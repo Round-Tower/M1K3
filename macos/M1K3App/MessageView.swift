@@ -211,6 +211,15 @@ struct MessageView: View {
                     .buttonStyle(.glass)
                     .accessibilityLabel("Copy this answer")
                     .help(didCopy ? "Copied" : "Copy this answer")
+
+                    ShareLink(item: shareText) {
+                        Image(systemName: "square.and.arrow.up")
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.caption)
+                    }
+                    .buttonStyle(.glass)
+                    .accessibilityLabel("Share this answer")
+                    .help("Share this answer")
                 }
             }
         }
@@ -220,6 +229,15 @@ struct MessageView: View {
         // behind the text so it stays readable over the moving image.
         .modifier(LegibilityScrim(active: avatarDisplay == .background))
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// What actually goes out the share sheet: the answer plus a plain-text
+    /// signature. No links, no encoded payload — just so a reader who gets this
+    /// forwarded knows where it came from. See the deep-link design thread
+    /// (challenger + security-auditor, 2026-07-22) for why this is the whole
+    /// feature for now rather than a Universal Link.
+    private var shareText: String {
+        message.text + "\n\n— Shared from M1K3 · m1k3.app"
     }
 
     /// Copy the answer to the clipboard, with a brief checkmark confirmation. Copies

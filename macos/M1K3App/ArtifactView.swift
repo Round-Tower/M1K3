@@ -81,9 +81,21 @@ struct ArtifactView: View {
             Button {
                 showExporter = true
             } label: {
-                Image(systemName: "square.and.arrow.up")
+                Image(systemName: "square.and.arrow.down")
             }
             .help("Export \(artifact.filename)")
+
+            // `message:` (not appended to `item`) so the shared source stays
+            // byte-for-byte pasteable — corrupting it with trailing prose would
+            // defeat the point of sharing code.
+            ShareLink(
+                item: artifact.source,
+                subject: Text(artifact.displayTitle),
+                message: Text("Shared from M1K3 · m1k3.app")
+            ) {
+                Image(systemName: "square.and.arrow.up")
+            }
+            .help("Share \(artifact.filename)")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

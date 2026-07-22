@@ -464,7 +464,12 @@ struct ContentView: View {
                             .id(message.id)
                         }
                     }
-                    .padding(20)
+                    // Horizontal > vertical on purpose — flat assistant turns (no
+                    // card, see MessageView's LegibilityScrim) had ZERO inset of
+                    // their own outside this padding, so headings/code blocks sat
+                    // right at the column edge (Kev's catch, 2026-07-22).
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 24)
                     .frame(maxWidth: Self.chatContentMaxWidth)
                     .frame(maxWidth: .infinity) // centre the capped column
                 }

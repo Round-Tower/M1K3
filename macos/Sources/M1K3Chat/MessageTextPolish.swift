@@ -2,11 +2,17 @@
 //  MessageTextPolish.swift
 //  M1K3Chat
 //
-//  Models emit markdown; ReadingText renders plain text (it owns typesetting —
-//  dyslexia/bionic modes work on words, not markup). This flattens the markdown
-//  models actually produce into readable plain text and tidies whitespace.
-//  Citation tokens ([Title §heading], no following parenthesis) are not links
-//  and pass through untouched.
+//  Models emit markdown. ReadingText used to render PLAIN text, so this file's
+//  whole job was flattening **bold**/*italic*/`code`/#headings away before the
+//  bubble ever saw them. As of the markdown/code-highlighting pass (2026-07-22)
+//  ReadingText renders real markdown blocks (ChatMarkdownParser) — flattening
+//  the markup here would just delete the structure the renderer now depends on.
+//  So this is down to a whitespace-only tidy: collapsing blank-line pile-ups
+//  (the "Web sources" gap models leave), skipping fenced code blocks AND
+//  <artifact>…</artifact> document blocks so neither loses meaningful
+//  whitespace (indentation, deliberate blank lines in a snippet). Citation
+//  tokens ([Title §heading], no following parenthesis) were never touched by
+//  the old flattening either — nothing here does anything to them.
 //
 //  Runs once on the FINAL message text (ChatSession rewrites it at completion
 //  after citation validation), so streaming shows raw tokens for a moment and
@@ -27,13 +33,23 @@
 //  fences/artifacts now run verbatim to the end, and CRLF pairs correctly
 //  (\r\n is ONE grapheme — search \.isNewline, never == "\n"; the pin test
 //  caught this). Review-debt paydown: #109-2, #109-14.
-
+//  Review: Kev + claude-sonnet-5, 2026-07-22, Confidence 0.85 — the chat
+//  bubble now renders real markdown blocks and highlighted code (ChatMarkdown-
+//  Parser + CodeSyntaxHighlighter in ReadingText), so flattening bold/italic/
+//  backticks/headings/bullets/links here would destroy the very structure the
+//  renderer needs. All of that stripping is gone; only the blank-line collapse
+//  survives, still fence/artifact-safe. Kept the function name and the fence/
+//  artifact-preserving scan (still needed so the collapse can't mangle a
+//  snippet's or a document's deliberate whitespace) — only `polishProse`'s
+//  BODY changed.
 import Foundation
 
 public enum MessageTextPolish {
-    /// Flatten markdown prose for plain-text rendering while leaving fenced code
-    /// blocks (```…```) untouched. Splits on fences, polishes only the prose
-    /// segments, then trims the joined result once.
+    /// Tidy blank-line pile-ups in prose while leaving fenced code blocks
+    /// (```…```) and `<artifact>` document blocks untouched. Splits on those
+    /// regions, tidies only the prose segments, then trims the joined result
+    /// once. Markdown markup (headings, emphasis, links, bullets) is left
+    /// exactly as the model wrote it — ChatMarkdownParser renders it.
     public static func polish(_ text: String) -> String {
         // Regions left byte-for-byte: fenced code blocks AND <artifact>…</artifact>
         // document blocks — the markdown inside an artifact must survive verbatim so
@@ -140,43 +156,12 @@ public enum MessageTextPolish {
         return nil
     }
 
-    /// The flattening pass, applied only to non-code prose.
+    /// The whitespace-only tidy, applied to non-code, non-artifact prose.
     private static func polishProse(_ text: String) -> String {
-        var output = text
-        // Thematic breaks (*** / --- / ___ alone on a line) are document structure,
-        // not prose — drop the line before the emphasis passes run (a bare *** would
-        // otherwise be mis-read as an unterminated italic). The newline-collapse
-        // below tidies the gap it leaves.
-        output = output.replacing(/^[ \t]*[-*_]{3,}[ \t]*$/.anchorsMatchLineEndings()) { _ in "" }
-        // [label](url): collapse the duplicate-link artifact, keep real labels.
-        output = output.replacing(/\[([^\]]+)\]\(([^)\s]+)\)/) { match in
-            let label = String(match.1)
-            let url = String(match.2)
-            return label == url ? url : "\(label) (\(url))"
-        }
-        // **bold** → bold. Runs first so ***bold-italic*** lands as *bold-italic*,
-        // which the italic pass below then finishes.
-        output = output.replacing(/\*\*([^*]+)\*\*/) { String($0.1) }
-        // *italic* → italic. Only a properly-paired *word* where the content touches
-        // both asterisks — so arithmetic ("2 * 3") and the "* " bullet marker (space
-        // after the star) are left untouched. Group 1 is the preserved leading
-        // boundary (start-of-line / space / opening bracket); the trailing boundary
-        // is a zero-width lookahead so it isn't consumed.
-        output = output.replacing(
-            /(^|[\s(\[])\*(\S(?:[^*\n]*\S)?|\S)\*(?=$|[\s).,;:!?\]])/.anchorsMatchLineEndings()
-        ) { "\($0.1)\($0.2)" }
-        // ```code``` (same-line span, NOT a fence — those are line-based and
-        // never reach prose) → code. Must run before the single-backtick pass,
-        // whose innermost-pair match would leave stray ``doubles`` behind.
-        output = output.replacing(/```([^`\n]+)```/) { String($0.1) }
-        // `code` → code
-        output = output.replacing(/`([^`\n]+)`/) { String($0.1) }
-        // Line-leading "* " bullets → real bullets.
-        output = output.replacing(/^\s{0,3}\*\s+/.anchorsMatchLineEndings()) { _ in "• " }
-        // Heading markers vanish, the heading text stays.
-        output = output.replacing(/^#{1,6}\s+/.anchorsMatchLineEndings()) { _ in "" }
         // Newline pile-ups (the "Web sources" gap) collapse to one blank line.
-        output = output.replacing(/\n{3,}/) { _ in "\n\n" }
-        return output // the whole result is trimmed once in polish()
+        // Everything else markdown produces (headings, emphasis, links, code
+        // spans, bullets) is left exactly as written — ChatMarkdownParser and
+        // ReadingText render it for real now, so there is nothing left to strip.
+        text.replacing(/\n{3,}/) { _ in "\n\n" }
     }
 }

@@ -73,4 +73,11 @@ extension Font {
     static func dyslexic(_ size: CGFloat) -> Font {
         .custom(BundledFonts.dyslexicFamily, size: size)
     }
+
+    /// The bundled OpenDyslexic-Bold face, for markdown headings in dyslexia
+    /// mode — `.dyslexic(_:).bold()` can't synthesize weight on a custom font,
+    /// so headings need the dedicated bold face registered alongside it.
+    static func dyslexicBold(_ size: CGFloat) -> Font {
+        .custom("OpenDyslexic-Bold", size: size)
+    }
 }
