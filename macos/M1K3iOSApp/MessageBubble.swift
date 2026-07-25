@@ -133,8 +133,12 @@ private struct LegibilityScrim: ViewModifier {
             .padding(.vertical, active ? 8 : 4)
             .background {
                 if active {
+                    // .thinMaterial, not a flat black fill — the old
+                    // .black.opacity(0.3) read as a muddy off-brand slab in
+                    // light mode. Kept in lock-step with the macOS
+                    // LegibilityScrim (MessageView.swift), 2026-07-25.
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(.black.opacity(0.3))
+                        .fill(.thinMaterial)
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: active)

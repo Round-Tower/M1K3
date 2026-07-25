@@ -228,4 +228,130 @@ struct VoiceLoopControllerTests {
         await waitUntil { harness.listenStarts == 2 }
         #expect(controller.lastError == nil)
     }
+
+    // MARK: - Sentence-streamed turns (2026-07-25)
+
+    /// A streaming harness: the turn emits scripted chunks, then completes.
+    /// speak() records and returns immediately; speechDidEnd() is fired
+    /// manually per utterance, as the app's onSpeakingEnded wiring does.
+    @Test("streamed chunks speak in order and re-listen waits for the drain")
+    func streamedChunksSpeakInOrder() async {
+        let harness = Harness()
+        var deps = harness.dependencies()
+        deps.runTurnStreaming = { _, onChunk in
+            onChunk("One.")
+            onChunk("Two.")
+            return .success(())
+        }
+        let controller = VoiceLoopController(
+            dependencies: deps, silence: .milliseconds(50),
+            holdSilence: .seconds(3), echoGrace: .zero, endpointTick: .milliseconds(10)
+        )
+        controller.begin()
+        await waitUntil { harness.continuation != nil }
+        harness.continuation?.yield(TranscriptSegment(text: "question", isFinal: true))
+        harness.continuation?.finish()
+
+        // Both chunks reach speak, in order, while the loop stays speaking.
+        await waitUntil { harness.spoken.count == 2 }
+        #expect(harness.spoken == ["One.", "Two."])
+        if case .speaking = controller.state {} else {
+            Issue.record("expected .speaking, got \(controller.state)")
+        }
+
+        // First utterance ends — still speaking (one chunk unspoken).
+        controller.speechDidEnd()
+        try? await Task.sleep(for: .milliseconds(20))
+        if case .speaking = controller.state {} else {
+            Issue.record("expected .speaking after first chunk end, got \(controller.state)")
+        }
+        // Second ends — generation already completed → re-listen.
+        controller.speechDidEnd()
+        await waitUntil { harness.listenStarts == 2 }
+        #expect(harness.listenStarts == 2)
+    }
+
+    @Test("a stale turn's late completion cannot park a fresh turn (generation guard)")
+    func staleTurnCompletionDropped() async {
+        // Turn A streams a chunk, then the user barges in and asks turn B.
+        // Turn A's runTurnStreaming is still in flight; its late .answerCompleted
+        // must NOT park turn B (which is awaiting its own answer).
+        let harness = Harness()
+        var deps = harness.dependencies()
+        let gateA = TurnGate()
+        var turnIndex = 0
+        deps.runTurnStreaming = { _, onChunk in
+            turnIndex += 1
+            if turnIndex == 1 {
+                onChunk("Turn A first sentence.")
+                await gateA.wait() // hold turn A open until the test releases it
+                return .success(()) // late completion — must be ignored
+            }
+            onChunk("Turn B answer.")
+            return .success(())
+        }
+        let controller = VoiceLoopController(
+            dependencies: deps, silence: .milliseconds(50),
+            holdSilence: .seconds(3), echoGrace: .zero, endpointTick: .milliseconds(10)
+        )
+        controller.begin()
+        await waitUntil { harness.continuation != nil }
+        harness.continuation?.yield(TranscriptSegment(text: "question A", isFinal: true))
+        harness.continuation?.finish()
+        await waitUntil { harness.spoken == ["Turn A first sentence."] }
+
+        // Barge in, then ask turn B.
+        controller.interrupt()
+        await waitUntil { harness.continuation != nil }
+        harness.continuation?.yield(TranscriptSegment(text: "question B", isFinal: true))
+        harness.continuation?.finish()
+        await waitUntil { harness.spoken.contains("Turn B answer.") }
+
+        // Release turn A's late completion — it must be a no-op for turn B.
+        await gateA.open()
+        try? await Task.sleep(for: .milliseconds(30))
+        if case .speaking = controller.state {} else {
+            Issue.record("turn B should still be speaking, got \(controller.state)")
+        }
+    }
+
+    @Test("a streamed turn that fails before any chunk parks idle with the error")
+    func streamedFailureParks() async {
+        let harness = Harness()
+        var deps = harness.dependencies()
+        deps.runTurnStreaming = { _, _ in
+            .failure(VoiceTurnFailure(message: "brain fell over"))
+        }
+        let controller = VoiceLoopController(
+            dependencies: deps, silence: .milliseconds(50),
+            holdSilence: .seconds(3), echoGrace: .zero, endpointTick: .milliseconds(10)
+        )
+        controller.begin()
+        await waitUntil { harness.continuation != nil }
+        harness.continuation?.yield(TranscriptSegment(text: "question", isFinal: true))
+        harness.continuation?.finish()
+
+        await waitUntil { controller.lastError != nil }
+        #expect(controller.lastError == "brain fell over")
+        await waitUntil { controller.state == .idle }
+        #expect(harness.spoken.isEmpty)
+    }
+}
+
+/// A one-shot gate a streaming turn awaits, so a test can hold a turn's
+/// generation open across a barge-in and release its late completion.
+private actor TurnGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var opened = false
+
+    func wait() async {
+        if opened { return }
+        await withCheckedContinuation { continuation = $0 }
+    }
+
+    func open() {
+        opened = true
+        continuation?.resume()
+        continuation = nil
+    }
 }

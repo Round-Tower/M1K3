@@ -217,4 +217,110 @@ struct VoiceLoopMachineTests {
         #expect(machine.handle(.partial("ghost")).isEmpty)
         #expect(machine.state == .awaitingAnswer(question: "q"))
     }
+
+    // MARK: - Sentence-streamed answers (2026-07-25: speak the first sentence
+
+    // while the model is still generating — the loop previously sat silent for
+    // the whole ~25s Big generation before speaking a word)
+
+    private func machineAwaitingAnswer() -> VoiceLoopMachine {
+        var machine = VoiceLoopMachine()
+        _ = machine.handle(.begin)
+        _ = machine.handle(.endpointed("q"))
+        return machine
+    }
+
+    @Test("the first answer chunk starts speaking immediately")
+    func firstChunkSpeaks() {
+        var machine = machineAwaitingAnswer()
+        let commands = machine.handle(.answerChunk("First sentence."))
+        #expect(commands == [.speak("First sentence.")])
+        #expect(machine.state == .speaking(answer: "First sentence."))
+    }
+
+    @Test("later chunks enqueue more speech and grow the answer")
+    func laterChunksEnqueue() {
+        var machine = machineAwaitingAnswer()
+        _ = machine.handle(.answerChunk("One."))
+        let commands = machine.handle(.answerChunk("Two."))
+        #expect(commands == [.speak("Two.")])
+        #expect(machine.state == .speaking(answer: "One. Two."))
+    }
+
+    @Test("re-listen waits for BOTH generation done and every chunk spoken")
+    func relistenWaitsForDrainAndCompletion() {
+        var machine = machineAwaitingAnswer()
+        _ = machine.handle(.answerChunk("One."))
+        _ = machine.handle(.answerChunk("Two."))
+        // First utterance ends: one still queued, generation still running.
+        #expect(machine.handle(.speechFinished).isEmpty)
+        // Generation finishes while the second utterance still plays.
+        #expect(machine.handle(.answerCompleted).isEmpty)
+        #expect(machine.state == .speaking(answer: "One. Two."))
+        // Final utterance ends → NOW re-listen with echo grace.
+        let commands = machine.handle(.speechFinished)
+        #expect(commands == [.startListening(afterEchoGrace: true)])
+        #expect(machine.state == .listening(partial: ""))
+    }
+
+    @Test("completion arriving after the queue already drained re-listens at once")
+    func completionAfterDrainRelistens() {
+        var machine = machineAwaitingAnswer()
+        _ = machine.handle(.answerChunk("Only sentence."))
+        _ = machine.handle(.speechFinished) // spoken before generation ends
+        #expect(machine.state == .speaking(answer: "Only sentence."))
+        let commands = machine.handle(.answerCompleted)
+        #expect(commands == [.startListening(afterEchoGrace: true)])
+        #expect(machine.state == .listening(partial: ""))
+    }
+
+    @Test("a streamed turn that completes with zero chunks parks idle")
+    func emptyStreamedAnswerParks() {
+        var machine = machineAwaitingAnswer()
+        let commands = machine.handle(.answerCompleted)
+        #expect(commands.isEmpty)
+        #expect(machine.state == .idle)
+    }
+
+    @Test("a failure mid-stream drains what's queued then re-listens")
+    func midStreamFailureDrains() {
+        var machine = machineAwaitingAnswer()
+        _ = machine.handle(.answerChunk("Partial truth."))
+        #expect(machine.handle(.answerFailed("model fell over")).isEmpty)
+        // Still speaking the queued chunk; its end re-listens as usual.
+        #expect(machine.state == .speaking(answer: "Partial truth."))
+        let commands = machine.handle(.speechFinished)
+        #expect(commands == [.startListening(afterEchoGrace: true)])
+    }
+
+    @Test("barge-in mid-stream drops every later chunk as stale")
+    func bargeInDropsLateChunks() {
+        var machine = machineAwaitingAnswer()
+        _ = machine.handle(.answerChunk("One."))
+        _ = machine.handle(.interrupt)
+        #expect(machine.state == .listening(partial: ""))
+        #expect(machine.handle(.answerChunk("Two.")).isEmpty)
+        #expect(machine.handle(.answerCompleted).isEmpty)
+        #expect(machine.state == .listening(partial: ""))
+    }
+
+    @Test("exit mid-stream drops later chunks — terminal stays terminal")
+    func exitDropsLateChunks() {
+        var machine = machineAwaitingAnswer()
+        _ = machine.handle(.answerChunk("One."))
+        _ = machine.handle(.exit)
+        #expect(machine.handle(.answerChunk("Two.")).isEmpty)
+        #expect(machine.handle(.answerCompleted).isEmpty)
+        #expect(machine.state == .ended)
+    }
+
+    @Test("legacy answerReady still speaks once and re-listens on one speechFinished")
+    func legacyAnswerReadyUnchanged() {
+        var machine = machineAwaitingAnswer()
+        _ = machine.handle(.answerReady("whole answer"))
+        #expect(machine.state == .speaking(answer: "whole answer"))
+        let commands = machine.handle(.speechFinished)
+        #expect(commands == [.startListening(afterEchoGrace: true)])
+        #expect(machine.state == .listening(partial: ""))
+    }
 }

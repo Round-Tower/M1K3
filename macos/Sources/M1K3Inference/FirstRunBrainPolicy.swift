@@ -35,6 +35,21 @@ public enum AFMAvailability: Sendable, Equatable {
     /// on in System Settings would cure it; false for ineligible hardware
     /// (and unknown future reasons, where a settings pointer could mislead).
     case blocked(userFixable: Bool)
+
+    /// Whether a snapshot of this value is safe to CACHE (vs. re-probe every
+    /// read). Only genuinely stable states qualify: `.available` and
+    /// hardware-ineligible `.blocked(userFixable: false)`. The transient
+    /// warmup (`.notReady`) and the user-fixable block (`.blocked(true)` — the
+    /// user might enable Apple Intelligence any moment) MUST re-probe, or the
+    /// interim-Mini bridge freezes on a first-read `.notReady`/`.blocked(true)`
+    /// and never activates for the session (2026-07-25 review finding).
+    public var isStableForCaching: Bool {
+        switch self {
+        case .available: true
+        case .notReady: false
+        case let .blocked(userFixable): !userFixable
+        }
+    }
 }
 
 /// Decides which brain serves the first session when "Say hello" is tapped.

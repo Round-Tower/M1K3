@@ -132,6 +132,40 @@ final class AppEnvironment {
     /// the MCP status poll, so re-triggering SwiftUI on every flip would be noise.
     @ObservationIgnored var intelligenceAskInFlight = false
     private let runtimeSelection: RuntimeSelectionBox
+    /// The interim-Mini bridge: non-nil (.appleFoundationModels) while the
+    /// selected weight-backed brain is still loading AND AFM can serve, so
+    /// turns route to Mini without touching `selectedRuntime` or the persisted
+    /// brain. Kept in sync by `refreshInterimBridge()` from `modelLoad`/
+    /// `selectedRuntime`'s didSets — the box is read lock-side at generate
+    /// time, so it can't be a computed property here.
+    private let interimRuntimeOverride = RuntimeOverrideBox()
+    /// AFM availability CACHED for the gate (stored HERE — extensions can't
+    /// hold stored properties). The live probe
+    /// (`SystemLanguageModel.default.availability`) does real Security-
+    /// framework IPC — the unified log flags it as main-thread-unsafe — and
+    /// `chatGate` is evaluated on every download-progress tick. Worse than the
+    /// cost: a probe that wobbles `.available` ↔ `.notReady` under load makes
+    /// the gate OSCILLATE `.interim` ↔ `.blocked`, mounting/unmounting the
+    /// full ModelGateView per tick — the leading theory for the 07-25
+    /// NSGenericException layout crashes. Availability only genuinely changes
+    /// when the user flips Apple Intelligence in System Settings, so a
+    /// per-launch snapshot (invalidated on brain switch, see `selectBrain`)
+    /// is honest. First-run/onboarding flows keep their own live re-polls.
+    @ObservationIgnored var cachedBridgeAFM: AFMAvailability?
+    /// Last gate value the bridge saw — transition breadcrumbs only
+    /// (`.notice` because `.info`/`.debug` don't persist in OSLogStore).
+    @ObservationIgnored var lastBridgedGate: ChatGate?
+    /// delegate_deep state (stored HERE — extensions can't hold stored
+    /// properties; plain `var` because the writer lives in
+    /// AppEnvironment+DeepDelegation.swift, the `weightImportState` precedent).
+    /// nil = idle; non-nil = the task the deep lane is digging into.
+    var deepDelegationTaskLabel: String?
+    /// The in-flight delegated run — held (never cancelled by UI churn), the
+    /// voice-loop turnTask rule: the answer must land even if the user wanders.
+    @ObservationIgnored var deepDelegationTask: Task<Void, Never>?
+    /// Late-bound bridge the delegate_deep tool holds (the palette is built in
+    /// init before `self` exists); the handler installs at the end of init.
+    let deepDelegationHook = DeepDelegationHook()
     /// Call intelligence: encrypted-at-rest persistence + indexing into the SAME
     /// knowledge graph as documents (so calls are RAG-searchable) + two-stage
     /// summary. Composed from the M1K3Calls seams.
@@ -161,8 +195,12 @@ final class AppEnvironment {
     private let brainInventory = LocalModelInventory()
     /// The single MLX slot behind `RuntimeOption.mlxGemma` in the façade; re-pointed
     /// at `currentMLXProvider` whenever the brain switches between Lil and Big, so
-    /// the swap is seen without rebuilding the RAGResponder.
-    private let swappableMLX: SwappableInferenceProvider
+    /// the swap is seen without rebuilding the RAGResponder. Internal (not
+    /// private) for AppEnvironment+DeepDelegation.swift — the delegation lane
+    /// runs its responder DIRECTLY against this slot, bypassing the runtime
+    /// façade's interim override (which is busy routing interactive turns to
+    /// Mini while the slot digs).
+    let swappableMLX: SwappableInferenceProvider
     /// Voice input: WhisperKit (high accuracy, needs a model) routed ahead of
     /// Apple Speech (system framework, always available). Held directly so the
     /// app can load WhisperKit's model on demand. Internal (not private) for
@@ -359,6 +397,7 @@ final class AppEnvironment {
                 preloadTask = nil
                 if modelLoad.isActive { modelLoad = .idle }
             }
+            refreshInterimBridge()
         }
     }
 
@@ -389,7 +428,9 @@ final class AppEnvironment {
 
     /// Progress of warming the MLX Gemma weights, surfaced in Settings (and the
     /// chat send path). Stays `.idle` for the Apple Foundation Models default.
-    private(set) var modelLoad: ModelLoadState = .idle
+    private(set) var modelLoad: ModelLoadState = .idle {
+        didSet { refreshInterimBridge() }
+    }
 
     /// The Advanced pane's "Import weights from a folder…" affordance —
     /// see AppEnvironment+WeightImport.swift for the run, WeightImportDisplay
@@ -538,6 +579,7 @@ final class AppEnvironment {
         swappableMLX = mlxSlot
         let runtimeProvider = RuntimeInferenceProvider(
             selection: selection,
+            interimOverride: interimRuntimeOverride,
             backends: [
                 .appleFoundationModels: afm,
                 .mlxGemma: mlxSlot,
@@ -555,7 +597,8 @@ final class AppEnvironment {
             provider: runtimeProvider,
             onOpenLink: { url in
                 Task { @MainActor in review.open(url: url) }
-            }
+            },
+            deepDelegation: deepDelegationHook
         )
 
         // TTS seam: Built-in Apple voice wrapped in a swappable façade so the
@@ -615,6 +658,12 @@ final class AppEnvironment {
         // Wire avatar + word highlight ↔ speech after all stored properties are
         // initialized (see the Voice output extension).
         wireSpeechCallbacks()
+        // Late-bind delegate_deep's handler (the tool was built above, before
+        // self existed). Weak: the tool must never keep the environment alive.
+        deepDelegationHook.install { [weak self] task in
+            guard let self else { return "Error: M1K3 is shutting down." }
+            return await self.startDeepDelegation(task)
+        }
         Self.resetVoiceModeFlagAtLaunch()
         mcpHost = MCPHostController(environment: self)
         mcpHost.startIfEnabled()
@@ -868,6 +917,20 @@ final class AppEnvironment {
     /// onChange for readiness (onboarding's waking screen) must advance itself.
     @discardableResult
     func selectBrain(_ tier: BrainTier) -> Bool {
+        // Refuse a brain switch WHILE a deep dive is running on the MLX slot:
+        // re-pointing `swappableMLX` (and loading a new model into it) under
+        // the in-flight delegated generation both corrupts that run's provider
+        // and spins a second MLX loop, breaking the one-decode-loop invariant
+        // the whole delegate_deep design rests on (2026-07-25 review finding).
+        // The dive you started on this brain finishes on it; switch after.
+        if deepDelegationTaskLabel != nil {
+            Self.brainLog.notice("selectBrain \(tier.rawValue, privacy: .public): refused — deep dive in flight")
+            return true // no transition, same as the already-loaded no-op
+        }
+        // A brain switch is one of the few moments AFM availability can matter
+        // afresh (e.g. the user just enabled Apple Intelligence and came back)
+        // — drop the gate's snapshot so its next read re-probes live.
+        invalidateBridgeAFMCache()
         // Already on this exact MLX brain and it's loaded — re-selecting would spin up
         // a fresh MLXGemmaProvider (cold persona-KV prefix) and release the warm one,
         // repaying a multi-GB load + persona prefill for nothing. The predicate is
@@ -1313,6 +1376,56 @@ extension AppEnvironment {
     /// True once the active brain is loaded and can serve a turn.
     var isReady: Bool {
         readiness.isReady
+    }
+
+    /// What the chat surface should do about readiness: `.open` (no gate),
+    /// `.interim` (selected brain still downloading — Mini serves, show a
+    /// banner, keep the input alive), or `.blocked` (mount the full
+    /// ModelGateView). Pure policy in M1K3Inference (InterimBrainPolicy).
+    var chatGate: ChatGate {
+        InterimBrainPolicy.gate(
+            readiness: readiness,
+            selectedRequiresWeights: selectedBrain.mlxModelID != nil,
+            afm: bridgeAFMAvailability
+        )
+    }
+
+    private var bridgeAFMAvailability: AFMAvailability {
+        if let cachedBridgeAFM { return cachedBridgeAFM }
+        let value = afmAvailability
+        // Only cache genuinely stable states — a transient `.notReady` (AFM
+        // assets warming at launch) or a user-fixable block (they might enable
+        // Apple Intelligence any moment) must re-probe, or the bridge freezes
+        // on the first read for the whole session (2026-07-25 review finding).
+        if value.isStableForCaching { cachedBridgeAFM = value }
+        return value
+    }
+
+    /// Invalidate the gate's AFM snapshot (next read re-probes live).
+    func invalidateBridgeAFMCache() {
+        cachedBridgeAFM = nil
+    }
+
+    /// Keeps the façade's routing override in lock-step with the two reasons
+    /// interactive turns front on Mini: the selected brain's weights are still
+    /// downloading (`.interim`), or the MLX slot is busy with a delegate_deep
+    /// run (one MLX decode loop, ever — the challenger-pinned constraint).
+    /// Otherwise routing follows `selectedRuntime` untouched. Called from the
+    /// didSets of everything it reads (`modelLoad`, `selectedRuntime`) and
+    /// from the delegation start/finish — a computed value can't reach the
+    /// Sendable box the provider reads at generate time. Internal: the
+    /// delegation manager lives in its own file.
+    func refreshInterimBridge() {
+        let gate = chatGate
+        let delegationFronting = deepDelegationTaskLabel != nil
+            && selectedBrain.mlxModelID != nil
+        interimRuntimeOverride.value = (gate == .interim || delegationFronting)
+            ? .appleFoundationModels
+            : nil
+        if gate != lastBridgedGate {
+            Self.brainLog.notice("chatGate → \(String(describing: gate), privacy: .public)")
+            lastBridgedGate = gate
+        }
     }
 
     /// Warm the restored brain's model on launch so readiness can reach `.ready`

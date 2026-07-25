@@ -420,6 +420,25 @@ public final class ChatSession {
         scheduleRollingDistillationIfNeeded()
     }
 
+    /// Deliver a BACKGROUND answer (delegate_deep's landing pad, 2026-07-25)
+    /// as a completed assistant message: no user bubble, no streaming
+    /// placeholder, no responder call — the delegated agent already ran on the
+    /// deep lane. Gets the same FOLLOWUPS split + text polish an ordinary turn
+    /// gets so chips and house formatting behave identically, and persists at
+    /// once. Citations arrive as plain text in this path (the delegated run's
+    /// tool sources aren't threaded through — a named v1 gap, not an
+    /// oversight: CitationValidator needs the sources list to validate
+    /// against, and the background lane doesn't collect one yet).
+    public func deliverBackgroundAnswer(_ text: String) async {
+        let (answer, followUps) = FollowUpSplit.split(text)
+        let polished = MessageTextPolish.polish(answer)
+        guard !polished.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        var message = ChatMessage(role: .assistant, text: polished, status: .complete)
+        message.followUps = followUps
+        messages.append(message)
+        await persistActiveConversation()
+    }
+
     /// Save the live transcript to the active conversation's row and tell the
     /// drawer to refresh. Lazy row creation happens here — nowhere else writes.
     ///

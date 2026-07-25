@@ -165,7 +165,8 @@ extension AppEnvironment {
         store: KnowledgeStore,
         embedder: any EmbeddingService,
         onHits: @escaping @Sendable ([ChunkHit]) -> Void,
-        onOpenLink: (@Sendable (URL) -> Void)?
+        onOpenLink: (@Sendable (URL) -> Void)?,
+        deepDelegation: DeepDelegationHook? = nil
     ) -> [any AgentTool] {
         var tools: [any AgentTool] = [
             DateTimeTool(),
@@ -174,6 +175,16 @@ extension AppEnvironment {
             ListDocumentsTool(store: store),
             GetDocumentTool(store: store),
         ]
+        // delegate_deep joins ONLY the interactive-chat palette (non-nil hook is
+        // passed solely by the main responder): MCP's ask_m1k3 has its own job
+        // model and must not spawn background MLX work, the menu-bar Ask is a
+        // one-shot, and the delegation lane's own deep responder must never
+        // recurse into another delegate_deep.
+        if let deepDelegation {
+            tools.append(DelegateDeepTool(startDelegation: { task in
+                await deepDelegation.invoke(task)
+            }))
+        }
         let defaults = UserDefaults.standard
         let webAllowed = defaults.object(forKey: Self.webSearchEnabledKey) == nil
             || defaults.bool(forKey: Self.webSearchEnabledKey)
@@ -216,7 +227,8 @@ extension AppEnvironment {
         embedder: any EmbeddingService,
         provider: any InferenceProvider,
         forcedThinkingMode: ThinkingMode? = nil,
-        onOpenLink: (@Sendable (URL) -> Void)? = nil
+        onOpenLink: (@Sendable (URL) -> Void)? = nil,
+        deepDelegation: DeepDelegationHook? = nil
     ) -> any RAGResponding {
         // Hits the model retrieves itself (search_knowledge) flow through the
         // collector into the turn's sources + the citation allow-list.
@@ -230,7 +242,8 @@ extension AppEnvironment {
                     store: store,
                     embedder: embedder,
                     onHits: { hits in sourceCollector.record(hits) },
-                    onOpenLink: onOpenLink
+                    onOpenLink: onOpenLink,
+                    deepDelegation: deepDelegation
                 )
             },
             sourceCollector: sourceCollector,

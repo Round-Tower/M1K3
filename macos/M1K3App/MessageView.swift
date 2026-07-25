@@ -423,8 +423,14 @@ private struct LegibilityScrim: ViewModifier {
             .padding(.vertical, active ? 8 : 4)
             .background {
                 if active {
+                    // .thinMaterial, not a flat black fill: the old
+                    // .black.opacity(0.3) read fine over a dark backdrop but
+                    // rendered as a muddy off-brand slab in light mode (Kev's
+                    // 07-25 report). Material adapts to the scheme and keeps
+                    // the scrim in the app's glass language; legibility over
+                    // the moving avatar is what it exists for either way.
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(.black.opacity(0.3))
+                        .fill(.thinMaterial)
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: active)

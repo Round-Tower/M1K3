@@ -18,6 +18,8 @@
 import AppKit
 import AVFoundation
 import Foundation
+import M1K3Chat
+import M1K3Inference
 import M1K3Voice
 import Speech
 
@@ -342,6 +344,77 @@ extension AppEnvironment {
                 // (stop() guarantees exactly one); exitVoiceMode covers the
                 // not-speaking case. No clear needed here.
                 await self?.speech.stop()
+            },
+            // Sentence-streamed speech (2026-07-25): watch the assistant
+            // message WHILE chat.send streams into it and fold complete
+            // sentences out (SentenceStreamFolder) — first audio arrives at
+            // the first sentence, not after the whole ~25s Big generation.
+            // Poll-based on purpose: ChatSession already streams into the
+            // @Observable message; a 150ms cadence is far below speech
+            // latency and needs no new seams in the TDD'd chat machinery.
+            runTurnStreaming: { [weak self] question, onChunk in
+                guard let self else {
+                    return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
+                }
+                var folder = SentenceStreamFolder(stopMarker: FollowUpSplit.sentinel)
+                var emitted = false
+                var streamedText = ""
+                // Pin to THIS turn's assistant message by id — never read
+                // `messages.last`. A delegate_deep delivery (or any out-of-band
+                // append) lands as a NEW last message; folding THAT as the
+                // voice answer would speak the deep-dive instead (2026-07-25
+                // review finding). `send` appends [user, assistant] at the
+                // baseline, so the assistant is the first assistant at/after
+                // baselineCount; capture its id once it exists.
+                let baselineCount = chat.messages.count
+                var pinnedID: UUID?
+                /// Fold only forward-growing text: if the pinned message's text
+                /// stops being a prefix-extension (FOLLOWUPS split / polish
+                /// rewrite shrinks it), skip — the folder's divergence reset
+                /// would otherwise re-speak the whole answer. Same guard the
+                /// final fold uses, applied to every poll (2026-07-25 finding).
+                @MainActor func foldForward(_ text: String) {
+                    guard text.hasPrefix(streamedText) else { return }
+                    for sentence in folder.ingest(text) {
+                        emitted = true
+                        onChunk(sentence)
+                    }
+                    streamedText = text
+                }
+                @MainActor func pinnedMessage() -> ChatMessage? {
+                    if let pinnedID { return chat.messages.first { $0.id == pinnedID } }
+                    guard chat.messages.count > baselineCount else { return nil }
+                    let candidate = chat.messages[baselineCount...].first { $0.role == .assistant }
+                    pinnedID = candidate?.id
+                    return candidate
+                }
+                let poller = Task { @MainActor [weak self] in
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .milliseconds(150))
+                        guard self != nil, let message = pinnedMessage() else { continue }
+                        foldForward(message.text)
+                    }
+                }
+                await chat.send(question)
+                poller.cancel()
+                guard let settled = pinnedMessage() else {
+                    return .failure(VoiceTurnFailure(message: "No answer arrived."))
+                }
+                if case let .failed(message) = settled.status {
+                    // Chunks may already have spoken; the loop drains them and
+                    // re-listens (machine-pinned) while the error surfaces.
+                    return .failure(VoiceTurnFailure(message: message))
+                }
+                foldForward(settled.text)
+                if let tail = folder.flush() {
+                    emitted = true
+                    onChunk(tail)
+                }
+                guard emitted else {
+                    return .failure(VoiceTurnFailure(message: "The model had nothing to say."))
+                }
+                recordSpokenExchange()
+                return .success(())
             }
         )
     }
