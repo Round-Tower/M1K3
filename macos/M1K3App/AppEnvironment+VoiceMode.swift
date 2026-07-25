@@ -18,6 +18,7 @@
 import AppKit
 import AVFoundation
 import Foundation
+import M1K3Chat
 import M1K3Inference
 import M1K3Voice
 import Speech
@@ -358,40 +359,53 @@ extension AppEnvironment {
                 var folder = SentenceStreamFolder(stopMarker: FollowUpSplit.sentinel)
                 var emitted = false
                 var streamedText = ""
+                // Pin to THIS turn's assistant message by id — never read
+                // `messages.last`. A delegate_deep delivery (or any out-of-band
+                // append) lands as a NEW last message; folding THAT as the
+                // voice answer would speak the deep-dive instead (2026-07-25
+                // review finding). `send` appends [user, assistant] at the
+                // baseline, so the assistant is the first assistant at/after
+                // baselineCount; capture its id once it exists.
                 let baselineCount = chat.messages.count
+                var pinnedID: UUID?
+                /// Fold only forward-growing text: if the pinned message's text
+                /// stops being a prefix-extension (FOLLOWUPS split / polish
+                /// rewrite shrinks it), skip — the folder's divergence reset
+                /// would otherwise re-speak the whole answer. Same guard the
+                /// final fold uses, applied to every poll (2026-07-25 finding).
+                @MainActor func foldForward(_ text: String) {
+                    guard text.hasPrefix(streamedText) else { return }
+                    for sentence in folder.ingest(text) {
+                        emitted = true
+                        onChunk(sentence)
+                    }
+                    streamedText = text
+                }
+                @MainActor func pinnedMessage() -> ChatMessage? {
+                    if let pinnedID { return chat.messages.first { $0.id == pinnedID } }
+                    guard chat.messages.count > baselineCount else { return nil }
+                    let candidate = chat.messages[baselineCount...].first { $0.role == .assistant }
+                    pinnedID = candidate?.id
+                    return candidate
+                }
                 let poller = Task { @MainActor [weak self] in
                     while !Task.isCancelled {
                         try? await Task.sleep(for: .milliseconds(150))
-                        guard let self, self.chat.messages.count > baselineCount,
-                              let last = self.chat.messages.last, last.role == .assistant
-                        else { continue }
-                        streamedText = last.text
-                        for sentence in folder.ingest(last.text) {
-                            emitted = true
-                            onChunk(sentence)
-                        }
+                        guard self != nil, let message = pinnedMessage() else { continue }
+                        foldForward(message.text)
                     }
                 }
                 await chat.send(question)
                 poller.cancel()
-                guard let last = chat.messages.last, last.role == .assistant else {
+                guard let settled = pinnedMessage() else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))
                 }
-                if case let .failed(message) = last.status {
+                if case let .failed(message) = settled.status {
                     // Chunks may already have spoken; the loop drains them and
                     // re-listens (machine-pinned) while the error surfaces.
                     return .failure(VoiceTurnFailure(message: message))
                 }
-                // Final fold — ONLY if the settled text still extends what
-                // streamed. Post-processing that rewrites the message (e.g.
-                // the FOLLOWUPS split) would otherwise reset the folder and
-                // re-speak the whole answer from the top.
-                if last.text.hasPrefix(streamedText) {
-                    for sentence in folder.ingest(last.text) {
-                        emitted = true
-                        onChunk(sentence)
-                    }
-                }
+                foldForward(settled.text)
                 if let tail = folder.flush() {
                     emitted = true
                     onChunk(tail)

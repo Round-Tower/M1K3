@@ -45,7 +45,13 @@ struct ContentView: View {
     @AppStorage(AppEnvironment.sidebarVisibleKey) private var sidebarVisible = true
     /// The width-driven TRANSIENT sidebar state (auto-collapse on a narrow
     /// window); `sidebarVisible` above stays the user's persisted preference.
-    @State private var sidebarShown = true
+    /// **Optional, seeded nil**: until the first width-driven flip actually
+    /// lands, `effectiveSidebarVisible` reads the persisted preference. A
+    /// non-optional `true` seed made a persisted-HIDDEN sidebar render open
+    /// then animate shut on every wide launch — the handoff read the stale
+    /// seed the instant `windowWidth` became non-nil, before the deferred
+    /// correction ran (2026-07-25 review finding).
+    @State private var sidebarShown: Bool?
     /// Last observed window width — nil until the first layout pass.
     @State private var windowWidth: CGFloat?
     @State private var showImporter = false
@@ -92,10 +98,11 @@ struct ContentView: View {
         )
     }
 
-    /// Pre-first-layout (width unknown) the persisted preference rules; after
-    /// that, the width-aware transient state does.
+    /// The persisted preference rules until the first width-driven flip seeds
+    /// the transient state — so a persisted-hidden sidebar never flashes open
+    /// while the deferred correction is in flight.
     private var effectiveSidebarVisible: Bool {
-        windowWidth == nil ? sidebarVisible : sidebarShown
+        sidebarShown ?? sidebarVisible
     }
 
     /// One write path for BOTH the binding's set and the toolbar toggle, so
@@ -141,11 +148,20 @@ struct ContentView: View {
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.width
         } action: { newWidth in
+            let firstLayout = windowWidth == nil
             let change = SidebarAutoCollapse.transition(
                 from: windowWidth, to: newWidth, preferredVisible: sidebarVisible
             )
             windowWidth = newWidth
             guard let change else { return }
+            if firstLayout {
+                // First layout has no established NavigationSplitView tiling to
+                // re-enter, so seed the transient state SYNCHRONOUSLY (matching
+                // the preference already showing) — no animation, no flash, and
+                // not the re-entrant re-tile the deferral below guards against.
+                sidebarShown = change
+                return
+            }
             // Defer the column flip OUT of the layout pass this callback runs
             // in: toggling NavigationSplitView visibility re-tiles the
             // titlebar/sidebar (NSThemeFrame), and doing that re-entrantly
@@ -255,12 +271,6 @@ struct ContentView: View {
                     .transition(.opacity)
             }
         }
-        .overlay(alignment: .top) {
-            if env.chatGate == .interim {
-                InterimMiniBanner(load: env.modelLoad, brainName: env.downloadingBrainName)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
         .animation(.easeInOut(duration: 0.3), value: env.chatGate)
         // Warm the restored brain on launch so readiness can reach .ready without
         // the user firing the first turn (init's direct assignment skips the
@@ -298,6 +308,15 @@ struct ContentView: View {
                     }
                     .ignoresSafeArea(edges: .top)
                     .allowsHitTesting(false)
+            }
+        }
+        // The interim banner mounts AFTER the top scrim so it rides ABOVE the
+        // fog band, not inside it — a later .overlay draws on top (2026-07-25
+        // review finding: the banner was being drawn under the 96pt scrim).
+        .overlay(alignment: .top) {
+            if env.chatGate == .interim {
+                InterimMiniBanner(load: env.modelLoad, brainName: env.downloadingBrainName)
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .confirmationDialog("Record this call?", isPresented: $showConsentDialog, titleVisibility: .visible) {
@@ -863,8 +882,14 @@ struct ContentView: View {
             }
         }
         .keyboardShortcut("v", modifiers: [.command, .shift])
+        // Voice is a conversation, so it can take a turn whenever the chat can —
+        // including the interim state where Mini serves while a heavier brain
+        // downloads. Was `!env.isReady`, which denied voice exactly where the
+        // interim bridge promises Mini can answer (2026-07-25 review finding);
+        // now matches `canSend` (chatGate.canTakeTurn).
         .disabled(!env.isVoiceModeActive
-            && (!env.canDictate || env.chat.isResponding || env.isListening || !env.isReady))
+            && (!env.canDictate || env.chat.isResponding || env.isListening
+                || !env.chatGate.canTakeTurn))
         .help(env.isVoiceModeActive
             ? "Back to the chat (⌘⇧V)"
             : "Talk with M1K3 — hands-free conversation (⌘⇧V)")

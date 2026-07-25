@@ -917,6 +917,16 @@ final class AppEnvironment {
     /// onChange for readiness (onboarding's waking screen) must advance itself.
     @discardableResult
     func selectBrain(_ tier: BrainTier) -> Bool {
+        // Refuse a brain switch WHILE a deep dive is running on the MLX slot:
+        // re-pointing `swappableMLX` (and loading a new model into it) under
+        // the in-flight delegated generation both corrupts that run's provider
+        // and spins a second MLX loop, breaking the one-decode-loop invariant
+        // the whole delegate_deep design rests on (2026-07-25 review finding).
+        // The dive you started on this brain finishes on it; switch after.
+        if deepDelegationTaskLabel != nil {
+            Self.brainLog.notice("selectBrain \(tier.rawValue, privacy: .public): refused — deep dive in flight")
+            return true // no transition, same as the already-loaded no-op
+        }
         // A brain switch is one of the few moments AFM availability can matter
         // afresh (e.g. the user just enabled Apple Intelligence and came back)
         // — drop the gate's snapshot so its next read re-probes live.
@@ -1383,7 +1393,11 @@ extension AppEnvironment {
     private var bridgeAFMAvailability: AFMAvailability {
         if let cachedBridgeAFM { return cachedBridgeAFM }
         let value = afmAvailability
-        cachedBridgeAFM = value
+        // Only cache genuinely stable states — a transient `.notReady` (AFM
+        // assets warming at launch) or a user-fixable block (they might enable
+        // Apple Intelligence any moment) must re-probe, or the bridge freezes
+        // on the first read for the whole session (2026-07-25 review finding).
+        if value.isStableForCaching { cachedBridgeAFM = value }
         return value
     }
 

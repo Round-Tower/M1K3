@@ -90,4 +90,15 @@ struct InterimBrainPolicyTests {
         #expect(ChatGate.interim.canTakeTurn)
         #expect(!ChatGate.blocked.canTakeTurn)
     }
+
+    // MARK: - AFM cache policy (2026-07-25 review: don't freeze transient states)
+
+    @Test("only stable AFM states are cacheable; transient ones must re-probe")
+    func afmCachePolicy() {
+        #expect(AFMAvailability.available.isStableForCaching)
+        #expect(AFMAvailability.blocked(userFixable: false).isStableForCaching)
+        // The two that would freeze the bridge if cached on first read:
+        #expect(!AFMAvailability.notReady.isStableForCaching)
+        #expect(!AFMAvailability.blocked(userFixable: true).isStableForCaching)
+    }
 }
