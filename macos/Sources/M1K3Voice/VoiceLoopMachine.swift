@@ -39,7 +39,14 @@ public enum VoiceLoopEvent: Equatable, Sendable {
     case partial(String)
     /// The utterance ended (recognizer finality or silence endpoint).
     case endpointed(String)
+    /// The COMPLETE answer at once (legacy non-streaming path).
     case answerReady(String)
+    /// One speakable sentence of a still-streaming answer (2026-07-25:
+    /// sentence-streamed speech — first audio at the first sentence, not
+    /// after the whole generation).
+    case answerChunk(String)
+    /// The streaming turn finished generating (chunks may still be speaking).
+    case answerCompleted
     case answerFailed(String)
     /// Natural TTS completion (onSpeakingEnded).
     case speechFinished
@@ -65,6 +72,13 @@ public struct VoiceLoopMachine: Sendable {
     /// Park after this many empty listens in a row.
     private var consecutiveEmptyListens = 0
     private static let maxEmptyListens = 2
+    /// Sentence-streaming bookkeeping: utterances enqueued but not yet ended.
+    /// The loop re-listens only when this drains AND generation finished —
+    /// speechFinished arrives once per spoken chunk (the speech provider fires
+    /// onSpeakingEnded per utterance).
+    private var unspokenChunks = 0
+    /// True once the streaming turn stopped producing (completed OR failed).
+    private var generationDone = false
 
     public init() {}
 
@@ -86,23 +100,66 @@ public struct VoiceLoopMachine: Sendable {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return emptyListenEnded() }
             consecutiveEmptyListens = 0
+            unspokenChunks = 0
+            generationDone = false
             state = .awaitingAnswer(question: trimmed)
             return [.stopListening, .runTurn(trimmed)]
 
         case let .answerReady(answer):
             guard case .awaitingAnswer = state else { return [] }
+            // Legacy whole-answer path ≡ one chunk + completion.
+            unspokenChunks = 1
+            generationDone = true
             state = .speaking(answer: answer)
             return [.speak(answer)]
 
+        case let .answerChunk(chunk):
+            switch state {
+            case .awaitingAnswer:
+                unspokenChunks = 1
+                generationDone = false
+                state = .speaking(answer: chunk)
+                return [.speak(chunk)]
+            case let .speaking(answer):
+                unspokenChunks += 1
+                state = .speaking(answer: answer.isEmpty ? chunk : answer + " " + chunk)
+                return [.speak(chunk)]
+            case .idle, .listening, .ended:
+                return [] // stale (barge-in/exit already moved on)
+            }
+
+        case .answerCompleted:
+            switch state {
+            case .awaitingAnswer:
+                // Generation ended with zero speakable chunks — park, mirroring
+                // answerFailed (the controller surfaces any error separately).
+                state = .idle
+                return []
+            case .speaking:
+                generationDone = true
+                return relistenIfDrained()
+            case .idle, .listening, .ended:
+                return []
+            }
+
         case .answerFailed:
-            guard case .awaitingAnswer = state else { return [] }
-            state = .idle
-            return []
+            switch state {
+            case .awaitingAnswer:
+                state = .idle
+                return []
+            case .speaking:
+                // A failure after chunks already spoke: let the queued audio
+                // finish naturally, then re-listen — same shape as completion.
+                generationDone = true
+                return relistenIfDrained()
+            case .idle, .listening, .ended:
+                return []
+            }
 
         case .speechFinished:
             guard case .speaking = state else { return [] }
-            state = .listening(partial: "")
-            return [.startListening(afterEchoGrace: true)]
+            unspokenChunks = max(0, unspokenChunks - 1)
+            return relistenIfDrained()
 
         case .interrupt:
             guard case .speaking = state else { return [] }
@@ -122,6 +179,14 @@ public struct VoiceLoopMachine: Sendable {
             state = .ended
             return [.stopSpeaking, .stopListening]
         }
+    }
+
+    /// Speaking → listening only when the last queued utterance ended AND the
+    /// generator stopped; anything else keeps speaking with no commands.
+    private mutating func relistenIfDrained() -> [VoiceLoopCommand] {
+        guard unspokenChunks == 0, generationDone else { return [] }
+        state = .listening(partial: "")
+        return [.startListening(afterEchoGrace: true)]
     }
 
     private mutating func emptyListenEnded() -> [VoiceLoopCommand] {

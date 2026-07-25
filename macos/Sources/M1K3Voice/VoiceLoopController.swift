@@ -48,19 +48,32 @@ public final class VoiceLoopController {
         public var runTurn: @MainActor (String) async -> Result<String, VoiceTurnFailure>
         public var speak: @MainActor (String) async -> Void
         public var stopSpeaking: @MainActor () async -> Void
+        /// Sentence-streaming turn (2026-07-25): emits speakable chunks via the
+        /// callback WHILE the model generates and returns when generation
+        /// finishes — first audio at the first sentence, not after the whole
+        /// answer. nil falls back to the whole-answer `runTurn`.
+        public var runTurnStreaming: (@MainActor (
+            _ question: String,
+            _ onChunk: @escaping @MainActor (String) -> Void
+        ) async -> Result<Void, VoiceTurnFailure>)?
 
         public init(
             startListening: @escaping @MainActor () throws -> AsyncStream<TranscriptSegment>,
             stopListening: @escaping @MainActor () -> Void,
             runTurn: @escaping @MainActor (String) async -> Result<String, VoiceTurnFailure>,
             speak: @escaping @MainActor (String) async -> Void,
-            stopSpeaking: @escaping @MainActor () async -> Void
+            stopSpeaking: @escaping @MainActor () async -> Void,
+            runTurnStreaming: (@MainActor (
+                _ question: String,
+                _ onChunk: @escaping @MainActor (String) -> Void
+            ) async -> Result<Void, VoiceTurnFailure>)? = nil
         ) {
             self.startListening = startListening
             self.stopListening = stopListening
             self.runTurn = runTurn
             self.speak = speak
             self.stopSpeaking = stopSpeaking
+            self.runTurnStreaming = runTurnStreaming
         }
     }
 
@@ -78,6 +91,8 @@ public final class VoiceLoopController {
     /// Held, never cancelled by exit — see the header.
     private var turnTask: Task<Void, Never>?
     private var speakTask: Task<Void, Never>?
+    /// Chunks awaiting the serial speak drainer (sentence streaming).
+    private var speechQueue: [String] = []
     private var accumulator = TranscriptAccumulator()
     private var endpointer: SilenceEndpointer
 
@@ -145,6 +160,19 @@ public final class VoiceLoopController {
         case let .runTurn(question):
             turnTask = Task { [weak self] in
                 guard let dependencies = self?.dependencies else { return }
+                if let streaming = dependencies.runTurnStreaming {
+                    switch await streaming(question, { [weak self] chunk in
+                        self?.dispatch(.answerChunk(chunk))
+                    }) {
+                    case .success:
+                        self?.dispatch(.answerCompleted)
+                    case let .failure(failure):
+                        self?.lastError = failure.message
+                        Self.log.error("voice turn failed: \(failure.message, privacy: .public)")
+                        self?.dispatch(.answerFailed(failure.message))
+                    }
+                    return
+                }
                 switch await dependencies.runTurn(question) {
                 case let .success(answer):
                     self?.dispatch(.answerReady(answer))
@@ -156,18 +184,38 @@ public final class VoiceLoopController {
             }
 
         case let .speak(answer):
-            speakTask = Task { [weak self] in
-                await self?.dependencies.speak(answer)
-            }
+            // Serial queue, one utterance in flight: chunks must play in order
+            // and the provider's per-utterance onSpeakingEnded (→ speechDidEnd
+            // → the machine's chunk countdown) must fire once per queued item.
+            speechQueue.append(answer)
+            drainSpeechQueueIfIdle()
 
         case .stopSpeaking:
             // The cancel is advisory (speak providers are enqueue-style and
             // don't observe it) — the audio actually stops via the
-            // stopSpeaking dependency below.
+            // stopSpeaking dependency below. Pending chunks are abandoned:
+            // the machine already left .speaking, so their countdown is moot.
+            speechQueue.removeAll()
             speakTask?.cancel()
             speakTask = nil
             Task { [weak self] in await self?.dependencies.stopSpeaking() }
         }
+    }
+
+    /// One drainer at a time; it exits when the queue empties and is re-armed
+    /// by the next enqueue.
+    private func drainSpeechQueueIfIdle() {
+        guard speakTask == nil else { return }
+        speakTask = Task { [weak self] in
+            while !Task.isCancelled, let next = self?.nextSpeechChunk() {
+                await self?.dependencies.speak(next)
+            }
+            self?.speakTask = nil
+        }
+    }
+
+    private func nextSpeechChunk() -> String? {
+        speechQueue.isEmpty ? nil : speechQueue.removeFirst()
     }
 
     // MARK: - Listening internals

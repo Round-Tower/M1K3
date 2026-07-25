@@ -342,6 +342,64 @@ extension AppEnvironment {
                 // (stop() guarantees exactly one); exitVoiceMode covers the
                 // not-speaking case. No clear needed here.
                 await self?.speech.stop()
+            },
+            // Sentence-streamed speech (2026-07-25): watch the assistant
+            // message WHILE chat.send streams into it and fold complete
+            // sentences out (SentenceStreamFolder) — first audio arrives at
+            // the first sentence, not after the whole ~25s Big generation.
+            // Poll-based on purpose: ChatSession already streams into the
+            // @Observable message; a 150ms cadence is far below speech
+            // latency and needs no new seams in the TDD'd chat machinery.
+            runTurnStreaming: { [weak self] question, onChunk in
+                guard let self else {
+                    return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
+                }
+                var folder = SentenceStreamFolder(stopMarker: FollowUpSplit.sentinel)
+                var emitted = false
+                var streamedText = ""
+                let baselineCount = chat.messages.count
+                let poller = Task { @MainActor [weak self] in
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .milliseconds(150))
+                        guard let self, self.chat.messages.count > baselineCount,
+                              let last = self.chat.messages.last, last.role == .assistant
+                        else { continue }
+                        streamedText = last.text
+                        for sentence in folder.ingest(last.text) {
+                            emitted = true
+                            onChunk(sentence)
+                        }
+                    }
+                }
+                await chat.send(question)
+                poller.cancel()
+                guard let last = chat.messages.last, last.role == .assistant else {
+                    return .failure(VoiceTurnFailure(message: "No answer arrived."))
+                }
+                if case let .failed(message) = last.status {
+                    // Chunks may already have spoken; the loop drains them and
+                    // re-listens (machine-pinned) while the error surfaces.
+                    return .failure(VoiceTurnFailure(message: message))
+                }
+                // Final fold — ONLY if the settled text still extends what
+                // streamed. Post-processing that rewrites the message (e.g.
+                // the FOLLOWUPS split) would otherwise reset the folder and
+                // re-speak the whole answer from the top.
+                if last.text.hasPrefix(streamedText) {
+                    for sentence in folder.ingest(last.text) {
+                        emitted = true
+                        onChunk(sentence)
+                    }
+                }
+                if let tail = folder.flush() {
+                    emitted = true
+                    onChunk(tail)
+                }
+                guard emitted else {
+                    return .failure(VoiceTurnFailure(message: "The model had nothing to say."))
+                }
+                recordSpokenExchange()
+                return .success(())
             }
         )
     }
