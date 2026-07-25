@@ -18,6 +18,7 @@
 import AppKit
 import AVFoundation
 import Foundation
+import M1K3Inference
 import M1K3Voice
 import Speech
 
