@@ -24,6 +24,7 @@
 import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
+import M1K3Preview
 import M1K3Voice
 import SwiftUI
 import UniformTypeIdentifiers
@@ -42,6 +43,11 @@ struct ContentView: View {
     /// (not directly UserDefaults-storable) — same persisted-Bool shape as
     /// `avatarDisplay` below.
     @AppStorage(AppEnvironment.sidebarVisibleKey) private var sidebarVisible = true
+    /// The width-driven TRANSIENT sidebar state (auto-collapse on a narrow
+    /// window); `sidebarVisible` above stays the user's persisted preference.
+    @State private var sidebarShown = true
+    /// Last observed window width — nil until the first layout pass.
+    @State private var windowWidth: CGFloat?
     @State private var showImporter = false
     @State private var showAttachmentImporter = false
     @State private var pendingAttachments: [ImageAttachment] = []
@@ -69,20 +75,36 @@ struct ContentView: View {
     /// edge (~90+ chars/line reads badly, and worse in the dyslexia modes).
     private static let chatContentMaxWidth: CGFloat = 760
 
-    /// Bridges the persisted Bool to NavigationSplitView's own visibility
-    /// type (not directly storable). `.automatic` — not `.all` — is the
-    /// "shown" value: it's what gives the sidebar native auto-collapse/
-    /// overlay behavior on a narrow window (the same adaptive behavior
-    /// Mail/Xcode's own sidebars get), without any hand-rolled width
-    /// tracking. The system manages narrow-width collapsing internally and
-    /// doesn't round-trip through this setter for it, so a pure
-    /// width-driven collapse never touches the persisted preference — only
-    /// an explicit toggle-button tap (which DOES set `.detailOnly`) does.
+    /// Bridges the persisted preference + the width-driven transient state to
+    /// NavigationSplitView's own visibility type. The 07-14 comment here
+    /// claimed `.automatic` gives native narrow-window auto-collapse — it
+    /// doesn't on macOS (that's iPhone/iPad size-class behaviour; a 560pt Mac
+    /// window kept the sidebar pinned and clipped the labels), so the collapse
+    /// is now hand-rolled via `SidebarAutoCollapse` (M1K3Preview, unit-pinned):
+    /// crossing below the threshold collapses TRANSIENTLY (`sidebarShown`),
+    /// crossing back restores the persisted preference (`sidebarVisible`), and
+    /// explicit writes only persist while wide — a narrow-width `.detailOnly`
+    /// echo must not clobber the user's real preference.
     private var columnVisibility: Binding<NavigationSplitViewVisibility> {
         Binding(
-            get: { sidebarVisible ? .automatic : .detailOnly },
-            set: { sidebarVisible = $0 != .detailOnly }
+            get: { effectiveSidebarVisible ? .automatic : .detailOnly },
+            set: { setSidebar(visible: $0 != .detailOnly) }
         )
+    }
+
+    /// Pre-first-layout (width unknown) the persisted preference rules; after
+    /// that, the width-aware transient state does.
+    private var effectiveSidebarVisible: Bool {
+        windowWidth == nil ? sidebarVisible : sidebarShown
+    }
+
+    /// One write path for BOTH the binding's set and the toolbar toggle, so
+    /// the transient/persisted split can't drift between them.
+    private func setSidebar(visible: Bool) {
+        sidebarShown = visible
+        if SidebarAutoCollapse.persistsPreference(atWidth: windowWidth) {
+            sidebarVisible = visible
+        }
     }
 
     var body: some View {
@@ -113,6 +135,27 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 480, minHeight: 480)
+        // The hand-rolled narrow-window auto-collapse (see columnVisibility's
+        // comment): edge-triggered on threshold CROSSINGS only, so a manual
+        // re-open on a narrow window survives further resizing within the band.
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { newWidth in
+            let change = SidebarAutoCollapse.transition(
+                from: windowWidth, to: newWidth, preferredVisible: sidebarVisible
+            )
+            windowWidth = newWidth
+            guard let change else { return }
+            // Defer the column flip OUT of the layout pass this callback runs
+            // in: toggling NavigationSplitView visibility re-tiles the
+            // titlebar/sidebar (NSThemeFrame), and doing that re-entrantly
+            // inside AppKit's display cycle is the NSGenericException
+            // crash class caught on 07-25 (twice, EXC_BREAKPOINT via
+            // _crashOnException during _updateSidebarPositionIfNeeded).
+            Task { @MainActor in
+                withAnimation(.snappy) { sidebarShown = change }
+            }
+        }
         // Voice-first as a FULL-WINDOW hero: the avatar fills the window with the
         // karaoke line + controls floating on glass, covering the chat while
         // active (the chat answer still lands in the transcript underneath). This
@@ -188,14 +231,20 @@ struct ContentView: View {
         }
         .animation(.spring(duration: 0.35), value: showsBrainUpgradeNudge)
         .animation(.spring(duration: 0.35), value: avatarDisplay)
-        .frame(minWidth: 600, minHeight: 520)
-        // Global readiness gate: until the active brain is actually loaded into
-        // memory, swallow interaction behind a loading/failure surface — a turn
-        // fired against still-downloading weights is the "interacted before ready"
-        // latent bug. Chat-scoped: browsing Documents/Memories/Calls/past
-        // conversations doesn't need the active brain warm, only firing a turn does.
+        // 480 to MATCH the window's own minWidth — the old 600 exceeded it, so
+        // a 480-560pt window clipped the detail (the download bar overflowed
+        // the window edge in Kev's 07-25 screenshots). The transcript/input
+        // column is cap-and-centre (chatContentMaxWidth), so it degrades fine.
+        .frame(minWidth: 480, minHeight: 520)
+        // Readiness gate, narrowed 2026-07-25: the full blocking surface only
+        // mounts when NOTHING can serve a turn (.blocked). While the selected
+        // brain's weights download WITH Mini available, the gate is `.interim`
+        // — Mini answers (InterimBrainPolicy routes the façade) and a slim
+        // banner over the transcript carries the progress instead of a wall.
+        // Turns still can't fire against still-downloading weights: the façade
+        // override routes them to AFM until `modelLoad == .ready`.
         .overlay {
-            if !env.isReady {
+            if env.chatGate == .blocked {
                 ModelGateView(
                     readiness: env.readiness,
                     brainName: env.downloadingBrainName,
@@ -206,7 +255,13 @@ struct ContentView: View {
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: env.isReady)
+        .overlay(alignment: .top) {
+            if env.chatGate == .interim {
+                InterimMiniBanner(load: env.modelLoad, brainName: env.downloadingBrainName)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: env.chatGate)
         // Warm the restored brain on launch so readiness can reach .ready without
         // the user firing the first turn (init's direct assignment skips the
         // didSet that would otherwise kick the load). Idempotent.
@@ -619,7 +674,7 @@ struct ContentView: View {
     private var canSend: Bool {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !env.chat.isResponding
-            && env.isReady
+            && env.chatGate.canTakeTurn // open, or interim (Mini serving)
     }
 
     /// Cue for the ambient animated backdrop: audio capture (dictation / call
@@ -744,7 +799,7 @@ struct ContentView: View {
         // re-bind the standard Toggle-Sidebar shortcut here on our button.
         ToolbarItem(placement: .navigation) {
             Button {
-                withAnimation(.snappy) { sidebarVisible.toggle() }
+                withAnimation(.snappy) { setSidebar(visible: !effectiveSidebarVisible) }
             } label: {
                 Label("Toggle Sidebar", systemImage: "sidebar.leading")
             }
@@ -760,9 +815,16 @@ struct ContentView: View {
             // the always-relevant items (Agent Log, Review panel, Settings).
             if isChatSelected {
                 voiceModeButton
+            }
+            // The Review-panel toggle comes BEFORE the chat extras: the visible
+            // toolbar cluster is width-capped and trailing items spill into the
+            // ">>" overflow — where the panel's ONLY reveal affordance was
+            // hiding (Kev's 07-25 report). Avatar/Record can live in overflow;
+            // the right-hand nav's reveal button can't.
+            alwaysToolbarItems
+            if isChatSelected {
                 chatToolbarItems
             }
-            alwaysToolbarItems
         }
     }
 
@@ -892,9 +954,12 @@ struct ContentView: View {
             }
             .help("How M1K3's avatar appears: panel, full-window background, or off")
 
-            Button { showImporter = true } label: {
-                Label("Import", systemImage: "doc.badge.plus")
-            }
+            // The Import toolbar button retired 2026-07-25 (Kev's call): drop-
+            // to-ingest covers the whole window, the GreetingCard's drop zone
+            // teaches it, and Documents keeps its own Import button for the
+            // deliberate path. Fewer items also keeps the review-panel toggle
+            // out of the ">>" toolbar overflow. `showImporter`/.fileImporter
+            // stay — the GreetingCard buttons still drive them.
 
             Button {
                 if env.isRecording {
@@ -1027,6 +1092,47 @@ private struct ModelGateView: View {
     private func loadingLabel(_ state: ModelLoadState) -> String {
         let label = state.label(modelName: brainName)
         return label.isEmpty ? "Loading \(brainName)…" : label
+    }
+}
+
+/// The `.interim` gate's slim companion: the selected brain is still
+/// downloading but Mini is serving, so instead of ModelGateView's full wall
+/// this floats the progress over the top of the transcript and stays out of
+/// the way. Copy is honest about WHO is answering — the turn quality changes
+/// while Mini holds the fort.
+private struct InterimMiniBanner: View {
+    let load: ModelLoadState
+    let brainName: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if let fraction = load.fraction {
+                ProgressView(value: fraction)
+                    .progressViewStyle(.circular)
+                    .controlSize(.small)
+            } else {
+                ProgressView().controlSize(.small)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Mini’s answering while \(brainName) arrives")
+                    .font(.callout.weight(.medium))
+                Text(progressLine)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .glassEffect(in: .rect(cornerRadius: 12))
+        .padding(.top, 10)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Mini is answering while \(brainName) downloads. \(progressLine)")
+    }
+
+    private var progressLine: String {
+        let label = load.label(modelName: brainName)
+        return label.isEmpty ? "Getting \(brainName) ready…" : label
     }
 }
 

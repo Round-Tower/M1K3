@@ -132,6 +132,13 @@ final class AppEnvironment {
     /// the MCP status poll, so re-triggering SwiftUI on every flip would be noise.
     @ObservationIgnored var intelligenceAskInFlight = false
     private let runtimeSelection: RuntimeSelectionBox
+    /// The interim-Mini bridge: non-nil (.appleFoundationModels) while the
+    /// selected weight-backed brain is still loading AND AFM can serve, so
+    /// turns route to Mini without touching `selectedRuntime` or the persisted
+    /// brain. Kept in sync by `refreshInterimBridge()` from `modelLoad`/
+    /// `selectedRuntime`'s didSets — the box is read lock-side at generate
+    /// time, so it can't be a computed property here.
+    private let interimRuntimeOverride = RuntimeOverrideBox()
     /// Call intelligence: encrypted-at-rest persistence + indexing into the SAME
     /// knowledge graph as documents (so calls are RAG-searchable) + two-stage
     /// summary. Composed from the M1K3Calls seams.
@@ -359,6 +366,7 @@ final class AppEnvironment {
                 preloadTask = nil
                 if modelLoad.isActive { modelLoad = .idle }
             }
+            refreshInterimBridge()
         }
     }
 
@@ -389,7 +397,9 @@ final class AppEnvironment {
 
     /// Progress of warming the MLX Gemma weights, surfaced in Settings (and the
     /// chat send path). Stays `.idle` for the Apple Foundation Models default.
-    private(set) var modelLoad: ModelLoadState = .idle
+    private(set) var modelLoad: ModelLoadState = .idle {
+        didSet { refreshInterimBridge() }
+    }
 
     /// The Advanced pane's "Import weights from a folder…" affordance —
     /// see AppEnvironment+WeightImport.swift for the run, WeightImportDisplay
@@ -538,6 +548,7 @@ final class AppEnvironment {
         swappableMLX = mlxSlot
         let runtimeProvider = RuntimeInferenceProvider(
             selection: selection,
+            interimOverride: interimRuntimeOverride,
             backends: [
                 .appleFoundationModels: afm,
                 .mlxGemma: mlxSlot,
@@ -1313,6 +1324,27 @@ extension AppEnvironment {
     /// True once the active brain is loaded and can serve a turn.
     var isReady: Bool {
         readiness.isReady
+    }
+
+    /// What the chat surface should do about readiness: `.open` (no gate),
+    /// `.interim` (selected brain still downloading — Mini serves, show a
+    /// banner, keep the input alive), or `.blocked` (mount the full
+    /// ModelGateView). Pure policy in M1K3Inference (InterimBrainPolicy).
+    var chatGate: ChatGate {
+        InterimBrainPolicy.gate(
+            readiness: readiness,
+            selectedRequiresWeights: selectedBrain.mlxModelID != nil,
+            afm: afmAvailability
+        )
+    }
+
+    /// Keeps the façade's routing override in lock-step with the gate: while
+    /// `.interim`, turns route to Mini; otherwise routing follows
+    /// `selectedRuntime` untouched. Called from the didSets of everything the
+    /// gate reads (`modelLoad`, `selectedRuntime`) — a computed value can't
+    /// reach the Sendable box the provider reads at generate time.
+    private func refreshInterimBridge() {
+        interimRuntimeOverride.value = chatGate == .interim ? .appleFoundationModels : nil
     }
 
     /// Warm the restored brain's model on launch so readiness can reach `.ready`

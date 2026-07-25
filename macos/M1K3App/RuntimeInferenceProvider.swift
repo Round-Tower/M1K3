@@ -38,27 +38,44 @@ final class RuntimeSelectionBox: Sendable {
     }
 }
 
+/// The interim-Mini bridge's routing override (InterimBrainPolicy, M1K3Inference):
+/// while the selected weight-backed brain is still downloading and AFM can serve,
+/// AppEnvironment sets this to `.appleFoundationModels` so turns route to Mini
+/// WITHOUT touching `selectedRuntime` (whose didSet owns warm-up/cancel side
+/// effects) or the persisted brain choice. nil = no override, route normally.
+final class RuntimeOverrideBox: Sendable {
+    private let stored = Mutex<RuntimeOption?>(nil)
+
+    var value: RuntimeOption? {
+        get { stored.withLock { $0 } }
+        set { stored.withLock { $0 = newValue } }
+    }
+}
+
 /// Routes each generation to the selected backend. Unknown / not-yet-wired
 /// selections fall back to Apple Foundation Models.
 final class RuntimeInferenceProvider: InferenceProvider, Sendable {
     let name = "runtime"
 
     private let selection: RuntimeSelectionBox
+    private let interimOverride: RuntimeOverrideBox
     private let backends: [RuntimeOption: any InferenceProvider]
     private let fallback: any InferenceProvider
 
     init(
         selection: RuntimeSelectionBox,
+        interimOverride: RuntimeOverrideBox,
         backends: [RuntimeOption: any InferenceProvider],
         fallback: any InferenceProvider
     ) {
         self.selection = selection
+        self.interimOverride = interimOverride
         self.backends = backends
         self.fallback = fallback
     }
 
     private var active: any InferenceProvider {
-        backends[selection.value] ?? fallback
+        backends[interimOverride.value ?? selection.value] ?? fallback
     }
 
     var isAvailable: Bool {
