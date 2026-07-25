@@ -1124,7 +1124,13 @@ private struct InterimMiniBanner: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .glassEffect(in: .rect(cornerRadius: 12))
+        // .regularMaterial, NOT glassEffect: a Liquid Glass surface near the
+        // titlebar that re-renders on every download-progress tick resonated
+        // with NSThemeFrame's corner-inset updates — the NSGenericException
+        // layout crash (3 instances, 07-25; master control soaked clean, this
+        // banner is the branch's only glass near the chrome). Material gives
+        // the same legibility without entering the glass/corner-inset cycle.
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         .padding(.top, 10)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Mini is answering while \(brainName) downloads. \(progressLine)")

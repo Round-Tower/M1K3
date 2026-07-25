@@ -139,6 +139,22 @@ final class AppEnvironment {
     /// `selectedRuntime`'s didSets — the box is read lock-side at generate
     /// time, so it can't be a computed property here.
     private let interimRuntimeOverride = RuntimeOverrideBox()
+    /// AFM availability CACHED for the gate (stored HERE — extensions can't
+    /// hold stored properties). The live probe
+    /// (`SystemLanguageModel.default.availability`) does real Security-
+    /// framework IPC — the unified log flags it as main-thread-unsafe — and
+    /// `chatGate` is evaluated on every download-progress tick. Worse than the
+    /// cost: a probe that wobbles `.available` ↔ `.notReady` under load makes
+    /// the gate OSCILLATE `.interim` ↔ `.blocked`, mounting/unmounting the
+    /// full ModelGateView per tick — the leading theory for the 07-25
+    /// NSGenericException layout crashes. Availability only genuinely changes
+    /// when the user flips Apple Intelligence in System Settings, so a
+    /// per-launch snapshot (invalidated on brain switch, see `selectBrain`)
+    /// is honest. First-run/onboarding flows keep their own live re-polls.
+    @ObservationIgnored var cachedBridgeAFM: AFMAvailability?
+    /// Last gate value the bridge saw — transition breadcrumbs only
+    /// (`.notice` because `.info`/`.debug` don't persist in OSLogStore).
+    @ObservationIgnored var lastBridgedGate: ChatGate?
     /// Call intelligence: encrypted-at-rest persistence + indexing into the SAME
     /// knowledge graph as documents (so calls are RAG-searchable) + two-stage
     /// summary. Composed from the M1K3Calls seams.
@@ -879,6 +895,10 @@ final class AppEnvironment {
     /// onChange for readiness (onboarding's waking screen) must advance itself.
     @discardableResult
     func selectBrain(_ tier: BrainTier) -> Bool {
+        // A brain switch is one of the few moments AFM availability can matter
+        // afresh (e.g. the user just enabled Apple Intelligence and came back)
+        // — drop the gate's snapshot so its next read re-probes live.
+        invalidateBridgeAFMCache()
         // Already on this exact MLX brain and it's loaded — re-selecting would spin up
         // a fresh MLXGemmaProvider (cold persona-KV prefix) and release the warm one,
         // repaying a multi-GB load + persona prefill for nothing. The predicate is
@@ -1334,8 +1354,20 @@ extension AppEnvironment {
         InterimBrainPolicy.gate(
             readiness: readiness,
             selectedRequiresWeights: selectedBrain.mlxModelID != nil,
-            afm: afmAvailability
+            afm: bridgeAFMAvailability
         )
+    }
+
+    private var bridgeAFMAvailability: AFMAvailability {
+        if let cachedBridgeAFM { return cachedBridgeAFM }
+        let value = afmAvailability
+        cachedBridgeAFM = value
+        return value
+    }
+
+    /// Invalidate the gate's AFM snapshot (next read re-probes live).
+    func invalidateBridgeAFMCache() {
+        cachedBridgeAFM = nil
     }
 
     /// Keeps the façade's routing override in lock-step with the gate: while
@@ -1344,7 +1376,12 @@ extension AppEnvironment {
     /// gate reads (`modelLoad`, `selectedRuntime`) — a computed value can't
     /// reach the Sendable box the provider reads at generate time.
     private func refreshInterimBridge() {
-        interimRuntimeOverride.value = chatGate == .interim ? .appleFoundationModels : nil
+        let gate = chatGate
+        interimRuntimeOverride.value = gate == .interim ? .appleFoundationModels : nil
+        if gate != lastBridgedGate {
+            Self.brainLog.notice("chatGate → \(String(describing: gate), privacy: .public)")
+            lastBridgedGate = gate
+        }
     }
 
     /// Warm the restored brain's model on launch so readiness can reach `.ready`
