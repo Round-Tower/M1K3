@@ -58,6 +58,12 @@ enum TurnNotifier {
         await post(title: "M1K3 is ready", body: "\(modelName) has finished loading.")
     }
 
+    /// A delegated deep dive landed in the chat. No content preview by design
+    /// (privacy — same stance as the turn-finished ping).
+    static func notifyDeepDiveFinished() async {
+        await post(title: "Deep dive finished", body: "M1K3's background work is ready in the chat.")
+    }
+
     /// Shared post path — generic content, no trigger (immediate). The center
     /// silently drops it if authorization was never granted.
     private static func post(title: String, body: String) async {
@@ -127,6 +133,14 @@ extension AppEnvironment {
     func maybeNotifyDownloadComplete(modelName: String, appActive: Bool) async {
         guard notificationsEnabled, !appActive else { return }
         await TurnNotifier.notifyDownloadComplete(modelName: modelName)
+    }
+
+    /// Ping when a delegated deep dive delivers — same gate as the model
+    /// lifecycle pings (opted in AND backgrounded; the transcript already
+    /// carries the result when the user is watching).
+    func maybeNotifyDeepDiveFinished(appActive: Bool) async {
+        guard notificationsEnabled, !appActive else { return }
+        await TurnNotifier.notifyDeepDiveFinished()
     }
 
     /// Ping when a model finishes loading and is ready to answer — same gate.

@@ -155,6 +155,17 @@ final class AppEnvironment {
     /// Last gate value the bridge saw — transition breadcrumbs only
     /// (`.notice` because `.info`/`.debug` don't persist in OSLogStore).
     @ObservationIgnored var lastBridgedGate: ChatGate?
+    /// delegate_deep state (stored HERE — extensions can't hold stored
+    /// properties; plain `var` because the writer lives in
+    /// AppEnvironment+DeepDelegation.swift, the `weightImportState` precedent).
+    /// nil = idle; non-nil = the task the deep lane is digging into.
+    var deepDelegationTaskLabel: String?
+    /// The in-flight delegated run — held (never cancelled by UI churn), the
+    /// voice-loop turnTask rule: the answer must land even if the user wanders.
+    @ObservationIgnored var deepDelegationTask: Task<Void, Never>?
+    /// Late-bound bridge the delegate_deep tool holds (the palette is built in
+    /// init before `self` exists); the handler installs at the end of init.
+    let deepDelegationHook = DeepDelegationHook()
     /// Call intelligence: encrypted-at-rest persistence + indexing into the SAME
     /// knowledge graph as documents (so calls are RAG-searchable) + two-stage
     /// summary. Composed from the M1K3Calls seams.
@@ -184,8 +195,12 @@ final class AppEnvironment {
     private let brainInventory = LocalModelInventory()
     /// The single MLX slot behind `RuntimeOption.mlxGemma` in the façade; re-pointed
     /// at `currentMLXProvider` whenever the brain switches between Lil and Big, so
-    /// the swap is seen without rebuilding the RAGResponder.
-    private let swappableMLX: SwappableInferenceProvider
+    /// the swap is seen without rebuilding the RAGResponder. Internal (not
+    /// private) for AppEnvironment+DeepDelegation.swift — the delegation lane
+    /// runs its responder DIRECTLY against this slot, bypassing the runtime
+    /// façade's interim override (which is busy routing interactive turns to
+    /// Mini while the slot digs).
+    let swappableMLX: SwappableInferenceProvider
     /// Voice input: WhisperKit (high accuracy, needs a model) routed ahead of
     /// Apple Speech (system framework, always available). Held directly so the
     /// app can load WhisperKit's model on demand. Internal (not private) for
@@ -582,7 +597,8 @@ final class AppEnvironment {
             provider: runtimeProvider,
             onOpenLink: { url in
                 Task { @MainActor in review.open(url: url) }
-            }
+            },
+            deepDelegation: deepDelegationHook
         )
 
         // TTS seam: Built-in Apple voice wrapped in a swappable façade so the
@@ -642,6 +658,12 @@ final class AppEnvironment {
         // Wire avatar + word highlight ↔ speech after all stored properties are
         // initialized (see the Voice output extension).
         wireSpeechCallbacks()
+        // Late-bind delegate_deep's handler (the tool was built above, before
+        // self existed). Weak: the tool must never keep the environment alive.
+        deepDelegationHook.install { [weak self] task in
+            guard let self else { return "Error: M1K3 is shutting down." }
+            return await self.startDeepDelegation(task)
+        }
         Self.resetVoiceModeFlagAtLaunch()
         mcpHost = MCPHostController(environment: self)
         mcpHost.startIfEnabled()
@@ -1370,14 +1392,22 @@ extension AppEnvironment {
         cachedBridgeAFM = nil
     }
 
-    /// Keeps the façade's routing override in lock-step with the gate: while
-    /// `.interim`, turns route to Mini; otherwise routing follows
-    /// `selectedRuntime` untouched. Called from the didSets of everything the
-    /// gate reads (`modelLoad`, `selectedRuntime`) — a computed value can't
-    /// reach the Sendable box the provider reads at generate time.
-    private func refreshInterimBridge() {
+    /// Keeps the façade's routing override in lock-step with the two reasons
+    /// interactive turns front on Mini: the selected brain's weights are still
+    /// downloading (`.interim`), or the MLX slot is busy with a delegate_deep
+    /// run (one MLX decode loop, ever — the challenger-pinned constraint).
+    /// Otherwise routing follows `selectedRuntime` untouched. Called from the
+    /// didSets of everything it reads (`modelLoad`, `selectedRuntime`) and
+    /// from the delegation start/finish — a computed value can't reach the
+    /// Sendable box the provider reads at generate time. Internal: the
+    /// delegation manager lives in its own file.
+    func refreshInterimBridge() {
         let gate = chatGate
-        interimRuntimeOverride.value = gate == .interim ? .appleFoundationModels : nil
+        let delegationFronting = deepDelegationTaskLabel != nil
+            && selectedBrain.mlxModelID != nil
+        interimRuntimeOverride.value = (gate == .interim || delegationFronting)
+            ? .appleFoundationModels
+            : nil
         if gate != lastBridgedGate {
             Self.brainLog.notice("chatGate → \(String(describing: gate), privacy: .public)")
             lastBridgedGate = gate
