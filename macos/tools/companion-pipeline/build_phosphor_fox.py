@@ -88,13 +88,20 @@ def _args(argv: Sequence[str]) -> tuple[str, str, float, tuple[float, float, flo
             if i + 1 >= len(rest):
                 raise SystemExit(f"{opt} needs a value")
             value = rest[i + 1]
-            if opt == "--thickness":
-                thickness = float(value)
-            else:
-                parts = [float(p) for p in value.split(",")]
-                if len(parts) != 3:
-                    raise SystemExit("--colour wants r,g,b (0..1)")
-                colour = (parts[0], parts[1], parts[2])
+            # float() on a malformed value would raise a raw ValueError traceback.
+            # Every other bad input here exits with a usage message; a typo'd number
+            # should too. (SystemExit derives from BaseException, so the arity check
+            # below still propagates rather than being swallowed as a ValueError.)
+            try:
+                if opt == "--thickness":
+                    thickness = float(value)
+                else:
+                    parts = [float(p) for p in value.split(",")]
+                    if len(parts) != 3:
+                        raise SystemExit("--colour wants r,g,b (0..1)")
+                    colour = (parts[0], parts[1], parts[2])
+            except ValueError:
+                raise SystemExit(f"{opt} wants a number, got {value!r}") from None
             i += 2
         else:
             raise SystemExit(f"unknown option {opt!r}")
