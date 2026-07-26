@@ -36,7 +36,7 @@ names:
 | Dialect      | Clips to export                                      | Source                                   |
 |--------------|------------------------------------------------------|------------------------------------------|
 | `quaternius` | `Idle_A,Idle_B,Walk,Run,Jump,Fear,Sit,Clicked`       | `app/3d/Quirky-Series-FREE-Animals.../Animations/<Name>_Animations.glb` |
-| `fox`        | `Survey,Walk,Run`                                    | Khronos Fox (`site/vendor/Fox.glb`)      |
+| `fox`        | `Survey,Walk,Run`                                    | Khronos Fox (`site/vendor/Fox.glb`); also PhosphorFox — same rig/clips, wireframe lattice baked in by `build_phosphor_fox.py` |
 | `aquatic`    | quaternius set + `Swim,Fly` (move→Swim, react→Fly)   | Quirky pack swimmers (Inkfish)           |
 | `avian`      | quaternius set + `Swim,Fly` (move→Fly, react→Jump)   | Quirky pack birds (Sparrow)              |
 

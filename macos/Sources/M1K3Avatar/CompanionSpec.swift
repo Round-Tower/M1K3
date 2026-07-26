@@ -13,6 +13,12 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-11, Confidence 0.7 (mapping is by-design;
 //  per-companion scale is a by-eye nudge on top of the view's auto-fit), Prior: Unknown
+//
+//  Review: Kev + claude-opus-5, 2026-07-26 — added `phosphorFox`, the site's hero
+//  look made real in Blender (tools/companion-pipeline/build_phosphor_fox.py). A pure
+//  data addition: the wireframe lattice is BAKED GEOMETRY, so no shader, renderer or
+//  picker change was needed. Gated `rkprobe --tick` 3/3 MOVES + 2187 tests green;
+//  the on-screen result is verify-at-⌘R.
 
 /// The two animation vocabularies in M1K3's companion lineup. The Quaternius
 /// "Quirky Series" pack shares a rich clip set (Idle_A/Idle_B/Walk/Run/Jump/Fear/…);
@@ -144,7 +150,32 @@ public struct CompanionSpec: Equatable, Sendable, Identifiable {
         clips: ["Idle_A", "Idle_B", "Walk", "Run", "Jump", "Fear", "Sit", "Clicked"]
     )
 
-    public static let all: [CompanionSpec] = [.fox, .inkfish, .sparrow, .gecko, .colobus]
+    /// The Phosphor Fox (2026-07-26) — the site's hero look, made real in Blender.
+    ///
+    /// m1k3.app renders its fox as a dark body plus an *additive glowing wireframe
+    /// shell* (`site/index.html` → `phosphorise()`): a see-through triangle lattice
+    /// you can look straight through to the far legs. The app's `.phosphor` shading
+    /// style is a different animal — a fresnel rim-glow, which lights the silhouette
+    /// but has no interior lattice — so the two never matched.
+    ///
+    /// A shader can't close that gap honestly: a surface shader only draws on front
+    /// faces over an opaque body, so the see-through quality (the thing that makes
+    /// the site read as a wireframe sculpture) is unreachable. So the lattice is
+    /// baked as **real geometry** instead. How — and why the modifier order is the
+    /// crux — is documented with the code that does it, not duplicated here:
+    /// `macos/tools/companion-pipeline/build_phosphor_fox.py`.
+    ///
+    /// Ships as its OWN creature rather than a re-skin: the look is in the asset, so
+    /// it needs no shader, and `.off` (baked) shading reproduces the site exactly.
+    /// Same Khronos rig → same `.fox` dialect, same three clips.
+    public static let phosphorFox = CompanionSpec(
+        id: "PhosphorFox",
+        displayName: "Phosphor Fox",
+        dialect: .fox,
+        clips: ["Survey", "Walk", "Run"]
+    )
+
+    public static let all: [CompanionSpec] = [.fox, .inkfish, .sparrow, .gecko, .colobus, .phosphorFox]
 
     /// Resolve a persisted picker id to a spec. The empty string (and any unknown
     /// id) means "pixel face" — the default — and returns nil.
