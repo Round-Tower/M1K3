@@ -102,6 +102,20 @@ struct CompanionTests {
         #expect(fox.scale > 0)
     }
 
+    @Test("Phosphor Fox is the Blender-built lattice fox, sharing the fox dialect")
+    func phosphorFoxSpec() {
+        let phos = CompanionSpec.phosphorFox
+        #expect(phos.id == "PhosphorFox")
+        #expect(phos.displayName == "Phosphor Fox")
+        // Same Khronos source rig, so the same three-clip dialect — the phosphor
+        // look is baked geometry, not a different animation vocabulary.
+        #expect(phos.dialect == .fox)
+        #expect(phos.clips == ["Survey", "Walk", "Run"])
+        #expect(phos.scale > 0)
+        // Distinct creature, not a re-skin of the same id (the picker keys on id).
+        #expect(phos.id != CompanionSpec.fox.id)
+    }
+
     @Test("clip(for:) resolves through gait → dialect in one hop")
     func endToEndClip() {
         #expect(ClipMapper.clip(for: .idle, dialect: .fox) == "Survey")
@@ -121,6 +135,7 @@ struct CompanionTests {
         #expect(CompanionSpec.named("Gecko") == .gecko)
         // Colobus joins the same day, same pipeline run (rkprobe 8/8 MOVES).
         #expect(CompanionSpec.named("Colobus") == .colobus)
+        #expect(CompanionSpec.named("PhosphorFox") == .phosphorFox)
         #expect(CompanionSpec.named("") == nil) // the pixel-face sentinel
         #expect(CompanionSpec.named("pixel") == nil)
         #expect(CompanionSpec.named("Wolpertinger") == nil)
