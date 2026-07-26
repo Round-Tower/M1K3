@@ -161,10 +161,9 @@ public struct CompanionSpec: Equatable, Sendable, Identifiable {
     /// A shader can't close that gap honestly: a surface shader only draws on front
     /// faces over an opaque body, so the see-through quality (the thing that makes
     /// the site read as a wireframe sculpture) is unreachable. So the lattice is
-    /// **real geometry** instead — Blender welds the GLB's triangle soup back into a
-    /// closed manifold (V−E+F = 2, 864 clean edges, no doubles) and a Wireframe
-    /// modifier turns every edge into a tube, baked at glTF export. Vertex groups
-    /// survive the modifier, so one skeleton drives body + lattice together.
+    /// baked as **real geometry** instead. How — and why the modifier order is the
+    /// crux — is documented with the code that does it, not duplicated here:
+    /// `macos/tools/companion-pipeline/build_phosphor_fox.py`.
     ///
     /// Ships as its OWN creature rather than a re-skin: the look is in the asset, so
     /// it needs no shader, and `.off` (baked) shading reproduces the site exactly.

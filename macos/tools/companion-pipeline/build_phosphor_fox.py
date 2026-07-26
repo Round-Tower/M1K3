@@ -136,6 +136,9 @@ def _weld(mesh: bpy.types.Mesh) -> tuple[int, int, int]:
 
     bm = bmesh.new()
     bm.from_mesh(mesh)
+    # dist=1e-4 on a model whose smallest real feature is ~1 unit: tight enough that
+    # only exact duplicate corners collapse, never two distinct nearby vertices — which
+    # matters because merging distinct verts WOULD blend different skin weights.
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
     bm.to_mesh(mesh)
     bm.free()
