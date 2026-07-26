@@ -80,17 +80,24 @@ def _args(argv: Sequence[str]) -> tuple[str, str, float, tuple[float, float, flo
     thickness, colour = DEFAULT_THICKNESS, SITE_WIRE
     i = 2
     while i < len(rest):
-        if rest[i] == "--thickness":
-            thickness = float(rest[i + 1])
-            i += 2
-        elif rest[i] in ("--colour", "--color"):
-            parts = [float(p) for p in rest[i + 1].split(",")]
-            if len(parts) != 3:
-                raise SystemExit("--colour wants r,g,b (0..1)")
-            colour = (parts[0], parts[1], parts[2])
+        opt = rest[i]
+        if opt in ("--thickness", "--colour", "--color"):
+            # Bounds-check before reading the value, so a trailing flag with no value
+            # exits with the usage message like every other bad input rather than
+            # raising a bare IndexError.
+            if i + 1 >= len(rest):
+                raise SystemExit(f"{opt} needs a value")
+            value = rest[i + 1]
+            if opt == "--thickness":
+                thickness = float(value)
+            else:
+                parts = [float(p) for p in value.split(",")]
+                if len(parts) != 3:
+                    raise SystemExit("--colour wants r,g,b (0..1)")
+                colour = (parts[0], parts[1], parts[2])
             i += 2
         else:
-            raise SystemExit(f"unknown option {rest[i]!r}")
+            raise SystemExit(f"unknown option {opt!r}")
     return src, dst, thickness, colour
 
 
