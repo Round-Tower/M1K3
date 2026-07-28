@@ -61,6 +61,8 @@ struct SettingsScreen: View {
                     }
                 }
 
+                CompanionPickerSection()
+
                 Section {
                     Toggle("Web search in chat", isOn: $webSearchEnabled)
                 } header: {

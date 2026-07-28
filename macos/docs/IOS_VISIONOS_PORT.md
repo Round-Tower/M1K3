@@ -355,3 +355,103 @@ _Signed: Kev + claude-fable-5, 2026-07-18 (Mac-feel pass), Confidence 0.85
 (composition of TDD'd shared pieces; sim-verified live — bloom/recede/scrim/
 streaming seen working; on-device feel + thermals verify-owed as named).
 Prior: Kev + claude-opus-4-8 (the shell this restyles)._
+
+---
+
+## Addendum — 2026-07-28: the 3D companions come to the phone + a design polish
+
+The mobile shell was **pixel-face only** — the five 3D companions (Fox, Inkfish,
+Sparrow, Gecko, Colobus) already shipped in `M1K3Avatar`'s bundle but nothing on
+iOS/visionOS could render them (the render path was AppKit-bound, Mac-only). This
+pass brings them across and adds the picker, following the exact pattern
+`AvatarView` set (port cross-platform, then add to the `MobileShell` template).
+
+### What shipped
+
+- **`CompanionDefaults` (M1K3Avatar)** — the companion/shading UserDefaults
+  spellings, hoisted into the package so BOTH composition roots share one source
+  of truth. Before this, `CompanionAvatarView` read `AppEnvironment.*` keys — a
+  Mac-only type it couldn't reference from the shell. `AppEnvironment+VoiceMode`
+  now aliases these (same string VALUES → no migration; a persisted choice reads
+  back identically).
+- **`CompanionAvatarView` + `PhosphorMaterial` cross-platform** — `#if
+  canImport(AppKit)/UIKit` guards (the one `NSColor` fill-light extraction); the
+  camera is `#if !os(visionOS)` (visionOS ignores in-scene cameras — sized in
+  metres there instead). Added to the `MobileShell` sources.
+- **`AvatarSurface` (shell)** — the iOS sibling of the Mac's resolver: pixel-vs-
+  creature (`.id(spec.id)` rebuild), read by the chat hero, the reactive
+  `ChatBackdrop`, onboarding, and the Settings live preview. One place decides
+  the face; every surface renders it.
+- **`CompanionPickerSection` (shell)** — the Mac's live-preview + glass face-card
+  vocabulary in iOS Settings; the skin (shading) picker shows only for a creature.
+  Self-extends from `CompanionSpec.all.filter(isInstalled)`.
+- **Design polish** — starter-prompt chips on the blank chat canvas (same
+  `canSend` gate + tap-to-send as the follow-up chips); a warmer onboarding (a
+  lively greeting beat that settles + an "everything runs on your device" line).
+
+### The visionOS gotcha this pass found (compile-verified)
+
+**RealityKit `CustomMaterial` surface shaders are macOS/iOS only.** The xrOS SDK
+ships no `RealityKit.h` Metal header and no `CustomMaterial` (visionOS uses
+`ShaderGraphMaterial`), so `Phosphor.metal` + `PhosphorMaterial.swift` **cannot**
+compile for visionOS. They live on the `M1K3iOS` target alone (not the shared
+`MobileShell` template), and `CompanionAvatarView` `#if !os(visionOS)`'s out its
+shading calls. On Vision Pro a companion shows its **baked textures** (no
+phosphor/cel) — the skin picker is hidden there. Creatures themselves render on
+all three platforms.
+
+### The RealityView "swap → black" trap (found on-sim, refactored)
+
+On-simulator verification (driven UI) surfaced a real bug the first cut shipped:
+the companion live-preview rendered the FIRST creature but went **permanently
+black on any switch** — creature→creature AND creature→pixel. Root cause was the
+iOS RealityView lifecycle: `AvatarSurface` used `.id(spec.id)` to force a rebuild
+on switch, but **recreating a RealityView within a persisted iOS view tree renders
+the new one black** (the pixel face survived because it populates its content
+synchronously; the creature populates *after* an `await` on the USDZ load, which a
+swapped-in iOS RealityView doesn't present).
+
+The fix (this pass): `CompanionAvatarView` was reworked to a **single stable
+RealityView** — a persistent `root` + lights + camera built once, and the creature
+mesh swapped as `root`'s children **in place** (a monotonic reload token drops
+superseded loads). The iOS `AvatarSurface` drops `.id` so the view identity
+persists (the Mac's `AvatarSurface` keeps `.id` — recreation renders fine on
+macOS, so zero Mac change). Two supporting robustness fixes rode along: a
+process-level clip cache (RealityKit's `Entity(contentsOf:)` can hand back an
+animationless clone on repeat loads) and "render the static mesh rather than
+nothing" when an idle clip is missing.
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `xcodebuild -scheme M1K3iOS` (iPhone 17 Pro sim, iOS 27) | **BUILD SUCCEEDED** |
+| `xcodebuild -scheme M1K3visionOS` (Vision Pro sim) | **BUILD SUCCEEDED** |
+| `xcodebuild -scheme M1K3` (My Mac) | **BUILD SUCCEEDED** (non-regressive) |
+| `swift test --parallel` | **2186 tests / 314 suites passed** |
+| iOS Simulator, driven UI | pixel face renders + switches cleanly; **creature render unconfirmed** (see below) |
+
+**⚠️ Verify-owed — creature render on a real device (the headline caveat).** The
+iOS **Simulator is not a reliable oracle for RealityView**: async-populated content
+in a swapped-in RealityView does not present there, so the driven-UI check could
+NOT confirm the 3D creatures render on iOS (only the synchronous pixel face was
+confirmed). This is compile-green + architecture-sound, but **whether Fox/Inkfish/
+Sparrow/Gecko/Colobus actually render on an iPhone / Vision Pro is verify-by-launch
+on real hardware** — deliberately shipped to PR with this flagged (Kev's call) for
+a device check + review to drive any follow-up. The build installs to a connected
+device cleanly.
+
+Other named follow-ups: visionOS companion framing (the 0.45 m absolute-size guess
+vs a proper scene-bounds fit) is Phase-D; `paused` isn't threaded to the creature
+surface yet (same logged follow-up as the Mac); navigation/section structure left
+as-is — the adaptive sidebar is already sound, restructuring blind wasn't worth the
+regression risk.
+
+_Signed: Kev + claude-opus-4-8, 2026-07-28 (companions-on-mobile + polish +
+RealityView swap-fix), Confidence 0.7 (all three targets BUILD SUCCEEDED via real
+xcodebuild; macOS 2186/314 green proves non-regression; the CustomMaterial/visionOS
+split is compile-proven; the swap→black bug was found by driven-UI on-sim and the
+in-place-reload refactor is architecture-sound. The 0.7 (not higher) is deliberate:
+the Simulator can't confirm the 3D creatures render on iOS — that's the named
+verify-owed, shipped to PR flagged for a real-device check, Kev's call). Prior: Kev
++ claude-fable-5 (the Mac-feel pass this builds on)._

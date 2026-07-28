@@ -63,6 +63,14 @@ targetTemplates:
       - path: M1K3App/PixelFont.swift
       - path: M1K3App/ReadingMode.swift
       - path: M1K3App/ReadingText.swift
+      # The opt-in 3D companion creatures (Fox/Inkfish/Sparrow/Gecko/Colobus): the
+      # RealityKit render path, #if-guarded for iOS/visionOS. The assets ship in
+      # M1K3Avatar's bundle already. NOTE: the shading glue (PhosphorMaterial.swift
+      # + Phosphor.metal) is NOT here — CustomMaterial surface shaders are macOS/iOS
+      # only (visionOS uses ShaderGraphMaterial, and the xrOS SDK ships no
+      # RealityKit.h Metal header), so those two files live on the iOS target alone
+      # and CompanionAvatarView #if's out its shading calls on visionOS.
+      - path: M1K3App/CompanionAvatarView.swift
       - path: M1K3App/Resources/Fonts/Silkscreen-Regular.ttf
         buildPhase: resources
       - path: M1K3App/Resources/Fonts/Silkscreen-Bold.ttf
@@ -219,6 +227,12 @@ targets:
       - path: M1K3.icon
         type: file
         buildPhase: resources
+      # Companion shading (Phosphor/Cel) rides RealityKit CustomMaterial surface
+      # shaders — macOS/iOS only. Lives on the iOS target (not the shared
+      # MobileShell template) because the visionOS SDK ships no RealityKit.h Metal
+      # header and no CustomMaterial; the visionOS sibling shows baked textures.
+      - path: M1K3App/PhosphorMaterial.swift
+      - path: M1K3App/Phosphor.metal
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.m1k3.ios

@@ -18,6 +18,7 @@
 import AppKit
 import AVFoundation
 import Foundation
+import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
 import M1K3Voice
@@ -47,17 +48,19 @@ extension AppEnvironment {
     /// Persisted voice-mode avatar choice. Empty string (default) = the pixel face;
     /// otherwise a CompanionSpec id (e.g. "Fox"). The picker writes it; the VoiceDock
     /// (via AvatarSurface) reads it. The pixel face stays M1K3's default everywhere else.
-    nonisolated static let voiceCompanionKey = "voiceMode.companion"
+    /// The string lives in `CompanionDefaults` (M1K3Avatar) so the shared
+    /// CompanionAvatarView + the iOS AppCore read the same slot — same value as before.
+    nonisolated static let voiceCompanionKey = CompanionDefaults.companionKey
 
     /// Sentinel `voiceCompanion` value selecting the live 3D memory constellation
     /// as the companion (not a CompanionSpec id — it's procedural, not a USDZ
     /// creature). Distinct from "" (pixel face) and any spec id.
-    nonisolated static let voiceCompanionConstellation = "memory-constellation"
+    nonisolated static let voiceCompanionConstellation = CompanionDefaults.constellationID
 
     /// Shading style for 3D creature companions (off / phosphor / cel). Stores a
     /// `CompanionShadingStyle` rawValue. One source of truth shared by
     /// CompanionAvatarView (applies it) and Settings (picks it) — default off.
-    nonisolated static let companionShadingKey = "companion.shadingStyle"
+    nonisolated static let companionShadingKey = CompanionDefaults.shadingStyleKey
 
     /// UI earcons (error / memory-saved / voice-mode-enter) — ON by default,
     /// switchable in Settings. Absent key reads as enabled.

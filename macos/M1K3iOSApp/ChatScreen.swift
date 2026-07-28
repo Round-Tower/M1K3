@@ -89,7 +89,7 @@ struct ChatScreen: View {
     private var hero: some View {
         VStack(spacing: 6) {
             if !chatting {
-                AvatarView(controller: core.avatar)
+                AvatarSurface(controller: core.avatar)
                     .frame(height: 168)
                     .padding(.horizontal, 56)
                 Text("M1K3")
@@ -208,16 +208,61 @@ struct ChatScreen: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Text("Ask me anything.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Text("Grounded in your documents and memories — on device.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
+        VStack(spacing: 14) {
+            VStack(spacing: 8) {
+                Text("Ask me anything.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Text("Grounded in your documents and memories — on device.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+            }
+            starterChips
         }
         .padding(.top, 28)
+    }
+
+    /// Starter prompts for the blank canvas — the same tap-to-send path (and the
+    /// same `canSend` gate) as the reply follow-up chips, so a tap while the brain
+    /// is still warming is a no-op rather than an eaten message. Dimmed until ready
+    /// so the readiness hint in the hero reads as the reason.
+    private var starterChips: some View {
+        VStack(spacing: 8) {
+            ForEach(Self.starters, id: \.self) { prompt in
+                Button { sendStarter(prompt) } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkle")
+                            .font(.caption2)
+                            .foregroundStyle(.tint)
+                        Text(prompt)
+                            .font(.callout)
+                            .foregroundStyle(.primary)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .m1k3Glass(cornerRadius: 14)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: 340)
+        .opacity(canSend ? 1 : 0.5)
+        .padding(.top, 4)
+    }
+
+    private static let starters = [
+        "What can you help me with?",
+        "Explain something simply",
+        "What do you remember about me?",
+    ]
+
+    private func sendStarter(_ prompt: String) {
+        guard canSend else { return }
+        Task { await core.send(prompt) }
     }
 
     // MARK: - Input bar

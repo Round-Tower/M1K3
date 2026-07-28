@@ -45,7 +45,7 @@ struct ChatBackdrop: View {
             // paused honors the treatment's promise: recede/still/Reduce Motion
             // render one crisp frame and go QUIET — no 30fps churn under a live
             // blur while MLX is generating, no battery cost under Low Power.
-            AvatarView(controller: core.avatar, paused: !resolved.animatesMotion)
+            AvatarSurface(controller: core.avatar, paused: !resolved.animatesMotion)
                 .scaleEffect(resolved.scale)
                 .blur(radius: resolved.blur)
                 .opacity(resolved.opacity)

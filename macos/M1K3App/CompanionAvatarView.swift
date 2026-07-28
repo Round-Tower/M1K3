@@ -12,18 +12,53 @@
 //  claude-opus-4-8 (CompanionScene/CompanionAvatarView originate in AvatarView.swift,
 //  2026-06-11; moved here verbatim).
 
-import AppKit
+// AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
+// cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
+// colour extraction is platform-specific; RealityKit + the shading glue are not.
+#if canImport(AppKit)
+    import AppKit
+#elseif canImport(UIKit)
+    import UIKit
+#endif
 import M1K3Avatar
+import os
 import RealityKit
 import SwiftUI
 
 // MARK: - Companion avatar (opt-in 3D creature)
+
+/// Process-level cache of harvested clips per companion id.
+///
+/// RealityKit's `Entity(contentsOf:)` keeps an internal asset cache, and on a
+/// REPEAT load of the same USDZ it can hand back an instance whose
+/// `availableAnimations` is EMPTY (the animations live on the first-loaded root).
+/// Harvesting per-mount therefore worked for the first companion shown and left
+/// every one after it a black, unbuilt view — the "first renders, switches go
+/// black; none appear on device" bug. So we harvest ONCE per companion and reuse
+/// the AnimationResources: they replay across fresh Entity instances of the same
+/// rig, which is exactly how the cross-clip donor harvest already binds them.
+@MainActor
+enum CompanionClipCache {
+    static var byCompanion: [String: [String: AnimationResource]] = [:]
+}
 
 /// Stable storage for the loaded companion: the mesh-bearing host entity and the
 /// harvested per-clip animations. NOT @Observable — like AvatarScene, the update
 /// closure drives it while SwiftUI is mid-graph-update.
 @MainActor
 final class CompanionScene {
+    /// The persistent root added to the RealityView ONCE. Creatures are swapped as
+    /// its children in place, so the RealityView itself is never recreated on a
+    /// companion switch — the fix for the iOS "swap → black" lifecycle trap.
+    var root: Entity?
+    /// The scaffold (root + lights + camera) has been built into the RealityView.
+    var scaffoldBuilt = false
+    /// Which companion's mesh is currently loaded into `root` — drives the in-place
+    /// reload in the update closure (reload only when this differs from the binding).
+    var loadedCompanionID: String?
+    /// Monotonic reload token: a load that finishes after a newer one started is
+    /// dropped, so rapid switches never leave an older creature winning the swap.
+    var loadToken = 0
     var host: Entity?
     var fillLight: DirectionalLight?
     /// Clip name → harvested animation resource (cross-bound onto `host`'s rig).
@@ -62,7 +97,7 @@ struct CompanionAvatarView: View {
 
     /// Opt-in shading style (phosphor glow / cel toon) over the companion's baked
     /// textures. Applies on build and switches live when the picker changes.
-    @AppStorage(AppEnvironment.companionShadingKey) private var shadingRaw = CompanionShadingStyle.off.rawValue
+    @AppStorage(CompanionDefaults.shadingStyleKey) private var shadingRaw = CompanionShadingStyle.off.rawValue
 
     private var shadingStyle: CompanionShadingStyle {
         CompanionShadingStyle(rawValue: shadingRaw) ?? .off
@@ -70,8 +105,17 @@ struct CompanionAvatarView: View {
 
     @State private var scene = CompanionScene()
 
-    /// Fit the creature's largest dimension to this many world units, then frame it.
-    private static let targetSize: Float = 1.7
+    // Fit the creature's largest dimension to this many world units, then frame it.
+    // macOS/iOS frame it with a fixed PerspectiveCamera, so the absolute size only
+    // has to suit that camera (1.7). visionOS IGNORES in-scene cameras and renders
+    // at TRUE world scale inside the window volume, so there the creature is sized
+    // in metres to sit comfortably in a window (~0.45 m). Exact visionOS framing is
+    // Phase-D verify-owed — no device run this pass.
+    #if os(visionOS)
+        private static let targetSize: Float = 0.45
+    #else
+        private static let targetSize: Float = 1.7
+    #endif
     /// A flattering three-quarter base pose (radians about Y) rather than head-on —
     /// after the upright correction the creature's length runs in Z (depth), so this
     /// turns its broadside toward the camera.
@@ -79,17 +123,35 @@ struct CompanionAvatarView: View {
 
     var body: some View {
         RealityView { content in
-            await build(into: &content)
+            // Build the STABLE scaffold once — a persistent root + lights + camera.
+            // The creature is loaded into `root` and reloaded IN PLACE when the
+            // selection changes; the RealityView is never recreated, so it can't go
+            // black on a swap (the iOS "swap → black" lifecycle trap that made every
+            // companion after the first render as a black panel).
+            let root = Entity()
+            content.add(root)
+            scene.root = root
+            addLighting(to: &content)
+            #if !os(visionOS)
+                addCamera(to: &content)
+            #endif
+            scene.scaffoldBuilt = true
+            await reload(to: companion)
         } update: { _ in
-            guard scene.built else { return }
-            sync(to: controller.state)
+            guard scene.scaffoldBuilt else { return }
+            if companion.id != scene.loadedCompanionID {
+                // Selection changed → swap the creature into the SAME RealityView.
+                Task { await reload(to: companion) }
+            } else if scene.built {
+                sync(to: controller.state)
+            }
         }
         .overlay(CRTOverlay())
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: - Build (once, async)
+    // MARK: - Load a creature into the persistent root (in place)
 
     /// Blender exports Z-up; RealityKit is Y-up, so a companion loads standing on
     /// its nose. The base pose pitches it upright (−90° about X) THEN turns it to
@@ -101,45 +163,81 @@ struct CompanionAvatarView: View {
             * simd_quatf(angle: blenderZUpCorrection, axis: [1, 0, 0])
     }
 
-    private func build(into content: inout some RealityViewContentProtocol) async {
+    private static let log = Logger(subsystem: "app.m1k3", category: "companion")
+
+    /// Load `companion`'s mesh and swap it into the persistent `root` IN PLACE — the
+    /// RealityView, lights and camera are untouched, so a switch can never blank the
+    /// surface. Cancels stragglers via a monotonic token (a slow load that finishes
+    /// after a newer switch is dropped). Called once on build and again whenever the
+    /// selection changes.
+    private func reload(to companion: CompanionSpec) async {
+        guard let root = scene.root else { return }
+        scene.loadToken += 1
+        let token = scene.loadToken
+        // Claim the target NOW so the (high-frequency) update closure doesn't spawn a
+        // second reload for the same companion while this load is in flight.
+        scene.loadedCompanionID = companion.id
+
         guard let idleURL = CompanionAssets.clipURL(companion: companion.id, clip: companion.idleClip),
               let host = try? await Entity(contentsOf: idleURL)
-        else { return }
+        else {
+            Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
+            return // keep whatever creature is already shown rather than blanking
+        }
+        guard token == scene.loadToken else { return } // a newer switch superseded us
 
-        let clips = await harvestClips(idleHost: host)
-        // A loaded-but-animationless asset (corrupt or re-exported without the clip
-        // baked) would render a frozen bind pose. Treat it like a missing file:
-        // require the resting clip, and otherwise don't claim `built` — so a broken
-        // asset never enters voice mode as a static mesh masquerading as the companion.
-        guard let idle = clips[companion.idleClip] else { return }
+        // Reuse the process-cached clips when we've harvested this companion before:
+        // RealityKit's asset cache can return an animationless clone on a repeat load,
+        // which is what left re-mounted companions animation-less. Harvest (and cache)
+        // only on the first miss. See CompanionClipCache.
+        let clips: [String: AnimationResource]
+        if let cached = CompanionClipCache.byCompanion[companion.id], !cached.isEmpty {
+            clips = cached
+        } else {
+            let harvested = await harvestClips(idleHost: host)
+            if !harvested.isEmpty { CompanionClipCache.byCompanion[companion.id] = harvested }
+            clips = harvested
+        }
+        guard token == scene.loadToken else { return }
 
         // Pose BEFORE fit() so the recentre + scale measure the final, upright silhouette.
         host.orientation = Self.basePose
         fit(host)
 
-        let root = Entity()
+        // The swap: drop the previous creature, add the new one to the SAME root.
+        scene.host?.removeFromParent()
         root.addChild(host)
-        content.add(root)
-        addLighting(to: &content)
-        addCamera(to: &content)
-        host.playAnimation(idle.repeat(), transitionDuration: 0.3)
 
-        // Snapshot the baked materials BEFORE any shader, so cel can adapt the fur
-        // texture and Off can restore it on a live switch.
-        scene.bakedMaterials = PhosphorMaterial.snapshotMaterials(of: host)
+        // Play the resting clip if we have it; otherwise render the STATIC mesh rather
+        // than nothing. A frozen creature reads as quiet/loading; a black panel reads
+        // as broken — and the mesh appearing at all is the whole point.
+        if let idle = clips[companion.idleClip] {
+            host.playAnimation(idle.repeat(), transitionDuration: 0.3)
+        } else {
+            Self.log.warning("companion \(companion.id, privacy: .public): no idle clip harvested — static mesh")
+        }
 
-        // Opt-in shading style: paint the selected M1K3 shader over the baked
-        // materials. Rides the skeletal animation for free (per-fragment shader,
-        // blind to the rig). Falls back silently if the shader can't load.
         let activity = controller.state.activity
-        PhosphorMaterial.apply(
-            shadingStyle, treatment: activity.phosphorTreatment,
-            originals: scene.bakedMaterials, to: host
-        )
+        // Opt-in shading style: paint the selected M1K3 shader over the baked
+        // materials. CustomMaterial surface shaders are macOS/iOS only — on visionOS
+        // the creature simply shows its baked textures (see PhosphorMaterial note).
+        #if !os(visionOS)
+            // Snapshot the baked materials BEFORE any shader, so cel can adapt the
+            // fur texture and Off can restore it on a live switch.
+            scene.bakedMaterials = PhosphorMaterial.snapshotMaterials(of: host)
+            // Rides the skeletal animation for free (per-fragment shader, blind to
+            // the rig). Falls back silently if the shader can't load.
+            PhosphorMaterial.apply(
+                shadingStyle, treatment: activity.phosphorTreatment,
+                originals: scene.bakedMaterials, to: host
+            )
+        #endif
 
         scene.host = host
         scene.clips = clips
-        scene.currentClip = companion.idleClip
+        // nil when the idle clip is missing, so sync() will try to start a real clip
+        // as soon as the state changes rather than believing idle is already playing.
+        scene.currentClip = clips[companion.idleClip] != nil ? companion.idleClip : nil
         scene.lastEmotion = controller.state.emotion
         scene.lastActivity = activity
         scene.lastShadingStyle = shadingStyle
@@ -194,11 +292,13 @@ struct CompanionAvatarView: View {
         scene.fillLight = fill
     }
 
-    private func addCamera(to content: inout some RealityViewContentProtocol) {
-        let camera = PerspectiveCamera()
-        camera.look(at: [0, 0, 0], from: [0, 0.15, 2.4], relativeTo: nil)
-        content.add(camera)
-    }
+    #if !os(visionOS)
+        private func addCamera(to content: inout some RealityViewContentProtocol) {
+            let camera = PerspectiveCamera()
+            camera.look(at: [0, 0, 0], from: [0, 0.15, 2.4], relativeTo: nil)
+            content.add(camera)
+        }
+    #endif
 
     // MARK: - Per-update sync
 
@@ -212,16 +312,19 @@ struct CompanionAvatarView: View {
 
         // Reactive shading: shift the glow/tint with M1K3's state, AND repaint live
         // when the style picker changes (incl. restoring textures on switch to Off).
-        // Re-paint only on a real change — sync() runs ~30 fps.
-        let style = shadingStyle
-        if let host = scene.host, state.activity != scene.lastActivity || style != scene.lastShadingStyle {
-            PhosphorMaterial.apply(
-                style, treatment: state.activity.phosphorTreatment,
-                originals: scene.bakedMaterials, to: host
-            )
-            scene.lastActivity = state.activity
-            scene.lastShadingStyle = style
-        }
+        // Re-paint only on a real change — sync() runs ~30 fps. macOS/iOS only
+        // (CustomMaterial is unavailable on visionOS — see build()).
+        #if !os(visionOS)
+            let style = shadingStyle
+            if let host = scene.host, state.activity != scene.lastActivity || style != scene.lastShadingStyle {
+                PhosphorMaterial.apply(
+                    style, treatment: state.activity.phosphorTreatment,
+                    originals: scene.bakedMaterials, to: host
+                )
+                scene.lastActivity = state.activity
+                scene.lastShadingStyle = style
+            }
+        #endif
 
         let desired = ClipMapper.clip(for: state, dialect: companion.dialect)
         guard desired != scene.currentClip, let resource = scene.clips[desired], let host = scene.host
@@ -232,9 +335,17 @@ struct CompanionAvatarView: View {
     }
 
     /// Accent colour for the fill light. Neutral gets a soft warm white rather than
-    /// the dynamic `.secondary` grey, which doesn't read as light.
-    private static func fillColor(for emotion: AvatarEmotion) -> NSColor {
-        guard emotion != .neutral else { return NSColor(white: 0.95, alpha: 1) }
-        return NSColor(emotion.accentColor).usingColorSpace(.deviceRGB) ?? .white
+    /// the dynamic `.secondary` grey, which doesn't read as light. `Material.Color`
+    /// is `NSColor` on macOS and `UIColor` on iOS/visionOS — only NSColor exposes
+    /// `.usingColorSpace`, so the extraction branches by platform (the AvatarView pattern).
+    private static func fillColor(for emotion: AvatarEmotion) -> RealityKit.Material.Color {
+        guard emotion != .neutral else {
+            return RealityKit.Material.Color(white: 0.95, alpha: 1)
+        }
+        #if canImport(AppKit)
+            return NSColor(emotion.accentColor).usingColorSpace(.deviceRGB) ?? .white
+        #else
+            return RealityKit.Material.Color(emotion.accentColor)
+        #endif
     }
 }
