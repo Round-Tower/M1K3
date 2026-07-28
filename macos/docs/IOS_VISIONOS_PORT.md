@@ -386,9 +386,11 @@ pass brings them across and adds the picker, following the exact pattern
 - **`CompanionPickerSection` (shell)** — the Mac's live-preview + glass face-card
   vocabulary in iOS Settings; the skin (shading) picker shows only for a creature.
   Self-extends from `CompanionSpec.all.filter(isInstalled)`.
-- **Design polish** — starter-prompt chips on the blank chat canvas (same
-  `canSend` gate + tap-to-send as the follow-up chips); a warmer onboarding (a
-  lively greeting beat that settles + an "everything runs on your device" line).
+- **Design polish** — starter-prompt chips on the blank chat canvas (gated on
+  `brainReady` = `!isResponding && isReady` + tap-to-send, the same gate the
+  follow-up chips use — NOT `canSend`, which also requires a non-empty draft the
+  empty canvas never has); a warmer onboarding (a lively greeting beat that settles
+  + an "everything runs on your device" line).
 
 ### The visionOS gotcha this pass found (compile-verified)
 

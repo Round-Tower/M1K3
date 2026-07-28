@@ -203,6 +203,14 @@ struct CompanionAvatarView: View {
             // from re-spawning the doomed load every tick (a retry storm). sync() reads
             // `displayedCompanion` (still the on-screen creature), so animation stays
             // correct even though the claim points at the failed target.
+            //
+            // Edge case: if this fails on the FIRST load of a companion (nothing yet
+            // displayed — scene.host == nil), the surface stays blank until the user
+            // re-selects (picking another face and back re-triggers update → reload).
+            // Only reachable via a corrupt bundled USDZ that still resolves as a URL
+            // (isInstalled checks resolution, not decodability) — i.e. a packaging bug,
+            // not a runtime one. Accepting the reselect-to-recover path over a per-tick
+            // retry storm; the assets are pipeline-validated (rkprobe --tick) before ship.
             Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
             return
         }
