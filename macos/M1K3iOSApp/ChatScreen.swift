@@ -174,12 +174,13 @@ struct ChatScreen: View {
                             message: message,
                             scrimmed: backdropActive,
                             onSendFollowUp: { question in
-                                // Same gate as the input bar (see send()) — chips on
-                                // EARLIER turns stay tappable while a new answer
-                                // streams; ChatSession would silently drop the send
-                                // and the avatar epilogue would bloom the backdrop
-                                // over the streaming text.
-                                guard !core.chat.isResponding, core.isReady else { return }
+                                // Same gate the starter chips use (brainReady) — chips
+                                // carry their own prompt, so no draft dependency; chips
+                                // on EARLIER turns stay tappable while a new answer
+                                // streams (ChatSession would otherwise silently drop the
+                                // send and the avatar epilogue would bloom the backdrop
+                                // over the streaming text).
+                                guard brainReady else { return }
                                 Task { await core.send(question) }
                             }
                         )

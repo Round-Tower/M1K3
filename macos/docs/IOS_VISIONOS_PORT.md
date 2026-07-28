@@ -379,7 +379,8 @@ pass brings them across and adds the picker, following the exact pattern
   camera is `#if !os(visionOS)` (visionOS ignores in-scene cameras — sized in
   metres there instead). Added to the `MobileShell` sources.
 - **`AvatarSurface` (shell)** — the iOS sibling of the Mac's resolver: pixel-vs-
-  creature (`.id(spec.id)` rebuild), read by the chat hero, the reactive
+  creature (identity kept stable — **no** `.id(spec.id)`; the creature reloads in
+  place, see the swap→black fix below), read by the chat hero, the reactive
   `ChatBackdrop`, onboarding, and the Settings live preview. One place decides
   the face; every surface renders it.
 - **`CompanionPickerSection` (shell)** — the Mac's live-preview + glass face-card

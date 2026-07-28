@@ -11,6 +11,12 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.85, Prior: Kev +
 //  claude-opus-4-8 (CompanionScene/CompanionAvatarView originate in AvatarView.swift,
 //  2026-06-11; moved here verbatim).
+//  Review: Kev + claude-opus-4-8, 2026-07-28 — cross-platform for the iOS/visionOS
+//  shell (#if AppKit/UIKit; visionOS camera + CustomMaterial shading gated off) and
+//  reworked to a SINGLE stable RealityView: a persistent root + lights + camera built
+//  once, the creature swapped in place with a monotonic loadToken, so an iOS companion
+//  switch can't recreate the RealityView (the "swap → black" lifecycle trap). Plus a
+//  process-level clip cache and render-the-static-mesh-not-nothing on a missing idle.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
