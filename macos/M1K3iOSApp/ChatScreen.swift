@@ -250,7 +250,10 @@ struct ChatScreen: View {
             }
         }
         .frame(maxWidth: 340)
-        .opacity(canSend ? 1 : 0.5)
+        // brainReady, NOT canSend: the chips live on the EMPTY canvas (draft == ""),
+        // and canSend requires a non-empty draft — so canSend would dim them by
+        // default and swallow every tap even when the brain is warm and ready.
+        .opacity(brainReady ? 1 : 0.5)
         .padding(.top, 4)
     }
 
@@ -261,7 +264,10 @@ struct ChatScreen: View {
     ]
 
     private func sendStarter(_ prompt: String) {
-        guard canSend else { return }
+        // The chip carries its own prompt, so gate on brain readiness only — NOT
+        // canSend (which requires a non-empty draft the empty canvas never has). Same
+        // gate the reply follow-up chips use.
+        guard brainReady else { return }
         Task { await core.send(prompt) }
     }
 
@@ -295,9 +301,15 @@ struct ChatScreen: View {
     }
 
     private var canSend: Bool {
-        !core.chat.isResponding
-            && core.isReady
+        brainReady
             && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Ready to send a prompt that DOESN'T come from the input bar (starter +
+    /// follow-up chips carry their own text). No `draft` dependency — the difference
+    /// that makes canSend wrong for the chips.
+    private var brainReady: Bool {
+        !core.chat.isResponding && core.isReady
     }
 
     private func send() {

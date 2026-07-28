@@ -53,9 +53,16 @@ final class CompanionScene {
     var root: Entity?
     /// The scaffold (root + lights + camera) has been built into the RealityView.
     var scaffoldBuilt = false
-    /// Which companion's mesh is currently loaded into `root` — drives the in-place
-    /// reload in the update closure (reload only when this differs from the binding).
+    /// The claimed target companion id — the in-place-reload gate. Set SYNCHRONOUSLY
+    /// by the caller (make/update) before spawning the load, so the high-frequency
+    /// update closure can't spawn a second reload Task for the same target. Left
+    /// pointing at a failed target on load failure (deliberately — no retry storm);
+    /// `displayedCompanion` is what's actually on screen.
     var loadedCompanionID: String?
+    /// The companion actually rendered in `root` right now — may lag
+    /// `loadedCompanionID` when a newer load is in flight or failed. sync() reads ITS
+    /// dialect, so a failed switch keeps animating the creature that's really shown.
+    var displayedCompanion: CompanionSpec?
     /// Monotonic reload token: a load that finishes after a newer one started is
     /// dropped, so rapid switches never leave an older creature winning the swap.
     var loadToken = 0
@@ -136,12 +143,18 @@ struct CompanionAvatarView: View {
                 addCamera(to: &content)
             #endif
             scene.scaffoldBuilt = true
+            scene.loadedCompanionID = companion.id
             await reload(to: companion)
         } update: { _ in
             guard scene.scaffoldBuilt else { return }
             if companion.id != scene.loadedCompanionID {
-                // Selection changed → swap the creature into the SAME RealityView.
-                Task { await reload(to: companion) }
+                // Selection changed → claim the target SYNCHRONOUSLY here (not inside
+                // the async Task), so this high-frequency closure can't spawn a second
+                // reload for the same companion before the first begins. The swap
+                // happens in the SAME RealityView (no recreation → no black).
+                scene.loadedCompanionID = companion.id
+                let target = companion
+                Task { await reload(to: target) }
             } else if scene.built {
                 sync(to: controller.state)
             }
@@ -174,15 +187,18 @@ struct CompanionAvatarView: View {
         guard let root = scene.root else { return }
         scene.loadToken += 1
         let token = scene.loadToken
-        // Claim the target NOW so the (high-frequency) update closure doesn't spawn a
-        // second reload for the same companion while this load is in flight.
-        scene.loadedCompanionID = companion.id
+        // `loadedCompanionID` was claimed synchronously by the caller (make/update).
 
         guard let idleURL = CompanionAssets.clipURL(companion: companion.id, clip: companion.idleClip),
               let host = try? await Entity(contentsOf: idleURL)
         else {
+            // Keep whatever creature is already shown rather than blanking. We do NOT
+            // revert loadedCompanionID: leaving it on the failed target stops update()
+            // from re-spawning the doomed load every tick (a retry storm). sync() reads
+            // `displayedCompanion` (still the on-screen creature), so animation stays
+            // correct even though the claim points at the failed target.
             Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
-            return // keep whatever creature is already shown rather than blanking
+            return
         }
         guard token == scene.loadToken else { return } // a newer switch superseded us
 
@@ -234,6 +250,7 @@ struct CompanionAvatarView: View {
         #endif
 
         scene.host = host
+        scene.displayedCompanion = companion // what's really on screen now (sync reads its dialect)
         scene.clips = clips
         // nil when the idle clip is missing, so sync() will try to start a real clip
         // as soon as the state changes rather than believing idle is already playing.
@@ -326,7 +343,11 @@ struct CompanionAvatarView: View {
             }
         #endif
 
-        let desired = ClipMapper.clip(for: state, dialect: companion.dialect)
+        // Use the DISPLAYED companion's dialect, not the binding's: if a switch failed
+        // to load, the binding points at the failed target while the previous creature
+        // is still on screen, and its clip vocabulary is what `scene.clips`/`host` hold.
+        let dialect = (scene.displayedCompanion ?? companion).dialect
+        let desired = ClipMapper.clip(for: state, dialect: dialect)
         guard desired != scene.currentClip, let resource = scene.clips[desired], let host = scene.host
         else { return }
         let gait = ClipMapper.gait(for: state)
