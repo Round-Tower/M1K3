@@ -80,7 +80,10 @@ struct SettingsScreen: View {
             } header: {
                 Text("Grounding")
             } footer: {
-                Text("When on, M1K3 can search the web to answer. The only capability that sends chat-derived queries off this device.")
+                Text(
+                    "When on, M1K3 can search the web to answer. The only capability "
+                        + "that sends chat-derived queries off this device."
+                )
             }
 
             Section {
@@ -88,7 +91,11 @@ struct SettingsScreen: View {
             } header: {
                 Text("Appearance")
             } footer: {
-                Text("M1K3's face fills the background while you chat — bright when idle, receding while it thinks or you type. Off keeps a plain dark backdrop. Reduce Transparency also turns it off.")
+                Text(
+                    "M1K3's face fills the background while you chat — bright when idle, "
+                        + "receding while it thinks or you type. Off keeps a plain dark backdrop. "
+                        + "Reduce Transparency also turns it off."
+                )
             }
 
             Section {
