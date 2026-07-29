@@ -5,8 +5,13 @@
 //  The avatar-customisation section of Settings — the iOS sibling of the Mac's
 //  CompanionSettings. The face IS the product's identity, so choosing it shows it:
 //  a LIVE preview (the real AvatarSurface, honest to every choice below it) sits
-//  above a grid of glass face-cards. The skin (shading) picker appears only when a
-//  3D creature is chosen — it means nothing for the pixel face.
+//  above a grid of glass name-cards. The cards are deliberately TEXT-ONLY — the
+//  preview above is the picture; a generic pawprint beside every creature's name
+//  said nothing (2026-07-29 pass, Kev's call). The skin (shading) picker appears
+//  only when a 3D creature is chosen — it means nothing for the pixel face.
+//
+//  "None" is a first-class choice (CompanionDefaults.noneID): no hero face, no
+//  live chat backdrop, no preview — just the conversation.
 //
 //  The creature list self-extends: a new CompanionSpec with bundled assets appears
 //  here with no picker wiring (the same isInstalled filter the Mac uses). The
@@ -16,6 +21,8 @@
 //  shared AvatarSurface + package CompanionSpec catalogue; the live creature render
 //  is verify-by-launch on device — the simulator has no Metal). Prior: none (new
 //  file, patterned on M1K3App/CompanionSettings.swift).
+//  Review: Kev + claude-fable-5, 2026-07-29 — icons removed (text-only cards) and
+//  the None option added on top of the package-pinned noneID sentinel.
 //
 
 import M1K3Avatar
@@ -27,25 +34,32 @@ struct CompanionPickerSection: View {
     @AppStorage(CompanionDefaults.shadingStyleKey) private var shadingRaw =
         CompanionShadingStyle.off.rawValue
 
-    /// One selectable face. `glyph` nil = the pixel-M brand mark.
+    /// One selectable face.
     private struct FaceChoice: Identifiable {
         let id: String
         let name: String
-        let glyph: String?
     }
 
     private var choices: [FaceChoice] {
-        [FaceChoice(id: "", name: "Pixel face", glyph: nil)]
+        [FaceChoice(id: "", name: "Pixel face")]
             + CompanionSpec.all.filter(CompanionAssets.isInstalled).map {
-                FaceChoice(id: $0.id, name: $0.displayName, glyph: "pawprint.fill")
+                FaceChoice(id: $0.id, name: $0.displayName)
             }
+            + [FaceChoice(id: CompanionDefaults.noneID, name: "None")]
     }
 
     private var creatureChosen: Bool {
         CompanionSpec.named(companion) != nil
     }
 
+    private var noneChosen: Bool {
+        CompanionDefaults.hidesAvatar(companion)
+    }
+
     private var footerText: String {
+        if noneChosen {
+            return "No face — just the conversation. The chat backdrop stays a calm dark."
+        }
         guard creatureChosen else {
             return "M1K3's face in chat. Pick a 3D companion to bring it to life on device."
         }
@@ -58,7 +72,9 @@ struct CompanionPickerSection: View {
 
     var body: some View {
         Section {
-            preview
+            if !noneChosen {
+                preview
+            }
             faceGrid
             // The skin (shading) picker is macOS/iOS only — CustomMaterial surface
             // shaders aren't available on visionOS, so a creature there shows its
@@ -119,40 +135,22 @@ struct CompanionPickerSection: View {
         return Button {
             companion = choice.id
         } label: {
-            VStack(spacing: 8) {
-                mark(choice).frame(height: 26)
-                Text(choice.name)
-                    .font(.caption.weight(.medium))
-                    .lineLimit(1)
-                    .foregroundStyle(.primary)
-            }
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity)
-            .m1k3Glass(cornerRadius: 12, tint: isSelected ? .accentColor.opacity(0.22) : nil)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(.tint, lineWidth: isSelected ? 2 : 0)
-            )
-            .contentShape(.rect)
+            Text(choice.name)
+                .font(.subheadline.weight(.medium))
+                .lineLimit(1)
+                .foregroundStyle(.primary)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .m1k3Glass(cornerRadius: 12, tint: isSelected ? .accentColor.opacity(0.22) : nil)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(.tint, lineWidth: isSelected ? 2 : 0)
+                )
+                .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(choice.name)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-    }
-
-    @ViewBuilder
-    private func mark(_ choice: FaceChoice) -> some View {
-        if let glyph = choice.glyph {
-            Image(systemName: glyph)
-                .symbolRenderingMode(.hierarchical)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(.tint)
-        } else {
-            // The pixel face's mark is the brand mark itself — the Silkscreen "M".
-            Text("M")
-                .font(.pixel(22))
-                .foregroundStyle(.tint)
-        }
     }
 
     /// A quick greeting beat on the shared controller, then back to idle — unless a

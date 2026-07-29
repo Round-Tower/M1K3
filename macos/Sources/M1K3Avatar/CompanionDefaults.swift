@@ -28,4 +28,18 @@ public enum CompanionDefaults {
     /// Shading style for 3D creature companions — a `CompanionShadingStyle`
     /// rawValue (off / phosphor / cel). Default off (the baked textures).
     public static let shadingStyleKey = "companion.shadingStyle"
+
+    /// Sentinel `companionKey` value meaning NO avatar at all — the shell shows
+    /// just the conversation (no hero face, no live backdrop, no preview).
+    /// Distinct from "" (pixel face). Only the mobile shell offers it today; the
+    /// Mac resolver treats it like any unknown id (pixel-face fallback), so a
+    /// synced/stale value can never blank a surface that doesn't support it.
+    public static let noneID = "avatar-none"
+
+    /// True when the persisted choice means "show no avatar". ONLY the explicit
+    /// none sentinel hides — an unknown/retired companion id falls back to the
+    /// pixel face rather than a blank surface.
+    public static func hidesAvatar(_ persisted: String) -> Bool {
+        persisted == noneID
+    }
 }

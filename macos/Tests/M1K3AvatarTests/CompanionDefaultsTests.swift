@@ -21,4 +21,23 @@ struct CompanionDefaultsTests {
         #expect(CompanionDefaults.constellationID != "")
         #expect(CompanionSpec.all.allSatisfy { $0.id != CompanionDefaults.constellationID })
     }
+
+    @Test("the none sentinel is pinned and distinct from every other choice")
+    func noneSentinelIsPinnedAndDistinct() {
+        #expect(CompanionDefaults.noneID == "avatar-none")
+        #expect(CompanionDefaults.noneID != "")
+        #expect(CompanionDefaults.noneID != CompanionDefaults.constellationID)
+        #expect(CompanionSpec.all.allSatisfy { $0.id != CompanionDefaults.noneID })
+    }
+
+    @Test("hidesAvatar is true ONLY for the none sentinel")
+    func hidesAvatarOnlyForNone() {
+        #expect(CompanionDefaults.hidesAvatar(CompanionDefaults.noneID))
+        #expect(!CompanionDefaults.hidesAvatar("")) // pixel face
+        #expect(!CompanionDefaults.hidesAvatar(CompanionDefaults.constellationID))
+        // Every real companion id — and an unknown/stale id (falls back to the
+        // pixel face, never to a blank screen) — keeps the avatar visible.
+        #expect(CompanionSpec.all.allSatisfy { !CompanionDefaults.hidesAvatar($0.id) })
+        #expect(!CompanionDefaults.hidesAvatar("some-retired-companion"))
+    }
 }

@@ -458,3 +458,55 @@ in-place-reload refactor is architecture-sound. The 0.7 (not higher) is delibera
 the Simulator can't confirm the 3D creatures render on iOS — that's the named
 verify-owed, shipped to PR flagged for a real-device check, Kev's call). Prior: Kev
 + claude-fable-5 (the Mac-feel pass this builds on)._
+
+---
+
+## 2026-07-29 — The voice-first + navigation pass (no tab bar, None companion, Liquid-Glass parity)
+
+Kev's direction: the chat IS the app. Five moves in one pass:
+
+- **Navigation restructure.** The bottom tab bar is gone: `RootView` is now
+  `NavigationStack { ChatScreen }`. Settings is a toolbar push (gear); Memories and
+  Documents live in a **Workspace** section inside Settings (their own
+  `NavigationStack`s stripped — they're pushes now). The `"M1K3"` navigation title is
+  removed (the wordmark already owns the empty-state hero); a **New chat** toolbar
+  button rides `ChatSession.startNewConversation()` (disabled when empty/responding —
+  the session's own no-op guards, surfaced honestly). On visionOS this also retires
+  the tab ornament that rendered as dark squares (the V0 finding, closed by removal).
+- **Voice-first mode wired on mobile** (`AppCore+Voice.swift`, `VoiceScreen.swift`) —
+  the package-TDD'd `VoiceLoopController` over `AppleSpeechTranscriber` (on-device
+  STT) + `AVSpeechProvider` (system TTS), `M1K3Voice` added to the `MobileShell`
+  deps + mic/speech usage strings to both targets. Mobile-specific ground: an
+  explicit `AVAudioSession` (.playAndRecord/.voiceChat, activated on entry, released
+  on exit), **gentler endpointing (silence 2.0 s / hold 3.5 s** vs the Mac's 1.6/3.0
+  — the live "it cuts me off" complaint), whole-answer turns for v1 (the Mac's
+  sentence-streaming poller is a named follow-up). Entry via a toolbar waveform
+  button; a true background exits the mode before the brain sheds (scenePhase hook).
+- **Companion picker rework.** Cards are text-only (the generic pawprint glyphs said
+  nothing — the live preview above is the picture) and a **None** choice ships on a
+  package-pinned sentinel (`CompanionDefaults.noneID` + `hidesAvatar`, TDD'd): no
+  hero face, no live chat backdrop, no Settings preview — just the conversation.
+  Unknown/stale ids still fall back to the pixel face, never to a blank surface.
+- **Liquid-Glass parity pass.** User bubbles match the Mac's exact treatment
+  (`.regular.tint(.accentColor.opacity(0.2))`, rect 18); the input row and chip
+  stacks share a `GlassEffectContainer` via the portable `M1K3GlassGroup` (Group on
+  visionOS); input field glass at rect 22 (the Mac inputRow's radius).
+- **Branch hygiene:** the `companion` Logger category from the companions PR was
+  missing from the `M1K3Log.Category` catalogue (SubsystemGuard red) — case added.
+
+Verification: both mobile targets BUILD SUCCEEDED; `swift test --parallel`
+2191/315 green; the full flow driven live on the iPhone 17 Pro Max simulator
+(starter chip → send → backdrop handoff → Settings push → None selection → calm-dark
+chat → New chat → voice-mode cover incl. parked-idle honesty when the sim has no
+recognizer). ★ Bonus evidence: a 3D creature (Sparrow) **rendered live as the chat
+backdrop on the Simulator** via the in-place-reload path — softening (not closing)
+the 07-28 "creature render unconfirmed on sim" caveat; real-device feel remains
+verify-owed.
+
+Verify-owed on hardware: the full spoken beat (mic TCC dialogs, echo/endpointing
+feel, barge-in), speaker routing, and the answer path (Mini's reply never landed on
+this sim run — AFM-on-sim flakiness, pipeline untouched today).
+
+_Signed: Kev + claude-fable-5, 2026-07-29, Confidence 0.8 (every UI flow above
+watched live on-sim; voice is adapter glue over test-pinned loop/endpointer with the
+felt beat honestly device-owed). Prior: Kev + claude-opus-4-8 (this file)._

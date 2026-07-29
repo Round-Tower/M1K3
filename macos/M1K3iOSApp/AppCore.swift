@@ -15,9 +15,11 @@
 //  MemoryStore, the swappable inference slot (Mini = Apple Foundation Models,
 //  Lil = MLX Qwen3-4B), the always-on tool-calling `AgentRAGResponder`, a
 //  persisted `ChatSession`, `DocumentIngester`, and the pixel-face avatar.
-//  NOT wired (Phase B+, device/runtime-gated): voice (AVAudioSession), the
-//  in-app MCP server, call intelligence, Kokoro TTS. The mobile ladder tops out
-//  at Lil (BrainTier.recommended(platform: .mobile)) — iPhones stay on Mini.
+//  Voice-first mode is wired as of 2026-07-29 (AppCore+Voice: the shared
+//  VoiceLoopController over AppleSpeechTranscriber + AVSpeechProvider).
+//  NOT wired (Phase B+, device/runtime-gated): the in-app MCP server, call
+//  intelligence, Kokoro TTS, WhisperKit. The mobile ladder tops out at Lil
+//  (BrainTier.recommended(platform: .mobile)) — iPhones stay on Mini.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-06, Confidence 0.75 (compile-verified
 //  for iOS/visionOS; on-device RUN is the Phase-B verify-owed — MLX needs Metal,
@@ -35,6 +37,7 @@ import M1K3KnowledgeTools
 import M1K3Memory
 import M1K3MemoryChatBridge
 import M1K3MLX
+import M1K3Voice
 import Observation
 import os
 import SwiftUI
@@ -58,6 +61,18 @@ final class AppCore {
     let chat: ChatSession
     /// The pixel-cube companion, shared verbatim with the Mac app (AvatarView).
     let avatar = AvatarController()
+
+    // MARK: - Voice-first mode (system providers; wiring in AppCore+Voice)
+
+    /// System TTS (AVSpeechSynthesizer) — the built-in voice tier. Kokoro/MLX
+    /// stays Mac-only for now, behind the same `SpeechProvider` seam.
+    let speech = AVSpeechProvider()
+    /// Live on-device dictation (SFSpeechRecognizer + AVAudioEngine). On-device
+    /// recognition is REQUIRED by the provider — no server fallback, by design.
+    let transcriber = AppleSpeechTranscriber()
+    /// The live voice-first loop — non-nil while the mode is active (drives the
+    /// full-screen VoiceScreen cover). Internal-set: AppCore+Voice owns entry/exit.
+    var voiceLoop: VoiceLoopController?
 
     /// The single inference slot the responder holds. Re-pointed on brain switch
     /// (Mini = AFM, Lil = MLX) so the transcript is preserved across a swap.
@@ -197,6 +212,9 @@ final class AppCore {
         )
 
         refreshCounts()
+        // Speech lifecycle → avatar speaking state + the voice loop's completion
+        // signal (speechDidEnd). One-time wiring, like the Mac's.
+        wireSpeechCallbacks()
         // Warm a restored MLX brain so it's ready to answer (Mini needs nothing;
         // never on the Simulator, where MLX aborts).
         if brain.mlxModelID != nil, Self.mlxAvailable {

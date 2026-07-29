@@ -27,6 +27,7 @@ struct ChatScreen: View {
     @Environment(AppCore.self) private var core
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
+    @AppStorage(CompanionDefaults.companionKey) private var companion = ""
     @State private var draft = ""
     @FocusState private var inputFocused: Bool
 
@@ -34,11 +35,17 @@ struct ChatScreen: View {
         !core.chat.messages.isEmpty
     }
 
+    /// The "None" companion choice: no hero face, no live backdrop.
+    private var avatarHidden: Bool {
+        CompanionDefaults.hidesAvatar(companion)
+    }
+
     /// The live avatar backdrop is on when chatting, unless the user opted out
-    /// or asked the OS for Reduce Transparency (a layered live scene is exactly
-    /// what that setting asks us not to do — the Mac's glass swap, same spirit).
+    /// (the Appearance toggle or the None companion) or asked the OS for Reduce
+    /// Transparency (a layered live scene is exactly what that setting asks us
+    /// not to do — the Mac's glass swap, same spirit).
     private var backdropActive: Bool {
-        chatting && avatarBackdrop && !reduceTransparency
+        chatting && avatarBackdrop && !avatarHidden && !reduceTransparency
     }
 
     /// Composing — keyboard up or a draft in hand; recedes the backdrop avatar.
@@ -53,11 +60,42 @@ struct ChatScreen: View {
             inputBar
         }
         .background(backdrop)
-        .navigationTitle("M1K3")
+        // No navigation title — the wordmark lives in the empty-state hero; once
+        // chatting, the transcript owns the screen (2026-07-29, Kev's call).
         #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
         #endif
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        core.chat.startNewConversation()
+                    } label: {
+                        Label("New chat", systemImage: "square.and.pencil")
+                    }
+                    // startNewConversation no-ops on an empty transcript or a turn
+                    // in flight — disable so the button never reads as broken.
+                    .disabled(core.chat.messages.isEmpty || core.chat.isResponding)
+                }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        core.enterVoiceMode()
+                    } label: {
+                        Label("Voice mode", systemImage: "waveform")
+                    }
+                    .disabled(!core.isReady || core.chat.isResponding)
+                    NavigationLink {
+                        SettingsScreen()
+                    } label: {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: Binding(
+                get: { core.voiceLoop != nil },
+                set: { active in if !active { core.exitVoiceMode() } }
+            )) {
+                VoiceScreen()
+            }
     }
 
     // MARK: - Backdrop
@@ -89,9 +127,11 @@ struct ChatScreen: View {
     private var hero: some View {
         VStack(spacing: 6) {
             if !chatting {
-                AvatarSurface(controller: core.avatar)
-                    .frame(height: 168)
-                    .padding(.horizontal, 56)
+                if !avatarHidden {
+                    AvatarSurface(controller: core.avatar)
+                        .frame(height: 168)
+                        .padding(.horizontal, 56)
+                }
                 Text("M1K3")
                     .font(.pixel(28))
                     .kerning(2)
@@ -229,6 +269,18 @@ struct ChatScreen: View {
     /// is still warming is a no-op rather than an eaten message. Dimmed until ready
     /// so the readiness hint in the hero reads as the reason.
     private var starterChips: some View {
+        M1K3GlassGroup(spacing: 8) {
+            starterChipStack
+        }
+        .frame(maxWidth: 340)
+        // brainReady, NOT canSend: the chips live on the EMPTY canvas (draft == ""),
+        // and canSend requires a non-empty draft — so canSend would dim them by
+        // default and swallow every tap even when the brain is warm and ready.
+        .opacity(brainReady ? 1 : 0.5)
+        .padding(.top, 4)
+    }
+
+    private var starterChipStack: some View {
         VStack(spacing: 8) {
             ForEach(Self.starters, id: \.self) { prompt in
                 Button { sendStarter(prompt) } label: {
@@ -250,12 +302,6 @@ struct ChatScreen: View {
                 .buttonStyle(.plain)
             }
         }
-        .frame(maxWidth: 340)
-        // brainReady, NOT canSend: the chips live on the EMPTY canvas (draft == ""),
-        // and canSend requires a non-empty draft — so canSend would dim them by
-        // default and swallow every tap even when the brain is warm and ready.
-        .opacity(brainReady ? 1 : 0.5)
-        .padding(.top, 4)
     }
 
     private static let starters = [
@@ -275,25 +321,29 @@ struct ChatScreen: View {
     // MARK: - Input bar
 
     private var inputBar: some View {
-        HStack(spacing: 10) {
-            TextField("Ask M1K3…", text: $draft, axis: .vertical)
-                .lineLimit(1 ... 4)
-                .focused($inputFocused)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .m1k3Glass(cornerRadius: 20)
-                .onSubmit(send)
-            Button(action: send) {
-                if core.chat.isResponding {
-                    ProgressView().frame(width: 28, height: 28)
-                } else {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 30))
-                        .symbolRenderingMode(.hierarchical)
+        // One glass container for the whole row — the Mac inputRow's pattern, so
+        // the field's glass and any neighbouring chips render/blend as a group.
+        M1K3GlassGroup(spacing: 10) {
+            HStack(spacing: 10) {
+                TextField("Ask M1K3…", text: $draft, axis: .vertical)
+                    .lineLimit(1 ... 4)
+                    .focused($inputFocused)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 11)
+                    .m1k3Glass(cornerRadius: 22)
+                    .onSubmit(send)
+                Button(action: send) {
+                    if core.chat.isResponding {
+                        ProgressView().frame(width: 28, height: 28)
+                    } else {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 30))
+                            .symbolRenderingMode(.hierarchical)
+                    }
                 }
+                .buttonStyle(.plain)
+                .disabled(!canSend)
             }
-            .buttonStyle(.plain)
-            .disabled(!canSend)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

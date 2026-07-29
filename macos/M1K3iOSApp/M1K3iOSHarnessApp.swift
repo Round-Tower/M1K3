@@ -45,7 +45,12 @@ struct M1K3iOSApp: App {
                 // return. `.inactive` (notification banner / Control Center) is
                 // deliberately ignored so transient interruptions don't churn the model.
                 switch phase {
-                case .background: core?.releaseForBackground()
+                case .background:
+                    // Voice mode can't survive a true background (the mic engine
+                    // and audio session are torn down by the OS) — leave cleanly
+                    // BEFORE shedding the brain, so the loop never sees a dead mic.
+                    core?.exitVoiceMode()
+                    core?.releaseForBackground()
                 case .active: core?.warmForForeground()
                 default: break
                 }

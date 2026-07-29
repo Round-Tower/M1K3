@@ -34,7 +34,9 @@ struct MessageBubble: View {
                 Text(message.text)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .m1k3Glass(cornerRadius: 18, tint: .accentColor.opacity(0.22))
+                    // Byte-parity with the Mac's user turn (MessageView): regular
+                    // glass, accent tint 0.2, rect 18.
+                    .m1k3Glass(cornerRadius: 18, tint: .accentColor.opacity(0.2))
                     .textSelection(.enabled)
             }
         case .assistant:
@@ -90,9 +92,13 @@ struct MessageBubble: View {
     @ViewBuilder
     private var followUpChips: some View {
         if case .complete = message.status, !message.followUps.isEmpty {
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(message.followUps, id: \.self) { question in
-                    FollowUpChip(question: question) { onSendFollowUp(question) }
+            // Neighbouring glass chips share one container so Liquid Glass
+            // renders them as a group (the Mac inputRow pattern).
+            M1K3GlassGroup(spacing: 6) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(message.followUps, id: \.self) { question in
+                        FollowUpChip(question: question) { onSendFollowUp(question) }
+                    }
                 }
             }
             .padding(.top, 2)

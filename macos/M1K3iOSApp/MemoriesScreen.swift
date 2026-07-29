@@ -22,45 +22,43 @@ struct MemoriesScreen: View {
     @State private var searching = false
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if core.memoryStore == nil {
-                    ContentUnavailableView(
-                        "Memory unavailable",
-                        systemImage: "brain",
-                        description: Text("M1K3's memory store couldn't open on this device.")
-                    )
-                } else if query.isEmpty {
-                    ContentUnavailableView {
-                        Label("\(liveCount) memories", systemImage: "brain")
-                    } description: {
-                        // Now true on mobile: AppCore wires the shared
-                        // MemoryDistillationCoordinator, so durable facts are
-                        // distilled from chat into the corpus + the temporal graph,
-                        // all on device. (Runtime firing is verify-by-launch.)
-                        Text(liveCount == 0
-                            ? "Nothing here yet — memories build up as you chat, all on your device."
-                            : "Search what M1K3 remembers — all on your device.")
-                    }
-                } else if hits.isEmpty, !searching {
-                    ContentUnavailableView.search(text: query)
-                } else {
-                    List(hits) { hit in
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(hit.memory.text).font(.body)
-                            Text(hit.memory.source)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+        Group {
+            if core.memoryStore == nil {
+                ContentUnavailableView(
+                    "Memory unavailable",
+                    systemImage: "brain",
+                    description: Text("M1K3's memory store couldn't open on this device.")
+                )
+            } else if query.isEmpty {
+                ContentUnavailableView {
+                    Label("\(liveCount) memories", systemImage: "brain")
+                } description: {
+                    // Now true on mobile: AppCore wires the shared
+                    // MemoryDistillationCoordinator, so durable facts are
+                    // distilled from chat into the corpus + the temporal graph,
+                    // all on device. (Runtime firing is verify-by-launch.)
+                    Text(liveCount == 0
+                        ? "Nothing here yet — memories build up as you chat, all on your device."
+                        : "Search what M1K3 remembers — all on your device.")
+                }
+            } else if hits.isEmpty, !searching {
+                ContentUnavailableView.search(text: query)
+            } else {
+                List(hits) { hit in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(hit.memory.text).font(.body)
+                        Text(hit.memory.source)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
-            .navigationTitle("Memories")
-            .searchable(text: $query, prompt: "Recall a memory")
-            .onSubmit(of: .search) { Task { await search() } }
-            .onChange(of: query) { _, new in if new.isEmpty { hits = [] } }
-            .onAppear { liveCount = (try? core.memoryStore?.liveCount()) ?? 0 }
         }
+        .navigationTitle("Memories")
+        .searchable(text: $query, prompt: "Recall a memory")
+        .onSubmit(of: .search) { Task { await search() } }
+        .onChange(of: query) { _, new in if new.isEmpty { hits = [] } }
+        .onAppear { liveCount = (try? core.memoryStore?.liveCount()) ?? 0 }
     }
 
     private func search() async {
