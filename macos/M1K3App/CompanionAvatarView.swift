@@ -211,7 +211,12 @@ struct CompanionAvatarView: View {
             // (isInstalled checks resolution, not decodability) — i.e. a packaging bug,
             // not a runtime one. Accepting the reselect-to-recover path over a per-tick
             // retry storm; the assets are pipeline-validated (rkprobe --tick) before ship.
-            Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
+            // Staleness-check BEFORE logging: a superseded load's failure is
+            // not an error the user can still see — logging it would plant a
+            // red herring beside any real load failure (PR #82 review).
+            if token == scene.loadToken {
+                Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
+            }
             return
         }
         guard token == scene.loadToken else { return } // a newer switch superseded us

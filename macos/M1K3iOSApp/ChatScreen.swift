@@ -16,6 +16,11 @@
 //  ChatBackdropTreatment), matching the Mac's background-avatar mode. Follow-up
 //  chips are wired tap-to-send, and autoscroll now also fires when chips land
 //  (they arrive at .complete without a text change).
+//  Review: claude-fable-5, 2026-07-29/30 — chat-is-the-app pass: nav title
+//  dropped, New-chat + voice-mode toolbar, starter chips gated on the new
+//  `brainReady` (canSend's draft requirement silently ate chip taps), backdrop
+//  handoff to companions/None. 07-30: voice-mode button reuses !brainReady
+//  (PR #82 review DRY nit).
 //
 
 import M1K3Avatar
@@ -82,7 +87,7 @@ struct ChatScreen: View {
                     } label: {
                         Label("Voice mode", systemImage: "waveform")
                     }
-                    .disabled(!core.isReady || core.chat.isResponding)
+                    .disabled(!brainReady)
                     NavigationLink {
                         SettingsScreen()
                     } label: {

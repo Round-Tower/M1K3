@@ -38,11 +38,13 @@ Spike scaffolding, results, and Kev's open calls: `scratch/voice-mobile/PLAN-DRA
   the visionOS unlock) · V0 (visionOS sim spike) ✅ → its dark-avatar finding
   fixed in **#60** (camera-less `GeometryReader3D` framing — visionOS's eyes
   *are* the camera).
-- **Open finding from V0, not yet fixed:** the tab strip renders as dark
-  squares, not the visionOS ornament — needs a `.sidebarAdaptable` visionOS arm.
-- **One Kev call still open** (PLAN-DRAFT.md #1): confirm the "voice-forward,
-  not voice-only" scoping — the tab shell stays for setup/downloads/TCC/consent,
-  a voice-forward view layers on top. Once confirmed:
+- **V0's tab-ornament finding: CLOSED BY REMOVAL** (PR #82, 2026-07-29) — the
+  mobile nav restructure retired the tab shell entirely (chat is the app;
+  Memories/Documents/Settings are pushes), so the dark-squares ornament and its
+  planned `.sidebarAdaptable` fix no longer exist.
+- **Scoping resolved by the same restructure:** "voice-forward, not voice-only"
+  — voice is a full-screen cover over the retained chat shell (setup/downloads/
+  TCC/consent stay visual), shipped as v1 in #82. Remaining Phase B/D work:
   - **Phase B (iOS voice):** B-A1 AVAudioSession echo spike (incl. interruption/
     route negative paths — this is genuinely unbuilt today, zero hits repo-wide)
     → B-1 STT + karaoke captions, push-to-talk → B-2 Kokoro-vs-AVSpeech decided

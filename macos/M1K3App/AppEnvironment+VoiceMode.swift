@@ -13,6 +13,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.8 (adapter glue over
 //  test-pinned loop + seams; verify-at-⌘R for the full beat). Prior: Unknown.
+//  Review: claude-fable-5, 2026-07-28 — companion/shading/constellation keys
+//  aliased through CompanionDefaults (M1K3Avatar) so the Mac and iOS shells
+//  read the same UserDefaults slots (same string values — no migration).
 //
 
 import AppKit
