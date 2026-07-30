@@ -405,6 +405,17 @@ enum SelfTest {
             await MemGraphEvalStage.run(emit: emit)
         }
 
+        // 8b. Optional dream-cycle Tier-0 census (M1K3_SELFTEST_MEMSTAT=1):
+        //     read-only stats over the REAL container stores (live/kind/
+        //     superseded counts, pairwise cosine histogram, corpus divergence)
+        //     plus the contradiction/compatible/restatement probe pairs and
+        //     the end-to-end eaten-correction ingest probe. The measurement
+        //     that gates every dream-cycle tier — see scratch/dream-cycle/
+        //     SPEC.md and MemStatStage.swift.
+        if MemStatStage.isRequested {
+            await MemStatStage.run(emit: emit)
+        }
+
         // 9. Optional Gemma-4 vision spike (M1K3_SELFTEST_VISION=1 +
         //    M1K3_SELFTEST_VISION_IMAGE=<path>): loads gemma-4-e4b through
         //    MLXVLM — NOT the production MLXLLM path MLXGemmaProvider uses,

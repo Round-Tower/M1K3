@@ -816,6 +816,48 @@ public final class MemoryStore: @unchecked Sendable {
         }
     }
 
+    /// Every live memory's vector — the MEMSTAT pairwise-census read
+    /// (scratch/dream-cycle/SPEC.md Tier 0). Superseded rows are excluded:
+    /// retrieval can never pair with them, so counting them would inflate
+    /// the very bands the census exists to measure.
+    public func liveEmbeddingVectors(limit: Int = 20000) throws -> [[Float]] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                SELECT e.embedding FROM memory_embeddings e
+                JOIN memories m ON m.id = e.memory_id
+                WHERE m.superseded_by IS NULL
+                LIMIT ?
+                """,
+                arguments: [limit]
+            )
+            return rows.compactMap { row in
+                (row["embedding"] as Data?).map(VectorMath.deserialize)
+            }
+        }
+    }
+
+    /// Live per-kind row counts (rawValue → count) — the MEMSTAT census header.
+    public func liveCountsByKind() throws -> [String: Int] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                SELECT kind, COUNT(*) AS n FROM memories
+                WHERE superseded_by IS NULL GROUP BY kind
+                """
+            )
+            var counts: [String: Int] = [:]
+            for row in rows {
+                if let kind: String = row["kind"], let count: Int = row["n"] {
+                    counts[kind] = count
+                }
+            }
+            return counts
+        }
+    }
+
     /// Everything, newest first, for the Settings review/delete surface.
     /// Visibility is the other half of consent.
     public func allMemories(includeSuperseded: Bool = false, limit: Int = 500) throws -> [Memory] {
