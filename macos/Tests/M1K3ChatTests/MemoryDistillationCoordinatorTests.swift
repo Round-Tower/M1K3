@@ -46,9 +46,17 @@ private actor FakeGraphWriter: DistilledFactGraphWriting {
         self.shouldThrow = shouldThrow
     }
 
-    func writeDistilledFact(_ text: String, kind: DistilledFactKind, embedding: [Float]) async throws {
+    func writeDistilledFact(
+        _ text: String, kind: DistilledFactKind, embedding: [Float], superseding _: String?
+    ) async throws {
         if shouldThrow { throw Boom() }
         writes.append((text, kind, embedding))
+    }
+
+    func reviveFact(_ text: String, kind: DistilledFactKind, embedding: [Float]) async throws -> String? {
+        if shouldThrow { throw Boom() }
+        writes.append((text, kind, embedding))
+        return nil
     }
 
     func texts() -> [String] {
@@ -138,10 +146,12 @@ struct MemoryDistillationCoordinatorTests {
         #expect(try store.allItems(kind: .memory).count == 1)
     }
 
-    @Test("semantic layer: a near-identical stored memory blocks the write")
-    func semanticDedupe() async throws {
+    @Test("semantic layer: a near-identical stored memory is superseded — one live row, the newer text")
+    func semanticSupersede() async throws {
         // Seed a memory whose NORMALIZED form differs (extra word) so the
-        // exact layer misses, but whose embedding is close enough to block.
+        // exact layer misses, but whose embedding clears the bar. Tier 2:
+        // the twin is superseded (never the new fact eaten) — retrieval
+        // still holds exactly one row, and it is the newer assertion.
         let (seeder, store) = try makeFixture(facts: .success(["Kev lives in Cork city Ireland today"]))
         _ = try await seeder.distillAndStore(turns: someTurns)
         let nearCoordinator = MemoryDistillationCoordinator(
@@ -151,7 +161,10 @@ struct MemoryDistillationCoordinatorTests {
             embedder: HashingEmbeddingService()
         )
         _ = try await nearCoordinator.distillAndStore(turns: someTurns)
-        #expect(try store.allItems(kind: .memory).count == 1)
+        let live = try store.allItems(kind: .memory)
+        #expect(live.count == 1)
+        #expect(live.first?.title == "Kev lives in Cork city Ireland")
+        #expect(try store.allItems(kind: .memorySuperseded).count == 1)
     }
 
     @Test("a throwing distiller rethrows — the caller keeps the watermark")

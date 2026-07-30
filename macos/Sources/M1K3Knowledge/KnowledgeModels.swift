@@ -34,6 +34,17 @@ public struct KnowledgeKind: RawRepresentable, Hashable, Sendable, Codable {
     /// (see CanaryGuard): the prompt cannot stop retrieval surfacing a doc
     /// that is IN the index; only exclusion can.
     public static let quarantined = KnowledgeKind(rawValue: "quarantined")
+    /// The corpus twin of a memory the graph has SUPERSEDED (dream-cycle
+    /// Tier 2): same exclusion semantics as `.quarantined` — invisible to
+    /// every retrieval surface unless named — but a DISTINCT kind so the
+    /// restore rule (un-supersede-on-reassert flips it back to `.memory`)
+    /// can never collide with operator-QA quarantine (Security M1).
+    public static let memorySuperseded = KnowledgeKind(rawValue: "memory-superseded")
+
+    /// Kinds hidden from every nil-kinds retrieval surface (search, listing,
+    /// grounding). ONE definition — the deny sites in KnowledgeStore all
+    /// consume this so a new hidden kind can't be half-wired.
+    public static let hiddenFromRetrieval: Set<KnowledgeKind> = [.quarantined, .memorySuperseded]
 }
 
 /// Who wrote a knowledge item — the provenance half of the memory consent

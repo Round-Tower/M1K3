@@ -638,7 +638,7 @@ public final class MemoryStore: @unchecked Sendable {
                 )
                 SELECT m.*, MIN(r.hops) AS hops FROM reachable r
                 JOIN memories m ON m.id = r.id
-                WHERE r.id != ?
+                WHERE r.id != ? AND m.superseded_by IS NULL
                 GROUP BY m.id
                 ORDER BY hops ASC, m.created_at DESC
                 LIMIT ?
@@ -794,6 +794,52 @@ public final class MemoryStore: @unchecked Sendable {
                 db, sql: "SELECT COUNT(*) FROM memories WHERE superseded_by IS NULL"
             ) ?? 0
         }
+    }
+
+    /// The newest LIVE row whose text matches exactly — the write-time
+    /// repair's join key (dream-cycle Tier 2): the dual-write puts the SAME
+    /// fact text in both stores, so exact text is the honest corpus↔graph
+    /// linkage (the same identity `factSourceRef` hashes on the corpus side).
+    public func liveMemory(matchingText text: String) throws -> Memory? {
+        try dbQueue.read { db in
+            try Row.fetchOne(
+                db,
+                sql: """
+                SELECT * FROM memories
+                WHERE text = ? AND superseded_by IS NULL
+                ORDER BY created_at DESC LIMIT 1
+                """,
+                arguments: [text]
+            ).flatMap(Self.memory(from:))
+        }
+    }
+
+    /// From a SUPERSEDED row carrying `text`, follow the supersede chain to
+    /// its live head — the un-supersede-on-reassert join (Tier 2, spec
+    /// finding #8). Nil when no superseded row carries the text. Bounded
+    /// walk: chains are linear by construction; 64 hops is far beyond any
+    /// real lifetime of corrections.
+    public func liveSuccessor(ofText text: String) throws -> Memory? {
+        let start: Memory? = try dbQueue.read { db in
+            try Row.fetchOne(
+                db,
+                sql: """
+                SELECT * FROM memories
+                WHERE text = ? AND superseded_by IS NOT NULL
+                ORDER BY created_at DESC LIMIT 1
+                """,
+                arguments: [text]
+            ).flatMap(Self.memory(from:))
+        }
+        guard var current = start else { return nil }
+        for _ in 0 ..< 64 {
+            guard let nextID = current.supersededBy else { return current }
+            // A dangling pointer means an inconsistent chain — degrade to nil
+            // (caller plain-writes) rather than report a superseded node live.
+            guard let next = try memory(id: nextID) else { return nil }
+            current = next
+        }
+        return nil // cap hit — same degrade, never a non-live answer
     }
 
     /// Every row, superseded included — one aggregate read, no hydration

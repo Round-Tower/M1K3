@@ -23,6 +23,9 @@
 //  Review (2026-07-08, Kev + claude-fable-5): carries the new DistilledFactKind
 //  through to MemoryKind — was hardcoded `.note` (the in-source TODO on
 //  MemoryKind). Kev's product call: the distiller classifies.
+//  Review (2026-07-30, Kev + claude-fable-5): Tier-2 write-time repair — the
+//  seam gains supersede-by-text and revive-on-reassert (scratch/dream-cycle/
+//  SPEC.md §2); fact text is the corpus↔graph join key.
 //
 
 import M1K3Chat
@@ -35,10 +38,35 @@ public struct DistilledFactGraphAdapter: DistilledFactGraphWriting {
         self.store = store
     }
 
-    public func writeDistilledFact(_ text: String, kind: DistilledFactKind, embedding: [Float]) async throws {
-        try store.rememberConnected(
-            Memory(kind: MemoryKind(rawValue: kind.rawValue), text: text, source: "distilled"),
-            embedding: embedding
-        )
+    public func writeDistilledFact(
+        _ text: String, kind: DistilledFactKind, embedding: [Float], superseding oldFactText: String?
+    ) async throws {
+        let memory = Memory(kind: MemoryKind(rawValue: kind.rawValue), text: text, source: "distilled")
+        // Text is the join key (the dual-write stores the SAME fact text in
+        // both stores). A miss — no live node carries the old text — degrades
+        // to a plain insert rather than dropping the new fact.
+        //
+        // Source-trust (spec §1/B1): this supersedes whatever live node
+        // matches, INCLUDING an `mcp:remember`-sourced one — the allowed
+        // direction. The forbidden direction (an MCP fact auto-winning) can't
+        // occur through this seam: the MCP remember path never calls it.
+        guard let oldFactText, let old = try store.liveMemory(matchingText: oldFactText) else {
+            try store.rememberConnected(memory, embedding: embedding)
+            return
+        }
+        try store.remember(memory, embedding: embedding, supersedes: old.id)
+    }
+
+    public func reviveFact(_ text: String, kind: DistilledFactKind, embedding: [Float]) async throws -> String? {
+        let memory = Memory(kind: MemoryKind(rawValue: kind.rawValue), text: text, source: "distilled")
+        // Re-assertion repair (spec finding #8): supersede the chain's live
+        // head with a fresh node carrying the re-asserted text. No superseded
+        // chain matching the text → plain insert, nothing supplanted.
+        guard let head = try store.liveSuccessor(ofText: text) else {
+            try store.rememberConnected(memory, embedding: embedding)
+            return nil
+        }
+        try store.remember(memory, embedding: embedding, supersedes: head.id)
+        return head.text
     }
 }
