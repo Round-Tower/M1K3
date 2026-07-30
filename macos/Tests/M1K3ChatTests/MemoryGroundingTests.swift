@@ -252,7 +252,9 @@ struct MemoryGroundingTests {
         #expect(sources.contains { $0.kind == .memory })
         let prompt = try #require(provider.allPrompts.first)
         #expect(prompt.contains("WHAT I KNOW ABOUT YOU"))
-        #expect(prompt.contains("- Kev's sister is called Aoife."))
+        // Tier 1 (dream-cycle): the live store lane dates its hits, so the
+        // end-to-end line carries the freshly-ingested recency prefix.
+        #expect(prompt.contains("- (learned today) Kev's sister is called Aoife."))
     }
 }
 

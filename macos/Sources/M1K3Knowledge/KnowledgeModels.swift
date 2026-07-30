@@ -118,6 +118,11 @@ public struct ChunkHit: Identifiable, Equatable, Sendable, Codable {
     public var content: String
     public var similarity: Float?
     public var rrfScore: Double?
+    /// When the parent item was learned (its `created_at`). Optional for
+    /// payload compatibility — hits decoded from pre-Tier-1 archives carry
+    /// nil and downstream renderers fall back to the undated line
+    /// (scratch/dream-cycle/SPEC.md Tier 1).
+    public var createdAt: Date?
 
     public init(
         chunkID: UUID,
@@ -127,7 +132,8 @@ public struct ChunkHit: Identifiable, Equatable, Sendable, Codable {
         heading: String?,
         content: String,
         similarity: Float? = nil,
-        rrfScore: Double? = nil
+        rrfScore: Double? = nil,
+        createdAt: Date? = nil
     ) {
         self.chunkID = chunkID
         self.itemID = itemID
@@ -137,6 +143,7 @@ public struct ChunkHit: Identifiable, Equatable, Sendable, Codable {
         self.content = content
         self.similarity = similarity
         self.rrfScore = rrfScore
+        self.createdAt = createdAt
     }
 }
 

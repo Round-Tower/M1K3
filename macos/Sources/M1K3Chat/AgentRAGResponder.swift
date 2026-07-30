@@ -594,10 +594,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     static func grounding(
         chunks: [ChunkHit], memories: [ChunkHit] = [], toolNames: Set<String>,
         history: [ChatTurn] = [], historyBudget: HistoryWindow.Budget = .default,
-        style: PromptStyle = .react
+        style: PromptStyle = .react, now: Date = Date()
     ) -> String {
         let body = groundingBody(
-            chunks: chunks, memories: memories, toolNames: toolNames, style: style
+            chunks: chunks, memories: memories, toolNames: toolNames, style: style, now: now
         )
         guard let replay = HistoryWindow.render(history, budget: historyBudget) else { return body }
         return "\(replay)\n\n\(body)"
@@ -606,11 +606,32 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// The uncited personal-facts block: memories aren't sources to cite,
     /// they're things M1K3 simply knows about the user. Sits between
     /// KNOWLEDGE and RULES; absent when no memory cleared the gate.
-    private static func memoryBlock(_ memories: [ChunkHit]) -> String? {
+    ///
+    /// Tier 1 (scratch/dream-cycle/SPEC.md): dated hits render newest-first
+    /// with a "(learned …)" prefix so the model resolves contradictions with
+    /// recency, at read time. Undated hits (pre-Tier-1 payloads, fixtures)
+    /// keep the byte-pinned bare line and sort after dated ones. Token cost:
+    /// ~6–8 tokens per dated fact, outside GroundingBudget.fit's accounting —
+    /// covered by the ~95-token slack between the 1100 cap and the ~1195
+    /// measured reserve (07-20 instrument run), so not re-plumbed.
+    private static func memoryBlock(_ memories: [ChunkHit], now: Date) -> String? {
         guard !memories.isEmpty else { return nil }
-        let facts = memories.map { "- \($0.content)" }.joined(separator: "\n")
+        let ordered = memories.sorted {
+            ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast)
+        }
+        // `-> String` is load-bearing: without it the two-return closure's
+        // interpolations infer GRDB.SQL (also ExpressibleByStringInterpolation
+        // in this module) and the block renders an SQL debug dump.
+        let facts = ordered.map { hit -> String in
+            guard let createdAt = hit.createdAt else { return "- \(hit.content)" }
+            return "- (learned \(MemoryRecency.phrase(from: createdAt, to: now))) \(hit.content)"
+        }.joined(separator: "\n")
+        // The conflict clause is part of Tier 1: gemma-4-12B read the dated
+        // pair and HEDGED ("either Ardmore or Dublin") until told how to break
+        // ties; Qwen resolved on dates alone (memblock probe, 2026-07-30).
         return "WHAT I KNOW ABOUT YOU (remembered from past conversations — "
-            + "use naturally, do not cite):\n\(facts)"
+            + "use naturally, do not cite; where facts conflict, trust the most "
+            + "recently learned):\n\(facts)"
     }
 
     /// The generative carve-out — the FIRST rule in BOTH prompt styles, shared
@@ -622,7 +643,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             + "no \"found nothing\"; those are for factual questions."
 
     private static func groundingBody(
-        chunks: [ChunkHit], memories: [ChunkHit], toolNames: Set<String>, style: PromptStyle
+        chunks: [ChunkHit], memories: [ChunkHit], toolNames: Set<String>, style: PromptStyle,
+        now: Date
     ) -> String {
         let hasWebSearch = toolNames.contains("web_search")
         // Every routing line names only tools actually offered THIS turn —
@@ -709,7 +731,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             }.joined(separator: "\n\n")
             head = "KNOWLEDGE (the user's own documents, calls, notes):\n\(knowledge)"
         }
-        return [head, memoryBlock(memories), rules]
+        return [head, memoryBlock(memories, now: now), rules]
             .compactMap { $0 }
             .joined(separator: "\n\n")
     }

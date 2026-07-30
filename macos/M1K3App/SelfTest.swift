@@ -418,6 +418,15 @@ enum SelfTest {
             await MemStatStage.run(emit: emit)
         }
 
+        // 8c. Optional dated-memory-block probe (M1K3_SELFTEST_MEMBLOCK=1):
+        //     the Tier-1 dream-cycle verify — a seeded dated contradiction
+        //     through the REAL responder on each brain; the recency prefix is
+        //     the only signal separating the stale fact from the fresh one.
+        //     See MemBlockProbeStage.swift.
+        if MemBlockProbeStage.isRequested {
+            await MemBlockProbeStage.run(emit: emit)
+        }
+
         // 9. Optional Gemma-4 vision spike (M1K3_SELFTEST_VISION=1 +
         //    M1K3_SELFTEST_VISION_IMAGE=<path>): loads gemma-4-e4b through
         //    MLXVLM — NOT the production MLXLLM path MLXGemmaProvider uses,

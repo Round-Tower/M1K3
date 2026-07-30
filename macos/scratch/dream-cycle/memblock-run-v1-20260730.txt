@@ -1,0 +1,31 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: false
+• loading MLX Qwen3-Embedding (downloads on first use)…
+✓ MLX Qwen3-Embedding embed: dim=512 ‖v‖=1.000
+embedwarm: cold=3339ms warm=14ms delta=3325ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Llama-3.2-1B-Instruct-4bit…
+✓ MLX generate: A hydraulic seal is the binding or gasket-like substance that keeps fluids from escaping through leaks in a system, like pipes or valves.
+• memblock: Tier-1 dated-block live-path probe…
+• memblock brain mlx-community/Qwen3-4B-Instruct-2507-4bit…
+memblock [mlx-community/Qwen3-4B-Instruct-2507-4bit] 223.4s Q: Where do I live?
+memblock A: Ah, that’s a bit like asking where the wind lives — it doesn’t stay put. But I *do* know something: Kev lives in Ardmore [Personal Notes §Lives]. That’s the last solid pin we had. Still, you don’t live there unless you’re Kev — and even then, that’s just a hunch from last Tuesday.  
+
+If you're asking yourself where you are, maybe it's time to look at your own screen instead of mine. The Mac knows 
+memblock [mlx-community/Qwen3-4B-Instruct-2507-4bit] 5.7s Q: Tell me about my dog.
+memblock A: Bran’s got that classic collie spark — sharp eyes, a woolly coat like he’s woven from July winds, and the kind of calm that says *I’ve seen a thousand storms and still found your socks*. He doesn’t bark much, just low, thoughtful whines when you’re sad or when the mailman shows up with a letter that smells like regret. [Dog Breed Profile §Collie Traits]  
+
+FOLLOWUPS: ["What's Bran’s favorite toy?"
+• memblock brain mlx-community/gemma-4-12B-it-4bit…
+memblock [mlx-community/gemma-4-12B-it-4bit] 655.9s Q: Where do I live?
+memblock A: Depending on who you ask, you're either in Ardmore or Dublin. I've got both on the record, though I'm guessing you've settled on one of them by now.
+
+FOLLOWUPS: ["Why do I have two locations?", "What else do you know about me?", "Can we talk about something else?"]
+memblock [mlx-community/gemma-4-12B-it-4bit] 13.6s Q: Tell me about my dog.
+memblock A: Well, I recall you mentioning that your dog is a collie named Bran. A sturdy breed—very loyal, very fluffy, and prone to looking at you like they’re the ones actually in charge of the household. 
+
+How's he behaving today?
+
+FOLLOWUPS: ["Does Bran have any funny habits?", "What's a Collie known for?", "Tell me more about Bran."]
+✓ memblock: done — eyeball gate: the location answer must say Ardmore (recent) not Dublin (stale), with no register damage
+=== END SELF-TEST ===

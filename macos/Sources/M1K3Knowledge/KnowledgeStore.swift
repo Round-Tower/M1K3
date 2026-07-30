@@ -416,7 +416,7 @@ public extension KnowledgeStore {
         try dbQueue.read { db in
             var sql = """
             SELECT c.id AS chunk_id, c.item_id, c.heading, c.content,
-                   i.title, i.kind
+                   i.title, i.kind, i.created_at AS item_created_at
             FROM knowledge_chunk_fts fts
             JOIN knowledge_chunks c ON c.id = fts.id
             JOIN knowledge_items i ON i.id = c.item_id
@@ -450,7 +450,7 @@ public extension KnowledgeStore {
                 db,
                 sql: """
                 SELECT e.chunk_id, e.embedding, c.item_id, c.heading, c.content,
-                       i.title, i.kind
+                       i.title, i.kind, i.created_at AS item_created_at
                 FROM knowledge_chunk_embeddings e
                 JOIN knowledge_chunks c ON c.id = e.chunk_id
                 JOIN knowledge_items i ON i.id = c.item_id
@@ -594,7 +594,9 @@ public extension KnowledgeStore {
             itemTitle: row["title"] ?? "",
             kind: KnowledgeKind(rawValue: row["kind"] ?? "note"),
             heading: row["heading"],
-            content: row["content"] ?? ""
+            content: row["content"] ?? "",
+            createdAt: (row["item_created_at"] as Double?)
+                .map(Date.init(timeIntervalSince1970:))
         )
     }
 

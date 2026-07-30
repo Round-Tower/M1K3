@@ -74,7 +74,9 @@ built `.app` bundle. So MLX/WhisperKit code is verified two ways:
    override), `M1K3_SELFTEST_KEYEVAL=1` (keyword-query gap: bare vs instructed
    query arms), `M1K3_SELFTEST_MEMSTAT=1` (dream-cycle Tier-0 census: real-graph
    cosine histogram + eaten-correction ingest probe — read-only on the real
-   container stores), `M1K3_SELFTEST_OUT=<container path>`. This is the cleanest
+   container stores), `M1K3_SELFTEST_MEMBLOCK=1` (Tier-1 dated-memory-block
+   probe: seeded dated contradiction through the real responder per brain),
+   `M1K3_SELFTEST_OUT=<container path>`. This is the cleanest
    verify path — no UI, no MCP grace window or job deadline.
 
 When a change touches MLX/Metal/RealityKit/voice, the convention is
