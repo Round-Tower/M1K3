@@ -63,6 +63,14 @@ targetTemplates:
       - path: M1K3App/PixelFont.swift
       - path: M1K3App/ReadingMode.swift
       - path: M1K3App/ReadingText.swift
+      # The opt-in 3D companion creatures (Fox/Inkfish/Sparrow/Gecko/Colobus): the
+      # RealityKit render path, #if-guarded for iOS/visionOS. The assets ship in
+      # M1K3Avatar's bundle already. NOTE: the shading glue (PhosphorMaterial.swift
+      # + Phosphor.metal) is NOT here — CustomMaterial surface shaders are macOS/iOS
+      # only (visionOS uses ShaderGraphMaterial, and the xrOS SDK ships no
+      # RealityKit.h Metal header), so those two files live on the iOS target alone
+      # and CompanionAvatarView #if's out its shading calls on visionOS.
+      - path: M1K3App/CompanionAvatarView.swift
       - path: M1K3App/Resources/Fonts/Silkscreen-Regular.ttf
         buildPhase: resources
       - path: M1K3App/Resources/Fonts/Silkscreen-Bold.ttf
@@ -96,6 +104,11 @@ targetTemplates:
         product: M1K3MLX
       - package: M1K3
         product: M1K3Avatar
+      # Voice-first mode (2026-07-29): the portable voice loop + system-framework
+      # providers (SFSpeechRecognizer STT, AVSpeechSynthesizer TTS). Kokoro and
+      # WhisperKit stay Mac-only for now.
+      - package: M1K3
+        product: M1K3Voice
 
 targets:
   M1K3:
@@ -219,6 +232,12 @@ targets:
       - path: M1K3.icon
         type: file
         buildPhase: resources
+      # Companion shading (Phosphor/Cel) rides RealityKit CustomMaterial surface
+      # shaders — macOS/iOS only. Lives on the iOS target (not the shared
+      # MobileShell template) because the visionOS SDK ships no RealityKit.h Metal
+      # header and no CustomMaterial; the visionOS sibling shows baked textures.
+      - path: M1K3App/PhosphorMaterial.swift
+      - path: M1K3App/Phosphor.metal
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.m1k3.ios
@@ -233,6 +252,8 @@ targets:
       properties:
         CFBundleDisplayName: M1K3
         ITSAppUsesNonExemptEncryption: false
+        NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
+        NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
 
   # visionOS sibling — same shell, same portable graph, rendered spatially as a
   # window. The Kokoro visionOS gap (no xrOS ONNX slice) is RESOLVED as of
@@ -267,6 +288,8 @@ targets:
       properties:
         CFBundleDisplayName: M1K3
         ITSAppUsesNonExemptEncryption: false
+        NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
+        NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
 
 # A SHARED M1K3 scheme, explicit so xcodegen emits it to xcshareddata/xcschemes/.
 # Without this, Xcode only auto-creates an ephemeral user scheme — invisible to

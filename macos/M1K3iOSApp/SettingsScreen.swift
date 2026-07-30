@@ -25,87 +25,107 @@ struct SettingsScreen: View {
     private let brains: [BrainTier] = [.mini, .lil]
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Brain") {
-                    ForEach(brains) { tier in
-                        Button {
-                            core.selectBrain(tier)
-                        } label: {
-                            HStack(spacing: 12) {
-                                // `glyph` is an SF Symbol NAME, not an emoji.
-                                Image(systemName: tier.glyph)
-                                    .font(.title3)
-                                    .foregroundStyle(.tint)
-                                    .frame(width: 28)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(tier.displayName).foregroundStyle(.primary)
-                                    Text(tier.tagline)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if core.selectedBrain == tier {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.tint)
-                                }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    if let note = core.brainNote {
-                        Text(note).font(.caption).foregroundStyle(.orange)
-                    }
-                    if let hint = miniHint {
-                        Text(hint).font(.caption).foregroundStyle(.secondary)
-                    }
+        Form {
+            Section("Workspace") {
+                NavigationLink {
+                    MemoriesScreen()
+                } label: {
+                    Label("Memories", systemImage: "brain")
                 }
-
-                Section {
-                    Toggle("Web search in chat", isOn: $webSearchEnabled)
-                } header: {
-                    Text("Grounding")
-                } footer: {
-                    Text("When on, M1K3 can search the web to answer. The only capability that sends chat-derived queries off this device.")
-                }
-
-                Section {
-                    Toggle("Avatar backdrop in chat", isOn: $avatarBackdrop)
-                } header: {
-                    Text("Appearance")
-                } footer: {
-                    Text("M1K3's face fills the background while you chat — bright when idle, receding while it thinks or you type. Off keeps a plain dark backdrop. Reduce Transparency also turns it off.")
-                }
-
-                Section {
-                    Picker("Reply typeface", selection: $readingModeRaw) {
-                        ForEach(ReadingMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode.rawValue)
-                        }
-                    }
-                    ReadingText("Reading should feel effortless — pick what suits your eyes.")
-                        .font(.callout)
-                } header: {
-                    Text("Reading")
-                } footer: {
-                    Text(readingMode.detail)
-                }
-
-                Section("Knowledge") {
-                    LabeledContent("Indexed documents", value: "\(core.indexedItemCount)")
-                }
-
-                Section {
-                    LabeledContent("Version", value: appVersion)
-                    Link("m1k3.app", destination: URL(string: "https://m1k3.app")!)
-                } header: {
-                    Text("About")
-                } footer: {
-                    Text("M1K3 — a local, private AI companion. Everything runs on your device.")
+                NavigationLink {
+                    DocumentsScreen()
+                } label: {
+                    Label("Documents", systemImage: "doc.text")
                 }
             }
-            .navigationTitle("Settings")
+
+            Section("Brain") {
+                ForEach(brains) { tier in
+                    Button {
+                        core.selectBrain(tier)
+                    } label: {
+                        HStack(spacing: 12) {
+                            // `glyph` is an SF Symbol NAME, not an emoji.
+                            Image(systemName: tier.glyph)
+                                .font(.title3)
+                                .foregroundStyle(.tint)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(tier.displayName).foregroundStyle(.primary)
+                                Text(tier.tagline)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if core.selectedBrain == tier {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.tint)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                if let note = core.brainNote {
+                    Text(note).font(.caption).foregroundStyle(.orange)
+                }
+                if let hint = miniHint {
+                    Text(hint).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
+            CompanionPickerSection()
+
+            Section {
+                Toggle("Web search in chat", isOn: $webSearchEnabled)
+            } header: {
+                Text("Grounding")
+            } footer: {
+                Text(
+                    "When on, M1K3 can search the web to answer. The only capability "
+                        + "that sends chat-derived queries off this device."
+                )
+            }
+
+            Section {
+                Toggle("Avatar backdrop in chat", isOn: $avatarBackdrop)
+            } header: {
+                Text("Appearance")
+            } footer: {
+                Text(
+                    "M1K3's face fills the background while you chat — bright when idle, "
+                        + "receding while it thinks or you type. Off keeps a plain dark backdrop. "
+                        + "Reduce Transparency also turns it off."
+                )
+            }
+
+            Section {
+                Picker("Reply typeface", selection: $readingModeRaw) {
+                    ForEach(ReadingMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode.rawValue)
+                    }
+                }
+                ReadingText("Reading should feel effortless — pick what suits your eyes.")
+                    .font(.callout)
+            } header: {
+                Text("Reading")
+            } footer: {
+                Text(readingMode.detail)
+            }
+
+            Section("Knowledge") {
+                LabeledContent("Indexed documents", value: "\(core.indexedItemCount)")
+            }
+
+            Section {
+                LabeledContent("Version", value: appVersion)
+                Link("m1k3.app", destination: URL(string: "https://m1k3.app")!)
+            } header: {
+                Text("About")
+            } footer: {
+                Text("M1K3 — a local, private AI companion. Everything runs on your device.")
+            }
         }
+        .navigationTitle("Settings")
     }
 
     private var readingMode: ReadingMode {

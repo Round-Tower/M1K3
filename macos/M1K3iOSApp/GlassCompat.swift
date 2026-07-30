@@ -30,3 +30,20 @@ extension View {
         #endif
     }
 }
+
+/// Portable `GlassEffectContainer`: on iOS, neighbouring Liquid Glass shapes
+/// (input field + chips) should share ONE container so the system renders and
+/// blends them as a group — the Mac inputRow's exact pattern. visionOS has no
+/// container (its chips are plain materials), so this degrades to a Group.
+struct M1K3GlassGroup<Content: View>: View {
+    var spacing: CGFloat = 12
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        #if os(visionOS)
+            Group { content }
+        #else
+            GlassEffectContainer(spacing: spacing) { content }
+        #endif
+    }
+}

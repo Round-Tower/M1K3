@@ -6,9 +6,11 @@
 //  that ran the real engine + the pixel-cube avatar on an iPhone 17 Pro to move
 //  the port from "compiles" to "runs like M1K3" (both Mini and Lil verified on
 //  device, 2026-07-06). It has since grown up into the real shared adaptive
-//  shell: it builds the `AppCore` composition root and mounts the tabbed
-//  `RootView` (Chat / Memories / Documents / Settings) over the SAME package
-//  pipeline the Mac app ships. The Mac's `AppEnvironment` is untouched.
+//  shell: it builds the `AppCore` composition root and mounts `RootView` —
+//  chat IS the app (a `NavigationStack` over `ChatScreen`; Memories/Documents/
+//  Settings are pushes behind the toolbar gear since 2026-07-29) — over the
+//  SAME package pipeline the Mac app ships. The Mac's `AppEnvironment` is
+//  untouched.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-06, Confidence 0.8 (compile-verified for
 //  iOS + visionOS; on-device run is the Phase-B verify-owed — MLX needs Metal,
@@ -45,7 +47,12 @@ struct M1K3iOSApp: App {
                 // return. `.inactive` (notification banner / Control Center) is
                 // deliberately ignored so transient interruptions don't churn the model.
                 switch phase {
-                case .background: core?.releaseForBackground()
+                case .background:
+                    // Voice mode can't survive a true background (the mic engine
+                    // and audio session are torn down by the OS) — leave cleanly
+                    // BEFORE shedding the brain, so the loop never sees a dead mic.
+                    core?.exitVoiceMode()
+                    core?.releaseForBackground()
                 case .active: core?.warmForForeground()
                 default: break
                 }

@@ -16,6 +16,11 @@
 //  ChatBackdropTreatment), matching the Mac's background-avatar mode. Follow-up
 //  chips are wired tap-to-send, and autoscroll now also fires when chips land
 //  (they arrive at .complete without a text change).
+//  Review: claude-fable-5, 2026-07-29/30 — chat-is-the-app pass: nav title
+//  dropped, New-chat + voice-mode toolbar, starter chips gated on the new
+//  `brainReady` (canSend's draft requirement silently ate chip taps), backdrop
+//  handoff to companions/None. 07-30: voice-mode button reuses !brainReady
+//  (PR #82 review DRY nit).
 //
 
 import M1K3Avatar
@@ -27,6 +32,7 @@ struct ChatScreen: View {
     @Environment(AppCore.self) private var core
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
+    @AppStorage(CompanionDefaults.companionKey) private var companion = ""
     @State private var draft = ""
     @FocusState private var inputFocused: Bool
 
@@ -34,11 +40,17 @@ struct ChatScreen: View {
         !core.chat.messages.isEmpty
     }
 
+    /// The "None" companion choice: no hero face, no live backdrop.
+    private var avatarHidden: Bool {
+        CompanionDefaults.hidesAvatar(companion)
+    }
+
     /// The live avatar backdrop is on when chatting, unless the user opted out
-    /// or asked the OS for Reduce Transparency (a layered live scene is exactly
-    /// what that setting asks us not to do — the Mac's glass swap, same spirit).
+    /// (the Appearance toggle or the None companion) or asked the OS for Reduce
+    /// Transparency (a layered live scene is exactly what that setting asks us
+    /// not to do — the Mac's glass swap, same spirit).
     private var backdropActive: Bool {
-        chatting && avatarBackdrop && !reduceTransparency
+        chatting && avatarBackdrop && !avatarHidden && !reduceTransparency
     }
 
     /// Composing — keyboard up or a draft in hand; recedes the backdrop avatar.
@@ -53,11 +65,42 @@ struct ChatScreen: View {
             inputBar
         }
         .background(backdrop)
-        .navigationTitle("M1K3")
+        // No navigation title — the wordmark lives in the empty-state hero; once
+        // chatting, the transcript owns the screen (2026-07-29, Kev's call).
         #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
         #endif
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        core.chat.startNewConversation()
+                    } label: {
+                        Label("New chat", systemImage: "square.and.pencil")
+                    }
+                    // startNewConversation no-ops on an empty transcript or a turn
+                    // in flight — disable so the button never reads as broken.
+                    .disabled(core.chat.messages.isEmpty || core.chat.isResponding)
+                }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        core.enterVoiceMode()
+                    } label: {
+                        Label("Voice mode", systemImage: "waveform")
+                    }
+                    .disabled(!brainReady)
+                    NavigationLink {
+                        SettingsScreen()
+                    } label: {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: Binding(
+                get: { core.voiceLoop != nil },
+                set: { active in if !active { core.exitVoiceMode() } }
+            )) {
+                VoiceScreen()
+            }
     }
 
     // MARK: - Backdrop
@@ -89,9 +132,11 @@ struct ChatScreen: View {
     private var hero: some View {
         VStack(spacing: 6) {
             if !chatting {
-                AvatarView(controller: core.avatar)
-                    .frame(height: 168)
-                    .padding(.horizontal, 56)
+                if !avatarHidden {
+                    AvatarSurface(controller: core.avatar)
+                        .frame(height: 168)
+                        .padding(.horizontal, 56)
+                }
                 Text("M1K3")
                     .font(.pixel(28))
                     .kerning(2)
@@ -174,12 +219,13 @@ struct ChatScreen: View {
                             message: message,
                             scrimmed: backdropActive,
                             onSendFollowUp: { question in
-                                // Same gate as the input bar (see send()) — chips on
-                                // EARLIER turns stay tappable while a new answer
-                                // streams; ChatSession would silently drop the send
-                                // and the avatar epilogue would bloom the backdrop
-                                // over the streaming text.
-                                guard !core.chat.isResponding, core.isReady else { return }
+                                // Same gate the starter chips use (brainReady) — chips
+                                // carry their own prompt, so no draft dependency; chips
+                                // on EARLIER turns stay tappable while a new answer
+                                // streams (ChatSession would otherwise silently drop the
+                                // send and the avatar epilogue would bloom the backdrop
+                                // over the streaming text).
+                                guard brainReady else { return }
                                 Task { await core.send(question) }
                             }
                         )
@@ -208,40 +254,101 @@ struct ChatScreen: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Text("Ask me anything.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Text("Grounded in your documents and memories — on device.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
+        VStack(spacing: 14) {
+            VStack(spacing: 8) {
+                Text("Ask me anything.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Text("Grounded in your documents and memories — on device.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+            }
+            starterChips
         }
         .padding(.top, 28)
+    }
+
+    /// Starter prompts for the blank canvas — the same tap-to-send path (and the
+    /// same `canSend` gate) as the reply follow-up chips, so a tap while the brain
+    /// is still warming is a no-op rather than an eaten message. Dimmed until ready
+    /// so the readiness hint in the hero reads as the reason.
+    private var starterChips: some View {
+        M1K3GlassGroup(spacing: 8) {
+            starterChipStack
+        }
+        .frame(maxWidth: 340)
+        // brainReady, NOT canSend: the chips live on the EMPTY canvas (draft == ""),
+        // and canSend requires a non-empty draft — so canSend would dim them by
+        // default and swallow every tap even when the brain is warm and ready.
+        .opacity(brainReady ? 1 : 0.5)
+        .padding(.top, 4)
+    }
+
+    private var starterChipStack: some View {
+        VStack(spacing: 8) {
+            ForEach(Self.starters, id: \.self) { prompt in
+                Button { sendStarter(prompt) } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkle")
+                            .font(.caption2)
+                            .foregroundStyle(.tint)
+                        Text(prompt)
+                            .font(.callout)
+                            .foregroundStyle(.primary)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .m1k3Glass(cornerRadius: 14)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private static let starters = [
+        "What can you help me with?",
+        "Explain something simply",
+        "What do you remember about me?",
+    ]
+
+    private func sendStarter(_ prompt: String) {
+        // The chip carries its own prompt, so gate on brain readiness only — NOT
+        // canSend (which requires a non-empty draft the empty canvas never has). Same
+        // gate the reply follow-up chips use.
+        guard brainReady else { return }
+        Task { await core.send(prompt) }
     }
 
     // MARK: - Input bar
 
     private var inputBar: some View {
-        HStack(spacing: 10) {
-            TextField("Ask M1K3…", text: $draft, axis: .vertical)
-                .lineLimit(1 ... 4)
-                .focused($inputFocused)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .m1k3Glass(cornerRadius: 20)
-                .onSubmit(send)
-            Button(action: send) {
-                if core.chat.isResponding {
-                    ProgressView().frame(width: 28, height: 28)
-                } else {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 30))
-                        .symbolRenderingMode(.hierarchical)
+        // One glass container for the whole row — the Mac inputRow's pattern, so
+        // the field's glass and any neighbouring chips render/blend as a group.
+        M1K3GlassGroup(spacing: 10) {
+            HStack(spacing: 10) {
+                TextField("Ask M1K3…", text: $draft, axis: .vertical)
+                    .lineLimit(1 ... 4)
+                    .focused($inputFocused)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 11)
+                    .m1k3Glass(cornerRadius: 22)
+                    .onSubmit(send)
+                Button(action: send) {
+                    if core.chat.isResponding {
+                        ProgressView().frame(width: 28, height: 28)
+                    } else {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 30))
+                            .symbolRenderingMode(.hierarchical)
+                    }
                 }
+                .buttonStyle(.plain)
+                .disabled(!canSend)
             }
-            .buttonStyle(.plain)
-            .disabled(!canSend)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -250,9 +357,15 @@ struct ChatScreen: View {
     }
 
     private var canSend: Bool {
-        !core.chat.isResponding
-            && core.isReady
+        brainReady
             && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Ready to send a prompt that DOESN'T come from the input bar (starter +
+    /// follow-up chips carry their own text). No `draft` dependency — the difference
+    /// that makes canSend wrong for the chips.
+    private var brainReady: Bool {
+        !core.chat.isResponding && core.isReady
     }
 
     private func send() {

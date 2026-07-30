@@ -106,6 +106,8 @@ public enum M1K3Log {
         case launch
         /// OS (CoreSpotlight) index donation/reconcile.
         case spotlight
+        /// The 3D companion creature surface (USDZ load/reload lifecycle).
+        case companion
     }
 
     /// Build a `Logger` on the M1K3 subsystem for a catalogued category.

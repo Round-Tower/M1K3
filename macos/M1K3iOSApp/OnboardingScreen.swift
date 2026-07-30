@@ -31,7 +31,7 @@ struct OnboardingScreen: View {
     var body: some View {
         VStack(spacing: 20) {
             Spacer(minLength: 12)
-            AvatarView(controller: core.avatar)
+            AvatarSurface(controller: core.avatar)
                 .frame(width: 160, height: 160)
             Text("M1K3")
                 .font(.pixel(34))
@@ -49,6 +49,11 @@ struct OnboardingScreen: View {
             }
             .padding(.horizontal, 20)
 
+            Label("Everything runs on your device", systemImage: "lock.fill")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, 6)
+
             Spacer()
         }
         .frame(maxWidth: 520)
@@ -61,7 +66,15 @@ struct OnboardingScreen: View {
             .ignoresSafeArea()
         )
         .preferredColorScheme(.dark)
-        .onAppear { core.avatar.setEmotion(.happy) }
+        .onAppear {
+            // A lively "hello" beat that settles into a warm smile — the face
+            // greets you rather than sitting neutral behind the copy.
+            core.avatar.setEmotion(.excited)
+            Task {
+                try? await Task.sleep(for: .seconds(1.6))
+                core.avatar.setEmotion(.happy)
+            }
+        }
     }
 
     private func brainCard(_ tier: BrainTier) -> some View {
