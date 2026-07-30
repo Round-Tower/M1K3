@@ -152,7 +152,7 @@ public struct MemoryDistillationCoordinator: Sendable {
             }
             written += 1
             if let twin {
-                await supersede(twin, with: fact, vector: vector)
+                await supersede(twin, with: fact, newItemID: result.itemID, vector: vector)
             } else {
                 Self.log.info("remembered: \(LogPreview.preview(fact.text, max: 80), privacy: .public)")
                 await dualWriteToGraph(fact, vector: vector)
@@ -171,7 +171,9 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// lands in the audited divergence path (spec fixture #9), never as a
     /// live corpus row whose graph node is secretly superseded going
     /// unnoticed.
-    private func supersede(_ twin: ChunkHit, with fact: DistilledFact, vector: [Float]?) async {
+    private func supersede(
+        _ twin: ChunkHit, with fact: DistilledFact, newItemID: UUID, vector: [Float]?
+    ) async {
         if let graph, let vector {
             do {
                 try await graph.writeDistilledFact(
@@ -182,26 +184,55 @@ public struct MemoryDistillationCoordinator: Sendable {
             }
         }
         transitionCorpusTwin(itemID: twin.itemID, context: "supersede")
+        recordSupersededLink(from: twin.itemID, to: newItemID)
         Self.log.notice("memory superseded: 1 fact corrected at write time")
+    }
+
+    // MARK: - The corpus supersede ledger
+
+    /// CORPUS-side record of "who corrected whom" (meta table, IDs only).
+    /// This — not the graph — is what revive() reads to find the corrector it
+    /// must demote: the graph is best-effort/optional (nil for corpus-only
+    /// callers, and for the live app whenever memory.sqlite failed to open),
+    /// and a repair that depends on it would leave two contradicting live
+    /// rows exactly in the degraded state that needs the repair most
+    /// (PR #87 review finding 1).
+    static func supersededLinkKey(_ itemID: UUID) -> String {
+        "memory.superseded-by:\(itemID.uuidString)"
+    }
+
+    private func recordSupersededLink(from oldItemID: UUID, to newItemID: UUID) {
+        do {
+            try store.setMeta(key: Self.supersededLinkKey(oldItemID), value: newItemID.uuidString)
+        } catch {
+            Self.log.error("supersede-ledger write failed for item \(oldItemID.uuidString, privacy: .public)")
+        }
+    }
+
+    private func supersededLink(for itemID: UUID) -> UUID? {
+        (try? store.meta(key: Self.supersededLinkKey(itemID))).flatMap { $0 }.flatMap(UUID.init(uuidString:))
     }
 
     /// Exact re-assertion of a superseded fact: the graph writes a fresh node
     /// over the chain's live head, the existing corpus row returns to
     /// retrieval, and the supplanted head's own corpus twin leaves it.
     private func revive(_ fact: DistilledFact, itemID: UUID, vector: [Float]?) async throws {
-        var supplantedText: String?
         if let graph, let vector {
             do {
-                supplantedText = try await graph.reviveFact(fact.text, kind: fact.kind, embedding: vector)
+                // The graph resolves its own chain head; the corpus supplant
+                // below deliberately does NOT use this return value — the
+                // ledger works graph-less (PR #87 review finding 1).
+                _ = try await graph.reviveFact(fact.text, kind: fact.kind, embedding: vector)
             } catch {
                 Self.log.notice("graph revive failed (corpus restore proceeds): \(error.localizedDescription, privacy: .public)")
             }
         }
         transitionCorpusTwin(itemID: itemID, to: .memory, context: "revive-restore")
-        if let supplantedText, let supplantedID = try store.itemID(
-            forSourceRef: Self.factSourceRef(supplantedText)
-        ) {
-            transitionCorpusTwin(itemID: supplantedID, context: "revive-supplant")
+        if let correctorID = supersededLink(for: itemID) {
+            transitionCorpusTwin(itemID: correctorID, context: "revive-supplant")
+            // Flip the ledger: the demoted corrector can itself be revived.
+            recordSupersededLink(from: correctorID, to: itemID)
+            try? store.deleteMeta(key: Self.supersededLinkKey(itemID))
         }
         Self.log.notice("memory revived: 1 superseded fact restored by re-assertion")
     }

@@ -110,6 +110,12 @@ public final class KnowledgeStore: @unchecked Sendable {
         }
     }
 
+    public func deleteMeta(key: String) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "DELETE FROM knowledge_meta WHERE key = ?", arguments: [key])
+        }
+    }
+
     private static func upsertMeta(_ db: Database, key: String, value: String) throws {
         try db.execute(
             sql: """

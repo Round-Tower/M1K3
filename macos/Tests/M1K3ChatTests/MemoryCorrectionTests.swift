@@ -179,6 +179,37 @@ struct MemoryCorrectionTests {
         #expect(try f.store.searchFTS(query: "ardmore", kinds: [.memory]).isEmpty)
     }
 
+    @Test("graph-less revive demotes the corrector — never two live contradicting rows")
+    func graphlessReviveDemotesCorrector() async throws {
+        // PR #87 review finding 1: with graph nil, the supplant step used to
+        // depend on the graph's return value — re-asserting a superseded
+        // fact restored it WITHOUT demoting its corrector, leaving both
+        // "Dublin" and "Ardmore" live. The corpus supersede ledger closes it.
+        let f = try Fixture(graph: nil)
+        _ = try await f.distill([priorFact])
+        _ = try await f.distill([correctionFact]) // prior superseded
+
+        let written = try await f.distill([priorFact]) // the repair, graph-less
+
+        #expect(written == 1)
+        #expect(try f.store.searchFTS(query: "dublin", kinds: [.memory]).count == 1)
+        #expect(try f.store.searchFTS(query: "ardmore", kinds: [.memory]).isEmpty)
+    }
+
+    @Test("revive round-trip: the demoted corrector can itself be revived")
+    func reviveRoundTrip() async throws {
+        let f = try Fixture(graph: nil)
+        _ = try await f.distill([priorFact])
+        _ = try await f.distill([correctionFact])
+        _ = try await f.distill([priorFact]) // revive prior, demote correction
+
+        let written = try await f.distill([correctionFact]) // flip back
+
+        #expect(written == 1)
+        #expect(try f.store.searchFTS(query: "ardmore", kinds: [.memory]).count == 1)
+        #expect(try f.store.searchFTS(query: "dublin", kinds: [.memory]).isEmpty)
+    }
+
     @Test("graph-less callers still get the corpus half of the repair")
     func graphlessCorpusRepair() async throws {
         let f = try Fixture(graph: nil)

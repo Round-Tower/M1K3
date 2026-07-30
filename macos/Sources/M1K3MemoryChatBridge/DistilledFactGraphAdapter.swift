@@ -54,7 +54,12 @@ public struct DistilledFactGraphAdapter: DistilledFactGraphWriting {
             try store.rememberConnected(memory, embedding: embedding)
             return
         }
-        try store.remember(memory, embedding: embedding, supersedes: old.id)
+        // rememberConnected, not bare remember: a corrected fact still earns
+        // its "related" edges to live neighbours — otherwise every corrected
+        // node's only edge points at a peer related() can no longer surface
+        // (PR #87 review finding 2). The superseded twin itself is excluded
+        // from neighbour linking because recallVector filters superseded rows.
+        try store.rememberConnected(memory, embedding: embedding, supersedes: old.id)
     }
 
     public func reviveFact(_ text: String, kind: DistilledFactKind, embedding: [Float]) async throws -> String? {
@@ -66,7 +71,7 @@ public struct DistilledFactGraphAdapter: DistilledFactGraphWriting {
             try store.rememberConnected(memory, embedding: embedding)
             return nil
         }
-        try store.remember(memory, embedding: embedding, supersedes: head.id)
+        try store.rememberConnected(memory, embedding: embedding, supersedes: head.id)
         return head.text
     }
 }

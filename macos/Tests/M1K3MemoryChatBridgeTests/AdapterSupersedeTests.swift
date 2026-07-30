@@ -112,6 +112,34 @@ struct AdapterSupersedeTests {
         #expect(try f.store.liveMemory(matchingText: "Kev lives in Ardmore.") == nil)
     }
 
+    @Test("a superseding write still earns related edges to live neighbours")
+    func supersedeKeepsRelatedEdges() async throws {
+        // PR #87 review finding 2: the supersede path bypassed
+        // rememberConnected, so corrected facts landed with only a
+        // `supersedes` edge — pointing at a node related() can no longer
+        // surface — and the Connections panel went empty for them.
+        let f = try Fixture()
+        // A live topical neighbour sharing tokens with the correction.
+        try await f.adapter.writeDistilledFact(
+            "Kev lives in Ardmore near the tower.", kind: .note,
+            embedding: f.vec("Kev lives in Ardmore near the tower."), superseding: nil
+        )
+        try await f.adapter.writeDistilledFact(
+            "Kev lives in Dublin city.", kind: .profile,
+            embedding: f.vec("Kev lives in Dublin city."), superseding: nil
+        )
+
+        try await f.adapter.writeDistilledFact(
+            "Kev lives in Ardmore village.", kind: .profile,
+            embedding: f.vec("Kev lives in Ardmore village."),
+            superseding: "Kev lives in Dublin city."
+        )
+
+        let corrected = try #require(try f.store.liveMemory(matchingText: "Kev lives in Ardmore village."))
+        let neighbours = try f.store.related(to: corrected.id, maxHops: 1)
+        #expect(neighbours.contains { $0.text == "Kev lives in Ardmore near the tower." })
+    }
+
     @Test("reviveFact with no superseded match degrades to a plain write, nil supplanted")
     func reviveMissDegrades() async throws {
         let f = try Fixture()

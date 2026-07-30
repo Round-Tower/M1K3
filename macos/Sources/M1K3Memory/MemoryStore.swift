@@ -407,7 +407,7 @@ public final class MemoryStore: @unchecked Sendable {
     /// for a best-effort personal graph, and `link`'s INSERT OR IGNORE keeps
     /// retries idempotent. ⚠️ But a THROW mid-loop is permanently masked one
     /// layer up: the fact's vector is already in the corpus, so the distiller's
-    /// semantic dedup (`hasSemanticDuplicate` / `wasDeduped`) skips it on every
+    /// semantic dedup (`semanticTwin` / `wasDeduped`) handles it on every
     /// retry and the missing edges are never backfilled (112 review nit). That's
     /// why a mid-loop throw is wrapped in `MemoryGraphPartialWriteError` naming
     /// the partial X/N state — so the caller's breadcrumb says "node written,
@@ -420,9 +420,10 @@ public final class MemoryStore: @unchecked Sendable {
         _ memory: Memory,
         embedding: [Float],
         maxLinks: Int = 3,
-        threshold: Float = GroundingGate.edgeThreshold
+        threshold: Float = GroundingGate.edgeThreshold,
+        supersedes oldID: UUID? = nil
     ) throws -> Int {
-        try remember(memory, embedding: embedding)
+        try remember(memory, embedding: embedding, supersedes: oldID)
         // Nearest live neighbours by cosine — the +1 absorbs the node we just
         // inserted (cosine 1.0 with itself), which we then drop by id.
         let neighbours = try recallVector(queryVector: embedding, limit: maxLinks + 1)
