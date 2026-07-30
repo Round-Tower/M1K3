@@ -14,7 +14,9 @@
 //  cached model) so it proves the MLXLLM path without a fresh download — the
 //  product default (gemma-3-1b QAT) can be slow to fetch on first run.
 //
-//  Uses an in-memory store so it never touches the real container.
+//  Uses an in-memory store so it never touches the real container — except
+//  the MEMSTAT arm, which reads (never writes) the real container stores by
+//  design: measuring the live graph is its whole point (MemStatStage.swift).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
 
@@ -403,6 +405,17 @@ enum SelfTest {
         //    — the proof that recall works on MEANING, not just keyword overlap.
         if MemGraphEvalStage.isRequested {
             await MemGraphEvalStage.run(emit: emit)
+        }
+
+        // 8b. Optional dream-cycle Tier-0 census (M1K3_SELFTEST_MEMSTAT=1):
+        //     read-only stats over the REAL container stores (live/kind/
+        //     superseded counts, pairwise cosine histogram, corpus divergence)
+        //     plus the contradiction/compatible/restatement probe pairs and
+        //     the end-to-end eaten-correction ingest probe. The measurement
+        //     that gates every dream-cycle tier — see scratch/dream-cycle/
+        //     SPEC.md and MemStatStage.swift.
+        if MemStatStage.isRequested {
+            await MemStatStage.run(emit: emit)
         }
 
         // 9. Optional Gemma-4 vision spike (M1K3_SELFTEST_VISION=1 +

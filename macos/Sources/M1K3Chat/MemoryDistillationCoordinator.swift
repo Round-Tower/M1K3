@@ -38,7 +38,9 @@ public protocol DistilledFactGraphWriting: Sendable {
 public struct MemoryDistillationCoordinator: Sendable {
     private static let log = Logger(subsystem: M1K3Log.subsystem, category: "memory-distill")
     /// Cosine above which a stored memory counts as "already known".
-    static let semanticDedupeThreshold: Float = 0.90
+    /// Public so the MEMSTAT census (scratch/dream-cycle/SPEC.md Tier 0)
+    /// reports against the LIVE bar, never a copied constant.
+    public static let semanticDedupeThreshold: Float = 0.90
     static let maxTitleLength = 60
 
     private let distiller: any MemoryDistilling

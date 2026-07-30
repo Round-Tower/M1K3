@@ -796,6 +796,14 @@ public final class MemoryStore: @unchecked Sendable {
         }
     }
 
+    /// Every row, superseded included — one aggregate read, no hydration
+    /// (the MEMSTAT census's superseded-count input; PR #83 review fold).
+    public func totalCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM memories") ?? 0
+        }
+    }
+
     /// A cheap change-signal for polling UIs. `liveCount` alone MISSES a
     /// supersession (an old fact exits live as its corrector enters → net delta
     /// zero), so we fold in the edge count (a supersedes/link always writes an
@@ -813,6 +821,48 @@ public final class MemoryStore: @unchecked Sendable {
                 db, sql: "SELECT COALESCE(MAX(created_at), 0) FROM memories WHERE superseded_by IS NULL"
             ) ?? 0
             return MemoryRevision(memoryCount: memoryCount, edgeCount: edgeCount, latestCreatedAt: latest)
+        }
+    }
+
+    /// Every live memory's vector — the MEMSTAT pairwise-census read
+    /// (scratch/dream-cycle/SPEC.md Tier 0). Superseded rows are excluded:
+    /// retrieval can never pair with them, so counting them would inflate
+    /// the very bands the census exists to measure.
+    public func liveEmbeddingVectors(limit: Int = 20000) throws -> [[Float]] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                SELECT e.embedding FROM memory_embeddings e
+                JOIN memories m ON m.id = e.memory_id
+                WHERE m.superseded_by IS NULL
+                LIMIT ?
+                """,
+                arguments: [limit]
+            )
+            return rows.compactMap { row in
+                (row["embedding"] as Data?).map(VectorMath.deserialize)
+            }
+        }
+    }
+
+    /// Live per-kind row counts (rawValue → count) — the MEMSTAT census header.
+    public func liveCountsByKind() throws -> [String: Int] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                SELECT kind, COUNT(*) AS n FROM memories
+                WHERE superseded_by IS NULL GROUP BY kind
+                """
+            )
+            var counts: [String: Int] = [:]
+            for row in rows {
+                if let kind: String = row["kind"], let count: Int = row["n"] {
+                    counts[kind] = count
+                }
+            }
+            return counts
         }
     }
 
