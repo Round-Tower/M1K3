@@ -77,6 +77,22 @@ struct MemoryCosineStatsTests {
         #expect(report.binCounts.reduce(0, +) == 1)
     }
 
+    @Test("mismatched-dimension pairs are excluded from bins and counted separately")
+    func mismatchedDimensions() {
+        // VectorMath scores a length mismatch as cosine 0.0 — silently binning
+        // that would corrupt the census, so such pairs are quarantined instead.
+        let report = MemoryCosineStats.pairwise([[1, 0], [1, 0, 0]])
+        #expect(report.pairCount == 0)
+        #expect(report.mismatchedPairCount == 1)
+        #expect(report.binCounts.reduce(0, +) == 0)
+    }
+
+    @Test("mismatched pairs surface in the rendered report")
+    func mismatchedRendered() {
+        let text = MemoryCosineStats.render(MemoryCosineStats.pairwise([[1, 0], [1, 0, 0]]))
+        #expect(text.contains("1 mismatched-dimension pair(s) EXCLUDED"))
+    }
+
     @Test("render names the counts, bands, and non-empty bins")
     func renderReport() {
         let report = MemoryCosineStats.pairwise([[1, 0], [0.8, 0.6]])

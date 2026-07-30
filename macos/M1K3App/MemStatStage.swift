@@ -68,7 +68,7 @@ enum MemStatStage {
             }
             let store = try MemoryStore(path: memoryURL.path)
             let live = try store.liveCount()
-            let total = try store.allMemories(includeSuperseded: true, limit: 100_000).count
+            let total = try store.totalCount()
             let revision = try store.revision()
             emit("memstat graph: \(live) live, \(total - live) superseded, "
                 + "\(revision.edgeCount) edge(s)")
@@ -174,11 +174,16 @@ enum MemStatStage {
                 embedder: embedder
             )
         }
-        let turns = [ChatTurn(role: .user, text: pair.revision)]
-        guard try await coordinator(pair.prior).distillAndStore(turns: turns) == 1 else {
+        // The transcript is inert either way (ScriptedDistiller ignores it and
+        // returns its scripted facts) — each call still gets its own matching
+        // turn purely so the probe reads honestly (PR #83 review nit).
+        guard try await coordinator(pair.prior)
+            .distillAndStore(turns: [ChatTurn(role: .user, text: pair.prior)]) == 1
+        else {
             return .seedFailed
         }
-        let written = try await coordinator(pair.revision).distillAndStore(turns: turns)
+        let written = try await coordinator(pair.revision)
+            .distillAndStore(turns: [ChatTurn(role: .user, text: pair.revision)])
         return written == 1 ? .survived : .eaten
     }
 }

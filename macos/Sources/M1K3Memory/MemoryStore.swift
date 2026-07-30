@@ -796,6 +796,14 @@ public final class MemoryStore: @unchecked Sendable {
         }
     }
 
+    /// Every row, superseded included — one aggregate read, no hydration
+    /// (the MEMSTAT census's superseded-count input; PR #83 review fold).
+    public func totalCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM memories") ?? 0
+        }
+    }
+
     /// A cheap change-signal for polling UIs. `liveCount` alone MISSES a
     /// supersession (an old fact exits live as its corrector enters → net delta
     /// zero), so we fold in the edge count (a supersedes/link always writes an

@@ -14,7 +14,9 @@
 //  cached model) so it proves the MLXLLM path without a fresh download — the
 //  product default (gemma-3-1b QAT) can be slow to fetch on first run.
 //
-//  Uses an in-memory store so it never touches the real container.
+//  Uses an in-memory store so it never touches the real container — except
+//  the MEMSTAT arm, which reads (never writes) the real container stores by
+//  design: measuring the live graph is its whole point (MemStatStage.swift).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
 

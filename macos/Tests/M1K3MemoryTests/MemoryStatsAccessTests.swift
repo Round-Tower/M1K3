@@ -75,6 +75,16 @@ struct MemoryStatsAccessTests {
         #expect(counts[MemoryKind.preference.rawValue] == 1)
     }
 
+    @Test("totalCount counts every row including superseded, without hydration")
+    func totalCount() async throws {
+        let f = try Fixture()
+        let old = try await f.remember("Kev lives in Dublin", kind: .profile)
+        try await f.remember("Kev lives in Ardmore", kind: .profile, supersedes: old.id)
+
+        #expect(try f.store.totalCount() == 2)
+        #expect(try f.store.liveCount() == 1)
+    }
+
     @Test("empty store yields empty census")
     func emptyStore() throws {
         let f = try Fixture()

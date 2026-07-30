@@ -38,12 +38,18 @@ public enum MemoryCosineStats {
 
     public struct Report: Sendable, Equatable {
         public let vectorCount: Int
+        /// Scored (same-dimension) pairs only.
         public let pairCount: Int
         /// Histogram over [-1, 1], `binCount` bins; cosine 1.0 clamps into the
         /// last bin so the counts always total `pairCount`.
         public let binCounts: [Int]
         public let pairsAtOrAboveDedupe: Int
         public let pairsInMineableBand: Int
+        /// Pairs whose vectors differ in length — a mixed-embedder store.
+        /// VectorMath scores those 0.0 silently; binning them would corrupt
+        /// the exact measurement this census exists for, so they're
+        /// quarantined here and flagged in the render (PR #83 review fold).
+        public let mismatchedPairCount: Int
     }
 
     /// Full pairwise census. O(n²) dot products — acceptable by design for a
@@ -53,8 +59,13 @@ public enum MemoryCosineStats {
         var pairs = 0
         var dedupe = 0
         var mineable = 0
+        var mismatched = 0
         for i in vectors.indices {
             for j in vectors.indices where j > i {
+                guard vectors[i].count == vectors[j].count else {
+                    mismatched += 1
+                    continue
+                }
                 let cosine = VectorMath.cosineSimilarity(vectors[i], vectors[j])
                 pairs += 1
                 bins[binIndex(for: cosine)] += 1
@@ -70,7 +81,8 @@ public enum MemoryCosineStats {
             pairCount: pairs,
             binCounts: bins,
             pairsAtOrAboveDedupe: dedupe,
-            pairsInMineableBand: mineable
+            pairsInMineableBand: mineable,
+            mismatchedPairCount: mismatched
         )
     }
 
@@ -85,6 +97,10 @@ public enum MemoryCosineStats {
             String(format: "  pairs in [%.2f, %.2f): %d (mineable band)",
                    mineableFloor, dedupeBar, report.pairsInMineableBand),
         ]
+        if report.mismatchedPairCount > 0 {
+            lines.append("  ⚠️ \(report.mismatchedPairCount) mismatched-dimension pair(s) EXCLUDED "
+                + "(mixed embedders in store — census is partial)")
+        }
         for (index, count) in report.binCounts.enumerated() where count > 0 {
             let lower = -1.0 + Float(index) * 0.05
             lines.append(String(format: "  [%+.2f, %+.2f): %d", lower, lower + 0.05, count))
