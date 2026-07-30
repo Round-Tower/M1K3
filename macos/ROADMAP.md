@@ -5,23 +5,29 @@ architecture/build/test, see `CLAUDE.md`. For *why* a decision was made (model
 swaps, phase rationale, the full session-by-session build log), see `PLAN.md` —
 it's a signed historical record and stays that way; this file doesn't repeat it.
 
-Last swept: 2026-07-19, against `.claude/project-memory.md`, `PLAN.md`, open
-PRs/issues, and the current branch.
+Last swept: 2026-07-30 (merge day: #82 iOS companions/voice-first + #83/#84
+dream-cycle Tiers 0/1 all landed; PR board EMPTY; baseline = master).
 
 ---
 
 ## Now
 
-- **`fix/vision-review-nits` (current branch, uncommitted):** `ContentView.swift`
-  bottom-chrome refactor to a `safeAreaInset` (so the transcript scrolls under
-  the bar, matching the toolbar's material) + a top scrim overlay, plus a
-  `ChatSession+Conversations.swift` fix — review nits off PR #62. Finish + commit.
-- **Verify-owed: PR #62 (vision)** — Big now sees via `VLMModelFactory` +
-  image-attachment chat. Commit message names a "live-path CHATEVAL A/B gate
-  running on-device" — read that back before calling vision done.
-- **MTP speculative-decoding spike (#61) — PARKED, no action.** `Gemma4Unified`
-  is missing the MTP-aware cache override upstream (confirmed absent on
-  `mlx-swift-lm` `main`). Re-check only on the next `mlx-swift-lm` bump.
+- **iOS voice-mode crash triage (#85).** Kev's device run: the shell works
+  great, voice mode crashes. Pull the `.ips` from the device, then fix — this
+  blocks the felt iOS voice experience, which is the mobile flagship's spine.
+- **Dream-cycle Tier 2 — write-time repair** (`scratch/dream-cycle/SPEC.md`,
+  data in `MEMSTAT-RESULTS.md`): the Tier-0 census made it *mandatory* — 3/10
+  corrections are silently eaten at ingest today — and answered the mechanism
+  question (no cosine bar separates correction from restatement → the ≥ 0.90
+  disambiguation must be content-aware; supersede-on-write needs
+  contradiction-vs-compatible discrimination on the one candidate pair).
+  Prerequisites named in the spec ride the same PR (`related(to:)` superseded
+  filter, un-supersede-on-reassert, corpus-twin marker — Kev's sub-kind call).
+  With only 51 mineable pairs + a Δ202 backfill measured, Tier 2 + a one-shot
+  backfill may retire the nightly dream entirely.
+- **MetricKit adoption (#86)** — on-device crash/hang/power diagnostics for
+  both shells, surfaced through the existing secret-free issue-report flow.
+  First customer: #85.
 
 ---
 
@@ -100,15 +106,17 @@ Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
   the calm opt-in consent UX + the escalation control — is genuinely gated on
   a **macOS 27 runtime**, not just the SDK, so it can't start until that beta
   lands (~autumn, per the WWDC26 wave). Nothing to do here yet but watch for it.
-- **Memory distiller-quality eval.** Traced from an old "Phase 3 memory" item —
-  turns out most of it (consolidation/recency/contradiction) already shipped via
-  the temporal memory graph's supersession mechanism (`MemoryStore.supersededBy`
-  + `MemoryGraphEval` scoring recall-after-correction) and was just never
-  checked off. What's genuinely still open: an AFM-judge eval scoring whether
-  the auto-`MemoryDistillationCoordinator` extracts good facts from chat (no
-  fixtures exist in `M1K3Eval` for this yet), and confirming `user.profile`
-  facts vs `.memory`-graph profile facts don't collide (the distiller extracts
-  profile-grade facts into both stores — unverified whether that's handled).
+- **Memory distiller-quality eval.** Narrowed again by the dream-cycle work
+  (Tiers 0/1 shipped 2026-07-30; MEMSTAT now measures the ingest path
+  end-to-end). Still genuinely open: an AFM-judge eval scoring whether
+  `MemoryDistillationCoordinator` extracts good facts from chat (no fixtures
+  in `M1K3Eval` yet), and the `user.profile` vs `.memory`-graph collision
+  check.
+- **Golden Gate wave (macOS 27, ~Sept GA).** The standing play: ship the
+  LanguageModel/PCC capability at GA (Phase 17b below is the runtime-gated
+  half); Xcode 27 beta can be installed beside stable NOW (host req is
+  macOS 26.4+, already met) to start on the SDK surface without touching the
+  daily-driver OS. Demo/screenshot content shoots while the beta bakes.
 
 ---
 
@@ -159,12 +167,26 @@ Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
 
 ## Needs Kev — open calls, gathered in one place
 
-- Voice-mobile call #1 (scoping confirm, above) unblocks Phase B.
 - Brain-at-home §8 calls (naming, serving indicator, thermal etiquette,
   visionOS timing) unblock Phase A.
+- Dream-cycle Tier-2 corpus-twin marker: sub-kind vs title-prefix (spec §5
+  recommends sub-kind).
+- App icon: Kev wants the liquid-glass mark swapped for a plain M — his eye,
+  his edit (Icon Composer; the visionOS `.solidimagestack` follows).
+- Store presence pass (screenshots, per-platform captures, site cross-links) —
+  parked deliberately; the website content is strong, timing is the question.
+  (Voice-mobile scoping call #1 was RESOLVED by #82's nav restructure — see
+  the flagship section above.)
 
 ---
 
+<!-- Review: Kev + claude-fable-5, 2026-07-30 — merge-day sweep: Now section
+     rebuilt (stale #62-era items ticked off; voice-crash #85 + dream-cycle
+     Tier 2 + MetricKit #86 are the focus), V0 tab finding closed-by-removal,
+     voice scoping resolved-by-#82, Golden Gate wave named with the
+     install-beta-beside-stable unlock, Kev's icon + store-presence calls
+     captured. Confidence 0.85 (swept against merged PRs + issues + the
+     MEMSTAT/MEMBLOCK evidence; reduction reflects Kev's realign directive). -->
 <!-- Signed: Kev + claude-sonnet-5, 2026-07-19, Confidence 0.9 (synthesized from
      a full read of CLAUDE.md + all 811 lines of PLAN.md + the last ~15
      project-memory.md session blocks + scratch/voice-mobile + scratch/brain-at-home
