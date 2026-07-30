@@ -212,6 +212,8 @@ final class AppCore {
         )
 
         refreshCounts()
+        // Cheap + synchronous (registration only) — see AppCore+MetricKit.swift.
+        startMetricKitCollection()
         // Speech lifecycle → avatar speaking state + the voice loop's completion
         // signal (speechDidEnd). One-time wiring, like the Mac's.
         wireSpeechCallbacks()

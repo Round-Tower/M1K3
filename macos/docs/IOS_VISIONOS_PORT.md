@@ -510,3 +510,26 @@ this sim run — AFM-on-sim flakiness, pipeline untouched today).
 _Signed: Kev + claude-fable-5, 2026-07-29, Confidence 0.8 (every UI flow above
 watched live on-sim; voice is adapter glue over test-pinned loop/endpointer with the
 felt beat honestly device-owed). Prior: Kev + claude-opus-4-8 (this file)._
+
+## 2026-07-30 — MetricKit adoption (#86): `M1K3Diagnostics` joins the `MobileShell` deps
+
+The mobile shell now subscribes `MXMetricManager` too (`AppCore+MetricKit.swift`,
+mirroring the Mac's `M1K3App/MetricKitCollector.swift`) — a small, separate
+`MobileMetricKitCollector` rather than a shared app-target type, since
+`M1K3App`/`M1K3iOSApp` are different compiled targets/apps and can't share app-glue
+files directly. Both reuse the SAME pure decision logic
+(`M1K3Diagnostics.MetricPayloadDigest` / `MetricRetentionPolicy`), so
+`M1K3Diagnostics` was added to the `MobileShell` targetTemplate's `dependencies` in
+`project.yml` (`project.yml:112`) — the first time this package pulls in a target
+outside the RAG/voice/avatar core. Both iOS and visionOS SDKs ship
+`MetricKit.framework`; its availability macros are `ios()`-keyed with no `xros()`
+override, and visionOS inherits iOS availability in that case, so the same code
+compiles for both `M1K3iOS` and `M1K3visionOS`. v1 surfacing on mobile is minimal —
+persist to a bounded on-disk store + a `.notice` count line — there's no "Report an
+issue" flow on this shell yet (that's Mac-only, `IssueReporter.swift`), matching the
+task's documented fallback for a shell whose report surface doesn't exist.
+
+_Signed: Kev + claude-fable-5, 2026-07-30, Confidence 0.75 (compile-verified for
+iOS/visionOS; mirrors the SDK-header-verified Mac collector's shape but has no
+device-run or MXMetricManagerSubscriber smoke test of its own, by mobile-shell
+design). Prior: Kev + claude-fable-5 (this file)._

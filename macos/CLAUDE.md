@@ -117,7 +117,7 @@ shell that wires concrete backends to the seams; `AppEnvironment` (+ its
 | `M1K3MCPLog` | Opt-in Agent Interaction Log: a GRDB sink (conforms to `MCPCallLogSink`) capturing full MCP request+response text ONLY when the Settings toggle is on. Separate target so the PII-bearing capture stays out of the tool-dispatch core. |
 | `M1K3Launch` | Launch-at-login (SMAppService seam) for the menu-bar companion. |
 | `M1K3Preview` | Review-panel router (link/file → `ReviewTarget`); QuickLook/WKWebView renderers live in the app. |
-| `M1K3Diagnostics` | Privacy scrub + issue-report formatting + the diagnostic log partition for the secret-free "Report an issue" flow. Pure/dependency-free so the redaction rules are unit-pinned. |
+| `M1K3Diagnostics` | Privacy scrub + issue-report formatting + the diagnostic log partition for the secret-free "Report an issue" flow, plus the MetricKit payload digest (`MetricPayloadDigest`) and the bounded on-disk store's pure retention/pruning decision (`MetricRetentionPolicy`). Pure/dependency-free so the redaction + digest/retention rules are unit-pinned. |
 
 **Brains** (`BrainTier.swift`): three tiers — **Mini** (Apple Foundation Models,
 instant, no download), **Lil** (`Qwen3-4B-Instruct-2507-4bit`, since 2026-07-16 —

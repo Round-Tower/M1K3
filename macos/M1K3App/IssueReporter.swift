@@ -18,6 +18,11 @@
 //  orchestration extracted to DiagnosticsReportBuilder (109-12 review nit); this
 //  file now only gathers OS inputs and delegates. Behavior byte-identical; the
 //  canary pass rides the builder's injected scrub seam. Confidence 0.9.
+//  Review: Kev + claude-fable-5, 2026-07-30 (#86) — `metricDigests` param: the
+//  caller (AdvancedSettingsPane) opts in and supplies
+//  `env.recentMetricDigestLines()`; this file stays a pure pass-through —
+//  never fetches MetricKit data itself. Empty by default (opt-out is the
+//  no-op — nothing new ships unless the user asks).
 //
 
 import AppKit
@@ -49,10 +54,16 @@ enum IssueReporter {
     static func reportIssue(
         whatHappened: String = "",
         activeBrain: String,
-        userProfile: String?
+        userProfile: String?,
+        metricDigests: [String] = []
     ) async -> Bool {
         let body = await Task.detached(priority: .userInitiated) {
-            buildReportBody(whatHappened: whatHappened, activeBrain: activeBrain, userProfile: userProfile)
+            buildReportBody(
+                whatHappened: whatHappened,
+                activeBrain: activeBrain,
+                userProfile: userProfile,
+                metricDigests: metricDigests
+            )
         }.value
 
         // Full (untruncated) body to the clipboard so nothing is lost to the URL cap.
@@ -73,7 +84,8 @@ enum IssueReporter {
     private static func buildReportBody(
         whatHappened: String,
         activeBrain: String,
-        userProfile: String?
+        userProfile: String?,
+        metricDigests: [String]
     ) -> String {
         let report = IssueReport(
             title: issueTitle,
@@ -84,7 +96,8 @@ enum IssueReporter {
             device: deviceModel(),
             memoryGB: Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824),
             activeBrain: activeBrain,
-            logs: recentLogs() // raw — the builder owns redaction order
+            logs: recentLogs(), // raw — the builder owns redaction order
+            metricDigests: metricDigests // already display-safe summary lines — never raw payload text
         )
         return DiagnosticsReportBuilder.build(
             report: report,

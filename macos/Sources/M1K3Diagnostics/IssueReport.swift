@@ -28,6 +28,11 @@ public struct IssueReport: Sendable, Equatable {
     public var memoryGB: Int
     public var activeBrain: String
     public var logs: String
+    /// Human-readable MetricKit digest SUMMARY LINES (kind/date/version/top-
+    /// frame — see `MetricPayloadDigest`), never raw payload JSON. Empty
+    /// unless the user opts in from Settings; display-safe by construction
+    /// like `activeBrain`/`device`, so no redaction pass runs over these.
+    public var metricDigests: [String]
 
     public init(
         title: String,
@@ -38,7 +43,8 @@ public struct IssueReport: Sendable, Equatable {
         device: String,
         memoryGB: Int,
         activeBrain: String,
-        logs: String
+        logs: String,
+        metricDigests: [String] = []
     ) {
         self.title = title
         self.whatHappened = whatHappened
@@ -49,6 +55,7 @@ public struct IssueReport: Sendable, Equatable {
         self.memoryGB = memoryGB
         self.activeBrain = activeBrain
         self.logs = logs
+        self.metricDigests = metricDigests
     }
 }
 
@@ -74,6 +81,12 @@ public enum IssueReportFormatter {
 
         let logs = report.logs.trimmingCharacters(in: .whitespacesAndNewlines)
         sections.append("### Recent logs (redacted)\n```\n\(logs.isEmpty ? "(none captured)" : logs)\n```")
+
+        // Opt-in only: omitted entirely (not even an empty header) when the
+        // user didn't include on-device MetricKit summaries for this report.
+        if !report.metricDigests.isEmpty {
+            sections.append("### Recent diagnostics (MetricKit)\n" + report.metricDigests.joined(separator: "\n"))
+        }
 
         return sections.joined(separator: "\n\n")
     }
