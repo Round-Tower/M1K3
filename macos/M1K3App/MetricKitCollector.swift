@@ -45,6 +45,9 @@ import MetricKit
 /// payload's JSON to a bounded on-disk store. A singleton — like
 /// `MXMetricManager.shared` itself, there's exactly one OS-level subscription
 /// to make per process, so there's no benefit to per-instance state here.
+/// @unchecked ONLY because NSObject inheritance (required by
+/// MXMetricManagerSubscriber) blocks Sendable synthesis — every stored
+/// property is an immutable let; adding mutable state here needs a lock.
 final class MetricKitCollector: NSObject, MXMetricManagerSubscriber, @unchecked Sendable {
     static let shared = MetricKitCollector()
 
@@ -66,11 +69,18 @@ final class MetricKitCollector: NSObject, MXMetricManagerSubscriber, @unchecked 
     /// waiting for the next daily delivery.
     func start() {
         MXMetricManager.shared.add(self)
-        for payload in MXMetricManager.shared.pastDiagnosticPayloads {
-            persist(payload.jsonRepresentation(), kindPrefix: "diagnostic")
-        }
-        for payload in MXMetricManager.shared.pastPayloads {
-            persist(payload.jsonRepresentation(), kindPrefix: "metric")
+        // Queued-payload ingestion is unbounded file I/O (however many
+        // payloads the OS held since last launch) — off the caller's actor,
+        // one batched prune at the end, never inline in a @MainActor init
+        // (PR #88 review finding 2).
+        Task.detached(priority: .utility) { [self] in
+            for payload in MXMetricManager.shared.pastDiagnosticPayloads {
+                persist(payload.jsonRepresentation(), kindPrefix: "diagnostic", pruneAfter: false)
+            }
+            for payload in MXMetricManager.shared.pastPayloads {
+                persist(payload.jsonRepresentation(), kindPrefix: "metric", pruneAfter: false)
+            }
+            prune()
         }
     }
 
@@ -99,15 +109,20 @@ final class MetricKitCollector: NSObject, MXMetricManagerSubscriber, @unchecked 
             }
     }
 
-    private func persist(_ data: Data, kindPrefix: String) {
-        let name = "\(kindPrefix)-\(Int(Date().timeIntervalSince1970 * 1000)).json"
+    private func persist(_ data: Data, kindPrefix: String, pruneAfter: Bool = true) {
+        // Millisecond timestamps alone COLLIDE when a batch of queued
+        // payloads writes back-to-back — the second atomic write silently
+        // replaced the first (PR #88 review finding 1). The UUID suffix
+        // makes every name unique; the timestamp keeps names sortable.
+        let name = "\(kindPrefix)-\(Int(Date().timeIntervalSince1970 * 1000))"
+            + "-\(UUID().uuidString.prefix(8)).json"
         do {
             try data.write(to: directory.appendingPathComponent(name), options: .atomic)
         } catch {
             log.error("metrickit persist failed: \(error.localizedDescription, privacy: .public)")
             return
         }
-        prune()
+        if pruneAfter { prune() }
         // Kind + a fixed breadcrumb only — never the payload's own content
         // (house rule: length + brain, never the text).
         let kind = MetricPayloadDigest.summarize(data).kind
