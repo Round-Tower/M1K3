@@ -644,7 +644,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
 
     private static func groundingBody(
         chunks: [ChunkHit], memories: [ChunkHit], toolNames: Set<String>, style: PromptStyle,
-        now: Date = Date()
+        now: Date
     ) -> String {
         let hasWebSearch = toolNames.contains("web_search")
         // Every routing line names only tools actually offered THIS turn —
