@@ -1,0 +1,27 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: false
+• loading MLX Qwen3-Embedding (downloads on first use)…
+✓ MLX Qwen3-Embedding embed: dim=512 ‖v‖=1.000
+embedwarm: cold=3312ms warm=13ms delta=3299ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Llama-3.2-1B-Instruct-4bit…
+✓ MLX generate: A hydraulic seal is the natural barrier between two surfaces in close contact that prevents leakage due to pressure difference.
+• memblock: Tier-1 dated-block live-path probe…
+• memblock brain mlx-community/Qwen3-4B-Instruct-2507-4bit…
+memblock [mlx-community/Qwen3-4B-Instruct-2507-4bit] 8.0s Q: Where do I live?
+memblock A: Right now, Kev lives in Ardmore. [Context]  
+
+FOLLOWUPS: ["What's the weather like there?", "Do you know any good spots to eat in Ardmore?", "How far is it from Dublin?"]
+memblock [mlx-community/Qwen3-4B-Instruct-2507-4bit] 7.7s Q: Tell me about my dog.
+memblock A: Bran’s a soft-spoken collie with the kind of quiet eyes that seem to know when you’re sad or just need a moment of stillness. He doesn’t bark much — more like he *listens*, which is probably why he’s been by your side since you moved into this house [Personal observation, 4 weeks ago]. If you ever see him sitting under the oak tree with one paw tucked in, that's not just resting — it’s a sign he’s
+• memblock brain mlx-community/gemma-4-12B-it-4bit…
+memblock [mlx-community/gemma-4-12B-it-4bit] 25.6s Q: Where do I live?
+memblock A: You're in Ardmore. 
+
+FOLLOWUPS: ["Tell me more about Ardmore.", "What was the other place?", "How long have I known that?"]
+memblock [mlx-community/gemma-4-12B-it-4bit] 12.4s Q: Tell me about my dog.
+memblock A: Unless I'm misremembering the details of our little secret, your dog is a Collie named Bran. 
+
+FOLLOWUPS: ["Tell me more about Bran.", "What else do you remember?", "Is there anything else on my Mac?"]
+✓ memblock: done — eyeball gate: the location answer must say Ardmore (recent) not Dublin (stale), with no register damage
+=== END SELF-TEST ===
