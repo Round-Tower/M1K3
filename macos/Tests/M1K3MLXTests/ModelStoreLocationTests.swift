@@ -128,6 +128,23 @@ struct ModelStoreLocationTests {
         #expect(second.skippedRepos.isEmpty)
     }
 
+    @Test("a FRESH install (no legacy store) still gets its models root created and backup-excluded")
+    func freshInstallGetsExclusion() throws {
+        // PR #92 review High #2: exclusion must not be a migrating-cohort
+        // perk — new installs are the majority once the migration window
+        // passes, and HubApi would otherwise create the dir with default
+        // (backed-up) attributes.
+        let current = try makeBase()
+        defer { try? FileManager.default.removeItem(at: current) }
+
+        ModelStoreLocation.ensureStoreReady(currentBase: current)
+
+        let modelsRoot = current.appendingPathComponent("models")
+        #expect(FileManager.default.fileExists(atPath: modelsRoot.path))
+        let values = try modelsRoot.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        #expect(values.isExcludedFromBackup == true)
+    }
+
     @Test("the migrated models root is excluded from backup — re-downloadable GBs stay out of Time Machine")
     func backupExclusionSet() throws {
         let legacy = try makeBase()

@@ -25,10 +25,11 @@ public struct LocalModelInventory: Sendable {
     private let hub: HubApi
 
     /// - Parameter downloadBase: the LLM download root; defaults to the same
-    ///   prepared Application Support base `HubApiDownloader.llmDefault` uses
-    ///   (Caches until 2026-07-31 — see ModelStoreLocation).
+    ///   Application Support base `HubApiDownloader.llmDefault` uses (Caches
+    ///   until 2026-07-31 — see ModelStoreLocation; pure resolution, the
+    ///   migration is the app's explicit prepareOnce()).
     public init(downloadBase: URL? = nil) {
-        let base = downloadBase ?? ModelStoreLocation.preparedLLMBase()
+        let base = downloadBase ?? ModelStoreLocation.llmBase()
         hub = HubApi(downloadBase: base)
     }
 

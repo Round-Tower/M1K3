@@ -113,11 +113,13 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
 
     /// LLM weights base: Application Support since 2026-07-31 — the 2.x
     /// Caches default was purge-eligible and macOS DID purge multi-GB brains
-    /// under disk pressure (twice in one afternoon, log-evidenced). The
-    /// prepared base migrates any surviving Caches store across on first
-    /// touch. See ModelStoreLocation.
+    /// under disk pressure (twice in one afternoon, log-evidenced). PURE path
+    /// resolution only: the one-time migration/exclusion runs via the app's
+    /// explicit ModelStoreLocation.prepareOnce() — a static-let with
+    /// filesystem side effects would fire under UNSANDBOXED `swift test` and
+    /// mutate the host's real ~/Library (PR #92 review).
     static let llmDefault = HubApiDownloader(
-        hub: HubApi(downloadBase: ModelStoreLocation.preparedLLMBase())
+        hub: HubApi(downloadBase: ModelStoreLocation.llmBase())
     )
 
     /// Downloads where 2.x's `MLXEmbedders.loadModelContainer` default put

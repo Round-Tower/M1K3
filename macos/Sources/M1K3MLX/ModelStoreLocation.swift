@@ -52,13 +52,21 @@ public enum ModelStoreLocation {
         public var skippedRepos: [String] = []
     }
 
-    /// The download base every LLM consumer should use: the Application
-    /// Support base, with the legacy Caches store migrated across (once,
-    /// idempotent) and backup exclusion applied. Falls back to the legacy
-    /// base only if Application Support is unresolvable (never observed on
-    /// macOS — belt and braces).
-    public static func preparedLLMBase() -> URL? {
-        guard let current = llmBase() else { return legacyLLMBase() }
+    /// One-time store preparation: ensure the Application Support models root
+    /// exists with backup exclusion (fresh installs included — review High #2)
+    /// and migrate any surviving legacy Caches store across. EXPLICIT and
+    /// app-called only (AppEnvironment.init + SelfTest.run): resolving the
+    /// base must stay side-effect-free, because `swift test` runs UNSANDBOXED
+    /// — a static-let that migrated on first touch would mutate the real
+    /// ~/Library of whatever machine runs the tests (review High #1).
+    /// Idempotent and cheap after first run (one fileExists guard).
+    public static func prepareOnce() {
+        _ = prepared
+    }
+
+    private static let prepared: Void = {
+        guard let current = llmBase() else { return }
+        ensureStoreReady(currentBase: current)
         if let legacy = legacyLLMBase() {
             let outcome = migrateLegacyLLMStore(legacyBase: legacy, currentBase: current)
             if !outcome.movedRepos.isEmpty || !outcome.skippedRepos.isEmpty {
@@ -67,7 +75,16 @@ public enum ModelStoreLocation {
                 )
             }
         }
-        return current
+    }()
+
+    /// Create the models root under `currentBase` and mark it excluded from
+    /// backup. Runs regardless of legacy presence — a fresh install's first
+    /// download must land in an already-excluded tree, not wait for HubApi to
+    /// create it with default (backed-up) attributes.
+    public static func ensureStoreReady(currentBase: URL) {
+        let modelsRoot = currentBase.appendingPathComponent("models")
+        try? FileManager.default.createDirectory(at: modelsRoot, withIntermediateDirectories: true)
+        excludeFromBackup(modelsRoot)
     }
 
     /// Move every `models/<org>/<repo>` under `legacyBase` to `currentBase`.
@@ -83,6 +100,8 @@ public enum ModelStoreLocation {
         guard manager.fileExists(atPath: legacyModels.path) else { return outcome }
 
         let currentModels = currentBase.appendingPathComponent("models")
+        // ensureStoreReady owns creation+exclusion for every install; this
+        // repeat is belt-and-braces for direct callers (tests, future tools).
         try? manager.createDirectory(at: currentModels, withIntermediateDirectories: true)
         excludeFromBackup(currentModels)
 

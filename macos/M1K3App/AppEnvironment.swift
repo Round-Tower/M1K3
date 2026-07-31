@@ -488,6 +488,13 @@ final class AppEnvironment {
         // session's peak and never shrinks (~16GB footprint on easy queries).
         MLXMemoryBudget.applyOnce()
 
+        // Weights store prep before ANY model-path read (the inventory below
+        // is the first): ensure the Application Support root + backup
+        // exclusion, and migrate a surviving legacy Caches store. Explicit
+        // and sandboxed-app-only by design — see ModelStoreLocation. Cheap
+        // after first run (same-volume renames even on migration day).
+        ModelStoreLocation.prepareOnce()
+
         let url = try Self.storeURL()
         store = try KnowledgeStore(path: url.path)
 
