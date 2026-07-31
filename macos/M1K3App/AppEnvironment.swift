@@ -1061,8 +1061,11 @@ final class AppEnvironment {
 
     /// Post-load persona-prefix warm — `warmEmbedderOnLaunch`'s sibling for
     /// the OTHER half of the measured first-turn tax (embedder ~4.0 s; prefix
-    /// build ~1.9 s on lil / ~3.3 s on big — SelfTest EMBEDWARM/PREFIXWARM,
-    /// 2026-07-11/12). Pre-builds the (persona × tools) KV the interactive
+    /// build ~2.1 s on lil (2507) / **~8.5 s on big (12B)** — SelfTest
+    /// EMBEDWARM/PREFIXWARM re-run 2026-07-31 post-reshuffle, evidence in
+    /// scratch/eval-2026-07-31-prefixwarm/; the 12B build is ~2.6× the e4b-era
+    /// figure, so this warm is far more load-bearing than first documented).
+    /// Pre-builds the (persona × tools) KV the interactive
     /// chat's FIRST turn will ask for, in the background, behind the same
     /// thermal gate. Best-effort by design:
     /// - A turn racing the warm queues behind it on the ModelContainer —

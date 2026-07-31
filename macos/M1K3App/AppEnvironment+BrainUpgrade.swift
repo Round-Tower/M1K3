@@ -362,7 +362,10 @@ extension AppEnvironment {
     }
 
     private nonisolated static func freeDiskBytes() -> Int64 {
-        let url = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+        // Measure on the volume the weights actually land on (Application
+        // Support since 2026-07-31 — same volume as the old Caches base, but
+        // one source of truth beats a coincidence).
+        let url = ModelStoreLocation.llmBase()
             ?? URL(fileURLWithPath: NSHomeDirectory())
         let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
         return values?.volumeAvailableCapacityForImportantUsage ?? 0
