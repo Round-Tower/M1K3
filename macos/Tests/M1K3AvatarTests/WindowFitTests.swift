@@ -42,8 +42,14 @@ struct WindowFitTests {
     @Test("returns nil when the resulting scale is non-finite or non-positive")
     func nilOnDegenerateBounds() {
         #expect(WindowFit.scale(contentWidth: 1, contentHeight: 1, boundsWidth: Float.nan, boundsHeight: 10, headroom: 0.9) == nil)
+        // The SECOND min argument: Swift's `min(x, y)` is `y < x ? y : x`, and
+        // NaN comparisons are false — so a NaN boundsHeight used to be silently
+        // DISCARDED (scale computed from width alone), while a NaN boundsWidth
+        // propagated and was caught. Both axes must refuse. (PR #91 review.)
+        #expect(WindowFit.scale(contentWidth: 1, contentHeight: 1, boundsWidth: 10, boundsHeight: Float.nan, headroom: 0.9) == nil)
         #expect(WindowFit.scale(contentWidth: 1, contentHeight: 1, boundsWidth: 0, boundsHeight: 10, headroom: 0.9) == nil)
         #expect(WindowFit.scale(contentWidth: 1, contentHeight: 1, boundsWidth: -5, boundsHeight: 10, headroom: 0.9) == nil)
+        #expect(WindowFit.scale(contentWidth: 1, contentHeight: 1, boundsWidth: 10, boundsHeight: -5, headroom: 0.9) == nil)
     }
 
     @Test("matches AvatarView's face-grid fit arithmetic exactly")

@@ -34,6 +34,12 @@ public enum WindowFit {
         headroom: Float
     ) -> Float? {
         guard contentWidth > 0, contentHeight > 0 else { return nil }
+        // Explicit finiteness on BOTH bounds: Swift's `min(x, y)` is
+        // `y < x ? y : x` and NaN comparisons are false, so a NaN in the
+        // SECOND argument is silently discarded (the width-only scale came
+        // back looking valid) while a NaN first argument propagates and is
+        // caught below. Never lean on `min` to carry NaN. (PR #91 review.)
+        guard boundsWidth.isFinite, boundsHeight.isFinite else { return nil }
         let fit = min(boundsWidth / contentWidth, boundsHeight / contentHeight) * headroom
         guard fit.isFinite, fit > 0 else { return nil }
         return fit
