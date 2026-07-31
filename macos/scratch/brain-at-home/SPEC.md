@@ -196,6 +196,34 @@ MCP server: UNTOUCHED, loopback-only        gemba state-machine pattern,
    "your Mac is easing off")?
 4. visionOS: same provider drops in — worth including in C, or iPhone first?
 
+### 8a. Proposed defaults (2026-07-31 — Claude's ballot; veto any line and Phase A unblocks)
+
+1. **Naming: the Mac's actual name in the picker** ("Kev's Mac Studio"), with
+   the feature itself called **Brain at Home** in Settings/marketing copy.
+   Rationale: the picker row is a *device* choice and the Mac's real name is
+   the only label that stays honest with two Macs in the house; BrainTier
+   copy already speaks "your Mac", so the vocabulary is established. Reject
+   "M1K3 at home" for the picker — it names the persona, not the device
+   answering.
+2. **Serving indicator: yes, structural.** The menu-bar glyph carries a
+   persistent distinct state the entire time the listener is up (not only
+   during a turn), plus a stronger beat while actively serving — same honesty
+   doctrine as the mic. A notification is the wrong shape; a steady presence
+   is. If the pixel-M can wear a subtle antenna, that's the move.
+3. **Thermal etiquette: CoolHeadPolicy applies identically — and remote turns
+   yield first.** Same `applyCoolHead` path; under pressure the Mac declines
+   NEW remote turns before it eases local ones (the person at the keyboard
+   outranks the person on the sofa), and the phone falls back to its own
+   ladder with "your Mac's gone properly warm — Mini's got you." No queueing
+   in v1 (S2 already pins local-preempts-remote).
+4. **visionOS: free rider, not a lane.** The client lands behind the same
+   `SwappableInferenceProvider` slot both shells share — visionOS gets it by
+   compilation, iPhone is the verify surface. Don't sequence anything for the
+   headset; don't exclude it either.
+
+*Proposed by claude-fable-5, 2026-07-31, for Kev's veto — §8 stays the
+authoritative open list until he rules; nothing below changes.*
+
 ## 9. Security-auditor findings (2026-07-14 pass — ALL FOLDED above)
 
 Blocking (resolved in-spec): **B1** tool-calling scope pinned brain-only,
