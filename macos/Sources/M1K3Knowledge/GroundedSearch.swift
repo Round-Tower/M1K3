@@ -37,11 +37,14 @@ public enum GroundedSearch {
         // Two-lane retrieval (documents + memories get SEPARATE top-K budgets),
         // the same path implicit grounding uses — so a large document corpus
         // can't crowd short memory facts out of one ranking BEFORE the floor.
+        // Floors follow the embedder that produced the vectors: hashing's
+        // cosine cone needs its own measured bars (EmbedderFloors).
         let (knowledge, memories) = try GroundingGate.partition(
             store.searchGrounding(
                 query: query, queryVector: queryVector,
                 documentLimit: limit, memoryLimit: limit
-            )
+            ),
+            floors: .forFingerprint(embedder.fingerprint)
         )
         return knowledge + memories
     }

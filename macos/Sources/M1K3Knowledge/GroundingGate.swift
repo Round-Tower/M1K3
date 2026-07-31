@@ -48,6 +48,13 @@
 //  re-tune WIDENS (lower floors, no instruction-driven noise suppression on
 //  hashing). Upgrade path: per-embedder floors, or a hashing-arm KEYEVAL
 //  bracket, before iOS retrieval quality is tuned in anger.
+//  Review: Kev + claude-fable-5, 2026-07-31 — the caveat above is CLOSED:
+//  floors are now per-embedder (`EmbedderFloors`, selected by fingerprint at
+//  every gate call site), and the hashing arm is MEASURED — deterministically,
+//  in CI (HashingFloorMeasurementTests re-derives the MEMEVAL/ABSEP
+//  distributions each run). The qwen constants below are unchanged and remain
+//  this file's; hashing's rationale lives with its numbers in EmbedderFloors.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -82,7 +89,12 @@ public enum GroundingGate {
     /// floor, 0.136 to the noise ceiling. The instruction is why this is
     /// safe: it cut the off-domain ceiling 0.315 → 0.234 and the
     /// keyword-register noise ceiling to 0.203 (KEYEVAL probes).
-    public static let chunkThreshold: Float = 0.37
+    ///
+    /// Since 2026-07-31 these constants are the qwen3-instructed member of
+    /// `EmbedderFloors` — the per-embedder seam this file's 07-09 caveat
+    /// named. The values (and every measured rationale above) are unchanged;
+    /// hashing gets its own measured set (`EmbedderFloors.hashing`).
+    public static let chunkThreshold: Float = EmbedderFloors.qwen3Instructed.chunk
 
     /// Minimum cosine for a fact→fact EDGE in the memory graph
     /// (`rememberConnected`). Content↔content cosines carry NO query
@@ -91,7 +103,7 @@ public enum GroundingGate {
     /// the two-bar doctrine pinned edge formation to it (2026-07-08): a weak
     /// recall hit is one prompt line, a weak edge is permanent graph
     /// structure feeding traversal.
-    public static let edgeThreshold: Float = 0.51
+    public static let edgeThreshold: Float = EmbedderFloors.qwen3Instructed.edge
 
     /// Minimum cosine similarity for a MEMORY hit. Memories are 5–40-token
     /// atomic facts; query-to-short-fact pairs sit LOWER in the cone than
@@ -118,17 +130,20 @@ public enum GroundingGate {
     /// recall and 0.09 above the worst negative, and low enough to admit the
     /// keyword register (KEYEVAL instructed keyword positives floor at 0.420)
     /// that the old 0.39 bar was measured missing live on 2026-07-08.
-    public static let memoryThreshold: Float = 0.35
+    public static let memoryThreshold: Float = EmbedderFloors.qwen3Instructed.memory
 
     /// Split gated hits for the two prompt blocks: `.memory` hits (cleared
     /// `memoryThreshold`) feed the WHAT-I-KNOW-ABOUT-YOU block; everything
     /// else (cleared `chunkThreshold`) feeds KNOWLEDGE exactly as `relevant`
     /// would. FTS-only hits (nil similarity) are dropped from BOTH — the
     /// no-keyword-flood rule doesn't care what kind the noise is.
-    public static func partition(_ hits: [ChunkHit]) -> (knowledge: [ChunkHit], memories: [ChunkHit]) {
+    public static func partition(
+        _ hits: [ChunkHit],
+        floors: EmbedderFloors = .qwen3Instructed
+    ) -> (knowledge: [ChunkHit], memories: [ChunkHit]) {
         var knowledge: [ChunkHit] = []
         var memories: [ChunkHit] = []
-        for hit in hits where clears(hit) {
+        for hit in hits where clears(hit, floors: floors) {
             if hit.kind == .memory {
                 memories.append(hit)
             } else {
@@ -147,15 +162,18 @@ public enum GroundingGate {
     /// topical sibling. (Letting it ride along flooded a "what's the weather
     /// in Cork" prompt with 7KB of keyword-matched noise that drowned the
     /// web_search routing — the ⌘R weather bug.)
-    public static func relevant(_ hits: [ChunkHit]) -> [ChunkHit] {
-        hits.filter(clears)
+    public static func relevant(
+        _ hits: [ChunkHit],
+        floors: EmbedderFloors = .qwen3Instructed
+    ) -> [ChunkHit] {
+        hits.filter { clears($0, floors: floors) }
     }
 
     /// The single relevance predicate behind `relevant` and `partition`:
-    /// memories clear `memoryThreshold`, everything else `chunkThreshold`;
+    /// memories clear the memory floor, everything else the chunk floor;
     /// an FTS-only hit (nil similarity) never clears.
-    private static func clears(_ hit: ChunkHit) -> Bool {
+    private static func clears(_ hit: ChunkHit, floors: EmbedderFloors) -> Bool {
         guard let similarity = hit.similarity else { return false }
-        return similarity >= (hit.kind == .memory ? memoryThreshold : chunkThreshold)
+        return similarity >= (hit.kind == .memory ? floors.memory : floors.chunk)
     }
 }

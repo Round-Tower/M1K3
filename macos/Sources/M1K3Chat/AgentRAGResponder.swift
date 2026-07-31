@@ -235,7 +235,12 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // models. Below threshold nothing is injected; the model can still
             // retrieve on its own terms via search_knowledge. Memory hits clear
             // their own (lower) bar and feed a separate uncited prompt block.
-            (chunks, memories) = GroundingGate.partition(retrieved)
+            // Floors follow the ACTIVE embedder's cone (hashing fallback ≠
+            // instructed qwen3) — resolved per turn because the swappable
+            // façade can flip embedders at runtime.
+            (chunks, memories) = GroundingGate.partition(
+                retrieved, floors: .forFingerprint(embedder.fingerprint)
+            )
             Self.logGateDecision(retrieved: retrieved, kept: chunks + memories)
         }
         // Grounding-size safety cap (2026-07-20): both lanes above are injected
