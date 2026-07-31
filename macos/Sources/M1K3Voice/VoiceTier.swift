@@ -37,11 +37,25 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
     public var detail: String {
         switch self {
         case .builtin:
-            "macOS's built-in speech. Works immediately, always on-device — clear, "
-                + "if a little robotic."
+            Self.builtinDetail
         case .m1k3Voice:
             Self.m1k3VoiceDetail
         }
+    }
+
+    /// Same platform-honesty rule as `m1k3VoiceDetail` below. Closed
+    /// 2026-07-31: the Phase-B precondition ("voice isn't wired on mobile")
+    /// died with the #82 mobile voice-first shell, so the copy stops naming
+    /// macOS on devices that aren't one. macOS bytes frozen, pinned in
+    /// VoiceTierTests.
+    private static var builtinDetail: String {
+        #if os(macOS)
+            "macOS's built-in speech. Works immediately, always on-device — clear, "
+                + "if a little robotic."
+        #else
+            "Your device's built-in speech. Works immediately, always on-device — "
+                + "clear, if a little robotic."
+        #endif
     }
 
     /// Platform-honest wording, hand-rolled rather than folded onto
@@ -49,8 +63,7 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
     /// and a Voice→Inference edge to dedupe one string is worse layering than
     /// the duplication. Consolidate if HostPlatform ever moves to a universal
     /// leaf (M1K3LogCore) or Phase-B voice wiring gives Voice the dep anyway.
-    /// macOS bytes frozen, pinned in VoiceTierTests. (`.builtin`'s "macOS's
-    /// built-in speech" is left for Phase B — voice isn't wired on mobile yet.)
+    /// macOS bytes frozen, pinned in VoiceTierTests.
     private static var m1k3VoiceDetail: String {
         #if os(macOS)
             "A warm, natural neural voice that runs entirely on your Mac. One "

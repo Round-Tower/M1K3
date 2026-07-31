@@ -30,6 +30,16 @@ struct VoiceTierTests {
         #endif
     }
 
+    @Test("Built-in's card copy is platform-honest — macOS bytes frozen, no macOS leak elsewhere")
+    func builtinDetailPlatformHonest() {
+        #if os(macOS)
+            #expect(VoiceTier.builtin.detail.contains("macOS's built-in speech"))
+        #else
+            #expect(!VoiceTier.builtin.detail.contains("macOS"))
+            #expect(VoiceTier.builtin.detail.contains("built-in speech"))
+        #endif
+    }
+
     @Test("every tier has a non-empty tagline, detail, and glyph")
     func metadataPopulated() {
         for tier in VoiceTier.allCases {
