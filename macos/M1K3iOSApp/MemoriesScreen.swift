@@ -68,7 +68,13 @@ struct MemoriesScreen: View {
         defer { searching = false }
         do {
             let vector = try await core.embedder.embedQuery(text)
-            hits = try memoryStore.recall(query: text, queryVector: vector, limit: 20)
+            // Recall bar follows the embedder's cone — mobile ships hashing,
+            // whose measured floor is far below the qwen default this call
+            // would otherwise inherit (EmbedderFloors, 2026-07-31).
+            hits = try memoryStore.recall(
+                query: text, queryVector: vector, limit: 20,
+                threshold: EmbedderFloors.forFingerprint(core.embedder.fingerprint).memory
+            )
         } catch {
             hits = []
         }

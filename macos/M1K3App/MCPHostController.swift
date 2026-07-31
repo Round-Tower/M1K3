@@ -258,12 +258,22 @@ final class MCPHostController {
             recall: { query in
                 guard let memoryStore else { return [] }
                 let vector = try await embedder.embedQuery(query)
-                return try memoryStore.recall(query: query, queryVector: vector)
+                // Recall bar follows the ACTIVE embedder's cone (the Settings
+                // toggle can put the Mac on hashing) — EmbedderFloors, PR #89.
+                // forget's threshold-0 candidate search below is deliberate
+                // and stays (its 0.6 confidence bar gates, not the floor).
+                return try memoryStore.recall(
+                    query: query, queryVector: vector,
+                    threshold: EmbedderFloors.forFingerprint(embedder.fingerprint).memory
+                )
             },
             related: { query in
                 guard let memoryStore else { return nil }
                 let vector = try await embedder.embedQuery(query)
-                guard let seed = try memoryStore.recall(query: query, queryVector: vector, limit: 1).first else {
+                guard let seed = try memoryStore.recall(
+                    query: query, queryVector: vector, limit: 1,
+                    threshold: EmbedderFloors.forFingerprint(embedder.fingerprint).memory
+                ).first else {
                     return nil
                 }
                 return try (seed.memory, memoryStore.related(to: seed.memory.id))
