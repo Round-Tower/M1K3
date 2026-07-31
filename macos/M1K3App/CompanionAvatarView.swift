@@ -17,6 +17,16 @@
 //  once, the creature swapped in place with a monotonic loadToken, so an iOS companion
 //  switch can't recreate the RealityView (the "swap → black" lifecycle trap). Plus a
 //  process-level clip cache and render-the-static-mesh-not-nothing on a missing idle.
+//  Review: claude-fable-5, 2026-07-31 — applied AvatarView's #60 camera-less visionOS
+//  framing here too: a fit-owned `frame` node (parent of the persistent `root`) is
+//  scale-fit to the window's real scene-space bounds via `WindowFit.scale` (M1K3Avatar,
+//  test-pinned, shared with AvatarView so the two surfaces can't drift), replacing the
+//  fixed 0.45 m guess this file's own comment flagged as "Phase-D verify-owed." No
+//  position write on the frame — same double-offset lesson AvatarView's fit documents.
+//  A new `loadTick` @State nudge forces a render right when a creature finishes loading,
+//  since (unlike AvatarView) this view has no continuous TimelineView clock to carry the
+//  fit forward on its own. macOS/iOS PerspectiveCamera path is byte-for-byte unchanged.
+//  Prior: Kev + claude-opus-4-8 (this file).
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -53,6 +63,12 @@ enum CompanionClipCache {
 /// closure drives it while SwiftUI is mid-graph-update.
 @MainActor
 final class CompanionScene {
+    /// The fit-owned OUTER node (visionOS window framing writes scale here, the
+    /// same frame/root split AvatarView's pixel face uses — PR #60). Parent of
+    /// `root`, so the window-fit scale can never be clobbered by anything that
+    /// mutates `root`/`host` in place. Identity on macOS/iOS (the fixed camera
+    /// frames there instead).
+    var frame: Entity?
     /// The persistent root added to the RealityView ONCE. Creatures are swapped as
     /// its children in place, so the RealityView itself is never recreated on a
     /// companion switch — the fix for the iOS "swap → black" lifecycle trap.
@@ -73,6 +89,13 @@ final class CompanionScene {
     /// dropped, so rapid switches never leave an older creature winning the swap.
     var loadToken = 0
     var host: Entity?
+    /// The loaded creature's own local-space visual bounds (host-local —
+    /// captured before parenting, so no parent transform is baked in),
+    /// captured once at load — right after `fit(_:)` normalizes it, right before
+    /// it's parented — so the visionOS window-fit has a stable "designed content
+    /// size" to scale against instead of re-measuring RealityKit bounds every
+    /// tick. `nil` until the first successful load.
+    var hostExtents: SIMD3<Float>?
     var fillLight: DirectionalLight?
     /// Clip name → harvested animation resource (cross-bound onto `host`'s rig).
     var clips: [String: AnimationResource] = [:]
@@ -117,15 +140,26 @@ struct CompanionAvatarView: View {
     }
 
     @State private var scene = CompanionScene()
+    /// Bumped once at the end of every successful `reload(to:)` — a plain
+    /// counter with no meaning of its own, purely to force a fresh SwiftUI
+    /// render (and so a fresh RealityView `update` call) right when a creature
+    /// finishes loading. Without it, the visionOS window-fit (which only runs
+    /// inside `update`) would wait on the NEXT unrelated state change
+    /// (`controller.state` can sit idle for a while) before framing correctly —
+    /// a visible flash of default (unscaled) size between load and fit.
+    @State private var loadTick = 0
 
     // Fit the creature's largest dimension to this many world units, then frame it.
     // macOS/iOS frame it with a fixed PerspectiveCamera, so the absolute size only
     // has to suit that camera (1.7). visionOS IGNORES in-scene cameras and renders
-    // at TRUE world scale inside the window volume, so there the creature is sized
-    // in metres to sit comfortably in a window (~0.45 m). Exact visionOS framing is
-    // Phase-D verify-owed — no device run this pass.
+    // at TRUE world scale inside the window volume — rather than guess a metres
+    // size that happens to suit "a window", the creature is normalized to this
+    // reference size and then the OUTER frame node is scale-fit to the view's real
+    // window bounds (the #60 pattern, promoted 2026-07-31 — see `fit(frame:to:in:)`
+    // below). 1.0: an arbitrary but stable reference; only its ratio to the
+    // measured extents matters once the window-fit rescales it.
     #if os(visionOS)
-        private static let targetSize: Float = 0.45
+        private static let targetSize: Float = 1.0
     #else
         private static let targetSize: Float = 1.7
     #endif
@@ -135,14 +169,51 @@ struct CompanionAvatarView: View {
     private static let baseYaw: Float = -0.9
 
     var body: some View {
+        // Read (and discard) `loadTick` HERE — not inside a closure below — so
+        // SwiftUI's @State dependency tracking actually registers it against
+        // THIS body evaluation. A read inside the `fit` closure wouldn't count:
+        // that closure only runs later, when RealityView invokes it, by which
+        // point body has already finished evaluating its dependencies. `let _ =`
+        // (a declaration), not `_ = ` (an expression statement) — `body` is
+        // @ViewBuilder-inferred, and only declarations pass through unchanged;
+        // a bare discard-assignment gets funneled through `buildExpression` and
+        // fails to type-check as a View.
+        let _ = loadTick
+        #if os(visionOS)
+            // visionOS IGNORES in-scene cameras — the wearer's eyes are the camera
+            // and RealityView content renders at TRUE world scale, exactly the V0
+            // black-avatar root cause AvatarView's pixel face hit first (PR #60).
+            // Same fix here: no camera; scale-fit the creature's frame to the
+            // view's own bounds instead of the old fixed 0.45 m guess.
+            GeometryReader3D { geometry in
+                companionCore(fit: { content, frame in
+                    guard let extents = scene.hostExtents else { return }
+                    Self.fit(frame: frame, to: geometry, in: content, extents: extents)
+                })
+            }
+        #else
+            companionCore(fit: nil)
+        #endif
+    }
+
+    /// The shared RealityView core. `fit` is the visionOS window-fit strategy
+    /// (scale-to-view-bounds, applied to the OUTER frame node — same split as
+    /// AvatarView's `faceCore`, so nothing that mutates `root`/`host` in place
+    /// can clobber the framing); nil means macOS/iOS, where the fixed
+    /// PerspectiveCamera frames the creature instead (byte-for-byte unchanged).
+    private func companionCore(fit: ((AvatarRealityContent, Entity) -> Void)?) -> some View {
         RealityView { content in
-            // Build the STABLE scaffold once — a persistent root + lights + camera.
-            // The creature is loaded into `root` and reloaded IN PLACE when the
-            // selection changes; the RealityView is never recreated, so it can't go
-            // black on a swap (the iOS "swap → black" lifecycle trap that made every
-            // companion after the first render as a black panel).
+            // Build the STABLE scaffold once — a persistent frame + root + lights +
+            // camera. The creature is loaded into `root` and reloaded IN PLACE when
+            // the selection changes; the RealityView is never recreated, so it can't
+            // go black on a swap (the iOS "swap → black" lifecycle trap that made
+            // every companion after the first render as a black panel). `frame` is
+            // fit-owned (visionOS window framing); `root` is where creatures swap.
+            let frame = Entity()
             let root = Entity()
-            content.add(root)
+            frame.addChild(root)
+            content.add(frame)
+            scene.frame = frame
             scene.root = root
             addLighting(to: &content)
             #if !os(visionOS)
@@ -151,8 +222,11 @@ struct CompanionAvatarView: View {
             scene.scaffoldBuilt = true
             scene.loadedCompanionID = companion.id
             await reload(to: companion)
-        } update: { _ in
+        } update: { content in
             guard scene.scaffoldBuilt else { return }
+            if let fit, scene.built, let frame = scene.frame {
+                fit(content, frame)
+            }
             if companion.id != scene.loadedCompanionID {
                 // Selection changed → claim the target SYNCHRONOUSLY here (not inside
                 // the async Task), so this high-frequency closure can't spawn a second
@@ -169,6 +243,28 @@ struct CompanionAvatarView: View {
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
+
+    #if os(visionOS)
+        /// Scale (never translate — content entity space is already
+        /// window-relative, so writing `bounds.center` here would double-offset
+        /// the creature out of view, the exact PR #60 lesson AvatarView's fit
+        /// documents) the OUTER frame node so the loaded creature's own extents
+        /// fill the view's real window bounds. `extents` is captured once at
+        /// load (`reload(to:)`, right after the per-companion normalize-to-
+        /// `targetSize` step) rather than re-measured every tick. Shares its
+        /// arithmetic with AvatarView's identical fit via `WindowFit.scale`.
+        private static func fit(
+            frame: Entity, to geometry: GeometryProxy3D, in content: AvatarRealityContent, extents: SIMD3<Float>
+        ) {
+            let bounds = content.convert(geometry.frame(in: .local), from: .local, to: .scene)
+            guard let scale = WindowFit.scale(
+                contentWidth: extents.x, contentHeight: extents.y,
+                boundsWidth: bounds.extents.x, boundsHeight: bounds.extents.y,
+                headroom: 0.9
+            ) else { return }
+            frame.scale = SIMD3(repeating: scale)
+        }
+    #endif
 
     // MARK: - Load a creature into the persistent root (in place)
 
@@ -234,10 +330,19 @@ struct CompanionAvatarView: View {
             clips = harvested
         }
         guard token == scene.loadToken else { return }
+        // ⚠️ No `await` below this point (review invariant, PR #91): the token
+        // re-check above is the LAST one, and everything after runs atomically
+        // on @MainActor. Adding a suspension anywhere in this tail would let a
+        // superseded load write hostExtents/host/built unguarded — re-check the
+        // token after any future await here.
 
         // Pose BEFORE fit() so the recentre + scale measure the final, upright silhouette.
         host.orientation = Self.basePose
         fit(host)
+        // Captured BEFORE `root.addChild(host)` — host has no parent yet, so
+        // `relativeTo: nil` reads local-space extents (the visionOS window-fit's
+        // "designed content size"), same assumption `fit(_:)` already documents.
+        scene.hostExtents = host.visualBounds(relativeTo: nil).extents
 
         // The swap: drop the previous creature, add the new one to the SAME root.
         scene.host?.removeFromParent()
@@ -278,6 +383,10 @@ struct CompanionAvatarView: View {
         scene.lastActivity = activity
         scene.lastShadingStyle = shadingStyle
         scene.built = true
+        // Force a fresh SwiftUI render right now — see the `loadTick` doc comment;
+        // otherwise the visionOS window-fit (which only runs inside `update`) waits
+        // on the next unrelated `controller.state` change to frame correctly.
+        loadTick &+= 1
     }
 
     /// Harvest each bundled clip as an animation resource bound to the idle host's

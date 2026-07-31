@@ -26,6 +26,11 @@
 //  Fit writes the outer `frame` node; jitter keeps owning `root` — separate
 //  writers after the PR #60 review caught the per-tick position clobber.
 //  macOS/iOS behaviour byte-for-byte unchanged (camera path, identity frame).
+//  Review: claude-fable-5, 2026-07-31 — promoted the fit's core arithmetic to
+//  `WindowFit.scale` (M1K3Avatar, test-pinned) so CompanionAvatarView's 3D
+//  creatures can share the identical camera-less window-fit maths on visionOS
+//  rather than re-deriving it. No behaviour change here — same 0.9 headroom,
+//  same guard shape.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the avatar is brand-default and now
 // cross-platform (the pixel face is pure RealityKit + SwiftUI; only the accent
@@ -193,8 +198,14 @@ struct AvatarView: View {
             let bounds = content.convert(geometry.frame(in: .local), from: .local, to: .scene)
             let gridWidth = Float(FaceGrid.cols - 1) * spacing + cubeSize
             let gridHeight = Float(FaceGrid.rows - 1) * spacing + cubeSize
-            let scale = min(bounds.extents.x / gridWidth, bounds.extents.y / gridHeight) * 0.9
-            guard scale.isFinite, scale > 0 else { return }
+            // The core arithmetic is shared with CompanionAvatarView's identical
+            // window-fit (WindowFit.scale, M1K3Avatar) — promoted out of here 2026-07-31
+            // so the two surfaces can't silently drift apart.
+            guard let scale = WindowFit.scale(
+                contentWidth: gridWidth, contentHeight: gridHeight,
+                boundsWidth: bounds.extents.x, boundsHeight: bounds.extents.y,
+                headroom: 0.9
+            ) else { return }
             frame.scale = SIMD3(repeating: scale)
             // Deliberately NO position write: content entity space is already
             // window-relative with its origin at the view, so the grid is
