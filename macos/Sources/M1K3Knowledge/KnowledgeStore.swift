@@ -110,6 +110,12 @@ public final class KnowledgeStore: @unchecked Sendable {
         }
     }
 
+    public func deleteMeta(key: String) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "DELETE FROM knowledge_meta WHERE key = ?", arguments: [key])
+        }
+    }
+
     private static func upsertMeta(_ db: Database, key: String, value: String) throws {
         try db.execute(
             sql: """
@@ -334,10 +340,13 @@ public final class KnowledgeStore: @unchecked Sendable {
                     arguments: [kind.rawValue, limit]
                 )
             } else {
+                let hidden = KnowledgeKind.hiddenFromRetrieval.map(\.rawValue).sorted()
+                let holes = hidden.map { _ in "?" }.joined(separator: ", ")
                 rows = try Row.fetchAll(
                     db,
-                    sql: "SELECT * FROM knowledge_items WHERE kind != ? ORDER BY created_at DESC LIMIT ?",
-                    arguments: [KnowledgeKind.quarantined.rawValue, limit]
+                    sql: "SELECT * FROM knowledge_items WHERE kind NOT IN (\(holes)) "
+                        + "ORDER BY created_at DESC LIMIT ?",
+                    arguments: StatementArguments(hidden.map { $0 as DatabaseValueConvertible } + [limit])
                 )
             }
             return rows.compactMap { Self.item(from: $0) }
@@ -428,10 +437,12 @@ public extension KnowledgeStore {
                 sql += "\nAND i.kind IN (\(placeholders))"
                 args += kinds.map(\.rawValue)
             } else {
-                // nil kinds = every RETRIEVABLE kind. Quarantined items are
-                // reachable only by naming the kind (index segregation).
-                sql += "\nAND i.kind != ?"
-                args.append(KnowledgeKind.quarantined.rawValue)
+                // nil kinds = every RETRIEVABLE kind. Hidden kinds (quarantined,
+                // superseded memory twins) are reachable only by naming the
+                // kind (index segregation).
+                let hidden = KnowledgeKind.hiddenFromRetrieval.map(\.rawValue).sorted()
+                sql += "\nAND i.kind NOT IN (" + hidden.map { _ in "?" }.joined(separator: ", ") + ")"
+                args += hidden
             }
             sql += "\nORDER BY bm25(knowledge_chunk_fts) ASC\nLIMIT ?"
             args.append(limit)
@@ -467,7 +478,7 @@ public extension KnowledgeStore {
             else { continue }
             if let kinds, !kinds.isEmpty {
                 if !kinds.contains(hit.kind) { continue }
-            } else if hit.kind == .quarantined {
+            } else if KnowledgeKind.hiddenFromRetrieval.contains(hit.kind) {
                 // nil kinds = every RETRIEVABLE kind (index segregation).
                 continue
             }

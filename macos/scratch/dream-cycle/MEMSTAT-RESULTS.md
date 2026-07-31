@@ -59,3 +59,29 @@ GPU, production embedder + real coordinator end-to-end; probe classes are
 intervals; the 1 real ≥ 0.90 graph pair is counted but not yet identified —
 the census reports counts, not IDs, by design §1). Prior: SPEC.md v2 (same
 directory).
+
+---
+
+## Tier-2 acceptance re-run — 2026-07-30 (same instrument, post-repair build)
+
+Raw log: `memstat-run-tier2-20260730.txt`. Same 25 probe pairs, same
+production embedder, through the REAL coordinator with the write-time repair.
+
+| class | pre-Tier-2 eaten | post-Tier-2 eaten |
+|---|---|---|
+| contradictions | **3/10** | **0/10** |
+| compatibles | 0/10 | 0/10 |
+| restatements | 4/5 (silently) | 0/5 (superseded — refresh, one live row) |
+
+- **The eaten-correction bug is CLOSED**: every correction now lands; the
+  ≥ 0.90 twin is superseded, never the new fact discarded.
+- Restatement "survived" here means SUPERSEDE-refresh, not duplication —
+  the exactly-one-live-row invariant is unit-pinned
+  (`MemoryCorrectionTests` / `semanticSupersede`); the probe's
+  survived/eaten column only counts writes.
+- Real-graph census unchanged (read-only): 147 live, 1 pre-existing ≥ 0.90
+  pair (it stays until a write touches that fact), corpus divergence Δ202.
+
+Signed: Kev + claude-fable-5, 2026-07-30, Confidence 0.9 (same-day A/B on the
+identical instrument + fixture set; the closed bug is the exact failure the
+Tier-0 run quantified). Prior: this file (Tier-0 section).

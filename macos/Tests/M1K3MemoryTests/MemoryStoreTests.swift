@@ -242,9 +242,16 @@ struct MemoryStoreSupersessionTests {
         let f = try Fixture()
         let old = try await f.remember("first")
         let new = try await f.remember("second", supersedes: old.id)
-        // Undirected traversal: the corrector is one hop from the corrected.
+        // The edge row IS written (lineage keeps the history) …
+        let edges = try f.store.allEdges()
+        #expect(edges.contains {
+            $0.relation == "supersedes" && $0.fromID == new.id && $0.toID == old.id
+        })
+        // … but traversal no longer surfaces the superseded node (Tier 2,
+        // spec finding #7 — the split-visibility fix): related() returns
+        // live memories only.
         let neighbours = try f.store.related(to: new.id, maxHops: 1)
-        #expect(neighbours.contains { $0.id == old.id })
+        #expect(!neighbours.contains { $0.id == old.id })
     }
 
     @Test("liveCount counts only non-superseded memories")

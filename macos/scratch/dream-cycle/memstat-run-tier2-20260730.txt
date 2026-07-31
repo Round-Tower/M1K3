@@ -1,0 +1,101 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: false
+• loading MLX Qwen3-Embedding (downloads on first use)…
+✓ MLX Qwen3-Embedding embed: dim=512 ‖v‖=1.000
+embedwarm: cold=3426ms warm=16ms delta=3410ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Llama-3.2-1B-Instruct-4bit…
+✓ MLX generate: A hydraulic seal is the act of sealing an opening in a container or valve using high pressure to prevent leakage.
+• memstat: Tier-0 dream-cycle census (scratch/dream-cycle/SPEC.md)…
+memstat graph: 147 live, 0 superseded, 388 edge(s)
+memstat kind decision: 17
+memstat kind episode: 6
+memstat kind note: 93
+memstat kind preference: 14
+memstat kind profile: 17
+memstat census: 147 vector(s), 10731 pair(s)
+  pairs ≥ 0.90: 1 (dedupe band — should be structurally empty)
+  pairs in [0.75, 0.90): 51 (mineable band)
+  [+0.05, +0.10): 6
+  [+0.10, +0.15): 23
+  [+0.15, +0.20): 96
+  [+0.20, +0.25): 291
+  [+0.25, +0.30): 640
+  [+0.30, +0.35): 1185
+  [+0.35, +0.40): 1884
+  [+0.40, +0.45): 2142
+  [+0.45, +0.50): 1904
+  [+0.50, +0.55): 1242
+  [+0.55, +0.60): 686
+  [+0.60, +0.65): 339
+  [+0.65, +0.70): 159
+  [+0.70, +0.75): 82
+  [+0.75, +0.80): 32
+  [+0.80, +0.85): 16
+  [+0.85, +0.90): 3
+  [+0.95, +1.00): 1
+memstat corpus: 349 memory item(s), 9 quarantined, graph/corpus divergence 202
+memstat contradiction 0.800 [Kev lives in Dublin. → Kev lives in Ardmore.]
+memstat contradiction 0.808 [The user's favourite editor is Vim. → The user's favourite editor is Zed.]
+memstat contradiction 0.858 [Kev's dog is called Bran. → Kev's dog is called Rex.]
+memstat contradiction 0.686 [The user works at Round Tower. → The user works at Lighthouse Labs.]
+memstat contradiction 0.827 [Kev drinks his coffee black. → Kev drinks his coffee with oat milk.]
+memstat contradiction 0.941 [The user's next release ships in Mar → The user's next release ships in Sep]
+memstat contradiction 0.870 [Kev's sister lives in Galway. → Kev's sister lives in Lisbon.]
+memstat contradiction 0.907 [The user prefers dark mode. → The user prefers light mode.]
+memstat contradiction 0.841 [Kev drives a Toyota. → Kev drives a Volvo.]
+memstat contradiction 0.969 [The user's standing desk is set to 1 → The user's standing desk is set to 9]
+memstat compatible 0.675 [Kev lives in Ardmore. → Kev grew up in Waterford.]
+memstat compatible 0.754 [The user's dog is a collie. → The user's dog is called Bran.]
+memstat compatible 0.655 [Kev works on a Mac Studio. → Kev tests on an iPhone 17 Pro.]
+memstat compatible 0.692 [The user prefers metric units. → The user prefers Celsius for weather]
+memstat compatible 0.756 [Kev's sister is called Aoife. → Kev's sister works as a nurse.]
+memstat compatible 0.768 [The user drinks coffee in the mornin → The user drinks tea in the evening.]
+memstat compatible 0.686 [Kev is dyslexic. → Kev prefers audio summaries.]
+memstat compatible 0.733 [The user plays the guitar. → The user is learning the piano.]
+memstat compatible 0.765 [Kev runs on Saturday mornings. → Kev swims on Wednesday evenings.]
+memstat compatible 0.550 [The user's favourite colour is green → The user's favourite band is Fontain]
+memstat restatement 0.907 [Kev's sister is called Aoife. → Aoife is Kev's sister.]
+memstat restatement 0.892 [The user prefers metric units. → Metric units are the user's preferen]
+memstat restatement 0.934 [Kev lives in Ardmore. → Kev's home is in Ardmore.]
+memstat restatement 0.949 [The user's dog is a collie named Bra → Bran, the user's dog, is a collie.]
+memstat restatement 0.957 [Kev drinks his coffee black. → Kev takes his coffee black.]
+contradictions: min 0.686 median 0.858 max 0.969
+  contradictions ≥ 0.90 (eaten as duplicates): 3/10
+  contradictions in [0.75, 0.90): 6/10
+compatibles: min 0.550 median 0.733 max 0.768
+  compatibles ≥ 0.90 (would be wrongly eaten): 0/10
+  compatibles in [0.75, 0.90): 4/10
+restatements: min 0.892 median 0.934 max 0.957
+  restatements ≥ 0.90 (correctly eaten): 4/5
+  restatements in [0.75, 0.90): 1/5
+memstat ingest contradiction: survived [Kev lives in Ardmore.]
+memstat ingest contradiction: survived [The user's favourite editor is Zed.]
+memstat ingest contradiction: survived [Kev's dog is called Rex.]
+memstat ingest contradiction: survived [The user works at Lighthouse Labs.]
+memstat ingest contradiction: survived [Kev drinks his coffee with oat milk.]
+memstat ingest contradiction: survived [The user's next release ships in Sep]
+memstat ingest contradiction: survived [Kev's sister lives in Lisbon.]
+memstat ingest contradiction: survived [The user prefers light mode.]
+memstat ingest contradiction: survived [Kev drives a Volvo.]
+memstat ingest contradiction: survived [The user's standing desk is set to 9]
+memstat ingest contradiction: 0/10 eaten
+memstat ingest compatible: survived [Kev grew up in Waterford.]
+memstat ingest compatible: survived [The user's dog is called Bran.]
+memstat ingest compatible: survived [Kev tests on an iPhone 17 Pro.]
+memstat ingest compatible: survived [The user prefers Celsius for weather]
+memstat ingest compatible: survived [Kev's sister works as a nurse.]
+memstat ingest compatible: survived [The user drinks tea in the evening.]
+memstat ingest compatible: survived [Kev prefers audio summaries.]
+memstat ingest compatible: survived [The user is learning the piano.]
+memstat ingest compatible: survived [Kev swims on Wednesday evenings.]
+memstat ingest compatible: survived [The user's favourite band is Fontain]
+memstat ingest compatible: 0/10 eaten
+memstat ingest restatement: survived [Aoife is Kev's sister.]
+memstat ingest restatement: survived [Metric units are the user's preferen]
+memstat ingest restatement: survived [Kev's home is in Ardmore.]
+memstat ingest restatement: survived [Bran, the user's dog, is a collie.]
+memstat ingest restatement: survived [Kev takes his coffee black.]
+memstat ingest restatement: 0/5 eaten
+✓ memstat: done
+=== END SELF-TEST ===
