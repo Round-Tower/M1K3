@@ -89,7 +89,8 @@ final class CompanionScene {
     /// dropped, so rapid switches never leave an older creature winning the swap.
     var loadToken = 0
     var host: Entity?
-    /// The loaded creature's own local-space visual bounds (root-relative),
+    /// The loaded creature's own local-space visual bounds (host-local —
+    /// captured before parenting, so no parent transform is baked in),
     /// captured once at load — right after `fit(_:)` normalizes it, right before
     /// it's parented — so the visionOS window-fit has a stable "designed content
     /// size" to scale against instead of re-measuring RealityKit bounds every
@@ -329,6 +330,11 @@ struct CompanionAvatarView: View {
             clips = harvested
         }
         guard token == scene.loadToken else { return }
+        // ⚠️ No `await` below this point (review invariant, PR #91): the token
+        // re-check above is the LAST one, and everything after runs atomically
+        // on @MainActor. Adding a suspension anywhere in this tail would let a
+        // superseded load write hostExtents/host/built unguarded — re-check the
+        // token after any future await here.
 
         // Pose BEFORE fit() so the recentre + scale measure the final, upright silhouette.
         host.orientation = Self.basePose

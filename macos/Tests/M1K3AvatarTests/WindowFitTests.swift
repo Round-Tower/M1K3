@@ -50,8 +50,8 @@ struct WindowFitTests {
     func matchesFaceGridArithmetic() {
         // Regression pin for the exact call AvatarView.fit makes, so a future edit
         // to either side can't silently drift the two apart.
-        let gridWidth: Float = (Float(13 - 1) * 0.1) + 0.068
-        let gridHeight: Float = (Float(11 - 1) * 0.1) + 0.068
+        let gridWidth: Float = (Float(FaceGrid.cols - 1) * 0.1) + 0.068
+        let gridHeight: Float = (Float(FaceGrid.rows - 1) * 0.1) + 0.068
         let scale = WindowFit.scale(
             contentWidth: gridWidth, contentHeight: gridHeight,
             boundsWidth: 3.0, boundsHeight: 2.0,
