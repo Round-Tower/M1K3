@@ -133,10 +133,12 @@ public enum ModelCacheIntegrity {
     ///
     /// ⚠️ It is MOVED ASIDE, not deleted, and the distinction is not
     /// fastidiousness. The original cut deleted the directory outright, which
-    /// bets a user's entire multi-GB download on the re-download succeeding —
-    /// while these weights live in `Library/Caches`, which the system may
-    /// purge under disk pressure, so the app can create the very "I need 6.7 GB
-    /// again" situation it is trying to recover from. It also sat awkwardly
+    /// bets a user's entire multi-GB download on the re-download succeeding.
+    /// (When this was written the weights ALSO lived in purge-eligible
+    /// `Library/Caches` — that half of the rationale retired 2026-07-31 when
+    /// ModelStoreLocation moved them to Application Support; the purger
+    /// really did eat them, twice in one afternoon. The don't-bet-the-bytes
+    /// argument stands on its own.) It also sat awkwardly
     /// beside `WeightIntegrity`'s tamper path, which refuses to destroy the
     /// files it rejects on the grounds that they are evidence: the accidental
     /// case was treated more harshly than the hostile one.
