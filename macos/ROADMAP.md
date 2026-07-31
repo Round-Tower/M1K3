@@ -5,29 +5,32 @@ architecture/build/test, see `CLAUDE.md`. For *why* a decision was made (model
 swaps, phase rationale, the full session-by-session build log), see `PLAN.md` —
 it's a signed historical record and stays that way; this file doesn't repeat it.
 
-Last swept: 2026-07-30 (merge day: #82 iOS companions/voice-first + #83/#84
-dream-cycle Tiers 0/1 all landed; PR board EMPTY; baseline = master).
+Last swept: 2026-07-31 (#87 dream-cycle Tier 2 + #88 MetricKit MERGED; the
+hashing/iOS floors gap measured + closed in PR #89; #85 inspection findings
+posted; PR board = #89/#90 + the companion visionOS camera fix, all
+agent-authored, awaiting Kev's clicks).
 
 ---
 
 ## Now
 
-- **iOS voice-mode crash triage (#85).** Kev's device run: the shell works
-  great, voice mode crashes. Pull the `.ips` from the device, then fix — this
-  blocks the felt iOS voice experience, which is the mobile flagship's spine.
-- **Dream-cycle Tier 2 — write-time repair** (`scratch/dream-cycle/SPEC.md`,
-  data in `MEMSTAT-RESULTS.md`): the Tier-0 census made it *mandatory* — 3/10
-  corrections are silently eaten at ingest today — and answered the mechanism
-  question (no cosine bar separates correction from restatement → the ≥ 0.90
-  disambiguation must be content-aware; supersede-on-write needs
-  contradiction-vs-compatible discrimination on the one candidate pair).
-  Prerequisites named in the spec ride the same PR (`related(to:)` superseded
-  filter, un-supersede-on-reassert, corpus-twin marker — Kev's sub-kind call).
-  With only 51 mineable pairs + a Δ202 backfill measured, Tier 2 + a one-shot
-  backfill may retire the nightly dream entirely.
-- **MetricKit adoption (#86)** — on-device crash/hang/power diagnostics for
-  both shells, surfaced through the existing secret-free issue-report flow.
-  First customer: #85.
+- **iOS voice-mode crash triage (#85).** Code-inspection pass done (2026-07-31,
+  findings on the issue): the voice session layer is clean; ranked suspects
+  are ① jetsam memory-limit exit (fits "no `.ips`" — check for `JetsamEvent`
+  files, not just crash logs), ② watchdog via the synchronous
+  AVAudioSession activate/deactivate on the main actor, ③ the mic-tap
+  realtime-thread lock (bench item #4). **The discriminator is live:** #88's
+  `MXAppExitMetric` names the exit reason on the next repro. Cheap hardening
+  available regardless: make the session activate/deactivate non-blocking.
+- **Phase B — iOS voice, for real.** With #82's shell shipped and #85
+  instrumented, the B-A1 AVAudioSession echo spike is next — and it maps the
+  same territory as suspect ② above, so run the spike WITH the crash as
+  fixture one. Then B-1 STT/captions → B-2 Kokoro-vs-AVSpeech on measured
+  thermals → B-3 the composed voice-mode UI.
+- **Dream-cycle Tier-2 soak.** Shipped in #87 (write-time repair: corrections
+  supersede, never eaten — acceptance gate 3/10 → 0/10 on-device). Watch real
+  distillation traffic; the Tier-3 decision (one-shot Δ202 backfill vs nightly
+  dream) is a re-measure after the soak, not a build.
 
 ---
 
@@ -122,21 +125,21 @@ Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
 
 ## Backlog (smaller, pick off anytime)
 
-- **Per-embedder relevance floors (the "hashing/iOS floors" gap).**
-  `GroundingGate`'s citation/memory/KEYEVAL thresholds were all measured
-  against the MLX/Qwen3 embedder. `HashingEmbeddingService` — Mac's offline
-  fallback, and **the only embedder iOS/visionOS has** — shares those same
-  numbers unmeasured; its bag-of-words cosine distribution isn't remotely the
-  same shape. Documented as a caveat in `GroundingGate`'s own header, upgrade
-  path named there (per-embedder floors / a hashing-arm KEYEVAL run) but never
-  executed. Matters more now than when it was first logged — iOS actually ships.
+- **Per-embedder relevance floors — DONE, PR #89 (2026-07-31).** Measured
+  (deterministic hashing arm over the same MEMEVAL/ABSEP fixtures, now a
+  standing CI instrument): the shared bars kept 6/22 true memory recalls on
+  iOS. `EmbedderFloors` selects by fingerprint at every gate call site.
+  Remaining tail: Tier-2's ≥0.90 supersede bar is still qwen-derived (fails
+  safe on hashing — two live dated rows), and the mobile felt-feel pass is
+  Kev's.
 
 - **Spotlight `.memory` donation** — deliberately excluded from #29 on privacy
   grounds (a distilled fact's title *is* its body, so title-only donation is no
   mitigation). Needs 3 lifecycle hooks (supersede-deindex, forget-revive-re-donate,
   tag-UI-deindex), each red-first.
-- **Companion-avatar visionOS camera fix** — `CompanionAvatarView` needs the
-  same camera-less `GeometryReader3D` pattern #60 applied to the main `AvatarView`.
+- **Companion-avatar visionOS camera fix — DONE, PR #91 (2026-07-31):** the
+  #60 camera-less pattern applied via a new shared pure `WindowFit`;
+  real-headset look verify-owed.
 - **White-pane Code-tab render check** — long-open: the offscreen render probe
   (`scratchpad/preview-snapshot.swift`) renders a persisted artifact correctly
   (dark, styled) but Kev saw it white/unstyled in-app. Probe-clean, app-divergent,
@@ -144,8 +147,8 @@ Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
   divergence) is still owed.
 - **PREFIXWARM re-measurement** — stale since both the Lil (2507) and Big (12B)
   tier reshuffles; the cached warm-latency figures predate the current brains.
-- **`.builtin` voice-tier copy** — "macOS's built-in speech" string, logged as
-  a Phase B (iOS voice) item, not yet touched.
+- **`.builtin` voice-tier copy — DONE, PR #90 (2026-07-31):** platform-honest
+  `#if` split, macOS bytes frozen; live once a mobile voice-tier picker exists.
 - **Issue #46** — refusal-marker ledger: denial-decline phrasings the scorer
   misses. Grows one entry per new brain bake-off; low-effort, pick up opportunistically.
 - **`graphify-out/` rebuild** — stale since 2026-06-14, predates the entire
@@ -180,6 +183,12 @@ Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
 
 ---
 
+<!-- Review: Kev + claude-fable-5, 2026-07-31 — post-merge sweep: #87/#88
+     ticked off Now (merged + verified 2288/331); Now refilled with the voice
+     spine (#85 findings→Phase B as one thread) + the Tier-2 soak; hashing
+     floors + .builtin copy + companion camera moved to DONE with their PR
+     numbers (#89/#90/#91, all green awaiting Kev).
+     Confidence 0.9 (swept against live gh/git state same-session). -->
 <!-- Review: Kev + claude-fable-5, 2026-07-30 — merge-day sweep: Now section
      rebuilt (stale #62-era items ticked off; voice-crash #85 + dream-cycle
      Tier 2 + MetricKit #86 are the focus), V0 tab finding closed-by-removal,
