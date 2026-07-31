@@ -50,11 +50,15 @@
 //  bracket, before iOS retrieval quality is tuned in anger.
 //  Review: Kev + claude-fable-5, 2026-07-31 — the caveat above is CLOSED:
 //  floors are now per-embedder (`EmbedderFloors`, selected by fingerprint at
-//  every gate call site), and the hashing arm is MEASURED — deterministically,
-//  in CI (HashingFloorMeasurementTests re-derives the MEMEVAL/ABSEP
-//  distributions each run). The qwen constants below are unchanged and remain
-//  this file's; hashing's rationale lives with its numbers in EmbedderFloors.
-//  Confidence 0.85.
+//  the gate call sites — AgentRAGResponder, GroundedSearch — and the
+//  user-facing recall sites: iOS MemoriesScreen, Mac interrogateMemories,
+//  MCP recall/related. Deliberately NOT wired: SelfTest's MemoryGraphEval
+//  probe, a diagnostic; and forget's threshold-0 candidate search, whose
+//  0.6 confidence bar is the real gate). The hashing arm is MEASURED —
+//  deterministically, in CI (HashingFloorMeasurementTests re-derives the
+//  MEMEVAL/ABSEP distributions each run). The qwen constants below are
+//  unchanged and remain this file's; hashing's rationale lives with its
+//  numbers in EmbedderFloors. Confidence 0.85.
 //
 
 import Foundation

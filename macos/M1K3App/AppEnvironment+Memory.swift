@@ -52,7 +52,13 @@ extension AppEnvironment {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let memoryStore else { return [] }
         guard let vector = try? await embedder.embedQuery(trimmed) else { return [] }
-        let hits = (try? memoryStore.recall(query: trimmed, queryVector: vector, limit: limit)) ?? []
+        // Recall bar follows the ACTIVE embedder's cone — the Settings toggle
+        // (switchEmbeddings) can put the Mac on hashing, whose measured floor
+        // sits far below the qwen default (EmbedderFloors, PR #89).
+        let hits = (try? memoryStore.recall(
+            query: trimmed, queryVector: vector, limit: limit,
+            threshold: EmbedderFloors.forFingerprint(embedder.fingerprint).memory
+        )) ?? []
         return hits.map(\.memory)
     }
 
