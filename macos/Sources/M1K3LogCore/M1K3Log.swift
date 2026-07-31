@@ -108,6 +108,10 @@ public enum M1K3Log {
         case spotlight
         /// The 3D companion creature surface (USDZ load/reload lifecycle).
         case companion
+        /// MetricKit: on-device MXDiagnosticPayload/MXMetricPayload collection
+        /// (crash/hang/cpu/disk-write diagnostics + daily metrics). Payload
+        /// KIND + count only, never the payload's own content.
+        case metricKit = "metric-kit"
     }
 
     /// Build a `Logger` on the M1K3 subsystem for a catalogued category.

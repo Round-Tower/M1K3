@@ -32,6 +32,7 @@ struct AdvancedSettingsPane: View {
     @Environment(AppEnvironment.self) private var env
     @AppStorage(AppEnvironment.showGenerationStatsKey) private var showGenerationStats = false
     @AppStorage(AppEnvironment.conversationLogEnabledKey) private var conversationLogEnabled = false
+    @AppStorage(AppEnvironment.includeMetricDigestsInIssueKey) private var includeMetricDigests = false
     @State private var showLicenses = false
     @State private var issueReported = false
     @State private var issueTruncated = false
@@ -178,6 +179,7 @@ struct AdvancedSettingsPane: View {
             weightImportSection
 
             Section {
+                Toggle("Include on-device crash/hang summaries", isOn: $includeMetricDigests)
                 TextField("What happened? (optional)", text: $whatHappened, axis: .vertical)
                     .lineLimit(2 ... 5)
                     .textFieldStyle(.roundedBorder)
@@ -186,7 +188,8 @@ struct AdvancedSettingsPane: View {
                         issueTruncated = await IssueReporter.reportIssue(
                             whatHappened: whatHappened,
                             activeBrain: env.selectedBrain.displayName,
-                            userProfile: M1K3Persona.userProfile
+                            userProfile: M1K3Persona.userProfile,
+                            metricDigests: includeMetricDigests ? env.recentMetricDigestLines() : []
                         )
                         issueReported = true
                     }
@@ -200,7 +203,9 @@ struct AdvancedSettingsPane: View {
                         ? "Full report copied to your clipboard — paste it into the issue body on GitHub."
                         : "Opened a prefilled issue on GitHub (also copied to your clipboard). Review before you submit.")
                     : "Copies recent logs + this Mac's details, scrubbed of paths, emails and "
-                    + "your name, then opens a prefilled GitHub issue. Nothing is sent until you submit.")
+                    + "your name, then opens a prefilled GitHub issue. MetricKit summaries "
+                    + "(crash/hang kind, date, version — never raw data) are opt-in above. "
+                    + "Nothing is sent until you submit.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 

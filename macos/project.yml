@@ -109,6 +109,10 @@ targetTemplates:
       # WhisperKit stay Mac-only for now.
       - package: M1K3
         product: M1K3Voice
+      # MetricKit digest/retention pure logic (#86) — AppCore+MetricKit.swift's
+      # collector calls MetricPayloadDigest/MetricRetentionPolicy directly.
+      - package: M1K3
+        product: M1K3Diagnostics
 
 targets:
   M1K3:

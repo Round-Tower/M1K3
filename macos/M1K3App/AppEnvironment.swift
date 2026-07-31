@@ -668,6 +668,8 @@ final class AppEnvironment {
         mcpHost = MCPHostController(environment: self)
         mcpHost.startIfEnabled()
         menuBarAsk = MenuBarAsk(environment: self)
+        // Cheap + synchronous (registration only) — see AppEnvironment+MetricKit.swift.
+        startMetricKitCollection()
 
         // Warm a restored MLX brain (Lil/Big) on launch so it's ready to answer;
         // Mini (Apple) needs nothing. Setting selectedRuntime drives the existing

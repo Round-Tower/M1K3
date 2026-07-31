@@ -103,6 +103,21 @@ struct IssueReportFormatterTests {
         let md = IssueReportFormatter.markdownBody(sample(logs: ""))
         #expect(md.contains("(none captured)"))
     }
+
+    @Test("metric digest lines are omitted by default (opt-in, empty means silent)")
+    func metricDigestsOmittedByDefault() {
+        let md = IssueReportFormatter.markdownBody(sample())
+        #expect(!md.contains("MetricKit"))
+    }
+
+    @Test("opted-in metric digest lines render their own section, verbatim")
+    func metricDigestsSection() {
+        var report = sample()
+        report.metricDigests = ["crash · 2026-07-29T00:00:00Z · v1.4.0 (88) · M1K3"]
+        let md = IssueReportFormatter.markdownBody(report)
+        #expect(md.contains("### Recent diagnostics (MetricKit)"))
+        #expect(md.contains("crash · 2026-07-29T00:00:00Z · v1.4.0 (88) · M1K3"))
+    }
 }
 
 struct GitHubIssueURLTests {
