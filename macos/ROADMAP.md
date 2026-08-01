@@ -5,10 +5,12 @@ architecture/build/test, see `CLAUDE.md`. For *why* a decision was made (model
 swaps, phase rationale, the full session-by-session build log), see `PLAN.md` —
 it's a signed historical record and stays that way; this file doesn't repeat it.
 
-Last swept: 2026-07-31 (#87 dream-cycle Tier 2 + #88 MetricKit MERGED; the
-hashing/iOS floors gap measured + closed in PR #89; #85 inspection findings
-posted; PR board = #89/#90 + the companion visionOS camera fix, all
-agent-authored, awaiting Kev's clicks).
+Last swept: 2026-08-01 (housekeeping day: the branch pile verified + pruned —
+12 local branches, 3 worktrees; 20 dead remote branches verified merged and
+listed for Kev's delete, remote deletion being his click. PR board = #92
+weights-out-of-Caches · #93 chat markdown rendering, a RESCUED stranded
+2026-07-22 Kev commit + the speaks-raw-markdown regression fix · #94 the
+corrected-facts memories lens — all green-bound, awaiting Kev).
 
 ---
 
@@ -30,7 +32,9 @@ agent-authored, awaiting Kev's clicks).
 - **Dream-cycle Tier-2 soak.** Shipped in #87 (write-time repair: corrections
   supersede, never eaten — acceptance gate 3/10 → 0/10 on-device). Watch real
   distillation traffic; the Tier-3 decision (one-shot Δ202 backfill vs nightly
-  dream) is a re-measure after the soak, not a build.
+  dream) is a re-measure after the soak, not a build. The ride-along landed:
+  PR #94 gives corrected facts a list-level lens in MemoriesView (2026-08-01),
+  so the soak is now eyeball-able, not log-only.
 
 ---
 
@@ -145,8 +149,10 @@ Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
   (dark, styled) but Kev saw it white/unstyled in-app. Probe-clean, app-divergent,
   cause unknown. Kev's Code-tab check (splits app-artifact vs app-render
   divergence) is still owed.
-- **PREFIXWARM re-measurement** — stale since both the Lil (2507) and Big (12B)
-  tier reshuffles; the cached warm-latency figures predate the current brains.
+- **PREFIXWARM re-measurement — DONE (2026-07-31):** lil 2.1s / big 8.5s
+  (evidence `scratch/eval-2026-07-31-prefixwarm/`); the stale AppEnvironment
+  comment truthed up in PR #92. The 12B launch warm is ~2.6× more load-bearing
+  than the old figure suggested — background it stays.
 - **`.builtin` voice-tier copy — DONE, PR #90 (2026-07-31):** platform-honest
   `#if` split, macOS bytes frozen; live once a mobile voice-tier picker exists.
 - **Issue #46** — refusal-marker ledger: denial-decline phrasings the scorer
@@ -183,6 +189,11 @@ Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
 
 ---
 
+<!-- Review: Kev + claude-fable-5, 2026-08-01 — housekeeping-day sweep: header
+     truth-up (branch prune + the #93 rescue + #94 lens), Tier-2 soak bullet
+     gains its #94 ride-along, PREFIXWARM moved to DONE with the 07-31
+     numbers. Confidence 0.9 (every claim verified against live git/gh state
+     this session). -->
 <!-- Review: Kev + claude-fable-5, 2026-07-31 — post-merge sweep: #87/#88
      ticked off Now (merged + verified 2288/331); Now refilled with the voice
      spine (#85 findings→Phase B as one thread) + the Tier-2 soak; hashing
