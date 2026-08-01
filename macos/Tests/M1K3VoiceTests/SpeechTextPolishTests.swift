@@ -98,4 +98,66 @@ struct SpeechTextPolishTests {
         let text = "Web sources:\n• https://a.com\n• https://b.com"
         #expect(SpeechTextPolish.polish(text).isEmpty)
     }
+
+    // MARK: - Markdown flattening (speech never voices markup — the chat
+
+    // pipeline stopped flattening when bubbles learned to RENDER markdown,
+    // so the speech lane owns its own flatten now)
+
+    @Test("bold and italic markers are not spoken")
+    func flattensEmphasis() {
+        let text = "That is **really** important, *honestly*."
+        #expect(SpeechTextPolish.polish(text) == "That is really important, honestly.")
+    }
+
+    @Test("arithmetic asterisks survive the italic pass")
+    func keepsArithmeticAsterisks() {
+        let text = "So 2 * 3 is 6."
+        #expect(SpeechTextPolish.polish(text) == "So 2 * 3 is 6.")
+    }
+
+    @Test("inline code backticks vanish, the code text speaks")
+    func flattensInlineCode() {
+        let text = "Run `swift test` before you push."
+        #expect(SpeechTextPolish.polish(text) == "Run swift test before you push.")
+    }
+
+    @Test("heading markers vanish, the heading text speaks")
+    func flattensHeadings() {
+        let text = "## The plan\nShip it."
+        #expect(SpeechTextPolish.polish(text) == "The plan\nShip it.")
+    }
+
+    @Test("a markdown link speaks its label, not its URL")
+    func flattensLinksToLabel() {
+        let text = "See [the forecast](https://met.ie/today) for detail."
+        #expect(SpeechTextPolish.polish(text) == "See the forecast for detail.")
+    }
+
+    @Test("list bullet markers vanish, the item text speaks")
+    func flattensBulletMarkers() {
+        let text = "Bring:\n* a coat\n* boots"
+        #expect(SpeechTextPolish.polish(text) == "Bring:\na coat\nboots")
+    }
+
+    @Test("a thematic break line is silent")
+    func dropsThematicBreaks() {
+        let text = "Before.\n***\nAfter."
+        #expect(SpeechTextPolish.polish(text) == "Before.\n\nAfter.")
+    }
+
+    @Test("fenced code passes through verbatim — a shell comment keeps its hash")
+    func fencedCodeIsVerbatim() {
+        let text = "Install like this:\n```sh\n# deps first\nbrew install *thing*\n```\nDone."
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished.contains("# deps first"))
+        #expect(polished.contains("brew install *thing*"))
+    }
+
+    @Test("markdown flattening is idempotent too")
+    func markdownFlattenIdempotent() {
+        let text = "**Bold** with `code` and [a link](https://x.com/y).\n## Head"
+        let once = SpeechTextPolish.polish(text)
+        #expect(SpeechTextPolish.polish(once) == once)
+    }
 }

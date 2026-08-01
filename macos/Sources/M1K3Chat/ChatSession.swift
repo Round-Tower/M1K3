@@ -395,8 +395,9 @@ public final class ChatSession {
             let validation = await CitationValidator.validate(responseText: answer, against: mergedSources)
             update(assistantID) {
                 $0.sources = mergedSources
-                // Flatten model markdown + tidy whitespace once the full text
-                // is in hand (ReadingText renders plain text).
+                // Tidy whitespace once the full text is in hand. Markdown
+                // markup survives on purpose — ReadingText renders it as real
+                // blocks now; SpeechTextPolish owns the flatten for TTS.
                 $0.text = MessageTextPolish.polish(validation.cleanedText)
                 $0.citations = validation.validated
                 $0.reasoning = reasoning

@@ -240,8 +240,10 @@ struct MessageView: View {
         message.text + "\n\n— Shared from M1K3 · m1k3.app"
     }
 
-    /// Copy the answer to the clipboard, with a brief checkmark confirmation. Copies
-    /// the shown text (already polished) — what the user reads is what they share.
+    /// Copy the answer to the clipboard, with a brief checkmark confirmation.
+    /// Copies the message's markdown SOURCE, not the rendered look — same deal
+    /// as every chat app's copy button; paste into a markdown-aware target and
+    /// the structure survives.
     private func copyAnswer(_ text: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
