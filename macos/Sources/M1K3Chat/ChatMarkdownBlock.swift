@@ -108,10 +108,22 @@ public enum ChatMarkdownParser {
                     }
                 }
                 guard let columnIndex else { continue } // malformed cell — drop rather than guess
-                tableCells.append(TableCellCapture(
-                    isHeader: isHeader, rowIndex: rowIndex, columnIndex: columnIndex,
-                    text: AttributedString(attributed[run.range])
-                ))
+                // A styled cell (**bold** / `code` inside it) arrives as several
+                // runs sharing one (isHeader, row, column) key — accumulate into
+                // the open capture, mirroring what flush()'s currentText does
+                // for non-table runs, or each styled run becomes a phantom cell.
+                if let last = tableCells.indices.last,
+                   tableCells[last].isHeader == isHeader,
+                   tableCells[last].rowIndex == rowIndex,
+                   tableCells[last].columnIndex == columnIndex
+                {
+                    tableCells[last].text += attributed[run.range]
+                } else {
+                    tableCells.append(TableCellCapture(
+                        isHeader: isHeader, rowIndex: rowIndex, columnIndex: columnIndex,
+                        text: AttributedString(attributed[run.range])
+                    ))
+                }
                 continue
             }
             flushTable() // this run isn't part of a table — close out any table in flight
@@ -135,7 +147,8 @@ public enum ChatMarkdownParser {
         /// Meaningless when `isHeader` — CommonMark doesn't index the header row.
         let rowIndex: Int
         let columnIndex: Int
-        let text: AttributedString
+        /// var: a styled cell accumulates across runs sharing this cell's key.
+        var text: AttributedString
     }
 
     /// Reassembles a table's flattened cell captures into header + ordered

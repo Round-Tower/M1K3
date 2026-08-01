@@ -168,6 +168,24 @@ struct ChatMarkdownBlockTests {
         #expect(rows[1].map { String($0.characters) } == ["Code Blocks", "Yes", "Great"])
     }
 
+    @Test("a styled run inside a cell stays ONE cell — runs merge per (header,row,col)")
+    func styledCellStaysOneCell() {
+        // A cell containing **bold** or `code` arrives as MULTIPLE runs sharing
+        // one (isHeader, rowIndex, columnIndex) key; capturing one cell per run
+        // would split it into phantom columns.
+        let md = """
+        | Feature | Status |
+        | --- | --- |
+        | **Markdown** rendering | `done` now |
+        """
+        let blocks = ChatMarkdownParser.parse(md)
+        #expect(blocks.count == 1)
+        guard case let .table(header, rows) = blocks[0] else { Issue.record("expected table"); return }
+        #expect(header.map { String($0.characters) } == ["Feature", "Status"])
+        #expect(rows.count == 1)
+        #expect(rows[0].map { String($0.characters) } == ["Markdown rendering", "done now"])
+    }
+
     @Test("a table sits between two ordinary paragraphs without swallowing them")
     func tableBetweenParagraphs() {
         let md = "Intro line\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n\nOutro line"

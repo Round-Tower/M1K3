@@ -122,8 +122,10 @@ public enum MessageTextPolish {
                 // opener's info string may not contain backticks. It keeps a
                 // line-leading same-line span (```code``` prose…) OUT of fence
                 // detection — misreading one as an unclosed opener would swallow
-                // the rest of the message verbatim. It stays prose, and
-                // polishProse's same-line span pass flattens it.
+                // the rest of the message verbatim. It stays prose: here that
+                // just means the whitespace tidy may touch it (the renderer
+                // owns span styling now); SpeechTextPolish's twin scanner is
+                // where the span actually flattens, for speech.
                 openStart = lineStart
                 openRun = run
             }

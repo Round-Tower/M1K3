@@ -55,7 +55,7 @@ struct MessageBubble: View {
                         .foregroundStyle(.red)
                 }
                 if case .complete = message.status, !message.text.isEmpty {
-                    ShareLink(item: message.text + "\n\n— Shared from M1K3 · m1k3.app") {
+                    ShareLink(item: message.text + ShareSignature.answerSuffix) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.caption)
                     }

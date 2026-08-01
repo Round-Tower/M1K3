@@ -237,7 +237,7 @@ struct MessageView: View {
     /// (challenger + security-auditor, 2026-07-22) for why this is the whole
     /// feature for now rather than a Universal Link.
     private var shareText: String {
-        message.text + "\n\n— Shared from M1K3 · m1k3.app"
+        message.text + ShareSignature.answerSuffix
     }
 
     /// Copy the answer to the clipboard, with a brief checkmark confirmation.
