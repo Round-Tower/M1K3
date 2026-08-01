@@ -2,14 +2,15 @@
 //  MemoryProvenance.swift
 //  M1K3Memory
 //
-//  Two pure helpers the explorable memory surface leans on, kept out of the
+//  Pure helpers the explorable memory surface leans on, kept out of the
 //  view so they're unit-pinned and reusable:
 //    · MemoryProvenance — classify a fact's `source` string into the
 //      consent-facing "you told me" vs "I noticed" (vs an honest fallback).
 //    · SupersessionChain — the correction history behind a live fact, walking
 //      `Memory.supersededBy` backwards ("how did you learn this?").
+//    · MemoryListPartition — live vs corrected buckets for the list lens.
 //
-//  Both are pure over Memory VALUES — no store, no SQL, no embedder — so the
+//  All are pure over Memory VALUES — no store, no SQL, no embedder — so the
 //  UI stays dumb and this logic is tested in `swift test` (no metallib wall).
 //  Display strings stay app-side (String(localized:)); the core exposes intent,
 //  not copy.
@@ -18,6 +19,8 @@
 //  KnowledgeItemSource .user/.distilled mapping (M1K3Knowledge), generalised to
 //  the graph's richer source vocabulary ("mcp:remember", "chat:auto-distill",
 //  "user:settings").
+//  Review: Kev + claude-fable-5, 2026-08-01 — MemoryListPartition added for
+//  the corrected-facts list lens (PR #94); TDD'd, order-preserving.
 
 import Foundation
 

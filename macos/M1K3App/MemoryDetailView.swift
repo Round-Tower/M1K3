@@ -40,13 +40,22 @@ struct MemoryDetailView: View {
         .scrollContentBackground(.hidden)
         .navigationTitle("Memory")
         .toolbar {
-            ToolbarItem(placement: .destructiveAction) {
-                Button(role: .destructive) {
-                    if env.forgetMemory(memory) { dismiss() }
-                } label: {
-                    Label("Forget", systemImage: "trash")
+            // HIDDEN (dead-control rule), not disabled, for a corrected row:
+            // this screen is now reachable from the corrected-history section,
+            // and forgetting a history row would sever the lineage behind the
+            // live fact that replaced it — the same rule that keeps the forget
+            // swipe off corrected rows in the list. (The store's forget also
+            // revives whatever the row superseded — deleting mid-chain would
+            // resurrect a STALE fact as live beside the true head.)
+            if memory.supersededBy == nil {
+                ToolbarItem(placement: .destructiveAction) {
+                    Button(role: .destructive) {
+                        if env.forgetMemory(memory) { dismiss() }
+                    } label: {
+                        Label("Forget", systemImage: "trash")
+                    }
+                    .help("Forget this — removes it everywhere, no residue")
                 }
-                .help("Forget this — removes it everywhere, no residue")
             }
         }
         .onAppear(perform: load)
