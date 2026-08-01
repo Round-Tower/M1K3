@@ -29,6 +29,14 @@ extension AppEnvironment {
         (try? memoryStore?.allMemories(includeSuperseded: includeSuperseded)) ?? []
     }
 
+    /// Corrected (superseded) facts, newest first — the history lens. The
+    /// store's OWN query and row budget, never a partition of the live fetch:
+    /// a shared limit would let recent corrected rows displace live rows out
+    /// of the window and silently shrink the live list/count (PR #94).
+    func correctedMemories() -> [Memory] {
+        (try? memoryStore?.supersededMemories()) ?? []
+    }
+
     /// One-hop neighbours of a fact — the "Connections" section. Drilling
     /// deeper is recursion (tap a neighbour → its own detail), so one hop per
     /// level keeps the graph legible instead of dumping a 2-hop blob.

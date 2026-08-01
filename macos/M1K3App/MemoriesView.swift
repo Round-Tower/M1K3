@@ -21,10 +21,14 @@
 //  Signed: Kev + claude-opus-4-8, 2026-07-20, Confidence 0.82 (verify-owed =
 //  on-device click-through). Prior: flat list over documents(kind: .memory)
 //  (Kev + claude-fable-5, 2026-06-12).
-//  Review: Kev + claude-fable-5, 2026-08-01 — the corrected-facts section
-//  (MemoryListPartition, TDD'd in M1K3Memory) rides the existing reload path;
-//  the count chip stays a LIVE count on purpose so toggling the lens never
-//  changes how many facts M1K3 claims to hold.
+//  Review: Kev + claude-fable-5, 2026-08-01 — the corrected-facts section.
+//  TWO independent queries, not fetch-then-partition: the review caught that
+//  a shared LIMIT lets recent corrected rows displace live rows out of the
+//  fetched window, silently shrinking the live list/count. Live rows load
+//  exactly as before the lens existed; corrected rows come from the store's
+//  own supersededMemories query (TDD'd in M1K3Memory). The count chip reads
+//  the live fetch only, so toggling the lens structurally cannot change how
+//  many facts M1K3 claims to hold.
 
 import M1K3Memory
 import SwiftUI
@@ -45,7 +49,11 @@ struct MemoriesView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.openWindow) private var openWindow
 
+    /// Live facts only — never includes superseded rows, whatever the lens.
     @State private var memories: [Memory] = []
+    /// Corrected (superseded) facts, loaded only while the lens is on. Its own
+    /// fetch with its own row budget — see the header Review note.
+    @State private var corrected: [Memory] = []
     @State private var query: String = ""
     /// nil = not interrogating (show the full list); non-nil = search results.
     @State private var results: [Memory]?
@@ -57,12 +65,7 @@ struct MemoriesView: View {
     /// Interrogation only ever recalls live facts, so the corrected section
     /// stays out of search results by construction.
     private var shown: [Memory] {
-        results ?? partition.live
-    }
-
-    /// Live vs corrected buckets of the loaded list (pure, order-preserving).
-    private var partition: (live: [Memory], corrected: [Memory]) {
-        MemoryListPartition.split(memories)
+        results ?? memories
     }
 
     var body: some View {
@@ -109,10 +112,11 @@ struct MemoriesView: View {
         .padding(16)
     }
 
-    /// The count chip stays a LIVE count no matter the lens — toggling the
-    /// history reveal must never change how many facts M1K3 claims to hold.
+    /// The count chip stays a LIVE count no matter the lens — `memories` never
+    /// contains superseded rows, so toggling the reveal structurally cannot
+    /// change how many facts M1K3 claims to hold.
     private var liveCount: Int {
-        partition.live.count
+        memories.count
     }
 
     private var interrogateField: some View {
@@ -144,7 +148,7 @@ struct MemoriesView: View {
     /// The corrected section renders only under the reveal, and only while the
     /// list is not showing interrogation results (search recalls live facts).
     private var shownCorrected: [Memory] {
-        (showCorrected && results == nil) ? partition.corrected : []
+        (showCorrected && results == nil) ? corrected : []
     }
 
     @ViewBuilder
@@ -201,7 +205,8 @@ struct MemoriesView: View {
     }
 
     private func reload() {
-        memories = env.memories(includeSuperseded: showCorrected)
+        memories = env.memories()
+        corrected = showCorrected ? env.correctedMemories() : []
     }
 
     private func runInterrogation() {
