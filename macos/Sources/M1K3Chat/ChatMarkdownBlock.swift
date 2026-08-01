@@ -163,7 +163,9 @@ public enum ChatMarkdownParser {
         for component in components {
             if case let .codeBlock(languageHint) = component.kind {
                 let code = String(text.characters)
-                let trimmed = code.hasSuffix("\n") ? String(code.dropLast()) : code
+                // .isNewline, not == "\n": a CRLF ending is ONE grapheme that
+                // hasSuffix("\n") never matches (the fencedCodeRanges lesson).
+                let trimmed = code.last?.isNewline == true ? String(code.dropLast()) : code
                 let language = languageHint?.trimmingCharacters(in: .whitespaces).lowercased()
                 return .codeBlock(language: (language?.isEmpty ?? true) ? nil : language, code: trimmed)
             }

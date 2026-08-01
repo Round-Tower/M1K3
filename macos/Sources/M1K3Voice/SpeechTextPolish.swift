@@ -52,38 +52,61 @@ public enum SpeechTextPolish {
     // MARK: - Markdown flattening
 
     /// Flatten markdown markup to its spoken content, leaving fenced code
-    /// blocks byte-for-byte (a ``` line toggles fence state). Line-based, so
-    /// an unterminated fence simply runs verbatim to the end — the same
-    /// fail-safe MessageTextPolish's harness pinned.
+    /// blocks byte-for-byte. An unterminated fence runs verbatim to the end —
+    /// the same fail-safe MessageTextPolish's harness pinned.
     private static func flattenMarkdownOutsideFences(_ text: String) -> String {
-        var output: [String] = []
-        var prose: [String] = []
-        var inFence = false
-
-        func flushProse() {
-            guard !prose.isEmpty else { return }
-            output.append(flattenMarkdown(prose.joined(separator: "\n")))
-            prose.removeAll()
+        var result = ""
+        var cursor = text.startIndex
+        for range in fencedCodeRanges(in: text) {
+            result += flattenMarkdown(String(text[cursor ..< range.lowerBound]))
+            result += String(text[range]) // verbatim
+            cursor = range.upperBound
         }
+        result += flattenMarkdown(String(text[cursor...]))
+        return result
+    }
 
-        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
-            if line.trimmingCharacters(in: .whitespaces).hasPrefix("```") {
-                if inFence {
-                    output.append(String(line))
-                    inFence = false
-                } else {
-                    flushProse()
-                    output.append(String(line))
-                    inFence = true
+    /// Deliberately DUPLICATED from `MessageTextPolish.fencedCodeRanges`
+    /// (M1K3Chat) rather than imported — M1K3Voice is dependency-free by
+    /// design (the VoiceTier precedent: a Voice→Chat edge to dedupe one
+    /// scanner is worse layering than duplication). Keep the two in
+    /// lock-step; every rule here was earned by a pinned test over there:
+    /// `\.isNewline` (CRLF is ONE grapheme), the closing run-length match,
+    /// and CommonMark's no-backticks-in-info-string opener guard.
+    private static func fencedCodeRanges(in text: String) -> [Range<String.Index>] {
+        var ranges: [Range<String.Index>] = []
+        var openStart: String.Index?
+        var openRun = 0
+        var lineStart = text.startIndex
+        while lineStart < text.endIndex {
+            let newline = text[lineStart...].firstIndex(where: \.isNewline)
+            let contentEnd = newline ?? text.endIndex
+            let nextLine = newline.map { text.index(after: $0) } ?? text.endIndex
+            let line = text[lineStart ..< contentEnd]
+            // ANY leading whitespace is tolerated (wider than CommonMark's
+            // 3-space rule, on purpose): don't drop nested real code into the
+            // flatten pass.
+            let unindented = line.drop { $0 == " " || $0 == "\t" }
+            let run = unindented.prefix { $0 == "`" }.count
+            if let start = openStart {
+                if run >= openRun, unindented.dropFirst(run).allSatisfy(\.isWhitespace) {
+                    ranges.append(start ..< contentEnd)
+                    openStart = nil
                 }
-            } else if inFence {
-                output.append(String(line))
-            } else {
-                prose.append(String(line))
+            } else if run >= 3, !unindented.dropFirst(run).contains("`") {
+                // A same-line ```span``` fails this guard and stays prose —
+                // flattenMarkdown's span pass handles it; misreading it as an
+                // unclosed opener would leave the rest of the message spoken
+                // with its markup intact.
+                openStart = lineStart
+                openRun = run
             }
+            lineStart = nextLine
         }
-        flushProse()
-        return output.joined(separator: "\n")
+        if let start = openStart {
+            ranges.append(start ..< text.endIndex)
+        }
+        return ranges
     }
 
     /// The rules, ported from MessageTextPolish's retired flattening pass and

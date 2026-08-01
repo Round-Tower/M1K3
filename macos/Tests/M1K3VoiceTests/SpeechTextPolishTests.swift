@@ -160,4 +160,28 @@ struct SpeechTextPolishTests {
         let once = SpeechTextPolish.polish(text)
         #expect(SpeechTextPolish.polish(once) == once)
     }
+
+    @Test("CRLF text still pairs its fences — code stays verbatim, prose still flattens")
+    func crlfFencesPair() {
+        // Swift folds "\r\n" into ONE grapheme: a literal-\n line split sees
+        // this as a single line and never finds the fences (the exact bug
+        // MessageTextPolish's fencedCodeRanges pins with \.isNewline).
+        let text = "Intro **bold**.\r\n```\r\nkeep *ptr* verbatim\r\n```\r\nAfter *italic*."
+        let polished = SpeechTextPolish.polish(text)
+        #expect(!polished.contains("**"))
+        #expect(polished.contains("keep *ptr* verbatim"))
+        #expect(polished.contains("After italic."))
+    }
+
+    @Test("a line-leading same-line span is prose, not an unclosed fence opener")
+    func lineLeadingSameLineSpanIsProse() {
+        // CommonMark: a fence opener's info string may not contain backticks —
+        // so ```cmd``` on one line is a SPAN. Misreading it as an opener would
+        // swallow the rest of the message verbatim, leaving markup spoken.
+        let text = "```rm -rf /tmp/cache``` clears the cache.\n\nMore **prose** follows."
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished.contains("rm -rf /tmp/cache clears the cache."))
+        #expect(polished.contains("More prose follows."))
+        #expect(!polished.contains("`"))
+    }
 }
