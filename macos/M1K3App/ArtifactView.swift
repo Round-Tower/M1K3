@@ -96,6 +96,7 @@ struct ArtifactView: View {
                 Image(systemName: "square.and.arrow.up")
             }
             .help("Share \(artifact.filename)")
+            .accessibilityLabel("Share \(artifact.filename)")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

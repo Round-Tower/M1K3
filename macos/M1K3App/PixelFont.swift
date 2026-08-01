@@ -22,6 +22,9 @@ enum BundledFonts {
     /// Family names (for `Font.custom`).
     static let pixelFamily = "Silkscreen"
     static let dyslexicFamily = "OpenDyslexic"
+    /// The dedicated bold face — a custom font can't synthesize weight, so
+    /// dyslexia-mode headings name it directly (must match `faces` below).
+    static let dyslexicBoldFace = "OpenDyslexic-Bold"
 
     /// Every bundled face file (without extension) and its extension.
     private static let faces: [(name: String, ext: String)] = [
@@ -78,6 +81,6 @@ extension Font {
     /// mode — `.dyslexic(_:).bold()` can't synthesize weight on a custom font,
     /// so headings need the dedicated bold face registered alongside it.
     static func dyslexicBold(_ size: CGFloat) -> Font {
-        .custom("OpenDyslexic-Bold", size: size)
+        .custom(BundledFonts.dyslexicBoldFace, size: size)
     }
 }
