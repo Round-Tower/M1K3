@@ -81,3 +81,23 @@ public enum SupersessionChain {
         return collected.values.sorted { $0.createdAt < $1.createdAt }
     }
 }
+
+/// Splits a memory list into the facts M1K3 currently holds and the ones a
+/// correction replaced (dream-cycle Tier 2 supersedes instead of eating, so
+/// corrected rows accumulate as history). Pure and order-preserving per
+/// bucket — the caller feeds `allMemories(includeSuperseded: true)` and the
+/// view renders each bucket as its own section.
+public enum MemoryListPartition {
+    public static func split(_ memories: [Memory]) -> (live: [Memory], corrected: [Memory]) {
+        var live: [Memory] = []
+        var corrected: [Memory] = []
+        for memory in memories {
+            if memory.supersededBy == nil {
+                live.append(memory)
+            } else {
+                corrected.append(memory)
+            }
+        }
+        return (live, corrected)
+    }
+}

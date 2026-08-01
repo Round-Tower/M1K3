@@ -11,9 +11,20 @@
 //  the old flat list used, so rows carry the ids + edges + provenance that make
 //  traversal possible. Delete is still the real cascade (graph + corpus twin).
 //
+//  Corrected facts (dream-cycle Tier 2 supersedes instead of eating) are
+//  hidden by default and revealed by the header toggle as their own dimmed
+//  section — the same reveal idiom as DocumentsView's quarantine lock. They
+//  navigate to detail (the correction chain lives there) but carry no forget
+//  swipe: forgetting a history row would sever the chain the live fact's
+//  "how did you learn this?" story depends on.
+//
 //  Signed: Kev + claude-opus-4-8, 2026-07-20, Confidence 0.82 (verify-owed =
 //  on-device click-through). Prior: flat list over documents(kind: .memory)
 //  (Kev + claude-fable-5, 2026-06-12).
+//  Review: Kev + claude-fable-5, 2026-08-01 — the corrected-facts section
+//  (MemoryListPartition, TDD'd in M1K3Memory) rides the existing reload path;
+//  the count chip stays a LIVE count on purpose so toggling the lens never
+//  changes how many facts M1K3 claims to hold.
 
 import M1K3Memory
 import SwiftUI
@@ -39,10 +50,19 @@ struct MemoriesView: View {
     /// nil = not interrogating (show the full list); non-nil = search results.
     @State private var results: [Memory]?
     @State private var searching = false
+    /// Reveal the corrected-facts section (superseded rows kept as history).
+    @State private var showCorrected = false
 
     /// What the list renders: interrogation results when searching, else all.
+    /// Interrogation only ever recalls live facts, so the corrected section
+    /// stays out of search results by construction.
     private var shown: [Memory] {
-        results ?? memories
+        results ?? partition.live
+    }
+
+    /// Live vs corrected buckets of the loaded list (pure, order-preserving).
+    private var partition: (live: [Memory], corrected: [Memory]) {
+        MemoryListPartition.split(memories)
     }
 
     var body: some View {
@@ -71,11 +91,28 @@ struct MemoriesView: View {
             }
             .buttonStyle(.borderless)
             .help("See your memories as a 3D constellation")
-            Text("\(memories.count) memor\(memories.count == 1 ? "y" : "ies")")
+            // The DocumentsView lock idiom: a quiet reveal for kept history.
+            Button {
+                showCorrected.toggle()
+                reload()
+            } label: {
+                Image(systemName: "clock.arrow.circlepath")
+            }
+            .buttonStyle(.borderless)
+            .help(showCorrected ? "Hide corrected facts" : "Show corrected facts (kept as history)")
+            .foregroundStyle(showCorrected ? Color.primary : Color.secondary)
+            .accessibilityLabel(showCorrected ? "Hide corrected facts" : "Show corrected facts")
+            Text("\(liveCount) memor\(liveCount == 1 ? "y" : "ies")")
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
         .padding(16)
+    }
+
+    /// The count chip stays a LIVE count no matter the lens — toggling the
+    /// history reveal must never change how many facts M1K3 claims to hold.
+    private var liveCount: Int {
+        partition.live.count
     }
 
     private var interrogateField: some View {
@@ -104,9 +141,15 @@ struct MemoriesView: View {
         .padding(.bottom, 8)
     }
 
+    /// The corrected section renders only under the reveal, and only while the
+    /// list is not showing interrogation results (search recalls live facts).
+    private var shownCorrected: [Memory] {
+        (showCorrected && results == nil) ? partition.corrected : []
+    }
+
     @ViewBuilder
     private var content: some View {
-        if shown.isEmpty {
+        if shown.isEmpty, shownCorrected.isEmpty {
             ContentUnavailableView {
                 Label(emptyTitle, systemImage: "brain")
             } description: {
@@ -122,6 +165,21 @@ struct MemoriesView: View {
                         Button(role: .destructive) { forget(memory) } label: {
                             Label("Forget", systemImage: "trash")
                         }
+                    }
+                }
+                if !shownCorrected.isEmpty {
+                    // Corrected rows navigate (the chain story lives in detail)
+                    // but carry NO forget swipe — forgetting a history row would
+                    // sever the lineage behind the live fact that replaced it.
+                    Section {
+                        ForEach(shownCorrected) { memory in
+                            NavigationLink(value: memory) {
+                                MemoryRow(memory: memory, corrected: true)
+                            }
+                        }
+                    } header: {
+                        Label("Corrected — kept as history", systemImage: "clock.arrow.circlepath")
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -143,7 +201,7 @@ struct MemoriesView: View {
     }
 
     private func reload() {
-        memories = env.memories()
+        memories = env.memories(includeSuperseded: showCorrected)
     }
 
     private func runInterrogation() {
@@ -172,8 +230,11 @@ struct MemoriesView: View {
 
 /// One row in the memory list: the fact, its provenance, and when it landed.
 /// Navigation + forget are owned by the parent so the row stays a pure label.
+/// `corrected` rows dim (the DocumentsView quarantine idiom) and say so in
+/// the caption — the full replacement story is one tap away in detail.
 private struct MemoryRow: View {
     let memory: Memory
+    var corrected = false
 
     private var displayText: String {
         // Titled MCP facts carry discriminating context the bare text may lack.
@@ -183,22 +244,29 @@ private struct MemoryRow: View {
         return memory.text
     }
 
+    private var caption: String {
+        let base = "\(MemoryProvenance(source: memory.source).label) · \(memory.createdAt.formatted(date: .abbreviated, time: .omitted))"
+        return corrected ? String(localized: "corrected · \(base)") : base
+    }
+
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "brain")
+            Image(systemName: corrected ? "clock.arrow.circlepath" : "brain")
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tint)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(displayText)
                     .lineLimit(2)
-                Text("\(MemoryProvenance(source: memory.source).label) · \(memory.createdAt.formatted(date: .abbreviated, time: .omitted))")
+                Text(caption)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
         }
         .padding(.vertical, 4)
+        .opacity(corrected ? 0.55 : 1.0)
         .accessibilityElement(children: .combine)
+        .accessibilityHint(corrected ? Text("Corrected fact, kept as history") : Text(""))
     }
 }

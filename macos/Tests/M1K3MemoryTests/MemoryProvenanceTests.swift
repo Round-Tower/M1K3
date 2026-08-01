@@ -86,3 +86,44 @@ struct SupersessionHistoryTests {
         #expect(Set(history.map(\.id)) == [aID, bID])
     }
 }
+
+struct MemoryListPartitionTests {
+    private func memory(
+        _ text: String, at day: Double, supersededBy: UUID? = nil
+    ) -> Memory {
+        Memory(
+            kind: .profile, text: text, source: "test",
+            createdAt: Date(timeIntervalSince1970: day * 86400),
+            supersededBy: supersededBy
+        )
+    }
+
+    @Test("an empty list splits into two empty buckets")
+    func emptySplitsEmpty() {
+        let split = MemoryListPartition.split([])
+        #expect(split.live.isEmpty)
+        #expect(split.corrected.isEmpty)
+    }
+
+    @Test("all-live input lands entirely in live, corrected stays empty")
+    func allLiveStaysLive() {
+        let memories = [memory("A", at: 1), memory("B", at: 2)]
+        let split = MemoryListPartition.split(memories)
+        #expect(split.live.map(\.text) == ["A", "B"])
+        #expect(split.corrected.isEmpty)
+    }
+
+    @Test("superseded rows land in corrected; each bucket preserves input order")
+    func mixedPreservesOrderPerBucket() {
+        let corrector = UUID()
+        let memories = [
+            memory("old address", at: 1, supersededBy: corrector),
+            memory("current address", at: 2),
+            memory("old timezone", at: 3, supersededBy: corrector),
+            memory("current timezone", at: 4),
+        ]
+        let split = MemoryListPartition.split(memories)
+        #expect(split.live.map(\.text) == ["current address", "current timezone"])
+        #expect(split.corrected.map(\.text) == ["old address", "old timezone"])
+    }
+}
