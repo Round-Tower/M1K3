@@ -5,12 +5,12 @@ architecture/build/test, see `CLAUDE.md`. For *why* a decision was made (model
 swaps, phase rationale, the full session-by-session build log), see `PLAN.md` —
 it's a signed historical record and stays that way; this file doesn't repeat it.
 
-Last swept: 2026-08-01 (housekeeping day: the branch pile verified + pruned —
-12 local branches, 3 worktrees; 20 dead remote branches verified merged and
-listed for Kev's delete, remote deletion being his click. PR board = #92
-weights-out-of-Caches · #93 chat markdown rendering, a RESCUED stranded
-2026-07-22 Kev commit + the speaks-raw-markdown regression fix · #94 the
-corrected-facts memories lens — all green-bound, awaiting Kev).
+Last swept: 2026-08-02 (merge day: #92 weights-out-of-Caches + #93 chat
+markdown rendering, the rescued stranded commit + #94 the corrected-facts
+memories lens ALL MERGED by Kev; master verified 2338/335 post-merge, merged
+branches/worktrees pruned. **PR board is EMPTY.** Still Kev's: the 23 dead
+remote branches — one `git push origin --delete` batch, or repo Settings →
+"Automatically delete head branches" so the pile stops regrowing).
 
 ---
 
