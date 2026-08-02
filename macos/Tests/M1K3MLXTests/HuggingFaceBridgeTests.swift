@@ -18,12 +18,16 @@ import MLXLMCommon
 import Testing
 
 struct HuggingFaceBridgeTests {
-    @Test("LLM downloader resolves to the 2.x caches layout (no re-download on upgrade)")
-    func llmCacheLayout() {
+    @Test("LLM downloader resolves to the Application Support layout — purge-safe since 2026-07-31")
+    func llmStoreLayout() {
         let location = HubApiDownloader.llmDefault.hub
             .localRepoLocation(Hub.Repo(id: "mlx-community/gemma-3n-E4B-it-lm-4bit"))
-        // 2.x defaultHubApi: <caches>/models/<org>/<name>
-        #expect(location.path.contains("Caches/models/mlx-community/gemma-3n-E4B-it-lm-4bit"))
+        // The old "no re-download on upgrade" concern this test used to pin
+        // against the Caches layout is now carried by ModelStoreLocation's
+        // migration (fixture-pinned in ModelStoreLocationTests); what must
+        // never regress HERE is weights landing back in purge-eligible Caches.
+        #expect(location.path.contains("Application Support/models/mlx-community/gemma-3n-E4B-it-lm-4bit"))
+        #expect(!location.path.contains("Caches/"))
     }
 
     @Test("embedder downloader resolves to the 2.x Documents/huggingface layout")

@@ -1,0 +1,14 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: false
+• loading MLX Qwen3-Embedding (downloads on first use)…
+✓ MLX Qwen3-Embedding embed: dim=512 ‖v‖=1.000
+embedwarm: cold=4599ms warm=13ms delta=4585ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/gemma-4-12B-it-4bit…
+prefixwarm cold: first=8826ms
+prefixwarm warm: first=338ms
+prefixwarm delta=8488ms (what a post-load persona-prefix warm buys the first turn)
+✓ MLX generate: It's a component designed to keep fluids or gases from leaking out of a hydraulic system under pressure.
+
+FOLLOWUPS: ["How do they fail?", "What materials are best for high heat?",
+=== END SELF-TEST ===

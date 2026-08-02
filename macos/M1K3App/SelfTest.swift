@@ -122,6 +122,9 @@ enum SelfTest {
     static func run() async {
         truncateOutput()
         emit("=== M1K3 SELF-TEST (inside .app bundle) ===")
+        // SelfTest bypasses AppEnvironment, so it owns its own store prep —
+        // same explicit call, same sandboxed-app-only rule (ModelStoreLocation).
+        ModelStoreLocation.prepareOnce()
 
         // 1. Store + ingest + Hashing embed + AFM RAG.
         do {

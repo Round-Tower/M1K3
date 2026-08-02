@@ -153,9 +153,12 @@ format runs **native** (`runNative`); otherwise the **ReAct** floor
 
 - **Bundle ID / log subsystem / Keychain / sandbox container are all `app.m1k3`**
   (renamed from `dev.murphysig.M1K3` on 2026-06-14 — translate any old ref on
-  read). MLX models cache **inside the sandbox container**
-  (`~/Library/Containers/app.m1k3/Data/Library/Caches/models/<org>/<repo>/`),
-  not `~/Library/Caches`. `DEVELOPMENT_TEAM` is pinned in `project.yml` because a
+  read). MLX LLM weights live **inside the sandbox container** under
+  `~/Library/Containers/app.m1k3/Data/Library/Application Support/models/<org>/<repo>/`
+  — moved OUT of `…/Library/Caches/models/` on 2026-07-31 because macOS
+  purges Caches under disk pressure and really did eat the brains (twice in
+  one afternoon, log-evidenced); `ModelStoreLocation` migrates a surviving
+  Caches store across on first touch. `DEVELOPMENT_TEAM` is pinned in `project.yml` because a
   stable signing identity is load-bearing for persistent Keychain/TCC grants.
 - **`Package.swift` mlx-swift-lm is back on tag 3.31.4** (`.upToNextMinor`,
   since 2026-07-01 — the temporary main-revision pin for gemma-4 tool-calling is

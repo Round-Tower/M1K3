@@ -12,7 +12,10 @@
 //  already pins, and the same HubApi the 2.x line used internally, so the
 //  existing downloaded weights are reused byte-for-byte:
 //
-//    LLM weights      → Library/Caches/models/<id>      (2.x defaultHubApi)
+//    LLM weights      → Library/Application Support/models/<id>
+//                       (Caches until 2026-07-31 — purge-eligible, and macOS
+//                        really did purge the brains; ModelStoreLocation
+//                        migrates surviving Caches bytes across)
 //    embedder weights → Documents/huggingface/models/<id> (2.x HubApi())
 //
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.8 (bridge compiles +
@@ -108,9 +111,15 @@ enum RepoSizeEstimate {
 struct HubApiDownloader: MLXLMCommon.Downloader {
     let hub: HubApi
 
-    /// Downloads where 2.x's `defaultHubApi` put LLM weights (caches dir).
+    /// LLM weights base: Application Support since 2026-07-31 — the 2.x
+    /// Caches default was purge-eligible and macOS DID purge multi-GB brains
+    /// under disk pressure (twice in one afternoon, log-evidenced). PURE path
+    /// resolution only: the one-time migration/exclusion runs via the app's
+    /// explicit ModelStoreLocation.prepareOnce() — a static-let with
+    /// filesystem side effects would fire under UNSANDBOXED `swift test` and
+    /// mutate the host's real ~/Library (PR #92 review).
     static let llmDefault = HubApiDownloader(
-        hub: HubApi(downloadBase: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first)
+        hub: HubApi(downloadBase: ModelStoreLocation.llmBase())
     )
 
     /// Downloads where 2.x's `MLXEmbedders.loadModelContainer` default put

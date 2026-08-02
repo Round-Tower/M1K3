@@ -1,0 +1,12 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: false
+• loading MLX Qwen3-Embedding (downloads on first use)…
+✓ MLX Qwen3-Embedding embed: dim=512 ‖v‖=1.000
+embedwarm: cold=3794ms warm=15ms delta=3778ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Qwen3-4B-Instruct-2507-4bit…
+prefixwarm cold: first=2261ms
+prefixwarm warm: first=160ms
+prefixwarm delta=2101ms (what a post-load persona-prefix warm buys the first turn)
+✓ MLX generate: A hydraulic seal is a rubber or polymer gasket that keeps oil from leaking out of pipes — think of it as the Mac’s (or any machine's) invisible plumber, keeping things tight and qu
+=== END SELF-TEST ===
