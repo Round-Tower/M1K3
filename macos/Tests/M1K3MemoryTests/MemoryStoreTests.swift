@@ -237,6 +237,25 @@ struct MemoryStoreSupersessionTests {
         #expect(withHistory.contains { $0.id == old.id })
     }
 
+    @Test("supersededMemories returns ONLY corrected rows, newest first, own limit")
+    func supersededMemoriesOwnQuery() async throws {
+        // The corrected-facts lens must not share a row budget with the live
+        // list — a shared LIMIT lets corrected rows displace live ones out of
+        // the fetched window (the PR #94 round-2 catch). Own query, own limit.
+        let f = try Fixture()
+        let oldA = try await f.remember("fact A v1", at: Date(timeIntervalSince1970: 1))
+        _ = try await f.remember("fact A v2", at: Date(timeIntervalSince1970: 2), supersedes: oldA.id)
+        let oldB = try await f.remember("fact B v1", at: Date(timeIntervalSince1970: 3))
+        _ = try await f.remember("fact B v2", at: Date(timeIntervalSince1970: 4), supersedes: oldB.id)
+
+        let corrected = try f.store.supersededMemories()
+        #expect(corrected.map(\.id) == [oldB.id, oldA.id]) // newest first
+        #expect(corrected.allSatisfy { $0.supersededBy != nil })
+
+        let limited = try f.store.supersededMemories(limit: 1)
+        #expect(limited.map(\.id) == [oldB.id])
+    }
+
     @Test("supersession records a typed 'supersedes' edge between the two")
     func supersessionRecordsEdge() async throws {
         let f = try Fixture()

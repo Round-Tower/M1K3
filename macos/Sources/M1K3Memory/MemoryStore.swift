@@ -927,6 +927,21 @@ public final class MemoryStore: @unchecked Sendable {
         }
     }
 
+    /// Corrected rows only (superseded_by set), newest first — the corrected-
+    /// facts lens. Its OWN query and limit on purpose: sharing allMemories'
+    /// row budget lets recent corrected rows displace live ones out of the
+    /// fetched window, silently shrinking the live list/count (PR #94).
+    public func supersededMemories(limit: Int = 500) throws -> [Memory] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: "SELECT * FROM memories WHERE superseded_by IS NOT NULL ORDER BY created_at DESC LIMIT ?",
+                arguments: [limit]
+            )
+            return rows.compactMap { Self.memory(from: $0) }
+        }
+    }
+
     /// Fetch a single memory by id, live or superseded. The app layer needs this
     /// to surface a just-written fact (e.g. echo back an MCP `remember`) without
     /// scanning the whole store.
