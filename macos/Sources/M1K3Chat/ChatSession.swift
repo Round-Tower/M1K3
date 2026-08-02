@@ -128,6 +128,13 @@ public extension RAGResponding {
     }
 }
 
+/// The plain-text provenance line appended when an answer leaves the app via a
+/// share sheet. One constant for both platform share surfaces (MessageView on
+/// Mac, MessageBubble on iOS) so the wording can't drift between them.
+public enum ShareSignature {
+    public static let answerSuffix = "\n\n— Shared from M1K3 · m1k3.app"
+}
+
 /// One turn in the transcript. `sources` are the chunks the answer was grounded
 /// in (attached before tokens arrive, so the UI can show provenance up front).
 public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
@@ -395,8 +402,9 @@ public final class ChatSession {
             let validation = await CitationValidator.validate(responseText: answer, against: mergedSources)
             update(assistantID) {
                 $0.sources = mergedSources
-                // Flatten model markdown + tidy whitespace once the full text
-                // is in hand (ReadingText renders plain text).
+                // Tidy whitespace once the full text is in hand. Markdown
+                // markup survives on purpose — ReadingText renders it as real
+                // blocks now; SpeechTextPolish owns the flatten for TTS.
                 $0.text = MessageTextPolish.polish(validation.cleanedText)
                 $0.citations = validation.validated
                 $0.reasoning = reasoning

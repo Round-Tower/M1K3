@@ -54,6 +54,15 @@ struct MessageBubble: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
+                if case .complete = message.status, !message.text.isEmpty {
+                    ShareLink(item: message.text + ShareSignature.answerSuffix) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Share this answer")
+                }
                 if !message.sources.isEmpty {
                     sourcesRow(message.sources)
                 }

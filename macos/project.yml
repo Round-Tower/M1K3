@@ -71,6 +71,7 @@ targetTemplates:
       # RealityKit.h Metal header), so those two files live on the iOS target alone
       # and CompanionAvatarView #if's out its shading calls on visionOS.
       - path: M1K3App/CompanionAvatarView.swift
+      - path: M1K3App/CodeBlockView.swift
       - path: M1K3App/Resources/Fonts/Silkscreen-Regular.ttf
         buildPhase: resources
       - path: M1K3App/Resources/Fonts/Silkscreen-Bold.ttf

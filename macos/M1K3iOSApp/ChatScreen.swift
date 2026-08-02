@@ -232,8 +232,11 @@ struct ChatScreen: View {
                         .id(message.id)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                // Mac-parity bump (Kev's catch, 2026-07-22): flat assistant turns
+                // had zero inset of their own, so headings/code blocks sat right
+                // at the column edge.
+                .padding(.horizontal, 32)
+                .padding(.vertical, 16)
                 .frame(maxWidth: 760)
                 .frame(maxWidth: .infinity)
             }

@@ -211,6 +211,15 @@ struct MessageView: View {
                     .buttonStyle(.glass)
                     .accessibilityLabel("Copy this answer")
                     .help(didCopy ? "Copied" : "Copy this answer")
+
+                    ShareLink(item: shareText) {
+                        Image(systemName: "square.and.arrow.up")
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.caption)
+                    }
+                    .buttonStyle(.glass)
+                    .accessibilityLabel("Share this answer")
+                    .help("Share this answer")
                 }
             }
         }
@@ -222,8 +231,19 @@ struct MessageView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Copy the answer to the clipboard, with a brief checkmark confirmation. Copies
-    /// the shown text (already polished) — what the user reads is what they share.
+    /// What actually goes out the share sheet: the answer plus a plain-text
+    /// signature. No links, no encoded payload — just so a reader who gets this
+    /// forwarded knows where it came from. See the deep-link design thread
+    /// (challenger + security-auditor, 2026-07-22) for why this is the whole
+    /// feature for now rather than a Universal Link.
+    private var shareText: String {
+        message.text + ShareSignature.answerSuffix
+    }
+
+    /// Copy the answer to the clipboard, with a brief checkmark confirmation.
+    /// Copies the message's markdown SOURCE, not the rendered look — same deal
+    /// as every chat app's copy button; paste into a markdown-aware target and
+    /// the structure survives.
     private func copyAnswer(_ text: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)

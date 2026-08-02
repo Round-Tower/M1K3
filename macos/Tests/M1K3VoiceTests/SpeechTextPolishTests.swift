@@ -98,4 +98,90 @@ struct SpeechTextPolishTests {
         let text = "Web sources:\n• https://a.com\n• https://b.com"
         #expect(SpeechTextPolish.polish(text).isEmpty)
     }
+
+    // MARK: - Markdown flattening (speech never voices markup — the chat
+
+    // pipeline stopped flattening when bubbles learned to RENDER markdown,
+    // so the speech lane owns its own flatten now)
+
+    @Test("bold and italic markers are not spoken")
+    func flattensEmphasis() {
+        let text = "That is **really** important, *honestly*."
+        #expect(SpeechTextPolish.polish(text) == "That is really important, honestly.")
+    }
+
+    @Test("arithmetic asterisks survive the italic pass")
+    func keepsArithmeticAsterisks() {
+        let text = "So 2 * 3 is 6."
+        #expect(SpeechTextPolish.polish(text) == "So 2 * 3 is 6.")
+    }
+
+    @Test("inline code backticks vanish, the code text speaks")
+    func flattensInlineCode() {
+        let text = "Run `swift test` before you push."
+        #expect(SpeechTextPolish.polish(text) == "Run swift test before you push.")
+    }
+
+    @Test("heading markers vanish, the heading text speaks")
+    func flattensHeadings() {
+        let text = "## The plan\nShip it."
+        #expect(SpeechTextPolish.polish(text) == "The plan\nShip it.")
+    }
+
+    @Test("a markdown link speaks its label, not its URL")
+    func flattensLinksToLabel() {
+        let text = "See [the forecast](https://met.ie/today) for detail."
+        #expect(SpeechTextPolish.polish(text) == "See the forecast for detail.")
+    }
+
+    @Test("list bullet markers vanish, the item text speaks")
+    func flattensBulletMarkers() {
+        let text = "Bring:\n* a coat\n* boots"
+        #expect(SpeechTextPolish.polish(text) == "Bring:\na coat\nboots")
+    }
+
+    @Test("a thematic break line is silent")
+    func dropsThematicBreaks() {
+        let text = "Before.\n***\nAfter."
+        #expect(SpeechTextPolish.polish(text) == "Before.\n\nAfter.")
+    }
+
+    @Test("fenced code passes through verbatim — a shell comment keeps its hash")
+    func fencedCodeIsVerbatim() {
+        let text = "Install like this:\n```sh\n# deps first\nbrew install *thing*\n```\nDone."
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished.contains("# deps first"))
+        #expect(polished.contains("brew install *thing*"))
+    }
+
+    @Test("markdown flattening is idempotent too")
+    func markdownFlattenIdempotent() {
+        let text = "**Bold** with `code` and [a link](https://x.com/y).\n## Head"
+        let once = SpeechTextPolish.polish(text)
+        #expect(SpeechTextPolish.polish(once) == once)
+    }
+
+    @Test("CRLF text still pairs its fences — code stays verbatim, prose still flattens")
+    func crlfFencesPair() {
+        // Swift folds "\r\n" into ONE grapheme: a literal-\n line split sees
+        // this as a single line and never finds the fences (the exact bug
+        // MessageTextPolish's fencedCodeRanges pins with \.isNewline).
+        let text = "Intro **bold**.\r\n```\r\nkeep *ptr* verbatim\r\n```\r\nAfter *italic*."
+        let polished = SpeechTextPolish.polish(text)
+        #expect(!polished.contains("**"))
+        #expect(polished.contains("keep *ptr* verbatim"))
+        #expect(polished.contains("After italic."))
+    }
+
+    @Test("a line-leading same-line span is prose, not an unclosed fence opener")
+    func lineLeadingSameLineSpanIsProse() {
+        // CommonMark: a fence opener's info string may not contain backticks —
+        // so ```cmd``` on one line is a SPAN. Misreading it as an opener would
+        // swallow the rest of the message verbatim, leaving markup spoken.
+        let text = "```rm -rf /tmp/cache``` clears the cache.\n\nMore **prose** follows."
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished.contains("rm -rf /tmp/cache clears the cache."))
+        #expect(polished.contains("More prose follows."))
+        #expect(!polished.contains("`"))
+    }
 }

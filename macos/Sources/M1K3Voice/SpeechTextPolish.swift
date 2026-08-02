@@ -8,6 +8,12 @@
 //  (displayed text == spoken text) holds automatically.
 //
 //  What gets removed, and why:
+//  • Markdown markup (**bold**, *italic*, `code`, # headings, [label](url),
+//    bullet markers, thematic breaks) flattens to its spoken content — the
+//    chat pipeline stopped flattening when bubbles learned to RENDER markdown
+//    (2026-07-22 pass), so the speech lane owns its own flatten. Fenced code
+//    blocks pass through verbatim: mangling `*ptr` or a shell `# comment`
+//    would corrupt the karaoke caption (displayed text == spoken text).
 //  • The trailing "Web sources:" bullet block — URLs read aloud are noise.
 //  • Citation tokens `[Title §heading]` / `(Title §heading)` — visual
 //    affordances, not speech. Plain brackets without a § survive.
@@ -19,6 +25,12 @@
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.9 (pure string
 //  transform, every rule test-pinned; URL-host readability is a taste call).
 //  Prior: Unknown.
+//  Review: Kev + claude-fable-5, 2026-08-01 — markdown flattening moved here
+//  from MessageTextPolish (which now preserves markup for the bubble
+//  renderer); rules ported from its retired polishProse, speech-tuned: a
+//  link speaks its LABEL only, bullet markers vanish rather than becoming
+//  "•". Runs first so the link pass sees intact `[label](url)` before
+//  collapseURLs would mangle the parenthesised URL.
 //
 
 import Foundation
@@ -28,12 +40,108 @@ public enum SpeechTextPolish {
     /// never produces new strippable material.
     public static func polish(_ text: String) -> String {
         var result = text
+        result = flattenMarkdownOutsideFences(result)
         result = stripWebSourcesBlock(result)
         result = stripCitations(result)
         result = collapseURLs(result)
         result = normalizeCurlyPunctuation(result)
         result = tidyWhitespace(result)
         return result
+    }
+
+    // MARK: - Markdown flattening
+
+    /// Flatten markdown markup to its spoken content, leaving fenced code
+    /// blocks byte-for-byte. An unterminated fence runs verbatim to the end —
+    /// the same fail-safe MessageTextPolish's harness pinned.
+    private static func flattenMarkdownOutsideFences(_ text: String) -> String {
+        var result = ""
+        var cursor = text.startIndex
+        for range in fencedCodeRanges(in: text) {
+            result += flattenMarkdown(String(text[cursor ..< range.lowerBound]))
+            result += String(text[range]) // verbatim
+            cursor = range.upperBound
+        }
+        result += flattenMarkdown(String(text[cursor...]))
+        return result
+    }
+
+    /// Deliberately DUPLICATED from `MessageTextPolish.fencedCodeRanges`
+    /// (M1K3Chat) rather than imported — M1K3Voice is dependency-free by
+    /// design (the VoiceTier precedent: a Voice→Chat edge to dedupe one
+    /// scanner is worse layering than duplication). Keep the two in
+    /// lock-step; every rule here was earned by a pinned test over there:
+    /// `\.isNewline` (CRLF is ONE grapheme), the closing run-length match,
+    /// and CommonMark's no-backticks-in-info-string opener guard.
+    private static func fencedCodeRanges(in text: String) -> [Range<String.Index>] {
+        var ranges: [Range<String.Index>] = []
+        var openStart: String.Index?
+        var openRun = 0
+        var lineStart = text.startIndex
+        while lineStart < text.endIndex {
+            let newline = text[lineStart...].firstIndex(where: \.isNewline)
+            let contentEnd = newline ?? text.endIndex
+            let nextLine = newline.map { text.index(after: $0) } ?? text.endIndex
+            let line = text[lineStart ..< contentEnd]
+            // ANY leading whitespace is tolerated (wider than CommonMark's
+            // 3-space rule, on purpose): don't drop nested real code into the
+            // flatten pass.
+            let unindented = line.drop { $0 == " " || $0 == "\t" }
+            let run = unindented.prefix { $0 == "`" }.count
+            if let start = openStart {
+                if run >= openRun, unindented.dropFirst(run).allSatisfy(\.isWhitespace) {
+                    ranges.append(start ..< contentEnd)
+                    openStart = nil
+                }
+            } else if run >= 3, !unindented.dropFirst(run).contains("`") {
+                // A same-line ```span``` fails this guard and stays prose —
+                // flattenMarkdown's span pass handles it; misreading it as an
+                // unclosed opener would leave the rest of the message spoken
+                // with its markup intact.
+                openStart = lineStart
+                openRun = run
+            }
+            lineStart = nextLine
+        }
+        if let start = openStart {
+            ranges.append(start ..< text.endIndex)
+        }
+        return ranges
+    }
+
+    /// The rules, ported from MessageTextPolish's retired flattening pass and
+    /// speech-tuned: links speak their label only; bullet markers vanish.
+    private static func flattenMarkdown(_ text: String) -> String {
+        var output = text
+        // Thematic breaks (*** / --- / ___ alone on a line) are document
+        // structure, not speech — drop the line before the emphasis passes run
+        // (a bare *** would otherwise be mis-read as an unterminated italic).
+        output = output.replacing(/^[ \t]*[-*_]{3,}[ \t]*$/.anchorsMatchLineEndings()) { _ in "" }
+        // [label](url) → label. The URL is a visual affordance; collapseURLs
+        // still handles any bare URL left in prose.
+        output = output.replacing(/\[([^\]]+)\]\(([^)\s]+)\)/) { String($0.1) }
+        // **bold** → bold. Runs first so ***bold-italic*** lands as
+        // *bold-italic*, which the italic pass below then finishes.
+        output = output.replacing(/\*\*([^*]+)\*\*/) { String($0.1) }
+        // *italic* → italic. Only a properly-paired *word* where the content
+        // touches both asterisks — arithmetic ("2 * 3") and the "* " bullet
+        // marker survive. Group 1 preserves the leading boundary; the trailing
+        // boundary is a zero-width lookahead so it isn't consumed.
+        output = output.replacing(
+            /(^|[\s(\[])\*(\S(?:[^*\n]*\S)?|\S)\*(?=$|[\s).,;:!?\]])/.anchorsMatchLineEndings()
+        ) { "\($0.1)\($0.2)" }
+        // ```code``` (same-line span, NOT a fence — those never reach prose)
+        // → code. Before the single-backtick pass, whose innermost-pair match
+        // would leave stray ``doubles`` behind.
+        output = output.replacing(/```([^`\n]+)```/) { String($0.1) }
+        // `code` → code
+        output = output.replacing(/`([^`\n]+)`/) { String($0.1) }
+        // Line-leading "* " bullet markers vanish — speech wants the item, not
+        // a spoken glyph.
+        output = output.replacing(/^\s{0,3}\*\s+/.anchorsMatchLineEndings()) { _ in "" }
+        // Heading markers vanish, the heading text stays.
+        output = output.replacing(/^#{1,6}\s+/.anchorsMatchLineEndings()) { _ in "" }
+        return output
     }
 
     // MARK: - Rules
