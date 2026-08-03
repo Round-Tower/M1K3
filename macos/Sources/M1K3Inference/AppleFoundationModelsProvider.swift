@@ -43,6 +43,30 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     private let nativeToolCalling: Bool
 
     public init(
+        // Mini keeps the COMPACT core — no voiceExemplars. TRIED AND MEASURED
+        // 2026-08-03, not assumed: the standing reason for withholding them was
+        // cost, and cost turns out not to be the reason. They are ~187 tokens
+        // against Mini's 4096-token window (4.5%), on top of a ~875-token
+        // persona — affordable. See MiniPromptBudgetTests.
+        //
+        // They were switched ON and the same 8-probe MCP interview re-run. The
+        // register did not improve; one new failure mode appeared. Asked "Long
+        // day, I'm wrecked", Mini answered:
+        //
+        //     "Honey never spoils, and there are edible jars in 3,000-year-old
+        //      Egyptian tombs."
+        //
+        // — exemplar 3, verbatim, as CONTENT. That is precisely the risk
+        // `voiceExemplars`' own header documents ("a weak 4B reads a
+        // turn-formatted exemplar as a pattern to CONTINUE and parrots the next
+        // line verbatim"); the quoted-illustration framing mitigates it on the
+        // 4B MLX tiers but not on this ~3B one. Abstention also got WORSE — the
+        // seawater probe went from a false "102.5°C" to a false "100.5°C …
+        // derived from the Clausius-Clapeyron equation", confidently sourced.
+        //
+        // So: reverted, and the real lesson is that Mini's flat register is not
+        // an exemplar-starvation problem. Don't re-try this without new
+        // evidence — try shorter/abstract voice guidance in the CORE instead.
         instructions: @escaping @Sendable () -> String = { M1K3Persona.systemPrompt },
         nativeToolCalling: Bool = false
     ) {

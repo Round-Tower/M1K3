@@ -57,23 +57,47 @@ struct GroundingBudgetTests {
         #expect(result.memories.isEmpty)
     }
 
-    @Test("no tokenizer (countTokens returns nil): the cap is a no-op even for huge inputs")
-    func nilTokenizerIsNoOp() async {
+    @Test("no tokenizer (countTokens returns nil): the cap still applies, on an estimate")
+    func nilTokenizerStillCaps() async {
+        // This test previously asserted the OPPOSITE — that a nil tokenizer made
+        // the cap a no-op "even for huge inputs" — on the belief recorded in
+        // TokenCounting.swift that a provider without a tokenizer "self-manages
+        // its own context window, there is nothing to measure or cap".
+        //
+        // Apple Foundation Models does not self-manage. Interviewing Mini over
+        // MCP on 2026-08-03 produced, verbatim from the SDK:
+        //
+        //   exceededContextWindowSize: "Content contains 4486 tokens, which
+        //   exceeds the maximum allowed context size of 4096."
+        //
+        // Mini is the ONLY tier without a tokenizer AND has the SMALLEST window
+        // (4096 vs the MLX tiers' 8192) — so the one brain that most needs a
+        // grounding cap was the only one exempt from it. "Unmeasurable" must
+        // never mean "unlimited": a budget that fails open is not a budget.
         let huge = [chunk(String(repeating: "x", count: 50000))]
         let hugeMemories = [memory(String(repeating: "y", count: 50000))]
-        var calls = 0
-        let counter: (String) async -> Int? = { _ in
-            calls += 1
-            return nil
-        }
         let result = await GroundingBudget.fit(
-            chunks: huge, memories: hugeMemories, tokenBudget: 10, countTokens: counter
+            chunks: huge, memories: hugeMemories, tokenBudget: 10, countTokens: { _ in nil }
         )
-        #expect(result.chunks == huge)
-        #expect(result.memories == hugeMemories)
-        // Short-circuits on the FIRST measurement — never probes unit by unit
-        // once it's learned this turn's provider has no tokenizer.
-        #expect(calls == 1)
+        // The keep-at-least-one rule still holds, so the top unit survives —
+        // truncated to fit rather than passed through whole.
+        #expect(result.chunks.count == 1)
+        #expect(result.memories.isEmpty)
+        #expect(result.chunks[0].content.count < 1000)
+        #expect(result.chunks[0].content.hasSuffix(" …[truncated]"))
+    }
+
+    @Test("an exact count is preferred over the estimate when the provider has one")
+    func exactCountWinsOverEstimate() async {
+        // The estimate is a floor under the fail-open hole, not a replacement
+        // for a real tokenizer: when countTokens answers, that answer rules.
+        // Here the text would ESTIMATE far over budget but measures as cheap.
+        let long = [chunk(String(repeating: "x", count: 4000))]
+        let result = await GroundingBudget.fit(
+            chunks: long, memories: [], tokenBudget: 100, countTokens: { _ in 5 }
+        )
+        #expect(result.chunks == long)
+        #expect(result.chunks[0].content.count == 4000)
     }
 
     // MARK: - Over-budget dropping
