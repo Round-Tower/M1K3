@@ -73,7 +73,7 @@ struct AgentLogWindowContent: View {
                 Label("Logging is off", systemImage: "eye.slash")
             } description: {
                 Text("M1K3 doesn't capture agent conversations by default. Turn on "
-                    + "“Log agent conversations” in Settings → MCP server to review what a "
+                    + "“Log agent conversations” in Settings → Advanced to review what a "
                     + "connected agent asks for and hears back — on this Mac only.")
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
