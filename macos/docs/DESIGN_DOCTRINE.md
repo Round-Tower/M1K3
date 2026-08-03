@@ -34,6 +34,32 @@ port — is evidence of residency. If a feature doesn't make M1K3 more
    `creature` (the opt-in 3D pet) · `memory` (the fact graph) ·
    `documents` (the corpus). A new noun requires killing an old one.
 
+   **The machine / Mac split** (Kev, 2026-08-03 — *"M1K3 is a mechanic
+   after all"*). Same layer rule as principle 1, applied to a word:
+   - **M1K3 says "machine."** His own voice — persona, boot lines, the
+     Hear-a-sample line, spoken answers, first-person UI copy. It's his
+     register already: the system prompt ends *"just you and the machine."*
+     A mechanic talks about the machine he keeps running.
+   - **The chrome says "Mac."** Product name, store listing, site,
+     requirements, platform claims. That's Apple's layer, and "M1K3 for
+     Mac" / "Your AI. Your Mac. Nothing leaves." are load-bearing for
+     search and for the platform-trust promise. The shop sign says Mac.
+
+   **The seam already exists.** `HostPlatform.noun` (M1K3Inference) is the
+   single source for the machine noun in every persona and tool string —
+   built in 2026-07-18 when Mini introduced itself as running "on this Mac"
+   *on an iPhone*. Flipping macOS's arm from `"Mac"` to `"machine"` is one
+   line, and `thisDevice` / `yourDevice` carry it everywhere.
+
+   ⚠️ **But it is deliberately frozen.** `HostPlatformTests` pins the macOS
+   arm byte-identical to the literals it replaced, precisely because gemma
+   is prompt-fragile and the Mac persona is A/B-frozen. So this is a
+   *measured* pass — flip the noun, re-pin the tests, A/B both brains
+   before it ships — never a hot edit. Third-person chrome that names the
+   platform ("Your Mac is blocking the mic — flip M1K3 on in System
+   Settings") stays "Mac": that sentence is about Apple's layer, and
+   sending someone to System Settings on their "machine" helps nobody.
+
 4. **A setting is a decision you failed to make.**
    A new toggle must pass all three: (a) two real users would genuinely
    choose differently, (b) the wrong default actually hurts, (c) it's
@@ -88,11 +114,14 @@ These look like clutter in an audit and are actually the soul. Do not
 - **The face fronts the brand; creatures are guests.** OG images and
   first-run show the pixel face. The Fox appears only on the companions
   page.
+- **M1K3 lives on a machine; the product runs on a Mac.** Ratified by Kev
+  2026-08-03 — see the machine/Mac split under principle 3.
 
 ---
 *Signed: Kev + claude-fable-5, 2026-08-03, Confidence 0.8 (the essence and
 principles distilled from a measured audit — 3 repo scouts + the resident's
 own corpus + a reduction pass; the vocabulary and protected list are
 recommendations Kev has not yet ratified item-by-item. Treat "Standing
-decisions" as proposals until a human merge confirms them). Prior: none —
+decisions" as proposals until a human merge confirms them — EXCEPT the
+machine/Mac split, which is Kev's own call, made in-session). Prior: none —
 new doc.*

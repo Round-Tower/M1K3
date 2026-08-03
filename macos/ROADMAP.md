@@ -223,6 +223,16 @@ Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
     (06-13) both predate the current product.
   - **Reading-modes ceremony** — keep all four (protected), but ask once at
     onboarding instead of a Settings-only picker.
+- **"Machine", not "Mac", in M1K3's own voice — RATIFIED by Kev 2026-08-03**
+  (*"M1K3 is a mechanic after all"*). Doctrine principle 3 carries the split:
+  M1K3's first-person copy says *machine*; product/store/site chrome and any
+  sentence about Apple's own layer ("Your Mac is blocking the mic → System
+  Settings") stay *Mac*. **Not a hot edit** — the seam is
+  `HostPlatform.noun` (one line), but `HostPlatformTests` pins the macOS arm
+  byte-identical *because* the gemma persona is A/B-frozen and prompt-fragile.
+  The pass: flip the noun → re-pin the tests → A/B both brains → sweep the
+  ~6 first-person UI strings (`ContentView` 1185/1264/1272, `GreetingCard`,
+  the Hear-a-sample line if Mike is killed in the same pass).
 
 ---
 
