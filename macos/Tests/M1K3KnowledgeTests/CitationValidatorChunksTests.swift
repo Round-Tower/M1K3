@@ -31,6 +31,44 @@ struct CitationValidatorChunksTests {
         #expect(result.cleanedText.contains("[Field Log]"))
     }
 
+    @Test("a headingless PARENTHETICAL citation is recognised too — the AFM shape")
+    func headinglessParentheticalIsRecognised() async {
+        // This file's header records that Apple Foundation Models renders
+        // citations as parentheticals even when the prompt example uses
+        // brackets, which is why `citationHits` parses both delimiters. AFM is
+        // Mini — the brain that produced #97 — so a bracket-only headingless
+        // parser would have left the same invisible-citation hole open, just
+        // moved from `[Doc]` to `(Doc)`.
+        let chunks = [hit("Field Log", nil)]
+        let result = await CitationValidator.validate(
+            responseText: "The pump was replaced in March (Field Log).", against: chunks
+        )
+        #expect(result.validated == [Citation(source: "Field Log", heading: "")])
+        #expect(result.stripped.isEmpty)
+    }
+
+    /// Deliberate boundary: the allowlist matches a title verbatim, so a corpus
+    /// document with a generic title makes that bracket a citation whenever the
+    /// document is retrieved. Pinned rather than defended against, because the
+    /// only consequence is a Sources-footer credit — nothing is ever stripped —
+    /// and any "is this title too generic?" heuristic would be guesswork about
+    /// the user's own naming. PURELY NUMERIC titles are the one exclusion:
+    /// `[1]`/`[2]` footnote markers are a common enough prose idiom to be worth
+    /// one rule, and a document actually titled "1" is pathological.
+    @Test("a generic retrieved title is credited; a numeric one never is")
+    func genericTitleTradeOffIsPinned() async {
+        let generic = await CitationValidator.validate(
+            responseText: "Use `let xs: [String] = []` here.", against: [hit("String", nil)]
+        )
+        #expect(generic.validated == [Citation(source: "String", heading: "")])
+
+        let numeric = await CitationValidator.validate(
+            responseText: "See note [1] and note (2).", against: [hit("1", nil), hit("2", nil)]
+        )
+        #expect(numeric.validated.isEmpty)
+        #expect(numeric.stripped.isEmpty)
+    }
+
     @Test("a headingless bracket matches a retrieved title even when that chunk has a heading")
     func headinglessCitationMatchesOnTitleAlone() async {
         // Citing the document without naming a section is a legitimate, weaker

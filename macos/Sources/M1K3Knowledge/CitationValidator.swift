@@ -23,6 +23,17 @@
 //  (citationLabel renders titles verbatim, so real citations were invisible
 //  to validation and hallucinated ones leaked); markdown-link lookahead;
 //  case-insensitive chunk comparison so casing deviations aren't stripped.
+//  Review: Kev + claude-opus-5, 2026-08-03, Confidence 0.85 — the § discriminator
+//  meant a HEADINGLESS label (`[Title]`, what citationLabel renders for a chunk
+//  with no heading) was invisible: never validated, never credited to the Sources
+//  footer, never stripped. So a genuinely grounded answer citing such a doc showed
+//  no provenance while the raw token sat in the prose looking like debug output
+//  (#97). `headinglessCitations` recognises them against an ALLOWLIST of the
+//  titles retrieved this turn — never stripping, so no ordinary bracket can be
+//  eaten — across BOTH delimiters, because AFM renders parentheticals (above) and
+//  AFM is the brain #97 was caught on. Purely numeric tokens are excluded as
+//  footnote markers. Trade pinned in tests: a fabricated headingless citation
+//  still survives unchecked; the § form keeps full fabrication checking.
 
 import Foundation
 
@@ -135,11 +146,23 @@ public enum CitationValidator {
     /// prompt only ever demonstrates the § form (see ChatPromptBuilder).
     static func headinglessCitations(in text: String, chunks: [ChunkHit]) -> [Citation] {
         guard !chunks.isEmpty else { return [] }
+        // BOTH delimiters, for the same reason `citationHits` parses both:
+        // Apple Foundation Models renders citations as parentheticals even when
+        // the prompt example uses brackets (see this file's header). AFM is
+        // Mini — the brain that produced #97 — so a bracket-only parser would
+        // leave the identical hole open one delimiter over.
         // Same markdown-link exemption as the § parser: "[label](url)" is a link.
-        let pattern = #/\[([^\[\]§\n]+)\](?!\()/#
+        let bracketPattern = #/\[([^\[\]§\n]+)\](?!\()/#
+        let parenPattern = #/\(([^()§\n]+)\)/#
         var found: [Citation] = []
-        for match in text.matches(of: pattern) {
-            let source = match.1.trimmingCharacters(in: .whitespaces)
+        let sources = text.matches(of: bracketPattern).map(\.1)
+            + text.matches(of: parenPattern).map(\.1)
+        for raw in sources {
+            let source = raw.trimmingCharacters(in: .whitespaces)
+            // Purely numeric brackets are footnote markers ("[1]"), not
+            // citations — the one prose idiom common enough to outrank a
+            // literal title match. See genericTitleTradeOffIsPinned.
+            guard !source.allSatisfy(\.isNumber) else { continue }
             guard chunks.contains(where: {
                 $0.itemTitle.compare(source, options: .caseInsensitive) == .orderedSame
             }) else { continue }
