@@ -87,25 +87,44 @@ struct ReadingText: View {
     /// cell has its own leaf identity, so without this the table read as a
     /// flat list of every cell's text, one per line). Plain Grid — no
     /// striping/borders yet, just real rows and columns instead of word salad.
+    /// Wide content scrolls INSIDE its own container — the same rule
+    /// CodeBlockView already follows, and the reason a long code line has never
+    /// been able to shove the window around.
+    ///
+    /// A bare `Grid` sizes to its content and propagates that as a MINIMUM
+    /// outward, and a SwiftUI view's minimum reaches the window: probing the
+    /// live app, setting the window to 100pt wide clamps it to exactly the
+    /// `minWidth: 480` declared on ContentView's NavigationSplitView. So a
+    /// table with a few columns — or one unbreakable token, a URL or an
+    /// identifier, that cannot wrap at all — didn't just look cramped, it
+    /// FORCED the user's window wider. That is the shape of the 2026-08-03
+    /// self-resize logged on issue #79: a streamed answer landed and the window
+    /// grew itself 560 → 723 (a content-shaped number, not a constant),
+    /// immediately before AppKit's `layoutSubtreeIfNeeded … 300 iterations`.
+    /// Whether that resize is what tips the known NSThemeFrame recursion is
+    /// still unproven — but a bubble seizing the window is a defect on its own,
+    /// and on iOS (which shares this file) there is no window to give.
     private func tableView(header: [AttributedString], rows: [[AttributedString]]) -> some View {
-        Grid(alignment: .topLeading, horizontalSpacing: 14, verticalSpacing: 6) {
-            if !header.isEmpty {
-                GridRow {
-                    ForEach(Array(header.enumerated()), id: \.offset) { _, cell in
-                        proseText(cell, font: baseFont.weight(.semibold))
+        ScrollView(.horizontal, showsIndicators: false) {
+            Grid(alignment: .topLeading, horizontalSpacing: 14, verticalSpacing: 6) {
+                if !header.isEmpty {
+                    GridRow {
+                        ForEach(Array(header.enumerated()), id: \.offset) { _, cell in
+                            proseText(cell, font: baseFont.weight(.semibold))
+                        }
+                    }
+                    Divider()
+                }
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    GridRow {
+                        ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
+                            proseText(cell, font: baseFont)
+                        }
                     }
                 }
-                Divider()
             }
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                GridRow {
-                    ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
-                        proseText(cell, font: baseFont)
-                    }
-                }
-            }
+            .padding(10)
         }
-        .padding(10)
         .background(.secondary.opacity(0.06), in: .rect(cornerRadius: 10))
     }
 
