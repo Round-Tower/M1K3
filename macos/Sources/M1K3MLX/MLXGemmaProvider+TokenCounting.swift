@@ -9,7 +9,11 @@
 //  already a dependency edge; M1K3MLX → M1K3Chat would be a new, wrong-
 //  direction one). Apple Foundation Models / Mini simply don't conform:
 //  `provider as? TokenCounting` is nil for them, which the cap treats as
-//  "this tier self-manages its own context window, nothing to measure".
+//  "no EXACT count available — estimate instead". It does NOT stand the cap
+//  down; this comment used to say the cap treats it as "this tier self-manages
+//  its own context window, nothing to measure", and that belief was the
+//  2026-08-03 Mini bug — AFM's window is 4096, the smallest of any tier, and it
+//  throws rather than self-managing. See GroundingBudget.measure.
 //
 //  The conformance is DECLARATION-ONLY on purpose. `tokenCount(_:)` itself
 //  lives on `MLXGemmaProvider` (MLXGemmaProvider.swift), added by PR #65's

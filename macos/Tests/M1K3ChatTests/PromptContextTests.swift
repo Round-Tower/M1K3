@@ -42,6 +42,35 @@ struct PromptContextTests {
         #expect(line.contains("Lil M1K3"))
     }
 
+    /// The brain name is what M1K3 THINKS WITH, never what it IS.
+    ///
+    /// The live value is `BrainTier.displayName` — bare "Mini" / "Lil" / "Big",
+    /// not the friendlier "Lil M1K3" this suite's other fixture uses, which is
+    /// why the phrasing was never caught here. In production the line read
+    /// "you're Mini", and interviewing Mini over MCP on 2026-08-03 it duly
+    /// introduced itself:
+    ///
+    ///     "I'm Mini, an AI living on this Mac, here to help with any
+    ///      questions you might have."
+    ///
+    /// A tier name is internal vocabulary; the user has never heard of it. This
+    /// is the same failure as the per-turn "private local assistant" line in
+    /// #97 — a second identity stated closer to the question than the persona,
+    /// so it wins.
+    @Test(
+        "the brain clause never renames M1K3",
+        arguments: ["Mini", "Lil", "Big"]
+    )
+    func brainNameIsNotAnIdentity(brain: String) {
+        let line = PromptContext.line(now: noon(2026, 6, 21), brainName: brain)
+        // Still answers "which model are you?" honestly…
+        #expect(line.contains(brain))
+        // …but M1K3 is who it is, on every tier.
+        #expect(line.contains("M1K3"))
+        #expect(!line.contains("you're \(brain)"))
+        #expect(!line.contains("You're \(brain)"))
+    }
+
     @Test("empty brain name omits the brain clause but keeps the date")
     func emptyBrainKeepsDate() {
         let line = PromptContext.line(now: noon(2026, 6, 21), brainName: "")

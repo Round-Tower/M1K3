@@ -49,9 +49,11 @@
 //  size safety cap: right after GroundingGate.partition, GroundingBudget.fit
 //  caps the combined chunks+memories to ~1100 tokens (measured, PR #65) before
 //  anything renders them, closing the near-miss where gemma-4's grounded-Q
-//  worst case landed at 2998/3000 reserve tokens. No-op when the provider
-//  isn't `TokenCounting` (AFM/Mini). A `.notice` breadcrumb fires only when
-//  the cap actually changed something — see GroundingBudget.swift.
+//  worst case landed at 2998/3000 reserve tokens. A `.notice` breadcrumb fires
+//  only when the cap actually changed something — see GroundingBudget.swift.
+//  (This line used to read "no-op when the provider isn't `TokenCounting`
+//  (AFM/Mini)" — that exemption was the 2026-08-03 Mini bug. The cap now
+//  applies on every tier, estimating when there is no exact tokenizer.)
 
 import Foundation
 import M1K3Agent
@@ -248,9 +250,12 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // ("Big"), PR #65's prompt-size instrument measured the grounded-Q worst
         // case at 2998 of a 3000-token reserve — 2 tokens of headroom before
         // `RotatingKVCache(8192)` silently rotates the persona/grounding head out
-        // mid-turn with NO error. GroundingBudget caps at the source instead; it's
-        // a no-op when this turn's provider has no tokenizer (AFM/Mini self-manage
-        // their own windows).
+        // mid-turn with NO error. GroundingBudget caps at the source instead —
+        // on EVERY tier. When this turn's provider has no tokenizer (AFM/Mini)
+        // the cap estimates rather than standing down: the exemption this
+        // comment used to describe ("AFM/Mini self-manage their own windows")
+        // was the 2026-08-03 bug, and Mini's window is the smallest of the lot
+        // at 4096 tokens.
         let beforeCapChunks = chunks
         let beforeCapMemories = memories
         let countTokens: (String) async -> Int? = { [provider] text in

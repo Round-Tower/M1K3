@@ -27,6 +27,15 @@
 //  fake; the real on-device re-measure against a live MLX tokenizer — does
 //  grounded-Q actually drop below 3000 now? — is owed, not run here).
 //  Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-08-03, Confidence 0.85 — the cap FAILED
+//  OPEN. A nil `countTokens` skipped it entirely, on the belief that such a
+//  provider self-manages its window; and three further `?? 0` sites scored an
+//  unmeasured unit as FREE, so even the truncation binary-search never
+//  truncated. Apple Foundation Models does not self-manage: it throws
+//  `exceededContextWindowSize` at 4096 tokens — the smallest window of any
+//  tier, and the only tier the cap exempted. Exactly inverted. Now every path
+//  measures through `measure`, which falls back to a conservative
+//  chars-per-token estimate. Unmeasurable must never mean unlimited.
 //
 
 import Foundation
@@ -44,17 +53,51 @@ public enum GroundingBudget {
     /// last token the measurement implies is available.
     public static let defaultTokenBudget = 1100
 
+    /// Chars per token for the estimate used when a provider has no tokenizer.
+    ///
+    /// PR #65's on-device prompt-size instrument measured real prose+markup at
+    /// ~4.4–4.7 chars/token (2026-07-20). The LOW end is deliberate: a smaller
+    /// divisor over-estimates the token count, which over-tightens the budget —
+    /// the safe direction to be wrong in.
+    ///
+    /// Why this exists at all: the cap used to be a NO-OP whenever `countTokens`
+    /// returned nil, on the belief (recorded in TokenCounting.swift) that such a
+    /// provider "self-manages its own context window". Apple Foundation Models
+    /// does not. Interviewing Mini over MCP on 2026-08-03 produced, verbatim:
+    ///
+    ///     exceededContextWindowSize: "Content contains 4486 tokens, which
+    ///     exceeds the maximum allowed context size of 4096."
+    ///
+    /// Mini has the SMALLEST window of any tier (4096 against the MLX tiers'
+    /// 8192) and was the ONLY tier exempt from the cap — the exemption was
+    /// exactly inverted. Four of seven conversational probes in that interview
+    /// never answered at all, timing out at 120s while the loop ground through
+    /// an over-stuffed prompt. A budget that fails open is not a budget.
+    public static let estimatedCharsPerToken = 4.4
+
+    /// A conservative token estimate for text, used only where an exact count
+    /// is unavailable.
+    public static func estimatedTokens(_ text: String) -> Int {
+        Int((Double(text.count) / estimatedCharsPerToken).rounded(.up))
+    }
+
+    /// The token cost of `text`: the provider's exact count when it has one,
+    /// otherwise the estimate. Never nil, and never a silent zero — an
+    /// unmeasured unit costing "free" was the second fail-open path here.
+    static func measure(_ text: String, countTokens: (String) async -> Int?) async -> Int {
+        await countTokens(text) ?? estimatedTokens(text)
+    }
+
     /// Fit `chunks` and `memories` inside `tokenBudget`, sharing ONE budget —
     /// doc chunks (the larger, more variable lane, and the one actually
     /// cited) are filled first in rank order, then memories against whatever
     /// remains.
     ///
     /// - `countTokens` returning `nil` means the active provider has no
-    ///   tokenizer (Apple Foundation Models / Mini self-manage their own
-    ///   context windows) — the cap is a NO-OP, inputs pass through
-    ///   unchanged. Checked ONCE, on the very first candidate unit: a nil
-    ///   there means every later call would also be nil (same provider,
-    ///   same turn), so nothing further is measured.
+    ///   tokenizer. That is NOT a licence to skip the cap: the cap falls back
+    ///   to a conservative character-based estimate (`estimatedTokens`), because
+    ///   "unmeasurable" must never mean "unlimited". See `estimatedCharsPerToken`
+    ///   for why the old no-op was wrong and what it cost.
     /// - Whole units are kept in rank order until the next would exceed the
     ///   remaining budget, then the rest are dropped — no mid-unit
     ///   truncation, except for the very first unit overall (below).
@@ -78,20 +121,19 @@ public enum GroundingBudget {
         let units = chunks.enumerated().map { Unit.chunk($1, index: $0 + 1) }
             + memories.map { Unit.memory($0) }
 
-        // The gate measurement: nil here means this turn's provider has no
-        // tokenizer — no-op, the whole inputs pass through untouched.
-        guard let gateText = units.first?.renderedText,
-              let gateCost = await countTokens(gateText)
-        else {
+        guard let gateText = units.first?.renderedText else {
             return (chunks, memories)
         }
+        let gateCost = await measure(gateText, countTokens: countTokens)
 
         var remaining = tokenBudget
         var keptChunks: [ChunkHit] = []
         var keptMemories: [ChunkHit] = []
 
         for (offset, unit) in units.enumerated() {
-            let cost = offset == 0 ? gateCost : (await countTokens(unit.renderedText) ?? 0)
+            let cost = offset == 0
+                ? gateCost
+                : await measure(unit.renderedText, countTokens: countTokens)
             let isTopOverallUnit = keptChunks.isEmpty && keptMemories.isEmpty
             if cost > remaining {
                 if isTopOverallUnit {
@@ -129,12 +171,19 @@ public enum GroundingBudget {
     public static func totalTokens(
         chunks: [ChunkHit], memories: [ChunkHit], countTokens: (String) async -> Int?
     ) async -> Int {
+        // Same `measure` the cap itself uses, so the breadcrumb reports the
+        // numbers the decision was actually made on. With `?? 0` this read
+        // "tokens 0→0" on Mini while the cap was really dropping units 9→7 —
+        // an instrument that says nothing happened while something did is worse
+        // than no instrument.
         var total = 0
         for (offset, chunk) in chunks.enumerated() {
-            total += await countTokens(Unit.chunk(chunk, index: offset + 1).renderedText) ?? 0
+            total += await measure(
+                Unit.chunk(chunk, index: offset + 1).renderedText, countTokens: countTokens
+            )
         }
         for memory in memories {
-            total += await countTokens(Unit.memory(memory).renderedText) ?? 0
+            total += await measure(Unit.memory(memory).renderedText, countTokens: countTokens)
         }
         return total
     }
@@ -170,8 +219,8 @@ public enum GroundingBudget {
         _ chunk: ChunkHit, index: Int, tokenBudget: Int, countTokens: (String) async -> Int?
     ) async -> ChunkHit {
         let head = "\(index). \(ChatPromptBuilder.citationLabel(for: chunk))\n"
-        let headCost = await countTokens(head) ?? 0
-        let markerCost = await countTokens(truncationMarker) ?? 0
+        let headCost = await measure(head, countTokens: countTokens)
+        let markerCost = await measure(truncationMarker, countTokens: countTokens)
         let available = max(0, tokenBudget - headCost - markerCost)
         var truncated = chunk
         truncated.content = await truncatedContent(
@@ -185,8 +234,8 @@ public enum GroundingBudget {
     private static func truncatedMemory(
         _ memory: ChunkHit, tokenBudget: Int, countTokens: (String) async -> Int?
     ) async -> ChunkHit {
-        let bulletCost = await countTokens("- ") ?? 0
-        let markerCost = await countTokens(truncationMarker) ?? 0
+        let bulletCost = await measure("- ", countTokens: countTokens)
+        let markerCost = await measure(truncationMarker, countTokens: countTokens)
         let available = max(0, tokenBudget - bulletCost - markerCost)
         var truncated = memory
         truncated.content = await truncatedContent(
@@ -210,7 +259,7 @@ public enum GroundingBudget {
         while lo <= hi {
             let mid = (lo + hi) / 2
             let candidate = String(text.prefix(mid))
-            let cost = await countTokens(candidate) ?? 0
+            let cost = await measure(candidate, countTokens: countTokens)
             if cost <= available {
                 best = mid
                 lo = mid + 1
