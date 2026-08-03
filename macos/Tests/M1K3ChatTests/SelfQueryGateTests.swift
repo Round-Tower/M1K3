@@ -100,6 +100,10 @@ struct SelfQueryGateTests {
             "What can you do to help me draft the invoice?",
             // Compound: the corpus half must survive the probe half.
             "What can you do? Also check my notes about the seals.",
+            // Review round 2: every other regex in the gate anchors with \b, so
+            // a probe branch must not be allowed to start mid-word — the "what"
+            // inside "somewhat" is otherwise a valid match start.
+            "The result was somewhat are you?",
         ]
     )
     func capabilityShapedTopicalQuestionsStayUngated(question: String) {

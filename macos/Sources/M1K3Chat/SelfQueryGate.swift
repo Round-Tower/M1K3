@@ -127,6 +127,7 @@ public enum SelfQueryGate {
     /// dictated "tell me what you can do." still lands.
     private static var capabilityProbe: Regex<Substring> {
         #/
+        \b                                       # never mid-word ("somewhat are you?")
         (?:
             what\s+(?:can|could)\s+you\s+do      # "what can you do"
           | what\s+you\s+can\s+do                # "tell me what you can do"

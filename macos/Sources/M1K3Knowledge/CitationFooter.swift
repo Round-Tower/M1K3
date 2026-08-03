@@ -41,14 +41,41 @@ public enum CitationFooter {
     /// CitationValidator. A model that rephrases a heading ("§3.2" vs the chunk's
     /// "§3.2 Seals") won't match — but CitationValidator would have stripped that
     /// citation upstream too, so the surfaces stay consistent.
+    /// A document-level citation (empty heading, `[Title]`) credits ONE chunk of
+    /// that title, not every section retrieved. Retrieval dedups on chunkID, not
+    /// title (`KnowledgeStore.searchHybrid`), so top-K routinely carries several
+    /// chunks of the same document under different headings — the live
+    /// `M1K3_system_prompt_v2` search in #97 returned three. Crediting a generic
+    /// citation to all of them renders section-specific footer lines the model
+    /// never claimed and inflates the "N sources" count: phantom PRECISION,
+    /// which is the same honesty defect as a phantom source. A section the model
+    /// DID name is still kept on its own merits.
     public static func referencedSources(
         from hits: [ChunkHit],
         citedBy validated: [Citation]
     ) -> [ChunkHit] {
         guard !validated.isEmpty else { return [] }
-        return hits.filter { hit in
-            hit.kind != .memory && validated.contains { citation in cites(hit, citation) }
+        let citable = hits.filter { $0.kind != .memory }
+        // Exact (heading-bearing) citations first — they are the strongest claim
+        // and always earn their own line.
+        let exact = validated.filter { !$0.heading.isEmpty }
+        var kept = Set(
+            citable.filter { hit in exact.contains { cites(hit, $0) } }.map(\.chunkID)
+        )
+        // Then one representative per generically-cited title, skipping titles a
+        // named section already speaks for. `citable` is in relevance order, so
+        // `first` is the highest-ranked chunk of that document.
+        let titlesAlreadyKept = citable.filter { kept.contains($0.chunkID) }.map(\.itemTitle)
+        for citation in validated where citation.heading.isEmpty {
+            let alreadySpokenFor = titlesAlreadyKept.contains {
+                $0.compare(citation.source, options: .caseInsensitive) == .orderedSame
+            }
+            guard !alreadySpokenFor else { continue }
+            if let representative = citable.first(where: { cites($0, citation) }) {
+                kept.insert(representative.chunkID)
+            }
         }
+        return citable.filter { kept.contains($0.chunkID) }
     }
 
     /// True when `citation` refers to `hit` — same title and same heading,
