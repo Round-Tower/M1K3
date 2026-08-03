@@ -19,6 +19,20 @@
 //  ReadingMode's base font, so bold/italic/inline-code/links render for real in
 //  every mode except bionic, which still works on the block's plain characters
 //  (its whole premise is uniform word-boldening, same as before this change).
+//  Review: Kev + claude-opus-5, 2026-08-03, Confidence 0.75 — `tableView` was a
+//  bare `Grid`, the one wide-content renderer here without a horizontal scroll
+//  (CodeBlockView has always had one, which is why a long code line has never
+//  been able to shove the window around). A Grid sizes to its content and
+//  propagates that outward as a MINIMUM, and a SwiftUI minimum reaches the
+//  window — probed live, a 100pt window clamps to exactly ContentView's
+//  `minWidth: 480` — so a table with a few columns, or one unbreakable token
+//  that cannot wrap, FORCED the user's window wider. That is the shape of the
+//  self-resize on issue #79 (560 → 723 as an answer streamed in, immediately
+//  before AppKit's 300-iteration layout warning), though the causal link to
+//  that crash is unproven and the July reports predate tables entirely. Wrapped
+//  in ScrollView(.horizontal) with the card background moved outside it, so the
+//  card also spans the bubble now instead of hugging a narrow table. iOS shares
+//  this file (project.yml) and has no window to give.
 
 import M1K3Chat
 import SwiftUI
@@ -87,25 +101,31 @@ struct ReadingText: View {
     /// cell has its own leaf identity, so without this the table read as a
     /// flat list of every cell's text, one per line). Plain Grid — no
     /// striping/borders yet, just real rows and columns instead of word salad.
+    /// Wide content scrolls INSIDE its own container, the same rule
+    /// CodeBlockView follows — a bare `Grid` propagates its content width
+    /// outward as a MINIMUM, and a SwiftUI minimum reaches the window. See the
+    /// file header's 2026-08-03 Review block and issue #79 for the measurement.
     private func tableView(header: [AttributedString], rows: [[AttributedString]]) -> some View {
-        Grid(alignment: .topLeading, horizontalSpacing: 14, verticalSpacing: 6) {
-            if !header.isEmpty {
-                GridRow {
-                    ForEach(Array(header.enumerated()), id: \.offset) { _, cell in
-                        proseText(cell, font: baseFont.weight(.semibold))
+        ScrollView(.horizontal, showsIndicators: false) {
+            Grid(alignment: .topLeading, horizontalSpacing: 14, verticalSpacing: 6) {
+                if !header.isEmpty {
+                    GridRow {
+                        ForEach(Array(header.enumerated()), id: \.offset) { _, cell in
+                            proseText(cell, font: baseFont.weight(.semibold))
+                        }
+                    }
+                    Divider()
+                }
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    GridRow {
+                        ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
+                            proseText(cell, font: baseFont)
+                        }
                     }
                 }
-                Divider()
             }
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                GridRow {
-                    ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
-                        proseText(cell, font: baseFont)
-                    }
-                }
-            }
+            .padding(10)
         }
-        .padding(10)
         .background(.secondary.opacity(0.06), in: .rect(cornerRadius: 10))
     }
 
