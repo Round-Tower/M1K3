@@ -10,6 +10,95 @@ struct CitationValidatorChunksTests {
                  kind: .document, heading: heading, content: "x")
     }
 
+    // MARK: - Headingless citations (issue #97)
+
+    @Test("a headingless citation to a retrieved chunk is recognised and credited")
+    func headinglessCitationToARetrievedChunkValidates() async {
+        // `citationLabel` renders a chunk with no heading as bare `[Title]`, but
+        // the parser discriminates on §, so those labels were invisible to
+        // validation: never checked, never credited, never stripped. A grounded
+        // answer that cited a headingless doc therefore showed NO source footer
+        // (CitationFooter keys off `validated`) while the raw token sat in the
+        // prose looking like debug output — exactly the `[M1K3_system_prompt_v2]`
+        // that landed in Kev's bubble (#97).
+        let chunks = [hit("Field Log", nil)]
+        let result = await CitationValidator.validate(
+            responseText: "The pump was replaced in March [Field Log].", against: chunks
+        )
+        #expect(result.validated == [Citation(source: "Field Log", heading: "")])
+        #expect(result.stripped.isEmpty)
+        // Kept in the prose, exactly as a `[Title §heading]` citation is.
+        #expect(result.cleanedText.contains("[Field Log]"))
+    }
+
+    @Test("a headingless PARENTHETICAL citation is recognised too — the AFM shape")
+    func headinglessParentheticalIsRecognised() async {
+        // This file's header records that Apple Foundation Models renders
+        // citations as parentheticals even when the prompt example uses
+        // brackets, which is why `citationHits` parses both delimiters. AFM is
+        // Mini — the brain that produced #97 — so a bracket-only headingless
+        // parser would have left the same invisible-citation hole open, just
+        // moved from `[Doc]` to `(Doc)`.
+        let chunks = [hit("Field Log", nil)]
+        let result = await CitationValidator.validate(
+            responseText: "The pump was replaced in March (Field Log).", against: chunks
+        )
+        #expect(result.validated == [Citation(source: "Field Log", heading: "")])
+        #expect(result.stripped.isEmpty)
+    }
+
+    /// Deliberate boundary: the allowlist matches a title verbatim, so a corpus
+    /// document with a generic title makes that bracket a citation whenever the
+    /// document is retrieved. Pinned rather than defended against, because the
+    /// only consequence is a Sources-footer credit — nothing is ever stripped —
+    /// and any "is this title too generic?" heuristic would be guesswork about
+    /// the user's own naming. PURELY NUMERIC titles are the one exclusion:
+    /// `[1]`/`[2]` footnote markers are a common enough prose idiom to be worth
+    /// one rule, and a document actually titled "1" is pathological.
+    @Test("a generic retrieved title is credited; a numeric one never is")
+    func genericTitleTradeOffIsPinned() async {
+        let generic = await CitationValidator.validate(
+            responseText: "Use `let xs: [String] = []` here.", against: [hit("String", nil)]
+        )
+        #expect(generic.validated == [Citation(source: "String", heading: "")])
+
+        let numeric = await CitationValidator.validate(
+            responseText: "See note [1] and note (2).", against: [hit("1", nil), hit("2", nil)]
+        )
+        #expect(numeric.validated.isEmpty)
+        #expect(numeric.stripped.isEmpty)
+    }
+
+    @Test("a headingless bracket matches a retrieved title even when that chunk has a heading")
+    func headinglessCitationMatchesOnTitleAlone() async {
+        // Citing the document without naming a section is a legitimate, weaker
+        // citation — not a fabrication. Match on title alone here, or the
+        // recognition above would strip it for a heading it never claimed.
+        let chunks = [hit("Plant Notes", "3.2 Seals")]
+        let result = await CitationValidator.validate(
+            responseText: "See [Plant Notes].", against: chunks
+        )
+        #expect(result.validated == [Citation(source: "Plant Notes", heading: "")])
+        #expect(result.stripped.isEmpty)
+    }
+
+    /// Deliberate boundary (a decision, not an oversight): a bracket that does
+    /// NOT name a retrieved title is left completely alone — never parsed,
+    /// never stripped. Bare brackets are overwhelmingly ordinary text —
+    /// `[String]` in a Swift snippet, `[1]` footnotes, `[sic]` — and stripping
+    /// unknown ones would mangle code the markdown renderer is now shipping
+    /// (#93). The cost is that a fabricated headingless citation survives;
+    /// the § form remains the one that gets full fabrication checking.
+    @Test("brackets that name no retrieved chunk are left untouched")
+    func unknownBracketsAreNotTreatedAsCitations() async {
+        let chunks = [hit("Field Log", nil)]
+        let text = "Use `let names: [String] = []` — see note [1], and [sic] stands."
+        let result = await CitationValidator.validate(responseText: text, against: chunks)
+        #expect(result.validated.isEmpty)
+        #expect(result.stripped.isEmpty)
+        #expect(result.cleanedText == text)
+    }
+
     @Test("keeps citations that match a retrieved chunk, strips the invented ones")
     func validatesAgainstChunks() async {
         let chunks = [hit("ICH-Q7", "5.2 Cleaning"), hit("Plant Notes", "3.2 Seals")]

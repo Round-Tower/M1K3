@@ -55,6 +55,61 @@ struct SelfQueryGateTests {
         #expect(SelfQueryGate.isSelfQuery(question))
     }
 
+    // MARK: - Capability probes (must gate) — issue #97
+
+    /// Persona rule 3 names **abilities** alongside configuration and design,
+    /// but the gate only ever covered the leak-vector half. So the single most
+    /// likely first question a new user asks — and the app's own built-in
+    /// "What can you do?" suggestion chip — ran full retrieval. Live, that
+    /// pulled Kev's `M1K3_system_prompt_v2` call recording in as KNOWLEDGE and
+    /// M1K3 answered *from a transcript of its own prompt*, leaking the doc
+    /// title into the bubble (#97). A capability probe is a self-query.
+    @Test(
+        "identity and capability probes gate",
+        arguments: [
+            "What can you do?",
+            "what can you do",
+            "So what can you do?",
+            "What could you do?",
+            "Tell me what you can do.",
+            "What are you able to do?",
+            "What are your capabilities?",
+            "What are your abilities?",
+            "What do you do?",
+            "Who are you?",
+            "What are you?",
+        ]
+    )
+    func capabilityProbesGate(question: String) {
+        #expect(SelfQueryGate.isSelfQuery(question))
+    }
+
+    /// The precision line for the probe above: these open with the SAME words
+    /// but carry a real object, so they're ordinary questions about the world
+    /// or the user's corpus and must keep their grounding. End-anchoring is
+    /// what separates them — the probe has to BE the question, not start it.
+    @Test(
+        "capability-shaped questions with a real object stay retrievable",
+        arguments: [
+            "What can you do about the seal failure?",
+            "What can you do with the leftover paint in my notes?",
+            "What do you do when the pressure drops?",
+            "Who are you talking about?",
+            "What are you looking at?",
+            "What are your notes on the Q3 report?",
+            "What can you do to help me draft the invoice?",
+            // Compound: the corpus half must survive the probe half.
+            "What can you do? Also check my notes about the seals.",
+            // Review round 2: every other regex in the gate anchors with \b, so
+            // a probe branch must not be allowed to start mid-word — the "what"
+            // inside "somewhat" is otherwise a valid match start.
+            "The result was somewhat are you?",
+        ]
+    )
+    func capabilityShapedTopicalQuestionsStayUngated(question: String) {
+        #expect(!SelfQueryGate.isSelfQuery(question))
+    }
+
     // MARK: - Legitimate questions (must NOT gate)
 
     @Test(

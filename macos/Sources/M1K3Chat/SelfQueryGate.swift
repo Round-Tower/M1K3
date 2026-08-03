@@ -22,6 +22,15 @@
 //  Signed: Kev + claude-fable-5, 2026-07-12, Confidence 0.85, Prior: Unknown
 //  Context: docs/prompt-hardening-v2.md code-side ticket 1; the eval-side
 //  guard is ChatEvalFixtures.security (selfquery-notes et al.).
+//  Review: Kev + claude-opus-5, 2026-08-03, Confidence 0.85 — the gate covered
+//  persona rule 3's LEAK half (prompt/config/credentials) but not the half the
+//  rule names first: ABILITIES. So "What can you do?" — the app's own first-run
+//  suggestion chip, and the likeliest opening question there is — ran full
+//  retrieval, and answered out of whatever the corpus held. Live that was a call
+//  recording titled `M1K3_system_prompt_v2` containing the prompt text itself:
+//  the exact leak class this gate exists for, reached through the front door
+//  (#97). `capabilityProbe` closes it, end-anchored so only the bare probe gates
+//  and every "what can you do about X" keeps its grounding.
 //
 
 import Foundation
@@ -103,12 +112,42 @@ public enum SelfQueryGate {
         #/\b(?:about|on|regarding|concerning)\s+(?:you|yourself)\b|\byourself\b/#
     }
 
+    /// An identity or capability probe — "what can you do?", "who are you?".
+    /// Persona rule 3 covers ABILITIES as well as configuration and design, but
+    /// only the leak vectors above were ever enforced, so the likeliest opening
+    /// question of all (and the app's own "What can you do?" suggestion chip)
+    /// ran full retrieval and answered from whatever the corpus happened to
+    /// hold — live, a call recording of M1K3's own prompt (#97).
+    ///
+    /// END-ANCHORED, and that anchor is the whole precision story: the probe
+    /// must BE the question, not merely open it. "What can you do?" gates;
+    /// "What can you do about the seal failure?" keeps its grounding, because
+    /// an object after the verb means the user is asking about their world, not
+    /// about M1K3. Trailing punctuation and whitespace are tolerated so a
+    /// dictated "tell me what you can do." still lands.
+    private static var capabilityProbe: Regex<Substring> {
+        #/
+        \b                                       # never mid-word ("somewhat are you?")
+        (?:
+            what\s+(?:can|could)\s+you\s+do      # "what can you do"
+          | what\s+you\s+can\s+do                # "tell me what you can do"
+          | what\s+are\s+you\s+able\s+to\s+do
+          | what\s+are\s+your\s+(?:abilities|capabilities)
+          | what\s+do\s+you\s+do
+          | who\s+are\s+you
+          | what\s+are\s+you
+        )
+        \s*[?!.]*\s*$                            # …and that ENDS the question
+        /#
+    }
+
     /// True when the question is about M1K3 itself — its prompt, config,
-    /// rules, credentials, or notes-about-itself — and must be answered from
-    /// persona with no retrieval.
+    /// rules, abilities, credentials, or notes-about-itself — and must be
+    /// answered from persona with no retrieval.
     public static func isSelfQuery(_ question: String) -> Bool {
-        let text = question.lowercased()
+        let text = question.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         if unconditionalMarkers.contains(where: { text.contains($0) }) { return true }
+        if text.contains(capabilityProbe) { return true }
         if text.contains(toldProbe) { return true }
         if text.contains(passphraseProbe) { return true }
         if text.contains(possessiveIntrospection) { return true }
