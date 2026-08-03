@@ -13,6 +13,24 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.75,
 //  Prior: internal call-pipeline project, AppleFoundationModelsProvider (Kev)
+//  Review: Kev + claude-opus-5, 2026-08-03, Confidence 0.85 — NO functional
+//  change; recording a measured NEGATIVE result so it isn't re-tried blind.
+//
+//  Mini keeps the COMPACT persona (no `voiceExemplars`). The standing reason
+//  for withholding them is cost, and cost is not the reason: measured, they are
+//  ~187 tokens of Mini's 4096-token window (4.5%) on top of a ~875-token
+//  persona (MiniPromptBudgetTests). They were switched ON and the same 8-probe
+//  MCP interview re-run — the register did not improve, and a new failure
+//  appeared. Asked "Long day, I'm wrecked", Mini answered "Honey never spoils,
+//  and there are edible jars in 3,000-year-old Egyptian tombs": exemplar 3,
+//  verbatim, as CONTENT — the exact risk `voiceExemplars`' own header documents
+//  for weak models. Abstention degraded too. So Mini's flat register is NOT an
+//  exemplar-starvation problem; try shorter/abstract voice guidance in the CORE
+//  instead. The turn-by-turn detail sits on the `instructions` default below.
+//
+//  Note this provider builds a FRESH `LanguageModelSession(instructions:)` per
+//  call, so anything in the persona is re-sent every turn — the reason persona
+//  length is a real cost here and free on the KV-cached MLX tiers.
 
 import Foundation
 
