@@ -86,6 +86,45 @@ struct HeadlessAskTests {
         #expect(!answer.contains("The sealThe seal"))
     }
 
+    @Test("the FOLLOWUPS trailer is stripped — it's UI chip scaffolding, not answer")
+    func followUpsTrailerStripped() async throws {
+        // This file's header, and HeadlessAsk's own, claim the "same
+        // post-processing contract as ChatSession.send". ChatSession splits the
+        // trailer on BOTH its paths (send + deliverBackgroundAnswer); HeadlessAsk
+        // split it on neither, so every MCP `ask_m1k3` answer carried M1K3's
+        // suggestion-chip scaffolding as part of the prose. Caught live on
+        // 2026-08-03 while verifying #97 over MCP:
+        //
+        //     …ready to assist with any task you may have.
+        //
+        //     FOLLOWUPS:
+        //     1. What programming language do you prefer to work with?
+        //
+        // A visiting agent should get the answer, not the UI's furniture.
+        let responder = StreamResponder(chunks: [
+            "Ardmore is in County Waterford.\n\nFOLLOWUPS: [\"What else is nearby?\"]",
+        ])
+        let answer = try await HeadlessAsk.answer("where is ardmore?", using: responder)
+        #expect(answer == "Ardmore is in County Waterford.")
+        #expect(!answer.contains("FOLLOWUPS"))
+    }
+
+    @Test("a malformed FOLLOWUPS trailer is stripped too, never half-shown")
+    func malformedFollowUpsTrailerStripped() async throws {
+        // FollowUpSplit's contract: whatever follows the sentinel is ALWAYS
+        // removed, parseable or not — a raw fragment in the output is worse than
+        // a dropped suggestion list. The live leak was exactly this shape (a
+        // numbered list where the persona asks for a JSON array), so the
+        // off-format case is the one that actually has to hold.
+        let responder = StreamResponder(chunks: [
+            "Ardmore is in County Waterford.\n\nFOLLOWUPS:\n\n1. What else is nearby?\n2. Why?",
+        ])
+        let answer = try await HeadlessAsk.answer("where is ardmore?", using: responder)
+        #expect(answer == "Ardmore is in County Waterford.")
+        #expect(!answer.contains("FOLLOWUPS"))
+        #expect(!answer.contains("What else is nearby?"))
+    }
+
     @Test("reasoning think-blocks are stripped from the answer")
     func reasoningStripped() async throws {
         let responder = StreamResponder(chunks: ["<think>The user asks about seals.</think>It failed under load."])

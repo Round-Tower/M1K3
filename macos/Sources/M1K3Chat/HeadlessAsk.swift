@@ -18,9 +18,17 @@
 //  `.memory` hits from the Sources footer (they're "do not cite" ambient
 //  context; a promiscuous short-fact embedding was rendering as a citation
 //  source for unrelated queries). Validator allow-list unchanged.
+//  Review: Kev + claude-opus-5, 2026-08-03, Confidence 0.9 — the "mirrors
+//  ChatSession.send's post-processing contract" claim above was FALSE in one
+//  step: ChatSession splits the FOLLOWUPS trailer on both its paths (send and
+//  deliverBackgroundAnswer) and this one split it on neither, so every MCP
+//  `ask_m1k3` answer shipped M1K3's suggestion-chip scaffolding as prose.
+//  Caught live while verifying #97 over MCP. Now split in ChatSession's order —
+//  before citation validation, because the trailer is not answer text.
 //
 
 import Foundation
+import M1K3Inference // FollowUpSplit — the trailer is not answer text
 import M1K3Knowledge
 
 public enum HeadlessAsk {
@@ -42,7 +50,16 @@ public enum HeadlessAsk {
         for await chunk in stream {
             raw = ChatSession.fold(raw, chunk)
         }
-        let (reasoning, answerText) = ReasoningSplit.split(raw)
+        let (reasoning, answerWithFollowUps) = ReasoningSplit.split(raw)
+        // The FOLLOWUPS trailer is scaffolding for the chat UI's suggestion
+        // chips — ChatSession strips it on both its paths, and this one claims
+        // the same contract but never did, so every MCP `ask_m1k3` answer
+        // carried it as prose (caught live 2026-08-03). Split BEFORE citation
+        // validation, matching ChatSession.send's order: the trailer is not
+        // answer text and must not be validated or polished as if it were.
+        // There is nowhere to put the parsed questions here — a headless caller
+        // has no chips — so they are dropped, not surfaced.
+        let (answerText, _) = FollowUpSplit.split(answerWithFollowUps)
         let merged = ChatSession.mergeSources(injected, responder.collectedSources())
         let validation = await CitationValidator.validate(responseText: answerText, against: merged)
         let polished = MessageTextPolish.polish(validation.cleanedText)
