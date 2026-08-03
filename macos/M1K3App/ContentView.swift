@@ -123,7 +123,9 @@ struct ContentView: View {
             case .documents:
                 NavigationStack { DocumentsView() }
             case .memories:
-                NavigationStack { MemoriesView() }
+                // MemoriesView carries its own NavigationStack (it's also
+                // presented as a sheet from Settings → You) — don't nest one.
+                MemoriesView()
             case .calls:
                 NavigationStack { CallsView() }
             default:
@@ -714,7 +716,7 @@ struct ContentView: View {
     private var statusAccessibilityLabel: String {
         if env.isRecording { return "Recording in progress" }
         if env.modelLoad.isActive { return env.modelLoad.label(modelName: env.downloadingBrainName) }
-        return "Model unavailable, runtime \(env.selectedRuntime.rawValue)"
+        return "Brain unavailable"
     }
 
     /// Status earns its place only when it deviates from "ready and quiet":

@@ -302,7 +302,6 @@ struct MenuBarPopover: View {
         switch runtime {
         case .appleFoundationModels: "Apple on-device"
         case .mlxGemma: "MLX · local"
-        case .liteRTGemma: "LiteRT"
         }
     }
 }

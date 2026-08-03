@@ -50,40 +50,17 @@ import Network
 import Observation
 import os
 
-/// The inference backends the runtime picker offers. Only Apple Foundation
-/// Models is wired for the MVP; MLX / LiteRT Gemma are reserved slots that light
-/// up in the heavy-dependency session.
-enum RuntimeOption: String, CaseIterable, Identifiable {
+/// The two inference backends a brain can route to. A routing key, not a
+/// user-facing picker — the brain tiers (Mini/Lil/Big) are the vocabulary
+/// users see. (The old runtime-picker surface, its LiteRT reserved slot, and
+/// its subtitle/icon decoration were removed in the 2026-08-03 reduction
+/// wave: the picker UI died when brains replaced it, and LiteRT was dropped
+/// without ever being built — see PLAN.md.)
+enum RuntimeOption: String {
     case appleFoundationModels = "Apple Foundation Models"
-    // Model-neutral label: the MLX slot now serves whichever brain is chosen
-    // (Qwen3 Lil, Gemma 4 Big) — not display-persisted, safe to rename.
+    /// Model-neutral label: the MLX slot now serves whichever brain is chosen
+    /// (Qwen3 Lil, Gemma 4 Big) — not display-persisted, safe to rename.
     case mlxGemma = "MLX (local model)"
-    case liteRTGemma = "LiteRT Gemma"
-
-    var id: String {
-        rawValue
-    }
-
-    /// Wired and selectable today.
-    var isReady: Bool {
-        self == .appleFoundationModels || self == .mlxGemma
-    }
-
-    var subtitle: String {
-        switch self {
-        case .appleFoundationModels: "On-device, cheap & fast. The MVP brain."
-        case .mlxGemma: "Metal in-process local model (4-bit). Downloads on first use."
-        case .liteRTGemma: "LiteRT-LM Gemma. Spike — not yet wired."
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .appleFoundationModels: "apple.logo"
-        case .mlxGemma: "cpu"
-        case .liteRTGemma: "flask"
-        }
-    }
 }
 
 @MainActor
@@ -308,8 +285,6 @@ final class AppEnvironment {
     /// store's `isEnabled` predicate — read from the server's dispatch path —
     /// can check it off the main actor.
     nonisolated static let conversationLogEnabledKey = "mcp.conversationLog.enabled"
-    /// Whether the user has made a voice-output choice (onboarding speech step).
-    static let hasChosenVoiceKey = "hasChosenVoice"
     /// One-shot: the call-encryption key has been migrated to Touch-ID protection.
     /// Guards the (prompt-triggering) reassert so it runs once, not every launch.
     static let callKeyProtectionMigratedKey = "calls.keyProtectionMigrated"
@@ -2003,7 +1978,6 @@ extension AppEnvironment {
     /// Switch the active TTS tier. Built-in swaps back instantly; M1K3 Voice kicks
     /// the model download (or swaps in immediately if already staged).
     func selectVoiceTier(_ tier: VoiceTier) {
-        UserDefaults.standard.set(true, forKey: Self.hasChosenVoiceKey)
         switch tier {
         case .builtin:
             speech.setProvider(builtinSpeech)
@@ -2033,7 +2007,6 @@ extension AppEnvironment {
             speech.setProvider(kokoro)
             selectedVoiceTier = .m1k3Voice
             UserDefaults.standard.set(VoiceTier.m1k3Voice.rawValue, forKey: Self.selectedVoiceTierKey)
-            UserDefaults.standard.set(true, forKey: Self.hasChosenVoiceKey)
             isPreparingVoice = false
             voiceLoad = .ready
         } catch {
