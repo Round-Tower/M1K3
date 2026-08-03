@@ -72,6 +72,52 @@ struct ChatPromptBuilderTests {
         #expect(ChatPromptBuilder.citationLabel(for: hit("Doc", "", "x")) == "[Doc]")
     }
 
+    // MARK: - Identity and citation framing (issue #97)
+
+    @Test("the per-turn body never restates M1K3's identity — the persona owns it")
+    func doesNotAssertACompetingIdentity() {
+        // Every provider path injects M1K3Persona as the SESSION instructions
+        // (AppleFoundationModelsProvider / MLXGemmaProvider `instructions:`, the
+        // native system turn, the ReAct prepend). This builder produced a SECOND,
+        // contradicting identity in the per-turn body — "a private local
+        // assistant" against the persona's "a curious AI living entirely on your
+        // Mac" — and on the live Mini path the nearer one won: M1K3 introduced
+        // itself as "your local AI assistant" (#97). Identity belongs in exactly
+        // one place; per-turn content carries the task, not the character.
+        for prompt in [
+            ChatPromptBuilder.build(chunks: [hit("Doc", nil, "x")], userMessage: "q"),
+            ChatPromptBuilder.build(chunks: [], userMessage: "q"),
+        ] {
+            #expect(!prompt.contains("You are M1K3"))
+            #expect(!prompt.lowercased().contains("assistant"))
+        }
+    }
+
+    @Test("the citation example is a generic shape, never a retrieved title")
+    func citationExampleIsGenericNotARetrievedTitle() {
+        // The example was rendered from chunks[0]'s REAL label, so the prompt read
+        // "cite using citation tokens like [M1K3_system_prompt_v2]" — and the model
+        // dutifully echoed that exact string into its prose with nothing to cite
+        // (#97, screenshot-proven). Demonstrate the FORM, never a live title.
+        let prompt = ChatPromptBuilder.build(
+            chunks: [hit("Client Memo", nil, "body")], userMessage: "q"
+        )
+        #expect(prompt.contains("[Title §heading]"))
+        // The real label appears once — in the KNOWLEDGE block — and never again
+        // as the thing the model is told to imitate.
+        #expect(prompt.components(separatedBy: "[Client Memo]").count - 1 == 1)
+    }
+
+    @Test("the citation example keeps the § form the validator can actually see")
+    func citationExampleCarriesTheHeadingMarker() {
+        // CitationValidator parses on `§` as the discriminator, so a headingless
+        // `[Title]` echo is invisible to validation, to the Sources footer, and to
+        // SpeechTextPolish (it gets read aloud). Steering the model to the § form
+        // keeps every downstream consumer able to see what it emits.
+        let prompt = ChatPromptBuilder.build(chunks: [hit("Doc", nil, "x")], userMessage: "q")
+        #expect(prompt.contains("§"))
+    }
+
     @Test("numbers multiple chunks in order")
     func numbered() {
         let prompt = ChatPromptBuilder.build(

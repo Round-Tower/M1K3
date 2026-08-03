@@ -587,6 +587,29 @@ struct AgentRAGResponderTests {
         ])
     }
 
+    @Test("no fallback branch restates M1K3's identity — the persona owns it (#97)")
+    func fallbackPromptCarriesNoCompetingIdentity() {
+        // Both fallback branches opened "You are M1K3, a private local assistant",
+        // contradicting the persona the provider already carries as session
+        // instructions. On the live Mini path the nearer line won and M1K3 called
+        // itself "your local AI assistant" (#97). One identity, one home.
+        let withObservations = AgentRAGResponder.fallbackPrompt(
+            question: "q", chunks: [],
+            gathered: [ReasoningStep(
+                iteration: 0, thought: "", action: "web_search(x)", observation: "1. A result."
+            )]
+        )
+        let withoutObservations = AgentRAGResponder.fallbackPrompt(
+            question: "q", chunks: [], gathered: []
+        )
+        for prompt in [withObservations, withoutObservations] {
+            #expect(!prompt.contains("You are M1K3"))
+            #expect(!prompt.lowercased().contains("assistant"))
+        }
+        // The synthesis instruction itself survives the removal.
+        #expect(withObservations.contains("INFORMATION GATHERED"))
+    }
+
     @Test("web-synthesis prompt makes the model verify the premise, not stitch tangential hits")
     func fallbackPromptGuardsAgainstFalsePremise() {
         // The Glanmire false-positive (caught live, web ON): a FICTIONAL entity

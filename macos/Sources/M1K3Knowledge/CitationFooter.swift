@@ -52,11 +52,19 @@ public enum CitationFooter {
     }
 
     /// True when `citation` refers to `hit` — same title and same heading,
-    /// case-insensitively. A chunk with no heading can only be cited by an
-    /// (unparseable) empty-heading citation, so it never matches a real marker.
+    /// case-insensitively.
+    ///
+    /// An EMPTY heading is the document-level citation (`[Title]`, what
+    /// `citationLabel` renders for a chunk with no heading). Those used to be
+    /// unparseable, so this matcher could dismiss them; since #97
+    /// CitationValidator recognises them against the retrieved titles, and
+    /// citing a document without naming a section is a weaker citation, not a
+    /// fabricated one. So an empty-heading citation matches on title alone —
+    /// exactly the rule the validator used to accept it.
     private static func cites(_ hit: ChunkHit, _ citation: Citation) -> Bool {
         guard hit.itemTitle.compare(citation.source, options: .caseInsensitive) == .orderedSame
         else { return false }
+        guard !citation.heading.isEmpty else { return true }
         let hitHeading = (hit.heading ?? "").trimmingCharacters(in: .whitespaces)
         return hitHeading.compare(citation.heading, options: .caseInsensitive) == .orderedSame
     }

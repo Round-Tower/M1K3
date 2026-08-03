@@ -564,9 +564,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             return ChatPromptBuilder.build(chunks: chunks, userMessage: question)
         }
         return """
-        You are M1K3, a private local assistant. Answer the user's question \
-        using the INFORMATION GATHERED below. Be direct and plain — do not \
-        mention tools or actions.
+        Answer the user's question using the INFORMATION GATHERED below. Be \
+        direct and plain — do not mention tools or actions.
 
         First check the gathered information actually answers the question. If it \
         does NOT establish that the thing asked about exists — it only mentions the \

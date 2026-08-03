@@ -12,6 +12,29 @@ struct CitationFooterTests {
                  kind: .document, heading: heading, content: "x", similarity: similarity)
     }
 
+    @Test("a headingless citation credits the document it names (issue #97)")
+    func headinglessCitationCreditsTheDocument() {
+        // CitationValidator now recognises bare `[Title]` citations against the
+        // retrieved titles, so an empty-heading citation is no longer the
+        // "unparseable" case this matcher was written to dismiss. Citing a
+        // document without naming a section is a weaker citation, not a
+        // fabricated one — it should still show its source.
+        let retrieved = [hit("Plant Notes", "3.2 Seals"), hit("Field Log", nil)]
+        let referenced = CitationFooter.referencedSources(
+            from: retrieved, citedBy: [Citation(source: "Plant Notes", heading: "")]
+        )
+        #expect(referenced.map(\.itemTitle) == ["Plant Notes"])
+    }
+
+    @Test("a headingless citation never credits a different document")
+    func headinglessCitationStaysTitleScoped() {
+        let retrieved = [hit("Plant Notes", "3.2 Seals")]
+        let referenced = CitationFooter.referencedSources(
+            from: retrieved, citedBy: [Citation(source: "Field Log", heading: "")]
+        )
+        #expect(referenced.isEmpty)
+    }
+
     @Test("an identity turn that cited nothing yields an empty footer")
     func nothingCitedDropsEverything() {
         // Two off-topic chunks cleared the gate, but the answer cited none of them.
