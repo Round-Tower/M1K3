@@ -1,9 +1,10 @@
 # Voice in the chat — merging voice-first into the conversation (design)
 
-**Status:** DESIGN — Kev's 07-25 direction ("voice first should/could be
-integrated into the main chat view, or a minimal version of it"). No code.
-Build next session behind a Settings toggle so it's felt against the current
-hero, not argued in the abstract.
+**Status:** PARKED (2026-08-03) — design only, zero code, not on the roadmap.
+Originally Kev's 07-25 direction ("voice first should/could be integrated into
+the main chat view, or a minimal version of it"). Still buildable — its cited
+prerequisites all exist — but nothing is in flight; schedule it via ROADMAP.md
+before building.
 
 ## The scar this design respects
 

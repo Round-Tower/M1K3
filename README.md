@@ -37,12 +37,22 @@ Edge AI you actually own: no cloud, no telemetry, no network cable it never asks
 
 ## What's inside
 
-- **On-device inference** — MLX (Gemma, Qwen) + Apple Foundation Models. The model lives on your Mac.
-- **Live voice** — speak and be spoken to; neural TTS + on-device speech-to-text.
-- **Knowledge graph + RAG** — drop in notes and PDFs; M1K3 remembers and cites, locally.
+- **On-device inference** — three brains: Apple Foundation Models for instant
+  answers, Qwen 3 4B, and Gemma 4 12B via MLX. Chat with Mini from the first
+  second while a bigger brain downloads.
+- **Live voice** — sentence-streamed neural TTS + on-device speech-to-text, and
+  a full-window voice mode with karaoke captions.
+- **Knowledge + RAG** — drop in notes and PDFs; M1K3 remembers and cites, locally.
+- **A memory that repairs itself** — a temporal memory graph of dated facts;
+  when you correct something, the dream cycle supersedes the stale fact instead
+  of silently losing either version, and keeps the history visible.
+- **A face, and creatures** — the pixel face by default; an opt-in cast of
+  low-poly 3D companions rendered on-device with RealityKit.
 - **Call memory** — encrypted, on-device call transcription.
-- **A local agent** — tools that *do* things, grounded in your own data.
-- **MCP server** — expose M1K3's local capabilities to Claude and other agents.
+- **A local agent** — tools that *do* things, grounded in your own data, with
+  markdown + syntax-highlighted code in chat.
+- **MCP server** — 15 tools over local HTTP; give Claude and other agents a
+  resident with a voice, a memory, and your knowledge.
 
 Everything above runs without leaving the device. The only network use is the
 one-time model download and an optional, explicitly-enabled web search.
@@ -51,7 +61,7 @@ one-time model download and an optional, explicitly-enabled web search.
 |---|---|---|---|
 | **macOS native** | [`macos/`](./macos) | Swift 6.2, SwiftUI, MLX-Swift | **The product** — on-device knowledge · RAG · agent · voice · calls. Build it: [`macos/README.md`](./macos/README.md). |
 | **iOS + visionOS** | [`macos/M1K3iOSApp/`](./macos/M1K3iOSApp) | Swift 6.2, SwiftUI | Native SwiftUI shell on the **same** `macos/Sources/` package graph — chat · RAG · memories · docs. Ladder tops out at Lil on-device. See [`macos/docs/IOS_VISIONOS_PORT.md`](./macos/docs/IOS_VISIONOS_PORT.md). |
-| **間 AI mobile** | [`app/`](./app) | Kotlin Multiplatform | **Next** — the **Android** surface (KMP). See [`app/README.md`](./app/README.md). |
+| **間 AI mobile** | [`app/`](./app) | Kotlin Multiplatform | Slow burn — the **Android** surface (KMP), pre-release. See [`app/README.md`](./app/README.md). |
 | **The attic** | [`attic/`](./attic) | Python, THREE.js, Tauri | Where M1K3 grew up — the original CLI, avatar experiments, and ideas. Still boots. |
 
 ## Get M1K3

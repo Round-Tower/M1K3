@@ -5,12 +5,13 @@ architecture/build/test, see `CLAUDE.md`. For *why* a decision was made (model
 swaps, phase rationale, the full session-by-session build log), see `PLAN.md` —
 it's a signed historical record and stays that way; this file doesn't repeat it.
 
-Last swept: 2026-08-02 (merge day: #92 weights-out-of-Caches + #93 chat
-markdown rendering, the rescued stranded commit + #94 the corrected-facts
-memories lens ALL MERGED by Kev; master verified 2338/335 post-merge, merged
-branches/worktrees pruned. **PR board is EMPTY.** Still Kev's: the 23 dead
-remote branches — one `git push origin --delete` batch, or repo Settings →
-"Automatically delete head branches" so the pile stops regrowing).
+Last swept: 2026-08-03 (the PROJECT DREAM CYCLE — a Tier-0/1/2 pass over the
+app, brand, and docs themselves: 3 scouts + the resident's corpus + a
+reduction pass. Verdict and principles live in `docs/DESIGN_DOCTRINE.md`;
+the measured findings and this sweep's truth-ups are in the dream-cycle PR.
+Prior sweep 2026-08-02: #92/#93/#94 all merged, master verified 2338/335.
+Still Kev's: the 23 dead remote branches — one `git push origin --delete`
+batch, or repo Settings → "Automatically delete head branches").
 
 ---
 
@@ -35,6 +36,26 @@ remote branches — one `git push origin --delete` batch, or repo Settings →
   dream) is a re-measure after the soak, not a build. The ride-along landed:
   PR #94 gives corrected facts a list-level lens in MemoriesView (2026-08-01),
   so the soak is now eyeball-able, not log-only.
+- **The reduction wave (project dream cycle, 2026-08-03).** Doctrine:
+  `docs/DESIGN_DOCTRINE.md`. The measured duplication table (progress ×9,
+  change-brain ×5, record-consent ×3-dialects, avatar-display ×2 identical)
+  becomes staged cuts, each its own small PR, doctrine-tested:
+  1. **Show-a-state-once** — model-load progress 9 → 2 (canonical + menu bar).
+  2. **One promise** — a single record-call consent component; one entry point
+     in Calls + the menu-bar toggle.
+  3. **Vocabulary collapse** — `brain`/`face`/`creature` only; kill the stray
+     model/engine/runtime strings, the unshipped "LiteRT" label, the raw-enum
+     a11y string, the wrong Agent-Log→Settings pointer, and the dead
+     `hasChosenVoiceKey` / orphaned `showImporter`.
+  4. **The debug door** — Advanced pane gutted to Diagnostics + Licenses;
+     Embeddings/Import-weights/Status/Generation-stats behind a hidden debug
+     surface; SelfTest + eval stages out of the release binary.
+  5. **One thinking control** — merge General→Reasoning with voice-mode's own
+     (today one explicitly ignores the other).
+  6. **"Left this Mac"** — the thesis, rendered: Memory screen gains a
+     permanently-empty egress list that the MCP log fills only when the port
+     is on. Absorbs the Agent Log window + half the Privacy pane. Proof, not
+     copy — and the site's next screenshot.
 
 ---
 
@@ -186,9 +207,31 @@ Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
   parked deliberately; the website content is strong, timing is the question.
   (Voice-mobile scoping call #1 was RESOLVED by #82's nav restructure — see
   the flagship section above.)
+- **Dream-cycle brand calls (2026-08-03, doctrine recommends, Kev ratifies):**
+  - **Mike: kill or commit.** Doctrine + the resident's own testimony say kill
+    (one name; the leetspeak is the joke). Touch-points if killed: the
+    Hear-a-sample line (`AppEnvironment.swift:2048` — proposed replacement:
+    "I'm M1K3. I live on this Mac. Nothing you tell me leaves it."), Android's
+    drawer "Call me Mike" + `M1K3 (Mike)` prompt.
+  - **App Store noun:** description says "assistant", everything else says
+    "companion"; the launch-package doc argued the store exception. Doctrine
+    says companion everywhere, "assistant" as keyword only.
+  - **Labyrinth icon family → attic** (complete unused second identity in
+    `assets/app-icon/` + `assets/icons/labyrinth/`).
+  - **OG image regen** — pixel face as the hero on all pages (Fox stays on
+    companions.html only); `assets/brand/readme-hero.png` (07-02) + `site/og.png`
+    (06-13) both predate the current product.
+  - **Reading-modes ceremony** — keep all four (protected), but ask once at
+    onboarding instead of a Settings-only picker.
 
 ---
 
+<!-- Review: Kev + claude-fable-5, 2026-08-03 — the project dream cycle:
+     header truth-up, the reduction wave added to Now (6 staged cuts off the
+     measured duplication table), dream-cycle brand calls gathered under
+     Needs Kev, DESIGN_DOCTRINE.md referenced as the standing test. Confidence
+     0.85 (duplication counts from a very-thorough repo scout, spot-verified;
+     the staged cuts are proposals sized from those counts, not yet built). -->
 <!-- Review: Kev + claude-fable-5, 2026-08-01 — housekeeping-day sweep: header
      truth-up (branch prune + the #93 rescue + #94 lens), Tier-2 soak bullet
      gains its #94 ride-along, PREFIXWARM moved to DONE with the 07-31

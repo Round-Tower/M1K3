@@ -11,9 +11,16 @@
 Key facts:
 - Privacy: all inference, embeddings, voice, and storage are on-device; the
   optional web-search tool is off by default
-- Models: Gemma (MLX-Swift, Metal) and Apple Foundation Models, hot-swappable
+- Models: three brains — Mini (Apple Foundation Models), Lil (Qwen 3 4B), Big
+  (Gemma 4 12B) — MLX-Swift on Metal, switchable in Settings
 - Storage: app-sandboxed, GRDB, encrypted with a Keychain-held key
-- MCP server tools: search_knowledge, list_documents, get_document (stdio)
+- Memory: a temporal memory graph with dream-cycle self-repair — corrections
+  supersede stale facts instead of silently losing them, with a visible history
+- MCP server: 15 tools (knowledge search, documents, voice, memory, ask) over
+  local HTTP at http://127.0.0.1:4242/mcp
+- Install: signed DMG at
+  https://github.com/Round-Tower/m1k3/releases/latest/download/M1K3.dmg,
+  TestFlight beta, or build from source
 - License/source: open source, https://github.com/Round-Tower/m1k3
 
 ## Docs

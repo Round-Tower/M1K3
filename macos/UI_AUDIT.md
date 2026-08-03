@@ -1,5 +1,10 @@
 # M1K3 macOS — UI, SF Symbols, Typography & Accessibility Audit
 
+> ⚠️ **SUPERSEDED (2026-08-03).** Point-in-time audit of the June 2026 app
+> (907 lines, 5 view files — the app is now ~34 surfaces). The 🔴 accessibility
+> findings were addressed in #30. Kept as history; do not read the verdicts as
+> current.
+
 > Scope: the SwiftUI app shell in `macos/M1K3App/` (ContentView, MessageView,
 > CallsView, DocumentsView, SettingsView). 907 lines, 5 view files.
 > Goal: lean into a Mac-native look (SF Symbols + SF Pro intentionality) and make
