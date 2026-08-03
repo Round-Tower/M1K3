@@ -5,13 +5,19 @@ architecture/build/test, see `CLAUDE.md`. For *why* a decision was made (model
 swaps, phase rationale, the full session-by-session build log), see `PLAN.md` —
 it's a signed historical record and stays that way; this file doesn't repeat it.
 
-Last swept: 2026-08-03 (the PROJECT DREAM CYCLE — a Tier-0/1/2 pass over the
-app, brand, and docs themselves: 3 scouts + the resident's corpus + a
-reduction pass. Verdict and principles live in `docs/DESIGN_DOCTRINE.md`;
-the measured findings and this sweep's truth-ups are in the dream-cycle PR.
-Prior sweep 2026-08-02: #92/#93/#94 all merged, master verified 2338/335.
-Still Kev's: the 23 dead remote branches — one `git push origin --delete`
-batch, or repo Settings → "Automatically delete head branches").
+Last swept: 2026-08-03 (evening) — MERGE DAY, board back to empty. Six PRs
+landed: **#95** dream-cycle truth-up + `docs/DESIGN_DOCTRINE.md` · **#96**
+reduction wave 3 (deadwood) · **#97→#98** the identity/citation leak · **#99**
+a markdown table could seize the window's width (#79 lead) · **#100** the MCP
+`FOLLOWUPS` trailer · **#101** the Mini prompt budget. Master verified
+**2359 tests / 336 suites green + Mac shell builds**. Dead remote branches
+cleared (that `git push origin --delete` is NOT classifier-blocked after all —
+the earlier note was wrong). Xcode Cloud fires on the six merge pushes,
+unwatched.
+
+Earlier the same day: the PROJECT DREAM CYCLE — a Tier-0/1/2 pass over the app,
+brand, and docs themselves (3 scouts + the resident's corpus + a reduction
+pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
 
 ---
 
@@ -36,6 +42,27 @@ batch, or repo Settings → "Automatically delete head branches").
   dream) is a re-measure after the soak, not a build. The ride-along landed:
   PR #94 gives corrected facts a list-level lens in MemoriesView (2026-08-01),
   so the soak is now eyeball-able, not log-only.
+- **★ Mini's turn shape (#102) — the one that governs how M1K3 FEELS on the
+  default brain.** Found by interviewing Mini over MCP (#101 fixed the two
+  prompting bugs that interview surfaced: the grounding cap failing open on
+  the 4096-token tier, and `PromptContext` telling M1K3 its name was "Mini").
+  What's left is architecture, not persona. Small talk runs full retrieval,
+  ~4.7 KB of grounding, all 8 tools and 3 agent iterations on a ~3B model with
+  half a context window — so "Long day, I'm wrecked" came back with retrieved
+  *rave-website documents*, and "tell me something interesting" **invented a
+  weather forecast**. The clincher: with retrieval skipped and tools halved by
+  the self-query gate, Mini **still burned its full iteration cap**. So the
+  question isn't only "should this turn retrieve?" but "should this brain be
+  running an agent loop at all for this turn?". ⚠️ The obvious fix (a
+  small-talk gate) is close to the pre-generation intent router **rejected
+  2026-06-12 as "brittle both ways"** — wants a `challenger` pass before code.
+  Lean: tier-aware prompting, scaling the scaffold to what the brain can carry.
+  **Also measured and rejected:** giving Mini the `voiceExemplars` (cost is not
+  the reason they're withheld — they're only 187 tokens; the reason is a ~3B
+  model *parrots* them as content). Evidence lives in
+  `AppleFoundationModelsProvider`'s header; harness (`interview.sh`, paced 30s)
+  in the session scratchpad. **Pace any AFM verify loop ~30s** — rapid turns
+  exhaust `ModelManagerServices` and every answer degrades to the empty floor.
 - **The reduction wave (project dream cycle, 2026-08-03).** Doctrine:
   `docs/DESIGN_DOCTRINE.md`. The measured duplication table (progress ×9,
   change-brain ×5, record-consent ×3-dialects, avatar-display ×2 identical)
@@ -43,10 +70,9 @@ batch, or repo Settings → "Automatically delete head branches").
   1. **Show-a-state-once** — model-load progress 9 → 2 (canonical + menu bar).
   2. **One promise** — a single record-call consent component; one entry point
      in Calls + the menu-bar toggle.
-  3. **Vocabulary collapse** — `brain`/`face`/`creature` only; kill the stray
-     model/engine/runtime strings, the unshipped "LiteRT" label, the raw-enum
-     a11y string, the wrong Agent-Log→Settings pointer, and the dead
-     `hasChosenVoiceKey` / orphaned `showImporter`.
+  3. ~~**Vocabulary collapse**~~ — **DONE, #96** (2026-08-03): the unshipped
+     "LiteRT" label, the raw-enum a11y string, the wrong Agent-Log→Settings
+     pointer and the dead `hasChosenVoiceKey` are all gone.
   4. **The debug door** — Advanced pane gutted to Diagnostics + Licenses;
      Embeddings/Import-weights/Status/Generation-stats behind a hidden debug
      surface; SelfTest + eval stages out of the release binary.
