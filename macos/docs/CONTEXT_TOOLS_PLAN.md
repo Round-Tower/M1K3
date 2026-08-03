@@ -1,6 +1,9 @@
 # Context Tools — the Mac as M1K3's senses (plan)
 
-**Status:** PLAN — no code yet. Security-audit pass required before the first
+**Status:** PARKED (2026-08-03) — plan only, zero code, not on the roadmap.
+The folded security-audit findings (distillation-exclusion taint before Phase 2,
+second consent tier for `ask_m1k3`) remain the binding prerequisites whenever
+this is scheduled via ROADMAP.md. Security-audit pass required before the first
 tool lands (the brain-at-home precedent: auditor walks the design, blocking
 findings fold into this doc, then code).
 

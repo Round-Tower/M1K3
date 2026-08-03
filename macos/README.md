@@ -15,7 +15,9 @@ that it runs fully offline (web search is opt-in).
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) and (optional, nicer logs)
   [xcbeautify](https://github.com/cpisciotta/xcbeautify):
   `brew install xcodegen xcbeautify`
-- ~8 GB free disk for the default model set (more if you enable bigger brains).
+- Disk: nothing to download for the default brain (Mini runs on Apple's
+  on-device models). Allow ~2–7 GB extra only if you opt into the bigger
+  Lil/Big brains.
 
 ## Build & run
 

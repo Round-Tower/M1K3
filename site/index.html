@@ -36,13 +36,13 @@
   "name": "M1K3 for Mac",
   "operatingSystem": "macOS 26",
   "applicationCategory": "UtilitiesApplication",
-  "description": "A privacy-first AI companion that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3.5, Apple Foundation Models), live voice, a personal knowledge graph with RAG, encrypted call transcription, a local agent, and an MCP server.",
+  "description": "A privacy-first AI companion that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice, a personal knowledge graph with RAG, encrypted call transcription, a local agent, and an MCP server.",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
   "url": "https://m1k3.app/",
   "downloadUrl": "https://github.com/Round-Tower/m1k3",
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie", "sameAs": ["https://github.com/Round-Tower"] },
   "sameAs": ["https://github.com/Round-Tower/m1k3"],
-  "dateModified": "2026-06-26"
+  "dateModified": "2026-08-03"
 }
 </script>
 <script type="application/ld+json">
@@ -53,15 +53,15 @@
     { "@type": "Question", "name": "Does M1K3 send my data to a server?",
       "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 runs entirely on your Mac: inference, voice, embeddings, and storage are all on-device. Zero bytes of your conversations, documents, or calls are sent to any server. The optional web-search tool is off by default and clearly toggled." } },
     { "@type": "Question", "name": "What AI models does M1K3 run?",
-      "acceptedAnswer": { "@type": "Answer", "text": "M1K3 runs Google Gemma 4 and Qwen 3.5 locally via MLX-Swift on Apple Silicon — three brain sizes, from a fast 2B to a deep-reasoning 9B — with Apple Foundation Models handling fast turns. You can hot-swap runtimes in Settings mid-conversation." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "M1K3 runs three brains, all on your Mac: Mini on Apple Foundation Models for instant answers, Lil on Qwen 3 4B, and Big on Google Gemma 4 12B for deep reasoning — via MLX-Swift on Apple Silicon. Switch brains in Settings any time." } },
     { "@type": "Question", "name": "Which Macs does M1K3 support?",
       "acceptedAnswer": { "@type": "Answer", "text": "M1K3 requires an Apple Silicon Mac running macOS 26 Tahoe. It is a native SwiftUI app with Metal-accelerated inference, not an Electron wrapper." } },
     { "@type": "Question", "name": "How is M1K3 different from Ollama or ChatGPT?",
       "acceptedAnswer": { "@type": "Answer", "text": "Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI companion: local models plus live voice, a personal knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server, in one sandboxed native Mac app." } },
     { "@type": "Question", "name": "Can Claude or other AI agents use my M1K3 knowledge?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an MCP (Model Context Protocol) server exposing search_knowledge, list_documents, and get_document, so Claude and other MCP clients can query your local knowledge base, locally." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an in-app MCP (Model Context Protocol) server with 15 tools — knowledge search, documents, voice, memory, and ask-M1K3 — over local HTTP at 127.0.0.1:4242, so Claude and other MCP clients can query your local knowledge base without a byte leaving the Mac." } },
     { "@type": "Question", "name": "Is M1K3 free and open source?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 is free for humans, forever, and open source, developed by Round Tower in Ireland — no account, no subscription, no telemetry. You can join the TestFlight beta today or build it from source on GitHub. An optional GitHub Sponsors page funds development without gating features." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 is free for humans, forever, and open source, developed by Round Tower in Ireland — no account, no subscription, no telemetry. You can download the signed Mac app directly, join the TestFlight beta, or build it from source on GitHub. An optional GitHub Sponsors page funds development without gating features." } }
   ]
 }
 </script>
@@ -392,7 +392,7 @@
     <h1 class="headline reveal in">Your AI.<br />Your Mac.<br /><span class="dim" id="rotator">Nothing leaves.</span></h1>
     <p class="sub reveal in">M1K3 is a native AI companion that runs <strong>entirely on your Mac</strong>. Local models, live voice, a knowledge graph that remembers everything — and a network cable it never asks for.</p>
     <div class="cta-row reveal in">
-      <a class="btn btn-primary" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
+      <a class="btn btn-primary" href="https://github.com/Round-Tower/m1k3/releases/latest/download/M1K3.dmg">Download for Mac</a>
       <a class="btn btn-ghost" href="#features">See what's inside</a>
     </div>
     <div class="hero-meta">REQUIRES MACOS 26 TAHOE · APPLE SILICON · FREE FOR HUMANS, FOREVER</div>
@@ -408,7 +408,7 @@
 <div class="band" id="private">
   <div class="band-inner">
     <div class="stat reveal"><div class="num" data-num="0">0</div><div class="desc">bytes of your data sent to a server. Inference, voice, and memory are all on-device.</div></div>
-    <div class="stat reveal"><div class="num" data-num="100%">100%</div><div class="desc">local model stack — MLX-Swift Gemma 4 + Qwen 3.5 plus Apple Foundation Models, hot-swappable.</div></div>
+    <div class="stat reveal"><div class="num" data-num="100%">100%</div><div class="desc">local model stack — MLX-Swift Gemma 4 + Qwen 3 plus Apple Foundation Models, switchable in Settings.</div></div>
     <div class="stat reveal"><div class="num" data-num="1">1</div><div class="desc">place your knowledge lives: an encrypted store on your Mac, keyed from your Keychain.</div></div>
     <div class="stat reveal"><div class="num" data-num="∞">∞</div><div class="desc">things it remembers. Documents, conversations, calls — searchable forever, by you alone.</div></div>
   </div>
@@ -426,8 +426,8 @@
     <div class="cell reveal">
       <div class="cell-icon">▚▚</div>
       <h3>On-device inference</h3>
-      <p>Gemma 4 and Qwen 3.5 on MLX-Swift with Apple Foundation Models handling fast turns. Pick your runtime in Settings and hot-swap mid-conversation.</p>
-      <span class="tag">mlx-swift · gemma-4 · qwen-3.5 · afm</span>
+      <p>Gemma 4 and Qwen 3 on MLX-Swift with Apple Foundation Models handling fast turns. Pick your brain in Settings and switch any time.</p>
+      <span class="tag">mlx-swift · gemma-4 · qwen3 · afm</span>
     </div>
     <div class="cell reveal">
       <div class="cell-icon">◉))</div>
@@ -457,7 +457,7 @@
       <div class="cell-icon">&lt;/&gt;</div>
       <h3>MCP server</h3>
       <p>M1K3 exposes your knowledge to Claude and other agents over the Model Context Protocol. Your second brain, available to your other AIs — locally.</p>
-      <span class="tag">mcp · search_knowledge · stdio</span>
+      <span class="tag">mcp · 15 tools · 127.0.0.1:4242</span>
     </div>
   </div>
 </section>
@@ -512,7 +512,7 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>What AI models does it run?</summary>
-      <p>Google Gemma locally via MLX-Swift on Apple Silicon, with Apple Foundation Models handling fast turns. Hot-swap runtimes in Settings, mid-conversation.</p>
+      <p>Three brains, all local: Apple Foundation Models for instant answers, Qwen 3 4B, and Gemma 4 12B for deep reasoning — via MLX-Swift on Apple Silicon. Switch in Settings any time.</p>
     </details>
     <details class="reveal">
       <summary>Which Macs are supported?</summary>
@@ -528,7 +528,7 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>Is it free?</summary>
-      <p>Free for humans, forever — and open source, made by Round Tower in Ireland. No account, no subscription, no telemetry. Join the TestFlight beta or build from source today. If M1K3 earns a place on your Mac, there's an optional <a href="https://github.com/sponsors/Round-Tower">GitHub Sponsors</a> page — it funds development, never gates features.</p>
+      <p>Free for humans, forever — and open source, made by Round Tower in Ireland. No account, no subscription, no telemetry. Download the signed Mac app, join the TestFlight beta, or build from source today. If M1K3 earns a place on your Mac, there's an optional <a href="https://github.com/sponsors/Round-Tower">GitHub Sponsors</a> page — it funds development, never gates features.</p>
     </details>
   </div>
 </section>
@@ -539,9 +539,10 @@ the action list?<br />
 <section class="final" id="get">
   <span class="label reveal">// now in open beta</span>
   <h2 class="reveal" style="margin-top:18px;">Own your AI.</h2>
-  <p class="reveal">M1K3 for Mac is on TestFlight now. Free for humans, forever — run it on your own Mac, or build it from source.</p>
+  <p class="reveal">M1K3 for Mac is ready to download. Free for humans, forever — run it on your own Mac, or build it from source.</p>
   <div class="cta-row reveal" style="justify-content:center;">
-    <a class="btn btn-primary" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
+    <a class="btn btn-primary" href="https://github.com/Round-Tower/m1k3/releases/latest/download/M1K3.dmg">Download for Mac</a>
+    <a class="btn btn-ghost" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
     <a class="btn btn-ghost" href="https://github.com/Round-Tower/m1k3">Build from source</a>
   </div>
   <p class="reveal" style="margin-top:30px; font-family:var(--mono); font-size:13px; letter-spacing:0.06em; color:var(--ink-faint);">Free, and staying that way. If it earns a place on your Mac, you can <a href="https://github.com/sponsors/Round-Tower" style="color:var(--ink-dim); text-decoration:underline;">sponsor its development</a> — optional, never nagged.</p>
@@ -558,7 +559,7 @@ the action list?<br />
 <script>
   (function () {
     var bootEl = document.getElementById('boot');
-    var bootLines = '> m1k3 boot — local only\n> models: gemma-4 + qwen3.5 [metal] .. OK\n> network: not required';
+    var bootLines = '> m1k3 boot — local only\n> models: gemma-4 + qwen3 [metal] .. OK\n> network: not required';
     var bi = 0;
     (function typeBoot() {
       if (bi <= bootLines.length) {

@@ -5,8 +5,8 @@
 > spike**: declare the platforms, prove the library graph compiles for iOS/visionOS,
 > guard the few macOS-only leaves, and inventory the real runtime work — *before*
 > building the app target / UI / TestFlight lane. Kev's decision (2026-07-06):
-> mobile is THIS app, not the KMP `app/` surface — supersedes the "iOS = KMP" note in
-> `tools/release/README.md` §3 (reconcile additively there when the shell lands).
+> mobile is THIS app, not the KMP `app/` surface. (The "iOS = KMP" note in
+> `tools/release/README.md` §3 was reconciled when the shell landed — done.)
 
 ## What the spike proved
 
@@ -26,8 +26,10 @@ shell — **not** in the library graph. After declaring `.iOS(.v26)` + `.visionO
 | M1K3Calls | ✅ | after the ScreenCaptureKit guard |
 | M1K3MCPKit, M1K3MCP | ✅ | after the `homeDirectoryForCurrentUser` guard |
 
-`swift test --parallel` on macOS stays green (**1749 tests / 258 suites**), so the
-platform declaration + guards + memory-band changes are non-regressive to the Mac build.
+`swift test --parallel` on macOS stayed green (**1749 tests / 258 suites at the
+time of the spike** — the live count has grown well past that since; ROADMAP.md
+carries the current number), so the platform declaration + guards + memory-band
+changes were non-regressive to the Mac build.
 
 **visionOS** (`generic/platform=visionOS Simulator`, representative spot-check): M1K3MLX,
 M1K3Calls, M1K3MCPKit, M1K3Chat, M1K3Avatar all ✅. **One dependency gap, not our code:**
