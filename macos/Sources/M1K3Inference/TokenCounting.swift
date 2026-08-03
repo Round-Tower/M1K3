@@ -6,9 +6,16 @@
 //  string through a provider's own tokenizer — not a chars≈tokens estimate.
 //  Only tokenizer-backed backends (MLX) conform; Apple Foundation Models /
 //  Mini have no exposed tokenizer and simply don't — callers reach this via
-//  `provider as? TokenCounting`, and a nil cast is itself the correct answer
-//  ("this turn's provider self-manages its context window, there is nothing
-//  to measure or cap").
+//  `provider as? TokenCounting`.
+//
+//  ⚠️ A nil cast means ONLY "no exact count available". It does NOT mean "this
+//  provider self-manages its context window, there is nothing to measure or
+//  cap" — this header said exactly that until 2026-08-03, and that belief was
+//  the bug. Apple Foundation Models does not self-manage: it throws
+//  `exceededContextWindowSize` at 4096 tokens, the SMALLEST window of any tier,
+//  and was the only tier `GroundingBudget` exempted from its cap. Callers must
+//  treat nil as "estimate instead" (see `GroundingBudget.measure`), never as
+//  "skip the limit". Unmeasurable is not unlimited.
 //
 //  First consumer: `GroundingBudget` (M1K3Knowledge) caps the KNOWLEDGE +
 //  memory grounding lanes AgentRAGResponder injects into the prompt, before

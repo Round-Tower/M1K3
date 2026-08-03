@@ -49,9 +49,11 @@
 //  size safety cap: right after GroundingGate.partition, GroundingBudget.fit
 //  caps the combined chunks+memories to ~1100 tokens (measured, PR #65) before
 //  anything renders them, closing the near-miss where gemma-4's grounded-Q
-//  worst case landed at 2998/3000 reserve tokens. No-op when the provider
-//  isn't `TokenCounting` (AFM/Mini). A `.notice` breadcrumb fires only when
-//  the cap actually changed something — see GroundingBudget.swift.
+//  worst case landed at 2998/3000 reserve tokens. A `.notice` breadcrumb fires
+//  only when the cap actually changed something — see GroundingBudget.swift.
+//  (This line used to read "no-op when the provider isn't `TokenCounting`
+//  (AFM/Mini)" — that exemption was the 2026-08-03 Mini bug. The cap now
+//  applies on every tier, estimating when there is no exact tokenizer.)
 
 import Foundation
 import M1K3Agent

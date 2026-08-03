@@ -23,20 +23,18 @@
 import Foundation
 @testable import M1K3Chat
 import M1K3Inference
+import M1K3Knowledge
 import Testing
 
 struct MiniPromptBudgetTests {
     /// Apple Foundation Models' hard ceiling, quoted verbatim by the SDK error.
     static let miniContextWindow = 1024 * 4
 
-    /// The project's own measured figure for real prose+markup content
-    /// (PR #65's prompt-size instrument, 2026-07-20: ~4.4–4.7 chars/token).
-    /// Deliberately the LOW end — under-estimating chars-per-token
-    /// over-estimates the token count, which is the safe direction for a budget.
-    static let charsPerToken = 4.4
-
+    /// Shared with the live budget rather than restated, so the two can't drift:
+    /// a second hardcoded 4.4 here would let this suite keep passing against a
+    /// figure the cap no longer uses.
     static func estimatedTokens(_ text: String) -> Int {
-        Int((Double(text.count) / charsPerToken).rounded(.up))
+        GroundingBudget.estimatedTokens(text)
     }
 
     @Test("the standing persona alone leaves Mini room to work")
