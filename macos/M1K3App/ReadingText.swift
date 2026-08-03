@@ -19,6 +19,20 @@
 //  ReadingMode's base font, so bold/italic/inline-code/links render for real in
 //  every mode except bionic, which still works on the block's plain characters
 //  (its whole premise is uniform word-boldening, same as before this change).
+//  Review: Kev + claude-opus-5, 2026-08-03, Confidence 0.75 — `tableView` was a
+//  bare `Grid`, the one wide-content renderer here without a horizontal scroll
+//  (CodeBlockView has always had one, which is why a long code line has never
+//  been able to shove the window around). A Grid sizes to its content and
+//  propagates that outward as a MINIMUM, and a SwiftUI minimum reaches the
+//  window — probed live, a 100pt window clamps to exactly ContentView's
+//  `minWidth: 480` — so a table with a few columns, or one unbreakable token
+//  that cannot wrap, FORCED the user's window wider. That is the shape of the
+//  self-resize on issue #79 (560 → 723 as an answer streamed in, immediately
+//  before AppKit's 300-iteration layout warning), though the causal link to
+//  that crash is unproven and the July reports predate tables entirely. Wrapped
+//  in ScrollView(.horizontal) with the card background moved outside it, so the
+//  card also spans the bubble now instead of hugging a narrow table. iOS shares
+//  this file (project.yml) and has no window to give.
 
 import M1K3Chat
 import SwiftUI
@@ -87,23 +101,10 @@ struct ReadingText: View {
     /// cell has its own leaf identity, so without this the table read as a
     /// flat list of every cell's text, one per line). Plain Grid — no
     /// striping/borders yet, just real rows and columns instead of word salad.
-    /// Wide content scrolls INSIDE its own container — the same rule
-    /// CodeBlockView already follows, and the reason a long code line has never
-    /// been able to shove the window around.
-    ///
-    /// A bare `Grid` sizes to its content and propagates that as a MINIMUM
-    /// outward, and a SwiftUI view's minimum reaches the window: probing the
-    /// live app, setting the window to 100pt wide clamps it to exactly the
-    /// `minWidth: 480` declared on ContentView's NavigationSplitView. So a
-    /// table with a few columns — or one unbreakable token, a URL or an
-    /// identifier, that cannot wrap at all — didn't just look cramped, it
-    /// FORCED the user's window wider. That is the shape of the 2026-08-03
-    /// self-resize logged on issue #79: a streamed answer landed and the window
-    /// grew itself 560 → 723 (a content-shaped number, not a constant),
-    /// immediately before AppKit's `layoutSubtreeIfNeeded … 300 iterations`.
-    /// Whether that resize is what tips the known NSThemeFrame recursion is
-    /// still unproven — but a bubble seizing the window is a defect on its own,
-    /// and on iOS (which shares this file) there is no window to give.
+    /// Wide content scrolls INSIDE its own container, the same rule
+    /// CodeBlockView follows — a bare `Grid` propagates its content width
+    /// outward as a MINIMUM, and a SwiftUI minimum reaches the window. See the
+    /// file header's 2026-08-03 Review block and issue #79 for the measurement.
     private func tableView(header: [AttributedString], rows: [[AttributedString]]) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             Grid(alignment: .topLeading, horizontalSpacing: 14, verticalSpacing: 6) {
