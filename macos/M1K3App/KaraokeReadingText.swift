@@ -30,6 +30,12 @@ struct KaraokeReadingText: View {
     /// UTF-16 range of the word currently being heard.
     let currentWordRange: Range<Int>?
 
+    /// Compact hugs its content — no ScrollView, no claimed height. For the
+    /// voice bubbles, where the sentence-streamed line is short and the
+    /// surrounding glass should wrap it tightly (Kev: "the view is too
+    /// large"). Long content still belongs to the scrolling default.
+    var compact = false
+
     @AppStorage(ReadingMode.storageKey) private var savedModeRaw = ReadingMode.standard.rawValue
 
     private var mode: ReadingMode {
@@ -48,6 +54,21 @@ struct KaraokeReadingText: View {
         let words = wordRanges
         let current = currentIndex
         let paragraphs = ParagraphSplitter.split(text)
+        if compact {
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(paragraphs.indices, id: \.self) { index in
+                    paragraphText(paragraphs[index], allWords: words, globalCurrent: current)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            scrolling(words: words, current: current, paragraphs: paragraphs)
+        }
+    }
+
+    private func scrolling(
+        words: [Range<Int>], current: Int?, paragraphs: [ParagraphSplitter.Paragraph]
+    ) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {

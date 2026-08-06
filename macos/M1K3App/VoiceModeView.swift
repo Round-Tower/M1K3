@@ -184,15 +184,21 @@ struct VoiceModeView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 if let text = env.speechHighlight.utteranceText {
+                    // Compact: the bubble hugs the sentence — no claimed
+                    // height (the old ScrollView made every line a 180pt
+                    // slab). Long utterances cap and the tail truncates
+                    // visually; the audio and transcript carry it all.
                     KaraokeReadingText(
                         text: text,
                         timeline: env.speechHighlight.timeline,
-                        currentWordRange: env.speechHighlight.currentWordRange
+                        currentWordRange: env.speechHighlight.currentWordRange,
+                        compact: true
                     )
-                    .frame(maxHeight: 180)
+                    .frame(maxHeight: 150)
+                    .clipped()
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                    .padding(.vertical, 10)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 18))
                     .accessibilityLabel("M1K3 is speaking")
                 } else if spokenBubbles.isEmpty {
                     Text("Speaking…")

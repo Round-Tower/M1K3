@@ -204,7 +204,18 @@ extension AppEnvironment {
         UserDefaults.standard.set(true, forKey: Self.hasEnteredVoiceModeKey)
         UserDefaults.standard.set(true, forKey: Self.voiceModeActiveKey)
         soundEffects.play(.voiceEnter) // M1K3 materialising
-        let controller = VoiceLoopController(dependencies: makeVoiceLoopDependencies())
+        // Conversational endpointing (Kev, 2026-08-06: the defaults cut him
+        // off mid-thought — "it needs to be more fluid"). Complete-sounding
+        // sentences still turn over at 2s; a mid-thought trail-off gets a
+        // generous 4.5s to breathe, and long thoughts get 30s before the
+        // stuck-recognizer cap. Mobile runs its own gentler pair (2.0/3.5,
+        // 2026-07-29) — same complaint, same direction.
+        let controller = VoiceLoopController(
+            dependencies: makeVoiceLoopDependencies(),
+            silence: .seconds(2.0),
+            holdSilence: .seconds(4.5),
+            maxWait: .seconds(30)
+        )
         voiceLoop = controller
         controller.begin()
         // Voice deserves the sharper engine. If WhisperKit isn't loaded, kick its
