@@ -33,7 +33,14 @@ public enum HeartbeatComposer {
             lines.append("A quiet stretch — nothing new since the last pulse.")
         }
         if let fact = context.funFact {
-            lines.append("From the shelf: \(fact.text) [\(fact.sourceTitle)]")
+            // A remembered fact's title often IS its body (truncated) — a
+            // duplicate bracket reads broken (first live pulse, 2026-08-06).
+            let bareTitle = fact.sourceTitle.trimmingCharacters(in: CharacterSet(charactersIn: "…, "))
+            if fact.text.hasPrefix(bareTitle) || bareTitle.hasPrefix(fact.text) {
+                lines.append("From the shelf: \(fact.text)")
+            } else {
+                lines.append("From the shelf: \(fact.text) [\(fact.sourceTitle)]")
+            }
         }
         return lines.joined(separator: "\n")
     }

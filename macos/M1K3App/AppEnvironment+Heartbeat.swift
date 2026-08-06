@@ -37,6 +37,7 @@ import AppKit
 import Foundation
 import M1K3AgentTools
 import M1K3Heartbeat
+import M1K3Inference
 import M1K3LogCore
 
 extension AppEnvironment {
@@ -223,7 +224,11 @@ extension AppEnvironment {
             Self.heartbeatLog.notice("render failed: generate error — digest ships")
             return (nil, "digest")
         }
-        let cleaned = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        // The models emit their trained FOLLOWUPS trailer even here (the #100
+        // bug class, re-observed on the FIRST live pulse) — strip it before
+        // the guard sees the text.
+        let cleaned = FollowUpSplit.split(raw).answer
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         guard NarrativeGuard.validate(narrative: cleaned, digest: digest) else {
             Self.heartbeatLog.notice("render rejected by NarrativeGuard — digest ships")
             return (nil, "digest")

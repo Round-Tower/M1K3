@@ -61,4 +61,17 @@ struct NarrativeGuardTests {
         let narrative = "A quiet one. The machine's cool and I learned a few things worth keeping."
         #expect(NarrativeGuard.validate(narrative: narrative, digest: digest))
     }
+
+    @Test("the Mac noun is rejected — the machine is the word (first live pulse said Mac)")
+    func macNounRejected() {
+        #expect(!NarrativeGuard.validate(narrative: "Mac's breathing easy today.", digest: digest))
+        #expect(!NarrativeGuard.validate(narrative: "The Mac is cool.", digest: digest))
+        #expect(!NarrativeGuard.validate(narrative: "Both Macs are cool.", digest: digest))
+    }
+
+    @Test("machine and MacBook-free compounds are not false-positives for the Mac check")
+    func macNounBoundaries() {
+        let narrative = "The machine is cool as ever."
+        #expect(NarrativeGuard.validate(narrative: narrative, digest: digest))
+    }
 }

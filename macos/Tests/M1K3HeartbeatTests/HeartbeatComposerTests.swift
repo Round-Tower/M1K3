@@ -122,6 +122,18 @@ struct HeartbeatComposerTests {
         #expect(digest.contains("Irish towers"))
     }
 
+    @Test("a title-equals-body fun fact drops the duplicate bracket (first live pulse)")
+    func funFactTitleIsBody() {
+        let digest = HeartbeatComposer.digest(from: makeContext(
+            funFact: .init(
+                text: "The user is running on a Jetson Orin Nano with 8GB RAM.",
+                sourceTitle: "The user is running on a Jetson Orin Nano,…"
+            )
+        ))
+        #expect(digest.contains("Jetson Orin Nano with 8GB RAM."))
+        #expect(!digest.contains("["))
+    }
+
     @Test("excerpt cuts at a sentence end, never mid-word")
     func excerptSentenceCut() {
         let text = "Round towers were bell houses. They also served as refuges. Some are twelve floors."
