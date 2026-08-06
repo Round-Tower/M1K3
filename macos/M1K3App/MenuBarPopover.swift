@@ -15,6 +15,7 @@ import AppKit
 import M1K3Avatar
 import M1K3Calls
 import M1K3Chat
+import M1K3Heartbeat
 import SwiftUI
 
 struct MenuBarPopover: View {
@@ -27,6 +28,7 @@ struct MenuBarPopover: View {
     @AppStorage(AppEnvironment.hasChosenBrainKey) private var hasChosenBrain = false
     @State private var question = ""
     @State private var showRecordConsent = false
+    @State private var latestPulse: HeartbeatEntry?
     @FocusState private var askFocused: Bool
 
     var body: some View {
@@ -74,6 +76,7 @@ struct MenuBarPopover: View {
                 if hasChosenBrain {
                     askSection(env)
                     Divider()
+                    heartbeatSection(env)
                     toggles(env)
                     Divider()
                 } else {
@@ -172,6 +175,43 @@ struct MenuBarPopover: View {
         case let .failed(_, message):
             Text(message).font(.caption).foregroundStyle(.red)
         }
+    }
+
+    // MARK: Heartbeat — the latest pulse, ambient (principle 6: one canonical
+
+    // surface in Settings, this one line in the menu bar, zero elsewhere)
+
+    @ViewBuilder
+    private func heartbeatSection(_ env: AppEnvironment) -> some View {
+        if env.heartbeatEnabled, let pulse = latestPulse {
+            VStack(alignment: .leading, spacing: 4) {
+                Label {
+                    Text(pulse.createdAt, style: .relative) + Text(" ago")
+                } icon: {
+                    Image(systemName: "waveform.path.ecg")
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                Text(pulse.displayText)
+                    .font(.caption)
+                    .lineLimit(3)
+                    .foregroundStyle(.primary)
+            }
+            .task(id: env.heartbeatRevision) { await refreshLatestPulse(env) }
+            Divider()
+        } else if env.heartbeatEnabled {
+            // Store read races the first render: kick the load, show nothing.
+            Color.clear.frame(height: 0)
+                .task(id: env.heartbeatRevision) { await refreshLatestPulse(env) }
+        }
+    }
+
+    /// One-row store read off the main actor (the no-main-thread-IO rule).
+    private func refreshLatestPulse(_ env: AppEnvironment) async {
+        guard let store = env.heartbeatStore else { return }
+        latestPulse = await Task.detached(priority: .utility) {
+            (try? store.recent(limit: 1))?.first
+        }.value
     }
 
     // MARK: Quick toggles

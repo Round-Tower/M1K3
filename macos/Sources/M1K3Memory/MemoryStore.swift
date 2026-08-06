@@ -927,6 +927,26 @@ public final class MemoryStore: @unchecked Sendable {
         }
     }
 
+    /// Live memories created at or after `since`, newest first — the
+    /// heartbeat's "what did I learn since the last pulse" window. Filtered
+    /// in SQL on the indexed created_at column (never fetch-then-partition —
+    /// the PR #94 lesson); superseded rows excluded (a corrected fact isn't
+    /// news).
+    public func memoriesCreated(since: Date, limit: Int = 100) throws -> [Memory] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                SELECT * FROM memories
+                WHERE superseded_by IS NULL AND created_at >= ?
+                ORDER BY created_at DESC LIMIT ?
+                """,
+                arguments: [since.timeIntervalSince1970, limit]
+            )
+            return rows.compactMap { Self.memory(from: $0) }
+        }
+    }
+
     /// Corrected rows only (superseded_by set), newest first — the corrected-
     /// facts lens. Its OWN query and limit on purpose: sharing allMemories'
     /// row budget lets recent corrected rows displace live ones out of the

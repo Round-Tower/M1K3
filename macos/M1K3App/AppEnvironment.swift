@@ -35,6 +35,7 @@ import M1K3AgentTools
 import M1K3Avatar
 import M1K3Calls
 import M1K3Chat
+import M1K3Heartbeat
 import M1K3Inference
 import M1K3Knowledge
 import M1K3KnowledgeTools
@@ -79,6 +80,12 @@ final class AppEnvironment {
     /// flipping the toggle takes effect with no server restart. Best-effort,
     /// same inert-on-open-failure stance as `memoryStore`.
     let conversationLog: ConversationLogStore?
+    /// The heartbeat's pulse store (heartbeat.sqlite, capped rolling window,
+    /// one-tap Clear, excluded from diagnostics AND from the chat transcript
+    /// — so memory distillation can never mint facts from a pulse). Gated by
+    /// `heartbeatEnabledKey` (OFF by default); best-effort, same
+    /// inert-on-open-failure stance as `memoryStore`.
+    let heartbeatStore: HeartbeatStore?
     let provider: any InferenceProvider
     let responder: any RAGResponding
     /// The review panel's shared state: the inspector, chat link-chips, the MCP
@@ -143,6 +150,14 @@ final class AppEnvironment {
     /// Late-bound bridge the delegate_deep tool holds (the palette is built in
     /// init before `self` exists); the handler installs at the end of init.
     let deepDelegationHook = DeepDelegationHook()
+    /// The heartbeat's coarse check loop (10-min ticks deciding via the pure
+    /// policy) — see AppEnvironment+Heartbeat.swift.
+    @ObservationIgnored var heartbeatTask: Task<Void, Never>?
+    /// Bumped after each recorded pulse so SwiftUI surfaces re-read the store
+    /// (the `historyRevision` idiom).
+    var heartbeatRevision = 0
+    /// Single-flight guard for one pulse's gather→render→record run.
+    @ObservationIgnored var heartbeatPulseInFlight = false
     /// Call intelligence: encrypted-at-rest persistence + indexing into the SAME
     /// knowledge graph as documents (so calls are RAG-searchable) + two-stage
     /// summary. Composed from the M1K3Calls seams.
@@ -285,6 +300,9 @@ final class AppEnvironment {
     /// store's `isEnabled` predicate — read from the server's dispatch path —
     /// can check it off the main actor.
     nonisolated static let conversationLogEnabledKey = "mcp.conversationLog.enabled"
+    /// The heartbeat consent toggle — OFF by default (a persisted pulse history
+    /// is a consent surface, not a convenience; Kev's default to flip).
+    nonisolated static let heartbeatEnabledKey = "heartbeat.enabled"
     /// One-shot: the call-encryption key has been migrated to Touch-ID protection.
     /// Guards the (prompt-triggering) reassert so it runs once, not every launch.
     static let callKeyProtectionMigratedKey = "calls.keyProtectionMigrated"
@@ -505,6 +523,22 @@ final class AppEnvironment {
             Self.memoryLog.error("conversation log store open failed — agent log inert: \(error.localizedDescription, privacy: .public)")
         }
 
+        // The heartbeat pulse store — its own file, same separate-lifecycle
+        // reasoning as the two above (capped rolling window, one-tap Clear,
+        // excluded from diagnostics). Backup-excluded below: a pulse history
+        // is a rolling status feed, not something Time Machine should archive.
+        let heartbeatURL = url.deletingLastPathComponent().appendingPathComponent("heartbeat.sqlite")
+        do {
+            heartbeatStore = try HeartbeatStore(path: heartbeatURL.path)
+            var resourceURL = heartbeatURL
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? resourceURL.setResourceValues(values)
+        } catch {
+            heartbeatStore = nil
+            Self.memoryLog.error("heartbeat store open failed — heartbeat inert: \(error.localizedDescription, privacy: .public)")
+        }
+
         // Embeddings define the stored vector space, so the choice must persist
         // across launches (Hashing query vectors against MLX-stored vectors would
         // not match). Honour the saved preference; switching at runtime re-embeds
@@ -652,6 +686,9 @@ final class AppEnvironment {
         menuBarAsk = MenuBarAsk(environment: self)
         // Cheap + synchronous (registration only) — see AppEnvironment+MetricKit.swift.
         startMetricKitCollection()
+        // The heartbeat's coarse check loop (no-op while the toggle is off) —
+        // see AppEnvironment+Heartbeat.swift.
+        startHeartbeatLoop()
 
         // Warm a restored MLX brain (Lil/Big) on launch so it's ready to answer;
         // Mini (Apple) needs nothing. Setting selectedRuntime drives the existing

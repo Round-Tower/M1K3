@@ -23,6 +23,13 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
 
 ## Now
 
+- **The Heartbeat — v1 shipped 2026-08-06 (default OFF, Kev's calls owed).**
+  The 2-hourly narrative pulse: deterministic digest + resident-MLX
+  retelling, popover line + Settings surface. `docs/HEARTBEAT_DESIGN.md`
+  carries the challenger record and the open ruling — the activity-log vs
+  prove-nothing-kept double-bind (default/cap/history-length) and the
+  "heartbeat" noun. ⌘R verify-owed: toggle on, live with it an afternoon,
+  A/B the Big vs Lil narrative before defaulting on.
 - **iOS voice-mode crash triage (#85).** Code-inspection pass done (2026-07-31,
   findings on the issue): the voice session layer is clean; ranked suspects
   are ① jetsam memory-limit exit (fits "no `.ips`" — check for `JetsamEvent`

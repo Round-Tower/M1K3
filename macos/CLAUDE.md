@@ -118,6 +118,7 @@ shell that wires concrete backends to the seams; `AppEnvironment` (+ its
 | `M1K3Launch` | Launch-at-login (SMAppService seam) for the menu-bar companion. |
 | `M1K3Preview` | Review-panel router (link/file → `ReviewTarget`); QuickLook/WKWebView renderers live in the app. |
 | `M1K3Diagnostics` | Privacy scrub + issue-report formatting + the diagnostic log partition for the secret-free "Report an issue" flow, plus the MetricKit payload digest (`MetricPayloadDigest`) and the bounded on-disk store's pure retention/pruning decision (`MetricRetentionPolicy`). Pure/dependency-free so the redaction + digest/retention rules are unit-pinned. |
+| `M1K3Heartbeat` | The 2-hourly narrative pulse: pure schedule/quiet-hours/empty-pulse policies, the deterministic digest composer (the #102 guard — facts from code, never the model), `NarrativeGuard` (confabulation tripwire), and a capped GRDB pulse store (own file, one-tap Clear, backup- and diagnostics-excluded, never enters the chat transcript). The scheduler effect + resident-MLX render live in `AppEnvironment+Heartbeat.swift`. |
 
 **Brains** (`BrainTier.swift`): three tiers — **Mini** (Apple Foundation Models,
 instant, no download), **Lil** (`Qwen3-4B-Instruct-2507-4bit`, since 2026-07-16 —
