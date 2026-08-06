@@ -74,4 +74,25 @@ struct NarrativeGuardTests {
         let narrative = "The machine is cool as ever."
         #expect(NarrativeGuard.validate(narrative: narrative, digest: digest))
     }
+
+    @Test("digits from the day's earlier pulses are allowed — the prompt asks for the arc (pulse 2 live rejection)")
+    func earlierPulseDigitsAllowed() {
+        let narrative = "Disk's breathing again — 4GB this morning, 210 now."
+        #expect(!NarrativeGuard.validate(narrative: narrative, digest: digest))
+        #expect(NarrativeGuard.validate(
+            narrative: narrative,
+            digest: digest,
+            earlierPulses: ["Cool and steady, 4GB of space to spare."]
+        ))
+    }
+
+    @Test("the verdict names the rejection reason, content-free")
+    func verdictReasons() {
+        #expect(NarrativeGuard.verdict(narrative: "", digest: digest) == .empty)
+        #expect(NarrativeGuard.verdict(narrative: "The Mac hums.", digest: digest) == .macNoun)
+        #expect(NarrativeGuard.verdict(narrative: "Battery hit 12%.", digest: digest) == .inventedDigit)
+        #expect(NarrativeGuard.verdict(narrative: "All calm at 84%.", digest: digest) == .pass)
+        let long = String(repeating: "cool ", count: 400)
+        #expect(NarrativeGuard.verdict(narrative: long, digest: digest) == .tooLong)
+    }
 }

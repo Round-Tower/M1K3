@@ -79,6 +79,16 @@ struct HeartbeatComposerTests {
         #expect(!desktop.contains("%"))
     }
 
+    @Test("one new fact reads singular (pulse 2 said '1 new things')")
+    func singularFact() {
+        let digest = HeartbeatComposer.digest(from: makeContext(
+            memory: .init(newFactTitles: ["Heartbeat ship day"], supersededCount: 1)
+        ))
+        #expect(digest.contains("Learned 1 new thing:"))
+        #expect(!digest.contains("things"))
+        #expect(digest.contains("Corrected 1 remembered fact."))
+    }
+
     @Test("memory activity names new facts and counts corrections")
     func memoryActivity() {
         let digest = HeartbeatComposer.digest(from: makeContext(

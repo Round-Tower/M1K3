@@ -229,8 +229,16 @@ extension AppEnvironment {
         // the guard sees the text.
         let cleaned = FollowUpSplit.split(raw).answer
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard NarrativeGuard.validate(narrative: cleaned, digest: digest) else {
-            Self.heartbeatLog.notice("render rejected by NarrativeGuard — digest ships")
+        // earlierToday joins the allowed material: the prompt asks the model
+        // to thread the day's arc, so digits carried from earlier pulses are
+        // faithful, not invented (pulse 2's live rejection).
+        let verdict = NarrativeGuard.verdict(
+            narrative: cleaned, digest: digest, earlierPulses: earlierToday
+        )
+        guard verdict == .pass else {
+            Self.heartbeatLog.notice(
+                "render rejected by NarrativeGuard (\(verdict.rawValue, privacy: .public)) — digest ships"
+            )
             return (nil, "digest")
         }
         return (cleaned, selectedBrain.displayName)

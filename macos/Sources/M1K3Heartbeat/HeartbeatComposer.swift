@@ -91,10 +91,12 @@ public enum HeartbeatComposer {
             let shown = memory.newFactTitles.prefix(3).joined(separator: ", ")
             let overflow = memory.newFactTitles.count - 3
             let tail = overflow > 0 ? ", and \(overflow) more" : ""
-            parts.append("Learned \(memory.newFactTitles.count) new things: \(shown)\(tail).")
+            let noun = memory.newFactTitles.count == 1 ? "thing" : "things"
+            parts.append("Learned \(memory.newFactTitles.count) new \(noun): \(shown)\(tail).")
         }
         if memory.supersededCount > 0 {
-            parts.append("Corrected \(memory.supersededCount) remembered facts.")
+            let noun = memory.supersededCount == 1 ? "fact" : "facts"
+            parts.append("Corrected \(memory.supersededCount) remembered \(noun).")
         }
         return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
