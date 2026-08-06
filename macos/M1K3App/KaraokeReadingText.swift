@@ -115,8 +115,8 @@ struct KaraokeReadingText: View {
             localCurrent = nil
         }
         return Text(attributed(paragraph.text, wordRanges: localRanges, currentIndex: localCurrent))
-            .lineSpacing(mode == .dyslexia ? 7 : 4)
-            .tracking(mode == .dyslexia ? 0.5 : 0)
+            .lineSpacing(mode == .dyslexia ? 8 : 6)
+            .tracking(mode == .dyslexia ? 0.6 : 0.35)
             .textSelection(.enabled)
             // One element per paragraph for VoiceOver — never word-by-word hops
             // through the attributed runs of the visual highlight.
@@ -158,9 +158,9 @@ struct KaraokeReadingText: View {
 
     private var baseFont: Font {
         switch mode {
-        case .standard, .bionic: .title3
-        case .serif: .system(.title3, design: .serif)
-        case .dyslexia: .dyslexic(18)
+        case .standard, .bionic: .system(size: 19)
+        case .serif: .system(size: 19, design: .serif)
+        case .dyslexia: .dyslexic(20)
         }
     }
 }

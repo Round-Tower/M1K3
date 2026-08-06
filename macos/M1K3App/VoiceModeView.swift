@@ -138,9 +138,11 @@ struct VoiceModeView: View {
             .foregroundStyle(dimmed ? .secondary : .primary)
             .multilineTextAlignment(.leading)
             .lineLimit(3)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .glassEffect(.regular, in: .rect(cornerRadius: 18))
+            .lineSpacing(5)
+            .kerning(0.3)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .glassEffect(.regular, in: .rect(cornerRadius: 20))
             .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 
@@ -155,9 +157,11 @@ struct VoiceModeView: View {
                 .foregroundStyle(partial.isEmpty ? .secondary : .primary)
                 .multilineTextAlignment(.center)
                 .lineLimit(4)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 12)
-                .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                .lineSpacing(5)
+                .kerning(0.3)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 16)
+                .glassEffect(.regular, in: .rect(cornerRadius: 22))
                 .animation(.easeOut(duration: 0.15), value: partial)
 
         case .awaitingAnswer:
@@ -194,11 +198,11 @@ struct VoiceModeView: View {
                         currentWordRange: env.speechHighlight.currentWordRange,
                         compact: true
                     )
-                    .frame(maxHeight: 150)
+                    .frame(maxHeight: 165)
                     .clipped()
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .glassEffect(.regular, in: .rect(cornerRadius: 18))
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 16)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 22))
                     .accessibilityLabel("M1K3 is speaking")
                 } else if spokenBubbles.isEmpty {
                     Text("Speaking…")
