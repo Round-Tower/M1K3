@@ -450,6 +450,11 @@ struct ContentView: View {
                     onSend: { text in Task { await env.send(text) } }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // The idle main screen IS the heartbeat surface — "what's
+                // going on", chilled back under the greeting. Renders
+                // nothing until the toggle is on and a pulse exists.
+                HeartbeatIdleCard(env: env)
+                    .padding(.bottom, 16)
             }
         } else {
             ScrollViewReader { proxy in

@@ -107,6 +107,35 @@ pulse as the narrative one, deliberately the same metaphor).
   gathered as 0 until then.
 - **Voice**: a pulse `/narrate`-spoken aloud, or read on voice-mode entry.
 
+## Notification passing — scoping (Kev, 2026-08-06 evening: "notification
+## passing is the way we're actually gonna make this work … local Bonjour
+## + MCP")
+
+The idea: devices summarize their incoming notifications into the Mac
+resident's heartbeat — "what's going on there" across the household — over
+the local network. Honest platform picture, per surface:
+
+| Surface | Can it read other apps' notifications? | Path |
+|---|---|---|
+| **Android (間 AI, `app/`)** | **YES** — `NotificationListenerService` is a real, user-grantable API | The strongest opening move. The KMP app listens, digests LOCALLY (counts + app names + optional headline, per the digest rules), and passes the digest to the Mac over local MCP. |
+| **macOS (M1K3 itself)** | Only its own. The Notification Center store (`db2/db`) is readable ONLY with Full Disk Access — impossible in the MAS sandbox, heavy-consent for the DMG build | Park. If ever: DMG-only, own consent tier, security-audit first. |
+| **iOS/visionOS shell** | **NO** — there is no notification-listener API on iOS, full stop | The iPhone contributes its OWN app's signals only (delivered-notification count via `UNUserNotificationCenter`, plus app-side events). Not a general listener. |
+
+Transport: **Bonjour-discovered local MCP** — the brain-at-home (§8)
+direction. The Mac's in-app MCP server already exists; the missing pieces
+are (a) advertising it over Bonjour on the LAN, (b) a device-pairing
+consent tier (allowlist, the BLE `device_presence` pattern from
+CONTEXT_TOOLS_PLAN — never promiscuous), and (c) a `heartbeat_ingest`
+MCP tool: a device POSTs a small typed digest (app names, counts, an
+optional headline line — never message bodies), which lands as a new
+`HeartbeatContext` section on the next pulse.
+
+Sequencing gate: the ingest tool is INBOUND user-device data — it needs
+the P2 second-consent-tier work (scoped tool palettes) plus a
+security-audit pass before code, same as every context tool. And the
+digest rules extend: notification content is the most private stream in
+the house; app names + counts are the ceiling until Kev rules otherwise.
+
 ## Verify-owed (named)
 
 The loop, the render quality on Big/Lil (gemma is prompt-fragile — A/B the
