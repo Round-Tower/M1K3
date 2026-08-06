@@ -134,6 +134,15 @@ struct SidebarView: View {
                 .help("Agent Log — MCP tool calls captured from connected agents (opt-in)")
                 .accessibilityLabel("Agent Log")
 
+                Button {
+                    openWindow(id: M1K3App.heartbeatWindowID)
+                } label: {
+                    Image(systemName: "waveform.path.ecg")
+                        .imageScale(.large)
+                }
+                .help("Heartbeat — M1K3's 2-hourly notes on the day (opt-in)")
+                .accessibilityLabel("Heartbeat")
+
                 Spacer()
             }
             .buttonStyle(.borderless)

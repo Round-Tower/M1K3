@@ -33,6 +33,7 @@
 //  Prior: none (new file).
 //
 
+import AppKit
 import Foundation
 import M1K3AgentTools
 import M1K3Heartbeat
@@ -196,6 +197,7 @@ extension AppEnvironment {
         Self.heartbeatLog.notice(
             "pulse recorded by \(renderedBy, privacy: .public) (activity: \(context.hasActivity, privacy: .public))"
         )
+        await maybeNotifyHeartbeatPulse(text: narrative ?? digest, appActive: NSApp.isActive)
     }
 
     /// Kev's model rule: the most capable teller the machine can afford right

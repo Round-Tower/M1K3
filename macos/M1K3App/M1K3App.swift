@@ -142,6 +142,13 @@ struct M1K3App: App {
         }
         .windowResizability(.contentSize)
 
+        // The Heartbeat — the day's pulses as a readable diary (Kev's "core /
+        // idle piece"). Single-instance Window, summoned from the sidebar.
+        Window("Heartbeat", id: Self.heartbeatWindowID) {
+            HeartbeatWindowContent(env: appDelegate.environment)
+        }
+        .windowResizability(.contentSize)
+
         // Native macOS Settings scene — opened with ⌘, (or the toolbar gear via
         // SettingsLink), in its own window with the system title bar, instead of
         // the iOS-style modal sheet it used to be. Shares the one AppEnvironment;
