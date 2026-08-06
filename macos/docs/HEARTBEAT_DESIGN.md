@@ -136,6 +136,32 @@ security-audit pass before code, same as every context tool. And the
 digest rules extend: notification content is the most private stream in
 the house; app names + counts are the ceiling until Kev rules otherwise.
 
+## Seed — the CRT data-rain (Kev, 2026-08-06 late, do not lose)
+
+"Anytime anything happens… portray it in the background against the CRT —
+anytime an agent calls, we stream upwards the actual data being passed
+between the systems, Matrix-wise… what's going on in the background as
+M1K3 is working away… or as M1K3 is generating code and eventually spits
+out an artifact, as opposed to presently: recall, chest."
+
+The CRT face becomes a live instrument: visiting-agent traffic, tool
+calls, generation — rendered as glyph-rain rising through the phosphor
+while M1K3 works, and artifacts MATERIALIZING out of the stream instead
+of appearing in a panel. Evidence of residency, animated.
+
+Design stakes named early:
+- **Derived glyphs, never literal payload text.** The rain must be a
+  visual HASH of the traffic (density/speed/color from call rate, tool
+  kind, direction), not readable data — a screen-share or a screenshot
+  must not leak what a visiting agent asked. Same rule as the heartbeat
+  digest: shape, not content.
+- Seams that already exist: `MCPCallLogSink` (per-call moments),
+  the agent loop's onEvent stream (thoughts/actions), the phosphor
+  shader arc (#45/#46/#48/#49) for the surface, reduce-motion + battery
+  gates inherited from ChatBackdropTreatment.
+- Belongs to the companion/phosphor thread, not the heartbeat store —
+  the rain is ephemeral render state, nothing persists.
+
 ## Verify-owed (named)
 
 The loop, the render quality on Big/Lil (gemma is prompt-fragile — A/B the

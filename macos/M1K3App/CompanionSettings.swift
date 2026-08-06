@@ -31,24 +31,21 @@ struct CompanionSettingsSection: View {
 
     /// One selectable face. The creature list self-extends: a new CompanionSpec
     /// with bundled assets appears here with no picker wiring (same isInstalled
-    /// filter the old Picker used). (fileprivate: FaceChoiceCard below renders it.)
+    /// filter as ever).
     fileprivate struct FaceChoice: Identifiable {
         let id: String
         let name: String
-        /// nil glyph = the pixel-M brand mark (the pixel face's own identity).
-        let glyph: String?
     }
 
     private var choices: [FaceChoice] {
         [
-            FaceChoice(id: "", name: "Pixel face", glyph: nil),
+            FaceChoice(id: "", name: "Pixel face"),
             FaceChoice(
                 id: AppEnvironment.voiceCompanionConstellation,
-                name: "Constellation",
-                glyph: "sparkles"
+                name: "Constellation"
             ),
         ] + CompanionSpec.all.filter(CompanionAssets.isInstalled).map {
-            FaceChoice(id: $0.id, name: $0.displayName, glyph: "pawprint.fill")
+            FaceChoice(id: $0.id, name: $0.displayName)
         }
     }
 
@@ -106,16 +103,15 @@ struct CompanionSettingsSection: View {
             .accessibilityLabel("Live preview of the chosen companion face")
     }
 
+    /// A dropdown, not a card row (Kev, 2026-08-06): the creature roster
+    /// outgrew the cards and their glyphs were noise — the live preview
+    /// above is the picture; the menu only needs names.
     private var facePicker: some View {
-        HStack(spacing: 10) {
+        Picker("Face", selection: $voiceCompanion) {
             ForEach(choices) { choice in
-                FaceChoiceCard(
-                    choice: choice,
-                    isSelected: voiceCompanion == choice.id
-                ) { voiceCompanion = choice.id }
+                Text(choice.name).tag(choice.id)
             }
         }
-        .accessibilityElement(children: .contain)
         .accessibilityLabel("Companion face")
     }
 
@@ -133,52 +129,6 @@ struct CompanionSettingsSection: View {
             if env.avatar.state.activity == .idle {
                 env.avatar.resetToIdle()
             }
-        }
-    }
-}
-
-/// One face option — the onboarding cards' glass + SelectionRadio vocabulary at
-/// Settings density (the live preview above carries the visual truth; the card
-/// only needs name + mark).
-private struct FaceChoiceCard: View {
-    let choice: CompanionSettingsSection.FaceChoice
-    let isSelected: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 6) {
-                mark
-                    .frame(height: 22)
-                Text(choice.name)
-                    .font(.caption.weight(.medium))
-                    .lineLimit(1)
-                SelectionRadio(isSelected: isSelected)
-            }
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .glassEffect(
-                isSelected ? .regular.tint(.accentColor.opacity(0.22)) : .regular,
-                in: .rect(cornerRadius: 12)
-            )
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(choice.name)
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-    }
-
-    @ViewBuilder
-    private var mark: some View {
-        if let glyph = choice.glyph {
-            Image(systemName: glyph)
-                .symbolRenderingMode(.hierarchical)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.tint)
-        } else {
-            // The pixel face's mark is the brand mark itself.
-            Image(nsImage: MenuBarGlyphStyle.pixelM.image(pointSize: 18))
         }
     }
 }
