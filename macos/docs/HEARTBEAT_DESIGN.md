@@ -162,6 +162,18 @@ Design stakes named early:
 - Belongs to the companion/phosphor thread, not the heartbeat store —
   the rain is ephemeral render state, nothing persists.
 
+Extension (Kev, 2026-08-07 small hours): **the rain shows M1K3's own
+THINKING too — transparency as the aesthetic.** Two honesty tiers, one
+hard line: M1K3's own work renders REAL fragments (retrieval doc titles,
+tool names, agent-loop thought snippets, the token stream) — your machine
+thinking about your stuff, literal on purpose, the anti-black-box; while
+visiting-agent traffic stays derived glyphs only (a screen-share must
+never leak a visitor's payload). v1 needs no Metal: TimelineView+Canvas
+glyph-rain behind the voice-mode face, density ∝ activity, feeding off
+the agent onEvent stream + responder stages + MCPCallLogSink — a
+subscriber, not a system. Voice mode first (the face's theatre); chat
+backdrop is a later taste call.
+
 ## Verify-owed (named)
 
 The loop, the render quality on Big/Lil (gemma is prompt-fragile — A/B the
