@@ -25,6 +25,7 @@ public enum HeartbeatComposer {
         lines.append(deviceLine(context.device))
         if let battery = batteryLine(context.device) { lines.append(battery) }
         if let disk = diskLine(context.device) { lines.append(disk) }
+        if let uptime = uptimeLine(context.device) { lines.append(uptime) }
         if let memory = memoryLines(context.memory) { lines.append(memory) }
         if let chat = chatLine(context.chat) { lines.append(chat) }
         if let mcp = mcpLine(context.mcp) { lines.append(mcp) }
@@ -82,6 +83,19 @@ public enum HeartbeatComposer {
     private static func diskLine(_ device: HeartbeatContext.Device) -> String? {
         guard let free = device.diskFreeGB, let total = device.diskTotalGB else { return nil }
         return "\(Int(free.rounded())) GB free of \(Int(total.rounded())) GB on disk."
+    }
+
+    /// #103 review: uptime was gathered but never told. Plain words, coarse
+    /// bands — nobody needs minutes.
+    private static func uptimeLine(_ device: HeartbeatContext.Device) -> String? {
+        guard let hours = device.uptimeHours, hours >= 1 else { return nil }
+        if hours >= 48 {
+            return "Up \(Int(hours / 24)) days."
+        }
+        if hours >= 24 {
+            return "Up a day."
+        }
+        return "Up \(Int(hours)) hours."
     }
 
     private static func memoryLines(_ memory: HeartbeatContext.MemoryActivity?) -> String? {

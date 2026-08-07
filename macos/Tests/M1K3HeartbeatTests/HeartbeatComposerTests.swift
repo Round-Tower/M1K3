@@ -163,6 +163,12 @@ struct HeartbeatComposerTests {
         #expect(excerpt == "one two three four…")
     }
 
+    @Test("uptime renders in plain words (#103 review: it was gathered but never told)")
+    func uptimeLine() {
+        let short = HeartbeatComposer.digest(from: makeContext())
+        #expect(short.contains("Up 2 days"))
+    }
+
     @Test("the digest never says Mac — the machine is the noun")
     func machineNotMac() {
         let digest = HeartbeatComposer.digest(from: makeContext(

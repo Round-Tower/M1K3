@@ -69,6 +69,12 @@ struct NarrativeGuardTests {
         #expect(!NarrativeGuard.validate(narrative: "Both Macs are cool.", digest: digest))
     }
 
+    @Test("lowercase mac is caught too (#103 review: the tripwire was case-sensitive)")
+    func lowercaseMacRejected() {
+        #expect(!NarrativeGuard.validate(narrative: "the mac's cool tonight.", digest: digest))
+        #expect(NarrativeGuard.verdict(narrative: "two macs hum.", digest: digest) == .macNoun)
+    }
+
     @Test("machine and MacBook-free compounds are not false-positives for the Mac check")
     func macNounBoundaries() {
         let narrative = "The machine is cool as ever."

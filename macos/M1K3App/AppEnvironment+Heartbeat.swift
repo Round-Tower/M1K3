@@ -42,9 +42,6 @@ import M1K3LogCore
 
 extension AppEnvironment {
     private static let heartbeatLog = M1K3Log.logger(.heartbeat)
-    /// Below this battery percentage (uncharged), the pulse skips the MLX
-    /// render and ships the digest — a 12B narrative isn't worth the drain.
-    private static let heartbeatRenderBatteryFloor = 50
 
     var heartbeatEnabled: Bool {
         UserDefaults.standard.bool(forKey: Self.heartbeatEnabledKey)
@@ -213,10 +210,17 @@ extension AppEnvironment {
         guard selectedBrain.mlxModelID != nil, modelLoad == .ready else {
             return (nil, "digest")
         }
-        if let battery = device.batteryPercent, device.isCharging != true,
-           battery < Self.heartbeatRenderBatteryFloor
-        {
+        guard HeartbeatRenderPolicy.shouldRender(
+            batteryPercent: device.batteryPercent, isCharging: device.isCharging
+        ) else {
             Self.heartbeatLog.notice("render skipped: battery floor")
+            return (nil, "digest")
+        }
+        // Re-sample busy at the last moment (#103 review): the tick's gate
+        // ran before the off-main gather, and a chat/voice turn started in
+        // that window deserves the slot — the digest ships instead.
+        if chat.isResponding || voiceLoop != nil || deepDelegationTaskLabel != nil {
+            Self.heartbeatLog.notice("render skipped: machine became busy mid-pulse")
             return (nil, "digest")
         }
         let prompt = HeartbeatPrompt.render(digest: digest, earlierToday: earlierToday)

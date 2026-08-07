@@ -41,10 +41,12 @@ public enum NarrativeGuard {
     /// The platform-honesty tripwire. `.simple` word boundaries: the default
     /// Unicode algorithm treats "Mac's" as ONE word, so `\b` never fires
     /// before the apostrophe — the exact shape of the first live miss.
+    /// Case-insensitive (#103 review): a lowercased "the mac's cool" leaked
+    /// past the capitalized-only pattern.
     /// nonisolated(unsafe): this toolchain treats `Regex` as non-Sendable;
     /// a literal with no transform closures is immutable, so unsafe is
     /// sound (the M1K3LogCore.LogPreview precedent).
-    private nonisolated(unsafe) static let macNoun = /\bMacs?\b/.wordBoundaryKind(.simple)
+    private nonisolated(unsafe) static let macNoun = /\bMacs?\b/.wordBoundaryKind(.simple).ignoresCase()
 
     public static func verdict(
         narrative: String,

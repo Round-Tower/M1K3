@@ -312,6 +312,15 @@ public final class MemoryStore: @unchecked Sendable {
                 t.add(column: "title", .text)
             }
         }
+        // v3 (2026-08-07): index created_at — the heartbeat's
+        // memoriesCreated(since:) window filters on it every ~2h tick, and
+        // the #103 review caught the docstring promising an index v1 never
+        // made.
+        migrator.registerMigration("v3-created-at-index") { db in
+            try db.create(
+                index: "idx_memories_created_at", on: "memories", columns: ["created_at"]
+            )
+        }
         try migrator.migrate(dbQueue)
     }
 

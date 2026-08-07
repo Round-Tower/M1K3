@@ -92,6 +92,16 @@ struct HeartbeatSchedulePolicyTests {
     }
 }
 
+struct HeartbeatRenderPolicyTests {
+    @Test("charging always renders; battery renders at or above the floor")
+    func batteryFloor() {
+        #expect(HeartbeatRenderPolicy.shouldRender(batteryPercent: 20, isCharging: true))
+        #expect(HeartbeatRenderPolicy.shouldRender(batteryPercent: 50, isCharging: false))
+        #expect(!HeartbeatRenderPolicy.shouldRender(batteryPercent: 49, isCharging: false))
+        #expect(HeartbeatRenderPolicy.shouldRender(batteryPercent: nil, isCharging: nil))
+    }
+}
+
 struct QuietHoursTests {
     @Test("standard quiet hours span midnight: 23:00 through 07:59")
     func spansMidnight() {

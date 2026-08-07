@@ -90,3 +90,18 @@ public enum HeartbeatEmptyRule {
         hasActivity || isFirstPulseToday
     }
 }
+
+/// Whether the MLX narrative render is worth the power right now (#103
+/// review: this was untested app glue for no structural reason). Charging
+/// always renders; on battery the floor holds; unknown battery (a desktop)
+/// renders freely.
+public enum HeartbeatRenderPolicy {
+    /// Below this percentage, uncharged, the digest ships unrendered.
+    public static let batteryFloor = 50
+
+    public static func shouldRender(batteryPercent: Int?, isCharging: Bool?) -> Bool {
+        guard let batteryPercent else { return true }
+        if isCharging == true { return true }
+        return batteryPercent >= batteryFloor
+    }
+}
