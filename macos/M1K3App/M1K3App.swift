@@ -15,6 +15,7 @@
 //  Scene reads `appDelegate.environment`. Self-test path unchanged (guarded).
 
 import AppKit
+import M1K3Avatar
 import M1K3Launch
 import os
 import SwiftUI
@@ -142,6 +143,13 @@ struct M1K3App: App {
         }
         .windowResizability(.contentSize)
 
+        // The Heartbeat — the day's pulses as a readable diary (Kev's "core /
+        // idle piece"). Single-instance Window, summoned from the sidebar.
+        Window("Heartbeat", id: Self.heartbeatWindowID) {
+            HeartbeatWindowContent(env: appDelegate.environment)
+        }
+        .windowResizability(.contentSize)
+
         // Native macOS Settings scene — opened with ⌘, (or the toolbar gear via
         // SettingsLink), in its own window with the system title bar, instead of
         // the iOS-style modal sheet it used to be. Shares the one AppEnvironment;
@@ -192,6 +200,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @Published private(set) var startupError: String?
 
     func applicationWillFinishLaunching(_: Notification) {
+        // The phosphor Fox is the house default (Kev, 2026-08-06: "pretty
+        // awesome — default standard"). Registered defaults, not writes: an
+        // explicit persisted choice (any face, any skin — including pixel
+        // face's "") always wins; only the never-touched majority resolve
+        // here. If Fox's assets are ever absent the resolver's unknown-id
+        // fallback still lands on the pixel face — never a blank surface.
+        UserDefaults.standard.register(defaults: [
+            CompanionDefaults.companionKey: "Fox",
+            CompanionDefaults.shadingStyleKey: CompanionShadingStyle.phosphor.rawValue,
+        ])
         let menuBarOnly = UserDefaults.standard.bool(forKey: StartupPreferences.menuBarOnlyKey)
         if StartupVisibility(menuBarOnly: menuBarOnly).hidesDockIcon {
             NSApp.setActivationPolicy(.accessory)

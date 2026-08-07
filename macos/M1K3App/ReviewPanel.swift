@@ -107,17 +107,21 @@ struct ReviewPanel: View {
 
     @ViewBuilder
     private var content: some View {
+        // The three heavy cases mount hosted AppKit views (WKWebView /
+        // QLPreviewView) behind DeferredPanelMount — the #79 fix: their first
+        // layout must land OUTSIDE the inspector's constraint pass or AppKit
+        // aborts the process (see DeferredPanelMount.swift for the stack).
         switch review.target {
         case .empty:
             placeholder
         case let .web(url):
-            WebReviewView(url: url)
+            DeferredPanelMount { WebReviewView(url: url) }
                 .id(url)
         case let .file(url):
-            QuickLookPreview(url: url)
+            DeferredPanelMount { QuickLookPreview(url: url) }
                 .id(url)
         case let .artifact(artifact):
-            ArtifactView(artifact: artifact)
+            DeferredPanelMount { ArtifactView(artifact: artifact) }
                 .id(artifact.createdAt)
         case let .invalid(raw):
             ContentUnavailableView {

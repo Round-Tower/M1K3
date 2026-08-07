@@ -80,6 +80,11 @@ let package = Package(
         // "Report an issue" flow. Pure + dependency-free so the redaction rules
         // are unit-pinned (a miss leaks PII).
         .library(name: "M1K3Diagnostics", targets: ["M1K3Diagnostics"]),
+        // The heartbeat: the 2-hourly narrative pulse. Pure schedule/compose/
+        // guard policies + its own GRDB store (separate file, capped, one-tap
+        // Clear, excluded from diagnostics AND from memory distillation — a
+        // pulse history must never become permanent memory-graph facts).
+        .library(name: "M1K3Heartbeat", targets: ["M1K3Heartbeat"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
@@ -413,6 +418,24 @@ let package = Package(
             name: "M1K3MCPLogTests",
             dependencies: ["M1K3MCPLog", "M1K3MCPKit"],
             path: "Tests/M1K3MCPLogTests"
+        ),
+        // The heartbeat: pure pulse policies (schedule/quiet-hours/skip,
+        // deterministic digest composer, narrative validator) + a capped GRDB
+        // store mirroring ConversationLogStore's idioms. The model render and
+        // the scheduler EFFECT live in the app target; this target stays
+        // fast-testable.
+        .target(
+            name: "M1K3Heartbeat",
+            dependencies: [
+                "M1K3LogCore",
+                .product(name: "GRDB", package: "GRDB.swift"),
+            ],
+            path: "Sources/M1K3Heartbeat"
+        ),
+        .testTarget(
+            name: "M1K3HeartbeatTests",
+            dependencies: ["M1K3Heartbeat"],
+            path: "Tests/M1K3HeartbeatTests"
         ),
         // Launch-at-login. The LaunchAtLogin policy is pure (TDD against a fake);
         // SMAppServiceLoginItem wraps the system ServiceManagement framework

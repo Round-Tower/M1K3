@@ -115,6 +115,30 @@ struct ContentView: View {
     }
 
     var body: some View {
+        // #79 (closed-form): the review panel is a PLAIN trailing HStack
+        // member, NOT the native .inspector. Both 08-06 crash reports show
+        // SwiftUI's SplitViewChildController synchronously re-invalidating a
+        // hosted platform view (WKWebView/QLPreviewView) inside AppKit's
+        // constraint pass — _postWindowNeedsUpdateConstraints throws
+        // mid-flush and the process aborts. DeferredPanelMount only moved
+        // the first mount out of the pass; resize/toggle re-entered. Taking
+        // the split-view controller out of the panel's path removes the
+        // crashing actor entirely. Cost: fixed 420pt width (no drag-resize)
+        // until AppKit's re-entrancy is fixed upstream (macOS 26.4 25E246).
+        HStack(spacing: 0) {
+            splitRoot
+            if env.review.isPresented {
+                Divider()
+                ReviewPanel(review: env.review)
+                    .frame(width: 420)
+                    .ignoresSafeArea(.container, edges: .top)
+                    .transition(.move(edge: .trailing))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: env.review.isPresented)
+    }
+
+    private var splitRoot: some View {
         NavigationSplitView(columnVisibility: columnVisibility) {
             SidebarView(selection: $sidebarSelection)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
@@ -214,20 +238,6 @@ struct ContentView: View {
         } isTargeted: { isDropTargeted = $0 }
         .overlay { if isDropTargeted { DropHintView() } }
         .toolbar { toolbarContent }
-        // A trailing side panel for quick review of links and files, beside the
-        // conversation. Native macOS inspector — resizable, collapsible chrome.
-        // State lives in env.review so chat-chips / MCP / the agent can drive it.
-        .inspector(isPresented: Binding(
-            get: { env.review.isPresented },
-            set: { env.review.isPresented = $0 }
-        )) {
-            ReviewPanel(review: env.review)
-                .inspectorColumnWidth(min: 320, ideal: 420, max: 720)
-                // Fill the inspector to the WINDOW top: under .hiddenTitleBar the
-                // column otherwise insets below the toolbar strip and the window
-                // background shows as a black band above the panel.
-                .ignoresSafeArea(.container, edges: .top)
-        }
     }
 
     /// The chat surface: avatar + transcript + input, plus everything only
@@ -450,6 +460,11 @@ struct ContentView: View {
                     onSend: { text in Task { await env.send(text) } }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // The idle main screen IS the heartbeat surface — "what's
+                // going on", chilled back under the greeting. Renders
+                // nothing until the toggle is on and a pulse exists.
+                HeartbeatIdleCard(env: env)
+                    .padding(.bottom, 16)
             }
         } else {
             ScrollViewReader { proxy in

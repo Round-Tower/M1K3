@@ -170,6 +170,40 @@ public final class ConversationLogStore: MCPCallLogSink, @unchecked Sendable {
         }
     }
 
+    /// Visiting-agent activity since a watermark, computed IN SQL — the
+    /// heartbeat's read. Counting in Swift would page up to `capacity` rows
+    /// of PII-bearing response text into memory to produce an integer;
+    /// this touches only the tool-name column. Tool names come
+    /// most-frequent first.
+    public struct WindowedActivity: Sendable, Equatable {
+        public let callCount: Int
+        public let toolNames: [String]
+
+        public init(callCount: Int, toolNames: [String]) {
+            self.callCount = callCount
+            self.toolNames = toolNames
+        }
+    }
+
+    public func activity(since: Date) throws -> WindowedActivity {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                SELECT tool, COUNT(*) AS uses FROM mcp_calls
+                WHERE created_at >= ?
+                GROUP BY tool ORDER BY uses DESC, tool ASC
+                """,
+                arguments: [since.timeIntervalSince1970]
+            )
+            let counts = rows.map { (tool: $0["tool"] ?? "", uses: $0["uses"] ?? 0) as (String, Int) }
+            return WindowedActivity(
+                callCount: counts.reduce(0) { $0 + $1.1 },
+                toolNames: counts.map(\.0)
+            )
+        }
+    }
+
     /// Total captured calls — the Settings/empty-state count.
     public func count() throws -> Int {
         try dbQueue.read { db in

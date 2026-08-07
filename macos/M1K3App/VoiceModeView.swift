@@ -25,6 +25,12 @@
 //  verify-at-⌘R taste gate Kev owns). Prior: Kev + claude-opus-4-8 (VoiceDock, the
 //  bottom-dock interlude) → Kev + claude-fable-5 (VoiceModeView, the original
 //  full-window forebear this restores).
+//  Review: Kev + claude-fable-5, 2026-08-06 — the single glass slab becomes a
+//  timeline of individual liquid-glass bubbles that fade once spoken (Kev's
+//  screenshot note); the thinking button removed — inert on the whole current
+//  brain roster (2507 reasoning pinned off, gemma-4 and AFM non-thinking), and
+//  a control that cannot change anything is a dead control. VoiceThinkingPolicy
+//  itself stays for a future thinking brain.
 //
 
 import M1K3Avatar
@@ -33,10 +39,6 @@ import SwiftUI
 
 struct VoiceModeView: View {
     @Environment(AppEnvironment.self) private var env
-    /// Voice mode's own brain switch — replaces the Settings Reasoning picker
-    /// while the loop is active. Off (default) = fast replies; flips apply from
-    /// the next turn (the provider reads it per turn).
-    @AppStorage(AppEnvironment.voiceModeThinkingKey) private var voiceThinking = false
     /// The hero must CLAIM first-responder on appear, or Space/Esc go nowhere —
     /// it's mounted as a full-window overlay over the chat, so `.focusable()`
     /// alone doesn't route key presses here until something grants focus.
@@ -63,14 +65,18 @@ struct VoiceModeView: View {
             // (no background) → taps in the empty area fall through to the face.
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
-                VStack(spacing: 16) {
+                // Individual liquid-glass bubbles on a timeline — not one slab.
+                // Each spoken line gets its own glass and fades once said; the
+                // control bar floats on its own capsule below.
+                VStack(spacing: 12) {
                     stateContent
                         .frame(maxWidth: .infinity)
                     controlBar
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .glassEffect(.regular, in: .capsule)
                 }
-                .padding(20)
                 .frame(maxWidth: 720)
-                .glassEffect(.regular, in: .rect(cornerRadius: 28))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
             }
@@ -86,13 +92,58 @@ struct VoiceModeView: View {
         .onExitCommand { env.exitVoiceMode() }
         .onChange(of: env.voiceLoop?.state) { _, newState in
             syncAvatar(with: newState)
-            // One bounce per answer — fire only on the transition INTO speaking
-            // (a Bool value: would double-fire on entry and exit).
-            if case .speaking = newState { speakDownbeat &+= 1 }
         }
         .onChange(of: env.chat.messages.last?.text) {
             bumpToGeneratingIfStreaming()
         }
+        // The timeline: when the spoken utterance advances (sentence-streamed
+        // lane) the finished line becomes a fading bubble behind the live one.
+        .onChange(of: env.speechHighlight.utteranceText) { oldText, newText in
+            if let oldText, !oldText.isEmpty, oldText != newText {
+                retireSpokenBubble(oldText)
+            }
+            if newText == nil { spokenBubbles.removeAll() }
+        }
+    }
+
+    // MARK: - Spoken-bubble timeline
+
+    private struct SpokenBubble: Identifiable, Equatable {
+        let id = UUID()
+        let text: String
+    }
+
+    @State private var spokenBubbles: [SpokenBubble] = []
+
+    /// A finished line drifts into the timeline and fades out after a beat —
+    /// spoken words leave the stage; the transcript keeps the record.
+    private func retireSpokenBubble(_ text: String) {
+        let bubble = SpokenBubble(text: text)
+        withAnimation(.easeOut(duration: 0.3)) {
+            spokenBubbles.append(bubble)
+            if spokenBubbles.count > 2 { spokenBubbles.removeFirst() }
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            withAnimation(.easeOut(duration: 0.9)) {
+                spokenBubbles.removeAll { $0.id == bubble.id }
+            }
+        }
+    }
+
+    /// One glass bubble in the spoken timeline.
+    private func glassBubble(_ text: String, dimmed: Bool) -> some View {
+        Text(text)
+            .font(.callout)
+            .foregroundStyle(dimmed ? .secondary : .primary)
+            .multilineTextAlignment(.leading)
+            .lineLimit(3)
+            .lineSpacing(5)
+            .kerning(0.3)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .glassEffect(.regular, in: .rect(cornerRadius: 20))
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 
     // MARK: - State content (the karaoke line / live partial / status)
@@ -106,7 +157,11 @@ struct VoiceModeView: View {
                 .foregroundStyle(partial.isEmpty ? .secondary : .primary)
                 .multilineTextAlignment(.center)
                 .lineLimit(4)
-                .frame(maxWidth: .infinity)
+                .lineSpacing(5)
+                .kerning(0.3)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 16)
+                .glassEffect(.regular, in: .rect(cornerRadius: 22))
                 .animation(.easeOut(duration: 0.15), value: partial)
 
         case .awaitingAnswer:
@@ -116,27 +171,50 @@ struct VoiceModeView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .glassEffect(.regular, in: .capsule)
             // One spoken element — the spinner alone says nothing to VoiceOver.
             .accessibilityElement(children: .combine)
             .accessibilityLabel(env.chat.messages.last?.activityLabel ?? "Thinking")
 
         case .speaking:
-            if let text = env.speechHighlight.utteranceText {
-                // The dyslexia Focus-reader — the spoken line follows word-by-word.
-                // The window is the hero now, so it gets real height to read in.
-                KaraokeReadingText(
-                    text: text,
-                    timeline: env.speechHighlight.timeline,
-                    currentWordRange: env.speechHighlight.currentWordRange
-                )
-                .frame(maxHeight: 220)
-                .accessibilityLabel("M1K3 is speaking")
-            } else {
-                Text("Speaking…")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+            // The timeline: already-spoken lines dim and fade above the live
+            // one; the live bubble keeps the dyslexia Focus-reader following
+            // word-by-word.
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(spokenBubbles) { bubble in
+                    glassBubble(bubble.text, dimmed: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if let text = env.speechHighlight.utteranceText {
+                    // Compact: the bubble hugs the sentence — no claimed
+                    // height (the old ScrollView made every line a 180pt
+                    // slab). Long utterances cap and the tail truncates
+                    // visually; the audio and transcript carry it all.
+                    KaraokeReadingText(
+                        text: text,
+                        timeline: env.speechHighlight.timeline,
+                        currentWordRange: env.speechHighlight.currentWordRange,
+                        compact: true
+                    )
+                    .frame(maxHeight: 165)
+                    .clipped()
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 16)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 22))
                     .accessibilityLabel("M1K3 is speaking")
+                } else if spokenBubbles.isEmpty {
+                    Text("Speaking…")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .glassEffect(.regular, in: .capsule)
+                        .accessibilityLabel("M1K3 is speaking")
+                }
             }
+            .animation(.easeOut(duration: 0.3), value: spokenBubbles)
 
         case .idle:
             VStack(spacing: 6) {
@@ -161,7 +239,9 @@ struct VoiceModeView: View {
                         .symbolEffect(.variableColor.iterative)
                 }
             }
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .glassEffect(.regular, in: .rect(cornerRadius: 20))
 
         case .ended, .none:
             Text("")
@@ -169,7 +249,7 @@ struct VoiceModeView: View {
         }
     }
 
-    // MARK: - Controls (mic / think / leave) — the loop's own intents
+    // MARK: - Controls (mic / leave) — the loop's own intents
 
     private var controlBar: some View {
         HStack(spacing: 16) {
@@ -186,24 +266,6 @@ struct VoiceModeView: View {
             .tint(isListening ? .red : nil)
             .help(isListening ? "Stop listening" : "Start listening")
             .accessibilityLabel(isListening ? "Mute microphone" : "Start listening")
-
-            Button { voiceThinking.toggle() } label: {
-                Image(systemName: "brain")
-                    .imageScale(.large).fontWeight(.semibold)
-                    .frame(width: 24, height: 24)
-                    // A travelling shimmer across the brain's layers WHILE thinking,
-                    // and a single bounce the moment the answer lands.
-                    .symbolEffect(.variableColor.iterative.hideInactiveLayers, isActive: isThinking)
-                    .symbolEffect(.bounce, value: speakDownbeat)
-            }
-            .buttonStyle(.glass).buttonBorderShape(.circle)
-            .tint(voiceThinking ? .purple : nil)
-            .help(voiceThinking
-                ? "Thinking on — deeper answers, slower. Applies next turn"
-                : "Thinking off — fast replies. Applies next turn")
-            .accessibilityLabel("Thinking")
-            .accessibilityValue(voiceThinking ? "On" : "Off")
-            .accessibilityAddTraits(.isToggle)
 
             Button { env.exitVoiceMode() } label: {
                 Image(systemName: "xmark")
@@ -222,16 +284,6 @@ struct VoiceModeView: View {
         if case .listening = env.voiceLoop?.state { return true }
         return false
     }
-
-    /// True while M1K3 is working on the answer — drives the brain's shimmer.
-    private var isThinking: Bool {
-        if case .awaitingAnswer = env.voiceLoop?.state { return true }
-        return false
-    }
-
-    /// A monotonic token bumped once each time a turn enters `.speaking`, so the
-    /// brain bounces exactly once per answer (a discrete `.bounce` trigger).
-    @State private var speakDownbeat = 0
 
     private var micSymbol: String {
         isListening ? "mic.fill" : "mic"

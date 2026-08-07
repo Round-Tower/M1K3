@@ -112,6 +112,11 @@ public enum M1K3Log {
         /// (crash/hang/cpu/disk-write diagnostics + daily metrics). Payload
         /// KIND + count only, never the payload's own content.
         case metricKit = "metric-kit"
+        /// The heartbeat: the 2-hourly narrative pulse (schedule decisions,
+        /// gather/render lifecycle, store writes). Skip reasons, tier picked,
+        /// and entry COUNTS only — never digest or narrative content (the
+        /// pulse text summarizes memories/chat and must not leak into logs).
+        case heartbeat
     }
 
     /// Build a `Logger` on the M1K3 subsystem for a catalogued category.

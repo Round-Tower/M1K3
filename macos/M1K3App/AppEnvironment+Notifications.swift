@@ -64,6 +64,15 @@ enum TurnNotifier {
         await post(title: "Deep dive finished", body: "M1K3's background work is ready in the chat.")
     }
 
+    /// A heartbeat pulse landed. DELIBERATE exception to the generic-body rule
+    /// (Kev's call, 2026-08-06): the body IS the pulse — a summary M1K3 itself
+    /// composed under the digest's privacy rules (titles/counts, never message
+    /// text), behind its own opt-in, so the "status update" actually reaches
+    /// the lock screen it was made for. macOS preview-hiding still applies.
+    static func notifyHeartbeatPulse(text: String) async {
+        await post(title: "M1K3's heartbeat", body: text)
+    }
+
     /// Shared post path — generic content, no trigger (immediate). The center
     /// silently drops it if authorization was never granted.
     private static func post(title: String, body: String) async {
@@ -147,5 +156,37 @@ extension AppEnvironment {
     func maybeNotifyModelReady(modelName: String, appActive: Bool) async {
         guard notificationsEnabled, !appActive else { return }
         await TurnNotifier.notifyModelReady(modelName: modelName)
+    }
+
+    // MARK: Heartbeat pulse notification (its own opt-in — a 2-hourly rich
+
+    // ping is a different consent than "tell me when my answer is done")
+
+    /// UserDefaults flag for the pulse notification (default OFF).
+    static var notifyOnHeartbeatKey: String {
+        "notifications.heartbeat"
+    }
+
+    var notifyOnHeartbeatEnabled: Bool {
+        UserDefaults.standard.bool(forKey: Self.notifyOnHeartbeatKey)
+    }
+
+    /// Flip the pulse-notification opt-in — same honest-grant contract as
+    /// `setLongTurnNotifications` (ON persists only if authorization granted).
+    func setHeartbeatNotifications(_ enabled: Bool) async {
+        guard enabled else {
+            UserDefaults.standard.set(false, forKey: Self.notifyOnHeartbeatKey)
+            return
+        }
+        let granted = await TurnNotifier.requestAuthorization()
+        UserDefaults.standard.set(granted, forKey: Self.notifyOnHeartbeatKey)
+    }
+
+    /// Ping with the pulse itself — only if opted in AND backgrounded (an open
+    /// window or popover already shows it; same explicit `appActive` stance as
+    /// every other ping).
+    func maybeNotifyHeartbeatPulse(text: String, appActive: Bool) async {
+        guard notifyOnHeartbeatEnabled, !appActive else { return }
+        await TurnNotifier.notifyHeartbeatPulse(text: text)
     }
 }

@@ -30,6 +30,12 @@ struct KaraokeReadingText: View {
     /// UTF-16 range of the word currently being heard.
     let currentWordRange: Range<Int>?
 
+    /// Compact hugs its content — no ScrollView, no claimed height. For the
+    /// voice bubbles, where the sentence-streamed line is short and the
+    /// surrounding glass should wrap it tightly (Kev: "the view is too
+    /// large"). Long content still belongs to the scrolling default.
+    var compact = false
+
     @AppStorage(ReadingMode.storageKey) private var savedModeRaw = ReadingMode.standard.rawValue
 
     private var mode: ReadingMode {
@@ -48,6 +54,21 @@ struct KaraokeReadingText: View {
         let words = wordRanges
         let current = currentIndex
         let paragraphs = ParagraphSplitter.split(text)
+        if compact {
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(paragraphs.indices, id: \.self) { index in
+                    paragraphText(paragraphs[index], allWords: words, globalCurrent: current)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            scrolling(words: words, current: current, paragraphs: paragraphs)
+        }
+    }
+
+    private func scrolling(
+        words: [Range<Int>], current: Int?, paragraphs: [ParagraphSplitter.Paragraph]
+    ) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
@@ -94,8 +115,8 @@ struct KaraokeReadingText: View {
             localCurrent = nil
         }
         return Text(attributed(paragraph.text, wordRanges: localRanges, currentIndex: localCurrent))
-            .lineSpacing(mode == .dyslexia ? 7 : 4)
-            .tracking(mode == .dyslexia ? 0.5 : 0)
+            .lineSpacing(mode == .dyslexia ? 8 : 6)
+            .tracking(mode == .dyslexia ? 0.6 : 0.35)
             .textSelection(.enabled)
             // One element per paragraph for VoiceOver — never word-by-word hops
             // through the attributed runs of the visual highlight.
@@ -137,9 +158,9 @@ struct KaraokeReadingText: View {
 
     private var baseFont: Font {
         switch mode {
-        case .standard, .bionic: .title3
-        case .serif: .system(.title3, design: .serif)
-        case .dyslexia: .dyslexic(18)
+        case .standard, .bionic: .system(size: 19)
+        case .serif: .system(size: 19, design: .serif)
+        case .dyslexia: .dyslexic(20)
         }
     }
 }

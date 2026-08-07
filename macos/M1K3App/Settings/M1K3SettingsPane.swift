@@ -84,6 +84,8 @@ struct M1K3SettingsPane: View {
                     + "downloads the neural voice model for offline use. On-device only.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+
+            HeartbeatSettingsSection(env: env)
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)

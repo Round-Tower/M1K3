@@ -312,6 +312,15 @@ public final class MemoryStore: @unchecked Sendable {
                 t.add(column: "title", .text)
             }
         }
+        // v3 (2026-08-07): index created_at — the heartbeat's
+        // memoriesCreated(since:) window filters on it every ~2h tick, and
+        // the #103 review caught the docstring promising an index v1 never
+        // made.
+        migrator.registerMigration("v3-created-at-index") { db in
+            try db.create(
+                index: "idx_memories_created_at", on: "memories", columns: ["created_at"]
+            )
+        }
         try migrator.migrate(dbQueue)
     }
 
@@ -923,6 +932,26 @@ public final class MemoryStore: @unchecked Sendable {
             : "SELECT * FROM memories WHERE superseded_by IS NULL ORDER BY created_at DESC LIMIT ?"
         return try dbQueue.read { db in
             let rows = try Row.fetchAll(db, sql: sql, arguments: [limit])
+            return rows.compactMap { Self.memory(from: $0) }
+        }
+    }
+
+    /// Live memories created at or after `since`, newest first — the
+    /// heartbeat's "what did I learn since the last pulse" window. Filtered
+    /// in SQL on the indexed created_at column (never fetch-then-partition —
+    /// the PR #94 lesson); superseded rows excluded (a corrected fact isn't
+    /// news).
+    public func memoriesCreated(since: Date, limit: Int = 100) throws -> [Memory] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: """
+                SELECT * FROM memories
+                WHERE superseded_by IS NULL AND created_at >= ?
+                ORDER BY created_at DESC LIMIT ?
+                """,
+                arguments: [since.timeIntervalSince1970, limit]
+            )
             return rows.compactMap { Self.memory(from: $0) }
         }
     }
