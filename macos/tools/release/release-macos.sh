@@ -109,6 +109,7 @@ rm -rf "$ARCHIVE"
 xcodebuild archive \
   -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
   -archivePath "$ARCHIVE" -destination 'generic/platform=macOS' \
+  -skipPackagePluginValidation \
   CODE_SIGN_ENTITLEMENTS="$DIRECT_ENTITLEMENTS" \
   DEVELOPMENT_TEAM="$TEAM" \
   ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"} | beautify

@@ -291,6 +291,41 @@ are deliberately left unpinned so the evaluation loop stays usable.
 
 ## Decision log
 
+- **2026-08-08: pin bumped to main `c97539da` (MTP-capable) · gemma-4 chat template FIXED
+  in-app · MTP re-measured and still PARKED — now for a measured reason.**
+  Three findings, in order of how much they cost:
+  - **The bump broke gemma-4 tool-calling, 5/5 → 0/5**, and only the mandated NATIVE
+    tool-call smoke caught it. Upstream #453 (typed KV cache config + validation, 08-05)
+    now *throws* `incompatibleCapacity(expected: 8192, count: 8)` on a caller-requested
+    `maxKVSize`. Root cause is worse than a regression: `Gemma4Text.newCache` **ignores
+    `parameters` entirely** (StandardKVCache for the 8 `full_attention` layers, a
+    modelNative `RotatingKVCache(slidingWindow)` for the rest) — so our 8192 "hard bound on
+    KV growth" was **always a silent no-op on Big**. Upstream merely made a false belief
+    loud. Fix: `MLXGemmaProvider.supportsCallerKVCapacity` (family-gated, permissive
+    default) — gemma-4/3n request no capacity; default-`newCache` families keep the real
+    backstop. A test that pinned `maxKVSize == 8192` for gemma-4 was corrected, not deleted.
+  - **The gemma-4 chat template is now fixed on-device.** Google published the canonical
+    template 2026-07-09 (tool-call loops, turn closures, null args, thinking order);
+    `mlx-community/gemma-4-12B-it-4bit` still shipped the 2026-06-03 one, 7 weeks
+    unpropagated. Rather than keep waiting, M1K3 **vendors** the canonical file and
+    installs it over exactly the known-stale bytes (`Gemma4TemplateFix`, exact-hash-gated
+    both ways) *before* the integrity scan — whose manifest now pins the healed hash. The
+    template is tokenizer metadata, independent of the safetensors, so this is precisely
+    what a re-quantize would have carried. Verified live: on-disk hash went
+    `36e3a42e…` → `ae53464b…` on first load.
+  - **MTP: engages now, and still loses on our prompts.** #415 fixed the July blocker
+    (gate 2 went from "0 drafted, sticky passthrough" to **52% accept**), but gemma-4-12B's
+    sliding window is **1024 tokens** and M1K3's measured production prompt is
+    **1863–2998** (persona+tools KV seed alone is 1380). Every real turn lands in the
+    wrapped regime: **0.79–0.87× baseline** (the passthrough path is slower than plain
+    generate) and the medium fixture **diverges at char 314 despite #506's stand-down** —
+    a hard failure of speculative decoding's own greedy invariant. Full numbers:
+    `scratch/mtp-spike/RESULTS-2026-08-08-rerun.md`. **Revisit trigger changes** from
+    "upstream can't" to "our prompt fits 1024 tokens, or upstream makes the wrapped regime
+    faithful+engaging". Also note `mlx-swift` had to move 0.31.4 → 0.31.6 (main needs
+    `DType.greatestFiniteMagnitudeArray` / `MLXArray.maskFill`), and its `CudaBuild` plugin
+    now needs `-skipPackagePluginValidation` on `xcodebuild`.
+
 - **2026-07-02 (later): HUGE RETIRED — Qwen3-8B leaves the catalogue; three tiers (Mini/Lil/Big).**
   Step 1 of Kev's all-gemma reshuffle (standing intent since the Golden Gate session: mini=AFM ·
   lil=gemma-4-e4b · big=gemma-4-12B, gated upstream). The gate that mattered cleared: **gemma-4

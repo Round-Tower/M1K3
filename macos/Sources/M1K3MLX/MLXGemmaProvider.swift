@@ -179,7 +179,7 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             params.kvBits = 8
             params.kvGroupSize = 64
             params.quantizedKVStart = 0
-        } else {
+        } else if Self.supportsCallerKVCapacity(for: configuration) {
             // Hard-bound KV-cache growth (the cache rotates past this) so a long
             // agent transcript can't balloon memory without limit. The 4096
             // maxTokens above is only this class's DEFAULT: the live app caps a
@@ -187,6 +187,10 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             // rotatingGenerationTokenCap (2048) so prefill + decode fit 8192
             // together — an uncapped 4096 decode can cross the window mid-answer
             // and silently rotate the persona/grounding head out.
+            //
+            // Only for models on upstream's DEFAULT newCache, which honours a
+            // requested capacity. Architectures that own their cache geometry
+            // (gemma-4/3n) IGNORE it — see supportsCallerKVCapacity.
             params.maxKVSize = 8192
         }
         generateParameters = params
@@ -715,6 +719,31 @@ extension MLXGemmaProvider {
         return modelName.contains("qwen3") || modelName.contains("gemma-3-")
             || modelName.contains("ternary-bonsai-8b")
             || modelName.contains("ternary-bonsai-27b")
+    }
+
+    /// Whether a caller-requested KV capacity (`maxKVSize`) means anything for
+    /// this model — i.e. whether it rides upstream's DEFAULT `newCache`, which
+    /// builds one `RotatingKVCache(.requested)` per layer.
+    ///
+    /// Gemma-4 and Gemma-3n override `newCache` and IGNORE `parameters`
+    /// entirely: Gemma4Text builds `StandardKVCache()` for `full_attention`
+    /// layers and `RotatingKVCache(maxSize: config.slidingWindow)` (origin
+    /// `.modelNative`) for the rest. So our 8192 backstop was **always a
+    /// silent no-op there** — the real bound on Big has only ever been the
+    /// architecture's own sliding window plus the per-turn session lifecycle.
+    ///
+    /// mlx-swift-lm's typed KV-cache validation (#453, 2026-08-05) turned that
+    /// silent no-op into a hard throw —
+    /// `incompatibleCapacity(expected: 8192, count: 8)`, the eight
+    /// full-attention layers — which took gemma-4 tool-use from 5/5 to 0/5 on
+    /// the pin bump. Excluding the family restores the behaviour we always
+    /// actually had, and makes the (previously false) claim in the branch above
+    /// true for everyone still in it. Exact-family gated, permissive default:
+    /// an unknown model is assumed to use the default newCache, where the
+    /// backstop is real and harmless.
+    static func supportsCallerKVCapacity(for configuration: ModelConfiguration) -> Bool {
+        let modelName = configuration.name.lowercased()
+        return !(modelName.contains("gemma-4") || modelName.contains("gemma-3n"))
     }
 
     /// Prepend the synthetic `<think>` opener exactly once so downstream

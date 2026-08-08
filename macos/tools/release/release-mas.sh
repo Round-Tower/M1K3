@@ -99,6 +99,7 @@ xcodebuild archive \
   -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
   -archivePath "$ARCHIVE" -destination 'generic/platform=macOS' \
   -allowProvisioningUpdates \
+  -skipPackagePluginValidation \
   ${BUILD_NUMBER:+CURRENT_PROJECT_VERSION="$BUILD_NUMBER"} \
   DEVELOPMENT_TEAM="$TEAM" \
   CODE_SIGN_ENTITLEMENTS="$MAS_ENTITLEMENTS" | beautify

@@ -1,0 +1,65 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: true
+✓ AFM RAG answer: The hydraulic seal on the conveyor failed under load.
+
+FOLLOWUPS:
+[What caused the hydraulic seal failure?]
+[How was the conveyor repaired?]
+  grounded in 1 source(s)
+• loading MLX Qwen3-Embedding (downloads on first use)…
+✓ MLX Qwen3-Embedding embed: dim=512 ‖v‖=1.000
+embedwarm: cold=3924ms warm=13ms delta=3911ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Llama-3.2-1B-Instruct-4bit…
+✓ MLX generate: A hydraulic seal is a device that prevents or reduces the leakage of fluids through seals and gaskets by creating an impermeable barrier.
+• chateval: 5 fixture(s) × 1 brain(s) [kinds: tool-use]…
+• chateval brain big (Big)…
+  tool-datetime [tool-use]: PASS (36877ms)
+    ✓ non-empty — 43 chars
+    ✓ no think-leak
+    – follow-ups — 3 offered
+    – ends-with-question — no
+    ✓ calls datetime
+    ✓ responsive — 36877ms
+  tool-search-notes [tool-use]: PASS (22007ms)
+    ✓ non-empty — 172 chars
+    ✓ no think-leak
+    – follow-ups — 3 offered
+    – ends-with-question — no
+    ✓ calls search_knowledge
+    ✓ responsive — 22007ms
+  tool-search-doc [tool-use]: PASS (22549ms)
+    ✓ non-empty — 308 chars
+    ✓ no think-leak
+    – follow-ups — 3 offered
+    – ends-with-question — no
+    ✓ calls search_knowledge
+    ✓ responsive — 22549ms
+  tool-fact [tool-use]: PASS (24319ms)
+    ✓ non-empty — 505 chars
+    ✓ no think-leak
+    – follow-ups — 3 offered
+    – ends-with-question — no
+    ✓ calls lookup_fact
+    ✓ responsive — 24319ms
+  tool-web [tool-use]: PASS (25563ms)
+    ✓ non-empty — 581 chars
+    ✓ no think-leak
+    – follow-ups — 3 offered
+    – ends-with-question — no
+    ✓ calls web_search
+    ✓ responsive — 25563ms
+
+=== CHATEVAL MATRIX (passed/total ⌀latency) ===
+task-kind  | big        
+------------------------
+open-chat  | —          
+grounded-Q | —          
+reasoning  | —          
+code-gen   | —          
+tool-use   | 5/5 24319ms
+refusal    | —          
+security   | —          
+------------------------
+overall    | 5/5 24319ms
+=== END SELF-TEST ===

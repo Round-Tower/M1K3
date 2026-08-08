@@ -1,0 +1,22 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: true
+✓ AFM RAG answer: The hydraulic seal on the conveyor failed under load.
+  grounded in 1 source(s)
+• loading MLX Qwen3-Embedding (downloads on first use)…
+✓ MLX Qwen3-Embedding embed: dim=512 ‖v‖=1.000
+embedwarm: cold=3718ms warm=12ms delta=3706ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Llama-3.2-1B-Instruct-4bit…
+✓ MLX generate: A hydraulic seal is the device that prevents fluid (such as oil or gas) from leaking through a tight fitting or joint between two parts that are supposed to be sealed together.
+• mtp spike: target mlx-community/gemma-4-12B-it-4bit + drafter mlx-community/gemma-4-12B-it-qat-assistant-4bit via MLXVLM…
+✓ mtp short-no-wrap: prompt 25tok · baseline 17.0tok/s (23tok) vs mtp 18.2tok/s (23tok) = 1.08x · accept 52% (14/27) · exact-match
+  mtp short-no-wrap baseline: A hydraulic seal is a component designed to contain fluids or gases within a hydraulic system by preventing leaks and maintaining pressure.
+  mtp short-no-wrap mtp:      A hydraulic seal is a component designed to contain fluids or gases within a hydraulic system by preventing leaks and maintaining pressure.
+✓ mtp medium-wraps-mid-decode: prompt 588tok · baseline 26.3tok/s (561tok) vs mtp 20.8tok/s (615tok) = 0.79x · accept 42% (243/573) · DIVERGES@314 · passthrough: sliding cache wrapped mid-stream — MTP rewind unavailable; continuing without speculation
+  mtp medium-wraps-mid-decode baseline: To effectively parse the harbor logs and summarize daily vessel traffic, I would implement a structured data processing pipeline that moves from raw text ingest
+  mtp medium-wraps-mid-decode mtp:      To effectively parse the harbor logs and summarize daily vessel traffic, I would implement a structured data processing pipeline that moves from raw text ingest
+✓ mtp long-wrapped-at-prefill: prompt 2072tok · baseline 28.5tok/s (23tok) vs mtp 24.9tok/s (23tok) = 0.87x · accept n/a (0/0) · exact-match · passthrough: prompt fills the sliding window — MTP rewind unavailable; generating without speculation
+  mtp long-wrapped-at-prefill baseline: I state plainly when I do not know the answer. I provide information only based on the documents provided to me.
+  mtp long-wrapped-at-prefill mtp:      I state plainly when I do not know the answer. I provide information only based on the documents provided to me.
+MTP spike (VLM-loaded target + drafter resident) MB: active=6430 cache=129 peak=7659 footprint=7013
+=== END SELF-TEST ===

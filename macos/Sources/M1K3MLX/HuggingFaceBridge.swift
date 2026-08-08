@@ -207,6 +207,11 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
             downloadLog.notice(
                 "snapshot done: \(id, privacy: .public) in \(totalSeconds)s sizeMB=\(sizeMB)"
             )
+            // Heal the known-stale gemma-4 chat template BEFORE judging the
+            // directory — the manifest pins the healed bytes (Gemma4TemplateFix
+            // header has the ordering rationale). Exact-hash-gated; a no-op
+            // for every other repo and any unrecognised template.
+            try Gemma4TemplateFix.apply(directory: url, repoID: id)
             // Supply-chain tripwire: check the bytes against the digests pinned
             // in this build BEFORE any factory reads a tensor. This is the one
             // window where refusal actually prevents a poisoned load. Throws
@@ -222,6 +227,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
             )
             // The fallbacks are verified too: a cache poisoned on an earlier
             // run must not become trusted just because we're offline now.
+            try Gemma4TemplateFix.apply(directory: localPath, repoID: id)
             try WeightIntegrityScan.enforce(directory: localPath, repoID: id)
             return localPath
         } catch let error as WeightTamperError {
@@ -233,6 +239,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
                 downloadLog.warning(
                     "offline — using local copy of \(id, privacy: .public) (localMB=\(startSizeMB))"
                 )
+                try Gemma4TemplateFix.apply(directory: localPath, repoID: id)
                 try WeightIntegrityScan.enforce(directory: localPath, repoID: id)
                 return localPath
             }

@@ -219,12 +219,24 @@ Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
 
 ## Watching / blocked upstream
 
-- **MTP speculative decoding for Big** — parked on `Gemma4Unified` missing the
-  MTP-aware `callAsFunction(_:cache:state:)` override in `mlx-swift-lm`
-  (confirmed absent on `main`, 2026-07-19). Instrument (`M1K3_SELFTEST_MTP`) is
-  ready — re-run on the next dep bump.
-- **OptiQ mixed-precision quantization** — parked, no Swift loader exists for
-  the format (targets Python `mlx-lm` only). Re-check if upstream adds one.
+- **MTP speculative decoding for Big** — **re-measured 2026-08-08 on the
+  MTP-capable pin; still parked, new reason.** Upstream #415 fixed engagement
+  (52% accept on a short prompt, was 0), but gemma-4-12B's sliding window is
+  1024 tokens and our production prompt is 1863–2998 — every real turn is in
+  the wrapped regime, where MTP runs at **0.79–0.87× baseline** and one fixture
+  **diverges** despite #506's stand-down. Unparks only if our prompt fits 1024
+  (a #102-shaped project) or upstream makes the wrapped regime faithful *and*
+  engaging. Numbers: `scratch/mtp-spike/RESULTS-2026-08-08-rerun.md`.
+- **OptiQ mixed-precision quantization** — parked. Upstream now *loads* the
+  format but **generates garbage** (mlx-swift-lm issue #450, open) — worse than
+  the June "no loader" state. Re-check when #450 closes; the OptiQ repo is
+  incidentally the only 12B quant carrying Google's fixed chat template, which
+  M1K3 now vendors directly instead (`Gemma4TemplateFix`).
+- **`gemma-4-12B-it-4bit` chat template upstream** — M1K3 no longer waits:
+  the canonical 2026-07-09 template is vendored and installed over the stale
+  bytes at load. If mlx-community ever re-quantizes, the fix becomes a no-op by
+  construction (hash-gated) — but the pinned manifest hash must then be
+  re-checked against whatever they ship.
 
 ---
 

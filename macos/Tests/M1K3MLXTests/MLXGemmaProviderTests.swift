@@ -35,6 +35,47 @@ struct MLXGemmaProviderTests {
         #expect(HistoryBudgetPolicy.rotatingGenerationTokenCap < MLXGemmaProvider.defaultMaxTokens)
     }
 
+    @Test("gemma-4 owns its KV geometry — no caller capacity is requested for it")
+    func callerKVCapacityFamilyResolution() {
+        // Gemma4Text.newCache IGNORES `parameters` entirely: it builds
+        // StandardKVCache for full_attention layers and a modelNative
+        // RotatingKVCache(slidingWindow) for the rest. Requesting a capacity
+        // was therefore always a silent no-op — and since mlx-swift-lm's
+        // typed KV cache validation (#453, 2026-08-05) it is a hard throw
+        // (`incompatibleCapacity(expected: 8192, count: 8)` — the 8 full
+        // attention layers), which took gemma-4 tool-use from 5/5 to 0/5.
+        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
+        ))
+        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit")
+        ))
+        // Gemma3n likewise builds its own per-layer geometry.
+        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
+            for: ModelConfiguration(id: "mlx-community/gemma-3n-E4B-it-lm-4bit")
+        ))
+        // Everything on upstream's DEFAULT newCache honours a requested
+        // capacity (it builds RotatingKVCache(.requested) per layer), so the
+        // growth backstop stays real for them.
+        #expect(MLXGemmaProvider.supportsCallerKVCapacity(
+            for: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")
+        ))
+        #expect(MLXGemmaProvider.supportsCallerKVCapacity(
+            for: ModelConfiguration(id: "mlx-community/some-unknown-model-4bit")
+        ))
+    }
+
+    @Test("a gemma-4 provider requests neither quantized KV nor a caller capacity")
+    func gemma4RequestsNoCacheOverrides() {
+        let provider = MLXGemmaProvider(
+            configuration: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
+        )
+        // Both nil: quantized KV is unsafe for this family (raw cache.update)
+        // and a capacity is rejected by upstream validation.
+        #expect(provider.generateParameters.maxKVSize == nil)
+        #expect(provider.generateParameters.kvBits == nil)
+    }
+
     @Test("KV quantization is allow-listed per family — raw cache.update families are excluded")
     func kvQuantizationFamilyResolution() {
         // Safe: attention routes through upstream's attentionWithCacheUpdate
@@ -188,7 +229,7 @@ struct MLXGemmaProviderTests {
         #expect(provider.generateParameters.repetitionContextSize == 64)
     }
 
-    @Test("quantizing families carry kvBits; excluded families keep the rotation cap")
+    @Test("quantizing families carry kvBits; default-newCache families keep the rotation cap")
     func generateParametersPerFamily() {
         let qwen = MLXGemmaProvider(configuration: ModelConfiguration(id: "mlx-community/Qwen3.5-2B-4bit"))
         #expect(qwen.generateParameters.kvBits == 8)
@@ -196,9 +237,19 @@ struct MLXGemmaProviderTests {
         #expect(qwen.generateParameters.quantizedKVStart == 0)
         #expect(qwen.generateParameters.maxKVSize == nil)
 
+        // gemma-4 gets NEITHER: quantized KV is unsafe (raw cache.update) and
+        // a caller capacity is meaningless (its newCache ignores parameters).
+        // This assertion used to read `maxKVSize == 8192` — pinning a bound
+        // the model never honoured. See supportsCallerKVCapacity.
         let gemma4 = MLXGemmaProvider(configuration: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit"))
         #expect(gemma4.generateParameters.kvBits == nil)
-        #expect(gemma4.generateParameters.maxKVSize == 8192)
+        #expect(gemma4.generateParameters.maxKVSize == nil)
+
+        // A family on upstream's default newCache still gets the real backstop.
+        let llama = MLXGemmaProvider(
+            configuration: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")
+        )
+        #expect(llama.generateParameters.maxKVSize == 8192)
     }
 
     @Test(
