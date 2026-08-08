@@ -156,6 +156,10 @@ final class AppEnvironment {
     /// Bumped after each recorded pulse so SwiftUI surfaces re-read the store
     /// (the `historyRevision` idiom).
     var heartbeatRevision = 0
+    /// The most recent hold (skip/withhold reason + when) — observable so the
+    /// idle card and Heartbeat window can say WHY the pulse is stale instead
+    /// of silently ageing. Cleared on every recorded pulse.
+    var heartbeatLastHold: HeartbeatHold?
     /// Single-flight guard for one pulse's gather→render→record run.
     @ObservationIgnored var heartbeatPulseInFlight = false
     /// Call intelligence: encrypted-at-rest persistence + indexing into the SAME

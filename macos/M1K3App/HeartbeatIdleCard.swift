@@ -31,24 +31,39 @@ struct HeartbeatIdleCard: View {
     @State private var latest: HeartbeatEntry?
 
     var body: some View {
+        // Resolve the honest-hold line alongside the pulse: a stale pulse
+        // with a known hold (thermal / busy / quiet) says why, instead of
+        // silently ageing into "the heartbeat looks broken" (2026-08-08).
+        let holdLine = currentHoldLine
         Group {
-            if heartbeatOn, let pulse = latest {
+            if heartbeatOn, latest != nil || holdLine != nil {
                 Button {
                     openWindow(id: M1K3App.heartbeatWindowID)
                 } label: {
                     VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "waveform.path.ecg")
-                                .symbolRenderingMode(.hierarchical)
-                            Text(pulse.createdAt, style: .relative) + Text(" ago · told by \(pulse.renderedBy)")
+                        if let pulse = latest {
+                            HStack(spacing: 6) {
+                                Image(systemName: "waveform.path.ecg")
+                                    .symbolRenderingMode(.hierarchical)
+                                Text(pulse.createdAt, style: .relative) + Text(" ago · told by \(pulse.renderedBy)")
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            Text(pulse.displayText)
+                                .font(.callout)
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(5)
                         }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        Text(pulse.displayText)
-                            .font(.callout)
-                            .foregroundStyle(.primary)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(5)
+                        if let holdLine {
+                            HStack(spacing: 6) {
+                                Image(systemName: "zzz")
+                                    .symbolRenderingMode(.hierarchical)
+                                Text(holdLine)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
                     }
                     .frame(maxWidth: 440, alignment: .leading)
                     .padding(14)
@@ -58,7 +73,19 @@ struct HeartbeatIdleCard: View {
                 .accessibilityLabel("Heartbeat: latest pulse. Opens the Heartbeat window.")
             }
         }
+        // lastHold is observable state on env, so a tick's hold refresh
+        // re-evaluates the line; revision changes re-read the store.
         .task(id: env.heartbeatRevision) { await refresh() }
+    }
+
+    private var currentHoldLine: String? {
+        let now = Date()
+        return HeartbeatHoldLine.resolve(
+            now: now,
+            hour: Calendar.current.component(.hour, from: now),
+            lastPulse: latest?.createdAt,
+            lastHold: env.heartbeatLastHold
+        )
     }
 
     private func refresh() async {
