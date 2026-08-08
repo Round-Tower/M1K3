@@ -7,8 +7,10 @@
 //  maybe it could be the default"): when the chat is idle/empty, the latest
 //  pulse sits under the greeting — the resident telling you what's been
 //  going on, ambient and chilled back. Click-through opens the Heartbeat
-//  window (the history). Renders nothing while the toggle is off or before
-//  the first pulse, so the greeting stays untouched for new users.
+//  window (the history). Renders nothing while the toggle is off, so the
+//  greeting stays untouched for new users; with the toggle on it shows the
+//  latest pulse and/or the honest-hold line (HeartbeatHoldLine — why the
+//  pulse is stale, or that the first one is coming).
 //
 //  Surface census after this change (principle 6): main-screen idle card
 //  (canonical) + menu-bar line (ambient) + the Heartbeat window (history
@@ -70,7 +72,11 @@ struct HeartbeatIdleCard: View {
                     .glassEffect(in: .rect(cornerRadius: 18))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Heartbeat: latest pulse. Opens the Heartbeat window.")
+                .accessibilityLabel(
+                    latest != nil
+                        ? "Heartbeat: latest pulse. Opens the Heartbeat window."
+                        : "Heartbeat: holding. Opens the Heartbeat window."
+                )
             }
         }
         // lastHold is observable state on env, so a tick's hold refresh
