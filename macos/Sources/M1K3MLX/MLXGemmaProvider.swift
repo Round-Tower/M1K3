@@ -725,25 +725,35 @@ extension MLXGemmaProvider {
     /// this model — i.e. whether it rides upstream's DEFAULT `newCache`, which
     /// builds one `RotatingKVCache(.requested)` per layer.
     ///
-    /// Gemma-4 and Gemma-3n override `newCache` and IGNORE `parameters`
-    /// entirely: Gemma4Text builds `StandardKVCache()` for `full_attention`
-    /// layers and `RotatingKVCache(maxSize: config.slidingWindow)` (origin
-    /// `.modelNative`) for the rest. So our 8192 backstop was **always a
-    /// silent no-op there** — the real bound on Big has only ever been the
-    /// architecture's own sliding window plus the per-turn session lifecycle.
+    /// **An ALLOW-list, defaulting to false.** 27 of upstream's models override
+    /// `newCache` to build their own per-layer geometry and ignore
+    /// `parameters` outright — Gemma4Text (`StandardKVCache` for
+    /// `full_attention` layers, modelNative `RotatingKVCache(slidingWindow)`
+    /// for the rest) and LFM2Model (`KVCacheSimple` + `MambaCache`) are both in
+    /// that set, as are the Mamba/Jamba/Granite/Nemotron/Qwen3Next hybrids. For
+    /// every one of them our 8192 backstop was **always a silent no-op**.
     ///
     /// mlx-swift-lm's typed KV-cache validation (#453, 2026-08-05) turned that
     /// silent no-op into a hard throw —
-    /// `incompatibleCapacity(expected: 8192, count: 8)`, the eight
-    /// full-attention layers — which took gemma-4 tool-use from 5/5 to 0/5 on
-    /// the pin bump. Excluding the family restores the behaviour we always
-    /// actually had, and makes the (previously false) claim in the branch above
-    /// true for everyone still in it. Exact-family gated, permissive default:
-    /// an unknown model is assumed to use the default newCache, where the
-    /// backstop is real and harmless.
+    /// `incompatibleCapacity(expected: 8192, count: 8)`. It took gemma-4
+    /// tool-use from 5/5 to **0/5**, and then took LFM2.5 from a real
+    /// evaluation to **0/44** even after its weights loaded cleanly. The first
+    /// cut of this predicate was a DENY-list with a permissive default, which
+    /// is what let LFM2.5 through; the asymmetry says otherwise:
+    ///
+    /// - wrongly REQUESTING a capacity → the model fails outright, every turn;
+    /// - wrongly OMITTING one → we forgo a rotation backstop that the per-turn
+    ///   session lifecycle and `maxTokens` already bound in practice.
+    ///
+    /// So an unproven family gets no capacity — the same crash-safe-over-fast
+    /// shape as `supportsQuantizedKVCache`. Add a family here only after
+    /// confirming it has no `newCache` override in mlx-swift-lm.
     static func supportsCallerKVCapacity(for configuration: ModelConfiguration) -> Bool {
         let modelName = configuration.name.lowercased()
-        return !(modelName.contains("gemma-4") || modelName.contains("gemma-3n"))
+        // Llama has no newCache override (verified against mlx-swift-lm at
+        // revision c97539da) — it takes upstream's default, which honours a
+        // requested capacity by building RotatingKVCache(.requested) per layer.
+        return modelName.contains("llama")
     }
 
     /// Prepend the synthetic `<think>` opener exactly once so downstream
