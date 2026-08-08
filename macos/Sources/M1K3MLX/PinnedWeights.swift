@@ -57,7 +57,11 @@ public enum PinnedWeights {
         "mlx-community/gemma-4-12B-it-4bit": .init(
             revision: "73bcf09092aa277861d5a191b989b666f7f32e8f",
             files: [
-                "chat_template.jinja": .init(size: 17466, sha256: "36e3a42e5cf14cd0020e72d92e1fdd9970f59b82170e421f0cbe1bb42bead3f0"),
+                // NOT the snapshot's template: Gemma4TemplateFix installs
+                // Google's 2026-07-09 canonical over the stale 2026-06-03 one
+                // BEFORE the scan runs, so the manifest pins the healed bytes
+                // (vendored resource, sha re-verified on every read).
+                "chat_template.jinja": .init(size: 18683, sha256: "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4"),
                 "config.json": .init(size: 5415, sha256: "fbc1c1cb48ed86ec98482b2d41f5a03d3991aba74b7c29a93d430761e6518a38"),
                 "generation_config.json": .init(size: 260, sha256: "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e"),
                 "model-00001-of-00002.safetensors": .init(size: 5_351_756_584, sha256: "0d58feed0c98a69c07317b4481aeae5ab2785f12a496ea96ab24c4842808de78"),

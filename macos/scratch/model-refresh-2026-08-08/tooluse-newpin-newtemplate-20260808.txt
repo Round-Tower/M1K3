@@ -1,0 +1,36 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: true
+✓ AFM RAG answer: The hydraulic seal on the conveyor failed under load. [Plant Notes §3.2 Seals].
+  grounded in 1 source(s)
+• loading MLX Qwen3-Embedding (downloads on first use)…
+✓ MLX Qwen3-Embedding embed: dim=512 ‖v‖=1.000
+embedwarm: cold=3723ms warm=11ms delta=3711ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Llama-3.2-1B-Instruct-4bit…
+✓ MLX generate: A hydraulic seal is the material or device that prevents fluid (like oil or gas) from escaping through a joint or valve in an engine, transmission, or other mechanical system.
+• chateval: 5 fixture(s) × 1 brain(s) [kinds: tool-use]…
+• chateval brain big (Big)…
+  tool-datetime [tool-use]: FAIL (17219ms)
+    ✗ ran — incompatibleCapacity(expected: 8192, count: 8)
+  tool-search-notes [tool-use]: FAIL (4116ms)
+    ✗ ran — incompatibleCapacity(expected: 8192, count: 8)
+  tool-search-doc [tool-use]: FAIL (4087ms)
+    ✗ ran — incompatibleCapacity(expected: 8192, count: 8)
+  tool-fact [tool-use]: FAIL (4113ms)
+    ✗ ran — incompatibleCapacity(expected: 8192, count: 8)
+  tool-web [tool-use]: FAIL (4109ms)
+    ✗ ran — incompatibleCapacity(expected: 8192, count: 8)
+
+=== CHATEVAL MATRIX (passed/total ⌀latency) ===
+task-kind  | big       
+-----------------------
+open-chat  | —         
+grounded-Q | —         
+reasoning  | —         
+code-gen   | —         
+tool-use   | 0/5 4113ms
+refusal    | —         
+security   | —         
+-----------------------
+overall    | 0/5 4113ms
+=== END SELF-TEST ===

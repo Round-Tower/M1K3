@@ -105,7 +105,16 @@ let package = Package(
         // the tag. Verify-owed on any bump here: a gemma-4 NATIVE TOOL-CALL
         // smoke (not just load-and-generate) — tool-calling is the reason this
         // dependency moves.
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", .upToNextMinor(from: "3.31.4")),
+        // Pinned to a main revision (2026-08-06, "Olmo3: fix newCache signature",
+        // c97539da) for Gemma-4 MTP speculative decoding: #415 (the
+        // Gemma4Unified MTP entry points + drafter registration — the #61
+        // unlock) and #506 (stand down before the sliding cache wraps) are
+        // both post-3.31.4 and unreleased as tags. Revision-pin + release-watch
+        // (the 2026-06 pattern): move back to a tag when one ships carrying
+        // both. This revision also carries the #502 ChatConventionsProviding
+        // migration — our .gemma4 dialect integration was re-verified against
+        // it in the same commit that changed this line.
+        .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", revision: "c97539da0e8554d2fad90cc79692381eab1c7906"),
         // mlx-swift itself (MLX/MLXNN/MLXFFT/MLXFast) — mlx-swift-lm depends on
         // this but doesn't re-export its products, so M1K3Kokoro (which needs
         // the raw neural-net/FFT primitives for the vendored Kokoro port, not
@@ -366,7 +375,11 @@ let package = Package(
                 .product(name: "MLXVLM", package: "mlx-swift-lm"),
                 .product(name: "Transformers", package: "swift-transformers"),
             ],
-            path: "Sources/M1K3MLX"
+            path: "Sources/M1K3MLX",
+            // The vendored canonical gemma-4 chat template (Google's 2026-07-09
+            // fix) — installed over stale mlx-community snapshots by
+            // Gemma4TemplateFix before the integrity scan runs.
+            resources: [.copy("Resources/gemma4-chat-template-canonical.jinja")]
         ),
         .testTarget(
             name: "M1K3MLXTests",

@@ -161,12 +161,23 @@ format runs **native** (`runNative`); otherwise the **ReAct** floor
   one afternoon, log-evidenced); `ModelStoreLocation` migrates a surviving
   Caches store across on first touch. `DEVELOPMENT_TEAM` is pinned in `project.yml` because a
   stable signing identity is load-bearing for persistent Keychain/TCC grants.
-- **`Package.swift` mlx-swift-lm is back on tag 3.31.4** (`.upToNextMinor`,
-  since 2026-07-01 — the temporary main-revision pin for gemma-4 tool-calling is
-  resolved; the parser shipped in 3.31.4). Dep bumps are probe-first
-  (`swift package resolve`) because of the WhisperKit/swift-transformers
-  `Tokenizers` clash landmine, and any bump owes a gemma-4 NATIVE tool-call
-  smoke (tool-calling is why this dep moves).
+- **`Package.swift` mlx-swift-lm is on a main REVISION pin** (`c97539da`,
+  2026-08-06 — since 2026-08-08, for Gemma-4 MTP: #415's entry points and
+  #506's sliding-cache stand-down are both post-3.31.4 and untagged). Move
+  back to a tag when one carries both. `mlx-swift` moved 0.31.4 → 0.31.6 in
+  the same bump — main needs it (`DType.greatestFiniteMagnitudeArray`,
+  `MLXArray.maskFill`). Dep bumps are probe-first (`swift package resolve`)
+  because of the WhisperKit/swift-transformers `Tokenizers` clash landmine,
+  and **any bump owes a gemma-4 NATIVE tool-call smoke** (tool-calling is why
+  this dep moves) — the 08-08 bump took gemma-4 tool-use from 5/5 to **0/5**
+  and only the smoke caught it (upstream #453's typed KV validation now
+  *throws* on the caller `maxKVSize` that Gemma4Text had always silently
+  ignored; see `MLXGemmaProvider.supportsCallerKVCapacity`). Run it with
+  `M1K3_SELFTEST_CHATEVAL=1 M1K3_SELFTEST_CHATEVAL_BRAINS=big
+  M1K3_SELFTEST_CHATEVAL_KINDS=tool-use`.
+- **`xcodebuild` needs `-skipPackagePluginValidation`** since the mlx-swift
+  0.31.6 bump (its `CudaBuild` plugin fails validation on an interactive
+  build). CI already passes it; the release scripts gained it 2026-08-08.
 - **`rg -rn` is a footgun** — `-r` is `--replace`, so `-rn "pat"` rewrites every
   match to "n". Use `rg -n` (recursive is the default). This trap has bitten
   repeatedly.

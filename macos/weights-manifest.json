@@ -99,8 +99,8 @@
       "downloadBase": "llm",
       "files": {
         "chat_template.jinja": {
-          "size": 17466,
-          "sha256": "36e3a42e5cf14cd0020e72d92e1fdd9970f59b82170e421f0cbe1bb42bead3f0"
+          "size": 18683,
+          "sha256": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4"
         },
         "config.json": {
           "size": 5415,
