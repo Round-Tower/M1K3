@@ -3,6 +3,16 @@
 
     ./scorecard.py <transcript.txt> [--markdown out.md] [--json out.json]
 
+Smoke-test it without running an eval:
+
+    ./scorecard.py sample-transcript.txt
+
+`sample-transcript.txt` is a hand-written two-brain, four-kind transcript
+covering the shapes that matter: a length-band failure, a cliché-marker
+failure, and — deliberately — an interview answer ("I can't remember our last
+chat") that reads as a refusal to `RefusalHeuristic` but is a GOOD answer. That
+row is why `humour`/`interview` do not use `mustComply`.
+
 The SelfTest transcript IS the raw artifact — this only reshapes it, and
 deliberately fails loudly rather than guessing when the shape is unfamiliar.
 A benchmark whose parser silently drops rows is worse than no benchmark.
