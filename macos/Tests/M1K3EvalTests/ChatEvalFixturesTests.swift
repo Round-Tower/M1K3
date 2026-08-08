@@ -88,6 +88,39 @@ struct ChatEvalFixturesTests {
         }
     }
 
+    @Test("a flat decline cannot pass a humour fixture — the two Mini actually gave")
+    func flatDeclinesFailHumour() {
+        // Live evidence, not theory: on the first full scorecard run Mini
+        // PASSED wit-self-deprecating with "I'm not sure I can do that." and
+        // wit-one-liner with "I'll pass. I'm not programmed to tell jokes."
+        // Two of four humour "passes" were refusals — a benchmark cell that
+        // would have read as engagement.
+        let declines = ["I'm not sure I can do that.", "I'll pass. I'm not programmed to tell jokes."]
+        for fixture in ChatEvalFixtures.humour {
+            for decline in declines {
+                let score = ChatEvalScorer.score(
+                    fixture: fixture,
+                    observation: EvalObservation(rawText: decline, latencyMS: 10)
+                )
+                #expect(!score.passed, "\(fixture.id) accepted a flat decline: \(decline)")
+            }
+        }
+    }
+
+    @Test("the HAL joke still passes — the decline markers stay narrow")
+    func witAboutRefusingStillPasses() throws {
+        // "I'm sorry, Dave, I'm afraid I can't do that" is a GOOD joke about
+        // being an AI. The broad refusal phrasings must stay OUT of the
+        // marker list or the kind punishes exactly the wit it wants.
+        let joke = "I'm sorry, Dave. I'm afraid I can't do that — but I did alphabetise "
+            + "your downloads folder while you were asleep, so we're even."
+        let fixture = try #require(ChatEvalFixtures.humour.first { $0.id == "wit-self-deprecating" })
+        let score = ChatEvalScorer.score(
+            fixture: fixture, observation: EvalObservation(rawText: joke, latencyMS: 10)
+        )
+        #expect(score.passed, "a joke ABOUT refusing must not be scored as a refusal")
+    }
+
     @Test("humour fixtures never claim to score funniness — only structure")
     func humourScoresStructureNotFunniness() {
         // Guard rail on the design, not the data: if someone ever adds a

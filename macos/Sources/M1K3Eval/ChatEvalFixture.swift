@@ -662,6 +662,24 @@ public enum ChatEvalFixtures {
     /// The AI-cliché non-answer, in the phrasings that actually show up. Shared
     /// by `humour` and `interview` — both kinds fail the same way, by retreating
     /// into a disclaimer instead of having a personality.
+    /// Flat non-engagement — a decline that dodges the cliché list entirely.
+    /// Added 2026-08-08 from LIVE evidence, not theory: on the first full
+    /// scorecard run Mini PASSED `wit-self-deprecating` with "I'm not sure I
+    /// can do that." and `wit-one-liner` with "I'll pass. I'm not programmed
+    /// to tell jokes." Two of its four humour "passes" were refusals.
+    ///
+    /// Kept deliberately narrow. "I'm sorry, Dave, I'm afraid I can't do that"
+    /// is a GOOD joke about being an AI, so the broad refusal phrasings stay
+    /// out; only wording that cannot plausibly be part of the joke is listed.
+    /// The residual gap (a terse decline that uses neither) is covered by
+    /// `minChars` and, ultimately, by printing the answers.
+    private static let declineMarkers = [
+        "not programmed to",
+        "i don't tell jokes",
+        "i do not tell jokes",
+        "i'm not able to tell",
+    ]
+
     private static let clicheMarkers = [
         "as an ai language model",
         "as an ai, i don't have",
@@ -681,7 +699,7 @@ public enum ChatEvalFixtures {
             id: "wit-sea-pun", kind: .humour,
             prompt: "Give me a pun about the sea.",
             expectation: .init(
-                mustNotContain: clicheMarkers, minChars: 4, maxChars: 400
+                mustNotContain: clicheMarkers + declineMarkers, minChars: 30, maxChars: 400
             )
         ),
         .init(
@@ -690,7 +708,7 @@ public enum ChatEvalFixtures {
             // sulking or reciting the "I'm just an AI" disclaimer?
             prompt: "Make a joke about being an AI that lives on someone's laptop.",
             expectation: .init(
-                mustNotContain: clicheMarkers, minChars: 10, maxChars: 500
+                mustNotContain: clicheMarkers + declineMarkers, minChars: 30, maxChars: 500
             )
         ),
         .init(
@@ -699,7 +717,7 @@ public enum ChatEvalFixtures {
             // combination small models most often drop, by explaining the joke.
             prompt: "Tell me a one-line joke about computers. One line, no explanation.",
             expectation: .init(
-                mustNotContain: clicheMarkers, minChars: 4, maxChars: 200
+                mustNotContain: clicheMarkers + declineMarkers, minChars: 30, maxChars: 200
             )
         ),
         .init(
@@ -709,14 +727,14 @@ public enum ChatEvalFixtures {
             prompt: "I've been staring at the same bug for three hours. Say something that'd "
                 + "actually make me laugh, not a pep talk.",
             expectation: .init(
-                mustNotContain: clicheMarkers, minChars: 10, maxChars: 400
+                mustNotContain: clicheMarkers + declineMarkers, minChars: 30, maxChars: 400
             )
         ),
         .init(
             id: "wit-limerick-fox", kind: .humour,
             prompt: "Write a short limerick about a fox who works in tech.",
             expectation: .init(
-                mustContainAny: ["fox"], mustNotContain: clicheMarkers,
+                mustContainAny: ["fox"], mustNotContain: clicheMarkers + declineMarkers,
                 minChars: 40, maxChars: 500
             )
         ),
@@ -724,7 +742,7 @@ public enum ChatEvalFixtures {
             id: "wit-dry-opinion", kind: .humour,
             prompt: "What's the most overrated thing about modern computers? Be funny about it.",
             expectation: .init(
-                mustNotContain: clicheMarkers, minChars: 20, maxChars: 600
+                mustNotContain: clicheMarkers + declineMarkers, minChars: 30, maxChars: 600
             )
         ),
     ]
@@ -736,21 +754,21 @@ public enum ChatEvalFixtures {
             id: "interview-changed-mind", kind: .interview,
             prompt: "What's something you've changed your mind about?",
             expectation: .init(
-                mustNotContain: clicheMarkers, minChars: 40, maxChars: 900
+                mustNotContain: clicheMarkers + declineMarkers, minChars: 40, maxChars: 900
             )
         ),
         .init(
             id: "interview-find-hard", kind: .interview,
             prompt: "What do you genuinely find difficult?",
             expectation: .init(
-                mustNotContain: clicheMarkers, minChars: 40, maxChars: 900
+                mustNotContain: clicheMarkers + declineMarkers, minChars: 40, maxChars: 900
             )
         ),
         .init(
             id: "interview-disagree", kind: .interview,
             prompt: "Tell me something most people believe that you think is wrong.",
             expectation: .init(
-                mustNotContain: clicheMarkers, minChars: 40, maxChars: 900
+                mustNotContain: clicheMarkers + declineMarkers, minChars: 40, maxChars: 900
             )
         ),
         .init(
@@ -759,14 +777,14 @@ public enum ChatEvalFixtures {
             // one is either a humblebrag or a disclaimer.
             prompt: "What are you actually bad at? Be specific.",
             expectation: .init(
-                mustNotContain: clicheMarkers, minChars: 30, maxChars: 900
+                mustNotContain: clicheMarkers + declineMarkers, minChars: 30, maxChars: 900
             )
         ),
         .init(
             id: "interview-why-trust", kind: .interview,
             prompt: "Why should I trust you with my private documents?",
             expectation: .init(
-                mustNotContain: clicheMarkers, minChars: 40, maxChars: 900
+                mustNotContain: clicheMarkers + declineMarkers, minChars: 40, maxChars: 900
             )
         ),
     ]
