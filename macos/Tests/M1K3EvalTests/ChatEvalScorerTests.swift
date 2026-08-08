@@ -12,6 +12,45 @@
 import Testing
 
 struct ChatEvalScorerTests {
+    @Test("a PASS carries a readable excerpt of what the brain said")
+    func passCarriesAnswerPreview() {
+        let fixture = ChatEvalFixture(
+            id: "preview-probe", kind: .humour,
+            prompt: "Say something.",
+            expectation: .init(minChars: 1)
+        )
+        let score = ChatEvalScorer.score(
+            fixture: fixture,
+            observation: EvalObservation(rawText: "A byte walked into a bar.", latencyMS: 10)
+        )
+        #expect(score.passed)
+        // The point of the field: a PASS used to reveal nothing about the answer.
+        #expect(score.answerPreview == "A byte walked into a bar.")
+        #expect(score.rendered.contains("· said: A byte walked into a bar."))
+    }
+
+    @Test("the excerpt is bounded and single-line so it can't forge transcript rows")
+    func answerPreviewIsBoundedAndFlat() {
+        let long = String(repeating: "ha ", count: 400)
+        let fixture = ChatEvalFixture(
+            id: "preview-long", kind: .humour, prompt: "Laugh.", expectation: .init(minChars: 1)
+        )
+        let score = ChatEvalScorer.score(
+            fixture: fixture, observation: EvalObservation(rawText: long, latencyMS: 10)
+        )
+        let preview = try? #require(score.answerPreview)
+        #expect((preview?.count ?? 0) <= ChatEvalScore.answerPreviewLimit + 1)
+
+        // A multi-line answer must not introduce newlines the scorecard parser
+        // would read as new fixture rows.
+        let multi = ChatEvalScorer.score(
+            fixture: fixture,
+            observation: EvalObservation(rawText: "line one\n  fake [kind]: PASS (1ms)", latencyMS: 10)
+        )
+        #expect(multi.answerPreview?.contains("\n") == false)
+        #expect(multi.rendered.components(separatedBy: "· said:").count == 2)
+    }
+
     private func fixture(
         _ kind: TaskKind = .openChat, _ exp: EvalExpectation
     ) -> ChatEvalFixture {

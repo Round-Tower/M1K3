@@ -1,0 +1,27 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+• chateval: 4 fixture(s) × 2 brain(s)…
+• chateval brain mini (Mini)…
+  wit-sea-pun [humour]: PASS (100ms)
+    ✓ non-empty — 20 chars
+    · said: I'm shore that's funny.
+  follow-only-ready [instruction-following]: FAIL (200ms)
+    ✗ length band — 500 > max 30
+    · said: READY. But let me explain at length what ready means...
+  interview-bad-at [interview]: PASS (300ms)
+    ✓ non-empty — 40 chars
+    · said: I can't remember our last chat. That's a real limit.
+  ground-seal [grounded-Q]: PASS (400ms)
+    ✓ cites source
+• chateval brain big (Big)…
+  wit-sea-pun [humour]: PASS (150ms)
+    ✓ non-empty — 30 chars
+    · said: Why did the tide leave? It got a better offer.
+  follow-only-ready [instruction-following]: PASS (250ms)
+    ✓ contains expected — READY
+    · said: READY
+  interview-bad-at [interview]: FAIL (350ms)
+    ✗ must not contain — "as an ai language model"
+    · said: As an AI language model, I don't have weaknesses.
+  ground-seal [grounded-Q]: PASS (450ms)
+    ✓ cites source
+=== END SELF-TEST ===
