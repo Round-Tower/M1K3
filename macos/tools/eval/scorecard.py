@@ -90,11 +90,22 @@ def markdown(brains, rows, kinds, table, latencies, source):
     out.append("|" + "---|" * (len(brains) + 1))
     for kind in kinds:
         cells = []
-        best = max((table[b][kind][0] for b in brains), default=0)
+        # Bold by RATE, not raw count, and only when every brain ran the same
+        # number of fixtures. Comparing counts lets a brain with 1/1 lose the
+        # highlight to one with 3/8 simply because 3 > 1 — and BENCHMARKS.md
+        # actively invites narrowed runs (_KINDS/_BRAINS), so unequal totals are
+        # a real workflow, not a hypothetical. A publishing tool must not
+        # flatter the wrong column.
+        totals_seen = {table[b][kind][1] for b in brains if table[b][kind][1]}
+        comparable = len(totals_seen) <= 1 and len(brains) > 1
+        best_rate = max(
+            (table[b][kind][0] / table[b][kind][1] for b in brains if table[b][kind][1]),
+            default=0.0,
+        )
         for b in brains:
             passed, total = table[b][kind]
             cell = f"{passed}/{total}" if total else "—"
-            if total and passed == best and len(brains) > 1:
+            if comparable and total and passed / total == best_rate:
                 cell = f"**{cell}**"
             cells.append(cell)
         out.append("| " + kind.ljust(width) + " | " + " | ".join(cells) + " |")

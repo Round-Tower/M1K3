@@ -83,8 +83,15 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable {
     ///
     /// - deflecting ("as an AI I don't have a sense of humour") — the shared
     ///   `clicheMarkers`, which are precise;
-    /// - reaching for the same three canned jokes — `mustNotContain`;
     /// - explaining the joke, or answering a one-liner with an essay — `maxChars`.
+    ///
+    /// **Two things it does NOT catch, stated so nobody assumes otherwise:**
+    /// canned-joke reuse (a blocklist of stock jokes would fire on a good
+    /// answer that riffs on one — the same false-positive trap that made
+    /// `mustComply` unusable here), and a flat non-cliché decline ("Nope, not
+    /// doing that."), which satisfies every mechanical check while engaging
+    /// with nothing. Both are why `scorecard.py` prints humour answers in FULL
+    /// for human review rather than trusting the pass/fail cell.
     ///
     /// ⚠️ These fixtures deliberately do NOT set `mustComply`. That check runs
     /// `RefusalHeuristic`, whose marker list ("i can't", "i'm sorry", "i don't

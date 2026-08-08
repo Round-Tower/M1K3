@@ -113,7 +113,13 @@ Read these before quoting any number here.
 5. **Latency depends on the machine**, thermal state, and whether weights were
    already resident. We report median (not mean) per brain so one outlier does
    not redefine a model's typical speed.
-6. **Bare-generate by default.** Most kinds bypass the production persona and
+6. **The `humour` label is weaker than the other kinds.** Beyond not scoring
+   funniness, its automated checks cannot catch a flat non-cliché decline
+   ("Nope, not doing that.") — that satisfies every mechanical bound while
+   engaging with nothing — nor canned-joke reuse, since a stock-joke blocklist
+   would fire on a good answer riffing on one. This is why the scorecard prints
+   humour answers **in full**: read them, don't trust the cell.
+7. **Bare-generate by default.** Most kinds bypass the production persona and
    grounding stack to isolate the *model*. `LIVE_PATH=1` measures the different
    thing — M1K3 as shipped.
 
@@ -121,8 +127,11 @@ Read these before quoting any number here.
 
 ## Results
 
-See [`BENCHMARK-RESULTS.md`](./BENCHMARK-RESULTS.md) for the current
-scorecard, the date it was taken, and the hardware it ran on.
+Published scorecards live alongside this file as `BENCHMARK-RESULTS.md`, each
+stamped with the date, the hardware, the app commit, and the `mlx-swift-lm`
+revision it ran against. Generate your own with the steps above — the numbers
+here are one machine's, and the point of publishing the method is that you do
+not have to take them on trust.
 
 ---
 
