@@ -301,9 +301,16 @@ are deliberately left unpinned so the evaluation loop stays usable.
     `parameters` entirely** (StandardKVCache for the 8 `full_attention` layers, a
     modelNative `RotatingKVCache(slidingWindow)` for the rest) — so our 8192 "hard bound on
     KV growth" was **always a silent no-op on Big**. Upstream merely made a false belief
-    loud. Fix: `MLXGemmaProvider.supportsCallerKVCapacity` (family-gated, permissive
-    default) — gemma-4/3n request no capacity; default-`newCache` families keep the real
-    backstop. A test that pinned `maxKVSize == 8192` for gemma-4 was corrected, not deleted.
+    loud. Fix: `MLXGemmaProvider.supportsCallerKVCapacity`. A test that pinned
+    `maxKVSize == 8192` for gemma-4 was corrected, not deleted.
+    **⚠️ CORRECTED IN #108 — the first cut of this fix was a deny-list with a
+    permissive default (gemma-4/3n excluded, everything else allowed), and it was
+    wrong.** Evaluating LFM2.5 hours later hit the identical throw, because 27 of
+    upstream's models override `newCache` and ignore `parameters` — the hybrids
+    (Mamba/Jamba/Granite/Nemotron/Qwen3Next) as much as gemma. #108 flips it to an
+    **allow-list defaulting to false**, version-scoped (`llama-3`, not `llama`),
+    on the asymmetry: wrongly requesting a capacity fails the model every turn;
+    wrongly omitting one only forgoes a backstop `maxTokens` already bounds.
   - **The gemma-4 chat template is now fixed on-device.** Google published the canonical
     template 2026-07-09 (tool-call loops, turn closures, null args, thinking order);
     `mlx-community/gemma-4-12B-it-4bit` still shipped the 2026-06-03 one, 7 weeks

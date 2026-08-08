@@ -153,3 +153,12 @@ worth one probe before writing the family off).
 **Lil stays `mlx-community/Qwen3-4B-Instruct-2507-4bit`.** Two challengers
 tested properly, both rejected on evidence, and the incumbent's own weak spot
 (security 4/7) is now named with a demonstration that it is fixable.
+
+*Signed: Kev + claude-opus-5, 2026-08-08, Confidence 0.9 for the Qwen3.5
+disqualification (a 6.7x latency gap excluding model load, reproducing the exact
+documented failure mode; the 9-of-44 partial-run caveat is stated in that
+section rather than hidden) and 0.85 for the LFM2.5 verdict (a full 44-fixture
+run, but only after two harness faults, and its grounded-Q latency is odd
+enough versus its own reasoning latency that a retrieval-path interaction is
+plausible and unprobed). Every number is a single run with no variance bars.
+Prior: Unknown.*

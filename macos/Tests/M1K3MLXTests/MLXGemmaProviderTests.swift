@@ -54,6 +54,12 @@ struct MLXGemmaProviderTests {
         #expect(MLXGemmaProvider.supportsCallerKVCapacity(
             for: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")
         ))
+        // Version-scoped: this function has been broken twice by unscoped
+        // family assumptions, so a hypothetical Llama-4 must NOT inherit the
+        // allow-list entry — it has to be audited and added deliberately.
+        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
+            for: ModelConfiguration(id: "mlx-community/Llama-4-Scout-4bit")
+        ))
         // Architectures that own their geometry — every one of these throws.
         for id in [
             "mlx-community/gemma-4-12B-it-4bit",
@@ -71,6 +77,18 @@ struct MLXGemmaProviderTests {
         #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
             for: ModelConfiguration(id: "mlx-community/some-unknown-model-4bit")
         ))
+    }
+
+    @Test("an LFM2 provider requests no caller capacity — the regression this fix exists for")
+    func lfm2ProviderRequestsNoCacheOverrides() {
+        // End-to-end through the real init, not just the static predicate:
+        // LFM2 is the family that actually broke (0/44, incompatibleCapacity),
+        // so the provider-level path deserves the same guard gemma-4 has.
+        for id in ["mlx-community/LFM2.5-2.6B-4bit", "local/LFM2.5-2.6B-4bit-liquid"] {
+            let provider = MLXGemmaProvider(configuration: ModelConfiguration(id: id))
+            #expect(provider.generateParameters.maxKVSize == nil, "\(id) must request no capacity")
+            #expect(provider.generateParameters.kvBits == nil, "\(id) is not in the quantized allow-list")
+        }
     }
 
     @Test("a gemma-4 provider requests neither quantized KV nor a caller capacity")

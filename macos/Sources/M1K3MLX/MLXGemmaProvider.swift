@@ -188,9 +188,10 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             // together — an uncapped 4096 decode can cross the window mid-answer
             // and silently rotate the persona/grounding head out.
             //
-            // Only for models on upstream's DEFAULT newCache, which honours a
-            // requested capacity. Architectures that own their cache geometry
-            // (gemma-4/3n) IGNORE it — see supportsCallerKVCapacity.
+            // ALLOW-LISTED families only (today: llama alone). Most
+            // architectures own their cache geometry and ignore a requested
+            // capacity — see supportsCallerKVCapacity for the list and why the
+            // default is "no capacity".
             params.maxKVSize = 8192
         }
         generateParameters = params
@@ -750,10 +751,19 @@ extension MLXGemmaProvider {
     /// confirming it has no `newCache` override in mlx-swift-lm.
     static func supportsCallerKVCapacity(for configuration: ModelConfiguration) -> Bool {
         let modelName = configuration.name.lowercased()
-        // Llama has no newCache override (verified against mlx-swift-lm at
-        // revision c97539da) — it takes upstream's default, which honours a
-        // requested capacity by building RotatingKVCache(.requested) per layer.
-        return modelName.contains("llama")
+        // ⚠️ VERSION-SCOPED ON PURPOSE. Llama-3 has no newCache override
+        // (verified against mlx-swift-lm at revision c97539da) — it takes
+        // upstream's default, which honours a requested capacity by building
+        // RotatingKVCache(.requested) per layer.
+        //
+        // The prefix is "llama-3", not "llama", because this function has now
+        // been broken TWICE by exactly that kind of unscoped family assumption:
+        // Gemma-3 honoured the capacity, Gemma-4 silently stopped, and LFM2
+        // never did. A future Llama-4 (or a vision/guard/MoE variant) could
+        // add a newCache override the same way and would be matched silently
+        // by a bare "llama". It also avoids matching an id containing
+        // "ollama". **Audit `newCache` upstream before adding a family here.**
+        return modelName.contains("llama-3")
     }
 
     /// Prepend the synthetic `<think>` opener exactly once so downstream
