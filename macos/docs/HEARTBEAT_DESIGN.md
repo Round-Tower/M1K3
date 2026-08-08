@@ -174,6 +174,22 @@ the agent onEvent stream + responder stages + MCPCallLogSink — a
 subscriber, not a system. Voice mode first (the face's theatre); chat
 backdrop is a later taste call.
 
+## Addendum — honest holds (2026-08-08)
+
+The first live days surfaced a design gap: the schedule's skips are logged
+but invisible in the UI, so a held heartbeat is indistinguishable from a
+broken one (observed: 47 quiet-hour + 3 thermal skips in one night while the
+surfaces showed an ageing "8 hours ago"). `HeartbeatHoldLine` (pure,
+`M1K3Heartbeat`) now resolves the last hold — quiet hours, warm machine,
+busy machine, or the empty rule's quiet-window withhold — into one short
+line; the engine records `heartbeatLastHold` on every non-tooSoon skip and
+clears it on a recorded pulse. Surfaces: the main-screen idle card and the
+Heartbeat window header. Holds age out after 30 minutes (a hold that stopped
+refreshing means the loop itself is asleep — an explanation would be a
+guess). Note the surface census since #103's final shape: main-screen idle
+card (canonical) + menu-bar line (ambient) + the Heartbeat window (history
+drill-in); Settings keeps only consent.
+
 ## Verify-owed (named)
 
 The loop, the render quality on Big/Lil (gemma is prompt-fragile — A/B the

@@ -83,6 +83,11 @@ extension AppEnvironment {
         guard case .fire = decision else {
             if case let .skip(reason) = decision, reason != .tooSoon {
                 Self.heartbeatLog.notice("pulse skipped: \(reason.rawValue, privacy: .public)")
+                // Surface the hold (tooSoon is not a hold — the pulse is
+                // fresh) so the surfaces can explain a stale pulse honestly.
+                if let held = HeartbeatHoldReason(skip: reason) {
+                    heartbeatLastHold = HeartbeatHold(reason: held, at: now)
+                }
             }
             return
         }
@@ -178,6 +183,7 @@ extension AppEnvironment {
             isFirstPulseToday: gathered.pulsesToday == 0
         ) else {
             Self.heartbeatLog.notice("pulse withheld: quiet window, not the day's first")
+            heartbeatLastHold = HeartbeatHold(reason: .quietWindow, at: now)
             return
         }
 
@@ -192,6 +198,7 @@ extension AppEnvironment {
             pulseStore.record(digest: digest, narrative: narrative, renderedBy: renderedBy, at: now)
         }.value
         heartbeatRevision += 1
+        heartbeatLastHold = nil
         Self.heartbeatLog.notice(
             "pulse recorded by \(renderedBy, privacy: .public) (activity: \(context.hasActivity, privacy: .public))"
         )

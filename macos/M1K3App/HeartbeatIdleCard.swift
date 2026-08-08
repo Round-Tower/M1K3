@@ -7,8 +7,10 @@
 //  maybe it could be the default"): when the chat is idle/empty, the latest
 //  pulse sits under the greeting — the resident telling you what's been
 //  going on, ambient and chilled back. Click-through opens the Heartbeat
-//  window (the history). Renders nothing while the toggle is off or before
-//  the first pulse, so the greeting stays untouched for new users.
+//  window (the history). Renders nothing while the toggle is off, so the
+//  greeting stays untouched for new users; with the toggle on it shows the
+//  latest pulse and/or the honest-hold line (HeartbeatHoldLine — why the
+//  pulse is stale, or that the first one is coming).
 //
 //  Surface census after this change (principle 6): main-screen idle card
 //  (canonical) + menu-bar line (ambient) + the Heartbeat window (history
@@ -29,36 +31,82 @@ struct HeartbeatIdleCard: View {
     @Environment(\.openWindow) private var openWindow
     @AppStorage(AppEnvironment.heartbeatEnabledKey) private var heartbeatOn = false
     @State private var latest: HeartbeatEntry?
+    /// The store read has completed at least once. Until then the hold line
+    /// stays nil — `latest == nil` pre-load would otherwise read as "no pulse
+    /// ever" and flash "first pulse on its way" at users with weeks of
+    /// history (review catch, PR #104).
+    @State private var hasLoadedLatest = false
 
     var body: some View {
+        // Resolve the honest-hold line alongside the pulse: a stale pulse
+        // with a known hold (thermal / busy / quiet) says why, instead of
+        // silently ageing into "the heartbeat looks broken" (2026-08-08).
+        let holdLine = currentHoldLine
         Group {
-            if heartbeatOn, let pulse = latest {
+            if heartbeatOn, latest != nil || holdLine != nil {
                 Button {
                     openWindow(id: M1K3App.heartbeatWindowID)
                 } label: {
                     VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "waveform.path.ecg")
-                                .symbolRenderingMode(.hierarchical)
-                            Text(pulse.createdAt, style: .relative) + Text(" ago · told by \(pulse.renderedBy)")
+                        if let pulse = latest {
+                            HStack(spacing: 6) {
+                                Image(systemName: "waveform.path.ecg")
+                                    .symbolRenderingMode(.hierarchical)
+                                Text(pulse.createdAt, style: .relative) + Text(" ago · told by \(pulse.renderedBy)")
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            Text(pulse.displayText)
+                                .font(.callout)
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(5)
                         }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        Text(pulse.displayText)
-                            .font(.callout)
-                            .foregroundStyle(.primary)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(5)
+                        if let holdLine {
+                            HStack(spacing: 6) {
+                                Image(systemName: "zzz")
+                                    .symbolRenderingMode(.hierarchical)
+                                Text(holdLine)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
                     }
                     .frame(maxWidth: 440, alignment: .leading)
                     .padding(14)
                     .glassEffect(in: .rect(cornerRadius: 18))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Heartbeat: latest pulse. Opens the Heartbeat window.")
+                // The hold line joins the label: the Button collapses its
+                // subtree into one a11y element, so without this VoiceOver
+                // would never hear the honest explanation the card exists
+                // for (review catch, PR #104).
+                .accessibilityLabel(accessibilityLabel(holdLine: holdLine))
             }
         }
+        // lastHold is observable state on env, so a tick's hold refresh
+        // re-evaluates the line; revision changes re-read the store.
         .task(id: env.heartbeatRevision) { await refresh() }
+    }
+
+    private var currentHoldLine: String? {
+        guard hasLoadedLatest else { return nil }
+        let now = Date()
+        return HeartbeatHoldLine.resolve(
+            now: now,
+            hour: Calendar.current.component(.hour, from: now),
+            lastPulse: latest?.createdAt,
+            lastHold: env.heartbeatLastHold
+        )
+    }
+
+    private func accessibilityLabel(holdLine: String?) -> String {
+        var parts = [latest != nil ? "Heartbeat: latest pulse." : "Heartbeat: holding."]
+        if let holdLine {
+            parts.append(holdLine)
+        }
+        parts.append("Opens the Heartbeat window.")
+        return parts.joined(separator: " ")
     }
 
     private func refresh() async {
@@ -66,5 +114,6 @@ struct HeartbeatIdleCard: View {
         latest = await Task.detached(priority: .utility) {
             (try? store.recent(limit: 1))?.first
         }.value
+        hasLoadedLatest = true
     }
 }

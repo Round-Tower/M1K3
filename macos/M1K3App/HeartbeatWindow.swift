@@ -42,22 +42,46 @@ struct HeartbeatWindowContent: View {
     }
 
     private var header: some View {
-        HStack {
-            Label("Heartbeat", systemImage: "waveform.path.ecg")
-                .symbolRenderingMode(.hierarchical)
-                .font(.pixelTitle)
-            Text("\(pulses.count)")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
-            Spacer()
-            Button(role: .destructive) {
-                Task { await clearPulses() }
-            } label: {
-                Label("Clear", systemImage: "trash")
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Label("Heartbeat", systemImage: "waveform.path.ecg")
+                    .symbolRenderingMode(.hierarchical)
+                    .font(.pixelTitle)
+                Text("\(pulses.count)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button(role: .destructive) {
+                    Task { await clearPulses() }
+                } label: {
+                    Label("Clear", systemImage: "trash")
+                }
+                .disabled(pulses.isEmpty)
             }
-            .disabled(pulses.isEmpty)
+            // The honest-hold line: a stale latest pulse explains itself
+            // (thermal / busy / quiet hours) instead of silently ageing.
+            if let holdLine = currentHoldLine {
+                Text(holdLine)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(16)
+    }
+
+    private var currentHoldLine: String? {
+        // Only over real history: the no-pulses ContentUnavailableView
+        // already explains the empty state (and `pulses` starts [] before
+        // the first store read — a hold line there would flash a wrong
+        // claim, the PR #104 review catch).
+        guard heartbeatOn, let newest = pulses.first else { return nil }
+        let now = Date()
+        return HeartbeatHoldLine.resolve(
+            now: now,
+            hour: Calendar.current.component(.hour, from: now),
+            lastPulse: newest.createdAt,
+            lastHold: env?.heartbeatLastHold
+        )
     }
 
     @ViewBuilder
