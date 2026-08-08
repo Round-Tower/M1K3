@@ -31,6 +31,11 @@ struct HeartbeatIdleCard: View {
     @Environment(\.openWindow) private var openWindow
     @AppStorage(AppEnvironment.heartbeatEnabledKey) private var heartbeatOn = false
     @State private var latest: HeartbeatEntry?
+    /// The store read has completed at least once. Until then the hold line
+    /// stays nil — `latest == nil` pre-load would otherwise read as "no pulse
+    /// ever" and flash "first pulse on its way" at users with weeks of
+    /// history (review catch, PR #104).
+    @State private var hasLoadedLatest = false
 
     var body: some View {
         // Resolve the honest-hold line alongside the pulse: a stale pulse
@@ -72,11 +77,11 @@ struct HeartbeatIdleCard: View {
                     .glassEffect(in: .rect(cornerRadius: 18))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(
-                    latest != nil
-                        ? "Heartbeat: latest pulse. Opens the Heartbeat window."
-                        : "Heartbeat: holding. Opens the Heartbeat window."
-                )
+                // The hold line joins the label: the Button collapses its
+                // subtree into one a11y element, so without this VoiceOver
+                // would never hear the honest explanation the card exists
+                // for (review catch, PR #104).
+                .accessibilityLabel(accessibilityLabel(holdLine: holdLine))
             }
         }
         // lastHold is observable state on env, so a tick's hold refresh
@@ -85,6 +90,7 @@ struct HeartbeatIdleCard: View {
     }
 
     private var currentHoldLine: String? {
+        guard hasLoadedLatest else { return nil }
         let now = Date()
         return HeartbeatHoldLine.resolve(
             now: now,
@@ -94,10 +100,20 @@ struct HeartbeatIdleCard: View {
         )
     }
 
+    private func accessibilityLabel(holdLine: String?) -> String {
+        var parts = [latest != nil ? "Heartbeat: latest pulse." : "Heartbeat: holding."]
+        if let holdLine {
+            parts.append(holdLine)
+        }
+        parts.append("Opens the Heartbeat window.")
+        return parts.joined(separator: " ")
+    }
+
     private func refresh() async {
         guard let store = env.heartbeatStore else { return }
         latest = await Task.detached(priority: .utility) {
             (try? store.recent(limit: 1))?.first
         }.value
+        hasLoadedLatest = true
     }
 }

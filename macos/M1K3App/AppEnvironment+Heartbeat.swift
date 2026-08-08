@@ -83,11 +83,11 @@ extension AppEnvironment {
         guard case .fire = decision else {
             if case let .skip(reason) = decision, reason != .tooSoon {
                 Self.heartbeatLog.notice("pulse skipped: \(reason.rawValue, privacy: .public)")
-            }
-            // Surface the hold (tooSoon is not a hold — the pulse is fresh) so
-            // the idle card / window can explain a stale pulse honestly.
-            if case let .skip(reason) = decision, let held = HeartbeatHoldReason(skip: reason) {
-                heartbeatLastHold = HeartbeatHold(reason: held, at: now)
+                // Surface the hold (tooSoon is not a hold — the pulse is
+                // fresh) so the surfaces can explain a stale pulse honestly.
+                if let held = HeartbeatHoldReason(skip: reason) {
+                    heartbeatLastHold = HeartbeatHold(reason: held, at: now)
+                }
             }
             return
         }

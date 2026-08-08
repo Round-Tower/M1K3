@@ -70,12 +70,16 @@ struct HeartbeatWindowContent: View {
     }
 
     private var currentHoldLine: String? {
-        guard heartbeatOn else { return nil }
+        // Only over real history: the no-pulses ContentUnavailableView
+        // already explains the empty state (and `pulses` starts [] before
+        // the first store read — a hold line there would flash a wrong
+        // claim, the PR #104 review catch).
+        guard heartbeatOn, let newest = pulses.first else { return nil }
         let now = Date()
         return HeartbeatHoldLine.resolve(
             now: now,
             hour: Calendar.current.component(.hour, from: now),
-            lastPulse: pulses.first?.createdAt,
+            lastPulse: newest.createdAt,
             lastHold: env?.heartbeatLastHold
         )
     }

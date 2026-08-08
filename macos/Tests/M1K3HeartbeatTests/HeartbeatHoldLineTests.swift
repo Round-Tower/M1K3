@@ -70,7 +70,14 @@ struct HeartbeatHoldLineTests {
     func quietWindowExplains() {
         let hold = HeartbeatHold(reason: .quietWindow, at: noon.addingTimeInterval(-10 * 60))
         let line = resolve(lastPulse: noon.addingTimeInterval(-3 * 60 * 60), lastHold: hold)
-        #expect(line == "A quiet stretch — I'll pulse when something happens, or with the morning.")
+        #expect(line == "A quiet stretch — the next pulse comes when something happens, or with the morning.")
+    }
+
+    @Test("a leftover quiet-hours hold cannot swallow a fresh install's first-pulse line")
+    func quietHoursHoldFallsThroughToFirstPulse() {
+        let hold = HeartbeatHold(reason: .quietHours, at: noon.addingTimeInterval(-10 * 60))
+        let line = resolve(lastPulse: nil, lastHold: hold)
+        #expect(line == "The first pulse is on its way.")
     }
 
     @Test("a stale hold (loop gone quiet, e.g. the machine slept) says nothing")

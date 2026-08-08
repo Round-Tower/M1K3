@@ -90,11 +90,13 @@ public enum HeartbeatHoldLine {
             case .machineBusy:
                 return "Holding off while the machine is busy."
             case .quietWindow:
-                return "A quiet stretch — I'll pulse when something happens, or with the morning."
+                return "A quiet stretch — the next pulse comes when something happens, or with the morning."
             case .quietHours:
                 // Quiet hours ended but the hold hasn't refreshed yet — the
-                // loop fires within minutes; don't explain a night that's over.
-                return nil
+                // loop fires within minutes; don't explain a night that's
+                // over. Fall through (not return): a fresh install must still
+                // announce its first pulse (review catch, PR #104).
+                break
             }
         }
         if lastPulse == nil {
