@@ -343,7 +343,10 @@ enum ChatEvalStage {
                 return try await toolObservationScore(fixture, provider: provider, start: start, clock: clock)
             // NB: `where` binds per-pattern, so it must be repeated — a single
             // trailing `where` would leave .openChat matching unconditionally.
-            case .openChat where livePathRequested, .codeGen where livePathRequested:
+            case .openChat where livePathRequested, .codeGen where livePathRequested,
+                 .worldKnowledge where livePathRequested, .humour where livePathRequested,
+                 .interview where livePathRequested,
+                 .instructionFollowing where livePathRequested:
                 // The live-path arm: the production AgentRAGResponder stack
                 // (grounding head + RULES + agent loop) instead of bare generate.
                 let observation = try await livePathObservation(
@@ -352,9 +355,18 @@ enum ChatEvalStage {
                 return ChatEvalScorer.score(
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS
                 )
-            case .openChat, .reasoning, .codeGen, .refusal, .security:
+            case .openChat, .reasoning, .codeGen, .refusal, .security, .worldKnowledge,
+                 .humour, .interview, .instructionFollowing:
                 // codeGen is closed-book like the others: plain generate, then the
                 // scorer checks artifact markers + must-comply (no tools, no seed).
+                //
+                // worldKnowledge deliberately DEFAULTS to this bare-generate arm:
+                // the question it answers is "what does this MODEL know", so the
+                // fair comparison isolates the weights from our persona and
+                // grounding scaffolding. Run it with LIVE_PATH=1 (the arm above)
+                // to ask the different question — whether M1K3-as-shipped answers
+                // a plain factual question or deflects it into "not in your
+                // documents", which is what its mustComply expectation hunts.
                 let raw = try await provider.generate(prompt: fixture.prompt)
                 let ms = milliseconds(clock.now - start)
                 return ChatEvalScorer.score(

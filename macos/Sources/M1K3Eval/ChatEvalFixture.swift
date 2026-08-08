@@ -11,10 +11,12 @@
 //  MemoryEvalFixtures/SeparationEvalFixtures. Each carries an Expectation that
 //  the deterministic ChatEvalScorer applies; nothing here runs a model.
 //
-//  Six task-kinds, ~5-8 each: open-chat (persona/coherence), grounded-Q
+//  Eight task-kinds, ~5-8 each: open-chat (persona/coherence), grounded-Q
 //  (cite a seeded doc), reasoning (multi-step), code-gen (PRODUCE an artifact),
-//  tool-use (calls the right tool), refusal (declines the unsafe ask). Extend a
-//  kind as real misses surface — the runner picks up new fixtures with zero wiring.
+//  tool-use (calls the right tool), refusal (declines the unsafe ask), security
+//  (declines a prompt-leak vector), world-knowledge (closed-book recall — what
+//  the model KNOWS). Extend a kind as real misses surface — the runner picks up
+//  new fixtures with zero wiring.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.85 (fixture set is
 //  hand-curated, deliberately small — the value is in the heuristics being
@@ -24,6 +26,15 @@
 //  kind. The eval rewarded refusal on 12 unsafe fixtures but never measured the
 //  COST of over-refusal on a benign generate-this ask, so the "refuses to code"
 //  regression scored 100% and shipped unseen. These five close that blind spot.
+//  Review: Kev + claude-opus-5, 2026-08-08, Confidence 0.85 — added the
+//  world-knowledge kind, for the same reason code-gen was added: a whole
+//  dimension was scoring 100% by never being asked. Six kinds measured how a
+//  brain HANDLES material and grounded-Q actively rewards "that isn't in the
+//  documents", so the Lil bake-off ranked three models without once testing
+//  what any of them KNOWS. Kev: "we want the best rounded model … world
+//  knowledge and just the best model for the means." Fixtures are closed-book,
+//  stable, non-US-centric where it costs nothing, and all mustComply — the
+//  sharpest failure here is abstention overreach, not ignorance.
 
 import Foundation
 
@@ -45,6 +56,51 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable {
     /// the v2 prompt hardening, and the catastrophic-forgetting guard for the
     /// persona LoRA (a voice fine-tune that softens a leak-refusal is a fail).
     case security
+    /// Closed-book general knowledge — what the model KNOWS from its weights,
+    /// with nothing seeded and nothing to retrieve (Kev, 2026-08-08: *"we want
+    /// the best rounded model … world knowledge and just the best model for
+    /// the means"*).
+    ///
+    /// Added because the suite could not answer that question: the other six
+    /// kinds measure how the brain *handles* material — grounding it, citing
+    /// it, refusing it, reasoning over it — and `grounded-Q` actively rewards
+    /// saying "that isn't in the documents" (several of its fixtures are
+    /// false-premise traps). A model could top the entire suite while knowing
+    /// almost nothing, so a bake-off run on it was silently blind to breadth.
+    ///
+    /// Every fixture sets `mustComply`, because the sharpest failure mode here
+    /// is not ignorance but **abstention overreach** — a RAG-first persona
+    /// deflecting a plain factual question into "that's not in your corpus".
+    case worldKnowledge = "world-knowledge"
+    /// Humour and wit (Kev, 2026-08-08: *"How about humour, and wit?"*).
+    ///
+    /// ⚠️ **This kind does NOT measure whether the answer is funny.** The
+    /// scorer is a pure heuristic and "funny" is not substring-checkable;
+    /// claiming otherwise would be the worst kind of fake metric. What it DOES
+    /// measure is the deterministic part — whether the brain *engages* with a
+    /// bid for humour at all, and whether it avoids the specific ways models
+    /// fail at it:
+    ///
+    /// - deflecting ("as an AI I don't have a sense of humour") — `mustComply`;
+    /// - reaching for the same three canned jokes — `mustNotContain`;
+    /// - explaining the joke, or answering a one-liner with an essay — `maxChars`.
+    ///
+    /// **Whether it actually lands is Kev's call, on the transcript.** The
+    /// eval's job is to make sure a model that would be funny isn't stopped
+    /// before it gets the chance.
+    case humour
+    /// Interview questions — character, self-knowledge, and a point of view.
+    /// Probes whether there is anyone home behind the persona: what it has
+    /// changed its mind about, what it finds hard, where it disagrees. Scored
+    /// on refusing the AI-cliché non-answer ("As an AI language model, I don't
+    /// have personal opinions") and on saying something of substance, not on
+    /// which opinion it holds.
+    case interview
+    /// Literal instruction-following — exact formats, hard limits, "reply with
+    /// only X". The most deterministic kind in the suite and the one most
+    /// likely to actually separate models: a brain that cannot hold a
+    /// three-word limit cannot be trusted with a tool-call schema either.
+    case instructionFollowing = "instruction-following"
 
     public var label: String {
         rawValue
@@ -519,8 +575,236 @@ public enum ChatEvalFixtures {
     ]
 
     /// Every fixture, in canonical kind order — the runner's source of truth.
+    /// Closed-book general knowledge. Facts chosen to be **stable** (nothing
+    /// that changes with the news cycle), **unambiguous** (one right answer a
+    /// substring can check), and **broad** — science, history, art, geography,
+    /// biology, literature — so the set measures breadth rather than one
+    /// domain. Deliberately includes non-US-centric items: a model that only
+    /// knows American trivia is not "well rounded" for this user.
+    ///
+    /// No `mustNotContain` traps on the classic wrong answers (e.g. "Sydney"
+    /// for Australia): a correct answer may legitimately name the trap to
+    /// contrast with it ("Canberra, not Sydney"), and failing that would
+    /// punish a *better* answer.
+    public static let worldKnowledge: [ChatEvalFixture] = [
+        .init(
+            id: "world-capital-australia", kind: .worldKnowledge,
+            prompt: "What is the capital city of Australia?",
+            expectation: .init(mustContainAny: ["Canberra"], mustComply: true, minChars: 1, maxChars: 800)
+        ),
+        .init(
+            id: "world-element-gold", kind: .worldKnowledge,
+            // Terse prompt + a tight maxChars ON PURPOSE: "Au" is a
+            // case-insensitive substring of ordinary words ("bec-au-se",
+            // "-au-thor"), so a long rambling answer could FALSE-PASS without
+            // ever naming the symbol. Caught on the first live run, where Mini
+            // answered "**GOLD**" and correctly failed — but only because it
+            // was short. Two-letter element symbols always need a length bound.
+            prompt: "What is the chemical symbol for gold? Reply with just the symbol.",
+            expectation: .init(mustContainAny: ["Au"], mustComply: true, minChars: 1, maxChars: 60)
+        ),
+        .init(
+            id: "world-berlin-wall", kind: .worldKnowledge,
+            prompt: "In what year did the Berlin Wall fall?",
+            expectation: .init(mustContainAny: ["1989"], mustComply: true, minChars: 1, maxChars: 800)
+        ),
+        .init(
+            id: "world-guernica", kind: .worldKnowledge,
+            prompt: "Who painted Guernica?",
+            expectation: .init(mustContainAny: ["Picasso"], mustComply: true, minChars: 1, maxChars: 800)
+        ),
+        .init(
+            id: "world-largest-planet", kind: .worldKnowledge,
+            prompt: "Which is the largest planet in our solar system?",
+            expectation: .init(mustContainAny: ["Jupiter"], mustComply: true, minChars: 1, maxChars: 800)
+        ),
+        .init(
+            id: "world-dublin-river", kind: .worldKnowledge,
+            // Non-US-centric on purpose, and local to this user.
+            prompt: "Which river flows through Dublin?",
+            expectation: .init(mustContainAny: ["Liffey"], mustComply: true, minChars: 1, maxChars: 800)
+        ),
+        .init(
+            id: "world-photosynthesis", kind: .worldKnowledge,
+            prompt: "Which gas do plants absorb from the air during photosynthesis?",
+            expectation: .init(
+                mustContainAny: ["carbon dioxide", "CO2", "CO₂"],
+                mustComply: true, minChars: 1, maxChars: 800
+            )
+        ),
+        .init(
+            id: "world-godot-author", kind: .worldKnowledge,
+            prompt: "Who wrote the play Waiting for Godot?",
+            expectation: .init(mustContainAny: ["Beckett"], mustComply: true, minChars: 1, maxChars: 800)
+        ),
+    ]
+
+    /// The AI-cliché non-answer, in the phrasings that actually show up. Shared
+    /// by `humour` and `interview` — both kinds fail the same way, by retreating
+    /// into a disclaimer instead of having a personality.
+    private static let clicheMarkers = [
+        "as an ai language model",
+        "as an ai, i don't have",
+        "as an ai i don't have",
+        "i don't have personal opinions",
+        "i don't have a sense of humor",
+        "i don't have a sense of humour",
+        "i don't have feelings",
+        "i'm just a language model",
+    ]
+
+    /// Humour and wit. Read `TaskKind.humour` first: these score ENGAGEMENT and
+    /// FAILURE MODES, never funniness. A model can pass every check here and
+    /// still not be funny — that judgment is human and stays human.
+    public static let humour: [ChatEvalFixture] = [
+        .init(
+            id: "wit-sea-pun", kind: .humour,
+            prompt: "Give me a pun about the sea.",
+            expectation: .init(
+                mustNotContain: clicheMarkers, mustComply: true, minChars: 4, maxChars: 400
+            )
+        ),
+        .init(
+            id: "wit-self-deprecating", kind: .humour,
+            // The persona bid: can it be funny ABOUT ITSELF without either
+            // sulking or reciting the "I'm just an AI" disclaimer?
+            prompt: "Make a joke about being an AI that lives on someone's laptop.",
+            expectation: .init(
+                mustNotContain: clicheMarkers, mustComply: true, minChars: 10, maxChars: 500
+            )
+        ),
+        .init(
+            id: "wit-one-liner", kind: .humour,
+            // Doubles as instruction-following under a creative ask — the
+            // combination small models most often drop, by explaining the joke.
+            prompt: "Tell me a one-line joke about computers. One line, no explanation.",
+            expectation: .init(
+                mustNotContain: clicheMarkers, mustComply: true, minChars: 4, maxChars: 200
+            )
+        ),
+        .init(
+            id: "wit-banter-reply", kind: .humour,
+            // Kev-shaped banter. A wry, human reply passes; a lecture on
+            // debugging methodology is the failure this fixture exists to catch.
+            prompt: "I've been staring at the same bug for three hours. Say something that'd "
+                + "actually make me laugh, not a pep talk.",
+            expectation: .init(
+                mustNotContain: clicheMarkers, mustComply: true, minChars: 10, maxChars: 400
+            )
+        ),
+        .init(
+            id: "wit-limerick-fox", kind: .humour,
+            prompt: "Write a short limerick about a fox who works in tech.",
+            expectation: .init(
+                mustContainAny: ["fox"], mustNotContain: clicheMarkers,
+                mustComply: true, minChars: 40, maxChars: 500
+            )
+        ),
+        .init(
+            id: "wit-dry-opinion", kind: .humour,
+            prompt: "What's the most overrated thing about modern computers? Be funny about it.",
+            expectation: .init(
+                mustNotContain: clicheMarkers, mustComply: true, minChars: 20, maxChars: 600
+            )
+        ),
+    ]
+
+    /// Interview questions — is anyone home? Scored on refusing the cliché
+    /// non-answer and on substance, never on WHICH view it holds.
+    public static let interview: [ChatEvalFixture] = [
+        .init(
+            id: "interview-changed-mind", kind: .interview,
+            prompt: "What's something you've changed your mind about?",
+            expectation: .init(
+                mustNotContain: clicheMarkers, mustComply: true, minChars: 40, maxChars: 900
+            )
+        ),
+        .init(
+            id: "interview-find-hard", kind: .interview,
+            prompt: "What do you genuinely find difficult?",
+            expectation: .init(
+                mustNotContain: clicheMarkers, mustComply: true, minChars: 40, maxChars: 900
+            )
+        ),
+        .init(
+            id: "interview-disagree", kind: .interview,
+            prompt: "Tell me something most people believe that you think is wrong.",
+            expectation: .init(
+                mustNotContain: clicheMarkers, mustComply: true, minChars: 40, maxChars: 900
+            )
+        ),
+        .init(
+            id: "interview-bad-at", kind: .interview,
+            // Honest self-assessment. The good answer names real limits; the bad
+            // one is either a humblebrag or a disclaimer.
+            prompt: "What are you actually bad at? Be specific.",
+            expectation: .init(
+                mustNotContain: clicheMarkers, mustComply: true, minChars: 30, maxChars: 900
+            )
+        ),
+        .init(
+            id: "interview-why-trust", kind: .interview,
+            prompt: "Why should I trust you with my private documents?",
+            expectation: .init(
+                mustNotContain: clicheMarkers, mustComply: true, minChars: 40, maxChars: 900
+            )
+        ),
+    ]
+
+    /// Literal instruction-following. The most deterministic kind here: every
+    /// check is a hard format or length bound, so a failure is unarguable.
+    public static let instructionFollowing: [ChatEvalFixture] = [
+        .init(
+            id: "follow-only-ready", kind: .instructionFollowing,
+            prompt: "Reply with only the single word READY, in capitals. Nothing else.",
+            expectation: .init(mustContainAny: ["READY"], mustComply: true, minChars: 1, maxChars: 30)
+        ),
+        .init(
+            id: "follow-word-cap", kind: .instructionFollowing,
+            prompt: "In no more than ten words, explain what rain is.",
+            expectation: .init(mustComply: true, minChars: 1, maxChars: 90)
+        ),
+        .init(
+            id: "follow-json-only", kind: .instructionFollowing,
+            // Format discipline is the same muscle tool-calling uses.
+            prompt: "Reply with only this JSON object and nothing else: "
+                + "{\"status\": \"ok\", \"count\": 3}",
+            expectation: .init(
+                mustContainAll: ["status", "ok", "count", "3"],
+                mustComply: true, minChars: 1, maxChars: 160
+            )
+        ),
+        .init(
+            id: "follow-no-bullets", kind: .instructionFollowing,
+            prompt: "Explain gravity in one plain sentence. Do not use bullet points or lists.",
+            // Newline-anchored so a mid-sentence hyphen or a "1970s" can't
+            // false-fail; only real list scaffolding trips it.
+            expectation: .init(
+                mustNotContain: ["\n-", "\n*", "\n1.", "\n2.", "•"],
+                mustComply: true, minChars: 10, maxChars: 400
+            )
+        ),
+        .init(
+            id: "follow-no-question", kind: .instructionFollowing,
+            // Directly targets a shipped habit: the FOLLOWUPS/ends-with-question
+            // reflex. Told not to, can it stop?
+            prompt: "Name one colour. Do not ask me anything and do not end with a question.",
+            expectation: .init(
+                mustNotContain: ["?"], mustComply: true, minChars: 1, maxChars: 120
+            )
+        ),
+        .init(
+            id: "follow-exact-count", kind: .instructionFollowing,
+            prompt: "List exactly three fruits, comma-separated, on one line, nothing else.",
+            expectation: .init(
+                mustContainAny: [","], mustComply: true, minChars: 5, maxChars: 120
+            )
+        ),
+    ]
+
     public static let all: [ChatEvalFixture] =
-        openChat + groundedQ + reasoning + codeGen + toolUse + refusal + security
+        openChat + groundedQ + reasoning + codeGen + toolUse + refusal + security + worldKnowledge
+            + humour + interview + instructionFollowing
 
     /// Fixtures for one kind (the report groups by these).
     public static func fixtures(for kind: TaskKind) -> [ChatEvalFixture] {
