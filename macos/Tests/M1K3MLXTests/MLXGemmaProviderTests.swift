@@ -35,34 +35,60 @@ struct MLXGemmaProviderTests {
         #expect(HistoryBudgetPolicy.rotatingGenerationTokenCap < MLXGemmaProvider.defaultMaxTokens)
     }
 
-    @Test("gemma-4 owns its KV geometry — no caller capacity is requested for it")
+    @Test("caller KV capacity is an ALLOW-list — anything unproven owns its own geometry")
     func callerKVCapacityFamilyResolution() {
-        // Gemma4Text.newCache IGNORES `parameters` entirely: it builds
-        // StandardKVCache for full_attention layers and a modelNative
-        // RotatingKVCache(slidingWindow) for the rest. Requesting a capacity
-        // was therefore always a silent no-op — and since mlx-swift-lm's
-        // typed KV cache validation (#453, 2026-08-05) it is a hard throw
-        // (`incompatibleCapacity(expected: 8192, count: 8)` — the 8 full
-        // attention layers), which took gemma-4 tool-use from 5/5 to 0/5.
-        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
-            for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
-        ))
-        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
-            for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit")
-        ))
-        // Gemma3n likewise builds its own per-layer geometry.
-        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
-            for: ModelConfiguration(id: "mlx-community/gemma-3n-E4B-it-lm-4bit")
-        ))
-        // Everything on upstream's DEFAULT newCache honours a requested
-        // capacity (it builds RotatingKVCache(.requested) per layer), so the
-        // growth backstop stays real for them.
+        // 27 of upstream's models override `newCache` and build their own
+        // per-layer geometry, IGNORING `parameters` — Gemma4Text
+        // (StandardKVCache + modelNative rotating) and LFM2Model
+        // (KVCacheSimple + MambaCache) are both in that set. Since
+        // mlx-swift-lm #453's typed KV validation, requesting a capacity such
+        // a model cannot honour is a HARD THROW
+        // (`incompatibleCapacity(expected: 8192, count: 8)`), not a silent
+        // no-op — it took gemma-4 tool-use to 0/5 and LFM2.5 to 0/44.
+        //
+        // The asymmetry decides the default: wrongly REQUESTING a capacity
+        // fails the model outright; wrongly OMITTING one only forgoes a
+        // backstop that the per-turn session lifecycle + maxTokens already
+        // bound. So this is an allow-list defaulting to false — the same
+        // crash-safe-over-fast shape as supportsQuantizedKVCache.
         #expect(MLXGemmaProvider.supportsCallerKVCapacity(
             for: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")
         ))
-        #expect(MLXGemmaProvider.supportsCallerKVCapacity(
+        // Version-scoped: this function has been broken twice by unscoped
+        // family assumptions, so a hypothetical Llama-4 must NOT inherit the
+        // allow-list entry — it has to be audited and added deliberately.
+        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
+            for: ModelConfiguration(id: "mlx-community/Llama-4-Scout-4bit")
+        ))
+        // Architectures that own their geometry — every one of these throws.
+        for id in [
+            "mlx-community/gemma-4-12B-it-4bit",
+            "mlx-community/gemma-4-e4b-it-4bit",
+            "mlx-community/gemma-3n-E4B-it-lm-4bit",
+            "mlx-community/LFM2.5-2.6B-4bit",
+            "local/LFM2.5-2.6B-4bit-liquid",
+        ] {
+            #expect(
+                !MLXGemmaProvider.supportsCallerKVCapacity(for: ModelConfiguration(id: id)),
+                "\(id) owns its KV geometry — must not be sent a capacity"
+            )
+        }
+        // Unknown families default to NO capacity — the safe direction.
+        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
             for: ModelConfiguration(id: "mlx-community/some-unknown-model-4bit")
         ))
+    }
+
+    @Test("an LFM2 provider requests no caller capacity — the regression this fix exists for")
+    func lfm2ProviderRequestsNoCacheOverrides() {
+        // End-to-end through the real init, not just the static predicate:
+        // LFM2 is the family that actually broke (0/44, incompatibleCapacity),
+        // so the provider-level path deserves the same guard gemma-4 has.
+        for id in ["mlx-community/LFM2.5-2.6B-4bit", "local/LFM2.5-2.6B-4bit-liquid"] {
+            let provider = MLXGemmaProvider(configuration: ModelConfiguration(id: id))
+            #expect(provider.generateParameters.maxKVSize == nil, "\(id) must request no capacity")
+            #expect(provider.generateParameters.kvBits == nil, "\(id) is not in the quantized allow-list")
+        }
     }
 
     @Test("a gemma-4 provider requests neither quantized KV nor a caller capacity")
