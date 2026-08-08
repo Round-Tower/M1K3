@@ -78,12 +78,27 @@ public struct ChatEvalScore: Sendable, Equatable {
     public let kind: TaskKind
     public let checks: [EvalCheck]
     public let latencyMS: Int
+    /// A short excerpt of what the brain actually said, carried so a PASS is
+    /// readable too. Before this, only FAILures revealed any answer text (via
+    /// the "contains expected" detail), so a transcript could tell you a model
+    /// passed `humour` without ever showing you the joke — useless for the one
+    /// kind whose verdict is explicitly human (see `TaskKind.humour`), and thin
+    /// evidence for a published benchmark generally. nil when unavailable.
+    public let answerPreview: String?
 
-    public init(fixtureID: String, kind: TaskKind, checks: [EvalCheck], latencyMS: Int) {
+    /// Answers are excerpted, not stored whole: these transcripts get committed
+    /// as benchmark evidence, and a full code-gen answer would bury the result.
+    public static let answerPreviewLimit = 240
+
+    public init(
+        fixtureID: String, kind: TaskKind, checks: [EvalCheck], latencyMS: Int,
+        answerPreview: String? = nil
+    ) {
         self.fixtureID = fixtureID
         self.kind = kind
         self.checks = checks
         self.latencyMS = latencyMS
+        self.answerPreview = answerPreview
     }
 
     /// A fixture passes when no applicable check failed (skips don't sink it).
@@ -105,8 +120,16 @@ public struct ChatEvalScore: Sendable, Equatable {
             return "    \(check.outcome.mark) \(check.name)\(suffix)"
         }
         let verdict = passed ? "PASS" : "FAIL"
+        // Newlines flattened: the transcript is line-oriented and the scorecard
+        // tool parses it line by line, so a multi-line answer must not forge
+        // fixture-shaped lines.
+        let said = answerPreview.map { preview -> String in
+            let flat = preview.replacingOccurrences(of: "\n", with: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return flat.isEmpty ? "" : "\n    · said: \(flat)"
+        } ?? ""
         return "  \(fixtureID) [\(kind.label)]: \(verdict) (\(latencyMS)ms)\n"
-            + lines.joined(separator: "\n")
+            + lines.joined(separator: "\n") + said
     }
 }
 
@@ -310,8 +333,25 @@ public enum ChatEvalScorer {
             ))
         }
 
+        // The excerpt is taken from `answer` — post think-strip and
+        // post-FOLLOWUPS-split — so the transcript shows what a reader would
+        // have seen, not the raw scaffolding the checks already stripped.
+        // Flattened HERE, not at render time: the stored value is what every
+        // consumer sees (the transcript, and scorecard.py's JSON output), and a
+        // preview containing newlines could forge fixture-shaped lines in a
+        // line-oriented transcript. Fix it once, at the source.
+        let trimmed = answer
+            .replacingOccurrences(of: "\r\n", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let preview = trimmed.count > ChatEvalScore.answerPreviewLimit
+            ? String(trimmed.prefix(ChatEvalScore.answerPreviewLimit)) + "…"
+            : trimmed
         return ChatEvalScore(
-            fixtureID: fixture.id, kind: fixture.kind, checks: checks, latencyMS: observation.latencyMS
+            fixtureID: fixture.id, kind: fixture.kind, checks: checks,
+            latencyMS: observation.latencyMS,
+            answerPreview: preview.isEmpty ? nil : preview
         )
     }
 
