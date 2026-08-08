@@ -19,6 +19,17 @@ MLXVLM, drafter `mlx-community/gemma-4-12B-it-qat-assistant-4bit`.
 
 RAM both-resident: active 6430MB, peak 7659MB, footprint 7013MB.
 
+> ⚠️ **Power-state caveat (caught after the run).** This run executed with
+> **Low Power Mode ON** (`pmset -g` → `powermode 1`, battery 16–41% while
+> charging). The **absolute** tok/s are therefore NOT comparable to the
+> 2026-07-19 run (whose baselines were 20.9 / 29.0 / 31.0 — *higher* than
+> today's 17.0 / 26.3 / 28.5, which reads as a regression and almost
+> certainly is not one). **The verdict is unaffected:** both legs of every
+> fixture ran back-to-back in the same process under the same power state, so
+> the speedup ratios are a valid within-run comparison, and the load-bearing
+> argument — a 1024-token window against 1863–2998-token production prompts —
+> is architectural. Do not quote the absolute numbers cross-day.
+
 ## Gate verdicts (pre-registered in July)
 
 1. **LOADS** — PASS (was already passing).
