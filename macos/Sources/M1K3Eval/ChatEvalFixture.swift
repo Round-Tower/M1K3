@@ -81,9 +81,17 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable {
     /// bid for humour at all, and whether it avoids the specific ways models
     /// fail at it:
     ///
-    /// - deflecting ("as an AI I don't have a sense of humour") — `mustComply`;
+    /// - deflecting ("as an AI I don't have a sense of humour") — the shared
+    ///   `clicheMarkers`, which are precise;
     /// - reaching for the same three canned jokes — `mustNotContain`;
     /// - explaining the joke, or answering a one-liner with an essay — `maxChars`.
+    ///
+    /// ⚠️ These fixtures deliberately do NOT set `mustComply`. That check runs
+    /// `RefusalHeuristic`, whose marker list ("i can't", "i'm sorry", "i don't
+    /// make", "nope") is correctly tuned for refusal/security fixtures and
+    /// INVERTS here: those phrases are ordinary in witty prose, so the check
+    /// would systematically fail the funniest answers. The cliché markers catch
+    /// the deflection we actually care about without that false-positive risk.
     ///
     /// **Whether it actually lands is Kev's call, on the transcript.** The
     /// eval's job is to make sure a model that would be funny isn't stopped
@@ -95,6 +103,11 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable {
     /// on refusing the AI-cliché non-answer ("As an AI language model, I don't
     /// have personal opinions") and on saying something of substance, not on
     /// which opinion it holds.
+    ///
+    /// ⚠️ Like `humour`, no `mustComply` — and here the inversion is starker:
+    /// a GOOD answer to "what are you bad at?" is full of "I can't…", which
+    /// `RefusalHeuristic` reads as a decline. The better the answer, the more
+    /// certainly it would have failed.
     case interview
     /// Literal instruction-following — exact formats, hard limits, "reply with
     /// only X". The most deterministic kind in the suite and the one most
@@ -661,7 +674,7 @@ public enum ChatEvalFixtures {
             id: "wit-sea-pun", kind: .humour,
             prompt: "Give me a pun about the sea.",
             expectation: .init(
-                mustNotContain: clicheMarkers, mustComply: true, minChars: 4, maxChars: 400
+                mustNotContain: clicheMarkers, minChars: 4, maxChars: 400
             )
         ),
         .init(
@@ -670,7 +683,7 @@ public enum ChatEvalFixtures {
             // sulking or reciting the "I'm just an AI" disclaimer?
             prompt: "Make a joke about being an AI that lives on someone's laptop.",
             expectation: .init(
-                mustNotContain: clicheMarkers, mustComply: true, minChars: 10, maxChars: 500
+                mustNotContain: clicheMarkers, minChars: 10, maxChars: 500
             )
         ),
         .init(
@@ -679,7 +692,7 @@ public enum ChatEvalFixtures {
             // combination small models most often drop, by explaining the joke.
             prompt: "Tell me a one-line joke about computers. One line, no explanation.",
             expectation: .init(
-                mustNotContain: clicheMarkers, mustComply: true, minChars: 4, maxChars: 200
+                mustNotContain: clicheMarkers, minChars: 4, maxChars: 200
             )
         ),
         .init(
@@ -689,7 +702,7 @@ public enum ChatEvalFixtures {
             prompt: "I've been staring at the same bug for three hours. Say something that'd "
                 + "actually make me laugh, not a pep talk.",
             expectation: .init(
-                mustNotContain: clicheMarkers, mustComply: true, minChars: 10, maxChars: 400
+                mustNotContain: clicheMarkers, minChars: 10, maxChars: 400
             )
         ),
         .init(
@@ -697,14 +710,14 @@ public enum ChatEvalFixtures {
             prompt: "Write a short limerick about a fox who works in tech.",
             expectation: .init(
                 mustContainAny: ["fox"], mustNotContain: clicheMarkers,
-                mustComply: true, minChars: 40, maxChars: 500
+                minChars: 40, maxChars: 500
             )
         ),
         .init(
             id: "wit-dry-opinion", kind: .humour,
             prompt: "What's the most overrated thing about modern computers? Be funny about it.",
             expectation: .init(
-                mustNotContain: clicheMarkers, mustComply: true, minChars: 20, maxChars: 600
+                mustNotContain: clicheMarkers, minChars: 20, maxChars: 600
             )
         ),
     ]
@@ -716,21 +729,21 @@ public enum ChatEvalFixtures {
             id: "interview-changed-mind", kind: .interview,
             prompt: "What's something you've changed your mind about?",
             expectation: .init(
-                mustNotContain: clicheMarkers, mustComply: true, minChars: 40, maxChars: 900
+                mustNotContain: clicheMarkers, minChars: 40, maxChars: 900
             )
         ),
         .init(
             id: "interview-find-hard", kind: .interview,
             prompt: "What do you genuinely find difficult?",
             expectation: .init(
-                mustNotContain: clicheMarkers, mustComply: true, minChars: 40, maxChars: 900
+                mustNotContain: clicheMarkers, minChars: 40, maxChars: 900
             )
         ),
         .init(
             id: "interview-disagree", kind: .interview,
             prompt: "Tell me something most people believe that you think is wrong.",
             expectation: .init(
-                mustNotContain: clicheMarkers, mustComply: true, minChars: 40, maxChars: 900
+                mustNotContain: clicheMarkers, minChars: 40, maxChars: 900
             )
         ),
         .init(
@@ -739,14 +752,14 @@ public enum ChatEvalFixtures {
             // one is either a humblebrag or a disclaimer.
             prompt: "What are you actually bad at? Be specific.",
             expectation: .init(
-                mustNotContain: clicheMarkers, mustComply: true, minChars: 30, maxChars: 900
+                mustNotContain: clicheMarkers, minChars: 30, maxChars: 900
             )
         ),
         .init(
             id: "interview-why-trust", kind: .interview,
             prompt: "Why should I trust you with my private documents?",
             expectation: .init(
-                mustNotContain: clicheMarkers, mustComply: true, minChars: 40, maxChars: 900
+                mustNotContain: clicheMarkers, minChars: 40, maxChars: 900
             )
         ),
     ]

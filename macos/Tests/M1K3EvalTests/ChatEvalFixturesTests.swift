@@ -67,9 +67,17 @@ struct ChatEvalFixturesTests {
     func personalityKindsShape() {
         for fixture in ChatEvalFixtures.humour + ChatEvalFixtures.interview {
             #expect(fixture.seedDoc == nil, "\(fixture.id) is closed-book")
-            // The shared failure mode both kinds exist to catch: retreating into
-            // a disclaimer instead of having a personality.
-            #expect(fixture.expectation.mustComply, "\(fixture.id) must engage, not deflect")
+            // ★ These kinds must NOT set mustComply. It runs RefusalHeuristic,
+            // whose markers ("i can't", "i'm sorry", "i don't make", "nope")
+            // are ordinary words in witty prose and in honest self-assessment —
+            // a good answer to "what are you bad at?" is full of "I can't…".
+            // The check would systematically fail the best answers, so the
+            // precise cliché markers do that job instead. Pinned so nobody
+            // "helpfully" adds it back.
+            #expect(
+                !fixture.expectation.mustComply,
+                "\(fixture.id) must not use the refusal heuristic — it inverts on this kind"
+            )
             #expect(
                 fixture.expectation.mustNotContain.contains("as an ai language model"),
                 "\(fixture.id) must reject the cliché non-answer"
