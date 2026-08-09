@@ -84,6 +84,33 @@ enum MemStatStage {
             let quarantined = try corpus.allItems(kind: .quarantined, limit: 100_000).count
             emit("memstat corpus: \(corpusMemories) memory item(s), \(quarantined) quarantined, "
                 + "graph/corpus divergence \(corpusMemories - live)")
+
+            // Durability census (2026-08-09). The store only ever grew, and the
+            // 08-09 audit found real facts LOSING retrieval to turn-summaries
+            // ("where does the user live" surfaced "the user is using a computer
+            // for the conversation" above three true Cork rows). This counts how
+            // much of the live corpus the write-time gate now classifies as
+            // transient — the number that says whether the gate was worth it.
+            //
+            // Classifies the item TITLE, which for a memory row is the fact
+            // itself but is truncated for long ones. Markers sit early in a
+            // sentence ("The user asked…", "Kev is currently…"), so truncation
+            // costs recall, not precision: read this as a FLOOR.
+            var durability: [String: Int] = [:]
+            for item in try corpus.allItems(kind: .memory, limit: 100_000) {
+                switch FactDurabilityPolicy.classify(item.title) {
+                case .durable:
+                    durability["durable", default: 0] += 1
+                case let .transient(reason):
+                    durability[reason.rawValue, default: 0] += 1
+                }
+            }
+            let transient = durability.filter { $0.key != "durable" }.values.reduce(0, +)
+            let share = corpusMemories > 0 ? transient * 100 / corpusMemories : 0
+            emit("memstat durability: \(durability["durable"] ?? 0) durable, "
+                + "\(transient) transient (\(share)% — floor) "
+                + durability.filter { $0.key != "durable" }.sorted { $0.key < $1.key }
+                .map { "\($0.key) \($0.value)" }.joined(separator: ", "))
         } catch {
             emit("✗ memstat census: \(error)")
         }
