@@ -199,6 +199,36 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             // capacity — see supportsCallerKVCapacity for the list and why the
             // default is "no capacity".
             params.maxKVSize = 8192
+
+            // PREFILL CHUNKING — measured 2026-08-09 on this machine (M1 Max,
+            // powermode 0), same 2357-token prompt every run:
+            //
+            //   upstream default   14333 / 14254 ms   (two runs, <0.6% apart)
+            //   stepSize 1024      13092 ms           -8.5%
+            //   stepSize 2048      13074 ms           -8.5%  (clamps to 1024)
+            //   unchunked          14513 ms           +1.5%  — bigger is NOT better
+            //
+            // 1024 and 2048 land together because upstream clamps the step to the
+            // model's `maximumStepSize`, which for gemma-4 is its sliding window.
+            // So this is really "use the whole window per forward"; the gemma text
+            // path's own default is smaller and costs us ~8.5% on every turn.
+            //
+            // Why this matters more than it looks: gemma-4's 1024-token window
+            // means the KV cache WRAPS on every real turn (prompts run 2.3-2.9k),
+            // which vetoes cross-turn reuse entirely — see MLXToolCalling's
+            // `reusable` gate. Every turn re-prefills the whole prompt, so prefill
+            // THROUGHPUT is the only lever left short of changing brains.
+            //
+            // Scoped to the family it was measured on. Qwen (Lil) has no sliding
+            // window and reuse works there, so its prefill profile is a different
+            // question and gets upstream's default until someone measures it.
+            if Self.prefersWindowSizedPrefill(for: configuration) {
+                params.prefill.stepSize = 1024
+            }
+            // Escape hatch for the next measurement pass — one build, many variants:
+            //   defaults write app.m1k3 prefillStepSize -int 2048
+            let stepOverride = UserDefaults.standard.integer(forKey: "prefillStepSize")
+            if stepOverride > 0 { params.prefill.stepSize = stepOverride }
         }
         generateParameters = params
         self.name = name
@@ -765,6 +795,18 @@ extension MLXGemmaProvider {
         return modelName.contains("qwen3") || modelName.contains("gemma-3-")
             || modelName.contains("ternary-bonsai-8b")
             || modelName.contains("ternary-bonsai-27b")
+    }
+
+    /// Whether this model benefits from a window-sized prefill chunk.
+    ///
+    /// True for gemma-4, measured: its own default chunk is smaller than its
+    /// sliding window and costs ~8.5% of every turn's prefill. Deliberately a
+    /// narrow allow-list rather than a default for everything — the sibling
+    /// `supportsCallerKVCapacity` has now been broken twice by unscoped family
+    /// assumptions, and an unmeasured model deserves upstream's choice, not
+    /// ours.
+    static func prefersWindowSizedPrefill(for configuration: ModelConfiguration) -> Bool {
+        configuration.name.lowercased().contains("gemma-4")
     }
 
     /// Whether a caller-requested KV capacity (`maxKVSize`) means anything for

@@ -360,4 +360,24 @@ struct MLXGemmaProviderTests {
             )
         }
     }
+
+    /// Measured 2026-08-09: gemma-4's own prefill chunk is smaller than its
+    /// sliding window and costs ~8.5% of every turn (14.29s → 13.09s on the
+    /// same 2357-token prompt). Scoped to the family it was measured on —
+    /// `supportsCallerKVCapacity` has been broken twice by unscoped family
+    /// assumptions, and an unmeasured model deserves upstream's default.
+    @Test("window-sized prefill is opt-IN per family, not a blanket default")
+    func windowSizedPrefillIsScoped() {
+        #expect(MLXGemmaProvider.prefersWindowSizedPrefill(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
+        ))
+        // Lil has no sliding window and cross-turn reuse works there, so its
+        // prefill profile is a different question — upstream's default stands.
+        #expect(!MLXGemmaProvider.prefersWindowSizedPrefill(
+            for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit")
+        ))
+        #expect(!MLXGemmaProvider.prefersWindowSizedPrefill(
+            for: ModelConfiguration(id: "mlx-community/Llama-3.2-3B-Instruct-4bit")
+        ))
+    }
 }
