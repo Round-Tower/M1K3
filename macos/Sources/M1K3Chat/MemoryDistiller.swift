@@ -209,19 +209,60 @@ public enum MemoryFactValidator {
         !conflatesUserWithAssistant(fact)
     }
 
+    /// The copulas that bind a NAME to its subject, longest-first because
+    /// regex alternation is ordered, not longest-match ("is" would otherwise
+    /// shadow "is called").
+    ///
+    /// This was a fixed phrase list until 2026-08-09, when "The user identifies
+    /// as M1K3." was found sitting in the live store having walked straight
+    /// through it. A lookup table only ever covers the wordings someone thought
+    /// of, and the thing on the other side of this fence is a small model that
+    /// paraphrases. So the fence matches the CLASS — subject `user`, any naming
+    /// copula, the assistant's name.
+    static let namingCopula: String = {
+        // Longest-first: regex alternation is ordered, so a bare "is" listed
+        // early would shadow "is called" and the pattern would then demand the
+        // name where "called" sits.
+        let copulas = [
+            "is called", "is named",
+            "identifies (?:him|her|them)sel(?:f|ves) as", "identifies as",
+            "refers to (?:him|her|them)sel(?:f|ves) as",
+            "goes by the name", "goes by", "is",
+        ]
+        return "(?:" + copulas.joined(separator: "|") + ")"
+    }()
+
+    /// Apostrophe lookalikes a tokenizer realistically emits, straightened so a
+    /// curly `user’s` cannot walk past a straight-quoted `user's` check (review
+    /// catch on PR #112 — the same class the eval scorer fixed in this same PR).
+    ///
+    /// Deliberately applied HERE and not inside `MemoryFactNormalizer.normalize`:
+    /// that function is the dedupe hash and, since 2026-08-09, the identity
+    /// `factSourceRef` uses to DELETE a corpus row. Changing it would silently
+    /// re-key every fact already stored.
+    static func straightenedApostrophes(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\u{2019}", with: "'")
+            .replacingOccurrences(of: "\u{02BC}", with: "'")
+            .replacingOccurrences(of: "\u{02B9}", with: "'")
+    }
+
     static func conflatesUserWithAssistant(_ fact: String) -> Bool {
-        let norm = MemoryFactNormalizer.normalize(fact)
-        // 1. Name conflation — the USER (as subject) is / is called / is named
-        //    the assistant. Anchored to "user" so a genuine fact about a THING
-        //    the user named M1K3 survives ("the user's project is called M1K3",
-        //    "the user is building an app called M1K3").
+        let norm = straightenedApostrophes(MemoryFactNormalizer.normalize(fact))
+        // 1. Name conflation — the USER (as subject) named as the assistant.
+        //    SUBJECT ADJACENCY is what keeps the genuine facts: a possessive
+        //    between the user and the copula means the thing being named is
+        //    the possession, not the person ("the user's project is called
+        //    M1K3"), and a copula not immediately followed by the name means
+        //    it's a different predicate ("the user is building an app called
+        //    M1K3"). Both survive; only "the user IS M1K3" is caught.
         for name in assistantNames {
-            let phrases = [
-                "user's name is \(name)", "user name is \(name)",
-                "user is \(name)", "user is called \(name)", "user is named \(name)",
-                "\(name) is the user", "user goes by \(name)",
-            ]
-            if phrases.contains(where: norm.contains) { return true }
+            let pattern = #"\buser \#(namingCopula) \#(name)\b"#
+            if norm.range(of: pattern, options: .regularExpression) != nil { return true }
+            if norm.contains("\(name) is the user") { return true }
+            if norm.contains("user's name is \(name)") || norm.contains("user name is \(name)") {
+                return true
+            }
         }
         // 2. Identity attribution — the user described as the assistant's KIND.
         //    \b after each kind so "programmer"/"botanist" don't match

@@ -214,6 +214,31 @@ struct MemoryFactValidatorTests {
         #expect(!MemoryFactValidator.isAcceptable("M1K3 is the user"))
     }
 
+    /// Live witnesses, 2026-08-09: "The user identifies as M1K3." was found
+    /// sitting in the real store, having walked straight through the fence —
+    /// the guard was a FIXED PHRASE LIST, and a small distiller paraphrases.
+    /// A lookup table only ever covers the wordings someone thought of; these
+    /// pin the CLASS (user ⟵copula⟶ assistant name), not seven spellings.
+    @Test("rejects name conflation however the copula is phrased")
+    func rejectsNameConflationParaphrases() {
+        #expect(!MemoryFactValidator.isAcceptable("The user identifies as M1K3."))
+        #expect(!MemoryFactValidator.isAcceptable("The user identifies themselves as M1K3"))
+        #expect(!MemoryFactValidator.isAcceptable("The user refers to himself as M1K3."))
+        #expect(!MemoryFactValidator.isAcceptable("The user goes by the name M1K3"))
+    }
+
+    /// Review catch on PR #112: the possessive check was NOT apostrophe-
+    /// normalised — the exact bug class the sibling commit in the same PR fixed
+    /// in the eval scorer. A model emitting the curly U+2019 walks through a
+    /// straight-quoted `user's name is`.
+    @Test("possessive name conflation survives a curly apostrophe")
+    func possessiveConflationIsApostropheNormalised() {
+        #expect(!MemoryFactValidator.isAcceptable("The user\u{2019}s name is M1K3"))
+        #expect(!MemoryFactValidator.isAcceptable("The user\u{02BC}s name is M1K3."))
+        // The false-positive guard still holds through the same normalisation.
+        #expect(MemoryFactValidator.isAcceptable("The user\u{2019}s project is called M1K3."))
+    }
+
     @Test("rejects facts that describe the user as an AI/assistant (assistant self-description)")
     func rejectsIdentityAttribution() {
         #expect(!MemoryFactValidator.isAcceptable("The user is an AI assistant"))
