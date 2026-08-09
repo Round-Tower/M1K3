@@ -313,6 +313,8 @@ final class AppEnvironment {
     /// Call-subsystem diagnostics — pairs with StereoCallRecorder's trail so a full
     /// record→transcribe QA pass is one `log stream` predicate.
     private static let callLog = Logger(subsystem: "app.m1k3", category: "calls")
+    /// Self-wiring quarantine outcomes (IDs/counts only, never titles).
+    private static let securityLog = Logger(subsystem: "app.m1k3", category: "security")
     /// Brain load / swap diagnostics — the most common field issue ("stuck/failed
     /// download"); pairs with M1K3MLX's mlx-load trail under one predicate.
     private static let brainLog = Logger(subsystem: "app.m1k3", category: "mlx-load")
@@ -1477,10 +1479,51 @@ extension AppEnvironment {
         recomputeBrainUpgradeState()
         M1K3Persona.setUserProfile(try? store.meta(key: Self.userProfileMetaKey))
         installGenerationMetricsSink()
+        await quarantineSelfWiringDocuments()
         await reindexIfEmbedderChanged()
         await reindexMemoryGraphIfNeeded()
         await warmEmbedderOnLaunch()
         await syncSpotlightIndex()
+    }
+
+    /// Keep M1K3's own wiring out of the retrievable index. Found live
+    /// 2026-08-09: `search_knowledge` returned ABSOLUTE RULES 1, 2 and 3
+    /// verbatim from an ingested copy of the prompt, so the rules could be
+    /// RECITED without the model ever leaking them — a different door from the
+    /// one the persona guards, and the only one that was open.
+    ///
+    /// The `.quarantined` kind was built for this in June and the re-tag was
+    /// left as a manual operator action, where it sat undone for two months. A
+    /// maintenance chore nobody performs is not a control, so it runs every
+    /// launch: idempotent, and it catches the NEXT accidental ingest without
+    /// anyone remembering. Best-effort — a scan failure must never block boot.
+    private func quarantineSelfWiringDocuments() async {
+        // Off the main actor: this reads every chunk of every retrievable item,
+        // and runStartupMaintenance() inherits @MainActor from the class — so a
+        // synchronous call here would scan the whole corpus on the thread that
+        // draws the first frame (review catch, PR #115).
+        let spans = SelfWiringQuarantine.spans(inPrompt: M1K3Persona.wiringText)
+        let corpus = store
+        let moved: [UUID]
+        do {
+            moved = try await Task.detached(priority: .utility) {
+                try corpus.quarantineSelfWiring(spans: spans)
+            }.value
+        } catch {
+            // A silent failure would make "the sweep never ran" indistinguishable
+            // from "nothing to quarantine" — unacceptable for a security control.
+            Self.securityLog.error(
+                "self-wiring quarantine FAILED: \(error.localizedDescription, privacy: .public)"
+            )
+            return
+        }
+        guard !moved.isEmpty else { return }
+        // IDs only, never titles: the whole point is that this content should
+        // not be spreading, and a log line is another place it would live.
+        Self.securityLog.notice(
+            "self-wiring quarantine: \(moved.count, privacy: .public) item(s) re-kinded"
+        )
+        refreshCounts()
     }
 
     /// Route the MLX backend's per-turn stats onto the streaming assistant message

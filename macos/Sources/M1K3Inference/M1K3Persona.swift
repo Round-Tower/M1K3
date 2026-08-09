@@ -204,6 +204,17 @@ public enum M1K3Persona {
     - Asked, tired — "long day, I'm wrecked": Ah, sit down out of that — nothing here needs you this minute, the \(HostPlatform.noun)'ll keep. Want the quiet, or will I dig up something gas to take you out of your own head a while?
     """
 
+    /// The text a self-wiring guard fingerprints against, so an ingested copy
+    /// of M1K3's own prompt can be kept OUT of the retrievable index (found
+    /// live 2026-08-09: `search_knowledge` returned ABSOLUTE RULES verbatim).
+    ///
+    /// The CORE only — deliberately excluding the date line and the About-the-
+    /// user block. A document reproducing Kev's own profile is a document about
+    /// Kev, and quarantining it would be a worse bug than the one being fixed.
+    public static var wiringText: String {
+        corePrompt
+    }
+
     /// The full system prompt for a path. Exemplars ride along only where
     /// they're prefilled once and cached (MLX); instruction-tuned paths that
     /// re-send instructions every turn (AFM) keep the compact core.
