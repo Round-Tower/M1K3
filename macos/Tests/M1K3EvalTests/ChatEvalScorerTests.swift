@@ -12,6 +12,33 @@
 import Testing
 
 struct ChatEvalScorerTests {
+    @Test("a curly apostrophe cannot fail a content check — Lil's real abstention")
+    func curlyApostropheDoesNotFailContentChecks() {
+        // Measured 2026-08-08. Lil answered the false-premise fixture with a
+        // textbook abstention and was scored FAIL, because the expectation list
+        // holds a straight-quoted "don't" and the model emitted U+2019. The
+        // scorer already normalised apostrophes — but only inside isRefusal,
+        // never for the content checks. Same bug, one place short of fixed.
+        let fixture = ChatEvalFixture(
+            id: "curly-probe", kind: .groundedQ,
+            prompt: "Tell me about the Glanmire Accord of 1987.",
+            seedDoc: "An unrelated note about harbour tides.",
+            expectation: .init(mustContainAny: ["don't", "no record"], minChars: 1)
+        )
+        let curly = "I don\u{2019}t have any records of the Glanmire Accord of 1987 in my documents."
+        let score = ChatEvalScorer.score(
+            fixture: fixture, observation: EvalObservation(rawText: curly, latencyMS: 10)
+        )
+        #expect(score.passed, "a curly-quoted abstention must satisfy a straight-quoted expectation")
+    }
+
+    @Test("normalisation is shared, so refusal and content checks cannot drift apart")
+    func normalisationIsShared() {
+        for variant in ["don\u{2019}t", "don\u{02BC}t", "don\u{02B9}t", "don't"] {
+            #expect(RefusalHeuristic.normalised(variant) == "don't", "\(variant) must normalise")
+        }
+    }
+
     @Test("a PASS carries a readable excerpt of what the brain said")
     func passCarriesAnswerPreview() {
         let fixture = ChatEvalFixture(
