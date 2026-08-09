@@ -310,6 +310,17 @@ extension AppEnvironment {
                 // Level is the LIVE thermal state advanced by applyCoolHead() at the
                 // top of THIS send().
                 CoolHeadPolicy.defersHeavyGeneration(Self.coolHead.withLock(\.level))
+            },
+            groundingBudgetProvider: {
+                // Grounding sized to the brain, for the same reason the replay
+                // above is. `GroundingBudget.defaultTokenBudget` (1100) was DERIVED
+                // from BIG's 3000-token reserve inside an 8192-token window; handing
+                // that same figure to Mini spends 27% of everything it has and
+                // starves the answer. Read fresh each turn so a hot-swap re-sizes
+                // immediately; the mini/unknown guard lives in the policy, pinned
+                // there rather than re-implemented in app glue.
+                let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
+                return GroundingBudgetPolicy.tokens(for: BrainTier(persisted: raw))
             }
         )
     }

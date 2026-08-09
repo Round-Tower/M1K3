@@ -67,12 +67,20 @@ public enum HistoryBudgetPolicy {
     /// aligns the live path with it.)
     public static let rotatingGenerationTokenCap = 2048
 
-    /// Apple Foundation Models (mini) manages its OWN ~4K window and fails LOUDLY
-    /// on overflow, and its real effective budget is unmeasured (the [SPIKE]). So
-    /// mini gets a fixed CONSERVATIVE replay — wider per-turn than the legacy
-    /// 6×400 (less answer mangling) but well under the window — NOT the wide MLX
-    /// default and NOT the tier policy (whose MLX-sized reserves would zero it
-    /// out). Revisit once AFM's effective window is measured on-device.
+    /// Apple Foundation Models (mini) has its own ~4K window, and its real
+    /// effective budget is unmeasured (the [SPIKE]). So mini gets a fixed
+    /// CONSERVATIVE replay — wider per-turn than the legacy 6×400 (less answer
+    /// mangling) but well under the window — NOT the wide MLX default and NOT
+    /// the tier policy (whose MLX-sized reserves would zero it out).
+    ///
+    /// ⚠️ This comment used to add "and fails LOUDLY on overflow". It does NOT,
+    /// and that belief has now caused two bugs. AFM throws on overflow from
+    /// `generate`, but `generateStreaming` — the live chat path — could only
+    /// end the stream, so an overflow arrived as an ordinary empty answer. The
+    /// same belief exempted Mini from `GroundingBudget` entirely until #101.
+    /// As of 2026-08-09 the throw is at least CLASSIFIED and logged
+    /// (`AFMFailure`), but it is still not loud to the caller. Size for Mini as
+    /// if a miss is silent, because it is.
     public static let conservativeMiniBudget = HistoryWindow.Budget(
         totalChars: 3000, perTurnChars: 750, maxTurns: 8
     )

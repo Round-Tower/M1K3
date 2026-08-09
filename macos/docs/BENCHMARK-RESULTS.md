@@ -20,6 +20,20 @@ kind. This is a decision instrument for one product, not a leaderboard.
 | brains | Mini = Apple Foundation Models · Lil = `Qwen3-4B-Instruct-2507-4bit` · Big = `gemma-4-12B-it-4bit` |
 | fixture runs | 207 (69 fixtures × 3 brains) |
 
+⚠️ **This run did NOT use the live path, and that changes how the latency
+column may be read.** The config used lacked `M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1`,
+so every kind except `grounded-Q` (plain `RAGResponder`) and `tool-use` (AFM's
+own session loop) ran through bare `provider.generate` — no retrieval, no
+grounding, no tools, no agent loop.
+
+So **Mini's 11574 ms median is the cost of ONE bare call**, not of a real chat
+turn. A production turn adds the whole turn shape on top and can multiply that
+figure. Quoting these medians as "what a user waits" understates them, and — the
+sharper trap — **no change to grounding, tool exposure or the agent loop can
+move any of these cells**, because those things were never in the measurement.
+Found 2026-08-09 while working #102. The reproduce config in `BENCHMARKS.md` now
+sets the flag; the next run supersedes this one.
+
 ⚠️ **The `humour` cells are optimistic.** This run predates the decline-marker
 fix: a flat refusal could still score a PASS, and Mini gave two
 ("I'm not sure I can do that.", "I'll pass. I'm not programmed to tell jokes.").

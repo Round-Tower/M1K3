@@ -203,6 +203,12 @@ let package = Package(
         // FoundationModels is a system framework on macOS 26.
         .target(
             name: "M1K3Inference",
+            // M1K3LogCore only — the dependency-free logging catalogue. Added
+            // 2026-08-09 because AppleFoundationModelsProvider (the Mini tier,
+            // and the first-run default) had NO logger at all, so overflows,
+            // guardrail refusals and daemon collapses were one silent empty
+            // stream. This target stays otherwise dependency-free by design.
+            dependencies: ["M1K3LogCore"],
             path: "Sources/M1K3Inference"
         ),
         .testTarget(
