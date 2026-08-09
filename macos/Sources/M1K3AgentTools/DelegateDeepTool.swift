@@ -14,14 +14,32 @@
 
 import Foundation
 import M1K3Agent
+import M1K3Inference
+import M1K3LogCore
+import os
 
 public struct DelegateDeepTool: AgentTool {
+    /// Same `delegate_deep …` grammar the manager emits, so ONE grep over the
+    /// unified log catches every invocation — including the ones that never
+    /// reach the manager at all. Without this, a model calling with a blank
+    /// task looks identical to a model that never called.
+    private static let log = Logger(subsystem: M1K3Log.subsystem, category: "mlx-load")
+
     public let name = "delegate_deep"
+    /// Describes what the plumbing ACTUALLY does. The previous wording promised
+    /// "the deeper brain" — but the manager passes `swappableMLX`, the brain
+    /// already resident, which under an eligible call is the very brain reading
+    /// this description; `selectBrain` refuses mid-dive, so nothing heavier can
+    /// be swapped in. This tool buys TIME, not intelligence, and it spends the
+    /// conversation's quality to do it (interactive turns route to Mini while
+    /// the slot is held). Both halves are stated so the model can make that
+    /// trade knowingly on the user's behalf.
     public let description =
-        "Hand a genuinely long-form task (a deep dive, a long document, heavy "
-            + "analysis) to the deeper brain to work on in the background. Returns "
-            + "immediately — the result arrives in the chat later with a "
-            + "notification. Use ONLY when the user asks for something big; answer "
+        "Run a long task in the background instead of answering it now. It goes to "
+            + "the brain already in use — this buys time, not extra intelligence — and "
+            + "while it runs, chat replies come from Mini: faster, but the weakest "
+            + "tier. Returns immediately; the result lands in this chat later with a "
+            + "notification. Use ONLY for work that genuinely takes minutes — answer "
             + "ordinary questions yourself."
     public let parameters = [
         ToolParameter(name: "task", description: "The full task for the deep brain, self-contained."),
@@ -38,6 +56,9 @@ public struct DelegateDeepTool: AgentTool {
     public func execute(input: [String: String]) async throws -> ToolResult {
         let task = (input["task"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !task.isEmpty else {
+            Self.log.notice(
+                "\(DeepDelegationOutcome.declined(reason: .emptyTask).logLine, privacy: .public)"
+            )
             return ToolResult(output: "Error: delegate_deep needs a task — describe what to dig into.")
         }
         return await ToolResult(output: startDelegation(task))

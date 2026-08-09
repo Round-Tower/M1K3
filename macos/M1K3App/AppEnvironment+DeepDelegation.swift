@@ -54,11 +54,20 @@ final class DeepDelegationHook: Sendable {
 extension AppEnvironment {
     private static let delegationLog = Logger(subsystem: "app.m1k3", category: "mlx-load")
 
+    /// One `.notice` per delegate_deep invocation, whatever became of it.
+    /// `.notice` and not `.info`/`.debug`: those don't persist in OSLogStore,
+    /// and the whole point is that a later `rg 'delegate_deep '` over days of
+    /// log can tell "never called" from "always refused".
+    static func logDelegation(_ outcome: DeepDelegationOutcome) {
+        delegationLog.notice("\(outcome.logLine, privacy: .public)")
+    }
+
     /// Start a background deep dive. Returns the tool observation for the
     /// fronting model — delegated, single-flight refusal, or an eligibility
     /// refusal (DeepDelegationPolicy).
     func startDeepDelegation(_ task: String) async -> String {
         if let running = deepDelegationTaskLabel {
+            Self.logDelegation(.declined(reason: .alreadyRunning))
             return "Error: already digging into “\(running)” — one deep dive at a "
                 + "time. Offer to queue the new one for after, or answer it directly."
         }
@@ -67,12 +76,19 @@ extension AppEnvironment {
             load: modelLoad,
             afm: afmAvailability
         )
-        if let refusal = eligibility.refusalObservation { return refusal }
+        // Both halves of a refusal, together: `refusalObservation` is what the
+        // model hears, `declineReason` is what we see. They are pinned in
+        // lockstep (DeepDelegationOutcomeTests) precisely so a refusal can never
+        // again be spoken to the model while leaving no trace for us.
+        if let reason = eligibility.declineReason, let refusal = eligibility.refusalObservation {
+            Self.logDelegation(.declined(reason: reason))
+            return refusal
+        }
 
         let brainName = selectedBrain.displayName
         deepDelegationTaskLabel = task
         refreshInterimBridge() // interactive turns front on Mini from here
-        Self.delegationLog.notice("delegate_deep started on \(brainName, privacy: .public)")
+        Self.logDelegation(.started(brain: brainName))
         // Ask for notification permission NOW so the finish ping can land
         // (no-op if already granted/denied; the center drops unauthorized posts).
         Task { _ = await TurnNotifier.requestAuthorization() }

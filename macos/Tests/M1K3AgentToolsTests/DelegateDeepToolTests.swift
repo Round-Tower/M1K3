@@ -46,6 +46,32 @@ struct DelegateDeepToolTests {
         #expect(tool.parameters.count == 1)
         #expect(tool.parameters.first?.name == "task")
     }
+
+    // MARK: - The description must describe what the tool actually does
+
+    @Test("the description never promises a DEEPER brain — the dive runs on the resident one")
+    func descriptionDoesNotPromiseEscalation() {
+        // AppEnvironment+DeepDelegation passes `provider: swappableMLX` — the
+        // brain ALREADY resident, which under an eligible call is the very brain
+        // making this call. There is no escalation: `selectBrain` refuses mid-dive,
+        // so nothing heavier can be swapped in. A description promising depth the
+        // plumbing cannot deliver teaches the model to reach for a rung that
+        // isn't there, and a tool that lies to the model is worse than no tool.
+        let description = DelegateDeepTool(startDelegation: { _ in "" }).description.lowercased()
+        #expect(!description.contains("deeper brain"))
+        #expect(!description.contains("deep brain"))
+    }
+
+    @Test("the description names the real trade: background time, and a weaker front meanwhile")
+    func descriptionNamesTheTrade() {
+        // Delegating is not free. While the dive holds the one MLX slot, every
+        // interactive turn is routed to Mini (refreshInterimBridge) — faster, but
+        // the weakest tier. The model is choosing on the user's behalf, so it has
+        // to be told what it's spending, not just what it's buying.
+        let description = DelegateDeepTool(startDelegation: { _ in "" }).description.lowercased()
+        #expect(description.contains("background"))
+        #expect(description.contains("mini"))
+    }
 }
 
 private actor TaskRecorder {
