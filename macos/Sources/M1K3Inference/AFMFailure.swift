@@ -47,9 +47,13 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
     /// whichever check happened to run first.
     public static func classify(_ description: String) -> AFMFailure {
         let text = description.lowercased()
-        if text.contains("exceeds the maximum allowed context size")
+        // Hoisted to a local rather than a multi-line `if` condition: swiftformat
+        // wraps such a condition's brace onto its own line and swiftlint's
+        // opening_brace rule then rejects it. The two tools disagree; a named
+        // condition satisfies both and reads better anyway.
+        let isOverflow = text.contains("exceeds the maximum allowed context size")
             || text.contains("exceededcontextwindowsize")
-        {
+        if isOverflow {
             return .contextOverflow
         }
         if text.contains("guardrail") {
