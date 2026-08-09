@@ -295,8 +295,21 @@ final class MCPHostController {
                 // bare cosine dipped under the recall floor. The 0.6 bar, not
                 // this candidate search, gates the actual delete.
                 let vector = try await embedder.embed(query)
-                let hits = try memoryStore.recall(query: query, queryVector: vector, limit: 3, threshold: 0)
-                switch ForgetResolver.resolve(hits: hits) {
+                // limit raised 3 → 12 on 2026-08-09: the resolver now requires the caller
+                // to have NAMED the fact, so the exact row has to be IN the candidate
+                // set to be deletable at all. At 3 a verbatim request routinely missed
+                // its own target and the old rank-1 rule deleted a neighbour instead.
+                let hits = try memoryStore.recall(query: query, queryVector: vector, limit: 12, threshold: 0)
+                // Content identity, looked up directly rather than by ranking: the
+                // dual-write puts the SAME text in both stores, so this finds the graph
+                // twin even when recall never surfaced it. Handing it to the resolver
+                // keeps ONE authorisation decision — the first cut had the fallback
+                // below delete the corpus twin while this node survived, and reported
+                // success (PR #113 review).
+                let namedGraphTwin = try? memoryStore.liveMemory(matchingText: query)
+                switch ForgetResolver.resolve(
+                    hits: hits, query: query, exactGraphMatch: namedGraphTwin
+                ) {
                 case let .forget(memory):
                     try memoryStore.forget(id: memory.id)
                     // Forget the dual-written twin in the document corpus too, matched by
@@ -320,6 +333,32 @@ final class MCPHostController {
                     await MainActor.run { environment.refreshCounts() }
                     return .forgotten(text: memory.text)
                 case let .notConfident(closest):
+                    // A graph miss is not the end. The dual-write left corpus rows with
+                    // NO graph node (the 2026-07-30 MEMSTAT census counted a corpus/graph
+                    // divergence of 202), and those rows stay fully RETRIEVABLE — M1K3
+                    // quotes them in answers — while being invisible to graph recall.
+                    // Before this, they could be recited but never forgotten: the consent
+                    // promise was false for the oldest facts in the store. Found live on
+                    // 2026-08-09 ("The user is a curious AI." — searchable, undeletable).
+                    //
+                    // Authorised by CONTENT IDENTITY only: the same sha256-of-normalised
+                    // -text that the twin delete above and the remember dedupe already
+                    // use. An exact hash match cannot resolve to a neighbour the way a
+                    // cosine can, so this path can never delete a fact nobody named.
+                    //
+                    // Reached only when there is NO live graph twin (the identity lookup
+                    // above ran first), so this is a true orphan BY CONSTRUCTION — not a
+                    // second, lower bar on a fact the floor just declined.
+                    let orphanRef = MemoryDistillationCoordinator.factSourceRef(query)
+                    if let orphanID = try? knowledgeStore.itemID(forSourceRef: orphanRef),
+                       (try? knowledgeStore.deleteItem(id: orphanID)) == true
+                    {
+                        Self.securityLog.notice(
+                            "forget_memory: corpus-only row forgotten (no graph twin existed)"
+                        )
+                        await MainActor.run { environment.refreshCounts() }
+                        return .forgotten(text: query)
+                    }
                     return .notConfident(closest: closest?.text)
                 }
             }

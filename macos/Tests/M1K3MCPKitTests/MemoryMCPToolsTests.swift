@@ -52,8 +52,8 @@ private func makeHandlers(
             // Mirror the app glue minus the corpus twin: recall, resolve against
             // the forget floor, hard-delete on a confident match.
             let vector = try await embedder.embed(query)
-            let hits = try store.recall(query: query, queryVector: vector, limit: 3)
-            switch ForgetResolver.resolve(hits: hits) {
+            let hits = try store.recall(query: query, queryVector: vector, limit: 12)
+            switch ForgetResolver.resolve(hits: hits, query: query) {
             case let .forget(memory):
                 try store.forget(id: memory.id)
                 return .forgotten(text: memory.text)

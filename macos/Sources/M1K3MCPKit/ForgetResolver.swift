@@ -57,17 +57,65 @@ public enum ForgetResolver {
     /// above it, unrelated facts below.
     public static let suggestionFloor: Float = 0.35
 
-    /// Resolve the top recall hit against the forget floor. `hits` are expected
-    /// best-first (as `MemoryStore.recall` returns them). A hit with no cosine
-    /// similarity (FTS-only) can never be confident → treated as a near-miss
-    /// (it matched by KEYWORD, so it is a plausible suggestion even without a
-    /// cosine — the pre-existing contract, unchanged).
-    public static func resolve(hits: [MemoryHit], floor: Float = ForgetResolver.floor) -> ForgetResolution {
-        guard let top = hits.first else { return .notConfident(closest: nil) }
-        guard let similarity = top.similarity else {
-            return .notConfident(closest: top.memory)
+    /// Canonical form for deciding "the caller named THIS fact": case, spacing
+    /// and a trailing full stop are noise; anything else is a different fact.
+    /// Deliberately a local copy rather than a dependency on the distiller's
+    /// normalizer — M1K3MCPKit stays free of M1K3Chat, and this rule guards an
+    /// irreversible delete, so it should not drift with someone else's dedupe.
+    static func canonical(_ text: String) -> String {
+        var trimmed = text.lowercased()
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        while let last = trimmed.last, ".,;:!?".contains(last) {
+            trimmed = String(trimmed.dropLast())
         }
-        if similarity >= floor { return .forget(top.memory) }
-        return .notConfident(closest: similarity >= suggestionFloor ? top.memory : nil)
+        return trimmed
+    }
+
+    /// Resolve a forget request. `hits` are expected best-first (as
+    /// `MemoryStore.recall` returns them); `query` is what the caller asked to
+    /// forget.
+    ///
+    /// TWO conditions must hold to delete, and rank is not one of them:
+    /// the caller must have NAMED the fact (its text, normalised, appears in
+    /// the hits), and that named hit must clear the forget floor on its own.
+    ///
+    /// The named-fact requirement is the 2026-08-09 fix. Judging `hits.first`
+    /// alone answered "how close is the best match?" when the question is "is
+    /// the best match the fact you asked for?" — and in a store of short,
+    /// generic user-facts (all scoring 0.55–0.70 against each other) something
+    /// always clears 0.6. Live, that hard-deleted true facts the caller had
+    /// never mentioned. A no-cosine (FTS-only) hit still can't authorise a
+    /// delete even when named — the pre-existing contract, unchanged.
+    /// `exactGraphMatch` is a live memory whose text IS the query, found by the
+    /// caller's own content-identity lookup rather than by ranking. It wins
+    /// outright, because an exact match is strictly better evidence than
+    /// "closest ranked neighbour ≥ 0.6" — and because the alternative is worse:
+    /// the first cut of the corpus fallback (PR #113 review) let a named fact
+    /// present in BOTH stores have its corpus twin deleted while the graph node
+    /// lived on, then reported "forgotten". Two stores, two different bars, for
+    /// what is meant to be one atomic forget. One decision, here, instead.
+    public static func resolve(
+        hits: [MemoryHit],
+        query: String,
+        exactGraphMatch: Memory? = nil,
+        floor: Float = ForgetResolver.floor
+    ) -> ForgetResolution {
+        if let exactGraphMatch { return .forget(exactGraphMatch) }
+        guard let top = hits.first else { return .notConfident(closest: nil) }
+        let asked = canonical(query)
+        let named = hits.first { canonical($0.memory.text) == asked }
+
+        if let named, let similarity = named.similarity, similarity >= floor {
+            return .forget(named.memory)
+        }
+        // Nothing deletable. Offer the closest so the caller can name it back
+        // deliberately — but only when it's a plausible near-miss rather than a
+        // random fact, since the invited repeat WOULD delete it.
+        let closest = named?.memory ?? top.memory
+        let closestSimilarity = named?.similarity ?? top.similarity
+        guard let closestSimilarity else { return .notConfident(closest: closest) }
+        return .notConfident(closest: closestSimilarity >= suggestionFloor ? closest : nil)
     }
 }
