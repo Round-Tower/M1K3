@@ -68,13 +68,31 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// unexpectedly chatty payload can't dump a conversation into the log.
     private static let errorPreviewCap = 200
 
-    /// One breadcrumb per generation, before the call. The char count is the
-    /// load-bearing part — Mini's window is 4096 tokens (~18k chars at the
-    /// measured ~4.4 chars/token), and an overflow is otherwise only visible as
-    /// an empty answer.
+    /// One breadcrumb per generation, before the call.
+    ///
+    /// Logs BODY, INSTRUCTIONS and TOTAL separately, and that split is the
+    /// whole point. Mini's context is the SUM of both — the persona rides in
+    /// `LanguageModelSession(instructions:)`, never in `prompt`. The first cut
+    /// of this logged only the body, and was therefore blind to ~3.8k chars of
+    /// the very context it exists to diagnose: an overflow instrument that
+    /// cannot see the thing that overflows. Caught by reading its own first
+    /// live output, which is the argument for running an instrument before
+    /// trusting it.
+    ///
+    /// The split also keeps the persona-duplication class visible for good: if
+    /// body and instructions ever both carry the persona again, `total` jumps
+    /// by ~3.8k chars and the line says so on every turn.
+    ///
+    /// Window is 4096 tokens ≈ 18k chars at the measured ~4.4 chars/token.
     private func logTurnStart(promptChars: Int, streaming: Bool) {
+        let instructionChars = instructions().count
         Self.log.notice(
-            "afm turn: prompt=\(promptChars, privacy: .public) chars, streaming=\(streaming, privacy: .public)"
+            """
+            afm turn: body=\(promptChars, privacy: .public) \
+            instructions=\(instructionChars, privacy: .public) \
+            total=\(promptChars + instructionChars, privacy: .public) chars, \
+            streaming=\(streaming, privacy: .public)
+            """
         )
     }
 
