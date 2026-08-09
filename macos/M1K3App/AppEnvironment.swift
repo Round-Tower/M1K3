@@ -342,6 +342,14 @@ final class AppEnvironment {
     /// cut from Settings 2026-07-13 (Kev-approved); the ladder's `preferAppleOnDevice`
     /// input is now always `false` (see resolvedAutoRouteTier).
     nonisolated static let autoRouteBrainKey = "brain.autoRoute"
+    /// Opt-in to the steady-state "Mini fronts, the MLX slot is kept for
+    /// depth" posture. **Absent means OFF** — a plain `bool(forKey:)` read,
+    /// so no UI writes it yet and no shipped build changes behaviour. It stays
+    /// off until the on-device measurement (#102) says Mini is quick enough to
+    /// front AND the delegate_deep log says the depth trigger actually fires.
+    /// Deliberately no Settings control yet: a toggle that silently deletes the
+    /// deep tier would be a dead control at best and a trap at worst.
+    nonisolated static let miniFrontsByDefaultKey = "brain.miniFrontsByDefault"
 
     /// The chosen brain (Mini / Lil / Big). Restored on launch, persisted on change.
     private(set) var selectedBrain: BrainTier = .mini
@@ -1449,9 +1457,33 @@ extension AppEnvironment {
         let gate = chatGate
         let delegationFronting = deepDelegationTaskLabel != nil
             && selectedBrain.mlxModelID != nil
-        interimRuntimeOverride.value = (gate == .interim || delegationFronting)
-            ? .appleFoundationModels
-            : nil
+        // The steady-state "Mini fronts, MLX kept for depth" posture (Kev's
+        // "quick by default, deep when complex"). DEFAULT OFF: whether Mini is
+        // good enough to front is the unanswered on-device question in #102,
+        // and this must not read as an assertion that it is.
+        let preferMiniFront = UserDefaults.standard.bool(forKey: Self.miniFrontsByDefaultKey)
+        // ★ The guard that keeps the opt-in from deleting the deep tier. With
+        // Mini answering at `.ready`, the MLX brain serves no interactive turn,
+        // so `delegate_deep` becomes the ONLY route to it — and eligibility is
+        // the most we can assert here.
+        //
+        // ⚠️ NECESSARY, NOT SUFFICIENT: eligibility says the app WOULD accept a
+        // dive, not that the model ever ASKS for one, and it has not asked once
+        // in 8 days. The `delegate_deep` log added 2026-08-09 now separates
+        // "declined" from "never called"; read it before trusting this, and do
+        // not flip the default until it says the trigger fires.
+        let depthReachable = DeepDelegationPolicy.eligibility(
+            selectedRequiresWeights: selectedBrain.mlxModelID != nil,
+            load: modelLoad,
+            afm: afmAvailability
+        ) == .eligible
+        let posture = InterimBrainPolicy.posture(
+            gate: gate,
+            delegationInFlight: delegationFronting,
+            preferMiniFront: preferMiniFront,
+            depthReachable: depthReachable
+        )
+        interimRuntimeOverride.value = posture.frontsOnMini ? .appleFoundationModels : nil
         if gate != lastBridgedGate {
             Self.brainLog.notice("chatGate → \(String(describing: gate), privacy: .public)")
             lastBridgedGate = gate
