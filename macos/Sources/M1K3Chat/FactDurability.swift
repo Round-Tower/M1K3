@@ -90,7 +90,15 @@ public enum FactDurabilityPolicy {
     /// subject is what separates it — "Kev's" is followed by an apostrophe, so
     /// the sister's asking never reads as Kev's turn.
     static let speechActPattern: String = {
-        let subject = "(the user|user|kev|they)"
+        // `they` was dropped on review (PR #114): a possessive noun subject is
+        // broken by its own apostrophe ("Kev's sister asks him…"), but a pronoun
+        // has no apostrophe to break on, so "Aoife visits every summer; they
+        // mentioned wanting to change jobs" would be silently dropped — a
+        // durable fact about a friend. No fixture ever demanded `they`, and this
+        // file's own rule is: never widen a rule without one. Losing recall on
+        // user-as-"they" phrasing is the documented, accepted failure mode;
+        // losing a fact is not.
+        let subject = "(the user|user|kev)"
         let auxiliary = "(has |had |have |is |was |had not |has not )?"
         let framing = "(decided to |wanted to |went on to |began to )?"
         return "\\b\(subject)\\s+\(auxiliary)\(framing)(\(speechVerbs.joined(separator: "|")))\\b"
@@ -101,9 +109,20 @@ public enum FactDurabilityPolicy {
     /// `an assistant` / `the assistant` are anchored with their article so
     /// "the user is a research assistant" — a real false-positive guard in the
     /// role-fence suite — survives untouched.
+    /// The conversation as SUBJECT. Anchored to the START of the fact, not
+    /// matched anywhere in it: review (PR #114) offered "Kev prepared talking
+    /// points for the conversation with his boss" as a false positive, and it
+    /// is one — but phrase-boundary matching does not save it, because the
+    /// phrase genuinely occurs. What separates it from "The conversation takes
+    /// place at a bar" is which one the sentence is ABOUT.
+    static let metaSubjects = ["the conversation", "this conversation"]
+
+    /// The assistant as subject matter. A standing fact about a person does not
+    /// mention the assistant it was said to. Anchored with their article so
+    /// "the user is a research assistant" — a real false-positive guard in the
+    /// role-fence suite — survives untouched.
     static let metaPhrases = [
-        "the conversation", "this conversation", "the assistant", "an assistant",
-        "ai assistant", "for the conversation", "has not yet provided",
+        "the assistant", "an assistant", "ai assistant", "has not yet provided",
     ]
 
     public static func classify(_ fact: String) -> FactDurability {
@@ -112,7 +131,11 @@ public enum FactDurabilityPolicy {
         // Meta and speech acts first: "the user is currently asking about X" is
         // better described as a turn than as a moment, and the turn reading is
         // the more useful log line.
-        if metaPhrases.contains(where: { text.contains($0) }) {
+        let lead = canonicalLead(text)
+        if metaSubjects.contains(where: { lead.hasPrefix($0) }) {
+            return .transient(.speechAct)
+        }
+        if metaPhrases.contains(where: { containsWord($0, in: text) }) {
             return .transient(.speechAct)
         }
         if text.range(of: speechActPattern, options: [.regularExpression]) != nil {
@@ -133,6 +156,13 @@ public enum FactDurabilityPolicy {
     /// plain `contains("current")` would eat "the user is interested in current
     /// events" — a real durable row. ICU's `\b` is the \w-based boundary, which
     /// is what's wanted here (marker words carry no apostrophes).
+    /// Lowercased and whitespace-collapsed, for the leading-subject test.
+    private static func canonicalLead(_ text: String) -> String {
+        text.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
     private static func containsWord(_ needle: String, in haystack: String) -> Bool {
         haystack.range(
             of: "\\b\(NSRegularExpression.escapedPattern(for: needle))\\b",

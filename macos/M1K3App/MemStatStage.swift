@@ -80,7 +80,8 @@ enum MemStatStage {
 
             // Corpus twins: the store that actually feeds chat (spec finding #1).
             let corpus = try KnowledgeStore(path: knowledgeURL.path)
-            let corpusMemories = try corpus.allItems(kind: .memory, limit: 100_000).count
+            let corpusMemoryItems = try corpus.allItems(kind: .memory, limit: 100_000)
+            let corpusMemories = corpusMemoryItems.count
             let quarantined = try corpus.allItems(kind: .quarantined, limit: 100_000).count
             emit("memstat corpus: \(corpusMemories) memory item(s), \(quarantined) quarantined, "
                 + "graph/corpus divergence \(corpusMemories - live)")
@@ -97,7 +98,7 @@ enum MemStatStage {
             // sentence ("The user asked…", "Kev is currently…"), so truncation
             // costs recall, not precision: read this as a FLOOR.
             var durability: [String: Int] = [:]
-            for item in try corpus.allItems(kind: .memory, limit: 100_000) {
+            for item in corpusMemoryItems {
                 switch FactDurabilityPolicy.classify(item.title) {
                 case .durable:
                     durability["durable", default: 0] += 1

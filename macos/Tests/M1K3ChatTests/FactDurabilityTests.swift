@@ -44,7 +44,6 @@ struct FactDurabilityTests {
         for fact in [
             "The user is speaking to an assistant.",
             "The user is in a quiet conversation with an assistant.",
-            "The user is using a computer for the conversation.",
             "The conversation mentions a friend's preference and their sense of humour.",
             "The conversation takes place at a bar, as indicated by the background.",
             "The user decided to interact with the assistant for entertainment.",
@@ -55,6 +54,30 @@ struct FactDurabilityTests {
                 "should be conversation meta: \(fact)"
             )
         }
+    }
+
+    /// The precision/recall trade, written down rather than left implicit.
+    ///
+    /// "The user is using a computer for the conversation." IS junk, and an
+    /// earlier cut caught it with a bare `contains("for the conversation")`.
+    /// Review (PR #114) then produced "Kev prepared talking points for the
+    /// conversation with his boss" — a durable fact containing the identical
+    /// fragment. No pattern separates them; only meaning does.
+    ///
+    /// A wrongly-dropped fact is invisible and unrecoverable; a surviving junk
+    /// row is merely noise, and the sweep can take it. So the junk row wins its
+    /// appeal, on purpose, and this test exists so nobody "fixes" it later
+    /// without re-reading the trade.
+    @Test("an accepted miss: junk survives rather than risk a durable fact")
+    func acceptedMisses() {
+        #expect(
+            FactDurabilityPolicy.classify("The user is using a computer for the conversation.")
+                == .durable
+        )
+        #expect(
+            FactDurabilityPolicy.classify("Kev prepared talking points for the conversation with his boss.")
+                == .durable
+        )
     }
 
     // MARK: - Moment state: true for minutes, stored for ever
@@ -118,6 +141,13 @@ struct FactDurabilityTests {
             "Kev suggests using a static site generator like Hugo.",
             // A durable fact may legitimately name a person who asked something.
             "Kev's sister asks him for tech advice every Christmas.",
+            // Review catch (PR #114): a possessive subject is broken by its own
+            // apostrophe, but a PRONOUN subject has nothing to break on — so a
+            // third party referred to as "they" needs the subject set not to
+            // include it. Structurally the same fact as the sister above.
+            "Aoife visits every summer; they mentioned wanting to change jobs.",
+            // "for the conversation" is a generic fragment, not conversation meta.
+            "Kev prepared talking points for the conversation with his boss.",
         ] {
             #expect(
                 FactDurabilityPolicy.classify(fact) == .durable,
