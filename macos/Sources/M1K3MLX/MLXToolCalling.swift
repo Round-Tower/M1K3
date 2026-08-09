@@ -708,8 +708,12 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     private func logPrefillReuse(reused: Int, total: Int, vetoed: Bool) {
         // `vetoed` is the interesting case and deserves its own word: the cache
         // HELD a usable prefix and the sliding window made it unusable.
+        let note = vetoed ? " (VETOED — cache wrapped the sliding window)" : ""
         mlxToolLog.notice(
-            "toolTurnSession reuse: \(reused, privacy: .public)/\(total, privacy: .public) tok from cache, prefilling \(total - reused, privacy: .public)\(vetoed ? " (VETOED — cache wrapped the sliding window)" : "", privacy: .public)"
+            """
+            toolTurnSession reuse: \(reused, privacy: .public)/\(total, privacy: .public) \
+            tok from cache, prefilling \(total - reused, privacy: .public)\(note, privacy: .public)
+            """
         )
     }
 
