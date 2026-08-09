@@ -324,6 +324,28 @@ final class MCPHostController {
                     await MainActor.run { environment.refreshCounts() }
                     return .forgotten(text: memory.text)
                 case let .notConfident(closest):
+                    // A graph miss is not the end. The dual-write left corpus rows with
+                    // NO graph node (the 2026-07-30 MEMSTAT census counted a corpus/graph
+                    // divergence of 202), and those rows stay fully RETRIEVABLE — M1K3
+                    // quotes them in answers — while being invisible to graph recall.
+                    // Before this, they could be recited but never forgotten: the consent
+                    // promise was false for the oldest facts in the store. Found live on
+                    // 2026-08-09 ("The user is a curious AI." — searchable, undeletable).
+                    //
+                    // Authorised by CONTENT IDENTITY only: the same sha256-of-normalised
+                    // -text that the twin delete above and the remember dedupe already
+                    // use. An exact hash match cannot resolve to a neighbour the way a
+                    // cosine can, so this path can never delete a fact nobody named.
+                    let orphanRef = MemoryDistillationCoordinator.factSourceRef(query)
+                    if let orphanID = try? knowledgeStore.itemID(forSourceRef: orphanRef),
+                       (try? knowledgeStore.deleteItem(id: orphanID)) == true
+                    {
+                        Self.securityLog.notice(
+                            "forget_memory: corpus-only row forgotten (no graph twin existed)"
+                        )
+                        await MainActor.run { environment.refreshCounts() }
+                        return .forgotten(text: query)
+                    }
                     return .notConfident(closest: closest?.text)
                 }
             }

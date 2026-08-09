@@ -238,6 +238,44 @@ struct MemoryFactValidatorTests {
     }
 }
 
+// MARK: - Content identity (the forget fallback's key)
+
+/// `factSourceRef` is no longer only a dedupe key. Since 2026-08-09 it is also
+/// what authorises forgetting a CORPUS-ONLY memory — a row with no graph node,
+/// retrievable (so M1K3 quotes it) but invisible to graph recall, of which the
+/// MEMSTAT census counted ~200. That path deletes on an exact hash match, so
+/// this identity has to absorb exactly the same noise the ForgetResolver's
+/// naming rule does — case, spacing, a trailing stop — and nothing more.
+struct MemoryFactIdentityTests {
+    @Test("content identity ignores case, spacing and trailing punctuation")
+    func identityAbsorbsNoise() {
+        let canonical = MemoryDistillationCoordinator.factSourceRef("The user is a curious AI.")
+        for variant in [
+            "the user is a curious ai.",
+            "THE USER IS A CURIOUS AI",
+            "  The user   is a curious AI  ",
+            "The user is a curious AI!!",
+        ] {
+            #expect(
+                MemoryDistillationCoordinator.factSourceRef(variant) == canonical,
+                "must share identity: \(variant)"
+            )
+        }
+    }
+
+    @Test("a different fact is a different identity — the forget fallback can't drift")
+    func identityIsNotFuzzy() {
+        let canonical = MemoryDistillationCoordinator.factSourceRef("The user is a curious AI.")
+        for other in [
+            "The user is a curious AI researcher.",
+            "The user is curious about AI.",
+            "The user is a serious AI.",
+        ] {
+            #expect(MemoryDistillationCoordinator.factSourceRef(other) != canonical)
+        }
+    }
+}
+
 // MARK: - Normalizer
 
 struct MemoryFactNormalizerTests {
