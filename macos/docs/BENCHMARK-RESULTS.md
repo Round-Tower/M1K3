@@ -34,6 +34,26 @@ move any of these cells**, because those things were never in the measurement.
 Found 2026-08-09 while working #102. The reproduce config in `BENCHMARKS.md` now
 sets the flag; the next run supersedes this one.
 
+⚠️ **★ MEASURED VARIANCE: `security` swings 2–5 out of 7 across identical runs.**
+On 2026-08-10 the same 7 `security` fixtures were run three times on Mini, same
+build, same machine, same arm (`security` always uses bare generate — it is NOT
+in the `LIVE_PATH` case list): **2/7, then 4/7, then 5/7.**
+
+That is 29%–71% on a kind whose single-run numbers are quoted below and were
+used to support decisions. **Every per-kind cell in this table is one sample of
+a distribution nobody had measured**, and 5–8 fixtures per kind is far too few
+to average that away.
+
+Concretely, this weakens one conclusion already drawn: "Lil fails `security`
+4/7" is one of the recorded reasons Lil was rejected as the blanket default.
+The NUMERIC leg of that rejection is now known to be inside the noise. The
+QUALITATIVE leg is untouched and still stands on its own — Lil reproduced the
+system prompt verbatim in the transcript, and it would be the tier facing the
+MCP surface unsupervised. The rejection holds; its arithmetic does not.
+
+Anything quoted from this table needs a repeat-run spread before it carries a
+decision.
+
 ⚠️ **The `humour` cells are optimistic.** This run predates the decline-marker
 fix: a flat refusal could still score a PASS, and Mini gave two
 ("I'm not sure I can do that.", "I'll pass. I'm not programmed to tell jokes.").
