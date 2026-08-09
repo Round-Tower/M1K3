@@ -159,4 +159,41 @@ struct ForgetResolverTests {
                 == .notConfident(closest: hits[0].memory)
         )
     }
+
+    // MARK: - Content identity beats rank (PR #113 review)
+
+    /// The review caught a split-store bug in the first cut of the corpus
+    /// fallback: a named fact present in BOTH stores but below the floor (or
+    /// simply absent from the candidate window) had its corpus twin deleted
+    /// while the graph node lived on — and the caller was told "forgotten".
+    /// Two stores, two different bars, for what is supposed to be one atomic
+    /// forget.
+    ///
+    /// The fix is not a second authorisation path but a stronger first one:
+    /// an EXACT content-identity match on the graph is strictly better evidence
+    /// than "closest ranked neighbour ≥ 0.6", so when the caller names a fact
+    /// that exists, it is forgotten whatever the cosine says.
+    @Test("an exactly-named graph fact is forgotten even when rank and floor say no")
+    func exactGraphMatchBeatsTheFloor() {
+        let named = Memory(kind: .note, text: "The user is a curious AI.", source: "test")
+        // A candidate window that does NOT contain the named fact at all — the
+        // real shape from 2026-08-09 — and whose top hit clears the floor.
+        let hits = [hit("The user is associated with Brightbeam AI Limited.", similarity: 0.65)]
+        guard case let .forget(memory) = ForgetResolver.resolve(
+            hits: hits, query: "The user is a curious AI.", exactGraphMatch: named
+        ) else {
+            Issue.record("expected .forget"); return
+        }
+        #expect(memory.text == named.text)
+    }
+
+    @Test("no exact graph match leaves the unnamed neighbour alone")
+    func noExactGraphMatchStillRefuses() {
+        let hits = [hit("The user is associated with Brightbeam AI Limited.", similarity: 0.65)]
+        #expect(
+            ForgetResolver.resolve(
+                hits: hits, query: "The user is a curious AI.", exactGraphMatch: nil
+            ) == .notConfident(closest: hits[0].memory)
+        )
+    }
 }

@@ -88,9 +88,21 @@ public enum ForgetResolver {
     /// always clears 0.6. Live, that hard-deleted true facts the caller had
     /// never mentioned. A no-cosine (FTS-only) hit still can't authorise a
     /// delete even when named — the pre-existing contract, unchanged.
+    /// `exactGraphMatch` is a live memory whose text IS the query, found by the
+    /// caller's own content-identity lookup rather than by ranking. It wins
+    /// outright, because an exact match is strictly better evidence than
+    /// "closest ranked neighbour ≥ 0.6" — and because the alternative is worse:
+    /// the first cut of the corpus fallback (PR #113 review) let a named fact
+    /// present in BOTH stores have its corpus twin deleted while the graph node
+    /// lived on, then reported "forgotten". Two stores, two different bars, for
+    /// what is meant to be one atomic forget. One decision, here, instead.
     public static func resolve(
-        hits: [MemoryHit], query: String, floor: Float = ForgetResolver.floor
+        hits: [MemoryHit],
+        query: String,
+        exactGraphMatch: Memory? = nil,
+        floor: Float = ForgetResolver.floor
     ) -> ForgetResolution {
+        if let exactGraphMatch { return .forget(exactGraphMatch) }
         guard let top = hits.first else { return .notConfident(closest: nil) }
         let asked = canonical(query)
         let named = hits.first { canonical($0.memory.text) == asked }
