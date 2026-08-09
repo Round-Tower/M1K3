@@ -229,6 +229,10 @@ public struct ChatTranscriptStore: Sendable {
 @Observable
 public final class ChatSession {
     private static let log = Logger(subsystem: "app.m1k3", category: "chat-session")
+    /// `security`, not `chat-session`: a prompt leak reaching the user is a
+    /// security event, and it belongs with the other leak tripwires in an
+    /// issue-report capture rather than buried in conversation lifecycle.
+    private static let leakLog = Logger(subsystem: "app.m1k3", category: "security")
     public private(set) var messages: [ChatMessage] = []
     public private(set) var isResponding = false
 
@@ -400,15 +404,28 @@ public final class ChatSession {
             let (answer, followUps) = FollowUpSplit.split(answerWithFollowUps)
             let mergedSources = Self.mergeSources(sources, responder.collectedSources())
             let validation = await CitationValidator.validate(responseText: answer, against: mergedSources)
+            // Prompt-leak guard (#111): the model reproduced its own wiring.
+            // Persona rule 1 forbids it, but a prompt cannot enforce itself and
+            // Mini does it unprompted (2026-08-08 scorecard). Applied to the
+            // FINAL text — streaming already showed tokens, so this is the last
+            // point that can stop it being persisted, spoken, or distilled into
+            // a memory. Sources and citations are dropped with it: a leak cites
+            // nothing real.
+            let leaked = PersonaLeakGuard.leaks(validation.cleanedText)
+            if leaked {
+                Self.leakLog.error("prompt-leak guard: chat answer reproduced the persona")
+            }
             update(assistantID) {
-                $0.sources = mergedSources
+                $0.sources = leaked ? [] : mergedSources
                 // Tidy whitespace once the full text is in hand. Markdown
                 // markup survives on purpose — ReadingText renders it as real
                 // blocks now; SpeechTextPolish owns the flatten for TTS.
-                $0.text = MessageTextPolish.polish(validation.cleanedText)
-                $0.citations = validation.validated
-                $0.reasoning = reasoning
-                $0.followUps = followUps
+                $0.text = leaked
+                    ? PersonaLeakGuard.refusal
+                    : MessageTextPolish.polish(validation.cleanedText)
+                $0.citations = leaked ? [] : validation.validated
+                $0.reasoning = leaked ? nil : reasoning
+                $0.followUps = leaked ? [] : followUps
                 $0.activityLabel = nil
                 $0.status = .complete
             }
@@ -441,6 +458,15 @@ public final class ChatSession {
         let (answer, followUps) = FollowUpSplit.split(text)
         let polished = MessageTextPolish.polish(answer)
         guard !polished.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        // Same guard as the live path (#111). The delegated lane runs the same
+        // persona through the same models, so it can leak the same way — and it
+        // arrives unattended, which is worse.
+        guard !PersonaLeakGuard.leaks(polished) else {
+            Self.leakLog.error("prompt-leak guard: background answer reproduced the persona")
+            messages.append(ChatMessage(role: .assistant, text: PersonaLeakGuard.refusal, status: .complete))
+            await persistActiveConversation()
+            return
+        }
         var message = ChatMessage(role: .assistant, text: polished, status: .complete)
         message.followUps = followUps
         messages.append(message)
