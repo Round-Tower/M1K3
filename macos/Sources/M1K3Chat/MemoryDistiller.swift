@@ -148,6 +148,13 @@ public enum MemoryFactParser {
             // "the user" ("the user's name is M1K3"). The prompt asks it not to;
             // this is the deterministic backstop that the prompt can't guarantee.
             guard MemoryFactValidator.isAcceptable(fact) else { continue }
+            // Durability gate: fed a transcript, a small model summarises the
+            // CONVERSATION when it was asked for facts about a person. "The user
+            // asked for tips on keeping curry fresh" is true about a turn and
+            // worthless about Kev — and stored for ever it out-ranks the facts
+            // that matter. Measured over the live store 2026-08-09: 36 of 321
+            // rows, 11% (a floor), via the MEMSTAT durability census.
+            guard FactDurabilityPolicy.isDurable(fact) else { continue }
             // Dedupe on TEXT alone — the same fact under two labels is one
             // fact; the first classification wins.
             guard seen.insert(MemoryFactNormalizer.normalize(fact)).inserted else { continue }
