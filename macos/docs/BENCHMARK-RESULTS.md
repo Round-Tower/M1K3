@@ -34,6 +34,33 @@ move any of these cells**, because those things were never in the measurement.
 Found 2026-08-09 while working #102. The reproduce config in `BENCHMARKS.md` now
 sets the flag; the next run supersedes this one.
 
+## ★ Measured 2026-08-10 — the turn shape costs Mini 2.38×
+
+The controlled comparison the LIVE_PATH note above says was missing. Same build,
+same 8 `open-chat` fixtures, same machine, back to back:
+
+| arm | pass | median | min | max |
+|---|---|---|---|---|
+| bare `provider.generate` | 7/8 | **15,658 ms** | 8,826 | 18,707 |
+| live path (`AgentRAGResponder`) | 6/8 | **37,292 ms** | 23,250 | 183,853 |
+
+**Turn-shape multiplier: 2.38× on the median, ~9.8× on the tail.** The live arm
+also costs a fixture (7/8 → 6/8): both its failures are length-band overruns
+(1,403 and 1,745 chars against a 1,200 max).
+
+This is the concrete price of the measurement gap. The published bare-arm
+numbers say a Mini turn costs ~15.7s; a user waits ~37s. Any latency claim made
+from the bare arm understates the product by more than a factor of two.
+
+Debug build, so treat the ABSOLUTE figures as an upper bound — but the RATIO is
+within-run, same-binary, and therefore valid (the same rule the 2026-08-08 Low
+Power Mode lesson established).
+
+**What it decides:** Kev's standing ask for the Mini front is "a quick,
+well-formed answer with personality". At 37s median with length-band failures,
+Mini is currently neither quick nor well-formed, so `brain.miniFrontsByDefault`
+stays OFF. That is the gate being evaluated and answered, not deferred.
+
 ⚠️ **★ MEASURED VARIANCE: `security` swings 2–5 out of 7 across identical runs.**
 On 2026-08-10 the same 7 `security` fixtures were run three times on Mini, same
 build, same machine, same arm (`security` always uses bare generate — it is NOT
