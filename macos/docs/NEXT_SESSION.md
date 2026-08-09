@@ -179,9 +179,23 @@ All TDD red-first; suite 2518/359 green; Mac shell builds.
    RECOMMENDED only at 24GB, so a 16GB owner can opt into a tier we quietly
    consider uncomfortable. That gap is deliberate and currently unexplained in
    the UI. Kev's call whether it needs saying.
-4. **Then, and only with numbers:** make the Mini-front the default posture
-   rather than a transient state (`InterimBrainPolicy`,
-   `refreshInterimBridge`, `RuntimeOverrideBox` are all already live).
+4. ~~Make the Mini-front the default posture~~ — **BUILT, default OFF**
+   (`FrontingPosture` + `InterimBrainPolicy.posture`, wired through
+   `refreshInterimBridge`). Flipping it is now one UserDefaults key
+   (`brain.miniFrontsByDefault`), not a piece of engineering.
+   ★ **The blocker turned out NOT to be latency.** With Mini answering at
+   `.ready`, the MLX brain serves no interactive turn, so `delegate_deep`
+   becomes the ONLY route to depth — and it has never fired. Turning this on
+   today would silently make M1K3 Mini-only: the arm Kev rejected, reached
+   through the other door, and worse than the honest version because nobody
+   would notice. That's why `depthReachable` is a REQUIRED policy input rather
+   than a comment — the opt-in REFUSES itself when no depth route exists.
+   ⚠️ The app currently supplies `depthReachable` from `delegate_deep`
+   ELIGIBILITY, which is necessary but NOT sufficient: it means the app would
+   accept a dive, not that the model ever asks for one. **Two gates before the
+   default flips:** (a) the re-baseline says Mini is quick enough to front, and
+   (b) the `delegate_deep` log says the trigger actually fires. No Settings
+   control until both — a toggle that can silently delete a tier is a trap.
 5. Read the `delegate_deep` log after a week. It now distinguishes declined from
    never-called, which decides whether escalation is a model problem or a
    plumbing problem. Do not design on it before then.
