@@ -44,9 +44,37 @@ same 8 `open-chat` fixtures, same machine, back to back:
 | bare `provider.generate` | 7/8 | **15,658 ms** | 8,826 | 18,707 |
 | live path (`AgentRAGResponder`) | 6/8 | **37,292 ms** | 23,250 | 183,853 |
 
-**Turn-shape multiplier: 2.38× on the median, ~9.8× on the tail.** The live arm
-also costs a fixture (7/8 → 6/8): both its failures are length-band overruns
-(1,403 and 1,745 chars against a 1,200 max).
+**Turn-shape multiplier: 2.38× on the median** — but that median is a bad
+summary, and the per-fixture breakdown is the actionable result:
+
+| fixture | bare | live | × | bare ch | live ch |
+|---|---|---|---|---|---|
+| chat-greeting | 15,520 | 29,819 | 1.9 | 68 | 77 |
+| chat-explain-simply | 18,707 | 44,765 | 2.4 | 212 | 187 |
+| chat-opinion | 16,292 | 69,027 | 4.2 | 1,050 | 891 |
+| chat-support | 15,797 | 23,504 | 1.5 | 207 | 232 |
+| **chat-creative** | 8,826 | **110,879** | **12.6** | 77 | **34** |
+| chat-followup | 17,105 | 26,359 | 1.5 | 1,048 | 484 |
+| **chat-capabilities** | 9,365 | **183,853** | **19.6** | 224 | 1,403 |
+| chat-identity-noisy-corpus | 13,213 | 23,250 | 1.8 | 319 | 1,745 |
+
+**Drop the two outliers and the typical turn costs 1.75–1.84×.** The rest is two
+distinct pathologies, and neither is "the scaffold is a bit heavy":
+
+- **`chat-creative` — 110.9s inside a single AFM call to emit 34 characters.**
+  Output went DOWN versus bare while time went up 12.6×, so this is not
+  generation cost. An AFM stall, not a prompt-size problem.
+- **`chat-capabilities` — 177s of TOTAL LOG SILENCE before the first AFM call.**
+  The turn itself then completed in ~3s. The unified log has nothing at all
+  between the previous fixture ending and `self-query gate: retrieval skipped`
+  firing three minutes later. ★ **The single largest latency contributor in the
+  run is invisible to our instrumentation.**
+
+An early reading of this data — "the turn shape makes Mini write longer, and
+longer output costs time" — is FALSE and was discarded: output length only rises
+1.64× overall, and the worst offender got *shorter*.
+
+
 
 This is the concrete price of the measurement gap. The published bare-arm
 numbers say a Mini turn costs ~15.7s; a user waits ~37s. Any latency claim made
