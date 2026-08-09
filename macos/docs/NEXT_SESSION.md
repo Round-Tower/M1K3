@@ -44,9 +44,23 @@ calls and bins the first answer.
   Mini fronts on both — AFM is a separate Apple runtime that never touches the
   MLX budget, so "Mini fronts" was never one arm of the fork. The only real
   question was what sits in the one MLX slot, and RAM answers it.
-- **Big stays VISIBLE but disabled below 24GB, with a plain reason.** Hiding a
-  rung is only honest when every rung is reachable. ⚠️ **Not yet built** — this
-  is a real open item, see below.
+- **Big stays VISIBLE but disabled, with a plain reason, where it can't run.**
+  Hiding a rung is only honest when every rung is reachable.
+  ✅ **Already shipped — nothing to build, and the question rested on a rev-1
+  error.** Rev 1 said "Big needs 24GB+ … on a 16GB Mac the deep tier does not
+  exist at all". That conflates two different floors:
+  - `BrainTier.minimumPhysicalMemoryGB` for `.big` is **16** — the SELECTION
+    floor. On a 16GB Mac Big is selectable and runnable (tight, but real).
+  - `BrainTier.recommended` returns `.lil` below 24GB — the RECOMMENDATION
+    floor. Comfortable, not possible. The file's own comment says as much:
+    "selection is permissive, recommendation is comfortable."
+
+  So the deep tier only disappears below **16GB** (8GB Macs), and there both
+  surfaces already do exactly what Kev asked: `OnboardingCards` renders the card
+  disabled at 0.45 opacity with "· needs 16GB+ memory", and `BrainSwitcher`
+  renders the menu row disabled as "Big M1K3 · needs 16GB+". `BrainSwitchRow`'s
+  own docstring states the policy: *"shown disabled, NOT hidden (so the user
+  sees it exists and why it's unavailable)."*
 
 ---
 
@@ -141,8 +155,11 @@ All TDD red-first; suite 2518/359 green; Mac shell builds.
 2. **#111 Mini prompt leak** — untouched this session. It fires on plain trivia,
    not only under attack, and #102's finding that MORE prompt makes Mini worse
    means re-tuning is not obviously the fix.
-3. **Build the 16GB honesty** — Big visible-but-disabled with a plain reason
-   (Kev's ruling above).
+3. ~~Build the 16GB honesty~~ — already shipped; see the ruling above. What
+   remains is a judgement call, not code: Big is SELECTABLE at 16GB but
+   RECOMMENDED only at 24GB, so a 16GB owner can opt into a tier we quietly
+   consider uncomfortable. That gap is deliberate and currently unexplained in
+   the UI. Kev's call whether it needs saying.
 4. **Then, and only with numbers:** make the Mini-front the default posture
    rather than a transient state (`InterimBrainPolicy`,
    `refreshInterimBridge`, `RuntimeOverrideBox` are all already live).
