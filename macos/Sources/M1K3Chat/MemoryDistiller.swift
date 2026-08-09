@@ -232,8 +232,23 @@ public enum MemoryFactValidator {
         return "(?:" + copulas.joined(separator: "|") + ")"
     }()
 
+    /// Apostrophe lookalikes a tokenizer realistically emits, straightened so a
+    /// curly `user’s` cannot walk past a straight-quoted `user's` check (review
+    /// catch on PR #112 — the same class the eval scorer fixed in this same PR).
+    ///
+    /// Deliberately applied HERE and not inside `MemoryFactNormalizer.normalize`:
+    /// that function is the dedupe hash and, since 2026-08-09, the identity
+    /// `factSourceRef` uses to DELETE a corpus row. Changing it would silently
+    /// re-key every fact already stored.
+    static func straightenedApostrophes(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\u{2019}", with: "'")
+            .replacingOccurrences(of: "\u{02BC}", with: "'")
+            .replacingOccurrences(of: "\u{02B9}", with: "'")
+    }
+
     static func conflatesUserWithAssistant(_ fact: String) -> Bool {
-        let norm = MemoryFactNormalizer.normalize(fact)
+        let norm = straightenedApostrophes(MemoryFactNormalizer.normalize(fact))
         // 1. Name conflation — the USER (as subject) named as the assistant.
         //    SUBJECT ADJACENCY is what keeps the genuine facts: a possessive
         //    between the user and the copula means the thing being named is
