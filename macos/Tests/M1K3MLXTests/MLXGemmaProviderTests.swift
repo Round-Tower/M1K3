@@ -380,4 +380,25 @@ struct MLXGemmaProviderTests {
             for: ModelConfiguration(id: "mlx-community/Llama-3.2-3B-Instruct-4bit")
         ))
     }
+
+    /// Measured 2026-08-09: on gemma-4 the persona prefix is ~1878 tokens
+    /// against a 1024 sliding window, so it wraps, `isTrimmable` goes false,
+    /// and MLXToolCalling's `reusable` gate vetoes reuse on EVERY turn. Building
+    /// it cost 12.5 SECONDS of prefill per launch and per brain swap to produce
+    /// a cache nothing could ever use. The old code documented that it was
+    /// wasted and built it regardless — knowing is not the same as not doing.
+    @Test("a prefix longer than the sliding window is never reusable, so never worth building")
+    func prefixReusabilityFollowsTheWindow() {
+        let big = "mlx-community/gemma-4-12B-it-4bit"
+        #expect(MLXGemmaProvider.slidingWindow(forModelID: big) == 1024)
+        #expect(!MLXGemmaProvider.prefixIsReusable(tokens: 1878, modelID: big))
+        #expect(MLXGemmaProvider.prefixIsReusable(tokens: 1024, modelID: big), "exactly the window fits")
+        #expect(!MLXGemmaProvider.prefixIsReusable(tokens: 1025, modelID: big))
+
+        // Dense attention: no window, so a prefix of any size stays trimmable
+        // and reuse genuinely works — which is why Lil is 10x faster per turn.
+        let lil = "mlx-community/Qwen3-4B-Instruct-2507-4bit"
+        #expect(MLXGemmaProvider.slidingWindow(forModelID: lil) == nil)
+        #expect(MLXGemmaProvider.prefixIsReusable(tokens: 1878, modelID: lil))
+    }
 }

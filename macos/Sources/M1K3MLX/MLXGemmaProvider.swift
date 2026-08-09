@@ -535,11 +535,23 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             let cache: [KVCache]
             let tokenIDs: [Int]
         }
+        // Resolved OUTSIDE the closure: touching `self.configuration` inside it
+        // makes the closure async and `perform`'s overload no longer matches.
+        let reusableWindow = Self.slidingWindow(forModelID: modelIdentifier)
         let built: PrefixBox = try await container.perform { context in
             // System-block token ids, no assistant opener. Lenient templates
             // render a system-only array; strict ones (Qwen3.5) reject it and
             // need the two-probe boundary slice — see systemBlockIDs.
             let ids = try self.systemBlockIDs(context: context, persona: persona, specs: specs)
+            // Tokenising is cheap; the prefill is not. If the prefix cannot
+            // survive this model's sliding window, stop HERE — building it
+            // burns seconds of GPU for a cache the cross-turn gate will veto
+            // on every single turn.
+            // An EMPTY box is the "declined" signal — keeping the closure's
+            // return type unchanged keeps `perform`'s overload resolution happy.
+            guard reusableWindow.map({ ids.count <= $0 }) ?? true else {
+                return PrefixBox(cache: [], tokenIDs: [])
+            }
             // Prefill: run a 1-token generation over the prefix, then trim
             // the cache back to exactly the prompt (the sampled token must
             // not pollute the reusable prefix).
@@ -566,6 +578,12 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
                 }
             }
             return PrefixBox(cache: cache, tokenIDs: ids)
+        }
+        guard !built.tokenIDs.isEmpty else {
+            mlxTTFTLog.notice(
+                "persona prefix SKIPPED — longer than the sliding window, so no turn could reuse it"
+            )
+            return
         }
         personaPrefix.store(built.cache, tokenIDs: built.tokenIDs, for: key)
         let tokens = built.tokenIDs.count
@@ -807,6 +825,33 @@ extension MLXGemmaProvider {
     /// ours.
     static func prefersWindowSizedPrefill(for configuration: ModelConfiguration) -> Bool {
         configuration.name.lowercased().contains("gemma-4")
+    }
+
+    /// A model's attention window, when it is SMALLER than its context length —
+    /// i.e. a sliding window that the KV cache rotates through.
+    ///
+    /// gemma-4 slides at 1024. Nil means "no sliding window" (dense attention,
+    /// e.g. Qwen3), where a cached prefix stays linearly trimmable and reuse
+    /// works for real.
+    static func slidingWindow(forModelID modelID: String) -> Int? {
+        modelID.lowercased().contains("gemma-4") ? 1024 : nil
+    }
+
+    /// Whether a persona prefix of `tokens` can ever be REUSED on this model.
+    ///
+    /// Measured 2026-08-09: a prefix longer than the sliding window wraps the
+    /// rotating KV cache, `isTrimmable` goes false, and MLXToolCalling's
+    /// `reusable` gate vetoes cross-turn reuse — permanently, for every turn.
+    /// On gemma-4 the persona is ~1878 tokens against a 1024 window, so it is
+    /// ALWAYS in that regime, and building it cost 12.5 SECONDS of prefill per
+    /// launch and per brain swap to produce a cache nothing could ever use.
+    ///
+    /// The old code documented this ("a wrapped prefix can't be linearly reused
+    /// anyway") and built it regardless. Knowing it is wasted is not the same as
+    /// not doing it.
+    static func prefixIsReusable(tokens: Int, modelID: String) -> Bool {
+        guard let window = slidingWindow(forModelID: modelID) else { return true }
+        return tokens <= window
     }
 
     /// Whether a caller-requested KV capacity (`maxKVSize`) means anything for
