@@ -54,10 +54,19 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// not persist in OSLogStore, and a breadcrumb that evaporates cannot
     /// diagnose a failure the user reports hours later.
     ///
-    /// SIZES AND ERROR CLASSES ONLY, never prompt or answer content: this text
-    /// is the user's own conversation, and the diagnostic partition it would
-    /// land in is the one attached to issue reports.
+    /// Sizes, error CLASSES, and a BOUNDED preview of error text — never prompt
+    /// or answer content. The turn's text is the user's own conversation and the
+    /// diagnostic partition this lands in is the one attached to issue reports,
+    /// so the error description is capped rather than emitted whole: a guardrail
+    /// throw that echoed the offending span would otherwise put that span into
+    /// `.public` OSLogStore verbatim. `FoundationModels` is closed-source, so
+    /// what its errors carry is an assumption we decline to make.
     private static let log = M1K3Log.logger(.afm)
+
+    /// Cap on logged error text. Long enough to recognise a NEW error shape
+    /// (the known overflow string is ~90 chars) and short enough that an
+    /// unexpectedly chatty payload can't dump a conversation into the log.
+    private static let errorPreviewCap = 200
 
     /// One breadcrumb per generation, before the call. The char count is the
     /// load-bearing part — Mini's window is 4096 tokens (~18k chars at the
@@ -72,13 +81,22 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// A failure, classified. The class is what makes this countable across a
     /// day of logs — "Mini overflowed 40 times" is actionable in a way that
     /// forty copies of an error sentence are not.
+    /// NEVER call this for a `CancellationError` — the user cancelling is
+    /// expected, and routing it here would classify it `.unknown` and log it at
+    /// `.error`, poisoning the one signal `AFMFailure.unknown` exists to carry
+    /// (a rising unknown count meaning "an error shape we don't recognise").
+    /// All three call sites catch cancellation first.
     private func logFailure(_ error: any Error, streaming: Bool) {
-        let failure = AFMFailure.classify(String(describing: error))
+        let described = String(describing: error)
+        // Classify from the FULL text — the markers can sit anywhere — but emit
+        // only a bounded, flattened preview (see `errorPreviewCap`).
+        let failure = AFMFailure.classify(described)
+        let preview = LogPreview.preview(described, max: Self.errorPreviewCap)
         Self.log.error(
             """
             afm failed: \(failure.rawValue, privacy: .public) \
             (streaming=\(streaming, privacy: .public)) — \
-            \(String(describing: error), privacy: .public)
+            \(preview, privacy: .public)
             """
         )
     }
@@ -166,6 +184,13 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         do {
             let response = try await session.respond(to: prompt)
             return response.content
+        } catch is CancellationError {
+            // The user cancelled — expected, not a failure, and this is the
+            // MOST COMMON throw on this path: `generate(prompt:)` is what the
+            // ReAct floor calls for Mini, so every cancelled Mini turn lands
+            // here. Classifying it would score `.unknown` and log `.error`,
+            // making the unknown-count tripwire noise from day one.
+            throw CancellationError()
         } catch {
             // This path DOES rethrow, so the caller isn't blind — but the log is
             // where the pattern shows up across a day, and the classification is

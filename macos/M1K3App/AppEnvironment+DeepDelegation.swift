@@ -80,6 +80,12 @@ extension AppEnvironment {
         // model hears, `declineReason` is what we see. They are pinned in
         // lockstep (DeepDelegationOutcomeTests) precisely so a refusal can never
         // again be spoken to the model while leaving no trace for us.
+        //
+        // Requiring BOTH to unwrap is safe rather than merely lucky: each is an
+        // exhaustive `switch` over `Eligibility` with NO `default:`, so adding a
+        // case fails to compile until both are extended. The compiler enforces
+        // the pairing; the test documents it. If either ever gained a `default:`
+        // this double-bind would silently start swallowing refusals — so don't.
         if let reason = eligibility.declineReason, let refusal = eligibility.refusalObservation {
             Self.logDelegation(.declined(reason: reason))
             return refusal

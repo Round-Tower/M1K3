@@ -295,7 +295,11 @@ let package = Package(
         // M1K3Chat never links this.
         .target(
             name: "M1K3AgentTools",
-            dependencies: ["M1K3Agent", "M1K3Inference", "M1K3Preview"],
+            // M1K3LogCore declared explicitly (2026-08-09). Several files here
+            // already imported it and compiled on the transitive path through
+            // M1K3Agent — pre-existing, not introduced by this change, but it
+            // works by accident and would break if M1K3Agent's own deps moved.
+            dependencies: ["M1K3Agent", "M1K3Inference", "M1K3LogCore", "M1K3Preview"],
             path: "Sources/M1K3AgentTools"
         ),
         .testTarget(
