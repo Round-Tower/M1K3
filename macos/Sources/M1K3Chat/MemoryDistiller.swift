@@ -315,6 +315,16 @@ public struct ProviderMemoryDistiller: MemoryDistilling {
     }
 
     public func distill(turns: [ChatTurn]) async throws -> [DistilledFact] {
+        // Distillation runs after a conversation, on nobody's clock — marked
+        // background so it cannot take the persona-prefix slot from the next
+        // interactive turn (the 2026-08-09 re-prefill finding). Wraps BOTH
+        // legs, because the fallback is the same provider on a bad day.
+        try await InferenceIntent.backgroundUtility {
+            try await self.distillUncounted(turns: turns)
+        }
+    }
+
+    private func distillUncounted(turns: [ChatTurn]) async throws -> [DistilledFact] {
         let prompt = MemoryDistillationPrompt.build(turns: turns)
         if primary.isAvailable {
             do {

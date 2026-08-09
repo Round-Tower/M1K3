@@ -139,6 +139,12 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     /// Per-(tools × persona) prefilled system-block KV prefix; turns start
     /// from copies instead of re-prefilling the persona every time.
     let personaPrefix = PersonaPrefixCache()
+    /// Coalesces concurrent builds of the SAME prefix. Measured 2026-08-09:
+    /// without it, several callers miss the cache together, serialise on the
+    /// ModelContainer, and each pays a full ~13s prefill for a prefix the
+    /// first one was already building. A bigger cache cannot fix that — every
+    /// entrant missed before the first store existed.
+    private let prefixBuilds = SingleFlight<PersonaCacheKey, Bool>()
 
     /// The default generation ceiling, NOT a target — the model stops at EOS
     /// naturally, so this is free for short replies. Reasoning models (Qwen3)
@@ -456,6 +462,40 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             personaText: persona
         )
         if let hit = personaPrefix.snapshot(for: key) { return hit }
+        // Background housekeeping (titles, follow-ups, distillation) may USE a
+        // cached prefix but must never BUILD one: on 2026-08-09 a 64-token
+        // title rendered its own prefix, took the only slot, and cost the next
+        // interactive turn 16-19s of re-prefill. The cache is two slots now, so
+        // this is the belt to that pair of braces — capacity holds only while
+        // prefixes outnumber slots, and the key includes the TOOL SET, so that
+        // count is not fixed at two. Sending the persona inline costs this one
+        // small call a little; taking the slot cost the next real turn a lot.
+        if InferenceIntent.isBackgroundUtility { return nil }
+        // Single-flight the BUILD, then let every caller take its OWN snapshot.
+        //
+        // Coalescing the RESULT would be a correctness bug, not just a shortcut:
+        // a snapshot hands over live KVCache arrays that the caller's decode
+        // mutates, so concurrent turns sharing one snapshot would corrupt each
+        // other. `snapshot(for:)` deep-copies per caller — that has to stay
+        // per caller. What is wasteful to repeat is the 13-second PREFILL, and
+        // that is what this deduplicates.
+        _ = try await prefixBuilds.run(key) { [self] in
+            // A build that finished while we queued makes this free.
+            if personaPrefix.snapshot(for: key) != nil { return true }
+            try await renderPersonaPrefix(container: container, specs: specs, key: key)
+            return true
+        }
+        return personaPrefix.snapshot(for: key)
+    }
+
+    /// The actual prefill: renders the system block, prefills it, and STORES it.
+    /// Only ever entered once per key at a time (see the coalescer above).
+    private func renderPersonaPrefix(
+        container: ModelContainer,
+        specs: [ToolSpec]?,
+        key: PersonaCacheKey
+    ) async throws {
+        let persona = key.personaText
 
         let parameters = generateParameters
         // `@unchecked Sendable` box: the cache arrays are evaluated by the
@@ -499,8 +539,13 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
         }
         personaPrefix.store(built.cache, tokenIDs: built.tokenIDs, for: key)
         let tokens = built.tokenIDs.count
-        mlxTTFTLog.notice("persona prefix cached: \(tokens)tok (saved from every turn's prefill)")
-        return personaPrefix.snapshot(for: key)
+        // Key fingerprint stays in the line: this log is the ONLY way to tell a
+        // legitimate second prefix (a different tool palette) from the same one
+        // being rebuilt — the distinction that separated a cache-capacity bug
+        // from a cache STAMPEDE on 2026-08-09, and they want opposite fixes.
+        mlxTTFTLog.notice(
+            "persona prefix built: \(tokens)tok key=\(key.hashValue, privacy: .public) tools=[\(key.toolsFingerprint, privacy: .public)]"
+        )
     }
 
     /// System-block token ids for the persona prefill (no assistant opener).

@@ -31,7 +31,12 @@ public struct ProviderConversationTitler: ConversationTitling {
     }
 
     public func title(forUser user: String, assistant: String) async throws -> String {
-        try await provider.generate(prompt: TitlePrompt.build(user: user, assistant: assistant))
+        // Nobody is waiting on a title. Marked background so it can never take
+        // the persona-prefix slot from the chat turn that just finished — the
+        // 2026-08-09 finding, where exactly this call cost the NEXT turn 16-19s.
+        try await InferenceIntent.backgroundUtility {
+            try await provider.generate(prompt: TitlePrompt.build(user: user, assistant: assistant))
+        }
     }
 }
 
