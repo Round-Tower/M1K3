@@ -295,8 +295,12 @@ final class MCPHostController {
                 // bare cosine dipped under the recall floor. The 0.6 bar, not
                 // this candidate search, gates the actual delete.
                 let vector = try await embedder.embed(query)
-                let hits = try memoryStore.recall(query: query, queryVector: vector, limit: 3, threshold: 0)
-                switch ForgetResolver.resolve(hits: hits) {
+                // limit raised 3 → 12 on 2026-08-09: the resolver now requires the caller
+                // to have NAMED the fact, so the exact row has to be IN the candidate
+                // set to be deletable at all. At 3 a verbatim request routinely missed
+                // its own target and the old rank-1 rule deleted a neighbour instead.
+                let hits = try memoryStore.recall(query: query, queryVector: vector, limit: 12, threshold: 0)
+                switch ForgetResolver.resolve(hits: hits, query: query) {
                 case let .forget(memory):
                     try memoryStore.forget(id: memory.id)
                     // Forget the dual-written twin in the document corpus too, matched by
