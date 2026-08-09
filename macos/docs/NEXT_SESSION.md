@@ -151,10 +151,29 @@ All TDD red-first; suite 2518/359 green; Mac shell builds.
    measured end-to-end; every figure above is arithmetic or source-reading. The
    primary metric should be **AFM calls per turn**, not scorecard cells and not
    prompt tokens — that is what the persona dedup and the small-talk rule
-   actually target.
-2. **#111 Mini prompt leak** — untouched this session. It fires on plain trivia,
-   not only under attack, and #102's finding that MORE prompt makes Mini worse
-   means re-tuning is not obviously the fix.
+   actually target. ★ That metric is newly COUNTABLE: the AFM logger added this
+   session emits `afm turn:` per generation, so `rg 'afm turn:'` over the run's
+   log window gives calls-per-turn directly.
+   ⚠️ **BLOCKED on the app being closed, not merely owed.** The SelfTest config
+   is a ONE-SHOT file read at launch, so dropping it while M1K3 is running turns
+   Kev's next launch into a headless eval instead of his app. Close the app
+   first. Also: run it from a Release build — a Debug build distorts latency,
+   though NOT the call count, which is what actually matters here.
+2. ~~#111 Mini prompt leak~~ — **code-side half SHIPPED** (`PersonaLeakGuard`).
+   The output-side mirror of `SelfWiringQuarantine`: spans derived from the live
+   persona, whitespace-insensitive, threshold ONE (an answer has no "I was
+   quoting" excuse), wired at all three points a complete answer exists —
+   HeadlessAsk/MCP, `ChatSession.send`, `deliverBackgroundAnswer` — and a leaked
+   turn drops its sources/citations/follow-ups with it.
+   ⚠️ **Still open on #111:** (a) a PARAPHRASED leak reproduces no verbatim span
+   and is out of scope by construction, same named limit as its sibling; (b) the
+   guard replaces the answer but does not stop the model GENERATING it, so the
+   turn is still spent; (c) grounded-Q 1/8 is a separate half of #111 — mostly
+   *citation* failures with correct content — and is untouched.
+   ★ Untested hypothesis worth checking in the same eval run: the persona dedup
+   may have reduced the leak RATE for free. On the ReAct floor the persona used
+   to sit in the prompt BODY — text a model treats as content to continue — and
+   now lives only in AFM's session `instructions`.
 3. ~~Build the 16GB honesty~~ — already shipped; see the ruling above. What
    remains is a judgement call, not code: Big is SELECTABLE at 16GB but
    RECOMMENDED only at 24GB, so a 16GB owner can opt into a tier we quietly
