@@ -2,99 +2,63 @@
 //  FrontingPostureTests.swift
 //  M1K3InferenceTests
 //
-//  "Quick by default, deep when complex" — Kev's standing vision — as a policy
-//  rather than an aspiration. Mini (Apple Foundation Models) fronts the
-//  conversation; the one MLX slot is reserved for depth.
+//  Who answers an interactive turn. Mini fronts ONLY while the MLX slot can't
+//  serve — mid-download or mid-dive.
 //
-//  Today Mini only fronts in TRANSIENT states: while a weight-backed brain
-//  downloads (`ChatGate.interim`) or while a `delegate_deep` dive holds the
-//  slot. This adds the STEADY-STATE posture — and, more importantly, encodes
-//  the constraint that makes it safe.
+//  ★ These tests used to cover a steady-state "Mini fronts by default" opt-in.
+//  It was built, measured, and removed the same night. Same build, same 8
+//  open-chat fixtures, same live path:
 //
-//  ★ The constraint: fronting by default is only sound while a route to the
-//  deep brain actually exists. Mini fronting at `.ready` means the MLX brain
-//  answers nothing interactively, so the ONLY remaining route is
-//  `delegate_deep` — which has never been invoked once in 8 days of logs. Turn
-//  this on without a working depth trigger and the deep tier quietly ceases to
-//  exist, which is precisely the arm Kev rejected ("deletes the deep tier"),
-//  arriving through the other arm's door. So `depthReachable` is a REQUIRED
-//  input, not a comment: the type system makes you answer the question.
+//      lil    median 10,022 ms   max  18,132 ms
+//      big    median 30,500 ms   max 289,020 ms
+//      mini   median 37,292 ms   max 183,853 ms
 //
-//  Signed: Kev + claude-opus-5, 2026-08-09, Confidence 0.85 (the policy is pure
-//  and pinned; whether Mini is GOOD ENOUGH to front is an on-device question
-//  that is still unanswered — which is why the opt-in defaults OFF).
-//  Prior: Unknown.
+//  Mini is the SLOWEST tier by 3.7x, not the quick one — AFM re-sends the whole
+//  persona on a fresh session every call while the MLX tiers reuse a cached KV
+//  prefix. The opt-in could only ever have made M1K3 slower, so it is gone
+//  rather than sitting disabled waiting for someone to find it.
+//
+//  Signed: Kev + claude-opus-5, 2026-08-10, Confidence 0.9 (the ordering is
+//  measured on one build with n=8 per tier; the RATIO is same-binary and the
+//  gap is far too large to be noise, though absolute figures are Debug-inflated).
+//  Prior: Kev + claude-opus-5 (the retired steady-state version).
 //
 
 @testable import M1K3Inference
 import Testing
 
 struct FrontingPostureTests {
-    /// Today's behaviour: the transient bridges, with the opt-in off.
-    private func today(gate: ChatGate, delegating: Bool = false) -> FrontingPosture {
-        InterimBrainPolicy.posture(
-            gate: gate, delegationInFlight: delegating,
-            preferMiniFront: false, depthReachable: true
-        )
+    @Test("the resident brain answers when it can")
+    func residentAnswersWhenReady() {
+        #expect(InterimBrainPolicy.posture(gate: .open, delegationInFlight: false) == .selectedBrain)
     }
 
-    @Test("with the opt-in OFF, behaviour is exactly what shipped before")
-    func optInOffIsUnchanged() {
-        #expect(today(gate: .open) == .selectedBrain)
-        #expect(today(gate: .interim) == .miniFronts)
-        #expect(today(gate: .blocked) == .selectedBrain)
-        #expect(today(gate: .open, delegating: true) == .miniFronts)
+    @Test("Mini fronts while the brain is still downloading")
+    func miniFrontsDuringDownload() {
+        // Nothing else can serve here, so Mini being the slowest tier is beside
+        // the point — something beats nothing.
+        #expect(InterimBrainPolicy.posture(gate: .interim, delegationInFlight: false) == .miniFronts)
     }
 
-    @Test("★ the opt-in is REFUSED when no route to the deep brain exists")
-    func frontingRequiresAReachableDepthPath() {
-        // The whole safety property. Mini fronting at `.ready` means the MLX
-        // brain answers nothing interactively; if delegate_deep can't or won't
-        // fire, the deep tier is gone. Silently becoming a Mini-only product is
-        // a worse outcome than not honouring the preference.
-        #expect(InterimBrainPolicy.posture(
-            gate: .open, delegationInFlight: false,
-            preferMiniFront: true, depthReachable: false
-        ) == .selectedBrain)
-    }
-
-    @Test("with the opt-in ON and depth reachable, Mini fronts the steady state")
-    func steadyStateFronting() {
-        #expect(InterimBrainPolicy.posture(
-            gate: .open, delegationInFlight: false,
-            preferMiniFront: true, depthReachable: true
-        ) == .miniFronts)
-    }
-
-    @Test("the transient bridges never depend on the opt-in or on depth")
-    func transientBridgesAreUnconditional() {
-        // While the brain is downloading there IS no deep tier to protect — the
-        // whole point of the interim bridge is that nothing else can serve. The
-        // depth guard must not accidentally re-gate the download experience.
-        for reachable in [true, false] {
-            #expect(InterimBrainPolicy.posture(
-                gate: .interim, delegationInFlight: false,
-                preferMiniFront: false, depthReachable: reachable
-            ) == .miniFronts)
-            // Likewise mid-dive: the slot is already busy, Mini is the only
-            // thing that can answer, and refusing to front would queue the
-            // conversation behind the dive — the exact promise delegate_deep makes.
-            #expect(InterimBrainPolicy.posture(
-                gate: .open, delegationInFlight: true,
-                preferMiniFront: false, depthReachable: reachable
-            ) == .miniFronts)
-        }
+    @Test("Mini fronts while a dive holds the slot")
+    func miniFrontsDuringDive() {
+        // Refusing here would queue the conversation behind the dive, breaking
+        // the exact promise delegate_deep makes.
+        #expect(InterimBrainPolicy.posture(gate: .open, delegationInFlight: true) == .miniFronts)
     }
 
     @Test("a blocked gate never fronts — it has recovery affordances to show")
     func blockedNeverFronts() {
-        // `.blocked` carries retry / switch-brain surfaces that a slim banner
-        // would bury (InterimBrainPolicy's own doctrine). Fronting there would
-        // paper over a state the user must act on.
-        #expect(InterimBrainPolicy.posture(
-            gate: .blocked, delegationInFlight: false,
-            preferMiniFront: true, depthReachable: true
-        ) == .selectedBrain)
+        #expect(InterimBrainPolicy.posture(gate: .blocked, delegationInFlight: false) == .selectedBrain)
+        #expect(InterimBrainPolicy.posture(gate: .blocked, delegationInFlight: true) == .selectedBrain)
+    }
+
+    @Test("★ there is no steady-state Mini front, and that is deliberate")
+    func noSteadyStateFronting() {
+        // The regression guard for the falsified premise. If someone reintroduces
+        // "Mini fronts when everything is ready", this fails and sends them to the
+        // header's numbers first.
+        #expect(InterimBrainPolicy.posture(gate: .open, delegationInFlight: false) != .miniFronts)
     }
 
     @Test("only the fronting posture asks the app to override the runtime")
