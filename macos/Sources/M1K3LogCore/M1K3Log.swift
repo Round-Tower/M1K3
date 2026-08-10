@@ -123,6 +123,13 @@ public enum M1K3Log {
         /// model that simply said nothing were indistinguishable — on the
         /// default brain. Sizes and error text only, never prompt content.
         case afm
+        /// The headless CHATEVAL harness: fixture boundaries and phase marks.
+        /// Exists because a 2026-08-10 run showed 177 SECONDS of total log
+        /// silence between one fixture ending and the next producing its first
+        /// line — the single largest latency contributor in the run, and
+        /// completely unattributable. Fixture IDs and timings only, never
+        /// prompt or answer text.
+        case eval
     }
 
     /// Build a `Logger` on the M1K3 subsystem for a catalogued category.
