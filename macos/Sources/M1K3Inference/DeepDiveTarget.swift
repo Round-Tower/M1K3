@@ -74,9 +74,10 @@ public enum DeepDiveTarget {
         bigWeightsPresent: Bool,
         physicalMemoryGB: Double
     ) -> DeepDivePlan {
-        // `cappedForThisMac` semantics: would the AUTOMATIC ladder pick Big on
-        // this Mac? Not "could Big be forced to run here" — see refusal 2.
-        let bigIsComfortableHere = BrainTier.capped(.big, forPhysicalMemoryGB: physicalMemoryGB) == .big
+        // The deep-tier comfort bar (24GB), NOT `recommended`/`capped` — those
+        // top out at Lil since 2026-08-11, so asking them "can this Mac run
+        // Big?" would answer no everywhere and silently kill escalation.
+        let bigIsComfortableHere = BrainTier.supportsDeepReasoning(forPhysicalMemoryGB: physicalMemoryGB)
         let canRunBig = bigWeightsPresent && bigIsComfortableHere
         guard canRunBig, resident != .big else {
             // Stay on the resident brain: either Big isn't reachable without a

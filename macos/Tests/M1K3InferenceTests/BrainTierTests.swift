@@ -88,19 +88,47 @@ struct BrainTierTests {
         }
     }
 
-    @Test("recommendation scales with this Mac's memory (echoes KMP device tiers)")
+    @Test("★ Lil is the recommended FRONT at every Mac size — Big is never auto-resident")
     func recommendationByMemory() {
         #expect(BrainTier.recommended(forPhysicalMemoryGB: 8) == .mini)
         #expect(BrainTier.recommended(forPhysicalMemoryGB: 15.9) == .mini)
         #expect(BrainTier.recommended(forPhysicalMemoryGB: 16) == .lil)
-        // Big is a ~7GB-RAM model now — recommending it on a 16GB Mac that
-        // also runs a browser would be hostile. Floor rises to 24GB.
+        // ★ 2026-08-11, Kev's call on measured evidence: "lil is our snappy,
+        // witty agent — and big is for deep reasoning." Big used to be the
+        // automatic pick at 24GB+, which is why a 64GB Mac woke on the SLOW
+        // brain. Same build, same fixtures, live path:
+        //     lil 10,022ms median (max 18,132)
+        //     big 30,500ms median (max 289,020)
+        // Big is 3x slower with a tail that blew the 120s MCP deadline on an
+        // ordinary question. It stays fully SELECTABLE (see the floors below) —
+        // a user may still choose it — and it is reached for depth via
+        // delegate_deep. It is simply never the automatic FRONT any more.
         #expect(BrainTier.recommended(forPhysicalMemoryGB: 23.9) == .lil)
-        #expect(BrainTier.recommended(forPhysicalMemoryGB: 24) == .big)
-        // Big is the ceiling now — Huge retired 2026-07-02; big Macs stay on Big
-        // until gemma-4-12B unblocks upstream (RotatingKVCache.temporalOrder).
-        #expect(BrainTier.recommended(forPhysicalMemoryGB: 48) == .big)
-        #expect(BrainTier.recommended(forPhysicalMemoryGB: 64) == .big)
+        #expect(BrainTier.recommended(forPhysicalMemoryGB: 24) == .lil)
+        #expect(BrainTier.recommended(forPhysicalMemoryGB: 48) == .lil)
+        #expect(BrainTier.recommended(forPhysicalMemoryGB: 64) == .lil)
+    }
+
+    @Test("Big stays SELECTABLE everywhere it can run — the change is the default, not the ladder")
+    func bigRemainsSelectable() {
+        // Dropping Big from the RECOMMENDATION must not drop it from the
+        // product. A user who wants the deep brain resident can still pick it.
+        #expect(BrainTier.big.isSelectable(forPhysicalMemoryGB: 16))
+        #expect(BrainTier.big.isSelectable(forPhysicalMemoryGB: 64))
+        #expect(!BrainTier.big.isSelectable(forPhysicalMemoryGB: 8))
+    }
+
+    @Test("★ deep reasoning has its OWN floor, independent of what is recommended")
+    func deepReasoningFloor() {
+        // Load-bearing separation. `capped`/`recommended` now top out at Lil, so
+        // anything asking "can this Mac run Big?" via `capped` would get NO
+        // forever — silently killing delegate_deep's escalation, the very
+        // feature Big is being reserved for. Deep reasoning keeps the 24GB
+        // comfortable bar it always had.
+        #expect(!BrainTier.supportsDeepReasoning(forPhysicalMemoryGB: 16))
+        #expect(!BrainTier.supportsDeepReasoning(forPhysicalMemoryGB: 23.9))
+        #expect(BrainTier.supportsDeepReasoning(forPhysicalMemoryGB: 24))
+        #expect(BrainTier.supportsDeepReasoning(forPhysicalMemoryGB: 64))
     }
 
     @Test("mobile recommendation is conservative — never Big, Lil only on iPad-Pro/Vision-Pro RAM")
@@ -116,9 +144,13 @@ struct BrainTierTests {
         // Big is NEVER recommended on mobile, even at high RAM.
         #expect(BrainTier.recommended(forPhysicalMemoryGB: 24, platform: .mobile) == .lil)
         #expect(BrainTier.recommended(forPhysicalMemoryGB: 64, platform: .mobile) == .lil)
-        // The Mac ladder is unchanged (regression guard): default platform is .mac.
-        #expect(BrainTier.recommended(forPhysicalMemoryGB: 24) == .big)
-        #expect(BrainTier.recommended(forPhysicalMemoryGB: 24, platform: .mac) == .big)
+        // Both ladders now top out at Lil — but for DIFFERENT reasons, and the
+        // distinction matters if either is ever retuned. Mobile: Big exceeds any
+        // per-app jetsam budget, so it cannot run at all. Mac: Big runs fine and
+        // is fully selectable, it is simply 3x slower than Lil (measured
+        // 2026-08-11) and therefore the wrong DEFAULT.
+        #expect(BrainTier.recommended(forPhysicalMemoryGB: 24) == .lil)
+        #expect(BrainTier.recommended(forPhysicalMemoryGB: 24, platform: .mac) == .lil)
     }
 
     @Test("tiers order by capability — mini < lil < big")
@@ -150,11 +182,30 @@ struct BrainTierTests {
         #expect(BrainTier.capped(.mini, forPhysicalMemoryGB: 128) == .mini)
     }
 
-    @Test("capped leaves an at-or-below-ceiling pick unchanged (boundaries)")
-    func cappedAtCeilingUnchanged() {
-        #expect(BrainTier.capped(.big, forPhysicalMemoryGB: 48) == .big) // above Big's ceiling
-        #expect(BrainTier.capped(.big, forPhysicalMemoryGB: 24) == .big) // exactly Big's ceiling
-        #expect(BrainTier.capped(.lil, forPhysicalMemoryGB: 16) == .lil) // exactly Lil's ceiling
+    @Test("capped now eases Big down to Lil — the AUTOMATIC path picks snappy")
+    func cappedEasesBigToLil() {
+        // `capped` governs the AUTOMATIC path only (auto-route's "let M1K3
+        // choose"). With Lil the recommendation everywhere, asking M1K3 to
+        // choose gets you the snappy brain — which is the whole point of the
+        // 2026-08-11 change. This USED to return .big at 24GB+.
+        #expect(BrainTier.capped(.big, forPhysicalMemoryGB: 48) == .lil)
+        #expect(BrainTier.capped(.big, forPhysicalMemoryGB: 24) == .lil)
+        #expect(BrainTier.capped(.lil, forPhysicalMemoryGB: 16) == .lil)
+    }
+
+    @Test("★ a user who CHOSE Big keeps it across a relaunch — capping is not demotion")
+    func explicitBigSurvivesRestore() {
+        // The safety property that makes the ladder change tolerable, and the
+        // one most likely to be broken by a careless follow-up. `capped` easing
+        // Big to Lil is correct for the AUTOMATIC path and would be a betrayal
+        // on the RESTORE path: someone who deliberately picked the deep brain
+        // must not be silently downgraded every time they quit the app.
+        // `selectableOrEased` only eases a pick below its tier's HARD floor.
+        #expect(BrainTier.selectableOrEased(.big, forPhysicalMemoryGB: 64) == .big)
+        #expect(BrainTier.selectableOrEased(.big, forPhysicalMemoryGB: 24) == .big)
+        #expect(BrainTier.selectableOrEased(.big, forPhysicalMemoryGB: 16) == .big)
+        // Below Big's 16GB hard floor it still eases — that pick can't run.
+        #expect(BrainTier.selectableOrEased(.big, forPhysicalMemoryGB: 8) != .big)
     }
 
     @Test("Big-12B carries the promised 16GB selection floor; Mini/Lil stay floorless")
