@@ -1,5 +1,54 @@
 # Next session — the brain-routing refinement
 
+> ## ★ REV 3 (2026-08-11): THE PREMISE WAS BACKWARDS. Read this first.
+>
+> Rev 1 and rev 2 are both built on "Mini fronts because Mini is quick". It
+> isn't. Measured on ONE build, same 8 open-chat fixtures, same live path:
+>
+> | brain | pass | median | max |
+> |---|---|---|---|
+> | **lil** | 7/8 | **10,022 ms** | 18,132 |
+> | big | — | 30,500 ms | 289,020 |
+> | mini | 6/8 | **37,292 ms** | 183,853 |
+>
+> **Mini is the SLOWEST tier, by 3.7× against Lil.** AFM opens a fresh
+> `LanguageModelSession` and re-sends the whole persona every call; the MLX
+> tiers reuse a cached KV prefix. The "instant, no download" tier is
+> structurally the most expensive per turn. The steady-state Mini-front opt-in
+> built on 2026-08-09 was REMOVED on 08-10 (`cdfe3ae5`) — a default-OFF switch
+> whose only reachable effect is a 3.7× slowdown is a trap, not a deferral.
+>
+> **The architecture Kev confirmed live (2026-08-10): "mini or lil — ideally
+> always the fastest — with a tool to delegate."** Which is what his original
+> goal said all along: *push the 4B/3B tier, move to Big for deep reasoning,
+> not always on.* Concretely:
+>
+> - **Lil is the front** — resident, KV-cached, 3× faster than Mini and 3× faster
+>   than Big. On a Lil machine that is ALREADY today's behaviour; no override.
+> - **Mini fronts only when the slot can't serve** — mid-download, mid-dive.
+>   Unchanged, and correct: something beats nothing.
+> - **Big is reached by DELEGATION**, not residency.
+>
+> ### The two pieces left, in order
+>
+> 1. **★ Wire `DeepDiveTarget` — make `delegate_deep` actually swap the slot.**
+>    The decision layer shipped and is tested (`DeepDiveTargetTests`): dive on
+>    Big when its weights are present and the Mac clears the 16GB floor, else
+>    stay resident and report `isEscalation: false`. NOT WIRED. The remaining
+>    step re-points the one MLX slot mid-flight and must restore it on EVERY
+>    exit path including a throw. Needs a session that can verify a real
+>    cross-brain dive — which outlives the MCP 120s deadline, so verify in-app
+>    or via SelfTest, not over MCP.
+> 2. **Revisit the ladder.** `BrainTier.recommended` puts Big resident at 24GB+.
+>    If Lil is the better front and Big is reached by delegation, that default
+>    is now questionable on exactly the machines that can afford Big. Kev's call
+>    — it changes what a 64GB Mac feels like out of the box.
+>
+> Everything below is rev 2 and still accurate EXCEPT where it assumes Mini
+> should front. The rejections, the measurement gaps and the #111/#102 findings
+> all stand.
+
+
 Living handoff for the #102 / #111 thread. Rev 2 (2026-08-09, evening) — rev 1
 was written the same day and **one of its load-bearing readings was wrong**; the
 correction is the first thing below, because it changes what the work is.
