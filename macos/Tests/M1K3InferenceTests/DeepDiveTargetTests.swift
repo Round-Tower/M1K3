@@ -66,12 +66,50 @@ struct DeepDiveTargetTests {
 
     @Test("a Mac that cannot run Big dives on the resident brain instead")
     func belowBigsFloorStaysResident() {
-        // Big's selection floor is 16GB. Swapping it onto an 8GB Mac would
-        // swap-thrash, and a background dive is the worst place to discover that.
+        // Swapping Big onto an 8GB Mac would swap-thrash, and a background dive
+        // is the worst possible place to discover that.
         let plan = DeepDiveTarget.plan(
             resident: .lil, bigWeightsPresent: true, physicalMemoryGB: 8
         )
         #expect(plan.tier == .lil)
+        #expect(!plan.requiresSwap)
+    }
+
+    @Test("★ 16GB does NOT auto-escalate — this is the AUTOMATIC path, so it uses the comfortable floor")
+    func sixteenGigDoesNotAutoEscalate() {
+        // Big's SELECTION floor is 16GB (tight-but-runnable) but its
+        // RECOMMENDATION floor is 24GB. `BrainTier.cappedForThisMac` already
+        // states the house rule this follows: "ease the automatic pick down to
+        // what THIS Mac can run comfortably... Manual selection stays sovereign
+        // (capped only on the AUTOMATIC path)."
+        //
+        // A model-invoked background tool deciding to load a 12B model IS the
+        // automatic path — nobody chose it. A user who wants Big on a 16GB Mac
+        // can still pick it themselves; the model may not pick it for them.
+        let plan = DeepDiveTarget.plan(
+            resident: .lil, bigWeightsPresent: true, physicalMemoryGB: 16
+        )
+        #expect(plan.tier == .lil)
+        #expect(!plan.requiresSwap)
+        #expect(!plan.isEscalation)
+    }
+
+    @Test("24GB and up auto-escalates — the recommendation floor is the bar")
+    func twentyFourGigEscalates() {
+        #expect(DeepDiveTarget.plan(
+            resident: .lil, bigWeightsPresent: true, physicalMemoryGB: 24
+        ).requiresSwap)
+    }
+
+    @Test("a user who already chose Big at 16GB keeps it — sovereignty cuts both ways")
+    func manualBigAtSixteenIsHonoured() {
+        // The cap applies to the AUTOMATIC pick, never to a manual one. If Big
+        // is already resident on a 16GB Mac the user put it there deliberately,
+        // and a dive must not demote them to Lil on their behalf.
+        let plan = DeepDiveTarget.plan(
+            resident: .big, bigWeightsPresent: true, physicalMemoryGB: 16
+        )
+        #expect(plan.tier == .big)
         #expect(!plan.requiresSwap)
     }
 
