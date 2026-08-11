@@ -480,8 +480,11 @@ Kev's direction: the chat IS the app. Five moves in one pass:
   STT) + `AVSpeechProvider` (system TTS), `M1K3Voice` added to the `MobileShell`
   deps + mic/speech usage strings to both targets. Mobile-specific ground: an
   explicit `AVAudioSession` (.playAndRecord/.voiceChat, activated on entry, released
-  on exit), **gentler endpointing (silence 2.0 s / hold 3.5 s** vs the Mac's 1.6/3.0
-  — the live "it cuts me off" complaint), whole-answer turns for v1 (the Mac's
+  on exit), gentler endpointing than the Mac's — **superseded 2026-08-11: both
+  shells now share `EndpointCadence.conversational`, because those two hand-typed
+  pairs came from the SAME "it cuts me off" complaint and drifted anyway; the
+  endpointer also learns the speaker's own pause rhythm on top** — whole-answer
+  turns for v1 (the Mac's
   sentence-streaming poller is a named follow-up). Entry via a toolbar waveform
   button; a true background exits the mode before the brain sheds (scenePhase hook).
 - **Companion picker rework.** Cards are text-only (the generic pawprint glyphs said
