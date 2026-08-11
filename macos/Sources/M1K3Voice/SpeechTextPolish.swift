@@ -44,9 +44,67 @@ public enum SpeechTextPolish {
         result = stripWebSourcesBlock(result)
         result = stripCitations(result)
         result = collapseURLs(result)
+        result = speakOwnName(result)
         result = normalizeCurlyPunctuation(result)
         result = tidyWhitespace(result)
         return result
+    }
+
+    // MARK: - The name
+
+    /// M1K3 is leetspeak for MIKE (1→I, 3→E), and no TTS engine can know that.
+    /// Kokoro spells it out per character — and silently drops letters its
+    /// dictionary lacks, which is why Kev heard "M1K3" arrive without its "M"
+    /// (2026-08-11). AVSpeech reads it as an alphanumeric jumble. Rewriting the
+    /// TEXT fixes every engine and both platforms at once, where an engine
+    /// dictionary entry would fix one.
+    ///
+    /// Whole word only, and deliberately nothing else: this runs over every spoken
+    /// answer, so a looser rule would start rewriting the user's own content —
+    /// `app.m1k3`, `M1K3Voice`, a file path. `\b` won't do it (`.` and the digits
+    /// make the boundaries lie), so the guard is explicit on both sides:
+    /// letters/digits/`.`/`_`/`-` adjacent means it's part of something bigger.
+    /// A trailing `'s` is allowed through as the possessive it is.
+    private static func speakOwnName(_ text: String) -> String {
+        let name = "m1k3"
+        var result = ""
+        var index = text.startIndex
+        while let found = text.range(of: name, options: .caseInsensitive, range: index ..< text.endIndex) {
+            let precedes = found.lowerBound > text.startIndex
+                ? text[text.index(before: found.lowerBound)] : nil
+            let follows = found.upperBound < text.endIndex ? text[found.upperBound] : nil
+            // A dot AFTER the name is usually the end of a sentence, but a dot
+            // BEFORE it never is (`app.m1k3`) — so the two sides can't share one
+            // rule. A trailing dot only blocks when something identifier-shaped
+            // follows it (`m1k3.swift`).
+            let afterDot = follows == "." && found.upperBound < text.endIndex
+                ? text[text.index(after: found.upperBound)...].first : nil
+            let trailingIsPath = follows == "." && (afterDot?.isLetter == true || afterDot?.isNumber == true)
+            result += text[index ..< found.lowerBound]
+            let isWholeName = precedesBoundary(precedes)
+                && !trailingIsPath
+                && (follows == "." || followsBoundary(follows))
+            result += isWholeName ? "Mike" : text[found]
+            index = found.upperBound
+        }
+        result += text[index ..< text.endIndex]
+        return result
+    }
+
+    /// Nil (string start) or anything that can't be part of a longer identifier.
+    /// `.`/`_`/`-` all block: `app.m1k3`, `the_m1k3_app`, `run-m1k3`.
+    private static func precedesBoundary(_ character: Character?) -> Bool {
+        guard let character else { return true }
+        if character == "." || character == "_" || character == "-" { return false }
+        return !character.isLetter && !character.isNumber
+    }
+
+    /// Nil (string end) or ordinary punctuation/space. `'` passes so the
+    /// possessive ("M1K3's memory") speaks as one word.
+    private static func followsBoundary(_ character: Character?) -> Bool {
+        guard let character else { return true }
+        if character == "_" || character == "-" { return false }
+        return !character.isLetter && !character.isNumber
     }
 
     // MARK: - Markdown flattening

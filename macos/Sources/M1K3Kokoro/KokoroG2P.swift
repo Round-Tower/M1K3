@@ -338,13 +338,55 @@ public struct KokoroG2P: Sendable {
         return original.count <= 5 && original.allSatisfy(\.isUppercase)
     }
 
-    /// Per-character expansion: letters via their single-character dictionary
-    /// keys (all 26 are present), digits via NumberSpeller.
+    /// How each letter is NAMED aloud, en-GB ("zed", not "zee"; "aitch").
+    ///
+    /// ★ This table replaces the belief that "all 26 single-character dictionary
+    /// keys are present". Measured 2026-08-11 against the real bundled dictionary:
+    /// only **8** are (a e i j k n r s) — the rest are letters that happen to be
+    /// words. Every other letter resolved to nothing and `joinedTokens` drops what
+    /// it can't resolve, so they were silently unspoken: "M1K3" lost its "M" (which
+    /// is what Kev heard), and "MCP" produced NO AUDIO AT ALL. A dropped phoneme
+    /// leaves no trace anywhere, which is how this survived since the spike.
+    ///
+    /// Every spelling here was probed against the bundled dictionary before being
+    /// chosen, so none of them are silently dropped in turn — that's the whole
+    /// point, and `SpellOutLettersTests` re-measures it on every run rather than
+    /// trusting this comment.
+    /// "w" is two dictionary words — `doubleyou` is NOT a key (it only appeared to
+    /// resolve when probed on its own, because that goes through the compound
+    /// splitter, which `joinedTokens`' raw lookup does not).
+    private static let letterNames: [Character: [String]] = [
+        "a": ["aye"], "b": ["bee"], "c": ["cee"], "d": ["dee"], "e": ["ee"],
+        "f": ["eff"], "g": ["gee"], "h": ["aitch"], "i": ["eye"], "j": ["jay"],
+        "k": ["kay"], "l": ["el"], "m": ["em"], "n": ["en"], "o": ["oh"],
+        "p": ["pee"], "q": ["queue"], "r": ["are"], "s": ["ess"], "t": ["tee"],
+        "u": ["you"], "v": ["vee"], "w": ["double", "you"], "x": ["ex"],
+        "y": ["why"], "z": ["zed"],
+    ]
+
+    /// The words that speak one character: its letter NAME when the dictionary can
+    /// say it, otherwise the bare character.
+    ///
+    /// The fallback is not decoration — a dictionary that keys letters directly
+    /// (the fallback tests' fake, or a future replacement dictionary) keeps
+    /// working, and a letter outside the table (accented, non-Latin) behaves
+    /// exactly as it did before. All-or-nothing per letter, so "w" never speaks as
+    /// a bare "double".
+    private func spelledWords(for char: Character) -> [String] {
+        let lowered = Character(String(char).lowercased())
+        if let name = Self.letterNames[lowered], name.allSatisfy({ dictionary[$0] != nil }) {
+            return name
+        }
+        return [String(lowered)]
+    }
+
+    /// Per-character expansion: letters via their spoken names, digits via
+    /// NumberSpeller.
     private func spellOutTokens(_ text: String, extraWords: [String]) -> [Int]? {
         var words: [String] = []
         for char in text {
             if char.isLetter {
-                words.append(String(char).lowercased())
+                words.append(contentsOf: spelledWords(for: char))
             } else if let digit = NumberSpeller.digitWord(char) {
                 words.append(digit)
             }
