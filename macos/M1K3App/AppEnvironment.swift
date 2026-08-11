@@ -360,6 +360,26 @@ final class AppEnvironment {
     /// user by `runStartupMaintenance` once there's a window to read it in.
     private var pendingFrontTierNotice: String?
 
+    /// The effect-chain renderer behind the M1K3 Voice (Kokoro) tier — held so the
+    /// voice character can be switched live rather than rebuilt.
+    private let voiceRenderer: EffectfulSpeechProvider
+
+    /// Persisted voice character (see `VoiceCharacter`). Absent = the signature
+    /// M1K3 voice, so a stored preference is the only way to change how it sounds.
+    nonisolated static let voiceCharacterKey = "voice.character"
+
+    /// The live character, for the Settings picker.
+    var voiceCharacter: VoiceCharacter {
+        VoiceCharacter(persisted: UserDefaults.standard.string(forKey: Self.voiceCharacterKey))
+    }
+
+    /// Switch how M1K3 sounds, now — the next rendered chunk carries it, so a
+    /// listener hears the change within a sentence rather than after a restart.
+    func setVoiceCharacter(_ character: VoiceCharacter) {
+        UserDefaults.standard.set(character.rawValue, forKey: Self.voiceCharacterKey)
+        voiceRenderer.setChain(character.chain)
+    }
+
     /// The downloading brain's name for progress labels (e.g. "Big M1K3").
     var downloadingBrainName: String {
         selectedBrain.displayName
@@ -660,7 +680,17 @@ final class AppEnvironment {
         // TTS seam: Built-in Apple voice wrapped in a swappable façade so the
         // premium Kokoro tier can drop in without rebuilding any caller.
         builtinSpeech = AVSpeechProvider()
-        kokoro = KokoroSpeechProvider()
+        // The renderer is built here, not left to KokoroSpeechProvider's default,
+        // so the voice character stays switchable at runtime (Settings) instead of
+        // being frozen into a provider we'd have to rebuild — engine, taps and all —
+        // to change how M1K3 sounds.
+        let renderer = EffectfulSpeechProvider(
+            chain: VoiceCharacter(
+                persisted: UserDefaults.standard.string(forKey: Self.voiceCharacterKey)
+            ).chain
+        )
+        voiceRenderer = renderer
+        kokoro = KokoroSpeechProvider(renderer: renderer)
         speech = SwappableSpeechProvider(builtinSpeech)
         selectedVoiceTier = UserDefaults.standard.string(forKey: Self.selectedVoiceTierKey)
             .flatMap(VoiceTier.init(rawValue:)) ?? .builtin

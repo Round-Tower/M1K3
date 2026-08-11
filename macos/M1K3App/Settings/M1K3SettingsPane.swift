@@ -74,6 +74,21 @@ struct M1K3SettingsPane: View {
             Section {
                 LabeledContent("Active voice", value: env.selectedVoiceTier.displayName)
                 voiceOutputControl
+                if env.selectedVoiceTier == .m1k3Voice {
+                    // Character applies to the neural voice's effect chain, so it's
+                    // only meaningful on that tier. Live: the next chunk carries it,
+                    // which is what makes "Hear a sample" an A/B test.
+                    Picker("Character", selection: Binding(
+                        get: { env.voiceCharacter },
+                        set: { env.setVoiceCharacter($0) }
+                    )) {
+                        ForEach(VoiceCharacter.allCases, id: \.rawValue) { character in
+                            Text(character.displayName).tag(character)
+                        }
+                    }
+                    Text(env.voiceCharacter.summary)
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Button("Hear a sample") { Task { await env.speakSample() } }
                     .buttonStyle(.glass)
             } header: {
@@ -81,7 +96,10 @@ struct M1K3SettingsPane: View {
             } footer: {
                 Text("How M1K3 sounds when it speaks. Built-in is Apple's clear default; "
                     + "M1K3 Voice runs the speech through M1K3's own voice character and "
-                    + "downloads the neural voice model for offline use. On-device only.")
+                    + "downloads the neural voice model for offline use. On-device only. "
+                    + "Character shapes that voice \u{2014} Clean is the full neural range, "
+                    + "M1K3 is the signature transmitted sound, Radio leans further into "
+                    + "lo-fi. Switch and hit \u{201C}Hear a sample\u{201D} to compare.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 

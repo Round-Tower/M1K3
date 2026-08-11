@@ -69,7 +69,18 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     // `chain`/`player`/`configureEngineIfNeeded`/`streamingSession` are internal
     // (not private) for EffectfulSpeechProvider+Streaming.swift — the chunked
     // playback path lives there to keep this file inside the length budget.
-    let chain: VoiceEffectChain
+    /// Lock-guarded so the voice character can be switched while the app runs (the
+    /// Settings picker) without rebuilding the provider and its audio engine.
+    /// Read once per rendered chunk — a lock at ~100ms of audio is free — and the
+    /// class is already `@unchecked Sendable` under exactly this discipline. A
+    /// switch mid-utterance simply lands on the next chunk, which is the honest
+    /// behaviour: audio already handed to the player has been heard.
+    private let chainLock = NSLock()
+    private var _chain: VoiceEffectChain
+    var chain: VoiceEffectChain {
+        chainLock.withLock { _chain }
+    }
+
     private let synthesizer = AVSpeechSynthesizer()
     private let engine = AVAudioEngine()
     let player = AVAudioPlayerNode()
@@ -116,7 +127,7 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     private var configObserver: NSObjectProtocol?
 
     public init(chain: VoiceEffectChain = .m1k3Character, fallback: AVSpeechProvider = AVSpeechProvider()) {
-        self.chain = chain
+        _chain = chain
         plainFallback = fallback
         super.init()
         configObserver = NotificationCenter.default.addObserver(
@@ -124,6 +135,12 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
         ) { [weak self] _ in
             Task { @MainActor in self?.handleEngineConfigurationChange() }
         }
+    }
+
+    /// Switch the voice character live (Settings). Takes effect on the next
+    /// rendered chunk — see `chain`.
+    public func setChain(_ newChain: VoiceEffectChain) {
+        chainLock.withLock { _chain = newChain }
     }
 
     deinit {
