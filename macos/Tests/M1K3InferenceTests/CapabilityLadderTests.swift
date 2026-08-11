@@ -27,10 +27,14 @@ struct CapabilityLadderTests {
         #expect(UpgradeTarget.next(from: .mini, physicalMemoryGB: 16) == .lil)
     }
 
-    @Test("Mini on a 24GB+ Mac → Big directly (don't sell two downloads when one is right)")
-    func miniOffersBigOn24() {
-        #expect(UpgradeTarget.next(from: .mini, physicalMemoryGB: 24) == .big)
-        #expect(UpgradeTarget.next(from: .mini, physicalMemoryGB: 64) == .big)
+    @Test("Mini on a 24GB+ Mac → Lil, the fast front (was Big until 2026-08-11)")
+    func miniOffersLilOnBigMacs() {
+        // The upgrade ladder follows `recommended`, which now tops out at Lil on
+        // every Mac. Offering Big here would sell the user a 3x SLOWER resident
+        // brain as an "upgrade" (measured: lil 10.0s median vs big 30.5s).
+        // Big is reached for depth via delegate_deep, not by moving in.
+        #expect(UpgradeTarget.next(from: .mini, physicalMemoryGB: 24) == .lil)
+        #expect(UpgradeTarget.next(from: .mini, physicalMemoryGB: 64) == .lil)
     }
 
     @Test("Mini on an 8GB Mac → no rung: the recommendation IS Mini")
@@ -38,9 +42,15 @@ struct CapabilityLadderTests {
         #expect(UpgradeTarget.next(from: .mini, physicalMemoryGB: 8) == nil)
     }
 
-    @Test("Lil on a capable Mac → Big, the second rung")
-    func lilOffersBigWhenCapable() {
-        #expect(UpgradeTarget.next(from: .lil, physicalMemoryGB: 24) == .big)
+    @Test("★ Lil is the top rung on every Mac — nothing to upsell")
+    func lilIsTheCeilingEverywhere() {
+        // A Lil user is already on the brain we want them on, so the upgrade
+        // prompt stays quiet rather than nagging them onto a slower resident.
+        // When a turn genuinely needs depth the answer is delegate_deep, which
+        // borrows Big for one task — not a permanent move that taxes every
+        // subsequent turn.
+        #expect(UpgradeTarget.next(from: .lil, physicalMemoryGB: 24) == nil)
+        #expect(UpgradeTarget.next(from: .lil, physicalMemoryGB: 64) == nil)
     }
 
     @Test("Lil on a 16GB Mac → no rung: Big would be hostile there")

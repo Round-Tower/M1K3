@@ -40,6 +40,7 @@ import M1K3Chat
 import M1K3Eval
 import M1K3Inference
 import M1K3Knowledge
+import M1K3LogCore
 import M1K3MLX
 import Synchronization
 
@@ -88,6 +89,10 @@ private struct AFMRecordingTool: FoundationModels.Tool {
 }
 
 enum ChatEvalStage {
+    /// Fixture boundaries, so time spent OUTSIDE a turn is attributable.
+    /// See M1K3Log.Category.eval for the 177-second silence that motivated it.
+    private static let evalLog = M1K3Log.logger(.eval)
+
     static var isRequested: Bool {
         SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL") == "1"
     }
@@ -307,7 +312,16 @@ enum ChatEvalStage {
         let kinds = selectedKinds()
         var scores: [ChatEvalScore] = []
         for fixture in ChatEvalFixtures.all where kinds?.contains(fixture.kind) ?? true {
+            // Bracket every fixture. The gap between one `fixture done` and the
+            // next `fixture start` is time the harness spends OUTSIDE the turn,
+            // and on 2026-08-10 that gap was 177s before `chat-capabilities`
+            // with nothing in the log to explain it. Whatever it is, it is now
+            // bounded by two timestamps instead of inferred from silence.
+            Self.evalLog.notice("fixture start: \(fixture.id, privacy: .public)")
             let score = await runFixture(fixture, provider: provider)
+            Self.evalLog.notice(
+                "fixture done: \(fixture.id, privacy: .public) \(score.latencyMS, privacy: .public)ms"
+            )
             emit(score.rendered)
             scores.append(score)
         }

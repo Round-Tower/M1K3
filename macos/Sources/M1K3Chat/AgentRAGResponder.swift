@@ -111,6 +111,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// `() -> Bool` for the same dependency-direction reason as `maxIterationsProvider`:
     /// the CoolHeadLevel enum lives in M1K3LanguageModel, which this module doesn't link.
     private let defersHeavyGenerationProvider: (@Sendable () -> Bool)?
+    /// The grounding token ceiling, read FRESH each turn like the other
+    /// providers so a brain hot-swap re-sizes it immediately.
+    /// `GroundingBudget.defaultTokenBudget` was DERIVED from Big's 3000-token
+    /// reserve in an 8192-token window; on Mini's 4096 window the same number is
+    /// 27% of everything the model has. `GroundingBudgetPolicy` sizes it per
+    /// tier. Defaults to the old constant so unwired callers are byte-identical.
+    private let groundingBudgetProvider: @Sendable () -> Int
 
     public init(
         store: KnowledgeStore,
@@ -126,7 +133,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         fastThinkingProvider: @escaping @Sendable () -> Bool = { false },
         historyBudgetProvider: @escaping @Sendable () -> HistoryWindow.Budget = { .default },
         maxIterationsProvider: (@Sendable () -> Int)? = nil,
-        defersHeavyGenerationProvider: (@Sendable () -> Bool)? = nil
+        defersHeavyGenerationProvider: (@Sendable () -> Bool)? = nil,
+        groundingBudgetProvider: @escaping @Sendable () -> Int = { GroundingBudget.defaultTokenBudget }
     ) {
         self.store = store
         self.embedder = embedder
@@ -142,6 +150,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.fastThinkingProvider = fastThinkingProvider
         self.historyBudgetProvider = historyBudgetProvider
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
+        self.groundingBudgetProvider = groundingBudgetProvider
     }
 
     /// Fixed tool list — convenience for tests and simple callers.
@@ -261,9 +270,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let countTokens: (String) async -> Int? = { [provider] text in
             await (provider as? TokenCounting)?.tokenCount(text)
         }
+        let groundingTokenBudget = groundingBudgetProvider()
         (chunks, memories) = await GroundingBudget.fit(
             chunks: chunks, memories: memories,
-            tokenBudget: GroundingBudget.defaultTokenBudget,
+            tokenBudget: groundingTokenBudget,
             countTokens: countTokens
         )
         if chunks != beforeCapChunks || memories != beforeCapMemories {
@@ -693,6 +703,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             """
             RULES:
             \(Self.generativeCarveOut)
+            - Pure small talk — greetings, banter — needs no tools or knowledge: \
+            reply IMMEDIATELY starting with "CONCLUSION:". A question about the \
+            current world is NOT small talk, even phrased casually.
             - If the KNOWLEDGE already answers the question, reply IMMEDIATELY \
             starting with "CONCLUSION:" — do not use tools.
             - Cite knowledge sources inline with citation tokens like \

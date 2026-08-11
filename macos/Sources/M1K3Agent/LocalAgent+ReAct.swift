@@ -126,10 +126,17 @@ extension LocalAgent {
 
         let groundingBlock = grounding.map { "\n\nContext:\n\($0)" } ?? ""
 
-        return """
-        \(M1K3Persona.systemPrompt)
+        // Only send the persona when the backend isn't already carrying it.
+        // A bare completion model has nowhere else to learn who it is; AFM
+        // opens every session with the same persona as standing instructions,
+        // so including it here sent Mini ~890 tokens of duplicate identity per
+        // generation — ~43% of its 4096-token window, before the question.
+        // Not conforming to PersonaCarrying keeps the old behaviour exactly.
+        let carriesPersona = (inferenceProvider as? PersonaCarrying)?.carriesStandingPersona == true
+        let personaBlock = carriesPersona ? "" : "\(M1K3Persona.systemPrompt)\n\n"
 
-        Your goal: \(goal)\(groundingBlock)
+        return """
+        \(personaBlock)Your goal: \(goal)\(groundingBlock)
 
         Available Tools:
         \(toolDescriptions)

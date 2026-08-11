@@ -30,8 +30,15 @@
 import Foundation
 import M1K3Inference // FollowUpSplit — the trailer is not answer text
 import M1K3Knowledge
+import M1K3LogCore
+import os
 
 public enum HeadlessAsk {
+    /// `security` (not `responder`): a prompt leak reaching a headless caller
+    /// is a security event on the surface a visiting agent drives unsupervised,
+    /// and it belongs beside the canary tripwire in an issue-report capture.
+    private static let log = Logger(subsystem: M1K3Log.subsystem, category: "security")
+
     /// One headless turn. `canary` is the leak tripwire: any honeypot string it
     /// holds is redacted from the final answer (body + Sources footer) and
     /// `onCanaryTrip` is called with the match count so the caller can raise a
@@ -68,6 +75,16 @@ public enum HeadlessAsk {
         // reduces the turn to empty. Degrade with an honest message instead of
         // throwing; a visiting agent should never see a bare "Error: emptyAnswer".
         guard !polished.isEmpty else { return emptyAnswerMessage(didReason: reasoning != nil) }
+        // Prompt-leak guard (#111). Persona rule 1 forbids reproducing the
+        // wiring, but a prompt cannot enforce itself and the 2026-08-08
+        // scorecard says Mini does it unprompted. Returned BEFORE the Sources
+        // footer is assembled: a leak has no real citations, and half a leak is
+        // still a leak. This surface first because MCP is the one a visiting
+        // agent drives with no human reading the answer.
+        if PersonaLeakGuard.leaks(polished) {
+            Self.log.error("prompt-leak guard: outgoing ask_m1k3 answer reproduced the persona")
+            return PersonaLeakGuard.refusal
+        }
         // The footer lists only what the answer ACTUALLY cited, not everything
         // retrieved. Top-K + the grounding floor let an off-topic chunk ride above
         // the bar; on an identity turn the model cites nothing, so rendering the

@@ -117,6 +117,19 @@ public enum M1K3Log {
         /// and entry COUNTS only — never digest or narrative content (the
         /// pulse text summarizes memories/chat and must not leak into logs).
         case heartbeat
+        /// Apple Foundation Models (the Mini tier): session lifecycle, prompt
+        /// SIZE, and the throws that were previously swallowed whole. Mini had
+        /// no logger at all, so a context overflow, a guardrail refusal and a
+        /// model that simply said nothing were indistinguishable — on the
+        /// default brain. Sizes and error text only, never prompt content.
+        case afm
+        /// The headless CHATEVAL harness: fixture boundaries and phase marks.
+        /// Exists because a 2026-08-10 run showed 177 SECONDS of total log
+        /// silence between one fixture ending and the next producing its first
+        /// line — the single largest latency contributor in the run, and
+        /// completely unattributable. Fixture IDs and timings only, never
+        /// prompt or answer text.
+        case eval
     }
 
     /// Build a `Logger` on the M1K3 subsystem for a catalogued category.

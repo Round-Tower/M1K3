@@ -1449,9 +1449,11 @@ extension AppEnvironment {
         let gate = chatGate
         let delegationFronting = deepDelegationTaskLabel != nil
             && selectedBrain.mlxModelID != nil
-        interimRuntimeOverride.value = (gate == .interim || delegationFronting)
-            ? .appleFoundationModels
-            : nil
+        let posture = InterimBrainPolicy.posture(
+            gate: gate,
+            delegationInFlight: delegationFronting
+        )
+        interimRuntimeOverride.value = posture.frontsOnMini ? .appleFoundationModels : nil
         if gate != lastBridgedGate {
             Self.brainLog.notice("chatGate → \(String(describing: gate), privacy: .public)")
             lastBridgedGate = gate

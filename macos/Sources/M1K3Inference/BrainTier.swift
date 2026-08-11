@@ -263,6 +263,22 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         return gigabytes >= floor
     }
 
+    /// RAM at which running Big is COMFORTABLE — the bar for reaching the deep
+    /// tier on demand (delegate_deep), as opposed to running it as the resident
+    /// front. Deliberately NOT derived from `recommended`/`capped`: those now
+    /// top out at Lil, so `capped(.big, …) == .big` is false everywhere and any
+    /// caller asking "can this Mac run Big?" through them would get NO forever,
+    /// silently disabling escalation — the one job Big is being kept for.
+    ///
+    /// 24GB is the same comfortable bar Big's recommendation used to carry; the
+    /// number didn't change, only what it governs.
+    public static let deepReasoningFloorGB: Double = 24
+
+    /// Whether this Mac can comfortably host Big for a deep dive.
+    public static func supportsDeepReasoning(forPhysicalMemoryGB gigabytes: Double) -> Bool {
+        gigabytes >= deepReasoningFloorGB
+    }
+
     /// The brain best matched to this Mac's memory, echoing KMP's device tiers.
     /// Big (gemma-4-12B) peaks ~7.4GB at inference — recommending it on a
     /// 16GB Mac that also runs a browser would be hostile, so its floor
@@ -274,8 +290,19 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     ) -> BrainTier {
         switch platform {
         case .mac:
+            // ★ Lil is the FRONT at every Mac size (2026-08-11, Kev: "lil is our
+            // snappy, witty agent — and big is for deep reasoning"). Big used to
+            // be the automatic pick at 24GB+, which is precisely why a 64GB Mac
+            // woke on the SLOWEST brain it could choose. Measured same-build,
+            // same fixtures, live path: lil 10,022ms median (max 18,132) vs big
+            // 30,500ms (max 289,020) — 3x slower with a tail that blew the 120s
+            // MCP deadline on an ordinary question.
+            //
+            // Big is NOT retired: still fully selectable (minimumPhysicalMemoryGB
+            // 16), still the deep tier, still reached on demand via delegate_deep
+            // — see `supportsDeepReasoning`. What changed is only which brain you
+            // get without asking.
             switch gigabytes {
-            case 24...: .big
             case 16...: .lil
             default: .mini
             }

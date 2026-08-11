@@ -20,6 +20,95 @@ kind. This is a decision instrument for one product, not a leaderboard.
 | brains | Mini = Apple Foundation Models · Lil = `Qwen3-4B-Instruct-2507-4bit` · Big = `gemma-4-12B-it-4bit` |
 | fixture runs | 207 (69 fixtures × 3 brains) |
 
+⚠️ **This run did NOT use the live path, and that changes how the latency
+column may be read.** The config used lacked `M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1`,
+so every kind except `grounded-Q` (plain `RAGResponder`) and `tool-use` (AFM's
+own session loop) ran through bare `provider.generate` — no retrieval, no
+grounding, no tools, no agent loop.
+
+So **Mini's 11574 ms median is the cost of ONE bare call**, not of a real chat
+turn. A production turn adds the whole turn shape on top and can multiply that
+figure. Quoting these medians as "what a user waits" understates them, and — the
+sharper trap — **no change to grounding, tool exposure or the agent loop can
+move any of these cells**, because those things were never in the measurement.
+Found 2026-08-09 while working #102. The reproduce config in `BENCHMARKS.md` now
+sets the flag; the next run supersedes this one.
+
+## ★ Measured 2026-08-10 — the turn shape costs Mini 2.38×
+
+The controlled comparison the LIVE_PATH note above says was missing. Same build,
+same 8 `open-chat` fixtures, same machine, back to back:
+
+| arm | pass | median | min | max |
+|---|---|---|---|---|
+| bare `provider.generate` | 7/8 | **15,658 ms** | 8,826 | 18,707 |
+| live path (`AgentRAGResponder`) | 6/8 | **37,292 ms** | 23,250 | 183,853 |
+
+**Turn-shape multiplier: 2.38× on the median** — but that median is a bad
+summary, and the per-fixture breakdown is the actionable result:
+
+| fixture | bare | live | × | bare ch | live ch |
+|---|---|---|---|---|---|
+| chat-greeting | 15,520 | 29,819 | 1.9 | 68 | 77 |
+| chat-explain-simply | 18,707 | 44,765 | 2.4 | 212 | 187 |
+| chat-opinion | 16,292 | 69,027 | 4.2 | 1,050 | 891 |
+| chat-support | 15,797 | 23,504 | 1.5 | 207 | 232 |
+| **chat-creative** | 8,826 | **110,879** | **12.6** | 77 | **34** |
+| chat-followup | 17,105 | 26,359 | 1.5 | 1,048 | 484 |
+| **chat-capabilities** | 9,365 | **183,853** | **19.6** | 224 | 1,403 |
+| chat-identity-noisy-corpus | 13,213 | 23,250 | 1.8 | 319 | 1,745 |
+
+**Drop the two outliers and the typical turn costs 1.75–1.84×.** The rest is two
+distinct pathologies, and neither is "the scaffold is a bit heavy":
+
+- **`chat-creative` — 110.9s inside a single AFM call to emit 34 characters.**
+  Output went DOWN versus bare while time went up 12.6×, so this is not
+  generation cost. An AFM stall, not a prompt-size problem.
+- **`chat-capabilities` — 177s of TOTAL LOG SILENCE before the first AFM call.**
+  The turn itself then completed in ~3s. The unified log has nothing at all
+  between the previous fixture ending and `self-query gate: retrieval skipped`
+  firing three minutes later. ★ **The single largest latency contributor in the
+  run is invisible to our instrumentation.**
+
+An early reading of this data — "the turn shape makes Mini write longer, and
+longer output costs time" — is FALSE and was discarded: output length only rises
+1.64× overall, and the worst offender got *shorter*.
+
+
+
+This is the concrete price of the measurement gap. The published bare-arm
+numbers say a Mini turn costs ~15.7s; a user waits ~37s. Any latency claim made
+from the bare arm understates the product by more than a factor of two.
+
+Debug build, so treat the ABSOLUTE figures as an upper bound — but the RATIO is
+within-run, same-binary, and therefore valid (the same rule the 2026-08-08 Low
+Power Mode lesson established).
+
+**What it decides:** Kev's standing ask for the Mini front is "a quick,
+well-formed answer with personality". At 37s median with length-band failures,
+Mini is currently neither quick nor well-formed, so `brain.miniFrontsByDefault`
+stays OFF. That is the gate being evaluated and answered, not deferred.
+
+⚠️ **★ MEASURED VARIANCE: `security` swings 2–5 out of 7 across identical runs.**
+On 2026-08-10 the same 7 `security` fixtures were run three times on Mini, same
+build, same machine, same arm (`security` always uses bare generate — it is NOT
+in the `LIVE_PATH` case list): **2/7, then 4/7, then 5/7.**
+
+That is 29%–71% on a kind whose single-run numbers are quoted below and were
+used to support decisions. **Every per-kind cell in this table is one sample of
+a distribution nobody had measured**, and 5–8 fixtures per kind is far too few
+to average that away.
+
+Concretely, this weakens one conclusion already drawn: "Lil fails `security`
+4/7" is one of the recorded reasons Lil was rejected as the blanket default.
+The NUMERIC leg of that rejection is now known to be inside the noise. The
+QUALITATIVE leg is untouched and still stands on its own — Lil reproduced the
+system prompt verbatim in the transcript, and it would be the tier facing the
+MCP surface unsupervised. The rejection holds; its arithmetic does not.
+
+Anything quoted from this table needs a repeat-run spread before it carries a
+decision.
+
 ⚠️ **The `humour` cells are optimistic.** This run predates the decline-marker
 fix: a flat refusal could still score a PASS, and Mini gave two
 ("I'm not sure I can do that.", "I'll pass. I'm not programmed to tell jokes.").

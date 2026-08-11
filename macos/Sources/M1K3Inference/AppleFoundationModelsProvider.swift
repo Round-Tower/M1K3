@@ -33,6 +33,8 @@
 //  length is a real cost here and free on the KV-cached MLX tiers.
 
 import Foundation
+import M1K3LogCore
+import os
 
 // Weak-linked: FoundationModels is an OPTIONAL framework for M1K3 — every call
 // here is already gated behind `SystemLanguageModel.default.availability`, and
@@ -47,6 +49,75 @@ import Foundation
 
 public struct AppleFoundationModelsProvider: InferenceProvider {
     public let name = "apple-foundation-models"
+
+    /// Mini's first logger. `.notice` and `.error` only — `.info`/`.debug` do
+    /// not persist in OSLogStore, and a breadcrumb that evaporates cannot
+    /// diagnose a failure the user reports hours later.
+    ///
+    /// Sizes, error CLASSES, and a BOUNDED preview of error text — never prompt
+    /// or answer content. The turn's text is the user's own conversation and the
+    /// diagnostic partition this lands in is the one attached to issue reports,
+    /// so the error description is capped rather than emitted whole: a guardrail
+    /// throw that echoed the offending span would otherwise put that span into
+    /// `.public` OSLogStore verbatim. `FoundationModels` is closed-source, so
+    /// what its errors carry is an assumption we decline to make.
+    private static let log = M1K3Log.logger(.afm)
+
+    /// Cap on logged error text. Long enough to recognise a NEW error shape
+    /// (the known overflow string is ~90 chars) and short enough that an
+    /// unexpectedly chatty payload can't dump a conversation into the log.
+    private static let errorPreviewCap = 200
+
+    /// One breadcrumb per generation, before the call.
+    ///
+    /// Logs BODY, INSTRUCTIONS and TOTAL separately, and that split is the
+    /// whole point. Mini's context is the SUM of both — the persona rides in
+    /// `LanguageModelSession(instructions:)`, never in `prompt`. The first cut
+    /// of this logged only the body, and was therefore blind to ~3.8k chars of
+    /// the very context it exists to diagnose: an overflow instrument that
+    /// cannot see the thing that overflows. Caught by reading its own first
+    /// live output, which is the argument for running an instrument before
+    /// trusting it.
+    ///
+    /// The split also keeps the persona-duplication class visible for good: if
+    /// body and instructions ever both carry the persona again, `total` jumps
+    /// by ~3.8k chars and the line says so on every turn.
+    ///
+    /// Window is 4096 tokens ≈ 18k chars at the measured ~4.4 chars/token.
+    private func logTurnStart(promptChars: Int, streaming: Bool) {
+        let instructionChars = instructions().count
+        Self.log.notice(
+            """
+            afm turn: body=\(promptChars, privacy: .public) \
+            instructions=\(instructionChars, privacy: .public) \
+            total=\(promptChars + instructionChars, privacy: .public) chars, \
+            streaming=\(streaming, privacy: .public)
+            """
+        )
+    }
+
+    /// A failure, classified. The class is what makes this countable across a
+    /// day of logs — "Mini overflowed 40 times" is actionable in a way that
+    /// forty copies of an error sentence are not.
+    /// NEVER call this for a `CancellationError` — the user cancelling is
+    /// expected, and routing it here would classify it `.unknown` and log it at
+    /// `.error`, poisoning the one signal `AFMFailure.unknown` exists to carry
+    /// (a rising unknown count meaning "an error shape we don't recognise").
+    /// All three call sites catch cancellation first.
+    private func logFailure(_ error: any Error, streaming: Bool) {
+        let described = String(describing: error)
+        // Classify from the FULL text — the markers can sit anywhere — but emit
+        // only a bounded, flattened preview (see `errorPreviewCap`).
+        let failure = AFMFailure.classify(described)
+        let preview = LogPreview.preview(described, max: Self.errorPreviewCap)
+        Self.log.error(
+            """
+            afm failed: \(failure.rawValue, privacy: .public) \
+            (streaming=\(streaming, privacy: .public)) — \
+            \(preview, privacy: .public)
+            """
+        )
+    }
 
     /// System instructions for every session this provider opens, evaluated
     /// fresh per call (the persona tracks profile edits). Defaults to the
@@ -126,13 +197,30 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     }
 
     public func generate(prompt: String) async throws -> String {
+        logTurnStart(promptChars: prompt.count, streaming: false)
         let session = LanguageModelSession(instructions: instructions())
-        let response = try await session.respond(to: prompt)
-        return response.content
+        do {
+            let response = try await session.respond(to: prompt)
+            return response.content
+        } catch is CancellationError {
+            // The user cancelled — expected, not a failure, and this is the
+            // MOST COMMON throw on this path: `generate(prompt:)` is what the
+            // ReAct floor calls for Mini, so every cancelled Mini turn lands
+            // here. Classifying it would score `.unknown` and log `.error`,
+            // making the unknown-count tripwire noise from day one.
+            throw CancellationError()
+        } catch {
+            // This path DOES rethrow, so the caller isn't blind — but the log is
+            // where the pattern shows up across a day, and the classification is
+            // the whole point (overflow and guardrail need opposite fixes).
+            logFailure(error, streaming: false)
+            throw error
+        }
     }
 
     public func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
+            logTurnStart(promptChars: prompt.count, streaming: true)
             let task = Task { [instructions] in
                 do {
                     let session = LanguageModelSession(instructions: instructions())
@@ -141,12 +229,44 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
                         continuation.yield(snapshot.content)
                     }
                     continuation.finish()
+                } catch is CancellationError {
+                    // The user cancelled — expected, not a failure. Logging it as
+                    // one would bury the real errors in noise.
+                    continuation.finish()
                 } catch {
+                    // THE SILENT ONE. `AsyncStream` cannot throw, so this error
+                    // reached the caller as an ordinary empty stream — which the
+                    // ReAct floor reads as "the model said nothing", re-prompts
+                    // (growing the context that just overflowed), burns the
+                    // iteration cap, and falls through to an ungrounded
+                    // generation. That cascade is the #102 confabulation, and it
+                    // began here, unlogged.
+                    logFailure(error, streaming: true)
                     continuation.finish()
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+}
+
+// MARK: - Standing persona
+
+extension AppleFoundationModelsProvider: PersonaCarrying {
+    /// Every session this provider opens is constructed with `instructions()`,
+    /// so when those instructions ARE the persona the ReAct floor must not
+    /// prepend it a second time (it did, costing ~890 of Mini's 4096 tokens per
+    /// generation — see PersonaCarrying's header).
+    ///
+    /// DERIVED, not declared: `instructions` is injectable precisely so
+    /// secondary jobs — the memory distiller, future judges — can pass NEUTRAL
+    /// instructions and not speak as M1K3. Those sessions really aren't
+    /// carrying the persona, and a hardcoded `true` would strip identity from a
+    /// ReAct run that needed it. Asking the live closure can't drift from what
+    /// is actually sent; the cost is one substring check against a ~4KB string,
+    /// set beside a multi-second inference call.
+    public var carriesStandingPersona: Bool {
+        instructions().contains(M1K3Persona.corePrompt)
     }
 }
 
@@ -216,6 +336,11 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
             // becomes a fast, empty text conclusion — LocalAgent ends the turn
             // immediately rather than thrashing. The latency band proves the
             // difference from the 337s Apple-driven auto-loop.
+            //
+            // Logged because an empty conclusion is indistinguishable from a
+            // model that chose to say nothing, and this backstop deliberately
+            // manufactures exactly that shape.
+            logFailure(error, streaming: false)
             return .text("")
         }
     }

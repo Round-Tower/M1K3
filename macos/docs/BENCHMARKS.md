@@ -69,6 +69,7 @@ cat > ~/Library/Containers/app.m1k3/Data/.m1k3-selftest.json <<'JSON'
   "M1K3_SELFTEST": "1",
   "M1K3_SELFTEST_CHATEVAL": "1",
   "M1K3_SELFTEST_CHATEVAL_BRAINS": "mini,lil,big",
+  "M1K3_SELFTEST_CHATEVAL_LIVE_PATH": "1",
   "M1K3_SELFTEST_OUT": "scorecard.txt"
 }
 JSON
@@ -83,9 +84,21 @@ python3 tools/eval/scorecard.py \
 
 Useful knobs: `M1K3_SELFTEST_CHATEVAL_KINDS` (comma-separated, e.g.
 `tool-use,world-knowledge`), `M1K3_SELFTEST_CHATEVAL_MLX_MODEL` (point a tier
-at a different hub id — how challenger models are A/B'd),
-`M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1` (run through the production
-`AgentRAGResponder` stack rather than bare generate).
+at a different hub id — how challenger models are A/B'd).
+
+> ⚠️ **`M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1` is in the config above deliberately
+> — do not drop it.** Without it, every kind except `grounded-Q` and `tool-use`
+> runs through bare `provider.generate`: no retrieval, no grounding, no tools,
+> no agent loop. That arm is a fine way to isolate the persona, and it is
+> **structurally blind to the entire turn shape** — so a change to grounding,
+> tool exposure or the agent loop cannot move a single cell, and a real
+> improvement reads as noise. The published 2026-08-08 results were measured
+> WITHOUT it (see the note in `BENCHMARK-RESULTS.md`); omitting it is how you
+> ship a good fix and then revert it for lack of evidence.
+>
+> Run the bare arm too when you want the persona isolated. The **gap between
+> the two arms is the scaffolding's cost**, and that gap is the number that
+> matters for issue #102.
 
 **Record `pmset -g | rg powermode` with any timing you publish.** A Low Power
 Mode run reads 15–20% slower and looks exactly like a regression — it
