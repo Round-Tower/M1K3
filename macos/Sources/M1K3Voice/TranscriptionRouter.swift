@@ -32,6 +32,24 @@ public struct TranscriptionRouter: Sendable {
         providers.first { $0.isAvailable }
     }
 
+    /// The provider to serve this listen, optionally preferring one whose mic path
+    /// we can put echo cancellation and other-audio ducking on.
+    ///
+    /// Voice-first mode is a hands-free conversation held over speakers, so when
+    /// other audio is in play the room matters more than the last few points of
+    /// word accuracy: an engine that hears the music transcribes the music (and
+    /// M1K3's own voice back at itself). Chat dictation is the other way round —
+    /// one short push-to-talk burst, usually quiet — so it keeps the sharper
+    /// engine by leaving this flag off.
+    ///
+    /// A PREFERENCE, never a requirement: if nothing echo-cancelling is available
+    /// it falls back to normal ordering, because listening on the sharper engine
+    /// beats refusing to listen.
+    public func activeProvider(preferringEchoCancellation: Bool) -> (any TranscriptionProvider)? {
+        guard preferringEchoCancellation else { return activeProvider }
+        return providers.first { $0.isAvailable && $0.attemptsEchoCancellation } ?? activeProvider
+    }
+
     public var activeProviderName: String? {
         activeProvider?.name
     }

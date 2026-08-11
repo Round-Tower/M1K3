@@ -12,9 +12,11 @@
 //  Mobile-specific ground the Mac never needed:
 //  • AVAudioSession — iOS/visionOS require an explicit .playAndRecord session
 //    before the mic engine starts; activated on entry, released on exit.
-//  • Gentler endpointing — silence 2.0s / hold 3.5s (Mac: 1.6/3.0). Phone-mic
-//    recognition partials lag more than desktop, and the live complaint
-//    (2026-07-29, Kev) is the listen closing before the thought is done.
+//  • Endpointing came from `EndpointCadence.conversational` as of 2026-08-11 —
+//    shared with the Mac. This file used to carry its own gentler pair (2.0/3.5)
+//    while the Mac carried 2.0/4.5, both written for the SAME complaint ("it
+//    closes before the thought is done"), which is how a tuning fix could land on
+//    one surface and leave the other clipping you.
 //  • Whole-answer turns for v1 — Mini/Lil answer fast on mobile; the Mac's
 //    sentence-streaming poller is a named follow-up, not wired here yet.
 //
@@ -67,8 +69,7 @@ extension AppCore {
         activateVoiceAudioSession()
         let controller = VoiceLoopController(
             dependencies: makeVoiceLoopDependencies(),
-            silence: .seconds(2.0),
-            holdSilence: .seconds(3.5)
+            cadence: .conversational
         )
         voiceLoop = controller
         controller.begin()

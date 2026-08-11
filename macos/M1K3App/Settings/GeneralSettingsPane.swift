@@ -24,6 +24,7 @@ struct GeneralSettingsPane: View {
     @AppStorage(AppEnvironment.notifyOnLongTurnKey) private var notifyOnLongTurn = false
     @AppStorage(AppEnvironment.soundEffectsEnabledKey) private var soundEffectsEnabled = true
     @AppStorage(AppEnvironment.dialUpSoundEnabledKey) private var dialUpSound = true
+    @AppStorage(AppEnvironment.voiceEchoCancellationKey) private var preferEchoCancellation = true
     @AppStorage(AppEnvironment.thinkingModeKey) private var thinkingMode = ThinkingMode.auto.rawValue
     @AppStorage(StartupPreferences.menuBarOnlyKey) private var menuBarOnly = false
     @State private var showResetOnboarding = false
@@ -68,6 +69,19 @@ struct GeneralSettingsPane: View {
                     + "On-device only. The dial-up \u{201C}connecting\u{201D} sound plays while "
                     + "a brain downloads or loads — nostalgic, but a long loop, so "
                     + "it has its own switch.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Keep other audio out of the mic", isOn: $preferEchoCancellation)
+            } header: {
+                Text("Voice mode")
+            } footer: {
+                Text("In voice mode M1K3 listens with the recogniser it can put echo "
+                    + "cancellation on, so music ducks while you talk and M1K3 doesn't "
+                    + "hear itself. Turn this off to always use the sharper transcriber "
+                    + "instead \u{2014} more accurate in a quiet room, but it hears whatever "
+                    + "your speakers are playing. Takes effect next time you enter voice mode.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 

@@ -29,4 +29,29 @@ public protocol TranscriptionProvider: Sendable {
     func startListening() throws -> AsyncStream<TranscriptSegment>
     /// Stop the active session; flushes a final segment then finishes the stream.
     func stopListening()
+
+    /// Whether this recogniser drives a mic path we can put Apple's voice
+    /// processing on — acoustic echo cancellation, noise suppression, and
+    /// speech-triggered ducking of other audio.
+    ///
+    /// It reports the ATTEMPT, not a guarantee: voice processing is unavailable on
+    /// some aggregate/virtual input devices and fails softly there (see
+    /// `AppleSpeechTranscriber.enableVoiceProcessing`). Named honestly so nobody
+    /// reads it as "echo is definitely cancelled".
+    ///
+    /// This exists because the two engines are NOT interchangeable here. WhisperKit
+    /// builds its own `AVAudioEngine` inside the package (`setupEngine` and
+    /// `processBuffer` are both internal), so there is no seam from out here to
+    /// enable voice processing on it — verified against the checkout, 2026-08-11.
+    /// A conversation held over speakers with music playing therefore has to pick:
+    /// the sharper transcriber, or the one that can keep the room out of the mic.
+    var attemptsEchoCancellation: Bool { get }
+}
+
+public extension TranscriptionProvider {
+    /// Default false: a provider must opt IN to claiming echo cancellation, so a
+    /// new backend can never silently inherit a promise it doesn't keep.
+    var attemptsEchoCancellation: Bool {
+        false
+    }
 }

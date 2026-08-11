@@ -105,13 +105,41 @@ public final class VoiceLoopController {
         holdSilence: Duration = .seconds(3.0),
         maxWait: Duration = .seconds(20),
         echoGrace: Duration = .milliseconds(350),
-        endpointTick: Duration = .milliseconds(300)
+        endpointTick: Duration = .milliseconds(300),
+        cadenceMargin: Duration = .seconds(0.75),
+        cadenceCeiling: Duration = .seconds(6.0)
     ) {
         self.dependencies = dependencies
         self.silence = silence
         self.echoGrace = echoGrace
         self.endpointTick = endpointTick
-        endpointer = SilenceEndpointer(silence: silence, holdSilence: holdSilence, maxWait: maxWait)
+        endpointer = SilenceEndpointer(
+            silence: silence,
+            holdSilence: holdSilence,
+            maxWait: maxWait,
+            cadenceMargin: cadenceMargin,
+            cadenceCeiling: cadenceCeiling
+        )
+    }
+
+    /// The shell-facing init: one shared preset instead of five literals typed
+    /// into each shell (which is how the Mac and iOS timings drifted apart).
+    public convenience init(
+        dependencies: Dependencies,
+        cadence: EndpointCadence,
+        echoGrace: Duration = .milliseconds(350),
+        endpointTick: Duration = .milliseconds(300)
+    ) {
+        self.init(
+            dependencies: dependencies,
+            silence: cadence.silence,
+            holdSilence: cadence.hold,
+            maxWait: cadence.maxWait,
+            echoGrace: echoGrace,
+            endpointTick: endpointTick,
+            cadenceMargin: cadence.cadenceMargin,
+            cadenceCeiling: cadence.cadenceCeiling
+        )
     }
 
     // MARK: - User intents
@@ -268,7 +296,17 @@ public final class VoiceLoopController {
             for await segment in stream {
                 guard !Task.isCancelled else { return }
                 accumulator.ingest(segment)
+                let knownPause = endpointer.observedPause
                 endpointer.ingest(partial: accumulator.text, at: ContinuousClock.now)
+                // Breadcrumb for the next "it cut me off" report: how patient the
+                // loop has learned to be is the first thing you'd want to know,
+                // and it's otherwise invisible. .notice because .info/.debug do
+                // not persist in OSLogStore (our own logged lesson).
+                if endpointer.observedPause > knownPause {
+                    Self.log.notice(
+                        "voice cadence: speaker pauses up to \(String(describing: self.endpointer.observedPause), privacy: .public) — waiting longer before taking a turn"
+                    )
+                }
                 dispatch(.partial(accumulator.text))
             }
             // Stream ended (recognizer finality). If a silence endpoint already
