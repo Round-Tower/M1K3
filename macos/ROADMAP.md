@@ -34,10 +34,23 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
   kept for the keyword lane so a rare token (a surname) can't be ranked off the
   page — the shape a challenger pass insisted on, and the tell that it's right is
   that the 2026-07-02 Golden Gate regression test passes unmodified.
-  ② **The grounding head now hedges.** Asked what he had for dinner on 3 March,
-  M1K3 retrieved a fragment of a stored SCREENPLAY and narrated it before
-  correctly saying it didn't know. Retrieval returns the least-bad match for any
-  question; the head must not present it as material the question is about.
+  ② **The grounding head now hedges — and it is NOT enough (re-measured live).**
+  Asked what he had for dinner on 3 March, M1K3 retrieved a fragment of a stored
+  SCREENPLAY and narrated it before correctly saying it didn't know. The hedge
+  shipped; the same question on the fixed build **still narrates the
+  pomegranate**. A prompt nudge does not stop a 4B model describing what is in
+  front of it. ⚠️ **And the obvious lever is measured DEAD:** with the new gate
+  instrument, best-hit cosine per query on Kev's real store —
+  answerable 0.497 (Cartogram) / 0.715 (Brightbeam) / 0.725 (the script itself);
+  no-answer 0.361 (Ulaanbaatar) / 0.489 (dream) / nothing retrieved (dentist);
+  dinner-on-3-March 0.477 with 7 of 10 chunks kept. **The bands touch: 0.497 vs
+  0.489, a gap of 0.008.** Any abstain threshold that suppresses the dinner
+  grounding also kills the Cartogram answer — the same shape as the 2026-07-30
+  dream-cycle result where contradiction and restatement overlapped and no cosine
+  bar separated them. So: no threshold, and the next idea must not be one.
+  Candidates that survive the measurement: rank-aware injection (inject the
+  best 2, not the best 7 — the dinner turn kept SEVEN chunks about nothing),
+  or a cheap answerability judgement that is not a similarity number.
   ③ **The pre-warm warmed a phantom.** It built a 9-tool palette no call site
   ever asks for (it passed `onOpenLink` but not `deepDelegation`, while live chat
   passes both), so the ~2.1s prefix build was paid at launch AND on the first
