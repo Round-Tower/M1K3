@@ -473,15 +473,27 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let similarity = hit.similarity.map { String(format: "%.3f", $0) } ?? "–"
             let fused = hit.rrfScore.map { String(format: "%.4f", $0) } ?? "–"
             let verdict = keptIDs.contains(hit.chunkID) ? "kept" : "gated"
-            let title = LogPreview.preview(hit.itemTitle, max: 60)
+            let chunk = hit.chunkID.uuidString
             // .notice, like the summary line below and for the same reason: this
             // is the ONLY instrument that can say what a wrong hit actually
             // scored, and .debug does not persist in OSLogStore — so every
             // question about the floors was being answered from inference. Asked
             // for by name on 2026-08-12 after a screenplay was retrieved for a
             // question about dinner: measure before moving a threshold.
+            //
+            // ★ ID, never the TITLE. The title was here while this was `.debug`,
+            // which the logging daemon does not persist; promoting the line to
+            // `.notice` would have carried document titles into `OSLogStore` and
+            // from there into the issue report — the one deliberate exception to
+            // "nothing leaves this device" — where the scrub knows about paths,
+            // emails and the user's name, but has no notion of corpus content. A
+            // title can BE the sensitive part ("MRI results.pdf", someone's name).
+            // The sibling quarantine sweeps in this same change log ids only for
+            // exactly this reason. Map an id back with `get_document` or a store
+            // query when a hit needs identifying; the score is what the
+            // instrument exists to report.
             log.notice(
-                "gate \(verdict, privacy: .public): sim=\(similarity, privacy: .public) rrf=\(fused, privacy: .public) [\(title, privacy: .public)]"
+                "gate \(verdict, privacy: .public): sim=\(similarity, privacy: .public) rrf=\(fused, privacy: .public) chunk=\(chunk, privacy: .public)"
             )
         }
         let retrievedCount = retrieved.count
