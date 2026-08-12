@@ -23,6 +23,59 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
 
 ## Now
 
+- **Retrieval, the warm palette, and the model's own thinking in the corpus —
+  2026-08-12, found by driving the live app over MCP.** Four things, all
+  measured on Kev's real store rather than reasoned about:
+  ① **Recall ranked by the wrong number.** `MemoryStore.recall` gated on cosine,
+  PRINTED cosine, and ORDERED by RRF — so "what does Kev do for work" put a 60%
+  row above the 71% row that answered it, and "where does Kev live" put "Kev is
+  using a Mac" above three Cork rows. Read as a floor problem since 2026-08-09;
+  it was an ordering problem. Now ranked by similarity, with ONE guaranteed seat
+  kept for the keyword lane so a rare token (a surname) can't be ranked off the
+  page — the shape a challenger pass insisted on, and the tell that it's right is
+  that the 2026-07-02 Golden Gate regression test passes unmodified.
+  ② **The grounding head now hedges — and it is NOT enough (re-measured live).**
+  Asked what he had for dinner on 3 March, M1K3 retrieved a fragment of a stored
+  SCREENPLAY and narrated it before correctly saying it didn't know. The hedge
+  shipped; the same question on the fixed build **still narrates the
+  pomegranate**. A prompt nudge does not stop a 4B model describing what is in
+  front of it. ⚠️ **And the obvious lever is measured DEAD:** with the new gate
+  instrument, best-hit cosine per query on Kev's real store —
+  answerable 0.497 (Cartogram) / 0.715 (Brightbeam) / 0.725 (the script itself);
+  no-answer 0.361 (Ulaanbaatar) / 0.489 (dream) / nothing retrieved (dentist);
+  dinner-on-3-March 0.477 with 7 of 10 chunks kept. **The bands touch: 0.497 vs
+  0.489, a gap of 0.008.** Any abstain threshold that suppresses the dinner
+  grounding also kills the Cartogram answer — the same shape as the 2026-07-30
+  dream-cycle result where contradiction and restatement overlapped and no cosine
+  bar separated them. So: no threshold, and the next idea must not be one.
+  Candidates that survive the measurement: rank-aware injection (inject the
+  best 2, not the best 7 — the dinner turn kept SEVEN chunks about nothing),
+  or a cheap answerability judgement that is not a similarity number.
+  ③ **The pre-warm warmed a phantom.** It built a 9-tool palette no call site
+  ever asks for (it passed `onOpenLink` but not `deepDelegation`, while live chat
+  passes both), so the ~2.1s prefix build was paid at launch AND on the first
+  chat turn AND on the first agent ask. Now warms both real palettes; the
+  heartbeat render is marked background so it can't take a slot either.
+  ④ **`ThinkStripper` knew one dialect out of two.** The resident summariser has
+  been gemma-4 since July and speaks `<|channel>thought`; the stripper only knew
+  `<think>`. A call summary from 2 July was the model's raw reasoning, stored and
+  retrievable for six weeks. One token table now (`ReasoningSplit`, lifted into
+  M1K3Inference), plus `ModelThinkingQuarantine` — a startup sweep in the shape
+  of `SelfWiringQuarantine`, because a fixed generator does not un-store a stored
+  row. ⚠️ **Accepted cost, named because it is real on Kev's Mac:** quarantine is
+  per ITEM, so the 2 July call lost its (perfectly good) TRANSCRIPT from
+  retrieval along with its poisoned summary. That follows the SelfWiringQuarantine
+  precedent and `.quarantined` is a kind, not a delete — nothing is destroyed, and
+  the row is still in Documents. Worth revisiting only if chunk-level quarantine
+  ever earns its complexity.
+  **Instrument added, deliberately ahead of any threshold move:** the grounding
+  gate's per-hit line is `.notice` now, so the next person can read what a wrong
+  hit actually SCORED instead of inferring it. No floor constant was touched —
+  the floors were derived against fixture sets containing only cross-domain
+  negatives (there is not one near-domain negative in them), which is exactly the
+  shape that fails here. Measure first.
+
+
 - **Voice-mode feel — PR open 2026-08-11 (Kev's ⌘R owed).** Three live
   complaints, three fixes. ① The endpointer now LEARNS the speaker's pause
   instead of taking a third guess at one number, and both shells share

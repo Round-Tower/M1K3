@@ -444,6 +444,41 @@ are deliberately left unpinned so the evaluation loop stays usable.
   Caveats: single eval run; approximateContextTokens stays 32768 (2507 is 256K-native — deliberately
   conservative, the budget layer under-promises). Existing Lil users pay one ~2.1GB re-download.
 
+## 2026-08-12 — the front/deep split, ruled
+
+Kev, after driving the live app over MCP: *"The smaller agent is much better for
+these kinds of tasks. The speed of the agent and its ability to tool call and
+give back decent answers is better than any deep reasoning model when it comes to
+just usability... the smaller the model we can deploy, the more usable model wins
+all the time. And Big is just an add-on for deep reasoning."*
+
+So the roster is now read as a FRONT and a DEPTH tier, not a quality ladder:
+
+| role | tier | why |
+|---|---|---|
+| **front** | Lil (`Qwen3-4B-Instruct-2507-4bit`) | 10.0s median vs Big's 30.5s on the same fixtures; 7.7s twice over MCP on 2026-08-12, in character, with a clean abstention. Tool-calling is what a usable assistant is made of, and it is good enough at 4B. |
+| **fallback** | Mini (AFM) | instant, no download — and structurally the SLOWEST per turn (37.3s median: a fresh `LanguageModelSession` re-sends the persona every call, where the MLX tiers reuse a cached KV prefix). Fronts only when the slot cannot serve. |
+| **depth** | Big (`gemma-4-12B-it-4bit`) | not retired, not resident. Reached by delegation for work that earns minutes. |
+
+**The open consequence (Kev's call, recorded not decided):** since #117 nothing
+in the product downloads Big — the recommendation never names it and
+`UpgradeTarget.next` cannot offer it — so on a new install the deep tier is
+present in the code and absent from the machine. Either that is intended (the
+12B is legacy) or the missing piece is a depth-framed download route, not more
+delegation plumbing. See `docs/NEXT_SESSION.md`.
+
+**Kev's own next probe, not yet run:** re-look at Liquid's LFM line for the front
+("we baselined it, but it wasn't a hit"). The 2026-08-08 bake-off scored
+LFM2.5-2.6B 36/44 against Lil's 38/44 with +870% latency — but it BEAT Lil on
+reasoning and security, and that bake-off scored the BARE arm. Under this ruling
+the thing to measure is tool-calling and turn latency in the LIVE path.
+
+<!-- Signed: Kev + claude-opus-5, 2026-08-12, Confidence 0.9 (the ruling is Kev's,
+quoted; the latency figures are the 2026-08-11 eval plus two live MCP turns timed
+this session; the "nothing downloads Big" consequence was found by a challenger
+pass against CapabilityLadder/DeepDiveTarget and is the reason this entry names an
+open question rather than closing one). Prior: Kev + claude-fable-5. -->
+
 <!-- Review: Kev + claude-opus-4-8, 2026-06-24 (bake-off), Confidence 0.9 — gemma-4-12B verified on-device
 end-to-end: loads (#363) + generates + RAM 7.4 GB, but a deterministic RotatingKVCache.temporalOrder crash on
 tool-use, reproduced under both maxKVSize settings and isolated to the 12B (no-KV-sharing) geometry vs e4b's

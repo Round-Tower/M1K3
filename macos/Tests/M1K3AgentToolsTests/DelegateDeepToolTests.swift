@@ -57,9 +57,19 @@ struct DelegateDeepToolTests {
         // so nothing heavier can be swapped in. A description promising depth the
         // plumbing cannot deliver teaches the model to reach for a rung that
         // isn't there, and a tool that lies to the model is worse than no tool.
-        let description = DelegateDeepTool(startDelegation: { _ in "" }).description.lowercased()
+        let tool = DelegateDeepTool(startDelegation: { _ in "" })
+        let description = tool.description.lowercased()
         #expect(!description.contains("deeper brain"))
         #expect(!description.contains("deep brain"))
+        // PARAMETER descriptions render into the system block too, and this one
+        // still said "the deep brain" for three weeks after the tool description
+        // stopped saying it (caught 2026-08-12). Every string the model reads has
+        // to make the same promise.
+        for parameter in tool.parameters {
+            let text = parameter.description.lowercased()
+            #expect(!text.contains("deeper brain"), "parameter \(parameter.name)")
+            #expect(!text.contains("deep brain"), "parameter \(parameter.name)")
+        }
     }
 
     @Test("the description names the real trade: background time, and a weaker front meanwhile")

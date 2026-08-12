@@ -39,10 +39,32 @@
 >    exit path including a throw. Needs a session that can verify a real
 >    cross-brain dive — which outlives the MCP 120s deadline, so verify in-app
 >    or via SelfTest, not over MCP.
-> 2. **Revisit the ladder.** `BrainTier.recommended` puts Big resident at 24GB+.
->    If Lil is the better front and Big is reached by delegation, that default
->    is now questionable on exactly the machines that can afford Big. Kev's call
->    — it changes what a 64GB Mac feels like out of the box.
+> 2. ~~**Revisit the ladder.**~~ **RULED 2026-08-12 — closed, do not reopen.**
+>    Kev: *"The smaller agent is much better for these kinds of tasks... the
+>    smaller the model we can deploy, the more usable model wins all the time.
+>    And Big is just an add-on for deep reasoning."* And the ladder half was
+>    already shipped: `BrainTier.recommended` has topped out at Lil at every Mac
+>    size since #117, and `FrontTierRealignment` (#118) moves a persisted Big
+>    down once. Nothing to build; the question was answered before it was asked.
+>    ⚠️ One consequence worth recording: that one-time realignment window is now
+>    SPENT for every existing user (`AppEnvironment.swift`, the marker is written
+>    on every launch that evaluates it), so a FUTURE ladder move has no migration
+>    left and would need its own key.
+>
+> ### ★ The question the ruling exposes, and it is Kev's (2026-08-12)
+>
+> **Nothing downloads Big any more.** `UpgradeTarget.next` can no longer offer
+> it, `DeepDiveTarget` refuses to fetch it, and the recommendation never names
+> it. So `bigWeightsPresent` is false for every new install, forever — which
+> means wiring piece 1 above would make the docs true and the product unchanged:
+> the escalation path would serve only the legacy Big owners #118 just demoted,
+> a population that only shrinks. Either the 12B is dead weight for new users, or
+> the missing piece is a download route to Big framed around DEPTH ("this answer
+> wants more thinking — want me to fetch the heavy brain?"), not more
+> `delegate_deep` plumbing. Piece 1 is gated on that answer, and on the cheaper
+> test that comes first: `delegate_deep` has never been invoked once in eight
+> days of unified log, so grep a week of logs before building for a road nobody
+> drives.
 >
 > Everything below is rev 2 and still accurate EXCEPT where it assumes Mini
 > should front. The rejections, the measurement gaps and the #111/#102 findings

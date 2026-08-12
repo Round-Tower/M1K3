@@ -162,7 +162,16 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3KnowledgeTests",
-            dependencies: ["M1K3Knowledge"],
+            // M1K3Inference is a TEST-ONLY dep, the same pattern as
+            // M1K3ChatTests → M1K3Eval and M1K3MLXTests → M1K3Chat.
+            // ModelThinkingQuarantine must duplicate ReasoningSplit's reasoning
+            // markers, because M1K3Knowledge deliberately does not depend on
+            // M1K3Inference — and this PR's own defect four was two copies of a
+            // marker list drifting apart unnoticed. A cross-module equality pin
+            // here is what makes the duplication survivable; without it the
+            // file's comment claiming it is "pinned by test" is just a wish
+            // (caught in review, #119).
+            dependencies: ["M1K3Knowledge", "M1K3Inference"],
             path: "Tests/M1K3KnowledgeTests"
         ),
         // The temporal memory graph: atomic facts + typed edges + recursive-CTE

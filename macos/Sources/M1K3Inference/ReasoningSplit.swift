@@ -1,6 +1,6 @@
 //
 //  ReasoningSplit.swift
-//  M1K3Chat
+//  M1K3Inference
 //
 //  Reasoning models emit their chain-of-thought before the answer, in one of two
 //  formats we know about:
@@ -18,12 +18,12 @@
 
 import Foundation
 
-enum ReasoningSplit {
+public enum ReasoningSplit {
     /// Open/close tag pairs we recognise as a reasoning block, longest-first so a
     /// channel open is matched before any accidental substring. Shared with the
     /// streaming splitter so live and post-stream views agree.
-    static let openTags = ["<|channel>thought", "<think>"]
-    static let closeTags = ["<channel|>", "</think>"]
+    public static let openTags = ["<|channel>thought", "<think>"]
+    public static let closeTags = ["<channel|>", "</think>"]
 
     /// Separate chain-of-thought from the answer. Returns the joined reasoning
     /// (nil if none) and the answer with the think blocks removed. An unclosed
@@ -31,7 +31,7 @@ enum ReasoningSplit {
     /// close with no opening tag (the chat template pre-opens the block in the
     /// prompt, so the model emits only the close) treats the prefix as reasoning.
     /// Both parts are whitespace-trimmed.
-    static func split(_ text: String) -> (reasoning: String?, answer: String) {
+    public static func split(_ text: String) -> (reasoning: String?, answer: String) {
         var reasoningParts: [String] = []
         var answer = ""
         var remaining = Substring(text)

@@ -80,14 +80,22 @@ struct MemoryGroundingTests {
     //
     // Captured from the pre-memory implementation 2026-06-12; the self-question
     // rule was added deliberately the same day (meta-question confabulation
-    // fix), and the empty-lookup uncertainty bullet was added deliberately
-    // 2026-06-14 (grounding nudges, 83ff7e37). Any OTHER drift is accidental and
-    // should fail here.
+    // fix), the empty-lookup uncertainty bullet was added deliberately
+    // 2026-06-14 (grounding nudges, 83ff7e37), and the KNOWLEDGE head gained its
+    // irrelevance hedge deliberately 2026-08-12 — asked what he had for dinner on
+    // 3 March, M1K3 retrieved a fragment of a stored SCREENPLAY and narrated it
+    // ("a pomegranate being worked on by the High Priestess") before correctly
+    // saying it didn't know. Retrieval returns the least-bad match for ANY
+    // question; the head must not present it as material the question is about.
+    // Any OTHER drift is accidental and should fail here.
 
     @Test("react grounding with chunks and no memories is byte-identical to the pre-memory output")
     func reactPinnedVerbatim() {
         let expected = """
-        KNOWLEDGE (the user's own documents, calls, notes):
+        KNOWLEDGE (excerpts from the user's own documents, calls and notes, \
+        retrieved by similarity — they may be irrelevant to this question; use \
+        only what genuinely answers it, and ignore the rest rather than working \
+        it into the answer):
         1. [Plant Notes §3.2 Seals]
         The hydraulic seal failed.
 

@@ -473,9 +473,27 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let similarity = hit.similarity.map { String(format: "%.3f", $0) } ?? "–"
             let fused = hit.rrfScore.map { String(format: "%.4f", $0) } ?? "–"
             let verdict = keptIDs.contains(hit.chunkID) ? "kept" : "gated"
-            let title = LogPreview.preview(hit.itemTitle, max: 60)
-            log.debug(
-                "gate \(verdict, privacy: .public): sim=\(similarity, privacy: .public) rrf=\(fused, privacy: .public) [\(title, privacy: .public)]"
+            let chunk = hit.chunkID.uuidString
+            // .notice, like the summary line below and for the same reason: this
+            // is the ONLY instrument that can say what a wrong hit actually
+            // scored, and .debug does not persist in OSLogStore — so every
+            // question about the floors was being answered from inference. Asked
+            // for by name on 2026-08-12 after a screenplay was retrieved for a
+            // question about dinner: measure before moving a threshold.
+            //
+            // ★ ID, never the TITLE. The title was here while this was `.debug`,
+            // which the logging daemon does not persist; promoting the line to
+            // `.notice` would have carried document titles into `OSLogStore` and
+            // from there into the issue report — the one deliberate exception to
+            // "nothing leaves this device" — where the scrub knows about paths,
+            // emails and the user's name, but has no notion of corpus content. A
+            // title can BE the sensitive part ("MRI results.pdf", someone's name).
+            // The sibling quarantine sweeps in this same change log ids only for
+            // exactly this reason. Map an id back with `get_document` or a store
+            // query when a hit needs identifying; the score is what the
+            // instrument exists to report.
+            log.notice(
+                "gate \(verdict, privacy: .public): sim=\(similarity, privacy: .public) rrf=\(fused, privacy: .public) chunk=\(chunk, privacy: .public)"
             )
         }
         let retrievedCount = retrieved.count
@@ -751,7 +769,19 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let knowledge = chunks.enumerated().map { index, hit in
                 "\(index + 1). \(ChatPromptBuilder.citationLabel(for: hit))\n\(hit.content)"
             }.joined(separator: "\n\n")
-            head = "KNOWLEDGE (the user's own documents, calls, notes):\n\(knowledge)"
+            // The hedge is deliberate and it is the cheap half of the fix for a
+            // real failure (2026-08-12): asked what he had for dinner on 3 March,
+            // M1K3 retrieved a fragment of a SCREENPLAY the user had stored and
+            // narrated it — "a pomegranate being worked on by the High Priestess"
+            // — before correctly saying it didn't know. Retrieval returns the
+            // least-bad match for any question, so the head must not present it as
+            // material the question is about. The empty branch above already tells
+            // the model to say so plainly; this tells it these excerpts may have
+            // nothing to do with the question at all.
+            head = "KNOWLEDGE (excerpts from the user's own documents, calls and "
+                + "notes, retrieved by similarity — they may be irrelevant to this "
+                + "question; use only what genuinely answers it, and ignore the "
+                + "rest rather than working it into the answer):\n\(knowledge)"
         }
         return [head, memoryBlock(memories, now: now), rules]
             .compactMap { $0 }
