@@ -291,9 +291,12 @@ final class AppEnvironment {
     nonisolated static let selectedBrainKey = "selectedBrain"
 
     /// Marker for the one-time realignment of a persisted brain pick that the
-    /// ladder no longer recommends (2026-08-11). Set the instant it fires, so
-    /// re-choosing the heavy tier afterwards sticks forever — see
-    /// `FrontTierRealignment`.
+    /// ladder no longer recommends (2026-08-11). Set on every evaluation of the
+    /// nudge, fired or NOT — it records that the one-time window has passed, not
+    /// that anything moved. Writing it only when it fires leaves a Mac that's
+    /// already on the recommended tier eligible forever, and then takes back the
+    /// first heavy tier its owner deliberately picks. See the contract on
+    /// `FrontTierRealignment.plan`.
     nonisolated static let frontTierRealignedKey = "brain.frontTierRealigned"
     /// Whether the user has completed brain selection — gates the onboarding flow.
     static let hasChosenBrainKey = "hasChosenBrain"
