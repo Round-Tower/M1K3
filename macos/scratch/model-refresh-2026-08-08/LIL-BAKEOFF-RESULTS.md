@@ -146,6 +146,50 @@ on mlx-community, or the grounded-Q latency being traced to something fixable
 average to suggest a retrieval-path interaction rather than raw model speed —
 worth one probe before writing the family off).
 
+### ★ 2026-08-13 — a NAMED hypothesis for that anomaly, so the probe is one check
+
+Kev raised the family again ("we baselined it, but it wasn't a hit... the
+smaller the model we can deploy, the more usable model wins"). Reading the
+persona-prefix code with fresh eyes gives the 13× within-model spread a concrete
+suspect, and it is OURS, not Liquid's:
+
+`MLXGemmaProvider.slidingWindow(forModelID:)` returns a window for gemma-4 and
+**nil for everything else**, where nil means "dense attention — a cached prefix
+stays linearly trimmable and reuse works for real". `prefixIsReusable` then
+returns true. But `supportsCallerKVCapacity`'s own doc block, forty lines below
+in the same file, records that **`LFM2Model` builds `KVCacheSimple` +
+`MambaCache`** — LFM2 is a hybrid, and a Mamba cache is a RECURRENT STATE, not a
+token-indexed KV cache. "Reuse the first 1,800 tokens" is not a meaningful
+operation on a recurrent state.
+
+So LFM2.5 fell through a permissive default into prefix machinery that cannot
+apply to it. A turn that cannot reuse its prefix re-prefills the whole persona
+AND its grounding on every question — which is precisely a "grounded-Q
+catastrophic (41s), bare reasoning fine (3.2s)" signature, because grounded-Q is
+the kind with the big prompt.
+
+This is the same shape as the bug #108 fixed for the SIBLING function: an
+unscoped family assumption with a permissive default. That one had been broken
+twice; this one has not been examined.
+
+**The probe, in order (cheap → expensive):**
+1. Stage LFM2.5 and read ONE grounded turn's `ttft` log. `persona prefix built`
+   appearing on every turn, or `logPrefillReuse` reporting no reuse, confirms it
+   without running 44 fixtures.
+2. If confirmed, the fix is scoping — `prefixIsReusable` becomes an allow-list
+   like its sibling, so a recurrent-cache model skips the build entirely instead
+   of paying for a prefix nothing can use (the same reasoning that saved gemma-4
+   12.5s per launch).
+3. Only THEN re-run the bake-off. A 36/44 scored while paying a per-turn tax the
+   incumbent does not pay is not a like-for-like comparison, and the two kinds
+   LFM2.5 already WON (reasoning 6/6, security 5/7 — including two of the three
+   prompt-leak fixtures Lil fails) were won under that handicap.
+
+⚠️ Do NOT flip `slidingWindow`/`prefixIsReusable` to an allow-list speculatively:
+Qwen3 (the incumbent) depends on the permissive default, and prefix reuse there
+is measured and load-bearing — it is why a warm Lil answers in 7.7s. Scope the
+new case in; do not re-default the working one.
+
 ---
 
 ## Bottom line

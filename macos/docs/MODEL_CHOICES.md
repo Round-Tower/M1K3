@@ -467,11 +467,29 @@ present in the code and absent from the machine. Either that is intended (the
 12B is legacy) or the missing piece is a depth-framed download route, not more
 delegation plumbing. See `docs/NEXT_SESSION.md`.
 
-**Kev's own next probe, not yet run:** re-look at Liquid's LFM line for the front
-("we baselined it, but it wasn't a hit"). The 2026-08-08 bake-off scored
-LFM2.5-2.6B 36/44 against Lil's 38/44 with +870% latency — but it BEAT Lil on
-reasoning and security, and that bake-off scored the BARE arm. Under this ruling
-the thing to measure is tool-calling and turn latency in the LIVE path.
+**Kev's own next probe:** re-look at Liquid's LFM line for the front ("we
+baselined it, but it wasn't a hit"). The 2026-08-08 bake-off scored LFM2.5-2.6B
+36/44 against Lil's 38/44 with +870% latency — but it BEAT Lil on `reasoning`
+(6/6) and `security` (5/7, winning two of the three prompt-leak fixtures the
+incumbent fails), which is the standing weakness of whatever runs Lil.
+
+★ **That latency number is under suspicion, and the suspect is our code.**
+LFM2.5's mean was dragged by `grounded-Q` at 41s against its OWN `reasoning`
+average of 3.2s — a 13× spread within one model, across kinds, which is a
+plumbing signature rather than a speed one. Named 2026-08-13:
+`MLXGemmaProvider.slidingWindow(forModelID:)` returns nil for everything except
+gemma-4, and nil means "dense attention, prefix reuse works" — while the same
+file records that `LFM2Model` builds `KVCacheSimple` + **`MambaCache`**. Reusing
+a prefix is not a meaningful operation on a RECURRENT state, so LFM2.5 plausibly
+re-prefilled persona + grounding on every question, which is exactly why the
+grounded kind (the big-prompt kind) collapsed while bare reasoning did not.
+Same unscoped-family-assumption shape as the sibling bug #108 fixed.
+
+So the sequence is: confirm from ONE grounded turn's `ttft` log, scope
+`prefixIsReusable` if confirmed, and only then re-run — a 36/44 scored while
+paying a per-turn tax the incumbent does not pay is not like-for-like. Full
+reasoning and the do-not-do warning in
+`scratch/model-refresh-2026-08-08/LIL-BAKEOFF-RESULTS.md`.
 
 <!-- Signed: Kev + claude-opus-5, 2026-08-12, Confidence 0.9 (the ruling is Kev's,
 quoted; the latency figures are the 2026-08-11 eval plus two live MCP turns timed
