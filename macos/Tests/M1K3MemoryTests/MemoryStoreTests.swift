@@ -155,6 +155,26 @@ struct MemoryStoreWriteRecallTests {
         #expect(hits.last?.memory.id == rare.id)
     }
 
+    /// ★ At `limit: 1` the seat has nothing to sit beside — taking "the last one"
+    /// means taking the ONLY one, which is this PR's own bug reintroduced for the
+    /// single-result case (PR #119 review). It is not hypothetical:
+    /// `related_memory` seeds its graph walk with `recall(limit: 1)` and is
+    /// documented as "the single best matching fact", so a keyword hit anywhere in
+    /// the candidate set would silently move the anchor the whole walk starts from.
+    @Test("at limit 1 the best match keeps its place — a seat needs a seat beside it")
+    func keywordSeatNeverTakesTheOnlySlot() throws {
+        let store = try MemoryStore()
+        let query: [Float] = [1, 0, 0]
+        let best = Memory(kind: .profile, text: "banana of record", source: "test")
+        try store.remember(best, embedding: [1, 0, 0])
+        let keyword = Memory(kind: .note, text: "zeta is unrelated", source: "test")
+        try store.remember(keyword, embedding: [0.6, 0.8, 0])
+
+        let hits = try store.recall(query: "zeta", queryVector: query, limit: 1)
+        #expect(hits.count == 1)
+        #expect(hits.first?.memory.id == best.id, "the anchor related_memory walks from")
+    }
+
     @Test("a query with punctuation/quotes is sanitised, not crashed")
     func recallSanitisesQuery() async throws {
         let f = try Fixture()

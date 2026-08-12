@@ -572,9 +572,17 @@ public final class MemoryStore: @unchecked Sendable {
     static func withKeywordSeat(
         ranked: [MemoryHit], keywordIDs: Set<UUID>, limit: Int
     ) -> [MemoryHit] {
-        guard limit > 0 else { return [] }
+        // `limit > 1`, not `> 0`: with a single slot the "last seat" IS the only
+        // seat, so seating a keyword hit would evict the best match outright —
+        // this fix's own bug, reintroduced for one-result callers (#119 review).
+        // `related_memory` is exactly that caller: it seeds a graph walk with
+        // `recall(limit: 1)` and is documented as "the single best matching fact",
+        // so a stray keyword hit would move the anchor the whole walk starts from.
+        // A guarantee that can only be honoured by breaking the rule it protects
+        // is not a guarantee; below two results, similarity simply wins.
+        guard limit > 1 else { return Array(ranked.prefix(limit)) }
         let top = Array(ranked.prefix(limit))
-        guard ranked.count > limit, limit > 0 else { return top }
+        guard ranked.count > limit else { return top }
         // Already represented? Then the seat is spoken for and nothing moves.
         if top.contains(where: { keywordIDs.contains($0.memory.id) }) { return top }
         guard let seated = ranked.first(where: { keywordIDs.contains($0.memory.id) }) else {
