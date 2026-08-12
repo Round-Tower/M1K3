@@ -142,11 +142,105 @@ struct SilenceEndpointerTests {
 
     @Test("a partial that becomes complete mid-hold switches to the shorter threshold")
     func transitionToCompleteUsesShorterThreshold() {
-        var endpointer = SilenceEndpointer(silence: .seconds(1.5), holdSilence: .seconds(3.0))
+        // cadenceCeiling .zero disables cadence adaptation, isolating the
+        // completeness transition this test is about (with adaptation live, the
+        // 2s pause below would itself raise the floor — pinned separately in
+        // recoveredPauseRaisesTheFloor).
+        var endpointer = SilenceEndpointer(
+            silence: .seconds(1.5), holdSilence: .seconds(3.0), cadenceCeiling: .zero
+        )
         endpointer.ingest(partial: "tell me about the", at: start) // incomplete → would hold 3.0s
         // User completes the thought 2s in:
         endpointer.ingest(partial: "tell me about the weather", at: start.advanced(by: .seconds(2.0)))
         #expect(!endpointer.shouldEndpoint(at: start.advanced(by: .seconds(3.4)))) // idle 1.4 < 1.5
         #expect(endpointer.shouldEndpoint(at: start.advanced(by: .seconds(3.5)))) // idle 1.5 ≥ silence
+    }
+
+    // MARK: - Cadence adaptation (learning how long THIS speaker pauses)
+
+    @Test("a pause the speaker recovers from raises the floor for the rest of the session")
+    func recoveredPauseRaisesTheFloor() {
+        var endpointer = SilenceEndpointer(
+            silence: .seconds(2.0), holdSilence: .seconds(4.5), cadenceMargin: .seconds(0.75)
+        )
+        // Kev's cadence: a dangling connective, a long pause, then he carries on.
+        endpointer.ingest(partial: "I got some issues and", at: start)
+        endpointer.ingest(partial: "I got some issues and the voice mode", at: start.advanced(by: .seconds(3.5)))
+        // The tail now READS complete, so the bare threshold would turn over at
+        // 2.0s — but this speaker has just demonstrated a 3.5s intra-thought
+        // pause, so the floor is 3.5 + 0.75.
+        #expect(!endpointer.shouldEndpoint(at: start.advanced(by: .seconds(3.5 + 2.0))))
+        #expect(!endpointer.shouldEndpoint(at: start.advanced(by: .seconds(3.5 + 4.0))))
+        #expect(endpointer.shouldEndpoint(at: start.advanced(by: .seconds(3.5 + 4.25))))
+    }
+
+    @Test("the learned cadence survives reset — it is the speaker's, not the utterance's")
+    func cadenceSurvivesReset() {
+        var endpointer = SilenceEndpointer(
+            silence: .seconds(2.0), holdSilence: .seconds(4.5), cadenceMargin: .seconds(0.75)
+        )
+        endpointer.ingest(partial: "so the thing is and", at: start)
+        endpointer.ingest(partial: "so the thing is and it broke", at: start.advanced(by: .seconds(3.0)))
+        #expect(endpointer.observedPause == .seconds(3.0))
+        endpointer.reset() // next listen in the same voice-mode session
+        endpointer.ingest(partial: "what about Tuesday", at: start.advanced(by: .seconds(30)))
+        // Learned 3.0 + 0.75 still governs, so the next turn isn't clipped either.
+        #expect(!endpointer.shouldEndpoint(at: start.advanced(by: .seconds(32.0))))
+        #expect(endpointer.shouldEndpoint(at: start.advanced(by: .seconds(33.75))))
+    }
+
+    @Test("the learned floor is capped, so one huge gap can't stall the loop")
+    func cadenceIsCapped() {
+        var endpointer = SilenceEndpointer(
+            silence: .seconds(2.0), holdSilence: .seconds(4.5),
+            maxWait: .seconds(120), cadenceMargin: .seconds(0.75), cadenceCeiling: .seconds(6.0)
+        )
+        endpointer.ingest(partial: "hold on and", at: start)
+        endpointer.ingest(partial: "hold on and here it is", at: start.advanced(by: .seconds(45)))
+        #expect(endpointer.observedPause == .seconds(6.0)) // clamped on the way in
+        #expect(endpointer.shouldEndpoint(at: start.advanced(by: .seconds(45 + 6.0))))
+    }
+
+    @Test("mic-open latency before the first word is NOT a speaker pause")
+    func silenceBeforeFirstSpeechIsNotLearned() {
+        var endpointer = SilenceEndpointer(
+            silence: .seconds(2.0), holdSilence: .seconds(4.5), cadenceMargin: .seconds(0.75)
+        )
+        // WhisperKit emits an empty/placeholder partial, then the first words
+        // seconds later. That gap is the recognizer warming up, not Kev thinking.
+        endpointer.ingest(partial: "", at: start)
+        endpointer.ingest(partial: "what's the weather", at: start.advanced(by: .seconds(4.0)))
+        #expect(endpointer.observedPause == .zero)
+        #expect(endpointer.shouldEndpoint(at: start.advanced(by: .seconds(6.0)))) // idle 2.0 = silence
+    }
+
+    @Test("a gap shorter than the endpoint threshold teaches nothing")
+    func shortGapsTeachNothing() {
+        var endpointer = SilenceEndpointer(
+            silence: .seconds(2.0), holdSilence: .seconds(4.5), cadenceMargin: .seconds(0.75)
+        )
+        // Ordinary word-by-word partial growth must not inflate the floor, or
+        // every speaker would drift toward the ceiling.
+        endpointer.ingest(partial: "what", at: start)
+        endpointer.ingest(partial: "what's the", at: start.advanced(by: .seconds(0.6)))
+        endpointer.ingest(partial: "what's the weather", at: start.advanced(by: .seconds(1.4)))
+        #expect(endpointer.observedPause == .zero)
+        #expect(endpointer.shouldEndpoint(at: start.advanced(by: .seconds(3.4)))) // idle 2.0
+    }
+
+    @Test("a fresh endpointer starts with no speaker model — the session boundary")
+    func freshEndpointerForgetsTheSpeaker() {
+        // The voice loop builds one endpointer per voice-mode entry, which is what
+        // scopes the learning to a session. Pinned so that stays true by
+        // construction rather than by comment.
+        var learned = SilenceEndpointer(silence: .seconds(2.0), holdSilence: .seconds(4.5))
+        learned.ingest(partial: "the thing and", at: start)
+        learned.ingest(partial: "the thing and more", at: start.advanced(by: .seconds(3.0)))
+        #expect(learned.observedPause == .seconds(3.0))
+
+        var next = SilenceEndpointer(silence: .seconds(2.0), holdSilence: .seconds(4.5))
+        #expect(next.observedPause == .zero)
+        next.ingest(partial: "quick question", at: start)
+        #expect(next.shouldEndpoint(at: start.advanced(by: .seconds(2.0))))
     }
 }

@@ -64,7 +64,13 @@ built `.app` bundle. So MLX/WhisperKit code is verified two ways:
 1. **Unit tests** cover the pure policy layers (routers, scorers, budget math,
    tier metadata) against fakes — `M1K3_MLX_INTEGRATION=1` enables the heavy
    integration tests that actually download a model and generate (run locally,
-   off in CI).
+   off in CI). `M1K3_AUDIO_INTEGRATION=1` likewise enables the real-speaker
+   speech smoke (`EffectfulStreamingIntegrationTests`): it plays audio out of
+   your speakers and its word clock is a real-time delegate correlation that
+   starves under a loaded parallel run, so the default suite is silent and
+   deterministic. Run it deliberately when touching speech. Note this is the
+   SYSTEM voice — M1K3's own (Kokoro) is MLX/Metal and can't run under
+   `swift test` at all.
 2. **`SelfTest.swift`** (in `M1K3App/`) is the headless on-device harness. Drop
    a `~/Library/Containers/app.m1k3/Data/.m1k3-selftest.json` config file
    (keyed by env-var name), launch the built `.app`, and it runs the real

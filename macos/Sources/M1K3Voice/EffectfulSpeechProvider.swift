@@ -63,13 +63,32 @@
 import AVFoundation
 import Foundation
 
+/// One claimed render's place in the two orderings that can invalidate it: which
+/// speak entry it is (newer ones win) and which stop era it was claimed in (a
+/// stop after that invalidates it, however long its synthesis takes).
+struct RenderEntry {
+    let generation: Int
+    let stopEpoch: Int
+}
+
 public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTiming, @unchecked Sendable {
     public let name = "m1k3-effect-voice"
 
     // `chain`/`player`/`configureEngineIfNeeded`/`streamingSession` are internal
     // (not private) for EffectfulSpeechProvider+Streaming.swift — the chunked
     // playback path lives there to keep this file inside the length budget.
-    let chain: VoiceEffectChain
+    /// Lock-guarded so the voice character can be switched while the app runs (the
+    /// Settings picker) without rebuilding the provider and its audio engine.
+    /// Read once per rendered chunk — a lock at ~100ms of audio is free — and the
+    /// class is already `@unchecked Sendable` under exactly this discipline. A
+    /// switch mid-utterance simply lands on the next chunk, which is the honest
+    /// behaviour: audio already handed to the player has been heard.
+    private let chainLock = NSLock()
+    private var _chain: VoiceEffectChain
+    var chain: VoiceEffectChain {
+        chainLock.withLock { _chain }
+    }
+
     private let synthesizer = AVSpeechSynthesizer()
     private let engine = AVAudioEngine()
     let player = AVAudioPlayerNode()
@@ -109,6 +128,14 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     /// Monotonic per-entry token. A queued render bails if a newer `speak()`
     /// superseded it before it owned the gate — latest-wins, no leaked awaiters.
     @MainActor private var speakGeneration = 0
+    /// Monotonic stop token. Bumped by every `stop()`; a render samples it before
+    /// synthesis and re-checks after, so a stop that arrives DURING the silent
+    /// offline-render window cannot be outlived by the playback that window was
+    /// producing. Deliberately separate from `speakGeneration`: `claimEntry` calls
+    /// `stop()` on the barge-in path, so a stop that bumped the speak generation
+    /// would invalidate the very entry that just claimed it and drop both
+    /// utterances.
+    @MainActor private var stopEpoch = 0
     /// Observes `.AVAudioEngineConfigurationChange` so an output-route flip (BLE
     /// headphones arriving, AirPods leaving) rebinds playback to the NEW default
     /// device instead of leaving the voice pinned to the old one. Same pattern as
@@ -116,7 +143,7 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     private var configObserver: NSObjectProtocol?
 
     public init(chain: VoiceEffectChain = .m1k3Character, fallback: AVSpeechProvider = AVSpeechProvider()) {
-        self.chain = chain
+        _chain = chain
         plainFallback = fallback
         super.init()
         configObserver = NotificationCenter.default.addObserver(
@@ -124,6 +151,12 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
         ) { [weak self] _ in
             Task { @MainActor in self?.handleEngineConfigurationChange() }
         }
+    }
+
+    /// Switch the voice character live (Settings). Takes effect on the next
+    /// rendered chunk — see `chain`.
+    public func setChain(_ newChain: VoiceEffectChain) {
+        chainLock.withLock { _chain = newChain }
     }
 
     deinit {
@@ -157,18 +190,28 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
         // guarantees the interrupt happens BEFORE the successor touches the shared
         // synthesizer — so two concurrent speak()s can no longer start overlapping
         // renders (the #52 review residual; see the "Entry serialisation" MARK).
-        let generation = await claimEntry()
+        let entry = await claimEntry()
         await entryGate.run { [self] in
-            await runRender(generation) { await self.renderText(utterance) }
+            await runRender(entry) { await self.renderText(utterance, since: entry.stopEpoch) }
         }
     }
 
     /// The offline-render → timeline → streamed-playback pipeline for the Apple
     /// (and Kokoro-fallback) voice. Runs INSIDE the entry gate, so it never
     /// overlaps another render on the single AVSpeechSynthesizer.
-    private func renderText(_ utterance: SpeechUtterance) async {
+    private func renderText(_ utterance: SpeechUtterance, since epoch: Int) async {
         do {
             let (samples, sampleRate, wordOnsets) = try await synthesizeToFloats(utterance)
+            // A stop that landed while we were rendering SILENTLY means this audio
+            // must never be heard. Until 2026-08-12 the only thing standing between
+            // a mid-synthesis stop and the full utterance playing was
+            // `stopSpeaking(at: .immediate)` cancelling the offline render — and
+            // under load it doesn't: measured, a stop 900ms in took 6.1s to unwind
+            // because the render finished and then played. Kev heard it before any
+            // assertion did ("it goes right to the end"). The bookkeeping was all
+            // correct — one ended event, isSpeaking false — while the room was
+            // still being talked at.
+            guard await stillCurrent(epoch) else { return }
             guard !samples.isEmpty, sampleRate > 0 else {
                 await plainSpeak(utterance)
                 return
@@ -236,23 +279,33 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     /// our sample and our `stop()` — could still clip a newer render. Far narrower
     /// than the 2-way race above; a fully airtight fix needs a generation-guarded
     /// stop, deferred to keep this change small.
-    func claimEntry() async -> Int {
+    func claimEntry() async -> RenderEntry {
         let (generation, wasBusy) = await MainActor.run { () -> (Int, Bool) in
             speakGeneration += 1
             let busy = speakingState.isSpeaking(streamingActive: streamingSession != nil) || renderInFlight
             return (speakGeneration, busy)
         }
         if wasBusy { await stop() }
-        return generation
+        // Epoch sampled AFTER the barge-in stop above, so this entry doesn't read
+        // its own interrupt of its predecessor as a reason to cancel itself — but
+        // BEFORE the gate wait, which is exactly the window a user's stop can land
+        // in while this render is still queued behind another.
+        let epoch = await MainActor.run { stopEpoch }
+        return RenderEntry(generation: generation, stopEpoch: epoch)
     }
 
     /// Run one render under the gate. Bails if a newer speak() superseded this entry
     /// while it waited (latest-wins). Marks `renderInFlight` for the whole pipeline
     /// so a concurrent barge-in can see — and interrupt — the synthesis window too,
     /// not just audible playback. Internal so the streaming entry point reuses it.
-    func runRender(_ generation: Int, _ render: () async -> Void) async {
+    func runRender(_ entry: RenderEntry, _ render: () async -> Void) async {
         let proceed = await MainActor.run { () -> Bool in
-            guard generation == speakGeneration else { return false }
+            // Two ways to be stale by the time the gate is ours: a NEWER speak
+            // superseded us (latest-wins), or a stop() landed while we queued.
+            // The second used to fall through — stop() only ever interrupted the
+            // render that was already running, so a queued utterance sailed past
+            // it and spoke.
+            guard entry.generation == speakGeneration, stillCurrent(entry.stopEpoch) else { return false }
             renderInFlight = true
             return true
         }
@@ -270,9 +323,9 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     /// from `player.isPlaying` — so the neural path drives the avatar mouth + speaking
     /// state identically to `speak(_:)`. No callback is bypassed.
     public func speak(rawPCM samples: [Float], sampleRate: Double) async {
-        let generation = await claimEntry()
+        let entry = await claimEntry()
         await entryGate.run { [self] in
-            await runRender(generation) { await self.renderPCM(samples, sampleRate: sampleRate) }
+            await runRender(entry) { await self.renderPCM(samples, sampleRate: sampleRate) }
         }
     }
 
@@ -290,9 +343,19 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
         }
     }
 
+    /// Whether no `stop()` has landed since `epoch` was sampled — i.e. whether the
+    /// audio a render just produced is still wanted. Cheap MainActor read.
+    @MainActor
+    private func stillCurrent(_ epoch: Int) -> Bool {
+        stopEpoch == epoch
+    }
+
     public func stop() async {
         let wasActive = await isSpeaking()
         let hadPlayback = await MainActor.run { () -> Bool in
+            // Bump FIRST: a render suspended inside synthesis resumes into
+            // `stillCurrent` and must see this stop however late it lands.
+            stopEpoch += 1
             player.stop()
             _ = synthesizer.stopSpeaking(at: .immediate)
             // Resume any playback wait — .dataPlayedBack won't fire after stop().

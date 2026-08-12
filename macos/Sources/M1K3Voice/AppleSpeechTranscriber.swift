@@ -63,6 +63,12 @@ import Speech
 public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sendable {
     public let name = "Apple Speech"
 
+    /// This provider owns its own `AVAudioEngine`, so we can put voice processing
+    /// on the input node (see `enableVoiceProcessing`). WhisperKit's engine lives
+    /// inside that package and cannot be reached, which is the whole reason the
+    /// router needs to know the difference.
+    public let attemptsEchoCancellation = true
+
     private static let log = Logger(subsystem: "app.m1k3", category: "stt")
 
     private let locale: Locale
@@ -366,6 +372,10 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     @discardableResult
     private func installInputTap() -> Bool {
         let inputNode = audioEngine.inputNode
+        // BEFORE reading the format: voice processing CHANGES it (VPIO renders
+        // mono at the device rate), so a format read first would install a tap
+        // that no longer matches the node.
+        enableVoiceProcessing(on: inputNode)
         let format = inputNode.outputFormat(forBus: 0)
         Self.log.notice(
             "stt mic input format \(format.sampleRate, privacy: .public)Hz ch=\(format.channelCount, privacy: .public)"
@@ -388,6 +398,44 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             self?.lock.withLock { self?.request?.append(buffer) }
         }
         return true
+    }
+
+    /// Turn on Apple's voice-processing IO for this mic: acoustic echo
+    /// cancellation, noise suppression and AGC, plus speech-triggered ducking of
+    /// whatever else is playing.
+    ///
+    /// Why it matters (Kev, 2026-08-11): with music on, M1K3 and the music "both
+    /// compete as opposed to ducking", and the recogniser hears the room —
+    /// including M1K3's own voice, which `echoGrace` can only paper over by
+    /// waiting. VPIO's reference signal is the OUTPUT device, so it cancels
+    /// anything coming out of the speakers (the music and M1K3 alike) rather than
+    /// just muting us in time.
+    ///
+    /// `enableAdvancedDucking` ducks other audio only while it detects the user
+    /// SPEAKING, which is the behaviour asked for — the music stays listenable
+    /// and gets out of the way mid-sentence, instead of being flattened for the
+    /// whole session.
+    ///
+    /// Non-fatal by design: VP is unavailable on some aggregate/virtual input
+    /// devices, and a plain mic tap is strictly better than no mic. Idempotent —
+    /// the route-change handler reinstalls taps and must not re-toggle a live
+    /// setting (toggling requires a stopped engine).
+    private func enableVoiceProcessing(on inputNode: AVAudioInputNode) {
+        guard !inputNode.isVoiceProcessingEnabled else { return }
+        do {
+            try inputNode.setVoiceProcessingEnabled(true)
+            inputNode.voiceProcessingOtherAudioDuckingConfiguration =
+                AVAudioVoiceProcessingOtherAudioDuckingConfiguration(
+                    enableAdvancedDucking: true, duckingLevel: .max
+                )
+            Self.log.notice("stt voice processing on (echo cancellation + speech-triggered ducking)")
+        } catch {
+            // Worth a trail: this is the difference between "the mic hears the
+            // room" and "the mic hears you", and it fails silently otherwise.
+            Self.log.error(
+                "stt voice processing unavailable — no echo cancellation or ducking on this input: \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 
     private func observeConfigurationChanges(ifGeneration generation: UInt64) {

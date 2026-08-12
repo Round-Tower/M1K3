@@ -57,6 +57,10 @@ import os
 /// its subtitle/icon decoration were removed in the 2026-08-03 reduction
 /// wave: the picker UI died when brains replaced it, and LiteRT was dropped
 /// without ever being built — see PLAN.md.)
+/// Brain-selection trail (the one-time front-tier realignment). `mlx-load` is the
+/// registered category for which brain is in the slot and why.
+private let frontTierLog = Logger(subsystem: "app.m1k3", category: "mlx-load")
+
 enum RuntimeOption: String {
     case appleFoundationModels = "Apple Foundation Models"
     /// Model-neutral label: the MLX slot now serves whichever brain is chosen
@@ -285,6 +289,15 @@ final class AppEnvironment {
     /// `nonisolated` (like the sibling keys) so a @Sendable closure — the
     /// responder's per-turn brain-name lookup — can read it off the main actor.
     nonisolated static let selectedBrainKey = "selectedBrain"
+
+    /// Marker for the one-time realignment of a persisted brain pick that the
+    /// ladder no longer recommends (2026-08-11). Set on every evaluation of the
+    /// nudge, fired or NOT — it records that the one-time window has passed, not
+    /// that anything moved. Writing it only when it fires leaves a Mac that's
+    /// already on the recommended tier eligible forever, and then takes back the
+    /// first heavy tier its owner deliberately picks. See the contract on
+    /// `FrontTierRealignment.plan`.
+    nonisolated static let frontTierRealignedKey = "brain.frontTierRealigned"
     /// Whether the user has completed brain selection — gates the onboarding flow.
     static let hasChosenBrainKey = "hasChosenBrain"
     static let selectedVoiceTierKey = "selectedVoiceTier"
@@ -345,6 +358,30 @@ final class AppEnvironment {
 
     /// The chosen brain (Mini / Lil / Big). Restored on launch, persisted on change.
     private(set) var selectedBrain: BrainTier = .mini
+
+    /// Set by init when the one-time front-tier realignment fired; flushed to the
+    /// user by `runStartupMaintenance` once there's a window to read it in.
+    private var pendingFrontTierNotice: String?
+
+    /// The effect-chain renderer behind the M1K3 Voice (Kokoro) tier — held so the
+    /// voice character can be switched live rather than rebuilt.
+    private let voiceRenderer: EffectfulSpeechProvider
+
+    /// Persisted voice character (see `VoiceCharacter`). Absent = the signature
+    /// M1K3 voice, so a stored preference is the only way to change how it sounds.
+    nonisolated static let voiceCharacterKey = "voice.character"
+
+    /// The live character, for the Settings picker.
+    var voiceCharacter: VoiceCharacter {
+        VoiceCharacter(persisted: UserDefaults.standard.string(forKey: Self.voiceCharacterKey))
+    }
+
+    /// Switch how M1K3 sounds, now — the next rendered chunk carries it, so a
+    /// listener hears the change within a sentence rather than after a restart.
+    func setVoiceCharacter(_ character: VoiceCharacter) {
+        UserDefaults.standard.set(character.rawValue, forKey: Self.voiceCharacterKey)
+        voiceRenderer.setChain(character.chain)
+    }
 
     /// The downloading brain's name for progress labels (e.g. "Big M1K3").
     var downloadingBrainName: String {
@@ -567,13 +604,37 @@ final class AppEnvironment {
         // selectable tier.
         let storedBrainRaw = UserDefaults.standard.string(forKey: Self.selectedBrainKey)
         let decoded = storedBrainRaw.flatMap(BrainTier.init(persisted:)) ?? .mini
+        let physicalMemoryGB = Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
+        // One-time realignment (2026-08-11): #117 made Lil the recommended front on
+        // every Mac on measured evidence (3x quicker), but a recommendation never
+        // reaches a machine that already has a pick — this one did not move Kev's
+        // own Mac off Big, and he reported voice-first as slow the next day. Fires
+        // once, records a marker, tells the user, and stays reversible in Settings.
+        let realigned = FrontTierRealignment.plan(
+            persisted: decoded,
+            nudgeSpent: UserDefaults.standard.bool(forKey: Self.frontTierRealignedKey),
+            recommended: BrainTier.recommended(forPhysicalMemoryGB: physicalMemoryGB)
+        )
+        // Spent by EVALUATING it, not by firing it — the window is the first launch
+        // of a build that has this, full stop. Marking only the firing branch would
+        // leave every Lil/Mini Mac permanently eligible, and then quietly undo the
+        // first Big anyone deliberately picked in Settings (see plan's contract).
+        UserDefaults.standard.set(true, forKey: Self.frontTierRealignedKey)
+        if let realigned {
+            frontTierLog.notice(
+                "front tier realigned \(decoded.rawValue, privacy: .public) → \(realigned.tier.rawValue, privacy: .public) (once)"
+            )
+        }
         let brain = BrainTier.selectableOrEased(
-            decoded, forPhysicalMemoryGB: Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
+            realigned?.tier ?? decoded, forPhysicalMemoryGB: physicalMemoryGB
         )
         if let storedBrainRaw, storedBrainRaw != brain.rawValue {
             UserDefaults.standard.set(brain.rawValue, forKey: Self.selectedBrainKey)
         }
         selectedBrain = brain
+        // Held rather than shown: the notice auto-clears after 6s and init runs
+        // before there's a window to read it in. Flushed from runStartupMaintenance.
+        pendingFrontTierNotice = realigned?.notice
 
         // Generation IS swappable. The façade forwards to whichever backend the
         // brain selects; AFM is Mini + the fallback, the MLX slot is Lil/Big. The
@@ -626,7 +687,17 @@ final class AppEnvironment {
         // TTS seam: Built-in Apple voice wrapped in a swappable façade so the
         // premium Kokoro tier can drop in without rebuilding any caller.
         builtinSpeech = AVSpeechProvider()
-        kokoro = KokoroSpeechProvider()
+        // The renderer is built here, not left to KokoroSpeechProvider's default,
+        // so the voice character stays switchable at runtime (Settings) instead of
+        // being frozen into a provider we'd have to rebuild — engine, taps and all —
+        // to change how M1K3 sounds.
+        let renderer = EffectfulSpeechProvider(
+            chain: VoiceCharacter(
+                persisted: UserDefaults.standard.string(forKey: Self.voiceCharacterKey)
+            ).chain
+        )
+        voiceRenderer = renderer
+        kokoro = KokoroSpeechProvider(renderer: renderer)
         speech = SwappableSpeechProvider(builtinSpeech)
         selectedVoiceTier = UserDefaults.standard.string(forKey: Self.selectedVoiceTierKey)
             .flatMap(VoiceTier.init(rawValue:)) ?? .builtin
@@ -1479,6 +1550,11 @@ extension AppEnvironment {
         // Rebuild the background-upgrade state from disk facts (never persisted
         // — a mid-download quit or failure self-heals here).
         recomputeBrainUpgradeState()
+        // A brain swap the user didn't ask for has to be SAID, not just done.
+        if let notice = pendingFrontTierNotice {
+            pendingFrontTierNotice = nil
+            showBrainUpgradeNotice(notice)
+        }
         M1K3Persona.setUserProfile(try? store.meta(key: Self.userProfileMetaKey))
         installGenerationMetricsSink()
         await quarantineSelfWiringDocuments()

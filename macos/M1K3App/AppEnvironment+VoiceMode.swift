@@ -25,9 +25,14 @@ import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
 import M1K3Voice
+import os
 import Speech
 
 extension AppEnvironment {
+    /// Which recogniser served a listen, and whether it could keep the room out of
+    /// the mic — `stt` is the registered category for that (see M1K3LogCore).
+    private nonisolated static let voiceLog = Logger(subsystem: "app.m1k3", category: "stt")
+
     /// Transient flag consulted by thinkingModeProvider (voice mode swaps the
     /// global Reasoning setting for the in-mode thinking toggle).
     nonisolated static let voiceModeActiveKey = "voiceMode.active"
@@ -42,6 +47,24 @@ extension AppEnvironment {
     nonisolated static let voiceUpgradeExchangesKey = "voiceUpgrade.exchanges"
     nonisolated static let voiceUpgradeDismissalsKey = "voiceUpgrade.dismissals"
     nonisolated static let voiceUpgradeSinceDismissalKey = "voiceUpgrade.exchangesSinceDismissal"
+
+    /// Voice-first mode prefers a recogniser we can put echo cancellation and
+    /// other-audio ducking on (Apple Speech) over the sharper one we can't
+    /// (WhisperKit builds its own audio engine inside the package). Default ON.
+    ///
+    /// Kev, 2026-08-11: with music playing, M1K3 and the music "both compete as
+    /// opposed to ducking", and the mic hears the room — so a hands-free
+    /// conversation over speakers is the wrong place to spend the last points of
+    /// word accuracy. Off restores the sharper-engine-always behaviour; chat
+    /// dictation is unaffected either way (it never sets the preference).
+    nonisolated static let voiceEchoCancellationKey = "voiceMode.preferEchoCancellation"
+
+    /// Live read of the echo-cancellation preference (absent key = ON).
+    var prefersEchoCancellingRecogniser: Bool {
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: Self.voiceEchoCancellationKey) == nil
+            || defaults.bool(forKey: Self.voiceEchoCancellationKey)
+    }
 
     /// Persisted voice-mode thinking toggle (default off = fast replies).
     /// While voice mode is active this REPLACES the Settings Reasoning picker
@@ -204,26 +227,23 @@ extension AppEnvironment {
         UserDefaults.standard.set(true, forKey: Self.hasEnteredVoiceModeKey)
         UserDefaults.standard.set(true, forKey: Self.voiceModeActiveKey)
         soundEffects.play(.voiceEnter) // M1K3 materialising
-        // Conversational endpointing (Kev, 2026-08-06: the defaults cut him
-        // off mid-thought — "it needs to be more fluid"). Complete-sounding
-        // sentences still turn over at 2s; a mid-thought trail-off gets a
-        // generous 4.5s to breathe, and long thoughts get 30s before the
-        // stuck-recognizer cap. Mobile runs its own gentler pair (2.0/3.5,
-        // 2026-07-29) — same complaint, same direction.
+        // Conversational endpointing lives in EndpointCadence now — ONE preset,
+        // shared with the iOS shell, which used to carry its own drifted copy of
+        // these numbers from the same complaint. The endpointer also learns Kev's
+        // own pause rhythm on top of the preset (2026-08-11), so these values only
+        // have to be right for the first pause of a session.
         let controller = VoiceLoopController(
             dependencies: makeVoiceLoopDependencies(),
-            silence: .seconds(2.0),
-            holdSilence: .seconds(4.5),
-            maxWait: .seconds(30)
+            cadence: .conversational
         )
         voiceLoop = controller
         controller.begin()
-        // Voice deserves the sharper engine. If WhisperKit isn't loaded, kick its
-        // load now (downloads on first use). NON-blocking: the loop re-resolves its
-        // provider at the start of EACH listen, so it upgrades from the Apple Speech
-        // fallback to WhisperKit on the next cycle once ready — the first utterance
-        // still works meanwhile, and an offline/failed load just stays on Apple.
-        if !isWhisperKitActive {
+        // Voice deserves the sharper engine — UNLESS we've chosen a clean duplex
+        // channel over raw accuracy for this mode, in which case pulling a
+        // WhisperKit model down is work whose result we'd then decline to use.
+        // NON-blocking either way: the loop re-resolves its provider at the start
+        // of EACH listen, so it upgrades on the next cycle once ready.
+        if !isWhisperKitActive, !prefersEchoCancellingRecogniser {
             Task { [weak self] in await self?.enableWhisperKit() }
         }
     }
@@ -296,11 +316,21 @@ extension AppEnvironment {
                 // Strong-bind up front: nested @Sendable closures below may not
                 // reference a weak (mutable) capture under strict concurrency,
                 // and holding the app-lifetime environment for a listen is fine.
-                guard let self, let provider = transcription.activeProvider else {
+                guard let self,
+                      let provider = transcription.activeProvider(
+                          preferringEchoCancellation: prefersEchoCancellingRecogniser
+                      )
+                else {
                     throw VoiceTurnFailure(message: "No speech recogniser is available.")
                 }
                 let stream = try provider.startListening()
                 activeProvider = provider
+                // Which engine served, and whether it can keep the room out of the
+                // mic, is the first question when someone reports M1K3 talking over
+                // the music or answering something they didn't say.
+                Self.voiceLog.notice(
+                    "voice listening on \(provider.name, privacy: .public) (echo cancellation attempted: \(provider.attemptsEchoCancellation, privacy: .public))"
+                )
                 // Zero-segment backstop (the silent-denial fix's second layer):
                 // a listen that drains with NO segments while a grant reads
                 // blocked means the user hit notDetermined→deny mid-gesture or

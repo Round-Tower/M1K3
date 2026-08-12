@@ -23,6 +23,33 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
 
 ## Now
 
+- **Voice-mode feel — PR open 2026-08-11 (Kev's ⌘R owed).** Three live
+  complaints, three fixes. ① The endpointer now LEARNS the speaker's pause
+  instead of taking a third guess at one number, and both shells share
+  `EndpointCadence.conversational` (they had drifted: 2.0/4.5/30 vs 2.0/3.5/20,
+  from the same complaint). ② Apple's voice processing is on our mic path —
+  echo cancellation + speech-triggered ducking, so music gets out of the way
+  mid-sentence instead of competing. ③ A one-time realignment moves a persisted
+  Big to Lil, because #117's Lil-fronts default only ever reached machines with
+  no pick — Kev's own Mac woke on Big the next morning.
+  **The open question is ②'s cost:** voice mode now prefers Apple Speech over
+  WhisperKit, because WhisperKit's `AVAudioEngine` is built inside the package
+  (`setupEngine`/`processBuffer` internal — verified) so echo cancellation cannot
+  be reached from out here. That trades word accuracy for a clean channel;
+  Settings → Voice mode flips it. If the transcription feel is worse, the named
+  alternatives are an upstream WhisperKit `voiceProcessing` option, or ducking the
+  system output device ourselves via CoreAudio while the mic is hot.
+  **④ Stop now actually stops (2026-08-12, found by Kev's ear).** A `stop()`
+  landing during the SILENT offline-synthesis window relied entirely on
+  `stopSpeaking(at: .immediate)` cancelling that render — and under load it
+  doesn't: measured, a stop 900ms in took 6.1s to unwind because the render
+  finished and then played the whole utterance. Every piece of bookkeeping was
+  correct throughout (one ended event, `isSpeaking` false), which is why no test
+  caught it and why the test named "returns promptly" passed without ever
+  asserting promptness. A render now carries the stop epoch it was claimed in and
+  drops its audio if a stop landed since — covering both the synthesis window and
+  a render still queued behind the gate. This is barge-in on a long answer: the
+  window is exactly as long as M1K3 takes to synthesise.
 - **The Heartbeat — v1 shipped 2026-08-06 (default OFF, Kev's calls owed).**
   The 2-hourly narrative pulse: deterministic digest + resident-MLX
   retelling, popover line + Settings surface. `docs/HEARTBEAT_DESIGN.md`

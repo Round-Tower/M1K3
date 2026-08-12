@@ -26,6 +26,7 @@ struct TranscriptSegmentTests {
 private struct FakeTranscriber: TranscriptionProvider {
     let name: String
     let isAvailable: Bool
+    var attemptsEchoCancellation = false
     func startListening() -> AsyncStream<TranscriptSegment> {
         AsyncStream { $0.finish() }
     }
@@ -60,6 +61,41 @@ struct TranscriptionRouterTests {
         ])
         #expect(router.activeProvider == nil)
         #expect(router.activeProviderName == nil)
+    }
+
+    // MARK: - Echo-cancellation preference (talking over music)
+
+    @Test("asking for echo cancellation skips the sharper engine that can't do it")
+    func prefersEchoCancellingProvider() {
+        let router = TranscriptionRouter(providers: [
+            FakeTranscriber(name: "whisper", isAvailable: true),
+            FakeTranscriber(name: "apple", isAvailable: true, attemptsEchoCancellation: true),
+        ])
+        #expect(router.activeProvider(preferringEchoCancellation: true)?.name == "apple")
+        // …and leaves the default path alone: accuracy still leads when the
+        // caller hasn't asked for a clean duplex channel.
+        #expect(router.activeProvider(preferringEchoCancellation: false)?.name == "whisper")
+        #expect(router.activeProviderName == "whisper")
+    }
+
+    @Test("the preference is a preference — it never leaves you with no recogniser")
+    func preferenceFallsBackRatherThanFailing() {
+        // Nothing echo-cancelling is available: listening on the sharper engine
+        // beats not listening at all. (An early cut of this returned nil and
+        // would have made voice mode simply refuse to start.)
+        let router = TranscriptionRouter(providers: [
+            FakeTranscriber(name: "whisper", isAvailable: true),
+        ])
+        #expect(router.activeProvider(preferringEchoCancellation: true)?.name == "whisper")
+    }
+
+    @Test("an echo-cancelling provider that isn't available is not selected")
+    func unavailableEchoProviderIsSkipped() {
+        let router = TranscriptionRouter(providers: [
+            FakeTranscriber(name: "whisper", isAvailable: true),
+            FakeTranscriber(name: "apple", isAvailable: false, attemptsEchoCancellation: true),
+        ])
+        #expect(router.activeProvider(preferringEchoCancellation: true)?.name == "whisper")
     }
 }
 
