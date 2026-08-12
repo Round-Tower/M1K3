@@ -634,7 +634,18 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 self.cachedIDs = []
                 input = prepared
             }
-            self.logPrefillReuse(reused: reuse, total: fullIDs.count)
+            // Report what was APPLIED, not what was computed. Until 2026-08-09
+            // this logged the common-prefix length whether or not reuse
+            // survived the `reusable` veto — so on gemma-4, where a 1024-token
+            // sliding window means the cache wraps on every real turn and reuse
+            // is ALWAYS vetoed, it cheerfully reported "1776/2750 from cache"
+            // while re-prefilling all 2750. An instrument that reports intent
+            // as outcome hides the thing it exists to measure.
+            self.logPrefillReuse(
+                reused: (reuse > 0 && reusable) ? reuse : 0,
+                total: fullIDs.count,
+                vetoed: reuse > 0 && !reusable
+            )
             self.kvCache = cache
 
             let stream = try MLXLMCommon.generate(
@@ -694,9 +705,15 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
 
     /// Param-only (the Logger interpolation is an autoclosure; swiftformat
     /// strips the `self.` the compiler would need on a member).
-    private func logPrefillReuse(reused: Int, total: Int) {
+    private func logPrefillReuse(reused: Int, total: Int, vetoed: Bool) {
+        // `vetoed` is the interesting case and deserves its own word: the cache
+        // HELD a usable prefix and the sliding window made it unusable.
+        let note = vetoed ? " (VETOED — cache wrapped the sliding window)" : ""
         mlxToolLog.notice(
-            "toolTurnSession reuse: \(reused, privacy: .public)/\(total, privacy: .public) tok from cache, prefilling \(total - reused, privacy: .public)"
+            """
+            toolTurnSession reuse: \(reused, privacy: .public)/\(total, privacy: .public) \
+            tok from cache, prefilling \(total - reused, privacy: .public)\(note, privacy: .public)
+            """
         )
     }
 

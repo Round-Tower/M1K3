@@ -139,6 +139,12 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     /// Per-(tools × persona) prefilled system-block KV prefix; turns start
     /// from copies instead of re-prefilling the persona every time.
     let personaPrefix = PersonaPrefixCache()
+    /// Coalesces concurrent builds of the SAME prefix. Measured 2026-08-09:
+    /// without it, several callers miss the cache together, serialise on the
+    /// ModelContainer, and each pays a full ~13s prefill for a prefix the
+    /// first one was already building. A bigger cache cannot fix that — every
+    /// entrant missed before the first store existed.
+    private let prefixBuilds = SingleFlight<PersonaCacheKey, Bool>()
 
     /// The default generation ceiling, NOT a target — the model stops at EOS
     /// naturally, so this is free for short replies. Reasoning models (Qwen3)
@@ -193,6 +199,36 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             // capacity — see supportsCallerKVCapacity for the list and why the
             // default is "no capacity".
             params.maxKVSize = 8192
+
+            // PREFILL CHUNKING — measured 2026-08-09 on this machine (M1 Max,
+            // powermode 0), same 2357-token prompt every run:
+            //
+            //   upstream default   14333 / 14254 ms   (two runs, <0.6% apart)
+            //   stepSize 1024      13092 ms           -8.5%
+            //   stepSize 2048      13074 ms           -8.5%  (clamps to 1024)
+            //   unchunked          14513 ms           +1.5%  — bigger is NOT better
+            //
+            // 1024 and 2048 land together because upstream clamps the step to the
+            // model's `maximumStepSize`, which for gemma-4 is its sliding window.
+            // So this is really "use the whole window per forward"; the gemma text
+            // path's own default is smaller and costs us ~8.5% on every turn.
+            //
+            // Why this matters more than it looks: gemma-4's 1024-token window
+            // means the KV cache WRAPS on every real turn (prompts run 2.3-2.9k),
+            // which vetoes cross-turn reuse entirely — see MLXToolCalling's
+            // `reusable` gate. Every turn re-prefills the whole prompt, so prefill
+            // THROUGHPUT is the only lever left short of changing brains.
+            //
+            // Scoped to the family it was measured on. Qwen (Lil) has no sliding
+            // window and reuse works there, so its prefill profile is a different
+            // question and gets upstream's default until someone measures it.
+            if Self.prefersWindowSizedPrefill(for: configuration) {
+                params.prefill.stepSize = 1024
+            }
+            // Escape hatch for the next measurement pass — one build, many variants:
+            //   defaults write app.m1k3 prefillStepSize -int 2048
+            let stepOverride = UserDefaults.standard.integer(forKey: "prefillStepSize")
+            if stepOverride > 0 { params.prefill.stepSize = stepOverride }
         }
         generateParameters = params
         self.name = name
@@ -456,6 +492,42 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             personaText: persona
         )
         if let hit = personaPrefix.snapshot(for: key) { return hit }
+        // Background housekeeping (titles, follow-ups, distillation) may USE a
+        // cached prefix but must never BUILD one: on 2026-08-09 a 64-token
+        // title rendered its own prefix, took the only slot, and cost the next
+        // interactive turn 16-19s of re-prefill. The cache is two slots now, so
+        // this is the belt to that pair of braces — capacity holds only while
+        // prefixes outnumber slots, and the key includes the TOOL SET, so that
+        // count is not fixed at two. Sending the persona inline costs this one
+        // small call a little; taking the slot cost the next real turn a lot.
+        if InferenceIntent.isBackgroundUtility { return nil }
+        // Single-flight the BUILD, then let every caller take its OWN snapshot.
+        //
+        // Coalescing the RESULT would be a correctness bug, not just a shortcut:
+        // a snapshot hands over live KVCache arrays that the caller's decode
+        // mutates, so concurrent turns sharing one snapshot would corrupt each
+        // other. `snapshot(for:)` deep-copies per caller — that has to stay
+        // per caller. What is wasteful to repeat is the 13-second PREFILL, and
+        // that is what this deduplicates.
+        _ = try await prefixBuilds.run(key) { [self] in
+            // A build that finished while we queued makes this free. `contains`,
+            // not `snapshot`: this only needs to know whether one landed, and a
+            // snapshot here would deep-copy a ~2k-token prefix to discard it.
+            if personaPrefix.contains(key) { return true }
+            try await renderPersonaPrefix(container: container, specs: specs, key: key)
+            return true
+        }
+        return personaPrefix.snapshot(for: key)
+    }
+
+    /// The actual prefill: renders the system block, prefills it, and STORES it.
+    /// Only ever entered once per key at a time (see the coalescer above).
+    private func renderPersonaPrefix(
+        container: ModelContainer,
+        specs: [ToolSpec]?,
+        key: PersonaCacheKey
+    ) async throws {
+        let persona = key.personaText
 
         let parameters = generateParameters
         // `@unchecked Sendable` box: the cache arrays are evaluated by the
@@ -465,11 +537,23 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             let cache: [KVCache]
             let tokenIDs: [Int]
         }
+        // Resolved OUTSIDE the closure: touching `self.configuration` inside it
+        // makes the closure async and `perform`'s overload no longer matches.
+        let reusableWindow = Self.slidingWindow(forModelID: modelIdentifier)
         let built: PrefixBox = try await container.perform { context in
             // System-block token ids, no assistant opener. Lenient templates
             // render a system-only array; strict ones (Qwen3.5) reject it and
             // need the two-probe boundary slice — see systemBlockIDs.
             let ids = try self.systemBlockIDs(context: context, persona: persona, specs: specs)
+            // Tokenising is cheap; the prefill is not. If the prefix cannot
+            // survive this model's sliding window, stop HERE — building it
+            // burns seconds of GPU for a cache the cross-turn gate will veto
+            // on every single turn.
+            // An EMPTY box is the "declined" signal — keeping the closure's
+            // return type unchanged keeps `perform`'s overload resolution happy.
+            guard reusableWindow.map({ ids.count <= $0 }) ?? true else {
+                return PrefixBox(cache: [], tokenIDs: [])
+            }
             // Prefill: run a 1-token generation over the prefix, then trim
             // the cache back to exactly the prompt (the sampled token must
             // not pollute the reusable prefix).
@@ -497,10 +581,21 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             }
             return PrefixBox(cache: cache, tokenIDs: ids)
         }
+        guard !built.tokenIDs.isEmpty else {
+            mlxTTFTLog.notice(
+                "persona prefix SKIPPED — longer than the sliding window, so no turn could reuse it"
+            )
+            return
+        }
         personaPrefix.store(built.cache, tokenIDs: built.tokenIDs, for: key)
         let tokens = built.tokenIDs.count
-        mlxTTFTLog.notice("persona prefix cached: \(tokens)tok (saved from every turn's prefill)")
-        return personaPrefix.snapshot(for: key)
+        // Key fingerprint stays in the line: this log is the ONLY way to tell a
+        // legitimate second prefix (a different tool palette) from the same one
+        // being rebuilt — the distinction that separated a cache-capacity bug
+        // from a cache STAMPEDE on 2026-08-09, and they want opposite fixes.
+        mlxTTFTLog.notice(
+            "persona prefix built: \(tokens)tok key=\(key.hashValue, privacy: .public) tools=[\(key.toolsFingerprint, privacy: .public)]"
+        )
     }
 
     /// System-block token ids for the persona prefill (no assistant opener).
@@ -720,6 +815,45 @@ extension MLXGemmaProvider {
         return modelName.contains("qwen3") || modelName.contains("gemma-3-")
             || modelName.contains("ternary-bonsai-8b")
             || modelName.contains("ternary-bonsai-27b")
+    }
+
+    /// Whether this model benefits from a window-sized prefill chunk.
+    ///
+    /// True for gemma-4, measured: its own default chunk is smaller than its
+    /// sliding window and costs ~8.5% of every turn's prefill. Deliberately a
+    /// narrow allow-list rather than a default for everything — the sibling
+    /// `supportsCallerKVCapacity` has now been broken twice by unscoped family
+    /// assumptions, and an unmeasured model deserves upstream's choice, not
+    /// ours.
+    static func prefersWindowSizedPrefill(for configuration: ModelConfiguration) -> Bool {
+        configuration.name.lowercased().contains("gemma-4")
+    }
+
+    /// A model's attention window, when it is SMALLER than its context length —
+    /// i.e. a sliding window that the KV cache rotates through.
+    ///
+    /// gemma-4 slides at 1024. Nil means "no sliding window" (dense attention,
+    /// e.g. Qwen3), where a cached prefix stays linearly trimmable and reuse
+    /// works for real.
+    static func slidingWindow(forModelID modelID: String) -> Int? {
+        modelID.lowercased().contains("gemma-4") ? 1024 : nil
+    }
+
+    /// Whether a persona prefix of `tokens` can ever be REUSED on this model.
+    ///
+    /// Measured 2026-08-09: a prefix longer than the sliding window wraps the
+    /// rotating KV cache, `isTrimmable` goes false, and MLXToolCalling's
+    /// `reusable` gate vetoes cross-turn reuse — permanently, for every turn.
+    /// On gemma-4 the persona is ~1878 tokens against a 1024 window, so it is
+    /// ALWAYS in that regime, and building it cost 12.5 SECONDS of prefill per
+    /// launch and per brain swap to produce a cache nothing could ever use.
+    ///
+    /// The old code documented this ("a wrapped prefix can't be linearly reused
+    /// anyway") and built it regardless. Knowing it is wasted is not the same as
+    /// not doing it.
+    static func prefixIsReusable(tokens: Int, modelID: String) -> Bool {
+        guard let window = slidingWindow(forModelID: modelID) else { return true }
+        return tokens <= window
     }
 
     /// Whether a caller-requested KV capacity (`maxKVSize`) means anything for
