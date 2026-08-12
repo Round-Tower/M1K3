@@ -25,6 +25,12 @@
 //  fact that it follows the LADDER rather than naming Big is what keeps it correct
 //  if the ladder moves again). Prior: Unknown.
 //
+//  Reviewed: Kev + claude-opus-5, 2026-08-12 — a PR review caught that the marker
+//  had the wrong MEANING at the call site ("it fired" rather than "the window has
+//  passed"), which made the nudge able to override a Big picked deliberately AFTER
+//  this shipped. The rule now lives in `plan`'s doc as an explicit contract,
+//  because the bug was never in this function — it was in what the caller stored.
+//
 
 import Foundation
 
@@ -44,17 +50,29 @@ public enum FrontTierRealignment {
 
     /// `nil` means leave the stored pick exactly as it is.
     ///
+    /// ⚠️ Call-site contract: **evaluating this SPENDS the nudge**, whether or not
+    /// it fired. The marker is not "it has fired before", it is "the one-time
+    /// window has passed" — record it on every evaluation, unconditionally.
+    /// Setting it only on the firing branch looks equivalent and is not: a Mac
+    /// running Lil evaluates to `nil`, leaves the marker `false` forever, and then
+    /// the FIRST time its owner deliberately picks Big in Settings, the next
+    /// launch quietly takes it back off them. That is a manual pick being
+    /// overridden — the exact thing `BrainTier.selectableOrEased` promises never
+    /// happens (#81's never-touch-an-explicit-pick rule). A pick made today was
+    /// made against today's ladder; there is nothing left to realign.
+    ///
     /// - Parameters:
-    ///   - persisted: the decoded stored pick, or nil when none was ever made.
-    ///   - alreadyRealigned: whether this nudge has fired before. Once only —
-    ///     after it, re-choosing the heavy tier must stick forever.
+    ///   - persisted: the decoded stored pick (a machine with no pick yet is
+    ///     already governed by `recommended`, so it decodes to that default and
+    ///     nothing here applies).
+    ///   - nudgeSpent: whether the one-time window has passed — see above.
     ///   - recommended: what the ladder recommends for THIS machine now.
     public static func plan(
-        persisted: BrainTier?,
-        alreadyRealigned: Bool,
+        persisted: BrainTier,
+        nudgeSpent: Bool,
         recommended: BrainTier
     ) -> Plan? {
-        guard !alreadyRealigned, let persisted else { return nil }
+        guard !nudgeSpent else { return nil }
         // Only ever downhill, and only when the ladder has actually moved beneath
         // this pick. Never "upgrade" someone into a download they didn't ask for.
         guard persisted > recommended else { return nil }

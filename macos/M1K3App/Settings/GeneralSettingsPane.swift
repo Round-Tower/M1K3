@@ -81,7 +81,7 @@ struct GeneralSettingsPane: View {
                     + "cancellation on, so music ducks while you talk and M1K3 doesn't "
                     + "hear itself. Turn this off to always use the sharper transcriber "
                     + "instead \u{2014} more accurate in a quiet room, but it hears whatever "
-                    + "your speakers are playing. Takes effect next time you enter voice mode.")
+                    + "your speakers are playing. Takes effect on your next turn.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 

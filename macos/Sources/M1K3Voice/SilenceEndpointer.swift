@@ -79,12 +79,19 @@ public struct SilenceEndpointer: Sendable {
     ///   - cadenceCeiling: hard clamp on the learned floor, so one long silence
     ///     can never stall the loop. `.zero` disables adaptation entirely
     ///     (the fixed-threshold behaviour, useful for isolating tests).
+    ///
+    /// The two cadence defaults are READ from `EndpointCadence.conversational`
+    /// rather than retyped, because a knob written down twice is how the Mac and
+    /// iOS timings drifted in the first place. The `silence`/`holdSilence`/
+    /// `maxWait` defaults deliberately do NOT follow suit: they're the older fixed
+    /// thresholds that existing tests pin, and production reaches this init only
+    /// through the preset.
     public init(
         silence: Duration = .seconds(1.6),
         holdSilence: Duration = .seconds(3.0),
         maxWait: Duration = .seconds(20),
-        cadenceMargin: Duration = .seconds(0.75),
-        cadenceCeiling: Duration = .seconds(6.0)
+        cadenceMargin: Duration = EndpointCadence.conversational.cadenceMargin,
+        cadenceCeiling: Duration = EndpointCadence.conversational.cadenceCeiling
     ) {
         // Duration interpolates with its SI suffix, e.g. "3.0 s" / "1.5 s".
         precondition(

@@ -106,8 +106,8 @@ public final class VoiceLoopController {
         maxWait: Duration = .seconds(20),
         echoGrace: Duration = .milliseconds(350),
         endpointTick: Duration = .milliseconds(300),
-        cadenceMargin: Duration = .seconds(0.75),
-        cadenceCeiling: Duration = .seconds(6.0)
+        cadenceMargin: Duration = EndpointCadence.conversational.cadenceMargin,
+        cadenceCeiling: Duration = EndpointCadence.conversational.cadenceCeiling
     ) {
         self.dependencies = dependencies
         self.silence = silence

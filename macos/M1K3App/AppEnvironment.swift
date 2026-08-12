@@ -609,11 +609,15 @@ final class AppEnvironment {
         // once, records a marker, tells the user, and stays reversible in Settings.
         let realigned = FrontTierRealignment.plan(
             persisted: decoded,
-            alreadyRealigned: UserDefaults.standard.bool(forKey: Self.frontTierRealignedKey),
+            nudgeSpent: UserDefaults.standard.bool(forKey: Self.frontTierRealignedKey),
             recommended: BrainTier.recommended(forPhysicalMemoryGB: physicalMemoryGB)
         )
+        // Spent by EVALUATING it, not by firing it — the window is the first launch
+        // of a build that has this, full stop. Marking only the firing branch would
+        // leave every Lil/Mini Mac permanently eligible, and then quietly undo the
+        // first Big anyone deliberately picked in Settings (see plan's contract).
+        UserDefaults.standard.set(true, forKey: Self.frontTierRealignedKey)
         if let realigned {
-            UserDefaults.standard.set(true, forKey: Self.frontTierRealignedKey)
             frontTierLog.notice(
                 "front tier realigned \(decoded.rawValue, privacy: .public) → \(realigned.tier.rawValue, privacy: .public) (once)"
             )

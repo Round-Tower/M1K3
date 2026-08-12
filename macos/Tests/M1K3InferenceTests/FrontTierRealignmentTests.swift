@@ -25,7 +25,7 @@ struct FrontTierRealignmentTests {
     @Test("a persisted Big realigns to the lighter recommended front, once")
     func bigRealignsToRecommended() {
         let outcome = FrontTierRealignment.plan(
-            persisted: .big, alreadyRealigned: false, recommended: .lil
+            persisted: .big, nudgeSpent: false, recommended: .lil
         )
         #expect(outcome?.tier == .lil)
         // The notice has to explain that Big is still reachable, or this reads as
@@ -36,26 +36,36 @@ struct FrontTierRealignmentTests {
     @Test("it never fires twice — one nudge, then the pick is the user's again")
     func realignsOnlyOnce() {
         #expect(FrontTierRealignment.plan(
-            persisted: .big, alreadyRealigned: true, recommended: .lil
+            persisted: .big, nudgeSpent: true, recommended: .lil
+        ) == nil)
+    }
+
+    @Test("a Big chosen AFTER the window has passed is never taken back")
+    func spentNudgeCannotOverrideALaterPick() {
+        // The bug this pins (PR #118 review): the marker used to be written only
+        // on the firing branch, so a Mac already on Lil left it `false` forever —
+        // and the first deliberate switch to Big got silently undone on the next
+        // launch. The marker means "the one-time window has passed", NOT "it
+        // fired", so a machine that evaluated to `nil` still spends it.
+        let quietEvaluation = FrontTierRealignment.plan(
+            persisted: .lil, nudgeSpent: false, recommended: .lil
+        )
+        #expect(quietEvaluation == nil)
+        // ...and that machine, having evaluated once, must be immune afterwards.
+        #expect(FrontTierRealignment.plan(
+            persisted: .big, nudgeSpent: true, recommended: .lil
         ) == nil)
     }
 
     @Test("a pick at or below the recommendation is left alone")
     func lighterPicksUntouched() {
         #expect(FrontTierRealignment.plan(
-            persisted: .lil, alreadyRealigned: false, recommended: .lil
+            persisted: .lil, nudgeSpent: false, recommended: .lil
         ) == nil)
         // Mini is a deliberate choice on a small machine — never "upgrade" someone
         // into a multi-gigabyte download they didn't ask for.
         #expect(FrontTierRealignment.plan(
-            persisted: .mini, alreadyRealigned: false, recommended: .lil
-        ) == nil)
-    }
-
-    @Test("no stored pick means nothing to realign — `recommended` already covers it")
-    func noPersistedPick() {
-        #expect(FrontTierRealignment.plan(
-            persisted: nil, alreadyRealigned: false, recommended: .lil
+            persisted: .mini, nudgeSpent: false, recommended: .lil
         ) == nil)
     }
 
@@ -64,7 +74,7 @@ struct FrontTierRealignmentTests {
         // Guards against the realignment being read as "Big is bad". It only ever
         // follows the ladder; if the ladder says Big here, Big stays.
         #expect(FrontTierRealignment.plan(
-            persisted: .big, alreadyRealigned: false, recommended: .big
+            persisted: .big, nudgeSpent: false, recommended: .big
         ) == nil)
     }
 
