@@ -510,8 +510,10 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
         // per caller. What is wasteful to repeat is the 13-second PREFILL, and
         // that is what this deduplicates.
         _ = try await prefixBuilds.run(key) { [self] in
-            // A build that finished while we queued makes this free.
-            if personaPrefix.snapshot(for: key) != nil { return true }
+            // A build that finished while we queued makes this free. `contains`,
+            // not `snapshot`: this only needs to know whether one landed, and a
+            // snapshot here would deep-copy a ~2k-token prefix to discard it.
+            if personaPrefix.contains(key) { return true }
             try await renderPersonaPrefix(container: container, specs: specs, key: key)
             return true
         }

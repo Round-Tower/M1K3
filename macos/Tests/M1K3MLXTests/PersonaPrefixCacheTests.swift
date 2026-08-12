@@ -108,6 +108,38 @@ struct PersonaPrefixCacheTests {
         #expect(store.snapshot(for: cold) == nil)
     }
 
+    /// The coalescer's re-check ("did a build finish while I queued?") only ever
+    /// asked whether an entry EXISTS — and asking with `snapshot(for:)` deep-copies
+    /// the Metal-backed KV arrays of a ~2k-token prefix just to throw them away.
+    /// In a PR whose whole point is not paying for KV work nobody uses, that stung.
+    @Test("contains answers existence without paying for a copy")
+    func containsIsACheapPeek() {
+        let store = PersonaPrefixCache(capacity: 2)
+        let known = key(["web_search"])
+        #expect(store.contains(known) == false)
+        store.store([], tokenIDs: [1], for: known)
+        #expect(store.contains(known))
+        #expect(store.contains(key(["something_else"])) == false)
+    }
+
+    /// A peek is not a use. If `contains` promoted its hit, a caller that merely
+    /// asked would outrank a turn that actually generated from the prefix, and the
+    /// eviction candidate would stop being the genuinely coldest entry.
+    @Test("contains does not count as a use — it cannot reorder eviction")
+    func containsDoesNotPromote() {
+        let store = PersonaPrefixCache(capacity: 2)
+        let older = key(["web_search"])
+        let newer = key([])
+        store.store([], tokenIDs: [1], for: older)
+        store.store([], tokenIDs: [2], for: newer)
+
+        #expect(store.contains(older)) // a peek, not a touch
+
+        store.store([], tokenIDs: [3], for: key(["a", "b"]))
+        #expect(store.contains(older) == false, "a mere peek must not have saved it")
+        #expect(store.contains(newer))
+    }
+
     @Test("invalidate clears every slot, not just the newest")
     func invalidateClearsAll() {
         let store = PersonaPrefixCache(capacity: 2)

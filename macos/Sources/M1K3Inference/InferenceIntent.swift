@@ -2,9 +2,9 @@
 //  InferenceIntent.swift
 //  M1K3Inference
 //
-//  Not every generation is a person waiting for an answer. Conversation
-//  titles, follow-up suggestions and memory distillation all run the same
-//  provider as the chat turn, and on 2026-08-09 that cost Kev 16-19 seconds
+//  Not every generation is a person waiting for an answer. Conversation titles
+//  and memory distillation run the same provider as the chat turn, and on
+//  2026-08-09 that cost Kev 16-19 seconds
 //  per interactive turn: a 64-token background TITLE rendered a different
 //  persona prefix, evicted the interactive one from a single-slot cache, and
 //  the next chat turn re-prefilled ~2,000 tokens from scratch. Decode was

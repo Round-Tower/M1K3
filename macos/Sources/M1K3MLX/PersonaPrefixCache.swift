@@ -108,6 +108,22 @@ final class PersonaPrefixCache: @unchecked Sendable {
         return PersonaPrefixSnapshot(cache: held.cache.map { $0.copy() }, tokenIDs: held.tokens)
     }
 
+    /// Whether a prefix for `requested` is held — WITHOUT copying it.
+    ///
+    /// For the caller that only needs to know whether someone else's build has
+    /// already landed (the coalescer's re-check). `snapshot(for:)` would answer
+    /// the same question by deep-copying every layer's KV arrays and discarding
+    /// them, which is the exact waste this cache exists to avoid.
+    ///
+    /// Deliberately NOT a use: a peek must not move the entry to front, or a
+    /// caller that merely asked would outrank one that actually generated, and
+    /// the eviction candidate would stop being the coldest entry.
+    func contains(_ requested: PersonaCacheKey) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return entries.contains { $0.key == requested }
+    }
+
     func store(_ cache: [KVCache], tokenIDs: [Int], for newKey: PersonaCacheKey) {
         lock.lock()
         defer { lock.unlock() }

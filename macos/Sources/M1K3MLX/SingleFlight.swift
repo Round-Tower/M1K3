@@ -15,6 +15,14 @@
 //  A bigger cache cannot fix this — every entrant missed before the first
 //  store existed. Capacity is about what survives; this is about what starts.
 //
+//  Not `M1K3Inference.SingleFlightLoader` (used by this same provider for the
+//  model load) and not an extension of it, though they rhyme. That one is
+//  single-key and permanently caches its successful value — which is right for
+//  a model you load once, and wrong here: a coalescer that also cached would
+//  hold prefixes the two-slot LRU had deliberately evicted, and the two would
+//  disagree about what's live. Caching is `PersonaPrefixCache`'s job. This type
+//  only decides what STARTS.
+//
 //  Signed: Kev + claude-opus-5, 2026-08-09, Confidence 0.9 (the stampede was
 //  read off the unified log with a key fingerprint added to prove same-key,
 //  same-instance, rather than inferred; the coalescer itself is pinned by a
