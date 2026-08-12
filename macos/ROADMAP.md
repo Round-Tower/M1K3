@@ -62,7 +62,12 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
   retrievable for six weeks. One token table now (`ReasoningSplit`, lifted into
   M1K3Inference), plus `ModelThinkingQuarantine` — a startup sweep in the shape
   of `SelfWiringQuarantine`, because a fixed generator does not un-store a stored
-  row.
+  row. ⚠️ **Accepted cost, named because it is real on Kev's Mac:** quarantine is
+  per ITEM, so the 2 July call lost its (perfectly good) TRANSCRIPT from
+  retrieval along with its poisoned summary. That follows the SelfWiringQuarantine
+  precedent and `.quarantined` is a kind, not a delete — nothing is destroyed, and
+  the row is still in Documents. Worth revisiting only if chunk-level quarantine
+  ever earns its complexity.
   **Instrument added, deliberately ahead of any threshold move:** the grounding
   gate's per-hit line is `.notice` now, so the next person can read what a wrong
   hit actually SCORED instead of inferring it. No floor constant was touched —
