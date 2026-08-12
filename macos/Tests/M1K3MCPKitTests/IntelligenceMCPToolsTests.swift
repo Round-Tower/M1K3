@@ -74,10 +74,17 @@ struct IntelligenceMCPToolsTests {
         #expect(registry.tools.map(\.name) == ["ask_m1k3", "get_answer", "remember"])
     }
 
+    /// Long enough that only a genuinely hung fake could miss it (see the note on
+    /// the fast-path tests). Not a product number — production's is
+    /// `defaultAskGraceSeconds`.
+    private let schedulerTolerantGrace: Double = 60
+
     @Test("ask_m1k3 passes the question through and returns the answer")
     func askPassthrough() async {
         let log = CallLog()
-        let registry = MCPToolRegistry(makeIntelligenceToolDefinitions(handlers: makeHandlers(log: log)))
+        let registry = MCPToolRegistry(makeIntelligenceToolDefinitions(
+            handlers: makeHandlers(log: log), graceSeconds: schedulerTolerantGrace
+        ))
         let result = await registry.call(name: "ask_m1k3", arguments: ["question": .string("what failed?")])
         #expect(result.isError != true)
         #expect(text(result) == "Grounded answer [Doc §Heading]")
@@ -98,7 +105,10 @@ struct IntelligenceMCPToolsTests {
     @Test("a busy brain surfaces its message as isError")
     func askBusy() async {
         let registry = MCPToolRegistry(
-            makeIntelligenceToolDefinitions(handlers: makeHandlers(log: CallLog(), askThrows: true))
+            makeIntelligenceToolDefinitions(
+                handlers: makeHandlers(log: CallLog(), askThrows: true),
+                graceSeconds: schedulerTolerantGrace
+            )
         )
         let result = await registry.call(name: "ask_m1k3", arguments: ["question": .string("hi")])
         #expect(result.isError == true)
@@ -135,11 +145,29 @@ struct IntelligenceMCPToolsTests {
         #expect(text(result)?.contains("get_answer") == true)
     }
 
+    /// ⚠️ GRACE WINDOWS IN THIS FILE ARE SCHEDULER TOLERANCE, NOT THE THING UNDER
+    /// TEST. What is asserted is the BEHAVIOUR — a completed job answers inline, an
+    /// unfinished one hands back a job id. The seconds only have to be longer than
+    /// the cooperative pool takes to run a fake that returns immediately.
+    ///
+    /// They were 5s, and on 2026-08-12 that went from an occasional flake to a
+    /// consistently red CI job — on this branch AND on master — with the five
+    /// fast-path tests reporting 7.9-11.7s for work that takes 0.38s locally
+    /// (measured 3/3). Nothing was wrong with the code: `askM1K3Handler` spawns the
+    /// generation in a `Task` and polls, so the fast path races the SCHEDULER, and
+    /// ~2,600 tests running in parallel on a 3-core runner can starve that task for
+    /// ten seconds. Three reruns and a fresh-runner retrigger all failed, which is
+    /// what ruled out the usual "stalled runner" explanation.
+    ///
+    /// So the fast-path tests now allow a window no fake could ever legitimately
+    /// need. The SLOW-path tests deliberately keep their tiny 0.2s window — that
+    /// one IS the thing under test (a turn that outruns the grace must hand back a
+    /// job id), and a bigger number would weaken it.
     @Test("a fast brain returns its answer inline within the grace window")
     func askFastReturnsInline() async {
         let log = CallLog()
         let registry = MCPToolRegistry(
-            makeIntelligenceToolDefinitions(handlers: makeHandlers(log: log), graceSeconds: 5)
+            makeIntelligenceToolDefinitions(handlers: makeHandlers(log: log), graceSeconds: schedulerTolerantGrace)
         )
         let result = await registry.call(name: "ask_m1k3", arguments: ["question": .string("what failed?")])
         #expect(result.isError != true)
@@ -221,7 +249,7 @@ struct IntelligenceMCPToolsTests {
         let log = CallLog()
         let store = AskJobStore(makeID: { "job-x" })
         let registry = MCPToolRegistry(
-            makeIntelligenceToolDefinitions(handlers: makeHandlers(log: log), jobStore: store, graceSeconds: 5)
+            makeIntelligenceToolDefinitions(handlers: makeHandlers(log: log), jobStore: store, graceSeconds: schedulerTolerantGrace)
         )
         let submit = await registry.call(name: "ask_m1k3", arguments: ["question": .string("first ask")])
         #expect(text(submit) == "Grounded answer [Doc §Heading]")
