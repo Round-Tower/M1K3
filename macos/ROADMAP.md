@@ -39,6 +39,17 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
   Settings → Voice mode flips it. If the transcription feel is worse, the named
   alternatives are an upstream WhisperKit `voiceProcessing` option, or ducking the
   system output device ourselves via CoreAudio while the mic is hot.
+  **④ Stop now actually stops (2026-08-12, found by Kev's ear).** A `stop()`
+  landing during the SILENT offline-synthesis window relied entirely on
+  `stopSpeaking(at: .immediate)` cancelling that render — and under load it
+  doesn't: measured, a stop 900ms in took 6.1s to unwind because the render
+  finished and then played the whole utterance. Every piece of bookkeeping was
+  correct throughout (one ended event, `isSpeaking` false), which is why no test
+  caught it and why the test named "returns promptly" passed without ever
+  asserting promptness. A render now carries the stop epoch it was claimed in and
+  drops its audio if a stop landed since — covering both the synthesis window and
+  a render still queued behind the gate. This is barge-in on a long answer: the
+  window is exactly as long as M1K3 takes to synthesise.
 - **The Heartbeat — v1 shipped 2026-08-06 (default OFF, Kev's calls owed).**
   The 2-hourly narrative pulse: deterministic digest + resident-MLX
   retelling, popover line + Settings surface. `docs/HEARTBEAT_DESIGN.md`

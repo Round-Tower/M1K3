@@ -81,10 +81,10 @@ public extension EffectfulSpeechProvider {
     /// the highest-traffic voice path bypassed the #52 gate entirely.)
     @discardableResult
     func speak(stream: AsyncThrowingStream<TimedPCMChunk, Error>, sampleRate: Double) async -> Bool {
-        let generation = await claimEntry()
+        let entry = await claimEntry()
         // Default TRUE = "handled, don't fall back". `runRender` bails WITHOUT running
         // the closure when this entry was superseded (a newer speak() bumped the
-        // generation while we queued behind the gate) — leaving `spoke` at its
+        // generation, or a stop() landed, while we queued behind the gate) — leaving `spoke` at its
         // default. The caller (KokoroSpeechProvider.synthesize) reads a `false` return
         // as "nothing synthesised → speak it in the Apple voice"; falling back for an
         // utterance we DELIBERATELY abandoned would re-speak stale text and stop() the
@@ -92,7 +92,7 @@ public extension EffectfulSpeechProvider {
         // render that actually ran and scheduled nothing sets this false.
         let outcome = StreamOutcome(spoke: true)
         await entryGate.run { [self] in
-            await runRender(generation) {
+            await runRender(entry) {
                 outcome.spoke = await self.renderStream(stream: stream, sampleRate: sampleRate)
             }
         }

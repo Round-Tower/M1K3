@@ -87,18 +87,67 @@ struct SpeechEntryGateTests {
         // Apple-voice fallback that stop()s the newer render — the #52 barge-in bug).
         let provider = EffectfulSpeechProvider()
 
-        let staleGeneration = await provider.claimEntry() // generation N
+        let stale = await provider.claimEntry() // generation N
         _ = await provider.claimEntry() // generation N+1 supersedes it
 
         let ranStale = RanFlag()
-        await provider.runRender(staleGeneration) { ranStale.value = true }
+        await provider.runRender(stale) { ranStale.value = true }
         #expect(ranStale.value == false) // superseded → closure never runs
 
         // The current (latest) generation still renders normally.
-        let currentGeneration = await provider.claimEntry()
+        let current = await provider.claimEntry()
         let ranCurrent = RanFlag()
-        await provider.runRender(currentGeneration) { ranCurrent.value = true }
+        await provider.runRender(current) { ranCurrent.value = true }
         #expect(ranCurrent.value == true)
+    }
+
+    /// The other way to be stale, and the one that used to sail straight through:
+    /// nothing superseded this entry, the user just said stop while it was queued
+    /// behind another render. `stop()` only ever interrupted the render already
+    /// running, so the one waiting its turn spoke afterwards — you stopped M1K3 and
+    /// M1K3 answered you (Kev, 2026-08-12: "it goes right to the end").
+    ///
+    /// Headless: `claimEntry`/`runRender` are pure bookkeeping and a fresh provider
+    /// is idle, so nothing here touches an audio device.
+    @Test("a render claimed before a stop() does not run after it")
+    func stopCancelsAQueuedRender() async {
+        let provider = EffectfulSpeechProvider()
+
+        let queued = await provider.claimEntry()
+        await provider.stop() // the user's stop lands while `queued` waits its turn
+
+        let ranQueued = RanFlag()
+        await provider.runRender(queued) { ranQueued.value = true }
+        #expect(ranQueued.value == false)
+
+        // ...and the provider is not poisoned: the NEXT thing asked for still speaks.
+        // (A stop epoch compared with `>=` instead of `==`, or one never re-sampled,
+        // would mute everything from here on — the failure mode that would be much
+        // worse than the bug.)
+        let afterwards = await provider.claimEntry()
+        let ranAfterwards = RanFlag()
+        await provider.runRender(afterwards) { ranAfterwards.value = true }
+        #expect(ranAfterwards.value == true)
+    }
+
+    /// A barge-in — speak while already speaking — internally calls `stop()` to
+    /// interrupt the predecessor. That stop must not read as a reason to cancel the
+    /// utterance that *caused* it, or every interruption would silence both sides.
+    @Test("the stop a barge-in fires does not cancel the barge-in itself")
+    func bargeInSurvivesItsOwnStop() async {
+        let provider = EffectfulSpeechProvider()
+
+        let first = await provider.claimEntry()
+        let ranFirst = RanFlag()
+        await provider.runRender(first) { ranFirst.value = true }
+        #expect(ranFirst.value == true)
+
+        // Second claim on a provider that just rendered: whatever housekeeping stop
+        // this triggers, the claimant's own entry must remain current.
+        let second = await provider.claimEntry()
+        let ranSecond = RanFlag()
+        await provider.runRender(second) { ranSecond.value = true }
+        #expect(ranSecond.value == true)
     }
 
     @Test("truly-concurrent claimEntry calls get distinct, gap-free generations")
@@ -111,7 +160,7 @@ struct SpeechEntryGateTests {
 
         let generations = await withTaskGroup(of: Int.self) { group in
             for _ in 0 ..< count {
-                group.addTask { await provider.claimEntry() }
+                group.addTask { await provider.claimEntry().generation }
             }
             var collected: [Int] = []
             for await generation in group {
