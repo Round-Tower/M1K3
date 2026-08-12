@@ -446,11 +446,22 @@ are deliberately left unpinned so the evaluation loop stays usable.
 
 ## 2026-08-12 — the front/deep split, ruled
 
-Kev, after driving the live app over MCP: *"The smaller agent is much better for
-these kinds of tasks. The speed of the agent and its ability to tool call and
-give back decent answers is better than any deep reasoning model when it comes to
-just usability... the smaller the model we can deploy, the more usable model wins
-all the time. And Big is just an add-on for deep reasoning."*
+Kev, after driving the live app over MCP (verbatim — an earlier abridgement of
+this dropped the qualifier in the last sentence, which changes the reading):
+
+> "The smaller agent is much better for these kind of tasks. Like, I'm thinking we
+> were looking at LM for liquids new model for the agent as well. Like, I think we
+> baselined it, but it wasn't a hit. But, like, the speed of the agent and its
+> ability to tool call and give back decent answers is better than any, you know,
+> deep reasoning model when it comes to just usability. **We need the deepness and
+> the richness of context as well and speech from the deep model** was... you know?
+> I think the smaller the model we can deploy, the more usable model wins all the
+> time. And big is just an add on for deep reasoning."
+
+★ The bolded clause is the half a summary loses. This is NOT "Big is optional" —
+the deep tier's answer quality is rated and wanted; what changes is only which
+brain answers WITHOUT being asked. Which is why the open question below (nothing
+downloads Big any more) is a real problem rather than a tidy consequence.
 
 So the roster is now read as a FRONT and a DEPTH tier, not a quality ladder:
 
