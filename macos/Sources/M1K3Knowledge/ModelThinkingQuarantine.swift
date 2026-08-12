@@ -32,7 +32,7 @@
 //  summary that begins with a sentence of prose and then lapses into reasoning
 //  is not caught — that shape has not been observed; and the tokens are named
 //  here rather than imported, because M1K3Knowledge deliberately does not depend
-//  on M1K3Inference. The pairing is pinned by test on the inference side.)
+//  on M1K3Inference — the equality is pinned by ModelThinkingMarkerPinTests.)
 //  Prior: Unknown
 //
 
@@ -45,8 +45,12 @@ public enum ModelThinkingQuarantine {
     /// Deliberately duplicated from `ReasoningSplit.openTags` rather than
     /// imported — M1K3Knowledge takes no dependency on M1K3Inference (the same
     /// boundary SelfWiringQuarantine respects by having its spans injected). The
-    /// duplication is the lesser evil ONLY because it is pinned: see
-    /// `ReasoningSplitTests` for the token list this must track.
+    /// duplication is the lesser evil ONLY because it is pinned:
+    /// `ModelThinkingMarkerPinTests` asserts this set equals
+    /// `ReasoningSplit.openTags`, via a TEST-ONLY dependency on M1K3Inference
+    /// (the pattern Package.swift already uses for M1K3ChatTests → M1K3Eval).
+    /// Review caught that this comment previously CLAIMED such a pin without one
+    /// existing — which is the same defect as the bug below, one file over.
     public static let openMarkers = ["<|channel>thought", "<think>"]
 
     /// True when `text` IS model thinking rather than text that mentions it.
