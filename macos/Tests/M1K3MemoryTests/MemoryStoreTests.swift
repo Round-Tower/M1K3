@@ -94,6 +94,67 @@ struct MemoryStoreWriteRecallTests {
         #expect(hits.count == 3)
     }
 
+    /// ★ Measured on Kev's LIVE store over MCP, 2026-08-12. `recall_memory` gates
+    /// on cosine, PRINTS cosine, and then ordered by RRF — so the list was not
+    /// sorted by the number it showed you:
+    ///
+    ///     "what does Kev do for work"
+    ///       1. Kev made a decision to use Biomock as a tool for their work.  ~60%
+    ///       3. Kev is an engineer by profession with expertise in AI research. ~71%
+    ///
+    ///     scores in rank order: [60, 63, 71, 70, 45]   ← not monotonic
+    ///
+    /// The right answer, eleven points better, sat third. Same shape put "Kev is
+    /// using a Mac" above three true Cork rows for "where does Kev live" — which
+    /// had been read as a floor problem since 2026-08-09. It was never the floor.
+    ///
+    /// Engineered here with the deterministic hashing embedder: a LONG row
+    /// carrying every query token wins the FTS lane outright (strict AND) while
+    /// its cosine is diluted by length (k/√(n·m)); a SHORT row shares one token,
+    /// misses the strict AND entirely, and scores higher. RRF then ranks the
+    /// keyword row first on lane count alone.
+    @Test("recall ranks by the similarity it gates on, not by fused rank")
+    func recallRanksBySimilarityNotRRF() async throws {
+        let f = try Fixture()
+        // cosine 2/√(2·8) = 0.5, and the only row FTS's implicit AND accepts.
+        try await f.remember("alpha beta gamma delta epsilon zeta eta theta")
+        // cosine 1/√(2·1) ≈ 0.707 — better, on one lane only.
+        try await f.remember("alpha")
+
+        let hits = try f.store.recall(query: "alpha beta", queryVector: await f.vec("alpha beta"))
+        let ordered = hits.map(\.memory.text)
+        #expect(ordered.count == 2)
+        #expect(ordered.first == "alpha", "the better-scoring row must lead — got \(ordered)")
+        // Demoted, never dropped: the keyword lane keeps its seat (see
+        // `withKeywordSeat`) — this fix moves the wrong answer DOWN, it does not
+        // trade one recall bug for another.
+        #expect(ordered.contains("alpha beta gamma delta epsilon zeta eta theta"))
+        let scores = hits.map { $0.similarity ?? 0 }
+        #expect(scores == scores.sorted(by: >), "not monotonic: \(scores)")
+    }
+
+    /// The seat is a guarantee, not a preference: an exact keyword hit whose cosine
+    /// is diluted by row length still reaches the user. Pure similarity ranking
+    /// would have quietly dropped it off the end of the page — the 2026-07-02
+    /// Golden Gate miss arriving by a different door.
+    @Test("the keyword lane keeps one seat when similarity alone would drop it")
+    func keywordSeatSurvivesBetterScoringRows() throws {
+        let store = try MemoryStore()
+        let query: [Float] = [1, 0, 0]
+        for i in 1 ... 6 {
+            try store.remember(
+                Memory(kind: .note, text: "banana\(i)", source: "test"), embedding: [1, 0, 0]
+            )
+        }
+        let rare = Memory(kind: .profile, text: "zeta is the answer", source: "test")
+        try store.remember(rare, embedding: [0.6, 0.8, 0])
+
+        let hits = try store.recall(query: "zeta", queryVector: query, limit: 2)
+        #expect(hits.contains { $0.memory.id == rare.id }, "the only row the user's word names")
+        // ...and it takes the LAST seat, so it never displaces a better answer.
+        #expect(hits.last?.memory.id == rare.id)
+    }
+
     @Test("a query with punctuation/quotes is sanitised, not crashed")
     func recallSanitisesQuery() async throws {
         let f = try Fixture()

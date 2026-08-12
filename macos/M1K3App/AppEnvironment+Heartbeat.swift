@@ -231,7 +231,25 @@ extension AppEnvironment {
             return (nil, "digest")
         }
         let prompt = HeartbeatPrompt.render(digest: digest, earlierToday: earlierToday)
-        guard let raw = try? await swappableMLX.generate(prompt: prompt) else {
+        // Marked background like the titler and the distiller (2026-08-12): nobody
+        // is waiting on a pulse. Unmarked, it was the one background generate that
+        // could TAKE a persona-prefix slot — and its bare-persona key is a third
+        // palette against a two-slot cache, so a 2am pulse could evict the prefix
+        // the morning's first chat turn wanted. Priority is a rule, capacity is a
+        // heuristic (see InferenceIntent).
+        // Provider hoisted to a local: the closure crosses into nonisolated
+        // `backgroundUtility`, and capturing `self`'s MainActor state there is a
+        // Swift 6 sending violation. The siblings (ConversationTitler,
+        // MemoryDistiller) don't hit it only because they aren't MainActor types.
+        // ...and declared @Sendable explicitly: both captures are Sendable
+        // (SwappableInferenceProvider is a Sendable final class, prompt is a
+        // String), but an inline closure written inside a MainActor method is
+        // inferred MainActor-isolated, which is what the compiler refuses to send.
+        let provider = swappableMLX
+        let render: @Sendable () async throws -> String = {
+            try await provider.generate(prompt: prompt)
+        }
+        guard let raw = try? await InferenceIntent.backgroundUtility(render) else {
             Self.heartbeatLog.notice("render failed: generate error — digest ships")
             return (nil, "digest")
         }

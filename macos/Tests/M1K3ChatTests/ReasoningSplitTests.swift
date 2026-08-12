@@ -10,6 +10,7 @@
 
 import Foundation
 @testable import M1K3Chat
+import M1K3Inference
 import Testing
 
 struct ReasoningSplitTests {

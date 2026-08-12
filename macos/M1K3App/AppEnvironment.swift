@@ -1185,17 +1185,36 @@ final class AppEnvironment {
             armThermalRecovery()
             return
         }
-        // onOpenLink is non-nil to mirror the interactive responder's list —
-        // open_link renders into the system block, so it is part of the key.
-        let tools = Self.interactiveAgentTools(
+        // Warm BOTH palettes that really exist. Until 2026-08-12 this warmed a
+        // THIRD one that nothing ever asks for: it passed onOpenLink but not
+        // deepDelegation, while the live responder (AppEnvironment.swift:684)
+        // always passes both — so the warmed key matched no caller and the ~2.1s
+        // build was paid at launch AND again on the first chat turn AND again on
+        // the first agent ask. Caught by reading two `persona prefix built` lines
+        // in the unified log with different tool sets, not by any test: the key is
+        // a fingerprint of the tool SET, and nothing checks that the set we warm
+        // is a set anyone wants.
+        //
+        // Order matters — the second warm becomes MRU, and the cache holds two.
+        // Interactive goes last because a person waiting on their first chat turn
+        // beats an agent's first ask.
+        let headlessTools = Self.interactiveAgentTools(
             store: store, embedder: embedder,
-            onHits: { _ in }, onOpenLink: { _ in }
+            onHits: { _ in }, onOpenLink: nil
+        ).map(\.toolDefinition)
+        let interactiveTools = Self.interactiveAgentTools(
+            store: store, embedder: embedder,
+            onHits: { _ in }, onOpenLink: { _ in }, deepDelegation: deepDelegationHook
         ).map(\.toolDefinition)
         // weak: a brain swap mid-warm must not have this task pin the OUTGOING
         // provider's multi-GB weights alive while the new brain's are loading
         // (releaseMemory's reclaim would silently wait on the warm otherwise).
         Task.detached(priority: .utility) { [weak mlx] in
-            await mlx?.warmPersonaPrefix(tools: tools)
+            // Sequentially: one ModelContainer, and the coalescer only dedupes
+            // IDENTICAL keys — two concurrent builds of different keys would just
+            // queue on the actor anyway, with the loser's ordering unpredictable.
+            await mlx?.warmPersonaPrefix(tools: headlessTools)
+            await mlx?.warmPersonaPrefix(tools: interactiveTools)
         }
     }
 
@@ -1558,6 +1577,7 @@ extension AppEnvironment {
         M1K3Persona.setUserProfile(try? store.meta(key: Self.userProfileMetaKey))
         installGenerationMetricsSink()
         await quarantineSelfWiringDocuments()
+        await quarantineModelThinkingDocuments()
         await reindexIfEmbedderChanged()
         await reindexMemoryGraphIfNeeded()
         await warmEmbedderOnLaunch()
@@ -1600,6 +1620,29 @@ extension AppEnvironment {
         // not be spreading, and a log line is another place it would live.
         Self.securityLog.notice(
             "self-wiring quarantine: \(moved.count, privacy: .public) item(s) re-kinded"
+        )
+        refreshCounts()
+    }
+
+    /// The sibling sweep: stored text that IS the model's scratchpad rather than
+    /// knowledge (`ModelThinkingQuarantine`). Same shape, same reasons — off the
+    /// main actor, loud on failure, every launch.
+    private func quarantineModelThinkingDocuments() async {
+        let corpus = store
+        let moved: [UUID]
+        do {
+            moved = try await Task.detached(priority: .utility) {
+                try corpus.quarantineModelThinking()
+            }.value
+        } catch {
+            Self.securityLog.error(
+                "model-thinking quarantine FAILED: \(error.localizedDescription, privacy: .public)"
+            )
+            return
+        }
+        guard !moved.isEmpty else { return }
+        Self.securityLog.notice(
+            "model-thinking quarantine: \(moved.count, privacy: .public) item(s) re-kinded"
         )
         refreshCounts()
     }

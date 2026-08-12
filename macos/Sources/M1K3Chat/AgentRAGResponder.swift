@@ -474,7 +474,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let fused = hit.rrfScore.map { String(format: "%.4f", $0) } ?? "–"
             let verdict = keptIDs.contains(hit.chunkID) ? "kept" : "gated"
             let title = LogPreview.preview(hit.itemTitle, max: 60)
-            log.debug(
+            // .notice, like the summary line below and for the same reason: this
+            // is the ONLY instrument that can say what a wrong hit actually
+            // scored, and .debug does not persist in OSLogStore — so every
+            // question about the floors was being answered from inference. Asked
+            // for by name on 2026-08-12 after a screenplay was retrieved for a
+            // question about dinner: measure before moving a threshold.
+            log.notice(
                 "gate \(verdict, privacy: .public): sim=\(similarity, privacy: .public) rrf=\(fused, privacy: .public) [\(title, privacy: .public)]"
             )
         }
@@ -751,7 +757,19 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let knowledge = chunks.enumerated().map { index, hit in
                 "\(index + 1). \(ChatPromptBuilder.citationLabel(for: hit))\n\(hit.content)"
             }.joined(separator: "\n\n")
-            head = "KNOWLEDGE (the user's own documents, calls, notes):\n\(knowledge)"
+            // The hedge is deliberate and it is the cheap half of the fix for a
+            // real failure (2026-08-12): asked what he had for dinner on 3 March,
+            // M1K3 retrieved a fragment of a SCREENPLAY the user had stored and
+            // narrated it — "a pomegranate being worked on by the High Priestess"
+            // — before correctly saying it didn't know. Retrieval returns the
+            // least-bad match for any question, so the head must not present it as
+            // material the question is about. The empty branch above already tells
+            // the model to say so plainly; this tells it these excerpts may have
+            // nothing to do with the question at all.
+            head = "KNOWLEDGE (excerpts from the user's own documents, calls and "
+                + "notes, retrieved by similarity — they may be irrelevant to this "
+                + "question; use only what genuinely answers it, and ignore the "
+                + "rest rather than working it into the answer):\n\(knowledge)"
         }
         return [head, memoryBlock(memories, now: now), rules]
             .compactMap { $0 }

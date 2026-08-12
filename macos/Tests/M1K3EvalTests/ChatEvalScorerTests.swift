@@ -99,15 +99,43 @@ struct ChatEvalScorerTests {
         #expect(!score.passed)
     }
 
-    @Test("a residual think tag in the answer fails no-think-leak")
-    func thinkLeakFails() {
-        // A lone close strips clean; an UNcLOSED opener survives the strip and
-        // is the leak we must catch.
+    /// An answer that is ALL unclosed reasoning now strips to nothing rather than
+    /// surviving with its tag attached (2026-08-12: ThinkStripper became an alias
+    /// over ReasoningSplit, which treats an unclosed opener as reasoning to the
+    /// end). So the fixture still fails — via `non-empty`, which is the honest
+    /// check for "the brain said nothing but its own thinking". Pinned so nobody
+    /// reads the leak check going quiet as the brains having improved.
+    @Test("an all-reasoning answer strips to empty and fails on emptiness")
+    func unclosedReasoningStripsToEmpty() {
         let score = ChatEvalScorer.score(
             fixture: fixture(.openChat, .init()),
             observation: EvalObservation(rawText: "<think>still reasoning and never closed")
         )
-        #expect(check(score, "no think-leak")?.outcome == .fail)
+        #expect(check(score, "non-empty")?.outcome == .fail)
+        #expect(!score.passed)
+    }
+
+    /// The leak check earns its name on RESIDUE — a marker that survives stripping
+    /// because its partner never arrived in a form the splitter could pair.
+    @Test("a residual marker in the answer fails no-think-leak, in either dialect")
+    func residualMarkerFails() {
+        // A SECOND lone close is what actually survives: `split` consumes one
+        // unpaired close as the template's pre-opened block, then looks only for
+        // OPEN tags — so the stray one rides through into the answer. (My first
+        // two attempts at this test used a single close in each dialect; both were
+        // stripped clean, which is the splitter being right and the test being
+        // wrong. Worth the note: "it leaked" and "the stripper missed it" are not
+        // the same claim, and only the second one belongs in this check.)
+        for residue in [
+            "</think> The answer is Paris. </think> tail",
+            "<channel|> Paris <channel|> tail",
+        ] {
+            let score = ChatEvalScorer.score(
+                fixture: fixture(.openChat, .init()),
+                observation: EvalObservation(rawText: residue)
+            )
+            #expect(check(score, "no think-leak")?.outcome == .fail, "missed residue: \(residue)")
+        }
     }
 
     @Test("chain-of-thought is stripped before the answer is judged")

@@ -242,7 +242,13 @@ public enum ChatEvalScorer {
             outcome: answer.isEmpty ? .fail : .pass,
             detail: "\(answer.count) chars"
         ))
-        let leaked = answer.contains("<think>") || answer.contains("</think>")
+        // Every marker the stripper knows, not just the qwen pair: gemma-4 speaks
+        // the CHANNEL dialect, and a scorer that only looked for `<think>` would
+        // have reported a clean run while `<|channel>thought` sat in the answer
+        // (2026-08-12 — exactly how one leaked into a stored call summary and
+        // lived in the corpus for six weeks). One token table, read by both.
+        let markers = ReasoningSplit.openTags + ReasoningSplit.closeTags
+        let leaked = markers.contains { answer.contains($0) }
         checks.append(EvalCheck(
             name: "no think-leak",
             outcome: leaked ? .fail : .pass,

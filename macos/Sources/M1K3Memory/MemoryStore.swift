@@ -532,14 +532,55 @@ public final class MemoryStore: @unchecked Sendable {
                 )
             }
         }
-        return scored
+        let survivors = scored
             .filter { ($0.similarity ?? 0) >= threshold } // the cutoff — no exceptions
+            // Rank by the quantity we GATE on and DISPLAY. RRF stays where it
+            // earns its keep — CANDIDATE GENERATION — but ranking WITH it meant
+            // the list was not sorted by the number printed beside it. Measured on
+            // the live store 2026-08-12: "what does Kev do for work" put a 60% row
+            // above the 71% row that actually answered it, and "where does Kev
+            // live" put "Kev is using a Mac" above three Cork rows. Read as a
+            // floor problem since 2026-08-09; it was an ordering problem. A lane
+            // COUNT is not a relevance score, and `similarity` is comparable
+            // across both lanes precisely because FTS-first hits are backfilled
+            // above.
             .sorted {
-                if $0.rrfScore != $1.rrfScore { return ($0.rrfScore ?? 0) > ($1.rrfScore ?? 0) }
+                let left = $0.similarity ?? 0
+                let right = $1.similarity ?? 0
+                if left != right { return left > right }
                 return $0.memory.createdAt > $1.memory.createdAt
             }
-            .prefix(limit)
-            .map { $0 }
+        return Self.withKeywordSeat(
+            ranked: survivors, keywordIDs: Set(ftsHits.map(\.memory.id)), limit: limit
+        )
+    }
+
+    /// Cosine ranks the list, but the keyword lane keeps ONE guaranteed seat — the
+    /// last one.
+    ///
+    /// Ranking purely by similarity is right for the common case and wrong for the
+    /// case hybrid search exists to serve: a rare token (a surname, "Biomock") in a
+    /// long row has its cosine diluted by length (k/√(n·m)) and loses to shorter,
+    /// blander rows, even though the user typed the one word that identifies it.
+    /// That is the 2026-07-02 Golden Gate keyword miss arriving by a different
+    /// door — not dropped unjudged this time, just ranked off the end of the page.
+    ///
+    /// So: the best-scoring FTS hit that cleared the floor is guaranteed a place
+    /// even when its score would not earn one. It goes LAST, never displacing a
+    /// better answer from the top, which is why the displayed order still reads
+    /// descending everywhere a user actually looks.
+    static func withKeywordSeat(
+        ranked: [MemoryHit], keywordIDs: Set<UUID>, limit: Int
+    ) -> [MemoryHit] {
+        guard limit > 0 else { return [] }
+        let top = Array(ranked.prefix(limit))
+        guard ranked.count > limit, limit > 0 else { return top }
+        // Already represented? Then the seat is spoken for and nothing moves.
+        if top.contains(where: { keywordIDs.contains($0.memory.id) }) { return top }
+        guard let seated = ranked.first(where: { keywordIDs.contains($0.memory.id) }) else {
+            return top
+        }
+        return top.dropLast() + [seated]
     }
 
     /// Strict-then-relaxed FTS lane (same rule as KnowledgeStore.searchFTS):

@@ -42,7 +42,13 @@ public struct DelegateDeepTool: AgentTool {
             + "notification. Use ONLY for work that genuinely takes minutes — answer "
             + "ordinary questions yourself."
     public let parameters = [
-        ToolParameter(name: "task", description: "The full task for the deep brain, self-contained."),
+        // "the deep brain" survived here when the tool description above was
+        // truthed-up (#117): a parameter description renders into the system
+        // block exactly like the tool's own, so the promise the description
+        // stopped making was still being made one line below it.
+        ToolParameter(
+            name: "task", description: "The full task to run in the background, self-contained."
+        ),
     ]
 
     /// The app's delegation manager: returns the observation for the model
