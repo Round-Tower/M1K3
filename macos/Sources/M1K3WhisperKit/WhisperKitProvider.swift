@@ -50,6 +50,13 @@
 //  metallib-wall convention. Evidence in macos/scratch/voice-session-audit-2026-07-16/.
 
 import AVFoundation
+#if os(macOS)
+    // The HAL property API in defaultInputChannelCount (AudioObjectGetPropertyData
+    // and friends). AVFoundation happens to re-export these today — verified
+    // compiling without this line — but an implicit transitive dependency is
+    // exactly the kind that breaks on an SDK bump. Explicit > implicit.
+    import CoreAudio
+#endif
 import Foundation
 import M1K3Inference
 import M1K3Voice

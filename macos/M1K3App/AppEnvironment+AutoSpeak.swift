@@ -54,6 +54,12 @@ extension AppEnvironment {
         cancelAutoSpeak()
         let baselineCount = chat.messages.count
         autoSpeakTask = Task { @MainActor [weak self] in
+            // Clear the handle on NATURAL completion so the next session
+            // doesn't mistake a finished task for a live one and fire a
+            // needless stopSpeaking (round-2 review nit). Cancellation-guarded:
+            // a superseded task was cancelled first, and by then the handle is
+            // nil or already the successor's — never clobber that.
+            defer { if let self, !Task.isCancelled { self.autoSpeakTask = nil } }
             // Typing is the barge-in: silence a superseded session's in-flight
             // utterance BEFORE this one speaks, sequenced inside this task so
             // the stop can't race past and kill the new answer's first line.
