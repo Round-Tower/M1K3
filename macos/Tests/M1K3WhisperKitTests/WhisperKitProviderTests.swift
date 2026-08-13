@@ -55,4 +55,26 @@ struct WhisperKitProviderTests {
         // Unavailable (no model) → router resolves nothing, no crash.
         #expect(router.activeProvider == nil)
     }
+
+    // MARK: - Input-device channel gate (the 2026-08-13 silent-dictation incident)
+
+    @Test("a multi-channel input device makes the provider report device-unusable")
+    func multiChannelDeviceVetoes() {
+        let provider = WhisperKitProvider(inputChannelCount: { 9 })
+        #expect(provider.inputDeviceUsable == false)
+    }
+
+    @Test("mono and stereo devices keep the provider device-usable")
+    func monoStereoDevicesServe() {
+        #expect(WhisperKitProvider(inputChannelCount: { 1 }).inputDeviceUsable)
+        #expect(WhisperKitProvider(inputChannelCount: { 2 }).inputDeviceUsable)
+    }
+
+    @Test("an unreadable probe fails open — availability still gates on the model")
+    func unknownProbeFailsOpen() {
+        let provider = WhisperKitProvider(inputChannelCount: { nil })
+        #expect(provider.inputDeviceUsable)
+        // Still unavailable overall: no model is loaded.
+        #expect(provider.isAvailable == false)
+    }
 }

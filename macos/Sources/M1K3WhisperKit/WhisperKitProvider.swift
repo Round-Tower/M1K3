@@ -114,6 +114,10 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
 
     private let model: String
     private let downloadBase: URL?
+    private let inputChannelCount: @Sendable () -> UInt32?
+    /// Last channel count the gate vetoed, so the veto logs once per device
+    /// change instead of on every `isAvailable` read (guarded by `lock`).
+    private var lastVetoLogged: UInt32?
 
     /// - Parameter model: WhisperKit variant. `base.en` balances size (~142MB)
     ///   and accuracy; `tiny.en` (~75MB) downloads faster, `small.en` is sharper.
@@ -121,9 +125,18 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
     ///   Application Support directory so downloads land in a stable sandbox path
     ///   rather than the HuggingFace cache default (which can produce broken partial
     ///   downloads in sandboxed apps).
-    public init(model: String = "base.en", downloadBase: URL? = nil) {
+    /// - Parameter inputChannelCount: Probe for the default input device's channel
+    ///   count (nil = unreadable, fails open). Injectable for tests; the default
+    ///   reads the live device — see `ConverterChannelGate` for why this gates
+    ///   availability at all.
+    public init(
+        model: String = "base.en",
+        downloadBase: URL? = nil,
+        inputChannelCount: (@Sendable () -> UInt32?)? = nil
+    ) {
         self.model = model
         self.downloadBase = downloadBase
+        self.inputChannelCount = inputChannelCount ?? Self.defaultInputChannelCount
         loader = SingleFlightLoader { progress in
             progress(0.05)
             let config = WhisperKitConfig(model: model, verbose: false, prewarm: true, load: true)
@@ -151,13 +164,82 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
         return FileManager.default.fileExists(atPath: bundle.path)
     }
 
-    /// Available only on Apple Silicon once a model has been loaded. Until then
-    /// the router falls back to Apple Speech.
+    /// Available only on Apple Silicon once a model has been loaded AND the
+    /// current input device is one WhisperKit's converter can actually serve
+    /// (≤2 channels — see `ConverterChannelGate`). Otherwise the router falls
+    /// back to Apple Speech, which is the whole point: an honest false here is
+    /// a working dictation session on the other engine; a dishonest true is
+    /// the silent "Failed to create node format" loop of 2026-08-13.
     public var isAvailable: Bool {
         #if arch(arm64)
-            return lock.withLock { whisperKit != nil }
+            return lock.withLock { whisperKit != nil } && inputDeviceUsable
         #else
             return false
+        #endif
+    }
+
+    /// Whether the default input device can feed WhisperKit's mic converter.
+    /// Separated from `isAvailable` so the device gate is testable without a
+    /// loaded model. Logs the veto once per device change, not per read.
+    var inputDeviceUsable: Bool {
+        let channels = inputChannelCount()
+        let usable = ConverterChannelGate.canServe(channelCount: channels)
+        let shouldLog: Bool = lock.withLock {
+            if usable {
+                lastVetoLogged = nil
+                return false
+            }
+            guard lastVetoLogged != channels else { return false }
+            lastVetoLogged = channels
+            return true
+        }
+        if shouldLog, let channels {
+            Self.log.notice(
+                """
+                whisperkit vetoed: input device has \(channels, privacy: .public) channels \
+                (layoutless converter format needs 1-2) — router falls back to Apple Speech
+                """
+            )
+        }
+        return usable
+    }
+
+    /// Default probe: total input channels on the system default input device.
+    /// CoreAudio property reads on macOS (cheap — no AVAudioEngine/HAL spin-up);
+    /// the shared AVAudioSession on iOS. nil on any read failure (fails open).
+    private static let defaultInputChannelCount: @Sendable () -> UInt32? = {
+        #if os(macOS)
+            var deviceID = AudioDeviceID(0)
+            var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+            var address = AudioObjectPropertyAddress(
+                mSelector: kAudioHardwarePropertyDefaultInputDevice,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            guard AudioObjectGetPropertyData(
+                AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceID
+            ) == noErr, deviceID != kAudioObjectUnknown else { return nil }
+
+            address = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyStreamConfiguration,
+                mScope: kAudioObjectPropertyScopeInput,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var configSize = UInt32(0)
+            guard AudioObjectGetPropertyDataSize(deviceID, &address, 0, nil, &configSize) == noErr,
+                  configSize > 0 else { return nil }
+            let raw = UnsafeMutableRawPointer.allocate(
+                byteCount: Int(configSize), alignment: MemoryLayout<AudioBufferList>.alignment
+            )
+            defer { raw.deallocate() }
+            guard AudioObjectGetPropertyData(deviceID, &address, 0, nil, &configSize, raw) == noErr
+            else { return nil }
+            let bufferList = UnsafeMutableAudioBufferListPointer(
+                raw.assumingMemoryBound(to: AudioBufferList.self)
+            )
+            return bufferList.reduce(0 as UInt32) { $0 + $1.mNumberChannels }
+        #else
+            return UInt32(max(0, AVAudioSession.sharedInstance().inputNumberOfChannels))
         #endif
     }
 
