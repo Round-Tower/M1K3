@@ -59,7 +59,8 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
   Filed rather than fixed: raising capacity wants the measured RAM snapshot the
   file's own header demands. **Standing consequence: tune the grounding, never
   the palette** — which is a second, stronger reason for the existing
-  "cut iterations, not tools" ruling.
+  "cut iterations, not tools" ruling. Full write-up, including the TTS-upgrade
+  and background-conversation answers: `docs/VOICE_PERFORMANCE.md` (issue #121).
 
 
 - **Retrieval, the warm palette, and the model's own thinking in the corpus —
