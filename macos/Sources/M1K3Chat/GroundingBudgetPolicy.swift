@@ -80,8 +80,12 @@ public enum GroundingBudgetPolicy {
     ///
     /// `spoken` can only ever TIGHTEN the result (`min`), never widen it: this
     /// policy's whole direction of failure is toward the smaller budget, and a
-    /// mode flag must not be able to reverse that for a tier — Mini's 600 is
-    /// already below the spoken ceiling and stays 600.
+    /// mode flag must not be able to reverse that for a tier.
+    ///
+    /// No tier is exempt, INCLUDING Mini — its 600 trims to 400 like the rest.
+    /// Both reasons for the spoken cap apply to Mini at least as hard as to the
+    /// others: nobody reads seven chunks aloud whichever brain read them, and
+    /// Mini has the least window to spend in the first place.
     public static func tokens(for tier: BrainTier?, spoken: Bool = false) -> Int {
         // nil is an unresolvable persisted brain string. Fail small, matching
         // HistoryBudgetPolicy's nil guard: the cost of being wrong is asymmetric.

@@ -62,7 +62,6 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
   "cut iterations, not tools" ruling. Full write-up, including the TTS-upgrade
   and background-conversation answers: `docs/VOICE_PERFORMANCE.md` (issue #121).
 
-
 - **Retrieval, the warm palette, and the model's own thinking in the corpus —
   2026-08-12, found by driving the live app over MCP.** Four things, all
   measured on Kev's real store rather than reasoned about:

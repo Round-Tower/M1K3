@@ -149,11 +149,9 @@ final class AppCore {
     }()
 
     init() throws {
-        // Voice mode is never restored across launches. A stale `true` — a crash
-        // or a jetsam kill mid-conversation (issue #85) — would apply the spoken
-        // grounding budget to every typed turn until the user happened to enter
-        // and leave voice mode again. Same launch hygiene the Mac shell does.
-        UserDefaults.standard.set(false, forKey: VoiceModeDefaults.activeKey)
+        // Same launch hygiene the Mac shell does, through the same shared call
+        // (issue #85 makes a mid-conversation kill a real scenario here).
+        VoiceModeDefaults.resetAtLaunch()
 
         // Bound the process-global MLX Metal cache before ANY MLX work (4 GB mobile
         // ceiling). Skipped on the Simulator — see `mlxAvailable`; touching MLX there

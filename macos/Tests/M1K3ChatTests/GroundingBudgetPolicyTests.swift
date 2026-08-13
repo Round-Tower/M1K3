@@ -100,16 +100,32 @@ struct GroundingBudgetPolicyTests {
 
     @Test("spoken never RAISES a tier's budget — it can only tighten")
     func spokenOnlyTightens() {
-        // Mini is already below the spoken cap. A tier that is tighter than the
-        // spoken ceiling must keep its own number: this policy's whole direction
-        // of failure is toward the smaller budget, and a mode flag must not
-        // reverse it.
+        // The invariant, not the arithmetic: whatever the constants are today, a
+        // tier already tighter than the spoken ceiling must keep its own number.
+        // This policy's whole direction of failure is toward the smaller budget
+        // and a mode flag must not be able to reverse it. Which tier is currently
+        // on which side of the ceiling is `miniIsNotExemptWhenSpoken`'s job — a
+        // distinction this `<=` cannot make, which is how the doc comment came to
+        // claim the opposite of the behaviour for a whole PR review cycle.
         for tier in BrainTier.allCases {
             #expect(GroundingBudgetPolicy.tokens(for: tier, spoken: true)
                 <= GroundingBudgetPolicy.tokens(for: tier))
         }
         #expect(GroundingBudgetPolicy.tokens(for: nil, spoken: true)
             <= GroundingBudgetPolicy.tokens(for: nil))
+    }
+
+    @Test("no tier is exempt from the spoken trim — including Mini")
+    func miniIsNotExemptWhenSpoken() {
+        // `spokenOnlyTightens` uses `<=`, which passes whether Mini is left at
+        // 600 or trimmed to 400 — so the contract lived only in a doc comment,
+        // and that comment was backwards (review catch, PR #120). Both reasons
+        // for the spoken cap apply to Mini hardest: nobody reads seven chunks
+        // aloud whichever brain read them, and Mini has the least window.
+        #expect(GroundingBudgetPolicy.tokens(for: .mini, spoken: true)
+            == GroundingBudgetPolicy.spokenTokenBudget)
+        #expect(GroundingBudgetPolicy.tokens(for: nil, spoken: true)
+            == GroundingBudgetPolicy.spokenTokenBudget)
     }
 
     @Test("a spoken turn still fits a real retrieved chunk — this is a trim, not a mute")

@@ -31,6 +31,18 @@ public enum VoiceModeDefaults {
     /// both shells clear it at launch.
     public static let activeKey = "voiceMode.active"
 
+    /// Clear the flag at launch. Voice mode is never restored across launches,
+    /// and a stale `true` — a crash or a jetsam kill mid-conversation — would
+    /// apply spoken budgets to every typed turn until the user happened to enter
+    /// and leave voice mode again.
+    ///
+    /// Shared rather than written inline in each shell for the same reason the
+    /// key is: two copies of a one-liner about a persisted flag agree right up
+    /// until one of them is fixed (review catch, PR #120).
+    public static func resetAtLaunch() {
+        UserDefaults.standard.set(false, forKey: activeKey)
+    }
+
     /// Live read, from anywhere. Absent key reads as "not in voice mode", which
     /// is the safe direction: a missed spoken turn costs latency, a wrongly
     /// spoken typed turn costs grounding the reader can actually use.

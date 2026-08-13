@@ -134,10 +134,18 @@ public actor KokoroSynthesizer {
     /// neural voice for a lost optimisation.
     private func warm(_ box: Loaded) async {
         guard !warmed else { return }
+        // Claimed BEFORE the first await, so a concurrent `preload()` can't
+        // start a second warm through actor reentrancy — and RELEASED again on
+        // every failure path below, so a transient one doesn't permanently
+        // re-introduce the very cost this exists to remove. `preload()` is
+        // documented idempotent and really is called more than once.
         warmed = true
         let started = ContinuousClock.now
         let result = box.g2p.annotatedTokens(Self.warmPhrase)
-        guard !result.tokens.isEmpty else { return }
+        guard !result.tokens.isEmpty else {
+            warmed = false
+            return
+        }
         do {
             let style = try box.voices.style(voice: voice, tokenCount: result.tokens.count)
             let tokens = KokoroMLXInput.modelTokens(result.tokens)
@@ -155,7 +163,13 @@ public actor KokoroSynthesizer {
                 "kokoro warm: graph compiled in \(elapsedMS, privacy: .public)ms — the first spoken sentence no longer pays this"
             )
         } catch {
-            Self.log.warning("kokoro warm skipped: \(error.localizedDescription, privacy: .public)")
+            // Swallowed by design (the weights ARE loaded — a warm failure must
+            // never demote M1K3 to the system voice), but retryable: leaving
+            // `warmed` set would mean one transient Metal hiccup silently costs
+            // the graph warm for the whole process, with only this line as
+            // evidence — and the metallib wall means no test can catch it.
+            warmed = false
+            Self.log.warning("kokoro warm skipped, will retry on the next preload: \(error.localizedDescription, privacy: .public)")
         }
     }
 

@@ -28,6 +28,20 @@ struct VoiceModeDefaultsTests {
         #expect(!VoiceModeDefaults.isActive)
     }
 
+    @Test("the launch reset clears a flag left set by a crash mid-conversation")
+    func launchResetClears() {
+        let defaults = UserDefaults.standard
+        let restore = defaults.object(forKey: VoiceModeDefaults.activeKey)
+        defer { defaults.set(restore, forKey: VoiceModeDefaults.activeKey) }
+
+        defaults.set(true, forKey: VoiceModeDefaults.activeKey)
+        VoiceModeDefaults.resetAtLaunch()
+        // Both shells call this. A survivor `true` would apply spoken grounding
+        // budgets to every TYPED turn until the user next entered and left voice
+        // mode — invisible, and only on the installs that had already crashed.
+        #expect(!VoiceModeDefaults.isActive)
+    }
+
     @Test("the flag reads back what was written")
     func readsWhatWasWritten() {
         let defaults = UserDefaults.standard

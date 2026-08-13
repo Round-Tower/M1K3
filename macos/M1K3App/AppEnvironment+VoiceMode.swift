@@ -179,7 +179,7 @@ extension AppEnvironment {
     /// active — would silently force fast-mode thinking on every normal chat
     /// turn until the user happened to enter and leave voice mode again.
     nonisolated static func resetVoiceModeFlagAtLaunch() {
-        UserDefaults.standard.set(false, forKey: voiceModeActiveKey)
+        VoiceModeDefaults.resetAtLaunch()
     }
 
     var isVoiceModeActive: Bool {
