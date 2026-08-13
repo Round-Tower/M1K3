@@ -2,17 +2,17 @@
 
 @.claude/project-memory.md
 
-> **⚠️ Orientation (2026-07-07):** The **live product** is the Mac-native SwiftUI
+> **⚠️ Orientation (2026-08-13):** The **live product** is the Mac-native SwiftUI
 > app under **`macos/`** (`M1K3App/`) — see `macos/CLAUDE.md`, `macos/PLAN.md` and
-> `.claude/project-memory.md`. The same portable `macos/Sources/` package graph now
+> `.claude/project-memory.md`. The same portable `macos/Sources/` package graph
 > also drives a native **iOS + visionOS** SwiftUI shell under `macos/M1K3iOSApp/`
 > (`M1K3iOS` / `M1K3visionOS` targets) — see `macos/docs/IOS_VISIONOS_PORT.md`.
-> The entire legacy Python surface (CLI, RAG
-> engine, web avatar, PWA, Tauri popover — pre-Mac-app, last meaningful work
-> Jan 2026) is archived under **`attic/`**, which preserves the old repo-root
-> layout so it still runs as-is (`cd attic` first). The live MCP surface is the
-> Mac app's in-app HTTP server (`.mcp.json` points at `127.0.0.1:4242/mcp`);
-> the orphaned Python `mcp_unified_server.py` is in `attic/_legacy/`.
+> The legacy Python surface (CLI, RAG engine, web avatar, PWA, Tauri popover —
+> pre-Mac-app, last meaningful work Jan 2026) was archived under `attic/` and
+> then **cleared from the working tree on 2026-08-13** — git history before
+> `7545b4a4` keeps all of it (`git checkout 7545b4a4 -- attic` resurrects the
+> tree, old repo-root layout intact). The live MCP surface is the Mac app's
+> in-app HTTP server (`.mcp.json` points at `127.0.0.1:4242/mcp`).
 
 Privacy-focused local AI companion for macOS — MLX inference, live voice,
 knowledge graph + RAG, and an MCP server.
@@ -25,18 +25,11 @@ knowledge graph + RAG, and an MCP server.
   (`macos/M1K3iOSApp/`) on the shared package graph. This — not `app/` — is the
   Apple mobile/spatial surface.
 - **`app/CLAUDE.md`** — 間 AI mobile (Kotlin Multiplatform, slow burn — the **Android** surface).
-- **`attic/README.md`** — the archive tour: the original Python CLI, avatar
-  experiments, era docs (`attic/docs/`), and how to run any of it.
+- **The attic** — the original Python CLI, avatar experiments, and era docs
+  live in git history before `7545b4a4` (the tour starts at `attic/README.md`
+  there). Cleared from the tree 2026-08-13; nothing under `macos/` or `app/`
+  depends on it.
 - **`CONTRIBUTING.md` / `SECURITY.md`** — public-repo contributor surface.
-
-## Test (attic Python, only when touching attic/)
-
-```bash
-cd attic
-pip install duckdb                    # required by tests/conftest.py
-python -m pytest tests/               # full legacy suite
-# CI (attic.yml, path-filtered) runs only the smoke subset: tests/ci_smoke.txt
-```
 
 ## graphify
 

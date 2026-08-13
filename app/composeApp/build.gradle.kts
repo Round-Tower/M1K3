@@ -319,117 +319,16 @@ sqldelight {
 }
 
 // ============================================================================
-// Web Avatar Integration - Asset Bundling
+// Web Avatar - committed assets only (pipeline retired 2026-08-13)
 // ============================================================================
-
-/*
- * Install npm dependencies for web-avatar.
- * Config-cache safe: captures paths at configuration time (not Project
- * references) and declares inputs/outputs so Gradle handles incremental
- * execution without an onlyIf closure.
- */
-tasks.register<Exec>("installWebAvatarDeps") {
-    group = "web-avatar"
-    description = "Install npm dependencies for web-avatar"
-
-    val webAvatarDir = layout.projectDirectory.dir("../../attic/src/web-avatar")
-    val nodeModulesDir = webAvatarDir.dir("node_modules")
-    val packageJson = webAvatarDir.file("package.json")
-    val packageLockJson = webAvatarDir.file("package-lock.json")
-
-    workingDir = webAvatarDir.asFile
-    commandLine("npm", "install")
-
-    inputs.file(packageJson).withPropertyName("packageJson")
-    inputs.file(packageLockJson).withPropertyName("packageLockJson").optional()
-    outputs.dir(nodeModulesDir).withPropertyName("nodeModules")
-}
-
-// Build web-avatar production bundle with Vite. Copies dist-app/ to assets.
-tasks.register<Exec>("buildWebAvatar") {
-    group = "web-avatar"
-    description = "Build web-avatar production bundle with Vite"
-
-    dependsOn("installWebAvatarDeps")
-
-    val webAvatarDir = layout.projectDirectory.dir("../../attic/src/web-avatar")
-    val distAppDir = webAvatarDir.dir("dist-app")
-
-    workingDir = webAvatarDir.asFile
-    commandLine("npm", "run", "build:app")
-
-    inputs.dir(webAvatarDir.dir("src")).withPropertyName("webAvatarSrc")
-    inputs.file(webAvatarDir.file("index.html")).withPropertyName("indexHtml")
-    inputs.file(webAvatarDir.file("package.json")).withPropertyName("packageJson")
-    inputs.file(webAvatarDir.file("vite.config.app.ts")).withPropertyName("viteConfig")
-    outputs.dir(distAppDir).withPropertyName("distApp")
-}
-
-/*
- * Copy web-avatar dist to Android assets:
- *   dist-app/ → composeApp/src/androidMain/assets/web-avatar/
- * Includes index.html, JS, CSS, and bundled models. Runs automatically
- * before Android build via preBuild.dependsOn below.
- */
-tasks.register<Copy>("copyWebAvatarToAndroid") {
-    group = "web-avatar"
-    description = "Copy web-avatar dist to Android assets"
-
-    dependsOn("buildWebAvatar")
-
-    from("../../attic/src/web-avatar/dist-app") {
-        include("**/*")
-    }
-    into("src/androidMain/assets/web-avatar")
-
-    doFirst {
-        println("📋 Copying web-avatar to Android assets...")
-    }
-
-    doLast {
-        println("✅ Web avatar bundled for Android")
-    }
-}
-
-/*
- * Copy web-avatar dist to iOS resources:
- *   dist-app/ → ../iosApp/iosApp/Resources/web-avatar/
- * Manual step: add Resources/web-avatar/ to Xcode project as a folder
- * reference (blue folder) so Xcode includes it in the app bundle.
- */
-tasks.register<Copy>("copyWebAvatarToIOS") {
-    group = "web-avatar"
-    description = "Copy web-avatar dist to iOS resources (requires Xcode setup)"
-
-    dependsOn("buildWebAvatar")
-
-    from("../../attic/src/web-avatar/dist-app") {
-        include("**/*")
-    }
-    into("../iosApp/iosApp/Resources/web-avatar")
-
-    doFirst {
-        println("📋 Copying web-avatar to iOS resources...")
-    }
-
-    doLast {
-        println("✅ Web avatar copied for iOS")
-        println("⚠️  MANUAL STEP: Add Resources/web-avatar/ to Xcode project as folder reference (blue folder)")
-    }
-}
-
-// Bundle web-avatar for both Android and iOS in one shot.
-tasks.register("bundleWebAvatar") {
-    group = "web-avatar"
-    description = "Build and bundle web-avatar for Android and iOS"
-
-    dependsOn("copyWebAvatarToAndroid", "copyWebAvatarToIOS")
-}
-
-// Auto-bundle web-avatar before every Android build.
-tasks.named("preBuild") {
-    dependsOn("copyWebAvatarToAndroid")
-}
+// The THREE.js web-avatar SOURCE lived in attic/src/web-avatar and was cleared
+// from the working tree with the rest of the attic — git history before
+// 7545b4a4 keeps it, along with the npm-install/Vite-build/copy task chain
+// that used to run here (installWebAvatarDeps → buildWebAvatar →
+// copyWebAvatarToAndroid, wired into preBuild). The BUILT bundle the app
+// actually ships is committed at src/androidMain/assets/web-avatar/ and needs
+// no build step. To change the avatar: resurrect the source from history,
+// rebuild, and re-commit the dist output.
 
 // ============================================================================
 // 16KB Page-Size Alignment Guard (Android 15+)
@@ -523,8 +422,10 @@ abstract class Verify16KbAlignmentTask : DefaultTask() {
                 input.readNBytes(sz)
             }
         if (bytes.size < 64) return null
-        if (bytes[0] != 0x7F.toByte() || bytes[1] != 'E'.code.toByte() ||
-            bytes[2] != 'L'.code.toByte() || bytes[3] != 'F'.code.toByte()
+        if (bytes[0] != 0x7F.toByte() ||
+            bytes[1] != 'E'.code.toByte() ||
+            bytes[2] != 'L'.code.toByte() ||
+            bytes[3] != 'F'.code.toByte()
         ) {
             return null
         }

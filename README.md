@@ -62,7 +62,7 @@ one-time model download and an optional, explicitly-enabled web search.
 | **macOS native** | [`macos/`](./macos) | Swift 6.2, SwiftUI, MLX-Swift | **The product** — on-device knowledge · RAG · agent · voice · calls. Build it: [`macos/README.md`](./macos/README.md). |
 | **iOS + visionOS** | [`macos/M1K3iOSApp/`](./macos/M1K3iOSApp) | Swift 6.2, SwiftUI | Native SwiftUI shell on the **same** `macos/Sources/` package graph — chat · RAG · memories · docs. Ladder tops out at Lil on-device. See [`macos/docs/IOS_VISIONOS_PORT.md`](./macos/docs/IOS_VISIONOS_PORT.md). |
 | **間 AI mobile** | [`app/`](./app) | Kotlin Multiplatform | Slow burn — the **Android** surface (KMP), pre-release. See [`app/README.md`](./app/README.md). |
-| **The attic** | [`attic/`](./attic) | Python, THREE.js, Tauri | Where M1K3 grew up — the original CLI, avatar experiments, and ideas. Still boots. |
+| **The attic** | git history before `7545b4a4` | Python, THREE.js, Tauri | Where M1K3 grew up — the original CLI, avatar experiments, and ideas. Cleared from the tree 2026-08-13; see [The attic](#the-attic). |
 
 ## Get M1K3
 
@@ -112,8 +112,10 @@ _15 tools (generated live from the running server)._
 M1K3 didn't start as a Mac app. It started in August 2025 as a Python CLI with
 a synthesized voice, grew a THREE.js avatar, a PWA, a Tauri popover, a RAG
 engine, and an MCP server — and then everything it learned was rebuilt native.
-That history lives in [`attic/`](./attic), runnable and signed, because a
-project about provenance should keep its own. The tour: [`attic/README.md`](./attic/README.md).
+That history is signed and permanent in this repo's git history — a project
+about provenance should keep its own. The `attic/` tree was cleared from the
+working copy on 2026-08-13; to walk through it, check out any commit before
+`7545b4a4` (or resurrect it with `git checkout 7545b4a4 -- attic`).
 
 ## Contributing
 
