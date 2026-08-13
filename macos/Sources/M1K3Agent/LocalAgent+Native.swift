@@ -284,16 +284,25 @@ extension LocalAgent {
         return "\(call.name)(\(arguments))"
     }
 
-    /// The opening user turn: goal + optional grounding, with NO ReAct
+    /// The opening user turn: optional grounding then the goal, with NO ReAct
     /// scaffolding — tools are supplied structurally, identity lives in the
     /// system turn (M1K3Persona), so this carries only the turn's task.
+    ///
+    /// Goal LAST, deliberately (2026-08-13, NativeGoalOrderTests):
+    /// the context block opens with the day-granular context line and the
+    /// append-extending history replay, while the goal changes every turn.
+    /// Goal-first put the divergence ~30 tokens in and capped cross-turn KV
+    /// reuse at the persona prefix (measured: 1786 tokens reused, always);
+    /// goal-last lets the conversation-tail seed reuse everything up to this
+    /// turn's grounding. Recency helps too — small models weight the end of
+    /// the prompt, and the task should sit closest to the generation.
     static func buildNativeGoal(goal: String, grounding: String?) -> String {
-        let groundingBlock = grounding.map { "\n\nContext:\n\($0)" } ?? ""
+        let groundingBlock = grounding.map { "Context:\n\($0)\n\n" } ?? ""
         return """
         Use the available tools when they help answer the user's request. When \
         you have enough information, reply with your final answer in plain language.
 
-        Goal: \(goal)\(groundingBlock)
+        \(groundingBlock)Goal: \(goal)
         """
     }
 
