@@ -65,7 +65,17 @@ public struct VoiceTurnTimeline: Sendable, Equatable {
     }
 
     /// Audio actually began playing (the TTS provider's started callback).
+    ///
+    /// Ignored while no sentence exists: speech is only ever enqueued after a
+    /// chunk, so a started-callback with no chunk behind it is a stale tail
+    /// from a previous (barged-in) turn arriving after the flush — recording
+    /// it would hand this turn a bogus "first audio" that first-wins then
+    /// keeps, and settle the turn before it has actually spoken. (A stale
+    /// callback arriving AFTER this turn's first chunk is not distinguishable
+    /// without utterance identity from the provider; that window is the synth
+    /// gap, ~centiseconds, and is accepted.)
     public mutating func audioStarted(at instant: ContinuousClock.Instant) {
+        guard firstChunkAt != nil else { return }
         if firstAudioAt == nil { firstAudioAt = instant }
     }
 

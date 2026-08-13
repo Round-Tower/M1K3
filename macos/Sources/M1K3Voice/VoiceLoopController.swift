@@ -187,9 +187,17 @@ public final class VoiceLoopController {
     // MARK: - Reducer plumbing
 
     private func dispatch(_ event: VoiceLoopEvent) {
-        recordTiming(for: event)
+        // The machine arbitrates FIRST: two independent endpoint sources exist
+        // (silence tick, recognizer finality) and the machine's state guard is
+        // what drops the stale duplicate. Timing must follow that verdict, not
+        // race ahead of it — a stale `.endpointed` acted on here would flush
+        // the in-flight turn's timeline mid-turn and orphan its marks (PR #120
+        // review). Every rejected event returns an empty command list; every
+        // accepted `.endpointed` arm a non-empty one (pinned in
+        // VoiceLoopMachineTests.staleEndpointReturnsNothing).
         let commands = machine.handle(event)
         state = machine.state
+        recordTiming(for: event, accepted: !commands.isEmpty)
         for command in commands {
             execute(command)
         }
@@ -202,10 +210,18 @@ public final class VoiceLoopController {
     /// `.endpointed` is the user's own stopwatch start — but it also fires for
     /// empty/parked listens, which never run a turn; `summary()` returns nil for
     /// those, so they cost a mark and log nothing.
-    private func recordTiming(for event: VoiceLoopEvent) {
+    ///
+    /// `accepted` is the machine's verdict on the event; only `.endpointed`
+    /// consults it (its flush is destructive, and only the machine knows which
+    /// of the two endpoint sources counted). The answer events keep recording
+    /// regardless — some accepted arms legitimately return no commands.
+    private func recordTiming(for event: VoiceLoopEvent, accepted: Bool) {
         let now = ContinuousClock.now
         switch event {
         case .endpointed:
+            // A rejected endpoint is the stale twin from the other source —
+            // acting on it would flush the LIVE turn's timeline mid-turn.
+            guard accepted else { return }
             // Flush FIRST: a previous turn that never settled (generated but
             // never spoke) would otherwise donate its first-sentence mark to
             // this turn and report a latency that belongs to neither.

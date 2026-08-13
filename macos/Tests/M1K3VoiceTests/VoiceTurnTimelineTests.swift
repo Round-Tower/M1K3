@@ -56,6 +56,39 @@ struct VoiceTurnTimelineTests {
         #expect(summary.contains("3 sentences"))
     }
 
+    @Test("audio before any sentence exists is a stale callback, not this turn's audio")
+    func audioBeforeChunkIgnored() throws {
+        // The reachable half of the PR #120 review race: a barged-in turn's TTS
+        // tail fires its started-callback late, AFTER the flush — landing in
+        // the next turn's timeline, where "first wins" would keep it forever.
+        // Real audio can only follow this turn's first chunk (speak is only
+        // enqueued once a sentence exists), so a mark with no chunk behind it
+        // is provably not ours.
+        var timeline = VoiceTurnTimeline()
+        timeline.endpointed(at: at(0))
+        timeline.turnStarted(at: at(10))
+        timeline.audioStarted(at: at(20)) // stale tail from the previous turn
+        timeline.chunkReady(at: at(500))
+        timeline.audioStarted(at: at(1100)) // the real one
+
+        timeline.completed(at: at(2000))
+        let summary = try #require(timeline.summary())
+        #expect(summary.contains("first audio 1100ms"), "stale mark won: \(summary)")
+    }
+
+    @Test("a stale audio mark cannot SETTLE a turn that hasn't spoken")
+    func staleAudioDoesNotSettle() {
+        // The worse half of the same bug: settled = completed + audio, so a
+        // stale pre-chunk mark plus generation finishing would flush the turn
+        // early — logged as spoken when nothing was ever heard.
+        var timeline = VoiceTurnTimeline()
+        timeline.endpointed(at: at(0))
+        timeline.turnStarted(at: at(10))
+        timeline.audioStarted(at: at(20)) // stale — no sentence exists
+        timeline.completed(at: at(3000))
+        #expect(!timeline.isSettled)
+    }
+
     @Test("a turn that generated but never spoke says so instead of inventing a number")
     func noAudioIsNamed() throws {
         var timeline = VoiceTurnTimeline()
