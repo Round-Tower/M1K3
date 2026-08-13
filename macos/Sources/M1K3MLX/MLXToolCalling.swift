@@ -449,7 +449,8 @@ extension MLXGemmaProvider: ToolCallingProvider {
             seed = await personaPrefixSnapshot(
                 container: container,
                 specs: inputs.specs,
-                toolNames: inputs.toolNames
+                toolNames: inputs.toolNames,
+                key: key
             )
             seedSource = seed == nil ? .none : .persona
         }
