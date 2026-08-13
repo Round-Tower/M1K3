@@ -167,7 +167,7 @@ struct VoiceModeView: View {
                 // Teach the spoken submit button (PoliteEndpoint): end on
                 // "please" and M1K3 takes its turn on the short window instead
                 // of waiting out the conversational pause.
-                Text("End with “please” and M1K3 will take its turn")
+                Text(PoliteEndpoint.uiHint)
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

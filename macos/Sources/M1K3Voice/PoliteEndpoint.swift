@@ -22,6 +22,11 @@ import Foundation
 
 /// Pure trailing-word check: does this live partial end on the submit word?
 public enum PoliteEndpoint {
+    /// The one hint both shells show while listening — shared for the same
+    /// anti-drift reason as `EndpointCadence`: the Mac and iOS copies of a
+    /// user-facing literal agree until someone edits one of them.
+    public static let uiHint = "End with “please” and M1K3 will take its turn"
+
     public static func isSubmit(_ text: String) -> Bool {
         let lastWord = text
             .split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" })

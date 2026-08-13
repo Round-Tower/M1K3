@@ -77,4 +77,32 @@ struct WhisperKitProviderTests {
         // Still unavailable overall: no model is loaded.
         #expect(provider.isAvailable == false)
     }
+
+    @Test("the device probe is cached — isAvailable is on a SwiftUI hot path")
+    func probeResultIsCached() {
+        // canDictate → router → isAvailable re-evaluates per coalesced render
+        // during streaming; the CoreAudio HAL read must not run each time.
+        let calls = ProbeCallCounter()
+        let provider = WhisperKitProvider(inputChannelCount: {
+            calls.increment()
+            return 2
+        })
+        #expect(provider.inputDeviceUsable)
+        #expect(provider.inputDeviceUsable)
+        #expect(provider.inputDeviceUsable)
+        #expect(calls.count == 1)
+    }
+}
+
+/// Thread-safe call counter for the @Sendable probe closure.
+private final class ProbeCallCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+    var count: Int {
+        lock.withLock { value }
+    }
+
+    func increment() {
+        lock.withLock { value += 1 }
+    }
 }

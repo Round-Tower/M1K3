@@ -51,4 +51,11 @@ struct PoliteEndpointTests {
         #expect(!PoliteEndpoint.isSubmit(""))
         #expect(!PoliteEndpoint.isSubmit("   "))
     }
+
+    @Test("the UI hint names the submit word it teaches")
+    func uiHintNamesTheWord() {
+        // Both shells render this one constant; if the submit word ever
+        // changes, the hint must move with it or the UI teaches a lie.
+        #expect(PoliteEndpoint.uiHint.lowercased().contains("please"))
+    }
 }

@@ -125,6 +125,13 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
     /// Last channel count the gate vetoed, so the veto logs once per device
     /// change instead of on every `isAvailable` read (guarded by `lock`).
     private var lastVetoLogged: UInt32?
+    /// TTL cache over the device probe (guarded by `lock`). `channels` may be
+    /// a cached nil (unreadable probe) — the tuple's presence, not the value,
+    /// is what says "probed recently".
+    private var cachedProbe: (channels: UInt32?, at: ContinuousClock.Instant)?
+    /// Probe cache lifetime — long enough to take HAL I/O off the render-rate
+    /// path, short enough that a device swap is honoured almost immediately.
+    private static let probeTTL: Duration = .seconds(2)
 
     /// - Parameter model: WhisperKit variant. `base.en` balances size (~142MB)
     ///   and accuracy; `tiny.en` (~75MB) downloads faster, `small.en` is sharper.
@@ -188,8 +195,24 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
     /// Whether the default input device can feed WhisperKit's mic converter.
     /// Separated from `isAvailable` so the device gate is testable without a
     /// loaded model. Logs the veto once per device change, not per read.
+    ///
+    /// TTL-cached (round-4 review, PR #124): `isAvailable` sits on a SwiftUI
+    /// hot path — `canDictate` → router → here, re-evaluated at the chat's
+    /// coalesced render rate for the whole of every streamed answer — and the
+    /// default probe is two HAL round-trips through coreaudiod plus an alloc.
+    /// Bounded staleness is fine: routing binds at listen START, so a device
+    /// swap is honoured within a probe period either way.
     var inputDeviceUsable: Bool {
-        let channels = inputChannelCount()
+        let now = ContinuousClock.now
+        let channels: UInt32?
+        if let cached = lock.withLock({ cachedProbe }),
+           cached.at.duration(to: now) < Self.probeTTL
+        {
+            channels = cached.channels
+        } else {
+            channels = inputChannelCount()
+            lock.withLock { cachedProbe = (channels, now) }
+        }
         let usable = ConverterChannelGate.canServe(channelCount: channels)
         let shouldLog: Bool = lock.withLock {
             if usable {
