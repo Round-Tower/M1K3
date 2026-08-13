@@ -105,20 +105,63 @@ Turn N+1 renders `[persona][ctx][hist_N + q_N + a_N][grounding_N+1][q_N+1]` on a
 **fresh session**, so there is no live cache to match against at all — the seed
 is the persona, and the common prefix is therefore the persona.
 
-### What would fix it
+### ★ The challenger pass ran (2026-08-13) — append-only is DEAD, and here's why
 
-Hold **one session per conversation** and make the transcript append-only —
-fold each turn's grounding into that turn's user text rather than re-rendering
-history as replay prose. The cache then genuinely extends:
-`[persona][G1 q1][a1][G2 q2]...`, and turn N prefills only its own grounding and
-question.
+The obvious fix — one session per conversation, append-only transcript — was
+pressure-tested and killed. Do not resurrect it without new facts:
 
-⚠️ Not started deliberately. It changes how every prompt is assembled and it
-has real hazards — cache invalidation on brain swap, unbounded KV growth over a
-long conversation, gemma's `RotatingKVCache` vetoing reuse once it wraps, and the
-history-replay machinery becoming redundant rather than merely unused. **Wants a
-`challenger` pass before a line is written**, per house rules for non-trivial
-architecture.
+1. **It cannot exist on Big, and Big is where prefill hurts.** gemma-4-12B runs
+   `sliding_window: 1024` on 40 of 48 layers; `prefixIsReusable` returns false
+   for any prefix over 1024 tokens, and the app already logs *"persona prefix
+   SKIPPED — longer than the sliding window"* on Big. **The 1.71 ms/token above
+   is Lil's number; Big's measured prefill is ~6.1 ms/token** (13.1–14.5 s for a
+   2357-token prompt, `MLXGemmaProvider`). The architecture change would deliver
+   exactly zero to the slow tier.
+2. **The session's transcript is not the user's transcript.** Every native
+   tool-using turn synthesises its final answer through a flat fallback prompt
+   *outside* the session (`AgentRAGResponder.synthesiseOverEvidence`); the
+   session records the suppressed in-loop conclusion the user never saw. Today
+   history replays from `ChatSession.messages` (the displayed text), so it
+   doesn't matter. Make the session transcript authoritative and the model's
+   memory of what it said diverges from what it said — silently, and more the
+   more tools are used. Mini-routed turns (interim bridge, delegate_deep) would
+   likewise be holes in the MLX transcript.
+3. **The margin over a far cheaper change is ~200–430 tokens/turn** (~0.35–0.7 s
+   on Lil, 0 on Big) — because turn N+1's prompt already carries only its *own*
+   grounding; append-only would additionally pin every prior turn's grounding
+   into an unbounded KV (~78 KB/token on Lil at kvBits=8) that `clearCache()`
+   cannot reclaim, in the mode (voice) that barges in most — and barge-in's
+   `finish()` nils the cache.
+
+### What to build instead (challenger-endorsed)
+
+Change the **seed**, not the lifetime:
+
+1. **Move `Goal:` after `Context:`** in the native user message
+   (`LocalAgent+Native.buildNativeGoal`). Today the question sits ~30 tokens in
+   and kills the common prefix immediately; question-last also generally helps
+   small-model instruction-following. ⚠️ This is a prompt change on a
+   prompt-fragile tier — **A/B on-device before shipping**, per house rule.
+2. **A conversation-scoped slot in `PersonaPrefixCache`**: extend the key
+   (already `model × tools × persona`) with a conversation id; `finish()` stores
+   the end-of-turn cache back instead of nilling it; `makeToolTurnSession` seeds
+   from the best match. `CrossTurnCacheReuse.reusableLength` already computes
+   the common prefix and trims — a longer seed just works. **Fail-soft by
+   construction**: palette change, brain swap, cancelled turn or slid window is
+   a cache miss back to today's 1786, never a corruption.
+
+Safeguards it ships with: tier-gate on `prefixIsReusable` (never retain state
+gemma will veto every turn) · hard token cap on the retained slot (~4000 tok ≈
+300 MiB on Lil, logged eviction) · a test pinning that history replay still
+sources from `ChatSession.messages` · the reuse **source** (persona vs
+conversation) added to the `toolTurnSession reuse` log line so a working seed is
+distinguishable from a warm persona.
+
+Honest limit, stated up front: the replay is a suffix window (8 turns / 3000
+chars), so when it slides the common prefix collapses back to
+persona+preamble+context and one full re-prefill is paid. Append-only had a
+longer runway but the same eventual collapse with a bigger bill. Neither escapes
+"reset every N turns"; this one admits it and costs a fraction as much.
 
 ---
 
