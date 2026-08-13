@@ -243,4 +243,52 @@ struct SilenceEndpointerTests {
         next.ingest(partial: "quick question", at: start)
         #expect(next.shouldEndpoint(at: start.advanced(by: .seconds(2.0))))
     }
+
+    // MARK: - The polite fast-path ("please" is the spoken submit button)
+
+    @Test("a trailing please endpoints on the short polite window, not the silence threshold")
+    func trailingPleaseAcceleratesEndpoint() {
+        var endpointer = SilenceEndpointer(
+            silence: .seconds(2.5), holdSilence: .seconds(5.0), politeSilence: .seconds(1.0)
+        )
+        endpointer.ingest(partial: "tell me a story please", at: start)
+        #expect(!endpointer.shouldEndpoint(at: start.advanced(by: .seconds(0.5))))
+        #expect(endpointer.shouldEndpoint(at: start.advanced(by: .seconds(1.0))))
+    }
+
+    @Test("please bypasses the learned cadence floor — the word IS the submit")
+    func pleaseBypassesLearnedFloor() {
+        var endpointer = SilenceEndpointer(
+            silence: .seconds(2.0), holdSilence: .seconds(4.5),
+            cadenceMargin: .seconds(0.75), cadenceCeiling: .seconds(6.0),
+            politeSilence: .seconds(1.0)
+        )
+        // Teach a 4s rhythm: without please, later waits would be ~4.75s.
+        endpointer.ingest(partial: "the thing and", at: start)
+        endpointer.ingest(partial: "the thing and also please", at: start.advanced(by: .seconds(4.0)))
+        #expect(endpointer.observedPause == .seconds(4.0))
+        #expect(endpointer.shouldEndpoint(at: start.advanced(by: .seconds(5.0)))) // idle 1.0
+    }
+
+    @Test("please overrides the incomplete-partial hold")
+    func pleaseOverridesHold() {
+        var endpointer = SilenceEndpointer(
+            silence: .seconds(2.5), holdSilence: .seconds(5.0), politeSilence: .seconds(1.0)
+        )
+        // "can you please" trails on the submit word itself — the documented
+        // contract: say please, M1K3 takes its turn.
+        endpointer.ingest(partial: "can you please", at: start)
+        #expect(endpointer.shouldEndpoint(at: start.advanced(by: .seconds(1.0))))
+    }
+
+    @Test("a mid-sentence please changes nothing")
+    func midSentencePleaseKeepsNormalCadence() {
+        var endpointer = SilenceEndpointer(
+            silence: .seconds(2.5), holdSilence: .seconds(5.0), politeSilence: .seconds(1.0)
+        )
+        endpointer.ingest(partial: "please tell me about the", at: start)
+        // Trails on "the" (dangling) → the HOLD applies, untouched by the fast-path.
+        #expect(!endpointer.shouldEndpoint(at: start.advanced(by: .seconds(2.6))))
+        #expect(endpointer.shouldEndpoint(at: start.advanced(by: .seconds(5.0))))
+    }
 }

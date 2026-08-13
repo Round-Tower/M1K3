@@ -57,6 +57,7 @@ public struct SilenceEndpointer: Sendable {
     private let maxWait: Duration
     private let cadenceMargin: Duration
     private let cadenceCeiling: Duration
+    private let politeSilence: Duration
     private var lastText = ""
     private var lastChange: ContinuousClock.Instant?
     /// When the partial first became non-empty (first RECOGNISED speech, which can
@@ -91,7 +92,8 @@ public struct SilenceEndpointer: Sendable {
         holdSilence: Duration = .seconds(3.0),
         maxWait: Duration = .seconds(20),
         cadenceMargin: Duration = EndpointCadence.conversational.cadenceMargin,
-        cadenceCeiling: Duration = EndpointCadence.conversational.cadenceCeiling
+        cadenceCeiling: Duration = EndpointCadence.conversational.cadenceCeiling,
+        politeSilence: Duration = EndpointCadence.conversational.polite
     ) {
         // Duration interpolates with its SI suffix, e.g. "3.0 s" / "1.5 s".
         precondition(
@@ -105,6 +107,7 @@ public struct SilenceEndpointer: Sendable {
         self.maxWait = maxWait
         self.cadenceMargin = cadenceMargin
         self.cadenceCeiling = cadenceCeiling
+        self.politeSilence = politeSilence
     }
 
     /// The longest pause this speaker has been observed to speak THROUGH. Exposed
@@ -155,6 +158,14 @@ public struct SilenceEndpointer: Sendable {
         // has actually gone quiet (idle ≥ silence), end it — but never cut a user
         // who's still actively speaking (partials still advancing).
         if let firstSpeech, firstSpeech.duration(to: now) >= maxWait, idle >= silence {
+            return true
+        }
+        // The polite fast-path: a turn ending on "please" is the spoken submit
+        // button — it bypasses the completeness hold AND the learned cadence
+        // floor, because the user has TOLD us they're done (see PoliteEndpoint).
+        // `politeSilence` still applies so a recognizer partial that merely
+        // paused on "please tell me…" has one hop's grace to continue.
+        if PoliteEndpoint.isSubmit(lastText), idle >= politeSilence {
             return true
         }
         let base = UtteranceCompleteness.looksComplete(lastText) ? silence : holdSilence

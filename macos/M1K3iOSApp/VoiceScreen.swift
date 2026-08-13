@@ -110,6 +110,13 @@ struct VoiceScreen: View {
                     .foregroundStyle(.orange)
                     .multilineTextAlignment(.center)
             }
+            // Teach the spoken submit button (PoliteEndpoint): end on "please"
+            // and M1K3 takes its turn on the short window.
+            if case .listening = state {
+                Text("End with “please” and M1K3 will take its turn")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(.horizontal, 32)
         .frame(minHeight: 96, alignment: .top)
