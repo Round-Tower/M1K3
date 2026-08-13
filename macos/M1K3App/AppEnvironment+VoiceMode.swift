@@ -233,6 +233,10 @@ extension AppEnvironment {
     func enterVoiceMode() {
         guard voiceLoop == nil, !chat.isResponding, !isListening else { return }
         guard voicePermissionPreflight() else { return }
+        // The loop owns speech from here; a chat auto-speak session mid-answer
+        // would talk over it (its poll-tick guard also bails, but the in-flight
+        // utterance needs the explicit stop).
+        cancelAutoSpeak()
         UserDefaults.standard.set(true, forKey: Self.hasEnteredVoiceModeKey)
         UserDefaults.standard.set(true, forKey: Self.voiceModeActiveKey)
         soundEffects.play(.voiceEnter) // M1K3 materialising

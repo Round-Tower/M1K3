@@ -49,4 +49,16 @@ public enum VoiceModeDefaults {
     public static var isActive: Bool {
         UserDefaults.standard.bool(forKey: activeKey)
     }
+
+    /// Chat auto-speak (Kev, 2026-08-13): when on, assistant answers in the
+    /// CHAT surface are spoken sentence-by-sentence as they stream, with the
+    /// karaoke follow riding above the input bar — reading and listening at
+    /// the same time, without entering voice mode. Default OFF (absent key);
+    /// package-owned for the same anti-drift reason as `activeKey`.
+    public static let autoSpeakKey = "chat.autoSpeak"
+
+    /// Live read of the chat auto-speak toggle (absent key = OFF).
+    public static var autoSpeakEnabled: Bool {
+        UserDefaults.standard.bool(forKey: autoSpeakKey)
+    }
 }

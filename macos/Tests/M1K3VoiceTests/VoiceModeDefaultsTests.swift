@@ -53,4 +53,19 @@ struct VoiceModeDefaultsTests {
         defaults.set(false, forKey: VoiceModeDefaults.activeKey)
         #expect(!VoiceModeDefaults.isActive)
     }
+
+    @Test("the auto-speak key is pinned and defaults OFF")
+    func autoSpeakKeyPinnedAndDefaultsOff() {
+        #expect(VoiceModeDefaults.autoSpeakKey == "chat.autoSpeak")
+
+        let defaults = UserDefaults.standard
+        let restore = defaults.object(forKey: VoiceModeDefaults.autoSpeakKey)
+        defer { defaults.set(restore, forKey: VoiceModeDefaults.autoSpeakKey) }
+
+        defaults.removeObject(forKey: VoiceModeDefaults.autoSpeakKey)
+        // Speaking every answer unprompted is an opt-in, never a surprise.
+        #expect(!VoiceModeDefaults.autoSpeakEnabled)
+        defaults.set(true, forKey: VoiceModeDefaults.autoSpeakKey)
+        #expect(VoiceModeDefaults.autoSpeakEnabled)
+    }
 }
