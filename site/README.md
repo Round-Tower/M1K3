@@ -1,7 +1,8 @@
 # M1K3 launch site
 
 Single-page launch site for M1K3 for Mac. Self-contained: THREE.js is vendored
-in `vendor/` (from `attic/src/web-avatar/node_modules`), the hero fox is a local GLB —
+in `vendor/` (originally from the attic's web-avatar node_modules — history
+before `7545b4a4`), the hero fox is a local GLB —
 no CDN required for the 3D, fitting for a "no cloud attached" product. The only
 external request is Google Fonts (degrades gracefully to system mono).
 

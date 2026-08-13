@@ -69,7 +69,7 @@ mlx_*.pid
 # Local Claude settings (user-specific, don't commit)
 .claude/settings.local.json
 
-# Models - Large files should be downloaded locally 
+# Models - Large files should be downloaded locally
 models/
 *.bin
 *.gguf
@@ -83,10 +83,6 @@ models/
 node_modules/
 
 # PWA deployment build artifacts (users should build their own)
-attic/pwa-deployment/node_modules/
-attic/pwa-deployment/build/
-attic/pwa-deployment/dist/
-attic/pwa-deployment/__pycache__/
 
 # Audio cache
 audio_cache/
@@ -102,8 +98,6 @@ logs/
 temp/
 
 # Test results and screenshots
-attic/tests/results/*.json
-attic/tests/screenshots/
 screenshots/
 
 # Debug and development files
@@ -125,54 +119,6 @@ demo_*.py
 *_demo.py
 interactive_*.py
 
-# Test files now in tests/python/ - still ignored
-attic/tests/python/test_*.py
-
-# --- CI smoke subset: vetted-green files un-ignored so CI can run them
-#     (see tests/CI_TRIAGE.md). The rest of tests/python/ stays ignored.
-!attic/tests/python/test_ai_inference_fix.py
-!attic/tests/python/test_audio_completion.py
-!attic/tests/python/test_bluetooth_audio_fix.py
-!attic/tests/python/test_cli_greeting.py
-!attic/tests/python/test_cli_integration.py
-!attic/tests/python/test_cli_startup.py
-!attic/tests/python/test_comprehensive_validation.py
-!attic/tests/python/test_full_system_integration.py
-!attic/tests/python/test_full_system.py
-!attic/tests/python/test_greeting_integration.py
-!attic/tests/python/test_intelligent_tts_fix.py
-!attic/tests/python/test_interface_connections.py
-!attic/tests/python/test_llm_greeting.py
-!attic/tests/python/test_m1k3_qwen3.py
-!attic/tests/python/test_m1k3_voice_final.py
-!attic/tests/python/test_model_cli_integration.py
-!attic/tests/python/test_performance_optimization.py
-!attic/tests/python/test_phonemizer_fix.py
-!attic/tests/python/test_profile_system.py
-!attic/tests/python/test_project_wide_validation.py
-!attic/tests/python/test_rag_end_to_end.py
-!attic/tests/python/test_rag_practical.py
-!attic/tests/python/test_sanitization_fix.py
-!attic/tests/python/test_shutdown_behavior.py
-!attic/tests/python/test_syllable_completion.py
-!attic/tests/python/test_temperature_fix.py
-!attic/tests/python/test_temperature_investigation.py
-!attic/tests/python/test_transparency_integration.py
-!attic/tests/python/test_tts_content_parsing.py
-!attic/tests/python/test_tts_system.py
-!attic/tests/python/test_vector_memory_system.py
-!attic/tests/python/test_vibevoice.py
-!attic/tests/python/test_voice_engine_fix.py
-!attic/tests/python/test_voice_first_mode.py
-!attic/tests/python/test_vosk_cli.py
-!attic/tests/python/test_vosk_only.py
-!attic/tests/python/test_vosk_recognition.py
-!attic/tests/python/test_warm_voice_update.py
-
-# Local MLX integration test — tracked, referenced by README + docs/MLX_SETUP.md;
-# NOT part of the CI smoke set
-!attic/tests/python/test_mlx_integration.py
-
 # Development and diagnostic files
 *_diagnostic.py
 system_analysis.py
@@ -182,8 +128,6 @@ voice_diagnostic.py
 voice_truncation_tracker.py
 
 # Large model files - download separately
-attic/models/SmolLM-135M.Q4_K_M.gguf
-attic/pwa-deployment/frontend/models/embeddings-tiny/model.onnx
 
 # External Libraries
 VibeVoice/
@@ -237,8 +181,6 @@ databases/
 # Local session state (machine/runtime status)
 .m1k3_session.json
 # Generated test reports (embed absolute local paths)
-attic/tests/unified-suite/output/
-attic/scripts/test_report.json
 data/test-results/
 
 # graphify knowledge graph: generated/regenerable (~18M), goes stale on edits.

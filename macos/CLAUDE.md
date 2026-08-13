@@ -13,8 +13,9 @@ graph also drives a native **iOS 26 / visionOS 26** SwiftUI shell under
 `M1K3iOSApp/` (the `M1K3iOS` / `M1K3visionOS` targets in `project.yml`) — a
 distinct surface from the KMP `../app/` (that's the Android effort).
 
-The parent `../CLAUDE.md` documents the **legacy Python CLI** (archived under
-`../attic/`, last meaningful work Jan 2026). When working under `macos/`, this
+The parent `../CLAUDE.md` covers repo orientation (the legacy Python CLI was
+cleared from the tree 2026-08-13 — git history before `7545b4a4` keeps it).
+When working under `macos/`, this
 file is the relevant one. Durable session history lives in
 `../.claude/project-memory.md` (read it for in-flight threads and hard-won gotchas).
 **`ROADMAP.md` is the current "what's next" doc** — kept live, not append-only.

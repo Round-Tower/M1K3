@@ -5,8 +5,8 @@ name: Security
 # (no real Node app — root had only a stub package.json). What's left is the
 # cheap, genuinely-useful stuff for a privacy-focused local-AI project:
 #   • secrets detection (verified only — no noise)
-# The Python SAST (Bandit) moved to attic.yml with the archived Python surface —
-# path-filtered on attic/**, same high/high gate.
+# The Python SAST (Bandit) left with the archived Python surface (attic/,
+# cleared from the tree 2026-08-13 — history before 7545b4a4 keeps it).
 
 on:
   push:

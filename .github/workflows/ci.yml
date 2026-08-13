@@ -3,11 +3,11 @@ name: CI
 # Lean test pipeline — tests what M1K3 actually ships.
 #   • swift-mac : the Mac-native MVP (the active surface), via `swift test`
 #
-# The legacy Python smoke subset moved to attic.yml (path-filtered on attic/**)
-# when the Python surface was archived. Replaced the old Node/Playwright
-# "unified suite" (quick-tests / unified-tests / release-testing), which tested
-# a web dashboard, was perpetually red, and never covered the Swift work. See
-# attic/tests/CI_TRIAGE.md for the Python story.
+# The archived Python surface (attic/) was cleared from the working tree on
+# 2026-08-13 along with its path-filtered attic.yml workflow — git history
+# before 7545b4a4 keeps all of it (`git checkout 7545b4a4 -- attic`). The old
+# Node/Playwright "unified suite" went the same way earlier: it tested a web
+# dashboard, was perpetually red, and never covered the Swift work.
 
 on:
   push:
@@ -24,7 +24,7 @@ permissions:
 jobs:
   # Cheap path gate: the three macOS jobs below are the expensive tier (full
   # MLX/Metal + RealityKit graph on macos-26 runners, 15-30 min each) and can
-  # only break on compilable-surface changes. Docs, site/, attic/, marketing,
+  # only break on compilable-surface changes. Docs, site/, marketing,
   # and release-script edits skip them entirely — the seconds-cheap ubuntu
   # guards (scheme-drift, doc-drift) still run on everything, so docs↔code
   # sync stays enforced. Public-repo runners are free; the spend here is

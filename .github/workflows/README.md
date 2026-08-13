@@ -10,7 +10,6 @@ and never covered the Swift Mac MVP — the active surface. It was removed.
 | File | Purpose | Triggers |
 |------|---------|----------|
 | **`ci.yml`** | Tests. `swift-mac` runs `swift test` on the macOS MVP; `app-build` compiles the app shell; `scheme-drift` guards the test scheme. | push to `master`/`develop`, all PRs |
-| **`attic.yml`** | The archived Python surface: curated smoke subset + Bandit (high/high gate). | pushes/PRs touching `attic/**` only |
 | **`security.yml`** | TruffleHog (verified secrets, repo-wide). | push to `master`/`develop`, all PRs |
 | **`nightly-dmg.yml`** | Signed/notarized DMG → GitHub Release (skips until signing secrets are set). | nightly cron, manual |
 | **`claude.yml`** | `@claude` assistant on issues/PRs. | `@claude` mentions |
@@ -24,11 +23,8 @@ and never covered the Swift Mac MVP — the active surface. It was removed.
   the image; pin a `macos-26` runner if the hosted image lags. MLX/Metal +
   WhisperKit integration tests are env-gated **off** (they only run from a
   bundled `.app`, never the CLI — see `macos/` project memory).
-- **`attic.yml`'s smoke job runs a curated subset, not the whole suite.** The
-  legacy Python tests are a swamp; see **`attic/tests/CI_TRIAGE.md`** for the
-  green list (`attic/tests/ci_smoke.txt`), the quarantine backlog, and the
-  rehabilitation task. Slim deps live in `attic/requirements-ci.txt`.
+- **`attic.yml` left with the attic** (2026-08-13): the archived Python surface
+  and its curated smoke subset + Bandit gate were cleared from the working
+  tree. Git history before `7545b4a4` keeps the whole thing, workflow included.
 - **Dropped CodeQL** (needed repo "Code Security" enabled + noisy here) and
-  **npm-audit** (no real Node app — root `package.json` is a stub).
-- The stub `package.json` (Playwright-era test dashboard) lives in `attic/`
-  with the rest of the archived Python/Node surface.
+  **npm-audit** (no real Node app — the stub `package.json` left with the attic).
