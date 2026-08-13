@@ -431,11 +431,33 @@ extension MLXGemmaProvider: ToolCallingProvider {
         // (enable_thinking only touches the generation suffix, template-probe
         // verified — the cached prefix is identical either way.)
         let inputs = MLXToolMapping.prefixInputs(for: tools)
-        let seed = await personaPrefixSnapshot(
-            container: container,
-            specs: inputs.specs,
-            toolNames: inputs.toolNames
-        )
+        // Conversation tail first, persona fallback — the tail always BEGINS
+        // with the persona render (same key), so it can only ever reuse more,
+        // and any divergence fails soft through the common-prefix arithmetic.
+        // Background utilities skip the tail both ways for the same reason
+        // they never BUILD a persona prefix: a title turn's render would
+        // produce a useless tail, and adopting it would displace the live
+        // conversation's seed.
+        let key = toolTurnCacheKey(toolNames: inputs.toolNames)
+        let background = InferenceIntent.isBackgroundUtility
+        let seed: PersonaPrefixSnapshot?
+        let seedSource: PrefixSeedSource
+        if !background, let tail = conversationTail.snapshot(for: key) {
+            seed = tail
+            seedSource = .conversation
+        } else {
+            seed = await personaPrefixSnapshot(
+                container: container,
+                specs: inputs.specs,
+                toolNames: inputs.toolNames
+            )
+            seedSource = seed == nil ? .none : .persona
+        }
+        let adoptTail: (([KVCache], [Int]) -> ConversationTailCache.AdoptOutcome)? = background
+            ? nil
+            : { [conversationTail] cache, ids in
+                conversationTail.adopt(cache, tokenIDs: ids, for: key)
+            }
         // Per-turn thinking, decided ONLY from this turn's flag + the family's
         // toggle capability — never the provider's construction-time thinking
         // state (which would silently override a turn that asked to think).
@@ -453,7 +475,9 @@ extension MLXGemmaProvider: ToolCallingProvider {
             thinkingContext: thinking.context,
             prefixNeeded: thinking.prefixNeeded,
             imagesAllowed: supportsImageInput,
-            seed: seed
+            seed: seed,
+            seedSource: seedSource,
+            adoptTail: adoptTail
         )
     }
 
@@ -511,6 +535,12 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     /// equal the seeded persona prefix, so a shortfall there is a diagnosable
     /// seed/render mismatch (logged, decoded).
     private var sendCount = 0
+    /// Where the seed came from — printed in the reuse log so a working
+    /// conversation tail is distinguishable from a warm persona prefix.
+    private let seedSource: PrefixSeedSource
+    /// Hand-off for the end-of-turn cache (nil = drop, today's behaviour).
+    /// Installed by the provider for interactive turns only.
+    private let adoptTail: (([KVCache], [Int]) -> ConversationTailCache.AdoptOutcome)?
     /// The full conversation — re-rendered every turn so strict templates
     /// (Qwen3.5's "No user query found") always see the user query; only the
     /// suffix beyond `cachedIDs` is actually prefilled.
@@ -525,7 +555,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         thinkingContext: [String: any Sendable]?,
         prefixNeeded: Bool,
         imagesAllowed: Bool = false,
-        seed: PersonaPrefixSnapshot? = nil
+        seed: PersonaPrefixSnapshot? = nil,
+        seedSource: PrefixSeedSource = .none,
+        adoptTail: (([KVCache], [Int]) -> ConversationTailCache.AdoptOutcome)? = nil
     ) {
         self.container = container
         self.modelID = modelID
@@ -535,6 +567,8 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         self.thinkingContext = thinkingContext
         self.prefixNeeded = prefixNeeded
         self.imagesAllowed = imagesAllowed
+        self.seedSource = seedSource
+        self.adoptTail = adoptTail
         kvCache = seed?.cache
         cachedIDs = seed?.tokenIDs ?? []
     }
@@ -586,11 +620,16 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                     cached: self.cachedIDs, full: fullIDs, hasCache: self.kvCache != nil
                 )
                 : 0
-            // Diagnose a first-send seed miss: the persona prefix SHOULD be a
+            // Diagnose a first-send seed miss: the PERSONA prefix SHOULD be a
             // full prefix of the first render. If reuse falls short, decode the
             // tokens either side of the divergence so the cause is visible (a
-            // tool-JSON ordering drift, a persona-text mismatch, …).
-            if self.sendCount == 0, seedCount > 0, reuse < seedCount, !turnCarriesImages {
+            // tool-JSON ordering drift, a persona-text mismatch, …). Persona
+            // seeds ONLY: a conversation tail legitimately falls short whenever
+            // the grounding changed or the history window slid — that's the
+            // fail-soft working as designed, not a mismatch to alarm on.
+            if self.seedSource == .persona,
+               self.sendCount == 0, seedCount > 0, reuse < seedCount, !turnCarriesImages
+            {
                 let window = { (ids: [Int]) -> String in
                     let lo = max(0, reuse - 3), hi = min(ids.count, reuse + 8)
                     return context.tokenizer.decode(tokenIds: Array(ids[lo ..< hi]))
@@ -644,7 +683,8 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             self.logPrefillReuse(
                 reused: (reuse > 0 && reusable) ? reuse : 0,
                 total: fullIDs.count,
-                vetoed: reuse > 0 && !reusable
+                vetoed: reuse > 0 && !reusable,
+                source: self.seedSource.rawValue
             )
             self.kvCache = cache
 
@@ -705,14 +745,18 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
 
     /// Param-only (the Logger interpolation is an autoclosure; swiftformat
     /// strips the `self.` the compiler would need on a member).
-    private func logPrefillReuse(reused: Int, total: Int, vetoed: Bool) {
+    private func logPrefillReuse(reused: Int, total: Int, vetoed: Bool, source: String) {
         // `vetoed` is the interesting case and deserves its own word: the cache
         // HELD a usable prefix and the sliding window made it unusable.
+        // `seed=` is the acceptance instrument for the conversation tail: a
+        // reuse figure above the persona length with seed=persona would mean
+        // the tail never engaged — the two must be distinguishable in the log.
         let note = vetoed ? " (VETOED — cache wrapped the sliding window)" : ""
         mlxToolLog.notice(
             """
             toolTurnSession reuse: \(reused, privacy: .public)/\(total, privacy: .public) \
-            tok from cache, prefilling \(total - reused, privacy: .public)\(note, privacy: .public)
+            tok from cache, prefilling \(total - reused, privacy: .public), \
+            seed=\(source, privacy: .public)\(note, privacy: .public)
             """
         )
     }
@@ -725,13 +769,47 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         )
     }
 
-    /// Turn over: drop the cache and hand the pooled Metal buffers back —
+    /// Turn over: hand the cache to the conversation-tail slot (the next turn
+    /// of this conversation seeds from it), then reclaim pooled buffers —
     /// the per-TURN reclaim (per-generation would thrash the pool between
     /// iterations that are about to reuse it). The bare `kvCache = nil` write
     /// is covered by the serial-use contract above: finish() is reachable
     /// only after runNativeLoop returns, never overlapping a `send`.
+    ///
+    /// Adoption guards: only a LINEAR cache is worth keeping — a wrapped
+    /// sliding-window cache can't be trimmed to a common prefix (the same veto
+    /// the send path applies), which is also the gemma-4 tier gate: its real
+    /// turns wrap, so it never stores a tail. A throw-path finish (barge-in,
+    /// cancellation) may hand over a cache whose mirror UNDERSTATES it — safe
+    /// for the same reason the send path documents: the next turn's trim runs
+    /// against `layer.offset`, the cache's real state. The adopted arrays are
+    /// retained by the store, so the reclaim below can't free them.
     func finish() async {
+        if let cache = kvCache, !cachedIDs.isEmpty, let adoptTail,
+           CrossTurnCacheReuse.cacheReusable(layersTrimmable: cache.map(\.isTrimmable))
+        {
+            logTailAdoption(adoptTail(cache, cachedIDs), tokens: cachedIDs.count)
+        }
         kvCache = nil
         MLXMemoryBudget.reclaim(label: "toolTurnSession")
+    }
+
+    /// Param-only for the same swiftformat/autoclosure reason as its sibling.
+    private func logTailAdoption(_ outcome: ConversationTailCache.AdoptOutcome, tokens: Int) {
+        switch outcome {
+        case .stored:
+            mlxToolLog.notice(
+                "toolTurnSession tail adopted: \(tokens, privacy: .public) tok retained for the next turn"
+            )
+        case .overCap:
+            // The eviction is LOUD on purpose (no silent caps): from here on,
+            // this conversation re-prefills its history every turn again.
+            mlxToolLog.notice(
+                """
+                toolTurnSession tail EVICTED: \(tokens, privacy: .public) tok over the \
+                \(ConversationTailCache.maxSeedTokens, privacy: .public)-tok cap — next turn seeds from persona
+                """
+            )
+        }
     }
 }

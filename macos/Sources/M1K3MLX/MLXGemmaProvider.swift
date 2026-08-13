@@ -139,6 +139,10 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     /// Per-(tools × persona) prefilled system-block KV prefix; turns start
     /// from copies instead of re-prefilling the persona every time.
     let personaPrefix = PersonaPrefixCache()
+    /// The last turn's end-of-turn KV cache — the cross-TURN seed, so a
+    /// continuing conversation reuses past the persona instead of
+    /// re-prefilling its own history every turn. See ConversationTailCache.
+    let conversationTail = ConversationTailCache()
     /// Coalesces concurrent builds of the SAME prefix. Measured 2026-08-09:
     /// without it, several callers miss the cache together, serialise on the
     /// ModelContainer, and each pays a full ~13s prefill for a prefix the
@@ -346,6 +350,7 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     /// alive through the generation independent of this invalidation.
     public func releaseMemory() {
         personaPrefix.invalidate()
+        conversationTail.invalidate()
         MLXMemoryBudget.reclaim(label: "releaseMemory")
     }
 
@@ -478,19 +483,25 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     /// The throwing core of the prefix build — the kv-persist probe calls this
     /// directly so failures surface with their REAL error, not the app path's
     /// swallowed best-effort nil.
+    /// THE key for this provider's cached prefixes — persona AND conversation
+    /// tail share it (one derivation, so the tail can never seed a turn whose
+    /// persona/tools render differs from what its arrays hold).
+    func toolTurnCacheKey(toolNames: [String]) -> PersonaCacheKey {
+        PersonaCacheKey(
+            modelID: modelIdentifier,
+            toolNames: toolNames,
+            // Exemplars ride the CACHED render — they cost once per launch,
+            // not per turn. The fallback (inline instructions) stays compact.
+            personaText: M1K3Persona.systemPrompt(includeExemplars: true)
+        )
+    }
+
     func buildPersonaPrefixSnapshot(
         container: ModelContainer,
         specs: [ToolSpec]?,
         toolNames: [String]
     ) async throws -> PersonaPrefixSnapshot? {
-        let persona = M1K3Persona.systemPrompt(includeExemplars: true)
-        let key = PersonaCacheKey(
-            modelID: modelIdentifier,
-            toolNames: toolNames,
-            // Exemplars ride the CACHED render — they cost once per launch,
-            // not per turn. The fallback (inline instructions) stays compact.
-            personaText: persona
-        )
+        let key = toolTurnCacheKey(toolNames: toolNames)
         if let hit = personaPrefix.snapshot(for: key) { return hit }
         // Background housekeeping (titles, follow-ups, distillation) may USE a
         // cached prefix but must never BUILD one: on 2026-08-09 a 64-token
