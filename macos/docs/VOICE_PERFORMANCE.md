@@ -76,7 +76,10 @@ against it.
 
 ---
 
-## 2a. ★ The biggest lever left: the conversation is re-prefilled every turn
+## 2a. ★ The biggest lever, found and pulled: the conversation WAS re-prefilled every turn
+
+> Status: FIXED same day — PR #122 (see the BUILT block below). The measurement
+> and the killed design are kept because they are why the fix has this shape.
 
 Measured 2026-08-13, three consecutive turns, from `toolTurnSession reuse`:
 
@@ -133,28 +136,39 @@ pressure-tested and killed. Do not resurrect it without new facts:
    cannot reclaim, in the mode (voice) that barges in most — and barge-in's
    `finish()` nils the cache.
 
-### What to build instead (challenger-endorsed)
+### ✅ BUILT + MEASURED (same day, PR #122): change the seed, not the lifetime
 
-Change the **seed**, not the lifetime:
+The endorsed design shipped as two coupled changes, and the on-device A/B
+passed as the merge gate:
 
-1. **Move `Goal:` after `Context:`** in the native user message
-   (`LocalAgent+Native.buildNativeGoal`). Today the question sits ~30 tokens in
-   and kills the common prefix immediately; question-last also generally helps
-   small-model instruction-following. ⚠️ This is a prompt change on a
-   prompt-fragile tier — **A/B on-device before shipping**, per house rule.
-2. **A conversation-scoped slot in `PersonaPrefixCache`**: extend the key
-   (already `model × tools × persona`) with a conversation id; `finish()` stores
-   the end-of-turn cache back instead of nilling it; `makeToolTurnSession` seeds
-   from the best match. `CrossTurnCacheReuse.reusableLength` already computes
-   the common prefix and trims — a longer seed just works. **Fail-soft by
-   construction**: palette change, brain swap, cancelled turn or slid window is
-   a cache miss back to today's 1786, never a corruption.
+1. **`Goal:` renders LAST** in the native user message
+   (`LocalAgent+Native.buildNativeGoal`) — it was the only per-turn-volatile
+   text sitting ~30 tokens in. A/B'd on-device (both brains, tool-use +
+   open-chat, live path, powermode 0): lil's pass set IDENTICAL to master,
+   big's equal-or-better — no fragility signature.
+2. **`ConversationTailCache`** (single slot, no conversation id):
+   `finish()` hands the end-of-turn cache over instead of dropping it;
+   `makeToolTurnSession` seeds from the tail before falling back to the
+   persona prefix. Divergence fails soft through the common-prefix arithmetic.
 
-Safeguards it ships with: tier-gate on `prefixIsReusable` (never retain state
-gemma will veto every turn) · hard token cap on the retained slot (~4000 tok ≈
-300 MiB on Lil, logged eviction) · a test pinning that history replay still
-sources from `ChatSession.messages` · the reuse **source** (persona vs
-conversation) added to the `toolTurnSession reuse` log line so a working seed is
+**The acceptance log, from the A/B run itself:**
+
+```
+toolTurnSession reuse: 1401/1855 tok from cache, prefilling 454, seed=persona   ← first turn
+toolTurnSession tail adopted: 1855 tok retained for the next turn
+toolTurnSession reuse: 1839/1858 tok from cache, prefilling  19, seed=conversation
+toolTurnSession reuse: 1839/1861 tok from cache, prefilling  22, seed=conversation
+```
+
+**Prefilling 17–23 tokens per turn** — the goal is genuinely the only
+divergence, ~750 ms/turn saved at 1.71 ms/token even in the historyless
+eval shape; a history-carrying conversation saves more.
+
+Shipped safeguards: adoption requires every layer trimmable (which IS the
+gemma tier gate — its real turns wrap, so it never stores) · 4000-token cap
+(~300 MiB retained ceiling on Lil, evictions logged loud) · background
+utilities skip the tail both ways · the reuse **source**
+(`seed=persona|conversation|none`) in the log line so a working seed is
 distinguishable from a warm persona.
 
 Honest limit, stated up front: the replay is a suffix window (8 turns / 3000
@@ -285,8 +299,11 @@ On macOS none of it applies: the app is already running.
 ## 6. Owed
 
 - **A real spoken-turn reading from the instrument this doc is built on.** Every
-  number above comes from the MCP/chat path; no voice turn has yet been timed
-  end-to-end. That is the first thing to do on the next voice run.
+  number above comes from the MCP/chat/eval path; no HUMAN voice turn has yet
+  been timed end-to-end. First voice-mode run on a build carrying #120+#122
+  settles it — read with the `log show` line in §1, plus
+  `rg 'seed=conversation'` for the tail engaging mid-conversation (the eval
+  proved the mechanism 2026-08-13; the felt conversation is the remaining half).
 - The 400-token spoken budget's effect on answer **quality** is unmeasured.
 - The Kokoro graph warm's saving is verify-by-launch (metallib wall) — the
   `kokoro warm:` log line reports it.

@@ -49,6 +49,15 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
   at all**, so PR #101's Mini sizing never crossed to mobile; it does now.
   Kokoro's `preload()` also now runs one throwaway forward pass — it loaded the
   weights but left the Metal graph to compile on the user's first real sentence.
+  **Then the big one landed the same day (PR #122, A/B-gated):** goal-last +
+  `ConversationTailCache` — the conversation used to re-prefill from scratch
+  every turn (reuse pinned at exactly the 1786-token persona, measured); now
+  the end-of-turn cache seeds the next turn and the eval log reads
+  `prefilling 17–23 tok, seed=conversation` per turn. The append-only
+  one-session design was challenger-killed first (gemma's sliding window,
+  transcript divergence) — the whole story is `docs/VOICE_PERFORMANCE.md` §2a.
+  **Remaining owed: the first HUMAN voice-turn reading** (`voice turn:` +
+  `seed=conversation` lines from a real multi-turn chat on a build ≥ #122).
 
 - **⚠️ The tool palette is a KV-cache key — changing it per mode costs seconds.**
   Measured the same day: a self-query turn ("Who are you?") withholds four corpus
