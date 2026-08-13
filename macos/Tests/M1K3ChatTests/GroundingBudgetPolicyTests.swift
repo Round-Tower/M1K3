@@ -72,6 +72,73 @@ struct GroundingBudgetPolicyTests {
         #expect(outputRoom > 700, "only \(outputRoom) tokens left to answer in")
     }
 
+    // MARK: - Spoken turns (2026-08-13)
+
+    @Test("a spoken turn gets a tighter grounding budget than a typed one")
+    func spokenIsTighter() {
+        // Measured on Kev's Mac, Lil resident, persona prefix warm, live agent
+        // path over MCP:
+        //     prompt  822 tok → prefill 2052 ms
+        //     prompt 1401 tok → prefill 3045 ms
+        //     marginal = 993 ms / 579 tok = 1.71 ms per prompt token
+        // Prefill is paid IN FULL before the first token exists, and voice mode
+        // speaks at the first sentence — so every grounding token is 1.71 ms
+        // added directly to time-to-first-audio, the number the user feels.
+        #expect(GroundingBudgetPolicy.tokens(for: .lil, spoken: true)
+            < GroundingBudgetPolicy.tokens(for: .lil))
+        #expect(GroundingBudgetPolicy.tokens(for: .big, spoken: true)
+            < GroundingBudgetPolicy.tokens(for: .big))
+    }
+
+    @Test("the typed path is byte-identical — this only changes spoken turns")
+    func typedPathUnchanged() {
+        for tier in BrainTier.allCases {
+            #expect(GroundingBudgetPolicy.tokens(for: tier, spoken: false)
+                == GroundingBudgetPolicy.tokens(for: tier))
+        }
+    }
+
+    @Test("spoken never RAISES a tier's budget — it can only tighten")
+    func spokenOnlyTightens() {
+        // The invariant, not the arithmetic: whatever the constants are today, a
+        // tier already tighter than the spoken ceiling must keep its own number.
+        // This policy's whole direction of failure is toward the smaller budget
+        // and a mode flag must not be able to reverse it. Which tier is currently
+        // on which side of the ceiling is `miniIsNotExemptWhenSpoken`'s job — a
+        // distinction this `<=` cannot make, which is how the doc comment came to
+        // claim the opposite of the behaviour for a whole PR review cycle.
+        for tier in BrainTier.allCases {
+            #expect(GroundingBudgetPolicy.tokens(for: tier, spoken: true)
+                <= GroundingBudgetPolicy.tokens(for: tier))
+        }
+        #expect(GroundingBudgetPolicy.tokens(for: nil, spoken: true)
+            <= GroundingBudgetPolicy.tokens(for: nil))
+    }
+
+    @Test("no tier is exempt from the spoken trim — including Mini")
+    func miniIsNotExemptWhenSpoken() {
+        // `spokenOnlyTightens` uses `<=`, which passes whether Mini is left at
+        // 600 or trimmed to 400 — so the contract lived only in a doc comment,
+        // and that comment was backwards (review catch, PR #120). Both reasons
+        // for the spoken cap apply to Mini hardest: nobody reads seven chunks
+        // aloud whichever brain read them, and Mini has the least window.
+        #expect(GroundingBudgetPolicy.tokens(for: .mini, spoken: true)
+            == GroundingBudgetPolicy.spokenTokenBudget)
+        #expect(GroundingBudgetPolicy.tokens(for: nil, spoken: true)
+            == GroundingBudgetPolicy.spokenTokenBudget)
+    }
+
+    @Test("a spoken turn still fits a real retrieved chunk — this is a trim, not a mute")
+    func spokenStillGrounds() {
+        // Live grounding on Kev's store ran ~290 tokens per kept unit (3 units =
+        // 872 tokens, measured 2026-08-13). A budget under one unit would round
+        // down to no grounding at all and quietly turn voice mode into an
+        // ungrounded assistant — which is not a latency win, it is a different
+        // product.
+        let measuredUnitTokens = 290
+        #expect(GroundingBudgetPolicy.tokens(for: .lil, spoken: true) >= measuredUnitTokens)
+    }
+
     @Test("no tier is given a budget that cannot fit its own window")
     func everyTierFitsItsWindow() {
         for tier in BrainTier.allCases {

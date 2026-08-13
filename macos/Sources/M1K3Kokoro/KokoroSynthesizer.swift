@@ -44,6 +44,7 @@
 import Foundation
 import M1K3Voice
 import MLX
+import os
 
 /// One synthesized piece of an utterance: its audio and the word timing for
 /// exactly that audio. `timeline.text` is the FULL utterance text (ranges
@@ -99,10 +100,14 @@ public actor KokoroSynthesizer {
         }
     }
 
+    private static let log = Logger(subsystem: "app.m1k3", category: "voice")
+
     private let modelDirectory: URL
     private let voice: String
     private var loaded: Loaded?
     private var loadTask: Task<Loaded, Error>?
+    /// The graph is compiled once per process; a second warm would be pure cost.
+    private var warmed = false
 
     public init(modelDirectory: URL, voice: String = "bm_daniel") {
         self.modelDirectory = modelDirectory
@@ -110,10 +115,68 @@ public actor KokoroSynthesizer {
     }
 
     /// Eagerly load the model/voices/dictionary (e.g. at voice-prepare time) so the
-    /// first spoken utterance isn't gated on the ~326 MB session init.
+    /// first spoken utterance isn't gated on the ~326 MB session init — AND run
+    /// one throwaway forward pass, because loading the weights was only half of
+    /// what this method promised.
+    ///
+    /// MLX compiles its Metal kernels lazily on first use, so before this the
+    /// very first sentence of every launch paid the whole pipeline warm-up
+    /// while the user sat listening to nothing. The audio is discarded; the
+    /// compiled kernels are what we're keeping.
     public func preload() async throws {
-        _ = try await ensureLoaded()
+        let box = try await ensureLoaded()
+        await warm(box)
     }
+
+    /// One short forward pass to compile the graph. Errors are swallowed on
+    /// purpose: the weights ARE loaded by the time this runs, so a warm failure
+    /// must never demote M1K3 to the system voice — it would trade the whole
+    /// neural voice for a lost optimisation.
+    private func warm(_ box: Loaded) async {
+        guard !warmed else { return }
+        // Claimed BEFORE the first await, so a concurrent `preload()` can't
+        // start a second warm through actor reentrancy — and RELEASED again on
+        // every failure path below, so a transient one doesn't permanently
+        // re-introduce the very cost this exists to remove. `preload()` is
+        // documented idempotent and really is called more than once.
+        warmed = true
+        let started = ContinuousClock.now
+        let result = box.g2p.annotatedTokens(Self.warmPhrase)
+        guard !result.tokens.isEmpty else {
+            warmed = false
+            return
+        }
+        do {
+            let style = try box.voices.style(voice: voice, tokenCount: result.tokens.count)
+            let tokens = KokoroMLXInput.modelTokens(result.tokens)
+            _ = try await withCheckedThrowingContinuation { continuation in
+                box.inferenceQueue.async {
+                    continuation.resume(with: Result {
+                        try Self.infer(box, tokens: tokens, style: style, speed: 1.0)
+                    })
+                }
+            }
+            // Hoisted: interpolating a MEMBER into a Logger autoclosure is the
+            // documented swiftformat landmine in this repo.
+            let elapsedMS = started.duration(to: .now).wholeMilliseconds
+            Self.log.notice(
+                "kokoro warm: graph compiled in \(elapsedMS, privacy: .public)ms — the first spoken sentence no longer pays this"
+            )
+        } catch {
+            // Swallowed by design (the weights ARE loaded — a warm failure must
+            // never demote M1K3 to the system voice), but retryable: leaving
+            // `warmed` set would mean one transient Metal hiccup silently costs
+            // the graph warm for the whole process, with only this line as
+            // evidence — and the metallib wall means no test can catch it.
+            warmed = false
+            Self.log.warning("kokoro warm skipped, will retry on the next preload: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Short, ordinary, and never heard. Real words (not silence) so the G2P,
+    /// the style lookup and the decoder all take the same path a real sentence
+    /// takes — a degenerate input can compile a different graph.
+    private static let warmPhrase = "Hello."
 
     /// Synthesize `text` to mono float PCM @ 24 kHz. Empty result ⇒ nothing to say
     /// (all words out-of-vocabulary); the caller should fall back.

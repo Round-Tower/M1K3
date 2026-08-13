@@ -319,8 +319,20 @@ extension AppEnvironment {
                 // starves the answer. Read fresh each turn so a hot-swap re-sizes
                 // immediately; the mini/unknown guard lives in the policy, pinned
                 // there rather than re-implemented in app glue.
-                let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
-                return GroundingBudgetPolicy.tokens(for: BrainTier(persisted: raw))
+                //
+                // A SPOKEN turn is tighter again. Prefill is paid in full before
+                // the first token exists and voice mode speaks at the first
+                // sentence, so grounding tokens land directly on
+                // time-to-first-audio at a measured 1.71 ms each (Lil, live path,
+                // 2026-08-13). The mode is read from the same nonisolated
+                // UserDefaults flag voice mode already maintains — this closure
+                // is @Sendable and cannot touch the main-actor `voiceLoop`.
+                let defaults = UserDefaults.standard
+                let raw = defaults.string(forKey: Self.selectedBrainKey) ?? ""
+                return GroundingBudgetPolicy.tokens(
+                    for: BrainTier(persisted: raw),
+                    spoken: defaults.bool(forKey: Self.voiceModeActiveKey)
+                )
             }
         )
     }

@@ -50,14 +50,51 @@ public enum GroundingBudgetPolicy {
     /// A budget that consumes the window is not a budget.
     public static let miniTokenBudget = 600
 
+    /// The ceiling for a SPOKEN turn, on any tier.
+    ///
+    /// Two independent reasons, and the second is the one that makes this a
+    /// design decision rather than a latency hack:
+    ///
+    /// 1. **Prefill is what a voice user waits for.** Measured on Kev's Mac
+    ///    (Lil resident, persona prefix warm, live agent path): prompts of 822
+    ///    and 1401 tokens prefilled in 2052 ms and 3045 ms — a marginal
+    ///    **1.71 ms per prompt token**, against a decode of ~61 tok/s. Voice
+    ///    mode speaks at the first SENTENCE, so decode barely registers in
+    ///    time-to-first-audio while prefill is paid in full before a single
+    ///    token exists. Trimming 1100 → 400 takes ~1.2 s off every spoken turn.
+    /// 2. **A spoken answer cannot spend that grounding anyway.** Nobody reads
+    ///    seven document chunks aloud. The typed budget is sized for an answer
+    ///    the reader can scan and re-read; a spoken one is a few sentences.
+    ///
+    /// Deliberately NOT done here: changing the TOOL palette for spoken turns.
+    /// The palette is part of the persona-prefix KV cache key, so a mode-
+    /// specific palette costs a full prefix rebuild — measured at **6.2 s** on
+    /// Lil when the self-query gate's smaller palette missed the cache
+    /// (2026-08-13). Tune the grounding, never the palette.
+    public static let spokenTokenBudget = 400
+
     /// The grounding token ceiling for `tier`. The MLX tiers keep
     /// `GroundingBudget.defaultTokenBudget` byte-for-byte — that figure is the
     /// output of PR #65's on-device instrument and this policy is not licence
     /// to re-tune it from an armchair.
-    public static func tokens(for tier: BrainTier?) -> Int {
+    ///
+    /// `spoken` can only ever TIGHTEN the result (`min`), never widen it: this
+    /// policy's whole direction of failure is toward the smaller budget, and a
+    /// mode flag must not be able to reverse that for a tier.
+    ///
+    /// No tier is exempt, INCLUDING Mini — its 600 trims to 400 like the rest.
+    /// Both reasons for the spoken cap apply to Mini at least as hard as to the
+    /// others: nobody reads seven chunks aloud whichever brain read them, and
+    /// Mini has the least window to spend in the first place.
+    public static func tokens(for tier: BrainTier?, spoken: Bool = false) -> Int {
         // nil is an unresolvable persisted brain string. Fail small, matching
         // HistoryBudgetPolicy's nil guard: the cost of being wrong is asymmetric.
-        guard let tier, tier != .mini else { return miniTokenBudget }
-        return GroundingBudget.defaultTokenBudget
+        let typed: Int
+        if let tier, tier != .mini {
+            typed = GroundingBudget.defaultTokenBudget
+        } else {
+            typed = miniTokenBudget
+        }
+        return spoken ? min(typed, spokenTokenBudget) : typed
     }
 }

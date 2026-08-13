@@ -23,6 +23,45 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
 
 ## Now
 
+- **★ Voice latency: measured, and the intuition was wrong — 2026-08-13.** The
+  voice loop had never been instrumented end-to-end. Per-generation `ttft` lines
+  existed (prefill ms, decode tok/s) but a voice turn is retrieval + a grounding
+  cap + an agent loop + a synthesiser, so nothing answered *how long after Kev
+  stopped talking did M1K3 start talking back*. `VoiceTurnTimeline` now logs
+  exactly that, per turn, on both shells:
+  `voice turn: first sentence Xms · synth Yms · first audio Zms · answer Wms · N sentences`.
+  **Measured live over MCP** (Lil resident, persona prefix warm, Kev's own store):
+
+  | prompt | prefill | decode |
+  |---|---|---|
+  | 822 tok | 2052 ms | 84 tok @ 63 tok/s |
+  | 1401 tok | 3045 ms | 175 tok @ 61 tok/s |
+
+  Marginal cost is **1.71 ms per prompt token** on a ~646 ms fixed floor.
+  ★ **Prefill dominates time-to-first-audio and decode barely registers** —
+  voice speaks at the first SENTENCE (~15 tokens, ~250 ms of decode) while
+  prefill is paid in full before any token exists. So the lever is FEWER PROMPT
+  TOKENS, not faster decoding, which demotes speculative decoding from "the
+  obvious next win" to a full-answer-time optimisation (see below).
+  Shipped off that: `GroundingBudgetPolicy.spokenTokenBudget = 400` (from 1100)
+  — ~1.2 s off every spoken turn, and justified twice over, because nobody reads
+  seven document chunks aloud. The iOS shell had **no grounding budget provider
+  at all**, so PR #101's Mini sizing never crossed to mobile; it does now.
+  Kokoro's `preload()` also now runs one throwaway forward pass — it loaded the
+  weights but left the Metal graph to compile on the user's first real sentence.
+
+- **⚠️ The tool palette is a KV-cache key — changing it per mode costs seconds.**
+  Measured the same day: a self-query turn ("Who are you?") withholds four corpus
+  tools, which is a different `PersonaPrefixCache` key, which is a **6.2 s prefix
+  rebuild** — and `PersonaPrefixCache.defaultCapacity` is 2 while three real
+  palettes now exist (interactive, headless, self-query), so they evict each
+  other. This is the 2026-08-09 stampede class, reopened by a third palette.
+  Filed rather than fixed: raising capacity wants the measured RAM snapshot the
+  file's own header demands. **Standing consequence: tune the grounding, never
+  the palette** — which is a second, stronger reason for the existing
+  "cut iterations, not tools" ruling. Full write-up, including the TTS-upgrade
+  and background-conversation answers: `docs/VOICE_PERFORMANCE.md` (issue #121).
+
 - **Retrieval, the warm palette, and the model's own thinking in the corpus —
   2026-08-12, found by driving the live app over MCP.** Four things, all
   measured on Kev's real store rather than reasoned about:

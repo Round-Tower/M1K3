@@ -57,6 +57,27 @@ struct VoiceLoopMachineTests {
         #expect(machine.state == .idle)
     }
 
+    @Test("a stale duplicate endpoint returns NO commands — the timing gate relies on exactly this")
+    func staleEndpointReturnsNothing() {
+        // Two independent endpoint sources exist (silence tick, recognizer
+        // finality) and the machine is the arbiter of which one counts. The
+        // controller's `recordTiming` gates its `.endpointed` handling on
+        // `commands.isEmpty`, so this property — every REJECTED endpoint
+        // returns an empty command list, every accepted arm a non-empty one
+        // (pinned by the three tests above) — is load-bearing beyond the
+        // machine itself. Widen with care.
+        var awaiting = VoiceLoopMachine()
+        _ = awaiting.handle(.begin)
+        _ = awaiting.handle(.endpointed("what's the weather"))
+        #expect(awaiting.handle(.endpointed("what's the weather")).isEmpty)
+
+        var speaking = VoiceLoopMachine()
+        _ = speaking.handle(.begin)
+        _ = speaking.handle(.endpointed("hello"))
+        _ = speaking.handle(.answerReady("hi"))
+        #expect(speaking.handle(.endpointed("hello")).isEmpty)
+    }
+
     @Test("a real utterance resets the empty-listen counter")
     func realUtteranceResetsCounter() {
         var machine = VoiceLoopMachine()
