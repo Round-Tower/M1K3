@@ -80,6 +80,11 @@ public final class VoiceLoopController {
     public private(set) var state: VoiceLoopState = .idle
     public private(set) var lastError: String?
 
+    /// The last completed turn's latency line (the same text that goes to the
+    /// unified log). Public so the numbers are assertable from the loop's own
+    /// fakes rather than only observable by reading a log after the fact.
+    public private(set) var lastTurnLatency: String?
+
     private var machine = VoiceLoopMachine()
     private let dependencies: Dependencies
     private let echoGrace: Duration
@@ -98,6 +103,9 @@ public final class VoiceLoopController {
     private var speechQueue: [String] = []
     private var accumulator = TranscriptAccumulator()
     private var endpointer: SilenceEndpointer
+    /// This turn's latency envelope (see VoiceTurnTimeline). Reset per turn,
+    /// flushed to the log the moment it settles.
+    private var timeline = VoiceTurnTimeline()
 
     public init(
         dependencies: Dependencies,
@@ -166,14 +174,81 @@ public final class VoiceLoopController {
         dispatch(.speechFinished)
     }
 
+    /// Wire from the speech provider's onSpeakingStarted. Purely a timing mark
+    /// — the loop's state machine already owns the speaking phase, so this
+    /// deliberately dispatches no event. It is the ONLY point that knows when
+    /// sound actually reached the user, which is the number the whole voice
+    /// performance thread is about.
+    public func speechDidStart() {
+        timeline.audioStarted(at: .now)
+        flushTimelineIfSettled()
+    }
+
     // MARK: - Reducer plumbing
 
     private func dispatch(_ event: VoiceLoopEvent) {
+        recordTiming(for: event)
         let commands = machine.handle(event)
         state = machine.state
         for command in commands {
             execute(command)
         }
+    }
+
+    /// Stamp this turn's latency marks off the events already flowing through
+    /// `dispatch`. Timing lives here rather than at each call site so a new
+    /// route into the loop can't silently stop being measured.
+    ///
+    /// `.endpointed` is the user's own stopwatch start — but it also fires for
+    /// empty/parked listens, which never run a turn; `summary()` returns nil for
+    /// those, so they cost a mark and log nothing.
+    private func recordTiming(for event: VoiceLoopEvent) {
+        let now = ContinuousClock.now
+        switch event {
+        case .endpointed:
+            // Flush FIRST: a previous turn that never settled (generated but
+            // never spoke) would otherwise donate its first-sentence mark to
+            // this turn and report a latency that belongs to neither.
+            flushTimeline()
+            timeline.endpointed(at: now)
+        case .answerChunk:
+            timeline.chunkReady(at: now)
+        case .answerReady:
+            // The whole-answer path has exactly one "sentence" and finishes
+            // generating at the same instant it produces it.
+            timeline.chunkReady(at: now)
+            timeline.completed(at: now)
+        case .answerCompleted:
+            timeline.completed(at: now)
+            flushTimelineIfSettled()
+        case .answerFailed:
+            // A failed turn's latency is worth MORE than a successful one's —
+            // it is time the user waited for nothing. Reported unsettled.
+            timeline.completed(at: now)
+            flushTimeline()
+        case .exit, .interrupt, .mute:
+            // A barge-in or exit mid-answer would otherwise lose the turn's
+            // numbers entirely, biasing every measurement towards the turns the
+            // user was patient enough to sit through.
+            flushTimeline()
+        case .begin, .partial, .speechFinished:
+            break
+        }
+    }
+
+    /// Log + clear once every number has landed.
+    private func flushTimelineIfSettled() {
+        guard timeline.isSettled else { return }
+        flushTimeline()
+    }
+
+    /// Log whatever this turn managed to record, then start clean. `.notice`
+    /// because `.info`/`.debug` do not persist in OSLogStore.
+    private func flushTimeline() {
+        defer { timeline.reset() }
+        guard let summary = timeline.summary() else { return }
+        lastTurnLatency = summary
+        Self.log.notice("\(summary, privacy: .public)")
     }
 
     /// Dispatch an answer event ONLY if it belongs to the current turn — a
@@ -213,6 +288,7 @@ public final class VoiceLoopController {
             // rely on cancellation to silence it). 2026-07-25 review finding.
             turnGeneration &+= 1
             let generation = turnGeneration
+            timeline.turnStarted(at: .now)
             turnTask = Task { [weak self] in
                 guard let dependencies = self?.dependencies else { return }
                 if let streaming = dependencies.runTurnStreaming {

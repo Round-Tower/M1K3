@@ -102,6 +102,49 @@ struct VoiceLoopControllerTests {
         #expect(controller.state == .listening(partial: ""))
     }
 
+    // MARK: - Latency instrument
+
+    @Test("a spoken turn reports its own latency once audio starts")
+    func turnLatencyIsRecorded() async throws {
+        let harness = Harness()
+        let controller = makeController(harness, silence: .seconds(30), holdSilence: .seconds(30))
+
+        controller.begin()
+        await waitUntil { harness.continuation != nil }
+        harness.continuation?.yield(TranscriptSegment(text: "how fast are you", isFinal: true))
+        harness.continuation?.finish()
+        await waitUntil { !harness.spoken.isEmpty }
+        // Generation has completed (whole-answer path) but nothing has been heard
+        // yet — reporting now would call every such turn silent.
+        #expect(controller.lastTurnLatency == nil)
+
+        controller.speechDidStart()
+        let summary = try #require(controller.lastTurnLatency)
+        #expect(summary.hasPrefix("voice turn: "))
+        #expect(summary.contains("first audio"))
+        #expect(summary.contains("1 sentence"))
+    }
+
+    @Test("a turn abandoned by barge-in still reports — the impatient turns are the ones that matter")
+    func bargeInStillReportsLatency() async throws {
+        let harness = Harness()
+        harness.holdTurn = true
+        let controller = makeController(harness, silence: .seconds(30), holdSilence: .seconds(30))
+
+        controller.begin()
+        await waitUntil { harness.continuation != nil }
+        harness.continuation?.yield(TranscriptSegment(text: "take your time", isFinal: true))
+        harness.continuation?.finish()
+        await waitUntil { !harness.turns.isEmpty }
+
+        controller.interrupt()
+        let summary = try #require(controller.lastTurnLatency)
+        #expect(summary.contains("no audio"))
+        #expect(summary.contains("0 sentences"))
+
+        harness.turnGate?.resume()
+    }
+
     @Test("a stalled partial endpoints by silence — no finality needed")
     func silenceEndpoint() async {
         let harness = Harness()

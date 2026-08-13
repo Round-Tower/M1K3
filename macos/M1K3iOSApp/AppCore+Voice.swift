@@ -45,7 +45,14 @@ extension AppCore {
     /// mode the end callback just settles the avatar back to idle.
     func wireSpeechCallbacks() {
         speech.onSpeakingStarted = { [weak self] in
-            Task { @MainActor [weak self] in self?.avatar.setActivity(.speaking) }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                avatar.setActivity(.speaking)
+                // Same latency mark as the Mac shell — mobile is the surface
+                // where the wait is felt most, so it must not be the one
+                // surface that goes unmeasured.
+                voiceLoop?.speechDidStart()
+            }
         }
         speech.onSpeakingEnded = { [weak self] in
             Task { @MainActor [weak self] in
@@ -67,6 +74,10 @@ extension AppCore {
     func enterVoiceMode() {
         guard voiceLoop == nil, !chat.isResponding, isReady else { return }
         activateVoiceAudioSession()
+        // The responder's @Sendable budget closure cannot see `voiceLoop`, so
+        // the mode announces itself through the shared defaults slot — the same
+        // one the Mac shell has written since voice-first shipped.
+        UserDefaults.standard.set(true, forKey: VoiceModeDefaults.activeKey)
         let controller = VoiceLoopController(
             dependencies: makeVoiceLoopDependencies(),
             cadence: .conversational
@@ -81,6 +92,7 @@ extension AppCore {
         guard let controller = voiceLoop else { return }
         controller.exit()
         voiceLoop = nil
+        UserDefaults.standard.set(false, forKey: VoiceModeDefaults.activeKey)
         avatar.resetToIdle()
         deactivateVoiceAudioSession()
     }

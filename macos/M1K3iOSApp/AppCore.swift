@@ -149,6 +149,12 @@ final class AppCore {
     }()
 
     init() throws {
+        // Voice mode is never restored across launches. A stale `true` — a crash
+        // or a jetsam kill mid-conversation (issue #85) — would apply the spoken
+        // grounding budget to every typed turn until the user happened to enter
+        // and leave voice mode again. Same launch hygiene the Mac shell does.
+        UserDefaults.standard.set(false, forKey: VoiceModeDefaults.activeKey)
+
         // Bound the process-global MLX Metal cache before ANY MLX work (4 GB mobile
         // ceiling). Skipped on the Simulator — see `mlxAvailable`; touching MLX there
         // aborts the process.
@@ -482,6 +488,22 @@ final class AppCore {
             fastThinkingProvider: {
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.prefersFastThinking ?? false
+            },
+            groundingBudgetProvider: {
+                // This shell had NO budget provider at all until 2026-08-13, so
+                // every tier — including Mini, the mobile first-run default —
+                // ran the 1100-token figure derived for Big's 8192-token window.
+                // That is PR #101's fix, which never crossed to mobile.
+                //
+                // A spoken turn tightens again: prefill is paid in full before
+                // the first token exists, at a measured 1.71 ms per prompt token
+                // (Lil, live path), and it lands directly on time-to-first-audio.
+                let defaults = UserDefaults.standard
+                let raw = defaults.string(forKey: Self.selectedBrainKey) ?? ""
+                return GroundingBudgetPolicy.tokens(
+                    for: BrainTier(persisted: raw),
+                    spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey)
+                )
             }
         )
     }

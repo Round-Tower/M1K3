@@ -34,8 +34,11 @@ extension AppEnvironment {
     private nonisolated static let voiceLog = Logger(subsystem: "app.m1k3", category: "stt")
 
     /// Transient flag consulted by thinkingModeProvider (voice mode swaps the
-    /// global Reasoning setting for the in-mode thinking toggle).
-    nonisolated static let voiceModeActiveKey = "voiceMode.active"
+    /// global Reasoning setting for the in-mode thinking toggle) and by the
+    /// grounding budget (a spoken turn is trimmed for time-to-first-audio).
+    /// The literal now lives in the package so the iOS shell reads the SAME
+    /// slot — same string, no migration.
+    nonisolated static let voiceModeActiveKey = VoiceModeDefaults.activeKey
 
     /// Flipped on the first successful voice-mode entry — the toolbar button
     /// stays LABELED until then (discoverability for the headline feature).
@@ -120,7 +123,13 @@ extension AppEnvironment {
     /// whichever tier is active and AppEnvironment.swift stays under its ceilings.
     func wireSpeechCallbacks() {
         speech.onSpeakingStarted = { [weak self] in
-            Task { @MainActor [weak self] in self?.avatar.setActivity(.speaking) }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                avatar.setActivity(.speaking)
+                // The only point that knows when sound actually reached the
+                // user — the number the voice latency line is built around.
+                voiceLoop?.speechDidStart()
+            }
         }
         speech.onSpeakingEnded = { [weak self] in
             Task { @MainActor [weak self] in
