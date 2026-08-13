@@ -76,6 +76,52 @@ against it.
 
 ---
 
+## 2a. ★ The biggest lever left: the conversation is re-prefilled every turn
+
+Measured 2026-08-13, three consecutive turns, from `toolTurnSession reuse`:
+
+```
+reuse: 1786/2390 tok from cache, prefilling  604
+reuse: 1786/3441 tok from cache, prefilling 1655
+reuse: 1786/2712 tok from cache, prefilling  926
+```
+
+**1786 every time.** That is exactly the persona prefix — and not one token
+more. `CrossTurnCacheReuse` is real and working, but the `MLXToolTurnSession` is
+built **per chat turn**, seeded from `PersonaPrefixCache` and nothing else, so
+its reuse only ever serves the agent loop's own iterations *within* a turn. The
+context line, the history replay and the grounding are re-prefilled from scratch
+on every single turn of a conversation.
+
+At 1.71 ms/token that is the dominant remaining cost, and unlike grounding it
+**grows with the conversation**: `HistoryBudgetPolicy` replays up to 3000 chars
+(~857 tokens, ~1.5 s) and a voice chat reaches that quickly. Turn 3 above spent
+2032 ms prefilling 926 tokens it had almost entirely prefilled before.
+
+### Why the reuse stops where it does
+
+Cache after turn N holds `[persona][ctx][hist_N][grounding_N][q_N][answer_N]`.
+Turn N+1 renders `[persona][ctx][hist_N + q_N + a_N][grounding_N+1][q_N+1]` on a
+**fresh session**, so there is no live cache to match against at all — the seed
+is the persona, and the common prefix is therefore the persona.
+
+### What would fix it
+
+Hold **one session per conversation** and make the transcript append-only —
+fold each turn's grounding into that turn's user text rather than re-rendering
+history as replay prose. The cache then genuinely extends:
+`[persona][G1 q1][a1][G2 q2]...`, and turn N prefills only its own grounding and
+question.
+
+⚠️ Not started deliberately. It changes how every prompt is assembled and it
+has real hazards — cache invalidation on brain swap, unbounded KV growth over a
+long conversation, gemma's `RotatingKVCache` vetoing reuse once it wraps, and the
+history-replay machinery becoming redundant rather than merely unused. **Wants a
+`challenger` pass before a line is written**, per house rules for non-trivial
+architecture.
+
+---
+
 ## 3. Things that look like wins and are not
 
 ### Speculative decoding — real, but smaller than it looks
