@@ -235,8 +235,14 @@ extension AppEnvironment {
         guard voicePermissionPreflight() else { return }
         // The loop owns speech from here; a chat auto-speak session mid-answer
         // would talk over it (its poll-tick guard also bails, but the in-flight
-        // utterance needs the explicit stop).
+        // utterance needs the explicit stop). Both calls, same as the toggle-off
+        // handler: cancel kills future sentences, stop silences the one
+        // currently rendering — otherwise M1K3's trailing voice bleeds into the
+        // mic the loop is about to open (round-3 review catch, PR #124). The
+        // stop stays OUT of cancelAutoSpeak itself: the supersede path needs it
+        // sequenced inside the new session, not fire-and-forget.
         cancelAutoSpeak()
+        Task { await stopSpeaking() }
         UserDefaults.standard.set(true, forKey: Self.hasEnteredVoiceModeKey)
         UserDefaults.standard.set(true, forKey: Self.voiceModeActiveKey)
         soundEffects.play(.voiceEnter) // M1K3 materialising
@@ -416,9 +422,11 @@ extension AppEnvironment {
                 guard let self else {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
-                var folder = SentenceStreamFolder(stopMarker: FollowUpSplit.sentinel)
-                var emitted = false
-                var streamedText = ""
+                // StreamedAnswerFolder carries the fold-forward guard (only
+                // prefix-extending updates — a FOLLOWUPS/polish shrink must
+                // never re-speak the answer, the 2026-07-25 finding) as a
+                // tested M1K3Voice seam shared with chat auto-speak.
+                var folder = StreamedAnswerFolder(stopMarker: FollowUpSplit.sentinel)
                 // Pin to THIS turn's assistant message by id — never read
                 // `messages.last`. A delegate_deep delivery (or any out-of-band
                 // append) lands as a NEW last message; folding THAT as the
@@ -428,18 +436,10 @@ extension AppEnvironment {
                 // baselineCount; capture its id once it exists.
                 let baselineCount = chat.messages.count
                 var pinnedID: UUID?
-                /// Fold only forward-growing text: if the pinned message's text
-                /// stops being a prefix-extension (FOLLOWUPS split / polish
-                /// rewrite shrinks it), skip — the folder's divergence reset
-                /// would otherwise re-speak the whole answer. Same guard the
-                /// final fold uses, applied to every poll (2026-07-25 finding).
                 @MainActor func foldForward(_ text: String) {
-                    guard text.hasPrefix(streamedText) else { return }
                     for sentence in folder.ingest(text) {
-                        emitted = true
                         onChunk(sentence)
                     }
-                    streamedText = text
                 }
                 @MainActor func pinnedMessage() -> ChatMessage? {
                     if let pinnedID { return chat.messages.first { $0.id == pinnedID } }
@@ -467,10 +467,9 @@ extension AppEnvironment {
                 }
                 foldForward(settled.text)
                 if let tail = folder.flush() {
-                    emitted = true
                     onChunk(tail)
                 }
-                guard emitted else {
+                guard folder.emittedAny else {
                     return .failure(VoiceTurnFailure(message: "The model had nothing to say."))
                 }
                 recordSpokenExchange()
