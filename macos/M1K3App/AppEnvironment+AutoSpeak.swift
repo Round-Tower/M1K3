@@ -44,6 +44,12 @@ extension AppEnvironment {
     /// a delegate_deep delivery must not be spoken as this answer).
     func beginAutoSpeakSession() {
         guard autoSpeakWouldServe else { return }
+        // A send while a turn is already streaming NO-OPS in ChatSession
+        // (`guard !isResponding`), so starting a session here would cancel the
+        // in-flight answer's speech and pin a baseline no message will ever
+        // cross — leave the live session alone instead (review catch, PR #124;
+        // reachable via dictation, whose mic button doesn't disable mid-turn).
+        guard !chat.isResponding else { return }
         let superseding = autoSpeakTask != nil
         cancelAutoSpeak()
         let baselineCount = chat.messages.count
@@ -54,6 +60,10 @@ extension AppEnvironment {
             if superseding { await self?.stopSpeaking() }
             var folder = StreamedAnswerFolder(stopMarker: FollowUpSplit.sentinel)
             var pinnedID: UUID?
+            // Poll ticks before the first assistant message appears; ~10s at
+            // 150ms. Generous — a message normally appears within one tick.
+            let firstMessageTickBudget = 66
+            var ticks = 0
 
             /// Nested funcs in a @MainActor closure are NONISOLATED by default
             /// (Swift 6) — the annotation is load-bearing, not decoration.
@@ -81,10 +91,8 @@ extension AppEnvironment {
                     case .failed:
                         return // the error earcon carries it; speak nothing more
                     case .complete:
-                        for sentence in folder.ingest(message.text) {
-                            guard !Task.isCancelled else { return }
-                            await self.speak(sentence)
-                        }
+                        // The loop above already ingested the settled text —
+                        // only the unterminated tail remains.
                         if !Task.isCancelled, let tail = folder.flush() {
                             await self.speak(tail)
                         }
@@ -92,7 +100,13 @@ extension AppEnvironment {
                     default:
                         break // still streaming
                     }
+                } else if ticks > firstMessageTickBudget {
+                    // No assistant message ever crossed the baseline — a send
+                    // that silently no-opped somewhere this file can't see.
+                    // Give up rather than spin every 150ms indefinitely.
+                    return
                 }
+                ticks += 1
                 try? await Task.sleep(for: .milliseconds(150))
             }
         }
