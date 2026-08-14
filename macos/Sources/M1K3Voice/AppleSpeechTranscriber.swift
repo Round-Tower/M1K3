@@ -83,6 +83,10 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var continuation: AsyncStream<TranscriptSegment>.Continuation?
+    /// One-shot breadcrumb flag (guarded by `lock`): the mono-mixdown adapter
+    /// failing soft on a >2-channel device is a silent-capture risk and must
+    /// log — once, not at tap-callback rate.
+    private var mixdownFallbackLogged = false
     /// Observes `.AVAudioEngineConfigurationChange` so a route flip (a Bluetooth
     /// mic connecting, or capture forcing the A2DP→HFP profile switch) reinstalls
     /// the tap on the NEW input format instead of leaving it deaf on the old one.
@@ -395,7 +399,31 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // not observed in practice; closing over the specific request instance would
         // tighten it if it ever surfaces.
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            self?.lock.withLock { self?.request?.append(buffer) }
+            // Multi-channel devices go MONO before the recognizer: SFSpeech
+            // accepts >2-channel buffers and silently never produces a partial
+            // (the 2026-08-14 nine-channel aggregate — VPIO above doesn't
+            // engage on aggregates, so the tap sees the raw device format).
+            // Liveness first, so a torn-down session's trailing buffer skips
+            // the mixdown copy too (PR #127 review).
+            guard let self else { return }
+            let audible = MonoMixdown.mixIfNeeded(buffer)
+            self.lock.withLock {
+                // The adapter fails SOFT (returns the original buffer) if it
+                // can't build the mono copy — which would re-open the exact
+                // listens-captures-nothing class this fix closes. Leave a
+                // breadcrumb, once per session (PR #127 review).
+                if audible === buffer, buffer.format.channelCount > 2, !self.mixdownFallbackLogged {
+                    self.mixdownFallbackLogged = true
+                    Self.log.error(
+                        """
+                        mono mixdown fell back — recognizer fed \
+                        \(buffer.format.channelCount, privacy: .public)-channel audio \
+                        (silent-capture risk)
+                        """
+                    )
+                }
+                self.request?.append(audible)
+            }
         }
         return true
     }
