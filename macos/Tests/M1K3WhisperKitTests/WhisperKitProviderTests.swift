@@ -55,4 +55,54 @@ struct WhisperKitProviderTests {
         // Unavailable (no model) → router resolves nothing, no crash.
         #expect(router.activeProvider == nil)
     }
+
+    // MARK: - Input-device channel gate (the 2026-08-13 silent-dictation incident)
+
+    @Test("a multi-channel input device makes the provider report device-unusable")
+    func multiChannelDeviceVetoes() {
+        let provider = WhisperKitProvider(inputChannelCount: { 9 })
+        #expect(provider.inputDeviceUsable == false)
+    }
+
+    @Test("mono and stereo devices keep the provider device-usable")
+    func monoStereoDevicesServe() {
+        #expect(WhisperKitProvider(inputChannelCount: { 1 }).inputDeviceUsable)
+        #expect(WhisperKitProvider(inputChannelCount: { 2 }).inputDeviceUsable)
+    }
+
+    @Test("an unreadable probe fails open — availability still gates on the model")
+    func unknownProbeFailsOpen() {
+        let provider = WhisperKitProvider(inputChannelCount: { nil })
+        #expect(provider.inputDeviceUsable)
+        // Still unavailable overall: no model is loaded.
+        #expect(provider.isAvailable == false)
+    }
+
+    @Test("the device probe is cached — isAvailable is on a SwiftUI hot path")
+    func probeResultIsCached() {
+        // canDictate → router → isAvailable re-evaluates per coalesced render
+        // during streaming; the CoreAudio HAL read must not run each time.
+        let calls = ProbeCallCounter()
+        let provider = WhisperKitProvider(inputChannelCount: {
+            calls.increment()
+            return 2
+        })
+        #expect(provider.inputDeviceUsable)
+        #expect(provider.inputDeviceUsable)
+        #expect(provider.inputDeviceUsable)
+        #expect(calls.count == 1)
+    }
+}
+
+/// Thread-safe call counter for the @Sendable probe closure.
+private final class ProbeCallCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+    var count: Int {
+        lock.withLock { value }
+    }
+
+    func increment() {
+        lock.withLock { value += 1 }
+    }
 }

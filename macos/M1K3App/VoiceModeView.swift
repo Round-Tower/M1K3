@@ -152,17 +152,25 @@ struct VoiceModeView: View {
     private var stateContent: some View {
         switch env.voiceLoop?.state {
         case let .listening(partial):
-            Text(partial.isEmpty ? "Listening…" : partial)
-                .font(.title3)
-                .foregroundStyle(partial.isEmpty ? .secondary : .primary)
-                .multilineTextAlignment(.center)
-                .lineLimit(4)
-                .lineSpacing(5)
-                .kerning(0.3)
-                .padding(.horizontal, 22)
-                .padding(.vertical, 16)
-                .glassEffect(.regular, in: .rect(cornerRadius: 22))
-                .animation(.easeOut(duration: 0.15), value: partial)
+            VStack(spacing: 8) {
+                Text(partial.isEmpty ? "Listening…" : partial)
+                    .font(.title3)
+                    .foregroundStyle(partial.isEmpty ? .secondary : .primary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(4)
+                    .lineSpacing(5)
+                    .kerning(0.3)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 16)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 22))
+                    .animation(.easeOut(duration: 0.15), value: partial)
+                // Teach the spoken submit button (PoliteEndpoint): end on
+                // "please" and M1K3 takes its turn on the short window instead
+                // of waiting out the conversational pause.
+                Text(PoliteEndpoint.uiHint)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
 
         case .awaitingAnswer:
             HStack(spacing: 10) {

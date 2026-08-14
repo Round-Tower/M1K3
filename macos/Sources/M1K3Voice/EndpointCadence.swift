@@ -34,19 +34,28 @@ public struct EndpointCadence: Sendable, Equatable {
     public let cadenceMargin: Duration
     /// Clamp on the learned floor, so one long silence can't stall the loop.
     public let cadenceCeiling: Duration
+    /// The short window after a trailing "please" — the spoken submit button
+    /// (see PoliteEndpoint). Must exceed the slowest recognizer's partial
+    /// cadence (WhisperKit hops ~1s windows) or "please tell me…" could be
+    /// clipped to "please" before the continuation ever arrives — hence the
+    /// 1.2s default sits comfortably PAST the ~1s hop, not exactly on it
+    /// (round-4 review, PR #124).
+    public let polite: Duration
 
     public init(
         silence: Duration,
         hold: Duration,
         maxWait: Duration,
         cadenceMargin: Duration,
-        cadenceCeiling: Duration
+        cadenceCeiling: Duration,
+        polite: Duration = .seconds(1.2)
     ) {
         self.silence = silence
         self.hold = hold
         self.maxWait = maxWait
         self.cadenceMargin = cadenceMargin
         self.cadenceCeiling = cadenceCeiling
+        self.polite = polite
     }
 
     /// Human conversation, not command dictation: a complete-sounding sentence

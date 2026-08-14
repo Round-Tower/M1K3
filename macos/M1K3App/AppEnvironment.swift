@@ -271,6 +271,10 @@ final class AppEnvironment {
 
     /// Word-highlight state for speech playback (the karaoke reading view).
     let speechHighlight = SpeechHighlight()
+    /// Chat auto-speak session — the poller that speaks a streaming answer
+    /// sentence-by-sentence while the transcript renders it. One at a time;
+    /// a new send supersedes the old (AppEnvironment+AutoSpeak.swift).
+    var autoSpeakTask: Task<Void, Never>?
     /// Voice-first mode's conversation loop — non-nil while the mode is active.
     /// Written ONLY by enterVoiceMode/exitVoiceMode (AppEnvironment+VoiceMode.swift;
     /// internal because private(set) is file-scoped).
@@ -875,6 +879,9 @@ final class AppEnvironment {
                 self.avatar.setActivity(.generating)
             }
         }
+        // Auto-speak rides the same streaming message this send is about to
+        // create — begin BEFORE the send so the baseline pins this turn.
+        beginAutoSpeakSession()
         await chat.send(text, images: images)
         advance.cancel()
         // A failed turn earns the error earcon (the gate mutes it if M1K3 is

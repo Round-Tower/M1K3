@@ -115,7 +115,8 @@ public final class VoiceLoopController {
         echoGrace: Duration = .milliseconds(350),
         endpointTick: Duration = .milliseconds(300),
         cadenceMargin: Duration = EndpointCadence.conversational.cadenceMargin,
-        cadenceCeiling: Duration = EndpointCadence.conversational.cadenceCeiling
+        cadenceCeiling: Duration = EndpointCadence.conversational.cadenceCeiling,
+        politeSilence: Duration = EndpointCadence.conversational.polite
     ) {
         self.dependencies = dependencies
         self.silence = silence
@@ -126,7 +127,8 @@ public final class VoiceLoopController {
             holdSilence: holdSilence,
             maxWait: maxWait,
             cadenceMargin: cadenceMargin,
-            cadenceCeiling: cadenceCeiling
+            cadenceCeiling: cadenceCeiling,
+            politeSilence: politeSilence
         )
     }
 
@@ -146,7 +148,8 @@ public final class VoiceLoopController {
             echoGrace: echoGrace,
             endpointTick: endpointTick,
             cadenceMargin: cadence.cadenceMargin,
-            cadenceCeiling: cadence.cadenceCeiling
+            cadenceCeiling: cadence.cadenceCeiling,
+            politeSilence: cadence.polite
         )
     }
 

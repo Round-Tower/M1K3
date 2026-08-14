@@ -75,6 +75,8 @@ struct ContentView: View {
     /// until the first entry — the headline feature must not hide behind an
     /// unlabeled wave glyph for someone who's never found it.
     @AppStorage(AppEnvironment.hasEnteredVoiceModeKey) private var hasEnteredVoiceMode = false
+    /// Chat auto-speak: answers are spoken as they stream, karaoke band follows.
+    @AppStorage(VoiceModeDefaults.autoSpeakKey) private var autoSpeakEnabled = false
 
     /// Readable measure for the chat column on large windows: transcript and
     /// input bar cap at this width and centre, instead of stretching edge to
@@ -565,11 +567,33 @@ struct ContentView: View {
 
     private var inputBar: some View {
         VStack(spacing: 8) {
+            // The karaoke follow for auto-speak: the sentence being spoken,
+            // word-highlighted, riding above the input bar (the voice-in-chat
+            // design's band) — read along while M1K3 talks, keep typing.
+            if autoSpeakEnabled, env.speechHighlight.isActive,
+               let text = env.speechHighlight.utteranceText
+            {
+                KaraokeReadingText(
+                    text: text,
+                    timeline: env.speechHighlight.timeline,
+                    currentWordRange: env.speechHighlight.currentWordRange,
+                    compact: true
+                )
+                .frame(maxHeight: 110)
+                .clipped()
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .glassEffect(.regular, in: .rect(cornerRadius: 18))
+                .frame(maxWidth: Self.chatContentMaxWidth)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .accessibilityLabel("M1K3 is speaking")
+            }
             if !pendingAttachments.isEmpty {
                 pendingAttachmentsStrip
             }
             inputRow
         }
+        .animation(.easeOut(duration: 0.2), value: env.speechHighlight.isActive)
     }
 
     /// Thumbnails of images staged for the next send, each removable. Only
@@ -672,6 +696,31 @@ struct ContentView: View {
                     .accessibilityHint("Stops listening without sending")
                     .transition(.scale.combined(with: .opacity))
                 }
+
+                Button {
+                    autoSpeakEnabled.toggle()
+                    if !autoSpeakEnabled {
+                        // Off means quiet NOW, not after the sentence finishes.
+                        env.cancelAutoSpeak()
+                        Task { await env.stopSpeaking() }
+                    }
+                } label: {
+                    Image(systemName: autoSpeakEnabled ? "speaker.wave.2.fill" : "speaker.slash")
+                        .imageScale(.large)
+                        .fontWeight(.semibold)
+                        .frame(width: 22, height: 22)
+                        .contentTransition(.symbolEffect(.replace))
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .tint(autoSpeakEnabled ? .accentColor : nil)
+                .help(
+                    autoSpeakEnabled
+                        ? "Auto-speak is on — M1K3 reads answers aloud"
+                        : "Auto-speak — M1K3 reads answers aloud as they arrive"
+                )
+                .accessibilityLabel("Auto-speak answers")
+                .accessibilityValue(autoSpeakEnabled ? "On" : "Off")
 
                 Button { env.toggleDictation() } label: {
                     Image(systemName: env.isListening ? "mic.fill" : "mic")
