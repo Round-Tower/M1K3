@@ -395,7 +395,12 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // not observed in practice; closing over the specific request instance would
         // tighten it if it ever surfaces.
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            self?.lock.withLock { self?.request?.append(buffer) }
+            // Multi-channel devices go MONO before the recognizer: SFSpeech
+            // accepts >2-channel buffers and silently never produces a partial
+            // (the 2026-08-14 nine-channel aggregate — VPIO above doesn't
+            // engage on aggregates, so the tap sees the raw device format).
+            let audible = MonoMixdown.mixIfNeeded(buffer)
+            self?.lock.withLock { self?.request?.append(audible) }
         }
         return true
     }
