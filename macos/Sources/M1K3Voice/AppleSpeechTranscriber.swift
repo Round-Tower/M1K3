@@ -223,6 +223,11 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         let stillCurrent = lock.withLock {
             guard generation == self.generation else { return false }
             self.request = request
+            // Re-arm the mixdown-fallback breadcrumb per SESSION: this object
+            // is an app-lifetime singleton, so a launch-scoped flag would log
+            // the first fallback ever and then go silent for every later
+            // session — on this device or any other (post-merge review, #127).
+            self.mixdownFallbackLogged = false
             return true
         }
         guard stillCurrent else {
@@ -403,9 +408,12 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             // accepts >2-channel buffers and silently never produces a partial
             // (the 2026-08-14 nine-channel aggregate — VPIO above doesn't
             // engage on aggregates, so the tap sees the raw device format).
-            // Liveness first, so a torn-down session's trailing buffer skips
-            // the mixdown copy too (PR #127 review).
             guard let self else { return }
+            // Skip the mixdown copy when no session wants the audio — the
+            // `self` check alone can't do that (this object is an app-lifetime
+            // singleton; sessions are generation-scoped, and it's the nil'd
+            // request that marks teardown — post-merge review, #127).
+            guard self.lock.withLock({ self.request != nil }) else { return }
             let audible = MonoMixdown.mixIfNeeded(buffer)
             self.lock.withLock {
                 // The adapter fails SOFT (returns the original buffer) if it
