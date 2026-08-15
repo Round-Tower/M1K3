@@ -33,6 +33,10 @@ import M1K3Knowledge
 
 public struct SearchKnowledgeTool: AgentTool {
     public let name = "search_knowledge"
+    /// Embeds the query through the MLX embedder — Metal work, so in a
+    /// multi-call batch this tool takes the serial exclusive-compute lane
+    /// rather than overlapping another MLX workload.
+    public let requiresExclusiveCompute = true
     public let description =
         "Search M1K3's stored knowledge (documents, calls, notes) by text. Argument: the search query."
     public let parameters = [

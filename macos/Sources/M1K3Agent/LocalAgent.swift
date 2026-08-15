@@ -210,30 +210,43 @@ public actor LocalAgent {
         let eventArgument: String
     }
 
-    /// Shared dispatch core for BOTH the ReAct and native paths: repeat-guard,
-    /// unknown-tool steering, the activity event, and used/executed bookkeeping.
-    /// The `execute` closure adapts the dialect's arguments (a positional string
-    /// for ReAct, a structured map for native) to the tool's `execute(input:)`.
-    func dispatchCall(
+    /// What the guard pre-pass decided about one call: an observation settled
+    /// without execution (repeat/unknown steering), or a resolved tool to run.
+    /// Split out of `dispatchCall` (2026-08-15) so the native path can run its
+    /// guards serially in emission order and then EXECUTE the survivors
+    /// concurrently — `inout` bookkeeping can't cross a TaskGroup boundary.
+    enum ToolDispatchDecision {
+        case steer(String)
+        case run(any AgentTool)
+    }
+
+    /// The serial half of dispatch, shared by BOTH paths: repeat-guard,
+    /// unknown-tool steering, the activity event, and used/executed
+    /// bookkeeping. Order-dependent (the repeat-guard must see call N before
+    /// call N+1), so it always runs in emission order.
+    func planCall(
         _ site: ToolCallSite,
         executedActions: inout Set<String>,
         usedTools: inout Set<String>,
-        onEvent: (@Sendable (AgentLoopEvent) -> Void)?,
-        execute: (any AgentTool) async throws -> String
-    ) async -> String {
+        onEvent: (@Sendable (AgentLoopEvent) -> Void)?
+    ) -> ToolDispatchDecision {
         if executedActions.contains(site.displayDescription) {
             // Repeat-guard: small models loop on the same call. Steer to a
             // DIFFERENT tool or a conclusion instead of re-executing.
-            return "You already ran \(site.displayDescription) — do not repeat it. "
-                + "Try a different tool if one fits, or use what you have and "
-                + "reply starting with \"CONCLUSION:\"."
+            return .steer(
+                "You already ran \(site.displayDescription) — do not repeat it. "
+                    + "Try a different tool if one fits, or use what you have and "
+                    + "reply starting with \"CONCLUSION:\"."
+            )
         }
         guard let tool = tools[site.toolName] else {
             // Steer, don't just error: list what IS callable so the next
             // thought can correct itself.
             let available = tools.keys.sorted().joined(separator: ", ")
-            return "Error: unknown tool '\(site.toolName)'. "
-                + "Available tools: \(available.isEmpty ? "(none)" : available)."
+            return .steer(
+                "Error: unknown tool '\(site.toolName)'. "
+                    + "Available tools: \(available.isEmpty ? "(none)" : available)."
+            )
         }
         onEvent?(.actionStarted(tool: site.toolName, argument: site.eventArgument))
         executedActions.insert(site.displayDescription)
@@ -243,10 +256,31 @@ public actor LocalAgent {
         // and the raw post-error conclusion would surface instead of routing
         // through synthesis (which filters errors and degrades to plain RAG).
         usedTools.insert(site.toolName)
-        do {
-            return try await execute(tool)
-        } catch {
-            return "Error executing \(site.toolName): \(error)"
+        return .run(tool)
+    }
+
+    /// Shared dispatch core for BOTH the ReAct and native paths — the serial
+    /// plan half plus inline execution. The `execute` closure adapts the
+    /// dialect's arguments (a positional string for ReAct, a structured map
+    /// for native) to the tool's `execute(input:)`.
+    func dispatchCall(
+        _ site: ToolCallSite,
+        executedActions: inout Set<String>,
+        usedTools: inout Set<String>,
+        onEvent: (@Sendable (AgentLoopEvent) -> Void)?,
+        execute: (any AgentTool) async throws -> String
+    ) async -> String {
+        switch planCall(
+            site, executedActions: &executedActions, usedTools: &usedTools, onEvent: onEvent
+        ) {
+        case let .steer(observation):
+            return observation
+        case let .run(tool):
+            do {
+                return try await execute(tool)
+            } catch {
+                return "Error executing \(site.toolName): \(error)"
+            }
         }
     }
 }

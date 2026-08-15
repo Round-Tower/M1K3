@@ -57,4 +57,19 @@ public protocol AgentTool: Sendable {
     /// stays in the signature for genuinely unrecoverable tool states; the
     /// built-in web/OS tools deliberately never use it.
     func execute(input: [String: String]) async throws -> ToolResult
+
+    /// Whether this tool contends for the process's single Metal/MLX compute
+    /// lane (query embedding, delegated generation). When one model turn
+    /// carries several tool calls, exclusive tools execute serially relative
+    /// to EACH OTHER while everything else fans out concurrently — two
+    /// concurrent MLX workloads stall each other (the one-decode-loop
+    /// doctrine), but network/disk tools overlap freely. Default false.
+    var requiresExclusiveCompute: Bool { get }
+}
+
+public extension AgentTool {
+    /// Default: a plain network/disk/pure tool — safe to run concurrently.
+    var requiresExclusiveCompute: Bool {
+        false
+    }
 }

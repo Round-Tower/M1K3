@@ -26,6 +26,9 @@ public struct DelegateDeepTool: AgentTool {
     private static let log = Logger(subsystem: M1K3Log.subsystem, category: "mlx-load")
 
     public let name = "delegate_deep"
+    /// Spawns MLX generation on the slot — never overlap it with another
+    /// MLX-touching tool in a multi-call batch (the serial exclusive lane).
+    public let requiresExclusiveCompute = true
     /// Describes what the plumbing ACTUALLY does. The previous wording promised
     /// "the deeper brain" — but the manager passes `swappableMLX`, the brain
     /// already resident, which under an eligible call is the very brain reading
