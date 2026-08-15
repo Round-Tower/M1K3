@@ -1,3 +1,11 @@
+//
+//  TranscriptContinuationTests.swift
+//  M1K3VoiceTests
+//
+//  Signed: Kev + claude-fable-5, 2026-08-15, Confidence 0.9 (pure contracts,
+//  synthetic clocks/fakes — no real recognizer). Prior: Unknown.
+//
+
 import Foundation
 import M1K3Voice
 import Testing
