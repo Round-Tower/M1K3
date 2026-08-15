@@ -204,7 +204,11 @@ extension AppEnvironment {
         // no suspension separates them, so selectBrain can't slip between.
         if let restore = deepDiveRestoreProvider {
             swappableMLX.setProvider(restore)
-            deepDiveEscalatedProvider?.releaseMemory()
+            // releaseModel (not releaseMemory): explicit, immediate eviction of
+            // Big's container rather than trusting ARC dealloc timing to finish
+            // the job — the same discipline the parked side got, both ways
+            // (round-3 review symmetry note).
+            await deepDiveEscalatedProvider?.releaseModel()
             deepDiveEscalatedProvider = nil
             deepDiveRestoreProvider = nil
             // Hoisted local: the Logger interpolation is an autoclosure, so a
