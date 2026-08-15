@@ -404,9 +404,14 @@ public final class VoiceLoopController {
                 }
                 dispatch(.partial(accumulator.text))
             }
-            // Stream ended (recognizer finality). If a silence endpoint already
-            // moved the machine on, this event is stale and dropped there.
+            // Stream ended (recognizer finality, an error, or a silent listen
+            // under keepsListening). If a silence endpoint already moved the
+            // machine on, this event is stale and dropped there. Logged so the
+            // trail always names WHO ended a turn — this unconditional branch
+            // is exactly where Apple Speech's own VAD used to take the user's
+            // turn invisibly (2026-08-15 finding).
             guard !Task.isCancelled else { return }
+            Self.log.notice("voice endpoint: recognizer ended the stream")
             dispatch(.endpointed(sanitizedUtterance()))
         }
     }
@@ -424,7 +429,11 @@ public final class VoiceLoopController {
             while !Task.isCancelled {
                 try? await Task.sleep(for: self?.endpointTick ?? .milliseconds(300))
                 guard let self, !Task.isCancelled else { return }
-                if endpointer.shouldEndpoint(at: ContinuousClock.now) {
+                if let decision = endpointer.decision(at: ContinuousClock.now) {
+                    // Which branch took the turn, and how patient it was — the
+                    // first question in every "it cut me off" report. `.notice`
+                    // because `.info`/`.debug` do not persist in OSLogStore.
+                    Self.log.notice("\(decision.logLine, privacy: .public)")
                     dispatch(.endpointed(sanitizedUtterance()))
                     return
                 }

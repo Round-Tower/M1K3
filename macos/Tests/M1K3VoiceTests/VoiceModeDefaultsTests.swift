@@ -7,6 +7,11 @@ import Foundation
 import M1K3Voice
 import Testing
 
+/// Serialized: four of these tests mutate the SAME UserDefaults.standard key,
+/// and the default parallel schedule let them race (surfaced 2026-08-15 when
+/// unrelated new tests reshuffled the schedule — different member failed each
+/// run). The suite is sub-millisecond; serial costs nothing.
+@Suite(.serialized)
 struct VoiceModeDefaultsTests {
     @Test("the key literal is pinned — it is already on disk in every install")
     func keyIsStable() {
