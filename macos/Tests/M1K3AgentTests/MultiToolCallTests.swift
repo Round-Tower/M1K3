@@ -20,7 +20,6 @@
 import Foundation
 @testable import M1K3Agent
 import M1K3Inference
-import Synchronization
 import Testing
 
 private func call(_ name: String, _ args: [String: JSONValue] = [:]) -> ToolTurn {
@@ -221,14 +220,12 @@ struct MultiToolCallTests {
     func exclusiveToolsSerialize() async throws {
         let gauge = ConcurrencyGauge()
         let makeExclusive: (String) -> ClosureTool = { name in
-            let tool = ClosureTool(name: name) {
+            ClosureTool(name: name, exclusive: true) {
                 await gauge.enter()
                 try? await Task.sleep(for: .milliseconds(30))
                 await gauge.exit()
                 return "\(name)-done"
             }
-            tool.requiresExclusiveComputeOverride = true
-            return tool
         }
         let provider = BatchScriptedProvider { index in
             index == 0
@@ -250,19 +247,19 @@ struct MultiToolCallTests {
 }
 
 /// A tool whose behaviour is a closure — lets a test coordinate executions.
+/// `@unchecked Sendable` is sound because every stored property is a `let`
+/// (the exclusive flag became one on review — a post-init mutable var was
+/// safe only by an undocumented init-before-first-use convention).
 private final class ClosureTool: AgentTool, @unchecked Sendable {
     let name: String
     let description = "closure"
     let parameters: [ToolParameter] = []
-    var requiresExclusiveComputeOverride = false
+    let requiresExclusiveCompute: Bool
     private let body: @Sendable () async -> String
 
-    var requiresExclusiveCompute: Bool {
-        requiresExclusiveComputeOverride
-    }
-
-    init(name: String, body: @escaping @Sendable () async -> String) {
+    init(name: String, exclusive: Bool = false, body: @escaping @Sendable () async -> String) {
         self.name = name
+        requiresExclusiveCompute = exclusive
         self.body = body
     }
 
