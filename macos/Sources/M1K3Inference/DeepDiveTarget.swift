@@ -58,6 +58,31 @@ public struct DeepDivePlan: Equatable, Sendable {
     /// task stops blocking the conversation) but NOT depth, and the model-facing
     /// copy should not claim otherwise.
     public let isEscalation: Bool
+
+    public init(tier: BrainTier, requiresSwap: Bool, isEscalation: Bool) {
+        self.tier = tier
+        self.requiresSwap = requiresSwap
+        self.isEscalation = isEscalation
+    }
+}
+
+/// The model-facing observation for a STARTED dive — the model's only window
+/// into which shape it actually got (escalated to Big, or the background lane
+/// on the resident brain). Pure and pinned: strings the model reads are tested,
+/// never eyeballed (the 2026-08-03 identity-leak lesson).
+public enum DeepDiveObservation {
+    public static func delegated(plan: DeepDivePlan) -> String {
+        if plan.isEscalation {
+            return "Delegated to \(plan.tier.displayName) — escalated to the deeper brain, "
+                + "digging in the background. The result will land in this chat later "
+                + "(with a ping if the user is away). Chat replies come from Mini until "
+                + "it's done; tell the user it's underway."
+        }
+        return "Delegated to \(plan.tier.displayName). It's digging in the background; "
+            + "the result will land in this chat (with a ping if the user is away). "
+            + "Tell the user it's underway and that quicker replies come from Mini "
+            + "until it's done."
+    }
 }
 
 public enum DeepDiveTarget {

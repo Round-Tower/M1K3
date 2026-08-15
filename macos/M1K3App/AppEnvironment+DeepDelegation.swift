@@ -24,11 +24,22 @@
 //  Signed: Kev + claude-fable-5, 2026-07-25, Confidence 0.85 (policy + tool +
 //  delivery are unit-pinned; the manager itself is app glue over those seams —
 //  concurrency behaviour is verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-fable-5, 2026-08-15 — the DeepDiveTarget wiring: where
+//  Big's weights are on disk and this Mac clears the 24GB comfort bar, the
+//  dive re-points the ONE MLX slot at a fresh Big provider and restores the
+//  parked resident on every exit (finishDeepDelegation is the single teardown
+//  point; success and failure both funnel there). The slot — not a private
+//  provider — so stray mid-dive callers queue on Big's container actor rather
+//  than decoding concurrently on the parked brain. Confidence 0.8 — the plan
+//  and observation copy are unit-pinned; the swap/restore is app glue and
+//  verify-by-launch (a real cross-brain dive has still never run).
 //
 
 import AppKit
 import Foundation
+import M1K3Chat
 import M1K3Inference
+import M1K3MLX
 import os
 import Synchronization
 
@@ -91,10 +102,43 @@ extension AppEnvironment {
             return refusal
         }
 
-        let brainName = selectedBrain.displayName
+        // Where should this dive run? DeepDiveTarget escalates to Big only when
+        // its weights are already on disk AND this Mac clears the 24GB comfort
+        // bar (both refusals argued in its header); everywhere else the dive
+        // stays on the resident brain — the pre-2026-08-15 behaviour.
+        let plan = DeepDiveTarget.plan(
+            resident: selectedBrain,
+            bigWeightsPresent: isBrainDownloaded(.big),
+            physicalMemoryGB: Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
+        )
         deepDelegationTaskLabel = task
+        if plan.requiresSwap, let bigID = BrainTier.big.mlxModelID {
+            // Re-point the ONE MLX slot at Big for the dive's lifetime. The
+            // slot (not a private provider) on purpose: any stray caller that
+            // reaches swappableMLX mid-dive then QUEUES on Big's container
+            // actor instead of spinning a second concurrent MLX decode loop on
+            // the parked brain — the one-decode-loop invariant this whole
+            // design rests on. `selectBrain` already refuses while the label is
+            // set, so nothing else re-points the slot underneath us.
+            let big = MLXGemmaProvider(
+                modelID: bigID,
+                maxTokens: HistoryBudgetPolicy.generationTokenCap(
+                    for: .big, defaultCap: MLXGemmaProvider.defaultMaxTokens
+                )
+            )
+            deepDiveRestoreProvider = currentMLXProvider
+            deepDiveEscalatedProvider = big
+            swappableMLX.setProvider(big)
+            // Free the parked brain's Metal footprint before the 12B load; it
+            // reloads lazily (ensureLoaded) once the slot is restored. Weights
+            // are on disk by the plan's own gate, so the dive's first generate
+            // loads from disk — never a download.
+            deepDiveRestoreProvider?.releaseMemory()
+        }
         refreshInterimBridge() // interactive turns front on Mini from here
-        Self.logDelegation(.started(brain: brainName))
+        Self.logDelegation(.started(brain: plan.isEscalation
+                ? "\(plan.tier.displayName) (escalated from \(selectedBrain.displayName))"
+                : plan.tier.displayName))
         // Ask for notification permission NOW so the finish ping can land
         // (no-op if already granted/denied; the center drops unauthorized posts).
         Task { _ = await TurnNotifier.requestAuthorization() }
@@ -127,9 +171,7 @@ extension AppEnvironment {
             let elapsed = clock.now - start
             await self?.finishDeepDelegation(delivered: delivered, elapsed: elapsed)
         }
-        return "Delegated to \(brainName). It's digging in the background; the result "
-            + "will land in this chat (with a ping if the user is away). Tell the user "
-            + "it's underway and that quicker replies come from Mini until it's done."
+        return DeepDiveObservation.delegated(plan: plan)
     }
 
     /// Delivery + teardown, always on the main actor. The task handle clears
@@ -137,6 +179,26 @@ extension AppEnvironment {
     private func finishDeepDelegation(delivered: String, elapsed: Duration) async {
         deepDelegationTaskLabel = nil
         deepDelegationTask = nil
+        // Restore the slot BEFORE fronting returns to the selected brain, so no
+        // interactive turn can land on the dive's Big provider. This block and
+        // the label-clear above run in the same synchronous main-actor window —
+        // no suspension separates them, so selectBrain can't slip between.
+        if let restore = deepDiveRestoreProvider {
+            swappableMLX.setProvider(restore)
+            deepDiveEscalatedProvider?.releaseMemory()
+            deepDiveEscalatedProvider = nil
+            deepDiveRestoreProvider = nil
+            // Hoisted local: the Logger interpolation is an autoclosure, so a
+            // bare property read needs `self.` — which the formatter strips.
+            let restoredName = selectedBrain.displayName
+            Self.delegationLog.notice(
+                "delegate_deep escalation ended — slot restored to \(restoredName, privacy: .public)"
+            )
+            // The parked provider reloads lazily; rebuild weights + persona
+            // prefix off the hot path so the next interactive turn doesn't pay
+            // the cold load inline.
+            warmPersonaPrefixAfterLoad(restore)
+        }
         refreshInterimBridge() // interactive turns return to the selected brain
         Self.delegationLog.notice(
             "delegate_deep finished in \(elapsed.components.seconds, privacy: .public)s"
