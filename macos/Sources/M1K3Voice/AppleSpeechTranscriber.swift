@@ -450,6 +450,11 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
               recognizer.isAvailable,
               recognizer.supportsOnDeviceRecognition
         else {
+            // Say WHY before ending: the controller's stream-end line can't
+            // distinguish this from a normal single-segment end, and
+            // unexplained turn-endings are the bug this whole file exists to
+            // end (round-2 review).
+            Self.log.error("on-device recognizer unavailable at segment restart — ending listen")
             stopListening(ifGeneration: generation)
             return
         }
