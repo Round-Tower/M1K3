@@ -106,11 +106,18 @@ extension AppEnvironment {
         // its weights are already on disk AND this Mac clears the 24GB comfort
         // bar (both refusals argued in its header); everywhere else the dive
         // stays on the resident brain — the pre-2026-08-15 behaviour.
+        //
+        // `plan` is the intent; `livePlan` is what actually happened. They
+        // diverge only if the swap block below can't run (today impossible —
+        // Big always has an mlxModelID — but this file's whole discipline is
+        // that the model-facing copy never outruns the plumbing, so the
+        // downgrade is structural rather than trusted, per review #130).
         let plan = DeepDiveTarget.plan(
             resident: selectedBrain,
             bigWeightsPresent: isBrainDownloaded(.big),
             physicalMemoryGB: Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
         )
+        var livePlan = DeepDivePlan(tier: selectedBrain, requiresSwap: false, isEscalation: false)
         deepDelegationTaskLabel = task
         if plan.requiresSwap, let bigID = BrainTier.big.mlxModelID {
             // Re-point the ONE MLX slot at Big for the dive's lifetime. The
@@ -129,16 +136,21 @@ extension AppEnvironment {
             deepDiveRestoreProvider = currentMLXProvider
             deepDiveEscalatedProvider = big
             swappableMLX.setProvider(big)
-            // Free the parked brain's Metal footprint before the 12B load; it
-            // reloads lazily (ensureLoaded) once the slot is restored. Weights
-            // are on disk by the plan's own gate, so the dive's first generate
-            // loads from disk — never a download.
-            deepDiveRestoreProvider?.releaseMemory()
+            // FULLY unload the parked brain — weights included. releaseMemory()
+            // frees KV caches and the Metal buffer pool but the container cache
+            // kept the weights alive for the object's lifetime (review catch,
+            // #130), and the process-global ceiling is min(75% RAM, 12GB) on
+            // EVERY machine — Big's working set beside a parked brain's weights
+            // sits right at it. The restore reloads from disk lazily, off the
+            // hot path (warmPersonaPrefixAfterLoad); weights are on disk by the
+            // plan's own gate, so no path here can trigger a download.
+            await deepDiveRestoreProvider?.releaseModel()
+            livePlan = plan
         }
         refreshInterimBridge() // interactive turns front on Mini from here
-        Self.logDelegation(.started(brain: plan.isEscalation
-                ? "\(plan.tier.displayName) (escalated from \(selectedBrain.displayName))"
-                : plan.tier.displayName))
+        Self.logDelegation(.started(brain: livePlan.isEscalation
+                ? "\(livePlan.tier.displayName) (escalated from \(selectedBrain.displayName))"
+                : livePlan.tier.displayName))
         // Ask for notification permission NOW so the finish ping can land
         // (no-op if already granted/denied; the center drops unauthorized posts).
         Task { _ = await TurnNotifier.requestAuthorization() }
@@ -171,7 +183,7 @@ extension AppEnvironment {
             let elapsed = clock.now - start
             await self?.finishDeepDelegation(delivered: delivered, elapsed: elapsed)
         }
-        return DeepDiveObservation.delegated(plan: plan)
+        return DeepDiveObservation.delegated(plan: livePlan)
     }
 
     /// Delivery + teardown, always on the main actor. The task handle clears
