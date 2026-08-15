@@ -10,6 +10,9 @@
 //  validates and forwards — same closure-injection shape as open_link.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-25, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5, 2026-08-15 — description truthed up again for
+//  the wired escalation (conditional, DeepDiveTarget-gated; see the test's
+//  history note pinning both flips). Confidence 0.9.
 //
 
 import Foundation

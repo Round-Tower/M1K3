@@ -30,6 +30,9 @@
 //  that itself throws CancellationError now clears the slot (it used to be
 //  mistaken for a waiter cancel and poisoned the loader with no retry path).
 //  Both pinned red-first in SingleFlightLoaderTests.
+//  Review: Kev + claude-fable-5, 2026-08-15 — reset() added (cache eviction
+//  only; an in-flight load completes and re-caches). Pinned both ways.
+//  Confidence 0.9.
 
 import Foundation
 

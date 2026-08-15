@@ -119,6 +119,14 @@ extension AppEnvironment {
         )
         var livePlan = DeepDivePlan(tier: selectedBrain, requiresSwap: false, isEscalation: false)
         deepDelegationTaskLabel = task
+        // Front on Mini BEFORE the swap block, not after (review catch, round
+        // 2): the swap contains a real suspension (`releaseModel()` hops onto
+        // the loader actor), and the façade boxes are deliberately not
+        // main-actor-confined — an MCP ask_m1k3 arriving in that window would
+        // resolve `active` to the fresh Big provider instead of Mini, kick off
+        // its ensureLoaded, and contend with the dive on the same container.
+        // The posture reads only the label + selectedBrain, both already set.
+        refreshInterimBridge() // interactive turns front on Mini from here
         if plan.requiresSwap, let bigID = BrainTier.big.mlxModelID {
             // Re-point the ONE MLX slot at Big for the dive's lifetime. The
             // slot (not a private provider) on purpose: any stray caller that
@@ -147,7 +155,6 @@ extension AppEnvironment {
             await deepDiveRestoreProvider?.releaseModel()
             livePlan = plan
         }
-        refreshInterimBridge() // interactive turns front on Mini from here
         Self.logDelegation(.started(brain: livePlan.isEscalation
                 ? "\(livePlan.tier.displayName) (escalated from \(selectedBrain.displayName))"
                 : livePlan.tier.displayName))

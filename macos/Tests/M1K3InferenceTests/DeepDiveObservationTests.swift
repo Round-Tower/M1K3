@@ -1,3 +1,11 @@
+//
+//  DeepDiveObservationTests.swift
+//  M1K3InferenceTests
+//
+//  Signed: Kev + claude-fable-5, 2026-08-15, Confidence 0.9 (pure string
+//  contracts, pinned both shapes). Prior: Unknown.
+//
+
 import Foundation
 import M1K3Inference
 import Testing

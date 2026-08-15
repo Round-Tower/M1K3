@@ -54,6 +54,10 @@
 //  quantize (swift_unexpectedError; stack-evidenced). Directory via HubApi's
 //  own localRepoLocation (the LocalModelInventory never-drift rule); resumable
 //  .incomplete downloads are protected from the heal (review catch).
+//  Review: Kev + claude-fable-5, 2026-08-15 — releaseModel() added (full
+//  unload incl. the container via SingleFlightLoader.reset) for the escalated
+//  deep dive's parked-brain memory story (PR #130). Idle-only by doc contract.
+//  Confidence 0.85 — Metal half is verify-by-launch per the metallib wall.
 
 import Foundation
 import Hub

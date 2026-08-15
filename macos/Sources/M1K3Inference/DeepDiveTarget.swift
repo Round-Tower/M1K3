@@ -41,6 +41,12 @@
 //  Signed: Kev + claude-opus-5, 2026-08-11, Confidence 0.85 (pure and pinned;
 //  the swap it authorises is app glue and stays verify-by-launch — nothing here
 //  has yet run a real cross-brain dive). Prior: Unknown.
+//  Review: Kev + claude-fable-5, 2026-08-15 — the swap is now WIRED
+//  (AppEnvironment+DeepDelegation, PR #130); DeepDivePlan gained a public init
+//  and this file gained DeepDiveObservation, the pinned model-facing copy for
+//  a started dive (escalated vs background lane). Confidence 0.85 — the
+//  observation strings are test-pinned; a real cross-brain dive remains
+//  verify-owed.
 //
 
 import Foundation
