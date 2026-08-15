@@ -27,7 +27,8 @@ private func call(_ name: String, _ args: [String: JSONValue] = [:]) -> ToolTurn
 }
 
 /// Scripts turns like NativeToolCallingTests' fake, kept local (that one's
-/// siblings are private to its file).
+/// siblings are private to its file). `@unchecked Sendable` is sound because
+/// every mutable member is touched only inside `lock.withLock`.
 private final class BatchScriptedProvider: ToolCallingProvider, @unchecked Sendable {
     let name = "scripted"
     let isAvailable = true

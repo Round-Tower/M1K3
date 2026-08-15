@@ -64,6 +64,14 @@ public protocol AgentTool: Sendable {
     /// to EACH OTHER while everything else fans out concurrently — two
     /// concurrent MLX workloads stall each other (the one-decode-loop
     /// doctrine), but network/disk tools overlap freely. Default false.
+    ///
+    /// Named limit (review, #131): the lane bounds only the tool's own
+    /// `execute(input:)` duration. Detached work a tool kicks off and returns
+    /// from — delegate_deep's background dive is the live case — escapes the
+    /// lane by construction; once its `execute` returns, the next exclusive
+    /// item runs while that background generation is still on the GPU. The
+    /// serialization is real for synchronous-inside-execute tools
+    /// (search_knowledge) and best-effort ordering for fire-and-forget ones.
     var requiresExclusiveCompute: Bool { get }
 }
 
