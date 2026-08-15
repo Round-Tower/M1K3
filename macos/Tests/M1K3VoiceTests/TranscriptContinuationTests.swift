@@ -47,15 +47,35 @@ struct TranscriptContinuationTests {
         #expect(acc.text == "keep this")
     }
 
-    @Test("confidence still tracks the latest non-empty segment across a restart")
-    func confidenceTracksAcrossRestart() {
+    @Test("a nil-confidence tail does not erase the last real measurement")
+    func confidenceSurvivesNilTail() {
+        // Review fold (#129): the restarted session's partials carry nil
+        // confidence (Apple's 0.0 on non-finals is meaningless), and a turn the
+        // CONSUMER endpoints — the whole point of keepsListening — can end on
+        // such a tail. Erasing the last real measurement there meant a genuine
+        // trailing "thanks"/"bye" got ghost-dropped by the sanitizer's
+        // (confidence ?? 0) gate. The last REPORTED confidence stands in.
         var acc = TranscriptAccumulator()
         acc.ingest(TranscriptSegment(text: "solid start", isFinal: true, confidence: 0.9))
         #expect(acc.confidence == 0.9)
-        // The restarted session's partials carry no confidence (Apple reports a
-        // meaningless 0 on non-finals, which the transcriber now yields as nil).
         acc.ingest(TranscriptSegment(text: "and more", isFinal: false, confidence: nil))
+        #expect(acc.confidence == 0.9)
+    }
+
+    @Test("a recogniser that never reports confidence stays nil — WhisperKit ghosts still drop")
+    func neverReportedStaysNil() {
+        var acc = TranscriptAccumulator()
+        acc.ingest(TranscriptSegment(text: "thank you", isFinal: false, confidence: nil))
+        acc.ingest(TranscriptSegment(text: "thank you", isFinal: true, confidence: nil))
         #expect(acc.confidence == nil)
+    }
+
+    @Test("a real reported confidence still overwrites an earlier one")
+    func reportedConfidenceOverwrites() {
+        var acc = TranscriptAccumulator()
+        acc.ingest(TranscriptSegment(text: "first", isFinal: true, confidence: 0.9))
+        acc.ingest(TranscriptSegment(text: "second", isFinal: true, confidence: 0.3))
+        #expect(acc.confidence == 0.3)
     }
 
     @Test("isFinal stays latched once any final has been seen")

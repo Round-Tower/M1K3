@@ -30,10 +30,13 @@ import Foundation
 public struct TranscriptAccumulator: Sendable, Equatable {
     /// True once a final segment has been ingested (latched).
     public private(set) var isFinal: Bool = false
-    /// The confidence of the latest non-empty segment (nil when the recogniser
-    /// doesn't report one, e.g. WhisperKit or a restarted session's partials) —
-    /// fed to TranscriptSanitizer so a confident pleasantry survives while a
-    /// no-confidence ghost drops.
+    /// The latest REPORTED confidence — nil only when no segment has ever
+    /// carried one (WhisperKit, which reports none, so its silence-ghosts still
+    /// drop at the sanitizer's gate). A nil-confidence segment does not erase an
+    /// earlier real measurement: Apple's non-final partials carry nil (its 0.0
+    /// there is meaningless), and a consumer-endpointed turn can legitimately
+    /// end on such a tail — erasing the measurement there ghost-dropped a
+    /// genuine trailing "thanks"/"bye" (review fold, #129).
     public private(set) var confidence: Float?
     /// Finalized text from completed recognition segments.
     private var committed: String = ""
@@ -60,7 +63,9 @@ public struct TranscriptAccumulator: Sendable, Equatable {
             } else {
                 live = segment.text
             }
-            confidence = segment.confidence
+            if let reported = segment.confidence {
+                confidence = reported
+            }
         }
         if segment.isFinal { isFinal = true }
     }

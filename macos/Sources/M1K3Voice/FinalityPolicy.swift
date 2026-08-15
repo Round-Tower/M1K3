@@ -44,3 +44,17 @@ public enum FinalityPolicy: Sendable, Equatable {
         self == .keepsListening && hasCapturedText
     }
 }
+
+/// Classifies a recognition-task error for the finality decision: only Apple's
+/// benign "no speech detected" is silence wearing an error type — everything
+/// else (revoked authorization, a broken on-device model, a bad audio format)
+/// is a genuine failure that must END the listen and be logged, not be masked
+/// as segment-boundary churn (review fold, #129). If Apple ever signals
+/// silence with a different code, the failure mode is the safe one: the listen
+/// ends exactly as pre-fix behaviour did.
+public enum RecognizerFinality {
+    public static func isBenignNoSpeech(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        return nsError.domain == "kAFAssistantErrorDomain" && nsError.code == 1110
+    }
+}

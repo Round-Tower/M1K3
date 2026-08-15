@@ -227,9 +227,16 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         _ continuation: AsyncStream<TranscriptSegment>.Continuation,
         generation: UInt64
     ) async {
+        // supportsOnDeviceRecognition is part of the guard, not just the
+        // request config: the file's privacy floor is on-device REQUIRED, and
+        // a recogniser that can't run offline must read unavailable rather
+        // than fall through to a request that could reach Apple's servers
+        // (review fold, #129 — previously only `isAvailable` was re-checked
+        // here and in restartRecognition).
         guard await Self.authorized(),
               let recognizer = SFSpeechRecognizer(locale: locale),
-              recognizer.isAvailable
+              recognizer.isAvailable,
+              recognizer.supportsOnDeviceRecognition
         else {
             continuation.finish()
             return
@@ -364,13 +371,15 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             // Generation-scoped on BOTH exits: stopListening endAudio()s then
             // cancel()s the old task, so a superseded session comes back as a
             // late isFinal OR a cancel-error — either used to tear down the NEW
-            // session's engine/tap/continuation. A no-speech error on the LIVE
-            // session routes through the same finality decision as isFinal: on
-            // a keepsListening session with captured text it restarts (the user
-            // is mid-thought; the consumer's endpointer owns the boundary),
-            // otherwise it ends the listen exactly as before.
-            if error != nil {
-                self.recognizerReachedFinality(generation: generation, continuation: continuation)
+            // session's engine/tap/continuation. Only Apple's benign no-speech
+            // error routes through the restart decision like isFinal (silence
+            // wearing an error type); every OTHER error ends the listen and is
+            // logged — a revoked authorization or broken model must not be
+            // masked as segment-boundary churn (review fold, #129).
+            if let error {
+                self.recognizerReachedFinality(
+                    generation: generation, continuation: continuation, error: error
+                )
                 return
             }
             guard let result else { return }
@@ -399,20 +408,29 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         }
     }
 
-    /// The recognizer declared finality on its own (isFinal or a no-speech
-    /// error). Under `.keepsListening` with captured text, that is a SEGMENT
-    /// boundary, not the end of the listen — restart recognition and keep the
-    /// engine, tap, and stream open. Everything else ends the listen exactly as
-    /// before (a stale generation no-ops inside stopListening).
+    /// The recognizer declared finality on its own — isFinal (error nil) or a
+    /// recognition error. Under `.keepsListening` with captured text, benign
+    /// finality (isFinal / the no-speech error) is a SEGMENT boundary, not the
+    /// end of the listen — restart recognition and keep the engine, tap, and
+    /// stream open. A genuine error, or anything else, ends the listen exactly
+    /// as before (a stale generation no-ops inside stopListening) — with the
+    /// error logged either way, so a hard failure finally leaves its name in
+    /// the trail instead of a stream of identical restarts.
     private func recognizerReachedFinality(
         generation: UInt64,
-        continuation: AsyncStream<TranscriptSegment>.Continuation
+        continuation: AsyncStream<TranscriptSegment>.Continuation,
+        error: Error? = nil
     ) {
-        let restart = lock.withLock {
-            generation == self.generation
-                && sessionFinality.shouldRestart(hasCapturedText: sessionHasText)
+        let (isCurrent, wantsRestart) = lock.withLock {
+            (generation == self.generation,
+             sessionFinality.shouldRestart(hasCapturedText: sessionHasText))
         }
-        guard restart else {
+        let benign = error.map(RecognizerFinality.isBenignNoSpeech) ?? true
+        if let error, isCurrent, !benign {
+            let reason = error.localizedDescription
+            Self.log.error("recognizer failed mid-listen — ending: \(reason, privacy: .public)")
+        }
+        guard isCurrent, benign, wantsRestart else {
             stopListening(ifGeneration: generation)
             return
         }
@@ -428,7 +446,10 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         generation: UInt64,
         continuation: AsyncStream<TranscriptSegment>.Continuation
     ) {
-        guard let recognizer = SFSpeechRecognizer(locale: locale), recognizer.isAvailable else {
+        guard let recognizer = SFSpeechRecognizer(locale: locale),
+              recognizer.isAvailable,
+              recognizer.supportsOnDeviceRecognition
+        else {
             stopListening(ifGeneration: generation)
             return
         }
