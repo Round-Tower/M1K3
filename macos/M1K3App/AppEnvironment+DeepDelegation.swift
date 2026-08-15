@@ -193,15 +193,24 @@ extension AppEnvironment {
         return DeepDiveObservation.delegated(plan: livePlan)
     }
 
-    /// Delivery + teardown, always on the main actor. The task handle clears
-    /// FIRST so a delivery that itself takes time can't block a new delegation.
+    /// Delivery + teardown, always on the main actor.
+    ///
+    /// ORDER IS LOAD-BEARING (round-4 review catch): `deepDelegationTaskLabel`
+    /// is the single-flight guard for BOTH a new delegation and selectBrain,
+    /// and the restore block below contains a real suspension (`releaseModel`
+    /// hops onto the loader actor). Clearing the label FIRST — the original
+    /// shape, safe when teardown was fully synchronous — opened an actor-
+    /// reentrancy window once the await arrived: dive B could start during
+    /// dive A's suspension, then A's resume clobbered B's restore bookkeeping
+    /// and B's own finish skipped its restore entirely — Big silently left in
+    /// the slot for good, the exact outcome the bookkeeping doc says can't
+    /// happen. So the guard now holds through the whole restore; it clears
+    /// just before delivery, preserving the original intent (a slow
+    /// deliverBackgroundAnswer/notification never blocks a new delegation).
     private func finishDeepDelegation(delivered: String, elapsed: Duration) async {
-        deepDelegationTaskLabel = nil
-        deepDelegationTask = nil
         // Restore the slot BEFORE fronting returns to the selected brain, so no
-        // interactive turn can land on the dive's Big provider. This block and
-        // the label-clear above run in the same synchronous main-actor window —
-        // no suspension separates them, so selectBrain can't slip between.
+        // interactive turn can land on the dive's Big provider — all under the
+        // still-held label, per the header.
         if let restore = deepDiveRestoreProvider {
             swappableMLX.setProvider(restore)
             // releaseModel (not releaseMemory): explicit, immediate eviction of
@@ -222,6 +231,8 @@ extension AppEnvironment {
             // the cold load inline.
             warmPersonaPrefixAfterLoad(restore)
         }
+        deepDelegationTaskLabel = nil
+        deepDelegationTask = nil
         refreshInterimBridge() // interactive turns return to the selected brain
         Self.delegationLog.notice(
             "delegate_deep finished in \(elapsed.components.seconds, privacy: .public)s"

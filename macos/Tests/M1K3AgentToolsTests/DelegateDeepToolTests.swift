@@ -9,6 +9,10 @@
 //  NEVER throws (the "Error: …" observation contract).
 //
 //  Signed: Kev + claude-fable-5, 2026-07-25, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5, 2026-08-15 — the no-escalation description
+//  pin was deliberately inverted to a conditional-escalation pin when the
+//  DeepDiveTarget wiring landed (PR #130); the replacement test carries the
+//  history of both flips. Confidence 0.9.
 //
 
 import M1K3AgentTools
