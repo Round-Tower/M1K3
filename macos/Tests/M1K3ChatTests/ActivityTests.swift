@@ -39,10 +39,36 @@ struct ActivityLabelerTests {
 
     @Test("unknown tools and the loop phases have sensible copy")
     func phases() {
-        #expect(ActivityLabeler.label(for: .retrieving) == "Looking through your knowledge…")
+        // The every-turn RAG phase must NOT read like the search_knowledge tool
+        // ("Searching your knowledge…") — Kev heard it as a tool call that never
+        // was (2026-08-16). A self-action verb keeps the two distinguishable.
+        #expect(ActivityLabeler.label(for: .retrieving) == "Recalling what I know…")
         #expect(ActivityLabeler.label(for: .thinking(iteration: 0)) == "Thinking…")
         #expect(ActivityLabeler.label(for: .usingTool(name: "query_graph", argument: "x"))
             == "Using query_graph…")
+    }
+
+    @Test("tools have short display names for the transcript trace")
+    func displayNames() {
+        #expect(ActivityLabeler.displayName(forTool: "web_search") == "web search")
+        #expect(ActivityLabeler.displayName(forTool: "search_knowledge") == "knowledge search")
+        #expect(ActivityLabeler.displayName(forTool: "fetch_page") == "web page")
+        #expect(ActivityLabeler.displayName(forTool: "lookup_fact") == "fact lookup")
+        #expect(ActivityLabeler.displayName(forTool: "datetime") == "date & time")
+        #expect(ActivityLabeler.displayName(forTool: "system_status") == "system status")
+        #expect(ActivityLabeler.displayName(forTool: "delegate_deep") == "deep dive")
+        #expect(ActivityLabeler.displayName(forTool: "list_documents") == "documents")
+        #expect(ActivityLabeler.displayName(forTool: "get_document") == "document")
+        #expect(ActivityLabeler.displayName(forTool: "open_link") == "link")
+        // Unknown tools humanize rather than leak snake_case into the UI.
+        #expect(ActivityLabeler.displayName(forTool: "query_graph") == "query graph")
+    }
+
+    @Test("the transcript trace line is a pinned product string")
+    func traceLabel() {
+        #expect(ActivityLabeler.traceLabel(for: ["web_search", "datetime"])
+            == "Used web search · date & time")
+        #expect(ActivityLabeler.traceLabel(for: ["delegate_deep"]) == "Used deep dive")
     }
 
     @Test("long web queries are truncated in the label")
@@ -120,5 +146,116 @@ struct ChatSessionActivityTests {
         let decoded = try JSONDecoder().decode([ChatMessage].self, from: data)
         #expect(decoded.first?.activityLabel == nil)
         #expect(decoded.first?.text == "hi")
+    }
+}
+
+// MARK: - Tool trace (persisted provenance)
+
+/// Emits several tool events (with a duplicate) before streaming — pins that
+/// the trace is accumulated deduped, in dispatch order, and survives the turn.
+/// `@unchecked Sendable`: mutable state is only touched from the @MainActor
+/// test body and ChatSession.send's MainActor hops (the GatedActivityResponder
+/// precedent above).
+private final class MultiToolResponder: RAGResponding, @unchecked Sendable {
+    func answerStreaming(
+        _ question: String
+    ) async throws -> (sources: [ChunkHit], stream: AsyncStream<String>) {
+        try await answerStreaming(question, onActivity: { _ in })
+    }
+
+    func answerStreaming(
+        _: String,
+        onActivity: @escaping @Sendable (ResponderActivity) -> Void
+    ) async throws -> (sources: [ChunkHit], stream: AsyncStream<String>) {
+        onActivity(.retrieving)
+        onActivity(.usingTool(name: "web_search", argument: "weather"))
+        onActivity(.usingTool(name: "web_search", argument: "weather tomorrow"))
+        onActivity(.usingTool(name: "datetime", argument: ""))
+        let stream = AsyncStream<String> { continuation in
+            continuation.yield("Answer.")
+            continuation.finish()
+        }
+        return ([], stream)
+    }
+}
+
+/// Captures the onActivity callback so a test can fire a STRAGGLER event
+/// after the turn has settled. `@unchecked Sendable`: same MainActor-only
+/// access pattern as its siblings above.
+private final class CallbackCapturingResponder: RAGResponding, @unchecked Sendable {
+    var capturedActivity: (@Sendable (ResponderActivity) -> Void)?
+
+    func answerStreaming(
+        _ question: String
+    ) async throws -> (sources: [ChunkHit], stream: AsyncStream<String>) {
+        try await answerStreaming(question, onActivity: { _ in })
+    }
+
+    func answerStreaming(
+        _: String,
+        onActivity: @escaping @Sendable (ResponderActivity) -> Void
+    ) async throws -> (sources: [ChunkHit], stream: AsyncStream<String>) {
+        capturedActivity = onActivity
+        onActivity(.usingTool(name: "web_search", argument: "hi"))
+        let stream = AsyncStream<String> { continuation in
+            continuation.yield("Answer.")
+            continuation.finish()
+        }
+        return ([], stream)
+    }
+}
+
+@MainActor
+struct ToolTraceTests {
+    @Test("tools used are recorded on the message, deduped, phases excluded")
+    func traceAccumulates() async throws {
+        let session = ChatSession(responder: MultiToolResponder())
+        await session.send("what's the weather?")
+        // The activity hops ride Task { @MainActor } — give them a beat to land.
+        for _ in 0 ..< 200 where session.messages.last?.toolsUsed?.count != 2 {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        let assistant = session.messages.last
+        #expect(assistant?.status == .complete)
+        #expect(assistant?.toolsUsed == ["web_search", "datetime"])
+    }
+
+    @Test("a late activity hop cannot mutate a settled message")
+    func lateHopIsDropped() async throws {
+        // The trace hops ride unstructured Task { @MainActor } — one can land
+        // AFTER the final update (and after the leak guard's clear). A settled
+        // message must be immutable to them, or a leaked/persisted turn could
+        // grow provenance it was stripped of (quality review, 2026-08-16).
+        let responder = CallbackCapturingResponder()
+        let session = ChatSession(responder: responder)
+        await session.send("hi")
+        for _ in 0 ..< 200 where session.messages.last?.toolsUsed == nil {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(session.messages.last?.toolsUsed == ["web_search"])
+
+        // Fire a straggler tool event after the turn is complete.
+        responder.capturedActivity?(.usingTool(name: "datetime", argument: ""))
+        try await Task.sleep(for: .milliseconds(50))
+        let assistant = session.messages.last
+        #expect(assistant?.status == .complete)
+        #expect(assistant?.toolsUsed == ["web_search"])
+        #expect(assistant?.activityLabel == nil)
+    }
+
+    @Test("the tool trace persists in the transcript, absent key decodes nil")
+    func tracePersists() throws {
+        var message = ChatMessage(role: .assistant, text: "hi", status: .complete)
+        message.toolsUsed = ["web_search", "datetime"]
+        let data = try JSONEncoder().encode([message])
+        let decoded = try JSONDecoder().decode([ChatMessage].self, from: data)
+        #expect(decoded.first?.toolsUsed == ["web_search", "datetime"])
+
+        // A pre-trace transcript (no key) must still decode — the
+        // reasoning/attachments precedent.
+        let old = ChatMessage(role: .assistant, text: "old", status: .complete)
+        let oldData = try JSONEncoder().encode([old])
+        let oldDecoded = try JSONDecoder().decode([ChatMessage].self, from: oldData)
+        #expect(oldDecoded.first?.toolsUsed == nil)
     }
 }

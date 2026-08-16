@@ -103,6 +103,7 @@ struct MessageView: View {
                     if !citedSources.isEmpty {
                         sourcesDisclosure
                     }
+                    toolTraceFooter
                     linkChips
                     followUpChips
                     statsFooter
@@ -139,6 +140,23 @@ struct MessageView: View {
             Text("\(context) · \(metrics.generationTokens.formatted()) out · "
                 + "\(Int(metrics.tokensPerSecond.rounded())) tok/s")
                 .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+        }
+    }
+
+    /// Persisted provenance: which tools served this turn. The live activity
+    /// label vanishes the moment tokens stream — this line is what survives in
+    /// the transcript, so tool use (and what left the device) is never
+    /// invisible after the fact. Rendered on failed turns too, not just
+    /// complete ones — a turn that searched the web and THEN failed is exactly
+    /// when "what left the device" matters most (bot review, PR #132). Leaked
+    /// turns can't reach here with a trace: the guard nils it with the rest.
+    @ViewBuilder
+    private var toolTraceFooter: some View {
+        if message.status != .streaming, let tools = message.toolsUsed, !tools.isEmpty {
+            Label(ActivityLabeler.traceLabel(for: tools), systemImage: "wrench.and.screwdriver")
+                .font(.caption2)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
         }
