@@ -154,6 +154,14 @@ final class AppEnvironment {
     /// Late-bound bridge the delegate_deep tool holds (the palette is built in
     /// init before `self` exists); the handler installs at the end of init.
     let deepDelegationHook = DeepDelegationHook()
+    /// Escalated-dive slot bookkeeping (2026-08-15, the DeepDiveTarget wiring):
+    /// while a dive runs on Big, the resident brain's provider is parked in
+    /// `deepDiveRestoreProvider` and the slot is restored from it on EVERY dive
+    /// exit — `finishDeepDelegation` is the single teardown point for success
+    /// and failure alike, so there is no path that leaves Big in the slot.
+    @ObservationIgnored var deepDiveRestoreProvider: MLXGemmaProvider?
+    /// The Big provider an escalated dive runs on — released at restore.
+    @ObservationIgnored var deepDiveEscalatedProvider: MLXGemmaProvider?
     /// The heartbeat's coarse check loop (10-min ticks deciding via the pure
     /// policy) — see AppEnvironment+Heartbeat.swift.
     @ObservationIgnored var heartbeatTask: Task<Void, Never>?
@@ -189,7 +197,10 @@ final class AppEnvironment {
     /// The MLX provider for the currently-selected brain (Lil = Qwen / Big =
     /// Gemma). Rebuilt when the brain changes; held directly so the onboarding /
     /// picker can warm it and stream download progress to the UI.
-    private var currentMLXProvider: MLXGemmaProvider
+    /// `private(set)`: written only in this file (selectBrain); READ by
+    /// AppEnvironment+DeepDelegation to park the resident provider across an
+    /// escalated dive's slot swap.
+    private(set) var currentMLXProvider: MLXGemmaProvider
     /// "Is this brain's weights already on disk?" — drives the onboarding card's
     /// "On disk · ready" hint instead of dangling a download the user already did.
     private let brainInventory = LocalModelInventory()
@@ -1183,7 +1194,9 @@ final class AppEnvironment {
     /// consults each turn (callbacks are no-ops — only definitions render into
     /// the prefix), and the MLX side shares its key derivation with
     /// `makeToolTurnSession` (pinned in MLXPrefixInputsTests).
-    private func warmPersonaPrefixAfterLoad(_ mlx: MLXGemmaProvider) {
+    /// Internal (not private): AppEnvironment+DeepDelegation re-warms the
+    /// restored resident brain after an escalated dive releases the slot.
+    func warmPersonaPrefixAfterLoad(_ mlx: MLXGemmaProvider) {
         guard Self.backgroundWorkAllowed() else {
             // Hot right now (the model download itself can heat the Mac):
             // arm the cooldown retry, or this session would pay the inline

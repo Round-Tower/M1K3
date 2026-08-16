@@ -212,4 +212,63 @@ struct SingleFlightLoaderTests {
         #expect(retried == 5)
         #expect(await counter.count == 2)
     }
+
+    // MARK: - Eviction (2026-08-15, the deep-dive escalation's memory story)
+
+    @Test("reset evicts the cached value so the next caller reloads")
+    func resetEvictsCachedValue() async throws {
+        // Until reset() existed, cachedValue lived for the loader's lifetime —
+        // so "releasing" a parked MLXGemmaProvider freed its KV caches but
+        // never its weights, and an escalated deep dive ran Big beside the
+        // parked brain's resident weights (review catch, #130).
+        let counter = InvocationCounter()
+        let loader = SingleFlightLoader<Int> { _ in await counter.bump() }
+
+        #expect(try await loader.value() == 1)
+        #expect(try await loader.value() == 1) // cached
+        await loader.reset()
+        #expect(try await loader.value() == 2) // reloaded
+        #expect(await counter.count == 2)
+    }
+
+    @Test("reset during an in-flight load leaves that flight to complete and re-cache")
+    func resetDuringFlightIsDocumentedBehaviour() async throws {
+        // Deliberate semantics: reset only evicts the CACHED value. An
+        // in-flight load completes and caches its result — its waiters are owed
+        // an answer, and tearing a live download out from under them is a
+        // different (unneeded) feature. The dive's use runs reset on an IDLE
+        // parked provider, so this branch is a documented edge, not the path.
+        let gate = AsyncGate()
+        let counter = InvocationCounter()
+        let loader = SingleFlightLoader<Int> { _ in
+            await gate.wait()
+            return await counter.bump()
+        }
+
+        let inFlight = Task { try await loader.value() }
+        try? await Task.sleep(for: .milliseconds(20)) // let the flight start
+        await loader.reset()
+        await gate.open()
+        #expect(try await inFlight.value == 1)
+        #expect(try await loader.value() == 1) // the completed flight re-cached
+    }
+}
+
+/// Suspends waiters until opened — deterministic flight-in-progress control.
+private actor AsyncGate {
+    private var opened = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func open() {
+        opened = true
+        for waiter in waiters {
+            waiter.resume()
+        }
+        waiters.removeAll()
+    }
+
+    func wait() async {
+        if opened { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
 }

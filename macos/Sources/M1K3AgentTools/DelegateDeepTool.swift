@@ -10,6 +10,9 @@
 //  validates and forwards — same closure-injection shape as open_link.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-25, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5, 2026-08-15 — description truthed up again for
+//  the wired escalation (conditional, DeepDiveTarget-gated; see the test's
+//  history note pinning both flips). Confidence 0.9.
 //
 
 import Foundation
@@ -35,20 +38,23 @@ public struct DelegateDeepTool: AgentTool {
     /// ORDERING (the dive is dispatched before a batch-mate's embed starts),
     /// not a hard mutual exclusion.
     public let requiresExclusiveCompute = true
-    /// Describes what the plumbing ACTUALLY does. The previous wording promised
-    /// "the deeper brain" — but the manager passes `swappableMLX`, the brain
-    /// already resident, which under an eligible call is the very brain reading
-    /// this description; `selectBrain` refuses mid-dive, so nothing heavier can
-    /// be swapped in. This tool buys TIME, not intelligence, and it spends the
-    /// conversation's quality to do it (interactive turns route to Mini while
-    /// the slot is held). Both halves are stated so the model can make that
-    /// trade knowingly on the user's behalf.
+    /// Describes what the plumbing ACTUALLY does — third revision of this
+    /// string, each tracking the plumbing (see the test's history note). Since
+    /// 2026-08-15 the manager runs DeepDiveTarget.plan and, where this Mac
+    /// allows it (Big installed + the 24GB comfort bar), swaps the MLX slot to
+    /// Big for the dive — real escalation, conditionally. Elsewhere the dive
+    /// stays on the resident brain (time, not intelligence). The per-call
+    /// observation (DeepDiveObservation) tells the model which shape it got;
+    /// the standing cost is stated so the model chooses knowingly: interactive
+    /// turns route to Mini while the slot is held.
     public let description =
-        "Run a long task in the background instead of answering it now. It goes to "
-            + "the brain already in use — this buys time, not extra intelligence — and "
-            + "while it runs, chat replies come from Mini: faster, but the weakest "
-            + "tier. Returns immediately; the result lands in this chat later with a "
-            + "notification. Use ONLY for work that genuinely takes minutes — answer "
+        "Run a long or genuinely hard task in the background instead of answering "
+            + "it now. Where this Mac allows it, the task escalates to the deepest "
+            + "installed brain; otherwise it runs on the brain already in use (buying "
+            + "time, not extra intelligence). While it runs, chat replies come from "
+            + "Mini: faster, but the weakest tier. Returns immediately; the result "
+            + "lands in this chat later with a notification. Use ONLY for work that "
+            + "genuinely takes minutes or needs the deepest reasoning — answer "
             + "ordinary questions yourself."
     public let parameters = [
         // "the deep brain" survived here when the tool description above was

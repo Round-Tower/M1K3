@@ -43,6 +43,15 @@
 //  finish() completed) could otherwise flicker a stale segment into the UI; the
 //  yield is now skipped when `generation != self.generation`. Confidence 0.85 —
 //  a mechanical symmetry fold matching an already-verified pattern.
+//  Review: Kev + claude-fable-5, 2026-08-15 — recognizer finality is no longer
+//  an unconditional end-of-listen: under FinalityPolicy.keepsListening (voice-
+//  first), isFinal and no-speech errors on the LIVE session restart recognition
+//  (fresh request+task, same generation, engine+tap untouched — the tap's
+//  fresh-per-buffer request read is now load-bearing). Request config
+//  centralised in makeRequest (+addsPunctuation, .dictation hint); non-final
+//  confidence yields nil (Apple reports a meaningless 0.0 there). Confidence
+//  0.8 — the restart glue is verify-by-launch per this file's convention; the
+//  policy/accumulator halves are test-pinned.
 
 import AVFoundation
 import Foundation
@@ -97,6 +106,14 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// AsyncStream.Continuation is not Equatable and a nil-check can't distinguish
     /// "stopped" from "restarted", so the counter is the only correct identity.
     private var generation: UInt64 = 0
+    /// This session's finality policy (guarded by `lock`, set at start). Under
+    /// `.keepsListening`, recognizer-initiated finality restarts recognition
+    /// instead of ending the listen — see FinalityPolicy.
+    private var sessionFinality: FinalityPolicy = .endsListen
+    /// Whether this session has yielded any non-empty text (guarded by `lock`).
+    /// The restart gate: a listen that has captured nothing ends exactly as
+    /// before, preserving the consumer's empty-listen parking.
+    private var sessionHasText = false
     /// Which generation's tap is currently installed on the bus / engine armed
     /// (nil = idle). Guarded by `engineLock` — mutated and read ONLY inside an
     /// engineLock hold, alongside the engine op it authorizes. This is what makes
@@ -120,11 +137,17 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     }
 
     public func startListening() throws -> AsyncStream<TranscriptSegment> {
+        try startListening(finality: .endsListen)
+    }
+
+    public func startListening(finality: FinalityPolicy) throws -> AsyncStream<TranscriptSegment> {
         stopListening()
         return AsyncStream { continuation in
             let generation = lock.withLock {
                 self.generation &+= 1
                 self.continuation = continuation
+                self.sessionFinality = finality
+                self.sessionHasText = false
                 return self.generation
             }
             // Consumer cancellation (task torn down without a paired
@@ -204,17 +227,22 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         _ continuation: AsyncStream<TranscriptSegment>.Continuation,
         generation: UInt64
     ) async {
+        // supportsOnDeviceRecognition is part of the guard, not just the
+        // request config: the file's privacy floor is on-device REQUIRED, and
+        // a recogniser that can't run offline must read unavailable rather
+        // than fall through to a request that could reach Apple's servers
+        // (review fold, #129 — previously only `isAvailable` was re-checked
+        // here and in restartRecognition).
         guard await Self.authorized(),
               let recognizer = SFSpeechRecognizer(locale: locale),
-              recognizer.isAvailable
+              recognizer.isAvailable,
+              recognizer.supportsOnDeviceRecognition
         else {
             continuation.finish()
             return
         }
 
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportPartialResults = true
-        request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
+        let request = Self.makeRequest(recognizer: recognizer)
         // Store the request before installing the tap (so the first audio buffers
         // aren't dropped by `self.request` still being nil when the tap fires) —
         // atomically with the liveness re-check: a stop that landed during the
@@ -250,34 +278,10 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         }
         observeConfigurationChanges(ifGeneration: generation)
 
-        let task = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            guard let self else { return }
-            // Generation-scoped teardown on BOTH exits: stopListening endAudio()s
-            // then cancel()s the old task, so a superseded session comes back as
-            // a late isFinal OR a cancel-error — either used to tear down the
-            // NEW session's engine/tap/continuation.
-            if error != nil {
-                self.stopListening(ifGeneration: generation)
-                return
-            }
-            guard let result else { return }
-            let text = result.bestTranscription.formattedString
-            // Generation-gate the SHARED continuation exactly as the error branch
-            // above (and the WhisperKit sibling's onState) do: a superseded session's
-            // late, non-final partial must not flicker into a continuation the
-            // consumer has already asked to finish. Without this the two providers
-            // are asymmetric in precisely the dimension this hardening pass unifies.
-            // isFinal still routes through the generation-scoped stopListening below.
-            let isCurrent = self.lock.withLock { generation == self.generation }
-            if isCurrent, !text.isEmpty {
-                continuation.yield(TranscriptSegment(
-                    text: text,
-                    isFinal: result.isFinal,
-                    confidence: Self.confidence(of: result.bestTranscription)
-                ))
-            }
-            if result.isFinal { self.stopListening(ifGeneration: generation) }
-        }
+        let task = makeRecognitionTask(
+            recognizer: recognizer, request: request,
+            generation: generation, continuation: continuation
+        )
 
         let taskAccepted = lock.withLock {
             guard generation == self.generation else { return false }
@@ -334,6 +338,149 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             request.endAudio()
             task.cancel()
             continuation.finish()
+        }
+    }
+
+    /// One recognition request, configured in ONE place so a mid-listen restart
+    /// can't drift from the session's original settings. `addsPunctuation` +
+    /// `.dictation` are deliberate (2026-08-15): punctuated partials give
+    /// UtteranceCompleteness a real terminal-punctuation signal (previously the
+    /// hold branch could barely engage on this engine), and the dictation hint
+    /// biases the recognizer toward long-form speech.
+    private static func makeRequest(recognizer: SFSpeechRecognizer) -> SFSpeechAudioBufferRecognitionRequest {
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
+        request.addsPunctuation = true
+        request.taskHint = .dictation
+        return request
+    }
+
+    /// The recognition callback, shared by the initial task and every
+    /// mid-listen restart. Non-final confidence is yielded as nil — Apple
+    /// reports a meaningless 0.0 on non-final segments, and folding that into
+    /// the sanitizer's gate read as "measured zero" rather than "unknown".
+    private func makeRecognitionTask(
+        recognizer: SFSpeechRecognizer,
+        request: SFSpeechAudioBufferRecognitionRequest,
+        generation: UInt64,
+        continuation: AsyncStream<TranscriptSegment>.Continuation
+    ) -> SFSpeechRecognitionTask {
+        recognizer.recognitionTask(with: request) { [weak self] result, error in
+            guard let self else { return }
+            // Generation-scoped on BOTH exits: stopListening endAudio()s then
+            // cancel()s the old task, so a superseded session comes back as a
+            // late isFinal OR a cancel-error — either used to tear down the NEW
+            // session's engine/tap/continuation. Only Apple's benign no-speech
+            // error routes through the restart decision like isFinal (silence
+            // wearing an error type); every OTHER error ends the listen and is
+            // logged — a revoked authorization or broken model must not be
+            // masked as segment-boundary churn (review fold, #129).
+            if let error {
+                self.recognizerReachedFinality(
+                    generation: generation, continuation: continuation, error: error
+                )
+                return
+            }
+            guard let result else { return }
+            let text = result.bestTranscription.formattedString
+            // Generation-gate the SHARED continuation exactly as the error branch
+            // above (and the WhisperKit sibling's onState) do: a superseded session's
+            // late, non-final partial must not flicker into a continuation the
+            // consumer has already asked to finish. Without this the two providers
+            // are asymmetric in precisely the dimension this hardening pass unifies.
+            // isFinal still routes through the generation-scoped decision below.
+            let isCurrent = self.lock.withLock {
+                guard generation == self.generation else { return false }
+                if !text.isEmpty { self.sessionHasText = true }
+                return true
+            }
+            if isCurrent, !text.isEmpty {
+                continuation.yield(TranscriptSegment(
+                    text: text,
+                    isFinal: result.isFinal,
+                    confidence: result.isFinal ? Self.confidence(of: result.bestTranscription) : nil
+                ))
+            }
+            if result.isFinal {
+                self.recognizerReachedFinality(generation: generation, continuation: continuation)
+            }
+        }
+    }
+
+    /// The recognizer declared finality on its own — isFinal (error nil) or a
+    /// recognition error. Under `.keepsListening` with captured text, benign
+    /// finality (isFinal / the no-speech error) is a SEGMENT boundary, not the
+    /// end of the listen — restart recognition and keep the engine, tap, and
+    /// stream open. A genuine error, or anything else, ends the listen exactly
+    /// as before (a stale generation no-ops inside stopListening) — with the
+    /// error logged either way, so a hard failure finally leaves its name in
+    /// the trail instead of a stream of identical restarts.
+    private func recognizerReachedFinality(
+        generation: UInt64,
+        continuation: AsyncStream<TranscriptSegment>.Continuation,
+        error: Error? = nil
+    ) {
+        let (isCurrent, wantsRestart) = lock.withLock {
+            (generation == self.generation,
+             sessionFinality.shouldRestart(hasCapturedText: sessionHasText))
+        }
+        let benign = error.map(RecognizerFinality.isBenignNoSpeech) ?? true
+        if let error, isCurrent, !benign {
+            let reason = error.localizedDescription
+            Self.log.error("recognizer failed mid-listen — ending: \(reason, privacy: .public)")
+        }
+        guard isCurrent, benign, wantsRestart else {
+            stopListening(ifGeneration: generation)
+            return
+        }
+        restartRecognition(generation: generation, continuation: continuation)
+    }
+
+    /// Swap in a fresh request + recognition task under the SAME session: the
+    /// engine and tap keep running, and the tap reads `self.request` fresh per
+    /// buffer, so audio flows into the new request the moment it is stored.
+    /// The accumulator's commit-and-continue fold makes the restarted session's
+    /// from-empty cumulative partials safe downstream.
+    private func restartRecognition(
+        generation: UInt64,
+        continuation: AsyncStream<TranscriptSegment>.Continuation
+    ) {
+        guard let recognizer = SFSpeechRecognizer(locale: locale),
+              recognizer.isAvailable,
+              recognizer.supportsOnDeviceRecognition
+        else {
+            // Say WHY before ending: the controller's stream-end line can't
+            // distinguish this from a normal single-segment end, and
+            // unexplained turn-endings are the bug this whole file exists to
+            // end (round-2 review).
+            Self.log.error("on-device recognizer unavailable at segment restart — ending listen")
+            stopListening(ifGeneration: generation)
+            return
+        }
+        let request = Self.makeRequest(recognizer: recognizer)
+        let previous = lock.withLock {
+            () -> SFSpeechAudioBufferRecognitionRequest?? in
+            guard generation == self.generation else { return nil }
+            let old = self.request
+            self.request = request
+            return .some(old)
+        }
+        guard let previous else { return } // superseded while deciding — the stop owns teardown
+        previous?.endAudio()
+        Self.log.notice("recognizer finalized mid-listen — restarting recognition, turn stays open")
+        let task = makeRecognitionTask(
+            recognizer: recognizer, request: request,
+            generation: generation, continuation: continuation
+        )
+        let accepted = lock.withLock {
+            guard generation == self.generation else { return false }
+            self.task = task
+            return true
+        }
+        if !accepted {
+            task.cancel()
+            request.endAudio()
         }
     }
 
@@ -395,14 +542,16 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             Self.log.error("degenerate mic format — not installing tap (route not ready)")
             return false
         }
-        // Residual (pre-existing, informational): the closure reads `self?.request`
-        // FRESH per buffer rather than closing over the request live at install
-        // time. removeTap(onBus:) is not guaranteed to synchronously drain an
-        // in-flight render-thread callback, so a trailing buffer from a just-removed
-        // tap could theoretically append into a SUCCESSOR session's request (a few
-        // stray samples). Unrelated to the session-lifetime races closed here and
-        // not observed in practice; closing over the specific request instance would
-        // tighten it if it ever surfaces.
+        // The closure reads `self?.request` FRESH per buffer rather than closing
+        // over the request live at install time — now LOAD-BEARING (2026-08-15):
+        // a mid-listen recognition restart (FinalityPolicy.keepsListening) swaps
+        // `self.request` under the running tap, and fresh-per-buffer reads are
+        // exactly what routes audio into the new request without touching the
+        // engine. Residual (pre-existing): removeTap(onBus:) is not guaranteed
+        // to synchronously drain an in-flight render-thread callback, so a
+        // trailing buffer from a just-removed tap could theoretically append a
+        // few stray samples into a successor session's request; not observed in
+        // practice.
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             // Multi-channel devices go MONO before the recognizer: SFSpeech
             // accepts >2-channel buffers and silently never produces a partial

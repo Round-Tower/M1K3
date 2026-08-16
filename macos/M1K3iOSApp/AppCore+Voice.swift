@@ -105,7 +105,9 @@ extension AppCore {
                 guard let self else {
                     throw VoiceTurnFailure(message: "M1K3 is shutting down.")
                 }
-                let stream = try transcriber.startListening()
+                // Voice-first owns its turn boundary: recognizer finality is a
+                // segment boundary, not the end of the listen (FinalityPolicy).
+                let stream = try transcriber.startListening(finality: .keepsListening)
                 avatar.setActivity(.listening)
                 return stream
             },
