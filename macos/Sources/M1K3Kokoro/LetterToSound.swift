@@ -20,10 +20,17 @@
 //  doubled-consonant collapse, and short-vowel defaults, with primary stress on
 //  the first vowel — the right default for the names this exists to speak.
 //
+//  Known limits, accepted: `th` always maps voiceless (θ) — voiced ð (then,
+//  mother) is lexically conditioned and undecidable from spelling alone; real
+//  `th` words come from the dictionary anyway. Same class as unstressed-vowel
+//  reduction: rules guess, the lexicon knows.
+//
 //  Signed: Kev + claude-fable-5, 2026-08-16, Confidence 0.8 (the engine and
 //  every rule are pinned by LetterToSoundTests against hand-checked IPA; the
 //  AUDIO quality of any given guess is verify-by-ear, and the design accepts
 //  imperfect guesses as strictly better than silence). Prior: Unknown.
+//  Review: Kev + claude-fable-5, 2026-08-16 — the -ce/-ge softness bug (bot
+//  review, PR #135): applyFinalE now sentinels soft c/g BEFORE dropping the e.
 //
 
 import Foundation
@@ -71,6 +78,11 @@ public enum LetterToSound {
             ]
             chars[chars.count - 3] = long[vowel] ?? vowel
         }
+        // Soft c/g must be decided HERE, before the e is deleted — single()'s
+        // lookahead can never see a character that no longer exists (the
+        // face→"fake" bug, PR #135 review). The sentinel carries the softness.
+        if consonant == "c" { chars[chars.count - 2] = "C" }
+        if consonant == "g" { chars[chars.count - 2] = "G" }
         chars.removeLast()
     }
 
@@ -146,6 +158,9 @@ public enum LetterToSound {
         // "EI" are the magic-e sentinels — a lengthened front vowel still softens.
         case "c": return next.map { "eiyEI".contains($0) } == true ? "s" : "k"
         case "g": return next.map { "eiyEI".contains($0) } == true ? "ʤ" : "g"
+        // Softness decided by applyFinalE before the e was dropped (-ce/-ge).
+        case "C": return "s"
+        case "G": return "ʤ"
         case "j": return "ʤ"
         case "q": return "k"
         case "r": return "ɹ"

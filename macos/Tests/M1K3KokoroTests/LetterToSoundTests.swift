@@ -36,6 +36,20 @@ struct LetterToSoundTests {
         #expect(LetterToSound.ipa(for: "gyre") == "ʤˈaɪɹ") // soft g + magic-e
     }
 
+    @Test("soft c/g survives the dropped final e — face is not fake")
+    func softCGBeforeFinalE() {
+        // PR #135 review catch: applyFinalE deleted the e BEFORE single() could
+        // peek at it, so the majority soft-c/g shape (-ce/-ge — Grace, Pierce,
+        // Page, exactly the surname traffic this engine exists for) hardened.
+        #expect(LetterToSound.ipa(for: "face") == "fˈeɪs")
+        #expect(LetterToSound.ipa(for: "cage") == "kˈeɪʤ")
+        #expect(LetterToSound.ipa(for: "race") == "ɹˈeɪs")
+        #expect(LetterToSound.ipa(for: "since") == "sˈɪns")
+        #expect(LetterToSound.ipa(for: "voice") == "vˈɔɪs")
+        #expect(LetterToSound.ipa(for: "large") == "lˈɑːʤ")
+        #expect(LetterToSound.ipa(for: "bryce") == "bɹˈaɪs")
+    }
+
     @Test("stress lands before the first vowel")
     func stressPlacement() {
         #expect(LetterToSound.ipa(for: "strand") == "stɹˈænd")
