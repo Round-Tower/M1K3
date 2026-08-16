@@ -196,9 +196,12 @@ public struct KokoroG2P: Sendable {
         return WordRun(text: text, unitWords: unitWords, containsDigit: containsDigit, end: end, utf16Count: utf16Count)
     }
 
-    /// Fallback chain: dictionary → number expansion → per-character spell-out
-    /// → nil (silent skip). Expansions join their words with the space token so
-    /// one run yields one contiguous token span.
+    /// Fallback chain: dictionary → house lexicon → inflection → compound →
+    /// acronym spell-out → letter-to-sound → nil (silent skip). Expansions join
+    /// their words with the space token so one run yields one contiguous token
+    /// span. Letter-to-sound is deliberately LAST (2026-08-16): it can only
+    /// ever replace what used to be silence — the fate of every pronounceable
+    /// OOV word before it, including "Kev" and "Kokoro" itself.
     private func resolveTokens(for run: WordRun) -> [Int]? {
         if run.containsDigit {
             if let numberWords = NumberSpeller.numberWords(run.text) {
@@ -209,9 +212,20 @@ public struct KokoroG2P: Sendable {
         }
         let raw = run.text.lowercased()
         if let hit = lookup(raw) { return hit }
+        if let house = houseTokens(raw) { return house }
         if let inflected = inflectedTokens(raw) { return inflected }
         if let compound = compoundTokens(raw) { return compound }
         if shouldSpellOut(run.text) { return spellOutTokens(run.text, extraWords: []) }
+        if let guessed = LetterToSound.tokens(for: raw) { return guessed }
+        return nil
+    }
+
+    /// House-lexicon lookup with the same apostrophe trim as `lookup` — so
+    /// "Kev's" resolves its base through the inflection path.
+    private func houseTokens(_ word: String) -> [Int]? {
+        if let hit = HouseLexicon.tokens(for: word) { return hit }
+        let trimmed = word.trimmingCharacters(in: CharacterSet(charactersIn: "'"))
+        if trimmed != word { return HouseLexicon.tokens(for: trimmed) }
         return nil
     }
 
@@ -273,11 +287,14 @@ public struct KokoroG2P: Sendable {
         return nil
     }
 
-    /// Base tokens via the dictionary, falling back to a compound split (so
-    /// "keyboards" = key+board, then +/z/). nil for stems too short to be real.
+    /// Base tokens via the dictionary or house lexicon, falling back to a
+    /// compound split (so "keyboards" = key+board, then +/z/). Deliberately NO
+    /// letter-to-sound here: an OOV name ending in s ("glarps", "silas") is
+    /// better guessed WHOLE by the main chain's LTS than split into a guessed
+    /// base plus a plural it may not have. nil for stems too short to be real.
     private func resolveBase(_ stem: String) -> [Int]? {
         guard stem.count >= 2 else { return nil }
-        return lookup(stem) ?? compoundTokens(stem)
+        return lookup(stem) ?? houseTokens(stem) ?? compoundTokens(stem)
     }
 
     private func pluralSuffix(after last: Int?) -> [Int] {
