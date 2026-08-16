@@ -54,6 +54,10 @@
 //  quantize (swift_unexpectedError; stack-evidenced). Directory via HubApi's
 //  own localRepoLocation (the LocalModelInventory never-drift rule); resumable
 //  .incomplete downloads are protected from the heal (review catch).
+//  Review: Kev + claude-fable-5, 2026-08-15 — releaseModel() added (full
+//  unload incl. the container via SingleFlightLoader.reset) for the escalated
+//  deep dive's parked-brain memory story (PR #130). Idle-only by doc contract.
+//  Confidence 0.85 — Metal half is verify-by-launch per the metallib wall.
 
 import Foundation
 import Hub
@@ -340,6 +344,25 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     /// No-ops fast once the container is cached.
     public func prepare(progress: @escaping @Sendable (Double) -> Void) async throws {
         _ = try await ensureLoaded(progress: progress)
+    }
+
+    /// Fully unload this provider: everything `releaseMemory()` frees PLUS the
+    /// model container itself (weights). `releaseMemory()` alone cannot shrink
+    /// a parked provider below its weight footprint — the SingleFlightLoader
+    /// caches the container for the object's lifetime — which is exactly wrong
+    /// for the escalated deep dive, where the parked front brain must not sit
+    /// beside Big against the process-global back-pressure ceiling (#130
+    /// review catch). The provider stays fully usable: the next generate's
+    /// `ensureLoaded` re-runs the loader and reloads from disk.
+    ///
+    /// Only for a provider that is IDLE — evicting under an in-flight
+    /// generation would not crash (ARC keeps the container alive through the
+    /// generation) but the memory would not actually return until it finishes.
+    public func releaseModel() async {
+        await loader.reset()
+        personaPrefix.invalidate()
+        conversationTail.invalidate()
+        MLXMemoryBudget.reclaim(label: "releaseModel")
     }
 
     /// Eagerly release cached Metal state (persona KV prefix) and return

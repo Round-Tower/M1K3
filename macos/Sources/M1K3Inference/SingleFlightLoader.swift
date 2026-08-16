@@ -30,6 +30,9 @@
 //  that itself throws CancellationError now clears the slot (it used to be
 //  mistaken for a waiter cancel and poisoned the loader with no retry path).
 //  Both pinned red-first in SingleFlightLoaderTests.
+//  Review: Kev + claude-fable-5, 2026-08-15 — reset() added (cache eviction
+//  only; an in-flight load completes and re-caches). Pinned both ways.
+//  Confidence 0.9.
 
 import Foundation
 
@@ -117,5 +120,20 @@ public actor SingleFlightLoader<Value: Sendable> {
     private func cancelWaiter(_ id: UUID) {
         guard let continuation = waiters.removeValue(forKey: id) else { return }
         continuation.resume(throwing: CancellationError())
+    }
+
+    /// Evict the cached value so the next caller re-runs the operation.
+    /// Added 2026-08-15 for the deep-dive escalation: a parked
+    /// MLXGemmaProvider's "release" freed KV caches and the Metal buffer pool
+    /// but never the weights, because this cache had no eviction path — so an
+    /// escalated dive ran Big beside the parked brain's resident weights
+    /// against the process-global back-pressure ceiling (review catch, #130).
+    ///
+    /// Deliberate semantics: ONLY the cached value is evicted. An in-flight
+    /// load completes and re-caches — its waiters are owed an answer, and
+    /// cancelling a live download is a different feature nobody needs yet.
+    /// Callers reset an IDLE loader.
+    public func reset() {
+        cachedValue = nil
     }
 }

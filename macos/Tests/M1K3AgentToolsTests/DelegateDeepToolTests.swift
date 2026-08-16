@@ -9,6 +9,10 @@
 //  NEVER throws (the "Error: …" observation contract).
 //
 //  Signed: Kev + claude-fable-5, 2026-07-25, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5, 2026-08-15 — the no-escalation description
+//  pin was deliberately inverted to a conditional-escalation pin when the
+//  DeepDiveTarget wiring landed (PR #130); the replacement test carries the
+//  history of both flips. Confidence 0.9.
 //
 
 import M1K3AgentTools
@@ -49,27 +53,19 @@ struct DelegateDeepToolTests {
 
     // MARK: - The description must describe what the tool actually does
 
-    @Test("the description never promises a DEEPER brain — the dive runs on the resident one")
-    func descriptionDoesNotPromiseEscalation() {
-        // AppEnvironment+DeepDelegation passes `provider: swappableMLX` — the
-        // brain ALREADY resident, which under an eligible call is the very brain
-        // making this call. There is no escalation: `selectBrain` refuses mid-dive,
-        // so nothing heavier can be swapped in. A description promising depth the
-        // plumbing cannot deliver teaches the model to reach for a rung that
-        // isn't there, and a tool that lies to the model is worse than no tool.
-        let tool = DelegateDeepTool(startDelegation: { _ in "" })
-        let description = tool.description.lowercased()
-        #expect(!description.contains("deeper brain"))
-        #expect(!description.contains("deep brain"))
-        // PARAMETER descriptions render into the system block too, and this one
-        // still said "the deep brain" for three weeks after the tool description
-        // stopped saying it (caught 2026-08-12). Every string the model reads has
-        // to make the same promise.
-        for parameter in tool.parameters {
-            let text = parameter.description.lowercased()
-            #expect(!text.contains("deeper brain"), "parameter \(parameter.name)")
-            #expect(!text.contains("deep brain"), "parameter \(parameter.name)")
-        }
+    @Test("the description promises escalation CONDITIONALLY — it happens where this Mac allows it")
+    func descriptionPromisesConditionalEscalation() {
+        // History, so nobody reverts this to either absolute: the description
+        // originally promised "the deeper brain" while the plumbing ran the dive
+        // on the resident one (fixed #117 — a tool that lies to the model is
+        // worse than no tool). On 2026-08-15 the escalation was actually WIRED
+        // (DeepDiveTarget → slot swap), so the honest description changed again:
+        // escalation is real but conditional (Big installed + 24GB comfort bar,
+        // see DeepDiveTarget's refusals). The per-call observation
+        // (DeepDiveObservation) tells the model which shape it actually got.
+        let description = DelegateDeepTool(startDelegation: { _ in "" }).description.lowercased()
+        #expect(description.contains("escalat"))
+        #expect(description.contains("where") || description.contains("when") || description.contains("if"))
     }
 
     @Test("the description names the real trade: background time, and a weaker front meanwhile")

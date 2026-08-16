@@ -24,11 +24,22 @@
 //  Signed: Kev + claude-fable-5, 2026-07-25, Confidence 0.85 (policy + tool +
 //  delivery are unit-pinned; the manager itself is app glue over those seams —
 //  concurrency behaviour is verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-fable-5, 2026-08-15 — the DeepDiveTarget wiring: where
+//  Big's weights are on disk and this Mac clears the 24GB comfort bar, the
+//  dive re-points the ONE MLX slot at a fresh Big provider and restores the
+//  parked resident on every exit (finishDeepDelegation is the single teardown
+//  point; success and failure both funnel there). The slot — not a private
+//  provider — so stray mid-dive callers queue on Big's container actor rather
+//  than decoding concurrently on the parked brain. Confidence 0.8 — the plan
+//  and observation copy are unit-pinned; the swap/restore is app glue and
+//  verify-by-launch (a real cross-brain dive has still never run).
 //
 
 import AppKit
 import Foundation
+import M1K3Chat
 import M1K3Inference
+import M1K3MLX
 import os
 import Synchronization
 
@@ -91,10 +102,62 @@ extension AppEnvironment {
             return refusal
         }
 
-        let brainName = selectedBrain.displayName
+        // Where should this dive run? DeepDiveTarget escalates to Big only when
+        // its weights are already on disk AND this Mac clears the 24GB comfort
+        // bar (both refusals argued in its header); everywhere else the dive
+        // stays on the resident brain — the pre-2026-08-15 behaviour.
+        //
+        // `plan` is the intent; `livePlan` is what actually happened. They
+        // diverge only if the swap block below can't run (today impossible —
+        // Big always has an mlxModelID — but this file's whole discipline is
+        // that the model-facing copy never outruns the plumbing, so the
+        // downgrade is structural rather than trusted, per review #130).
+        let plan = DeepDiveTarget.plan(
+            resident: selectedBrain,
+            bigWeightsPresent: isBrainDownloaded(.big),
+            physicalMemoryGB: Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
+        )
+        var livePlan = DeepDivePlan(tier: selectedBrain, requiresSwap: false, isEscalation: false)
         deepDelegationTaskLabel = task
+        // Front on Mini BEFORE the swap block, not after (review catch, round
+        // 2): the swap contains a real suspension (`releaseModel()` hops onto
+        // the loader actor), and the façade boxes are deliberately not
+        // main-actor-confined — an MCP ask_m1k3 arriving in that window would
+        // resolve `active` to the fresh Big provider instead of Mini, kick off
+        // its ensureLoaded, and contend with the dive on the same container.
+        // The posture reads only the label + selectedBrain, both already set.
         refreshInterimBridge() // interactive turns front on Mini from here
-        Self.logDelegation(.started(brain: brainName))
+        if plan.requiresSwap, let bigID = BrainTier.big.mlxModelID {
+            // Re-point the ONE MLX slot at Big for the dive's lifetime. The
+            // slot (not a private provider) on purpose: any stray caller that
+            // reaches swappableMLX mid-dive then QUEUES on Big's container
+            // actor instead of spinning a second concurrent MLX decode loop on
+            // the parked brain — the one-decode-loop invariant this whole
+            // design rests on. `selectBrain` already refuses while the label is
+            // set, so nothing else re-points the slot underneath us.
+            let big = MLXGemmaProvider(
+                modelID: bigID,
+                maxTokens: HistoryBudgetPolicy.generationTokenCap(
+                    for: .big, defaultCap: MLXGemmaProvider.defaultMaxTokens
+                )
+            )
+            deepDiveRestoreProvider = currentMLXProvider
+            deepDiveEscalatedProvider = big
+            swappableMLX.setProvider(big)
+            // FULLY unload the parked brain — weights included. releaseMemory()
+            // frees KV caches and the Metal buffer pool but the container cache
+            // kept the weights alive for the object's lifetime (review catch,
+            // #130), and the process-global ceiling is min(75% RAM, 12GB) on
+            // EVERY machine — Big's working set beside a parked brain's weights
+            // sits right at it. The restore reloads from disk lazily, off the
+            // hot path (warmPersonaPrefixAfterLoad); weights are on disk by the
+            // plan's own gate, so no path here can trigger a download.
+            await deepDiveRestoreProvider?.releaseModel()
+            livePlan = plan
+        }
+        Self.logDelegation(.started(brain: livePlan.isEscalation
+                ? "\(livePlan.tier.displayName) (escalated from \(selectedBrain.displayName))"
+                : livePlan.tier.displayName))
         // Ask for notification permission NOW so the finish ping can land
         // (no-op if already granted/denied; the center drops unauthorized posts).
         Task { _ = await TurnNotifier.requestAuthorization() }
@@ -127,14 +190,47 @@ extension AppEnvironment {
             let elapsed = clock.now - start
             await self?.finishDeepDelegation(delivered: delivered, elapsed: elapsed)
         }
-        return "Delegated to \(brainName). It's digging in the background; the result "
-            + "will land in this chat (with a ping if the user is away). Tell the user "
-            + "it's underway and that quicker replies come from Mini until it's done."
+        return DeepDiveObservation.delegated(plan: livePlan)
     }
 
-    /// Delivery + teardown, always on the main actor. The task handle clears
-    /// FIRST so a delivery that itself takes time can't block a new delegation.
+    /// Delivery + teardown, always on the main actor.
+    ///
+    /// ORDER IS LOAD-BEARING (round-4 review catch): `deepDelegationTaskLabel`
+    /// is the single-flight guard for BOTH a new delegation and selectBrain,
+    /// and the restore block below contains a real suspension (`releaseModel`
+    /// hops onto the loader actor). Clearing the label FIRST — the original
+    /// shape, safe when teardown was fully synchronous — opened an actor-
+    /// reentrancy window once the await arrived: dive B could start during
+    /// dive A's suspension, then A's resume clobbered B's restore bookkeeping
+    /// and B's own finish skipped its restore entirely — Big silently left in
+    /// the slot for good, the exact outcome the bookkeeping doc says can't
+    /// happen. So the guard now holds through the whole restore; it clears
+    /// just before delivery, preserving the original intent (a slow
+    /// deliverBackgroundAnswer/notification never blocks a new delegation).
     private func finishDeepDelegation(delivered: String, elapsed: Duration) async {
+        // Restore the slot BEFORE fronting returns to the selected brain, so no
+        // interactive turn can land on the dive's Big provider — all under the
+        // still-held label, per the header.
+        if let restore = deepDiveRestoreProvider {
+            swappableMLX.setProvider(restore)
+            // releaseModel (not releaseMemory): explicit, immediate eviction of
+            // Big's container rather than trusting ARC dealloc timing to finish
+            // the job — the same discipline the parked side got, both ways
+            // (round-3 review symmetry note).
+            await deepDiveEscalatedProvider?.releaseModel()
+            deepDiveEscalatedProvider = nil
+            deepDiveRestoreProvider = nil
+            // Hoisted local: the Logger interpolation is an autoclosure, so a
+            // bare property read needs `self.` — which the formatter strips.
+            let restoredName = selectedBrain.displayName
+            Self.delegationLog.notice(
+                "delegate_deep escalation ended — slot restored to \(restoredName, privacy: .public)"
+            )
+            // The parked provider reloads lazily; rebuild weights + persona
+            // prefix off the hot path so the next interactive turn doesn't pay
+            // the cold load inline.
+            warmPersonaPrefixAfterLoad(restore)
+        }
         deepDelegationTaskLabel = nil
         deepDelegationTask = nil
         refreshInterimBridge() // interactive turns return to the selected brain
