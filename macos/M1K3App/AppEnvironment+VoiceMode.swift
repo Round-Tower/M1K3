@@ -431,6 +431,17 @@ extension AppEnvironment {
                 // never re-speak the answer, the 2026-07-25 finding) as a
                 // tested M1K3Voice seam shared with chat auto-speak.
                 var folder = StreamedAnswerFolder(stopMarker: FollowUpSplit.sentinel)
+                // Spoken tool transparency (2026-08-16): tool dispatches used to
+                // be dead air in voice mode — the visual activity label lives on
+                // a screen a hands-free user isn't watching. Announce each
+                // dispatch once, as a short interstitial, through the SAME
+                // onChunk lane as answer sentences: it inherits the serial
+                // speak queue and the turn-generation guard for free, and tools
+                // run before tokens stream so it lands ahead of the answer.
+                // (VoiceTurnTimeline's "first sentence" now stamps at the
+                // interstitial on tool turns — that IS the first audio the
+                // user hears, so the felt-latency number stays honest.)
+                var toolAnnouncer = ToolAnnouncementTracker()
                 // Pin to THIS turn's assistant message by id — never read
                 // `messages.last`. A delegate_deep delivery (or any out-of-band
                 // append) lands as a NEW last message; folding THAT as the
@@ -452,10 +463,18 @@ extension AppEnvironment {
                     pinnedID = candidate?.id
                     return candidate
                 }
+                var announcedAnyTool = false
+                @MainActor func announceTools(on message: ChatMessage) {
+                    for name in toolAnnouncer.newAnnouncements(from: message.toolsUsed ?? []) {
+                        announcedAnyTool = true
+                        onChunk(ToolNarration.phrase(forTool: name))
+                    }
+                }
                 let poller = Task { @MainActor [weak self] in
                     while !Task.isCancelled {
                         try? await Task.sleep(for: .milliseconds(150))
                         guard self != nil, let message = pinnedMessage() else { continue }
+                        announceTools(on: message)
                         foldForward(message.text)
                     }
                 }
@@ -469,12 +488,24 @@ extension AppEnvironment {
                     // re-listens (machine-pinned) while the error surfaces.
                     return .failure(VoiceTurnFailure(message: message))
                 }
+                // A tool that fired inside the final poll window (a near-instant
+                // datetime call) is persisted but was never ticked — announce it
+                // BEFORE the answer tail so the spoken order matches dispatch
+                // order (quality review, 2026-08-16).
+                announceTools(on: settled)
                 foldForward(settled.text)
                 if let tail = folder.flush() {
                     onChunk(tail)
                 }
                 guard folder.emittedAny else {
-                    return .failure(VoiceTurnFailure(message: "The model had nothing to say."))
+                    // The machine drains fine either way (answerFailed while
+                    // .speaking is pinned) — but the on-screen error must not
+                    // contradict what the user just HEARD: after a spoken
+                    // "Checking the web." interstitial, "nothing to say" reads
+                    // as a lie.
+                    return .failure(VoiceTurnFailure(message: announcedAnyTool
+                            ? "I checked, but no answer came back."
+                            : "The model had nothing to say."))
                 }
                 recordSpokenExchange()
                 return .success(())

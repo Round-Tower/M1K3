@@ -157,6 +157,13 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// `.streaming` and no tokens have arrived. Transient — omitted from
     /// `CodingKeys` like `citations`.
     public var activityLabel: String?
+    /// Which tools actually served this turn, in dispatch order, deduped by
+    /// name. PERSISTED — unlike `activityLabel`, which vanishes the moment
+    /// tokens stream, this is the transcript's durable provenance ("Used web
+    /// search"), so a reloaded conversation still shows what left the device.
+    /// Optional so pre-trace transcripts decode to nil (the `attachments`
+    /// precedent); nil and empty mean the same.
+    public var toolsUsed: [String]?
     /// A reasoning model's `<think>…</think>` chain-of-thought, separated from
     /// the answer and surfaced (collapsibly) for transparency. Persisted as an
     /// optional key, so old transcripts (without it) still decode to nil.
@@ -181,7 +188,7 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     public var status: Status
 
     enum CodingKeys: String, CodingKey {
-        case id, role, text, sources, status, reasoning, attachments
+        case id, role, text, sources, status, reasoning, attachments, toolsUsed
     }
 
     public init(
@@ -351,7 +358,21 @@ public final class ChatSession {
                 onActivity: { [weak self] activity in
                     Task { @MainActor in
                         self?.update(assistantID) {
+                            // These hops are unstructured per-event Tasks with no
+                            // happens-before against the final update or the
+                            // persist — a straggler landing after the turn
+                            // settles must be a no-op, or it could re-grow a
+                            // trace the leak guard just stripped (and mutate a
+                            // message already written to disk).
+                            guard case .streaming = $0.status else { return }
                             $0.activityLabel = ActivityLabeler.label(for: activity)
+                            // Tool dispatches also land in the persisted trace —
+                            // the label is transient, the provenance is not.
+                            if case let .usingTool(name, _) = activity,
+                               $0.toolsUsed?.contains(name) != true
+                            {
+                                $0.toolsUsed = ($0.toolsUsed ?? []) + [name]
+                            }
                         }
                     }
                 }
@@ -426,6 +447,10 @@ public final class ChatSession {
                 $0.citations = leaked ? [] : validation.validated
                 $0.reasoning = leaked ? nil : reasoning
                 $0.followUps = leaked ? [] : followUps
+                // The trace goes with the rest on a leak — provenance chips
+                // under a refusal would dress the leak up as a served answer
+                // (the "Sources footer on a leak" rule, #111).
+                if leaked { $0.toolsUsed = nil }
                 $0.activityLabel = nil
                 $0.status = .complete
             }

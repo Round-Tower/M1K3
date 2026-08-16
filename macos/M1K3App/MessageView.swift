@@ -103,6 +103,7 @@ struct MessageView: View {
                     if !citedSources.isEmpty {
                         sourcesDisclosure
                     }
+                    toolTraceFooter
                     linkChips
                     followUpChips
                     statsFooter
@@ -139,6 +140,20 @@ struct MessageView: View {
             Text("\(context) · \(metrics.generationTokens.formatted()) out · "
                 + "\(Int(metrics.tokensPerSecond.rounded())) tok/s")
                 .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+        }
+    }
+
+    /// Persisted provenance: which tools served this turn. The live activity
+    /// label vanishes the moment tokens stream — this line is what survives in
+    /// the transcript, so tool use (and what left the device) is never
+    /// invisible after the fact.
+    @ViewBuilder
+    private var toolTraceFooter: some View {
+        if case .complete = message.status, let tools = message.toolsUsed, !tools.isEmpty {
+            Label(ActivityLabeler.traceLabel(for: tools), systemImage: "wrench.and.screwdriver")
+                .font(.caption2)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
         }
