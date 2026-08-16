@@ -86,9 +86,11 @@ struct KokoroG2PFallbackTests {
 
     @Test("mixed alphanumerics spell out per character as one word")
     func mixedAlphanumeric() {
-        // "M1K3" → m one k three, one word covering 0..<4.
-        let result = g2p().annotatedTokens("M1K3")
-        #expect(result.tokens == [41, 16, 46, 16, 42, 16, 23])
+        // "M1S5" → m one s five, one word covering 0..<4. (This fixture WAS
+        // "M1K3" — retired from spell-out duty when the kill-or-commit-Mike
+        // ruling made it a house NAME; see HouseLexiconTests.m1k3SaysMike.)
+        let result = g2p().annotatedTokens("M1S5")
+        #expect(result.tokens == [41, 16, 46, 16, 44, 16, 25])
         #expect(result.words == [G2PWord(textRange: 0 ..< 4, tokenRange: 0 ..< 7)])
     }
 

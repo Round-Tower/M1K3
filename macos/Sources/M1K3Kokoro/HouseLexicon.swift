@@ -12,10 +12,9 @@
 //  map is dropped at lookup (fail-closed), and HouseLexiconTests speaks every
 //  entry through the real bundled pipeline so a bad entry turns the suite red.
 //
-//  Deliberately NOT here: "M1K3" — the digit path spells it out ("em one kay
-//  three"), which is correct until Kev rules on the kill-or-commit-Mike
-//  branding question; when he commits, one entry here (m1k3 → mˈaɪk) plus a
-//  house check in the digit branch does it.
+//  "M1K3" → "Mike": the kill-or-commit-Mike branding question was COMMITTED
+//  (Kev, 2026-08-16) — the visual brand stays M1K3, the voice says the name
+//  the leet always encoded. Reverting is deleting two entries.
 //
 //  Signed: Kev + claude-fable-5, 2026-08-16, Confidence 0.85 (every entry
 //  spoken through the bundled pipeline in tests; the accent of each guess is
@@ -35,6 +34,11 @@ public enum HouseLexicon {
         "aoife": "ˈiːfə",
         "murphysig": "mˈɜːfisˌɪg",
         "lexy": "lˈɛksi",
+        // ★ The kill-or-commit-Mike ruling: COMMITTED (Kev, 2026-08-16). Text
+        // stays M1K3 — the voice says the name the leet always encoded. The
+        // digit branch consults the house lexicon for exactly this pair.
+        "m1k3": "mˈaɪk",
+        "m1k3's": "mˈaɪks",
     ]
 
     /// Tokens for a word, if it's ours. nil for everyone else.

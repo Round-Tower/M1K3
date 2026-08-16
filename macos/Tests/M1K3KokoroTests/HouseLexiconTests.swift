@@ -35,6 +35,18 @@ struct HouseLexiconTests {
         #expect(!g2p.phonemeTokens("Kokoro").isEmpty)
     }
 
+    @Test("M1K3 says its own name — Mike, exactly as the dictionary says it")
+    func m1k3SaysMike() throws {
+        let g2p = try KokoroG2P.bundled()
+        // The house IPA must render IDENTICALLY to the dictionary's own "mike"
+        // — same name, same phonemes, no drift between text and leet.
+        #expect(g2p.phonemeTokens("M1K3") == g2p.phonemeTokens("mike"))
+        #expect(g2p.phonemeTokens("M1K3's") == g2p.phonemeTokens("mike") + [61])
+        // Units never route through the lexicon — a degenerate "M1K3°C" run
+        // falls back to the spell-out path rather than "Mike celsius".
+        #expect(g2p.phonemeTokens("M1K3°C") != g2p.phonemeTokens("mike"))
+    }
+
     @Test("Kev's takes the house base plus the voiced possessive")
     func kevPossessive() throws {
         let g2p = try KokoroG2P.bundled()

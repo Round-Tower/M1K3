@@ -204,10 +204,16 @@ public struct KokoroG2P: Sendable {
     /// OOV word before it, including "Kev" and "Kokoro" itself.
     private func resolveTokens(for run: WordRun) -> [Int]? {
         if run.containsDigit {
+            // House names first: "M1K3" is pronounced "Mike" (the
+            // kill-or-commit ruling, 2026-08-16) — not spelled out. Only when
+            // no unit rode the run; "15°C" never reaches the lexicon.
+            if run.unitWords.isEmpty, let house = houseTokens(run.text.lowercased()) {
+                return house
+            }
             if let numberWords = NumberSpeller.numberWords(run.text) {
                 return joinedTokens(for: numberWords + run.unitWords)
             }
-            // Mixed alphanumeric ("M1K3") → spell out per character.
+            // Mixed alphanumeric ("V2X7") → spell out per character.
             return spellOutTokens(run.text, extraWords: run.unitWords)
         }
         let raw = run.text.lowercased()
