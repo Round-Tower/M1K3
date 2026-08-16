@@ -29,6 +29,15 @@ public struct DelegateDeepTool: AgentTool {
     private static let log = Logger(subsystem: M1K3Log.subsystem, category: "mlx-load")
 
     public let name = "delegate_deep"
+    /// Spawns MLX generation on the slot — so it takes the serial exclusive
+    /// lane in a multi-call batch. Honest scope (review, #131): execute()
+    /// returns as soon as the manager DISPATCHES the dive, so the lane bounds
+    /// only that quick dispatch — the background generation itself outlives it
+    /// and can overlap a later batch-mate's MLX work (fire-and-forget is the
+    /// tool's pre-existing 2026-07-25 design). The flag still buys correct
+    /// ORDERING (the dive is dispatched before a batch-mate's embed starts),
+    /// not a hard mutual exclusion.
+    public let requiresExclusiveCompute = true
     /// Describes what the plumbing ACTUALLY does — third revision of this
     /// string, each tracking the plumbing (see the test's history note). Since
     /// 2026-08-15 the manager runs DeepDiveTarget.plan and, where this Mac

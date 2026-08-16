@@ -57,4 +57,27 @@ public protocol AgentTool: Sendable {
     /// stays in the signature for genuinely unrecoverable tool states; the
     /// built-in web/OS tools deliberately never use it.
     func execute(input: [String: String]) async throws -> ToolResult
+
+    /// Whether this tool contends for the process's single Metal/MLX compute
+    /// lane (query embedding, delegated generation). When one model turn
+    /// carries several tool calls, exclusive tools execute serially relative
+    /// to EACH OTHER while everything else fans out concurrently — two
+    /// concurrent MLX workloads stall each other (the one-decode-loop
+    /// doctrine), but network/disk tools overlap freely. Default false.
+    ///
+    /// Named limit (review, #131): the lane bounds only the tool's own
+    /// `execute(input:)` duration. Detached work a tool kicks off and returns
+    /// from — delegate_deep's background dive is the live case — escapes the
+    /// lane by construction; once its `execute` returns, the next exclusive
+    /// item runs while that background generation is still on the GPU. The
+    /// serialization is real for synchronous-inside-execute tools
+    /// (search_knowledge) and best-effort ordering for fire-and-forget ones.
+    var requiresExclusiveCompute: Bool { get }
+}
+
+public extension AgentTool {
+    /// Default: a plain network/disk/pure tool — safe to run concurrently.
+    var requiresExclusiveCompute: Bool {
+        false
+    }
 }

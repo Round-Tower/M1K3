@@ -147,14 +147,18 @@ extension LocalAgent {
 
             case let .toolCalls(calls):
                 transcript.append(.assistant(text: nil, toolCalls: calls))
-                for parsedCall in calls {
-                    let observation = await observeNative(
-                        parsedCall: parsedCall,
-                        iteration: iteration,
-                        executedActions: &executedActions,
-                        usedTools: &usedTools,
-                        onEvent: onEvent
-                    )
+                let observations = await executeNativeBatch(
+                    calls: calls,
+                    iteration: iteration,
+                    executedActions: &executedActions,
+                    usedTools: &usedTools,
+                    onEvent: onEvent
+                )
+                // Bookkeeping strictly in EMISSION order whatever the
+                // completion order — the model correlates result-to-call by
+                // position (chatMessage's documented one-result-per-call
+                // contract in MLXToolCalling).
+                for (parsedCall, observation) in zip(calls, observations) {
                     reasoningTrace.append(ReasoningStep(
                         iteration: iteration,
                         thought: "",
@@ -208,35 +212,102 @@ extension LocalAgent {
         return (turn, remainder)
     }
 
-    /// Execute one structured tool call through the shared dispatch core,
-    /// flattening the typed arguments to the tool's `[String: String]` contract.
-    private func observeNative(
-        parsedCall: ParsedToolCall,
+    /// Execute one turn's tool calls (2026-08-15, replacing the sequential
+    /// per-call loop). Two phases:
+    ///
+    /// 1. A serial PRE-PASS in emission order runs the shared guards
+    ///    (`planCall`: repeat-guard, unknown-tool steering, events,
+    ///    bookkeeping) — order-dependent, so never concurrent, and the reason
+    ///    the plan/run split exists (`inout` sets can't cross a TaskGroup).
+    /// 2. The survivors EXECUTE concurrently — except exclusive-compute tools
+    ///    (see `AgentTool.requiresExclusiveCompute`), which share one serial
+    ///    lane: two concurrent MLX workloads stall each other, while network
+    ///    tools overlap freely.
+    ///
+    /// Returns observations indexed to `calls` — emission order, whatever the
+    /// completion order.
+    private func executeNativeBatch(
+        calls: [ParsedToolCall],
         iteration: Int,
         executedActions: inout Set<String>,
         usedTools: inout Set<String>,
         onEvent: (@Sendable (AgentLoopEvent) -> Void)?
-    ) async -> String {
-        let start = ContinuousClock.now
-        let display = Self.nativeDescription(parsedCall)
-        let observation = await dispatchCall(
-            ToolCallSite(
+    ) async -> [String] {
+        var observations = [String?](repeating: nil, count: calls.count)
+        var runnable: [(index: Int, call: ParsedToolCall, tool: any AgentTool)] = []
+        for (index, parsedCall) in calls.enumerated() {
+            let site = ToolCallSite(
                 toolName: parsedCall.name,
-                displayDescription: display,
+                displayDescription: Self.nativeDescription(parsedCall),
                 // Dictionary.values.first is order-nondeterministic; sort so a
                 // multi-arg call always surfaces the same argument in the UI.
                 eventArgument: parsedCall.stringArguments
                     .sorted { $0.key < $1.key }
                     .first?.value ?? ""
-            ),
-            executedActions: &executedActions,
-            usedTools: &usedTools,
-            onEvent: onEvent
-        ) { tool in
-            try await tool.execute(input: parsedCall.stringArguments).output
+            )
+            switch planCall(
+                site, executedActions: &executedActions, usedTools: &usedTools, onEvent: onEvent
+            ) {
+            case let .steer(observation):
+                observations[index] = observation
+                logObservation(
+                    observation, callDescription: site.displayDescription,
+                    iteration: iteration, took: "0ms"
+                )
+            case let .run(tool):
+                runnable.append((index, parsedCall, tool))
+            }
         }
-        logObservation(observation, callDescription: display, iteration: iteration, start: start)
-        return observation
+        let exclusive = runnable.filter { $0.tool.requiresExclusiveCompute }
+        let concurrent = runnable.filter { !$0.tool.requiresExclusiveCompute }
+        await withTaskGroup(of: [(Int, String, String)].self) { group in
+            for item in concurrent {
+                group.addTask {
+                    [await Self.runNativeCall(item.call, tool: item.tool, index: item.index)]
+                }
+            }
+            if !exclusive.isEmpty {
+                group.addTask {
+                    var results: [(Int, String, String)] = []
+                    for item in exclusive {
+                        results.append(
+                            await Self.runNativeCall(item.call, tool: item.tool, index: item.index)
+                        )
+                    }
+                    return results
+                }
+            }
+            for await batch in group {
+                for (index, observation, took) in batch {
+                    observations[index] = observation
+                    logObservation(
+                        observation, callDescription: Self.nativeDescription(calls[index]),
+                        iteration: iteration, took: took
+                    )
+                }
+            }
+        }
+        // Structurally unreachable (every index is either steered or executed);
+        // the fallback keeps zip alignment honest rather than force-unwrapping.
+        return observations.map { $0 ?? "Error: tool produced no observation." }
+    }
+
+    /// One tool execution off the actor — flattens the typed arguments to the
+    /// tool's `[String: String]` contract, wraps throws in the model-facing
+    /// error observation, and measures its own duration (measured inside the
+    /// child so the serial lane's queue wait isn't billed to the tool).
+    private static func runNativeCall(
+        _ parsedCall: ParsedToolCall,
+        tool: any AgentTool,
+        index: Int
+    ) async -> (Int, String, String) {
+        let start = ContinuousClock.now
+        do {
+            let output = try await tool.execute(input: parsedCall.stringArguments).output
+            return (index, output, Self.elapsed(since: start))
+        } catch {
+            return (index, "Error executing \(parsedCall.name): \(error)", Self.elapsed(since: start))
+        }
     }
 
     /// Final answer when the loop hits its cap: instruct the model to answer in

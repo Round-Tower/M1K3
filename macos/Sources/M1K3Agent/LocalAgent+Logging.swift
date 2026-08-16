@@ -58,7 +58,18 @@ extension LocalAgent {
     func logObservation(
         _ observation: String, callDescription: String, iteration: Int, start: ContinuousClock.Instant
     ) {
-        let took = Self.elapsed(since: start)
+        logObservation(
+            observation, callDescription: callDescription,
+            iteration: iteration, took: Self.elapsed(since: start)
+        )
+    }
+
+    /// Variant taking a pre-measured duration — the native batch measures
+    /// inside each concurrent child so the serial lane's queue wait isn't
+    /// billed to the tool.
+    func logObservation(
+        _ observation: String, callDescription: String, iteration: Int, took: String
+    ) {
         M1K3Log.agentLoop.info("""
         iteration \(iteration): \(callDescription, privacy: .public) → observation in \
         \(took, privacy: .public) (\(observation.count) chars): \
