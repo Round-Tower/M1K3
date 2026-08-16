@@ -125,3 +125,39 @@ extension RuntimeInferenceProvider: ToolCallingProvider {
         return try await toolProvider.makeToolTurnSession(tools: tools, options: options)
     }
 }
+
+// MARK: - Persona carrying (the #117 dedup, through the façade)
+
+/// Forwards the persona-carrying capability to the active backend. THIS WAS THE
+/// HOLE (found 2026-08-16): the live responder holds this façade, not the bare
+/// AFM provider, so `LocalAgent+ReAct`'s `as? PersonaCarrying` cast failed in
+/// production and Mini was sent the persona twice — in the prompt body AND in
+/// session instructions — while every eval (which constructs the bare provider)
+/// showed the dedup working. Mirrors SwappableInferenceProvider's forwarding,
+/// which is the package-testable twin (ReActPersonaDuplicationTests' façade
+/// cases); this app-target copy is compile-checked + verify-by-launch via the
+/// `afm turn: body=` log (a Mini chat turn's body should NOT carry ~3.8k
+/// persona chars).
+extension RuntimeInferenceProvider: PersonaCarrying {
+    var carriesStandingPersona: Bool {
+        (active as? PersonaCarrying)?.carriesStandingPersona ?? false
+    }
+}
+
+/// Second instance of the same hole (2026-08-16): the grounding cap's
+/// `provider as? TokenCounting` cast failed on this façade, so every tier's
+/// cap estimated (~4.4 chars/token) instead of measuring with the real MLX
+/// tokenizer. nil through here still means "estimate, never skip".
+extension RuntimeInferenceProvider: TokenCounting {
+    func tokenCount(_ text: String) async -> Int? {
+        await (active as? TokenCounting)?.tokenCount(text)
+    }
+}
+
+/// Forwards the end-of-turn warm signal (the AFM prewarm re-arm) — same
+/// every-façade-forwards rule as its siblings above.
+extension RuntimeInferenceProvider: TurnWarmable {
+    func prepareForNextTurn() {
+        (active as? TurnWarmable)?.prepareForNextTurn()
+    }
+}

@@ -84,16 +84,62 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// by ~3.8k chars and the line says so on every turn.
     ///
     /// Window is 4096 tokens ≈ 18k chars at the measured ~4.4 chars/token.
-    private func logTurnStart(promptChars: Int, streaming: Bool) {
+    private func logTurnStart(promptChars: Int, streaming: Bool, prewarmed: Bool) {
         let instructionChars = instructions().count
         Self.log.notice(
             """
             afm turn: body=\(promptChars, privacy: .public) \
             instructions=\(instructionChars, privacy: .public) \
             total=\(promptChars + instructionChars, privacy: .public) chars, \
-            streaming=\(streaming, privacy: .public)
+            streaming=\(streaming, privacy: .public), \
+            prewarmed=\(prewarmed, privacy: .public)
             """
         )
+    }
+
+    // MARK: - Prewarm
+
+    /// Single-slot prewarmed session, keyed by the exact instructions text that
+    /// built it (a persona that changed since prewarm must never be served
+    /// stale — the slot drops mismatches by construction). A reference held by
+    /// this struct, so provider copies share one slot.
+    private let prewarmSlot = PrewarmSlot<LanguageModelSession>()
+
+    /// Build a session ahead of need and ask the framework to load assets +
+    /// process the instructions now, so the NEXT turn doesn't pay cold-start.
+    /// Mini opens a fresh `LanguageModelSession` per call (no KV prefix reuse,
+    /// unlike the MLX tiers — the 2026-08-10 finding behind Mini's 37s live
+    /// median), which makes this the one warm-up the tier can have.
+    public func prewarm() {
+        let text = instructions()
+        let session = LanguageModelSession(instructions: text)
+        session.prewarm()
+        prewarmSlot.store(session, key: text)
+        Self.log.notice("afm prewarm: armed (\(text.count, privacy: .public) instruction chars)")
+    }
+
+    /// The session for this generation: the prewarmed one when its instructions
+    /// still match, else a cold one. Optionally re-arms afterwards (see
+    /// `prewarmsBetweenTurns`).
+    private func takeSession(instructions text: String) -> (session: LanguageModelSession, prewarmed: Bool) {
+        if let warm = prewarmSlot.take(matching: text) {
+            return (warm, true)
+        }
+        return (LanguageModelSession(instructions: text), false)
+    }
+
+    /// Re-arm for the next turn once this one has settled. Gated on the opt-in
+    /// so batch users of this provider (the distiller, eval harnesses that
+    /// didn't ask) never generate daemon work they don't want.
+    ///
+    /// Called via the `TurnWarmable` seam — once per AGENT TURN, never from
+    /// inside `generate`/`generateStreaming`: Mini's ReAct floor makes several
+    /// rapid provider calls per turn, and a per-call re-arm interleaves prewarm
+    /// daemon round-trips between them (the logged rate-collapse shape,
+    /// pkill-poisons-afm-daemon 2026-08-03).
+    private func rearmIfWanted() {
+        guard prewarmsBetweenTurns else { return }
+        prewarm()
     }
 
     /// A failure, classified. The class is what makes this countable across a
@@ -131,6 +177,11 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// eval harness (and, later, a Settings toggle) to exercise the spike.
     private let nativeToolCalling: Bool
 
+    /// Opt-in: after each generation settles, arm a fresh prewarmed session so
+    /// the NEXT turn skips cold-start. Default OFF — batch users (the
+    /// distiller, availability probes) must not generate idle daemon work.
+    private let prewarmsBetweenTurns: Bool
+
     public init(
         // Mini keeps the COMPACT core — no voiceExemplars. TRIED AND MEASURED
         // 2026-08-03, not assumed: the standing reason for withholding them was
@@ -157,10 +208,12 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         // an exemplar-starvation problem. Don't re-try this without new
         // evidence — try shorter/abstract voice guidance in the CORE instead.
         instructions: @escaping @Sendable () -> String = { M1K3Persona.systemPrompt },
-        nativeToolCalling: Bool = false
+        nativeToolCalling: Bool = false,
+        prewarmsBetweenTurns: Bool = false
     ) {
         self.instructions = instructions
         self.nativeToolCalling = nativeToolCalling
+        self.prewarmsBetweenTurns = prewarmsBetweenTurns
     }
 
     public var isAvailable: Bool {
@@ -197,8 +250,8 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     }
 
     public func generate(prompt: String) async throws -> String {
-        logTurnStart(promptChars: prompt.count, streaming: false)
-        let session = LanguageModelSession(instructions: instructions())
+        let (session, prewarmed) = takeSession(instructions: instructions())
+        logTurnStart(promptChars: prompt.count, streaming: false, prewarmed: prewarmed)
         do {
             let response = try await session.respond(to: prompt)
             return response.content
@@ -220,10 +273,10 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
 
     public func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
-            logTurnStart(promptChars: prompt.count, streaming: true)
-            let task = Task { [instructions] in
+            let (session, prewarmed) = takeSession(instructions: instructions())
+            logTurnStart(promptChars: prompt.count, streaming: true, prewarmed: prewarmed)
+            let task = Task { [self] in
                 do {
-                    let session = LanguageModelSession(instructions: instructions())
                     let stream = session.streamResponse(to: prompt)
                     for try await snapshot in stream {
                         continuation.yield(snapshot.content)
@@ -251,6 +304,16 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
 }
 
 // MARK: - Standing persona
+
+// MARK: - Turn warming
+
+/// The agent turn concluded — re-arm the prewarmed session for the next one
+/// (no-op unless `prewarmsBetweenTurns` opted in).
+extension AppleFoundationModelsProvider: TurnWarmable {
+    public func prepareForNextTurn() {
+        rearmIfWanted()
+    }
+}
 
 extension AppleFoundationModelsProvider: PersonaCarrying {
     /// Every session this provider opens is constructed with `instructions()`,
