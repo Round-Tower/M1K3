@@ -72,6 +72,33 @@ struct ReActPersonaDuplicationTests {
         #expect(!prompt.contains(M1K3Persona.systemPrompt), "the session already carries it")
     }
 
+    @Test("the seam survives a façade — production hands the agent a wrapper, not the backend")
+    func facadeForwardsPersonaCarrying() async throws {
+        // THE PRODUCTION SHAPE, previously untested: the live responder's
+        // provider is a routing façade (RuntimeInferenceProvider in the app,
+        // SwappableInferenceProvider here in the package), and an `as?`
+        // capability cast on a façade that doesn't forward it silently fails —
+        // the #65 RecordingProvider lesson, and exactly how the #117 dedup
+        // shipped fixed-in-eval but dead-in-production (2026-08-16 find): the
+        // eval hands the agent the BARE provider, production never does.
+        let recorder = PromptRecorder()
+        let facade = SwappableInferenceProvider(StandingInstructionsProvider(recorder: recorder))
+        let agent = LocalAgent(inferenceProvider: facade, tools: [], maxIterations: 1)
+        _ = try await agent.run(goal: "what's up?", context: nil)
+        let prompt = try #require(await recorder.prompts.first)
+        #expect(!prompt.contains(M1K3Persona.systemPrompt), "the façade must forward the capability")
+    }
+
+    @Test("a façade over a bare backend still reports not-carrying — no false stripping")
+    func facadeOverBareStaysBare() async throws {
+        let recorder = PromptRecorder()
+        let facade = SwappableInferenceProvider(BareProvider(recorder: recorder))
+        let agent = LocalAgent(inferenceProvider: facade, tools: [], maxIterations: 1)
+        _ = try await agent.run(goal: "what's up?", context: nil)
+        let prompt = try #require(await recorder.prompts.first)
+        #expect(prompt.contains(M1K3Persona.systemPrompt))
+    }
+
     @Test("a bare completion backend still gets the persona — it has nowhere else to come from")
     func bareProviderStillGetsPersona() async throws {
         let recorder = PromptRecorder()

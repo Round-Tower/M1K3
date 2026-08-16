@@ -218,6 +218,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             return (sources: [], stream: stream)
         }
 
+        // Pre-generation phase instrument: the 2026-08-10 eval found 177s of
+        // total log silence before a turn's first model call — "turn start:"
+        // only fires after retrieval, so a blocked embed was invisible. One
+        // line per turn now names where the pre-gen time went.
+        let phaseClock = ContinuousClock()
+        var phases = TurnPhaseTimeline()
+        phases.started(at: phaseClock.now)
         // Stale tool hits from an aborted prior turn must not leak in.
         _ = sourceCollector?.drain()
         // Self-query router (prompt-hardening v2): a question about M1K3
@@ -233,6 +240,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         } else {
             onActivity(.retrieving)
             let queryVector = try await embedder.embedQuery(question)
+            phases.embedded(at: phaseClock.now)
             // Two-lane retrieval: documents and memories get SEPARATE top-K budgets
             // so the larger document corpus can't crowd short memory facts out of a
             // single ranking (the open-chat recall miss — M1K3 forgot the user's
@@ -253,6 +261,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 retrieved, floors: .forFingerprint(embedder.fingerprint)
             )
             Self.logGateDecision(retrieved: retrieved, kept: chunks + memories)
+            phases.retrieved(at: phaseClock.now)
         }
         // Grounding-size safety cap (2026-07-20): both lanes above are injected
         // VERBATIM and UNTRUNCATED downstream (groundingBody). On gemma-4-12B
@@ -276,6 +285,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             tokenBudget: groundingTokenBudget,
             countTokens: countTokens
         )
+        // Marked BEFORE the diagnostic block below — its extra tokenizer
+        // passes are logging overhead, and folding them into "cap Xms" would
+        // make the instrument distort the thing it measures.
+        phases.capped(at: phaseClock.now)
         if chunks != beforeCapChunks || memories != beforeCapMemories {
             // Only pay for the extra tokenizer passes when the cap actually did
             // something — the common case (nothing dropped, or no tokenizer at
@@ -325,6 +338,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // mode bails) would otherwise leave the agent loop running to the
             // iteration cap. Terminating the stream cancels the turn.
             continuation.onTermination = { _ in turnTask.cancel() }
+        }
+        phases.handedOff(at: phaseClock.now)
+        if let phaseLine = phases.summary(gate: isSelfQuery ? .selfQuery : .normal) {
+            Self.log.notice("\(phaseLine, privacy: .public)")
         }
         // Memory hits ride along as sources so the UI shows their provenance.
         return (cappedChunks + cappedMemories, stream)
