@@ -201,6 +201,10 @@ final class AppEnvironment {
     /// AppEnvironment+DeepDelegation to park the resident provider across an
     /// escalated dive's slot swap.
     private(set) var currentMLXProvider: MLXGemmaProvider
+    /// The chat-facing AFM provider (Mini + the façade's fallback) — retained so
+    /// the launch and Mini-fronting hooks can arm its prewarm slot (provider
+    /// copies share one slot; the struct holds the box by reference).
+    private(set) var afmProvider: AppleFoundationModelsProvider
     /// "Is this brain's weights already on disk?" — drives the onboarding card's
     /// "On disk · ready" hint instead of dangling a download the user already did.
     private let brainInventory = LocalModelInventory()
@@ -659,7 +663,12 @@ final class AppEnvironment {
             brain.backing == .appleFoundationModels ? .appleFoundationModels : .mlxGemma
         let selection = RuntimeSelectionBox(runtimeForBrain)
         runtimeSelection = selection
-        let afm = AppleFoundationModelsProvider()
+        // prewarmsBetweenTurns: after each Mini generation the provider arms a
+        // fresh prewarmed session, so a conversation's turns 2+ never pay
+        // cold-start. The INITIAL arm rides warmUpSelectedBrainOnLaunch /
+        // refreshInterimBridge — the points where Mini becomes likely to serve.
+        let afm = AppleFoundationModelsProvider(prewarmsBetweenTurns: true)
+        afmProvider = afm
         let initialMLXModelID = brain.mlxModelID ?? BrainTier.big.mlxModelID ?? ""
         // Generation cap follows the tier whose MODEL fills the slot (Big's when
         // Mini is active), not the selected brain: on a rotating-KV tier an
@@ -1563,7 +1572,19 @@ extension AppEnvironment {
             gate: gate,
             delegationInFlight: delegationFronting
         )
+        let wasFronting = interimRuntimeOverride.value != nil
         interimRuntimeOverride.value = posture.frontsOnMini ? .appleFoundationModels : nil
+        // Mini is about to serve interactive turns (download/delegation front)
+        // — arm the prewarm slot on the EDGE, not every refresh, so the first
+        // fronted turn is warm without spamming the daemon. Detached: this
+        // method is reachable from UI didSets, `session.prewarm()` is a
+        // closed-SDK call with no latency contract, and a stall here would be
+        // a frame hitch. Verify-owed: the "afm prewarm: armed" log line should
+        // land near-instantly after the fronting flip on a real launch.
+        if posture.frontsOnMini, !wasFronting {
+            let afm = afmProvider
+            Task.detached(priority: .utility) { afm.prewarm() }
+        }
         if gate != lastBridgedGate {
             Self.brainLog.notice("chatGate → \(String(describing: gate), privacy: .public)")
             lastBridgedGate = gate
@@ -1571,13 +1592,25 @@ extension AppEnvironment {
     }
 
     /// Warm the restored brain's model on launch so readiness can reach `.ready`
-    /// without the user having to fire a turn first. Mini (Apple Foundation Models)
-    /// is instant — nothing to warm. An MLX brain restored from defaults is assigned
-    /// directly in `init`, which SKIPS `selectedRuntime`'s didSet (Swift omits
-    /// property observers during initialization), so nothing else kicks the load —
-    /// this is that kick. Idempotent: `preloadGemma`/the SingleFlightLoader no-op
-    /// once the weights are cached.
+    /// without the user having to fire a turn first. An MLX brain restored from
+    /// defaults is assigned directly in `init`, which SKIPS `selectedRuntime`'s
+    /// didSet (Swift omits property observers during initialization), so nothing
+    /// else kicks the load — this is that kick. Idempotent: `preloadGemma`/the
+    /// SingleFlightLoader no-op once the weights are cached.
+    ///
+    /// Mini is NOT "instant — nothing to warm" (the belief this doc used to
+    /// state): every AFM call builds a fresh session and pays asset load +
+    /// instruction processing cold. Arming the prewarm slot here moves that
+    /// cost off the user's first turn.
     func warmUpSelectedBrainOnLaunch() async {
+        if selectedBrain.backing == .appleFoundationModels {
+            // Detached off the MainActor — `session.prewarm()` is a closed-SDK
+            // call with no latency contract (verify-owed at ⌘R, same as the
+            // fronting-edge arm in refreshInterimBridge).
+            let afm = afmProvider
+            Task.detached(priority: .utility) { afm.prewarm() }
+            return
+        }
         guard selectedBrain.mlxModelID != nil else { return }
         await preloadGemma()
     }

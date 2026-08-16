@@ -108,6 +108,16 @@ public actor LocalAgent {
         onReasoningToken: (@Sendable (String) -> Void)? = nil
     ) async throws -> AgentResult {
         reasoningTrace.removeAll()
+        // One re-arm per TURN, whatever path or exit: a per-generate re-arm
+        // would interleave prewarm daemon calls between the ReAct floor's rapid
+        // provider calls (the logged AFM rate-collapse shape). Cancellation
+        // skips it — a cancelled turn means the user is mid-send, and a prewarm
+        // now would compete with the successor turn's own generation.
+        defer {
+            if !Task.isCancelled {
+                (inferenceProvider as? TurnWarmable)?.prepareForNextTurn()
+            }
+        }
 
         let toolProvider = inferenceProvider as? ToolCallingProvider
         let supportsToolCalls = toolProvider?.supportsToolCalls ?? false

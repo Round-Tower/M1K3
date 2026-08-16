@@ -85,3 +85,36 @@ extension SwappableInferenceProvider: ToolCallingProvider {
         return try await toolProvider.makeToolTurnSession(tools: tools, options: options)
     }
 }
+
+/// Forwards the persona-carrying capability to the current backend. Without
+/// this, an `as?` cast on the façade silently fails and the ReAct floor
+/// re-prepends the persona a backend already carries as standing instructions
+/// — the #117 duplication, back through the wrapper door (the #65
+/// RecordingProvider lesson: every capability seam must be forwarded by every
+/// façade, or production diverges from any eval that holds the bare provider).
+/// Pinned by ReActPersonaDuplicationTests' façade cases.
+extension SwappableInferenceProvider: PersonaCarrying {
+    public var carriesStandingPersona: Bool {
+        (active as? PersonaCarrying)?.carriesStandingPersona ?? false
+    }
+}
+
+/// Forwards the tokenizer to the current backend. Same hole as above, second
+/// instance: the grounding cap's `provider as? TokenCounting` cast failed on
+/// the façade, so EVERY tier's cap fell back to the ~4.4 chars/token estimate
+/// — the measured cap #67 shipped never measured in production. A backend
+/// without a tokenizer reads nil through here, which callers already treat as
+/// "estimate, never skip" (TokenCounting's own header).
+extension SwappableInferenceProvider: TokenCounting {
+    public func tokenCount(_ text: String) async -> Int? {
+        await (active as? TokenCounting)?.tokenCount(text)
+    }
+}
+
+/// Forwards the end-of-turn warm signal (the AFM prewarm re-arm) — same
+/// every-façade-forwards rule as its siblings above.
+extension SwappableInferenceProvider: TurnWarmable {
+    public func prepareForNextTurn() {
+        (active as? TurnWarmable)?.prepareForNextTurn()
+    }
+}
