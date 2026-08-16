@@ -483,16 +483,19 @@ extension AppEnvironment {
                 guard let settled = pinnedMessage() else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))
                 }
+                // A tool that fired inside the final poll window (a near-instant
+                // datetime call) is persisted but was never ticked — announce it
+                // BEFORE the answer tail so the spoken order matches dispatch
+                // order, and BEFORE the failed-turn return so the spoken record
+                // matches the visual footer on a failed turn too (a turn that
+                // searched the web and then failed is exactly when "what left
+                // the device" must be audible — PR #132 re-review).
+                announceTools(on: settled)
                 if case let .failed(message) = settled.status {
                     // Chunks may already have spoken; the loop drains them and
                     // re-listens (machine-pinned) while the error surfaces.
                     return .failure(VoiceTurnFailure(message: message))
                 }
-                // A tool that fired inside the final poll window (a near-instant
-                // datetime call) is persisted but was never ticked — announce it
-                // BEFORE the answer tail so the spoken order matches dispatch
-                // order (quality review, 2026-08-16).
-                announceTools(on: settled)
                 foldForward(settled.text)
                 if let tail = folder.flush() {
                     onChunk(tail)
