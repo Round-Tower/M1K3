@@ -69,17 +69,23 @@ struct SpellOutLettersTests {
         #expect(spelledSeparators("1w", g2p) == 2)
     }
 
-    @Test("M1K3 spells out with all four characters")
-    func productNameSpellsOutInFull() throws {
+    @Test("the name is a NAME now — M1K3 speaks as Mike, not four characters")
+    func productNameSpeaksAsMike() throws {
+        // The kill-or-commit-Mike ruling (Kev, 2026-08-16): committed. The
+        // engine now agrees with SpeechTextPolish's text rewrite — both paths
+        // land on the dictionary's own "mike" phonemes, so polished and
+        // unpolished callers can't drift apart.
+        let g2p = try KokoroG2P.bundled()
+        #expect(g2p.phonemeTokens("M1K3") == g2p.phonemeTokens("mike"))
+    }
+
+    @Test("mixed alphanumerics that are NOT the name still spell out in full")
+    func mixedAlphanumericsSpellOutInFull() throws {
         let g2p = try KokoroG2P.bundled()
         // Four spoken characters → three separators. Counting separators catches a
         // DROPPED character without pinning exact phoneme ids, which are a property
         // of the dictionary rather than of this rule.
-        //
-        // In normal speech this path never runs on the name — SpeechTextPolish
-        // rewrites it to "Mike" (leetspeak MIKE) before any engine sees it. The
-        // spell-out still has to be right for every other acronym M1K3 says.
-        #expect(spelledSeparators("M1K3", g2p) == 3)
+        #expect(spelledSeparators("B2X9", g2p) == 3)
     }
 
     @Test("an all-caps acronym keeps every letter — MCP used to be silence")

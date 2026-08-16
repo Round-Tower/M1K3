@@ -12,6 +12,16 @@ struct KokoroG2PBundledTests {
         #expect(dict["empty"] == nil)
     }
 
+    @Test("the byte parser keeps the Int.init contract — junk id segments drop whole")
+    func parseDropsJunkSegments() {
+        // "5x0" must not become 50 (digit accumulation across junk) — the old
+        // `Int(Substring)` returned nil for the whole segment, and the byte
+        // parser must agree. A final line without a trailing newline parses too.
+        let dict = KokoroG2P.parse("mixed\t12,5x0,7\nlast\t9")
+        #expect(dict["mixed"] == [12, 7])
+        #expect(dict["last"] == [9])
+    }
+
     @Test("the bundled dictionary loads and reproduces the oracle tokens end-to-end")
     func bundledEndToEnd() throws {
         let g2p = try KokoroG2P.bundled()

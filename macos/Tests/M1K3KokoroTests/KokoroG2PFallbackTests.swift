@@ -86,9 +86,11 @@ struct KokoroG2PFallbackTests {
 
     @Test("mixed alphanumerics spell out per character as one word")
     func mixedAlphanumeric() {
-        // "M1K3" → m one k three, one word covering 0..<4.
-        let result = g2p().annotatedTokens("M1K3")
-        #expect(result.tokens == [41, 16, 46, 16, 42, 16, 23])
+        // "M1S5" → m one s five, one word covering 0..<4. (This fixture WAS
+        // "M1K3" — retired from spell-out duty when the kill-or-commit-Mike
+        // ruling made it a house NAME; see HouseLexiconTests.m1k3SaysMike.)
+        let result = g2p().annotatedTokens("M1S5")
+        #expect(result.tokens == [41, 16, 46, 16, 44, 16, 25])
         #expect(result.words == [G2PWord(textRange: 0 ..< 4, tokenRange: 0 ..< 7)])
     }
 
@@ -104,11 +106,23 @@ struct KokoroG2PFallbackTests {
         #expect(g2p().phonemeTokens("mks") == [41, 16, 42, 16, 44])
     }
 
-    @Test("pronounceable lowercase OOV words still skip silently — regression")
-    func pronounceableOOVStaysSilent() {
+    @Test("pronounceable OOV words are now GUESSED by letter-to-sound, not skipped")
+    func pronounceableOOVSpeaks() {
+        // Pre-2026-08-16 this pinned total silence ("conservative by design") —
+        // which meant "Kev", "Kevin", and "Kokoro" itself were unspeakable.
+        // LTS emits canonical Kokoro ids regardless of this fake dictionary.
         let result = g2p().annotatedTokens("aa blorptastic bb")
+        #expect(result.words.count == 3)
+        #expect(!result.words[1].tokenRange.isEmpty)
+        // Neighbours keep their words and spacing around the guess.
+        #expect(result.tokens.first == 101)
+        #expect(result.tokens.last == 102)
+    }
+
+    @Test("a word letter-to-sound refuses (non-ASCII) still skips silently")
+    func unguessableOOVStaysSilent() {
+        let result = g2p().annotatedTokens("aa Zoë bb")
         #expect(result.tokens == [101, 16, 102])
-        // The OOV word stays addressable for timing with an empty token range.
         #expect(result.words.count == 3)
         #expect(result.words[1].tokenRange.isEmpty)
     }
@@ -130,21 +144,23 @@ struct KokoroG2PFallbackTests {
         #expect(g2p().phonemeTokens("aa Keyboard bb") == [101, 16, 64, 16, 65, 16, 102])
     }
 
-    @Test("a partial segmentation (leftover that isn't a known word) stays silent")
-    func compoundPartialStaysSilent() {
-        // "masterful" = master + "ful" (not in dict) — no COMPLETE split → silent,
-        // not a half-spoken "master".
+    @Test("a partial segmentation never half-speaks — it falls through to a whole-word guess")
+    func compoundPartialFallsToGuess() {
+        // "masterful" = master + "ful" (not in dict) — no COMPLETE split. The
+        // old pin was silence; now letter-to-sound guesses the WHOLE word (one
+        // span, never a half-spoken "master" + hole).
         let result = g2p().annotatedTokens("masterful")
-        #expect(result.tokens.isEmpty)
         #expect(result.words.count == 1)
-        #expect(result.words[0].tokenRange.isEmpty)
+        #expect(!result.words[0].tokenRange.isEmpty)
+        #expect(result.words[0].tokenRange == 0 ..< result.tokens.count)
     }
 
     @Test("single-letter dict keys can't make a compound into letter-soup")
     func compoundMinSegmentGuard() {
         // "ask" would be a-s-k via single-letter keys if unguarded; the ≥3-char
-        // minimum blocks that, and "ask" isn't a real sub-word split → silent.
-        #expect(g2p().phonemeTokens("ask").isEmpty)
+        // minimum blocks that. It then speaks WHOLE via letter-to-sound
+        // (ˈæsk = [156, 43, 61, 53]) — one guess, not three letter names.
+        #expect(g2p().phonemeTokens("ask") == [156, 43, 61, 53])
     }
 
     // MARK: - Inflection (the "plays" fix): OOV -s/-es/-ies/-ed forms
@@ -199,17 +215,20 @@ struct KokoroG2PFallbackTests {
         #expect(g2p().phonemeTokens("keyboards") == [64, 16, 65, 68])
     }
 
-    @Test("a genuinely OOV word ending in s with no resolvable base stays silent")
-    func unresolvableSStaysSilent() {
-        // "blorps" — "blorp" isn't a dict word or a compound → silent, no guess.
-        #expect(g2p().phonemeTokens("blorps").isEmpty)
+    @Test("an OOV word ending in s with no resolvable base is guessed WHOLE")
+    func unresolvableSGuessedWhole() {
+        // "blorps" — "blorp" isn't a dict word or a compound, and resolveBase
+        // deliberately excludes letter-to-sound, so the -s split never fires;
+        // the main chain's LTS guesses the whole form instead (old pin: silence).
+        #expect(g2p().phonemeTokens("blorps") == LetterToSound.tokens(for: "blorps"))
     }
 
-    @Test("long all-caps words are not spelled out")
+    @Test("long all-caps words are not spelled out — they get a word guess")
     func longCapsNotSpelled() {
-        // 6+ caps is likely a shouted word, not an acronym; "MKSMKS" has no
-        // vowels though, so use a vowelled one that is OOV in the mini dict.
-        #expect(g2p().phonemeTokens("AMAZING") == [])
+        // 6+ caps is likely a shouted word, not an acronym: never letter-soup.
+        // Old pin: silence; now the whole-word letter-to-sound guess (in the
+        // REAL pipeline "AMAZING" is a dictionary hit long before this).
+        #expect(g2p().phonemeTokens("AMAZING") == LetterToSound.tokens(for: "amazing"))
     }
 
     // MARK: - Cap behavior
