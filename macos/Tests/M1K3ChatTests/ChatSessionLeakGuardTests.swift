@@ -98,7 +98,8 @@ struct ChatSessionLeakGuardTests {
 
     /// Reports a tool dispatch, holds the stream until the test has SEEN the
     /// trace land, then leaks — so the test pins recorded-then-cleared, not a
-    /// trivially-never-recorded nil.
+    /// trivially-never-recorded nil. `@unchecked Sendable`: `release` is only
+    /// touched from the @MainActor test body and send's MainActor hops.
     private final class GatedLeakingToolResponder: RAGResponding, @unchecked Sendable {
         private var release: (() -> Void)?
 

@@ -153,6 +153,9 @@ struct ChatSessionActivityTests {
 
 /// Emits several tool events (with a duplicate) before streaming — pins that
 /// the trace is accumulated deduped, in dispatch order, and survives the turn.
+/// `@unchecked Sendable`: mutable state is only touched from the @MainActor
+/// test body and ChatSession.send's MainActor hops (the GatedActivityResponder
+/// precedent above).
 private final class MultiToolResponder: RAGResponding, @unchecked Sendable {
     func answerStreaming(
         _ question: String
@@ -177,7 +180,8 @@ private final class MultiToolResponder: RAGResponding, @unchecked Sendable {
 }
 
 /// Captures the onActivity callback so a test can fire a STRAGGLER event
-/// after the turn has settled.
+/// after the turn has settled. `@unchecked Sendable`: same MainActor-only
+/// access pattern as its siblings above.
 private final class CallbackCapturingResponder: RAGResponding, @unchecked Sendable {
     var capturedActivity: (@Sendable (ResponderActivity) -> Void)?
 
