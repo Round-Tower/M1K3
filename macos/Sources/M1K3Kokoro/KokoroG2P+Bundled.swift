@@ -35,12 +35,24 @@ public extension KokoroG2P {
         guard let url = Bundle.module.url(forResource: bundledResource, withExtension: "deflate") else {
             throw LoadError.resourceMissing("\(bundledResource).deflate")
         }
-        let text = try inflate(Data(contentsOf: url))
-        return KokoroG2P(dictionary: parse(text))
+        // Parse the inflated BYTES directly — materializing a 7.7 MB String and
+        // Substring-splitting 197k lines measured 1.33 s of the voice tier's
+        // load (2026-08-16), serial with the weights inside Loaded.init.
+        let bytes = try inflateData(Data(contentsOf: url))
+        return KokoroG2P(dictionary: parse(bytes))
     }
 
     /// Inflate `[UInt32 LE uncompressedSize][raw DEFLATE]` to its UTF-8 text.
+    /// Kept for callers/tests that want the text; `bundled()` stays on bytes.
     internal static func inflate(_ data: Data) throws -> String {
+        guard let text = try String(bytes: inflateData(data), encoding: .utf8) else {
+            throw LoadError.inflateFailed
+        }
+        return text
+    }
+
+    /// Inflate `[UInt32 LE uncompressedSize][raw DEFLATE]` to its raw bytes.
+    internal static func inflateData(_ data: Data) throws -> Data {
         guard data.count > 4 else { throw LoadError.inflateFailed }
         let size = Int(data[0]) | Int(data[1]) << 8 | Int(data[2]) << 16 | Int(data[3]) << 24
         let deflate = data.subdata(in: 4 ..< data.count)
@@ -57,21 +69,67 @@ public extension KokoroG2P {
                 )
             }
         }
-        guard written == size, let text = String(bytes: destination, encoding: .utf8) else {
-            throw LoadError.inflateFailed
-        }
-        return text
+        guard written == size else { throw LoadError.inflateFailed }
+        return destination
     }
 
-    /// Parse the `word<TAB>id,id,…` dictionary text into a lookup table. Lines without
-    /// a tab or with no parseable ids are skipped.
+    /// Parse the `word<TAB>id,id,…` dictionary text into a lookup table. Lines
+    /// without a tab or with no parseable ids are skipped. String entry point —
+    /// kept as the test surface; `bundled()` parses bytes directly.
     internal static func parse(_ text: String) -> [String: [Int]] {
+        parse(Data(text.utf8))
+    }
+
+    /// Byte-level parser — the load-time hot path. `String.split` +
+    /// `Int(Substring)` over 197k lines measured 1.33 s (2026-08-16); walking
+    /// the UTF-8 buffer once and hand-accumulating digits does the same job
+    /// in a fraction of it. Semantics match the String version, pinned by
+    /// `parseSkipsMalformed`: tab-less lines skip, empty ids skip, and an id
+    /// segment containing any non-digit is dropped (the `Int.init` contract).
+    internal static func parse(_ data: Data) -> [String: [Int]] {
         var dict = [String: [Int]](minimumCapacity: 210_000)
-        for line in text.split(separator: "\n", omittingEmptySubsequences: true) {
-            guard let tab = line.firstIndex(of: "\t") else { continue }
-            let word = String(line[..<tab])
-            let ids = line[line.index(after: tab)...].split(separator: ",").compactMap { Int($0) }
-            if !word.isEmpty, !ids.isEmpty { dict[word] = ids }
+        data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+            let bytes = raw.bindMemory(to: UInt8.self)
+            let newline: UInt8 = 0x0A, tab: UInt8 = 0x09, comma: UInt8 = 0x2C
+            var index = 0
+            let count = bytes.count
+            while index < count {
+                var lineEnd = index
+                while lineEnd < count, bytes[lineEnd] != newline {
+                    lineEnd += 1
+                }
+                var tabAt = index
+                while tabAt < lineEnd, bytes[tabAt] != tab {
+                    tabAt += 1
+                }
+                if tabAt > index, tabAt < lineEnd {
+                    var ids: [Int] = []
+                    var value = 0
+                    var hasDigit = false
+                    var segmentValid = true
+                    var cursor = tabAt + 1
+                    while cursor <= lineEnd {
+                        let byte = cursor < lineEnd ? bytes[cursor] : comma
+                        if byte >= 0x30, byte <= 0x39 {
+                            value = value * 10 + Int(byte - 0x30)
+                            hasDigit = true
+                        } else if byte == comma {
+                            if hasDigit, segmentValid { ids.append(value) }
+                            value = 0
+                            hasDigit = false
+                            segmentValid = true
+                        } else {
+                            segmentValid = false
+                        }
+                        cursor += 1
+                    }
+                    if !ids.isEmpty {
+                        let word = String(decoding: bytes[index ..< tabAt], as: UTF8.self)
+                        dict[word] = ids
+                    }
+                }
+                index = lineEnd + 1
+            }
         }
         return dict
     }
