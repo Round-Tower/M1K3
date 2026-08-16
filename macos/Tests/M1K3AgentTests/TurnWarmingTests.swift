@@ -69,6 +69,37 @@ struct TurnWarmingTests {
         #expect(provider.warmCalls == 1)
     }
 
+    @Test("a cancelled turn does not warm — the successor turn owns the daemon")
+    func cancelledTurnSkipsWarm() async throws {
+        // Deliberate behavior, not an accident of defer placement: a cancelled
+        // turn means the user is mid-send, and a prewarm now would compete
+        // with the successor turn's own generation.
+        final class HangingWarmableProvider: InferenceProvider, TurnWarmable, @unchecked Sendable {
+            let name = "hanging"
+            let isAvailable = true
+            private(set) var warmCalls = 0
+            func generate(prompt _: String) async throws -> String {
+                try await Task.sleep(for: .seconds(10))
+                return "CONCLUSION: never"
+            }
+
+            func generateStreaming(prompt _: String) -> AsyncStream<String> {
+                AsyncStream { $0.finish() }
+            }
+
+            func prepareForNextTurn() {
+                warmCalls += 1
+            }
+        }
+        let provider = HangingWarmableProvider()
+        let agent = LocalAgent(inferenceProvider: provider, tools: [], maxIterations: 1)
+        let turn = Task { try await agent.run(goal: "q", context: nil) }
+        try await Task.sleep(for: .milliseconds(50))
+        turn.cancel()
+        _ = try? await turn.value
+        #expect(provider.warmCalls == 0)
+    }
+
     @Test("a non-conforming provider is untouched — the seam is opt-in")
     func nonConformingIsFine() async throws {
         struct Plain: InferenceProvider {
