@@ -137,9 +137,14 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// rapid provider calls per turn, and a per-call re-arm interleaves prewarm
     /// daemon round-trips between them (the logged rate-collapse shape,
     /// pkill-poisons-afm-daemon 2026-08-03).
+    /// Detached AT THE SOURCE (review, PR #133): `session.prewarm()` is a
+    /// closed-SDK call with no latency contract, and this fires on the tail of
+    /// EVERY opted-in turn — inline it would delay turn completion (spinner,
+    /// stream close) by whatever the daemon feels like. Detaching here fixes
+    /// all forwarding paths at once instead of asking each caller to remember.
     private func rearmIfWanted() {
         guard prewarmsBetweenTurns else { return }
-        prewarm()
+        Task.detached(priority: .utility) { self.prewarm() }
     }
 
     /// A failure, classified. The class is what makes this countable across a
