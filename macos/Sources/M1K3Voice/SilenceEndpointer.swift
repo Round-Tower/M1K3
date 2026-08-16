@@ -47,6 +47,10 @@
 //  `resetCadence()` is the session boundary. Confidence 0.85 — pure and
 //  test-pinned, but the margin/ceiling defaults are judgement, not measurement,
 //  and only Kev's ear can settle them.
+//  Review: Kev + claude-fable-5, 2026-08-15 — decision(at:) added: the same
+//  branches, now returning a reason-carrying EndpointDecision the controller
+//  logs; shouldEndpoint is exactly `decision != nil` (test-pinned). Behaviour
+//  unchanged by construction. Confidence 0.9.
 //
 
 import Foundation
@@ -150,15 +154,24 @@ public struct SilenceEndpointer: Sendable {
     /// True once a non-empty partial has gone idle for long enough — the normal
     /// `silence` when it reads complete, the longer `holdSilence` when it trails
     /// off mid-thought — or once `maxWait` from first speech is hit (anti-hang).
+    /// Exactly `decision(at:) != nil`, pinned by test — the decision carries the
+    /// reason and thresholds for the log.
     public func shouldEndpoint(at now: ContinuousClock.Instant) -> Bool {
+        decision(at: now) != nil
+    }
+
+    /// The reason-carrying endpoint check (see EndpointDecision): nil while the
+    /// listen should continue, otherwise which branch fired, the idle gap, and
+    /// the threshold that applied.
+    public func decision(at now: ContinuousClock.Instant) -> EndpointDecision? {
         guard let lastChange, !lastText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return false }
+        else { return nil }
         let idle = lastChange.duration(to: now)
         // Anti-hang backstop: once we've been going past maxWait AND the recognizer
         // has actually gone quiet (idle ≥ silence), end it — but never cut a user
         // who's still actively speaking (partials still advancing).
         if let firstSpeech, firstSpeech.duration(to: now) >= maxWait, idle >= silence {
-            return true
+            return EndpointDecision(reason: .maxWait, idle: idle, required: silence)
         }
         // The polite fast-path: a turn ending on "please" is the spoken submit
         // button — it bypasses the completeness hold AND the learned cadence
@@ -166,15 +179,21 @@ public struct SilenceEndpointer: Sendable {
         // `politeSilence` still applies so a recognizer partial that merely
         // paused on "please tell me…" has one hop's grace to continue.
         if PoliteEndpoint.isSubmit(lastText), idle >= politeSilence {
-            return true
+            return EndpointDecision(reason: .politeWord, idle: idle, required: politeSilence)
         }
-        let base = UtteranceCompleteness.looksComplete(lastText) ? silence : holdSilence
+        let complete = UtteranceCompleteness.looksComplete(lastText)
+        let base = complete ? silence : holdSilence
         // The learned floor lifts BOTH thresholds: a speaker who pauses 3s inside
         // a thought does it after complete-sounding clauses too, which is exactly
         // the clip being reported. Only the learned component is clamped — never
         // `base`, or a low ceiling would silently SHORTEN a configured hold.
         let needed = max(base, min(learnedPause + cadenceMargin, cadenceCeiling))
-        return idle >= needed
+        guard idle >= needed else { return nil }
+        return EndpointDecision(
+            reason: complete ? .completeThought : .midThoughtHold,
+            idle: idle,
+            required: needed
+        )
     }
 
     /// Clear for the next listen. Deliberately KEEPS the learned cadence: the

@@ -27,6 +27,16 @@ public protocol TranscriptionProvider: Sendable {
     /// Begin a live dictation session, streaming partial then final segments.
     /// Throws if the session can't start (e.g. mic/permission failure).
     func startListening() throws -> AsyncStream<TranscriptSegment>
+    /// Begin a live session with an explicit finality policy (see
+    /// FinalityPolicy): `.keepsListening` makes recognizer-initiated finality a
+    /// segment boundary rather than the end of the listen, so the CONSUMER's
+    /// endpointer owns the turn. A protocol REQUIREMENT (not an extension-only
+    /// method) so the concrete transcriber's implementation is reached through
+    /// `any TranscriptionProvider` — extension-only methods dispatch statically
+    /// and would silently pin every caller to the default. The default forwards
+    /// to `startListening()`, which is correct for providers whose finality
+    /// only ever comes from a consumer stop (WhisperKit).
+    func startListening(finality: FinalityPolicy) throws -> AsyncStream<TranscriptSegment>
     /// Stop the active session; flushes a final segment then finishes the stream.
     func stopListening()
 
@@ -49,6 +59,13 @@ public protocol TranscriptionProvider: Sendable {
 }
 
 public extension TranscriptionProvider {
+    /// Default: the finality policy is ignored and the plain session starts —
+    /// correct for providers that only ever finalize on a consumer stop
+    /// (WhisperKit), where the two policies are indistinguishable.
+    func startListening(finality _: FinalityPolicy) throws -> AsyncStream<TranscriptSegment> {
+        try startListening()
+    }
+
     /// Default false: a provider must opt IN to claiming echo cancellation, so a
     /// new backend can never silently inherit a promise it doesn't keep.
     var attemptsEchoCancellation: Bool {

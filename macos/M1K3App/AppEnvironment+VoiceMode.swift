@@ -342,7 +342,11 @@ extension AppEnvironment {
                 else {
                     throw VoiceTurnFailure(message: "No speech recogniser is available.")
                 }
-                let stream = try provider.startListening()
+                // Voice-first owns its turn boundary: recognizer finality is a
+                // segment boundary, not the end of the listen (FinalityPolicy).
+                // Chat dictation and the MCP listen tool keep the default —
+                // their submit-on-finality is a feature there.
+                let stream = try provider.startListening(finality: .keepsListening)
                 activeProvider = provider
                 // Which engine served, and whether it can keep the room out of the
                 // mic, is the first question when someone reports M1K3 talking over
