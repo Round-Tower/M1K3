@@ -23,6 +23,25 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
 
 ## Now
 
+- **★ The perf lever list (2026-08-16 — read the instruments BEFORE picking):**
+  - **Turn-phase instrument is armed but UNFED** — every `turn phases:` line so
+    far is from test runs. The next real conversation writes the first honest
+    pre-gen data (`rg 'turn phases:'` on `app.m1k3:responder`); it names the
+    next lever (this is what the 177s-hole hunt needed).
+  - **`prewarmed=true` verify** — needs a real Mini-fronted turn (`afm turn:`).
+  - **Gemma batch tool-calling A/B** — #131's parallel execution stays latent
+    until the prompt nudge is measured. EVAL-GATED (app closed; gemma is
+    prompt-fragile — A/B before shipping, standing rule).
+  - **Mini iteration cap** (#102's remainder) — wants the instrument's data first.
+  - **G2P dictionary RAM** — 197k small `[Int]` arrays; a flat token-buffer
+    layout would cut footprint meaningfully. Load already 1.33s→0.27s (#135).
+  - **Eval-vs-production divergence, structural fix** — ChatEvalStage's live arm
+    should hold the SAME façade production uses (how the #117 persona-dedup hole
+    hid: eval had the bare provider, production the wrapper — see
+    `facade-capability-forwarding` auto-memory).
+- **G2P/voice ear verdicts (Kev):** house pronunciations (Kokoro, Ardmore) are
+  one-line IPA tweaks in `HouseLexicon.swift`; letter-to-sound guesses are
+  verify-by-ear by design. M1K3 speaks as **Mike** (ruling committed 2026-08-16).
 - **★ Voice latency: measured, and the intuition was wrong — 2026-08-13.** The
   voice loop had never been instrumented end-to-end. Per-generation `ttft` lines
   existed (prefill ms, decode tok/s) but a voice turn is retrieval + a grounding
