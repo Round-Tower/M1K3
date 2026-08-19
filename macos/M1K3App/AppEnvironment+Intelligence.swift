@@ -78,7 +78,16 @@ extension AppEnvironment {
     /// `ask_m1k3` tool and the Ask App Intent. Single-flight (shared lock) + the
     /// 120s deadline + the shared canary tripwire. Throws `MCPVoiceError` on the
     /// not-ready / busy / timeout paths; callers surface its message.
-    func intelligenceAsk(_ question: String) async throws -> String {
+    /// `preemptsRemoteStreams`: true for a TRUE-local ask (menu-bar, App
+    /// Intent, loopback MCP) — the person at the keyboard outranks a paired
+    /// device, so an in-flight Brain-at-Home stream is cancelled. FALSE for a
+    /// LAN-scoped ask (a paired device's own `ask_m1k3`): one remote caller
+    /// must not preempt another's stream — that's not "local wins", it's two
+    /// remotes fighting (2026-08-19 review fold). The single-flight slot is
+    /// still protected either way: `admitRemoteTurn` folds
+    /// `intelligenceAskInFlight` into busy, so no NEW remote stream starts
+    /// while an ask runs.
+    func intelligenceAsk(_ question: String, preemptsRemoteStreams: Bool = true) async throws -> String {
         guard isReady else {
             throw MCPVoiceError("M1K3 is still loading its model — try again in a moment")
         }
@@ -91,11 +100,11 @@ extension AppEnvironment {
         }
         intelligenceAskInFlight = true
         defer { intelligenceAskInFlight = false }
-        // This turn is about to take the provider — preempt any in-flight
-        // Brain at Home remote stream first, exactly as AppEnvironment.send
-        // does. Without it an ask (menu-bar, MCP) races a remote generation
-        // on the same single-flight slot (2026-08-19 audit, finding 4).
-        brainServe?.preemptForLocalTurn()
+        // A TRUE-local ask takes the provider — preempt any in-flight Brain at
+        // Home remote stream first, exactly as AppEnvironment.send does (audit
+        // finding 4). A LAN-originated ask does NOT (it IS a remote turn — see
+        // the doc above).
+        if preemptsRemoteStreams { brainServe?.preemptForLocalTurn() }
         // Hoist members into locals before the Logger interpolation: the message is
         // an autoclosure, so a `self.` member there requires explicit self, which
         // swiftformat then strips → a build break (the documented logging landmine).

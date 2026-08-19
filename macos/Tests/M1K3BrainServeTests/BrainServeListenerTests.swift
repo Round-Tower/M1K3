@@ -162,6 +162,26 @@ struct BrainServeListenerTests {
         await listener.stop()
     }
 
+    @Test("with two paired devices, the SECOND identity's key completes the handshake")
+    func multiCredentialSecondIdentity() async throws {
+        let second = PSKCredential(identity: "device-two", key: Data((32 ..< 64).map { UInt8($0) }))
+        let listener = BrainServeListener(
+            port: 0, credentials: [credential, second], handlers: makeHandlers()
+        )
+        try await listener.start()
+        let port = try #require(await listener.boundPort)
+
+        // A client presenting the SECOND device's identity + key must be served
+        // (the multi-paired case the single-key tests don't cover).
+        let response = String(decoding: await exchange(
+            port: port, parameters: NWParameters(tls: BrainServeTLS.options(credentials: [second])),
+            request: get("/v1/health")
+        ), as: UTF8.self)
+        #expect(response.contains("200 OK"))
+        #expect(response.contains(#""ok":true"#))
+        await listener.stop()
+    }
+
     @Test("a wrong-PSK client gets ZERO bytes — the handshake never completes")
     func wrongPSKZeroBytes() async throws {
         let listener = BrainServeListener(port: 0, credentials: [credential], handlers: makeHandlers())

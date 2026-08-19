@@ -239,17 +239,26 @@ final class BrainServeController {
             }
             let registry = MCPToolRegistry(
                 scopedToolDefinitions(
-                    env.mcpHost.makeAllToolDefinitions(jobStore: lanAskJobStore), scope: .lan
+                    // preemptsRemoteStreams: false — a paired device's ask_m1k3
+                    // must never cancel ANOTHER paired device's stream (review
+                    // fold). Single-flight is still enforced by admitRemoteTurn.
+                    env.mcpHost.makeAllToolDefinitions(
+                        jobStore: lanAskJobStore, preemptsRemoteStreams: false
+                    ),
+                    scope: .lan
                 ),
                 logSink: env.conversationLog
             )
             // NOT the default pipeline: OriginValidator.localhost() allows
             // only 127.0.0.1/localhost Hosts, which rejects every real LAN
             // client with 421 (live-fired 2026-08-19). Host/Origin checking
-            // defends BROWSERS against DNS rebinding — no browser can complete
-            // the TLS-PSK handshake this route sits behind, so the PSK is the
-            // authenticator (strictly stronger than Host matching). The other
-            // validators stay. Loopback :4242 keeps the localhost default.
+            // defends BROWSERS against DNS rebinding — and a browser CANNOT
+            // reach this route at all: fetch/XHR/WebSocket have no API to
+            // supply an external TLS-PSK identity+key, so the handshake this
+            // route sits behind fails for any browser before a byte of HTTP
+            // exists. The PSK is therefore a strictly stronger authenticator
+            // than Host matching here. The other validators stay. Loopback
+            // :4242 keeps the localhost default.
             let transport = StatelessHTTPServerTransport(
                 validationPipeline: StandardValidationPipeline(validators: [
                     OriginValidator.disabled,
@@ -296,7 +305,12 @@ final class BrainServeController {
         }
         beginPairingInFlight = true
         defer { beginPairingInFlight = false }
-        cancelPairing()
+        // AWAIT the teardown of any prior pairing listener before minting the
+        // new one — NOT the fire-and-forget cancelPairing(). Its unstructured
+        // Task could otherwise resume AFTER `pairingListener = host` below and
+        // tear down the brand-new listener, stranding a live QR that can never
+        // complete a handshake (2026-08-19 review fold).
+        await cancelPairingAndTeardown()
         var secret = Data(count: 32)
         let status = secret.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
         guard status == errSecSuccess else {
@@ -382,14 +396,27 @@ final class BrainServeController {
         Self.log.notice("pairing: approved \"\(device.name, privacy: .public)\"")
     }
 
-    /// Decline / close the sheet: the candidate never existed (audit B2).
-    func cancelPairing() {
+    /// The synchronous state reset shared by both cancel paths.
+    private func clearPairingState() {
         pairing.cancel()
         pairingQRPayload = nil
         candidateSecret = nil
         pairingExpiryTask?.cancel()
         pairingExpiryTask = nil
+    }
+
+    /// Decline / close the sheet (a SYNCHRONOUS SwiftUI button action, so the
+    /// listener teardown is fire-and-forget): the candidate never existed (B2).
+    func cancelPairing() {
+        clearPairingState()
         Task { await teardownPairingListener() }
+    }
+
+    /// The ORDERED cancel `beginPairing` awaits — the teardown completes before
+    /// the new listener is minted, closing the fire-and-forget race.
+    private func cancelPairingAndTeardown() async {
+        clearPairingState()
+        await teardownPairingListener()
     }
 
     private func teardownPairingListener() async {
