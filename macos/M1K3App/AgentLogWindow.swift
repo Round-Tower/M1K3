@@ -52,7 +52,7 @@ struct AgentLogWindowContent: View {
                 .foregroundStyle(.secondary)
             Spacer()
             Button(role: .destructive) {
-                clear()
+                Task { await clear() }
             } label: {
                 Label("Clear", systemImage: "trash")
             }
@@ -134,10 +134,15 @@ struct AgentLogWindowContent: View {
         }.value
     }
 
-    private func clear() {
-        guard let store = env?.conversationLog else { return }
-        try? store.clear()
+    private func clear() async {
+        guard let env, let store = env.conversationLog else { return }
+        // Off the main actor (mirror refresh() — same anti-pattern on the write
+        // side), then bump mcpLogRevision so the Heartbeat destination timeline
+        // re-reads and drops the now-deleted visits (review fold — clearPulses'
+        // heartbeatRevision precedent).
+        await Task.detached(priority: .utility) { try? store.clear() }.value
         calls = []
+        env.mcpLogRevision += 1
     }
 }
 

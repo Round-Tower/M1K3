@@ -187,7 +187,7 @@ surfaces showed an ageing "8 hours ago"). `HeartbeatHoldLine` (pure,
 busy machine, or the empty rule's quiet-window withhold — into one short
 line; the engine records `heartbeatLastHold` on every non-tooSoon skip and
 clears it on a recorded pulse. Surfaces: the main-screen idle card and the
-Heartbeat window header. Holds age out after 30 minutes (a hold that stopped
+Heartbeat destination header. Holds age out after 30 minutes (a hold that stopped
 refreshing means the loop itself is asleep — an explanation would be a
 guess). Surface census since the 2026-08-19 promotion: the Heartbeat
 sidebar destination (canonical — `HeartbeatScreen`, the interaction

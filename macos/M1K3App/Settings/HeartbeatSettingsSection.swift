@@ -5,8 +5,9 @@
 //  The heartbeat's consent surface: the feature toggle (OFF by default — a
 //  persisted pulse history is a promise surface), the pulse-notification
 //  opt-in (its own key + honest-grant contract), and one-tap Clear. The
-//  pulses themselves live in the Heartbeat window (the canonical surface —
-//  principle 6: that window + the popover's ambient line, zero elsewhere).
+//  pulses themselves live in the Heartbeat sidebar DESTINATION (the canonical
+//  surface since the 2026-08-19 promotion — this Settings section keeps only
+//  consent; the summoned window is retired).
 //
 //  Signed: Kev + claude-fable-5, 2026-08-06, Confidence 0.8 (compiles +
 //  mirrors existing panes; the rendered feel is a named ⌘R verify-owed).

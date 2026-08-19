@@ -162,6 +162,22 @@ struct InteractionTimelineTests {
         #expect(visit.callCount == 3)
     }
 
+    @Test("tool-count ties break ALPHABETICALLY by name (the non-obvious tuple sort)")
+    func toolCountTieBreak() {
+        // Two tools tied at 1 each — the ordering must be alphabetical, which
+        // the swapped-operand tuple sort encodes non-obviously. Pins it so a
+        // later "simplification" can't silently flip it.
+        let days = InteractionTimeline.build(
+            pulses: [],
+            calls: [
+                call(1, tool: "zebra_tool", at: at(14, 0)),
+                call(2, tool: "alpha_tool", at: at(14, 1)),
+            ],
+            calendar: utc
+        )
+        #expect(visits(days)[0].toolCounts.map(\.tool) == ["alpha_tool", "zebra_tool"])
+    }
+
     @Test("unsorted input calls are handled — the fold sorts before grouping")
     func unsortedInput() {
         let days = InteractionTimeline.build(
