@@ -52,7 +52,12 @@ The scratch spec ruled "inference, not MCP". **Kev's 2026-08-19 ruling: both**
   web-search toggle allows it, an answer may fetch the web from the Mac.
   That reach is governed by the existing web consent, identical to loopback,
   and is stated in the Settings footer rather than implied away by "read
-  tools only".
+  tools only". The LAN transport runs the SDK validation pipeline with
+  **Origin/Host validation disabled** (live-fired 2026-08-19: the default
+  `OriginValidator.localhost()` 421-rejects every non-loopback Host, i.e.
+  every real LAN client): Host checking defends browsers against DNS
+  rebinding, and no browser can complete the TLS-PSK handshake — the PSK is
+  the authenticator. Loopback `:4242` keeps the localhost default.
 - The loopback `127.0.0.1:4242` MCP server is **untouched** — same pin, same
   15 tools. The Privacy-pane promise copy was rewritten honestly: loopback
   server unreachable from the network; the ONLY network path is Brain at

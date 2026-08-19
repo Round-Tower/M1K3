@@ -243,7 +243,21 @@ final class BrainServeController {
                 ),
                 logSink: env.conversationLog
             )
-            let transport = StatelessHTTPServerTransport()
+            // NOT the default pipeline: OriginValidator.localhost() allows
+            // only 127.0.0.1/localhost Hosts, which rejects every real LAN
+            // client with 421 (live-fired 2026-08-19). Host/Origin checking
+            // defends BROWSERS against DNS rebinding — no browser can complete
+            // the TLS-PSK handshake this route sits behind, so the PSK is the
+            // authenticator (strictly stronger than Host matching). The other
+            // validators stay. Loopback :4242 keeps the localhost default.
+            let transport = StatelessHTTPServerTransport(
+                validationPipeline: StandardValidationPipeline(validators: [
+                    OriginValidator.disabled,
+                    AcceptHeaderValidator(mode: .jsonOnly),
+                    ContentTypeValidator(),
+                    ProtocolVersionValidator(),
+                ])
+            )
             let server = await makeM1K3Server(registry: registry, name: "m1k3-brain")
             do {
                 try await server.start(transport: transport)
