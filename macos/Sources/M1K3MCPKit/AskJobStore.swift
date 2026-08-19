@@ -102,6 +102,10 @@ public actor AskJobStore {
     /// Every retained job, newest submission first — the `list_jobs` recovery
     /// index for a client that dropped its ticket. Payload-free by type.
     public func summaries() -> [JobSummary] {
+        // Reap here too, not only on submit — a client that polls `list_jobs`
+        // without ever submitting again would otherwise see terminal jobs
+        // past the documented retention window (PR #136 review fold).
+        reap(olderThan: Self.jobRetention)
         let current = now()
         return jobs.sorted { $0.value.sequence > $1.value.sequence }.map { id, job in
             let state = switch job.status {

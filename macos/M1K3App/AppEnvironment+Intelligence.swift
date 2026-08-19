@@ -78,7 +78,16 @@ extension AppEnvironment {
     /// `ask_m1k3` tool and the Ask App Intent. Single-flight (shared lock) + the
     /// runaway backstop + the shared canary tripwire. Throws `MCPVoiceError` on
     /// the blocked / busy / timeout paths; callers surface its message.
-    func intelligenceAsk(_ question: String) async throws -> String {
+    ///
+    /// `deadline` defaults to the MCP job path's 600s runaway backstop (no
+    /// client waits on it — answers redeem via `get_answer`). A DIRECT-await
+    /// caller (the Siri/Shortcuts intent) passes its own shorter deadline, so
+    /// a hung generation can't hold the single-flight lock for 10 minutes
+    /// against every other surface (PR #136 review fold).
+    func intelligenceAsk(
+        _ question: String,
+        deadline: TimeInterval = MCPHostController.askDeadlineSeconds
+    ) async throws -> String {
         // The same gate the chat surface uses (not a bare isReady): while the
         // selected MLX brain downloads, the interim bridge fronts turns on Mini
         // — the responder below rides the runtime façade, so `.interim` serves
@@ -111,7 +120,7 @@ extension AppEnvironment {
         let responder = intelligenceResponder
         let tripwire = CanaryGuard.fromLocalConfig()
         do {
-            let answer = try await withTimeout(seconds: MCPHostController.askDeadlineSeconds) {
+            let answer = try await withTimeout(seconds: deadline) {
                 try await HeadlessAsk.answer(
                     question, using: responder, canary: tripwire,
                     onCanaryTrip: { count in
@@ -130,9 +139,10 @@ extension AppEnvironment {
             // Backstop hit — a genuinely hung generation, not a slow answer
             // (those ride the job path): cancel, release the lock (defer),
             // tell the caller honestly rather than hang.
-            Self.askLog.error("ask hit the runaway backstop after \(Int(MCPHostController.askDeadlineSeconds))s")
+            let deadlineSeconds = Int(deadline)
+            Self.askLog.error("ask hit the runaway backstop after \(deadlineSeconds)s")
             throw MCPVoiceError(
-                "M1K3's answer ran past the \(Int(MCPHostController.askDeadlineSeconds))s backstop and was "
+                "M1K3's answer ran past the \(deadlineSeconds)s backstop and was "
                     + "stopped — that usually means something hung. Try a more specific question, or ask again."
             )
         }

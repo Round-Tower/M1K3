@@ -126,6 +126,12 @@ struct AskJobStoreTests {
         // Structural: a summary has no payload field — the answer text can't leak
         // through list_jobs. Pinned via the debug rendering of the whole value.
         #expect(!String(describing: summaries).contains("secret answer"))
+
+        // summaries() reaps on its own — a poll-only client never sees a
+        // terminal job past the retention window (PR #136 review fold).
+        clock.advance(AskJobStore.jobRetention + 1)
+        let afterRetention = await store.summaries()
+        #expect(afterRetention.map(\.id) == [running])
     }
 
     @Test("reap evicts a terminal job past the ttl but keeps running + fresh jobs")
