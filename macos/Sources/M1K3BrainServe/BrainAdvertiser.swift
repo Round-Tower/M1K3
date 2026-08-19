@@ -54,18 +54,17 @@ public final class BrainAdvertiser: @unchecked Sendable {
             return false
         }
         DNSServiceSetDispatchQueue(ref, queue)
-        lock.lock()
-        serviceRef = ref
-        lock.unlock()
+        lock.withLock { serviceRef = ref }
         Self.log.notice("brain advertise: \(Self.serviceType) \"\(name, privacy: .public)\" :\(port)")
         return true
     }
 
     public func stop() {
-        lock.lock()
-        let ref = serviceRef
-        serviceRef = nil
-        lock.unlock()
+        let ref = lock.withLock { () -> DNSServiceRef? in
+            let current = serviceRef
+            serviceRef = nil
+            return current
+        }
         if let ref { DNSServiceRefDeallocate(ref) }
     }
 

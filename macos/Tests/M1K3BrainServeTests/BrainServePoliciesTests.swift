@@ -41,6 +41,17 @@ struct GenerateRequestTests {
     }
 }
 
+struct PairRequestTests {
+    @Test("the self-reported name is trimmed and capped — junk falls back to \"A device\"")
+    func nameCap() {
+        let long = String(repeating: "x", count: 500)
+        let body = Data("{\"name\":\"\(long)\"}".utf8)
+        let parsed = PairRequest.parse(body)
+        #expect(parsed.deviceName.count == PairRequest.nameLengthCap)
+        #expect(PairRequest.parse(nil).deviceName == "A device")
+    }
+}
+
 struct RemoteTurnDecisionTests {
     @Test("thermal pressure outranks busy; both refuse; idle+cool serves")
     func decisions() {

@@ -271,6 +271,15 @@ final class BrainServeController {
     /// pairing listener (candidate key ONLY), and hand the UI its payload.
     func beginPairing() async {
         guard !beginPairingInFlight else { return }
+        // A candidate already awaiting the human's Approve is never silently
+        // clobbered by a re-display — the same invariant PairingSession pins
+        // (audit note 11); without this check the unconditional
+        // cancelPairing() below would reset the phase first and the pure
+        // guard could never fire (PR #139 review).
+        if case .awaitingApproval = pairing.phase {
+            statusText = "A device is waiting for approval — approve or decline it first"
+            return
+        }
         beginPairingInFlight = true
         defer { beginPairingInFlight = false }
         cancelPairing()

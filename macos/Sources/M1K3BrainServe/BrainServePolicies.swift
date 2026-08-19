@@ -63,13 +63,18 @@ public struct GenerateRequest: Sendable, Equatable {
 public struct PairRequest: Sendable, Equatable {
     public let deviceName: String
 
+    /// Cap on the self-reported name — it's persisted and rendered in
+    /// Settings, so an absurd payload can't balloon UserDefaults or the UI
+    /// (PSK-gated, but cheap belt-and-braces — PR #139 review).
+    public static let nameLengthCap = 64
+
     public static func parse(_ body: Data?) -> PairRequest {
         guard let body,
               let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
               let name = (json["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !name.isEmpty
         else { return PairRequest(deviceName: "A device") }
-        return PairRequest(deviceName: name)
+        return PairRequest(deviceName: String(name.prefix(nameLengthCap)))
     }
 
     public init(deviceName: String) {
