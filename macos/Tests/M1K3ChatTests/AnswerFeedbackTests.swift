@@ -74,6 +74,33 @@ struct AnswerFeedbackStoreTests {
                                           tools: ["web_search", "date_time"]))
         #expect(try store.allFeedback().first?.toolsUsed == ["web_search", "date_time"])
     }
+
+    @Test("the brain STAMPED on an answer round-trips — the feedback row's provenance")
+    func brainProvenanceRoundTrips() throws {
+        let store = try GRDBChatHistoryStore()
+        let msg = UUID()
+        try store.recordFeedback(feedback(message: msg, conversation: UUID(), verdict: .bad, brain: "Big"))
+        #expect(try store.allFeedback().first?.brain == "Big")
+    }
+}
+
+struct ChatMessageBrainTests {
+    @Test("brain persists through the ChatMessage codable round-trip; pre-trace decodes to nil")
+    func brainCodable() throws {
+        var message = ChatMessage(id: UUID(), role: .assistant, text: "hi", status: .complete)
+        message.brain = "Lil"
+        let data = try JSONEncoder().encode([message])
+        let decoded = try JSONDecoder().decode([ChatMessage].self, from: data)
+        #expect(decoded.first?.brain == "Lil")
+
+        // A message with no brain omits the key (optionals encode-if-present),
+        // so a pre-trace payload — which never wrote it — decodes to nil.
+        let unstamped = ChatMessage(id: UUID(), role: .assistant, text: "old", status: .complete)
+        let unstampedData = try JSONEncoder().encode([unstamped])
+        #expect(!String(decoding: unstampedData, as: UTF8.self).contains("brain"))
+        let old = try JSONDecoder().decode([ChatMessage].self, from: unstampedData)
+        #expect(old.first?.brain == nil)
+    }
 }
 
 struct AnswerFeedbackModelTests {

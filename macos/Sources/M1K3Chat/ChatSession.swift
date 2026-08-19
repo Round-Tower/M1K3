@@ -168,6 +168,13 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// the answer and surfaced (collapsibly) for transparency. Persisted as an
     /// optional key, so old transcripts (without it) still decode to nil.
     public var reasoning: String?
+    /// The brain that actually rendered this answer (display name — "Lil",
+    /// "Big", "Mini"), stamped at finalization. PERSISTED, so a reloaded
+    /// conversation attributes each answer to the brain that produced it —
+    /// full feedback traceability (the currently-SELECTED brain can differ
+    /// from what rendered an old turn). Optional: pre-trace transcripts decode
+    /// to nil (the `toolsUsed` precedent).
+    public var brain: String?
     /// Per-turn generation stats (context tokens, throughput) for the in-app
     /// testing readout. Transient — omitted from `CodingKeys` like `activityLabel`,
     /// so it isn't persisted and old transcripts still decode. MLX tiers only
@@ -188,7 +195,7 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     public var status: Status
 
     enum CodingKeys: String, CodingKey {
-        case id, role, text, sources, status, reasoning, attachments, toolsUsed
+        case id, role, text, sources, status, reasoning, attachments, toolsUsed, brain
     }
 
     public init(
@@ -268,6 +275,12 @@ public final class ChatSession {
     /// Read fresh at every trigger — the Settings toggle applies immediately
     /// (the thinkingModeProvider pattern).
     let autoCaptureEnabled: @Sendable () -> Bool
+    /// Resolves the resident brain's display name at answer-finalization, so
+    /// each answer is STAMPED with the brain that produced it (feedback
+    /// traceability). MainActor-isolated (ChatSession is @MainActor), so it
+    /// can read AppEnvironment's @Observable selectedBrain directly. Set by
+    /// AppEnvironment after construction; nil for test/legacy sessions.
+    public var residentBrainName: (@MainActor () -> String?)?
     /// Test hook — `await titlingTask?.value` makes fire-and-forget titling
     /// deterministic in tests.
     private(set) var titlingTask: Task<Void, Never>?
@@ -443,7 +456,12 @@ public final class ChatSession {
             if leaked {
                 Self.leakLog.error("prompt-leak guard: chat answer reproduced the persona")
             }
+            // Which brain produced this answer — captured now, at finalization,
+            // so the feedback row attributes it correctly even after a later
+            // brain switch (full traceability).
+            let brainName = residentBrainName?()
             update(assistantID) {
+                $0.brain = brainName
                 $0.sources = leaked ? [] : mergedSources
                 // Tidy whitespace once the full text is in hand. Markdown
                 // markup survives on purpose — ReadingText renders it as real
@@ -584,7 +602,10 @@ public final class ChatSession {
             question: question,
             answer: answer.text,
             toolsUsed: answer.toolsUsed ?? [],
-            brain: brain,
+            // The brain STAMPED on the answer wins — it's who actually rendered
+            // it; the caller's current selection is only the fallback for a
+            // pre-traceability turn that carries no stamp.
+            brain: answer.brain ?? brain,
             createdAt: Date()
         )
         feedbackVerdicts[messageID] = verdict
