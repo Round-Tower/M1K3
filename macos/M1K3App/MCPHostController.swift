@@ -108,6 +108,20 @@ final class MCPHostController {
         // get_answer closures so a long turn submitted on one request is fetchable
         // on a later one (the HTTP transport is stateless per-request).
         let intelligenceJobStore = AskJobStore()
+        // Who's calling: the HTTP shell reports each initialize's client name
+        // into the box; the stamping sink copies it onto every captured call
+        // (per-client visits in the Heartbeat timeline) and bumps the
+        // observable revision so open surfaces re-read live.
+        let clientIdentity = ClientIdentityBox()
+        let logSink: (any MCPCallLogSink)? = env.conversationLog.map { store in
+            StampingLogSink(
+                base: store,
+                clientName: { clientIdentity.current() },
+                onRecord: { [weak self] in
+                    Task { @MainActor [weak self] in self?.env.mcpLogRevision += 1 }
+                }
+            )
+        }
         let registry = MCPToolRegistry(
             makeKnowledgeToolDefinitions(store: env.store, embedder: env.embedder)
                 + makeVoiceToolDefinitions(handlers: makeVoiceHandlers())
@@ -118,7 +132,7 @@ final class MCPHostController {
             // the store self-gates on every call). Only this in-app HTTP
             // surface is wired for v1; the stdio M1K3MCP binary's registry
             // carries no sink — a follow-up if that surface wants the log too.
-            logSink: env.conversationLog
+            logSink: logSink
         )
         let host = LocalMCPHTTPServer(
             port: port,
@@ -128,7 +142,8 @@ final class MCPHostController {
                     self?.isRunning = false
                     self?.statusText = "Stopped: \(reason)"
                 }
-            }
+            },
+            onClientInitialize: { name in clientIdentity.set(name) }
         ) {
             let transport = StatelessHTTPServerTransport()
             let mcpServer = await makeM1K3Server(registry: registry)

@@ -23,10 +23,10 @@ extension M1K3App {
     static let agentLogWindowID = "agent-log"
 }
 
-/// The Agent Log window's content: a header (count + Refresh/Clear) over a
-/// list of captured calls, or an explanatory empty/off state. Loads on
-/// appear + explicit Refresh — no background poll (the log is a review
-/// surface, not a live feed; opening the window fresh is enough).
+/// The Agent Log window's content: a header (count + Clear) over a list of
+/// captured calls, or an explanatory empty/off state. Live since 2026-08-19:
+/// re-reads on `mcpLogRevision` (the stamping sink bumps it per captured
+/// call), which retired the manual Refresh button.
 struct AgentLogWindowContent: View {
     let env: AppEnvironment?
     @AppStorage(AppEnvironment.conversationLogEnabledKey) private var loggingEnabled = false
@@ -39,7 +39,7 @@ struct AgentLogWindowContent: View {
         }
         .frame(minWidth: 520, minHeight: 480)
         .navigationTitle("Agent Log")
-        .task { await refresh() }
+        .task(id: env?.mcpLogRevision ?? 0) { await refresh() }
     }
 
     private var header: some View {
@@ -51,11 +51,6 @@ struct AgentLogWindowContent: View {
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
             Spacer()
-            Button {
-                Task { await refresh() }
-            } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
-            }
             Button(role: .destructive) {
                 clear()
             } label: {
@@ -101,6 +96,11 @@ struct AgentLogWindowContent: View {
                 Label(call.tool, systemImage: call.isError ? "exclamationmark.triangle.fill" : "wrench.and.screwdriver")
                     .font(.body.bold())
                     .foregroundStyle(call.isError ? .red : .primary)
+                if let client = call.clientName {
+                    Text(client)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 Text(call.timestamp, format: .relative(presentation: .named))
                     .font(.caption)
@@ -126,7 +126,12 @@ struct AgentLogWindowContent: View {
 
     private func refresh() async {
         guard let store = env?.conversationLog else { return }
-        calls = (try? store.recent()) ?? []
+        // Off the main actor — the sync read here was the documented
+        // anti-pattern (HEARTBEAT_DESIGN.md §5); fixed with the live-refresh
+        // change since the read now fires per captured call.
+        calls = await Task.detached(priority: .utility) {
+            (try? store.recent()) ?? []
+        }.value
     }
 
     private func clear() {

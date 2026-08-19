@@ -38,8 +38,12 @@ struct HeartbeatSettingsSection: View {
                         }
                     }
                 ))
-                Button("Open the Heartbeat window") {
-                    openWindow(id: M1K3App.heartbeatWindowID)
+                Button("Show the Heartbeat") {
+                    // Settings is its own scene: ask the main window to select
+                    // the destination, then summon it (request set FIRST so
+                    // ContentView's consume-on-task sees it even on a cold open).
+                    env.pendingSidebarRequest = .heartbeat
+                    openWindow(id: M1K3App.mainWindowID)
                 }
                 .buttonStyle(.glass)
                 Button("Clear pulses", role: .destructive) {

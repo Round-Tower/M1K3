@@ -25,13 +25,30 @@ public struct MCPCallLogEntry: Sendable {
     public let responseText: String
     public let isError: Bool
     public let durationMS: Int
+    /// The calling client's self-reported name (from the MCP initialize's
+    /// clientInfo). The registry never fills this — it doesn't know the
+    /// session; the app's sink wrapper stamps it before the store. Untrusted
+    /// display data.
+    public let clientName: String?
 
-    public init(tool: String, arguments: [String: Value]?, responseText: String, isError: Bool, durationMS: Int) {
+    public init(
+        tool: String, arguments: [String: Value]?, responseText: String,
+        isError: Bool, durationMS: Int, clientName: String? = nil
+    ) {
         self.tool = tool
         self.arguments = arguments
         self.responseText = responseText
         self.isError = isError
         self.durationMS = durationMS
+        self.clientName = clientName
+    }
+
+    /// The same entry with the client identity stamped on.
+    public func stamped(clientName: String?) -> MCPCallLogEntry {
+        MCPCallLogEntry(
+            tool: tool, arguments: arguments, responseText: responseText,
+            isError: isError, durationMS: durationMS, clientName: clientName
+        )
     }
 }
 

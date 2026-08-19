@@ -55,6 +55,12 @@ struct SidebarView: View {
                     .tag(SidebarSelection.memories)
                 Label("Calls", systemImage: "phone.bubble")
                     .tag(SidebarSelection.calls)
+                // Promoted from the footer 2026-08-19: the Heartbeat became a
+                // destination (timeline detail pane), which is precisely the
+                // destination-vs-app-action line this file polices — it was on
+                // the wrong side as a footer window-opener.
+                Label("Heartbeat", systemImage: "waveform.path.ecg")
+                    .tag(SidebarSelection.heartbeat)
             }
 
             Section("Conversations") {
@@ -133,15 +139,6 @@ struct SidebarView: View {
                 }
                 .help("Agent Log — MCP tool calls captured from connected agents (opt-in)")
                 .accessibilityLabel("Agent Log")
-
-                Button {
-                    openWindow(id: M1K3App.heartbeatWindowID)
-                } label: {
-                    Image(systemName: "waveform.path.ecg")
-                        .imageScale(.large)
-                }
-                .help("Heartbeat — M1K3's 2-hourly notes on the day (opt-in)")
-                .accessibilityLabel("Heartbeat")
 
                 Spacer()
             }
