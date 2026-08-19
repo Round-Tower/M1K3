@@ -66,4 +66,21 @@ struct AgentLogStampingTests {
         #expect(base.entries.map(\.clientName) == ["claude-code", nil])
         #expect(bumps.count == 2)
     }
+
+    @Test("with the capture gate OFF the revision never bumps — no surface wakes for a no-op write")
+    func offGateSkipsNotify() {
+        let base = CapturingSink()
+        let bumps = Counter()
+        let sink = StampingLogSink(
+            base: base,
+            clientName: { "claude-code" },
+            isCapturing: { false },
+            onRecord: { bumps.bump() }
+        )
+        sink.record(MCPCallLogEntry(
+            tool: "get_status", arguments: nil, responseText: "ok", isError: false, durationMS: 1
+        ))
+        // The base still sees the forward (it self-gates); the OBSERVERS don't.
+        #expect(bumps.count == 0)
+    }
 }

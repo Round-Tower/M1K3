@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.9 (parse/encode
 //  test-pinned incl. split packets; HTTP/1.1 subset is deliberate — no
 //  chunked encoding, no keep-alive). Prior: Unknown.
+//  Review: claude-fable-5, 2026-08-19 — added `clientName(fromInitializeBody:)`
+//  (initialize clientInfo → the Agent Log identity stamp; test-pinned).
 //
 
 import Foundation

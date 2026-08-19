@@ -20,6 +20,9 @@
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.8 (wire layer is
 //  test-pinned; the NWListener shell is verify-by-launch — exercised live via
 //  `claude mcp add`). Prior: Unknown.
+//  Review: claude-fable-5, 2026-08-19 — added `onClientInitialize` (reports each
+//  initialize's self-declared client name for the Agent Log identity stamp;
+//  call-site wiring test-pinned in LocalMCPHTTPServerTests).
 //
 
 import Foundation

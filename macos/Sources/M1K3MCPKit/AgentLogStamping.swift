@@ -28,38 +28,43 @@ public final class ClientIdentityBox: @unchecked Sendable {
     public init() {}
 
     public func set(_ newName: String?) {
-        lock.lock()
-        name = newName
-        lock.unlock()
+        lock.withLock { name = newName }
     }
 
     public func current() -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        return name
+        lock.withLock { name }
     }
 }
 
 /// Forwards every recorded call to `base` with the current client identity
 /// stamped on, then fires `onRecord` — the host's observable-revision bump so
 /// live surfaces re-read without a manual Refresh.
+///
+/// `isCapturing` mirrors the base store's own opt-in gate: when the Agent
+/// Interaction Log is OFF the base no-ops, so bumping the revision would wake
+/// every open surface for a read that finds nothing. Pass the SAME predicate
+/// the store gates on; the default keeps notify-always for bases that always
+/// write (PR #137 review fold).
 public struct StampingLogSink: MCPCallLogSink {
     private let base: any MCPCallLogSink
     private let clientName: @Sendable () -> String?
+    private let isCapturing: @Sendable () -> Bool
     private let onRecord: @Sendable () -> Void
 
     public init(
         base: any MCPCallLogSink,
         clientName: @escaping @Sendable () -> String?,
+        isCapturing: @escaping @Sendable () -> Bool = { true },
         onRecord: @escaping @Sendable () -> Void = {}
     ) {
         self.base = base
         self.clientName = clientName
+        self.isCapturing = isCapturing
         self.onRecord = onRecord
     }
 
     public func record(_ entry: MCPCallLogEntry) {
         base.record(entry.stamped(clientName: clientName()))
-        onRecord()
+        if isCapturing() { onRecord() }
     }
 }

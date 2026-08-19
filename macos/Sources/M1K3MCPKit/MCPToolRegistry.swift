@@ -9,6 +9,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.9 (pure dispatch,
 //  test-pinned). Prior: Unknown.
+//  Review: claude-fable-5, 2026-08-19 — MCPCallLogEntry gained `clientName` +
+//  `stamped(clientName:)` (the Agent Log identity column; registry itself
+//  stays identity-blind — the transport-side sink stamps).
 //
 
 import Foundation

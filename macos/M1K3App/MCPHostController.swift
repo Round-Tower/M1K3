@@ -117,6 +117,9 @@ final class MCPHostController {
             StampingLogSink(
                 base: store,
                 clientName: { clientIdentity.current() },
+                // The store's own opt-in gate — with the log OFF, no write
+                // happens, so no revision bump / surface wake either.
+                isCapturing: { UserDefaults.standard.bool(forKey: AppEnvironment.conversationLogEnabledKey) },
                 onRecord: { [weak self] in
                     Task { @MainActor [weak self] in self?.env.mcpLogRevision += 1 }
                 }

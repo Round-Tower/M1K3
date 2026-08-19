@@ -33,6 +33,9 @@
 //  MemoryStore; TDD-pinned round-trip/cap/gate/clear behaviour; the live app
 //  wiring — UserDefaults predicate + the sibling-file path — is verify-by-launch).
 //  Prior: none (new file).
+//  Review: claude-fable-5, 2026-08-19 — v2 migration adds nullable `client_name`
+//  (untrusted display data from initialize clientInfo; old rows render as
+//  "an agent"; migration test-pinned).
 //
 
 import Foundation
