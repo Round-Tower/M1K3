@@ -52,7 +52,7 @@ public actor AskJobStore {
 
     /// Terminal jobs older than this are evicted opportunistically on submit —
     /// bounds memory on a long-lived server without a background timer.
-    static let jobRetention: TimeInterval = 600
+    public static let jobRetention: TimeInterval = 600
 
     private let makeID: @Sendable () -> String
     private let now: @Sendable () -> Date

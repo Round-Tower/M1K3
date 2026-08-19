@@ -14,6 +14,11 @@
 //  App-glue (verify-by-launch). Signed: Kev + claude-opus-4-8, 2026-06-17,
 //  Confidence 0.78, Prior: Unknown
 //
+//  Review: Kev + claude-fable-5, 2026-08-19 — a dedicated 120s deadline
+//  (deadlineSeconds), NOT the MCP job path's 600s backstop: this path awaits
+//  intelligenceAsk directly, so it must not hold the single-flight lock for
+//  10 minutes (MCP-async package).
+//
 
 import AppIntents
 import Foundation // TimeInterval

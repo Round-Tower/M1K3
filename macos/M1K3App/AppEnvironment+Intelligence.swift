@@ -15,6 +15,10 @@
 //  @Environment — a way to reach the live, warm environment.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5, 2026-08-19 — the ask deadline is now a
+//  parameter (default 600s backstop; the App Intent passes its own 120s),
+//  and the guard routes through chatGate so interim-Mini serves visiting
+//  agents during a brain download instead of refusing (MCP-async package).
 //
 
 import Foundation
@@ -95,6 +99,10 @@ extension AppEnvironment {
         // whole cold start (~6 min on a torn-cache Big heal). Only `.blocked`
         // (nothing can serve) refuses.
         let gate = chatGate
+        // Captured NOW, next to `gate`: the interim suffix names the brain that
+        // was loading when the question was ASKED, not whatever's selected when
+        // the (possibly minutes-long) generation returns (review fold).
+        let interimBrainName = selectedBrain.displayName
         guard gate.canTakeTurn else {
             throw MCPVoiceError("M1K3 is still getting its brain ready — try again in a moment")
         }
@@ -134,7 +142,7 @@ extension AppEnvironment {
             // send time: the caller asked the selected brain and got Mini.
             guard gate == .interim else { return answer }
             return answer
-                + "\n\n(Mini answered this while \(selectedBrain.displayName) finishes loading.)"
+                + "\n\n(Mini answered this while \(interimBrainName) finishes loading.)"
         } catch is TimeoutError {
             // Backstop hit — a genuinely hung generation, not a slow answer
             // (those ride the job path): cancel, release the lock (defer),

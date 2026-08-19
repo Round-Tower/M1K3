@@ -25,6 +25,11 @@
 //  preserved (provenance parameterised to "mcp:remember"); dropped the now-unused
 //  `os` + `M1K3Chat` imports.
 //
+//  Review: Kev + claude-fable-5, 2026-08-19 — askDeadlineSeconds 120→600s (the
+//  runaway backstop, read from AskJobStore.jobRetention so it can't drift) and
+//  the `listen` pre-wait budget fix. The 120s cap that cancelled long Big
+//  answers is gone (MCP-async package).
+//
 
 import Foundation
 import M1K3Avatar
@@ -74,9 +79,10 @@ final class MCPHostController {
     /// wedge). It was 120s (2026-06-14 era, when the lock was held by the HTTP
     /// request) and CANCELLED legitimately-long Big answers — the strongest
     /// live complaint against the MCP surface (2026-08-10). Now matches
-    /// AskJobStore.jobRetention (600s) so a job can never outlive its own
-    /// redeemability window.
-    nonisolated static let askDeadlineSeconds: Double = 600
+    /// AskJobStore.jobRetention so a job can never outlive its own
+    /// redeemability window — read from the constant, not a re-typed literal,
+    /// so the two can't drift (review fold).
+    nonisolated static let askDeadlineSeconds: Double = AskJobStore.jobRetention
 
     private(set) var isRunning = false
     private(set) var statusText: String?
