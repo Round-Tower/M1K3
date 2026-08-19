@@ -58,13 +58,16 @@ let eventCount = 6
 let sendInterval: TimeInterval = 0.15
 
 /// Tracks whether a server send failed after the client cancelled.
+/// `@unchecked Sendable`: the only mutable state is `_failedAtEvent`, and
+/// every access to it goes through `lock` — so the concurrency the compiler
+/// can't verify here is upheld by that single lock (review-fold clarity note).
 final class SendOutcome: @unchecked Sendable {
     private let lock = NSLock()
     private var _failedAtEvent: Int?
     func markFailure(at event: Int) {
         lock.lock()
+        defer { lock.unlock() } // defer everywhere, so a future branch stays safe
         if _failedAtEvent == nil { _failedAtEvent = event }
-        lock.unlock()
     }
 
     var failedAtEvent: Int? {
