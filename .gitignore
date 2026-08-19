@@ -191,8 +191,15 @@ graphify-out/
 # Brain-at-home Phase A spike evidence: committed ON PURPOSE (RESULTS.md is
 # the phase's verdict gate; the scripts are the reproducible instrument).
 # The global excludesfile ignores scratch/ wholesale, so re-open exactly this
-# path — a negation rule, not `git add -f`, so it can't regress (the
-# visionOS-PNG convention). Everything else under macos/scratch stays ignored.
+# path — a negation chain, not `git add -f`, so it can't regress. NOTE: this
+# is a HARDER pattern than the visionOS-PNG re-include above — that one only
+# re-includes a file EXTENSION under never-excluded dirs, so one `!` rule
+# suffices. Here whole DIRECTORIES are excluded, and git cannot re-include a
+# file whose parent dir is excluded — hence each ancestor is un-ignored
+# individually before the final `**`. Don't copy the simpler PNG shape for a
+# directory exclusion; it silently fails. Everything else under macos/scratch
+# stays ignored (verified: `git check-ignore -v` ignores a sibling scratch
+# dir AND a stray file directly in brain-at-home/, keeps spikes/ trackable).
 !macos/scratch/
 macos/scratch/**
 !macos/scratch/brain-at-home/
