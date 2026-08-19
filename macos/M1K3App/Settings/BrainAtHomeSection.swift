@@ -111,6 +111,17 @@ struct BrainPairingSheet: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                // Camera-less clients (desktops, emulators, a paired agent on
+                // this Mac) paste the same payload the QR encodes. Same
+                // security shape: the code is only the UNCOMMITTED candidate —
+                // nothing pairs until Approve, and it dies in ≤60s.
+                Button("Copy setup code") {
+                    if let payload = env.brainServe.pairingQRPayload {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(payload, forType: .string)
+                    }
+                }
+                .buttonStyle(.glass)
             case let .awaitingApproval(candidateName, _):
                 Image(systemName: "person.badge.shield.checkmark")
                     .font(.largeTitle)
