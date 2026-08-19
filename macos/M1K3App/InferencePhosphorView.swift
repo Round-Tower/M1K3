@@ -36,7 +36,9 @@ extension PhosphorSource {
         switch self {
         case .thinking: Color(red: 0.45, green: 1.0, blue: 0.72) // calm phosphor green
         case .tool: Color(red: 0.55, green: 0.9, blue: 1.0) // cyan ping
-        case .answer: Color(red: 0.78, green: 1.0, blue: 0.88) // bright green-white
+        case .heartbeat: Color(red: 1.0, green: 0.82, blue: 0.5) // warm amber pulse
+        case .notification: Color(red: 0.72, green: 0.68, blue: 1.0) // soft violet
+        case .answer: Color(red: 0.78, green: 1.0, blue: 0.88) // (unused in the rain)
         case .visitor: Color(red: 0.55, green: 0.72, blue: 0.66) // dim, derived
         }
     }
@@ -59,6 +61,9 @@ struct InferencePhosphorView: View {
     /// phrases, not one word per line.
     @State private var buffer: [PhosphorSource: String] = [:]
     @State private var lastActivity: String?
+    /// Highest ambient-note id already rained, so `env.ambientNotes` (heartbeat
+    /// pulses, later notifications/calls) each drift by exactly once.
+    @State private var lastAmbientID = -1
 
     /// The in-flight assistant message whose live fields drive the rain.
     private var activeMessage: ChatMessage? {
@@ -117,6 +122,18 @@ struct InferencePhosphorView: View {
 
     private func feed(now: Date) {
         rain.prune(at: now)
+
+        // Ambient life — heartbeat pulses (and later notifications / call
+        // transcription) drift regardless of any chat turn. Each note is a
+        // complete string; split it into phrase lines once.
+        for note in env.ambientNotes where note.id > lastAmbientID {
+            ingestPhrases(note.text, source: note.source, now: now)
+            lastAmbientID = note.id
+        }
+
+        // What M1K3 is DOING right now — tool activity + reasoning (if a brain
+        // ever emits it). Deliberately NOT the answer: it already lives in the
+        // chat bubble / spoken line, so raining it duplicates the output.
         guard let message = activeMessage else {
             lastActivity = nil
             buffer = [:]
@@ -125,27 +142,34 @@ struct InferencePhosphorView: View {
         let id = message.id.uuidString
         var marks = consumed[id] ?? (0, 0)
 
-        // Tool activity: a discrete label — rain it once as its own phrase.
         if let label = message.activityLabel, label != lastActivity {
             rain.ingestOwn(label, source: .tool, at: now)
             lastActivity = label
         }
-
-        // Reasoning: the growing <think> stream — accumulate its new tail into
-        // phrases, flush a whole line on a clause boundary.
         if let reasoning = message.reasoning, reasoning.count > marks.reasoning {
             accumulate(of: reasoning, from: &marks.reasoning, source: .thinking, now: now)
         }
-        // Answer: same phrasing when there's no separate reasoning stream.
-        if message.reasoning == nil || message.reasoning?.isEmpty == true {
-            if message.text.count > marks.answer {
-                accumulate(of: message.text, from: &marks.answer, source: .answer, now: now)
-            }
-        }
         consumed[id] = marks
-        // Bound the per-message ledger — only the in-flight message matters.
         if consumed.count > 8 {
             consumed = [id: marks]
+        }
+    }
+
+    /// Split a complete string into phrase lines and rain each — for ambient
+    /// notes (already whole, unlike the streaming reasoning tail).
+    private func ingestPhrases(_ text: String, source: PhosphorSource, now: Date) {
+        var pending = ""
+        for ch in text {
+            pending.append(ch)
+            let atBreak = Self.breakChars.contains(ch)
+                && pending.trimmingCharacters(in: .whitespaces).count >= Self.minPhrase
+            if atBreak || pending.count >= Self.maxPhrase {
+                rain.ingestOwn(pending, source: source, at: now)
+                pending = ""
+            }
+        }
+        if !pending.trimmingCharacters(in: .whitespaces).isEmpty {
+            rain.ingestOwn(pending, source: source, at: now)
         }
     }
 

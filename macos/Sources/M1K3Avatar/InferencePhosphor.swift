@@ -35,11 +35,19 @@ import Foundation
 /// Where a phosphor line came from — drives its tint and whether it is real
 /// text (M1K3's own) or derived glyphs (a visitor's).
 public enum PhosphorSource: String, Sendable, Equatable, CaseIterable {
-    /// M1K3's own chain-of-thought (`<think>` reasoning). Verbatim.
+    /// M1K3's own chain-of-thought (`<think>` reasoning). Verbatim. (No brain
+    /// on the current roster emits this, but the seam is ready for one that
+    /// does — a thinking model rains its reasoning here.)
     case thinking
     /// M1K3's own tool dispatch label ("Recalling what I know…"). Verbatim.
     case tool
-    /// M1K3's own answer tokens. Verbatim.
+    /// A heartbeat pulse — M1K3's own ambient narrative of its day. Verbatim.
+    case heartbeat
+    /// A notification M1K3 raised (answer ready, deep dive finished, …).
+    case notification
+    /// M1K3's own answer tokens. Verbatim. Deliberately NOT fed to the rain:
+    /// the answer already lives in the chat bubble / spoken line, so raining
+    /// it duplicates the output. Kept for a future surface that wants it.
     case answer
     /// A visiting agent's traffic — DERIVED GLYPHS ONLY, never their content.
     case visitor
@@ -48,6 +56,22 @@ public enum PhosphorSource: String, Sendable, Equatable, CaseIterable {
     /// (glyphs only). The single predicate the ingest paths are built around.
     public var isOwnOutput: Bool {
         self != .visitor
+    }
+}
+
+/// One ambient fragment awaiting the rain — a complete short string (a
+/// heartbeat pulse, a notification body) an app subsystem pushed, before the
+/// view splits it into phrase lines. Own output only (the ring that carries
+/// these refuses a visitor source).
+public struct AmbientNote: Sendable, Equatable, Identifiable {
+    public let id: Int
+    public let text: String
+    public let source: PhosphorSource
+
+    public init(id: Int, text: String, source: PhosphorSource) {
+        self.id = id
+        self.text = text
+        self.source = source
     }
 }
 

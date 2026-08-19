@@ -202,6 +202,10 @@ extension AppEnvironment {
         Self.heartbeatLog.notice(
             "pulse recorded by \(renderedBy, privacy: .public) (activity: \(context.hasActivity, privacy: .public))"
         )
+        // Drift the pulse through the ambient rain regardless of the notify
+        // toggle — the heartbeat IS M1K3's ambient life, so it belongs behind
+        // the avatar whether or not a banner also fires.
+        noteAmbient(narrative ?? digest, source: .heartbeat)
         await maybeNotifyHeartbeatPulse(text: narrative ?? digest, appActive: NSApp.isActive)
     }
 
