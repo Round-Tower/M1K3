@@ -45,6 +45,13 @@ struct AvatarChatBackground: View {
                 .blur(radius: resolved.blur)
                 .opacity(resolved.opacity)
                 .ignoresSafeArea()
+            // The thinking rain over the avatar backdrop — mostly reasoning +
+            // tool pings here (the answer's already in the bubble), so it
+            // complements the transcript rather than duplicating it. Under the
+            // scrim so chat text stays legible; the layer is itself
+            // non-interactive + a11y-hidden.
+            InferencePhosphorView()
+                .ignoresSafeArea()
             ReadingScrim()
                 .ignoresSafeArea()
         }
