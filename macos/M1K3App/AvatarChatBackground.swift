@@ -40,17 +40,17 @@ struct AvatarChatBackground: View {
     var body: some View {
         let resolved = treatment
         ZStack {
+            // The thinking rain at the very BACK — large phrases surfacing and
+            // dissolving, with the avatar (constellation renders transparent,
+            // so the rain shows through) floating in front. Mostly reasoning +
+            // tool pings here; the answer's already in the bubble. The layer is
+            // non-interactive + a11y-hidden.
+            InferencePhosphorView()
+                .ignoresSafeArea()
             AvatarSurface(env: env, paused: !resolved.animatesMotion)
                 .scaleEffect(resolved.scale)
                 .blur(radius: resolved.blur)
                 .opacity(resolved.opacity)
-                .ignoresSafeArea()
-            // The thinking rain over the avatar backdrop — mostly reasoning +
-            // tool pings here (the answer's already in the bubble), so it
-            // complements the transcript rather than duplicating it. Under the
-            // scrim so chat text stays legible; the layer is itself
-            // non-interactive + a11y-hidden.
-            InferencePhosphorView()
                 .ignoresSafeArea()
             ReadingScrim()
                 .ignoresSafeArea()

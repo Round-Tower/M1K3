@@ -49,10 +49,15 @@ struct InferencePhosphorView: View {
     /// Elapsed-time origin (the CRTOverlay / AudioCaptureBackdrop precision
     /// lesson — never an absolute reference date).
     @State private var start = Date()
-    @State private var rain = InferencePhosphor()
-    /// Chars already rained per message id, so a growing reasoning/answer
-    /// string feeds only its new tail — never re-stacks what's on screen.
+    /// Longer TTL / fewer lines than the default — ambient, not a ticker.
+    @State private var rain = InferencePhosphor(maxLines: 7, fragmentCap: 64, lineTTL: 9)
+    /// Chars already consumed per message id, so a growing reasoning/answer
+    /// string feeds only its new tail — never re-reads what's flushed.
     @State private var consumed: [String: (reasoning: Int, answer: Int)] = [:]
+    /// Partial phrase still accumulating per source — flushed as ONE line on a
+    /// clause/sentence boundary (or when it gets long), so the rain reads as
+    /// phrases, not one word per line.
+    @State private var buffer: [PhosphorSource: String] = [:]
     @State private var lastActivity: String?
 
     /// The in-flight assistant message whose live fields drive the rain.
@@ -83,23 +88,27 @@ struct InferencePhosphorView: View {
     private func draw(_ canvas: GraphicsContext, size: CGSize, now: Date) {
         let lines = rain.active(at: now)
         guard !lines.isEmpty else { return }
-        let lineHeight: CGFloat = 22
-        // Newest sits low (just under the avatar's chin third); older rises.
-        let baseline = size.height * 0.72
-        let font = Font.system(size: 13, weight: .medium, design: .monospaced)
+        // Large + ambient: a few big phrases surfacing and dissolving, not a
+        // dense ticker. Line height scales with the surface.
+        let fontSize = max(20, min(34, size.height / 26))
+        let lineHeight = fontSize * 1.7
+        // Centred vertically so lines rise THROUGH the middle and fade out the
+        // top — the avatar floats in front of them (this layer is behind it).
+        let baseline = size.height * 0.62
+        let font = Font.system(size: fontSize, weight: .light, design: .monospaced)
 
         for (index, line) in lines.enumerated() {
             let opacity = rain.opacity(for: line, at: now)
             guard opacity > 0.01 else { continue }
-            // Stack from the baseline upward by arrival order, plus the age
-            // rise so each line keeps drifting up as newer ones arrive.
             let stack = CGFloat(lines.count - 1 - index) * lineHeight
-            let rise = reduceMotion ? 0 : CGFloat(rain.rise(for: line, at: now, riseHeight: 40))
+            let rise = reduceMotion ? 0 : CGFloat(rain.rise(for: line, at: now, riseHeight: size.height * 0.22))
             let y = baseline - stack - rise
-            guard y > -lineHeight, y < size.height else { continue }
+            guard y > -lineHeight, y < size.height + lineHeight else { continue }
 
             var text = canvas.resolve(Text(line.text).font(font))
-            text.shading = .color(line.source.tint.opacity(opacity * 0.85))
+            // Ambient: capped well below full so it reads as a backdrop the
+            // avatar sits in front of, never foreground text.
+            text.shading = .color(line.source.tint.opacity(opacity * 0.5))
             canvas.draw(text, at: CGPoint(x: size.width / 2, y: y), anchor: .center)
         }
     }
@@ -110,25 +119,27 @@ struct InferencePhosphorView: View {
         rain.prune(at: now)
         guard let message = activeMessage else {
             lastActivity = nil
+            buffer = [:]
             return
         }
         let id = message.id.uuidString
         var marks = consumed[id] ?? (0, 0)
 
-        // Tool activity: a discrete label — rain it once when it changes.
+        // Tool activity: a discrete label — rain it once as its own phrase.
         if let label = message.activityLabel, label != lastActivity {
             rain.ingestOwn(label, source: .tool, at: now)
             lastActivity = label
         }
 
-        // Reasoning: the growing <think> stream — feed its new tail.
+        // Reasoning: the growing <think> stream — accumulate its new tail into
+        // phrases, flush a whole line on a clause boundary.
         if let reasoning = message.reasoning, reasoning.count > marks.reasoning {
-            feedTail(of: reasoning, from: &marks.reasoning, source: .thinking, now: now)
+            accumulate(of: reasoning, from: &marks.reasoning, source: .thinking, now: now)
         }
-        // Answer: rain a light sampling of the tokens as they stream.
+        // Answer: same phrasing when there's no separate reasoning stream.
         if message.reasoning == nil || message.reasoning?.isEmpty == true {
             if message.text.count > marks.answer {
-                feedTail(of: message.text, from: &marks.answer, source: .answer, now: now)
+                accumulate(of: message.text, from: &marks.answer, source: .answer, now: now)
             }
         }
         consumed[id] = marks
@@ -138,27 +149,28 @@ struct InferencePhosphorView: View {
         }
     }
 
-    /// Rain the new suffix of a growing string in fragment-sized pieces,
-    /// advancing the consumed cursor so nothing rains twice.
-    private func feedTail(of full: String, from cursor: inout Int, source: PhosphorSource, now: Date) {
+    /// Where a phrase can break — clause/sentence punctuation. A line flushes
+    /// at the FIRST of these at/after ~24 chars, so lines read as phrases
+    /// ("of mist that clings to your coat") rather than one word each.
+    private static let breakChars: Set<Character> = [".", ",", ";", ":", "!", "?", "—", "\n"]
+    private static let minPhrase = 24
+    private static let maxPhrase = 64
+
+    /// Fold the new suffix of a growing string into `buffer[source]`, flushing
+    /// a full phrase-line whenever it reaches a clause boundary or the cap.
+    private func accumulate(of full: String, from cursor: inout Int, source: PhosphorSource, now: Date) {
         let chars = Array(full)
         guard cursor < chars.count else { return }
-        // Fragment on word boundaries within the new tail, capped so a burst
-        // doesn't dump the whole stream in one tick.
-        let tail = String(chars[cursor...])
-        let words = tail.split(separator: " ", omittingEmptySubsequences: true)
-        var buffer = ""
-        var fed = 0
-        for word in words {
-            if buffer.count + word.count + 1 > 40 {
-                if !buffer.isEmpty { rain.ingestOwn(buffer, source: source, at: now); fed += 1 }
-                buffer = String(word)
-            } else {
-                buffer += buffer.isEmpty ? String(word) : " \(word)"
+        var pending = buffer[source] ?? ""
+        for ch in chars[cursor...] {
+            pending.append(ch)
+            let atBreak = Self.breakChars.contains(ch) && pending.trimmingCharacters(in: .whitespaces).count >= Self.minPhrase
+            if atBreak || pending.count >= Self.maxPhrase {
+                rain.ingestOwn(pending, source: source, at: now)
+                pending = ""
             }
-            if fed >= 3 { break } // at most a few lines per tick — a rain, not a flood
         }
-        if !buffer.isEmpty, fed < 3 { rain.ingestOwn(buffer, source: source, at: now) }
+        buffer[source] = pending
         cursor = chars.count
     }
 }
