@@ -187,3 +187,14 @@ data/test-results/
 # Collaborators run `graphify update .` locally; CLAUDE.md rules are conditional
 # on graphify-out/ existing. The .graphifyignore config + skill ARE tracked.
 graphify-out/
+
+# Brain-at-home Phase A spike evidence: committed ON PURPOSE (RESULTS.md is
+# the phase's verdict gate; the scripts are the reproducible instrument).
+# The global excludesfile ignores scratch/ wholesale, so re-open exactly this
+# path — a negation rule, not `git add -f`, so it can't regress (the
+# visionOS-PNG convention). Everything else under macos/scratch stays ignored.
+!macos/scratch/
+macos/scratch/**
+!macos/scratch/brain-at-home/
+!macos/scratch/brain-at-home/spikes/
+!macos/scratch/brain-at-home/spikes/**
