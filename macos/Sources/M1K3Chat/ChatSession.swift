@@ -252,6 +252,12 @@ public final class ChatSession {
     /// observable counter to re-fetch summaries (the CallsView callCount trick).
     public private(set) var historyRevision = 0
 
+    /// Per-answer feedback verdicts for the ACTIVE conversation (messageID →
+    /// verdict), so the transcript shows a filled thumb on already-rated
+    /// answers across reloads. Loaded when a conversation opens; updated live
+    /// on rate. Observable — MessageView reads it.
+    public private(set) var feedbackVerdicts: [UUID: FeedbackVerdict] = [:]
+
     private let responder: any RAGResponding
     /// Internal (not private): ChatSession+Conversations.swift is a cross-file
     /// same-module extension and needs the seams.
@@ -312,6 +318,7 @@ public final class ChatSession {
             messages = restored
             activeConversationID = recent.id
             activeTitle = recent.title
+            feedbackVerdicts = (try? history.feedbackVerdicts(conversationID: recent.id)) ?? [:]
         }
         // Launch catch-up: a quit-without-switching leaves undistilled turns
         // behind; distill the restored conversation's backlog now (delayed —
@@ -550,10 +557,41 @@ public final class ChatSession {
         self.messages = messages
         activeConversationID = id
         activeTitle = title
+        feedbackVerdicts = (try? history?.feedbackVerdicts(conversationID: id)) ?? [:]
     }
 
     func noteHistoryChanged() {
         historyRevision += 1
+    }
+
+    /// Record Kev's judgement on one assistant answer. Captures the paired
+    /// question + the answer's tools/text at rate-time so the row is a
+    /// self-contained curation datum, persists it (replacing any prior verdict
+    /// on that answer), and updates the observable map so the thumb fills. The
+    /// resident `brain` is passed in (ChatMessage carries no per-turn brain).
+    /// Silently no-ops for an unknown id or a user message.
+    public func recordFeedback(messageID: UUID, verdict: FeedbackVerdict, comment: String?, brain: String) {
+        guard let index = messages.firstIndex(where: { $0.id == messageID }),
+              messages[index].role == .assistant
+        else { return }
+        let answer = messages[index]
+        let question = messages[..<index].last { $0.role == .user }?.text ?? ""
+        let record = AnswerFeedback(
+            messageID: messageID,
+            conversationID: activeConversationID,
+            verdict: verdict,
+            comment: comment,
+            question: question,
+            answer: answer.text,
+            toolsUsed: answer.toolsUsed ?? [],
+            brain: brain,
+            createdAt: Date()
+        )
+        feedbackVerdicts[messageID] = verdict
+        // Persist off the main actor — a rate tap must not block the UI on a
+        // DB write (the saveAsync precedent).
+        let history = history
+        Task.detached(priority: .utility) { try? history?.recordFeedback(record) }
     }
 
     /// Fire-and-forget auto-titling after a successful exchange of an untitled

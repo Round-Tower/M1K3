@@ -475,6 +475,16 @@ struct ContentView: View {
                         ForEach(env.chat.messages, id: \.id) { message in
                             MessageView(
                                 message: message,
+                                verdict: env.chat.feedbackVerdicts[message.id],
+                                existingComment: nil,
+                                onFeedback: { verdict, comment in
+                                    env.chat.recordFeedback(
+                                        messageID: message.id,
+                                        verdict: verdict,
+                                        comment: comment,
+                                        brain: env.selectedBrain.displayName
+                                    )
+                                },
                                 onSpeak: { text in Task { await env.speak(text) } },
                                 onOpenLink: { url in env.review.open(url: url) },
                                 onSendFollowUp: { text in Task { await env.send(text) } },

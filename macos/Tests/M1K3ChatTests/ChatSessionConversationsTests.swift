@@ -17,6 +17,7 @@ import Testing
 // MARK: - Fakes
 
 private final class InMemoryHistoryStore: ChatHistoryPersisting, @unchecked Sendable {
+    private var feedbackRows: [UUID: AnswerFeedback] = [:]
     private struct Row {
         var title: String?
         var createdAt: Date
@@ -96,6 +97,23 @@ private final class InMemoryHistoryStore: ChatHistoryPersisting, @unchecked Send
         defer { lock.unlock() }
         guard rows[id] != nil else { return }
         watermarks[id] = count
+    }
+
+    func recordFeedback(_ feedback: AnswerFeedback) throws {
+        lock.lock(); defer { lock.unlock() }
+        feedbackRows[feedback.messageID] = feedback
+    }
+
+    func feedbackVerdicts(conversationID: UUID) throws -> [UUID: FeedbackVerdict] {
+        lock.lock(); defer { lock.unlock() }
+        return feedbackRows.values
+            .filter { $0.conversationID == conversationID }
+            .reduce(into: [:]) { $0[$1.messageID] = $1.verdict }
+    }
+
+    func allFeedback() throws -> [AnswerFeedback] {
+        lock.lock(); defer { lock.unlock() }
+        return feedbackRows.values.sorted { $0.createdAt > $1.createdAt }
     }
 
     /// Test seeding helper.

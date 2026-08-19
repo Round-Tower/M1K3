@@ -78,6 +78,15 @@ private final class WatermarkHistoryStore: ChatHistoryPersisting, @unchecked Sen
         return watermarks[id] ?? 0
     }
 
+    func recordFeedback(_: AnswerFeedback) throws {}
+    func feedbackVerdicts(conversationID _: UUID) throws -> [UUID: FeedbackVerdict] {
+        [:]
+    }
+
+    func allFeedback() throws -> [AnswerFeedback] {
+        []
+    }
+
     func setDistilledWatermark(id: UUID, count: Int) throws {
         lock.lock()
         defer { lock.unlock() }
