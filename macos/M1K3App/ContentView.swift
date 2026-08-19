@@ -476,7 +476,7 @@ struct ContentView: View {
                             MessageView(
                                 message: message,
                                 verdict: env.chat.feedbackVerdicts[message.id],
-                                existingComment: nil,
+                                existingComment: env.chat.feedbackComments[message.id],
                                 onFeedback: { verdict, comment in
                                     env.chat.recordFeedback(
                                         messageID: message.id,

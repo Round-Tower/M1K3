@@ -90,9 +90,9 @@ public struct AnswerFeedback: Sendable, Equatable, Identifiable {
 /// side-channel copy of the third-party corpus); only the answer text, which
 /// M1K3 authored, and the tools, which are names.
 public enum AnswerFeedbackExport {
-    /// One JSON object per line. Deterministic key order via manual assembly
-    /// (JSONEncoder's ordering isn't guaranteed) so a diff of two exports is
-    /// legible. `dateFormatter` injected for testability.
+    /// One JSON object per line. `.sortedKeys` gives deterministic key order
+    /// (so a diff of two exports is legible); the ISO formatter is injected for
+    /// testability.
     public static func jsonl(_ rows: [AnswerFeedback], iso: (Date) -> String) -> String {
         rows.map { row in
             var object: [String: Any] = [

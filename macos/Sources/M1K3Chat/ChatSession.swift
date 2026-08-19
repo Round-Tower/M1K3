@@ -264,6 +264,11 @@ public final class ChatSession {
     /// answers across reloads. Loaded when a conversation opens; updated live
     /// on rate. Observable — MessageView reads it.
     public private(set) var feedbackVerdicts: [UUID: FeedbackVerdict] = [:]
+    /// Saved notes for the active conversation's rated answers (messageID →
+    /// comment), so re-opening the comment field PREFILLS rather than starting
+    /// blank and clobbering the note on save. Loaded + updated alongside
+    /// `feedbackVerdicts`.
+    public private(set) var feedbackComments: [UUID: String] = [:]
 
     private let responder: any RAGResponding
     /// Internal (not private): ChatSession+Conversations.swift is a cross-file
@@ -332,6 +337,7 @@ public final class ChatSession {
             activeConversationID = recent.id
             activeTitle = recent.title
             feedbackVerdicts = (try? history.feedbackVerdicts(conversationID: recent.id)) ?? [:]
+            feedbackComments = (try? history.feedbackComments(conversationID: recent.id)) ?? [:]
         }
         // Launch catch-up: a quit-without-switching leaves undistilled turns
         // behind; distill the restored conversation's backlog now (delayed —
@@ -576,6 +582,7 @@ public final class ChatSession {
         activeConversationID = id
         activeTitle = title
         feedbackVerdicts = (try? history?.feedbackVerdicts(conversationID: id)) ?? [:]
+        feedbackComments = (try? history?.feedbackComments(conversationID: id)) ?? [:]
     }
 
     func noteHistoryChanged() {
@@ -609,6 +616,8 @@ public final class ChatSession {
             createdAt: Date()
         )
         feedbackVerdicts[messageID] = verdict
+        if let comment = record.comment { feedbackComments[messageID] = comment }
+        else { feedbackComments[messageID] = nil }
         // Persist off the main actor — a rate tap must not block the UI on a
         // DB write (the saveAsync precedent).
         let history = history

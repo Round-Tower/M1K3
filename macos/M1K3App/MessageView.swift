@@ -267,8 +267,10 @@ struct MessageView: View {
                     .help("Good answer")
 
                     Button {
+                        // Open the field prefilled; DON'T commit yet — a commit
+                        // on tap with a stale/blank comment would clobber a saved
+                        // note. The verdict + note commit together on Done.
                         commentDraft = existingComment ?? ""
-                        onFeedback(.bad, existingComment) // commit the verdict now
                         showComment = true
                     } label: {
                         Image(systemName: verdict == .bad ? "hand.thumbsdown.fill" : "hand.thumbsdown")

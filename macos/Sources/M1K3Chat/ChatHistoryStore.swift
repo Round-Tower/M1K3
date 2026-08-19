@@ -77,6 +77,10 @@ public protocol ChatHistoryPersisting: Sendable {
     /// The verdicts for a conversation's rated answers, so the UI can show the
     /// filled thumb on reload. messageID → verdict.
     func feedbackVerdicts(conversationID: UUID) throws -> [UUID: FeedbackVerdict]
+    /// The saved notes for a conversation's rated answers, so re-opening the
+    /// comment field PREFILLS the existing note (never silently wiping it).
+    /// messageID → comment (only rows that have one).
+    func feedbackComments(conversationID: UUID) throws -> [UUID: String]
     /// Every feedback row, newest first — the export/inspection read.
     func allFeedback() throws -> [AnswerFeedback]
 }
@@ -297,6 +301,23 @@ public final class GRDBChatHistoryStore: ChatHistoryPersisting, @unchecked Senda
                       let verdict = FeedbackVerdict(rawValue: row["verdict"])
                 else { continue }
                 result[id] = verdict
+            }
+            return result
+        }
+    }
+
+    public func feedbackComments(conversationID: UUID) throws -> [UUID: String] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: "SELECT message_id, comment FROM message_feedback WHERE conversation_id = ? AND comment IS NOT NULL",
+                arguments: [conversationID.uuidString]
+            )
+            var result: [UUID: String] = [:]
+            for row in rows {
+                guard let id = UUID(uuidString: row["message_id"]),
+                      let comment = row["comment"] as String? else { continue }
+                result[id] = comment
             }
             return result
         }

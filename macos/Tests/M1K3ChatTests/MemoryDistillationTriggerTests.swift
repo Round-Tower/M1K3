@@ -83,6 +83,10 @@ private final class WatermarkHistoryStore: ChatHistoryPersisting, @unchecked Sen
         [:]
     }
 
+    func feedbackComments(conversationID _: UUID) throws -> [UUID: String] {
+        [:]
+    }
+
     func allFeedback() throws -> [AnswerFeedback] {
         []
     }

@@ -111,6 +111,13 @@ private final class InMemoryHistoryStore: ChatHistoryPersisting, @unchecked Send
             .reduce(into: [:]) { $0[$1.messageID] = $1.verdict }
     }
 
+    func feedbackComments(conversationID: UUID) throws -> [UUID: String] {
+        lock.lock(); defer { lock.unlock() }
+        return feedbackRows.values
+            .filter { $0.conversationID == conversationID }
+            .reduce(into: [:]) { if let c = $1.comment { $0[$1.messageID] = c } }
+    }
+
     func allFeedback() throws -> [AnswerFeedback] {
         lock.lock(); defer { lock.unlock() }
         return feedbackRows.values.sorted { $0.createdAt > $1.createdAt }
@@ -226,6 +233,46 @@ struct ChatSessionConversationsTests {
         #expect(session.activeConversationID == newer)
         #expect(session.activeTitle == "New chat title")
         #expect(session.messages.count == 4)
+    }
+
+    @Test("recordFeedback pairs the question, updates the observable maps, and persists")
+    func recordFeedbackCapturesAndPersists() async throws {
+        let store = InMemoryHistoryStore()
+        let session = ChatSession(responder: EchoResponder(), history: store)
+        await session.send("Irish coffee in Cork?")
+        let assistantID = try #require(session.messages.last { $0.role == .assistant }?.id)
+
+        // No residentBrainName set → the passed brain is the fallback.
+        session.recordFeedback(messageID: assistantID, verdict: .bad,
+                               comment: "should have searched the web", brain: "Big")
+
+        // Observable maps update synchronously (the thumb fills immediately).
+        #expect(session.feedbackVerdicts[assistantID] == .bad)
+        #expect(session.feedbackComments[assistantID] == "should have searched the web")
+
+        // The row persists (off-main Task.detached — poll briefly).
+        var rows = try store.allFeedback()
+        for _ in 0 ..< 50 where rows.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+            rows = try store.allFeedback()
+        }
+        let row = try #require(rows.first)
+        #expect(row.question == "Irish coffee in Cork?") // paired the preceding user turn
+        #expect(row.brain == "Big") // fallback, message carried no stamp
+        #expect(row.toolsUsed.isEmpty)
+    }
+
+    @Test("recordFeedback no-ops for an unknown id or a user message")
+    func recordFeedbackGuards() async throws {
+        let store = InMemoryHistoryStore()
+        let session = ChatSession(responder: EchoResponder(), history: store)
+        await session.send("hi")
+        let userID = try #require(session.messages.first { $0.role == .user }?.id)
+
+        session.recordFeedback(messageID: UUID(), verdict: .good, comment: nil, brain: "Lil")
+        session.recordFeedback(messageID: userID, verdict: .bad, comment: "x", brain: "Lil")
+        #expect(session.feedbackVerdicts.isEmpty)
+        #expect(try store.allFeedback().isEmpty)
     }
 
     @Test("send persists the active conversation and bumps historyRevision")
