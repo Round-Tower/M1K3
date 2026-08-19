@@ -79,6 +79,55 @@ struct AskJobStoreTests {
         #expect(await store.status(of: id) == .error("timed out"))
     }
 
+    @Test("runningJobIDs lists only running jobs, oldest first")
+    func runningJobIDsOldestFirst() async {
+        let store = AskJobStore(makeID: counterID())
+        let first = await store.submit()
+        let done = await store.submit()
+        await store.complete(id: done, result: "answered")
+        let second = await store.submit()
+        #expect(await store.runningJobIDs() == [first, second])
+    }
+
+    @Test("summaries carry id, state, and age — never the answer text")
+    func summariesShape() async {
+        // Advancing clock: submit at t0, finish + read 30s later.
+        final class ClockBox: @unchecked Sendable {
+            private let lock = NSLock()
+            private var now = Date(timeIntervalSince1970: 1_000_000)
+            func advance(_ seconds: TimeInterval) {
+                lock.lock(); now = now.addingTimeInterval(seconds); lock.unlock()
+            }
+
+            func read() -> Date {
+                lock.lock(); defer { lock.unlock() }
+                return now
+            }
+        }
+        let clock = ClockBox()
+        let store = AskJobStore(makeID: counterID(), now: { clock.read() })
+        let running = await store.submit()
+        let finished = await store.submit()
+        clock.advance(30)
+        await store.complete(id: finished, result: "the secret answer text")
+        let failed = await store.submit()
+        await store.fail(id: failed, message: "brain busy")
+
+        let summaries = await store.summaries()
+        #expect(summaries.count == 3)
+        // Newest submission first — the recovery listing leads with what the
+        // caller most recently fired.
+        #expect(summaries.map(\.id) == [failed, finished, running])
+        #expect(summaries.first { $0.id == running }?.state == "running")
+        #expect(summaries.first { $0.id == finished }?.state == "done")
+        #expect(summaries.first { $0.id == failed }?.state == "error")
+        #expect(summaries.first { $0.id == running }?.ageSeconds == 30)
+        #expect(summaries.first { $0.id == failed }?.ageSeconds == 0)
+        // Structural: a summary has no payload field — the answer text can't leak
+        // through list_jobs. Pinned via the debug rendering of the whole value.
+        #expect(!String(describing: summaries).contains("secret answer"))
+    }
+
     @Test("reap evicts a terminal job past the ttl but keeps running + fresh jobs")
     func reaping() async {
         // Frozen clock so finishedAt and the reap cutoff are deterministic.

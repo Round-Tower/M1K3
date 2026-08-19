@@ -153,9 +153,11 @@ format runs **native** (`runNative`); otherwise the **ReAct** floor
   M1K3's voice/RAG/memory.
 - **`M1K3MCP` stdio binary** — registered into Claude Desktop/Code; reads the
   app's sandbox store. See `docs/MCP_SETUP.md`. (`ask_m1k3` is submit-and-poll:
-  ~8s inline grace, then a job id polled via `get_answer`, with a ~120s
-  server-side job deadline — see `Sources/M1K3MCPKit/IntelligenceMCPTools.swift`.
-  Long/thinking turns can blow the 120s cap; test those in-app or via SelfTest.)
+  ~8s inline grace, then a job id polled via `get_answer` — see
+  `Sources/M1K3MCPKit/IntelligenceMCPTools.swift`. Since 2026-08-19 a slow
+  turn runs to completion — the old 120s cap that cancelled good Big answers
+  is now a 600s runaway backstop matching job retention; `list_jobs` recovers
+  lost ids, and interim-Mini serves asks while a brain downloads.)
 
 ## Conventions specific to this repo
 

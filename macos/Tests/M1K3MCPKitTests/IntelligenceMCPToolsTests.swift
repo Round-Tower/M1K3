@@ -49,6 +49,20 @@ private func text(_ result: CallTool.Result) -> String? {
     return nil
 }
 
+/// Deterministic job ids ("job-1", "job-2", …) for tests that name them.
+private func counterID() -> @Sendable () -> String {
+    final class Box: @unchecked Sendable {
+        let lock = NSLock()
+        var count = 0
+    }
+    let box = Box()
+    return {
+        box.lock.lock(); defer { box.lock.unlock() }
+        box.count += 1
+        return "job-\(box.count)"
+    }
+}
+
 /// A one-shot gate so a fake `ask` can block until the test releases it — used to
 /// exercise the submit → poll → done lifecycle deterministically.
 private actor Gate {
@@ -68,10 +82,10 @@ private actor Gate {
 }
 
 struct IntelligenceMCPToolsTests {
-    @Test("the surface is ask_m1k3, get_answer, and remember")
+    @Test("the surface is ask_m1k3, get_answer, list_jobs, and remember")
     func surface() {
         let registry = MCPToolRegistry(makeIntelligenceToolDefinitions(handlers: makeHandlers(log: CallLog())))
-        #expect(registry.tools.map(\.name) == ["ask_m1k3", "get_answer", "remember"])
+        #expect(registry.tools.map(\.name) == ["ask_m1k3", "get_answer", "list_jobs", "remember"])
     }
 
     /// Long enough that only a genuinely hung fake could miss it (see the note on
@@ -261,6 +275,79 @@ struct IntelligenceMCPToolsTests {
         #expect(redeem.isError != true)
         #expect(text(redeem) == "Grounded answer [Doc §Heading]")
         #expect(log.all == ["ask:first ask"]) // exactly one generation — no re-ask
+    }
+
+    @Test("a new question while a job runs returns a busy note naming that job — and queues nothing")
+    func askWhileJobRunningIsHonestBusy() async {
+        // The app-side ask is single-flight, so a second question WOULD fail
+        // anyway — but it used to burn a fresh job id and surface as an error
+        // within milliseconds. Now the handler checks the store first and hands
+        // back a non-error note naming the running job, so the caller can
+        // redeem it (or wait) instead of wondering whether M1K3 is broken.
+        let gate = Gate()
+        let store = AskJobStore(makeID: counterID())
+        let log = CallLog()
+        let handlers = IntelligenceToolHandlers(
+            ask: { question in
+                log.add("ask:\(question)")
+                await gate.wait()
+                return "slow answer"
+            },
+            remember: { _, _, _ in "noop" }
+        )
+        let registry = MCPToolRegistry(
+            makeIntelligenceToolDefinitions(handlers: handlers, jobStore: store, graceSeconds: 0.2)
+        )
+
+        let submit = await registry.call(name: "ask_m1k3", arguments: ["question": .string("first")])
+        #expect(text(submit)?.contains("job-1") == true)
+
+        let second = await registry.call(name: "ask_m1k3", arguments: ["question": .string("second")])
+        #expect(second.isError != true)
+        #expect(text(second)?.contains("job-1") == true)
+        #expect(text(second)?.contains("wasn’t queued") == true)
+        // Exactly one generation ran and exactly one job exists — the second
+        // question spawned neither.
+        #expect(log.all == ["ask:first"])
+        #expect(await store.summaries().count == 1)
+        await gate.open()
+    }
+
+    @Test("list_jobs shows job ids and states without answer text")
+    func listJobsListing() async throws {
+        let gate = Gate()
+        let store = AskJobStore(makeID: counterID())
+        let handlers = IntelligenceToolHandlers(
+            ask: { _ in
+                await gate.wait()
+                return "the finished answer body"
+            },
+            remember: { _, _, _ in "noop" }
+        )
+        let registry = MCPToolRegistry(
+            makeIntelligenceToolDefinitions(handlers: handlers, jobStore: store, graceSeconds: 0.2)
+        )
+
+        _ = await registry.call(name: "ask_m1k3", arguments: ["question": .string("slow one")])
+        let whileRunning = await registry.call(name: "list_jobs", arguments: nil)
+        #expect(whileRunning.isError != true)
+        #expect(text(whileRunning)?.contains("job-1") == true)
+        #expect(text(whileRunning)?.contains("running") == true)
+
+        await gate.open()
+        try await Task.sleep(for: .milliseconds(150))
+        let afterFinish = await registry.call(name: "list_jobs", arguments: nil)
+        #expect(text(afterFinish)?.contains("done") == true)
+        // The listing is a recovery index, never a second answer channel.
+        #expect(text(afterFinish)?.contains("finished answer body") != true)
+    }
+
+    @Test("list_jobs with no jobs says so plainly")
+    func listJobsEmpty() async {
+        let registry = MCPToolRegistry(makeIntelligenceToolDefinitions(handlers: makeHandlers(log: CallLog())))
+        let result = await registry.call(name: "list_jobs", arguments: nil)
+        #expect(result.isError != true)
+        #expect(text(result)?.contains("No ask_m1k3 jobs") == true)
     }
 
     @Test("ask_m1k3 with an unknown job_id is a clean isError, not a new generation")

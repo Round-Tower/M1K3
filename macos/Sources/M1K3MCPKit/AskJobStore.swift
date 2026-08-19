@@ -16,6 +16,11 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-01, Confidence 0.85 (lifecycle
 //  TDD'd; the live generation write-back is verify-by-launch). Prior: Unknown.
+//
+//  Review: Kev + claude-fable-5, 2026-08-19, Confidence 0.9. Added the
+//  payload-free JobSummary listing (list_jobs — recovery for a dropped id) and
+//  runningJobIDs (the honest-busy check). Submission order via an explicit
+//  sequence counter, not clock ties. TDD'd.
 
 import Foundation
 
@@ -26,9 +31,23 @@ public actor AskJobStore {
         case error(String)
     }
 
+    /// One row of the `list_jobs` recovery listing. Deliberately payload-free —
+    /// ids, state, and age only — so the listing can never become a second
+    /// answer channel (answers are redeemed through get_answer alone).
+    public struct JobSummary: Sendable, Equatable {
+        public let id: String
+        /// "running" | "done" | "error" — the state NAME, never the payload.
+        public let state: String
+        /// Seconds since the job was submitted.
+        public let ageSeconds: Int
+    }
+
     private struct Job {
         var status: Status
         var finishedAt: Date?
+        var createdAt: Date
+        /// Monotonic submission order — dictionaries don't remember it.
+        var sequence: Int
     }
 
     /// Terminal jobs older than this are evicted opportunistically on submit —
@@ -38,6 +57,7 @@ public actor AskJobStore {
     private let makeID: @Sendable () -> String
     private let now: @Sendable () -> Date
     private var jobs: [String: Job] = [:]
+    private var nextSequence = 0
 
     public init(
         makeID: @escaping @Sendable () -> String = { UUID().uuidString },
@@ -52,7 +72,8 @@ public actor AskJobStore {
     public func submit() -> String {
         reap(olderThan: Self.jobRetention)
         let id = makeID()
-        jobs[id] = Job(status: .running, finishedAt: nil)
+        nextSequence += 1
+        jobs[id] = Job(status: .running, finishedAt: nil, createdAt: now(), sequence: nextSequence)
         return id
     }
 
@@ -67,6 +88,33 @@ public actor AskJobStore {
     /// The current status, or nil if the id is unknown (never submitted, or reaped).
     public func status(of id: String) -> Status? {
         jobs[id]?.status
+    }
+
+    /// Ids of jobs still generating, oldest first — the busy check reads the
+    /// head (the job a new question would collide with on the single-flight
+    /// app lock).
+    public func runningJobIDs() -> [String] {
+        jobs.filter { _, job in job.status == .running }
+            .sorted { $0.value.sequence < $1.value.sequence }
+            .map(\.key)
+    }
+
+    /// Every retained job, newest submission first — the `list_jobs` recovery
+    /// index for a client that dropped its ticket. Payload-free by type.
+    public func summaries() -> [JobSummary] {
+        let current = now()
+        return jobs.sorted { $0.value.sequence > $1.value.sequence }.map { id, job in
+            let state = switch job.status {
+            case .running: "running"
+            case .done: "done"
+            case .error: "error"
+            }
+            return JobSummary(
+                id: id,
+                state: state,
+                ageSeconds: Int(current.timeIntervalSince(job.createdAt).rounded())
+            )
+        }
     }
 
     /// Evict terminal (done/error) jobs whose finish time is older than `ttl`.
