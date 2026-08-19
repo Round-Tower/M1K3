@@ -85,6 +85,9 @@ let package = Package(
         // Clear, excluded from diagnostics AND from memory distillation — a
         // pulse history must never become permanent memory-graph facts).
         .library(name: "M1K3Heartbeat", targets: ["M1K3Heartbeat"]),
+        // Brain at Home — the LAN brain-serving layer (TLS-PSK listener,
+        // pairing, Bonjour advertiser, scoped LAN MCP route).
+        .library(name: "M1K3BrainServe", targets: ["M1K3BrainServe"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
@@ -450,6 +453,25 @@ let package = Package(
             name: "M1K3MCPLogTests",
             dependencies: ["M1K3MCPLog", "M1K3MCPKit"],
             path: "Tests/M1K3MCPLogTests"
+        ),
+        // Brain at Home: the LAN inference/service layer — pure pairing state
+        // machine, tool-palette scoping, route/request/SSE-frame policies
+        // (all TDD-fast), plus the TLS-PSK NWListener shell + dnssd advertiser
+        // (verify-by-launch, mirroring LocalMCPHTTPServer's split). Mechanism
+        // per scratch/brain-at-home/spikes/RESULTS.md: TLS 1.2 pinned +
+        // ECDHE_PSK 0xD001 (1.3 external-PSK doesn't handshake on this OS).
+        .target(
+            name: "M1K3BrainServe",
+            dependencies: [
+                "M1K3LogCore",
+                "M1K3MCPKit", // HTTPWireCodec + the scoped MCP session reuse
+            ],
+            path: "Sources/M1K3BrainServe"
+        ),
+        .testTarget(
+            name: "M1K3BrainServeTests",
+            dependencies: ["M1K3BrainServe", "M1K3MCPKit"],
+            path: "Tests/M1K3BrainServeTests"
         ),
         // The heartbeat: pure pulse policies (schedule/quiet-hours/skip,
         // deterministic digest composer, narrative validator) + a capped GRDB

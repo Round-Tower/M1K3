@@ -102,6 +102,18 @@ final class MCPHostController {
         Task { enabled ? await start() : await stop() }
     }
 
+    /// The FULL tool surface, one assembly shared by the loopback server and
+    /// Brain at Home's LAN /mcp route (which filters it through
+    /// MCPToolScope.lan before serving) — one implementation per tool, scoped
+    /// at the edge, so the two surfaces can't drift.
+    func makeAllToolDefinitions(jobStore: AskJobStore = AskJobStore()) -> [MCPToolDefinition] {
+        makeKnowledgeToolDefinitions(store: env.store, embedder: env.embedder)
+            + makeVoiceToolDefinitions(handlers: makeVoiceHandlers())
+            + makeIntelligenceToolDefinitions(handlers: makeIntelligenceHandlers(), jobStore: jobStore)
+            + makeOpenLinkToolDefinitions(handlers: makeOpenLinkHandlers())
+            + memoryToolDefinitions()
+    }
+
     func start() async {
         guard server == nil else { return }
         // One job store for the server's lifetime — captured in the ask_m1k3 /
@@ -109,11 +121,7 @@ final class MCPHostController {
         // on a later one (the HTTP transport is stateless per-request).
         let intelligenceJobStore = AskJobStore()
         let registry = MCPToolRegistry(
-            makeKnowledgeToolDefinitions(store: env.store, embedder: env.embedder)
-                + makeVoiceToolDefinitions(handlers: makeVoiceHandlers())
-                + makeIntelligenceToolDefinitions(handlers: makeIntelligenceHandlers(), jobStore: intelligenceJobStore)
-                + makeOpenLinkToolDefinitions(handlers: makeOpenLinkHandlers())
-                + memoryToolDefinitions(),
+            makeAllToolDefinitions(jobStore: intelligenceJobStore),
             // Opt-in Agent Interaction Log (Settings toggle, OFF by default —
             // the store self-gates on every call). Only this in-app HTTP
             // surface is wired for v1; the stdio M1K3MCP binary's registry

@@ -118,3 +118,15 @@ extension SwappableInferenceProvider: TurnWarmable {
         (active as? TurnWarmable)?.prepareForNextTurn()
     }
 }
+
+/// Forwards the raw (persona-free) completion capability — the Brain at Home
+/// /v1/generate seam. Same every-façade-forwards rule as its siblings: an
+/// `as?` cast that dies at the wrapper would silently make the LAN route
+/// "raw unavailable" while the bare provider serves it. A backend that
+/// genuinely can't do raw yields an immediately-finished stream, which the
+/// listener surfaces as a 503 — never a silent persona-seeded fallback.
+extension SwappableInferenceProvider: RawCompletionProviding {
+    public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
+        (active as? RawCompletionProviding)?.generateRawStreaming(prompt: prompt, maxTokens: maxTokens)
+    }
+}

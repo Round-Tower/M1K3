@@ -297,6 +297,9 @@ final class AppEnvironment {
     /// In-process MCP server lifecycle + voice tool glue (MCPHostController.swift).
     /// Set once at init tail (needs self for the handler closures).
     private(set) var mcpHost: MCPHostController!
+    /// Brain at Home — the LAN TLS-PSK brain service + pairing ceremony
+    /// (BrainServeController.swift). Set at init tail; default OFF.
+    private(set) var brainServe: BrainServeController!
     /// Menu-bar "Ask M1K3" — a headless grounded answer with no chat window.
     /// Owns its own dedicated responder (MenuBarAsk.swift); set at init tail.
     private(set) var menuBarAsk: MenuBarAsk!
@@ -784,6 +787,8 @@ final class AppEnvironment {
         Self.resetVoiceModeFlagAtLaunch()
         mcpHost = MCPHostController(environment: self)
         mcpHost.startIfEnabled()
+        brainServe = BrainServeController(environment: self)
+        brainServe.startIfEnabled()
         menuBarAsk = MenuBarAsk(environment: self)
         // Cheap + synchronous (registration only) — see AppEnvironment+MetricKit.swift.
         startMetricKitCollection()
@@ -887,6 +892,9 @@ final class AppEnvironment {
         // pressure into the cool-head state so the agent loop eases off when the Mac
         // runs hot. Never swaps the brain.
         applyCoolHead()
+        // Local preempts remote (Brain at Home, audit S2): the person at THIS
+        // keyboard outranks a paired device's in-flight stream.
+        brainServe?.preemptForLocalTurn()
         let clock = ContinuousClock()
         let started = clock.now
         avatar.setActivity(.thinking)

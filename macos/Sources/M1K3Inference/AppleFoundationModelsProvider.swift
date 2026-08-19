@@ -413,3 +413,42 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
         }
     }
 }
+
+// MARK: - Raw (persona-free) completion — Brain at Home /v1/generate
+
+/// A fresh, instruction-FREE session per call: no persona, no prewarm slot,
+/// no tools — the Brain at Home raw contract (2026-08-19 audit, finding 1).
+/// AFM's own snapshots are CUMULATIVE partials; this seam converts them to
+/// deltas so the wire contract matches the MLX tiers' token stream.
+extension AppleFoundationModelsProvider: RawCompletionProviding {
+    public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
+        AsyncStream { continuation in
+            let session = LanguageModelSession()
+            let options = GenerationOptions(maximumResponseTokens: maxTokens.map { max(1, $0) })
+            let task = Task { [self] in
+                do {
+                    var previous = ""
+                    for try await snapshot in session.streamResponse(to: prompt, options: options) {
+                        let content = snapshot.content
+                        if content.hasPrefix(previous) {
+                            let delta = String(content.dropFirst(previous.count))
+                            if !delta.isEmpty { continuation.yield(delta) }
+                        } else {
+                            // Snapshot diverged from its own prefix (rare) —
+                            // emit whole rather than lose text.
+                            continuation.yield(content)
+                        }
+                        previous = content
+                    }
+                    continuation.finish()
+                } catch is CancellationError {
+                    continuation.finish()
+                } catch {
+                    logFailure(error, streaming: true)
+                    continuation.finish()
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}

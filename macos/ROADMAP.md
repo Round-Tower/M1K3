@@ -271,21 +271,23 @@ Spike scaffolding, results, and Kev's open calls: `scratch/voice-mobile/PLAN-DRA
   is a privacy landmine on a listening surface (assert on-device, fail loud);
   thermals need a measured 10-minute burn, not a demo.
 
-### 2. Brain-at-home
-Spec, security audit, and Kev's open calls: `scratch/brain-at-home/SPEC.md`.
-
-- **Spec complete + security-hardened:** phone uses the Mac as a pure
-  `InferenceProvider` over a *new*, default-OFF TLS-PSK listener — the MCP
-  server's loopback pin is never touched, tool calls are answered phone-side
-  only (never re-opens the corpus over LAN), QR-carried 32-byte PSK for mutual
-  auth. 12 security findings, 4 blocking, all folded into the spec.
-- **Blocked on Kev's §8 calls:** naming, serving indicator, thermal etiquette,
-  visionOS timing.
-- **Then Phase A spikes:** TLS-PSK echo (incl. negative paths + an
-  unreachable-relay case), SSE streaming client (repo has zero streaming-HTTP
-  client code today — a real spike), dnssd/NWBrowser round-trip. Prior-art
-  reference: `gemba`'s `BonjourBrowser.swift` — but its "same LAN = trusted,
-  no auth" model is the anti-pattern to avoid, not copy.
+### 2. Brain-at-home — **Mac side SHIPPED 2026-08-19** (`docs/BRAIN_AT_HOME_SPEC.md`)
+- **Phase A spikes all PASS** (`scratch/brain-at-home/spikes/RESULTS.md`) with
+  one spec-impacting finding: TLS 1.3 external-PSK doesn't handshake on
+  Network.framework — the mechanism is **TLS 1.2 pinned + ECDHE_PSK 0xD001**
+  (PSK mutual auth WITH forward secrecy). §8a defaults adopted (plan-approval
+  veto pass, 2026-08-19).
+- **Mac server live behind Settings → Privacy → Brain at Home** (default OFF):
+  `M1K3BrainServe` module (pairing state machine + scope + listener, TDD'd
+  incl. real loopback TLS-PSK negative paths), QR pairing with the on-Mac
+  Approve + separate candidate-only pairing listener, Bonjour advertise,
+  429/preemption etiquette, and — **Kev's ruling** — the SCOPED LAN `/mcp`
+  route (read/ask allowlist, its own default-OFF toggle).
+- **Next:** Phase C clients — iPhone (`NWConnection` SSE; URLSession can't do
+  PSK) then Android (Conscrypt PSKKeyManager, or the cert-pin fallback).
+  Hardware-owed: real second-device pairing + Tailscale-unreachable.
+  Follow-ups: canary→Keychain migration; LAN-MCP client-name stamping once
+  the heartbeat-timeline PR's identity capture merges.
 
 ---
 

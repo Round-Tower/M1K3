@@ -91,6 +91,11 @@ extension AppEnvironment {
         }
         intelligenceAskInFlight = true
         defer { intelligenceAskInFlight = false }
+        // This turn is about to take the provider — preempt any in-flight
+        // Brain at Home remote stream first, exactly as AppEnvironment.send
+        // does. Without it an ask (menu-bar, MCP) races a remote generation
+        // on the same single-flight slot (2026-08-19 audit, finding 4).
+        brainServe?.preemptForLocalTurn()
         // Hoist members into locals before the Logger interpolation: the message is
         // an autoclosure, so a `self.` member there requires explicit self, which
         // swiftformat then strips → a build break (the documented logging landmine).

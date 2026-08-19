@@ -59,6 +59,8 @@ struct PrivacySettingsPane: View {
             }
 
             mcpSection
+
+            BrainAtHomeSection()
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -77,13 +79,17 @@ struct PrivacySettingsPane: View {
         } header: {
             Text("MCP server")
         } footer: {
-            Text("Lets Claude (or any MCP client) on THIS Mac use M1K3's "
-                + "knowledge search, voice, and microphone. Loopback only — "
-                + "never reachable from the network. One client at a time. "
-                + "Connect with:  claude mcp add --transport http m1k3 "
-                + "http://127.0.0.1:\(env.mcpHost.port)/mcp")
-                .font(.caption).foregroundStyle(.secondary)
-                .textSelection(.enabled)
+            // Multiline literal, not a + chain (the PR #92 type-checker lesson).
+            Text("""
+            Lets Claude (or any MCP client) on THIS Mac use M1K3's knowledge \
+            search, voice, and microphone. This server is loopback-only — \
+            other machines can never reach it; the only network path into \
+            M1K3 is Brain at Home below, for devices you pair, off by \
+            default. One client at a time. Connect with:  claude mcp add \
+            --transport http m1k3 http://127.0.0.1:\(env.mcpHost.port)/mcp
+            """)
+            .font(.caption).foregroundStyle(.secondary)
+            .textSelection(.enabled)
         }
     }
 }
