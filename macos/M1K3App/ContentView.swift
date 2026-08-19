@@ -295,7 +295,9 @@ struct ContentView: View {
             // bubbles. Standard chat mode only — voice mode has its own hero. It
             // recedes reactively while you read/type so text stays legible.
             if avatarDisplay == .background, !env.isVoiceModeActive {
-                AvatarChatBackground(env: env, isTyping: !draft.isEmpty)
+                // The one chat-context backdrop — opt into the thinking rain
+                // (the menu-bar/onboarding/brain-picker reuses don't).
+                AvatarChatBackground(env: env, isTyping: !draft.isEmpty, showsInferenceRain: true)
                     .transition(.opacity)
             }
         }

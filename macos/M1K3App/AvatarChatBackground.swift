@@ -23,6 +23,11 @@ struct AvatarChatBackground: View {
     let env: AppEnvironment
     /// The user is composing — recede so the draft + transcript stay crisp.
     let isTyping: Bool
+    /// Show the live inference rain behind the avatar. Default OFF — this
+    /// backdrop is REUSED by the menu-bar popover, brain picker, and onboarding
+    /// (HelloView), none of which are "the chat"; raining reasoning there is
+    /// off-context (review fold). Only the main chat backdrop opts in.
+    var showsInferenceRain = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -45,8 +50,10 @@ struct AvatarChatBackground: View {
             // so the rain shows through) floating in front. Mostly reasoning +
             // tool pings here; the answer's already in the bubble. The layer is
             // non-interactive + a11y-hidden.
-            InferencePhosphorView()
-                .ignoresSafeArea()
+            if showsInferenceRain {
+                InferencePhosphorView()
+                    .ignoresSafeArea()
+            }
             AvatarSurface(env: env, paused: !resolved.animatesMotion)
                 .scaleEffect(resolved.scale)
                 .blur(radius: resolved.blur)

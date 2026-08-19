@@ -48,6 +48,14 @@ struct InferencePhosphorView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Low Power Mode freezes the layer entirely (the ChatBackdropTreatment
+    /// contract the surrounding ZStack documents: "lowPower wins outright").
+    /// Read at render like ChatBackdropTreatment does — not observable, but
+    /// activity/turn changes re-render and re-read it.
+    private var lowPower: Bool {
+        ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
     /// Elapsed-time origin (the CRTOverlay / AudioCaptureBackdrop precision
     /// lesson — never an absolute reference date).
     @State private var start = Date()
@@ -55,15 +63,20 @@ struct InferencePhosphorView: View {
     @State private var rain = InferencePhosphor(maxLines: 7, fragmentCap: 64, lineTTL: 9)
     /// Chars already consumed per message id, so a growing reasoning/answer
     /// string feeds only its new tail — never re-reads what's flushed.
-    @State private var consumed: [String: (reasoning: Int, answer: Int)] = [:]
+    /// Reasoning chars already consumed per message id — feeds only the new
+    /// tail. (Answer is deliberately never fed; no answer cursor.)
+    @State private var consumed: [String: Int] = [:]
     /// Partial phrase still accumulating per source — flushed as ONE line on a
     /// clause/sentence boundary (or when it gets long), so the rain reads as
     /// phrases, not one word per line.
     @State private var buffer: [PhosphorSource: String] = [:]
     @State private var lastActivity: String?
     /// Highest ambient-note id already rained, so `env.ambientNotes` (heartbeat
-    /// pulses, later notifications/calls) each drift by exactly once.
-    @State private var lastAmbientID = -1
+    /// pulses, later notifications/calls) each drift by exactly once. Nil until
+    /// the view initialises it to the ring's CURRENT tail on first feed — so
+    /// re-entering voice mode doesn't replay hours-old buffered pulses as if
+    /// they just happened (review fold): only notes arriving AFTER mount rain.
+    @State private var lastAmbientID: Int?
 
     /// The in-flight assistant message whose live fields drive the rain.
     private var activeMessage: ChatMessage? {
@@ -74,7 +87,11 @@ struct InferencePhosphorView: View {
     }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+        // Under Low Power the TimelineView is PAUSED (no 30fps loop) — the same
+        // "stay cheap" invariant AvatarSurface honours via `paused:` in this
+        // ZStack. A paused timeline still renders one frame, so lingering lines
+        // fade on the next real change rather than freezing mid-air forever.
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: lowPower)) { context in
             let now = context.date
             Canvas { canvas, size in
                 draw(canvas, size: size, now: now)
@@ -123,13 +140,18 @@ struct InferencePhosphorView: View {
     private func feed(now: Date) {
         rain.prune(at: now)
 
+        // First feed: adopt the ring's CURRENT tail as the cursor, so the
+        // notes already buffered before this view mounted do NOT replay as if
+        // happening now (voice-mode re-entry burst — review fold). Only notes
+        // arriving after this point rain.
+        let cursor = lastAmbientID ?? (env.ambientNotes.last?.id ?? -1)
         // Ambient life — heartbeat pulses (and later notifications / call
         // transcription) drift regardless of any chat turn. Each note is a
         // complete string; split it into phrase lines once.
-        for note in env.ambientNotes where note.id > lastAmbientID {
+        for note in env.ambientNotes where note.id > cursor {
             ingestPhrases(note.text, source: note.source, now: now)
-            lastAmbientID = note.id
         }
+        lastAmbientID = env.ambientNotes.last?.id ?? cursor
 
         // What M1K3 is DOING right now — tool activity + reasoning (if a brain
         // ever emits it). Deliberately NOT the answer: it already lives in the
@@ -140,18 +162,18 @@ struct InferencePhosphorView: View {
             return
         }
         let id = message.id.uuidString
-        var marks = consumed[id] ?? (0, 0)
+        var reasoningMark = consumed[id] ?? 0
 
         if let label = message.activityLabel, label != lastActivity {
             rain.ingestOwn(label, source: .tool, at: now)
             lastActivity = label
         }
-        if let reasoning = message.reasoning, reasoning.count > marks.reasoning {
-            accumulate(of: reasoning, from: &marks.reasoning, source: .thinking, now: now)
+        if let reasoning = message.reasoning, reasoning.count > reasoningMark {
+            accumulate(of: reasoning, from: &reasoningMark, source: .thinking, now: now)
         }
-        consumed[id] = marks
+        consumed[id] = reasoningMark
         if consumed.count > 8 {
-            consumed = [id: marks]
+            consumed = [id: reasoningMark]
         }
     }
 
