@@ -30,7 +30,7 @@ import shutil
 # Paths resolve from this file's location (macos/tools/icons/) so the script
 # works from any checkout and any working directory.
 MACOS_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SRC = os.path.join(MACOS_DIR, "M1K3.icon", "Assets", "M1K3 2.png")
+SRC = os.path.join(MACOS_DIR, "M1K3.icon", "Assets", "M-mark.png")
 DEST = os.path.join(MACOS_DIR, "M1K3visionOS", "Assets.xcassets")
 STACK = os.path.join(DEST, "AppIcon.solidimagestack")
 S = 1024
