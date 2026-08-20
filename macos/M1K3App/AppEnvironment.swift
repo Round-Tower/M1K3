@@ -829,6 +829,11 @@ final class AppEnvironment {
         // see AppEnvironment+Heartbeat.swift.
         startHeartbeatLoop()
 
+        // Stamp each answer with the brain that rendered it — full feedback
+        // traceability (set here, post-init, so the weak-self capture is sound;
+        // invoked only at answer-finalization). Reads the @Observable selection.
+        chat.residentBrainName = { [weak self] in self?.selectedBrain.displayName }
+
         // Warm a restored MLX brain (Lil/Big) on launch so it's ready to answer;
         // Mini (Apple) needs nothing. Setting selectedRuntime drives the existing
         // preload path + the progress UI. No-op/fast once the weights are cached.

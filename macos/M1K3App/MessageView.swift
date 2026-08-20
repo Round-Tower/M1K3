@@ -17,6 +17,13 @@ import SwiftUI
 
 struct MessageView: View {
     let message: ChatMessage
+    /// The current feedback verdict on this answer (nil = unrated), so the
+    /// thumb shows filled across reloads.
+    var verdict: FeedbackVerdict?
+    /// An existing note on this answer, prefilled when re-opening the field.
+    var existingComment: String?
+    /// Record Kev's judgement — verdict + optional comment.
+    var onFeedback: (FeedbackVerdict, String?) -> Void = { _, _ in }
     /// Called with the message text when the user taps speak.
     let onSpeak: (String) -> Void
     /// Called with a link found in the turn when the user taps its chip — opens it
@@ -46,6 +53,8 @@ struct MessageView: View {
     @State private var showSources = false
     @State private var showReasoning = false
     @State private var didCopy = false
+    @State private var showComment = false
+    @State private var commentDraft = ""
     /// Monotonic token for the Speak button's acknowledge bounce — an Int, not a
     /// Bool, so repeat taps re-fire (Bool value effects double-fire; the
     /// speakDownbeat precedent in VoiceModeView).
@@ -238,6 +247,44 @@ struct MessageView: View {
                     .buttonStyle(.glass)
                     .accessibilityLabel("Share this answer")
                     .help("Share this answer")
+
+                    Divider().frame(height: 14).opacity(0.4)
+
+                    // Feedback: one-tap thumbs-up; thumbs-down commits the bad
+                    // verdict and opens a comment field (optional) — the note is
+                    // what makes a bad answer actionable ("should've searched").
+                    Button {
+                        onFeedback(.good, nil)
+                    } label: {
+                        Image(systemName: verdict == .good ? "hand.thumbsup.fill" : "hand.thumbsup")
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.caption)
+                            .contentTransition(.symbolEffect(.replace))
+                    }
+                    .buttonStyle(.glass)
+                    .tint(verdict == .good ? .green : nil)
+                    .accessibilityLabel("Good answer")
+                    .help("Good answer")
+
+                    Button {
+                        // Open the field prefilled; DON'T commit yet — a commit
+                        // on tap with a stale/blank comment would clobber a saved
+                        // note. The verdict + note commit together on Done.
+                        commentDraft = existingComment ?? ""
+                        showComment = true
+                    } label: {
+                        Image(systemName: verdict == .bad ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.caption)
+                            .contentTransition(.symbolEffect(.replace))
+                    }
+                    .buttonStyle(.glass)
+                    .tint(verdict == .bad ? .orange : nil)
+                    .accessibilityLabel("Needs work")
+                    .help("Needs work — add a note on why")
+                    .popover(isPresented: $showComment, arrowEdge: .bottom) {
+                        feedbackCommentEditor
+                    }
                 }
             }
         }
@@ -256,6 +303,34 @@ struct MessageView: View {
     /// feature for now rather than a Universal Link.
     private var shareText: String {
         message.text + ShareSignature.answerSuffix
+    }
+
+    /// The thumbs-down note field — optional, but focused so a quick "why" is
+    /// one keystroke away. Save persists the note against the already-committed
+    /// bad verdict; a blank note is fine (the verdict stands on its own).
+    private var feedbackCommentEditor: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("What was off?")
+                .font(.headline)
+            Text("A quick note — e.g. \"should have searched the web\" — so this can be fixed later. Optional.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            TextField("Note (optional)", text: $commentDraft, axis: .vertical)
+                .lineLimit(2 ... 5)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 260)
+            HStack {
+                Spacer()
+                Button("Done") {
+                    onFeedback(.bad, commentDraft)
+                    showComment = false
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(16)
     }
 
     /// Copy the answer to the clipboard, with a brief checkmark confirmation.

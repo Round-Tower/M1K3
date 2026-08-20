@@ -70,6 +70,19 @@ public protocol ChatHistoryPersisting: Sendable {
     /// Advance the watermark after a successful distillation. No-op for
     /// unknown ids (the setTitle precedent — distillation races deletion).
     func setDistilledWatermark(id: UUID, count: Int) throws
+    /// Record (or replace) the feedback on one answer. NO protocol default —
+    /// a silent no-op conformer would invisibly drop the curation data this
+    /// exists to capture (the distilledWatermark precedent).
+    func recordFeedback(_ feedback: AnswerFeedback) throws
+    /// The verdicts for a conversation's rated answers, so the UI can show the
+    /// filled thumb on reload. messageID → verdict.
+    func feedbackVerdicts(conversationID: UUID) throws -> [UUID: FeedbackVerdict]
+    /// The saved notes for a conversation's rated answers, so re-opening the
+    /// comment field PREFILLS the existing note (never silently wiping it).
+    /// messageID → comment (only rows that have one).
+    func feedbackComments(conversationID: UUID) throws -> [UUID: String]
+    /// Every feedback row, newest first — the export/inspection read.
+    func allFeedback() throws -> [AnswerFeedback]
 }
 
 public extension ChatHistoryPersisting {
@@ -117,6 +130,24 @@ public final class GRDBChatHistoryStore: ChatHistoryPersisting, @unchecked Senda
         migrator.registerMigration("v2-distilled") { db in
             try db.alter(table: "conversations") { table in
                 table.add(column: "distilled_count", .integer).notNull().defaults(to: 0)
+            }
+        }
+        // Per-answer feedback (good/bad + optional comment) — a SEPARATE table,
+        // not the conversation blob, so it's queryable + exportable as curation
+        // data. Keyed by the assistant message's UUID (one verdict per answer).
+        // Self-contained: it carries the Q/A/tools/brain snapshot so a row
+        // survives its conversation's deletion (no FK cascade on purpose).
+        migrator.registerMigration("v3-feedback") { db in
+            try db.create(table: "message_feedback") { table in
+                table.column("message_id", .text).primaryKey()
+                table.column("conversation_id", .text).notNull().indexed()
+                table.column("verdict", .integer).notNull() // +1 good / -1 bad
+                table.column("comment", .text) // NULL when none
+                table.column("question", .text).notNull()
+                table.column("answer", .text).notNull()
+                table.column("tools_used", .text).notNull() // JSON [String]
+                table.column("brain", .text).notNull()
+                table.column("created_at", .double).notNull()
             }
         }
         try migrator.migrate(dbQueue)
@@ -223,6 +254,99 @@ public final class GRDBChatHistoryStore: ChatHistoryPersisting, @unchecked Senda
                 sql: "UPDATE conversations SET distilled_count = ? WHERE id = ?",
                 arguments: [count, id.uuidString]
             )
+        }
+    }
+
+    public func recordFeedback(_ feedback: AnswerFeedback) throws {
+        let toolsJSON = String(
+            decoding: (try? JSONEncoder().encode(feedback.toolsUsed)) ?? Data("[]".utf8), as: UTF8.self
+        )
+        try dbQueue.write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO message_feedback
+                    (message_id, conversation_id, verdict, comment, question, answer, tools_used, brain, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(message_id) DO UPDATE SET
+                    verdict = excluded.verdict, comment = excluded.comment,
+                    question = excluded.question, answer = excluded.answer,
+                    tools_used = excluded.tools_used, brain = excluded.brain,
+                    created_at = excluded.created_at
+                """,
+                arguments: [
+                    feedback.messageID.uuidString,
+                    feedback.conversationID.uuidString,
+                    feedback.verdict.rawValue,
+                    feedback.comment,
+                    feedback.question,
+                    feedback.answer,
+                    toolsJSON,
+                    feedback.brain,
+                    feedback.createdAt.timeIntervalSince1970,
+                ]
+            )
+        }
+    }
+
+    public func feedbackVerdicts(conversationID: UUID) throws -> [UUID: FeedbackVerdict] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: "SELECT message_id, verdict FROM message_feedback WHERE conversation_id = ?",
+                arguments: [conversationID.uuidString]
+            )
+            var result: [UUID: FeedbackVerdict] = [:]
+            for row in rows {
+                guard let id = UUID(uuidString: row["message_id"]),
+                      let verdict = FeedbackVerdict(rawValue: row["verdict"])
+                else { continue }
+                result[id] = verdict
+            }
+            return result
+        }
+    }
+
+    public func feedbackComments(conversationID: UUID) throws -> [UUID: String] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: "SELECT message_id, comment FROM message_feedback WHERE conversation_id = ? AND comment IS NOT NULL",
+                arguments: [conversationID.uuidString]
+            )
+            var result: [UUID: String] = [:]
+            for row in rows {
+                guard let id = UUID(uuidString: row["message_id"]),
+                      let comment = row["comment"] as String? else { continue }
+                result[id] = comment
+            }
+            return result
+        }
+    }
+
+    public func allFeedback() throws -> [AnswerFeedback] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db, sql: "SELECT * FROM message_feedback ORDER BY created_at DESC"
+            )
+            return rows.compactMap { row -> AnswerFeedback? in
+                guard let messageID = UUID(uuidString: row["message_id"]),
+                      let conversationID = UUID(uuidString: row["conversation_id"]),
+                      let verdict = FeedbackVerdict(rawValue: row["verdict"])
+                else { return nil }
+                let toolsData = Data((row["tools_used"] as String? ?? "[]").utf8)
+                let tools = (try? JSONDecoder().decode([String].self, from: toolsData)) ?? []
+                return AnswerFeedback(
+                    messageID: messageID,
+                    conversationID: conversationID,
+                    verdict: verdict,
+                    comment: row["comment"],
+                    question: row["question"],
+                    answer: row["answer"],
+                    toolsUsed: tools,
+                    brain: row["brain"],
+                    createdAt: Date(timeIntervalSince1970: row["created_at"])
+                )
+            }
         }
     }
 }

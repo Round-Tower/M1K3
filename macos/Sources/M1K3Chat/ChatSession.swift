@@ -168,6 +168,13 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// the answer and surfaced (collapsibly) for transparency. Persisted as an
     /// optional key, so old transcripts (without it) still decode to nil.
     public var reasoning: String?
+    /// The brain that actually rendered this answer (display name — "Lil",
+    /// "Big", "Mini"), stamped at finalization. PERSISTED, so a reloaded
+    /// conversation attributes each answer to the brain that produced it —
+    /// full feedback traceability (the currently-SELECTED brain can differ
+    /// from what rendered an old turn). Optional: pre-trace transcripts decode
+    /// to nil (the `toolsUsed` precedent).
+    public var brain: String?
     /// Per-turn generation stats (context tokens, throughput) for the in-app
     /// testing readout. Transient — omitted from `CodingKeys` like `activityLabel`,
     /// so it isn't persisted and old transcripts still decode. MLX tiers only
@@ -188,7 +195,7 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     public var status: Status
 
     enum CodingKeys: String, CodingKey {
-        case id, role, text, sources, status, reasoning, attachments, toolsUsed
+        case id, role, text, sources, status, reasoning, attachments, toolsUsed, brain
     }
 
     public init(
@@ -252,6 +259,17 @@ public final class ChatSession {
     /// observable counter to re-fetch summaries (the CallsView callCount trick).
     public private(set) var historyRevision = 0
 
+    /// Per-answer feedback verdicts for the ACTIVE conversation (messageID →
+    /// verdict), so the transcript shows a filled thumb on already-rated
+    /// answers across reloads. Loaded when a conversation opens; updated live
+    /// on rate. Observable — MessageView reads it.
+    public private(set) var feedbackVerdicts: [UUID: FeedbackVerdict] = [:]
+    /// Saved notes for the active conversation's rated answers (messageID →
+    /// comment), so re-opening the comment field PREFILLS rather than starting
+    /// blank and clobbering the note on save. Loaded + updated alongside
+    /// `feedbackVerdicts`.
+    public private(set) var feedbackComments: [UUID: String] = [:]
+
     private let responder: any RAGResponding
     /// Internal (not private): ChatSession+Conversations.swift is a cross-file
     /// same-module extension and needs the seams.
@@ -262,6 +280,12 @@ public final class ChatSession {
     /// Read fresh at every trigger — the Settings toggle applies immediately
     /// (the thinkingModeProvider pattern).
     let autoCaptureEnabled: @Sendable () -> Bool
+    /// Resolves the resident brain's display name at answer-finalization, so
+    /// each answer is STAMPED with the brain that produced it (feedback
+    /// traceability). MainActor-isolated (ChatSession is @MainActor), so it
+    /// can read AppEnvironment's @Observable selectedBrain directly. Set by
+    /// AppEnvironment after construction; nil for test/legacy sessions.
+    public var residentBrainName: (@MainActor () -> String?)?
     /// Test hook — `await titlingTask?.value` makes fire-and-forget titling
     /// deterministic in tests.
     private(set) var titlingTask: Task<Void, Never>?
@@ -312,6 +336,8 @@ public final class ChatSession {
             messages = restored
             activeConversationID = recent.id
             activeTitle = recent.title
+            feedbackVerdicts = (try? history.feedbackVerdicts(conversationID: recent.id)) ?? [:]
+            feedbackComments = (try? history.feedbackComments(conversationID: recent.id)) ?? [:]
         }
         // Launch catch-up: a quit-without-switching leaves undistilled turns
         // behind; distill the restored conversation's backlog now (delayed —
@@ -436,7 +462,12 @@ public final class ChatSession {
             if leaked {
                 Self.leakLog.error("prompt-leak guard: chat answer reproduced the persona")
             }
+            // Which brain produced this answer — captured now, at finalization,
+            // so the feedback row attributes it correctly even after a later
+            // brain switch (full traceability).
+            let brainName = residentBrainName?()
             update(assistantID) {
+                $0.brain = brainName
                 $0.sources = leaked ? [] : mergedSources
                 // Tidy whitespace once the full text is in hand. Markdown
                 // markup survives on purpose — ReadingText renders it as real
@@ -550,10 +581,47 @@ public final class ChatSession {
         self.messages = messages
         activeConversationID = id
         activeTitle = title
+        feedbackVerdicts = (try? history?.feedbackVerdicts(conversationID: id)) ?? [:]
+        feedbackComments = (try? history?.feedbackComments(conversationID: id)) ?? [:]
     }
 
     func noteHistoryChanged() {
         historyRevision += 1
+    }
+
+    /// Record Kev's judgement on one assistant answer. Captures the paired
+    /// question + the answer's tools/text at rate-time so the row is a
+    /// self-contained curation datum, persists it (replacing any prior verdict
+    /// on that answer), and updates the observable map so the thumb fills. The
+    /// resident `brain` is passed in (ChatMessage carries no per-turn brain).
+    /// Silently no-ops for an unknown id or a user message.
+    public func recordFeedback(messageID: UUID, verdict: FeedbackVerdict, comment: String?, brain: String) {
+        guard let index = messages.firstIndex(where: { $0.id == messageID }),
+              messages[index].role == .assistant
+        else { return }
+        let answer = messages[index]
+        let question = messages[..<index].last { $0.role == .user }?.text ?? ""
+        let record = AnswerFeedback(
+            messageID: messageID,
+            conversationID: activeConversationID,
+            verdict: verdict,
+            comment: comment,
+            question: question,
+            answer: answer.text,
+            toolsUsed: answer.toolsUsed ?? [],
+            // The brain STAMPED on the answer wins — it's who actually rendered
+            // it; the caller's current selection is only the fallback for a
+            // pre-traceability turn that carries no stamp.
+            brain: answer.brain ?? brain,
+            createdAt: Date()
+        )
+        feedbackVerdicts[messageID] = verdict
+        if let comment = record.comment { feedbackComments[messageID] = comment }
+        else { feedbackComments[messageID] = nil }
+        // Persist off the main actor — a rate tap must not block the UI on a
+        // DB write (the saveAsync precedent).
+        let history = history
+        Task.detached(priority: .utility) { try? history?.recordFeedback(record) }
     }
 
     /// Fire-and-forget auto-titling after a successful exchange of an untitled
