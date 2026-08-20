@@ -114,6 +114,27 @@ final class MCPHostController {
         Task { enabled ? await start() : await stop() }
     }
 
+    /// The FULL tool surface, one assembly shared by the loopback server and
+    /// Brain at Home's LAN /mcp route (which filters it through
+    /// MCPToolScope.lan before serving) — one implementation per tool, scoped
+    /// at the edge, so the two surfaces can't drift.
+    /// `preemptsRemoteStreams` gates whether this palette's `ask_m1k3` cancels
+    /// in-flight Brain-at-Home streams — true for the loopback surface (a local
+    /// ask outranks a paired device), FALSE for the LAN palette (a remote ask
+    /// must not preempt another remote's stream — review fold).
+    func makeAllToolDefinitions(
+        jobStore: AskJobStore = AskJobStore(), preemptsRemoteStreams: Bool = true
+    ) -> [MCPToolDefinition] {
+        makeKnowledgeToolDefinitions(store: env.store, embedder: env.embedder)
+            + makeVoiceToolDefinitions(handlers: makeVoiceHandlers())
+            + makeIntelligenceToolDefinitions(
+                handlers: makeIntelligenceHandlers(preemptsRemoteStreams: preemptsRemoteStreams),
+                jobStore: jobStore
+            )
+            + makeOpenLinkToolDefinitions(handlers: makeOpenLinkHandlers())
+            + memoryToolDefinitions()
+    }
+
     func start() async {
         guard server == nil else { return }
         // One job store for the server's lifetime — captured in the ask_m1k3 /
@@ -138,11 +159,7 @@ final class MCPHostController {
             )
         }
         let registry = MCPToolRegistry(
-            makeKnowledgeToolDefinitions(store: env.store, embedder: env.embedder)
-                + makeVoiceToolDefinitions(handlers: makeVoiceHandlers())
-                + makeIntelligenceToolDefinitions(handlers: makeIntelligenceHandlers(), jobStore: intelligenceJobStore)
-                + makeOpenLinkToolDefinitions(handlers: makeOpenLinkHandlers())
-                + memoryToolDefinitions(),
+            makeAllToolDefinitions(jobStore: intelligenceJobStore),
             // Opt-in Agent Interaction Log (Settings toggle, OFF by default —
             // the store self-gates on every call). Only this in-app HTTP
             // surface is wired for v1; the stdio M1K3MCP binary's registry
@@ -229,11 +246,13 @@ final class MCPHostController {
     /// run on AppEnvironment's one dedicated responder + single-flight lock + canary
     /// + memory-graph dual-write — the same core the App Intents use. See
     /// AppEnvironment+Intelligence.swift.
-    private func makeIntelligenceHandlers() -> IntelligenceToolHandlers {
+    private func makeIntelligenceHandlers(preemptsRemoteStreams: Bool = true) -> IntelligenceToolHandlers {
         IntelligenceToolHandlers(
             ask: { [weak self] question in
                 guard let self else { throw MCPVoiceError("M1K3 is shutting down") }
-                return try await self.env.intelligenceAsk(question)
+                return try await self.env.intelligenceAsk(
+                    question, preemptsRemoteStreams: preemptsRemoteStreams
+                )
             },
             remember: { [weak self] title, text, kind in
                 guard let self else { throw MCPVoiceError("M1K3 is shutting down") }

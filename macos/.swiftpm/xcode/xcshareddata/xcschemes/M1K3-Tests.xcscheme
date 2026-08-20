@@ -32,6 +32,9 @@
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3HeartbeatTests" BuildableName = "M1K3HeartbeatTests" BlueprintName = "M1K3HeartbeatTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
          <TestableReference skipped = "NO">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3BrainServeTests" BuildableName = "M1K3BrainServeTests" BlueprintName = "M1K3BrainServeTests" ReferencedContainer = "container:"></BuildableReference>
+         </TestableReference>
+         <TestableReference skipped = "NO">
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3DiagnosticsTests" BuildableName = "M1K3DiagnosticsTests" BlueprintName = "M1K3DiagnosticsTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
          <TestableReference skipped = "NO">

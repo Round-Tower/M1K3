@@ -161,3 +161,13 @@ extension RuntimeInferenceProvider: TurnWarmable {
         (active as? TurnWarmable)?.prepareForNextTurn()
     }
 }
+
+/// Forwards the raw (persona-free) completion capability to the routed
+/// backend — same every-façade-forwards rule as its siblings above. Brain at
+/// Home holds THIS façade, so without the forward the LAN raw route would
+/// read "unavailable" on every tier (the #134 capability-hole shape).
+extension RuntimeInferenceProvider: RawCompletionProviding {
+    func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
+        (active as? RawCompletionProviding)?.generateRawStreaming(prompt: prompt, maxTokens: maxTokens)
+    }
+}

@@ -77,6 +77,7 @@ struct MenuBarPopover: View {
                     askSection(env)
                     Divider()
                     heartbeatSection(env)
+                    brainServeSection(env)
                     toggles(env)
                     Divider()
                 } else {
@@ -203,6 +204,24 @@ struct MenuBarPopover: View {
             // Store read races the first render: kick the load, show nothing.
             Color.clear.frame(height: 0)
                 .task(id: env.heartbeatRevision) { await refreshLatestPulse(env) }
+        }
+    }
+
+    /// Brain at Home's ambient honesty line (§8a.2: a steady presence the
+    /// whole time the listener is up, same doctrine as the mic) — one caption
+    /// while serving, nothing otherwise.
+    @ViewBuilder
+    private func brainServeSection(_ env: AppEnvironment) -> some View {
+        if env.brainServe.isRunning {
+            Label {
+                Text("Brain at Home — serving \(env.brainServe.pairedDevices.count) "
+                    + "device\(env.brainServe.pairedDevices.count == 1 ? "" : "s")")
+            } icon: {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            Divider()
         }
     }
 

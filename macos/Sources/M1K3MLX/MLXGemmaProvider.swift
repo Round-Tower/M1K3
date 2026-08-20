@@ -949,3 +949,51 @@ extension MLXGemmaProvider {
         return "<think>" + text
     }
 }
+
+// MARK: - Raw (persona-free) completion — Brain at Home /v1/generate
+
+/// A completion with NOTHING in context but the caller's prompt: no persona
+/// KV seed, no instructions, no tools, no conversation tail. Built for the
+/// Brain at Home raw route — a network-reachable session primed with the
+/// persona (About-the-user block included) is a prefix-extraction surface,
+/// so raw-ness is structural, not filtered (2026-08-19 audit, finding 1).
+extension MLXGemmaProvider: RawCompletionProviding {
+    public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
+        AsyncStream { continuation in
+            let task = Task {
+                defer { MLXMemoryBudget.reclaim(label: "generateRawStreaming") }
+                do {
+                    let container = try await ensureLoaded()
+                    var parameters = generateParameters
+                    if let requested = maxTokens {
+                        // Remote callers may SHORTEN a generation, never
+                        // lengthen it past this provider's own cap.
+                        let cap = parameters.maxTokens ?? Self.defaultMaxTokens
+                        parameters.maxTokens = min(max(1, requested), cap)
+                    }
+                    // instructions: nil and no cache seed — the raw contract.
+                    let session = ChatSession(container, generateParameters: parameters)
+                    for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
+                        if let chunk = event.chunk { continuation.yield(chunk) }
+                        if let info = event.info {
+                            logGenerationInfo(
+                                info, label: "raw", model: modelIdentifier,
+                                totalContextTokens: info.promptTokenCount
+                            )
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    if !(error is CancellationError) {
+                        mlxTTFTLog.error("""
+                        generateRawStreaming failed [\(self.modelIdentifier, privacy: .public)]: \
+                        \(error.localizedDescription, privacy: .public)
+                        """)
+                    }
+                    continuation.finish()
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}

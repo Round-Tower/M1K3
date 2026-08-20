@@ -413,3 +413,63 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
         }
     }
 }
+
+// MARK: - Raw (persona-free) completion — Brain at Home /v1/generate
+
+/// A fresh, instruction-FREE session per call: no persona, no prewarm slot,
+/// no tools — the Brain at Home raw contract (2026-08-19 audit, finding 1).
+/// AFM's own snapshots are CUMULATIVE partials; this seam converts them to
+/// deltas so the wire contract matches the MLX tiers' token stream.
+extension AppleFoundationModelsProvider: RawCompletionProviding {
+    /// The raw route's response cap — the seam's "shorten, never lengthen"
+    /// contract needs an explicit ceiling because AFM has no caller-visible
+    /// default the way MLX's `defaultMaxTokens` is. Half the 4096-token
+    /// window: a remote completion may fill at most the half the prompt
+    /// doesn't, so one request can't monopolize the single-flight slot for
+    /// the longest generation AFM could physically produce (PR #139 review).
+    public static let rawResponseTokenCap = 2048
+
+    /// Pure clamp, pinned by tests (the forwarding tests only prove the
+    /// value ARRIVES; this proves the ceiling holds): nil = the cap itself.
+    public static func clampedRawResponseTokens(_ requested: Int?) -> Int {
+        guard let requested else { return rawResponseTokenCap }
+        return min(max(1, requested), rawResponseTokenCap)
+    }
+
+    public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
+        AsyncStream { continuation in
+            let session = LanguageModelSession()
+            let options = GenerationOptions(
+                maximumResponseTokens: Self.clampedRawResponseTokens(maxTokens)
+            )
+            let task = Task { [self] in
+                do {
+                    var previous = ""
+                    for try await snapshot in session.streamResponse(to: prompt, options: options) {
+                        let content = snapshot.content
+                        if content.hasPrefix(previous) {
+                            let delta = String(content.dropFirst(previous.count))
+                            if !delta.isEmpty { continuation.yield(delta) }
+                        } else if content.count > previous.count {
+                            // Diverged mid-stream (a revision). A token wire
+                            // can't retract what's sent, so NEVER re-emit the
+                            // whole content (the client would assemble
+                            // duplicated text — PR #139 review); emit only the
+                            // length-based tail and accept the revision loss.
+                            continuation.yield(String(content.dropFirst(previous.count)))
+                        }
+                        // Shrank: nothing safe to emit — just track it.
+                        previous = content
+                    }
+                    continuation.finish()
+                } catch is CancellationError {
+                    continuation.finish()
+                } catch {
+                    logFailure(error, streaming: true)
+                    continuation.finish()
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}

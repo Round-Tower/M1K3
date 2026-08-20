@@ -19,11 +19,15 @@
 	     Signed: Kev + claude-opus-4-8, 2026-06-08, Confidence 0.85, Prior: Unknown -->
 	<key>com.apple.security.network.client</key>
 	<true/>
-	<!-- Inbound LISTENING for the in-process MCP server only — bound to
-	     127.0.0.1 explicitly (LocalMCPHTTPServer pins requiredLocalEndpoint to
-	     loopback), default OFF in Settings. Lets a local Claude session use
-	     M1K3's knowledge/voice tools; nothing is ever reachable from the LAN.
-	     Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.85, Prior: Unknown -->
+	<!-- Inbound LISTENING for two servers, both default OFF in Settings:
+	     (1) the in-process MCP server — bound to 127.0.0.1 explicitly
+	     (LocalMCPHTTPServer pins requiredLocalEndpoint to loopback; never
+	     reachable from the LAN); (2) Brain at Home (2026-08-19) — the LAN
+	     brain service for QR-PAIRED devices only: TLS-PSK (ECDHE_PSK), every
+	     route behind the handshake, interface-pinned, private sources only.
+	     Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.85, Prior: Unknown
+	     Review: Kev + claude-fable-5, 2026-08-19 (the Brain at Home widening —
+	     docs/BRAIN_AT_HOME_SPEC.md), Confidence 0.85 -->
 	<key>com.apple.security.network.server</key>
 	<true/>
 	<!-- Microphone access for voice input (Apple Speech / WhisperKit). On-device

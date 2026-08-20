@@ -174,6 +174,8 @@ targets:
         product: M1K3Diagnostics
       - package: M1K3
         product: M1K3Heartbeat
+      - package: M1K3
+        product: M1K3BrainServe
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.m1k3
@@ -203,6 +205,12 @@ targets:
         NSHumanReadableDescription: "Local, private AI companion."
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice input. Audio is transcribed on-device and never leaves your Mac."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device to let you ask questions by voice. Nothing is sent to Apple or any server."
+        # Brain at Home (default OFF): advertising the paired-devices brain
+        # service on the local network (Bonjour) — macOS surfaces a local-network
+        # consent dialog on first use.
+        NSLocalNetworkUsageDescription: "Brain at Home serves M1K3's brain to devices you pair by QR code — on your local network only, encrypted, off by default."
+        NSBonjourServices:
+          - "_m1k3._tcp"
         # Export compliance: M1K3 uses only standard, exempt encryption (HTTPS/TLS
         # for on-device model-weight downloads). Declaring this up front skips the
         # per-submission encryption prompt in App Store Connect and prevents an

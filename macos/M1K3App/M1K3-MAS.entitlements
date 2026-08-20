@@ -17,7 +17,8 @@
 	<!-- Outbound: on-device model-weight downloads (HuggingFace) on first use. -->
 	<key>com.apple.security.network.client</key>
 	<true/>
-	<!-- Inbound loopback only: the in-process MCP server (default OFF). -->
+	<!-- Inbound: the loopback MCP server + the QR-paired Brain at Home LAN
+	     service (both default OFF; see M1K3.entitlements for the full note). -->
 	<key>com.apple.security.network.server</key>
 	<true/>
 	<!-- Microphone for on-device voice input (Apple Speech / WhisperKit). -->

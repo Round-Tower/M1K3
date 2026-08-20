@@ -58,6 +58,25 @@ private struct CarryingProvider: InferenceProvider, PersonaCarrying {
     }
 }
 
+private struct RawProvider: InferenceProvider, RawCompletionProviding {
+    let name = "raw"
+    let isAvailable = true
+    func generate(prompt _: String) async throws -> String {
+        "raw"
+    }
+
+    func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        AsyncStream { $0.finish() }
+    }
+
+    func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
+        AsyncStream { continuation in
+            continuation.yield("raw:\(prompt):\(maxTokens.map(String.init) ?? "nil")")
+            continuation.finish()
+        }
+    }
+}
+
 struct SwappableCapabilityForwardingTests {
     @Test("token counting reaches the real tokenizer through the façade")
     func tokenCountingForwards() async {
@@ -85,5 +104,22 @@ struct SwappableCapabilityForwardingTests {
         #expect(facade.carriesStandingPersona)
         facade.setProvider(PlainProvider())
         #expect(!facade.carriesStandingPersona)
+    }
+
+    @Test("raw completion reaches the real backend through the façade, maxTokens intact")
+    func rawCompletionForwards() async throws {
+        let facade = SwappableInferenceProvider(RawProvider())
+        let stream = try #require(facade.generateRawStreaming(prompt: "hi", maxTokens: 64))
+        var collected: [String] = []
+        for await chunk in stream {
+            collected.append(chunk)
+        }
+        #expect(collected == ["raw:hi:64"])
+    }
+
+    @Test("a backend without raw completion reads nil through the façade — a 503, never a persona-seeded fallback")
+    func rawCompletionNilForBare() {
+        let facade = SwappableInferenceProvider(PlainProvider())
+        #expect(facade.generateRawStreaming(prompt: "hi", maxTokens: nil) == nil)
     }
 }

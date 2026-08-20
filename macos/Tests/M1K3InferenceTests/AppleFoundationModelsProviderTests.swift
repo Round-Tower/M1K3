@@ -45,4 +45,17 @@ struct AppleFoundationModelsProviderTests {
         // support on an unavailable host, even with the opt-in flag set.
         #expect(provider.supportsToolCalls == provider.isAvailable)
     }
+
+    @Test("the raw route's response cap holds — shorten, never lengthen (nil = the cap)")
+    func rawResponseTokenClamp() {
+        // The façade forwarding tests only prove maxTokens ARRIVES; this pins
+        // the ceiling itself, because the request value is network-supplied
+        // (Brain at Home /v1/generate — PR #139 review fold).
+        let cap = AppleFoundationModelsProvider.rawResponseTokenCap
+        #expect(AppleFoundationModelsProvider.clampedRawResponseTokens(nil) == cap)
+        #expect(AppleFoundationModelsProvider.clampedRawResponseTokens(10_000_000) == cap)
+        #expect(AppleFoundationModelsProvider.clampedRawResponseTokens(64) == 64)
+        #expect(AppleFoundationModelsProvider.clampedRawResponseTokens(0) == 1)
+        #expect(AppleFoundationModelsProvider.clampedRawResponseTokens(-5) == 1)
+    }
 }
