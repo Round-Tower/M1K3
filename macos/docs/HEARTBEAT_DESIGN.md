@@ -17,10 +17,13 @@ context the app already holds, composes a **deterministic digest**
 (`HeartbeatComposer` — the #102 guard: facts come from code, never from the
 model), asks the **resident MLX brain** to retell it as a short narrative of
 the day, vets the retelling with `NarrativeGuard`, and records the pulse in
-its own capped store. The menu-bar popover carries the latest pulse line
-(ambient); Settings → M1K3 → Heartbeat is the canonical surface (toggle,
-recent pulses, Clear). Principle 6 honoured: those two surfaces, zero
-elsewhere. No notifications in v1.
+its own capped store. Since 2026-08-19 the canonical surface is the
+**Heartbeat sidebar destination** (`HeartbeatScreen`) — an interaction
+timeline where pulses interleave with visiting-agent MCP calls foldered into
+per-client visits (`InteractionTimeline`, pure). The menu-bar popover line
+and the idle-card teaser are the ambient surfaces; Settings keeps consent.
+Principle 6 honoured: one canonical + ambient, zero elsewhere. (The
+summoned Heartbeat Window was retired with the promotion.)
 
 **Tier-A sources (no new consent):** thermal/low-power + battery/disk/uptime
 (`LiveSystemStatusProvider`) · memories learned since the last pulse
@@ -184,11 +187,12 @@ surfaces showed an ageing "8 hours ago"). `HeartbeatHoldLine` (pure,
 busy machine, or the empty rule's quiet-window withhold — into one short
 line; the engine records `heartbeatLastHold` on every non-tooSoon skip and
 clears it on a recorded pulse. Surfaces: the main-screen idle card and the
-Heartbeat window header. Holds age out after 30 minutes (a hold that stopped
+Heartbeat destination header. Holds age out after 30 minutes (a hold that stopped
 refreshing means the loop itself is asleep — an explanation would be a
-guess). Note the surface census since #103's final shape: main-screen idle
-card (canonical) + menu-bar line (ambient) + the Heartbeat window (history
-drill-in); Settings keeps only consent.
+guess). Surface census since the 2026-08-19 promotion: the Heartbeat
+sidebar destination (canonical — `HeartbeatScreen`, the interaction
+timeline) + the main-screen idle-card teaser and menu-bar line (ambient);
+Settings keeps only consent. The summoned window is retired.
 
 ## Verify-owed (named)
 

@@ -27,6 +27,11 @@ enum SidebarSelection: Hashable {
     case documents
     case memories
     case calls
+    /// The Heartbeat timeline — promoted from a summoned Window to a real
+    /// destination 2026-08-19 (it stays selected + swaps the detail pane,
+    /// which is exactly the destination-vs-app-action line SidebarView
+    /// polices). Other scenes reach it via `pendingSidebarRequest`.
+    case heartbeat
     /// A tap on a past-conversation row — transient, see file header.
     case conversation(UUID)
 }

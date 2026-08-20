@@ -154,10 +154,29 @@ struct ContentView: View {
                 MemoriesView()
             case .calls:
                 NavigationStack { CallsView() }
+            case .heartbeat:
+                NavigationStack { HeartbeatScreen(env: env) }
             default:
                 // .chat, the transient .conversation(_) (see onChange below),
                 // and nil all read as chat.
                 chatDetail
+            }
+        }
+        // Cross-scene destination requests (Settings' "Show the Heartbeat",
+        // the menu bar): consume-and-clear — the selection itself stays local
+        // (the AppEnvironment+Sidebar deliberate call); this is only the
+        // request channel. The .task arm covers a request set BEFORE this
+        // window (re)opened, which onChange would miss.
+        .onChange(of: env.pendingSidebarRequest) { _, requested in
+            if let requested {
+                sidebarSelection = requested
+                env.pendingSidebarRequest = nil
+            }
+        }
+        .task {
+            if let requested = env.pendingSidebarRequest {
+                sidebarSelection = requested
+                env.pendingSidebarRequest = nil
             }
         }
         // A conversation row is a PICK, not a destination to linger on —
@@ -465,7 +484,9 @@ struct ContentView: View {
                 // The idle main screen IS the heartbeat surface — "what's
                 // going on", chilled back under the greeting. Renders
                 // nothing until the toggle is on and a pulse exists.
-                HeartbeatIdleCard(env: env)
+                // Click-through selects the Heartbeat destination (the
+                // window it used to open was retired 2026-08-19).
+                HeartbeatIdleCard(env: env, onOpen: { sidebarSelection = .heartbeat })
                     .padding(.bottom, 16)
             }
         } else {
@@ -919,10 +940,10 @@ struct ContentView: View {
     }
 
     /// True for `.chat`, the transient `.conversation(_)` (see the onChange in
-    /// `body`), and `nil` — false only for the three other destinations.
+    /// `body`), and `nil` — false only for the four other destinations.
     private var isChatSelected: Bool {
         switch sidebarSelection {
-        case .documents, .memories, .calls: false
+        case .documents, .memories, .calls, .heartbeat: false
         default: true
         }
     }

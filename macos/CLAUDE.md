@@ -121,11 +121,11 @@ shell that wires concrete backends to the seams; `AppEnvironment` (+ its
 | `M1K3Calls` | Model-agnostic call intelligence: batch transcription + diarization + two-stage summarization protocols. |
 | `M1K3Avatar` | 3D companion (RealityKit) + pure emotion/animation types + earcons. Per-clip companion USDZs as resources. |
 | `M1K3MCPKit` / `M1K3MCP` | MCP server: testable tool handlers (`-Kit`) + the thin stdio executable (`M1K3MCP`) Claude spawns. |
-| `M1K3MCPLog` | Opt-in Agent Interaction Log: a GRDB sink (conforms to `MCPCallLogSink`) capturing full MCP request+response text ONLY when the Settings toggle is on. Separate target so the PII-bearing capture stays out of the tool-dispatch core. |
+| `M1K3MCPLog` | Opt-in Agent Interaction Log: a GRDB sink (conforms to `MCPCallLogSink`) capturing full MCP request+response text ONLY when the Settings toggle is on — since 2026-08-19 also the calling client's self-reported name (`client_name`, v2), which folds the Heartbeat timeline's per-client visits. Separate target so the PII-bearing capture stays out of the tool-dispatch core. |
 | `M1K3Launch` | Launch-at-login (SMAppService seam) for the menu-bar companion. |
 | `M1K3Preview` | Review-panel router (link/file → `ReviewTarget`); QuickLook/WKWebView renderers live in the app. |
 | `M1K3Diagnostics` | Privacy scrub + issue-report formatting + the diagnostic log partition for the secret-free "Report an issue" flow, plus the MetricKit payload digest (`MetricPayloadDigest`) and the bounded on-disk store's pure retention/pruning decision (`MetricRetentionPolicy`). Pure/dependency-free so the redaction + digest/retention rules are unit-pinned. |
-| `M1K3Heartbeat` | The 2-hourly narrative pulse: pure schedule/quiet-hours/empty-pulse policies, the deterministic digest composer (the #102 guard — facts from code, never the model), `NarrativeGuard` (confabulation tripwire), and a capped GRDB pulse store (own file, one-tap Clear, backup- and diagnostics-excluded, never enters the chat transcript). The scheduler effect + resident-MLX render live in `AppEnvironment+Heartbeat.swift`. |
+| `M1K3Heartbeat` | The 2-hourly narrative pulse: pure schedule/quiet-hours/empty-pulse policies, the deterministic digest composer (the #102 guard — facts from code, never the model), `NarrativeGuard` (confabulation tripwire), and a capped GRDB pulse store (own file, one-tap Clear, backup- and diagnostics-excluded, never enters the chat transcript), plus `InteractionTimeline` — the pure fold behind the Heartbeat destination screen (pulses + agent calls → day-bucketed, per-client visits). The scheduler effect + resident-MLX render live in `AppEnvironment+Heartbeat.swift`. |
 | `M1K3BrainServe` | Brain at Home — the LAN brain service for QR-paired devices: pure pairing state machine + tool-scope allowlist + route/SSE policies (TDD), the TLS-PSK NWListener shell (TLS 1.2 ECDHE_PSK — see `docs/BRAIN_AT_HOME_SPEC.md` §3 for why not 1.3), and the dnssd advertiser. App glue in `BrainServeController.swift`; default OFF. |
 
 **Brains** (`BrainTier.swift`): three tiers — **Mini** (Apple Foundation Models,
@@ -154,9 +154,11 @@ format runs **native** (`runNative`); otherwise the **ReAct** floor
   M1K3's voice/RAG/memory.
 - **`M1K3MCP` stdio binary** — registered into Claude Desktop/Code; reads the
   app's sandbox store. See `docs/MCP_SETUP.md`. (`ask_m1k3` is submit-and-poll:
-  ~8s inline grace, then a job id polled via `get_answer`, with a ~120s
-  server-side job deadline — see `Sources/M1K3MCPKit/IntelligenceMCPTools.swift`.
-  Long/thinking turns can blow the 120s cap; test those in-app or via SelfTest.)
+  ~8s inline grace, then a job id polled via `get_answer` — see
+  `Sources/M1K3MCPKit/IntelligenceMCPTools.swift`. Since 2026-08-19 a slow
+  turn runs to completion — the old 120s cap that cancelled good Big answers
+  is now a 600s runaway backstop matching job retention; `list_jobs` recovers
+  lost ids, and interim-Mini serves asks while a brain downloads.)
 
 ## Conventions specific to this repo
 

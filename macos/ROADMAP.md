@@ -170,10 +170,16 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
   drops its audio if a stop landed since — covering both the synthesis window and
   a render still queued behind the gate. This is barge-in on a long answer: the
   window is exactly as long as M1K3 takes to synthesise.
-- **The Heartbeat — v1 shipped 2026-08-06 (default OFF, Kev's calls owed).**
+- **The Heartbeat — v1 shipped 2026-08-06; PROMOTED to a sidebar destination
+  with the interaction timeline 2026-08-19 (default OFF, Kev's calls owed).**
   The 2-hourly narrative pulse: deterministic digest + resident-MLX
-  retelling, popover line + Settings surface. `docs/HEARTBEAT_DESIGN.md`
-  carries the challenger record and the open ruling — the activity-log vs
+  retelling. `HeartbeatScreen` is now the canonical surface — pulses and
+  visiting-agent MCP calls foldered into per-client visits
+  (`InteractionTimeline`, pure/TDD'd; client identity captured from the MCP
+  initialize into the opt-in Agent Log, `client_name` v2 migration;
+  `mcpLogRevision` makes agent comms live). Window retired; idle card is a
+  teaser into the destination. `docs/HEARTBEAT_DESIGN.md` carries the
+  challenger record and the open ruling — the activity-log vs
   prove-nothing-kept double-bind (default/cap/history-length) and the
   "heartbeat" noun. ⌘R verify-owed: toggle on, live with it an afternoon,
   A/B the Big vs Lil narrative before defaulting on.

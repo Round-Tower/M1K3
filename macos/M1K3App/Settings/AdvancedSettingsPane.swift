@@ -238,8 +238,9 @@ struct AdvancedSettingsPane: View {
             Text("Agent conversation log")
         } footer: {
             Text("On-device only, off by default. When on, M1K3 keeps the last "
-                + "500 tool calls a connected agent makes — see them in Window → "
-                + "Agent Log.")
+                + "500 tool calls a connected agent makes — including which agent "
+                + "called (its self-reported name). See them in Window → Agent Log, "
+                + "or folded into the Heartbeat timeline.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

@@ -168,6 +168,16 @@ final class AppEnvironment {
     /// Bumped after each recorded pulse so SwiftUI surfaces re-read the store
     /// (the `historyRevision` idiom).
     var heartbeatRevision = 0
+    /// Bumped after each captured MCP call (via the stamping sink) so the
+    /// Heartbeat timeline + Agent Log re-read live — before this, agent
+    /// comms had no observable invalidator and the Agent Log needed a manual
+    /// Refresh button.
+    var mcpLogRevision = 0
+    /// A cross-scene ask to show a sidebar destination (Settings' "Show the
+    /// Heartbeat", the menu bar). ContentView consumes it and resets to nil —
+    /// the SELECTION stays ContentView-local (AppEnvironment+Sidebar.swift's
+    /// deliberate call); this is only the request channel.
+    var pendingSidebarRequest: SidebarSelection?
     /// The most recent hold (skip/withhold reason + when) — observable so the
     /// idle card and Heartbeat window can say WHY the pulse is stale instead
     /// of silently ageing. Cleared on every recorded pulse.

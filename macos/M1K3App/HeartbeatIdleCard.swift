@@ -6,15 +6,16 @@
 //  screen as opposed to a pop up … core to the ethos. What's going on? …
 //  maybe it could be the default"): when the chat is idle/empty, the latest
 //  pulse sits under the greeting — the resident telling you what's been
-//  going on, ambient and chilled back. Click-through opens the Heartbeat
-//  window (the history). Renders nothing while the toggle is off, so the
+//  going on, ambient and chilled back. Click-through selects the Heartbeat
+//  DESTINATION (the timeline — since 2026-08-19; the summoned window it
+//  used to open is retired). Renders nothing while the toggle is off, so the
 //  greeting stays untouched for new users; with the toggle on it shows the
 //  latest pulse and/or the honest-hold line (HeartbeatHoldLine — why the
 //  pulse is stale, or that the first one is coming).
 //
-//  Surface census after this change (principle 6): main-screen idle card
-//  (canonical) + menu-bar line (ambient) + the Heartbeat window (history
-//  drill-in, summoned). The Settings section remains pure consent.
+//  Surface census after the promotion (principle 6): HeartbeatScreen
+//  destination (canonical) + this teaser and the menu-bar line (ambient).
+//  The Settings section remains pure consent.
 //
 //  Signed: Kev + claude-fable-5, 2026-08-06, Confidence 0.8 (compiles;
 //  reads via the same off-main revision-driven idiom as the other
@@ -27,8 +28,9 @@ import SwiftUI
 
 struct HeartbeatIdleCard: View {
     let env: AppEnvironment
+    /// Selects the Heartbeat destination (ContentView owns the selection).
+    let onOpen: () -> Void
 
-    @Environment(\.openWindow) private var openWindow
     @AppStorage(AppEnvironment.heartbeatEnabledKey) private var heartbeatOn = false
     @State private var latest: HeartbeatEntry?
     /// The store read has completed at least once. Until then the hold line
@@ -45,7 +47,7 @@ struct HeartbeatIdleCard: View {
         Group {
             if heartbeatOn, latest != nil || holdLine != nil {
                 Button {
-                    openWindow(id: M1K3App.heartbeatWindowID)
+                    onOpen()
                 } label: {
                     VStack(alignment: .leading, spacing: 6) {
                         if let pulse = latest {
@@ -105,7 +107,7 @@ struct HeartbeatIdleCard: View {
         if let holdLine {
             parts.append(holdLine)
         }
-        parts.append("Opens the Heartbeat window.")
+        parts.append("Opens the Heartbeat timeline.")
         return parts.joined(separator: " ")
     }
 

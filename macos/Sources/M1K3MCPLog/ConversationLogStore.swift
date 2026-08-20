@@ -33,6 +33,9 @@
 //  MemoryStore; TDD-pinned round-trip/cap/gate/clear behaviour; the live app
 //  wiring — UserDefaults predicate + the sibling-file path — is verify-by-launch).
 //  Prior: none (new file).
+//  Review: claude-fable-5, 2026-08-19 — v2 migration adds nullable `client_name`
+//  (untrusted display data from initialize clientInfo; old rows render as
+//  "an agent"; migration test-pinned).
 //
 
 import Foundation
@@ -52,6 +55,10 @@ public struct LoggedMCPCall: Identifiable, Equatable, Sendable {
     public var isError: Bool
     public var durationMS: Int
     public var timestamp: Date
+    /// The MCP client's self-reported name (initialize clientInfo) — nil for
+    /// rows captured before v2 or sessions that never identified. Untrusted
+    /// display data.
+    public var clientName: String?
 
     public init(
         id: Int64,
@@ -60,7 +67,8 @@ public struct LoggedMCPCall: Identifiable, Equatable, Sendable {
         responseText: String,
         isError: Bool,
         durationMS: Int,
-        timestamp: Date
+        timestamp: Date,
+        clientName: String? = nil
     ) {
         self.id = id
         self.tool = tool
@@ -69,6 +77,7 @@ public struct LoggedMCPCall: Identifiable, Equatable, Sendable {
         self.isError = isError
         self.durationMS = durationMS
         self.timestamp = timestamp
+        self.clientName = clientName
     }
 }
 
@@ -116,6 +125,14 @@ public final class ConversationLogStore: MCPCallLogSink, @unchecked Sendable {
                 t.column("created_at", .double).notNull().indexed()
             }
         }
+        // v2 (2026-08-19): which client called — the interaction timeline
+        // folds calls into per-client visits. Nullable: pre-v2 rows and
+        // unidentified sessions render as "an agent".
+        migrator.registerMigration("v2-client-name") { db in
+            try db.alter(table: "mcp_calls") { t in
+                t.add(column: "client_name", .text)
+            }
+        }
         try migrator.migrate(dbQueue)
     }
 
@@ -135,12 +152,13 @@ public final class ConversationLogStore: MCPCallLogSink, @unchecked Sendable {
             try db.execute(
                 sql: """
                 INSERT INTO mcp_calls
-                    (tool, arguments_json, response_text, is_error, duration_ms, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                    (tool, arguments_json, response_text, is_error, duration_ms, created_at, client_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 arguments: [
                     entry.tool, argumentsJSON, entry.responseText,
                     entry.isError, entry.durationMS, Date().timeIntervalSince1970,
+                    entry.clientName,
                 ]
             )
             // Trim to the newest `capacity` rows, in the same transaction as
@@ -228,7 +246,8 @@ public final class ConversationLogStore: MCPCallLogSink, @unchecked Sendable {
             responseText: row["response_text"] ?? "",
             isError: row["is_error"] ?? false,
             durationMS: row["duration_ms"] ?? 0,
-            timestamp: Date(timeIntervalSince1970: row["created_at"] ?? 0)
+            timestamp: Date(timeIntervalSince1970: row["created_at"] ?? 0),
+            clientName: row["client_name"]
         )
     }
 }

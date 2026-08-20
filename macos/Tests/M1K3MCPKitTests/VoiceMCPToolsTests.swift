@@ -104,6 +104,47 @@ struct VoiceMCPToolsTests {
         #expect(log.all == ["speak:hello:nil:true"])
     }
 
+    @Test("a speak wait:true that outlives the cap returns a still-speaking note instead of blocking")
+    func speakWaitOutlivesCap() async {
+        // An utterance longer than the wait cap: the tool must hand back an
+        // honest "still speaking" note promptly (non-error) — playback keeps
+        // going, the caller polls get_status. Before this, a long line blew the
+        // MCP client's request timeout while the speech played fine.
+        let handlers = VoiceToolHandlers(
+            speak: { _, _, _ in try? await Task.sleep(for: .seconds(60)) },
+            stopSpeaking: {},
+            status: { VoiceStatus(providerName: "kokoro", tier: "M1K3 Voice", isSpeaking: true) },
+            listen: { _ in "" }
+        )
+        let registry = MCPToolRegistry(
+            makeVoiceToolDefinitions(handlers: handlers, speakWaitCapSeconds: 0.2)
+        )
+        let start = ContinuousClock.now
+        let result = await registry.call(
+            name: "speak", arguments: ["text": .string("a very long read"), "wait": .bool(true)]
+        )
+        // Stall-proof bound (half the fake utterance), same doctrine as the
+        // ask grace tests — the semantic proof is the note itself.
+        #expect(start.duration(to: .now) < .seconds(30))
+        #expect(result.isError != true)
+        #expect(text(result)?.contains("get_status") == true)
+    }
+
+    @Test("a speak error inside the wait window still surfaces as isError")
+    func speakWaitSurfacesEarlyError() async {
+        let registry = MCPToolRegistry(
+            makeVoiceToolDefinitions(
+                handlers: makeHandlers(log: HandlerLog(), speakThrows: true),
+                speakWaitCapSeconds: 60 // scheduler tolerance, not the thing under test
+            )
+        )
+        let result = await registry.call(
+            name: "speak", arguments: ["text": .string("hello"), "wait": .bool(true)]
+        )
+        #expect(result.isError == true)
+        #expect(text(result)?.contains("voice conversation") == true)
+    }
+
     @Test("speak with missing or empty text is an isError without invoking the handler")
     func speakMissingText() async {
         let log = HandlerLog()

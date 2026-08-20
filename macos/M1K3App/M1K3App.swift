@@ -143,12 +143,10 @@ struct M1K3App: App {
         }
         .windowResizability(.contentSize)
 
-        // The Heartbeat — the day's pulses as a readable diary (Kev's "core /
-        // idle piece"). Single-instance Window, summoned from the sidebar.
-        Window("Heartbeat", id: Self.heartbeatWindowID) {
-            HeartbeatWindowContent(env: appDelegate.environment)
-        }
-        .windowResizability(.contentSize)
+        // The Heartbeat became a sidebar DESTINATION on 2026-08-19
+        // (HeartbeatScreen in ContentView's detail switch) — its summoned
+        // Window retired with the promotion; other scenes reach it via
+        // env.pendingSidebarRequest.
 
         // Native macOS Settings scene — opened with ⌘, (or the toolbar gear via
         // SettingsLink), in its own window with the system title bar, instead of
