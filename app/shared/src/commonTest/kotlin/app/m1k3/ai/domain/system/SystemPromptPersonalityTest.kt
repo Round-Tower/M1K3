@@ -141,9 +141,13 @@ class SystemPromptPersonalityTest {
             prompt.contains("magnificent", ignoreCase = true),
             "Prompt must not instruct M1K3 to be magnificent",
         )
-        assertFalse(
-            prompt.contains("villain", ignoreCase = true),
-            "Prompt must not cast M1K3 as a villain",
+        // 2026-08-20: the Mac persona (M1K3Persona.swift, DESIGN_DOCTRINE "protected
+        // species") names the costume once — "wearing every sci-fi villain's look but
+        // always on the user's side". That single, subverted mention is the character;
+        // instructing the model to ACT theatrical is what was retired, and stays out.
+        assertTrue(
+            prompt.contains("always on the user's side"),
+            "The costume line must keep its subversion clause",
         )
     }
 
