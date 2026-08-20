@@ -16,13 +16,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -46,13 +49,18 @@ import app.m1k3.ai.assistant.design.theme.MaTheme
 import app.m1k3.ai.assistant.di.allModules
 import app.m1k3.ai.assistant.embedding.EmbeddingEngineManager
 import app.m1k3.ai.assistant.navigation.Screen
+import app.m1k3.ai.assistant.stt.AndroidSttEngine
 import app.m1k3.ai.assistant.ui.ChatScreen
 import app.m1k3.ai.assistant.ui.DocumentsScreen
 import app.m1k3.ai.assistant.ui.HistoryScreen
 import app.m1k3.ai.assistant.ui.LicensesScreen
 import app.m1k3.ai.assistant.ui.MemoriesScreen
 import app.m1k3.ai.assistant.ui.SettingsScreen
+import app.m1k3.ai.assistant.ui.VoiceScreen
 import app.m1k3.ai.assistant.utils.Logger
+import app.m1k3.ai.assistant.voice.Speaker
+import app.m1k3.ai.assistant.voice.VoiceLoopController
+import app.m1k3.ai.assistant.voice.runVoiceTurn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -278,7 +286,45 @@ private fun MaAppContent() {
                 composable(Screen.Chat.route) {
                     ChatScreen(
                         onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                        onNavigateToVoiceMode = { navController.navigate(Screen.VoiceMode.route) },
                         projectId = "default",
+                    )
+                }
+
+                composable(Screen.VoiceMode.route) {
+                    // Same ChatScreenViewModel instance Chat is using — a voice
+                    // turn runs through the exact path typed chat uses
+                    // (runVoiceTurn), no second turn mechanism.
+                    val chatViewModel =
+                        koinViewModel<ChatScreenViewModel>(
+                            viewModelStoreOwner = navController.getBackStackEntry(Screen.Chat.route),
+                        ) { parametersOf("default") }
+                    val context = LocalContext.current
+                    val speaker = koinInject<Speaker>()
+                    val scope = rememberCoroutineScope()
+                    val sttEngine = remember { AndroidSttEngine(context) }
+                    val controller =
+                        remember {
+                            VoiceLoopController(
+                                stt = sttEngine,
+                                speaker = speaker,
+                                runTurn = { question ->
+                                    runVoiceTurn(
+                                        question = question,
+                                        uiState = chatViewModel.uiState,
+                                        updateInputText = chatViewModel::updateInputText,
+                                        sendMessage = chatViewModel::sendMessage,
+                                    )
+                                },
+                                scope = scope,
+                            )
+                        }
+                    DisposableEffect(Unit) {
+                        onDispose { sttEngine.release() }
+                    }
+                    VoiceScreen(
+                        controller = controller,
+                        onExit = { navController.navigateUp() },
                     )
                 }
 

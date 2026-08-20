@@ -107,6 +107,7 @@ import androidx.compose.runtime.collectAsState as collectFlowAsState
 @Composable
 fun ChatScreen(
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToVoiceMode: () -> Unit = {},
     onClearConversationClick: (() -> Unit)? = null,
     projectId: String = "default",
 ) {
@@ -313,10 +314,10 @@ fun ChatScreen(
         }
     }
 
-    // Voice mode toggle — for now this toggles the existing STT dictation
-    // (same source of truth as the input bar's mic button); a full-screen
-    // voice mode is a later wave.
-    val voiceModeToggle: (() -> Unit)? =
+    // Dictation-into-the-field toggle — a DIFFERENT job from the toolbar's
+    // full-screen "Voice mode" (below): this types by voice, it doesn't hold
+    // a spoken conversation. Same AndroidSttEngine instance as before.
+    val dictationToggle: (() -> Unit)? =
         if (sttEngine.isAvailable()) {
             {
                 if (sttState.isListening) sttEngine.stopListening() else sttEngine.startListening()
@@ -347,8 +348,8 @@ fun ChatScreen(
                         Icon(Icons.Default.Edit, contentDescription = "New chat")
                     }
                     IconButton(
-                        onClick = { voiceModeToggle?.invoke() },
-                        enabled = voiceModeToggle != null,
+                        onClick = onNavigateToVoiceMode,
+                        enabled = uiState.isInputEnabled,
                     ) {
                         Icon(Icons.Default.GraphicEq, contentDescription = "Voice mode")
                     }
@@ -433,7 +434,7 @@ fun ChatScreen(
                     },
                     enabled = uiState.isInputEnabled,
                     isListening = sttState.isListening,
-                    onMicClick = voiceModeToggle,
+                    onMicClick = dictationToggle,
                     listeningPartialText = partialTranscript,
                     onFocusChanged = { focused -> inputFocused = focused },
                 )

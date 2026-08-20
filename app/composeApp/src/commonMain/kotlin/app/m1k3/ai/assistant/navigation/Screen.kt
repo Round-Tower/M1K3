@@ -40,6 +40,12 @@ sealed class Screen(
     data object Documents : Screen("documents")
 
     /**
+     * Voice mode — full-screen, spoken conversation. M1K3 owns the turn
+     * boundary (see `VoiceLoopController`), not the recogniser.
+     */
+    data object VoiceMode : Screen("voice")
+
+    /**
      * Open Source Licenses screen - All third-party libraries, assets, and attributions
      */
     data object Licenses : Screen("licenses")

@@ -42,6 +42,9 @@ import app.m1k3.ai.assistant.tts.AudioEffectsProcessor
 import app.m1k3.ai.assistant.tts.AudioPlayer
 import app.m1k3.ai.assistant.tts.KokoroTtsEngine
 import app.m1k3.ai.assistant.utils.Logger
+import app.m1k3.ai.assistant.voice.KokoroOrPlatformSpeaker
+import app.m1k3.ai.assistant.voice.Speaker
+import app.m1k3.ai.assistant.voice.TextToSpeechSpeaker
 import app.m1k3.ai.domain.ai.AiCoreModelPreference
 import app.m1k3.ai.domain.ai.LlmModel
 import app.m1k3.ai.domain.ai.ModelDownloadManager
@@ -175,6 +178,36 @@ actual val platformModule =
          */
         single<TtsEngine> {
             KokoroTtsEngine(get<Context>())
+        }
+
+        /**
+         * Speaker — the spoken-audio sink voice mode AND "speak replies aloud"
+         * both use. Kokoro when it's loaded and healthy; Android's platform
+         * TextToSpeech when it isn't (Kokoro's ONNX synth has a logged
+         * "/encoder/bert/Expand invalid shape" failure mode — this is the
+         * floor that never fails silently under it).
+         */
+        single<Speaker> {
+            val prefs = get<PreferencesStoreInterface>()
+            KokoroOrPlatformSpeaker(
+                kokoro = get<TtsEngine>(),
+                platform = TextToSpeechSpeaker(get<Context>()),
+                playAudio = { audio ->
+                    val warmed =
+                        get<AudioEffectsProcessor>()
+                            .apply(audio, app.m1k3.ai.domain.tts.TtsEffect.Chain.M1K3_DEFAULT)
+                    get<AudioPlayer>().play(warmed)
+                },
+                stopAudio = { get<AudioPlayer>().stop() },
+                voice = {
+                    val voiceId =
+                        prefs.getString(
+                            app.m1k3.ai.assistant.platform.PreferenceKeys.SELECTED_VOICE,
+                            Voice.default.id,
+                        ) ?: Voice.default.id
+                    Voice.findById(voiceId) ?: Voice.default
+                },
+            )
         }
 
         // ===== AI Engine Layer =====
@@ -428,8 +461,6 @@ actual val platformModule =
         viewModel { params ->
             val projectId = params.getOrNull<String>() ?: "default"
             val context = get<Context>()
-            val ttsEngine = get<TtsEngine>()
-            val audioPlayer = get<AudioPlayer>()
 
             // MemoryManager is scoped per project — created here with projectId
             val memoryManager =
@@ -500,30 +531,7 @@ actual val platformModule =
                         }
                     }
                 },
-                onSpeakText = { text ->
-                    if (text.isBlank()) return@ChatScreenViewModel
-                    if (!ttsEngine.isLoaded) ttsEngine.loadModel()
-                    val prefs = get<PreferencesStoreInterface>()
-                    val voiceId =
-                        prefs.getString(
-                            app.m1k3.ai.assistant.platform.PreferenceKeys.SELECTED_VOICE,
-                            Voice.default.id,
-                        ) ?: Voice.default.id
-                    val voice = Voice.findById(voiceId) ?: Voice.default
-                    val result = ttsEngine.synthesize(text, voice)
-                    when (result) {
-                        is app.m1k3.ai.domain.tts.TtsResult.Success -> {
-                            val warmed =
-                                get<AudioEffectsProcessor>()
-                                    .apply(result.audio, app.m1k3.ai.domain.tts.TtsEffect.Chain.M1K3_DEFAULT)
-                            audioPlayer.play(warmed)
-                        }
-
-                        is app.m1k3.ai.domain.tts.TtsResult.Error -> {
-                            throw RuntimeException("TTS failed: ${result.message}")
-                        }
-                    }
-                },
+                onSpeakText = { text -> get<Speaker>().speak(text) },
                 userNameProvider = {
                     app.m1k3.ai.assistant.context
                         .UserNameProvider(context)
