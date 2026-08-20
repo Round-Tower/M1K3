@@ -35,8 +35,15 @@ When the app is closed the server is down — clients report the connection as
 failed. That's benign; launch M1K3 and reconnect.
 
 Notes for agents: `ask_m1k3` is submit-and-poll — ~8s inline grace, then a
-`job_id` you poll via `get_answer` (~120s server-side deadline). Long thinking
-turns can blow that cap; test those in-app instead.
+`job_id` you poll via `get_answer`. Since 2026-08-19 a slow turn is never
+cancelled on your behalf: the generation runs to completion (600s runaway
+backstop, matching the job store's retention) and the answer stays redeemable
+for ~10 minutes. Lost the id? `list_jobs` lists recent jobs (ids/state/age,
+no answer text). Asking while a job runs returns a busy note naming that job
+— nothing is queued. While the selected brain is still downloading, asks are
+served by Mini (the answer says so) instead of erroring "still loading".
+`speak wait:true` returns after playback or after ~25s with a still-speaking
+note (playback continues — poll `get_status`).
 
 ## 2. The stdio fallback (knowledge-only)
 

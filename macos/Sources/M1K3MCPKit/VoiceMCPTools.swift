@@ -16,6 +16,13 @@
 //  test-pinned with fakes; live handlers are app glue, verify-at-⌘R).
 //  Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5, 2026-08-19, Confidence 0.9. speak wait:true is
+//  now bounded (~25s): the utterance runs detached and a long read hands back a
+//  still-speaking note instead of blowing the MCP client's request timeout while
+//  the audio plays fine (the logged 2026-08-10 symptom). Also corrected the
+//  stale "serial server" rationale — the server interleaves requests; the
+//  client's own timeout is the real reason wait defaults false. TDD'd.
+//
 
 import Foundation
 import MCP
@@ -73,9 +80,11 @@ public struct MCPVoiceError: Error, CustomStringConvertible {
 
 /// The app-injected implementations behind the voice tools.
 public struct VoiceToolHandlers: Sendable {
-    /// `wait: false` returns at utterance start (frees the serial MCP loop —
-    /// the SDK Server processes one request at a time, so a blocking speak
-    /// starves every status poll); `wait: true` returns after playback ends.
+    /// `wait: false` returns at utterance start; `wait: true` returns after
+    /// playback ends. (The server handles requests concurrently — the old
+    /// "serial loop starves status polls" rationale was corrected 2026-08-19;
+    /// the reason wait defaults false is the CLIENT's own request timeout,
+    /// which the tool layer additionally bounds with `speakWaitCapSeconds`.)
     public var speak: @Sendable (_ text: String, _ emotion: String?, _ wait: Bool) async throws -> Void
     public var stopSpeaking: @Sendable () async -> Void
     public var status: @Sendable () async -> VoiceStatus
@@ -100,33 +109,102 @@ public func clampListenTimeout(_ seconds: Double) -> Double {
     min(max(seconds, 5), 120)
 }
 
-public func makeVoiceToolDefinitions(handlers: VoiceToolHandlers) -> [MCPToolDefinition] {
-    [
-        MCPToolDefinition(
-            tool: Tool(
-                name: "speak",
-                description: "Speak text aloud through M1K3's voice (and animate the avatar). Optional "
-                    + "emotion: happy, sad, angry, surprised, love, thinking, excited, sleepy, neutral. "
-                    + "Pass wait:true to return only after playback finishes (useful before listen); "
-                    + "default returns as speech starts.",
-                inputSchema: [
-                    "type": "object",
-                    "properties": [
-                        "text": ["type": "string", "description": "what to say"],
-                        "emotion": ["type": "string", "description": "avatar emotion while speaking (optional)"],
-                        "wait": ["type": "boolean", "description": "return after playback completes (default false)"],
+/// How long `speak wait:true` blocks before handing back an honest
+/// still-speaking note. Playback continues regardless — the caller polls
+/// `get_status.speaking`. Kept well under the MCP client's ~60s request
+/// deadline: a long Kokoro read used to blow that deadline while the speech
+/// played fine, and the resulting error read as "broken", not "long".
+public let defaultSpeakWaitCapSeconds: Double = 25
+
+/// Terminal outcome of a detached speak — polled by the bounded wait. The
+/// utterance task is never cancelled (the whole point is that playback
+/// continues past the cap); only the first terminal transition counts.
+private actor SpeakOutcome {
+    enum State {
+        case pending
+        case spoken
+        case failed(String)
+    }
+
+    private(set) var state: State = .pending
+
+    func finish(_ errorMessage: String?) {
+        guard case .pending = state else { return }
+        state = errorMessage.map(State.failed) ?? .spoken
+    }
+}
+
+private func speakDefinition(
+    handlers: VoiceToolHandlers,
+    speakWaitCapSeconds: Double
+) -> MCPToolDefinition {
+    MCPToolDefinition(
+        tool: Tool(
+            name: "speak",
+            description: "Speak text aloud through M1K3's voice (and animate the avatar). Optional "
+                + "emotion: happy, sad, angry, surprised, love, thinking, excited, sleepy, neutral. "
+                + "Pass wait:true to return once playback finishes, or after ~25s with a "
+                + "still-speaking note for a long read (poll get_status); default returns as "
+                + "speech starts.",
+            inputSchema: [
+                "type": "object",
+                "properties": [
+                    "text": ["type": "string", "description": "what to say"],
+                    "emotion": ["type": "string", "description": "avatar emotion while speaking (optional)"],
+                    "wait": [
+                        "type": "boolean",
+                        "description": "return after playback completes, bounded at ~25s (default false)",
                     ],
-                    "required": ["text"],
-                ]
-            ),
-            handler: { args in
-                let text = stringArg(args, "text")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                guard !text.isEmpty else { throw MCPVoiceError("speak requires non-empty text") }
-                let wait = boolArg(args, "wait") ?? false
-                try await handlers.speak(text, stringArg(args, "emotion"), wait)
-                return wait ? "Spoken." : "Speaking."
-            }
+                ],
+                "required": ["text"],
+            ]
         ),
+        handler: { args in
+            let text = stringArg(args, "text")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !text.isEmpty else { throw MCPVoiceError("speak requires non-empty text") }
+            let emotion = stringArg(args, "emotion")
+            guard boolArg(args, "wait") ?? false else {
+                try await handlers.speak(text, emotion, false)
+                return "Speaking."
+            }
+            // Bounded wait: run the utterance detached and poll its outcome
+            // until the cap. Never cancel it — a timeout must not cut the
+            // audio; the caller just switches to polling get_status.
+            let outcome = SpeakOutcome()
+            Task {
+                do {
+                    try await handlers.speak(text, emotion, true)
+                    await outcome.finish(nil)
+                } catch let error as MCPVoiceError {
+                    await outcome.finish(error.description)
+                } catch {
+                    await outcome.finish(error.localizedDescription)
+                }
+            }
+            let deadline = ContinuousClock.now.advanced(by: .seconds(speakWaitCapSeconds))
+            while ContinuousClock.now < deadline {
+                switch await outcome.state {
+                case .spoken:
+                    return "Spoken."
+                case let .failed(message):
+                    throw MCPVoiceError(message)
+                case .pending:
+                    try? await Task.sleep(for: .milliseconds(50))
+                }
+            }
+            return "Still speaking — the utterance outlived this call’s "
+                + "\(Int(speakWaitCapSeconds))s wait window. Poll get_status until "
+                + "\"speaking\" is false. (Playback was not interrupted.)"
+        }
+    )
+}
+
+public func makeVoiceToolDefinitions(
+    handlers: VoiceToolHandlers,
+    speakWaitCapSeconds: Double = defaultSpeakWaitCapSeconds
+) -> [MCPToolDefinition] {
+    [
+        speakDefinition(handlers: handlers, speakWaitCapSeconds: speakWaitCapSeconds),
         MCPToolDefinition(
             tool: Tool(
                 name: "stop_speaking",
@@ -162,7 +240,9 @@ public func makeVoiceToolDefinitions(handlers: VoiceToolHandlers) -> [MCPToolDef
                 name: "listen",
                 description: "Listen on M1K3's microphone and return the transcript once the speaker "
                     + "pauses (or the timeout passes). Waits for any in-progress speech to finish "
-                    + "before opening the mic. This is how you hear the user.",
+                    + "before opening the mic — that wait comes OUT of timeout_s (at least 5s of "
+                    + "real listening is always kept), so the call is bounded by roughly timeout_s "
+                    + "overall. This is how you hear the user.",
                 inputSchema: [
                     "type": "object",
                     "properties": [

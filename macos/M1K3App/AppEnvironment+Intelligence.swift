@@ -5,7 +5,7 @@
 //  The shared intelligence surface — ask / speak / remember — used by BOTH the
 //  in-process MCP server (MCPHostController) AND the macOS App Intents
 //  (Ask · Speak · Remember). One implementation, N adapters: the single-flight
-//  guard, the 120s ask deadline, the shared canary tripwire, the memory-graph
+//  guard, the runaway ask backstop, the shared canary tripwire, the memory-graph
 //  dual-write all live here once, so a Siri/Shortcuts ask gets the exact same
 //  protections a visiting agent's `ask_m1k3` does.
 //
@@ -15,6 +15,10 @@
 //  @Environment — a way to reach the live, warm environment.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5, 2026-08-19 — the ask deadline is now a
+//  parameter (default 600s backstop; the App Intent passes its own 120s),
+//  and the guard routes through chatGate so interim-Mini serves visiting
+//  agents during a brain download instead of refusing (MCP-async package).
 //
 
 import Foundation
@@ -76,11 +80,31 @@ extension AppEnvironment {
 
     /// One grounded, cited answer with no transcript — the core behind the MCP
     /// `ask_m1k3` tool and the Ask App Intent. Single-flight (shared lock) + the
-    /// 120s deadline + the shared canary tripwire. Throws `MCPVoiceError` on the
-    /// not-ready / busy / timeout paths; callers surface its message.
-    func intelligenceAsk(_ question: String) async throws -> String {
-        guard isReady else {
-            throw MCPVoiceError("M1K3 is still loading its model — try again in a moment")
+    /// runaway backstop + the shared canary tripwire. Throws `MCPVoiceError` on
+    /// the blocked / busy / timeout paths; callers surface its message.
+    ///
+    /// `deadline` defaults to the MCP job path's 600s runaway backstop (no
+    /// client waits on it — answers redeem via `get_answer`). A DIRECT-await
+    /// caller (the Siri/Shortcuts intent) passes its own shorter deadline, so
+    /// a hung generation can't hold the single-flight lock for 10 minutes
+    /// against every other surface (PR #136 review fold).
+    func intelligenceAsk(
+        _ question: String,
+        deadline: TimeInterval = MCPHostController.askDeadlineSeconds
+    ) async throws -> String {
+        // The same gate the chat surface uses (not a bare isReady): while the
+        // selected MLX brain downloads, the interim bridge fronts turns on Mini
+        // — the responder below rides the runtime façade, so `.interim` serves
+        // a real (Mini) answer instead of refusing visiting agents for the
+        // whole cold start (~6 min on a torn-cache Big heal). Only `.blocked`
+        // (nothing can serve) refuses.
+        let gate = chatGate
+        // Captured NOW, next to `gate`: the interim suffix names the brain that
+        // was loading when the question was ASKED, not whatever's selected when
+        // the (possibly minutes-long) generation returns (review fold).
+        let interimBrainName = selectedBrain.displayName
+        guard gate.canTakeTurn else {
+            throw MCPVoiceError("M1K3 is still getting its brain ready — try again in a moment")
         }
         guard voiceLoop == nil, !chat.isResponding else {
             throw MCPVoiceError("M1K3 is in a conversation right now — try again shortly")
@@ -104,7 +128,7 @@ extension AppEnvironment {
         let responder = intelligenceResponder
         let tripwire = CanaryGuard.fromLocalConfig()
         do {
-            return try await withTimeout(seconds: MCPHostController.askDeadlineSeconds) {
+            let answer = try await withTimeout(seconds: deadline) {
                 try await HeadlessAsk.answer(
                     question, using: responder, canary: tripwire,
                     onCanaryTrip: { count in
@@ -114,13 +138,20 @@ extension AppEnvironment {
                     }
                 )
             }
+            // Honest provenance on an interim (Mini-fronted) answer, pinned at
+            // send time: the caller asked the selected brain and got Mini.
+            guard gate == .interim else { return answer }
+            return answer
+                + "\n\n(Mini answered this while \(interimBrainName) finishes loading.)"
         } catch is TimeoutError {
-            // Deadline hit: the generation is cancelled and the lock is releasing
-            // (defer) — tell the caller honestly rather than hang.
-            Self.askLog.error("ask timed out after \(Int(MCPHostController.askDeadlineSeconds))s")
+            // Backstop hit — a genuinely hung generation, not a slow answer
+            // (those ride the job path): cancel, release the lock (defer),
+            // tell the caller honestly rather than hang.
+            let deadlineSeconds = Int(deadline)
+            Self.askLog.error("ask hit the runaway backstop after \(deadlineSeconds)s")
             throw MCPVoiceError(
-                "M1K3 took too long to answer (over \(Int(MCPHostController.askDeadlineSeconds))s) and stopped. "
-                    + "Try a more specific question, or ask again."
+                "M1K3's answer ran past the \(deadlineSeconds)s backstop and was "
+                    + "stopped — that usually means something hung. Try a more specific question, or ask again."
             )
         }
     }
@@ -128,11 +159,13 @@ extension AppEnvironment {
     // MARK: - Speak
 
     /// Speak text aloud — the core behind the MCP `speak` tool and the Speak App
-    /// Intent. `wait: false` fires and returns immediately (env.speak awaits FULL
-    /// playback, and the MCP server is serial, so a blocking speak would starve
-    /// status polls for the whole utterance). Deliberately no `isReady` guard
-    /// (unlike `intelligenceAsk`): TTS is model-independent — it needs only the
-    /// speech pipeline, which is always available.
+    /// Intent. `wait: false` fires and returns immediately; `wait: true` awaits
+    /// FULL playback (the MCP tool layer bounds that wait — the server handles
+    /// requests concurrently, so a blocking speak no longer starves status
+    /// polls; the stale "serial server" rationale was corrected 2026-08-19).
+    /// Deliberately no readiness guard (unlike `intelligenceAsk`): TTS is
+    /// model-independent — it needs only the speech pipeline, which is always
+    /// available.
     func intelligenceSpeak(text: String, emotion: String?, wait: Bool) async throws {
         guard voiceLoop == nil, !chat.isResponding else {
             throw MCPVoiceError("M1K3 is in a conversation right now — try again shortly")

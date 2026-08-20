@@ -40,6 +40,14 @@
 //  client's schema still requires question, so redemption calls may carry both).
 //  Test-pinned with fakes, incl. the no-second-generation invariant.
 //
+//  Review: Kev + claude-fable-5, 2026-08-19, Confidence 0.9. The async package:
+//  a second question while a job runs now returns a non-error busy note naming
+//  the running job (it used to burn a fresh id and bounce as an error in
+//  milliseconds — "broken", not "busy"); new list_jobs recovery tool (ids/state/
+//  age, never answer text). Pairs with the app-side change that turned the 120s
+//  cancel-the-work deadline into a 600s runaway backstop — a slow Big answer now
+//  finishes and stays redeemable for the job store's full retention.
+//
 
 import Foundation
 import M1K3Memory
@@ -80,6 +88,7 @@ public func makeIntelligenceToolDefinitions(
     [
         askM1K3Definition(handlers: handlers, jobStore: jobStore, graceSeconds: graceSeconds),
         getAnswerDefinition(jobStore: jobStore),
+        listJobsDefinition(jobStore: jobStore),
         rememberDefinition(handlers: handlers),
     ]
 }
@@ -130,6 +139,28 @@ private func getAnswerDefinition(jobStore: AskJobStore) -> MCPToolDefinition {
             ]
         ),
         handler: getAnswerHandler(jobStore: jobStore)
+    )
+}
+
+private func listJobsDefinition(jobStore: AskJobStore) -> MCPToolDefinition {
+    MCPToolDefinition(
+        tool: Tool(
+            name: "list_jobs",
+            description: "List recent ask_m1k3 jobs — id, state (running/done/error), and age in "
+                + "seconds. Use this to recover a job id you lost; redeem a done job via get_answer. "
+                + "Never contains answer text.",
+            inputSchema: ["type": "object", "properties": [:]]
+        ),
+        handler: { _ in
+            let summaries = await jobStore.summaries()
+            guard !summaries.isEmpty else {
+                return "No ask_m1k3 jobs in the last few minutes."
+            }
+            // Stable key order — clients parse this; one JSON object per line.
+            return summaries.map { summary in
+                "{\"job_id\":\"\(summary.id)\",\"state\":\"\(summary.state)\",\"age_s\":\(summary.ageSeconds)}"
+            }.joined(separator: "\n")
+        }
     )
 }
 
@@ -198,6 +229,18 @@ private func askM1K3Handler(
 
         let question = stringArg(args, "question")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !question.isEmpty else { throw MCPVoiceError("ask_m1k3 requires a non-empty question") }
+
+        // Honest busy: the app-side ask is single-flight, so a question fired
+        // while a job is generating would fail anyway — but it used to burn a
+        // fresh job id and bounce as an error within milliseconds, which reads
+        // as "broken", not "busy". Name the running job instead so the caller
+        // can redeem or wait. (Benign race with a concurrent submit: the loser
+        // lands as a failed job carrying the app's busy message.)
+        if let runningID = await jobStore.runningJobIDs().first {
+            return "M1K3 is already answering a question (job \"\(runningID)\") — your new "
+                + "question wasn’t queued. Fetch that job via get_answer, or ask again once "
+                + "it finishes."
+        }
 
         let id = await jobStore.submit()
         // Detached generation: outlives this request so a turn that beats the

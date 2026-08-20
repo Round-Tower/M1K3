@@ -25,6 +25,11 @@
 //  preserved (provenance parameterised to "mcp:remember"); dropped the now-unused
 //  `os` + `M1K3Chat` imports.
 //
+//  Review: Kev + claude-fable-5, 2026-08-19 — askDeadlineSeconds 120→600s (the
+//  runaway backstop, read from AskJobStore.jobRetention so it can't drift) and
+//  the `listen` pre-wait budget fix. The 120s cap that cancelled long Big
+//  answers is gone (MCP-async package).
+//
 
 import Foundation
 import M1K3Avatar
@@ -66,11 +71,18 @@ final class MCPHostController {
 
     private unowned let env: AppEnvironment
     private var server: LocalMCPHTTPServer?
-    /// Ceiling on a single ask_m1k3 generation. Legit answers run tens of
-    /// seconds even on the big brains; past this the generation is cancelled
-    /// and the single-flight lock released, so one runaway question can't wedge
-    /// the tool for the whole session (test-report F1 — observed ~5-min wedge).
-    nonisolated static let askDeadlineSeconds: Double = 120
+    /// RUNAWAY BACKSTOP on a single ask_m1k3 generation — not a client-facing
+    /// deadline. The submit-and-poll job path means no client ever waits on
+    /// this: a slow turn hands back a job id at the ~8s grace and the answer
+    /// is redeemed whenever it lands. This ceiling only frees the single-flight
+    /// lock from a genuinely hung generation (test-report F1 — observed ~5-min
+    /// wedge). It was 120s (2026-06-14 era, when the lock was held by the HTTP
+    /// request) and CANCELLED legitimately-long Big answers — the strongest
+    /// live complaint against the MCP surface (2026-08-10). Now matches
+    /// AskJobStore.jobRetention so a job can never outlive its own
+    /// redeemability window — read from the constant, not a re-typed literal,
+    /// so the two can't drift (review fold).
+    nonisolated static let askDeadlineSeconds: Double = AskJobStore.jobRetention
 
     private(set) var isRunning = false
     private(set) var statusText: String?
@@ -378,13 +390,18 @@ final class MCPHostController {
             throw MCPVoiceError("no speech recognizer is available")
         }
         // Don't open the mic over our own voice (the speak→listen race):
-        // wait, bounded, for any in-progress utterance to finish.
-        let quietDeadline = Date().addingTimeInterval(20)
+        // wait, bounded, for any in-progress utterance to finish. That wait
+        // comes OUT of the caller's timeout budget (the tool description says
+        // so) — before 2026-08-19 it was additive, so a listen(120) could hold
+        // the request ~145s. A floor of 5s real listening is always kept.
+        let preWaitStart = Date()
+        let quietDeadline = preWaitStart.addingTimeInterval(20)
         while Date() < quietDeadline,
               await env.speech.isSpeaking() || env.speechHighlight.utteranceText != nil
         {
             try? await Task.sleep(for: .milliseconds(150))
         }
+        let timeout = max(5, timeout - Date().timeIntervalSince(preWaitStart))
         env.avatar.setActivity(.listening)
         defer { env.avatar.resetToIdle() }
 
