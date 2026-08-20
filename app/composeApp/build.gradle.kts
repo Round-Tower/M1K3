@@ -64,22 +64,6 @@ kotlin {
             // and KokoroTtsEngine. Not used for LLM inference (that's Ma/llama.cpp).
             implementation(libs.onnxruntime.android)
 
-            // CameraX
-            implementation(libs.camerax.core)
-            implementation(libs.camerax.camera2)
-            implementation(libs.camerax.lifecycle)
-            implementation(libs.camerax.view)
-
-            // ML Kit Vision
-            implementation(libs.mlkit.vision)
-            implementation(libs.mlkit.text.recognition)
-            implementation(libs.mlkit.objectdetection)
-            implementation(libs.mlkit.image.labeling)
-
-            // ML Kit GenAI (Gemini Nano on-device)
-            implementation(libs.mlkit.genai.prompt)
-            implementation(libs.mlkit.genai.summarization)
-
             // Google Fonts for custom typography
             implementation(libs.compose.ui.text.googlefonts)
 
@@ -256,14 +240,10 @@ android {
 }
 
 dependencies {
-    // Pin vision-internal-vkp to a 16KB-page-aligned release (libmlkitcommonpipeline.so).
-    // Transitive through image-labeling; <18.2.0 ships 4KB-aligned .so and trips the
-    // Android 15+ PageSizeMismatchDialog on install. Drift-guarded by verify16KbAlignment*.
-    constraints {
-        implementation(libs.mlkit.vision.internal.vkp) {
-            because("Android 15+ requires 16KB ELF page alignment; vision-internal-vkp <18.2.0 is 4KB-aligned")
-        }
-    }
+    // The vision-internal-vkp 16KB-alignment pin (transitive through
+    // image-labeling) went with ML Kit Vision/GenAI + CameraX, cut 2026-08 as
+    // unreferenced dead weight — nothing left pulls that artifact in.
+    // Verify16KbAlignmentTask stays: it still guards sqlcipher/onnx/llama.
 
     debugImplementation(compose.uiTooling)
 

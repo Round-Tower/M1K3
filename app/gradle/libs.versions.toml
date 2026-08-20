@@ -26,14 +26,6 @@ androidx-work = "2.10.1"
 # M1K3 AI Dependencies
 sqldelight = "2.0.2"
 onnxruntime = "1.23.2"
-camerax = "1.4.0"
-mlkit-vision = "17.3.0"
-mlkit-imageLabeling = "17.0.9"
-mlkit-visionInternalVkp = "18.2.3"
-mlkit-text = "19.0.0"
-mlkit-objects = "17.0.1"
-mlkit-genai-prompt = "1.0.0-beta2"
-mlkit-genai-summarization = "1.0.0-beta1"
 kotlinx-serialization = "1.7.3"
 kotlinx-datetime = "0.6.2"
 sqlcipher = "4.14.1"
@@ -71,19 +63,6 @@ androidx-security-crypto = { module = "androidx.security:security-crypto", versi
 
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 jvector = { module = "io.github.jbellis:jvector", version.ref = "jvector" }
-
-camerax-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }
-camerax-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
-camerax-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
-camerax-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
-
-mlkit-vision = { module = "com.google.mlkit:vision-common", version.ref = "mlkit-vision" }
-mlkit-text-recognition = { module = "com.google.android.gms:play-services-mlkit-text-recognition", version = "19.0.1" }
-mlkit-objectdetection = { module = "com.google.android.gms:play-services-mlkit-image-labeling", version = "16.0.8" }
-mlkit-image-labeling = { module = "com.google.mlkit:image-labeling", version.ref = "mlkit-imageLabeling" }
-mlkit-vision-internal-vkp = { module = "com.google.mlkit:vision-internal-vkp", version.ref = "mlkit-visionInternalVkp" }
-mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkit-genai-prompt" }
-mlkit-genai-summarization = { module = "com.google.mlkit:genai-summarization", version.ref = "mlkit-genai-summarization" }
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }

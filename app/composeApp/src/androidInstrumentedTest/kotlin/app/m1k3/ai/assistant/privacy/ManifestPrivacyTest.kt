@@ -82,11 +82,13 @@ class ManifestPrivacyTest {
      * signups via Mixpanel"). A dependency that transitively pulls in any
      * of these will break the test at CI time, not at release time.
      *
-     * NOTE: `com.google.android.datatransport.runtime.TransportRuntime` is
-     * intentionally NOT on this list — it's an ML Kit transitive
-     * dependency (MlKitGenAiEngine uses ML Kit for on-device Gemini Nano).
-     * Auditing ML Kit's own telemetry hooks is a separate task; this test
-     * only enforces "no first-party telemetry SDK chose."
+     * `com.google.android.datatransport.runtime.TransportRuntime` used to be
+     * deliberately excluded here as an ML Kit GenAI transitive dependency —
+     * that engine (MlKitGenAiEngine/OnDeviceAi) was never wired into the
+     * real chat flow and was cut 2026-08 along with ML Kit vision/CameraX
+     * (also unreferenced). No ML Kit dependency remains on the classpath, so
+     * this test enforces "no first-party telemetry SDK chosen" with no
+     * carve-out needed.
      */
     @Test
     fun noAnalyticsLibraries_onClasspath() {

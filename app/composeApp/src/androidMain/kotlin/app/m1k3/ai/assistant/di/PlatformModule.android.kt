@@ -5,13 +5,6 @@ import app.m1k3.ai.assistant.ai.BaseLlmEngine
 import app.m1k3.ai.assistant.ai.LlamaCppEngine
 import app.m1k3.ai.assistant.ai.download.HttpModelDownloadManager
 import app.m1k3.ai.assistant.ai.download.ModelDownloadWorker
-import app.m1k3.ai.assistant.ai.ondevice.AndroidOnDeviceAi
-import app.m1k3.ai.assistant.ai.ondevice.LlamaCppFallbackEngine
-import app.m1k3.ai.assistant.ai.ondevice.MlKitAvailabilityChecker
-import app.m1k3.ai.assistant.ai.ondevice.MlKitGenAiEngine
-import app.m1k3.ai.assistant.ai.ondevice.OnDeviceAi
-import app.m1k3.ai.assistant.ai.ondevice.RealMlKitAvailabilityChecker
-import app.m1k3.ai.assistant.ai.ondevice.RealMlKitGenAiEngine
 import app.m1k3.ai.assistant.app.AndroidDatabaseInitializer
 import app.m1k3.ai.assistant.app.IDatabaseInitializer
 import app.m1k3.ai.assistant.app.InitializationViewModel
@@ -45,7 +38,6 @@ import app.m1k3.ai.assistant.utils.Logger
 import app.m1k3.ai.assistant.voice.KokoroOrPlatformSpeaker
 import app.m1k3.ai.assistant.voice.Speaker
 import app.m1k3.ai.assistant.voice.TextToSpeechSpeaker
-import app.m1k3.ai.domain.ai.AiCoreModelPreference
 import app.m1k3.ai.domain.ai.LlmModel
 import app.m1k3.ai.domain.ai.ModelDownloadManager
 import app.m1k3.ai.domain.chat.services.UnifiedPromptBuilder
@@ -66,7 +58,8 @@ import org.koin.dsl.module
  * Provides Android-specific dependencies:
  * - SQLDelight Android driver
  * - Android Context
- * - AI Engines (OnDeviceAi, ML Kit GenAI, LlamaCpp fallback)
+ * - AI Engines (LlamaCppEngine — the real chat path. ML Kit GenAI/OnDeviceAi
+ *   was a parallel engine never wired into ChatScreenViewModel; cut 2026-08.)
  */
 actual val platformModule =
     module {
@@ -236,65 +229,6 @@ actual val platformModule =
                 }
             val overridePath = get<ModelDownloadManager>().getModelPath(model.id)
             LlamaCppEngine(get<Context>(), model, overrideModelPath = overridePath)
-        }
-
-        /**
-         * ML Kit GenAI Availability Checker
-         *
-         * Checks if Gemini Nano is available on this device.
-         * Requirements: Android 14+, Pixel 8+/Samsung S24+, locked bootloader
-         */
-        single<MlKitAvailabilityChecker> {
-            RealMlKitAvailabilityChecker(get<Context>())
-        }
-
-        /**
-         * ML Kit GenAI Engine
-         *
-         * Provides Gemini Nano / Gemma 4 on-device inference when available.
-         * Supports Prompt API and AICore Developer Preview.
-         *
-         * Default: STABLE (Gemini Nano). Can be recreated with PREVIEW_SPEED
-         * (Gemma 4 E2B) or PREVIEW_FULL (Gemma 4 E4B) via AndroidOnDeviceAi.
-         */
-        single<MlKitGenAiEngine> {
-            RealMlKitGenAiEngine(get<Context>(), AiCoreModelPreference.STABLE)
-        }
-
-        /**
-         * LlamaCpp Fallback Engine
-         *
-         * OnDeviceAi adapter wrapping BaseLlmEngine for older devices.
-         * Used when ML Kit GenAI is not available.
-         */
-        single {
-            LlamaCppFallbackEngine(get<BaseLlmEngine>())
-        }
-
-        /**
-         * AndroidOnDeviceAi
-         *
-         * Main on-device AI implementation for Android.
-         * Automatically uses ML Kit GenAI when available, falls back to LlamaCpp.
-         *
-         * Usage:
-         * ```kotlin
-         * val ai: OnDeviceAi = get()
-         * when (ai.checkAvailability()) {
-         *     is AiAvailability.Available -> // Using Gemini Nano
-         *     is AiAvailability.Fallback -> // Using SmolLM2-135M
-         * }
-         * ```
-         */
-        single<OnDeviceAi> {
-            AndroidOnDeviceAi(
-                mlKitChecker = get<MlKitAvailabilityChecker>(),
-                mlKitEngine = get<MlKitGenAiEngine>(),
-                fallbackEngine = get<LlamaCppFallbackEngine>(),
-                mlKitEngineFactory = { preference ->
-                    RealMlKitGenAiEngine(get<Context>(), preference)
-                },
-            )
         }
 
         // ===== Model Download Manager =====

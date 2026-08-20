@@ -58,9 +58,7 @@ import org.koin.compose.koinInject
  * No "ML Kit GenAI" / "AICore Model" rows: that engine path
  * (OnDeviceAi/MlKitGenAiEngine) was never wired into the real chat flow —
  * ChatScreenViewModel talks to [app.m1k3.ai.assistant.ai.BaseLlmEngine]
- * directly — so surfacing its status here would be an engineering row
- * describing a system that has no effect on the product. See project memory
- * for the full trace.
+ * directly — and was cut entirely 2026-08 (see project memory for the trace).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -129,6 +129,16 @@ These are the strongest parts of the story. They survive the pivot.
     usage counters (model version, crash reports) as part of Play
     Services — you can disable at the OS level in Settings → Google →
     Usage & Diagnostics."
+  - **Addendum, 2026-08.** This whole engine path (`MlKitGenAiEngine`,
+    `AndroidOnDeviceAi`, `MlKitAvailabilityChecker`, `OnDeviceAi`) was
+    traced and confirmed NEVER wired into the real chat flow —
+    `ChatScreenViewModel` has always talked to
+    `app.m1k3.ai.assistant.ai.BaseLlmEngine` (Ma/llama.cpp) directly. It
+    was dead weight: registered in Koin, never `get()`-ed. Removed
+    outright, along with the ML Kit Vision/CameraX deps it dragged in
+    (also unreferenced by any real feature). This audit's findings stay
+    here as the historical record of what that dependency actually did
+    while it shipped — nothing in the app depends on ML Kit any more.
 
 ### Alternatives rejected
 
