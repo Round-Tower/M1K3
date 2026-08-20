@@ -57,8 +57,7 @@ Privacy-first AI companion via Kotlin Multiplatform. Your device is the cloud �
 │   │   ├── embedding/       # MiniLM, Gemma engines
 │   │   └── tools/           # AndroidToolRegistry, executors
 │   └── iosMain/             # iOS (future)
-├── codingModule/            # Dynamic feature (Qwen code gen)
-└── docs/phases/             # Phase documentation
+└── docs/adr/                # Architecture decision records
 ```
 
 ## Stack (from libs.versions.toml)
@@ -131,5 +130,4 @@ class MemoryRepositoryImpl(context: Context) : MemoryRepository {
 ## Docs
 - Architecture: `ARCHITECTURE.md`
 - AI details: `AI_ARCHITECTURE.md`
-- Phases: `docs/phases/PHASE*.md`
-- Qwen: `docs/phases/QWEN_SUMMARY.md`
+- ADRs: `docs/adr/`

@@ -1,6 +1,3 @@
 <resources>
     <string name="app_name">M1K3</string>
-
-    <!-- Dynamic Feature Module Titles (required for AAB) -->
-    <string name="gemma_embedding_title">Advanced Semantic Search</string>
 </resources>

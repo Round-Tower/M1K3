@@ -23,11 +23,6 @@ ndk = "28.2.13676358"
 
 androidx-work = "2.10.1"
 
-# Legacy Play Core — split-install APIs for the (currently parked)
-# dynamic feature modules. Modern replacement is feature-delivery:2.1.0
-# when/if :codingModule and :gemmaEmbedding come back online.
-play-core = "1.10.3"
-play-core-ktx = "1.8.1"
 compose-webview-multiplatform = "2.0.3"
 
 # M1K3 AI Dependencies
@@ -101,10 +96,6 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 compose-ui-text-googlefonts = { module = "androidx.compose.ui:ui-text-google-fonts", version.ref = "compose-ui-text-googlefonts" }
 
 compose-webview-multiplatform = { module = "io.github.kevinnzou:compose-webview-multiplatform", version.ref = "compose-webview-multiplatform" }
-
-# Legacy Play Core (split-install for dynamic features, currently parked).
-play-core = { module = "com.google.android.play:core", version.ref = "play-core" }
-play-core-ktx = { module = "com.google.android.play:core-ktx", version.ref = "play-core-ktx" }
 
 sceneview = { module = "io.github.sceneview:sceneview", version.ref = "sceneview" }
 

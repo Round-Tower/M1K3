@@ -44,13 +44,19 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.myapplication.shared"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    namespace = "app.m1k3.shared"
+    compileSdk =
+        libs.versions.android.compileSdk
+            .get()
+            .toInt()
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
     defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
     }
 }

@@ -17,7 +17,6 @@ import app.m1k3.ai.assistant.app.IDatabaseInitializer
 import app.m1k3.ai.assistant.app.InitializationViewModel
 import app.m1k3.ai.assistant.app.LoggerAdapter
 import app.m1k3.ai.assistant.chat.ChatScreenViewModel
-import app.m1k3.ai.assistant.coding.CodeGenerationViewModel
 import app.m1k3.ai.assistant.database.AndroidDatabaseFactory
 import app.m1k3.ai.assistant.database.DatabaseConfig
 import app.m1k3.ai.assistant.database.DatabaseFactory
@@ -335,7 +334,8 @@ actual val platformModule =
          * rebuild on cold start is fine).
          */
         single<app.m1k3.ai.domain.passages.services.VectorIndex> {
-            app.m1k3.ai.assistant.passages.JVectorIndex()
+            app.m1k3.ai.domain.passages.services
+                .LinearScanVectorIndex()
         }
 
         single<app.m1k3.ai.domain.passages.repositories.PassageRepository> {
@@ -567,18 +567,6 @@ actual val platformModule =
                     ModelDownloadWorker.observeAsFlow(ctx, model) // observe by name, not UUID
                 },
                 prefs = get<PreferencesStoreInterface>(),
-            )
-        }
-
-        /**
-         * CodeGenerationViewModel
-         *
-         * Handles code generation features.
-         * Requires Android Context for engine creation.
-         */
-        viewModel {
-            CodeGenerationViewModel(
-                context = get<Context>(),
             )
         }
 

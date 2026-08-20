@@ -86,11 +86,6 @@ kotlin {
             // SceneView for 3D avatar rendering
             implementation(libs.sceneview)
 
-            // Play Core for dynamic feature delivery (split-install).
-            // Parked: no dynamic-feature modules currently wired.
-            implementation(libs.play.core)
-            implementation(libs.play.core.ktx)
-
             // User context — local intelligence ("never leaves your phone")
             implementation(libs.health.connect)
             implementation(libs.play.services.location)
@@ -102,11 +97,10 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.koin.androidx.compose)
 
-            // Vector similarity search is currently linear-scan over cosine
-            // similarity (AndroidVectorSearchEngine, ~5-10 ms for <1K vectors).
-            // Fine at current corpus sizes. HNSW would want jvector-base, but
-            // io.github.jbellis:jvector-base still isn't on Maven Central as of
-            // last check — track there before introducing it.
+            // JVector HNSW graph, used by VectorSearchManager for memory
+            // semantic search (falls back to linear-scan when the graph is
+            // empty/stale). Personal-knowledge passage search is a separate
+            // path and uses LinearScanVectorIndex, not this dependency.
             implementation(libs.jvector)
         }
         commonMain.dependencies {
