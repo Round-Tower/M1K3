@@ -279,6 +279,29 @@ final class AppEnvironment {
     /// The avatar companion state — driven by this environment at each transition
     /// (listening → thinking → generating → speaking → idle).
     private(set) var avatar = AvatarController()
+
+    /// The ambient activity stream behind the avatar (the "thinking rain" /
+    /// InferencePhosphorView): a small ring of recent things M1K3 is DOING or
+    /// that reached it — heartbeat pulses, notifications it raised, (later)
+    /// call transcription. Tool activity + reasoning ride the ChatSession's
+    /// own observables; this is the seam for everything else that has no chat
+    /// turn. Own output only — a visiting agent never pushes here (the rain's
+    /// visitor path is derived glyphs, `InferencePhosphor.ingestVisitor`).
+    private(set) var ambientNotes: [AmbientNote] = []
+    private var ambientSequence = 0
+
+    /// Push one ambient fragment into the rain. Empty/blank is ignored; the
+    /// ring keeps only the most recent handful (the view ages them out fast).
+    func noteAmbient(_ text: String, source: PhosphorSource) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, source.isOwnOutput else { return }
+        ambientNotes.append(AmbientNote(id: ambientSequence, text: trimmed, source: source))
+        ambientSequence += 1
+        if ambientNotes.count > 24 {
+            ambientNotes.removeFirst(ambientNotes.count - 24)
+        }
+    }
+
     /// UI earcons. Lazy so `isSpeaking` can read the live avatar state (an
     /// earcon must never step on M1K3's voice). Enabled from the persisted
     /// preference; the Settings toggle updates `isEnabled` live. Not observed —

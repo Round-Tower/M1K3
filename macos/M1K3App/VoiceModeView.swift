@@ -50,6 +50,13 @@ struct VoiceModeView: View {
             // and a bright face / stars pop. The avatar is the room now.
             VoiceBackdrop()
 
+            // The thinking rain: M1K3's live inference (reasoning · tool ·
+            // answer) scrolling up behind the avatar — transparency as
+            // aesthetic. Non-interactive + a11y-hidden, so it sits between the
+            // backdrop and the face without stealing the barge-in tap.
+            InferencePhosphorView()
+                .ignoresSafeArea()
+
             // The avatar IS the window — full-bleed hero, and the primary
             // tap / Space barge-in surface.
             AvatarSurface(env: env)
