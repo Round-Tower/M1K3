@@ -5,6 +5,7 @@ import app.m1k3.ai.domain.tts.AudioSample
 import app.m1k3.ai.domain.tts.TtsEngine
 import app.m1k3.ai.domain.tts.TtsResult
 import app.m1k3.ai.domain.tts.Voice
+import kotlinx.coroutines.CancellationException
 
 private val logger = Logger.withTag("KokoroOrPlatformSpeaker")
 
@@ -17,12 +18,15 @@ private val logger = Logger.withTag("KokoroOrPlatformSpeaker")
  *
  * Audio playback for a successful Kokoro synthesis is injected ([playAudio],
  * [stopAudio]) rather than a hard dependency on the concrete `AudioPlayer` —
- * keeps this class portable and testable with plain fakes.
+ * keeps this class portable and testable with plain fakes. [playAudio] SUSPENDS
+ * until playback has finished — the loop treats speak() returning as "the user
+ * has heard it" and reopens the mic, so a merely-queued buffer would have M1K3
+ * transcribing its own voice (review catch, 2026-08-21).
  */
 class KokoroOrPlatformSpeaker(
     private val kokoro: TtsEngine,
     private val platform: Speaker,
-    private val playAudio: (AudioSample) -> Unit,
+    private val playAudio: suspend (AudioSample) -> Unit,
     private val stopAudio: () -> Unit,
     private val voice: () -> Voice = { Voice.default },
 ) : Speaker {
@@ -45,6 +49,9 @@ class KokoroOrPlatformSpeaker(
                     }
                 }
             }.getOrElse { e ->
+                // A cancelled speak (barge-in / exit) must NOT fall through to the
+                // platform voice — that would restart speech the user just stopped.
+                if (e is CancellationException) throw e
                 logger.w(e) { "Kokoro threw — falling back to the platform voice" }
                 false
             }

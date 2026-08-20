@@ -189,7 +189,7 @@ actual val platformModule =
                     val warmed =
                         get<AudioEffectsProcessor>()
                             .apply(audio, app.m1k3.ai.domain.tts.TtsEffect.Chain.M1K3_DEFAULT)
-                    get<AudioPlayer>().play(warmed)
+                    get<AudioPlayer>().playToCompletion(warmed)
                 },
                 stopAudio = { get<AudioPlayer>().stop() },
                 voice = {

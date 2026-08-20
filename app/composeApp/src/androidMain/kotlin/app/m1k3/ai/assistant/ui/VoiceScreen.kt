@@ -193,7 +193,15 @@ fun VoiceScreen(
             when (state) {
                 VoiceLoopState.Idle -> {
                     FilledTonalIconButton(
-                        onClick = { controller.begin() },
+                        // The mic is the retry path too: a denied permission re-asks
+                        // instead of driving the recogniser into a permission error.
+                        onClick = {
+                            if (hasMicPermission) {
+                                controller.begin()
+                            } else {
+                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        },
                         modifier = Modifier.size(64.dp),
                     ) {
                         Icon(Icons.Default.Mic, contentDescription = "Start listening")

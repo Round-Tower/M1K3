@@ -5,6 +5,10 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.util.Log
 import app.m1k3.ai.domain.tts.AudioSample
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * AudioPlayer - Plays synthesized audio via Android AudioTrack
@@ -16,6 +20,7 @@ class AudioPlayer {
 
     companion object {
         private const val TAG = "AudioPlayer"
+        private const val MARKER_GRACE_MS = 500L
     }
 
     private var audioTrack: AudioTrack? = null
@@ -73,6 +78,45 @@ class AudioPlayer {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to play audio", e)
             stop()
+        }
+    }
+
+    /**
+     * Play a sample and SUSPEND until it has actually finished playing (or the
+     * caller is cancelled, which stops the track). [play] returns as soon as the
+     * static buffer is queued, which is fine for a fire-and-forget "speak this
+     * reply" but wrong for the voice loop — it reopens the mic the moment the
+     * speaker returns. Completion = the AudioTrack's end-of-buffer marker, with a
+     * duration-based backstop so a missed marker can never hang the loop.
+     */
+    suspend fun playToCompletion(sample: AudioSample) {
+        if (sample.isEmpty) return
+        play(sample)
+        val track = audioTrack ?: return
+        val finished = CompletableDeferred<Unit>()
+        try {
+            track.setPlaybackPositionUpdateListener(
+                object : AudioTrack.OnPlaybackPositionUpdateListener {
+                    override fun onMarkerReached(t: AudioTrack?) {
+                        finished.complete(Unit)
+                    }
+
+                    override fun onPeriodicNotification(t: AudioTrack?) = Unit
+                },
+            )
+            track.setNotificationMarkerPosition(sample.samples.size)
+            withTimeoutOrNull(sample.durationMs + MARKER_GRACE_MS) { finished.await() }
+        } catch (e: CancellationException) {
+            stop()
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Marker wait failed — falling back to duration", e)
+            delay(sample.durationMs)
+        } finally {
+            try {
+                track.setPlaybackPositionUpdateListener(null)
+            } catch (_: Exception) {
+            }
         }
     }
 

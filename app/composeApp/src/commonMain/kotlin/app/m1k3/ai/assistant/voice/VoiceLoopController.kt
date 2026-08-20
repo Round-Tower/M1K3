@@ -6,6 +6,7 @@ import app.m1k3.ai.domain.stt.SttState
 import app.m1k3.ai.domain.voice.EndpointCadence
 import app.m1k3.ai.domain.voice.SilenceEndpointer
 import app.m1k3.ai.domain.voice.VoiceLoopCommand
+import app.m1k3.ai.domain.voice.SpeechTextPolish
 import app.m1k3.ai.domain.voice.VoiceLoopEvent
 import app.m1k3.ai.domain.voice.VoiceLoopMachine
 import app.m1k3.ai.domain.voice.VoiceLoopState
@@ -213,7 +214,9 @@ class VoiceLoopController(
     private fun speak(text: String) {
         speakJob =
             scope.launch {
-                speaker.speak(text)
+                // Markdown, code fences and <think> blocks are for the eye, not the
+                // ear (the Mac hit this as #93 — "voice would have spoken raw markdown").
+                speaker.speak(SpeechTextPolish.polish(text).ifBlank { text })
                 dispatch(VoiceLoopEvent.SpeechFinished)
             }
     }

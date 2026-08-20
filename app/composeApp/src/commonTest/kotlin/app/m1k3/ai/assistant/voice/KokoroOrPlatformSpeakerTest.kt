@@ -5,7 +5,12 @@ import app.m1k3.ai.domain.tts.TtsEngine
 import app.m1k3.ai.domain.tts.TtsErrorCode
 import app.m1k3.ai.domain.tts.TtsResult
 import app.m1k3.ai.domain.tts.Voice
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
+import kotlin.test.assertFalse
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -198,5 +203,31 @@ class KokoroOrPlatformSpeakerTest {
 
             assertEquals(1, stopAudioCalled)
             assertEquals(1, platform.stopCount)
+        }
+
+    @Test
+    fun `speak does not return until kokoro playback has finished`() =
+        runTest {
+            // The loop dispatches SpeechFinished the moment speak() returns — if
+            // playback is merely QUEUED, the mic reopens onto M1K3's own voice.
+            val speaker =
+                KokoroOrPlatformSpeaker(
+                    kokoro = FakeTtsEngine(),
+                    platform = FakeSpeaker(),
+                    playAudio = { delay(2_000) },
+                    stopAudio = {},
+                )
+            var returned = false
+            launch {
+                speaker.speak("A long answer.")
+                returned = true
+            }
+            runCurrent()
+            assertFalse(returned)
+            advanceTimeBy(1_999)
+            assertFalse(returned)
+            advanceTimeBy(2)
+            runCurrent()
+            assertTrue(returned)
         }
 }

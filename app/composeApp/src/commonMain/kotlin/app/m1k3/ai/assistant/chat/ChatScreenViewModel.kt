@@ -1,5 +1,6 @@
 package app.m1k3.ai.assistant.chat
 
+import app.m1k3.ai.domain.voice.SpeechTextPolish
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -453,7 +454,7 @@ class ChatScreenViewModel(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoadingTts = true, isSpeaking = true) }
-                speak(text)
+                speak(SpeechTextPolish.polish(text).ifBlank { text })
             } catch (e: Exception) {
                 logger.e(e) { "TTS playback failed" }
             } finally {
