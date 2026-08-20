@@ -33,6 +33,8 @@ struct GeneralSettingsPane: View {
         Form {
             startupSection
 
+            ScreenSaverSettingsSection()
+
             Section {
                 Toggle("Notify me in the background", isOn: $notifyOnLongTurn)
                     .onChange(of: notifyOnLongTurn) { _, on in

@@ -167,3 +167,43 @@ struct PresenceFormatterTests {
         #expect(PresenceFormatter.relativeAge(3 * 86400) == "3d ago")
     }
 }
+
+// MARK: - ScreenSaverInstall
+
+struct ScreenSaverInstallTests {
+    private func tempHome() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("m1k3-saver-test-\(UUID().uuidString)", isDirectory: true)
+    }
+
+    @Test func userDirectoryIsTheScreenSaversFolderWithASpace() {
+        let home = URL(fileURLWithPath: "/Users/x")
+        let dir = ScreenSaverInstall.userScreenSaversDirectory(home: home)
+        #expect(dir.path == "/Users/x/Library/Screen Savers")
+    }
+
+    @Test func installedURLNamesTheBundleUnderThatFolder() {
+        let home = URL(fileURLWithPath: "/Users/x")
+        #expect(ScreenSaverInstall.installedURL(home: home).path
+            == "/Users/x/Library/Screen Savers/M1K3.saver")
+    }
+
+    @Test func isInstalledIsFalseWhenAbsentAndTrueOncePresent() throws {
+        let home = tempHome()
+        let fm = FileManager.default
+        defer { try? fm.removeItem(at: home) }
+        #expect(ScreenSaverInstall.isInstalled(home: home) == false)
+
+        // Simulate the installed bundle (a directory named M1K3.saver).
+        let installed = ScreenSaverInstall.installedURL(home: home)
+        try fm.createDirectory(at: installed, withIntermediateDirectories: true)
+        #expect(ScreenSaverInstall.isInstalled(home: home) == true)
+    }
+
+    @Test func statusAndActionTitlesFlipOnInstall() {
+        #expect(ScreenSaverInstall.statusText(installed: false).contains("Not set up"))
+        #expect(ScreenSaverInstall.statusText(installed: true).contains("Installed"))
+        #expect(ScreenSaverInstall.actionTitle(installed: false) == "Set Up Screen Saver…")
+        #expect(ScreenSaverInstall.actionTitle(installed: true) == "Re-install Screen Saver")
+    }
+}
