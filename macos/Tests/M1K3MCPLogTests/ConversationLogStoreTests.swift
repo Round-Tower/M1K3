@@ -23,11 +23,12 @@ private func makeEntry(
     arguments: [String: Value]? = ["query": .string("seals")],
     responseText: String = "found 3 documents",
     isError: Bool = false,
-    durationMS: Int = 42
+    durationMS: Int = 42,
+    clientName: String? = nil
 ) -> MCPCallLogEntry {
     MCPCallLogEntry(
         tool: tool, arguments: arguments, responseText: responseText,
-        isError: isError, durationMS: durationMS
+        isError: isError, durationMS: durationMS, clientName: clientName
     )
 }
 
@@ -115,6 +116,21 @@ struct ConversationLogStoreTests {
 
         let recent = try store.recent()
         #expect(recent.first?.isError == true)
+    }
+
+    @Test("a client name round-trips; an entry without one reads back nil")
+    func clientNameRoundTrip() throws {
+        // The timeline folds visits by the client that called — the name comes
+        // from the MCP initialize's clientInfo, stamped by the app's sink
+        // wrapper. Legacy rows (pre-v2) and unidentified sessions stay nil.
+        let store = try ConversationLogStore()
+        store.record(makeEntry(clientName: "claude-code"))
+        store.record(makeEntry())
+
+        let recent = try store.recent()
+        #expect(recent.count == 2)
+        #expect(recent[0].clientName == nil) // newest first — the unnamed one
+        #expect(recent[1].clientName == "claude-code")
     }
 
     @Test("a call with nil arguments records a nil argumentsJSON")

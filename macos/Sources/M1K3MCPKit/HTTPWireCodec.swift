@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.9 (parse/encode
 //  test-pinned incl. split packets; HTTP/1.1 subset is deliberate — no
 //  chunked encoding, no keep-alive). Prior: Unknown.
+//  Review: claude-fable-5, 2026-08-19 — added `clientName(fromInitializeBody:)`
+//  (initialize clientInfo → the Agent Log identity stamp; test-pinned).
 //
 
 import Foundation
@@ -70,6 +72,22 @@ public enum HTTPWireCodec {
             return false
         }
         return json["method"] as? String == "initialize"
+    }
+
+    /// The MCP client's self-reported name (`params.clientInfo.name`) off an
+    /// initialize body — the identity the opt-in Agent Interaction Log stamps
+    /// on captured calls so the timeline can fold "visits" per client. Nil for
+    /// non-initialize bodies, junk JSON, or a missing/blank name; UNTRUSTED
+    /// display data either way (any process can claim any name).
+    public static func clientName(fromInitializeBody body: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
+              json["method"] as? String == "initialize",
+              let params = json["params"] as? [String: Any],
+              let clientInfo = params["clientInfo"] as? [String: Any],
+              let name = (clientInfo["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !name.isEmpty
+        else { return nil }
+        return name
     }
 
     private static func reasonPhrase(_ status: Int) -> String {

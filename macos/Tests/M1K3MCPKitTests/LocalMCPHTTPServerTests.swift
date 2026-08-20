@@ -102,6 +102,51 @@ struct LocalMCPHTTPServerTests {
         #expect(!stopped)
     }
 
+    @Test("initialize reports the self-declared client name; no clientInfo reports nil")
+    func clientInitializeWiring() async throws {
+        // The one genuinely new piece of logic in the identity capture is the
+        // CALL SITE (respond → onClientInitialize) — HTTPWireCodec.clientName
+        // and StampingLogSink are covered in isolation, but a silently
+        // never-firing callback would ship undetected without this
+        // (PR #137 review fold).
+        final class NameBox: @unchecked Sendable {
+            private let lock = NSLock()
+            private var values: [String?] = []
+            func append(_ value: String?) {
+                lock.withLock { values.append(value) }
+            }
+
+            func read() -> [String?] {
+                lock.withLock { values }
+            }
+        }
+        let box = NameBox()
+        let port = UInt16.random(in: 52000 ... 59000)
+        let server = LocalMCPHTTPServer(
+            port: port,
+            onClientInitialize: { box.append($0) }
+        ) {
+            let registry = MCPToolRegistry([
+                MCPToolDefinition(
+                    tool: Tool(name: "alpha", description: "first", inputSchema: ["type": "object"]),
+                    handler: { _ in "alpha says hi" }
+                ),
+            ])
+            let transport = StatelessHTTPServerTransport()
+            let server = await makeM1K3Server(registry: registry)
+            try await server.start(transport: transport)
+            return (server, transport)
+        }
+        try await server.start()
+        defer { Task { await server.stop() } }
+
+        _ = try await post(initializeBody, port: port)
+        let anonymous = #"{"jsonrpc":"2.0","id":9,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{}}}"#
+        _ = try await post(anonymous, port: port)
+        #expect(box.read() == ["wire-test", nil])
+        await server.stop()
+    }
+
     @Test("a session-rebuild failure stops the server honestly instead of zombie 500s")
     func rebuildFailureStopsServer() async throws {
         let port = UInt16.random(in: 52000 ... 59000)

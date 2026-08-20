@@ -20,6 +20,9 @@
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.8 (wire layer is
 //  test-pinned; the NWListener shell is verify-by-launch — exercised live via
 //  `claude mcp add`). Prior: Unknown.
+//  Review: claude-fable-5, 2026-08-19 — added `onClientInitialize` (reports each
+//  initialize's self-declared client name for the Agent Log identity stamp;
+//  call-site wiring test-pinned in LocalMCPHTTPServerTests).
 //
 
 import Foundation
@@ -36,6 +39,12 @@ public actor LocalMCPHTTPServer {
     /// Called when the server stops itself (session rebuild failed) — the
     /// host UI uses it to show an honest status instead of a stale "Running".
     private let onAbnormalStop: (@Sendable (String) -> Void)?
+    /// Called on every initialize with the client's self-reported name (nil
+    /// when it sent none) — the host stamps it onto the opt-in Agent
+    /// Interaction Log so the timeline can fold visits per client. Fires on
+    /// EVERY initialize, including a re-initialize with no name, so a stale
+    /// identity can't outlive its session.
+    private let onClientInitialize: (@Sendable (String?) -> Void)?
     private var listener: NWListener?
     private var session: (server: Server, transport: StatelessHTTPServerTransport)?
 
@@ -44,10 +53,12 @@ public actor LocalMCPHTTPServer {
     public init(
         port: UInt16,
         onAbnormalStop: (@Sendable (String) -> Void)? = nil,
+        onClientInitialize: (@Sendable (String?) -> Void)? = nil,
         makeSession: @escaping SessionFactory
     ) {
         self.port = port
         self.onAbnormalStop = onAbnormalStop
+        self.onClientInitialize = onClientInitialize
         self.makeSession = makeSession
     }
 
@@ -171,6 +182,7 @@ public actor LocalMCPHTTPServer {
     private func respond(to request: HTTPRequest) async -> HTTPResponse {
         // A new client's initialize must land on a FRESH SDK server.
         if let body = request.body, HTTPWireCodec.isInitializeRequest(body: body) {
+            onClientInitialize?(HTTPWireCodec.clientName(fromInitializeBody: body))
             if let session {
                 await session.server.stop()
                 await session.transport.disconnect()

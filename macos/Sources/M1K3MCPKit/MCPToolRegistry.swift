@@ -9,6 +9,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.9 (pure dispatch,
 //  test-pinned). Prior: Unknown.
+//  Review: claude-fable-5, 2026-08-19 — MCPCallLogEntry gained `clientName` +
+//  `stamped(clientName:)` (the Agent Log identity column; registry itself
+//  stays identity-blind — the transport-side sink stamps).
 //
 
 import Foundation
@@ -25,13 +28,30 @@ public struct MCPCallLogEntry: Sendable {
     public let responseText: String
     public let isError: Bool
     public let durationMS: Int
+    /// The calling client's self-reported name (from the MCP initialize's
+    /// clientInfo). The registry never fills this — it doesn't know the
+    /// session; the app's sink wrapper stamps it before the store. Untrusted
+    /// display data.
+    public let clientName: String?
 
-    public init(tool: String, arguments: [String: Value]?, responseText: String, isError: Bool, durationMS: Int) {
+    public init(
+        tool: String, arguments: [String: Value]?, responseText: String,
+        isError: Bool, durationMS: Int, clientName: String? = nil
+    ) {
         self.tool = tool
         self.arguments = arguments
         self.responseText = responseText
         self.isError = isError
         self.durationMS = durationMS
+        self.clientName = clientName
+    }
+
+    /// The same entry with the client identity stamped on.
+    public func stamped(clientName: String?) -> MCPCallLogEntry {
+        MCPCallLogEntry(
+            tool: tool, arguments: arguments, responseText: responseText,
+            isError: isError, durationMS: durationMS, clientName: clientName
+        )
     }
 }
 

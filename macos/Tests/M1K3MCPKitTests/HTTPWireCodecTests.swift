@@ -57,6 +57,26 @@ struct HTTPWireCodecTests {
         #expect(parsed.request.header("Accept") == "application/json")
     }
 
+    // MARK: - clientName
+
+    @Test("clientName reads params.clientInfo.name off an initialize body")
+    func clientNameFromInitialize() {
+        let body = #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":"#
+            + #"{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-code","version":"2.0"}}}"#
+        #expect(HTTPWireCodec.clientName(fromInitializeBody: bytes(body)) == "claude-code")
+    }
+
+    @Test("clientName is nil for a missing/blank name, junk JSON, or a non-initialize body")
+    func clientNameAbsent() {
+        let noInfo = #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}"#
+        let blank = #"{"method":"initialize","params":{"clientInfo":{"name":"  "}}}"#
+        let notInitialize = #"{"jsonrpc":"2.0","method":"ping","id":1}"#
+        #expect(HTTPWireCodec.clientName(fromInitializeBody: bytes(noInfo)) == nil)
+        #expect(HTTPWireCodec.clientName(fromInitializeBody: bytes(blank)) == nil)
+        #expect(HTTPWireCodec.clientName(fromInitializeBody: bytes(notInitialize)) == nil)
+        #expect(HTTPWireCodec.clientName(fromInitializeBody: bytes("not json")) == nil)
+    }
+
     // MARK: - encode
 
     @Test("a data response encodes status line, headers, content-length, and body")
