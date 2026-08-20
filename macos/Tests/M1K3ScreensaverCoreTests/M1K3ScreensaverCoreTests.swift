@@ -207,3 +207,74 @@ struct ScreenSaverInstallTests {
         #expect(ScreenSaverInstall.actionTitle(installed: true) == "Re-install Screen Saver")
     }
 }
+
+// MARK: - PixelFace
+
+struct PixelFaceTests {
+    @Test func gridMatchesTheAppFace() {
+        #expect(PixelFace.cols == 13)
+        #expect(PixelFace.rows == 11)
+        #expect(PixelFace.leftEye == FaceCell(col: 4, row: 3))
+        #expect(PixelFace.rightEye == FaceCell(col: 8, row: 3))
+    }
+
+    @Test func atRestBothPupilsAreLitAsSingleCells() {
+        // t=0: not blinking, no glance → round pupils at their homes.
+        #expect(PixelFace.isBlinking(at: 0) == false)
+        #expect(PixelFace.glanceOffset(at: 0) == 0)
+        let cells = PixelFace.litCells(at: 0)
+        #expect(cells.contains(FaceCell(col: 4, row: 3)))
+        #expect(cells.contains(FaceCell(col: 8, row: 3)))
+        // No closed-eye line neighbours when open.
+        #expect(!cells.contains(FaceCell(col: 3, row: 3)))
+        #expect(!cells.contains(FaceCell(col: 5, row: 3)))
+    }
+
+    @Test func blinkClosesEachEyeToAThreeCellLine() {
+        // Tail of the first blink period.
+        let t = 4.2 - 0.05
+        #expect(PixelFace.isBlinking(at: t) == true)
+        let cells = PixelFace.litCells(at: t)
+        for dc in -1 ... 1 {
+            #expect(cells.contains(FaceCell(col: 4 + dc, row: 3)))
+            #expect(cells.contains(FaceCell(col: 8 + dc, row: 3)))
+        }
+    }
+
+    @Test func glanceShiftsBothPupilsTheSameWay() {
+        // Tail of the first glance period (phase ≥ period − duration), and not
+        // a blink moment → both pupils dart the same way.
+        let t = 5.2
+        #expect(PixelFace.isBlinking(at: t) == false)
+        let dx = PixelFace.glanceOffset(at: t)
+        #expect(dx != 0)
+        let cells = PixelFace.litCells(at: t)
+        #expect(cells.contains(FaceCell(col: 4 + dx, row: 3)))
+        #expect(cells.contains(FaceCell(col: 8 + dx, row: 3)))
+    }
+
+    @Test func smileTurnsUpAtTheCorners() {
+        let cells = PixelFace.litCells(at: 0)
+        // A ⌣ curve: corners highest (row 6), middle lowest (row 8).
+        #expect(cells.contains(FaceCell(col: 3, row: PixelFace.mouthRow - 1)))
+        #expect(cells.contains(FaceCell(col: 9, row: PixelFace.mouthRow - 1)))
+        #expect(cells.contains(FaceCell(col: 6, row: PixelFace.mouthRow + 1)))
+        // The full mouth spans cols 3…9, stepping up one row per cell toward the
+        // corners (distance from centre column 6 sets the row).
+        for col in 3 ... 9 {
+            let dc = abs(col - 6)
+            let onRow = dc == 3 ? PixelFace.mouthRow - 1 : (dc == 2 ? PixelFace.mouthRow : PixelFace.mouthRow + 1)
+            #expect(cells.contains(FaceCell(col: col, row: onRow)))
+        }
+    }
+
+    @Test func litCellsStayInsideTheGrid() {
+        for step in 0 ..< 200 {
+            let t = Double(step) * 0.1
+            for cell in PixelFace.litCells(at: t) {
+                #expect(cell.col >= 0 && cell.col < PixelFace.cols)
+                #expect(cell.row >= 0 && cell.row < PixelFace.rows)
+            }
+        }
+    }
+}

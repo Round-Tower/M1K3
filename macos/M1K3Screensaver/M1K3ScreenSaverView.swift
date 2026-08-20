@@ -67,7 +67,7 @@ public final class M1K3ScreenSaverView: ScreenSaverView {
     override public func draw(_: NSRect) {
         drawBackground()
         drawRain()
-        drawMark()
+        drawFace()
         drawPresence()
     }
 
@@ -91,29 +91,62 @@ public final class M1K3ScreenSaverView: ScreenSaverView {
         }
     }
 
-    private func drawMark() {
-        // Frame the 5×7 M centred, height ~30% of the shorter dimension.
-        let markH = min(bounds.height * 0.30, bounds.width * 0.30 / PixelMark.aspectRatio)
+    /// M1K3's face — the hero. A 13×11 pixel matrix (matching the app's
+    /// FaceGrid): a faint CRT backing for every cell, with the eyes + resting
+    /// smile lit bright and glowing. Sits a touch above centre; the mark + copy
+    /// go below.
+    private func drawFace() {
+        let faceH = min(bounds.height * 0.40, bounds.width * 0.40
+            * CGFloat(PixelFace.rows) / CGFloat(PixelFace.cols))
+        let cell = faceH / CGFloat(PixelFace.rows)
+        let faceW = cell * CGFloat(PixelFace.cols)
+        let ox = bounds.midX - faceW / 2
+        let oy = bounds.midY - faceH / 2 + bounds.height * 0.10 // above centre
+        let block = cell * 0.72
+        let breath = 0.9 + 0.1 * (0.5 + 0.5 * sin(phase * 0.9))
+
+        // Soft phosphor bloom behind the face.
+        phosphor.withAlphaComponent(0.05).setFill()
+        NSBezierPath(ovalIn: NSRect(x: ox - faceW * 0.15, y: oy - faceH * 0.1,
+                                    width: faceW * 1.3, height: faceH * 1.2)).fill()
+
+        let lit = PixelFace.litCells(at: phase)
+        for row in 0 ..< PixelFace.rows {
+            for col in 0 ..< PixelFace.cols {
+                let cx = ox + (CGFloat(col) + 0.5) * cell
+                // AppKit origin is bottom-left; the grid is top-down.
+                let cy = oy + (CGFloat(PixelFace.rows - 1 - row) + 0.5) * cell
+                let r = NSRect(x: cx - block / 2, y: cy - block / 2, width: block, height: block)
+                let path = NSBezierPath(roundedRect: r, xRadius: block * 0.28, yRadius: block * 0.28)
+                if lit.contains(FaceCell(col: col, row: row)) {
+                    phosphor.withAlphaComponent(0.35).setFill() // glow halo
+                    NSBezierPath(roundedRect: r.insetBy(dx: -block * 0.25, dy: -block * 0.25),
+                                 xRadius: block * 0.4, yRadius: block * 0.4).fill()
+                    markColor.withAlphaComponent(CGFloat(breath)).setFill()
+                    path.fill()
+                } else {
+                    markColor.withAlphaComponent(0.05).setFill() // faint CRT backing
+                    path.fill()
+                }
+            }
+        }
+    }
+
+    /// The M mark, at a given centre + height — used small as a resting
+    /// signature beneath the face.
+    private func drawMark(centerX: CGFloat, centerY: CGFloat, height: CGFloat, alpha: CGFloat) {
+        let markH = height
         let markW = markH * PixelMark.aspectRatio
-        let ox = bounds.midX - markW / 2
-        let oy = bounds.midY - markH / 2 + bounds.height * 0.04 // sit slightly above centre; copy below
-        let pulse = 0.82 + 0.18 * (0.5 + 0.5 * sin(phase * 1.1))
-
-        // A faint phosphor bloom behind the mark.
-        phosphor.withAlphaComponent(0.05 * CGFloat(pulse)).setFill()
-        let bloom = NSRect(x: ox - markW * 0.3, y: oy - markH * 0.15,
-                           width: markW * 1.6, height: markH * 1.3)
-        NSBezierPath(ovalIn: bloom).fill()
-
-        markColor.withAlphaComponent(CGFloat(pulse)).setFill()
+        let ox = centerX - markW / 2
+        let oy = centerY - markH / 2
+        markColor.withAlphaComponent(alpha).setFill()
         for cell in PixelMark.cells(gap: 0.12) {
-            // core cells are top-left origin in unit space; flip Y into AppKit.
             let x = ox + CGFloat(cell.x) * markW
             let h = CGFloat(cell.height) * markH
             let y = oy + (1 - CGFloat(cell.y)) * markH - h
             let w = CGFloat(cell.width) * markW
-            let r = NSRect(x: x, y: y, width: w, height: h)
-            NSBezierPath(roundedRect: r, xRadius: w * 0.12, yRadius: w * 0.12).fill()
+            NSBezierPath(roundedRect: NSRect(x: x, y: y, width: w, height: h),
+                         xRadius: w * 0.14, yRadius: w * 0.14).fill()
         }
     }
 
@@ -121,7 +154,13 @@ public final class M1K3ScreenSaverView: ScreenSaverView {
         let status = PresenceFormatter.statusLine(presence)
         let heartbeat = PresenceFormatter.heartbeatLine(presence)
         let cx = bounds.midX
-        var y = bounds.midY - bounds.height * 0.14
+
+        // The M mark, small, as a resting signature under the face.
+        let markH = max(14, bounds.height * 0.05)
+        drawMark(centerX: cx, centerY: bounds.midY - bounds.height * 0.13,
+                 height: markH, alpha: 0.9)
+
+        var y = bounds.midY - bounds.height * 0.20
 
         draw(text: status, centeredAtX: cx, y: &y,
              size: max(11, bounds.height * 0.022),
