@@ -62,12 +62,6 @@ import app.m1k3.ai.assistant.design.tokens.MaColors
 import app.m1k3.ai.assistant.design.tokens.MaRadius
 import app.m1k3.ai.assistant.design.tokens.MaSpacing
 import app.m1k3.ai.assistant.design.tokens.MaTypography
-import app.m1k3.ai.assistant.globe.GlobeBackground
-import app.m1k3.ai.assistant.globe.GlobeMode
-import app.m1k3.ai.assistant.globe.TIER_HIGH
-import app.m1k3.ai.assistant.globe.TIER_LOW
-import app.m1k3.ai.assistant.globe.TIER_MEDIUM
-import app.m1k3.ai.assistant.platform.PreferenceKeys
 import app.m1k3.ai.assistant.stt.AndroidSttEngine
 import app.m1k3.ai.assistant.ui.components.ChatContextBar
 import app.m1k3.ai.assistant.ui.components.ChatContextBarState
@@ -84,7 +78,6 @@ import app.m1k3.ai.domain.stt.SttState
 import app.m1k3.ai.domain.stt.isListening
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.androidx.compose.koinViewModel
-import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 import androidx.compose.runtime.collectAsState as collectFlowAsState
 
@@ -107,7 +100,6 @@ import androidx.compose.runtime.collectAsState as collectFlowAsState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    onEcoStatsClick: () -> Unit = {},
     onClearConversationClick: (() -> Unit)? = null,
     projectId: String = "default",
 ) {
@@ -131,17 +123,6 @@ fun ChatScreen(
     val permissionRequester =
         rememberContextPermissionRequester { _ ->
             // Permission state changed — ViewModel will pick up new context on next load
-        }
-
-    // Globe mode from preferences (user-configurable in Settings)
-    val prefs = koinInject<app.m1k3.ai.assistant.platform.PreferencesStoreInterface>()
-    val globeMode =
-        remember {
-            when (prefs.getString(PreferenceKeys.GLOBE_MODE, "RUBIN")) {
-                "MAPLIBRE" -> GlobeMode.MAPLIBRE
-                "NONE" -> GlobeMode.NONE
-                else -> GlobeMode.RUBIN
-            }
         }
 
     // Speech-to-Text engine
@@ -367,13 +348,6 @@ fun ChatScreen(
                 .fillMaxSize()
                 .animateContentSize(),
     ) {
-        // Layer 0: Globe background — mode user-configurable in Settings
-        GlobeBackground(
-            mode = globeMode,
-            dimmed = uiState.generationState.isGenerating,
-            modifier = Modifier.fillMaxSize(),
-        )
-
         // Layer 1: Messages list (behind overlays)
         // Note: ContextWindowIndicator retired — its % lives in the
         // ChatContextBar footer now (one signal, one place).
@@ -383,7 +357,6 @@ fun ChatScreen(
                 messages = uiState.messages,
                 isGenerating = uiState.generationState.isGenerating,
                 listState = listState,
-                showEcoIndicator = true,
                 onSpeak = { text -> viewModel.speakMessage(text) },
                 userContext = uiState.userContext,
                 onRequestLocation = permissionRequester.onRequestLocation,
@@ -414,7 +387,7 @@ fun ChatScreen(
             )
         // Floating "island" cluster: input + footer share one rounded
         // elevated surface, set off from the nav bar with breathing room
-        // so the globe bleeds around and under it.
+
         val islandShape = RoundedCornerShape(MaRadius.xxl)
         Column(
             modifier =
@@ -459,10 +432,6 @@ fun ChatScreen(
                     haptics.medium()
                     viewModel.switchModel(model)
                 },
-                onEcoTap = {
-                    haptics.light()
-                    onEcoStatsClick()
-                },
                 enabled = uiState.isInputEnabled,
             )
         }
@@ -484,7 +453,7 @@ fun ChatScreen(
         // Clear conversation dialog
         if (showClearDialog) {
             ClearConversationDialog(
-                sessionStats = uiState.sessionEcoStats,
+                messageCount = uiState.messages.size,
                 onConfirm = {
                     haptics.strong()
                     viewModel.clearConversation()
@@ -558,9 +527,6 @@ fun ChatBubble(
                     memoryCount = message.statusMemoryCount ?: 0,
                     maxContextTokens = message.statusMaxTokens ?: 2048,
                     deviceTierName = message.statusDeviceTier ?: "Unknown",
-                    lastSessionWaterMl = message.statusLastWaterMl,
-                    lastSessionEnergyWh = message.statusLastEnergyWh,
-                    lastSessionCo2G = message.statusLastCo2G,
                 )
             }
         }
@@ -718,7 +684,6 @@ private fun ChatScreenEmptyPreview() {
                     messages = emptyList(),
                     isGenerating = false,
                     listState = rememberLazyListState(),
-                    showEcoIndicator = false,
                 )
             }
 
@@ -765,7 +730,6 @@ private fun ChatScreenWithMessagesPreview() {
                         ),
                     isGenerating = false,
                     listState = rememberLazyListState(),
-                    showEcoIndicator = true,
                 )
             }
 
@@ -816,7 +780,6 @@ private fun ChatScreenGeneratingPreview() {
                         ),
                     isGenerating = true,
                     listState = rememberLazyListState(),
-                    showEcoIndicator = false,
                 )
             }
 

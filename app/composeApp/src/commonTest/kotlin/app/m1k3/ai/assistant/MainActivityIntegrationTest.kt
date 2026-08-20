@@ -79,7 +79,6 @@ class MainActivityIntegrationTest {
 
         assertTrue(routes.contains("chat"))
         assertTrue(routes.contains("history"))
-        assertTrue(routes.contains("ecostats"))
         assertTrue(routes.contains("settings"))
     }
 
@@ -278,7 +277,7 @@ class MainActivityUIState {
     var toolbarThemeUpdated = false
     var onNavigate: (screen: String) -> Unit = {}
 
-    fun getSidebarRoutes(): List<String> = listOf("chat", "history", "ecostats", "settings")
+    fun getSidebarRoutes(): List<String> = listOf("chat", "history", "settings")
 
     fun openDrawer() {
         drawerOpen = true

@@ -29,7 +29,6 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
  * @param messages List of chat messages to display
  * @param isGenerating Whether AI is currently generating a response
  * @param listState LazyList state for scroll control
- * @param showEcoIndicator Whether to show eco stats (affects top padding)
  * @param modifier Optional modifier for customization
  */
 @Composable
@@ -37,7 +36,6 @@ fun ChatMessageList(
     messages: List<ChatMessage>,
     isGenerating: Boolean,
     listState: LazyListState,
-    showEcoIndicator: Boolean,
     onSpeak: ((String) -> Unit)? = null,
     userContext: app.m1k3.ai.domain.context.UserContext? = null,
     onRequestLocation: (() -> Unit)? = null,
@@ -56,7 +54,7 @@ fun ChatMessageList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding =
             PaddingValues(
-                top = if (showEcoIndicator) 180.dp else 120.dp,
+                top = 180.dp,
                 bottom = 200.dp,
             ),
     ) {
@@ -132,7 +130,6 @@ private fun ChatMessageListEmptyPreview() {
             messages = emptyList(),
             isGenerating = false,
             listState = rememberLazyListState(),
-            showEcoIndicator = false,
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -158,7 +155,6 @@ private fun ChatMessageListWithMessagesPreview() {
                 ),
             isGenerating = false,
             listState = rememberLazyListState(),
-            showEcoIndicator = false,
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -179,28 +175,6 @@ private fun ChatMessageListGeneratingPreview() {
                 ),
             isGenerating = true,
             listState = rememberLazyListState(),
-            showEcoIndicator = false,
-            modifier = Modifier.fillMaxSize(),
-        )
-    }
-}
-
-@Preview
-@Composable
-private fun ChatMessageListWithEcoIndicatorPreview() {
-    MaTheme {
-        ChatMessageList(
-            messages =
-                List(5) { index ->
-                    ChatMessage(
-                        text = "Message $index",
-                        isUser = index % 2 == 0,
-                        timestamp = System.currentTimeMillis() + (index * 1000),
-                    )
-                },
-            isGenerating = false,
-            listState = rememberLazyListState(),
-            showEcoIndicator = true,
             modifier = Modifier.fillMaxSize(),
         )
     }

@@ -47,7 +47,7 @@ import org.koin.compose.koinInject
  * 1. Personal     — name, avatar
  * 2. Context      — local intelligence permissions + live test
  * 3. Voice        — auto reply, STT
- * 4. Appearance   — globe, haptics
+ * 4. Appearance   — hero mascot, haptics
  * 5. AI           — model, ML Kit, AICore, RAG
  * 6. Data         — export, import, clear
  * 7. About        — version, privacy, licenses
@@ -534,52 +534,11 @@ private fun AppearanceSection(
     prefs: PreferencesStoreInterface,
     haptics: androidx.compose.ui.hapticfeedback.HapticFeedback,
 ) {
-    var globeMode by remember {
-        mutableStateOf(prefs.getString(PreferenceKeys.GLOBE_MODE, "RUBIN") ?: "RUBIN")
-    }
     var heroStyle by remember {
         mutableStateOf(prefs.getString(PreferenceKeys.HERO_STYLE, "DOT_MATRIX") ?: "DOT_MATRIX")
     }
 
     SettingsSection(title = "Appearance", icon = Icons.Default.Palette) {
-        SettingsItem(
-            title = "Globe background",
-            subtitle =
-                when (globeMode) {
-                    "MAPLIBRE" -> "MapLibre cartographic (bundled offline)"
-                    "NONE" -> "Off"
-                    else -> "Rubin dot-globe (offline)"
-                },
-            icon =
-                when (globeMode) {
-                    "NONE" -> Icons.Default.HideSource
-                    else -> Icons.Default.Public
-                },
-            iconTint = if (globeMode == "NONE") MaColors.textMuted() else MaColors.Orange,
-            trailingContent = {
-                Text(
-                    text =
-                        when (globeMode) {
-                            "RUBIN" -> "Rubin"
-                            "MAPLIBRE" -> "MapLibre"
-                            else -> "Off"
-                        },
-                    style = MaTypography.labelSmall,
-                    color = MaColors.textSecondary(),
-                )
-            },
-            onClick = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                val next =
-                    when (globeMode) {
-                        "RUBIN" -> "MAPLIBRE"
-                        "MAPLIBRE" -> "NONE"
-                        else -> "RUBIN"
-                    }
-                globeMode = next
-                prefs.setString(PreferenceKeys.GLOBE_MODE, next)
-            },
-        )
         SettingsItem(
             title = "Hero mascot",
             subtitle =

@@ -9,8 +9,6 @@ import app.m1k3.ai.assistant.ai.BaseLlmEngine
 import app.m1k3.ai.assistant.chat.usecase.ChatWithToolsUseCase
 import app.m1k3.ai.assistant.chat.usecase.ContextRetrievalUseCase
 import app.m1k3.ai.assistant.database.MaDatabase
-import app.m1k3.ai.assistant.eco.EcoCalculator
-import app.m1k3.ai.assistant.eco.EcoMetricsRepository
 import app.m1k3.ai.assistant.history.ConversationRepository
 import app.m1k3.ai.assistant.memory.MemoryManager
 import app.m1k3.ai.assistant.platform.DeviceInfoProviderInterface
@@ -60,19 +58,17 @@ private val logger = Logger.withTag("ChatScreenViewModel")
  * - Delegates to use cases for business logic:
  *   - ContextRetrievalUseCase: RAG + memory retrieval
  *   - GenerationConfigBuilder: Device-adaptive config
- * - Handles side effects: database, eco metrics, state updates
+ * - Handles side effects: database, state updates
  *
  * **Responsibilities:**
  * - UI state management via ChatUiState
  * - AI engine initialization
  * - Coordinating message flow with use cases
- * - Eco-metrics tracking
  * - Error handling
  */
 class ChatScreenViewModel(
     private var aiEngine: BaseLlmEngine,
     private val conversationRepo: ConversationRepository,
-    private val ecoMetricsRepo: EcoMetricsRepository,
     private val database: MaDatabase,
     private val deviceInfo: DeviceInfoProviderInterface,
     private val preferences: PreferencesStoreInterface,
@@ -185,7 +181,6 @@ class ChatScreenViewModel(
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     // Session tracking
-    private val sessionId = "chat_session_${Clock.System.now().toEpochMilliseconds()}"
     private var currentConversationId: Long? = null
 
     init {
@@ -522,7 +517,6 @@ class ChatScreenViewModel(
                 _uiState.update {
                     it.copy(
                         messages = emptyList(),
-                        sessionEcoStats = SessionEcoStats(),
                         error = null,
                         toolState = ToolState(),
                     )
@@ -685,14 +679,6 @@ class ChatScreenViewModel(
                 else -> 2048
             }
 
-        // Get last session eco stats (if any)
-        val lastSession =
-            try {
-                ecoMetricsRepo.getSessionStats().firstOrNull()
-            } catch (_: Exception) {
-                null
-            }
-
         val chatStatus =
             chatStatusBuilder.build(
                 hour = currentHour,
@@ -700,10 +686,6 @@ class ChatScreenViewModel(
                 memoryCount = memoryCount,
                 maxContextTokens = maxContextTokens,
                 deviceTierName = deviceTier.name.lowercase().replaceFirstChar { it.uppercase() },
-                lastSessionTokens = lastSession?.tokens,
-                lastSessionWaterMl = lastSession?.waterMl,
-                lastSessionEnergyWh = lastSession?.energyWh,
-                lastSessionCo2G = lastSession?.co2G,
             )
 
         // Add status message to UI
@@ -716,9 +698,6 @@ class ChatScreenViewModel(
                 statusMemoryCount = memoryCount,
                 statusMaxTokens = maxContextTokens,
                 statusDeviceTier = deviceTier.name.lowercase().replaceFirstChar { it.uppercase() },
-                statusLastWaterMl = lastSession?.waterMl,
-                statusLastEnergyWh = lastSession?.energyWh,
-                statusLastCo2G = lastSession?.co2G,
             )
 
         val placeholderMessage =
@@ -860,7 +839,6 @@ class ChatScreenViewModel(
                         )
                     }
 
-                    recordEcoMetrics(tokenCount)
                     recordMessage(welcomeText, "assistant", tokenCount)
 
                     logger.i { "Welcome message generated: $tokenCount tokens in ${duration}ms" }
@@ -1222,7 +1200,6 @@ class ChatScreenViewModel(
             )
         }
 
-        recordEcoMetrics(stats.tokenCount)
         recordMessage(
             content = displayText,
             role = "assistant",
@@ -1287,7 +1264,6 @@ class ChatScreenViewModel(
             )
         }
 
-        recordEcoMetrics(tokenCount)
         recordMessage(
             content = finalText,
             role = "assistant",
@@ -1354,37 +1330,6 @@ class ChatScreenViewModel(
             logger.i { "Stored ${chunks.size} context snapshots (${chunks.map { it.category }.distinct().joinToString()})" }
         } catch (e: Exception) {
             logger.w { "Failed to store context snapshots: ${e.message}" }
-        }
-    }
-
-    private fun recordEcoMetrics(tokenCount: Int) {
-        if (tokenCount <= 0) return
-
-        viewModelScope.launch {
-            try {
-                val savings = EcoCalculator.calculateSavings(tokenCount)
-
-                ecoMetricsRepo.recordMetrics(
-                    savings = savings,
-                    sessionId = sessionId,
-                    projectId = projectId,
-                )
-
-                _uiState.update { state ->
-                    state.copy(
-                        sessionEcoStats =
-                            SessionEcoStats(
-                                totalTokens = state.sessionEcoStats.totalTokens + tokenCount,
-                                waterMl = state.sessionEcoStats.waterMl + savings.waterSavedMl,
-                                energyWh = state.sessionEcoStats.energyWh + savings.energySavedWh,
-                                co2G = state.sessionEcoStats.co2G + savings.co2PreventedG,
-                                messageCount = state.sessionEcoStats.messageCount + 1,
-                            ),
-                    )
-                }
-            } catch (e: Exception) {
-                logger.w(e) { "Failed to record eco metrics" }
-            }
         }
     }
 

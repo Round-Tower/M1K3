@@ -33,7 +33,6 @@ data class SystemPromptInput(
     val currentDate: String? = null,
     val deviceTierName: String? = null,
     val contextWindowTokens: Int? = null,
-    val lifetimeCo2SavedG: Long? = null,
     val availableTools: List<String> = emptyList(),
 )
 
@@ -137,15 +136,6 @@ class MaSystemPromptBuilder {
                 input.deviceTierName?.let { appendLine("Tier: $it") }
                 input.contextWindowTokens?.let { appendLine("Context window: $it tokens") }
                 appendLine()
-            }
-
-            // Eco context — M1K3's quiet pride
-            input.lifetimeCo2SavedG?.let {
-                if (it > 0) {
-                    val display = if (it >= 1000) "${it / 1000.0}kg" else "${it}g"
-                    appendLine("Lifetime CO₂ saved by running locally: $display")
-                    appendLine()
-                }
             }
 
             // Tool calling — imperative for small models. Qwen3 0.6B-class

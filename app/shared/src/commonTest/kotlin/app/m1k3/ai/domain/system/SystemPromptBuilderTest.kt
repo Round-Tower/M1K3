@@ -86,16 +86,6 @@ class SystemPromptBuilderTest {
         assertTrue(prompt.contains("Thursday"))
     }
 
-    @Test fun `FULL includes eco context`() {
-        val prompt = builder.build(fullInput())
-        assertTrue(
-            prompt.contains("CO2", ignoreCase = true) ||
-                prompt.contains("eco", ignoreCase = true) ||
-                prompt.contains("local", ignoreCase = true) ||
-                prompt.contains("energy", ignoreCase = true),
-        )
-    }
-
     @Test fun `FULL mentions available tools when present`() {
         val prompt = builder.build(fullInput(tools = listOf("search_web", "open_settings")))
         assertTrue(

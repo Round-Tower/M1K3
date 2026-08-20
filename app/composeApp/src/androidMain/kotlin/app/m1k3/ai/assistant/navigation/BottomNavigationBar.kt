@@ -23,7 +23,6 @@ import app.m1k3.ai.assistant.design.tokens.MaColors
  * **Navigation Tabs:**
  * - Chat: Main AI conversation interface
  * - History: Browse past conversations
- * - Eco Stats: Environmental impact dashboard
  * - Settings: App configuration
  * - Demo: Welcome and feature showcase
  *
@@ -39,7 +38,7 @@ import app.m1k3.ai.assistant.design.tokens.MaColors
 @Composable
 fun BottomNavigationBar(
     navController: NavController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val haptics = LocalHapticFeedback.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -48,18 +47,19 @@ fun BottomNavigationBar(
     NavigationBar(
         modifier = modifier,
         containerColor = MaColors.BgPrimary,
-        contentColor = MaColors.TextSecondary
+        contentColor = MaColors.TextSecondary,
     ) {
         bottomNavItems.forEach { item ->
-            val isSelected = currentDestination?.hierarchy?.any {
-                it.route == item.screen.route
-            } == true
+            val isSelected =
+                currentDestination?.hierarchy?.any {
+                    it.route == item.screen.route
+                } == true
 
             NavigationBarItem(
                 icon = {
                     Icon(
                         imageVector = item.icon,
-                        contentDescription = item.label
+                        contentDescription = item.label,
                     )
                 },
                 label = {
@@ -73,13 +73,14 @@ fun BottomNavigationBar(
                     }
                 },
                 alwaysShowLabel = true,
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaColors.Orange,
-                    selectedTextColor = MaColors.Orange,
-                    unselectedIconColor = MaColors.TextMuted,
-                    unselectedTextColor = MaColors.TextMuted,
-                    indicatorColor = MaColors.OrangeFaint
-                )
+                colors =
+                    NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaColors.Orange,
+                        selectedTextColor = MaColors.Orange,
+                        unselectedIconColor = MaColors.TextMuted,
+                        unselectedTextColor = MaColors.TextMuted,
+                        indicatorColor = MaColors.OrangeFaint,
+                    ),
             )
         }
     }
@@ -91,31 +92,27 @@ fun BottomNavigationBar(
 data class BottomNavItem(
     val screen: Screen,
     val label: String,
-    val icon: ImageVector
+    val icon: ImageVector,
 )
 
 /**
  * Bottom navigation items configuration
  */
-val bottomNavItems = listOf(
-    BottomNavItem(
-        screen = Screen.Chat,
-        label = "Chat",
-        icon = Icons.Default.Chat
-    ),
-    BottomNavItem(
-        screen = Screen.History,
-        label = "History",
-        icon = Icons.Default.History
-    ),
-    BottomNavItem(
-        screen = Screen.EcoStats,
-        label = "Eco",
-        icon = Icons.Default.Eco
-    ),
-    BottomNavItem(
-        screen = Screen.Settings,
-        label = "Settings",
-        icon = Icons.Default.Settings
+val bottomNavItems =
+    listOf(
+        BottomNavItem(
+            screen = Screen.Chat,
+            label = "Chat",
+            icon = Icons.Default.Chat,
+        ),
+        BottomNavItem(
+            screen = Screen.History,
+            label = "History",
+            icon = Icons.Default.History,
+        ),
+        BottomNavItem(
+            screen = Screen.Settings,
+            label = "Settings",
+            icon = Icons.Default.Settings,
+        ),
     )
-)

@@ -1,7 +1,6 @@
 package app.m1k3.ai.assistant.chat
 
 import app.m1k3.ai.assistant.ai.BaseLlmEngine
-import app.m1k3.ai.assistant.eco.EcoMetricsRepository
 import app.m1k3.ai.assistant.history.ConversationRepository
 import app.m1k3.ai.assistant.mocks.MockBaseLlmEngine
 import app.m1k3.ai.assistant.mocks.MockDeviceInfoProvider
@@ -262,7 +261,6 @@ class ChatScreenViewModelToolsTest {
         return ChatScreenViewModel(
             aiEngine = aiEngine,
             conversationRepo = ConversationRepository(database),
-            ecoMetricsRepo = EcoMetricsRepository(database),
             database = database,
             deviceInfo = MockDeviceInfoProvider.midRange(),
             preferences = preferences,

@@ -67,7 +67,6 @@ fun ChatContextBar(
     state: ChatContextBarState,
     availableModels: List<LlmModel>,
     onModelSwitch: (LlmModel) -> Unit,
-    onEcoTap: () -> Unit,
     onContextTap: () -> Unit = {},
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
@@ -102,7 +101,6 @@ fun ChatContextBar(
                     state = state,
                     availableModels = availableModels,
                     onModelSwitch = onModelSwitch,
-                    onEcoTap = onEcoTap,
                     onContextTap = onContextTap,
                     enabled = enabled,
                 )
@@ -116,7 +114,6 @@ private fun FooterRow(
     state: ChatContextBarState,
     availableModels: List<LlmModel>,
     onModelSwitch: (LlmModel) -> Unit,
-    onEcoTap: () -> Unit,
     onContextTap: () -> Unit,
     enabled: Boolean,
 ) {
@@ -137,14 +134,6 @@ private fun FooterRow(
         ContextTag(
             percent = state.contextPercent,
             onTap = onContextTap,
-        )
-
-        Dot()
-
-        EcoTag(
-            waterMl = state.ecoStats.waterMl,
-            energyWh = state.ecoStats.energyWh,
-            onTap = onEcoTap,
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -238,34 +227,6 @@ private fun ContextTag(
         )
         Text(
             text = "$percent%",
-            style = MaTypography.labelSmall,
-            color = MaColors.textMuted(),
-        )
-    }
-}
-
-@Composable
-private fun EcoTag(
-    waterMl: Long,
-    energyWh: Long,
-    onTap: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(MaRadius.xs))
-                .clickable(onClick = onTap)
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = "\uD83D\uDCA7 ${formatWater(waterMl)}",
-            style = MaTypography.labelSmall,
-            color = MaColors.textMuted(),
-        )
-        Text(
-            text = "⚡${formatEnergy(energyWh)}",
             style = MaTypography.labelSmall,
             color = MaColors.textMuted(),
         )
@@ -408,6 +369,3 @@ private fun Waveform(
     }
 }
 
-private fun formatWater(ml: Long): String = if (ml >= 1000) "%.1fL".format(ml / 1000.0) else "${ml}ml"
-
-private fun formatEnergy(wh: Long): String = if (wh >= 1000) "%.1fkWh".format(wh / 1000.0) else "${wh}Wh"

@@ -1,0 +1,15 @@
+-- Migration 7 → 8: retire eco-impact tracking.
+--
+-- EcoMetrics (water/energy/CO2 "savings" estimates + real network-byte
+-- tracking) is cut in the reduction pass — see .claude/project-memory.md
+-- Wave 2. The UI it fed (EcoStatsScreen, EcoIndicator, status-card eco
+-- row, clear-conversation eco summary) is deleted in the same commit;
+-- real network-byte tracking for downloads/searches was the only load-
+-- bearing half of this table and it fed no surviving consumer.
+--
+-- SQLite: nothing references EcoMetrics as a FK target. Safe, one-way
+-- drop, same shape as migration 7 (TriviaFact retirement).
+--
+-- MurphySig: kev+claude / confidence 0.9 / 2026-08-20
+
+DROP TABLE IF EXISTS EcoMetrics;

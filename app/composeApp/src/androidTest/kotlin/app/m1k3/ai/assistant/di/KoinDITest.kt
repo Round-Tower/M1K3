@@ -173,7 +173,6 @@ class KoinDITest : KoinTest {
             listOf(
                 getKoin().get<app.m1k3.ai.assistant.app.InitializationViewModel>(),
                 getKoin().get<ChatScreenViewModel>(),
-                getKoin().get<app.m1k3.ai.assistant.eco.EcoStatsViewModel>(),
                 getKoin().get<app.m1k3.ai.assistant.history.HistoryViewModel>(),
             )
 

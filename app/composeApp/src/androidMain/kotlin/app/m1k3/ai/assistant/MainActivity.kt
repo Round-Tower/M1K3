@@ -80,7 +80,6 @@ import app.m1k3.ai.assistant.navigation.navigateToBottomNav
 import app.m1k3.ai.assistant.ui.AboutScreen
 import app.m1k3.ai.assistant.ui.AvatarGalleryScreen
 import app.m1k3.ai.assistant.ui.ChatScreen
-import app.m1k3.ai.assistant.ui.EcoStatsScreen
 import app.m1k3.ai.assistant.ui.ExportScreen
 import app.m1k3.ai.assistant.ui.FeedbackScreen
 import app.m1k3.ai.assistant.ui.HelpScreen
@@ -88,7 +87,6 @@ import app.m1k3.ai.assistant.ui.HistoryScreen
 import app.m1k3.ai.assistant.ui.LicensesScreen
 import app.m1k3.ai.assistant.ui.PrivacyScreen
 import app.m1k3.ai.assistant.ui.components.Toolbar
-import app.m1k3.ai.assistant.ui.demo.MaAIDemo
 import app.m1k3.ai.assistant.ui.drawer.DrawerContent
 import app.m1k3.ai.assistant.utils.FilamentSetup
 import app.m1k3.ai.assistant.utils.Logger
@@ -397,7 +395,6 @@ private fun MaAppContent() {
                                 setOf(
                                     Screen.Chat.route,
                                     Screen.History.route,
-                                    Screen.EcoStats.route,
                                     Screen.Settings.route,
                                 )
                             if (route in primaryRoutes) {
@@ -405,7 +402,6 @@ private fun MaAppContent() {
                                     when (route) {
                                         Screen.Chat.route -> Screen.Chat
                                         Screen.History.route -> Screen.History
-                                        Screen.EcoStats.route -> Screen.EcoStats
                                         Screen.Settings.route -> Screen.Settings
                                         else -> Screen.Chat
                                     }
@@ -453,7 +449,7 @@ private fun MaAppContent() {
                                 )
                             },
                             // Zero out Scaffold's automatic inset padding so content can
-                            // extend to true screen edges (globe behind status/nav bars).
+                            // extend to true screen edges (chat background behind status/nav bars).
                             // Individual screens call windowInsetsPadding where they need it.
                             // The Toolbar sits in topBar and Compose positions it below the
                             // status bar automatically via the slot's own inset handling.
@@ -463,20 +459,12 @@ private fun MaAppContent() {
                                 navController = navController,
                                 startDestination = Screen.Chat.route,
                                 // Only top padding from the Toolbar slot — bottom/sides
-                                // are screen-owned so the globe bleeds to all edges.
+                                // are screen-owned so the background bleeds to all edges.
                                 modifier = Modifier.padding(top = paddingValues.calculateTopPadding()),
                             ) {
-                                // Demo Screen
-                                composable(Screen.Demo.route) {
-                                    MaAIDemo(
-                                        onChatClick = { navController.navigate(Screen.Chat.route) },
-                                    )
-                                }
-
                                 // Chat Screen
                                 composable(Screen.Chat.route) {
                                     ChatScreen(
-                                        onEcoStatsClick = { navController.navigate(Screen.EcoStats.route) },
                                         projectId = "default",
                                     )
                                 }
@@ -490,15 +478,6 @@ private fun MaAppContent() {
                                         onConversationClick = { conversationId ->
                                             navController.navigate("conversation/$conversationId")
                                         },
-                                    )
-                                }
-
-                                // Eco Stats Screen
-                                composable(Screen.EcoStats.route) {
-                                    EcoStatsScreen(
-                                        database = database,
-                                        projectId = "default",
-                                        onBackClick = { navController.navigateUp() },
                                     )
                                 }
 
@@ -623,8 +602,6 @@ private fun getScreenName(route: String?): String =
     when (route) {
         Screen.Chat.route -> "Chat"
         Screen.History.route -> "History"
-        Screen.EcoStats.route -> "Environmental Impact"
         Screen.Settings.route -> "Settings"
-        Screen.Demo.route -> "Welcome"
         else -> "M1K3"
     }

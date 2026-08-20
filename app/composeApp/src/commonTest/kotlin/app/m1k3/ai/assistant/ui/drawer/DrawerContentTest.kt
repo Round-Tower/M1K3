@@ -60,7 +60,7 @@ class DrawerContentTest {
         // GREEN: Verify all navigation items present
         val items = getSidebarMenuItems()
 
-        assertEquals(4, items.size) // Chat, History, EcoStats, Settings
+        assertEquals(3, items.size) // Chat, History, Settings
     }
 
     @Test
@@ -250,12 +250,6 @@ fun getSidebarMenuItems(currentRoute: String = "chat"): List<SidebarMenuItem> {
             icon = "📜",
             route = "history",
             isSelected = currentRoute == "history"
-        ),
-        SidebarMenuItem(
-            label = "Environmental Impact",
-            icon = "🌍",
-            route = "ecostats",
-            isSelected = currentRoute == "ecostats"
         ),
         SidebarMenuItem(
             label = "Settings",

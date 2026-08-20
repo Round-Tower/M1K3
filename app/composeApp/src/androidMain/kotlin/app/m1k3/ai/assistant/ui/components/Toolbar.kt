@@ -219,18 +219,6 @@ private fun ToolbarHistoryLoadingPreview() {
 
 @Preview
 @Composable
-private fun ToolbarEcoGeneratingPreview() {
-    MaTheme {
-        Toolbar(
-            screenName = "Environmental Impact",
-            engineInitialized = true,
-            avatarState = AvatarState(emotion = AvatarEmotion.EXCITED),
-        )
-    }
-}
-
-@Preview
-@Composable
 private fun ToolbarSettingsPreview() {
     MaTheme {
         Toolbar(

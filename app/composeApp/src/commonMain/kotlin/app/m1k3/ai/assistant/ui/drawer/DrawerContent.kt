@@ -21,7 +21,7 @@ import app.m1k3.ai.assistant.navigation.sidebarItems
  *
  * Layout:
  * - 間 M1K3 branded header
- * - Primary nav (Chat, History, Eco Stats, Settings)
+ * - Primary nav (Chat, History, Settings)
  * - Divider
  * - Secondary nav (About, Help, Feedback, Privacy, Export)
  *

@@ -42,7 +42,7 @@ import org.koin.compose.koinInject
  *
  *   * A large 3D avatar (from the user's gallery pick) as the visual anchor
  *   * A contextual greeting (time of day + name, with any context lines)
- *   * Compact eco / context pills
+ *   * Compact context pills
  *   * A muted "what are we working on?" nudge
  *
  * Replaces the small status card that used to sit above the first message.

@@ -84,7 +84,6 @@ fun AboutScreen(onLicensesClick: (() -> Unit)? = null) {
                 Spacer(modifier = Modifier.height(MaSpacing.base))
 
                 MetaInfoRow(icon = Icons.Default.Security, label = "Chat", value = "100% On-Device")
-                MetaInfoRow(icon = Icons.Default.Eco, label = "Eco Impact", value = "Tracked")
                 MetaInfoRow(icon = Icons.Default.Smartphone, label = "On-Device AI", value = "SmolLM2-360M")
                 MetaInfoRow(icon = Icons.Default.Code, label = "Version", value = "1.0.0")
             }
@@ -170,16 +169,6 @@ fun HelpScreen() {
                     "Chat with M1K3 using natural language",
                     "Your conversations are 100% private and local",
                     "No internet connection required",
-                ),
-        )
-
-        HelpSection(
-            title = "Eco Stats",
-            items =
-                listOf(
-                    "Track water, energy, and CO2 saved vs cloud AI",
-                    "Every message contributes to environmental savings",
-                    "View detailed stats in the Eco Stats screen",
                 ),
         )
 
@@ -337,7 +326,7 @@ fun PrivacyScreen() {
             title = "Network You Can See",
             content =
                 "Network bytes only leave when YOU ask: model downloads from HuggingFace, web " +
-                    "search via DuckDuckGo. Both show real byte counts in the Eco Stats screen.",
+                    "search via DuckDuckGo. No other network activity happens.",
         )
     }
 }
@@ -373,7 +362,7 @@ fun ExportScreen() {
         Spacer(modifier = Modifier.height(MaSpacing.sm))
 
         Text(
-            "Export your conversations and eco stats",
+            "Export your conversations",
             style = MaTypography.bodyMedium,
             color = MaColors.textSecondary(),
         )
@@ -386,16 +375,6 @@ fun ExportScreen() {
             Icon(Icons.Default.FileDownload, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Export Conversations (JSON)")
-        }
-
-        Spacer(modifier = Modifier.height(MaSpacing.sm))
-
-        OutlinedButton(
-            onClick = { /* TODO: Implement export */ },
-        ) {
-            Icon(Icons.Default.Eco, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Export Eco Stats (CSV)")
         }
 
         Spacer(modifier = Modifier.height(MaSpacing.xl))

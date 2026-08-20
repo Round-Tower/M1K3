@@ -13,18 +13,11 @@ package app.m1k3.ai.assistant.navigation
  * **Bottom Nav Tabs:**
  * - Chat: Main AI conversation interface
  * - History: Browse past conversations
- * - Eco Stats: Environmental impact dashboard
  * - Settings: App configuration and preferences
- * - Demo: Welcome/demo screen for new users
  */
 sealed class Screen(
     val route: String,
 ) {
-    /**
-     * Home/Demo screen - Welcome and feature showcase
-     */
-    data object Demo : Screen("demo")
-
     /**
      * Chat screen - Main AI conversation interface
      */
@@ -34,11 +27,6 @@ sealed class Screen(
      * History screen - Browse and search past conversations
      */
     data object History : Screen("history")
-
-    /**
-     * Eco Stats screen - Environmental impact dashboard
-     */
-    data object EcoStats : Screen("eco_stats")
 
     /**
      * Settings screen - App configuration and preferences
@@ -86,7 +74,7 @@ sealed class Screen(
     data object Licenses : Screen("licenses")
 
     /**
-     * Export Data screen - Backup conversations, export eco stats
+     * Export Data screen - Backup conversations
      */
     data object Export : Screen("export")
 
@@ -122,9 +110,7 @@ sealed class Screen(
             listOf(
                 Chat,
                 History,
-                EcoStats,
                 Settings,
-                Demo,
             )
 
         /**

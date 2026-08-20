@@ -31,7 +31,6 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
  * - Engine status indicator
  * - Memory and knowledge counts
  * - Context capacity
- * - Last session eco stats (if available)
  *
  * Design: Glassmorphic card with orange accent border,
  * distinct from regular chat bubbles.
@@ -43,9 +42,6 @@ fun MaStatusCard(
     memoryCount: Long,
     maxContextTokens: Int,
     deviceTierName: String,
-    lastSessionWaterMl: Long? = null,
-    lastSessionEnergyWh: Long? = null,
-    lastSessionCo2G: Long? = null,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(MaRadius.lg)
@@ -105,52 +101,6 @@ fun MaStatusCard(
             style = MaTypography.labelSmall,
             color = MaColors.textSecondary(),
         )
-
-        // Last session eco stats (if available)
-        if (lastSessionWaterMl != null || lastSessionEnergyWh != null || lastSessionCo2G != null) {
-            Spacer(modifier = Modifier.height(MaSpacing.xs))
-
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(MaRadius.sm))
-                        .background(MaColors.SuccessBg)
-                        .padding(horizontal = MaSpacing.sm, vertical = MaSpacing.xs),
-                horizontalArrangement = Arrangement.spacedBy(MaSpacing.md),
-            ) {
-                Text(
-                    text = "Last session saved:",
-                    style = MaTypography.labelSmall,
-                    color = MaColors.Success,
-                    fontWeight = FontWeight.Medium,
-                )
-
-                lastSessionWaterMl?.let {
-                    Text(
-                        text = "${formatWater(it)} water",
-                        style = MaTypography.labelSmall,
-                        color = MaColors.textSecondary(),
-                    )
-                }
-
-                lastSessionEnergyWh?.let {
-                    Text(
-                        text = "$it Wh",
-                        style = MaTypography.labelSmall,
-                        color = MaColors.textSecondary(),
-                    )
-                }
-
-                lastSessionCo2G?.let {
-                    Text(
-                        text = "${it}g CO2",
-                        style = MaTypography.labelSmall,
-                        color = MaColors.textSecondary(),
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -168,9 +118,6 @@ fun MaStatusCard(
         memoryCount = status.memoryCount,
         maxContextTokens = status.maxContextTokens,
         deviceTierName = status.deviceTierName,
-        lastSessionWaterMl = status.lastSessionWaterMl,
-        lastSessionEnergyWh = status.lastSessionEnergyWh,
-        lastSessionCo2G = status.lastSessionCo2G,
         modifier = modifier,
     )
 }
@@ -200,13 +147,6 @@ private fun formatCount(count: Long): String =
         else -> count.toString()
     }
 
-private fun formatWater(ml: Long): String =
-    if (ml >= 1000) {
-        "${ml / 1000.0}L"
-    } else {
-        "${ml}ml"
-    }
-
 // ============================================================
 // Previews
 // ============================================================
@@ -228,31 +168,6 @@ private fun MaStatusCardPreview() {
                 memoryCount = 127,
                 maxContextTokens = 4096,
                 deviceTierName = "Flagship",
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun MaStatusCardWithEcoPreview() {
-    MaTheme {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(MaColors.bgPrimary())
-                    .padding(MaSpacing.base),
-        ) {
-            MaStatusCard(
-                greeting = "Good morning!",
-                engineReady = true,
-                memoryCount = 42,
-                maxContextTokens = 2048,
-                deviceTierName = "Mid-range",
-                lastSessionWaterMl = 2300,
-                lastSessionEnergyWh = 45,
-                lastSessionCo2G = 12,
             )
         }
     }

@@ -30,9 +30,6 @@ object PreferenceKeys {
     /** Selected avatar model ID */
     const val SELECTED_AVATAR = "selected_avatar"
 
-    /** Globe background mode: "RUBIN" | "MAPLIBRE" | "NONE" */
-    const val GLOBE_MODE = "globe_mode"
-
     /** User-set display name (overrides GET_ACCOUNTS detection) */
     const val USER_NAME = "user_name"
 

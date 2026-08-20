@@ -21,8 +21,6 @@ import app.m1k3.ai.assistant.database.AndroidDatabaseFactory
 import app.m1k3.ai.assistant.database.DatabaseConfig
 import app.m1k3.ai.assistant.database.DatabaseFactory
 import app.m1k3.ai.assistant.database.MaDatabase
-import app.m1k3.ai.assistant.eco.EcoMetricsRepository
-import app.m1k3.ai.assistant.eco.EcoStatsViewModel
 import app.m1k3.ai.assistant.embedding.EmbeddingEngine
 import app.m1k3.ai.assistant.embedding.EmbeddingEngineManager
 import app.m1k3.ai.assistant.embedding.EmbeddingEngineManagerImpl
@@ -283,7 +281,6 @@ actual val platformModule =
         single<ModelDownloadManager> {
             HttpModelDownloadManager(
                 context = get<Context>(),
-                ecoMetrics = get<EcoMetricsRepository>(),
             )
         }
 
@@ -300,7 +297,6 @@ actual val platformModule =
         single<ToolRegistry> {
             AndroidToolRegistry(
                 context = get<Context>(),
-                ecoMetrics = get<EcoMetricsRepository>(),
             )
         }
 
@@ -456,7 +452,6 @@ actual val platformModule =
             ChatScreenViewModel(
                 aiEngine = get<BaseLlmEngine>(),
                 conversationRepo = get<ConversationRepository>(),
-                ecoMetricsRepo = get<EcoMetricsRepository>(),
                 database = get<MaDatabase>(),
                 deviceInfo = get<DeviceInfoProviderInterface>(),
                 preferences = get<PreferencesStoreInterface>(),
@@ -567,18 +562,6 @@ actual val platformModule =
                     ModelDownloadWorker.observeAsFlow(ctx, model) // observe by name, not UUID
                 },
                 prefs = get<PreferencesStoreInterface>(),
-            )
-        }
-
-        /**
-         * EcoStatsViewModel
-         *
-         * Manages environmental impact statistics and tracking.
-         * Shows energy, water, and carbon savings from local AI inference.
-         */
-        viewModel {
-            EcoStatsViewModel(
-                repository = get<EcoMetricsRepository>(),
             )
         }
 

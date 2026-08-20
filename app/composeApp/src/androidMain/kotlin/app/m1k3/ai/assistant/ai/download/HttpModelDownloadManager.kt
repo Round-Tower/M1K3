@@ -1,8 +1,6 @@
 package app.m1k3.ai.assistant.ai.download
 
 import android.content.Context
-import app.m1k3.ai.assistant.eco.EcoCalculator
-import app.m1k3.ai.assistant.eco.EcoMetricsRepository
 import app.m1k3.ai.domain.ai.LlmModel
 import app.m1k3.ai.domain.ai.ModelDownloadManager
 import co.touchlab.kermit.Logger
@@ -21,16 +19,10 @@ import java.net.URL
  * Supports progress tracking and resumable downloads.
  *
  * @param context Android context for internal storage access
- * @param ecoMetrics Optional — records real bytes transferred so EcoStats
- *   can surface them. Null skips tracking (useful for tests / isolated builds).
  */
 class HttpModelDownloadManager(
     private val context: Context,
-    private val ecoMetrics: EcoMetricsRepository? = null,
 ) : ModelDownloadManager {
-    /** HTTP request envelope per connection — GET line + host/range/UA headers. */
-    private val requestBytesPerConnection = 512
-
     private val logger = Logger.withTag("HttpModelDownloadManager")
     private val modelsDir: File get() = File(context.filesDir, "models").also { it.mkdirs() }
 
@@ -105,12 +97,8 @@ class HttpModelDownloadManager(
                 // HTTP streams can end early without an IOException — the loop exits
                 // normally but the file is truncated. Check we got ≥99% of expected bytes.
                 val actualBytes = tempFile.length()
-                val sessionBytes = actualBytes - existingBytes
                 if (totalBytes > 0 && actualBytes < totalBytes * 99 / 100) {
                     logger.e { "Truncated download: got ${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB" }
-                    // Still record what we actually transferred this session —
-                    // honest eco accounting even on partial failures.
-                    recordDownloadBytes(model.id, sessionBytes)
                     // Keep as .tmp so next attempt resumes from this point
                     emit(
                         DownloadProgress.Failed(
@@ -122,7 +110,6 @@ class HttpModelDownloadManager(
                 }
 
                 tempFile.renameTo(targetFile)
-                recordDownloadBytes(model.id, sessionBytes)
                 logger.i { "Download complete: ${targetFile.length() / 1_000_000}MB" }
                 emit(DownloadProgress.Complete(model.id, targetFile.absolutePath))
             } catch (e: Exception) {
@@ -181,30 +168,6 @@ class HttpModelDownloadManager(
         }
 
         throw java.io.IOException("Too many redirects ($maxRedirects)")
-    }
-
-    /**
-     * Record a network event in EcoMetrics for the bytes transferred this
-     * session. Caller passes the session delta (not the total file size) so
-     * resumed downloads don't double-count. Swallows exceptions — eco
-     * tracking is never allowed to fail a real download.
-     */
-    private fun recordDownloadBytes(
-        modelId: String,
-        sessionBytes: Long,
-    ) {
-        val repo = ecoMetrics ?: return
-        if (sessionBytes <= 0) return
-        runCatching {
-            repo.recordMetrics(
-                savings =
-                    EcoCalculator.networkEvent(
-                        bytesSent = requestBytesPerConnection.toLong(),
-                        bytesReceived = sessionBytes,
-                    ),
-                sessionId = "download:$modelId",
-            )
-        }.onFailure { logger.w(it) { "Eco record failed (non-fatal)" } }
     }
 
     /**

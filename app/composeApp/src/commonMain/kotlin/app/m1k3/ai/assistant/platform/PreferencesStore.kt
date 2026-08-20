@@ -166,9 +166,6 @@ object PreferenceKeys {
     /** Selected avatar model ID */
     const val SELECTED_AVATAR = "selected_avatar"
 
-    /** Globe background mode: "RUBIN" | "MAPLIBRE" | "NONE" */
-    const val GLOBE_MODE = "globe_mode"
-
     /** Empty-chat hero mascot style: "DOT_MATRIX" (default) | "MODEL_3D" */
     const val HERO_STYLE = "hero_style"
 

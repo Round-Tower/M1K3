@@ -37,8 +37,6 @@ data class ChatUiState(
     val generationState: GenerationState = GenerationState.Idle,
     /** AI engine initialization state */
     val engineState: EngineState = EngineState.Loading,
-    /** Session eco-metrics (water, energy, CO2 saved) */
-    val sessionEcoStats: SessionEcoStats = SessionEcoStats(),
     /** Current error to display (null if none) */
     val error: ChatError? = null,
     /** RAG info for display (e.g., "Technical (85%) • 3 facts") */
@@ -244,56 +242,7 @@ data class ChatMessage(
     val statusMaxTokens: Int? = null,
     /** Device tier name for status card */
     val statusDeviceTier: String? = null,
-    /** Last session water saved (ml) for status card */
-    val statusLastWaterMl: Long? = null,
-    /** Last session energy saved (Wh) for status card */
-    val statusLastEnergyWh: Long? = null,
-    /** Last session CO2 saved (g) for status card */
-    val statusLastCo2G: Long? = null,
 )
-
-/**
- * Session eco-metrics tracking water, energy, and CO2 saved from local AI.
- */
-data class SessionEcoStats(
-    /** Total tokens generated in this session */
-    val totalTokens: Long = 0,
-    /** Water saved in milliliters (vs cloud AI) */
-    val waterMl: Long = 0,
-    /** Energy saved in watt-hours (vs cloud AI) */
-    val energyWh: Long = 0,
-    /** CO2 prevented in grams (vs cloud AI) */
-    val co2G: Long = 0,
-    /** Number of messages generated */
-    val messageCount: Int = 0,
-) {
-    /**
-     * Format water savings for display.
-     */
-    fun formatWater(): String =
-        when {
-            waterMl >= 1000 -> "%.1fL".format(waterMl / 1000.0)
-            else -> "${waterMl}ml"
-        }
-
-    /**
-     * Format energy savings for display.
-     */
-    fun formatEnergy(): String =
-        when {
-            energyWh >= 1000 -> "%.1fkWh".format(energyWh / 1000.0)
-            else -> "${energyWh}Wh"
-        }
-
-    /**
-     * Format CO2 savings for display.
-     */
-    fun formatCO2(): String =
-        when {
-            co2G >= 1000 -> "%.1fkg".format(co2G / 1000.0)
-            else -> "${co2G}g"
-        }
-}
 
 /**
  * Context window usage state for displaying token consumption.

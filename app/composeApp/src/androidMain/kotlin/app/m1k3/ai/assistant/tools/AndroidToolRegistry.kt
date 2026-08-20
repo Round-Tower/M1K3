@@ -1,7 +1,6 @@
 package app.m1k3.ai.assistant.tools
 
 import android.content.Context
-import app.m1k3.ai.assistant.eco.EcoMetricsRepository
 import app.m1k3.ai.assistant.tools.executors.BatteryLevelExecutor
 import app.m1k3.ai.assistant.tools.executors.GetHealthExecutor
 import app.m1k3.ai.assistant.tools.executors.GetNotificationsExecutor
@@ -39,7 +38,6 @@ import app.m1k3.ai.domain.tools.ToolParameter
  */
 class AndroidToolRegistry(
     private val context: Context,
-    private val ecoMetrics: EcoMetricsRepository? = null,
 ) : ToolRegistryImpl() {
     init {
         registerDeviceInfoTools()
@@ -380,7 +378,7 @@ class AndroidToolRegistry(
                     ),
                 category = ToolCategory.KNOWLEDGE,
             ),
-            WebSearchExecutor(ecoMetrics = ecoMetrics),
+            WebSearchExecutor(),
         )
     }
 }
