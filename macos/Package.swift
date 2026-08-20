@@ -88,6 +88,10 @@ let package = Package(
         // Brain at Home — the LAN brain-serving layer (TLS-PSK listener,
         // pairing, Bonjour advertiser, scoped LAN MCP route).
         .library(name: "M1K3BrainServe", targets: ["M1K3BrainServe"]),
+        // Pure model for the M1K3 screensaver (.saver): the M mark geometry, the
+        // ambient rain sim, presence copy. Foundation-only so the sandboxed
+        // legacyScreenSaver process links no app modules.
+        .library(name: "M1K3ScreensaverCore", targets: ["M1K3ScreensaverCore"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
@@ -155,6 +159,16 @@ let package = Package(
             name: "M1K3LogCoreTests",
             dependencies: ["M1K3LogCore"],
             path: "Tests/M1K3LogCoreTests"
+        ),
+        // Screensaver pure core (Foundation-only): rain sim + M mark + presence.
+        .target(
+            name: "M1K3ScreensaverCore",
+            path: "Sources/M1K3ScreensaverCore"
+        ),
+        .testTarget(
+            name: "M1K3ScreensaverCoreTests",
+            dependencies: ["M1K3ScreensaverCore"],
+            path: "Tests/M1K3ScreensaverCoreTests"
         ),
         .target(
             name: "M1K3Knowledge",

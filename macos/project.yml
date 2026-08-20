@@ -306,6 +306,36 @@ targets:
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
 
+  # The M1K3 screensaver (.saver bundle) — "what your machine got up to while you
+  # were away". A borderless ScreenSaverView drawing the ambient pixel-rain + the
+  # M brand mark; the pure sim/geometry/copy is the M1K3ScreensaverCore package.
+  # Chosen over an always-on desktop wallpaper (challenger, 2026-08-20): a
+  # screensaver runs only when idle, so cost + the screenshot-privacy bind vanish.
+  # Install: build, then copy M1K3.saver to ~/Library/Screen Savers/.
+  M1K3Screensaver:
+    type: bundle
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: M1K3Screensaver
+    dependencies:
+      - package: M1K3
+        product: M1K3ScreensaverCore
+      - sdk: ScreenSaver.framework
+    settings:
+      base:
+        WRAPPER_EXTENSION: saver
+        PRODUCT_BUNDLE_IDENTIFIER: app.m1k3.screensaver
+        # Product/module stays M1K3Screensaver (so NSPrincipalClass resolves and
+        # the module doesn't collide with the app's M1K3); the picker shows the
+        # CFBundleName "M1K3" from Info.plist regardless.
+        INFOPLIST_FILE: M1K3Screensaver/Info.plist
+        # legacyScreenSaver loads a signed bundle; inherit the Round Tower team
+        # from base settings, and skip the app-sandbox entitlement (a .saver is a
+        # plug-in hosted by the system, not an app).
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @loader_path/../Frameworks @executable_path/../Frameworks"
+
 # A SHARED M1K3 scheme, explicit so xcodegen emits it to xcshareddata/xcschemes/.
 # Without this, Xcode only auto-creates an ephemeral user scheme — invisible to
 # Xcode Cloud (which can build only shared schemes). Because the pbxproj is
@@ -347,6 +377,17 @@ schemes:
     run:
       config: Debug
     profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+  # The screensaver (.saver) — build, then copy the product to ~/Library/Screen Savers/.
+  M1K3Screensaver:
+    build:
+      targets:
+        M1K3Screensaver: all
+    run:
       config: Release
     analyze:
       config: Debug
