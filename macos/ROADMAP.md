@@ -5,7 +5,14 @@ architecture/build/test, see `CLAUDE.md`. For *why* a decision was made (model
 swaps, phase rationale, the full session-by-session build log), see `PLAN.md` —
 it's a signed historical record and stays that way; this file doesn't repeat it.
 
-Last swept: 2026-08-03 (evening) — MERGE DAY, board back to empty. Six PRs
+Last swept: 2026-08-20 — the **M brand mark** shipped (PR #142; app icon
+reduced from the M1K3 wordmark to the single pixel-M, both platforms) and the
+**live wallpaper** greenlit as the Golden Gate flagship (Kev: *"the live
+wallpaper definitely is next — do whatever you need to deliver it"*); prior art
+found in Cartogram-Mac's `Wallpaper/` module (in-app `DesktopWindow` at desktop
+level, occlusion-idle). See the flagship section. Before that —
+
+2026-08-03 (evening) — MERGE DAY, board back to empty. Six PRs
 landed: **#95** dream-cycle truth-up + `docs/DESIGN_DOCTRINE.md` · **#96**
 reduction wave 3 (deadwood) · **#97→#98** the identity/citation leak · **#99**
 a markdown table could seize the window's width (#79 lead) · **#100** the MCP
@@ -245,10 +252,45 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
 
 ---
 
-## Next — the two flagship initiatives
+## Next — the flagship initiatives
 
-Both are past the spike stage — architecture and feasibility are proven, what's
-left is building.
+Both voice-on-iOS and Brain-at-home are past the spike stage — architecture and
+feasibility are proven, what's left is building.
+
+### 0. The M1K3 screensaver — the Golden Gate "my machine is alive" flagship (2026-08-20)
+Kev greenlit a live-presence surface; `challenger` pressure-tested the obvious
+shape (an always-on **desktop wallpaper**, porting Cartogram-Mac's `DesktopWindow`)
+and **Kev chose the screensaver instead** on its recommendation.
+
+- **Why not the always-on desktop wallpaper** (challenger, grounded in source):
+  ① occlusion-idle barely fires — a desktop-level window reads `.visible` if any
+  sliver shows (menu-bar gap, Dock, notch), so it only idles inside a full-screen
+  Space (when you can't see it anyway); and the rain's `TimelineView` is
+  `paused: lowPower` only — **no occlusion-pause seam exists** (`InferencePhosphorView.swift:94`),
+  so a straight port is a permanent 30fps GPU loop per screen. ② the "2D pixel
+  face" **is RealityKit** (`AvatarView` FaceGrid, 30fps) — same always-on cost as
+  the "3D" avatar; only the bare rain Canvas is cheap. ③ the heartbeat line is
+  composed from **remembered-fact titles** (`HeartbeatComposer.swift:37`) and
+  own-output renders verbatim — a user-content leak onto the most-screenshotted
+  surface (the privacy double-bind: screenshotted × readable × data-minimalism → pick two).
+- **Why the screensaver wins:** runs only when idle (cost-free — idle = no battery
+  worry), most cinematic recording context, macOS owns the lifecycle (no occlusion
+  problem), and it rarely lands in a work screenshot so the privacy bind dissolves.
+  The "can't read live state" limit is FALSE for us — it can poll M1K3's own
+  **loopback MCP** (`127.0.0.1:4242` `get_status`, recent activity) + read
+  `heartbeat.sqlite`, both already served. Story: *"what M1K3 got up to while you
+  were away."*
+- **Guardrails carried from the pass:** v1 self-contained visual (pixel-rain +
+  the new **M mark** + black gradient) that always works with zero data; the live
+  layer (status + latest heartbeat) degrades gracefully if the loopback port is
+  closed or the `legacyScreenSaver` sandbox blocks it (⚠️ **unverified** — sandbox
+  may block cross-container `heartbeat.sqlite` reads and/or outbound localhost;
+  spike the mechanism first). Freeze-detect / static-idle-mark if the resident
+  brain is stalled. Default surface, install to `~/Library/Screen Savers/`.
+- **The other two shapes, recorded not chosen:** the always-on desktop wallpaper
+  (needs occlusion→full-Space pause seam + glyph-only + energy proof — deferred,
+  maybe never); a "Present/Ambient" in-app full-screen mode (cheap, live, opt-in
+  "watch M1K3 think" — a possible later companion to the screensaver).
 
 ### 1. Voice on iOS + the Vision Pro flagship
 Spike scaffolding, results, and Kev's open calls: `scratch/voice-mobile/PLAN-DRAFT.md`.
@@ -401,8 +443,15 @@ Spike scaffolding, results, and Kev's open calls: `scratch/voice-mobile/PLAN-DRA
   visionOS timing) unblock Phase A.
 - Dream-cycle Tier-2 corpus-twin marker: sub-kind vs title-prefix (spec §5
   recommends sub-kind).
-- App icon: Kev wants the liquid-glass mark swapped for a plain M — his eye,
-  his edit (Icon Composer; the visionOS `.solidimagestack` follows).
+- ~~App icon: swap the liquid-glass wordmark for a plain M~~ — **DONE, PR #142
+  (2026-08-20).** The **M brand mark** — the leading pixel-M lifted exactly from
+  the wordmark (5×7, 17 cells), kept monochrome, glass-composited on the black
+  gradient. Both platforms ride the identical mark (visionOS `.solidimagestack`
+  regenerated from the same source); verified in the compiled bundle. Source of
+  truth + generator + brand sheet in `tools/icons/brand/`. Downstream still open:
+  make the M focal on the **website** + a content pass reflecting Brain at Home /
+  heartbeat / rain / feedback (its own session). The OG-image brand call below
+  now resolves to the M, not the pixel face.
 - Store presence pass (screenshots, per-platform captures, site cross-links) —
   parked deliberately; the website content is strong, timing is the question.
   (Voice-mobile scoping call #1 was RESOLVED by #82's nav restructure — see

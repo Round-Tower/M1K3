@@ -176,6 +176,20 @@ targets:
         product: M1K3Heartbeat
       - package: M1K3
         product: M1K3BrainServe
+      # The screensaver's pure core — the app uses ScreenSaverInstall for the
+      # "Set Up Screen Saver" Settings row (status + install action).
+      - package: M1K3
+        product: M1K3ScreensaverCore
+      # Embed the .saver so Settings can install it: M1K3 is sandboxed and can't
+      # write to ~/Library/Screen Savers directly, so the app ships the bundle
+      # and hands it to macOS via NSWorkspace.open (the native install prompt).
+      # Copied into Contents/Resources; link:false — a .saver isn't linkable.
+      # (MAS note: embedded plug-ins are restricted on the App Store; M1K3's
+      # primary channel is the Developer-ID DMG, where this is fine.)
+      - target: M1K3Screensaver
+        link: false
+        copyFiles:
+          destination: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.m1k3
@@ -306,6 +320,39 @@ targets:
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
 
+  # The M1K3 screensaver (.saver bundle) — "what your machine got up to while you
+  # were away". A borderless ScreenSaverView drawing the ambient pixel-rain + the
+  # M brand mark; the pure sim/geometry/copy is the M1K3ScreensaverCore package.
+  # Chosen over an always-on desktop wallpaper (challenger, 2026-08-20): a
+  # screensaver runs only when idle, so cost + the screenshot-privacy bind vanish.
+  # Install: build, then copy M1K3.saver to ~/Library/Screen Savers/.
+  M1K3Screensaver:
+    type: bundle
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: M1K3Screensaver
+    dependencies:
+      - package: M1K3
+        product: M1K3ScreensaverCore
+      - sdk: ScreenSaver.framework
+    settings:
+      base:
+        WRAPPER_EXTENSION: saver
+        PRODUCT_BUNDLE_IDENTIFIER: app.m1k3.screensaver
+        # File is "M1K3.saver" (PRODUCT_NAME) so the installed path + picker read
+        # "M1K3" and match ScreenSaverInstall.fileName; the Swift MODULE stays
+        # M1K3Screensaver (PRODUCT_MODULE_NAME) so NSPrincipalClass resolves and
+        # it doesn't collide with the app's own M1K3 module.
+        PRODUCT_NAME: M1K3
+        PRODUCT_MODULE_NAME: M1K3Screensaver
+        INFOPLIST_FILE: M1K3Screensaver/Info.plist
+        # legacyScreenSaver loads a signed bundle; inherit the Round Tower team
+        # from base settings, and skip the app-sandbox entitlement (a .saver is a
+        # plug-in hosted by the system, not an app).
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @loader_path/../Frameworks @executable_path/../Frameworks"
+
 # A SHARED M1K3 scheme, explicit so xcodegen emits it to xcshareddata/xcschemes/.
 # Without this, Xcode only auto-creates an ephemeral user scheme — invisible to
 # Xcode Cloud (which can build only shared schemes). Because the pbxproj is
@@ -347,6 +394,17 @@ schemes:
     run:
       config: Debug
     profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+  # The screensaver (.saver) — build, then copy the product to ~/Library/Screen Savers/.
+  M1K3Screensaver:
+    build:
+      targets:
+        M1K3Screensaver: all
+    run:
       config: Release
     analyze:
       config: Debug
