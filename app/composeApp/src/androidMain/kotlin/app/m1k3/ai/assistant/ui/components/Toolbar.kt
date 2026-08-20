@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.m1k3.ai.assistant.avatar.AvatarEmotion
 import app.m1k3.ai.assistant.avatar.AvatarState
-import app.m1k3.ai.assistant.avatar.AvatarView
+import app.m1k3.ai.assistant.avatar.DotMatrixAvatar
 import app.m1k3.ai.assistant.design.theme.MaTheme
 import app.m1k3.ai.assistant.design.tokens.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -41,7 +41,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
  * - Hamburger menu icon for drawer toggle
  * - Liquid glass blur effect with gradient overlay
  * - Engine initialization status indicator
- * - 3D avatar with emotion/activity feedback (100dp)
+ * - The face, with emotion/activity feedback (100dp)
  * - Screen name display
  * - Consistent styling across all screens
  *
@@ -166,23 +166,15 @@ fun Toolbar(
                     }
                 }
 
-                // Right side: Avatar — hidden while the chat hero owns the 3D scene.
-                val showAvatar by app.m1k3.ai.assistant.avatar.LocalShowToolbarAvatar.current
-                if (showAvatar) {
-                    AvatarView(
-                        state = avatarState,
-                        use3D = true,
-                        showInfo = true,
-                        modifier =
-                            Modifier
-                                .testTag("avatar_unified")
-                                .size(140.dp)
-                                .statusBarsPadding(),
-                    )
-                } else {
-                    androidx.compose.foundation.layout
-                        .Spacer(modifier = Modifier.size(140.dp))
-                }
+                // Right side: the face — M1K3's one avatar.
+                DotMatrixAvatar(
+                    state = avatarState,
+                    modifier =
+                        Modifier
+                            .testTag("avatar_unified")
+                            .size(140.dp)
+                            .statusBarsPadding(),
+                )
             }
         }
     }

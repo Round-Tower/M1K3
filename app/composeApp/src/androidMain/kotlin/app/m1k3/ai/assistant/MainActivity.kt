@@ -62,12 +62,9 @@ import app.m1k3.ai.assistant.app.InitializationResult
 import app.m1k3.ai.assistant.app.InitializationState
 import app.m1k3.ai.assistant.app.InitializationViewModel
 import app.m1k3.ai.assistant.app.LoggerAdapter
-import app.m1k3.ai.assistant.avatar.FilamentEngineManager
 import app.m1k3.ai.assistant.avatar.LocalSharedAvatarVM
-import app.m1k3.ai.assistant.avatar.ProvideSharedEngine
 import app.m1k3.ai.assistant.avatar.collectAsState
 import app.m1k3.ai.assistant.avatar.rememberAvatarViewModel
-import app.m1k3.ai.assistant.avatar.webview.AvatarWebViewDemoScreen
 import app.m1k3.ai.assistant.chat.ChatScreenViewModel
 import app.m1k3.ai.assistant.database.MaDatabase
 import app.m1k3.ai.assistant.design.theme.MaTheme
@@ -78,7 +75,6 @@ import app.m1k3.ai.assistant.embedding.EmbeddingEngineManager
 import app.m1k3.ai.assistant.navigation.Screen
 import app.m1k3.ai.assistant.navigation.navigateToBottomNav
 import app.m1k3.ai.assistant.ui.AboutScreen
-import app.m1k3.ai.assistant.ui.AvatarGalleryScreen
 import app.m1k3.ai.assistant.ui.ChatScreen
 import app.m1k3.ai.assistant.ui.ExportScreen
 import app.m1k3.ai.assistant.ui.FeedbackScreen
@@ -88,7 +84,6 @@ import app.m1k3.ai.assistant.ui.LicensesScreen
 import app.m1k3.ai.assistant.ui.PrivacyScreen
 import app.m1k3.ai.assistant.ui.components.Toolbar
 import app.m1k3.ai.assistant.ui.drawer.DrawerContent
-import app.m1k3.ai.assistant.utils.FilamentSetup
 import app.m1k3.ai.assistant.utils.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -153,7 +148,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
 
-        // Initialize Koin & Filament using AppInitializationManager
+        // Initialize Koin using AppInitializationManager
         val appInitManager =
             AppInitializationManager(
                 logger = LoggerAdapter(logger),
@@ -163,17 +158,11 @@ class MainActivity : ComponentActivity() {
                         modules(allModules)
                     }
                 },
-                filamentInitializer = { FilamentSetup.initialize() },
             )
 
         val koinResult = appInitManager.initializeKoin()
         if (koinResult !is InitializationResult.Success) {
             logger.e { "Koin initialization failed" }
-        }
-
-        val filamentResult = appInitManager.initializeFilament()
-        if (filamentResult !is InitializationResult.Success) {
-            logger.e { "Filament initialization failed" }
         }
 
         // Initialize embedding engine for RAG/semantic search
@@ -220,14 +209,6 @@ class MainActivity : ComponentActivity() {
                     try {
                         // Close AI engine (ONNX cleanup on IO thread)
                         aiEngine.close()
-
-                        // Order matters: loader holds engine-owned handles, so
-                        // destroy shared models before the engine itself.
-                        app.m1k3.ai.assistant.avatar.SharedModelCache
-                            .forceDestroy()
-
-                        // Destroy Filament engine (CRITICAL: prevents memory leaks)
-                        FilamentEngineManager.forceDestroy()
                     } catch (e: Exception) {
                         logger.w(e) { "Error during cleanup" }
                     }
@@ -316,273 +297,225 @@ private fun MaAppContent() {
     // Get database from Koin for screens that need it directly
     val database = koinInject<MaDatabase>()
 
-    ProvideSharedEngine {
-        MaTheme {
-            val navController = rememberNavController()
-            val appAvatarVM = rememberAvatarViewModel()
-            val appAvatarState by appAvatarVM.collectAsState()
+    MaTheme {
+        val navController = rememberNavController()
+        val appAvatarVM = rememberAvatarViewModel()
+        val appAvatarState by appAvatarVM.collectAsState()
 
-            // Selected avatar lifts to a top-level state so Avatar3D surfaces
-            // recompose immediately when the user picks a new model in the gallery.
-            val prefs = koinInject<app.m1k3.ai.assistant.platform.PreferencesStoreInterface>()
-            val selectedAvatarState =
-                remember {
-                    mutableStateOf(
-                        prefs.getString(
-                            app.m1k3.ai.assistant.platform.PreferenceKeys.SELECTED_AVATAR,
-                            null,
-                        ) ?: app.m1k3.ai.assistant.avatar.ModelRegistry.DEFAULT_MODEL_ID,
-                    )
-                }
-
-            // Controls whether the Toolbar renders its own 3D avatar.
-            // Starts FALSE so no speculative Filament surface mounts at cold
-            // launch — ChatScreen's LaunchedEffect(preConversation) flips
-            // it to true once chatting begins. See AvatarCompositionLocal
-            // for the full rationale (Vulkan OOM cascade, 2026-04-19).
-            val toolbarAvatarVisible = remember { mutableStateOf(false) }
-
-            // Shared mutable state so the current screen can publish
-            // Toolbar actions (e.g. "New chat") without prop-drilling
-            // through the Scaffold. ChatScreen writes to this on entry
-            // and clears it on dispose.
-            val toolbarActionsState =
-                remember {
-                    mutableStateOf(
-                        app.m1k3.ai.assistant.ui.components
-                            .ToolbarActions(),
-                    )
-                }
-
-            var drawerOpen by remember { mutableStateOf(false) }
-
-            val drawerState = rememberDrawerState(DrawerValue.Closed)
-
-            LaunchedEffect(drawerOpen) {
-                if (drawerOpen) {
-                    drawerState.open()
-                } else {
-                    drawerState.close()
-                }
+        // Shared mutable state so the current screen can publish
+        // Toolbar actions (e.g. "New chat") without prop-drilling
+        // through the Scaffold. ChatScreen writes to this on entry
+        // and clears it on dispose.
+        val toolbarActionsState =
+            remember {
+                mutableStateOf(
+                    app.m1k3.ai.assistant.ui.components
+                        .ToolbarActions(),
+                )
             }
 
-            LaunchedEffect(drawerState.currentValue) {
-                drawerOpen = drawerState.currentValue == DrawerValue.Open
+        var drawerOpen by remember { mutableStateOf(false) }
+
+        val drawerState = rememberDrawerState(DrawerValue.Closed)
+
+        LaunchedEffect(drawerOpen) {
+            if (drawerOpen) {
+                drawerState.open()
+            } else {
+                drawerState.close()
             }
+        }
 
-            val haptics = LocalHapticFeedback.current
-            val isDarkMode = isSystemInDarkTheme()
+        LaunchedEffect(drawerState.currentValue) {
+            drawerOpen = drawerState.currentValue == DrawerValue.Open
+        }
 
-            // Animate content offset based on drawer state
-            val contentOffset by animateDpAsState(
-                targetValue = if (drawerOpen) 280.dp else 0.dp,
-                animationSpec = tween(durationMillis = 300),
-            )
+        val haptics = LocalHapticFeedback.current
+        val isDarkMode = isSystemInDarkTheme()
 
-            ModalNavigationDrawer(
-                drawerContent = {
-                    DrawerContent(
-                        currentRoute =
-                            navController
-                                .currentBackStackEntryAsState()
-                                .value
-                                ?.destination
-                                ?.route,
-                        isDarkMode = isDarkMode,
-                        onItemClick = { route ->
-                            // Primary nav uses navigateToBottomNav for proper back stack
-                            val primaryRoutes =
-                                setOf(
-                                    Screen.Chat.route,
-                                    Screen.History.route,
-                                    Screen.Settings.route,
-                                )
-                            if (route in primaryRoutes) {
-                                val screen =
-                                    when (route) {
-                                        Screen.Chat.route -> Screen.Chat
-                                        Screen.History.route -> Screen.History
-                                        Screen.Settings.route -> Screen.Settings
-                                        else -> Screen.Chat
-                                    }
-                                navController.navigateToBottomNav(screen)
-                            } else {
-                                navController.navigate(route)
-                            }
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        onMenuClose = { drawerOpen = false },
-                    )
-                },
-                scrimColor = if (isDarkMode) MaColors.ScrimMedium else MaColors.ScrimMediumLight,
-                drawerState = drawerState,
+        // Animate content offset based on drawer state
+        val contentOffset by animateDpAsState(
+            targetValue = if (drawerOpen) 280.dp else 0.dp,
+            animationSpec = tween(durationMillis = 300),
+        )
+
+        ModalNavigationDrawer(
+            drawerContent = {
+                DrawerContent(
+                    currentRoute =
+                        navController
+                            .currentBackStackEntryAsState()
+                            .value
+                            ?.destination
+                            ?.route,
+                    isDarkMode = isDarkMode,
+                    onItemClick = { route ->
+                        // Primary nav uses navigateToBottomNav for proper back stack
+                        val primaryRoutes =
+                            setOf(
+                                Screen.Chat.route,
+                                Screen.History.route,
+                                Screen.Settings.route,
+                            )
+                        if (route in primaryRoutes) {
+                            val screen =
+                                when (route) {
+                                    Screen.Chat.route -> Screen.Chat
+                                    Screen.History.route -> Screen.History
+                                    Screen.Settings.route -> Screen.Settings
+                                    else -> Screen.Chat
+                                }
+                            navController.navigateToBottomNav(screen)
+                        } else {
+                            navController.navigate(route)
+                        }
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    onMenuClose = { drawerOpen = false },
+                )
+            },
+            scrimColor = if (isDarkMode) MaColors.ScrimMedium else MaColors.ScrimMediumLight,
+            drawerState = drawerState,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .offset(x = contentOffset),
             ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .offset(x = contentOffset),
+                // Lift the shared avatar state above the Scaffold so the
+                // Toolbar slot can consume it too.
+                CompositionLocalProvider(
+                    LocalSharedAvatarVM provides appAvatarVM,
+                    app.m1k3.ai.assistant.ui.components.LocalToolbarActions provides toolbarActionsState,
                 ) {
-                    // Lift avatar-related CompositionLocals above the Scaffold so the
-                    // Toolbar slot (which renders Avatar3DView) can consume them too.
-                    CompositionLocalProvider(
-                        LocalSharedAvatarVM provides appAvatarVM,
-                        app.m1k3.ai.assistant.avatar.LocalSelectedAvatarId provides selectedAvatarState,
-                        app.m1k3.ai.assistant.avatar.LocalShowToolbarAvatar provides toolbarAvatarVisible,
-                        app.m1k3.ai.assistant.ui.components.LocalToolbarActions provides toolbarActionsState,
-                    ) {
-                        Scaffold(
-                            topBar = {
-                                Toolbar(
-                                    screenName =
-                                        getScreenName(
-                                            navController
-                                                .currentBackStackEntryAsState()
-                                                .value
-                                                ?.destination
-                                                ?.route,
-                                        ),
-                                    engineInitialized = true,
-                                    avatarState = appAvatarState,
-                                    onMenuClick = { drawerOpen = !drawerOpen },
-                                    modifier = Modifier.fillMaxWidth(),
+                    Scaffold(
+                        topBar = {
+                            Toolbar(
+                                screenName =
+                                    getScreenName(
+                                        navController
+                                            .currentBackStackEntryAsState()
+                                            .value
+                                            ?.destination
+                                            ?.route,
+                                    ),
+                                engineInitialized = true,
+                                avatarState = appAvatarState,
+                                onMenuClick = { drawerOpen = !drawerOpen },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        },
+                        // Zero out Scaffold's automatic inset padding so content can
+                        // extend to true screen edges (chat background behind status/nav bars).
+                        // Individual screens call windowInsetsPadding where they need it.
+                        // The Toolbar sits in topBar and Compose positions it below the
+                        // status bar automatically via the slot's own inset handling.
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                    ) { paddingValues ->
+                        NavHost(
+                            navController = navController,
+                            startDestination = Screen.Chat.route,
+                            // Only top padding from the Toolbar slot — bottom/sides
+                            // are screen-owned so the background bleeds to all edges.
+                            modifier = Modifier.padding(top = paddingValues.calculateTopPadding()),
+                        ) {
+                            // Chat Screen
+                            composable(Screen.Chat.route) {
+                                ChatScreen(
+                                    projectId = "default",
                                 )
-                            },
-                            // Zero out Scaffold's automatic inset padding so content can
-                            // extend to true screen edges (chat background behind status/nav bars).
-                            // Individual screens call windowInsetsPadding where they need it.
-                            // The Toolbar sits in topBar and Compose positions it below the
-                            // status bar automatically via the slot's own inset handling.
-                            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                        ) { paddingValues ->
-                            NavHost(
-                                navController = navController,
-                                startDestination = Screen.Chat.route,
-                                // Only top padding from the Toolbar slot — bottom/sides
-                                // are screen-owned so the background bleeds to all edges.
-                                modifier = Modifier.padding(top = paddingValues.calculateTopPadding()),
-                            ) {
-                                // Chat Screen
-                                composable(Screen.Chat.route) {
-                                    ChatScreen(
-                                        projectId = "default",
-                                    )
-                                }
+                            }
 
-                                // History Screen
-                                composable(Screen.History.route) {
-                                    HistoryScreen(
-                                        database = database,
-                                        projectId = "default",
-                                        onBackClick = { navController.navigateUp() },
-                                        onConversationClick = { conversationId ->
-                                            navController.navigate("conversation/$conversationId")
+                            // History Screen
+                            composable(Screen.History.route) {
+                                HistoryScreen(
+                                    database = database,
+                                    projectId = "default",
+                                    onBackClick = { navController.navigateUp() },
+                                    onConversationClick = { conversationId ->
+                                        navController.navigate("conversation/$conversationId")
+                                    },
+                                )
+                            }
+
+                            // Settings Screen
+                            composable(Screen.Settings.route) {
+                                app.m1k3.ai.assistant.ui.SettingsScreen(
+                                    onNavigateToLicenses = {
+                                        navController.navigate(Screen.Licenses.route)
+                                    },
+                                    onNavigateToDocuments = {
+                                        navController.navigate(Screen.Documents.route)
+                                    },
+                                )
+                            }
+
+                            // Documents (personal knowledge)
+                            composable(Screen.Documents.route) {
+                                app.m1k3.ai.assistant.ui.DocumentsScreen(
+                                    onBack = { navController.navigateUp() },
+                                )
+                            }
+
+                            // Meta Screens (Drawer actions)
+                            composable(Screen.About.route) {
+                                AboutScreen(
+                                    onLicensesClick = { navController.navigate(Screen.Licenses.route) },
+                                )
+                            }
+
+                            composable(Screen.Licenses.route) {
+                                LicensesScreen()
+                            }
+
+                            composable(Screen.Help.route) {
+                                HelpScreen()
+                            }
+
+                            composable(Screen.Feedback.route) {
+                                FeedbackScreen()
+                            }
+
+                            composable(Screen.Privacy.route) {
+                                PrivacyScreen()
+                            }
+
+                            composable(Screen.Export.route) {
+                                ExportScreen()
+                            }
+
+                            // Conversation Detail Screen
+                            composable(
+                                route = Screen.ConversationDetail.route,
+                                arguments =
+                                    listOf(
+                                        navArgument(Screen.ConversationDetail.argConversationId) {
+                                            type = NavType.LongType
                                         },
-                                    )
-                                }
+                                    ),
+                            ) { backStackEntry ->
+                                val conversationId =
+                                    backStackEntry.arguments?.getLong(
+                                        Screen.ConversationDetail.argConversationId,
+                                    ) ?: 0L
 
-                                // Settings Screen
-                                composable(Screen.Settings.route) {
-                                    app.m1k3.ai.assistant.ui.SettingsScreen(
-                                        onNavigateToAvatarGallery = {
-                                            navController.navigate(Screen.AvatarGallery.route)
-                                        },
-                                        onNavigateToLicenses = {
-                                            navController.navigate(Screen.Licenses.route)
-                                        },
-                                        onNavigateToDocuments = {
-                                            navController.navigate(Screen.Documents.route)
-                                        },
-                                    )
-                                }
-
-                                // Documents (personal knowledge)
-                                composable(Screen.Documents.route) {
-                                    app.m1k3.ai.assistant.ui.DocumentsScreen(
-                                        onBack = { navController.navigateUp() },
-                                    )
-                                }
-
-                                // Avatar Gallery
-                                composable(Screen.AvatarGallery.route) {
-                                    AvatarGalleryScreen(
-                                        currentAvatarId = selectedAvatarState.value,
-                                        onAvatarSelected = { id: String ->
-                                            selectedAvatarState.value = id
-                                            prefs.setString(
-                                                app.m1k3.ai.assistant.platform.PreferenceKeys.SELECTED_AVATAR,
-                                                id,
-                                            )
-                                        },
-                                    )
-                                }
-
-                                // Meta Screens (Drawer actions)
-                                composable(Screen.About.route) {
-                                    AboutScreen(
-                                        onLicensesClick = { navController.navigate(Screen.Licenses.route) },
-                                    )
-                                }
-
-                                composable(Screen.Licenses.route) {
-                                    LicensesScreen()
-                                }
-
-                                composable(Screen.Help.route) {
-                                    HelpScreen()
-                                }
-
-                                composable(Screen.Feedback.route) {
-                                    FeedbackScreen()
-                                }
-
-                                composable(Screen.Privacy.route) {
-                                    PrivacyScreen()
-                                }
-
-                                composable(Screen.Export.route) {
-                                    ExportScreen()
-                                }
-
-                                // WebView Avatar Demo (Phase 1)
-                                composable("avatar-webview-demo") {
-                                    AvatarWebViewDemoScreen(
-                                        onBackClick = { navController.navigateUp() },
-                                    )
-                                }
-
-                                // Conversation Detail Screen
-                                composable(
-                                    route = Screen.ConversationDetail.route,
-                                    arguments =
-                                        listOf(
-                                            navArgument(Screen.ConversationDetail.argConversationId) {
-                                                type = NavType.LongType
-                                            },
-                                        ),
-                                ) { backStackEntry ->
-                                    val conversationId =
-                                        backStackEntry.arguments?.getLong(
-                                            Screen.ConversationDetail.argConversationId,
-                                        ) ?: 0L
-
-                                    // TODO: Create ConversationDetailScreen in Phase 3
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center,
+                                // TODO: Create ConversationDetailScreen in Phase 3
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
                                     ) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                                        ) {
-                                            Text(
-                                                "Conversation Detail",
-                                                style = MaterialTheme.typography.headlineMedium,
-                                            )
-                                            Text("ID: $conversationId")
-                                            TextButton(onClick = { navController.navigateUp() }) {
-                                                Text("← Back")
-                                            }
+                                        Text(
+                                            "Conversation Detail",
+                                            style = MaterialTheme.typography.headlineMedium,
+                                        )
+                                        Text("ID: $conversationId")
+                                        TextButton(onClick = { navController.navigateUp() }) {
+                                            Text("← Back")
                                         }
                                     }
                                 }

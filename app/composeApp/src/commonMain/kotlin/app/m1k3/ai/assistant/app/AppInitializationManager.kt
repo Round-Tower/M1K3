@@ -20,9 +20,8 @@ interface ILogger {
  * Follows project pattern (e.g., DatabaseInitResult).
  *
  * Variants:
- * - Success: Both Koin and Filament (or whichever component) initialized
+ * - Success: Koin DI initialized
  * - KoinSetupFailed: Koin DI initialization failed with exception
- * - FilamentSetupFailed: Filament 3D engine initialization failed with exception
  */
 sealed class InitializationResult {
     data object Success : InitializationResult()
@@ -30,34 +29,26 @@ sealed class InitializationResult {
     data class KoinSetupFailed(
         val error: Exception,
     ) : InitializationResult()
-
-    data class FilamentSetupFailed(
-        val error: Exception,
-    ) : InitializationResult()
 }
 
 /**
  * AppInitializationManager
  *
- * Handles Koin DI and Filament 3D engine initialization
+ * Handles Koin DI initialization
  *
  * **Responsibilities:**
  * - Initialize Koin dependency injection framework
- * - Initialize Filament 3D rendering engine
  * - Return type-safe results instead of throwing exceptions
  * - Log all initialization steps for debugging
- * - Ensure Koin initializes before Filament
  *
  * **Error Handling:**
  * - Catches initialization exceptions
- * - Returns sealed failure types (KoinSetupFailed, FilamentSetupFailed)
+ * - Returns sealed failure types (KoinSetupFailed)
  * - Logs errors for debugging
- * - Allows partial success (e.g., Koin succeeds but Filament fails)
  *
  * **Dependencies (Injected for testability):**
  * - logger: KermitLogger for debug/info/error messages
  * - koinInitializer: Callable to initialize Koin (mockable for tests)
- * - filamentInitializer: Callable to initialize Filament (mockable for tests)
  *
  * **Pattern:**
  * - Pure logic, no static methods
@@ -76,7 +67,6 @@ sealed class InitializationResult {
  *                 modules(allModules)
  *             }
  *         },
- *         filamentInitializer = { FilamentSetup.initialize() }
  *     )
  *
  *     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,14 +76,6 @@ sealed class InitializationResult {
  *         when (koinResult) {
  *             is InitializationResult.Success -> logger.i("Koin ready")
  *             is InitializationResult.KoinSetupFailed -> logger.e(koinResult.error, "Koin failed")
- *             else -> {}
- *         }
- *
- *         val filamentResult = appInitManager.initializeFilament()
- *         when (filamentResult) {
- *             is InitializationResult.Success -> logger.i("Filament ready")
- *             is InitializationResult.FilamentSetupFailed -> logger.e(filamentResult.error, "Filament failed")
- *             else -> {}
  *         }
  *     }
  * }
@@ -102,7 +84,6 @@ sealed class InitializationResult {
 class AppInitializationManager(
     private val logger: ILogger,
     private val koinInitializer: () -> Unit = { /* Implemented in Android */ },
-    private val filamentInitializer: () -> Unit = { /* Implemented in Android */ },
 ) {
     /**
      * Initialize Koin dependency injection framework
@@ -119,22 +100,5 @@ class AppInitializationManager(
         } catch (e: Exception) {
             logger.e(e, "Failed to initialize Koin DI")
             InitializationResult.KoinSetupFailed(e)
-        }
-
-    /**
-     * Initialize Filament 3D rendering engine
-     *
-     * Wraps Filament initialization with error handling and logging
-     *
-     * @return InitializationResult.Success or InitializationResult.FilamentSetupFailed
-     */
-    fun initializeFilament(): InitializationResult =
-        try {
-            filamentInitializer()
-            logger.i("Filament 3D engine initialized")
-            InitializationResult.Success
-        } catch (e: Exception) {
-            logger.e(e, "Failed to initialize Filament 3D engine")
-            InitializationResult.FilamentSetupFailed(e)
         }
 }

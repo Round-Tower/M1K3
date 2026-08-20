@@ -23,8 +23,6 @@ ndk = "28.2.13676358"
 
 androidx-work = "2.10.1"
 
-compose-webview-multiplatform = "2.0.3"
-
 # M1K3 AI Dependencies
 sqldelight = "2.0.2"
 onnxruntime = "1.23.2"
@@ -42,7 +40,6 @@ sqlcipher = "4.14.1"
 androidx-security = "1.1.0-alpha06"
 compose-ui-text-googlefonts = "1.9.5"
 jvector = "3.0.0"
-sceneview = "2.3.0"
 kermit = "2.0.4"
 koin-core = "4.1.0"
 koin-compose = "4.1.0"
@@ -94,10 +91,6 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
 compose-ui-text-googlefonts = { module = "androidx.compose.ui:ui-text-google-fonts", version.ref = "compose-ui-text-googlefonts" }
-
-compose-webview-multiplatform = { module = "io.github.kevinnzou:compose-webview-multiplatform", version.ref = "compose-webview-multiplatform" }
-
-sceneview = { module = "io.github.sceneview:sceneview", version.ref = "sceneview" }
 
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin-core" }

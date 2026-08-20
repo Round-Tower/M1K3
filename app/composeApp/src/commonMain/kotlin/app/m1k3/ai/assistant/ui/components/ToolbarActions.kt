@@ -9,9 +9,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
  *
  * Lets a screen (today: ChatScreen) publish its own callbacks up to the
  * shared Toolbar without the parent Scaffold having to know about them.
- * Mirrors the `LocalShowToolbarAvatar` pattern so the local is provided
- * above the Scaffold, and screens mutate the backing MutableState to
- * publish (or clear) their callbacks per lifecycle.
+ * The local is provided above the Scaffold, and screens mutate the
+ * backing MutableState to publish (or clear) their callbacks per lifecycle.
  *
  * When `onNewChat` is null the Toolbar hides the affordance entirely.
  */

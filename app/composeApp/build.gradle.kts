@@ -83,9 +83,6 @@ kotlin {
             // Google Fonts for custom typography
             implementation(libs.compose.ui.text.googlefonts)
 
-            // SceneView for 3D avatar rendering
-            implementation(libs.sceneview)
-
             // User context — local intelligence ("never leaves your phone")
             implementation(libs.health.connect)
             implementation(libs.play.services.location)
@@ -123,9 +120,6 @@ kotlin {
 
             // Ma - our own JNI bridge to llama.cpp (replaces Llamatik)
             // Built via NDK/CMake, no Gradle dependency needed (libma.so is compiled locally)
-
-            // WebView for Three.js 3D avatar rendering
-            implementation(libs.compose.webview.multiplatform)
 
             // Kermit - Multiplatform logging
             implementation(libs.kermit)

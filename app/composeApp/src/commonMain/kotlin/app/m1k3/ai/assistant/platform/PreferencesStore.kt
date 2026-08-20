@@ -163,12 +163,6 @@ object PreferenceKeys {
     /** Auto voice reply - automatically speak AI responses */
     const val VOICE_AUTO_REPLY = "voice_auto_reply"
 
-    /** Selected avatar model ID */
-    const val SELECTED_AVATAR = "selected_avatar"
-
-    /** Empty-chat hero mascot style: "DOT_MATRIX" (default) | "MODEL_3D" */
-    const val HERO_STYLE = "hero_style"
-
     /** User-set display name (overrides GET_ACCOUNTS detection) */
     const val USER_NAME = "user_name"
 

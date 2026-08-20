@@ -22,7 +22,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.m1k3.ai.assistant.avatar.AvatarState
-import app.m1k3.ai.assistant.avatar.AvatarView
 import app.m1k3.ai.assistant.avatar.AvatarViewModel
 import app.m1k3.ai.assistant.avatar.DotMatrixAvatar
 import app.m1k3.ai.assistant.avatar.LocalSharedAvatarState
@@ -31,11 +30,8 @@ import app.m1k3.ai.assistant.design.tokens.MaColors
 import app.m1k3.ai.assistant.design.tokens.MaRadius
 import app.m1k3.ai.assistant.design.tokens.MaSpacing
 import app.m1k3.ai.assistant.design.tokens.MaTypography
-import app.m1k3.ai.assistant.platform.PreferenceKeys
-import app.m1k3.ai.assistant.platform.PreferencesStoreInterface
 import app.m1k3.ai.domain.context.ContextualGreetingBuilder
 import app.m1k3.ai.domain.context.UserContext
-import org.koin.compose.koinInject
 
 /**
  * The first thing you see when you open an empty chat — a hero splash.
@@ -68,9 +64,6 @@ fun ChatHeroSplash(
         .collectAsState()
     val avatarState = LocalSharedAvatarState.current ?: collectedState
 
-    val prefs: PreferencesStoreInterface = koinInject()
-    val heroStyle = prefs.getString(PreferenceKeys.HERO_STYLE, "DOT_MATRIX") ?: "DOT_MATRIX"
-
     Column(
         modifier =
             modifier
@@ -86,19 +79,10 @@ fun ChatHeroSplash(
                     .height(220.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (heroStyle == "MODEL_3D" && avatarState != null) {
-                AvatarView(
-                    state = avatarState,
-                    modifier = Modifier.fillMaxWidth().height(220.dp),
-                    showInfo = false,
-                    use3D = true,
-                )
-            } else {
-                DotMatrixAvatar(
-                    state = avatarState ?: AvatarState(),
-                    modifier = Modifier.fillMaxWidth().height(220.dp),
-                )
-            }
+            DotMatrixAvatar(
+                state = avatarState ?: AvatarState(),
+                modifier = Modifier.fillMaxWidth().height(220.dp),
+            )
         }
 
         Text(

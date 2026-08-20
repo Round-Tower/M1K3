@@ -32,11 +32,6 @@ val primaryNavItems =
             icon = Icons.Default.History,
         ),
         NavItem(
-            screen = Screen.AvatarGallery,
-            label = "Avatar",
-            icon = Icons.Default.Face,
-        ),
-        NavItem(
             screen = Screen.Settings,
             label = "Settings",
             icon = Icons.Default.Settings,

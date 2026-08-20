@@ -44,17 +44,15 @@ import org.koin.compose.koinInject
  * SettingsScreen — full app configuration.
  *
  * Sections (top → bottom, logical priority):
- * 1. Personal     — name, avatar
+ * 1. Personal     — name
  * 2. Context      — local intelligence permissions + live test
- * 3. Voice        — auto reply, STT
- * 4. Appearance   — hero mascot, haptics
- * 5. AI           — model, ML Kit, AICore, RAG
- * 6. Data         — export, import, clear
- * 7. About        — version, privacy, licenses
+ * 3. Voice        — auto reply, STT, haptics
+ * 4. AI           — model, ML Kit, AICore, RAG
+ * 5. Data         — export, import, clear
+ * 6. About        — version, privacy, licenses
  */
 @Composable
 fun SettingsScreen(
-    onNavigateToAvatarGallery: (() -> Unit)? = null,
     onNavigateToLicenses: (() -> Unit)? = null,
     onNavigateToDocuments: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -87,7 +85,6 @@ fun SettingsScreen(
             PersonalSection(
                 prefs = prefs,
                 haptics = haptics,
-                onNavigateToAvatarGallery = onNavigateToAvatarGallery,
             )
         }
 
@@ -105,12 +102,7 @@ fun SettingsScreen(
             VoiceSection(prefs = prefs, haptics = haptics)
         }
 
-        // ── 4. Appearance ─────────────────────────────────────
-        item {
-            AppearanceSection(prefs = prefs, haptics = haptics)
-        }
-
-        // ── 5. AI Model ───────────────────────────────────────
+        // ── 4. AI Model ───────────────────────────────────────
         item {
             ModelSection(modelInfo = state.modelInfo)
         }
@@ -142,12 +134,12 @@ fun SettingsScreen(
             )
         }
 
-        // ── 6. Data ───────────────────────────────────────────
+        // ── 5. Data ───────────────────────────────────────────
         item {
             DataSection(onExportClick = {}, onImportClick = {}, onClearClick = {})
         }
 
-        // ── 7. About ──────────────────────────────────────────
+        // ── 6. About ──────────────────────────────────────────
         item {
             PrivacySection(
                 onPrivacyDashboardClick = {},
@@ -175,7 +167,6 @@ fun SettingsScreen(
 private fun PersonalSection(
     prefs: PreferencesStoreInterface,
     haptics: androidx.compose.ui.hapticfeedback.HapticFeedback,
-    onNavigateToAvatarGallery: (() -> Unit)?,
 ) {
     var name by remember { mutableStateOf(prefs.getString(PreferenceKeys.USER_NAME, "") ?: "") }
     var isEditing by remember { mutableStateOf(false) }
@@ -218,19 +209,6 @@ private fun PersonalSection(
                 },
             )
         }
-
-        HorizontalDivider(modifier = Modifier.padding(horizontal = MaSpacing.base), color = MaColors.BorderLight)
-
-        val selectedAvatar = prefs.getString(PreferenceKeys.SELECTED_AVATAR, "colobus") ?: "colobus"
-        SettingsItem(
-            title = "Your avatar",
-            subtitle = selectedAvatar.replaceFirstChar { it.uppercase() },
-            icon = Icons.Default.Pets,
-            onClick = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                onNavigateToAvatarGallery?.invoke()
-            },
-        )
     }
 }
 
@@ -526,51 +504,7 @@ private fun VoiceSection(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 4. Appearance
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun AppearanceSection(
-    prefs: PreferencesStoreInterface,
-    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback,
-) {
-    var heroStyle by remember {
-        mutableStateOf(prefs.getString(PreferenceKeys.HERO_STYLE, "DOT_MATRIX") ?: "DOT_MATRIX")
-    }
-
-    SettingsSection(title = "Appearance", icon = Icons.Default.Palette) {
-        SettingsItem(
-            title = "Hero mascot",
-            subtitle =
-                when (heroStyle) {
-                    "MODEL_3D" -> "3D model from your avatar gallery"
-                    else -> "LED dot-matrix face (pixel-native)"
-                },
-            icon =
-                when (heroStyle) {
-                    "MODEL_3D" -> Icons.Default.ViewInAr
-                    else -> Icons.Default.GridOn
-                },
-            iconTint = MaColors.Orange,
-            trailingContent = {
-                Text(
-                    text = if (heroStyle == "MODEL_3D") "3D" else "Dots",
-                    style = MaTypography.labelSmall,
-                    color = MaColors.textSecondary(),
-                )
-            },
-            onClick = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                val next = if (heroStyle == "DOT_MATRIX") "MODEL_3D" else "DOT_MATRIX"
-                heroStyle = next
-                prefs.setString(PreferenceKeys.HERO_STYLE, next)
-            },
-        )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// 5. AI Model (existing, unchanged)
+// 4. AI Model (existing, unchanged)
 // ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -644,7 +578,7 @@ private fun AiCoreSection(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 6. Data
+// 5. Data
 // ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -677,7 +611,7 @@ private fun DataSection(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 7. About / Privacy
+// 6. About / Privacy
 // ─────────────────────────────────────────────────────────────
 
 @Composable

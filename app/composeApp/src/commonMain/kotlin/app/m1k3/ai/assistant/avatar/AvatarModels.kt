@@ -21,67 +21,66 @@ enum class AvatarEmotion(
     val displayName: String,
     val emoji: String,
     val primaryColor: Color,
-    val description: String
+    val description: String,
 ) {
     HAPPY(
         displayName = "Happy",
         emoji = "😊",
         primaryColor = Color(0xFF4CAF50), // Green
-        description = "Joyful, content, satisfied"
+        description = "Joyful, content, satisfied",
     ),
     SAD(
         displayName = "Sad",
         emoji = "😢",
         primaryColor = Color(0xFF2196F3), // Blue
-        description = "Melancholy, disappointed, down"
+        description = "Melancholy, disappointed, down",
     ),
     ANGRY(
         displayName = "Angry",
         emoji = "😠",
         primaryColor = Color(0xFFF44336), // Red
-        description = "Frustrated, irritated, upset"
+        description = "Frustrated, irritated, upset",
     ),
     SURPRISED(
         displayName = "Surprised",
         emoji = "😲",
         primaryColor = Color(0xFFFFEB3B), // Yellow
-        description = "Astonished, shocked, amazed"
+        description = "Astonished, shocked, amazed",
     ),
     LOVE(
         displayName = "Love",
         emoji = "😍",
         primaryColor = Color(0xFFE91E63), // Pink
-        description = "Affectionate, adoring, caring"
+        description = "Affectionate, adoring, caring",
     ),
     THINKING(
         displayName = "Thinking",
         emoji = "🤔",
         primaryColor = Color(0xFF9C27B0), // Purple
-        description = "Pondering, processing, analyzing"
+        description = "Pondering, processing, analyzing",
     ),
     SLEEPY(
         displayName = "Sleepy",
         emoji = "😴",
         primaryColor = Color(0xFF607D8B), // Blue-gray
-        description = "Tired, drowsy, resting"
+        description = "Tired, drowsy, resting",
     ),
     EXCITED(
         displayName = "Excited",
         emoji = "🤩",
         primaryColor = MaColors.Orange, // M1K3 orange
-        description = "Enthusiastic, energized, thrilled"
+        description = "Enthusiastic, energized, thrilled",
     ),
     NEUTRAL(
         displayName = "Neutral",
         emoji = "😐",
         primaryColor = MaColors.TextSecondary, // Gray
-        description = "Calm, balanced, composed"
-    );
+        description = "Calm, balanced, composed",
+    ),
+    ;
 
     companion object {
-        fun fromString(name: String): AvatarEmotion {
-            return entries.find { it.name.equals(name, ignoreCase = true) } ?: NEUTRAL
-        }
+        fun fromString(name: String): AvatarEmotion = entries.find { it.name.equals(name, ignoreCase = true) } ?: NEUTRAL
     }
 }
 
@@ -92,32 +91,33 @@ enum class AvatarEmotion(
  */
 enum class AvatarActivity(
     val displayName: String,
-    val description: String
+    val description: String,
 ) {
     IDLE(
         displayName = "Idle",
-        description = "Waiting for input"
+        description = "Waiting for input",
     ),
     LISTENING(
         displayName = "Listening",
-        description = "Processing user input"
+        description = "Processing user input",
     ),
     THINKING(
         displayName = "Thinking",
-        description = "Analyzing and reasoning"
+        description = "Analyzing and reasoning",
     ),
     GENERATING(
         displayName = "Generating",
-        description = "Creating response"
+        description = "Creating response",
     ),
     SPEAKING(
         displayName = "Speaking",
-        description = "Delivering response"
+        description = "Delivering response",
     ),
     ERROR(
         displayName = "Error",
-        description = "Encountered an issue"
-    );
+        description = "Encountered an issue",
+    ),
+    ;
 
     val isActive: Boolean
         get() = this != IDLE && this != ERROR
@@ -133,7 +133,7 @@ data class AvatarState(
     val activity: AvatarActivity = AvatarActivity.IDLE,
     val intensity: Float = 0.5f, // 0.0 (subtle) to 1.0 (extreme)
     val animationProgress: Float = 0.0f, // 0.0 to 1.0 for transitions
-    val message: String? = null // Optional status message
+    val message: String? = null, // Optional status message
 ) {
     /**
      * Get current display color based on emotion and intensity
@@ -147,14 +147,14 @@ data class AvatarState(
                 Color(
                     red = baseColor.red + (1f - baseColor.red) * (intensity - 0.5f) * 0.5f,
                     green = baseColor.green + (1f - baseColor.green) * (intensity - 0.5f) * 0.5f,
-                    blue = baseColor.blue + (1f - baseColor.blue) * (intensity - 0.5f) * 0.5f
+                    blue = baseColor.blue + (1f - baseColor.blue) * (intensity - 0.5f) * 0.5f,
                 )
             } else {
                 // Less intense = darker
                 Color(
                     red = baseColor.red * (intensity * 2f),
                     green = baseColor.green * (intensity * 2f),
-                    blue = baseColor.blue * (intensity * 2f)
+                    blue = baseColor.blue * (intensity * 2f),
                 )
             }
         }
@@ -170,84 +170,22 @@ data class AvatarState(
          * Create state from AI activity
          */
         fun fromActivity(activity: AvatarActivity): AvatarState {
-            val emotion = when (activity) {
-                AvatarActivity.IDLE -> AvatarEmotion.NEUTRAL
-                AvatarActivity.LISTENING -> AvatarEmotion.THINKING
-                AvatarActivity.THINKING -> AvatarEmotion.THINKING
-                AvatarActivity.GENERATING -> AvatarEmotion.EXCITED
-                AvatarActivity.SPEAKING -> AvatarEmotion.HAPPY
-                AvatarActivity.ERROR -> AvatarEmotion.ANGRY
-            }
+            val emotion =
+                when (activity) {
+                    AvatarActivity.IDLE -> AvatarEmotion.NEUTRAL
+                    AvatarActivity.LISTENING -> AvatarEmotion.THINKING
+                    AvatarActivity.THINKING -> AvatarEmotion.THINKING
+                    AvatarActivity.GENERATING -> AvatarEmotion.EXCITED
+                    AvatarActivity.SPEAKING -> AvatarEmotion.HAPPY
+                    AvatarActivity.ERROR -> AvatarEmotion.ANGRY
+                }
             return AvatarState(
                 emotion = emotion,
                 activity = activity,
-                intensity = if (activity.isActive) 0.7f else 0.5f
+                intensity = if (activity.isActive) 0.7f else 0.5f,
             )
         }
     }
-}
-
-/**
- * Robot avatar geometry
- *
- * Defines visual elements for robot-style avatar
- */
-data class RobotGeometry(
-    // Head
-    val headSize: Float = 160f,
-    val headCornerRadius: Float = 20f,
-
-    // Eyes
-    val eyeWidth: Float = 40f,
-    val eyeHeight: Float = 12f,
-    val eyeSpacing: Float = 60f,
-    val eyeVerticalOffset: Float = -10f,
-
-    // Antenna
-    val antennaHeight: Float = 30f,
-    val antennaWidth: Float = 6f,
-    val antennaBulbRadius: Float = 10f,
-
-    // Mouth (varies by emotion)
-    val mouthWidth: Float = 60f,
-    val mouthHeight: Float = 8f,
-    val mouthVerticalOffset: Float = 30f,
-
-    // Colors
-    val backgroundColor: Color = MaColors.BgSecondary,
-    val outlineColor: Color = MaColors.BorderLight,
-    val outlineWidth: Float = 2f
-)
-
-/**
- * Avatar animation parameters
- */
-data class AvatarAnimation(
-    val duration: Long = 300, // milliseconds
-    val bounceHeight: Float = 10f, // pixels
-    val rotationDegrees: Float = 5f, // degrees
-    val scaleMin: Float = 0.95f,
-    val scaleMax: Float = 1.05f
-)
-
-/**
- * Emotion transition
- *
- * Defines how to transition between two emotions
- */
-data class EmotionTransition(
-    val from: AvatarEmotion,
-    val to: AvatarEmotion,
-    val duration: Long = 300,
-    val interpolation: TransitionInterpolation = TransitionInterpolation.EASE_IN_OUT
-)
-
-enum class TransitionInterpolation {
-    LINEAR,
-    EASE_IN,
-    EASE_OUT,
-    EASE_IN_OUT,
-    BOUNCE
 }
 
 /**
@@ -264,12 +202,5 @@ enum class TransitionInterpolation {
  *
  * // Create state from activity
  * val thinkingState = AvatarState.fromActivity(AvatarActivity.THINKING)
- *
- * // Transition between emotions
- * val transition = EmotionTransition(
- *     from = AvatarEmotion.NEUTRAL,
- *     to = AvatarEmotion.EXCITED,
- *     duration = 500
- * )
  * ```
  */

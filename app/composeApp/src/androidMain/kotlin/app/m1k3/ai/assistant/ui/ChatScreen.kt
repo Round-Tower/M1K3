@@ -89,7 +89,7 @@ import androidx.compose.runtime.collectAsState as collectFlowAsState
  *
  * **Architecture:**
  * - Uses ChatScreenViewModel for state management
- * - Delegates to extracted components (ChatInputBar, ChatHeader, etc.)
+ * - Delegates to extracted components (ChatInputBar, ChatHeroSplash, etc.)
  * - Minimal UI logic - ViewModel handles business logic
  *
  * **Responsibilities:**
@@ -310,19 +310,6 @@ fun ChatScreen(
         if (inputFocused && uiState.messages.isNotEmpty()) {
             runCatching { listState.animateScrollToItem(uiState.messages.size - 1) }
         }
-    }
-
-    // Hero owns the 3D avatar scene while the chat is pre-conversation —
-    // tell the Toolbar to hide its own avatar so we don't spin up two
-    // Filament scenes on the same GLB (libgltfio-jni.so SIGSEGV otherwise).
-    val toolbarAvatarVisibility =
-        app.m1k3.ai.assistant.avatar.LocalShowToolbarAvatar.current as? androidx.compose.runtime.MutableState<Boolean>
-    val preConversation = uiState.messages.none { it.isUser }
-    LaunchedEffect(preConversation) {
-        toolbarAvatarVisibility?.value = !preConversation
-    }
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose { toolbarAvatarVisibility?.value = true }
     }
 
     // Publish the "New chat" action to the app-level Toolbar whenever the

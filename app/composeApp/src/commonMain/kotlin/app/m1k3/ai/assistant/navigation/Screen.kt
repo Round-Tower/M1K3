@@ -34,16 +34,6 @@ sealed class Screen(
     data object Settings : Screen("settings")
 
     /**
-     * WebView Avatar Demo - Test THREE.js avatar with shader effects (Phase 1)
-     */
-    data object AvatarWebViewDemo : Screen("avatar-webview-demo")
-
-    /**
-     * Avatar Gallery screen - Full-screen avatar selection with 3D previews
-     */
-    data object AvatarGallery : Screen("avatar_gallery")
-
-    /**
      * Documents screen — list + manage personal-knowledge sources the user imported.
      */
     data object Documents : Screen("documents")

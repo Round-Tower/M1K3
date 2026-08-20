@@ -342,7 +342,7 @@ fun AvatarViewModel.collectAsState(): State<AvatarState> {
  *     }
  *
  *     // Display avatar
- *     AvatarView(state = avatarState)
+ *     DotMatrixAvatar(state = avatarState)
  * }
  *
  * // Manual emotion control
