@@ -1,0 +1,382 @@
+<title>The M Mark</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  /* ---- Dark-first tokens. The brand IS black; light theme swaps ground↔mark,
+         which literally demonstrates the two mark treatments. ---- */
+  :root {
+    --ink:      #0A0A0C;   /* the icon ground */
+    --paper:    #F4F3F0;   /* warm-neutral off-white, chosen not defaulted */
+    --ground:   var(--ink);
+    --surface:  #131317;
+    --hairline: #26262C;
+    --mark:     #F5F5F7;   /* the pixels, on dark */
+    --text:     #E7E7EA;
+    --muted:    #9A9AA4;   /* cool-biased grey */
+    --faint:    #62626C;
+    --phosphor: #5FD0A8;   /* CRT mint — the single accent, used sparingly */
+    --phosphor-dim: rgba(95,208,168,0.14);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground:   var(--paper);
+      --surface:  #FBFAF8;
+      --hairline: #DEDCD6;
+      --mark:     #0A0A0C;
+      --text:     #1A1A1E;
+      --muted:    #57575E;
+      --faint:    #8C8C93;
+      --phosphor: #1F9E76;
+      --phosphor-dim: rgba(31,158,118,0.10);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:   var(--paper);
+    --surface:  #FBFAF8;
+    --hairline: #DEDCD6;
+    --mark:     #0A0A0C;
+    --text:     #1A1A1E;
+    --muted:    #57575E;
+    --faint:    #8C8C93;
+    --phosphor: #1F9E76;
+    --phosphor-dim: rgba(31,158,118,0.10);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    transition: background .4s ease, color .4s ease;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 28px; }
+
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px; font-weight: 500;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--phosphor);
+  }
+  h2 {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600; font-size: 26px; letter-spacing: -0.01em;
+    margin: 0 0 6px; color: var(--text); text-wrap: balance;
+  }
+  h3 { font-weight: 600; font-size: 17px; margin: 0 0 4px; }
+  p { margin: 0 0 14px; max-width: 62ch; }
+  .lead { color: var(--muted); }
+  .fine { font-size: 13.5px; color: var(--faint); }
+
+  /* ---- theme toggle ---- */
+  .toggle {
+    position: fixed; top: 18px; right: 18px; z-index: 20;
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: .1em;
+    background: var(--surface); color: var(--muted);
+    border: 1px solid var(--hairline); border-radius: 8px;
+    padding: 8px 12px; cursor: pointer; transition: color .2s, border-color .2s;
+  }
+  .toggle:hover { color: var(--phosphor); border-color: var(--phosphor); }
+  .toggle:focus-visible { outline: 2px solid var(--phosphor); outline-offset: 2px; }
+
+  /* ---- hero ---- */
+  .hero {
+    position: relative; overflow: hidden;
+    border-bottom: 1px solid var(--hairline);
+    padding: 108px 0 72px;
+  }
+  #rain { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; opacity: .5; }
+  .hero .wrap { position: relative; z-index: 1; }
+  .hero-mark {
+    width: min(230px, 46vw); height: auto; color: var(--mark);
+    display: block; margin-bottom: 34px;
+    filter: drop-shadow(0 18px 60px rgba(0,0,0,.45));
+  }
+  .hero h1 {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 700; font-size: clamp(30px, 5.4vw, 52px);
+    letter-spacing: -0.02em; line-height: 1.04; margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .hero h1 .dim { color: var(--faint); }
+  .hero p { font-size: 19px; color: var(--muted); max-width: 54ch; }
+
+  section { padding: 64px 0; border-bottom: 1px solid var(--hairline); }
+  .sect-head { margin-bottom: 34px; }
+
+  /* ---- reduction strip ---- */
+  .reduce {
+    display: flex; align-items: center; gap: clamp(20px, 5vw, 56px);
+    flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--hairline);
+    border-radius: 16px; padding: 40px clamp(24px,5vw,52px);
+  }
+  .reduce .word {
+    font-family: "IBM Plex Mono", monospace; font-weight: 700;
+    font-size: clamp(38px, 8vw, 74px); letter-spacing: .04em; color: var(--muted);
+  }
+  .reduce .word .drop { color: var(--faint); opacity: .4; }
+  .reduce .arrow { color: var(--phosphor); font-size: 30px; }
+  .reduce .mmark { width: clamp(56px, 12vw, 96px); color: var(--mark); }
+
+  /* ---- variations grid ---- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+  .swatch {
+    border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .swatch .face {
+    aspect-ratio: 4 / 3; display: grid; place-items: center; padding: 26px;
+  }
+  .swatch .face svg { width: 40%; height: auto; }
+  .face.on-black  { background: linear-gradient(180deg,#16161A,#060608); }
+  .face.on-white  { background: #F4F3F0; }
+  .face.on-phos   { background: radial-gradient(120% 120% at 50% 0%, #0d2a22, #060608); }
+  .swatch .cap {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: .06em;
+    color: var(--muted); padding: 11px 14px; border-top: 1px solid var(--hairline);
+    background: var(--surface);
+    display: flex; justify-content: space-between; gap: 10px;
+  }
+  .swatch .cap b { color: var(--text); font-weight: 500; }
+
+  /* ---- geometry / spec ---- */
+  .spec { display: grid; grid-template-columns: 1.1fr 1fr; gap: 44px; align-items: center; }
+  .spec .grid-viz { background: var(--surface); border: 1px solid var(--hairline); border-radius: 16px; padding: 32px; }
+  .spec svg { width: 100%; height: auto; }
+  .spec .gridline { stroke: var(--hairline); stroke-width: 1; }
+  .spec .cell-on { fill: var(--mark); }
+  .spec .cell-off { fill: transparent; stroke: var(--hairline); stroke-dasharray: 4 5; stroke-width: 1; }
+  dl.specs { margin: 0; }
+  dl.specs > div { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--hairline); }
+  dl.specs dt { color: var(--muted); }
+  dl.specs dd { margin: 0; font-family: "IBM Plex Mono", monospace; color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
+
+  /* ---- rollout ---- */
+  .steps { display: grid; gap: 14px; }
+  .step {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: start;
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; padding: 20px 22px;
+  }
+  .step .n { font-family: "IBM Plex Mono", monospace; color: var(--phosphor); font-weight: 600; font-size: 14px; padding-top: 2px; }
+  .step .body p { margin: 4px 0 0; }
+  .step .state {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: 999px; white-space: nowrap; align-self: center;
+  }
+  .state.ready { color: var(--phosphor); background: var(--phosphor-dim); border: 1px solid color-mix(in srgb, var(--phosphor) 40%, transparent); }
+  .state.next  { color: var(--muted); background: transparent; border: 1px solid var(--hairline); }
+
+  footer { padding: 44px 0 64px; }
+  footer .sig { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--faint); }
+
+  @media (max-width: 680px) {
+    .spec { grid-template-columns: 1fr; gap: 28px; }
+    .step { grid-template-columns: auto 1fr; }
+    .step .state { grid-column: 2; justify-self: start; margin-top: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #rain { display: none; }
+    body, .toggle { transition: none; }
+  }
+</style>
+
+<!-- Reusable pixel-M: viewBox 500×700, cell 100, gap 8, rx 6. currentColor = the mark. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mmark" viewBox="0 0 500 700">
+    <g fill="currentColor">
+      <rect x="4" y="4" width="92" height="92" rx="6"/><rect x="404" y="4" width="92" height="92" rx="6"/>
+      <rect x="4" y="104" width="92" height="92" rx="6"/><rect x="404" y="104" width="92" height="92" rx="6"/>
+      <rect x="4" y="204" width="92" height="92" rx="6"/><rect x="104" y="204" width="92" height="92" rx="6"/><rect x="304" y="204" width="92" height="92" rx="6"/><rect x="404" y="204" width="92" height="92" rx="6"/>
+      <rect x="4" y="304" width="92" height="92" rx="6"/><rect x="204" y="304" width="92" height="92" rx="6"/><rect x="404" y="304" width="92" height="92" rx="6"/>
+      <rect x="4" y="404" width="92" height="92" rx="6"/><rect x="404" y="404" width="92" height="92" rx="6"/>
+      <rect x="4" y="504" width="92" height="92" rx="6"/><rect x="404" y="504" width="92" height="92" rx="6"/>
+      <rect x="4" y="604" width="92" height="92" rx="6"/><rect x="404" y="604" width="92" height="92" rx="6"/>
+    </g>
+  </symbol>
+</svg>
+
+<button class="toggle" id="themeBtn" aria-label="Toggle light and dark">◐ theme</button>
+
+<header class="hero">
+  <canvas id="rain" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <svg class="hero-mark" viewBox="0 0 500 700" aria-label="The M1K3 mark"><use href="#mmark"/></svg>
+    <div class="eyebrow">M1K3 · brand mark</div>
+    <h1>One glyph does the&nbsp;work.<br><span class="dim">The name becomes the M.</span></h1>
+    <p>The strongest letter in <span class="mono">M1K3</span> — lifted from the wordmark's own pixels, kept exactly, given room to breathe. It survives at 40&nbsp;pixels and speaks the same block language as the CRT and the thinking-rain.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sect-head">
+      <div class="eyebrow">the reduction</div>
+      <h2>M1K3 → M</h2>
+      <p class="lead">Four glyphs of provenance collapse to one mark of recognition. The wordmark stays for the full lockup; the M carries the app icon, the favicon, the site — anywhere the mark has to work small and alone.</p>
+    </div>
+    <div class="reduce">
+      <span class="word">M<span class="drop">1K3</span></span>
+      <span class="arrow mono">→</span>
+      <svg class="mmark" viewBox="0 0 500 700" aria-label="M mark"><use href="#mmark"/></svg>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sect-head">
+      <div class="eyebrow">treatments</div>
+      <h2>Three grounds, one mark</h2>
+      <p class="lead">Monochrome by default — the mark never carries colour itself. The phosphor mint appears only around it, never inside it.</p>
+    </div>
+    <div class="grid">
+      <div class="swatch">
+        <div class="face on-black"><svg viewBox="0 0 500 700" style="color:#F5F5F7"><use href="#mmark"/></svg></div>
+        <div class="cap"><b>Primary</b><span>white · gradient black</span></div>
+      </div>
+      <div class="swatch">
+        <div class="face on-white"><svg viewBox="0 0 500 700" style="color:#0A0A0C"><use href="#mmark"/></svg></div>
+        <div class="cap"><b>Inverse</b><span>ink · paper</span></div>
+      </div>
+      <div class="swatch">
+        <div class="face on-phos"><svg viewBox="0 0 500 700" style="color:#5FD0A8"><use href="#mmark"/></svg></div>
+        <div class="cap"><b>Live</b><span>phosphor · sparingly</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sect-head">
+      <div class="eyebrow">geometry</div>
+      <h2>Built on a 5 × 7 grid</h2>
+    </div>
+    <div class="spec">
+      <div class="grid-viz">
+        <svg viewBox="0 0 500 700" aria-label="The M pixel grid, on and off cells">
+          <!-- off cells (dashed) -->
+          <g>
+            <!-- draw all 35 cells: off as dashed outline, on as filled -->
+          </g>
+          <script type="application/json" id="cells"></script>
+          <g id="gridcells"></g>
+        </svg>
+      </div>
+      <div>
+        <p>Seventeen pixels on a five-wide, seven-tall matrix. Two solid legs, shoulders that step inward, and a single centre block where the diagonals meet — the minimum that still reads unmistakably as <b>M</b>.</p>
+        <dl class="specs">
+          <div><dt>Matrix</dt><dd>5 × 7</dd></div>
+          <div><dt>Pixels on</dt><dd>17 / 35</dd></div>
+          <div><dt>Cell</dt><dd>100 u</dd></div>
+          <div><dt>Seam / corner</dt><dd>8 u / 6 u</dd></div>
+          <div><dt>Clear space</dt><dd>≥ 1 cell</dd></div>
+          <div><dt>Min size</dt><dd>40 px</dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sect-head">
+      <div class="eyebrow">rollout</div>
+      <h2>Where the M goes</h2>
+      <p class="lead">The source of truth is one SVG. Everything downstream is a render of it.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <span class="n">01</span>
+        <div class="body"><h3>Vector source</h3><p><span class="mono fine">m-mark-white.svg · m-mark-black.svg · m-icon-layer-1024.png</span> — rendered, pixel-exact.</p></div>
+        <span class="state ready">Done</span>
+      </div>
+      <div class="step">
+        <span class="n">02</span>
+        <div class="body"><h3>App icon bump</h3><p>Swap the wordmark layer in <span class="mono fine">M1K3.icon</span> for the M on the black gradient. iOS reuses it; visionOS layered stack follows.</p></div>
+        <span class="state next">On your nod</span>
+      </div>
+      <div class="step">
+        <span class="n">03</span>
+        <div class="body"><h3>Website, made focal</h3><p>The M leads the hero and becomes the favicon. A pass to reflect how far the product has actually gone — Brain at Home, the heartbeat, the rain, per-answer feedback.</p></div>
+        <span class="state next">Proposed</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="sig">The mark is monochrome, geometric, and self-identical across sizes.<br>Signed: Kev + claude-opus-4-8 · 2026-08-20 · reduction ratified by Kev, execution faithful to the wordmark's own M.</p>
+  </div>
+</footer>
+
+<script>
+  // ---- theme toggle ----
+  const btn = document.getElementById('themeBtn');
+  btn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const sysDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const next = cur ? (cur === 'dark' ? 'light' : 'dark') : (sysDark ? 'light' : 'dark');
+    document.documentElement.setAttribute('data-theme', next);
+  });
+
+  // ---- geometry grid render (5×7, dashed off-cells + filled on-cells) ----
+  (function(){
+    const on = new Set(['0,0','4,0','0,1','4,1','0,2','1,2','3,2','4,2','0,3','2,3','4,3','0,4','4,4','0,5','4,5','0,6','4,6']);
+    const g = document.getElementById('gridcells');
+    let s = '';
+    for (let r=0;r<7;r++) for (let c=0;c<5;c++){
+      const x=c*100+4, y=r*100+4;
+      if (on.has(c+','+r)) s += `<rect class="cell-on" x="${x}" y="${y}" width="92" height="92" rx="6"/>`;
+      else s += `<rect class="cell-off" x="${x+6}" y="${y+6}" width="80" height="80" rx="4"/>`;
+    }
+    g.innerHTML = s;
+  })();
+
+  // ---- ambient pixel-rain behind the hero (nods to #140; very restrained) ----
+  (function(){
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cv = document.getElementById('rain'), ctx = cv.getContext('2d');
+    let W,H,cols,drops,cell=16,dpr=Math.min(devicePixelRatio||1,2);
+    function accent(){ return getComputedStyle(document.documentElement).getPropertyValue('--phosphor').trim() || '#5FD0A8'; }
+    function size(){
+      const p = cv.parentElement.getBoundingClientRect();
+      W=p.width; H=p.height; cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+      cols=Math.ceil(W/cell); drops=Array.from({length:cols},()=>Math.random()*-H);
+    }
+    size(); addEventListener('resize', size);
+    let t=0;
+    function frame(){
+      t++;
+      ctx.clearRect(0,0,W,H);
+      const col = accent();
+      for(let i=0;i<cols;i++){
+        if (t%2===0) drops[i]+= (i%3===0?1:0.6)*cell*0.5;
+        if (drops[i]>H+cell) { if(Math.random()<0.02) drops[i]=Math.random()*-H*0.5; }
+        const x=i*cell, y=drops[i];
+        if (y<-cell) continue;
+        // faint trailing blocks
+        for(let k=0;k<3;k++){
+          const yy=y-k*cell;
+          if(yy<0||yy>H) continue;
+          ctx.globalAlpha=(0.16-k*0.05);
+          ctx.fillStyle=col;
+          ctx.fillRect(x+3,yy+3,cell-6,cell-6);
+        }
+      }
+      ctx.globalAlpha=1;
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+</script>

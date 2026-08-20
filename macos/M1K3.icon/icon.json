@@ -21,10 +21,10 @@
         {
           "glass" : true,
           "hidden" : false,
-          "image-name" : "M1K3 2.png",
-          "name" : "M1K3 2",
+          "image-name" : "M-mark.png",
+          "name" : "M mark",
           "position" : {
-            "scale" : 0.25,
+            "scale" : 1,
             "translation-in-points" : [
               0,
               0
