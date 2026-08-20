@@ -1,443 +1,449 @@
 package app.m1k3.ai.assistant.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import app.m1k3.ai.assistant.ai.ondevice.OnDeviceAi
-import app.m1k3.ai.assistant.design.theme.MaTheme
-import app.m1k3.ai.assistant.design.tokens.MaColors
-import app.m1k3.ai.assistant.design.tokens.MaSpacing
-import app.m1k3.ai.assistant.design.tokens.MaTypography
 import app.m1k3.ai.assistant.platform.PreferenceKeys
 import app.m1k3.ai.assistant.platform.PreferencesStoreInterface
-import app.m1k3.ai.assistant.settings.collectAsState
-import app.m1k3.ai.assistant.settings.rememberSettingsViewModel
-import app.m1k3.ai.assistant.ui.components.*
-import app.m1k3.ai.domain.ai.AiCoreModelPreference
-import app.m1k3.ai.domain.rag.Intent
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import app.m1k3.ai.domain.ai.LlmModel
+import app.m1k3.ai.domain.ai.M1K3Tier
+import app.m1k3.ai.domain.ai.ModelDownloadManager
+import app.m1k3.ai.domain.platform.DeviceInfoProviderInterface
+import app.m1k3.ai.domain.platform.DeviceTier
+import app.m1k3.ai.domain.tts.Voice
 import org.koin.compose.koinInject
 
 /**
- * SettingsScreen — full app configuration.
+ * SettingsScreen — the M1K3 shape: Workspace, Brain, Grounding, Voice, You,
+ * Data, About. Pushed from Chat's own top bar (chat is the app; this is a
+ * workspace room, not a destination in its own right).
  *
- * Sections (top → bottom, logical priority):
- * 1. Personal     — name
- * 2. Voice        — auto reply, STT, haptics
- * 3. AI           — model, ML Kit, AICore, RAG
- * 4. Data         — export, import, clear
- * 5. About        — version, privacy, licenses
+ * Uses plain Material 3 (ListItem/Switch/Card) throughout — the container is
+ * the platform's, M1K3's layer is the pixel face + orange + the copy, and
+ * neither of those belongs on a settings form (macos/docs/DESIGN_DOCTRINE.md).
+ *
+ * No "ML Kit GenAI" / "AICore Model" rows: that engine path
+ * (OnDeviceAi/MlKitGenAiEngine) was never wired into the real chat flow —
+ * ChatScreenViewModel talks to [app.m1k3.ai.assistant.ai.BaseLlmEngine]
+ * directly — so surfacing its status here would be an engineering row
+ * describing a system that has no effect on the product. See project memory
+ * for the full trace.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateToLicenses: (() -> Unit)? = null,
-    onNavigateToDocuments: (() -> Unit)? = null,
+    currentModel: LlmModel,
+    onSelectBrain: (LlmModel) -> Unit,
+    onNavigateToMemories: () -> Unit = {},
+    onNavigateToDocuments: () -> Unit = {},
+    onNavigateToConversations: () -> Unit = {},
+    onNavigateToLicenses: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val haptics = LocalHapticFeedback.current
-    val onDeviceAi: OnDeviceAi = koinInject()
     val prefs: PreferencesStoreInterface = koinInject()
-    val viewModel = rememberSettingsViewModel(onDeviceAi)
-    val state by viewModel.collectAsState()
+    val deviceInfo: DeviceInfoProviderInterface = koinInject()
+    val modelDownloadManager: ModelDownloadManager = koinInject()
 
-    LaunchedEffect(Unit) { viewModel.checkMlKitAvailability() }
+    Column(modifier = modifier.fillMaxWidth()) {
+        TopAppBar(
+            title = { Text("Settings") },
+            colors = TopAppBarDefaults.topAppBarColors(),
+        )
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding =
+                androidx.compose.foundation.layout
+                    .PaddingValues(bottom = 48.dp),
+        ) {
+            item {
+                WorkspaceSection(
+                    onNavigateToMemories = onNavigateToMemories,
+                    onNavigateToDocuments = onNavigateToDocuments,
+                    onNavigateToConversations = onNavigateToConversations,
+                )
+            }
+            item {
+                BrainSection(
+                    currentModel = currentModel,
+                    onSelectBrain = onSelectBrain,
+                    deviceInfo = deviceInfo,
+                    modelDownloadManager = modelDownloadManager,
+                )
+            }
+            item { GroundingSection(prefs = prefs) }
+            item { VoiceSection(prefs = prefs) }
+            item { YouSection(prefs = prefs) }
+            item { DataSection() }
+            item { AboutSection(onNavigateToLicenses = onNavigateToLicenses) }
+        }
+    }
+}
 
-    LazyColumn(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(MaColors.bgPrimary())
-                .padding(MaSpacing.base),
-        verticalArrangement = Arrangement.spacedBy(MaSpacing.base),
-    ) {
-        // ── 1. Personal ───────────────────────────────────────
-        item {
-            PersonalSection(
-                prefs = prefs,
-                haptics = haptics,
+// ─────────────────────────────────────────────────────────────
+// Section header
+// ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title.uppercase(),
+        style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+        color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 4.dp),
+    )
+}
+
+@Composable
+private fun SectionFooter(text: String) {
+    Text(
+        text = text,
+        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+    )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Workspace
+// ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun WorkspaceSection(
+    onNavigateToMemories: () -> Unit,
+    onNavigateToDocuments: () -> Unit,
+    onNavigateToConversations: () -> Unit,
+) {
+    Column {
+        SectionHeader("Workspace")
+        ListItem(
+            headlineContent = { Text("Memories") },
+            leadingContent = { Icon(Icons.Default.Psychology, contentDescription = null) },
+            trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+            modifier = Modifier.clickable(onClick = onNavigateToMemories),
+        )
+        ListItem(
+            headlineContent = { Text("Documents") },
+            leadingContent = { Icon(Icons.Default.Book, contentDescription = null) },
+            trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+            modifier = Modifier.clickable(onClick = onNavigateToDocuments),
+        )
+        ListItem(
+            headlineContent = { Text("Conversations") },
+            leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
+            trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+            modifier = Modifier.clickable(onClick = onNavigateToConversations),
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Brain
+// ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun BrainSection(
+    currentModel: LlmModel,
+    onSelectBrain: (LlmModel) -> Unit,
+    deviceInfo: DeviceInfoProviderInterface,
+    modelDownloadManager: ModelDownloadManager,
+) {
+    val recommended = M1K3Tier.forDevice(DeviceTier.fromRamGB(deviceInfo.getDeviceRamGB()))
+
+    Column {
+        SectionHeader("Brain")
+        M1K3Tier.all().forEach { tier ->
+            BrainCard(
+                tier = tier,
+                isSelected = tier.model == currentModel,
+                isRecommended = tier == recommended,
+                isDownloaded = modelDownloadManager.isModelAvailable(tier.model.id),
+                onClick = { onSelectBrain(tier.model) },
             )
         }
+    }
+}
 
-        // ── 2. Voice ─────────────────────────────────────────
-        item {
-            VoiceSection(prefs = prefs, haptics = haptics)
-        }
-
-        // ── 3. AI Model ───────────────────────────────────────
-        item {
-            ModelSection(modelInfo = state.modelInfo)
-        }
-
-        item {
-            SettingsSection(title = "ML Kit GenAI", icon = Icons.Default.AutoAwesome) {
-                MlKitStatusSection(
-                    status = state.mlKitStatus,
-                    testResult = state.testResult,
-                    isTestRunning = state.isTestRunning,
-                    onTestClick = { viewModel.runTestGeneration() },
+@Composable
+private fun BrainCard(
+    tier: M1K3Tier,
+    isSelected: Boolean,
+    isRecommended: Boolean,
+    isDownloaded: Boolean,
+    onClick: () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (isSelected) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+                    },
+            ),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Text(
+                        text = tier.displayName.removeSuffix(" M1K3"),
+                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (isRecommended) {
+                        Spacer(modifier = Modifier.padding(start = 4.dp))
+                        Text(
+                            text = "Recommended",
+                            style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+                Text(
+                    text = tier.tagline,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = if (isDownloaded) "Downloaded" else "~${tier.downloadSizeMb} MB download on first use",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Selected",
+                    tint = androidx.compose.material3.MaterialTheme.colorScheme.primary,
                 )
             }
         }
-
-        item {
-            AiCoreSection(
-                currentPreference = state.aiCorePreference,
-                onPreferenceChange = { viewModel.switchAiCorePreference(it) },
-            )
-        }
-
-        item {
-            KnowledgeSection(
-                ragEnabled = state.ragEnabled,
-                onRagEnabledChange = { viewModel.setRagEnabled(it) },
-                onKnowledgeBaseClick = { onNavigateToDocuments?.invoke() },
-                onIntentClick = {},
-            )
-        }
-
-        // ── 4. Data ───────────────────────────────────────────
-        item {
-            DataSection(onExportClick = {}, onImportClick = {}, onClearClick = {})
-        }
-
-        // ── 5. About ──────────────────────────────────────────
-        item {
-            PrivacySection(
-                onPrivacyDashboardClick = {},
-                onEncryptionClick = {},
-            )
-        }
-
-        item {
-            AboutSection(
-                onVersionClick = {},
-                onLicensesClick = { onNavigateToLicenses?.invoke() },
-                onPrivacyPolicyClick = {},
-            )
-        }
-
-        item { Spacer(Modifier.height(48.dp)) }
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// 1. Personal
+// Grounding
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun PersonalSection(
-    prefs: PreferencesStoreInterface,
-    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback,
-) {
-    var name by remember { mutableStateOf(prefs.getString(PreferenceKeys.USER_NAME, "") ?: "") }
-    var isEditing by remember { mutableStateOf(false) }
+private fun GroundingSection(prefs: PreferencesStoreInterface) {
+    var webSearchEnabled by remember {
+        mutableStateOf(prefs.getBoolean(PreferenceKeys.WEB_SEARCH_ENABLED, true))
+    }
+    var ragEnabled by remember {
+        mutableStateOf(prefs.getBoolean(PreferenceKeys.RAG_ENABLED, false))
+    }
 
-    SettingsSection(title = "Personal", icon = Icons.Default.Person) {
-        if (isEditing) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Your first name") },
-                singleLine = true,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = MaSpacing.base, vertical = MaSpacing.sm),
-                trailingIcon = {
-                    IconButton(onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        prefs.setString(PreferenceKeys.USER_NAME, name.trim())
-                        isEditing = false
-                    }) {
-                        Icon(Icons.Default.Check, contentDescription = "Save", tint = MaColors.Orange)
-                    }
-                },
-                colors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaColors.Orange,
-                        focusedLabelColor = MaColors.Orange,
-                        cursorColor = MaColors.Orange,
-                    ),
-            )
-        } else {
-            SettingsItem(
-                title = "Your name",
-                subtitle = name.ifBlank { "Tap to set — used in your greeting" },
-                icon = Icons.Default.Person,
-                onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    isEditing = true
-                },
-            )
-        }
+    Column {
+        SectionHeader("Grounding")
+        ListItem(
+            headlineContent = { Text("Web search in chat") },
+            trailingContent = {
+                Switch(
+                    checked = webSearchEnabled,
+                    onCheckedChange = {
+                        webSearchEnabled = it
+                        prefs.setBoolean(PreferenceKeys.WEB_SEARCH_ENABLED, it)
+                    },
+                )
+            },
+        )
+        SectionFooter(
+            "When on, M1K3 can search the web to answer. The only capability " +
+                "that sends chat-derived queries off this device.",
+        )
+        ListItem(
+            headlineContent = { Text("Ground replies in your documents") },
+            trailingContent = {
+                Switch(
+                    checked = ragEnabled,
+                    onCheckedChange = {
+                        ragEnabled = it
+                        prefs.setBoolean(PreferenceKeys.RAG_ENABLED, it)
+                    },
+                )
+            },
+        )
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// 2. Voice
+// Voice
 // ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun VoiceSection(
-    prefs: PreferencesStoreInterface,
-    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback,
-) {
-    var autoVoiceReply by remember {
+private fun VoiceSection(prefs: PreferencesStoreInterface) {
+    var selectedVoiceId by remember {
+        mutableStateOf(prefs.getString(PreferenceKeys.SELECTED_VOICE, Voice.default.id) ?: Voice.default.id)
+    }
+    var speakRepliesAloud by remember {
         mutableStateOf(prefs.getBoolean(PreferenceKeys.VOICE_AUTO_REPLY, false))
     }
-    var hapticsEnabled by remember {
-        mutableStateOf(prefs.getBoolean(PreferenceKeys.HAPTICS_ENABLED, true))
-    }
 
-    SettingsSection(title = "Voice & Feedback", icon = Icons.Default.RecordVoiceOver) {
-        SettingsToggleItem(
-            title = "Auto voice reply",
-            subtitle = "M1K3 speaks responses aloud automatically",
-            icon = Icons.Default.VolumeUp,
-            checked = autoVoiceReply,
-            onCheckedChange = { checked ->
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                autoVoiceReply = checked
-                prefs.setBoolean(PreferenceKeys.VOICE_AUTO_REPLY, checked)
+    Column {
+        SectionHeader("Voice")
+        ListItem(
+            headlineContent = { Text("Voice") },
+            supportingContent = {
+                Text(Voice.all().find { it.id == selectedVoiceId }?.displayName ?: Voice.default.displayName)
             },
         )
-
-        HorizontalDivider(modifier = Modifier.padding(horizontal = MaSpacing.base), color = MaColors.BorderLight)
-
-        SettingsToggleItem(
-            title = "Haptic feedback",
-            subtitle = "Tactile response for interactions",
-            icon = Icons.Default.Vibration,
-            checked = hapticsEnabled,
-            onCheckedChange = { checked ->
-                hapticsEnabled = checked
-                prefs.setBoolean(PreferenceKeys.HAPTICS_ENABLED, checked)
-                if (checked) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-            },
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(horizontal = MaSpacing.base), color = MaColors.BorderLight)
-
-        // Voice picker — Daniel, Bella, Emma
-        var selectedVoiceId by remember {
-            mutableStateOf(
-                prefs.getString(PreferenceKeys.SELECTED_VOICE, app.m1k3.ai.domain.tts.Voice.default.id)
-                    ?: app.m1k3.ai.domain.tts.Voice.default.id,
-            )
-        }
-        val voices =
-            app.m1k3.ai.domain.tts.Voice
-                .all()
-
-        SettingsItem(
-            title = "Voice",
-            subtitle = voices.find { it.id == selectedVoiceId }?.displayName ?: "Daniel",
-            icon = Icons.Default.RecordVoiceOver,
-            onClick = {},
-        )
-        androidx.compose.foundation.layout.Row(
-            modifier =
-                androidx.compose.ui.Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = MaSpacing.base, vertical = MaSpacing.sm),
-            horizontalArrangement =
-                androidx.compose.foundation.layout.Arrangement
-                    .spacedBy(MaSpacing.sm),
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            voices.forEach { voice ->
-                val isSelected = voice.id == selectedVoiceId
-                androidx.compose.material3.FilterChip(
-                    selected = isSelected,
+            Voice.all().forEach { voice ->
+                FilterChip(
+                    selected = voice.id == selectedVoiceId,
                     onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         selectedVoiceId = voice.id
                         prefs.setString(PreferenceKeys.SELECTED_VOICE, voice.id)
                     },
-                    label = { androidx.compose.material3.Text(voice.displayName) },
+                    label = { Text(voice.displayName) },
                 )
             }
         }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// 3. AI Model (existing, unchanged)
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun ModelSection(modelInfo: String) {
-    SettingsSection(title = "AI Model", icon = Icons.Default.Memory) {
-        SettingsItem(
-            title = "Current Model",
-            subtitle = modelInfo,
-            icon = Icons.Default.ModelTraining,
-            onClick = {},
-        )
-    }
-}
-
-@Composable
-private fun KnowledgeSection(
-    ragEnabled: Boolean,
-    onRagEnabledChange: (Boolean) -> Unit,
-    onKnowledgeBaseClick: () -> Unit,
-    onIntentClick: () -> Unit,
-) {
-    SettingsSection(title = "Personal Knowledge", icon = Icons.Default.MenuBook) {
-        SettingsToggleItem(
-            title = "Use personal knowledge",
-            subtitle = "Ground replies in your imported notes and docs",
-            icon = Icons.Default.AutoAwesome,
-            checked = ragEnabled,
-            onCheckedChange = onRagEnabledChange,
-        )
-        HorizontalDivider(modifier = Modifier.padding(horizontal = MaSpacing.base), color = MaColors.BorderLight)
-        SettingsItem(
-            title = "Documents",
-            subtitle = "None imported yet",
-            icon = Icons.Default.Book,
-            onClick = onKnowledgeBaseClick,
-        )
-        SettingsItem(
-            title = "Intent Classification",
-            subtitle = "${Intent.entries.size} query types · Adaptive retrieval",
-            icon = Icons.Default.Category,
-            onClick = onIntentClick,
-        )
-    }
-}
-
-@Composable
-private fun AiCoreSection(
-    currentPreference: AiCoreModelPreference,
-    onPreferenceChange: (AiCoreModelPreference) -> Unit,
-) {
-    SettingsSection(title = "AICore Model", icon = Icons.Default.AutoAwesome) {
-        AiCoreModelPreference.entries.forEachIndexed { index, preference ->
-            val isSelected = preference == currentPreference
-            SettingsItem(
-                title = preference.displayName,
-                subtitle =
-                    when (preference) {
-                        AiCoreModelPreference.STABLE -> "Production model — stable, optimized"
-                        AiCoreModelPreference.PREVIEW_SPEED -> "Gemma 4 E2B — 3x faster (Preview)"
-                        AiCoreModelPreference.PREVIEW_FULL -> "Gemma 4 E4B — highest quality (Preview)"
+        ListItem(
+            headlineContent = { Text("Speak replies aloud") },
+            trailingContent = {
+                Switch(
+                    checked = speakRepliesAloud,
+                    onCheckedChange = {
+                        speakRepliesAloud = it
+                        prefs.setBoolean(PreferenceKeys.VOICE_AUTO_REPLY, it)
                     },
-                icon = if (isSelected) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
-                iconTint = if (isSelected) MaColors.Orange else MaColors.textMuted(),
-                onClick = { onPreferenceChange(preference) },
-            )
-            if (index < AiCoreModelPreference.entries.lastIndex) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = MaSpacing.base), color = MaColors.BorderLight)
-            }
+                )
+            },
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// You
+// ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun YouSection(prefs: PreferencesStoreInterface) {
+    var name by remember { mutableStateOf(prefs.getString(PreferenceKeys.USER_NAME, "") ?: "") }
+
+    Column {
+        SectionHeader("You")
+        OutlinedTextField(
+            value = name,
+            onValueChange = {
+                name = it
+                prefs.setString(PreferenceKeys.USER_NAME, it.trim())
+            },
+            label = { Text("Your name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Data
+// ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun DataSection() {
+    Column {
+        SectionHeader("Data")
+        ListItem(
+            headlineContent = { Text("Export conversations") },
+            supportingContent = { Text("Backup to JSON") },
+            modifier = Modifier.clickable {},
+        )
+        ListItem(
+            headlineContent = { Text("Import conversations") },
+            supportingContent = { Text("Restore from backup") },
+            modifier = Modifier.clickable {},
+        )
+        ListItem(
+            headlineContent = {
+                Text(
+                    "Clear all data",
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                )
+            },
+            supportingContent = { Text("Reset app to defaults") },
+            modifier = Modifier.clickable {},
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// About
+// ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun AboutSection(onNavigateToLicenses: () -> Unit) {
+    val context = LocalContext.current
+    val version =
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0"
+        } catch (_: Exception) {
+            "1.0"
         }
-    }
-}
 
-// ─────────────────────────────────────────────────────────────
-// 4. Data
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun DataSection(
-    onExportClick: () -> Unit,
-    onImportClick: () -> Unit,
-    onClearClick: () -> Unit,
-) {
-    SettingsSection(title = "Data", icon = Icons.Default.Storage) {
-        SettingsItem(
-            title = "Export conversations",
-            subtitle = "Backup to JSON",
-            icon = Icons.Default.Upload,
-            onClick = onExportClick,
+    Column {
+        SectionHeader("About")
+        ListItem(
+            headlineContent = { Text("Version") },
+            trailingContent = { Text(version) },
         )
-        SettingsItem(
-            title = "Import conversations",
-            subtitle = "Restore from backup",
-            icon = Icons.Default.Download,
-            onClick = onImportClick,
+        ListItem(
+            headlineContent = { Text("m1k3.app") },
+            trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+            modifier =
+                Modifier.clickable {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://m1k3.app")))
+                },
         )
-        SettingsItem(
-            title = "Clear all data",
-            subtitle = "Reset app to defaults",
-            icon = Icons.Default.DeleteForever,
-            onClick = onClearClick,
-            isDestructive = true,
+        ListItem(
+            headlineContent = { Text("Licenses") },
+            trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+            modifier = Modifier.clickable(onClick = onNavigateToLicenses),
         )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// 5. About / Privacy
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun PrivacySection(
-    onPrivacyDashboardClick: () -> Unit,
-    onEncryptionClick: () -> Unit,
-) {
-    SettingsSection(title = "Privacy", icon = Icons.Default.Lock) {
-        SettingsItem(
-            title = "Privacy dashboard",
-            subtitle = "Chat on-device · network only when you ask",
-            icon = Icons.Default.Security,
-            onClick = onPrivacyDashboardClick,
-        )
-        SettingsItem(
-            title = "Data encryption",
-            subtitle = "AES-256 via SQLCipher",
-            icon = Icons.Default.Shield,
-            onClick = onEncryptionClick,
-        )
-    }
-}
-
-@Composable
-private fun AboutSection(
-    onVersionClick: () -> Unit,
-    onLicensesClick: () -> Unit,
-    onPrivacyPolicyClick: () -> Unit,
-) {
-    SettingsSection(title = "About", icon = Icons.Default.Info) {
-        SettingsItem(
-            title = "Version",
-            subtitle = "0.1.0 — Phase 2",
-            icon = Icons.Default.AppShortcut,
-            onClick = onVersionClick,
-        )
-        SettingsItem(
-            title = "Open source licenses",
-            subtitle = "Apache 2.0 · MIT",
-            icon = Icons.Default.Code,
-            onClick = onLicensesClick,
-        )
-        SettingsItem(
-            title = "Privacy policy",
-            subtitle = "No analytics · no telemetry · no tracking",
-            icon = Icons.Default.PrivacyTip,
-            onClick = onPrivacyPolicyClick,
-        )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Preview
-// ─────────────────────────────────────────────────────────────
-
-@Preview(showBackground = true)
-@Composable
-private fun SettingsScreenPreview() {
-    MaTheme {
-        SettingsScreen()
+        SectionFooter("M1K3 — a local, private AI companion. Everything runs on your device.")
     }
 }

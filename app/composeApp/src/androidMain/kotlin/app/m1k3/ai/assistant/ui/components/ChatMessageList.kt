@@ -37,7 +37,9 @@ fun ChatMessageList(
     isGenerating: Boolean,
     listState: LazyListState,
     onSpeak: ((String) -> Unit)? = null,
-    userName: String? = null,
+    brainCaption: String = "",
+    brainReady: Boolean = false,
+    onStarterTap: (String) -> Unit = {},
     generationState: app.m1k3.ai.assistant.chat.GenerationState = app.m1k3.ai.assistant.chat.GenerationState.Idle,
     modifier: Modifier = Modifier,
 ) {
@@ -49,9 +51,13 @@ fun ChatMessageList(
                 .animateContentSize()
                 .fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
+        // top: ChatScreen now owns a real Scaffold/TopAppBar, which already
+        // insets the list correctly — this is just breathing room below it
+        // (was 180.dp, compensating for the old floating avatar toolbar).
+        // bottom: clearance for the floating input+context "island" overlay.
         contentPadding =
             PaddingValues(
-                top = 180.dp,
+                top = 12.dp,
                 bottom = 200.dp,
             ),
     ) {
@@ -63,7 +69,9 @@ fun ChatMessageList(
         if (preConversation) {
             item {
                 ChatHeroSplash(
-                    userName = userName,
+                    brainCaption = brainCaption,
+                    brainReady = brainReady,
+                    onStarterTap = onStarterTap,
                 )
             }
             items(messages.filter { !it.isStatusMessage }) { message ->

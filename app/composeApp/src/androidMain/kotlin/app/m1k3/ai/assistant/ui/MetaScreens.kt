@@ -1,22 +1,21 @@
 package app.m1k3.ai.assistant.ui
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.m1k3.ai.assistant.design.tokens.MaColors
@@ -25,382 +24,19 @@ import app.m1k3.ai.assistant.design.tokens.MaSpacing
 import app.m1k3.ai.assistant.design.tokens.MaTypography
 
 /**
- * About M1K3 screen - App mission, privacy-first messaging, version info
- *
- * @param onLicensesClick Optional callback to navigate to the Open Source Licenses screen.
- */
-@Composable
-fun AboutScreen(onLicensesClick: (() -> Unit)? = null) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(MaSpacing.base),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(modifier = Modifier.height(MaSpacing.lg))
-
-        Text(
-            "M1K3",
-            style = MaTypography.displayLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaColors.Orange,
-        )
-
-        Text(
-            "Call me Mike",
-            style = MaTypography.bodyLarge,
-            color = MaColors.textSecondary(),
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.xl))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaColors.BgSecondary,
-                ),
-        ) {
-            Column(modifier = Modifier.padding(MaSpacing.base)) {
-                Text(
-                    "Privacy-First AI Assistant",
-                    style = MaTypography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-
-                Spacer(modifier = Modifier.height(MaSpacing.sm))
-
-                Text(
-                    "Your device is the cloud. 間 AI runs on your phone — chat inference " +
-                        "is 100% on-device and your conversations never leave. Network is a " +
-                        "tool you wield, not a default: model downloads and web search run " +
-                        "only when you ask.",
-                    style = MaTypography.bodyMedium,
-                    color = MaColors.textSecondary(),
-                )
-
-                Spacer(modifier = Modifier.height(MaSpacing.base))
-
-                MetaInfoRow(icon = Icons.Default.Security, label = "Chat", value = "100% On-Device")
-                MetaInfoRow(icon = Icons.Default.Smartphone, label = "On-Device AI", value = "SmolLM2-360M")
-                MetaInfoRow(icon = Icons.Default.Code, label = "Version", value = "1.0.0")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(MaSpacing.base))
-
-        Text(
-            "Built with ❤️ by developers who care about privacy",
-            style = MaTypography.bodySmall,
-            color = MaColors.textSecondary(),
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.base))
-
-        // Open Source Licenses link
-        val sectionShape = RoundedCornerShape(MaRadius.md)
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clip(sectionShape)
-                    .background(MaColors.bgElevated())
-                    .border(1.dp, MaColors.borderSubtle(), sectionShape)
-                    .clickable { onLicensesClick?.invoke() }
-                    .padding(MaSpacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Code,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaColors.Orange,
-            )
-            Spacer(modifier = Modifier.width(MaSpacing.md))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Open Source Licenses",
-                    style = MaTypography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    "Libraries & assets that power M1K3",
-                    style = MaTypography.labelSmall,
-                    color = MaColors.textMuted(),
-                )
-            }
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaColors.textMuted(),
-            )
-        }
-
-        Spacer(modifier = Modifier.height(MaSpacing.xl))
-    }
-}
-
-/**
- * Help & Documentation screen
- */
-@Composable
-fun HelpScreen() {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(MaSpacing.base),
-    ) {
-        Text(
-            "Help & Documentation",
-            style = MaTypography.displayMedium,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.base))
-
-        HelpSection(
-            title = "Getting Started",
-            items =
-                listOf(
-                    "Chat with M1K3 using natural language",
-                    "Your conversations are 100% private and local",
-                    "No internet connection required",
-                ),
-        )
-
-        HelpSection(
-            title = "Privacy",
-            items =
-                listOf(
-                    "Chat inference runs 100% on your device",
-                    "Your conversations never leave your phone",
-                    "Network is user-initiated: model downloads and web search only when you ask",
-                    "No analytics, no telemetry, no tracking",
-                ),
-        )
-    }
-}
-
-/**
- * Send Feedback screen
- */
-@Composable
-fun FeedbackScreen() {
-    val context = LocalContext.current
-
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(MaSpacing.base),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Default.Feedback,
-            contentDescription = "Feedback",
-            modifier = Modifier.size(64.dp),
-            tint = MaColors.Orange,
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.base))
-
-        Text(
-            "Send Feedback",
-            style = MaTypography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.sm))
-
-        Text(
-            "Found a bug? Have a feature request?\nWe'd love to hear from you!",
-            style = MaTypography.bodyMedium,
-            color = MaColors.textSecondary(),
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.xl))
-
-        Button(
-            onClick = {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/anthropics/m1k3/issues"))
-                context.startActivity(intent)
-            },
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor = MaColors.Orange,
-                ),
-        ) {
-            Icon(Icons.Default.OpenInBrowser, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Open GitHub Issues")
-        }
-    }
-}
-
-/**
- * Privacy Policy screen
- */
-@Composable
-fun PrivacyScreen() {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(MaSpacing.base),
-    ) {
-        Text(
-            "Privacy Policy",
-            style = MaTypography.displayMedium,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.base))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaColors.Success.copy(alpha = 0.1f),
-                ),
-        ) {
-            Column(modifier = Modifier.padding(MaSpacing.base)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Security,
-                        contentDescription = null,
-                        tint = MaColors.Success,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Your Device Is the Cloud",
-                        style = MaTypography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaColors.Success,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(MaSpacing.sm))
-
-                Text(
-                    "Chat inference runs on your phone, not in someone else's data centre. " +
-                        "Your conversations never leave the device. Network is a tool you wield, " +
-                        "not a default — model downloads and web search only happen when you ask.",
-                    style = MaTypography.bodyMedium,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(MaSpacing.base))
-
-        PrivacySection(
-            title = "What We Don't Collect",
-            content =
-                "間 AI doesn't run an analytics pipeline. No events, no crash reporting SDKs, " +
-                    "no advertising IDs, no user profiling. Your conversations are never read, " +
-                    "logged, or transmitted by the app itself.",
-        )
-
-        PrivacySection(
-            title = "Data Storage",
-            content =
-                "Your conversations are stored locally on your device in an encrypted SQLite database. " +
-                    "Only you have access to this data.",
-        )
-
-        PrivacySection(
-            title = "ML Kit (Gemini Nano)",
-            content =
-                "On-device chat via Google's Gemini Nano uses ML Kit. Your prompts and responses " +
-                    "never leave the device. ML Kit ships Google's usage-statistics library " +
-                    "(anonymous invocation counts, model version, crash reports) as part of Play " +
-                    "Services. You can opt out at the OS level: Settings → Google → Usage & Diagnostics.",
-        )
-
-        PrivacySection(
-            title = "Network You Can See",
-            content =
-                "Network bytes only leave when YOU ask: model downloads from HuggingFace, web " +
-                    "search via DuckDuckGo. No other network activity happens.",
-        )
-    }
-}
-
-/**
- * Export Data screen
- */
-@Composable
-fun ExportScreen() {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(MaSpacing.base),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Default.Download,
-            contentDescription = "Export",
-            modifier = Modifier.size(64.dp),
-            tint = MaColors.Orange,
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.base))
-
-        Text(
-            "Export Your Data",
-            style = MaTypography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.sm))
-
-        Text(
-            "Export your conversations",
-            style = MaTypography.bodyMedium,
-            color = MaColors.textSecondary(),
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.xl))
-
-        OutlinedButton(
-            onClick = { /* TODO: Implement export */ },
-        ) {
-            Icon(Icons.Default.FileDownload, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Export Conversations (JSON)")
-        }
-
-        Spacer(modifier = Modifier.height(MaSpacing.xl))
-
-        Text(
-            "Your data is always yours. Export it anytime.",
-            style = MaTypography.bodySmall,
-            color = MaColors.textSecondary(),
-        )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Open Source Licenses Screen
-// ─────────────────────────────────────────────────────────────
-
-/**
  * LicensesScreen — Full attribution for all open source libraries and assets.
  *
  * Every project we ship stands on the shoulders of open source work.
  * This screen gives credit where credit is due.
  *
+ * The rest of the old "Meta Screens" (About/Help/Feedback/Privacy/Export) were
+ * retired in the chat-is-the-app reduction pass — their content either duplicated
+ * Settings → About, or was a TODO stub with no real behaviour to preserve.
+ *
  * — MurphySig (https://murphysig.dev) | confidence: high | context: pure Compose, no deps
  */
 @Composable
-fun LicensesScreen() {
+fun LicensesScreen(onBack: () -> Unit = {}) {
     Column(
         modifier =
             Modifier
@@ -411,6 +47,15 @@ fun LicensesScreen() {
     ) {
         Spacer(modifier = Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         Spacer(modifier = Modifier.height(MaSpacing.lg))
+
+        IconButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = MaColors.textPrimary(),
+            )
+        }
+        Spacer(modifier = Modifier.height(MaSpacing.xs))
 
         // Header
         Text(
@@ -675,104 +320,5 @@ private fun LicenseBadge(
             color = textColor,
             fontWeight = FontWeight.Medium,
         )
-    }
-}
-
-// Helper composables
-
-@Composable
-private fun MetaInfoRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    value: String,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaColors.Orange,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                label,
-                style = MaTypography.bodyMedium,
-                color = MaColors.textSecondary(),
-            )
-        }
-        Text(
-            value,
-            style = MaTypography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
-@Composable
-private fun HelpSection(
-    title: String,
-    items: List<String>,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            title,
-            style = MaTypography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.sm))
-
-        items.forEach { item ->
-            Row(
-                modifier = Modifier.padding(vertical = 4.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Text(
-                    "•",
-                    style = MaTypography.bodyMedium,
-                    color = MaColors.Orange,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(
-                    item,
-                    style = MaTypography.bodyMedium,
-                    color = MaColors.textSecondary(),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(MaSpacing.base))
-    }
-}
-
-@Composable
-private fun PrivacySection(
-    title: String,
-    content: String,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            title,
-            style = MaTypography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.sm))
-
-        Text(
-            content,
-            style = MaTypography.bodyMedium,
-            color = MaColors.textSecondary(),
-        )
-
-        Spacer(modifier = Modifier.height(MaSpacing.base))
     }
 }

@@ -148,6 +148,7 @@ class ChatScreenViewModel(
                 toolRegistry = toolRegistry,
                 configBuilder = configBuilder,
                 promptBuilder = promptBuilder,
+                webSearchEnabled = { preferences.getBoolean(PreferenceKeys.WEB_SEARCH_ENABLED, true) },
             )
         } else {
             null

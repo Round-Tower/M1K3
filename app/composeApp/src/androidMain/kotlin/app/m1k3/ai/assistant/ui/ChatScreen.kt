@@ -16,14 +16,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,9 +77,8 @@ import app.m1k3.ai.assistant.ui.components.ChatInputBarContainer
 import app.m1k3.ai.assistant.ui.components.ChatMessageList
 import app.m1k3.ai.assistant.ui.components.ClearConversationDialog
 import app.m1k3.ai.assistant.ui.components.ContextWindowIndicator
-import app.m1k3.ai.assistant.ui.components.LocalToolbarActions
-import app.m1k3.ai.assistant.ui.components.ToolbarActions
 import app.m1k3.ai.domain.ai.LlmModel
+import app.m1k3.ai.domain.ai.M1K3Tier
 import app.m1k3.ai.domain.chat.ChatError
 import app.m1k3.ai.domain.stt.SttState
 import app.m1k3.ai.domain.stt.isListening
@@ -99,6 +106,7 @@ import androidx.compose.runtime.collectAsState as collectFlowAsState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
+    onNavigateToSettings: () -> Unit = {},
     onClearConversationClick: (() -> Unit)? = null,
     projectId: String = "default",
 ) {
@@ -305,146 +313,174 @@ fun ChatScreen(
         }
     }
 
-    // Publish the "New chat" action to the app-level Toolbar whenever the
-    // conversation has messages. Cleared on dispose so other screens don't
-    // inherit our action.
-    val toolbarActionsState =
-        LocalToolbarActions.current as? androidx.compose.runtime.MutableState<ToolbarActions>
-    LaunchedEffect(uiState.messages.isNotEmpty()) {
-        toolbarActionsState?.value =
-            if (uiState.messages.isNotEmpty()) {
-                ToolbarActions(onNewChat = { showClearDialog = true })
-            } else {
-                ToolbarActions()
+    // Voice mode toggle — for now this toggles the existing STT dictation
+    // (same source of truth as the input bar's mic button); a full-screen
+    // voice mode is a later wave.
+    val voiceModeToggle: (() -> Unit)? =
+        if (sttEngine.isAvailable()) {
+            {
+                if (sttState.isListening) sttEngine.stopListening() else sttEngine.startListening()
             }
-    }
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose { toolbarActionsState?.value = ToolbarActions() }
-    }
-
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .animateContentSize(),
-    ) {
-        // Layer 1: Messages list (behind overlays)
-        // Note: ContextWindowIndicator retired — its % lives in the
-        // ChatContextBar footer now (one signal, one place).
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Messages list
-            ChatMessageList(
-                messages = uiState.messages,
-                isGenerating = uiState.generationState.isGenerating,
-                listState = listState,
-                onSpeak = { text -> viewModel.speakMessage(text) },
-                userName = uiState.userName,
-                generationState = uiState.generationState,
-            )
+        } else {
+            null
         }
 
-        // Download progress overlay
-        uiState.modelDownload?.let { downloadState ->
-            ModelDownloadOverlay(
-                state = downloadState,
+    val currentBrainCaption =
+        M1K3Tier
+            .all()
+            .find { it.model == uiState.currentModel }
+            ?.displayName
+            ?.removeSuffix(" M1K3")
+            ?: uiState.currentModel.displayName
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                // No title text — the wordmark lives in the empty-state hero;
+                // once chatting, the transcript owns the screen.
+                title = {},
+                actions = {
+                    IconButton(
+                        onClick = { showClearDialog = true },
+                        enabled = uiState.messages.isNotEmpty() && !uiState.generationState.isGenerating,
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = "New chat")
+                    }
+                    IconButton(
+                        onClick = { voiceModeToggle?.invoke() },
+                        enabled = voiceModeToggle != null,
+                    ) {
+                        Icon(Icons.Default.GraphicEq, contentDescription = "Voice mode")
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaColors.bgPrimary()),
+            )
+        },
+        containerColor = MaColors.bgPrimary(),
+    ) { scaffoldPadding ->
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(top = scaffoldPadding.calculateTopPadding())
+                    .animateContentSize(),
+        ) {
+            // Layer 1: Messages list (behind overlays)
+            // Note: ContextWindowIndicator retired — its % lives in the
+            // ChatContextBar footer now (one signal, one place).
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Messages list
+                ChatMessageList(
+                    messages = uiState.messages,
+                    isGenerating = uiState.generationState.isGenerating,
+                    listState = listState,
+                    onSpeak = { text -> viewModel.speakMessage(text) },
+                    brainCaption = currentBrainCaption,
+                    brainReady = uiState.isInputEnabled,
+                    onStarterTap = { prompt ->
+                        avatarVM?.processMessage(prompt, isUserMessage = true)
+                        viewModel.updateInputText(prompt)
+                        viewModel.sendMessage()
+                    },
+                    generationState = uiState.generationState,
+                )
+            }
+
+            // Download progress overlay
+            uiState.modelDownload?.let { downloadState ->
+                ModelDownloadOverlay(
+                    state = downloadState,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 120.dp),
+                )
+            }
+
+            // Bottom overlay: context bar + input bar with gradient
+            val partialTranscript = (sttState as? SttState.Listening)?.partialText ?: ""
+            val contextBarState =
+                ChatContextBarState.from(
+                    uiState = uiState,
+                    isListening = sttState.isListening,
+                    partialTranscript = partialTranscript,
+                )
+            // Floating "island" cluster: input + footer share one rounded
+            // elevated surface, set off from the nav bar with breathing room
+
+            val islandShape = RoundedCornerShape(MaRadius.xxl)
+            Column(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 120.dp),
-            )
-        }
-
-        // Bottom overlay: context bar + input bar with gradient
-        val partialTranscript = (sttState as? SttState.Listening)?.partialText ?: ""
-        val contextBarState =
-            ChatContextBarState.from(
-                uiState = uiState,
-                isListening = sttState.isListening,
-                partialTranscript = partialTranscript,
-            )
-        // Floating "island" cluster: input + footer share one rounded
-        // elevated surface, set off from the nav bar with breathing room
-
-        val islandShape = RoundedCornerShape(MaRadius.xxl)
-        Column(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .imePadding()
-                    .padding(horizontal = MaSpacing.sm, vertical = MaSpacing.sm)
-                    .clip(islandShape)
-                    .background(MaColors.bgElevated(), islandShape)
-                    .border(1.dp, MaColors.borderSubtle(), islandShape),
-        ) {
-            ChatInputBar(
-                text = uiState.inputText,
-                onTextChange = { viewModel.updateInputText(it) },
-                onSend = {
-                    avatarVM?.processMessage(uiState.inputText, isUserMessage = true)
-                    viewModel.sendMessage()
-                },
-                enabled = uiState.isInputEnabled,
-                isListening = sttState.isListening,
-                onMicClick =
-                    if (sttEngine.isAvailable()) {
-                        {
-                            if (sttState.isListening) {
-                                sttEngine.stopListening()
-                            } else {
-                                sttEngine.startListening()
-                            }
-                        }
-                    } else {
-                        null
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .padding(horizontal = MaSpacing.sm, vertical = MaSpacing.sm)
+                        .clip(islandShape)
+                        .background(MaColors.bgElevated(), islandShape)
+                        .border(1.dp, MaColors.borderSubtle(), islandShape),
+            ) {
+                ChatInputBar(
+                    text = uiState.inputText,
+                    onTextChange = { viewModel.updateInputText(it) },
+                    onSend = {
+                        avatarVM?.processMessage(uiState.inputText, isUserMessage = true)
+                        viewModel.sendMessage()
                     },
-                listeningPartialText = partialTranscript,
-                onFocusChanged = { focused -> inputFocused = focused },
-            )
-            ChatContextBar(
-                state = contextBarState,
-                availableModels = LlmModel.all(),
-                onModelSwitch = { model ->
-                    haptics.medium()
-                    viewModel.switchModel(model)
-                },
-                enabled = uiState.isInputEnabled,
-            )
-        }
-
-        // Error dialog — haptic on appear
-        uiState.error?.let { error ->
-            LaunchedEffect(error) {
-                haptics.error()
+                    enabled = uiState.isInputEnabled,
+                    isListening = sttState.isListening,
+                    onMicClick = voiceModeToggle,
+                    listeningPartialText = partialTranscript,
+                    onFocusChanged = { focused -> inputFocused = focused },
+                )
+                ChatContextBar(
+                    state = contextBarState,
+                    availableModels = LlmModel.all(),
+                    onModelSwitch = { model ->
+                        haptics.medium()
+                        viewModel.switchModel(model)
+                    },
+                    enabled = uiState.isInputEnabled,
+                )
             }
-            ErrorSnackbar(
-                error = error,
-                onDismiss = {
-                    haptics.light()
-                    viewModel.clearError()
-                },
-            )
-        }
 
-        // Clear conversation dialog
-        if (showClearDialog) {
-            ClearConversationDialog(
-                messageCount = uiState.messages.size,
-                onConfirm = {
-                    haptics.strong()
-                    viewModel.clearConversation()
-                    showClearDialog = false
-                },
-                onDismiss = {
-                    haptics.light()
-                    showClearDialog = false
-                },
-            )
+            // Error dialog — haptic on appear
+            uiState.error?.let { error ->
+                LaunchedEffect(error) {
+                    haptics.error()
+                }
+                ErrorSnackbar(
+                    error = error,
+                    onDismiss = {
+                        haptics.light()
+                        viewModel.clearError()
+                    },
+                )
+            }
+
+            // Clear conversation dialog
+            if (showClearDialog) {
+                ClearConversationDialog(
+                    messageCount = uiState.messages.size,
+                    onConfirm = {
+                        haptics.strong()
+                        viewModel.clearConversation()
+                        showClearDialog = false
+                    },
+                    onDismiss = {
+                        haptics.light()
+                        showClearDialog = false
+                    },
+                )
+            }
         }
     }
 
-    // Expose clear callback to parent (for Toolbar)
+    // Expose clear callback to parent (legacy hook — parent may show its own dialog)
     LaunchedEffect(onClearConversationClick) {
         // This registers the callback - when parent calls it, we show the dialog
     }

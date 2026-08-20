@@ -65,8 +65,8 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
  *
  * The bar is intentionally minimal: text field, voice mic, send.
  * Model, context, and eco signals live above in [ChatContextBar];
- * "New chat" lives in the app-level Toolbar via [LocalToolbarActions];
- * auto-voice preference lives in Settings → Voice & Feedback.
+ * "New chat" lives in ChatScreen's own top bar; the "speak replies aloud"
+ * preference lives in Settings → Voice.
  */
 @Composable
 fun ChatInputBar(
@@ -192,7 +192,7 @@ fun ChatInputBar(
                                         if (isListening) {
                                             listeningPartialText.ifBlank { "Listening..." }
                                         } else {
-                                            "Chat with M1K3..."
+                                            "Ask M1K3…"
                                         },
                                     style = MaTypography.bodyLarge,
                                     color =

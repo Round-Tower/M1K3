@@ -90,7 +90,17 @@ class ChatWithToolsUseCase(
     private val grammarBuilder: ToolCallGrammarBuilder = ToolCallGrammarBuilder(),
     /** M1K3 system prompt — injected so personality persists across tool-calling path */
     var systemPrompt: String = "",
+    /**
+     * Live read of the "Web search in chat" setting (Settings → Grounding).
+     * Read fresh on every turn — same pattern as [ContextRetrievalUseCase.isRagEnabled] —
+     * so toggling it takes effect on the very next message, not the next launch.
+     */
+    private val webSearchEnabled: () -> Boolean = { true },
 ) {
+    /** Strips web_search from a candidate tool list when the user has turned it off. */
+    private fun applyWebSearchGate(tools: List<Tool>): List<Tool> =
+        if (webSearchEnabled()) tools else tools.filterNot { it.id == "web_search" }
+
     /**
      * Execute the chat flow with tool support.
      *
@@ -115,7 +125,7 @@ class ChatWithToolsUseCase(
                 logger.d { "Context: hasRAG=${context.hasRagContext}, hasMemory=${context.hasMemoryContext}" }
 
                 // 2. Get relevant tools and build prompt with tool schemas
-                val relevantTools = toolRegistry.getRelevantTools(prompt, maxTools = 3)
+                val relevantTools = applyWebSearchGate(toolRegistry.getRelevantTools(prompt, maxTools = 3))
                 println(
                     "DEBUG(ChatWithTools) TOOLS: ${relevantTools.size} relevant for '${prompt.take(40)}': ${relevantTools.map { it.id }}",
                 )
@@ -499,7 +509,7 @@ class ChatWithToolsUseCase(
         deviceContext: DeviceContext? = null,
         relevantTools: List<Tool>? = null,
     ): String {
-        val tools = relevantTools ?: toolRegistry.getRelevantTools(userPrompt, maxTools = 3)
+        val tools = relevantTools ?: applyWebSearchGate(toolRegistry.getRelevantTools(userPrompt, maxTools = 3))
         logger.i { "TOOLS: ${tools.size} relevant for '${userPrompt.take(40)}': ${tools.map { it.id }}" }
         logger.i { "SYSTEM: ${systemPrompt.take(80)}..." }
         logger.i { "BUILDER: promptBuilder=${promptBuilder != null}" }

@@ -1,91 +1,58 @@
 package app.m1k3.ai.assistant
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import app.cash.sqldelight.db.SqlDriver
 import app.m1k3.ai.assistant.ai.BaseLlmEngine
-import app.m1k3.ai.assistant.ai.LlamaCppEngine
-import app.m1k3.ai.assistant.app.AndroidDatabaseInitializer
 import app.m1k3.ai.assistant.app.AppInitializationManager
-import app.m1k3.ai.assistant.app.DatabaseInitResult
-import app.m1k3.ai.assistant.app.ILogger
 import app.m1k3.ai.assistant.app.InitializationResult
 import app.m1k3.ai.assistant.app.InitializationState
 import app.m1k3.ai.assistant.app.InitializationViewModel
 import app.m1k3.ai.assistant.app.LoggerAdapter
 import app.m1k3.ai.assistant.avatar.LocalSharedAvatarVM
-import app.m1k3.ai.assistant.avatar.collectAsState
 import app.m1k3.ai.assistant.avatar.rememberAvatarViewModel
 import app.m1k3.ai.assistant.chat.ChatScreenViewModel
+import app.m1k3.ai.assistant.chat.collectAsState
 import app.m1k3.ai.assistant.database.MaDatabase
 import app.m1k3.ai.assistant.design.theme.MaTheme
-import app.m1k3.ai.assistant.design.tokens.MaColors
 import app.m1k3.ai.assistant.di.allModules
-import app.m1k3.ai.assistant.embedding.EmbeddingEngine
 import app.m1k3.ai.assistant.embedding.EmbeddingEngineManager
 import app.m1k3.ai.assistant.navigation.Screen
-import app.m1k3.ai.assistant.navigation.navigateToBottomNav
-import app.m1k3.ai.assistant.ui.AboutScreen
 import app.m1k3.ai.assistant.ui.ChatScreen
-import app.m1k3.ai.assistant.ui.ExportScreen
-import app.m1k3.ai.assistant.ui.FeedbackScreen
-import app.m1k3.ai.assistant.ui.HelpScreen
+import app.m1k3.ai.assistant.ui.DocumentsScreen
 import app.m1k3.ai.assistant.ui.HistoryScreen
 import app.m1k3.ai.assistant.ui.LicensesScreen
-import app.m1k3.ai.assistant.ui.PrivacyScreen
-import app.m1k3.ai.assistant.ui.components.Toolbar
-import app.m1k3.ai.assistant.ui.drawer.DrawerContent
+import app.m1k3.ai.assistant.ui.MemoriesScreen
+import app.m1k3.ai.assistant.ui.SettingsScreen
 import app.m1k3.ai.assistant.utils.Logger
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -96,16 +63,19 @@ import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.context.startKoin
 import org.koin.core.parameter.parametersOf
-import co.touchlab.kermit.Logger as KermitLogger
 
 /**
- * M1K3 AI - MainActivity
+ * M1K3 - MainActivity
+ *
+ * Chat is the app. One NavigationStack-equivalent back stack rooted on Chat;
+ * Settings, Memories, Documents, Conversations, and Licenses are workspace
+ * rooms pushed onto it. No drawer, no bottom nav — each destination owns its
+ * own top bar (see macos/M1K3iOSApp/RootView.swift for the shape this mirrors).
  *
  * Minimalist demo showcasing:
  * - Privacy-first architecture (on-device chat; user-initiated network only — see ADR-0006)
  * - Encrypted database foundation
  * - Beautiful Material 3 design
- * - "Negative space" philosophy
  * - Full Koin DI with koinViewModel()
  */
 class MainActivity : ComponentActivity() {
@@ -286,239 +256,106 @@ private fun MaApp() {
 }
 
 /**
- * MaAppContent - Main app UI after successful initialization
+ * MaAppContent - Main app UI after successful initialization.
  *
- * Contains navigation, drawer, and all app screens.
- * Database is available via Koin injection.
+ * One NavigationStack-equivalent back stack rooted on Chat. No app-level
+ * Scaffold/drawer — every destination owns its own top bar.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MaAppContent() {
-    // Get database from Koin for screens that need it directly
     val database = koinInject<MaDatabase>()
 
     MaTheme {
         val navController = rememberNavController()
         val appAvatarVM = rememberAvatarViewModel()
-        val appAvatarState by appAvatarVM.collectAsState()
 
-        // Shared mutable state so the current screen can publish
-        // Toolbar actions (e.g. "New chat") without prop-drilling
-        // through the Scaffold. ChatScreen writes to this on entry
-        // and clears it on dispose.
-        val toolbarActionsState =
-            remember {
-                mutableStateOf(
-                    app.m1k3.ai.assistant.ui.components
-                        .ToolbarActions(),
-                )
-            }
-
-        var drawerOpen by remember { mutableStateOf(false) }
-
-        val drawerState = rememberDrawerState(DrawerValue.Closed)
-
-        LaunchedEffect(drawerOpen) {
-            if (drawerOpen) {
-                drawerState.open()
-            } else {
-                drawerState.close()
-            }
-        }
-
-        LaunchedEffect(drawerState.currentValue) {
-            drawerOpen = drawerState.currentValue == DrawerValue.Open
-        }
-
-        val haptics = LocalHapticFeedback.current
-        val isDarkMode = isSystemInDarkTheme()
-
-        // Animate content offset based on drawer state
-        val contentOffset by animateDpAsState(
-            targetValue = if (drawerOpen) 280.dp else 0.dp,
-            animationSpec = tween(durationMillis = 300),
-        )
-
-        ModalNavigationDrawer(
-            drawerContent = {
-                DrawerContent(
-                    currentRoute =
-                        navController
-                            .currentBackStackEntryAsState()
-                            .value
-                            ?.destination
-                            ?.route,
-                    isDarkMode = isDarkMode,
-                    onItemClick = { route ->
-                        // Primary nav uses navigateToBottomNav for proper back stack
-                        val primaryRoutes =
-                            setOf(
-                                Screen.Chat.route,
-                                Screen.History.route,
-                                Screen.Settings.route,
-                            )
-                        if (route in primaryRoutes) {
-                            val screen =
-                                when (route) {
-                                    Screen.Chat.route -> Screen.Chat
-                                    Screen.History.route -> Screen.History
-                                    Screen.Settings.route -> Screen.Settings
-                                    else -> Screen.Chat
-                                }
-                            navController.navigateToBottomNav(screen)
-                        } else {
-                            navController.navigate(route)
-                        }
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    },
-                    onMenuClose = { drawerOpen = false },
-                )
-            },
-            scrimColor = if (isDarkMode) MaColors.ScrimMedium else MaColors.ScrimMediumLight,
-            drawerState = drawerState,
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .offset(x = contentOffset),
+        CompositionLocalProvider(LocalSharedAvatarVM provides appAvatarVM) {
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Chat.route,
             ) {
-                // Lift the shared avatar state above the Scaffold so the
-                // Toolbar slot can consume it too.
-                CompositionLocalProvider(
-                    LocalSharedAvatarVM provides appAvatarVM,
-                    app.m1k3.ai.assistant.ui.components.LocalToolbarActions provides toolbarActionsState,
-                ) {
-                    Scaffold(
-                        topBar = {
-                            Toolbar(
-                                screenName =
-                                    getScreenName(
-                                        navController
-                                            .currentBackStackEntryAsState()
-                                            .value
-                                            ?.destination
-                                            ?.route,
-                                    ),
-                                engineInitialized = true,
-                                avatarState = appAvatarState,
-                                onMenuClick = { drawerOpen = !drawerOpen },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                composable(Screen.Chat.route) {
+                    ChatScreen(
+                        onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                        projectId = "default",
+                    )
+                }
+
+                composable(Screen.Settings.route) {
+                    // Same ChatScreenViewModel instance Chat is using (Chat's back
+                    // stack entry never pops while Settings is pushed on top), so
+                    // picking a brain here calls the exact mechanism the in-chat
+                    // model picker uses — no second source of truth.
+                    val chatViewModel =
+                        koinViewModel<ChatScreenViewModel>(
+                            viewModelStoreOwner = navController.getBackStackEntry(Screen.Chat.route),
+                        ) { parametersOf("default") }
+                    val chatUiState by chatViewModel.collectAsState()
+                    SettingsScreen(
+                        currentModel = chatUiState.currentModel,
+                        onSelectBrain = { model -> chatViewModel.switchModel(model) },
+                        onNavigateToMemories = { navController.navigate(Screen.Memories.route) },
+                        onNavigateToDocuments = { navController.navigate(Screen.Documents.route) },
+                        onNavigateToConversations = { navController.navigate(Screen.History.route) },
+                        onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) },
+                    )
+                }
+
+                composable(Screen.Memories.route) {
+                    MemoriesScreen(onBack = { navController.navigateUp() })
+                }
+
+                composable(Screen.Documents.route) {
+                    DocumentsScreen(onBack = { navController.navigateUp() })
+                }
+
+                composable(Screen.History.route) {
+                    HistoryScreen(
+                        database = database,
+                        projectId = "default",
+                        onBackClick = { navController.navigateUp() },
+                        onConversationClick = { conversationId ->
+                            navController.navigate("conversation/$conversationId")
                         },
-                        // Zero out Scaffold's automatic inset padding so content can
-                        // extend to true screen edges (chat background behind status/nav bars).
-                        // Individual screens call windowInsetsPadding where they need it.
-                        // The Toolbar sits in topBar and Compose positions it below the
-                        // status bar automatically via the slot's own inset handling.
-                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                    ) { paddingValues ->
-                        NavHost(
-                            navController = navController,
-                            startDestination = Screen.Chat.route,
-                            // Only top padding from the Toolbar slot — bottom/sides
-                            // are screen-owned so the background bleeds to all edges.
-                            modifier = Modifier.padding(top = paddingValues.calculateTopPadding()),
+                    )
+                }
+
+                composable(Screen.Licenses.route) {
+                    LicensesScreen(onBack = { navController.navigateUp() })
+                }
+
+                // Conversation Detail Screen
+                composable(
+                    route = Screen.ConversationDetail.route,
+                    arguments =
+                        listOf(
+                            navArgument(Screen.ConversationDetail.argConversationId) {
+                                type = NavType.LongType
+                            },
+                        ),
+                ) { backStackEntry ->
+                    val conversationId =
+                        backStackEntry.arguments?.getLong(
+                            Screen.ConversationDetail.argConversationId,
+                        ) ?: 0L
+
+                    // TODO: Create ConversationDetailScreen in Phase 3
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            // Chat Screen
-                            composable(Screen.Chat.route) {
-                                ChatScreen(
-                                    projectId = "default",
-                                )
-                            }
-
-                            // History Screen
-                            composable(Screen.History.route) {
-                                HistoryScreen(
-                                    database = database,
-                                    projectId = "default",
-                                    onBackClick = { navController.navigateUp() },
-                                    onConversationClick = { conversationId ->
-                                        navController.navigate("conversation/$conversationId")
-                                    },
-                                )
-                            }
-
-                            // Settings Screen
-                            composable(Screen.Settings.route) {
-                                app.m1k3.ai.assistant.ui.SettingsScreen(
-                                    onNavigateToLicenses = {
-                                        navController.navigate(Screen.Licenses.route)
-                                    },
-                                    onNavigateToDocuments = {
-                                        navController.navigate(Screen.Documents.route)
-                                    },
-                                )
-                            }
-
-                            // Documents (personal knowledge)
-                            composable(Screen.Documents.route) {
-                                app.m1k3.ai.assistant.ui.DocumentsScreen(
-                                    onBack = { navController.navigateUp() },
-                                )
-                            }
-
-                            // Meta Screens (Drawer actions)
-                            composable(Screen.About.route) {
-                                AboutScreen(
-                                    onLicensesClick = { navController.navigate(Screen.Licenses.route) },
-                                )
-                            }
-
-                            composable(Screen.Licenses.route) {
-                                LicensesScreen()
-                            }
-
-                            composable(Screen.Help.route) {
-                                HelpScreen()
-                            }
-
-                            composable(Screen.Feedback.route) {
-                                FeedbackScreen()
-                            }
-
-                            composable(Screen.Privacy.route) {
-                                PrivacyScreen()
-                            }
-
-                            composable(Screen.Export.route) {
-                                ExportScreen()
-                            }
-
-                            // Conversation Detail Screen
-                            composable(
-                                route = Screen.ConversationDetail.route,
-                                arguments =
-                                    listOf(
-                                        navArgument(Screen.ConversationDetail.argConversationId) {
-                                            type = NavType.LongType
-                                        },
-                                    ),
-                            ) { backStackEntry ->
-                                val conversationId =
-                                    backStackEntry.arguments?.getLong(
-                                        Screen.ConversationDetail.argConversationId,
-                                    ) ?: 0L
-
-                                // TODO: Create ConversationDetailScreen in Phase 3
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                                    ) {
-                                        Text(
-                                            "Conversation Detail",
-                                            style = MaterialTheme.typography.headlineMedium,
-                                        )
-                                        Text("ID: $conversationId")
-                                        TextButton(onClick = { navController.navigateUp() }) {
-                                            Text("← Back")
-                                        }
-                                    }
-                                }
+                            Text(
+                                "Conversation Detail",
+                                style = MaterialTheme.typography.headlineMedium,
+                            )
+                            Text("ID: $conversationId")
+                            TextButton(onClick = { navController.navigateUp() }) {
+                                Text("← Back")
                             }
                         }
                     }
@@ -527,14 +364,3 @@ private fun MaAppContent() {
         }
     }
 }
-
-/**
- * Helper to get screen name from route for UnifiedToolbar
- */
-private fun getScreenName(route: String?): String =
-    when (route) {
-        Screen.Chat.route -> "Chat"
-        Screen.History.route -> "History"
-        Screen.Settings.route -> "Settings"
-        else -> "M1K3"
-    }

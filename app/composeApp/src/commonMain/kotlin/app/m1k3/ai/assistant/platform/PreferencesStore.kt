@@ -151,8 +151,9 @@ object PreferenceKeys {
     /** Tool calling (agentic capabilities) enabled */
     const val TOOLS_ENABLED = "tools_enabled"
 
-    /** Haptic feedback enabled */
-    const val HAPTICS_ENABLED = "haptics_enabled"
+    /** Web search in chat enabled — the only capability that sends chat-derived
+     *  queries off this device. Default ON. */
+    const val WEB_SEARCH_ENABLED = "web_search_enabled"
 
     /** Dark mode preference */
     const val DARK_MODE = "dark_mode"
