@@ -37,10 +37,7 @@ fun ChatMessageList(
     isGenerating: Boolean,
     listState: LazyListState,
     onSpeak: ((String) -> Unit)? = null,
-    userContext: app.m1k3.ai.domain.context.UserContext? = null,
-    onRequestLocation: (() -> Unit)? = null,
-    onRequestHealth: (() -> Unit)? = null,
-    onRequestScreenTime: (() -> Unit)? = null,
+    userName: String? = null,
     generationState: app.m1k3.ai.assistant.chat.GenerationState = app.m1k3.ai.assistant.chat.GenerationState.Idle,
     modifier: Modifier = Modifier,
 ) {
@@ -66,10 +63,7 @@ fun ChatMessageList(
         if (preConversation) {
             item {
                 ChatHeroSplash(
-                    userContext = userContext,
-                    onRequestLocation = onRequestLocation,
-                    onRequestHealth = onRequestHealth,
-                    onRequestScreenTime = onRequestScreenTime,
+                    userName = userName,
                 )
             }
             items(messages.filter { !it.isStatusMessage }) { message ->
@@ -77,10 +71,6 @@ fun ChatMessageList(
                 val streamingState = generationState as? app.m1k3.ai.assistant.chat.GenerationState.Streaming
                 ChatBubble(
                     message = message,
-                    userContext = userContext,
-                    onRequestLocation = onRequestLocation,
-                    onRequestHealth = onRequestHealth,
-                    onRequestScreenTime = onRequestScreenTime,
                     onSpeak = onSpeak,
                     isStreaming = isLastAiMessage && streamingState != null,
                     isThinking = isLastAiMessage && (streamingState?.isThinking == true),
@@ -92,10 +82,6 @@ fun ChatMessageList(
                 val streamingState = generationState as? app.m1k3.ai.assistant.chat.GenerationState.Streaming
                 ChatBubble(
                     message = message,
-                    userContext = userContext,
-                    onRequestLocation = onRequestLocation,
-                    onRequestHealth = onRequestHealth,
-                    onRequestScreenTime = onRequestScreenTime,
                     onSpeak = onSpeak,
                     isStreaming = isLastAiMessage && streamingState != null,
                     isThinking = isLastAiMessage && (streamingState?.isThinking == true),

@@ -27,7 +27,6 @@ import app.m1k3.ai.domain.chat.services.ContextAssembler
 import app.m1k3.ai.domain.chat.services.DefaultChatFormatter
 import app.m1k3.ai.domain.chat.services.DeviceContextFormatter
 import app.m1k3.ai.domain.chat.services.UnifiedPromptBuilder
-import app.m1k3.ai.domain.context.ContextMemoryService
 import app.m1k3.ai.domain.platform.DateTimeProviderInterface
 import app.m1k3.ai.domain.platform.DeviceContext
 import app.m1k3.ai.domain.status.ChatStatusBuilder
@@ -88,8 +87,8 @@ class ChatScreenViewModel(
     private val downloadModel: ((LlmModel, (ModelDownloadState) -> Unit) -> Unit)? = null,
     // TTS callbacks (platform-injected, optional)
     private val onSpeakText: (suspend (String) -> Unit)? = null,
-    // User context for personalised welcome (platform-injected, optional)
-    private val userContextProvider: app.m1k3.ai.domain.context.UserContextProvider? = null,
+    // User's first name for a personalised welcome (platform-injected, optional)
+    private val userNameProvider: (() -> String?)? = null,
     // Tool execution history (optional — logs every tool call for analytics)
     private val toolExecutionDataSource: app.m1k3.ai.assistant.tools.ToolExecutionDataSource? = null,
 ) : ViewModel() {
@@ -159,16 +158,12 @@ class ChatScreenViewModel(
     val isToolCallingEnabled: Boolean
         get() = chatWithTools != null
 
-    /** Context memory service — converts UserContext to storable chunks */
-    private val contextMemoryService = ContextMemoryService()
-
     /** System prompt builder — builds tiered M1K3 personality prompts */
     private val systemPromptBuilder = MaSystemPromptBuilder()
 
     /**
      * Compact system prompt — built once after context is loaded, injected
      * into every message. COMPACT tier to preserve context window budget.
-     * Null until UserContext is available.
      */
     private var compactSystemPrompt: String? = null
 
@@ -652,22 +647,21 @@ class ChatScreenViewModel(
             return
         }
 
-        // Fetch user context in parallel with other setup
-        val userContext =
+        // Fetch the user's name for a personalised welcome
+        val userName =
             try {
-                userContextProvider?.getContext()
+                userNameProvider?.invoke()
             } catch (_: Exception) {
                 null
             }
 
-        // Store in state so ChatScreen can render ContextualWelcomeCard
-        if (userContext != null) {
-            _uiState.update { it.copy(userContext = userContext) }
-            storeContextSnapshots(userContext)
+        // Store in state so ChatScreen can render the personalised greeting
+        if (userName != null) {
+            _uiState.update { it.copy(userName = userName) }
         }
 
         // Build status card first
-        val currentHour = userContext?.hourOfDay ?: dateTimeProvider?.getCurrentHour() ?: 12
+        val currentHour = dateTimeProvider?.getCurrentHour() ?: 12
         val memoryCount = memoryManager?.getMemoryCount() ?: 0L
         val deviceTier = deviceInfo.getDeviceTier()
         // Context window scales with device tier
@@ -722,7 +716,7 @@ class ChatScreenViewModel(
             val promptInput =
                 SystemPromptInput(
                     tier = SystemPromptTier.FULL,
-                    userContext = userContext,
+                    userName = userName,
                     dayOfWeek = dayOfWeek,
                     currentDate = currentDate,
                     deviceTierName = deviceTier.name.lowercase().replaceFirstChar { it.uppercase() },
@@ -1288,48 +1282,6 @@ class ChatScreenViewModel(
                 generationState = GenerationState.Failed(chatError),
                 error = chatError,
             )
-        }
-    }
-
-    /**
-     * Store user context as ContextSnapshot rows for trend analysis.
-     *
-     * Converts UserContext → ContextChunks via ContextMemoryService,
-     * then inserts each chunk as a time-series snapshot. TrendAnalyzer
-     * reads these to detect patterns like "sleep improving" or
-     * "screen time spiking."
-     */
-    private fun storeContextSnapshots(context: app.m1k3.ai.domain.context.UserContext) {
-        val now = Clock.System.now().toEpochMilliseconds()
-        val chunks = contextMemoryService.createContextChunks(context, now)
-        if (chunks.isEmpty()) return
-
-        try {
-            chunks.forEachIndexed { index, chunk ->
-                val id = "${chunk.category}_${now}_$index"
-                val value =
-                    when (chunk.category) {
-                        "health" -> context.health?.stepsToday?.toDouble() ?: 0.0
-
-                        "screen_time" -> context.screenTime?.todayMinutes?.toDouble() ?: 0.0
-
-                        "notification" -> 1.0
-
-                        // each notification is one event
-                        else -> 0.0
-                    }
-                database.contextSnapshotQueries.insertSnapshot(
-                    id = id,
-                    timestamp = chunk.timestamp,
-                    category = chunk.category,
-                    value_ = value,
-                    data_json = chunk.text,
-                    summary = chunk.text,
-                )
-            }
-            logger.i { "Stored ${chunks.size} context snapshots (${chunks.map { it.category }.distinct().joinToString()})" }
-        } catch (e: Exception) {
-            logger.w { "Failed to store context snapshots: ${e.message}" }
         }
     }
 

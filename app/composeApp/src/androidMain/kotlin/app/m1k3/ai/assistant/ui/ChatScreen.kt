@@ -50,7 +50,6 @@ import app.m1k3.ai.assistant.chat.isGenerating
 import app.m1k3.ai.assistant.chat.isInputEnabled
 import app.m1k3.ai.assistant.chat.toEmoji
 import app.m1k3.ai.assistant.chat.toUserMessage
-import app.m1k3.ai.assistant.context.rememberContextPermissionRequester
 import app.m1k3.ai.assistant.design.components.MaChatBubbleAI
 import app.m1k3.ai.assistant.design.components.MaChatBubbleUser
 import app.m1k3.ai.assistant.design.components.MaStatusCard
@@ -118,12 +117,6 @@ fun ChatScreen(
     var showClearDialog by remember { mutableStateOf(false) }
     var inputFocused by remember { mutableStateOf(false) }
     val haptics = rememberHapticFeedback()
-
-    // Permission requester for context providers
-    val permissionRequester =
-        rememberContextPermissionRequester { _ ->
-            // Permission state changed — ViewModel will pick up new context on next load
-        }
 
     // Speech-to-Text engine
     val sttEngine = remember { AndroidSttEngine(context) }
@@ -345,10 +338,7 @@ fun ChatScreen(
                 isGenerating = uiState.generationState.isGenerating,
                 listState = listState,
                 onSpeak = { text -> viewModel.speakMessage(text) },
-                userContext = uiState.userContext,
-                onRequestLocation = permissionRequester.onRequestLocation,
-                onRequestHealth = permissionRequester.onRequestHealth,
-                onRequestScreenTime = permissionRequester.onRequestScreenTime,
+                userName = uiState.userName,
                 generationState = uiState.generationState,
             )
         }
@@ -488,34 +478,19 @@ private fun ErrorSnackbar(
 @Composable
 fun ChatBubble(
     message: ChatMessage,
-    userContext: app.m1k3.ai.domain.context.UserContext? = null,
-    onRequestLocation: (() -> Unit)? = null,
-    onRequestHealth: (() -> Unit)? = null,
-    onRequestScreenTime: (() -> Unit)? = null,
     onSpeak: ((String) -> Unit)? = null,
     isStreaming: Boolean = false,
     isThinking: Boolean = false,
 ) {
     when {
         message.isStatusMessage -> {
-            if (userContext != null) {
-                // Contextual welcome — uses real user data
-                app.m1k3.ai.assistant.context.ContextualWelcomeCard(
-                    context = userContext,
-                    onRequestLocation = onRequestLocation,
-                    onRequestHealth = onRequestHealth,
-                    onRequestScreenTime = onRequestScreenTime,
-                )
-            } else {
-                // Fallback — classic status card (no context available)
-                MaStatusCard(
-                    greeting = message.text.lines().firstOrNull() ?: "Hello!",
-                    engineReady = true,
-                    memoryCount = message.statusMemoryCount ?: 0,
-                    maxContextTokens = message.statusMaxTokens ?: 2048,
-                    deviceTierName = message.statusDeviceTier ?: "Unknown",
-                )
-            }
+            MaStatusCard(
+                greeting = message.text.lines().firstOrNull() ?: "Hello!",
+                engineReady = true,
+                memoryCount = message.statusMemoryCount ?: 0,
+                maxContextTokens = message.statusMaxTokens ?: 2048,
+                deviceTierName = message.statusDeviceTier ?: "Unknown",
+            )
         }
 
         message.isUser -> {

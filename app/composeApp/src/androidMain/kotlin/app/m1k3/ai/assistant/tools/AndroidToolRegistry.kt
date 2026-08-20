@@ -2,9 +2,6 @@ package app.m1k3.ai.assistant.tools
 
 import android.content.Context
 import app.m1k3.ai.assistant.tools.executors.BatteryLevelExecutor
-import app.m1k3.ai.assistant.tools.executors.GetHealthExecutor
-import app.m1k3.ai.assistant.tools.executors.GetNotificationsExecutor
-import app.m1k3.ai.assistant.tools.executors.GetScreenTimeExecutor
 import app.m1k3.ai.assistant.tools.executors.GetTimeExecutor
 import app.m1k3.ai.assistant.tools.executors.GetVolumeExecutor
 import app.m1k3.ai.assistant.tools.executors.OpenBrowserExecutor
@@ -44,7 +41,6 @@ class AndroidToolRegistry(
         registerSystemTools()
         registerAppLaunchers()
         registerTimerAndAlarmTools()
-        registerContextTools()
         registerWebTools()
     }
 
@@ -319,44 +315,6 @@ class AndroidToolRegistry(
                 category = ToolCategory.SYSTEM,
             ),
             SetTimerExecutor(context),
-        )
-    }
-
-    private fun registerContextTools() {
-        // Get Notifications (content, not just count)
-        registerTool(
-            Tool(
-                id = "get_notifications",
-                name = "Get Notifications",
-                description = "Returns recent notification content — app name, title, and message text",
-                parameters = emptyList(),
-                category = ToolCategory.DEVICE_INFO,
-            ),
-            GetNotificationsExecutor(context),
-        )
-
-        // Get Health
-        registerTool(
-            Tool(
-                id = "get_health",
-                name = "Get Health Data",
-                description = "Returns health data — steps today, sleep last night, heart rate, active calories",
-                parameters = emptyList(),
-                category = ToolCategory.DEVICE_INFO,
-            ),
-            GetHealthExecutor(context),
-        )
-
-        // Get Screen Time
-        registerTool(
-            Tool(
-                id = "get_screen_time",
-                name = "Get Screen Time",
-                description = "Returns today's screen time total and top apps with usage",
-                parameters = emptyList(),
-                category = ToolCategory.DEVICE_INFO,
-            ),
-            GetScreenTimeExecutor(context),
         )
     }
 

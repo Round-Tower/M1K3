@@ -1,30 +1,21 @@
 package app.m1k3.ai.assistant.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.m1k3.ai.assistant.ai.ondevice.OnDeviceAi
-import app.m1k3.ai.assistant.context.ContextPermissionRequester
-import app.m1k3.ai.assistant.context.UserContextManager
-import app.m1k3.ai.assistant.context.rememberContextPermissionRequester
 import app.m1k3.ai.assistant.design.theme.MaTheme
 import app.m1k3.ai.assistant.design.tokens.MaColors
-import app.m1k3.ai.assistant.design.tokens.MaRadius
 import app.m1k3.ai.assistant.design.tokens.MaSpacing
 import app.m1k3.ai.assistant.design.tokens.MaTypography
 import app.m1k3.ai.assistant.platform.PreferenceKeys
@@ -33,10 +24,7 @@ import app.m1k3.ai.assistant.settings.collectAsState
 import app.m1k3.ai.assistant.settings.rememberSettingsViewModel
 import app.m1k3.ai.assistant.ui.components.*
 import app.m1k3.ai.domain.ai.AiCoreModelPreference
-import app.m1k3.ai.domain.context.UserContext
-import app.m1k3.ai.domain.context.UserContextProvider
 import app.m1k3.ai.domain.rag.Intent
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 
@@ -45,11 +33,10 @@ import org.koin.compose.koinInject
  *
  * Sections (top → bottom, logical priority):
  * 1. Personal     — name
- * 2. Context      — local intelligence permissions + live test
- * 3. Voice        — auto reply, STT, haptics
- * 4. AI           — model, ML Kit, AICore, RAG
- * 5. Data         — export, import, clear
- * 6. About        — version, privacy, licenses
+ * 2. Voice        — auto reply, STT, haptics
+ * 3. AI           — model, ML Kit, AICore, RAG
+ * 4. Data         — export, import, clear
+ * 5. About        — version, privacy, licenses
  */
 @Composable
 fun SettingsScreen(
@@ -62,13 +49,6 @@ fun SettingsScreen(
     val prefs: PreferencesStoreInterface = koinInject()
     val viewModel = rememberSettingsViewModel(onDeviceAi)
     val state by viewModel.collectAsState()
-    val scope = rememberCoroutineScope()
-
-    // Context permission requester — drives real Android permission flows
-    val permissionRequester =
-        rememberContextPermissionRequester { newState ->
-            // Refresh context preview after grant
-        }
 
     LaunchedEffect(Unit) { viewModel.checkMlKitAvailability() }
 
@@ -88,21 +68,12 @@ fun SettingsScreen(
             )
         }
 
-        // ── 2. Local Intelligence (Context) ───────────────────
-        item {
-            LocalIntelligenceSection(
-                prefs = prefs,
-                haptics = haptics,
-                permissionRequester = permissionRequester,
-            )
-        }
-
-        // ── 3. Voice ─────────────────────────────────────────
+        // ── 2. Voice ─────────────────────────────────────────
         item {
             VoiceSection(prefs = prefs, haptics = haptics)
         }
 
-        // ── 4. AI Model ───────────────────────────────────────
+        // ── 3. AI Model ───────────────────────────────────────
         item {
             ModelSection(modelInfo = state.modelInfo)
         }
@@ -134,12 +105,12 @@ fun SettingsScreen(
             )
         }
 
-        // ── 5. Data ───────────────────────────────────────────
+        // ── 4. Data ───────────────────────────────────────────
         item {
             DataSection(onExportClick = {}, onImportClick = {}, onClearClick = {})
         }
 
-        // ── 6. About ──────────────────────────────────────────
+        // ── 5. About ──────────────────────────────────────────
         item {
             PrivacySection(
                 onPrivacyDashboardClick = {},
@@ -213,211 +184,7 @@ private fun PersonalSection(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 2. Local Intelligence
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun LocalIntelligenceSection(
-    prefs: PreferencesStoreInterface,
-    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback,
-    permissionRequester: ContextPermissionRequester,
-) {
-    val scope = rememberCoroutineScope()
-    val contextProvider = koinInject<UserContextProvider>()
-    val userContextManager = contextProvider as? UserContextManager
-
-    var permStatus by remember {
-        mutableStateOf(userContextManager?.getPermissionStatus())
-    }
-
-    // Live context preview for testing
-    var testContext by remember { mutableStateOf<UserContext?>(null) }
-    var isLoadingContext by remember { mutableStateOf(false) }
-    var showContextPreview by remember { mutableStateOf(false) }
-
-    SettingsSection(
-        title = "Local Intelligence",
-        icon = Icons.Default.Psychology,
-    ) {
-        // Permission status row
-        val granted = permStatus?.grantedCount ?: 0
-        val total = 4
-        SettingsItem(
-            title = "Context permissions",
-            subtitle = "$granted / $total granted",
-            icon = if (granted == total) Icons.Default.CheckCircle else Icons.Default.Circle,
-            iconTint =
-                when {
-                    granted == total -> MaColors.Success
-                    granted > 0 -> MaColors.Orange
-                    else -> MaColors.textMuted()
-                },
-            onClick = {},
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(horizontal = MaSpacing.base), color = MaColors.BorderLight)
-
-        // Individual permission items
-        PermissionItem(
-            title = "Location",
-            subtitle = "City-level · used in greeting",
-            granted = permStatus?.hasLocation == true,
-            onRequest = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                permissionRequester.onRequestLocation()
-                permStatus = userContextManager?.getPermissionStatus()
-            },
-        )
-
-        PermissionItem(
-            title = "Health Connect",
-            subtitle = "Steps, sleep, heart rate",
-            granted = permStatus?.hasHealth == true,
-            onRequest = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                permissionRequester.onRequestHealth()
-                permStatus = userContextManager?.getPermissionStatus()
-            },
-        )
-
-        PermissionItem(
-            title = "Screen time",
-            subtitle = "Opens Settings → Special App Access",
-            granted = permStatus?.hasScreenTime == true,
-            onRequest = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                permissionRequester.onRequestScreenTime()
-            },
-        )
-
-        PermissionItem(
-            title = "Notifications",
-            subtitle = "Opens Settings → Notification access",
-            granted = permStatus?.hasNotifications == true,
-            onRequest = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                permissionRequester.onRequestNotifications()
-            },
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(horizontal = MaSpacing.base), color = MaColors.BorderLight)
-
-        // Test context button — invaluable for debugging
-        SettingsItem(
-            title = if (isLoadingContext) "Loading context..." else "Test context snapshot",
-            subtitle = if (showContextPreview && testContext != null) "Tap to refresh" else "See what M1K3 knows right now",
-            icon = if (isLoadingContext) Icons.Default.HourglassEmpty else Icons.Default.Science,
-            onClick = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                isLoadingContext = true
-                scope.launch {
-                    testContext = contextProvider.getContext()
-                    isLoadingContext = false
-                    showContextPreview = true
-                    permStatus = userContextManager?.getPermissionStatus()
-                }
-            },
-        )
-
-        // Live context preview card
-        AnimatedVisibility(
-            visible = showContextPreview && testContext != null,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
-        ) {
-            testContext?.let { ctx -> ContextPreviewCard(ctx) }
-        }
-    }
-}
-
-@Composable
-private fun PermissionItem(
-    title: String,
-    subtitle: String,
-    granted: Boolean,
-    onRequest: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MaSpacing.base, vertical = MaSpacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MaSpacing.md),
-    ) {
-        Icon(
-            imageVector = if (granted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-            contentDescription = null,
-            tint = if (granted) MaColors.Success else MaColors.textMuted(),
-            modifier = Modifier.size(20.dp),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaTypography.bodyMedium, color = MaColors.textPrimary())
-            Text(subtitle, style = MaTypography.labelSmall, color = MaColors.textMuted())
-        }
-        if (!granted) {
-            TextButton(onClick = onRequest) {
-                Text("Grant", color = MaColors.Orange, style = MaTypography.labelSmall)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ContextPreviewCard(context: UserContext) {
-    val cardShape = RoundedCornerShape(MaRadius.md)
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MaSpacing.base, vertical = MaSpacing.xs)
-                .clip(cardShape)
-                .background(MaColors.Orange.copy(alpha = 0.06f), cardShape)
-                .padding(MaSpacing.md),
-        verticalArrangement = Arrangement.spacedBy(MaSpacing.xs),
-    ) {
-        Text(
-            "Context snapshot",
-            style = MaTypography.labelSmall,
-            color = MaColors.Orange,
-            fontWeight = FontWeight.Bold,
-        )
-        ContextRow("Hour", "${context.hourOfDay}:00")
-        context.userName?.let { ContextRow("Name", it) }
-        context.location?.let { ContextRow("Location", it.displayName) }
-        context.health?.let { h ->
-            h.stepsToday?.let { ContextRow("Steps", "$it") }
-            h.sleepLastNightMinutes?.let { ContextRow("Sleep", "${it / 60}h ${it % 60}m") }
-            h.heartRateLatestBpm?.let { ContextRow("Heart rate", "$it bpm") }
-        }
-        context.screenTime?.let { ContextRow("Screen time", "${it.todayMinutes}m today") }
-        context.notifications?.let { ContextRow("Notifications", "${it.unreadCount} unread") }
-        if (!context.hasAnyContext) {
-            Text(
-                "No context available — grant permissions above",
-                style = MaTypography.labelSmall,
-                color = MaColors.textMuted(),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ContextRow(
-    label: String,
-    value: String,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(label, style = MaTypography.labelSmall, color = MaColors.textMuted())
-        Text(value, style = MaTypography.labelSmall, color = MaColors.textSecondary(), fontWeight = FontWeight.Medium)
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-// 3. Voice
+// 2. Voice
 // ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -504,7 +271,7 @@ private fun VoiceSection(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 4. AI Model (existing, unchanged)
+// 3. AI Model (existing, unchanged)
 // ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -578,7 +345,7 @@ private fun AiCoreSection(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 5. Data
+// 4. Data
 // ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -611,7 +378,7 @@ private fun DataSection(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 6. About / Privacy
+// 5. About / Privacy
 // ─────────────────────────────────────────────────────────────
 
 @Composable

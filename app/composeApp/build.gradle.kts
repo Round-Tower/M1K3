@@ -83,10 +83,6 @@ kotlin {
             // Google Fonts for custom typography
             implementation(libs.compose.ui.text.googlefonts)
 
-            // User context — local intelligence ("never leaves your phone")
-            implementation(libs.health.connect)
-            implementation(libs.play.services.location)
-
             // WorkManager — background downloads survive screen lock
             implementation(libs.androidx.work.runtime)
 

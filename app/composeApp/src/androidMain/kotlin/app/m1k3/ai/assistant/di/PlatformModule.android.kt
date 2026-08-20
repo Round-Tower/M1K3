@@ -81,12 +81,6 @@ actual val platformModule =
             DatabaseFactory(driver = get<AndroidDatabaseFactory>().buildEncryptedDriver())
         }
 
-        // ===== User Context (singleton — shared across ViewModels) =====
-        single<app.m1k3.ai.domain.context.UserContextProvider> {
-            app.m1k3.ai.assistant.context
-                .UserContextManager(get<Context>())
-        }
-
         // ===== Platform Abstractions =====
 
         /**
@@ -530,7 +524,11 @@ actual val platformModule =
                         }
                     }
                 },
-                userContextProvider = get<app.m1k3.ai.domain.context.UserContextProvider>(),
+                userNameProvider = {
+                    app.m1k3.ai.assistant.context
+                        .UserNameProvider(context)
+                        .getUserFirstName()
+                },
                 toolExecutionDataSource = get<app.m1k3.ai.assistant.tools.ToolExecutionDataSource>(),
             )
         }

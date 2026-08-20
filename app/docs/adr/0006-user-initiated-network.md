@@ -151,3 +151,17 @@ These are the strongest parts of the story. They survive the pivot.
 - Follow-up task: EcoMetrics schema migration (`CHECK (bytes_sent = 0)`
   removal + `cloudBytesAvoided` field + real byte tracking in
   HttpModelDownloadManager + WebSearchExecutor).
+
+---
+
+## Addendum (2026-08-20)
+
+The ambient-context layer (`WeatherContextProvider`, `LocationContextProvider`,
+`HealthContextProvider`, `ScreenTimeContextProvider`, `NotificationContextProvider`
++ `MaNotificationListenerService`) was removed. `WeatherContextProvider` called
+`api.open-meteo.com` on its own initiative — not user-triggered — which violated
+this ADR's core invariant (#2) outright. The others were a privacy surface the
+Mac product (`macos/docs/CONTEXT_TOOLS_PLAN.md`) had already parked on a security
+audit: ambient facts spoken in a chat risk getting distilled into permanent
+memory without the consent model that owns deliberate writes. Only the user-name
+feature survives (`UserNameProvider`, no network, no ambient permission).

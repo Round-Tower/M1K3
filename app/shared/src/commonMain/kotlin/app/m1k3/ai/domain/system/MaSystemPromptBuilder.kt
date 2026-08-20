@@ -1,8 +1,5 @@
 package app.m1k3.ai.domain.system
 
-import app.m1k3.ai.domain.context.UserContext
-import app.m1k3.ai.domain.context.WeatherContext
-
 /**
  * Prompt tier — how much context to inject.
  *
@@ -22,8 +19,7 @@ enum class SystemPromptTier { FULL, COMPACT }
  */
 data class SystemPromptInput(
     val tier: SystemPromptTier,
-    val userContext: UserContext? = null,
-    val weather: WeatherContext? = null,
+    val userName: String? = null,
     val dayOfWeek: String? = null,
     /**
      * Human-readable date (e.g. "April 19, 2026"). Injected so the model
@@ -69,64 +65,10 @@ class MaSystemPromptBuilder {
             }
 
             // Who the user is
-            val ctx = input.userContext
-            if (ctx != null && ctx.hasAnyContext) {
+            if (input.userName != null || input.dayOfWeek != null) {
                 appendLine("--- What you know about this person right now ---")
-                ctx.userName?.let { appendLine("Name: $it") }
-                ctx.location?.let {
-                    val loc =
-                        buildString {
-                            it.city?.let { c -> append(c) }
-                            it.country?.let { c -> append(", $c") }
-                        }
-                    if (loc.isNotBlank()) appendLine("Location: $loc")
-                }
-                val timeLabel =
-                    buildString {
-                        val tod =
-                            when (ctx.hourOfDay) {
-                                in 5..11 -> "morning"
-                                in 12..17 -> "afternoon"
-                                in 18..21 -> "evening"
-                                else -> "night"
-                            }
-                        input.dayOfWeek?.let { append("$it ") }
-                        append(tod)
-                    }
-                appendLine("Time: $timeLabel")
-
-                // Weather
-                val weather = input.weather ?: ctx.weather
-                weather?.let { appendLine("Weather: ${it.summary}") }
-
-                // Health
-                ctx.health?.let { h ->
-                    val parts = mutableListOf<String>()
-                    h.sleepLastNightMinutes?.let {
-                        parts += "${it / 60}h${if (it % 60 > 0) " ${it % 60}m" else ""} sleep"
-                    }
-                    h.stepsToday?.let { parts += "${formatSteps(it)} steps" }
-                    h.heartRateLatestBpm?.let { parts += "${it}bpm" }
-                    if (parts.isNotEmpty()) appendLine("Health: ${parts.joinToString(" · ")}")
-                }
-
-                // Screen time
-                ctx.screenTime?.let {
-                    if (it.todayMinutes > 0) {
-                        val h = it.todayMinutes / 60
-                        val m = it.todayMinutes % 60
-                        val label = if (h > 0) "${h}h${if (m > 0) " ${m}m" else ""}" else "${m}m"
-                        appendLine("Screen time: $label today")
-                    }
-                }
-
-                // Notifications
-                ctx.notifications?.let {
-                    if (it.unreadCount > 0) {
-                        appendLine("Notifications: ${it.unreadCount} unread")
-                    }
-                }
-
+                input.userName?.let { appendLine("Name: $it") }
+                input.dayOfWeek?.let { appendLine("Day: $it") }
                 appendLine()
             }
 
@@ -171,34 +113,10 @@ class MaSystemPromptBuilder {
     // ── COMPACT ───────────────────────────────────────────────
 
     private fun buildCompact(input: SystemPromptInput): String {
-        val ctx = input.userContext
-        val name = ctx?.userName?.let { "$it · " } ?: ""
+        val name = input.userName?.let { "$it · " } ?: ""
+        val day = input.dayOfWeek?.let { "$it" } ?: ""
 
-        val location = ctx?.location?.city?.let { "$it · " } ?: ""
-
-        val weather =
-            (input.weather ?: ctx?.weather)?.let {
-                "${it.conditionDescription.lowercase()} ${it.displayTemperature} · "
-            } ?: ""
-
-        val timeLabel =
-            ctx?.let {
-                val tod =
-                    when (it.hourOfDay) {
-                        in 5..11 -> "morning"
-                        in 12..17 -> "afternoon"
-                        in 18..21 -> "evening"
-                        else -> "night"
-                    }
-                "${input.dayOfWeek?.let { d -> "$d " } ?: ""}$tod"
-            } ?: ""
-
-        val sleep =
-            ctx?.health?.sleepLastNightMinutes?.let {
-                " · ${it / 60}h sleep"
-            } ?: ""
-
-        val contextLine = "${name}${location}${weather}${timeLabel}$sleep".trimEnd(' ', '·').trim()
+        val contextLine = "$name$day".trimEnd(' ', '·').trim()
 
         return buildString {
             append(
@@ -218,13 +136,6 @@ class MaSystemPromptBuilder {
             }
         }
     }
-
-    private fun formatSteps(steps: Long): String =
-        if (steps >= 1000) {
-            "${steps / 1000},${(steps % 1000).toString().padStart(3, '0')}"
-        } else {
-            "$steps"
-        }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -239,6 +150,6 @@ Short answers when short works. Longer when it earns it. You don't pad. You don'
 
 You have opinions. You push back when the user's wrong — respectfully, not combatively. You celebrate when they're right — briefly, not performatively. You're on their side, not neutral.
 
-You know this person — their name, city, how they slept, what's on their screen. You don't recite it. You use it like someone who's actually paying attention.
+You know this person by name. You don't recite it — you use it like someone who's actually paying attention.
 
 Everything stays on-device. Their data is theirs. Running locally is the point, not a feature you brag about."""

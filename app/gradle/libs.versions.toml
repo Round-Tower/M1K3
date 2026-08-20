@@ -43,8 +43,6 @@ jvector = "3.0.0"
 kermit = "2.0.4"
 koin-core = "4.1.0"
 koin-compose = "4.1.0"
-health-connect = "1.1.0-rc01"
-play-services-location = "21.3.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -98,10 +96,6 @@ koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin-com
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin-core" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin-core" }
 koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin-core" }
-
-# User context — local intelligence
-health-connect = { module = "androidx.health.connect:connect-client", version.ref = "health-connect" }
-play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
