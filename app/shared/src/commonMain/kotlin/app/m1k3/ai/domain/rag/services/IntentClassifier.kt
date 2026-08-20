@@ -3,7 +3,7 @@ package app.m1k3.ai.domain.rag.services
 import app.m1k3.ai.domain.rag.Intent
 
 /**
- * 間 AI - Intent Classifier
+ * M1K3 - Intent Classifier
  *
  * Classifies user queries into knowledge categories for intelligent
  * RAG retrieval. Uses keyword matching and pattern detection.

@@ -1,8 +1,13 @@
-# 間 AI - On-Device Mobile AI
+# M1K3 for Android (Kotlin Multiplatform)
 
 @.claude/project-memory.md
 
 Privacy-first AI companion via Kotlin Multiplatform. Your device is the cloud — on-device chat, user-initiated network only (see ADR-0006).
+
+Note on naming: the product is **M1K3**. The internal `Ma*` class/file
+prefix (`MaTheme`, `MaButton`, `MaBridge`, …) is a historical
+design-system prefix from an earlier working name — it is not
+user-facing and is not being renamed (see `.claude/project-memory.md`).
 
 ## Commands
 ```bash
@@ -35,43 +40,55 @@ Privacy-first AI companion via Kotlin Multiplatform. Your device is the cloud �
 6. Disable background jobs in ViewModels during tests with constructor params
 
 ## Structure
+
+Two Gradle modules — `:shared` (pure Kotlin domain) and `:composeApp`
+(Android app, Compose Multiplatform UI + Android platform code):
+
 ```
+├── shared/src/
+│   ├── commonMain/kotlin/app/m1k3/ai/domain/
+│   │   ├── ai/               # LlmModel, M1K3Tier, InferenceTuning
+│   │   ├── voice/            # VoiceLoopMachine, SilenceEndpointer
+│   │   ├── chat/             # ChatFormat, ContextAssembler
+│   │   ├── rag/              # Intent, IntentClassifier
+│   │   ├── memory/           # MemoryChunk, SemanticChunker
+│   │   ├── passages/         # Personal-knowledge domain
+│   │   ├── repositories/     # Interfaces (Knowledge, Memory)
+│   │   └── usecases/         # Business logic orchestration
+│   └── commonTest/
 ├── composeApp/src/
 │   ├── commonMain/kotlin/app/m1k3/ai/assistant/
-│   │   ├── domain/          # Pure Kotlin business logic (IMPORTANT)
-│   │   │   ├── tools/       # Tool entities, services, registry
-│   │   │   ├── chat/        # ChatFormat, ContextAssembler
-│   │   │   ├── rag/         # Intent, IntentClassifier
-│   │   │   ├── memory/      # MemoryChunk, SemanticChunker
-│   │   │   ├── repositories/# Interfaces (Knowledge, Memory)
-│   │   │   └── usecases/    # Business logic orchestration
-│   │   ├── ai/              # AI interfaces, BaseLlmEngine
-│   │   ├── chat/            # ChatScreenViewModel, ChatUiState
-│   │   ├── embedding/       # EmbeddingEngine, EmbeddingEngineManager
-│   │   ├── memory/          # MemoryManager, MemoryDataSource
-│   │   ├── knowledge/       # SemanticRetrievalService
-│   │   ├── config/          # GenerationConstants
-│   │   └── di/              # Koin modules
+│   │   ├── ai/               # AI interfaces, BaseLlmEngine
+│   │   ├── chat/              # ChatScreenViewModel, ChatUiState
+│   │   ├── voice/              # VoiceLoopController, VoiceTurnRunner
+│   │   ├── embedding/           # EmbeddingEngine, EmbeddingEngineManager
+│   │   ├── memory/                # MemoryManager, MemoryDataSource
+│   │   ├── design/                 # Ma* design system (see naming note above)
+│   │   └── di/                      # Koin modules
 │   ├── androidMain/         # Android implementations
-│   │   ├── ai/ondevice/     # LlamaCpp, MlKitGenAi engines
-│   │   ├── embedding/       # MiniLM, Gemma engines
-│   │   └── tools/           # AndroidToolRegistry, executors
-│   └── iosMain/             # iOS (future)
+│   │   ├── ai/ma/            # Ma — our llama.cpp JNI bridge
+│   │   ├── embedding/         # MiniLM, Gemma engines
+│   │   ├── stt/, tts/          # Speech recognition, text-to-speech
+│   │   ├── ui/                  # VoiceScreen, ChatScreen, SettingsScreen
+│   │   └── tools/                # AndroidToolRegistry, executors
+│   └── commonTest/
 └── docs/adr/                # Architecture decision records
 ```
 
 ## Stack (from libs.versions.toml)
 - **Kotlin**: 2.2.20
 - **Compose Multiplatform**: 1.9.2
-- **SQLDelight**: 2.0.2
+- **SQLDelight**: 2.0.2 (+ SQLCipher AES-256 at rest)
 - **ONNX Runtime**: 1.23.2
-- **Target**: Android API 27+, iOS 15+ (future)
+- **Target**: Android API 27+
 
 ## AI Models
-- **SmolLM2-360M**: Primary LLM (LlamaCpp engine)
-- **MlKitGenAi**: Google's on-device AI (fallback)
-- **Gemma/MiniLM**: Embeddings (384-dim)
-- **Qwen2.5-Coder**: Code generation (dynamic module)
+- **Mini M1K3** — Qwen3.5 0.8B, <4GB RAM devices.
+- **Lil M1K3** — Qwen3.5 2B, 4–8GB RAM devices.
+- **Big M1K3** — Gemma 4 E2B, 8GB+ RAM devices.
+- All served via `Ma` (our own JNI bridge to llama.cpp), GGUF Q4_K_M,
+  GBNF grammar-constrained native tool calling. See `M1K3Tier.kt`.
+- **MiniLM-L6**: embeddings (384-dim, ONNX).
 
 ## Key Patterns
 - Sealed classes for UI state
@@ -128,6 +145,7 @@ class MemoryRepositoryImpl(context: Context) : MemoryRepository {
 - **SQLCipher** for encrypted storage (AES-256).
 
 ## Docs
-- Architecture: `ARCHITECTURE.md`
-- AI details: `AI_ARCHITECTURE.md`
-- ADRs: `docs/adr/`
+- Build/architecture overview: `README.md`
+- AI details (historical design rationale, banner-guarded): `AI_ARCHITECTURE.md`
+- ADRs (kept current): `docs/adr/`
+- Reference architecture (Mac-native flagship): `../macos/CLAUDE.md`

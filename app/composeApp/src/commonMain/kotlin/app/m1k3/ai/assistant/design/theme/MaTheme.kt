@@ -16,7 +16,7 @@ import app.m1k3.ai.assistant.design.tokens.MaTypography
  * - Light mode: Off-white (#F9F9FA) for readability
  *
  * System-aware: Automatically switches based on system dark mode preference.
- * Both modes optimized for wabi-sabi aesthetic and glassmorphic design.
+ * Both modes optimized for a clean, glassmorphic aesthetic.
  *
  * Key Features:
  * - Respects system dark mode setting
@@ -170,7 +170,7 @@ private val MaLightColorScheme = lightColorScheme(
 )
 
 /**
- * 間 AI Theme Composable
+ * M1K3 Theme Composable
  *
  * Apply this at the root of your app to enable the complete design system.
  * Automatically detects system dark mode preference and applies the appropriate color scheme.

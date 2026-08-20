@@ -33,7 +33,7 @@ import kotlinx.datetime.Clock
  */
 
 /**
- * 間 AI - Memory Manager
+ * M1K3 - Memory Manager
  *
  * High-level orchestration layer for semantic memory system.
  * Coordinates chunking, embedding, importance calculation, and storage.

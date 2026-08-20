@@ -24,7 +24,7 @@ knowledge graph + RAG, and an MCP server.
 - **`macos/docs/IOS_VISIONOS_PORT.md`** — the native iOS + visionOS SwiftUI shell
   (`macos/M1K3iOSApp/`) on the shared package graph. This — not `app/` — is the
   Apple mobile/spatial surface.
-- **`app/CLAUDE.md`** — 間 AI mobile (Kotlin Multiplatform, slow burn — the **Android** surface).
+- **`app/CLAUDE.md`** — M1K3 for Android (Kotlin Multiplatform, slow burn — the **Android** surface).
 - **The attic** — the original Python CLI, avatar experiments, and era docs
   live in git history before `7545b4a4` (the tour starts at `attic/README.md`
   there). Cleared from the tree 2026-08-13; nothing under `macos/` or `app/`

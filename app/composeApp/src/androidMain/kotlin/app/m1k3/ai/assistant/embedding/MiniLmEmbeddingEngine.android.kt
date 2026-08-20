@@ -45,7 +45,7 @@ import kotlin.math.sqrt
  * - Original: all-MiniLM-L6-v2 (87 MB fp32)
  * - Optimized: paraphrase-MiniLM-L3-v2 (17 MB int8) = 70 MB savings!
  *
- * This is the DEFAULT embedding model built into 間 AI.
+ * This is the DEFAULT embedding model built into M1K3.
  * Gemma 300M (512-dim) is available as an optional upgrade via Dynamic Delivery.
  *
  * Architecture:

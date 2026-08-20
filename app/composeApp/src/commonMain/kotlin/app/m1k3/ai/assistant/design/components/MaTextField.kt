@@ -32,7 +32,7 @@ import app.m1k3.ai.assistant.design.tokens.MaSpacing
 import app.m1k3.ai.assistant.design.tokens.MaTypography
 
 /**
- * 間 AI Text Field Component
+ * M1K3 Text Field Component
  *
  * Glassmorphic input field with:
  * - M1K3 orange focus glow
@@ -233,7 +233,7 @@ fun MaTextFieldSearch(
  *         sendMessage(message)
  *         message = ""
  *     },
- *     placeholder = "Ask 間 AI anything..."
+ *     placeholder = "Ask M1K3 anything..."
  * )
  *
  * // Search field

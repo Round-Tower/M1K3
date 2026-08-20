@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
  * - Pure AMOLED black for maximum battery efficiency
  * - M1K3 orange (#E25303) as signature brand accent
  * - Transparent white layers for glassmorphic depth
- * - Wabi-sabi aesthetic: minimal, intentional color use
+ * - Minimal, intentional color use
  */
 object MaColors {
     // ============================================

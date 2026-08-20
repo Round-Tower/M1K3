@@ -1,4 +1,4 @@
-# 間 AI (M1K3) ProGuard Rules - PHASE1.5 APK Optimization
+# M1K3 ProGuard Rules - PHASE1.5 APK Optimization
 #
 # Enables code shrinking and obfuscation while preserving critical runtime reflection.
 # Target: Reduce APK size by ~20-30 MB while maintaining 100% functionality.

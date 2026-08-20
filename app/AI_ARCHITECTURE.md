@@ -27,6 +27,18 @@
 >   this doc was written — see commits around April 2026.
 > - **Persona**: Theatrical villain + witty bartender personas retired
 >   April 2026. Current ethos is dry/sharp — see `MaSystemPromptBuilder.kt`.
+>
+> **Addendum (2026-08):**
+> - **Branding**: the product is now marketed and named **M1K3** everywhere
+>   user-facing — the 間/"Ma AI" naming below is the doc's original Nov-2025
+>   framing, retired. The internal `Ma*` class/file prefix (`MaTheme`,
+>   `MaButton`, `MaBridge`, …) is a historical design-system prefix and is
+>   NOT the product name; see `CLAUDE.md`.
+> - **Model tiers**: superseded again. Current tiers (`M1K3Tier.kt`) are
+>   Mini (Qwen3.5 0.8B, <4GB RAM), Lil (Qwen3.5 2B, 4–8GB RAM), Big
+>   (Gemma 4 E2B, 8GB+ RAM).
+> - **ML Kit GenAI / OnDeviceAi**: removed entirely (2026-08) — it was
+>   never wired into the real chat flow. See ADR-0006's addendum.
 
 ## Philosophical Foundation
 

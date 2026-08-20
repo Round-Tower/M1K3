@@ -7,7 +7,7 @@ package app.m1k3.ai.assistant.stt
  * Context: Android SpeechRecognizer implementation of domain SttEngine interface.
  * Chose Android's built-in recognizer over Whisper (too heavy for a background task)
  * and CMU PocketSphinx (unmaintained). On-device on Android 13+, cloud fallback on
- * older versions — consistent with 間's privacy-first approach where possible.
+ * older versions — consistent with M1K3's privacy-first approach where possible.
  * Domain interface lives in shared/ so iOS gets SFSpeechRecognizer when we get there.
  * RECORD_AUDIO permission added to manifest.
  *

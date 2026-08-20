@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
- * Privacy invariants for 間 AI.
+ * Privacy invariants for M1K3.
  *
  * Updated 2026-04-19 to match ADR-0006 ("user-initiated network"). The app
  * previously claimed "zero network" — no longer true once model downloads
@@ -48,7 +48,7 @@ class ManifestPrivacyTest {
     }
 
     /**
-     * AC2: No Google Cloud Messaging / Firebase push permissions. 間 AI
+     * AC2: No Google Cloud Messaging / Firebase push permissions. M1K3
      * does not use push notifications from a backend — all notifications
      * are locally generated.
      */
@@ -56,7 +56,7 @@ class ManifestPrivacyTest {
     fun androidManifest_hasNoPushMessagingPermissions() {
         assertFalse(
             hasPermission("com.google.android.c2dm.permission.RECEIVE"),
-            "C2DM/FCM push permission detected. 間 AI generates notifications " +
+            "C2DM/FCM push permission detected. M1K3 generates notifications " +
                 "locally; no backend push. Remove the offending dependency.",
         )
     }
@@ -116,7 +116,7 @@ class ManifestPrivacyTest {
         if (found.isNotEmpty()) {
             fail(
                 "Analytics/telemetry libraries detected on classpath: ${found.joinToString()}. " +
-                    "間 AI is no-telemetry by design (ADR-0006). Remove the dependency.",
+                    "M1K3 is no-telemetry by design (ADR-0006). Remove the dependency.",
             )
         }
     }

@@ -126,14 +126,14 @@ kotlin {
             implementation(libs.sqldelight.driver.jdbc)
         }
         iosMain.dependencies {
-            // 間 AI - iOS-specific dependencies
+            // M1K3 - iOS-specific dependencies
             implementation(libs.sqldelight.driver.native)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
 
-            // 間 AI - JVM/Desktop dependencies
+            // M1K3 - JVM/Desktop dependencies
             implementation(libs.sqldelight.driver.sqlite)
         }
     }

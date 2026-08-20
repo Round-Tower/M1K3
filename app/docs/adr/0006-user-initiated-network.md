@@ -13,7 +13,7 @@ network" — a lie. Fix the story.
 
 ## Context
 
-Early 間 AI shipped with a strong narrative: *Zero network permission. 100%
+Early M1K3 shipped with a strong narrative: *Zero network permission. 100%
 local.* That was true when the app did nothing but on-device inference.
 It is no longer true. Two shipped features need the network:
 
@@ -55,7 +55,7 @@ set of invariants.
 
 **"Your device is the cloud."**
 
-Support line: *"間 AI runs on your phone, not in someone else's data centre.
+Support line: *"M1K3 runs on your phone, not in someone else's data centre.
 Network is a tool you wield, not a default."*
 
 ### New privacy invariants (enforced, not aspirational)

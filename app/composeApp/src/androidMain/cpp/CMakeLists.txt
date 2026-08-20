@@ -42,10 +42,12 @@ add_subdirectory(${LLAMA_DIR} llama_build)
 # ============================================================================
 # ma_core - portable llama.cpp wrapper (no JNI, no Swift)
 # ============================================================================
-# Lives in composeApp/src/nativeShared/ma/ so iOS Kotlin/Native cinterop can
-# bind to the same implementation via ma_core.h. Built as a STATIC library
-# on Android; linked into libma.so below. iOS will build this as libma_core.a
-# via a separate CMake invocation (Phase 0 iOS, see PLAN_IOS.md).
+# Lives in composeApp/src/nativeShared/ma/ so a future Kotlin/Native cinterop
+# consumer can bind to the same implementation via ma_core.h. Built as a
+# STATIC library on Android; linked into libma.so below. This app's own
+# iOS target is unbuilt (the real Apple mobile/spatial surface is the
+# SwiftUI shell under ../../macos/M1K3iOSApp/ — see ../../macos/docs/
+# IOS_VISIONOS_PORT.md and Kev's 2026-07-06 ruling in that doc).
 
 add_library(ma_core STATIC
     ${MA_CORE_DIR}/ma_core.cpp

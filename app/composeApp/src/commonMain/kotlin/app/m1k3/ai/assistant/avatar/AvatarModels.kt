@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 import app.m1k3.ai.assistant.design.tokens.MaColors
 
 /**
- * 間 AI Avatar System - Data Models
+ * M1K3 Avatar System - Data Models
  *
  * Defines emotions, states, and visual properties for the robot avatar.
  * Inspired by M1K3's desktop avatar system, adapted for mobile.
