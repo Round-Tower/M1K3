@@ -43,12 +43,12 @@ sealed class LlmModel(
      *
      * March 2026. Natively multimodal. Qwen3.5-2B ≈ Qwen2.5-7B quality.
      * ChatML format. Q4_K_M ~1.33GB. 4–8GB RAM.
-     * HuggingFace: bartowski/Qwen_Qwen3.5-2B-GGUF
+     * HuggingFace: unsloth/Qwen3.5-2B-GGUF
      */
     data object Qwen35_2B : LlmModel(
         id = "qwen3.5-2b",
         displayName = "Qwen3.5 (2B)",
-        filename = "Qwen_Qwen3.5-2B-Q4_K_M.gguf",
+        filename = "Qwen3.5-2B-Q4_K_M.gguf",
         parameterCount = 2_000_000_000L,
         chatFormat = ChatFormat.ChatML,
         minRamGB = 2,
@@ -73,12 +73,12 @@ sealed class LlmModel(
      *
      * March 2026. Natively multimodal (text + image + video weights).
      * Best sub-1B model available. ChatML format. Q4_K_M ~557MB.
-     * HuggingFace: bartowski/Qwen_Qwen3.5-0.8B-GGUF
+     * HuggingFace: unsloth/Qwen3.5-0.8B-GGUF
      */
     data object Qwen35_0B8 : LlmModel(
         id = "qwen3.5-0.8b",
         displayName = "Qwen3.5 (0.8B)",
-        filename = "Qwen_Qwen3.5-0.8B-Q4_K_M.gguf",
+        filename = "Qwen3.5-0.8B-Q4_K_M.gguf",
         parameterCount = 800_000_000L,
         chatFormat = ChatFormat.ChatML,
         minFileSizeMb = 450,

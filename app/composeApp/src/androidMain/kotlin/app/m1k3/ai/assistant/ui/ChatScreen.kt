@@ -257,7 +257,7 @@ fun ChatScreen(
                 androidx.compose.material3.Button(
                     onClick = { viewModel.retryEngineInit() },
                 ) {
-                    androidx.compose.material3.Text("Re-download model")
+                    androidx.compose.material3.Text("Download again")
                 }
             }
         }

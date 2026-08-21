@@ -1,6 +1,7 @@
 package app.m1k3.ai.assistant.ai.download
 
 import android.content.Context
+import app.m1k3.ai.domain.ai.DownloadIntegrity
 import app.m1k3.ai.domain.ai.LlmModel
 import app.m1k3.ai.domain.ai.ModelDownloadManager
 import co.touchlab.kermit.Logger
@@ -58,6 +59,24 @@ class HttpModelDownloadManager(
      */
     fun download(model: LlmModel): Flow<DownloadProgress> =
         flow {
+            // Single-flight per model: a second collector while one is writing would
+            // see the .tmp, send a Range header, get a 206 and APPEND to a file the
+            // first writer is still filling (the 2x file of 2026-08-21).
+            if (!inFlight.add(model.id)) {
+                logger.w { "Download of ${model.displayName} already in flight — ignoring duplicate request" }
+                emit(DownloadProgress.Failed(model.id, "Already downloading ${model.displayName}."))
+                return@flow
+            }
+            try {
+                downloadExclusive(model)
+            } finally {
+                inFlight.remove(model.id)
+            }
+        }.flowOn(Dispatchers.IO)
+
+    private val inFlight = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    private suspend fun kotlinx.coroutines.flow.FlowCollector<DownloadProgress>.downloadExclusive(model: LlmModel) {
             val targetFile = File(modelsDir, model.filename)
             val tempFile = File(modelsDir, "${model.filename}.tmp")
 
@@ -97,16 +116,28 @@ class HttpModelDownloadManager(
                 // HTTP streams can end early without an IOException — the loop exits
                 // normally but the file is truncated. Check we got ≥99% of expected bytes.
                 val actualBytes = tempFile.length()
-                if (totalBytes > 0 && actualBytes < totalBytes * 99 / 100) {
-                    logger.e { "Truncated download: got ${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB" }
-                    // Keep as .tmp so next attempt resumes from this point
-                    emit(
-                        DownloadProgress.Failed(
-                            model.id,
-                            "Download incomplete (${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB). Tap retry to resume.",
-                        ),
-                    )
-                    return@flow
+                when (DownloadIntegrity.check(actualBytes, totalBytes)) {
+                    DownloadIntegrity.Verdict.TRUNCATED -> {
+                        logger.e { "Truncated download: got ${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB" }
+                        // Keep as .tmp so next attempt resumes from this point
+                        emit(
+                            DownloadProgress.Failed(
+                                model.id,
+                                "Download incomplete (${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB). Tap retry to resume.",
+                            ),
+                        )
+                        return
+                    }
+
+                    DownloadIntegrity.Verdict.OVERSIZE -> {
+                        // Never a good file — two writers landed on one .tmp. Start clean.
+                        logger.e { "Oversize download: ${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB — discarding" }
+                        tempFile.delete()
+                        emit(DownloadProgress.Failed(model.id, "Download was corrupted. Tap retry to download again."))
+                        return
+                    }
+
+                    DownloadIntegrity.Verdict.COMPLETE -> Unit
                 }
 
                 tempFile.renameTo(targetFile)
@@ -116,7 +147,7 @@ class HttpModelDownloadManager(
                 logger.e(e) { "Download failed: ${e.message}" }
                 emit(DownloadProgress.Failed(model.id, e.message ?: "Download failed"))
             }
-        }.flowOn(Dispatchers.IO)
+        }
 
     /**
      * Follow HTTP redirects manually, including cross-host redirects.
@@ -175,9 +206,14 @@ class HttpModelDownloadManager(
      */
     private fun getDownloadUrl(model: LlmModel): String =
         when (model) {
-            // Active tiers — public, no HuggingFace auth required
+            // Active tiers — public, no HuggingFace auth required.
+            // ⚠️ Qwen3.5 comes from unsloth, NOT bartowski: bartowski's Qwen3.5 GGUFs
+            // were re-converted WITH the MTP head (block_count 25, nextn_predict_layers
+            // 1) and mainline llama.cpp — whose own converter ignores MTP for Qwen3.5 —
+            // refuses them with "missing tensor 'blk.24.ssm_conv1d.weight'". Verified
+            // by reading both repos' GGUF headers over HTTP, 2026-08-21 on the Pixel.
             is LlmModel.Qwen35_0B8 -> {
-                "https://huggingface.co/bartowski/Qwen_Qwen3.5-0.8B-GGUF/resolve/main/${model.filename}"
+                "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/${model.filename}"
             }
 
             is LlmModel.Qwen3_0B6 -> {
@@ -185,7 +221,7 @@ class HttpModelDownloadManager(
             }
 
             is LlmModel.Qwen35_2B -> {
-                "https://huggingface.co/bartowski/Qwen_Qwen3.5-2B-GGUF/resolve/main/${model.filename}"
+                "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/${model.filename}"
             }
 
             is LlmModel.Qwen3_1B7 -> {

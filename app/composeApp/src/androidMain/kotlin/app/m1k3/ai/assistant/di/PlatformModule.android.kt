@@ -428,6 +428,9 @@ actual val platformModule =
                 isModelDownloaded = { model ->
                     get<ModelDownloadManager>().isModelAvailable(model.id)
                 },
+                deleteModel = { model ->
+                    get<ModelDownloadManager>().deleteModel(model.id)
+                },
                 downloadModel = { model, onProgress ->
                     val httpManager = get<ModelDownloadManager>() as HttpModelDownloadManager
                     @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)

@@ -86,6 +86,8 @@ class ChatScreenViewModel(
     private val isModelDownloaded: ((LlmModel) -> Boolean)? = null,
     // Model download trigger (platform-injected, optional)
     private val downloadModel: ((LlmModel, (ModelDownloadState) -> Unit) -> Unit)? = null,
+    /** Deletes a model's weights from disk — the retry path after a file that downloaded but won't load. */
+    private val deleteModel: ((LlmModel) -> Boolean)? = null,
     // TTS callbacks (platform-injected, optional)
     private val onSpeakText: (suspend (String) -> Unit)? = null,
     // User's first name for a personalised welcome (platform-injected, optional)
@@ -200,14 +202,29 @@ class ChatScreenViewModel(
     fun retryEngineInit() {
         aiEngine.release()
         _uiState.update { it.copy(engineState = EngineState.Loading, error = null) }
+        val model = _uiState.value.currentModel
+        val factory = engineFactory
+        // A file that downloaded but won't load is the common case here (a bad
+        // conversion, a torn write). Re-running init on the same bytes can't help —
+        // throw the file away and fetch it again when we have the means to.
+        if (factory != null && downloadModel != null) {
+            deleteModel?.invoke(model) // false = nothing on disk, which also wants a download
+            startModelDownload(model, factory)
+            return
+        }
         initializeEngine(force = true)
     }
 
     fun initializeEngine(force: Boolean = false) {
-        if (!force && _uiState.value.engineState is EngineState.Ready) {
-            logger.d { "Engine already initialized" }
+        // An init already in flight counts as done: ChatScreen's LaunchedEffect
+        // re-enters whenever the Failed branch flips back to Loading, which used to
+        // fire a second load on top of every retry (two loads per tap on the Pixel).
+        // (Can't key this off EngineState.Loading — that's also the initial state.)
+        if (!force && (_uiState.value.engineState is EngineState.Ready || engineInitInFlight)) {
+            logger.d { "Engine already initialized or initializing" }
             return
         }
+        engineInitInFlight = true
 
         viewModelScope.launch {
             try {
@@ -233,9 +250,13 @@ class ChatScreenViewModel(
                 logger.e(e) { "Failed to initialize AI engine" }
                 val error = mapExceptionToError(e)
                 _uiState.update { it.copy(engineState = EngineState.Failed(error)) }
+            } finally {
+                engineInitInFlight = false
             }
         }
     }
+
+    private var engineInitInFlight = false
 
     /**
      * Update the input text field.

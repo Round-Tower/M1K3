@@ -247,6 +247,30 @@ class ChatScreenViewModelToolsTest {
             assertFalse(viewModel.uiState.value.isLoadingTts)
         }
 
+    // ===== Retry after a bad weights file =====
+
+    @Test
+    fun `retryEngineInit deletes the current weights and re-downloads instead of re-loading the same bytes`() =
+        runTest {
+            // The Pixel run (2026-08-21): a GGUF that downloaded fine but could not be
+            // loaded. "Re-download model" re-ran init on the same file, forever.
+            val deleted = mutableListOf<LlmModel>()
+            val downloaded = mutableListOf<LlmModel>()
+            val viewModel =
+                createViewModel(
+                    preferences = TestPreferencesStore(),
+                    engineFactory = { MockBaseLlmEngine() },
+                    downloadModel = { model, _ -> downloaded += model },
+                    deleteModel = { model -> deleted += model; true },
+                )
+
+            viewModel.retryEngineInit()
+            advanceUntilIdle()
+
+            assertEquals(listOf(viewModel.uiState.value.currentModel), deleted)
+            assertEquals(listOf(viewModel.uiState.value.currentModel), downloaded)
+        }
+
     // ===== Helper Methods =====
 
     private fun createViewModel(
@@ -256,6 +280,8 @@ class ChatScreenViewModelToolsTest {
         aiEngine: MockBaseLlmEngine = MockBaseLlmEngine(),
         engineFactory: ((LlmModel) -> BaseLlmEngine)? = null,
         onSpeakText: (suspend (String) -> Unit)? = null,
+        downloadModel: ((LlmModel, (ModelDownloadState) -> Unit) -> Unit)? = null,
+        deleteModel: ((LlmModel) -> Boolean)? = null,
     ): ChatScreenViewModel {
         val database = TestDatabaseFactory.createInMemoryDatabase()
         return ChatScreenViewModel(
@@ -270,6 +296,8 @@ class ChatScreenViewModelToolsTest {
             processLlmOutput = processLlmOutput,
             engineFactory = engineFactory,
             onSpeakText = onSpeakText,
+            downloadModel = downloadModel,
+            deleteModel = deleteModel,
         )
     }
 

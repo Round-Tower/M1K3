@@ -195,6 +195,26 @@ ma_init_result ma_core_init(
 
     ma_init_result result = { 0, 0, 0, 0, 0, 0 };
 
+    // Route llama.cpp's own log into ours — a "failed to load model" without the
+    // loader's reason ("unknown tensor", "missing key", mmap failure) is
+    // undebuggable from logcat (bit us 2026-08-21 on the Pixel). Warnings and
+    // errors only; the per-tensor INFO stream is noise at runtime.
+    static bool log_hooked = false;
+    if (!log_hooked) {
+        llama_log_set([](ggml_log_level level, const char *text, void *) {
+            if (!text || !*text) return;
+            std::string line(text);
+            while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.pop_back();
+            if (line.empty()) return;
+            if (level == GGML_LOG_LEVEL_ERROR) {
+                LOGE("llama: %s", line.c_str());
+            } else if (level == GGML_LOG_LEVEL_WARN) {
+                LOGI("llama: %s", line.c_str());
+            }
+        }, nullptr);
+        log_hooked = true;
+    }
+
     LOGI("init: loading %s", model_path ? model_path : "(null)");
     if (!model_path) {
         LOGE("init: null model_path");
