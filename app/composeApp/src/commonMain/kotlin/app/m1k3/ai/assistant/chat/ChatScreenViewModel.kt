@@ -21,6 +21,7 @@ import app.m1k3.ai.domain.ai.ThinkingPolicy
 import app.m1k3.ai.domain.chat.ChatError
 import app.m1k3.ai.domain.chat.EnrichedContext
 import app.m1k3.ai.domain.chat.GenerationStats
+import app.m1k3.ai.domain.chat.PersonaLeakGuard
 import app.m1k3.ai.domain.chat.StreamingThinkTagParser
 import app.m1k3.ai.domain.chat.events.ChatEvent
 import app.m1k3.ai.domain.chat.services.ContextAssembler
@@ -1139,7 +1140,10 @@ class ChatScreenViewModel(
         // Finalize parser — handles unclosed <think> tags
         thinkParser.finalize()
 
-        val finalText = cleanFormatTokens(thinkParser.visibleText)
+        // Legacy (tools-off) path — cover it with the same persona-leak guard
+        // the tool path applies in ChatWithToolsUseCase.cleanAnswer, so a user
+        // who turns tools off in Settings isn't left with an unguarded answer.
+        val finalText = PersonaLeakGuard.guarded(cleanFormatTokens(thinkParser.visibleText))
 
         _uiState.update { state ->
             val updatedMessages = state.messages.toMutableList()
