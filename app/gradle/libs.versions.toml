@@ -32,7 +32,7 @@ sqlcipher = "4.17.0"
 androidx-security = "1.1.0-alpha06"
 compose-ui-text-googlefonts = "1.11.1"
 jvector = "3.0.6"
-kermit = "2.0.4"
+kermit = "2.1.0"
 koin-core = "4.2.2"
 koin-compose = "4.2.2"
 
