@@ -50,6 +50,7 @@ object MaBridge : MaInferenceBackend {
         useFlashAttn: Boolean,
         kvQuantOrdinal: Int,
         useMlock: Boolean,
+        nativeLibraryDir: String,
     ): Long =
         nativeInit(
             modelPath,
@@ -61,6 +62,7 @@ object MaBridge : MaInferenceBackend {
             useFlashAttn,
             kvQuantOrdinal,
             useMlock,
+            nativeLibraryDir,
         )
 
     /**
@@ -144,6 +146,10 @@ object MaBridge : MaInferenceBackend {
     /**
      * JNI entry point for model initialization.
      * All tuning fields map to llama_context_params / llama_model_params.
+     *
+     * [nativeLibraryDir] is scanned once per process for `libggml-cpu-*.so`
+     * runtime-dispatch variants (see [MaInferenceBackend.init]'s KDoc). Pass ""
+     * to fall back to the process's default search paths.
      */
     private external fun nativeInit(
         modelPath: String,
@@ -155,6 +161,7 @@ object MaBridge : MaInferenceBackend {
         useFlashAttn: Boolean,
         kvQuantOrdinal: Int,
         useMlock: Boolean,
+        nativeLibraryDir: String,
     ): Long
 
     /**

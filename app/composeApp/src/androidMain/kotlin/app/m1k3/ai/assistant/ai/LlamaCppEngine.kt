@@ -160,6 +160,10 @@ class LlamaCppEngine(
                             useFlashAttn = tuning.useFlashAttn,
                             kvQuantOrdinal = tuning.kvQuant.ordinal,
                             useMlock = tuning.useMlock,
+                            // Runtime CPU-dispatch backends (libggml-cpu-*.so) live beside
+                            // libma.so in the app's extracted native library directory — see
+                            // MaInferenceBackend.init's KDoc and ma_core.cpp's header comment.
+                            nativeLibraryDir = context.applicationInfo.nativeLibraryDir ?: "",
                         )
                     if (handle == 0L) {
                         return@withLock Result.failure(
