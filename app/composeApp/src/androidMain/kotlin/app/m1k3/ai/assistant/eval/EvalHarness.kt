@@ -76,14 +76,29 @@ object EvalHarness {
     ): Boolean {
         if (!isDebuggable(activity)) return false
 
+        // EXTRA_THINKING is sent as a boolean (`--ez`, not `--es` — run.py's
+        // choice, matching Android's own am-start convention for flags), so
+        // it can't be read via getStringExtra like the others: a String and
+        // a Boolean are different typed slots in the Intent's Bundle, and
+        // getStringExtra silently returns null for a boolean-typed extra
+        // rather than throwing. Read it separately via hasExtra +
+        // getBooleanExtra and restring it so EvalRunRequest.fromExtras keeps
+        // one uniform String? contract.
         val extras =
             listOf(
                 EvalRunRequest.EXTRA_FIXTURES,
                 EvalRunRequest.EXTRA_OUT,
                 EvalRunRequest.EXTRA_MODEL,
-                EvalRunRequest.EXTRA_THINKING,
                 EvalRunRequest.EXTRA_CPU_VARIANT,
-            ).associateWith { intent.getStringExtra(it) }
+            ).associateWith { intent.getStringExtra(it) } +
+                mapOf(
+                    EvalRunRequest.EXTRA_THINKING to
+                        if (intent.hasExtra(EvalRunRequest.EXTRA_THINKING)) {
+                            intent.getBooleanExtra(EvalRunRequest.EXTRA_THINKING, false).toString()
+                        } else {
+                            null
+                        },
+                )
 
         val request = EvalRunRequest.fromExtras(extras) ?: return false
 
