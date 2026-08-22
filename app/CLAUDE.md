@@ -21,6 +21,11 @@ user-facing and is not being renamed (see `.claude/project-memory.md`).
 
 # Single test class
 ./gradlew :composeApp:testDebugUnitTest --tests "*.MemoryRepositoryTest"
+
+# Android on-device model eval (best model for the hardware, evaled, not
+# assumed — see tools/eval/android/README.md)
+cd tools/eval/android && ./run.py --device <serial> --models qwen35_0b8 \
+  --fixtures 'fixtures/*.json' --out runs/<name> && ./scorecard.py runs/<name>
 ```
 
 ## Test Performance
