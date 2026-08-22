@@ -17,12 +17,12 @@ import app.m1k3.ai.assistant.platform.PreferencesStoreInterface
 import app.m1k3.ai.assistant.platform.getDeviceTier
 import app.m1k3.ai.assistant.utils.Logger
 import app.m1k3.ai.domain.ai.LlmModel
+import app.m1k3.ai.domain.ai.ThinkingPolicy
 import app.m1k3.ai.domain.chat.ChatError
 import app.m1k3.ai.domain.chat.EnrichedContext
 import app.m1k3.ai.domain.chat.GenerationStats
 import app.m1k3.ai.domain.chat.StreamingThinkTagParser
 import app.m1k3.ai.domain.chat.events.ChatEvent
-import app.m1k3.ai.domain.chat.format.ChatFormat
 import app.m1k3.ai.domain.chat.services.ContextAssembler
 import app.m1k3.ai.domain.chat.services.DefaultChatFormatter
 import app.m1k3.ai.domain.chat.services.DeviceContextFormatter
@@ -126,10 +126,12 @@ class ChatScreenViewModel(
      * UnifiedPromptBuilder for consistent prompt formatting.
      * Rebuilt on model switch to use the correct ChatFormat.
      */
-    private var promptBuilder: UnifiedPromptBuilder = createPromptBuilder(LlmModel.default.chatFormat)
+    private var promptBuilder: UnifiedPromptBuilder = createPromptBuilder(initialModel)
 
-    private fun createPromptBuilder(format: ChatFormat): UnifiedPromptBuilder {
-        val formatter = DefaultChatFormatter(format)
+    private fun createPromptBuilder(model: LlmModel): UnifiedPromptBuilder {
+        // Thinking is per-brain (ThinkingPolicy): the formatter pre-closes the
+        // think block for Mini/Lil so they answer instead of reasoning for minutes.
+        val formatter = DefaultChatFormatter(model.chatFormat, thinking = ThinkingPolicy.enabled(model))
         val assembler = ContextAssembler()
         return UnifiedPromptBuilder(formatter, assembler, deviceContextFormatter)
     }
@@ -401,7 +403,7 @@ class ChatScreenViewModel(
                 aiEngine = factory(model)
 
                 // Rebuild prompt builder and tools for new model's chat format
-                promptBuilder = createPromptBuilder(model.chatFormat)
+                promptBuilder = createPromptBuilder(model)
                 chatWithTools = createChatWithTools()
 
                 val result = aiEngine.initialize()
@@ -715,6 +717,7 @@ class ChatScreenViewModel(
                     contextWindowTokens = maxContextTokens,
                     // Artifacts are a Big-tier capability (see SystemPromptInput.teachesArtifacts).
                     teachesArtifacts = _uiState.value.currentModel == LlmModel.Gemma4_E2B,
+                    teachesThinking = ThinkingPolicy.enabled(_uiState.value.currentModel),
                     availableTools =
                         if (chatWithTools != null) {
                             toolRegistry?.getAllTools()?.map { it.id } ?: emptyList()
@@ -724,6 +727,7 @@ class ChatScreenViewModel(
                 )
             compactSystemPrompt = systemPromptBuilder.build(promptInput)
             chatWithTools?.systemPrompt = compactSystemPrompt ?: ""
+            chatWithTools?.thinkingEnabled = ThinkingPolicy.enabled(_uiState.value.currentModel)
             logger.i { "System prompt primed (${compactSystemPrompt?.length ?: 0} chars)" }
         } catch (e: Exception) {
             logger.e(e) { "Failed to prime system prompt" }

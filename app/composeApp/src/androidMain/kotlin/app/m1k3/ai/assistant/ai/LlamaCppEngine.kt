@@ -8,6 +8,7 @@ import app.m1k3.ai.domain.ai.InferenceTuning
 import app.m1k3.ai.domain.ai.LlmModel
 import app.m1k3.ai.domain.ai.MaInferenceBackend
 import app.m1k3.ai.domain.chat.format.MessageRole
+import app.m1k3.ai.domain.ai.ThinkingPolicy
 import app.m1k3.ai.domain.chat.services.ChatFormatter
 import app.m1k3.ai.domain.chat.services.DefaultChatFormatter
 import app.m1k3.ai.domain.platform.DeviceTier
@@ -52,7 +53,7 @@ private val nativeChatJson =
 class LlamaCppEngine(
     private val context: Context,
     private val model: LlmModel = LlmModel.default,
-    private val chatFormatter: ChatFormatter = DefaultChatFormatter(model.chatFormat),
+    private val chatFormatter: ChatFormatter = DefaultChatFormatter(model.chatFormat, thinking = ThinkingPolicy.enabled(model)),
     private val overrideModelPath: String? = null,
     private val backend: MaInferenceBackend = MaBridge,
     private val deviceRamGbOverride: Int = -1,

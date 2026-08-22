@@ -214,11 +214,20 @@ char *heap_cstr(const char *literal) {
  * when it works; when it doesn't, armv9.0_1 and armv9.2_1 have disjoint
  * feature sets (SVE2-no-SVE/SME vs SVE+SME-no-SVE2) so at most one of them
  * can ever load on a given device — their relative order doesn't matter. */
+/* ⚠️ The SVE/SVE2/SME variants (armv9.x) are deliberately tried AFTER
+ * armv8.6_1. On a Pixel 9a (Tensor G4, 2026-08-22, llama.cpp e85caa81e)
+ * android_armv9.0_1 loaded and Qwen3.5-0.8B then answered EVERY prompt with
+ * an empty think block + end-of-generation at ~6 tokens, while the same
+ * build on armv8.2_2 (emulator) and armv8.6_1 (this device, after this
+ * reorder) generated normally. The SVE2 kernels are producing broken
+ * logits for this model on this core; i8mm (armv8.6_1) is the real win on
+ * phones anyway. Re-verify the armv9 tiers on every llama.cpp bump before
+ * promoting them back above 8.6. */
 static const char *kAndroidCpuBackendVariants[] = {
+    "libggml-cpu-android_armv8.6_1.so",
     "libggml-cpu-android_armv9.2_2.so",
     "libggml-cpu-android_armv9.2_1.so",
     "libggml-cpu-android_armv9.0_1.so",
-    "libggml-cpu-android_armv8.6_1.so",
     "libggml-cpu-android_armv8.2_2.so",
     "libggml-cpu-android_armv8.2_1.so",
     "libggml-cpu-android_armv8.0_1.so",

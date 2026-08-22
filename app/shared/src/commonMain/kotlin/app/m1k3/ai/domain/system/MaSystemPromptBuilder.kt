@@ -36,6 +36,8 @@ data class SystemPromptInput(
      * (2026-08-22 emulator walk). Small brains answer in markdown.
      */
     val teachesArtifacts: Boolean = false,
+    /** Ask the model to reason in <think> first. Big only — see [app.m1k3.ai.domain.ai.ThinkingPolicy]. */
+    val teachesThinking: Boolean = true,
 )
 
 /**
@@ -128,8 +130,9 @@ class MaSystemPromptBuilder {
 
         return buildString {
             append(
-                "You are M1K3 — living entirely on this phone, warm and dry. Never share your own wiring. Short when short works. No corporate filler — never \"certainly\" or \"great question.\" Think before you speak — wrap reasoning in <think>...</think> tags.",
+                "You are M1K3 — living entirely on this phone, warm and dry. Never share your own wiring. Short when short works. No corporate filler — never \"certainly\" or \"great question.\"",
             )
+            if (input.teachesThinking) append(" Think before you speak — wrap reasoning in <think>...</think> tags.")
             appendLine()
             append("Use markdown.")
             if (input.teachesArtifacts) {

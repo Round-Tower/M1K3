@@ -91,6 +91,13 @@ class ChatWithToolsUseCase(
     /** M1K3 system prompt — injected so personality persists across tool-calling path */
     var systemPrompt: String = "",
     /**
+     * Whether the current brain reasons in <think> (ThinkingPolicy). Drives the
+     * native template's enable_thinking AND the stream parser's start state:
+     * with thinking off the template pre-closes the think block, so a parser
+     * that starts "in thinking" would swallow the entire answer.
+     */
+    var thinkingEnabled: Boolean = true,
+    /**
      * Live read of the "Web search in chat" setting (Settings → Grounding).
      * Read fresh on every turn — same pattern as [ContextRetrievalUseCase.isRagEnabled] —
      * so toggling it takes effect on the very next message, not the next launch.
@@ -331,7 +338,7 @@ class ChatWithToolsUseCase(
         // opener never appears in the token stream. Start the parser already
         // in thinking mode so reasoning routes to thinkingContent and the
         // ThinkingPill gets populated; visible body picks up after </think>.
-        val thinkParser = StreamingThinkTagParser(startInThinking = true)
+        val thinkParser = StreamingThinkTagParser(startInThinking = thinkingEnabled)
         // Native path ALWAYS has tools here (caller gates on relevantTools.isNotEmpty()).
         // Use the tool-focused config so small models actually trigger <tool_call>.
         val queryType = QueryType.fromIntentCategory(context.intentCategory)
@@ -344,6 +351,7 @@ class ChatWithToolsUseCase(
                 messagesJson = messagesJson,
                 toolsJson = toolsJson,
                 config = config,
+                enableThinking = thinkingEnabled,
                 onToken = { token ->
                     if (token.isNotEmpty()) {
                         tokenCount++

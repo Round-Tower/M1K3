@@ -34,7 +34,13 @@ import app.m1k3.ai.domain.tools.ToolResult
  * @param format The ChatFormat to use for formatting
  */
 class DefaultChatFormatter(
-    override val format: ChatFormat
+    override val format: ChatFormat,
+    /**
+     * When false, ChatML prompts pre-fill an empty `<think></think>` block in
+     * the assistant turn — Qwen's documented soft switch for reasoning OFF.
+     * See [app.m1k3.ai.domain.ai.ThinkingPolicy] for why Mini/Lil run this way.
+     */
+    private val thinking: Boolean = true,
 ) : ChatFormatter {
 
     override fun buildPrompt(
@@ -177,7 +183,7 @@ class DefaultChatFormatter(
      * This is appended at the end to prompt the model to generate.
      */
     private fun getAssistantTurnStart(): String = when (format) {
-        is ChatFormat.ChatML -> "<|im_start|>assistant\n"
+        is ChatFormat.ChatML -> if (thinking) "<|im_start|>assistant\n" else "<|im_start|>assistant\n<think>\n\n</think>\n\n"
         is ChatFormat.Llama -> "" // Llama generates after [/INST]
         is ChatFormat.Gemma3 -> "<start_of_turn>model\n"
         is ChatFormat.Gemma4 -> "<start_of_turn>model\n"

@@ -192,6 +192,12 @@ class SystemPromptPersonalityTest {
         )
     }
 
+    @Test
+    fun `thinking instruction is optional`() {
+        val off = builder.build(SystemPromptInput(userName = "Kev", tier = SystemPromptTier.COMPACT, teachesThinking = false))
+        assertTrue(!off.contains("<think>"), "teachesThinking=false must drop the think instruction")
+    }
+
     // Artifacts are a Big-tier capability. On the 2026-08-22 emulator walk a
     // 0.8B Mini answered "what can you help me with?" with a raw
     // <artifact type="html"> checklist — taught the format, it reached for it
