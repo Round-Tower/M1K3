@@ -14,7 +14,7 @@ robolectric = "4.14.1"
 composeHotReload = "1.0.0-rc02"
 composeMultiplatform = "1.9.2"
 junit = "4.13.2"
-kotlin = "2.2.20"
+kotlin = "2.4.10"
 kotlinx-coroutines = "1.10.2"
 
 # NDK pin — reproducible native builds (llama.cpp submodule).
