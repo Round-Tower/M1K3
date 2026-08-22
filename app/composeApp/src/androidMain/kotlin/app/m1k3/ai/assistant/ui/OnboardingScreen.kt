@@ -171,7 +171,7 @@ private fun WelcomeStep(onContinue: () -> Unit) {
         Spacer(Modifier.height(12.dp))
 
         Text(
-            "Your local intelligence machine.",
+            "A local, private AI companion.",
             style = MaTypography.headlineSmall,
             color = Color.White.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
@@ -180,7 +180,7 @@ private fun WelcomeStep(onContinue: () -> Unit) {
         Spacer(Modifier.height(24.dp))
 
         Text(
-            "Private by design. Powerful by choice.\nNo cloud. No subscriptions. Yours.",
+            "Pick a brain to get started.",
             style = MaTypography.bodyMedium,
             color = Color.White.copy(alpha = 0.45f),
             textAlign = TextAlign.Center,
@@ -213,7 +213,7 @@ private fun YourEngineStep(
 
         Column {
             Text(
-                "Your engine",
+                "Your brain",
                 style = MaTypography.labelSmall,
                 color = AwakeOrange,
                 letterSpacing = 2.sp,
@@ -253,9 +253,9 @@ private fun YourEngineStep(
         }
 
         Column {
-            // Tier picker — subtle, available if user wants to change
+            // Brain picker — subtle, available if user wants to change
             Text(
-                "Choose your tier",
+                "Or pick a different brain",
                 style = MaTypography.labelSmall,
                 color = Color.White.copy(alpha = 0.35f),
                 letterSpacing = 1.sp,
@@ -276,7 +276,15 @@ private fun YourEngineStep(
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(20.dp))
+            Text(
+                "Everything runs on your device.",
+                style = MaTypography.labelSmall,
+                color = Color.White.copy(alpha = 0.4f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(12.dp))
             PrimaryButton("Install my M1K3 →", onClick = onInstall)
             Spacer(Modifier.height(16.dp))
         }
@@ -312,21 +320,18 @@ private fun TierChip(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        val emoji =
-            when (tier) {
-                M1K3Tier.Mini -> "🤏"
-                M1K3Tier.Lil -> "⚡"
-                M1K3Tier.Big -> "🧠"
-            }
-        Text(emoji, fontSize = 22.sp)
         Text(
             tier.displayName
                 .removePrefix("M1K3")
-                .trim()
-                .lowercase(),
-            style = MaTypography.labelSmall,
+                .trim(),
+            style = MaTypography.labelMedium,
             color = if (isSelected) AwakeOrange else Color.White.copy(alpha = 0.55f),
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+        )
+        Text(
+            "~${tier.downloadSizeMb}MB",
+            style = MaTypography.labelSmall.copy(fontSize = 9.sp),
+            color = Color.White.copy(alpha = 0.35f),
         )
         if (isRecommended) {
             Text(
