@@ -118,7 +118,15 @@ fun VoiceScreen(
     }
 
     DisposableEffect(Unit) {
-        onDispose { controller.exit() }
+        onDispose {
+            controller.exit()
+            // Leaving mid-turn (e.g. tapping X while still Listening/Speaking) would
+            // otherwise strand the SHARED avatar state at that activity forever — the
+            // hero back on Chat would stay tinted for a turn that never finished. The
+            // state->activity LaunchedEffect above is torn down in the same dispose
+            // pass, so it can't be trusted to observe a late Idle/Ended transition.
+            avatarVM?.returnToIdle()
+        }
     }
 
     if (avatarVM != null) {
@@ -155,7 +163,7 @@ fun VoiceScreen(
                         .semantics { contentDescription = voiceAccessibilityLabel(state) },
                 contentAlignment = Alignment.Center,
             ) {
-                PixelFaceAvatar(state = avatarState)
+                PixelFaceAvatar(state = avatarState, modifier = Modifier.fillMaxSize())
             }
 
             Spacer(Modifier.height(28.dp))
