@@ -79,6 +79,15 @@ kotlin {
             // empty/stale). Personal-knowledge passage search is a separate
             // path and uses LinearScanVectorIndex, not this dependency.
             implementation(libs.jvector)
+
+            // ML Kit GenAI Prompt API (Gemini Nano / AICore) — Mini M1K3's
+            // system-model brain. Pulls in com.google.android.datatransport
+            // transitively (usage-stats Firelog, NOT first-party analytics —
+            // see ManifestPrivacyTest.noAnalyticsLibraries_onClasspath and
+            // docs/adr/0007-system-model-gemini-nano.md). No network calls
+            // originate from OUR code here; AICore/Play Services own the
+            // model download.
+            implementation(libs.mlkit.genai.prompt)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -277,7 +286,7 @@ sqldelight {
             packageName.set("app.m1k3.ai.assistant.database")
             // Schema will be defined in src/commonMain/sqldelight
             schemaOutputDirectory.set(file("build/dbs"))
-            dialect("app.cash.sqldelight:sqlite-3-38-dialect:2.0.2")
+            dialect("app.cash.sqldelight:sqlite-3-38-dialect:2.3.2")
         }
     }
 }

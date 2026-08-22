@@ -62,6 +62,21 @@ class LlamaCppEngineTest {
         }
 
     @Test
+    fun `initialize calls backend init with the app's native library dir`() =
+        runTest {
+            fakeBackend.initHandle = 42L
+            val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+
+            engine.initialize()
+
+            // The bridge scans this directory once per process for libggml-cpu-*.so
+            // runtime-dispatch variants — see MaInferenceBackend.init's KDoc. A
+            // Context is never guaranteed to report a non-null dir (e.g. some test
+            // doubles), so the engine always hands the bridge a non-null String.
+            assertEquals(context.applicationInfo.nativeLibraryDir ?: "", fakeBackend.lastInitNativeLibDir)
+        }
+
+    @Test
     fun `initialize returns failure when backend returns zero handle`() =
         runTest {
             fakeBackend.initHandle = 0L

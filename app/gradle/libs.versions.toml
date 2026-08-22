@@ -1,40 +1,45 @@
 [versions]
-agp = "9.0.1"
+agp = "9.3.1"
 android-compileSdk = "36"
 android-minSdk = "27"
 android-targetSdk = "36"
-androidx-activity = "1.11.0"
-androidx-core = "1.17.0"
+androidx-activity = "1.13.0"
+androidx-core = "1.19.0"
 androidx-espresso = "3.7.0"
-androidx-lifecycle = "2.9.5"
-androidx-navigation = "2.9.1"
+androidx-lifecycle = "2.10.0"
+androidx-navigation = "2.9.2"
 androidx-testExt = "1.3.0"
 androidx-testCore = "1.7.0"
-robolectric = "4.14.1"
-composeHotReload = "1.0.0-rc02"
-composeMultiplatform = "1.9.2"
+robolectric = "4.16.1"
+composeHotReload = "1.2.0"
+composeMultiplatform = "1.11.1"
 junit = "4.13.2"
-kotlin = "2.2.20"
-kotlinx-coroutines = "1.10.2"
+kotlin = "2.4.10"
+kotlinx-coroutines = "1.11.0"
 
 # NDK pin — reproducible native builds (llama.cpp submodule).
 # Bump this file to bump CI/local. Matches installed ~/Library/Android/sdk/ndk/.
 ndk = "28.2.13676358"
 
-androidx-work = "2.10.1"
+androidx-work = "2.11.2"
 
 # M1K3 AI Dependencies
-sqldelight = "2.0.2"
-onnxruntime = "1.23.2"
-kotlinx-serialization = "1.7.3"
-kotlinx-datetime = "0.6.2"
-sqlcipher = "4.14.1"
+sqldelight = "2.3.2"
+onnxruntime = "1.29.0"
+kotlinx-serialization = "1.11.0"
+kotlinx-datetime = "0.8.0"
+sqlcipher = "4.17.0"
 androidx-security = "1.1.0-alpha06"
-compose-ui-text-googlefonts = "1.9.5"
-jvector = "3.0.0"
-kermit = "2.0.4"
-koin-core = "4.1.0"
-koin-compose = "4.1.0"
+compose-ui-text-googlefonts = "1.11.1"
+jvector = "3.0.6"
+kermit = "2.1.0"
+koin-core = "4.2.2"
+koin-compose = "4.2.2"
+
+# ML Kit GenAI Prompt API (Gemini Nano / AICore) — Mini M1K3's system-model
+# brain when the device has one. Verified latest via maven-metadata.xml
+# 2026-08-22. See docs/adr/0007-system-model-gemini-nano.md.
+mlkit-genai-prompt = "1.0.0-beta4"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -63,6 +68,7 @@ androidx-security-crypto = { module = "androidx.security:security-crypto", versi
 
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 jvector = { module = "io.github.jbellis:jvector", version.ref = "jvector" }
+mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkit-genai-prompt" }
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }

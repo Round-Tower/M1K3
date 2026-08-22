@@ -22,6 +22,7 @@ class FakeMaInferenceBackend : MaInferenceBackend {
     var lastInitUseFlashAttn: Boolean = false
     var lastInitKvQuantOrdinal: Int = 0
     var lastInitUseMlock: Boolean = false
+    var lastInitNativeLibDir: String? = null
 
     // === generate() controls ===
     var generateResponse: String = "Test response from fake backend"
@@ -52,6 +53,7 @@ class FakeMaInferenceBackend : MaInferenceBackend {
         useFlashAttn: Boolean,
         kvQuantOrdinal: Int,
         useMlock: Boolean,
+        nativeLibraryDir: String,
     ): Long {
         initCalled = true
         initCallCount++
@@ -64,6 +66,7 @@ class FakeMaInferenceBackend : MaInferenceBackend {
         lastInitUseFlashAttn = useFlashAttn
         lastInitKvQuantOrdinal = kvQuantOrdinal
         lastInitUseMlock = useMlock
+        lastInitNativeLibDir = nativeLibraryDir
         return initHandle
     }
 
@@ -144,6 +147,7 @@ class FakeMaInferenceBackend : MaInferenceBackend {
         lastInitUseFlashAttn = false
         lastInitKvQuantOrdinal = 0
         lastInitUseMlock = false
+        lastInitNativeLibDir = null
         generateCalled = false
         generateCallCount = 0
         lastGenerateHandle = 0L

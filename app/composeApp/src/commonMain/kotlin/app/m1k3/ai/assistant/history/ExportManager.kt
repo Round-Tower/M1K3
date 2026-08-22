@@ -1,7 +1,7 @@
 package app.m1k3.ai.assistant.history
 
 import app.m1k3.ai.assistant.database.MaDatabase
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
@@ -129,7 +129,7 @@ class ExportManager(private val database: MaDatabase) {
 
         val projectExport = ProjectExport(
             projectId = projectId,
-            exportedAt = kotlinx.datetime.Clock.System.now().toEpochMilliseconds(),
+            exportedAt = kotlin.time.Clock.System.now().toEpochMilliseconds(),
             conversationCount = conversationExports.size,
             conversations = conversationExports
         )
@@ -221,7 +221,7 @@ class ExportManager(private val database: MaDatabase) {
             appendLine("# Project Export: $projectId")
             appendLine()
             appendLine("---")
-            appendLine("**Exported:** ${formatTimestamp(kotlinx.datetime.Clock.System.now().toEpochMilliseconds())}")
+            appendLine("**Exported:** ${formatTimestamp(kotlin.time.Clock.System.now().toEpochMilliseconds())}")
             appendLine("**Conversations:** ${conversations.size}")
             appendLine("---")
             appendLine()

@@ -24,6 +24,18 @@ sealed class M1K3Tier(
     val model: LlmModel,
     /** Short capability description for onboarding screen */
     val description: String,
+
+    /**
+     * When true, this tier is answered by the PLATFORM'S OWN on-device model
+     * when the device has (or can fetch) one — Gemini Nano/AICore on
+     * Android, matching the Mac/iOS app's Apple-Foundation-Models-first
+     * posture for its equivalent tier. [model] remains the weights fallback:
+     * used when [app.m1k3.ai.domain.ai.MiniBrainPolicy] resolves to
+     * [MiniBrain.Weights] (no system model on this device/OS), and always
+     * used for the download-size/tier-identity surfaces above. Only [Mini]
+     * sets this — Lil and Big are always our own weights.
+     */
+    val usesSystemModelWhenAvailable: Boolean = false,
 ) {
     /**
      * Approximate download size shown in UI — derived from the model's own
@@ -42,6 +54,7 @@ sealed class M1K3Tier(
         description =
             "Optimised for your device — lightweight intelligence " +
                 "that stays responsive and never misses a beat.",
+        usesSystemModelWhenAvailable = true,
     )
 
     /** 4–8GB RAM — Qwen3.5 2B — March 2026, multimodal, ≈ Qwen2.5-7B quality */
@@ -59,6 +72,7 @@ sealed class M1K3Tier(
         displayName = "Big M1K3",
         tagline = "Full intelligence",
         model = LlmModel.Gemma4_E2B,
+
         description =
             "Maximum capability. Extended thinking, 128K context, " +
                 "and multimodal reasoning — all running on your hardware.",

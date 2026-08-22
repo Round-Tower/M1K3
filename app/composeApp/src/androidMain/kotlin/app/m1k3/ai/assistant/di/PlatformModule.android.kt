@@ -5,6 +5,8 @@ import app.m1k3.ai.assistant.ai.BaseLlmEngine
 import app.m1k3.ai.assistant.ai.LlamaCppEngine
 import app.m1k3.ai.assistant.ai.download.HttpModelDownloadManager
 import app.m1k3.ai.assistant.ai.download.ModelDownloadWorker
+import app.m1k3.ai.assistant.ai.ondevice.AndroidSystemBrainProbe
+import app.m1k3.ai.assistant.ai.ondevice.GeminiNanoEngine
 import app.m1k3.ai.assistant.app.AndroidDatabaseInitializer
 import app.m1k3.ai.assistant.app.IDatabaseInitializer
 import app.m1k3.ai.assistant.app.InitializationViewModel
@@ -39,7 +41,10 @@ import app.m1k3.ai.assistant.voice.KokoroOrPlatformSpeaker
 import app.m1k3.ai.assistant.voice.Speaker
 import app.m1k3.ai.assistant.voice.TextToSpeechSpeaker
 import app.m1k3.ai.domain.ai.LlmModel
+import app.m1k3.ai.domain.ai.MiniBrain
+import app.m1k3.ai.domain.ai.MiniBrainPolicy
 import app.m1k3.ai.domain.ai.ModelDownloadManager
+import app.m1k3.ai.domain.ai.SystemBrainProbe
 import app.m1k3.ai.domain.chat.services.UnifiedPromptBuilder
 import app.m1k3.ai.domain.platform.DateTimeProviderInterface
 import app.m1k3.ai.domain.platform.DeviceTier
@@ -231,6 +236,33 @@ actual val platformModule =
         // ===== AI Engine Layer =====
 
         /**
+         * SystemBrainProbe — asks ML Kit GenAI whether this device has (or can
+         * fetch) its own on-device model (Gemini Nano / AICore).
+         */
+        single<SystemBrainProbe> {
+            AndroidSystemBrainProbe(get<Context>())
+        }
+
+        /**
+         * MiniBrain — the once-per-process resolution of what actually answers
+         * for [LlmModel.Qwen35_0B8] (M1K3Tier.Mini): the platform's system
+         * model, or our own weights. Probed once at first `get()` (Koin
+         * memoizes `single`), not re-checked per turn — matches the Mac's
+         * AFM-availability-cached-at-launch shape. A user who installs/enables
+         * a system model mid-session sees the change on next app launch, not
+         * mid-conversation; acceptable for a first cut, revisit if this needs
+         * to react live.
+         */
+        single<MiniBrain> {
+            val probe = get<SystemBrainProbe>()
+            val availability =
+                kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                    probe.availability()
+                }
+            MiniBrainPolicy.resolve(availability)
+        }
+
+        /**
          * LlamaCppEngine (BaseLlmEngine implementation)
          *
          * Used as fallback when ML Kit GenAI is not available.
@@ -239,7 +271,7 @@ actual val platformModule =
         single<BaseLlmEngine> {
             val model = resolveSelectedModel(get<PreferencesStoreInterface>())
             val overridePath = get<ModelDownloadManager>().getModelPath(model.id)
-            LlamaCppEngine(get<Context>(), model, overrideModelPath = overridePath)
+            engineForModel(get<Context>(), model, overridePath, get<MiniBrain>())
         }
 
         // ===== Model Download Manager =====
@@ -434,10 +466,17 @@ actual val platformModule =
                 engineFactory = { model ->
                     val downloadManager = get<ModelDownloadManager>()
                     val overridePath = downloadManager.getModelPath(model.id)
-                    LlamaCppEngine(context, model, overrideModelPath = overridePath)
+                    engineForModel(context, model, overridePath, get<MiniBrain>())
                 },
                 isModelDownloaded = { model ->
-                    get<ModelDownloadManager>().isModelAvailable(model.id)
+                    // Mini's system-model brain needs no weights download — it
+                    // ships with the OS/Play Services. Every other model still
+                    // gates on the real on-disk check.
+                    if (model == LlmModel.Qwen35_0B8 && get<MiniBrain>() is MiniBrain.SystemModel) {
+                        true
+                    } else {
+                        get<ModelDownloadManager>().isModelAvailable(model.id)
+                    }
                 },
                 deleteModel = { model ->
                     get<ModelDownloadManager>().deleteModel(model.id)
@@ -549,3 +588,27 @@ private fun wipeLegacyPlaintextDbIfNeeded(context: Context) {
     context.deleteDatabase(DatabaseConfig.DATABASE_NAME)
     prefs.edit().putBoolean("sqlcipher_initialized", true).apply()
 }
+
+/**
+ * The one place that decides which [BaseLlmEngine] actually answers for a
+ * given [LlmModel] selection. Every tier maps 1:1 onto [LlamaCppEngine] over
+ * its GGUF weights EXCEPT [LlmModel.Qwen35_0B8] (Mini M1K3): when [miniBrain]
+ * resolved to [MiniBrain.SystemModel] (see the `single<MiniBrain>` binding
+ * above), Mini is answered by [GeminiNanoEngine] instead — the platform's own
+ * on-device model, never our weights, for that tier.
+ *
+ * Shared by both the initial `single<BaseLlmEngine>` pick and
+ * [ChatScreenViewModel]'s `engineFactory` (tier-switch mid-session) so the
+ * two paths can't disagree about which engine a given model resolves to.
+ */
+private fun engineForModel(
+    context: Context,
+    model: LlmModel,
+    overrideModelPath: String?,
+    miniBrain: MiniBrain,
+): BaseLlmEngine =
+    if (model == LlmModel.Qwen35_0B8 && miniBrain is MiniBrain.SystemModel) {
+        GeminiNanoEngine(context)
+    } else {
+        LlamaCppEngine(context, model, overrideModelPath = overrideModelPath)
+    }

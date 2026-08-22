@@ -5,7 +5,7 @@ import app.m1k3.ai.domain.memory.ImportanceCalculator
 import app.m1k3.ai.domain.memory.services.SemanticChunker
 import app.m1k3.ai.domain.repositories.EmbeddingRepository
 import app.m1k3.ai.domain.repositories.MemoryRepository
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 /**
  * CreateMemoryUseCase - Orchestrates memory creation from messages

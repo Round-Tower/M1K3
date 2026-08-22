@@ -33,7 +33,7 @@ import app.m1k3.ai.assistant.history.ExportFormat
 import app.m1k3.ai.assistant.history.SearchResult
 import app.m1k3.ai.domain.history.pluralizeMessages
 import app.m1k3.ai.domain.history.toDisplayTitle
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 /**
@@ -563,9 +563,7 @@ fun HistoryEmptyState(
  */
 fun formatHistoryTimestamp(timestampMs: Long): String {
     val instant = Instant.fromEpochMilliseconds(timestampMs)
-    val now =
-        kotlinx.datetime.Clock.System
-            .now()
+    val now = kotlin.time.Clock.System.now()
 
     val diffMs = now.toEpochMilliseconds() - timestampMs
     val diffMinutes = diffMs / 60000

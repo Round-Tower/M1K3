@@ -1,6 +1,6 @@
 package app.m1k3.ai.domain.memory
 
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
