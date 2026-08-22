@@ -692,3 +692,48 @@ zero); F6/F8b/PersonaLeakGuard are TDD'd red-first and gate-green but their
 on-device effect (the security cells) is eval-owed; the re-baseline numbers are
 single-run (no error bars) and Big is uncaptured; the armv9 correction rests on
 one clean run and is flagged for re-confirmation. Prior: Kev + claude-opus-4-8.*
+
+### F14 — challenger verdict (2026-08-22): do the cheaper marker-fix, not F14 as written
+
+`challenger` pressure-tested F14 (both claims below verified against source):
+
+1. **F14 can't delete `ChatFormat` — there are THREE consumers, it touches one.**
+   Besides the tool-less use-case branch (F14's target) and the tools-off legacy
+   path (§8 above), `LlamaCppEngine.buildFormattedPrompt`/`assistantPrefix`
+   reference `ChatFormat.Gemma4` **directly** (`LlamaCppEngine.kt:533,603-606`) —
+   its own raw-prompt fallback. So the "delete F3/F4/F5/F7" payoff that
+   *justifies* F14 is unreachable by F14 alone. The audit's "delete" framing
+   (§5 F3/F4) is aspirational: retiring hand-rolled rendering is a multi-step
+   migration of all three consumers, not a one-line condition flip.
+2. **Forcing native on tool-less turns regresses the common case.**
+   `runNativeChatPath` calls `configBuilder.buildForToolInvocation` (temp 0.3 /
+   topK 20 / minP 0.05) **unconditionally** — its own comment says "Native path
+   ALWAYS has tools here" (`ChatWithToolsUseCase.kt:343-347`). Make native the
+   path for every open-chat/creative turn and you cold-clamp the majority case to
+   near-deterministic sampling — off-contract for Qwen (F12 wants temp 1.0).
+3. **F15 double-gen goes from edge to every-turn.** A native-path `false` return
+   falls through to a full second generation (`:157`). At Lil's ~50s median that
+   is a ~100s turn, and it lands on the very drifted raw path F14 claims to retire.
+4. **Big is unmeasured** (never re-baselined) and F16 puts it on its unmeasured
+   thinking arm — the prompt-fragile family, zero device data.
+
+**Verdict: fix the markers (the cheaper alternative), don't do F14 as scoped.**
+The *demonstrable* bug the goal names is F3 (`ChatFormat.Gemma4` = Gemma-**3**
+syntax) + F5 (double BOS); Qwen's ChatML raw path is already MATCH (§2.3 row f).
+So: correct `ChatFormat.Gemma4`'s markers to `<|turn>`/`<tool_call>call:`/
+`<|tool_response>` (F3), flip the raw path to `add_special=false` (F5). Removes
+the actual bug at a fraction of the risk, leaves `ChatFormat` as the fallback all
+three consumers still need. "One-template-everywhere" is a separate, re-scoped,
+device-gated migration — not this change.
+
+⚠️ **Even the cheaper F3/F5 are device-gated:** F3 touches Gemma, the
+prompt-fragile family — A/B Big before shipping (`gemma-prompt-fragility`), and
+Big has no re-baseline yet. F5 (BOS) is verified by logging the first three raw
+prompt token ids, which needs the device. Both are held for the device session.
+
+If native-unconditional is still wanted later, minimum safeguards: don't delete
+`ChatFormat` in the same change; fix config selection first (tool-less native
+turns must use `build(queryType)`, not `buildForToolInvocation`); land F8a
+(stop-strings) first and answer whether `<turn|>` is an EOG token in the Gemma 4
+GGUF; gate on a real Big re-baseline + an open-chat/small-talk/creative A/B
+showing no regression + a near-zero F15 fall-through count.
