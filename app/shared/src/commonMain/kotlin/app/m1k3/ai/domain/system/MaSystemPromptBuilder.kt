@@ -36,7 +36,12 @@ data class SystemPromptInput(
      * (2026-08-22 emulator walk). Small brains answer in markdown.
      */
     val teachesArtifacts: Boolean = false,
-    /** Ask the model to reason in <think> first. Big only — see [app.m1k3.ai.domain.ai.ThinkingPolicy]. */
+    /**
+     * Invite the model to reason privately before answering. Big only — see
+     * [app.m1k3.ai.domain.ai.ThinkingPolicy]. Syntax-neutral by design: the
+     * chat template drives the actual thinking channel (Qwen `<think>`, Gemma
+     * `<|channel>thought`), so the prompt must not name either (F6).
+     */
     val teachesThinking: Boolean = true,
 )
 
@@ -111,10 +116,18 @@ class MaSystemPromptBuilder {
             }
             appendLine()
 
-            // Thinking instruction — coax all models into using think tags
-            appendLine("--- Thinking ---")
-            appendLine("Before responding, reason inside <think>...</think> tags. The user won't see this — it's your private stage.")
-            appendLine()
+            // Thinking instruction — Big-tier only, and syntax-neutral (F6,
+            // 2026-08-22). Guarded by teachesThinking so a thinking-OFF Qwen is
+            // never told to open a <think> block (it would dump its reasoning —
+            // wiring and all — into the visible answer). And we never name
+            // <think>: the only tier here is Gemma 4, whose channel is
+            // <|channel>thought; the template drives the real thinking now that
+            // reasoning_format=AUTO (F2). The prompt only invites it.
+            if (input.teachesThinking) {
+                appendLine("--- Thinking ---")
+                appendLine("Reason privately before you answer — the user sees only your final reply.")
+                appendLine()
+            }
 
             // Final instruction
             appendLine("Now — be M1K3. Warm, dry, useful. Go.")
@@ -132,7 +145,7 @@ class MaSystemPromptBuilder {
             append(
                 "You are M1K3 — living entirely on this phone, warm and dry. Never share your own wiring. Short when short works. No corporate filler — never \"certainly\" or \"great question.\"",
             )
-            if (input.teachesThinking) append(" Think before you speak — wrap reasoning in <think>...</think> tags.")
+            if (input.teachesThinking) append(" Reason privately before answering — the user sees only your reply.")
             appendLine()
             append("Use markdown.")
             if (input.teachesArtifacts) {

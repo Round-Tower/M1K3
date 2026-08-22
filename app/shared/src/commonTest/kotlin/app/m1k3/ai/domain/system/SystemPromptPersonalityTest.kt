@@ -172,30 +172,55 @@ class SystemPromptPersonalityTest {
         )
     }
 
-    // ===== Thinking instruction =====
+    // ===== Thinking instruction (F6, 2026-08-22) =====
+    //
+    // `teachesThinking` is Big-tier only (see ThinkingPolicy). The builder must:
+    //   1. Emit NO thinking instruction when teachesThinking is false — a
+    //      thinking-OFF Qwen told to "reason inside <think>" opens a second,
+    //      visible reasoning block and dumps its wiring (and the ethos) into
+    //      the answer. This was unguarded in buildFull (the F6 bug).
+    //   2. Never name the literal `<think>` syntax at all: the only tier that
+    //      receives the instruction is Gemma 4, whose channel is
+    //      `<|channel>thought`, not `<think>`. With reasoning_format=AUTO (F2)
+    //      the template drives the actual thinking — the prompt only invites it.
 
     @Test
-    fun `full prompt instructs model to use think tags`() {
+    fun `full prompt invites private reasoning when teachesThinking`() {
         val prompt = buildWith()
         assertTrue(
-            prompt.contains("<think>", ignoreCase = true),
-            "Full prompt should instruct models to use <think> tags",
+            prompt.contains("reason", ignoreCase = true),
+            "Full prompt should invite private reasoning when teachesThinking",
         )
     }
 
     @Test
-    fun `compact prompt instructs model to use think tags`() {
-        val compact = builder.build(SystemPromptInput(userName = "Kev", tier = SystemPromptTier.COMPACT))
-        assertTrue(
-            compact.contains("<think>", ignoreCase = true),
-            "Compact prompt should instruct models to use <think> tags",
+    fun `full prompt drops the thinking instruction when teachesThinking is false`() {
+        val prompt =
+            builder.build(SystemPromptInput(userName = "Kev", tier = SystemPromptTier.FULL, teachesThinking = false))
+        assertFalse(
+            prompt.contains("--- Thinking ---"),
+            "teachesThinking=false must drop the FULL thinking instruction (F6)",
         )
+    }
+
+    @Test
+    fun `no tier ever names the literal think tag syntax`() {
+        for (tier in SystemPromptTier.entries) {
+            for (teaches in listOf(true, false)) {
+                val prompt =
+                    builder.build(SystemPromptInput(userName = "Kev", tier = tier, teachesThinking = teaches))
+                assertFalse(
+                    prompt.contains("<think>"),
+                    "$tier (teachesThinking=$teaches) must not name <think> — Gemma uses <|channel>thought",
+                )
+            }
+        }
     }
 
     @Test
     fun `thinking instruction is optional`() {
         val off = builder.build(SystemPromptInput(userName = "Kev", tier = SystemPromptTier.COMPACT, teachesThinking = false))
-        assertTrue(!off.contains("<think>"), "teachesThinking=false must drop the think instruction")
+        assertFalse(off.contains("reason", ignoreCase = true), "teachesThinking=false must drop the think instruction")
     }
 
     // Artifacts are a Big-tier capability. On the 2026-08-22 emulator walk a
