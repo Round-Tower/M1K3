@@ -29,9 +29,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.m1k3.ai.assistant.avatar.AvatarState
 import app.m1k3.ai.assistant.avatar.AvatarViewModel
-import app.m1k3.ai.assistant.avatar.DotMatrixAvatar
 import app.m1k3.ai.assistant.avatar.LocalSharedAvatarState
 import app.m1k3.ai.assistant.avatar.LocalSharedAvatarVM
+import app.m1k3.ai.assistant.avatar.PixelFaceAvatar
 import app.m1k3.ai.assistant.design.tokens.MaColors
 import app.m1k3.ai.assistant.design.tokens.MaSpacing
 import app.m1k3.ai.assistant.design.tokens.MaTypography
@@ -77,7 +77,7 @@ fun ChatHeroSplash(
                     .height(180.dp),
             contentAlignment = Alignment.Center,
         ) {
-            DotMatrixAvatar(
+            PixelFaceAvatar(
                 state = avatarState ?: AvatarState(),
                 modifier = Modifier.fillMaxWidth().height(180.dp),
             )

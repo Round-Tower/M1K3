@@ -41,9 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.m1k3.ai.assistant.avatar.AvatarActivity
 import app.m1k3.ai.assistant.avatar.AvatarState
-import app.m1k3.ai.assistant.avatar.DotMatrixAvatar
 import app.m1k3.ai.assistant.avatar.LocalSharedAvatarState
 import app.m1k3.ai.assistant.avatar.LocalSharedAvatarVM
+import app.m1k3.ai.assistant.avatar.PixelFaceAvatar
 import app.m1k3.ai.assistant.design.tokens.MaColors
 import app.m1k3.ai.assistant.design.tokens.MaTypography
 import app.m1k3.ai.assistant.voice.VoiceLoopController
@@ -155,7 +155,7 @@ fun VoiceScreen(
                         .semantics { contentDescription = voiceAccessibilityLabel(state) },
                 contentAlignment = Alignment.Center,
             ) {
-                DotMatrixAvatar(state = avatarState)
+                PixelFaceAvatar(state = avatarState)
             }
 
             Spacer(Modifier.height(28.dp))
