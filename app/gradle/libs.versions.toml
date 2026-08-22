@@ -15,7 +15,7 @@ composeHotReload = "1.2.0"
 composeMultiplatform = "1.11.1"
 junit = "4.13.2"
 kotlin = "2.4.10"
-kotlinx-coroutines = "1.10.2"
+kotlinx-coroutines = "1.11.0"
 
 # NDK pin — reproducible native builds (llama.cpp submodule).
 # Bump this file to bump CI/local. Matches installed ~/Library/Android/sdk/ndk/.
@@ -26,8 +26,8 @@ androidx-work = "2.10.1"
 # M1K3 AI Dependencies
 sqldelight = "2.0.2"
 onnxruntime = "1.23.2"
-kotlinx-serialization = "1.7.3"
-kotlinx-datetime = "0.6.2"
+kotlinx-serialization = "1.11.0"
+kotlinx-datetime = "0.8.0"
 sqlcipher = "4.14.1"
 androidx-security = "1.1.0-alpha06"
 compose-ui-text-googlefonts = "1.9.5"

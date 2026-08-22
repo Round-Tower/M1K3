@@ -32,7 +32,7 @@ import app.m1k3.ai.assistant.design.theme.MaTheme
 import app.m1k3.ai.assistant.history.ConversationInfo
 import app.m1k3.ai.assistant.history.ExportFormat
 import app.m1k3.ai.assistant.history.SearchResult
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * HistorySearchBar - Search bar for filtering conversations.
@@ -568,7 +568,7 @@ fun HistoryEmptyState(
  */
 fun formatHistoryTimestamp(timestampMs: Long): String {
     val instant = Instant.fromEpochMilliseconds(timestampMs)
-    val now = kotlinx.datetime.Clock.System.now()
+    val now = kotlin.time.Clock.System.now()
 
     val diffMs = now.toEpochMilliseconds() - timestampMs
     val diffMinutes = diffMs / 60000

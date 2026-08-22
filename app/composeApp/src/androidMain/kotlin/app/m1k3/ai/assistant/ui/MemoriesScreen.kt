@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import app.m1k3.ai.assistant.database.MemoryMetadata
 import app.m1k3.ai.assistant.memory.MemoriesViewModel
 import app.m1k3.ai.assistant.memory.MemoryDataSource
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject

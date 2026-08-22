@@ -2,7 +2,7 @@ package app.m1k3.ai.assistant.memory
 
 import app.m1k3.ai.assistant.database.MemoryMetadata
 import app.m1k3.ai.domain.repositories.VectorSearchResult
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlin.math.exp
 
 /**

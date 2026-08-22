@@ -222,12 +222,12 @@ class StreamingThinkTagParserTest {
     @Test
     fun `startInThinking captures thinkingStartMs at construction`() {
         val before =
-            kotlinx.datetime.Clock.System
+            kotlin.time.Clock.System
                 .now()
                 .toEpochMilliseconds()
         val parser = StreamingThinkTagParser(startInThinking = true)
         val after =
-            kotlinx.datetime.Clock.System
+            kotlin.time.Clock.System
                 .now()
                 .toEpochMilliseconds()
 

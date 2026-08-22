@@ -2,7 +2,7 @@ package app.m1k3.ai.assistant.tools
 
 import app.m1k3.ai.assistant.database.MaDatabase
 import app.m1k3.ai.assistant.test.TestDatabaseFactory
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlin.test.*
 
 /**

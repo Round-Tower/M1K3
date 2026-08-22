@@ -1,6 +1,6 @@
 package app.m1k3.ai.assistant.design.preview
 
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 /**
  * Shared Preview Fixtures for Compose Previews
