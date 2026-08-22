@@ -201,7 +201,16 @@ def run_cell(serial, fixtures_path, model, thinking, variant, cell_timeout, all_
                     last_count = len(done)
                     last_inflight = inflight
 
-                # Completed cleanly: process exiting with inProgress cleared.
+                # Completed cleanly. The authoritative signal is the report
+                # itself: every fixture has a result and nothing is in flight.
+                # We must NOT wait for the process to die — after the harness
+                # finishes its Activity the process lingers as an Android cached
+                # process, so `pidof` keeps returning it and a "wait for exit"
+                # check burns the whole cell timeout on an already-finished run.
+                if inflight is None and len(done) >= len(all_ids):
+                    adb(serial, "shell", "am", "force-stop", PACKAGE, check=False)
+                    return {"meta": meta, "done": done, "hung": hung, "launches": launches}
+                # Fallback: process gone with the marker cleared (older harness).
                 if inflight is None and not alive:
                     return {"meta": meta, "done": done, "hung": hung, "launches": launches}
 

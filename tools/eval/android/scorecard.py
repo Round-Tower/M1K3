@@ -69,7 +69,7 @@ def summarise(cells):
             entry[0] += int(bool(r.get("passed")))
             # A native hang produced no tokens/latency — exclude it from the
             # medians so it can't masquerade as a broken-logits signal.
-            if r.get("error", "").startswith("native hang"):
+            if (r.get("error") or "").startswith("native hang"):
                 continue
             latencies[c["id"]].append(r.get("generateMs", 0))
             tokens[c["id"]].append(r.get("tokens", 0))
@@ -86,7 +86,7 @@ def tripwires(cells, tokens, thinking_chars):
 
         if c["status"] == "crashed":
             cell_flags.append("CELL CRASHED — no results captured")
-        hung = c.get("hung") or [r["fixtureId"] for r in c["results"] if r.get("error", "").startswith("native hang")]
+        hung = c.get("hung") or [r["fixtureId"] for r in c["results"] if (r.get("error") or "").startswith("native hang")]
         if hung:
             cell_flags.append(f"HUNG (native, {len(hung)}): {', '.join(hung)}")
 
@@ -94,7 +94,7 @@ def tripwires(cells, tokens, thinking_chars):
         # broken-logits median so the CPU-variant signal stays clean.
         cell_tokens = [
             r["tokens"] for r in c["results"]
-            if not r.get("error", "").startswith("native hang")
+            if not (r.get("error") or "").startswith("native hang")
         ]
         if cell_tokens:
             med = statistics.median(cell_tokens)
