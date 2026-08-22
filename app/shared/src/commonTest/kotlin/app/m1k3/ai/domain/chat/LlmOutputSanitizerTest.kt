@@ -119,6 +119,17 @@ class LlmOutputSanitizerTest {
     }
 
     @Test
+    fun `drops im_start with whitespace before the role (the No dot system echo, F8b)`() {
+        // The model answered "No.", then began a fresh system turn as
+        // "<|im_start|>\nsystem ..." — a newline between the marker and the
+        // role. The old regex put \s* AFTER the role group, so the role never
+        // matched and the bare word "system" leaked to the UI (Pixel 9a
+        // 2026-08-22, "No.system You are M1K3 —…"). \s* now precedes the role.
+        assertEquals("hi", LlmOutputSanitizer.strip("<|im_start|>\nsystem\nhi").trim())
+        assertEquals("No.", LlmOutputSanitizer.strip("No.<|im_start|>\nsystem\n").trim())
+    }
+
+    @Test
     fun `preserves plain text containing angle brackets unrelated to chat markers`() {
         val raw = "Use <code>foo()</code> to call the function."
         assertEquals(

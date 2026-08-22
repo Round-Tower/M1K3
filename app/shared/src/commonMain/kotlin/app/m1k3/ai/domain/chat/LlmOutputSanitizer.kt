@@ -55,7 +55,7 @@ object LlmOutputSanitizer {
     // lowercase letters after a bare <|im_start|>.
     private val chatMlStart =
         Regex(
-            """<\|im_start\|>(?:assistant|user|system|tool)?\s*\n?""",
+            """<\|im_start\|>\s*(?:assistant|user|system|tool)?\s*\n?""",
             RegexOption.IGNORE_CASE,
         )
     private val chatMlEnd = Regex("""<\|im_end\|>""", RegexOption.IGNORE_CASE)
