@@ -544,6 +544,17 @@ char *ma_core_generate(
 
     LOGD("generate: %d prompt tokens, maxTokens=%d", n_prompt, max_tokens);
 
+    /* Every call is a fresh, self-contained prompt (the Kotlin side renders
+     * the whole conversation each turn). Without this the KV cache was never
+     * cleared and llama_batch_get_one APPENDED each turn after the last: the
+     * context filled across turns until n_ctx, then every decode failed and
+     * every answer came back empty until the process restarted — the eval
+     * harness's "native context may have been lost" cascade (2026-08-22).
+     * Prefix reuse across turns is a deliberate later step (see the Mac's
+     * ConversationTailCache); correctness first. */
+    llama_memory_clear(llama_get_memory(ma->ctx), /*data=*/true);
+
+
     /* --- Decode prompt tokens in n_batch-sized chunks ---
      * Upstream asserts n_tokens_all <= cparams.n_batch per decode call
      * (llama-context.cpp:1595). Callers must split prompts themselves;
@@ -744,6 +755,17 @@ char *ma_core_generate_chat(
 
     LOGD("generate_chat: %d prompt tokens, maxTokens=%d", n_prompt, max_tokens);
 
+    /* Every call is a fresh, self-contained prompt (the Kotlin side renders
+     * the whole conversation each turn). Without this the KV cache was never
+     * cleared and llama_batch_get_one APPENDED each turn after the last: the
+     * context filled across turns until n_ctx, then every decode failed and
+     * every answer came back empty until the process restarted — the eval
+     * harness's "native context may have been lost" cascade (2026-08-22).
+     * Prefix reuse across turns is a deliberate later step (see the Mac's
+     * ConversationTailCache); correctness first. */
+    llama_memory_clear(llama_get_memory(ma->ctx), /*data=*/true);
+
+
     /* --- Decode prompt tokens in n_batch-sized chunks ---
      * See ma_core_generate for the rationale — upstream asserts
      * n_tokens_all <= cparams.n_batch per llama_decode call. */
@@ -847,6 +869,17 @@ char *ma_core_generate_chat(
     try {
         common_chat_parser_params pparams(params);
         pparams.parse_tool_calls = true;
+        /* F1 (docs/MODEL_CONTRACTS.md): the converting ctor above copies only
+         * `format` + `generation_prompt` — NOT the PEG parser the template
+         * produced. With an empty arena common_chat_parse silently falls back
+         * to a content-only parser: tool_calls always empty, reasoning never
+         * split out, content returned with the generation prompt prepended
+         * (the April "exactly 30c of <|im_start|>assistant\n<think>" mystery).
+         * We were building this arena above only to dump it to logcat. */
+        pparams.parser.load(params.parser);
+        /* F2: reasoning_format defaults NONE, so <think> blocks were never
+         * extracted natively; AUTO matches llama-server's behaviour. */
+        pparams.reasoning_format = COMMON_REASONING_FORMAT_AUTO;
         common_chat_msg msg = common_chat_parse(accumulated, /*is_partial=*/false, pparams);
 
         LOGI("generate_chat: parsed content (%zu c): <<%.*s>>",
