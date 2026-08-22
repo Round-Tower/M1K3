@@ -33,8 +33,8 @@ androidx-security = "1.1.0-alpha06"
 compose-ui-text-googlefonts = "1.11.1"
 jvector = "3.0.0"
 kermit = "2.0.4"
-koin-core = "4.1.0"
-koin-compose = "4.1.0"
+koin-core = "4.2.2"
+koin-compose = "4.2.2"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
