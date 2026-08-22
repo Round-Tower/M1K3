@@ -41,7 +41,9 @@ class AndroidSystemBrainProbe(
 
     override suspend fun availability(): SystemBrainAvailability =
         try {
-            when (client.checkStatus()) {
+            val status = client.checkStatus()
+            logger.i { "checkStatus: $status (AVAILABLE=${FeatureStatus.AVAILABLE} DOWNLOADABLE=${FeatureStatus.DOWNLOADABLE} DOWNLOADING=${FeatureStatus.DOWNLOADING})" }
+            when (status) {
                 FeatureStatus.AVAILABLE -> SystemBrainAvailability.Available
                 FeatureStatus.DOWNLOADABLE -> SystemBrainAvailability.Downloadable()
                 FeatureStatus.DOWNLOADING -> SystemBrainAvailability.Downloading()

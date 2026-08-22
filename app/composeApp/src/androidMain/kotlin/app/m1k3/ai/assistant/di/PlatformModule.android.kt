@@ -42,9 +42,9 @@ import app.m1k3.ai.assistant.voice.Speaker
 import app.m1k3.ai.assistant.voice.TextToSpeechSpeaker
 import app.m1k3.ai.domain.ai.LlmModel
 import app.m1k3.ai.domain.ai.MiniBrain
-import app.m1k3.ai.domain.ai.MiniBrainPolicy
 import app.m1k3.ai.domain.ai.ModelDownloadManager
 import app.m1k3.ai.domain.ai.SystemBrainProbe
+import app.m1k3.ai.domain.ai.SystemBrainResolver
 import app.m1k3.ai.domain.chat.services.UnifiedPromptBuilder
 import app.m1k3.ai.domain.platform.DateTimeProviderInterface
 import app.m1k3.ai.domain.platform.DeviceTier
@@ -244,22 +244,19 @@ actual val platformModule =
         }
 
         /**
-         * MiniBrain — the once-per-process resolution of what actually answers
+         * SystemBrainResolver — the once-per-process resolution of what answers
          * for [LlmModel.Qwen35_0B8] (M1K3Tier.Mini): the platform's system
-         * model, or our own weights. Probed once at first `get()` (Koin
-         * memoizes `single`), not re-checked per turn — matches the Mac's
-         * AFM-availability-cached-at-launch shape. A user who installs/enables
-         * a system model mid-session sees the change on next app launch, not
-         * mid-conversation; acceptable for a first cut, revisit if this needs
-         * to react live.
+         * model, or our own weights. Started at Koin init (createdAtStart) on
+         * an IO scope and NEVER awaited on the main thread — the first cut did
+         * `runBlocking { probe.availability() }` here and ANR'd a Pixel 9a:
+         * ML Kit answers checkStatus() through a main-looper callback.
+         * `resolver.current` answers immediately (weights until the probe
+         * lands). Re-probed on next launch, not mid-session.
          */
-        single<MiniBrain> {
-            val probe = get<SystemBrainProbe>()
-            val availability =
-                kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-                    probe.availability()
-                }
-            MiniBrainPolicy.resolve(availability)
+        single(createdAtStart = true) {
+            SystemBrainResolver(get<SystemBrainProbe>(), LlmModel.Qwen35_0B8).also {
+                it.start(kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO))
+            }
         }
 
         /**
@@ -271,7 +268,7 @@ actual val platformModule =
         single<BaseLlmEngine> {
             val model = resolveSelectedModel(get<PreferencesStoreInterface>())
             val overridePath = get<ModelDownloadManager>().getModelPath(model.id)
-            engineForModel(get<Context>(), model, overridePath, get<MiniBrain>())
+            engineForModel(get<Context>(), model, overridePath, get<SystemBrainResolver>().current)
         }
 
         // ===== Model Download Manager =====
@@ -466,13 +463,13 @@ actual val platformModule =
                 engineFactory = { model ->
                     val downloadManager = get<ModelDownloadManager>()
                     val overridePath = downloadManager.getModelPath(model.id)
-                    engineForModel(context, model, overridePath, get<MiniBrain>())
+                    engineForModel(context, model, overridePath, get<SystemBrainResolver>().current)
                 },
                 isModelDownloaded = { model ->
                     // Mini's system-model brain needs no weights download — it
                     // ships with the OS/Play Services. Every other model still
                     // gates on the real on-disk check.
-                    if (model == LlmModel.Qwen35_0B8 && get<MiniBrain>() is MiniBrain.SystemModel) {
+                    if (model == LlmModel.Qwen35_0B8 && get<SystemBrainResolver>().current is MiniBrain.SystemModel) {
                         true
                     } else {
                         get<ModelDownloadManager>().isModelAvailable(model.id)
