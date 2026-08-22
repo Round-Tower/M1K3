@@ -662,6 +662,16 @@ guessing. So these are deliberately **not** done in the device-free window:
 - **F14** — make the native path unconditional (turns F3/F4/F5/F7 into
   deletions). Architectural + must be gated on the Big re-baseline; wants
   `challenger` and a device. Highest structural value, highest care.
+  - ⚠️ **Scope correction (2026-08-22):** the audit's "delete F3/F4/F5/F7"
+    is too broad. **Gemini Nano is NOT `NativeChatCapable`** (only
+    `LlamaCppEngine` is — Nano is `: BaseLlmEngine`, "Not NativeChatCapable"
+    by its own header), so it MUST keep the prompt-engineered path. F14 is
+    therefore "make native unconditional *for `NativeChatCapable` engines*
+    (empty tools when none), delete the GGUF raw-path drift they no longer
+    reach" — NOT delete the raw path outright. Before deleting `ChatFormat.
+    Gemma4`/`getPromptPrefix`/the raw-path BOS logic, confirm Nano's prompt
+    building (`ChatMlPromptSplit`) doesn't route through them; if it does,
+    those pieces stay for Nano and only the Qwen/Gemma GGUF branches go.
 - **F8a** — enforce stop strings in the C generation loop (the real fix for the
   role-echo; F8b was belt-and-braces). Device-verify.
 - **F10 / F11 / F12** — sampler order, `presence_penalty`, per-`LlmModel`
