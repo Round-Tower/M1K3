@@ -29,6 +29,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -272,46 +275,19 @@ fun ChatInputBar(
                                 ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        SendArrowIcon(color = MaColors.White)
+                        // Filled circle + arrow-up — the same shape as iOS's
+                        // `arrow.up.circle.fill` (finding: a proper icon, not
+                        // a hand-drawn Canvas arrow).
+                        Icon(
+                            imageVector = Icons.Default.ArrowUpward,
+                            contentDescription = "Send",
+                            tint = MaColors.White,
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SendArrowIcon(
-    color: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier.size(20.dp),
-) {
-    Canvas(modifier = modifier) {
-        val strokeWidth = 2.5f
-        val centerX = size.width / 2
-        val centerY = size.height / 2
-        val arrowLength = size.height * 0.5f
-
-        drawLine(
-            color = color,
-            start = Offset(centerX, centerY + arrowLength / 2),
-            end = Offset(centerX, centerY - arrowLength / 2),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
-        )
-        drawLine(
-            color = color,
-            start = Offset(centerX, centerY - arrowLength / 2),
-            end = Offset(centerX - arrowLength / 3, centerY - arrowLength / 2 + arrowLength / 3),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
-        )
-        drawLine(
-            color = color,
-            start = Offset(centerX, centerY - arrowLength / 2),
-            end = Offset(centerX + arrowLength / 3, centerY - arrowLength / 2 + arrowLength / 3),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
-        )
     }
 }
 
