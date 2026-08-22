@@ -192,12 +192,23 @@ class SystemPromptPersonalityTest {
         )
     }
 
+    // Artifacts are a Big-tier capability. On the 2026-08-22 emulator walk a
+    // 0.8B Mini answered "what can you help me with?" with a raw
+    // <artifact type="html"> checklist — taught the format, it reached for it
+    // on small talk. Small brains get markdown only.
     @Test
-    fun `compact prompt contains artifact instructions`() {
-        val compact = builder.build(SystemPromptInput(userName = "Kev", tier = SystemPromptTier.COMPACT))
-        assertTrue(
-            compact.contains("artifact", ignoreCase = true),
-            "Compact prompt should contain artifact instructions",
-        )
+    fun `prompts teach artifacts only when asked to`() {
+        for (tier in SystemPromptTier.entries) {
+            val silent = builder.build(SystemPromptInput(userName = "Kev", tier = tier))
+            assertTrue(
+                !silent.contains("artifact", ignoreCase = true),
+                "$tier prompt must not teach artifacts by default",
+            )
+            val taught = builder.build(SystemPromptInput(userName = "Kev", tier = tier, teachesArtifacts = true))
+            assertTrue(
+                taught.contains("<artifact", ignoreCase = true),
+                "$tier prompt should teach artifacts when teachesArtifacts=true",
+            )
+        }
     }
 }

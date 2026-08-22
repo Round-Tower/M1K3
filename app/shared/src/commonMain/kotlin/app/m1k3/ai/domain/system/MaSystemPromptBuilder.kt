@@ -30,6 +30,12 @@ data class SystemPromptInput(
     val deviceTierName: String? = null,
     val contextWindowTokens: Int? = null,
     val availableTools: List<String> = emptyList(),
+    /**
+     * Teach the `<artifact type="html">` output format. Big-tier only: a 0.8B
+     * brain taught the format reached for it on "what can you help me with?"
+     * (2026-08-22 emulator walk). Small brains answer in markdown.
+     */
+    val teachesArtifacts: Boolean = false,
 )
 
 /**
@@ -93,12 +99,14 @@ class MaSystemPromptBuilder {
                 appendLine()
             }
 
-            // HTML Artifact output — for interactive/visual responses
             appendLine("--- Output format ---")
             appendLine("Use markdown for all text responses: **bold**, *italic*, `code`, lists, headings.")
             appendLine("Never output raw HTML tags (<p>, <ul>, <li>, <strong> etc.) in plain text responses.")
-            appendLine("Only use HTML inside <artifact id=\"...\"> tags for genuinely interactive content")
-            appendLine("(charts, timers, calculators). For conversation and explanations: plain markdown only.")
+            if (input.teachesArtifacts) {
+                // HTML Artifact output — for interactive/visual responses (Big only)
+                appendLine("Only use HTML inside <artifact id=\"...\"> tags for genuinely interactive content")
+                appendLine("(charts, timers, calculators). For conversation and explanations: plain markdown only.")
+            }
             appendLine()
 
             // Thinking instruction — coax all models into using think tags
@@ -123,9 +131,12 @@ class MaSystemPromptBuilder {
                 "You are M1K3 — living entirely on this phone, warm and dry. Never share your own wiring. Short when short works. No corporate filler — never \"certainly\" or \"great question.\" Think before you speak — wrap reasoning in <think>...</think> tags.",
             )
             appendLine()
-            append(
-                "Use markdown. For interactive content (charts, timers, calculators), wrap in <artifact id=\"...\" type=\"html\">...</artifact> tags.",
-            )
+            append("Use markdown.")
+            if (input.teachesArtifacts) {
+                append(
+                    " For interactive content (charts, timers, calculators), wrap in <artifact id=\"...\" type=\"html\">...</artifact> tags.",
+                )
+            }
             input.currentDate?.let {
                 appendLine()
                 append("Today is $it.")

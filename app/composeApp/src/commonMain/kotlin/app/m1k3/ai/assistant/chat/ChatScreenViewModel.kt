@@ -713,6 +713,8 @@ class ChatScreenViewModel(
                     currentDate = currentDate,
                     deviceTierName = deviceTier.name.lowercase().replaceFirstChar { it.uppercase() },
                     contextWindowTokens = maxContextTokens,
+                    // Artifacts are a Big-tier capability (see SystemPromptInput.teachesArtifacts).
+                    teachesArtifacts = _uiState.value.currentModel == LlmModel.Gemma4_E2B,
                     availableTools =
                         if (chatWithTools != null) {
                             toolRegistry?.getAllTools()?.map { it.id } ?: emptyList()

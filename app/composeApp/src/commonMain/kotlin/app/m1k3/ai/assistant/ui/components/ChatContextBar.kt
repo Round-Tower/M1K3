@@ -99,7 +99,6 @@ fun ChatContextBar(
                     state = state,
                     availableModels = availableModels,
                     onModelSwitch = onModelSwitch,
-                    onContextTap = onContextTap,
                     enabled = enabled,
                 )
             }
@@ -112,14 +111,15 @@ fun ChatContextBar(
 // is chosen — doctrine principle 6, "show a state once") but the row itself
 // no longer renders the brain name or a tokens/sec figure: those are
 // engineering nouns (doctrine principle 7) that don't belong on the chat
-// face. What's left is context-window headroom (a real, non-noisy signal)
-// and — while a tool call is in flight — that it's happening.
+// face. The context-window % went the same way on the 2026-08-22 emulator
+// re-walk: a user never acts on "0%", and the Mac/iOS chat shows nothing
+// there. What's left is — while a tool call is in flight — that it's
+// happening (the Mac's tool-transparency precedent, #132).
 @Composable
 private fun FooterRow(
     state: ChatContextBarState,
     availableModels: List<LlmModel>,
     onModelSwitch: (LlmModel) -> Unit,
-    onContextTap: () -> Unit,
     enabled: Boolean,
 ) {
     Row(
@@ -127,11 +127,6 @@ private fun FooterRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaSpacing.sm),
     ) {
-        ContextTag(
-            percent = state.contextPercent,
-            onTap = onContextTap,
-        )
-
         Spacer(modifier = Modifier.weight(1f))
 
         val toolRunning = state.status as? ChatContextBarStatus.ToolRunning
@@ -150,41 +145,6 @@ private fun Dot() {
                 .clip(CircleShape)
                 .background(MaColors.textMuted().copy(alpha = 0.5f)),
     )
-}
-
-@Composable
-private fun ContextTag(
-    percent: Int,
-    onTap: () -> Unit,
-) {
-    val color =
-        when {
-            percent >= 80 -> MaColors.Error
-            percent >= 50 -> MaColors.Warning
-            else -> MaColors.Success
-        }
-    Row(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(MaRadius.xs))
-                .clickable(onClick = onTap)
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(5.dp)
-                    .clip(CircleShape)
-                    .background(color),
-        )
-        Text(
-            text = "$percent%",
-            style = MaTypography.labelSmall,
-            color = MaColors.textMuted(),
-        )
-    }
 }
 
 @Composable
