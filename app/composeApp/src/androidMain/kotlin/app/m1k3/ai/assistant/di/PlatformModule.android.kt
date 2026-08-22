@@ -53,6 +53,31 @@ import org.koin.core.module.dsl.*
 import org.koin.dsl.module
 
 /**
+ * Resolves the brain the user actually installed during onboarding.
+ *
+ * `SELECTED_M1K3_TIER` is saved as "mini" | "lil" | "big" when onboarding's
+ * download completes. This is the ONE place that mapping lives — both the
+ * real [BaseLlmEngine] and [ChatScreenViewModel]'s initial UI state (what
+ * Settings' Brain section shows as selected) read it from here, so they
+ * can never drift apart the way they used to (Settings showing "Lil" while
+ * the tier the user actually picked, and the engine actually loaded, was
+ * Mini — a hardcoded [LlmModel.default] in `ChatUiState` vs. this same
+ * prefs-driven resolution done a second time, separately, for the engine).
+ */
+private fun resolveSelectedModel(prefs: PreferencesStoreInterface): LlmModel {
+    val tierKey =
+        prefs.getString(
+            app.m1k3.ai.assistant.platform.PreferenceKeys.SELECTED_M1K3_TIER,
+            "lil",
+        ) ?: "lil"
+    return when (tierKey) {
+        "mini" -> LlmModel.Qwen35_0B8
+        "big" -> LlmModel.Gemma4_E2B
+        else -> LlmModel.Qwen35_2B // "lil" + fallback
+    }
+}
+
+/**
  * Android platform module
  *
  * Provides Android-specific dependencies:
@@ -212,21 +237,7 @@ actual val platformModule =
          * Also used directly for fine-grained LLM control.
          */
         single<BaseLlmEngine> {
-            // Use whichever model the user installed during onboarding.
-            // SELECTED_M1K3_TIER is saved as "mini" | "lil" | "big" when the
-            // download completes. Default to Gemma3_1B (Lil M1K3) if not set.
-            val prefs = get<PreferencesStoreInterface>()
-            val tierKey =
-                prefs.getString(
-                    app.m1k3.ai.assistant.platform.PreferenceKeys.SELECTED_M1K3_TIER,
-                    "lil",
-                ) ?: "lil"
-            val model: LlmModel =
-                when (tierKey) {
-                    "mini" -> LlmModel.Qwen35_0B8
-                    "big" -> LlmModel.Gemma4_E2B
-                    else -> LlmModel.Qwen35_2B // "lil" + fallback
-                }
+            val model = resolveSelectedModel(get<PreferencesStoreInterface>())
             val overridePath = get<ModelDownloadManager>().getModelPath(model.id)
             LlamaCppEngine(get<Context>(), model, overrideModelPath = overridePath)
         }
@@ -475,6 +486,7 @@ actual val platformModule =
                         .getUserFirstName()
                 },
                 toolExecutionDataSource = get<app.m1k3.ai.assistant.tools.ToolExecutionDataSource>(),
+                initialModel = resolveSelectedModel(get<PreferencesStoreInterface>()),
             )
         }
 

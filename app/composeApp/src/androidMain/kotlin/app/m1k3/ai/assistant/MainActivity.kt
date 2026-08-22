@@ -208,6 +208,24 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MaApp() {
+    // One theme decision, made once, at the true root — every branch below
+    // (onboarding, loading, error, the real app) used to reach for its own
+    // MaTheme, or none at all, and the composables in between (this Box) had
+    // no Surface to paint on, so they fell through to the native window
+    // background instead of M1K3's dark scheme (finding: "no theme
+    // decision" — macos/docs/DESIGN_DOCTRINE.md principle 4).
+    MaTheme {
+        androidx.compose.material3.Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            MaAppBody()
+        }
+    }
+}
+
+@Composable
+private fun MaAppBody() {
     val prefs = koinInject<app.m1k3.ai.assistant.platform.PreferencesStoreInterface>()
     var onboardingComplete by remember {
         mutableStateOf(
@@ -216,11 +234,9 @@ private fun MaApp() {
     }
 
     if (!onboardingComplete) {
-        app.m1k3.ai.assistant.design.theme.MaTheme {
-            app.m1k3.ai.assistant.ui.OnboardingScreen(
-                onComplete = { onboardingComplete = true },
-            )
-        }
+        app.m1k3.ai.assistant.ui.OnboardingScreen(
+            onComplete = { onboardingComplete = true },
+        )
         return
     }
 
