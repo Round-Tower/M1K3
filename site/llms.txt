@@ -1,32 +1,46 @@
 # M1K3 for Mac
 
-> M1K3 is a free, open-source, privacy-first AI companion for macOS that runs
-> entirely on-device. Local LLM inference (Gemma via MLX-Swift + Apple
-> Foundation Models), live voice (streaming STT/TTS), a personal knowledge
-> graph with RAG over your documents, consent-gated encrypted call
+> M1K3 is a free, open-source (Apache-2.0), privacy-first AI companion for
+> macOS that runs entirely on-device. Local LLM inference (Gemma + Qwen via
+> MLX-Swift + Apple Foundation Models), live voice (streaming STT + on-device
+> Kokoro neural TTS), a personal knowledge graph with RAG over your documents,
+> a self-repairing temporal memory graph, consent-gated encrypted call
 > transcription, a local tool-using agent, and an MCP server. Zero bytes of
 > user data leave the Mac. Requires Apple Silicon and macOS 26 Tahoe. Native
 > SwiftUI (Liquid Glass), not Electron. Made by Round Tower, Ireland.
 
 Key facts:
 - Privacy: all inference, embeddings, voice, and storage are on-device; the
-  optional web-search tool is off by default
-- Models: three brains — Mini (Apple Foundation Models), Lil (Qwen 3 4B), Big
-  (Gemma 4 12B) — MLX-Swift on Metal, switchable in Settings
+  optional web-search tool is off by default; even per-answer thumbs feedback
+  stays local and is never writable over MCP
+- Models: three brains — Mini (Apple Foundation Models, instant), Lil (Qwen 3
+  4B, the fast brain that fronts the conversation), Big (Gemma 4 12B, reached
+  by delegation for deep work) — MLX-Swift on Metal, switchable in Settings
+- Voice: Kokoro neural TTS on-device (pure MLX) with M1K3's own G2P
+  letter-to-sound + house lexicon, sentence-streamed speech, and M1K3's own
+  end-of-turn endpointing — ending a spoken turn on "please" submits it
 - Storage: app-sandboxed, GRDB, encrypted with a Keychain-held key
 - Memory: a temporal memory graph with dream-cycle self-repair — corrections
   supersede stale facts instead of silently losing them, with a visible history
-- MCP server: 15 tools (knowledge search, documents, voice, memory, ask) over
-  local HTTP at http://127.0.0.1:4242/mcp
-- Install: signed DMG at
+- Heartbeat: an ambient 2-hourly narrative pulse about your machine and day —
+  quiet hours respected, off by default, never enters the chat transcript
+- Brain at Home: serve the Mac's brain to your own devices over the LAN —
+  Bonjour discovery, one-time QR pairing, TLS-PSK, scoped read-only tools for
+  paired devices; off by default, nothing crosses the internet
+- Screensaver: a native macOS screensaver (the pixel M in ambient rain),
+  installable from Settings
+- MCP server: 16 tools (knowledge search, documents, voice, memory, ask —
+  with an async job API for long asks) over local HTTP at
+  http://127.0.0.1:4242/mcp
+- Install: signed & notarized DMG at
   https://github.com/Round-Tower/m1k3/releases/latest/download/M1K3.dmg,
   TestFlight beta, or build from source
-- License/source: open source, https://github.com/Round-Tower/m1k3
+- License/source: Apache-2.0, https://github.com/Round-Tower/m1k3
 
 ## Docs
 
 - [Repository and build-from-source](https://github.com/Round-Tower/m1k3): monorepo; the Mac app lives in macos/
-- [macOS app plan](https://github.com/Round-Tower/m1k3/blob/master/macos/PLAN.md): architecture and roadmap
+- [macOS app roadmap](https://github.com/Round-Tower/m1k3/blob/master/macos/ROADMAP.md): what's next (PLAN.md in the same folder is the historical decision record)
 
 ## Answers
 

@@ -47,7 +47,7 @@
     { "@type": "Question", "name": "How do I give Claude a local memory with MCP?",
       "acceptedAnswer": { "@type": "Answer", "text": "Run an MCP knowledge server on your machine and register it with your Claude client. M1K3, a free open-source AI companion for Apple Silicon Macs, serves MCP over loopback HTTP at http://127.0.0.1:4242/mcp while the app runs. Import your documents into M1K3, add the server to Claude Code or Claude Desktop, and Claude can search and read that knowledge through tools like search_knowledge — with retrieval happening entirely on your Mac." } },
     { "@type": "Question", "name": "What MCP tools does M1K3 expose?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Fifteen tools spanning knowledge (search_knowledge, list_documents, get_document), memory (remember, recall_memory, related_memory, forget_memory, memory_stats), intelligence (ask_m1k3, get_answer), voice (speak, stop_speaking, listen), and utility (get_status, open_link)." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Sixteen tools spanning knowledge (search_knowledge, list_documents, get_document), memory (remember, recall_memory, related_memory, forget_memory, memory_stats), intelligence (ask_m1k3, get_answer, list_jobs), voice (speak, stop_speaking, listen), and utility (get_status, open_link)." } },
     { "@type": "Question", "name": "Is an MCP knowledge server private?",
       "acceptedAnswer": { "@type": "Answer", "text": "M1K3's server binds to 127.0.0.1 — loopback only, unreachable from the network — and retrieval, embeddings, and storage all run on-device. One honest caveat: whatever an MCP client retrieves becomes part of that client's own context. If the client is a cloud-hosted assistant, retrieved text goes wherever that assistant's conversations go. Local server, client's rules — connect the clients you trust." } },
     { "@type": "Question", "name": "Does M1K3's MCP server work with agents other than Claude?",
@@ -92,7 +92,7 @@
   <p>Cloud assistants usually solve "memory" with cloud storage. The local variant flips that: M1K3 keeps the knowledge base on your Mac — app-sandboxed, encrypted with a Keychain-held key — and exposes it only on <code>127.0.0.1</code>, the loopback interface no other machine can reach. Claude gets a second brain; the second brain stays home.</p>
 
   <h2>What tools does M1K3 expose over MCP?</h2>
-  <p>Fifteen, spanning knowledge, memory, intelligence, and voice (the <a href="https://github.com/Round-Tower/m1k3#tools">README's table</a> is generated live from the running server):</p>
+  <p>Sixteen, spanning knowledge, memory, intelligence, and voice (the <a href="https://github.com/Round-Tower/m1k3#tools">README's table</a> is generated live from the running server):</p>
   <div class="table-scroll">
     <table class="cmp">
       <thead>
@@ -109,6 +109,7 @@
         <tr><td>memory_stats</td><td>How many live facts M1K3 currently remembers</td></tr>
         <tr><td>ask_m1k3</td><td>Ask M1K3's local brain a question (grounded in its knowledge)</td></tr>
         <tr><td>get_answer</td><td>Fetch the result of a long-running ask_m1k3 call by job id</td></tr>
+        <tr><td>list_jobs</td><td>List queued and finished ask_m1k3 jobs with their states</td></tr>
         <tr><td>speak / stop_speaking</td><td>Speak text aloud through M1K3's voice (and animate the avatar); stop immediately</td></tr>
         <tr><td>listen</td><td>Listen on the mic and return the transcript when the speaker pauses</td></tr>
         <tr><td>get_status</td><td>Active brain tier, voice status, and busy flags</td></tr>
