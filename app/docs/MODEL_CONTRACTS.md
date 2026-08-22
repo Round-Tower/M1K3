@@ -7,9 +7,12 @@
 > document establishes each contract from primary sources, then audits our code
 > against it line by line.
 >
-> Status: **audit only — 2026-08-22.** Nothing here has been changed. Findings
-> are ranked at the end with a proposed fix and the eval fixture that would
-> prove each one.
+> Status: **in progress — 2026-08-22.** The audit below stands as written;
+> §8 tracks what has since landed. Findings are ranked in §5 with a proposed
+> fix and the eval fixture that would prove each one.
+>
+> See **§8 Progress** (bottom) for the re-baseline numbers and the current
+> state of the work list.
 
 ---
 
@@ -599,3 +602,76 @@ the F8 echo mechanism is a reasoned reconstruction from two verified defects,
 not an observed repro; the "16 s turn" attribution to F15 is a hypothesis; and
 the LFM2.5 section is desk research plus the Mac's numbers, with no Android
 measurement behind it. Prior: Unknown.*
+
+---
+
+## 8. Progress — 2026-08-22 (device session + a few device-free hours)
+
+The audit above was written before anything ran on a device. This section is
+what has since landed and what the re-baseline says.
+
+### Landed (all committed on `feat/kmp-align-reduce`)
+
+| # | Item | Commit | Verified |
+|---|---|---|---|
+| F1 | Load the PEG arena before parsing | `68712e0f` | on-device (see below) |
+| F2 | `reasoning_format = AUTO` | `68712e0f` | on-device |
+| — | Clear the KV cache per generate call (found while fixing F1) | `68712e0f` | on-device |
+| F6 | Guard the `<think>` instruction, make it syntax-neutral | `d55497a3` | unit |
+| F8b | Sanitizer: strip a role after whitespace (`No.system` echo) | `028037a8` | unit |
+| — | **PersonaLeakGuard** — output guard vs verbatim wiring recitation | `793c8f91` | unit; eval-owed |
+
+**PersonaLeakGuard** is not an F-item — it is the code-side answer to the
+re-baseline's dominant real failure (security). Prose in the ethos does not stop
+a 2–3B model reciting its wiring, so a finished answer that reproduces a 60+ char
+wiring sentence verbatim is replaced with an in-character refusal. A faithful
+port of the Mac's #111 guard; spans derive from `M1K3Persona.wiringText`, the
+same constant the builder injects, so they can't drift.
+
+### The F1/F2 re-baseline (Pixel 9a, armv8.6_1, thinking off)
+
+The instrument earned its keep: F1/F2 moved every category that had been
+flat-zero.
+
+| kind | old baseline | **Mini (0.8B)** | **Lil (2B)** |
+|---|---|---|---|
+| instruction-following | — | 3/3 | 3/3 |
+| open-chat | — | 4/4 | 4/4 |
+| security | 0/4 | 2/4 | 1/4 |
+| small-talk | — | 3/3 | 3/3 |
+| tool-use | **0/4** | **4/4** | **4/4** |
+| world-knowledge | **0/4** | **3/4** | 2/4 |
+| **TOTAL** | **9/22** | **19/22** | **17/22** |
+| median latency | — | ~5.0s | **~50s** ⚠️ |
+
+- **Big (Gemma 4) was not captured** — the device disconnected mid-matrix.
+  Finishing the Lil (thinking-on) + Big (both) cells is the first device-owed
+  task; the harness resumes cleanly now (per-fixture writes + fast completion).
+- **Two new device-owed findings:** (1) **Lil's ~50s median latency** is a
+  serious perf signal for the 2B on this device — probe other CPU variants and
+  the sampler. (2) The **armv9 "broken logits" conclusion is falsified** —
+  armv9.0_1 re-baselined at 17/22 with real answers; it was the thinking/parse/
+  KV bugs, not the SVE2 kernel (corrected in `ma_core.cpp`, the eval README, and
+  `scorecard.py`; `armv8.6_1` stays first on *latency*).
+
+### Remaining work list — **do the rest on a device, measured**
+
+The audit's own rule: the P3 tier is tuning, and tuning without a device is
+guessing. So these are deliberately **not** done in the device-free window:
+
+- **F14** — make the native path unconditional (turns F3/F4/F5/F7 into
+  deletions). Architectural + must be gated on the Big re-baseline; wants
+  `challenger` and a device. Highest structural value, highest care.
+- **F8a** — enforce stop strings in the C generation loop (the real fix for the
+  role-echo; F8b was belt-and-braces). Device-verify.
+- **F10 / F11 / F12** — sampler order, `presence_penalty`, per-`LlmModel`
+  sampling defaults. All P3 tuning — measure each against the harness.
+- **F9** — prompt truncation should drop from the middle, not the tail.
+- **F13 / F15** — seed from config; count native-path fall-throughs in the eval.
+
+*Signed: Kev + claude-fable-5, 2026-08-22, Confidence 0.85 — F1/F2 are
+on-device-verified by the re-baseline jump (tool-use and world-knowledge off
+zero); F6/F8b/PersonaLeakGuard are TDD'd red-first and gate-green but their
+on-device effect (the security cells) is eval-owed; the re-baseline numbers are
+single-run (no error bars) and Big is uncaptured; the armv9 correction rests on
+one clean run and is flagged for re-confirmation. Prior: Kev + claude-opus-4-8.*
