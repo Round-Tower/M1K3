@@ -104,7 +104,6 @@ fun SettingsScreen(
             item { GroundingSection(prefs = prefs) }
             item { VoiceSection(prefs = prefs) }
             item { YouSection(prefs = prefs) }
-            item { DataSection() }
             item { AboutSection(onNavigateToLicenses = onNavigateToLicenses) }
         }
     }
@@ -378,36 +377,13 @@ private fun YouSection(prefs: PreferencesStoreInterface) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Data
-// ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun DataSection() {
-    Column {
-        SectionHeader("Data")
-        ListItem(
-            headlineContent = { Text("Export conversations") },
-            supportingContent = { Text("Backup to JSON") },
-            modifier = Modifier.clickable {},
-        )
-        ListItem(
-            headlineContent = { Text("Import conversations") },
-            supportingContent = { Text("Restore from backup") },
-            modifier = Modifier.clickable {},
-        )
-        ListItem(
-            headlineContent = {
-                Text(
-                    "Clear all data",
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.error,
-                )
-            },
-            supportingContent = { Text("Reset app to defaults") },
-            modifier = Modifier.clickable {},
-        )
-    }
-}
+// The old "Data" section (Export/Import/Clear all data) was three no-ops —
+// tapping any row did nothing. Cut rather than wired: a real "clear all
+// data" needs to reach across conversations, memories, and documents in
+// one irreversible action, which deserves its own confirmation-gated pass,
+// not a Settings-polish edit. A dishonest-but-present row is worse than no
+// row (doctrine principle 7 — an instrument gets a hidden door, not a fake
+// one on the main road).
 
 // ─────────────────────────────────────────────────────────────
 // About
