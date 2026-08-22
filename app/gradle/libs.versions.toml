@@ -24,7 +24,7 @@ ndk = "28.2.13676358"
 androidx-work = "2.11.2"
 
 # M1K3 AI Dependencies
-sqldelight = "2.0.2"
+sqldelight = "2.3.2"
 onnxruntime = "1.23.2"
 kotlinx-serialization = "1.11.0"
 kotlinx-datetime = "0.8.0"

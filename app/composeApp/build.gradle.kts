@@ -277,7 +277,7 @@ sqldelight {
             packageName.set("app.m1k3.ai.assistant.database")
             // Schema will be defined in src/commonMain/sqldelight
             schemaOutputDirectory.set(file("build/dbs"))
-            dialect("app.cash.sqldelight:sqlite-3-38-dialect:2.0.2")
+            dialect("app.cash.sqldelight:sqlite-3-38-dialect:2.3.2")
         }
     }
 }
