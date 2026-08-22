@@ -143,6 +143,11 @@ class HttpModelDownloadManager(
                 tempFile.renameTo(targetFile)
                 logger.i { "Download complete: ${targetFile.length() / 1_000_000}MB" }
                 emit(DownloadProgress.Complete(model.id, targetFile.absolutePath))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // A cancelled download (another brain picked) is not a failure —
+                // the .tmp stays for resume. Rethrow so the flow completes cleanly.
+                logger.i { "Download of ${model.displayName} cancelled (${tempFile.length() / 1_000_000}MB kept for resume)" }
+                throw e
             } catch (e: Exception) {
                 logger.e(e) { "Download failed: ${e.message}" }
                 emit(DownloadProgress.Failed(model.id, e.message ?: "Download failed"))
