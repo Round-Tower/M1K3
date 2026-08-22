@@ -28,8 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -109,6 +107,13 @@ fun ChatContextBar(
     }
 }
 
+// `state.currentModel` / `availableModels` / `onModelSwitch` stay on the
+// footer's data contract (Settings' Brain section is the one place a brain
+// is chosen — doctrine principle 6, "show a state once") but the row itself
+// no longer renders the brain name or a tokens/sec figure: those are
+// engineering nouns (doctrine principle 7) that don't belong on the chat
+// face. What's left is context-window headroom (a real, non-noisy signal)
+// and — while a tool call is in flight — that it's happening.
 @Composable
 private fun FooterRow(
     state: ChatContextBarState,
@@ -122,15 +127,6 @@ private fun FooterRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaSpacing.sm),
     ) {
-        ModelTag(
-            currentModel = state.currentModel,
-            availableModels = availableModels,
-            onModelSwitch = onModelSwitch,
-            enabled = enabled,
-        )
-
-        Dot()
-
         ContextTag(
             percent = state.contextPercent,
             onTap = onContextTap,
@@ -138,11 +134,9 @@ private fun FooterRow(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        val tokensPerSecond = state.lastTokensPerSecond
         val toolRunning = state.status as? ChatContextBarStatus.ToolRunning
-        when {
-            toolRunning != null -> ToolRunningChip(toolId = toolRunning.toolId)
-            tokensPerSecond != null -> TokensPerSecondTag(tokensPerSecond)
+        if (toolRunning != null) {
+            ToolRunningChip(toolId = toolRunning.toolId)
         }
     }
 }
@@ -156,46 +150,6 @@ private fun Dot() {
                 .clip(CircleShape)
                 .background(MaColors.textMuted().copy(alpha = 0.5f)),
     )
-}
-
-@Composable
-private fun ModelTag(
-    currentModel: LlmModel,
-    availableModels: List<LlmModel>,
-    onModelSwitch: (LlmModel) -> Unit,
-    enabled: Boolean,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        Text(
-            text = currentModel.displayName,
-            style = MaTypography.labelSmall,
-            color = if (enabled) MaColors.Orange.copy(alpha = 0.9f) else MaColors.textDisabled(),
-            fontWeight = FontWeight.Medium,
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(MaRadius.xs))
-                    .clickable(enabled = enabled) { expanded = true }
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            availableModels.forEach { model ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = model.displayName,
-                            style = MaTypography.bodyMedium,
-                            color = if (model == currentModel) MaColors.Orange else MaColors.textPrimary(),
-                        )
-                    },
-                    onClick = {
-                        expanded = false
-                        if (model != currentModel) onModelSwitch(model)
-                    },
-                )
-            }
-        }
-    }
 }
 
 @Composable
@@ -281,30 +235,6 @@ private fun ToolRunningChip(toolId: String) {
 }
 
 @Composable
-private fun TokensPerSecondTag(tokensPerSecond: Float) {
-    // Subtle shimmer on value change — a 400ms alpha bounce tied to the value.
-    val shimmerTrigger = remember { mutableStateOf(0) }
-    LaunchedEffect(tokensPerSecond) { shimmerTrigger.value++ }
-    val alpha by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
-        label = "tpsShimmer",
-    )
-
-    // Touch the trigger so recomposition happens on change.
-    @Suppress("UNUSED_VARIABLE")
-    val t = shimmerTrigger.value
-
-    Text(
-        text = "%.1f t/s".format(tokensPerSecond),
-        style = MaTypography.labelSmall,
-        color = MaColors.Orange.copy(alpha = 0.85f * alpha),
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier.padding(horizontal = 4.dp),
-    )
-}
-
-@Composable
 private fun ListeningPill(partial: String) {
     Row(
         modifier =
@@ -368,4 +298,3 @@ private fun Waveform(
         }
     }
 }
-

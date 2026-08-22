@@ -40,9 +40,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.m1k3.ai.assistant.design.tokens.MaColors
@@ -64,9 +64,13 @@ fun ThinkingPill(
     thinkingContent: String?,
     isThinking: Boolean,
     thinkingDurationMs: Long?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (thinkingContent.isNullOrEmpty() && !isThinking) return
+    // Doctrine (engineering nouns don't ship): a completed think pass under a
+    // second reads as a broken "Thought for 0.0s" pill, not a feature. Only
+    // show the completed state once there was something worth naming.
+    if (!isThinking && (thinkingDurationMs == null || thinkingDurationMs <= 1000L)) return
 
     val clipboardManager = LocalClipboardManager.current
     var expanded by remember { mutableStateOf(false) }
@@ -83,49 +87,56 @@ fun ThinkingPill(
     // Pulse animation for the "Thinking..." state
     val pulse = rememberInfiniteTransition(label = "think-pulse")
     val pulseAlpha by pulse.animateFloat(
-        initialValue = 0.5f, targetValue = 1f,
+        initialValue = 0.5f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(900, easing = EaseInOut), RepeatMode.Reverse),
-        label = "think-alpha"
+        label = "think-alpha",
     )
 
     val headerAlpha = if (isThinking) pulseAlpha else 1f
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaColors.bgElevated())
-            .clickable(
-                enabled = !isThinking && !thinkingContent.isNullOrEmpty(),
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { expanded = !expanded }
-            .padding(horizontal = MaSpacing.md, vertical = MaSpacing.sm)
-            .animateContentSize()
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaColors.bgElevated())
+                .clickable(
+                    enabled = !isThinking && !thinkingContent.isNullOrEmpty(),
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                ) { expanded = !expanded }
+                .padding(horizontal = MaSpacing.md, vertical = MaSpacing.sm)
+                .animateContentSize(),
     ) {
         // Header row
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
                 text = "🧠",
                 fontSize = 14.sp,
-                modifier = Modifier.alpha(headerAlpha)
+                modifier = Modifier.alpha(headerAlpha),
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = if (isThinking) "Thinking…"
-                       else thinkingDurationMs?.let { ms ->
-                           val secs = ms / 1000f
-                           "Thought for ${"%.1f".format(secs)}s"
-                       } ?: "Thought",
-                style = MaTypography.labelSmall.copy(
-                    fontSize = 12.sp,
-                    fontStyle = if (isThinking) FontStyle.Italic else FontStyle.Normal
-                ),
+                text =
+                    if (isThinking) {
+                        "Thinking…"
+                    } else {
+                        thinkingDurationMs?.let { ms ->
+                            val secs = ms / 1000f
+                            "Thought for ${"%.1f".format(secs)}s"
+                        } ?: "Thought"
+                    },
+                style =
+                    MaTypography.labelSmall.copy(
+                        fontSize = 12.sp,
+                        fontStyle = if (isThinking) FontStyle.Italic else FontStyle.Normal,
+                    ),
                 color = MaColors.textMuted().copy(alpha = headerAlpha),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             if (!isThinking && !thinkingContent.isNullOrEmpty()) {
                 // Copy thinking content to clipboard
@@ -134,22 +145,26 @@ fun ThinkingPill(
                         clipboardManager.setText(AnnotatedString(thinkingContent))
                         showCopied = true
                     },
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(24.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.ContentCopy,
                         contentDescription = "Copy thinking",
                         tint = if (showCopied) MaColors.Orange else MaColors.textDisabled(),
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(14.dp),
                     )
                 }
                 Spacer(Modifier.width(4.dp))
                 Icon(
-                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp
-                                  else Icons.Default.KeyboardArrowDown,
+                    imageVector =
+                        if (expanded) {
+                            Icons.Default.KeyboardArrowUp
+                        } else {
+                            Icons.Default.KeyboardArrowDown
+                        },
                     contentDescription = if (expanded) "Collapse" else "Expand",
                     tint = MaColors.textDisabled(),
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }
@@ -158,19 +173,20 @@ fun ThinkingPill(
         AnimatedVisibility(
             visible = expanded || isThinking,
             enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+            exit = fadeOut() + shrinkVertically(),
         ) {
             Column {
                 Spacer(Modifier.height(MaSpacing.xs))
                 Text(
                     text = thinkingContent ?: "",
-                    style = MaTypography.bodySmall.copy(
-                        fontSize = 12.sp,
-                        fontStyle = FontStyle.Italic
-                    ),
+                    style =
+                        MaTypography.bodySmall.copy(
+                            fontSize = 12.sp,
+                            fontStyle = FontStyle.Italic,
+                        ),
                     color = MaColors.textMuted(),
                     lineHeight = 18.sp,
-                    modifier = Modifier.alpha(0.8f)
+                    modifier = Modifier.alpha(0.8f),
                 )
             }
         }

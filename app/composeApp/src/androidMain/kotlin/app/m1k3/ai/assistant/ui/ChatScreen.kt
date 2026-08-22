@@ -60,7 +60,6 @@ import app.m1k3.ai.assistant.chat.toEmoji
 import app.m1k3.ai.assistant.chat.toUserMessage
 import app.m1k3.ai.assistant.design.components.MaChatBubbleAI
 import app.m1k3.ai.assistant.design.components.MaChatBubbleUser
-import app.m1k3.ai.assistant.design.components.MaStatusCard
 import app.m1k3.ai.assistant.design.components.ThinkingPill
 import app.m1k3.ai.assistant.design.components.ToolCallPill
 import app.m1k3.ai.assistant.design.haptics.rememberHapticFeedback
@@ -520,16 +519,11 @@ fun ChatBubble(
     isThinking: Boolean = false,
 ) {
     when {
-        message.isStatusMessage -> {
-            MaStatusCard(
-                greeting = message.text.lines().firstOrNull() ?: "Hello!",
-                engineReady = true,
-                memoryCount = message.statusMemoryCount ?: 0,
-                maxContextTokens = message.statusMaxTokens ?: 2048,
-                deviceTierName = message.statusDeviceTier ?: "Unknown",
-            )
-        }
-
+        // No welcome/status card — chat shows messages, nothing else
+        // (macos/docs/DESIGN_DOCTRINE.md principle 7). `isStatusMessage`
+        // is never set anymore (see ChatScreenViewModel.primeSystemPrompt);
+        // an old persisted status row just falls through and renders as a
+        // plain assistant bubble rather than vanishing.
         message.isUser -> {
             MaChatBubbleUser(
                 text = message.text,
