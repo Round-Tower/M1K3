@@ -156,24 +156,30 @@ object EvalHarness {
         viewModel: ChatScreenViewModel,
         request: EvalRunRequest,
     ) {
+        // Write after EVERY fixture (atomic rename) so a process the driver kills
+        // for a native hang still leaves its completed results + the in-flight
+        // fixture id behind. tools/eval/android/run.py resumes past it.
+        val out = java.io.File(request.outPath)
+        val tmp = java.io.File(request.outPath + ".tmp")
+        fun write(report: EvalRunReport) {
+            try {
+                tmp.writeText(report.toJson())
+                tmp.renameTo(out)
+            } catch (e: Exception) {
+                Log.e(TAG, "failed to write results to ${request.outPath}", e)
+            }
+        }
+
         val report =
             try {
-                EvalRunner(viewModel).run(request)
+                EvalRunner(viewModel).run(request, onReport = ::write)
             } catch (e: Exception) {
                 Log.e(TAG, "eval run crashed", e)
                 crashReport(request, e)
             }
 
-        try {
-            java.io.File(request.outPath).writeText(report.toJson())
-            Log.i(TAG, "wrote ${report.results.size} result(s) to ${request.outPath}")
-        } catch (e: Exception) {
-            // The Python driver's fallback is watching for PROCESS EXIT, not
-            // just the file — a missing file with the process gone still
-            // reads as "this cell failed", just without detail.
-            Log.e(TAG, "failed to write results to ${request.outPath}", e)
-        }
-
+        write(report)
+        Log.i(TAG, "wrote ${report.results.size} result(s) to ${request.outPath}")
         activity.finish()
     }
 

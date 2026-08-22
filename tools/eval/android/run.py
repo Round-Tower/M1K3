@@ -65,6 +65,12 @@ MODEL_KEYS = {"qwen35_0b8", "qwen35_2b", "gemma4_e2b"}
 
 DEFAULT_CELL_TIMEOUT_S = 20 * 60
 POLL_INTERVAL_S = 3
+# A single fixture with no progress for this long is treated as a native hang
+# (an uncancellable llama_decode — see EvalRunReport.inProgress): the process
+# is killed and the cell resumes past it. Big's cold model load is exempted by
+# only starting the clock once the first fixture is in-flight.
+FIXTURE_STALL_S = 240
+MAX_LAUNCHES_PER_CELL = 40
 
 
 def adb(serial, *args, check=True, capture=True):
@@ -123,10 +129,9 @@ def pull_text(serial, path):
     return result.stdout
 
 
-def run_cell(serial, fixtures_path, model, thinking, variant, cell_timeout):
+def _launch(serial, fixtures_path, model, thinking, variant, skip):
     adb(serial, "shell", "am", "force-stop", PACKAGE, check=False)
-    adb(serial, "shell", "run-as", PACKAGE, "rm", "-f", APP_RESULTS_PATH, check=False)
-
+    adb(serial, "shell", "run-as", PACKAGE, "rm", "-f", APP_RESULTS_PATH, APP_RESULTS_PATH + ".tmp", check=False)
     args = [
         "shell", "am", "start", "-n", ACTIVITY,
         "--es", "m1k3.eval.fixtures", fixtures_path,
@@ -138,32 +143,90 @@ def run_cell(serial, fixtures_path, model, thinking, variant, cell_timeout):
         args += ["--ez", "m1k3.eval.thinking", "true" if thinking else "false"]
     if variant:
         args += ["--es", "m1k3.eval.cpu_variant", VARIANT_FILENAMES[variant]]
+    if skip:
+        args += ["--es", "m1k3.eval.skip", ",".join(sorted(skip))]
     adb(serial, *args)
 
-    deadline = time.time() + cell_timeout
-    got_file = False
-    while time.time() < deadline:
-        if device_file_exists(serial, APP_RESULTS_PATH):
-            got_file = True
-            break
-        if not device_process_alive(serial):
-            # The activity may still be flushing the file at the moment the
-            # process count last read as zero — give it one more beat.
-            time.sleep(2)
-            got_file = device_file_exists(serial, APP_RESULTS_PATH)
-            break
-        time.sleep(POLL_INTERVAL_S)
 
-    if not got_file and time.time() >= deadline:
-        return {"status": "timeout", "raw": None}
-    if got_file:
-        raw_text = pull_text(serial, APP_RESULTS_PATH)
-        try:
-            return {"status": "ok", "raw": json.loads(raw_text)}
-        except json.JSONDecodeError:
-            return {"status": "unparseable", "raw": raw_text}
-    return {"status": "crashed", "raw": None}
+def _read_report(serial):
+    if not device_file_exists(serial, APP_RESULTS_PATH):
+        return None
+    raw = pull_text(serial, APP_RESULTS_PATH)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return None
 
+
+def run_cell(serial, fixtures_path, model, thinking, variant, cell_timeout, all_ids):
+    """Run one matrix cell to completion, surviving native hangs.
+
+    The app writes its results file after every fixture, naming the in-flight
+    fixture in `inProgress`. We watchdog that: a fixture that stays in-flight
+    while the completed-results count doesn't grow for FIXTURE_STALL_S is a
+    native hang (a stuck llama_decode no coroutine timeout can cancel). We kill
+    the process, record the fixture as `hung`, and relaunch with it added to
+    the skip set — resuming the cell instead of losing it.
+    """
+    done = {}            # fixture id -> result dict (from the app)
+    hung = {}            # fixture id -> synthetic hung result
+    meta = None
+    cell_deadline = time.time() + cell_timeout
+    launches = 0
+
+    while len(done) + len(hung) < len(all_ids) and launches < MAX_LAUNCHES_PER_CELL:
+        if time.time() >= cell_deadline:
+            break
+        skip = set(done) | set(hung)
+        _launch(serial, fixtures_path, model, thinking, variant, skip)
+        launches += 1
+
+        last_progress = time.time()
+        last_count = len(done)
+        last_inflight = None
+
+        while True:
+            time.sleep(POLL_INTERVAL_S)
+            report = _read_report(serial)
+            alive = device_process_alive(serial)
+
+            if report is not None:
+                if report.get("run"):
+                    meta = report["run"]
+                for r in report.get("results", []):
+                    done[r["fixtureId"]] = r
+                inflight = report.get("inProgress")
+                if len(done) > last_count or inflight != last_inflight:
+                    last_progress = time.time()
+                    last_count = len(done)
+                    last_inflight = inflight
+
+                # Completed cleanly: process exiting with inProgress cleared.
+                if inflight is None and not alive:
+                    return {"meta": meta, "done": done, "hung": hung, "launches": launches}
+
+                # Stalled on one fixture past the grace window → hang.
+                if inflight is not None and time.time() - last_progress > FIXTURE_STALL_S:
+                    print(f"    ! {inflight} hung ({FIXTURE_STALL_S}s no progress) — skipping")
+                    hung[inflight] = {
+                        "fixtureId": inflight, "kind": None, "passed": False,
+                        "failedChecks": ["native-hang"], "answer": "", "thinking": None,
+                        "toolsCalled": [], "chars": 0, "tokens": 0,
+                        "generateMs": int((time.time() - last_progress) * 1000),
+                        "firstTokenMs": None, "error": "native hang (killed by watchdog)",
+                    }
+                    adb(serial, "shell", "am", "force-stop", PACKAGE, check=False)
+                    break
+            elif not alive:
+                # Process gone with no readable file: a crash with no partial.
+                # Relaunch (skip set unchanged) unless nothing is progressing.
+                if time.time() - last_progress > FIXTURE_STALL_S:
+                    break
+
+            if time.time() >= cell_deadline:
+                break
+
+    return {"meta": meta, "done": done, "hung": hung, "launches": launches}
 
 def device_header(serial):
     model = adb(serial, "shell", "getprop", "ro.product.model", check=False).stdout.strip()
@@ -194,6 +257,7 @@ def main():
 
     fixtures = load_fixtures(args.fixtures)
     print(f"{len(fixtures)} fixtures loaded from {args.fixtures}")
+    all_ids = [f["id"] for f in fixtures]
 
     models = [m.strip() for m in args.models.split(",") if m.strip()] or [None]
     for model in models:
@@ -223,6 +287,14 @@ def main():
 
     manifest = {"header": header, "cells": []}
 
+    # Keep the device awake for the whole run. A cell that outlives the screen
+    # timeout leaves the activity cached; Android's freezer then kills it
+    # ("Async binder space running out while frozen", Pixel 9a 2026-08-22) and
+    # the cell reads as crashed. Restored in the finally below.
+    adb(args.device, "shell", "svc", "power", "stayon", "true", check=False)
+    adb(args.device, "shell", "input", "keyevent", "KEYCODE_WAKEUP", check=False)
+    adb(args.device, "shell", "wm", "dismiss-keyguard", check=False)
+
     total_cells = len(models) * len(thinking_labels) * len(variants)
     cell_num = 0
     for model in models:
@@ -233,16 +305,24 @@ def main():
                 cell_id = "-".join(filter(None, [model or "default", thinking_label, variant])) or "default"
                 print(f"\n=== [{cell_num}/{total_cells}] cell: {cell_id} ===")
 
-                outcome = run_cell(args.device, device_fixtures_path, model, thinking, variant, args.cell_timeout)
-                print(f"  status={outcome['status']}")
+                outcome = run_cell(
+                    args.device, device_fixtures_path, model, thinking, variant,
+                    args.cell_timeout, all_ids,
+                )
+                results = list(outcome["done"].values()) + list(outcome["hung"].values())
+                n_hung = len(outcome["hung"])
+                status = (
+                    "ok" if len(results) == len(all_ids) and n_hung == 0
+                    else "partial" if results
+                    else "crashed"
+                )
+                print(f"  status={status} ({len(outcome['done'])} ok, {n_hung} hung, "
+                      f"{len(all_ids) - len(results)} missing, {outcome['launches']} launch(es))")
 
-                raw_path = None
-                if outcome["raw"] is not None:
-                    raw_path = raw_dir / f"{cell_id}.json"
-                    if isinstance(outcome["raw"], (dict, list)):
-                        raw_path.write_text(json.dumps(outcome["raw"], indent=2))
-                    else:
-                        raw_path.write_text(outcome["raw"])
+                raw_path = raw_dir / f"{cell_id}.json"
+                raw_path.write_text(json.dumps(
+                    {"run": outcome["meta"], "results": results}, indent=2,
+                ))
 
                 manifest["cells"].append(
                     {
@@ -250,13 +330,16 @@ def main():
                         "model": model,
                         "thinking": thinking_label,
                         "variant": variant,
-                        "status": outcome["status"],
-                        "raw": str(raw_path) if raw_path else None,
+                        "status": status,
+                        "hung": sorted(outcome["hung"]),
+                        "launches": outcome["launches"],
+                        "raw": str(raw_path),
                     }
                 )
 
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
     print(f"\nwrote {out_dir / 'manifest.json'}")
+    adb(args.device, "shell", "svc", "power", "stayon", "false", check=False)
     print(f"next: ./scorecard.py {out_dir}")
 
 

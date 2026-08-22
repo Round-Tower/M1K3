@@ -40,6 +40,11 @@ data class EvalRunMeta(
 data class EvalRunReport(
     val run: EvalRunMeta,
     val results: List<EvalResult>,
+    /** The fixture currently being run when this snapshot was written; null on a
+     *  completed run. The Python driver watchdogs this: a fixture that stays
+     *  [inProgress] while [results] does not grow is hung natively (a stuck
+     *  llama_decode a coroutine timeout can't cancel) — kill and resume past it. */
+    val inProgress: String? = null,
 )
 
 private val evalReportJson =

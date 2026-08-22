@@ -36,7 +36,10 @@ private const val TAG = "M1K3Eval"
 class EvalRunner(
     private val viewModel: ChatScreenViewModel,
 ) {
-    suspend fun run(request: EvalRunRequest): EvalRunReport {
+    suspend fun run(
+        request: EvalRunRequest,
+        onReport: (EvalRunReport) -> Unit = {},
+    ): EvalRunReport {
         val fixtures = parseFixtures(readFile(request.fixturesPath))
         Log.i(TAG, "loaded ${fixtures.size} fixtures from ${request.fixturesPath}")
 
@@ -52,13 +55,21 @@ class EvalRunner(
             )
         }
 
+        val meta = buildMeta(request)
+        val toRun = fixtures.filter { it.id !in request.skip }
         val results = mutableListOf<EvalResult>()
-        for ((index, fixture) in fixtures.withIndex()) {
-            Log.i(TAG, "[$index/${fixtures.size}] ${fixture.id}")
+        for ((index, fixture) in toRun.withIndex()) {
+            Log.i(TAG, "[$index/${toRun.size}] ${fixture.id}")
+            // Mark this fixture in-flight BEFORE running it. If it hangs
+            // natively (uncancellable), the driver sees inProgress stuck here
+            // while results doesn't grow, and steps over it.
+            onReport(EvalRunReport(run = meta, results = results.toList(), inProgress = fixture.id))
             waitForClear()
             results += runFixture(fixture)
+            // Persist after every fixture so a killed process keeps its work.
+            onReport(EvalRunReport(run = meta, results = results.toList(), inProgress = null))
         }
-        return EvalRunReport(run = buildMeta(request), results = results)
+        return EvalRunReport(run = meta, results = results, inProgress = null)
     }
 
     private fun buildMeta(request: EvalRunRequest): EvalRunMeta {

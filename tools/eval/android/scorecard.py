@@ -47,7 +47,7 @@ def load_run(run_dir):
 
     cells = []
     for cell in manifest["cells"]:
-        if cell["status"] != "ok" or not cell["raw"]:
+        if not cell.get("raw") or not Path(cell["raw"]).exists():
             cells.append({**cell, "results": []})
             continue
         report = json.loads(Path(cell["raw"]).read_text())
@@ -67,6 +67,10 @@ def summarise(cells):
             entry = table[c["id"]][r["kind"]]
             entry[1] += 1
             entry[0] += int(bool(r.get("passed")))
+            # A native hang produced no tokens/latency — exclude it from the
+            # medians so it can't masquerade as a broken-logits signal.
+            if r.get("error", "").startswith("native hang"):
+                continue
             latencies[c["id"]].append(r.get("generateMs", 0))
             tokens[c["id"]].append(r.get("tokens", 0))
             if r.get("thinking"):
@@ -80,10 +84,18 @@ def tripwires(cells, tokens, thinking_chars):
     for c in cells:
         cell_flags = []
 
-        if c["status"] != "ok":
-            cell_flags.append(f"CELL {c['status'].upper()} — no results captured")
+        if c["status"] == "crashed":
+            cell_flags.append("CELL CRASHED — no results captured")
+        hung = c.get("hung") or [r["fixtureId"] for r in c["results"] if r.get("error", "").startswith("native hang")]
+        if hung:
+            cell_flags.append(f"HUNG (native, {len(hung)}): {', '.join(hung)}")
 
-        cell_tokens = tokens.get(c["id"], [])
+        # A native hang is a crash, not garbage output — keep it out of the
+        # broken-logits median so the CPU-variant signal stays clean.
+        cell_tokens = [
+            r["tokens"] for r in c["results"]
+            if not r.get("error", "").startswith("native hang")
+        ]
         if cell_tokens:
             med = statistics.median(cell_tokens)
             if med < BROKEN_LOGITS_TOKEN_FLOOR:

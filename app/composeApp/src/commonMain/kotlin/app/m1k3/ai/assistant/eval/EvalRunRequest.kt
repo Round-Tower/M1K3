@@ -32,6 +32,11 @@ data class EvalRunRequest(
     val model: String?,
     val thinking: Boolean?,
     val cpuVariant: String?,
+    /** Fixture ids to NOT run — already completed or hung on a prior launch of
+     *  this cell. `run.py` accumulates results across launches and re-sends the
+     *  growing skip set so a native hang (uncancellable in-process) can be
+     *  stepped over instead of killing the whole cell. */
+    val skip: Set<String> = emptySet(),
 ) {
     companion object {
         const val EXTRA_FIXTURES = "m1k3.eval.fixtures"
@@ -39,6 +44,7 @@ data class EvalRunRequest(
         const val EXTRA_MODEL = "m1k3.eval.model"
         const val EXTRA_THINKING = "m1k3.eval.thinking"
         const val EXTRA_CPU_VARIANT = "m1k3.eval.cpu_variant"
+        const val EXTRA_SKIP = "m1k3.eval.skip"
 
         /**
          * Builds a request from a `{extraName: value}` map (the androidMain
@@ -74,6 +80,13 @@ data class EvalRunRequest(
                 model = extras[EXTRA_MODEL],
                 thinking = thinking,
                 cpuVariant = extras[EXTRA_CPU_VARIANT],
+                skip =
+                    extras[EXTRA_SKIP]
+                        ?.split(',')
+                        ?.map { it.trim() }
+                        ?.filter { it.isNotEmpty() }
+                        ?.toSet()
+                        ?: emptySet(),
             )
         }
     }
