@@ -1,26 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M1K3's mark — the 5×7, 17-cell pixel M (the leading glyph of the wordmark,
+  macos/tools/icons/brand/build_m_mark.py's ON-map, ported cell-for-cell so
+  the shape can't drift from the Mac icon). Orange on the near-black
+  background in ic_launcher_background.xml.
+
+  Sized to 50% of the 108dp adaptive-icon canvas height so it clears the
+  ~61%-diameter safe zone on every mask shape (circle, squircle, rounded
+  square) without clipping.
+
+  Finding 9 of the Android UX pass — replaces an unbranded Android Studio
+  scaffold icon (concentric-ring placeholder art) that had never been
+  swapped for M1K3's own identity.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="1024"
     android:viewportHeight="1024">
-  <path
-      android:pathData="M0,0h1024v1024h-1024z"
-      android:strokeWidth="1"
-      android:fillColor="#000000"
-      android:fillType="evenOdd"
-      android:strokeColor="#00000000"/>
-  <path
-      android:pathData="M512,512m-200,0a200,200 0,1 1,400 0a200,200 0,1 1,-400 0"
-      android:strokeWidth="80"
-      android:fillColor="#00000000"
-      android:strokeColor="#D5D5D5"
-      android:fillType="evenOdd"/>
-  <path
-      android:pathData="M512,512m-600,0a600,600 0,1 1,1200 0a600,600 0,1 1,-1200 0"
-      android:strokeAlpha="0.07"
-      android:strokeWidth="310"
-      android:fillColor="#00000000"
-      android:strokeColor="#D5D5D5"
-      android:fillType="evenOdd"
-      android:fillAlpha="0.07"/>
+    <group
+        android:scaleX="0.731428"
+        android:scaleY="0.731428"
+        android:translateX="329.14"
+        android:translateY="256">
+        <path
+            android:fillColor="#D97706"
+            android:pathData="M4,4h92v92h-92z
+                M404,4h92v92h-92z
+                M4,104h92v92h-92z
+                M404,104h92v92h-92z
+                M4,204h92v92h-92z
+                M104,204h92v92h-92z
+                M304,204h92v92h-92z
+                M404,204h92v92h-92z
+                M4,304h92v92h-92z
+                M204,304h92v92h-92z
+                M404,304h92v92h-92z
+                M4,404h92v92h-92z
+                M404,404h92v92h-92z
+                M4,504h92v92h-92z
+                M404,504h92v92h-92z
+                M4,604h92v92h-92z
+                M404,604h92v92h-92z" />
+    </group>
 </vector>
