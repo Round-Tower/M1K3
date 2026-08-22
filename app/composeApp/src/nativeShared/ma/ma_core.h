@@ -49,6 +49,18 @@ typedef struct {
  * instantiate a context (some ARM kernel variants reject FA+Q8_0), it retries
  * once with F16 + FA disabled. The caller can detect this via `fell_back`.
  *
+ * On the FIRST call per process, this also loads the ggml CPU backend: when
+ * built with GGML_BACKEND_DL (see androidMain/cpp/CMakeLists.txt), the CPU
+ * backend ships as several `libggml-cpu-<variant>.so` runtime-dispatch
+ * modules rather than being linked in directly, and nothing registers a CPU
+ * device until something asks. `backend_lib_dir` is where those modules live
+ * (Android: the app's `nativeLibraryDir`, beside `libma.so`); pass NULL or ""
+ * to fall back to the process's default search paths (executable dir + cwd
+ * — rarely useful on Android, but harmless, and a no-op on builds that don't
+ * define GGML_BACKEND_DL, e.g. a future statically-linked iOS bridge).
+ * Subsequent calls ignore this parameter — the backend load only ever runs
+ * once, and picks the best-scoring variant for the CPU actually running it.
+ *
  * Returns 0 in handle on hard failure (model load failed, or fallback also failed).
  */
 ma_init_result ma_core_init(
@@ -60,7 +72,8 @@ ma_init_result ma_core_init(
     int         threads_batch,    /* 0 = hw-derived */
     int         use_flash_attn,   /* bool-like: nonzero = on */
     int         kv_quant_ordinal, /* 0 = F16, 1 = Q8_0 */
-    int         use_mlock         /* bool-like */
+    int         use_mlock,        /* bool-like */
+    const char *backend_lib_dir   /* nullable; see above */
 );
 
 /**

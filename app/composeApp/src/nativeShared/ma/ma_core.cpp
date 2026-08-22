@@ -10,6 +10,35 @@
  * moved to ma_bridge.cpp; everything else is here.
  *
  * MurphySig: kev+claude / confidence 0.88 / 2026-04-19
+ *
+ * Review 2026-08-22 (kev+claude-fable-5, confidence 0.85): ma_core_init
+ * gained a backend_lib_dir param + load_cpu_backends_once(), the runtime
+ * side of the GGML_BACKEND_DL / GGML_CPU_ALL_VARIANTS switch in
+ * androidMain/cpp/CMakeLists.txt (kills a fixed armv8.2-a+dotprod+i8mm
+ * -march flag that SIGILLs on any arm64 core without i8mm — plausibly the
+ * source of the 2026-04-19 "libggml-cpu.so SIGSEGV/ANR" note in
+ * app/.claude/project-memory.md, though that was never confirmed as the
+ * same crash). Pattern started from llama.cpp's own
+ * examples/llama.android/lib/src/main/cpp/ai_chat.cpp
+ * (ggml_backend_load_all_from_path → llama_backend_init, once, before any
+ * model load), then diverged: that upstream directory-scan finds NOTHING
+ * on this app's packaging (confirmed on-device — the app's nativeLibraryDir
+ * exists but is empty under AGP's default extractNativeLibs=false), so
+ * load_cpu_backends_once tries known Android variant module names BARE
+ * first (see its own header + kAndroidCpuBackendVariants, both above),
+ * falling back to the upstream directory scan only if none of those match.
+ *
+ * VERIFIED ON-DEVICE (Android Studio arm64-v8a emulator on Apple Silicon,
+ * the exact CPU this fix targets — its virtual core reports `asimddp`
+ * [dotprod] but no `i8mm` in /proc/cpuinfo, the precise gap the old fixed
+ * -march flag didn't allow for): logcat shows `load_backends: loaded CPU
+ * backend variant libggml-cpu-android_armv8.2_2.so` (the highest tier that
+ * doesn't require i8mm) followed by a clean `init: success`, and a real
+ * chat turn streamed to completion (63 tokens, 279 chars, ~3.2 tok/s) with
+ * no SIGILL and no crash. Not verified: a REAL (non-emulator) i8mm-capable
+ * device picking one of the higher armv8.6+/armv9.x tiers — Kev's to
+ * confirm on a Pixel; x86_64 is deliberately unchanged by this commit (see
+ * CMakeLists.txt) so it carries no new risk either way.
  */
 
 #include "ma_core.h"
@@ -174,6 +203,123 @@ char *heap_cstr(const char *literal) {
     return heap_cstr(std::string(literal));
 }
 
+#ifdef __ANDROID__
+/* Android CPU-variant module names, most-capable first. Mirrors the
+ * `ggml_add_cpu_backend_variant(android_*...)` calls in
+ * llama.cpp/ggml/src/CMakeLists.txt at our pinned submodule commit — see
+ * load_cpu_backends_once's header for why bare names, and why order here
+ * only has to be "at least as capable first", not a perfect total order:
+ * armv9.2_2 is a strict superset of every other tier's features, so trying
+ * it first and stopping at the first successful load is always correct
+ * when it works; when it doesn't, armv9.0_1 and armv9.2_1 have disjoint
+ * feature sets (SVE2-no-SVE/SME vs SVE+SME-no-SVE2) so at most one of them
+ * can ever load on a given device — their relative order doesn't matter. */
+static const char *kAndroidCpuBackendVariants[] = {
+    "libggml-cpu-android_armv9.2_2.so",
+    "libggml-cpu-android_armv9.2_1.so",
+    "libggml-cpu-android_armv9.0_1.so",
+    "libggml-cpu-android_armv8.6_1.so",
+    "libggml-cpu-android_armv8.2_2.so",
+    "libggml-cpu-android_armv8.2_1.so",
+    "libggml-cpu-android_armv8.0_1.so",
+};
+#endif
+
+/* -------------------------------------------------------------------------
+ * Load the ggml CPU backend once per process.
+ *
+ * When built with GGML_BACKEND_DL (see androidMain/cpp/CMakeLists.txt), the
+ * CPU backend ships as several `libggml-cpu-<variant>.so` runtime-dispatch
+ * modules — one per ARM feature tier — rather than being linked directly
+ * into libma.so. Nothing registers a CPU device until something calls
+ * ggml_backend_load_all()/ggml_backend_load_all_from_path()/ggml_backend_load():
+ * the registry's static-init auto-registration path only fires for the OLD
+ * single-variant (non-DL) build (guarded by #ifdef GGML_USE_CPU upstream,
+ * which is never defined in DL mode). Skipping this call is silent —
+ * llama_model_load_from_file still "succeeds" at parsing the GGUF, then
+ * fails to find any device to run on, deep inside the loader.
+ *
+ * On Android, `ggml_backend_load_all_from_path(lib_dir)` — upstream's own
+ * discovery mechanism, a plain `fs::directory_iterator` scan — finds
+ * NOTHING even when `lib_dir` is the app's real `nativeLibraryDir`: modern
+ * AGP (extractNativeLibs=false, our default — see composeApp/build.gradle.kts's
+ * 16KB-alignment comment) never copies JNI libs out to a real directory on
+ * disk; they're mmap'd straight from the APK's own lib/<abi>/ zip entries.
+ * Confirmed on-device: that directory exists but is empty. So instead we
+ * try loading each known Android CPU-variant module by its BARE filename
+ * (kAndroidCpuBackendVariants below, most-capable first) — bionic's dynamic
+ * linker resolves a bare name (no path separators) against the app's own
+ * process-wide linker namespace, which the OS populates from the APK's
+ * embedded native libs at process start. That's the exact mechanism that
+ * already makes plain `System.loadLibrary("ma")` work despite that same
+ * empty directory. ggml_backend_load() already gates each candidate
+ * through its own ggml_backend_score() (0 = "not supported on this
+ * device", silently rejected, not registered) — we just stop at the first
+ * one that actually registers.
+ *
+ * `lib_dir` (Android: the app's `nativeLibraryDir`, see ma_core_init) is
+ * kept as a fallback for anything the bare-name loop doesn't handle: a
+ * non-Android build, an Android build where none of the known variant
+ * names matched (a stale list after a submodule bump — see the variant
+ * list's own comment), or a future host where extraction genuinely does
+ * populate a real directory. Empty/NULL there falls back further to the
+ * process's default search paths (executable dir + cwd) via
+ * ggml_backend_load_all(). This whole function is a harmless no-op on any
+ * build that doesn't define GGML_BACKEND_DL (no libggml-cpu-*.so exists to
+ * find by any method, and the static-registration path already ran).
+ *
+ * Idempotent: only the first call does anything, subsequent calls return
+ * immediately, so switching between model tiers (Mini/Lil/Big) within one
+ * app process never re-scans anything or re-dlopens anything.
+ * ---------------------------------------------------------------------- */
+void load_cpu_backends_once(const char *lib_dir) {
+    static bool loaded = false;
+    if (loaded) return;
+    loaded = true;
+
+    bool got_cpu_backend = false;
+
+#ifdef __ANDROID__
+    for (const char *name : kAndroidCpuBackendVariants) {
+        if (ggml_backend_load(name)) {
+            LOGI("load_backends: loaded CPU backend variant %s", name);
+            got_cpu_backend = true;
+            break;
+        }
+    }
+#endif
+
+    if (!got_cpu_backend) {
+        if (lib_dir && *lib_dir) {
+            LOGI("load_backends: scanning %s for ggml backend variants", lib_dir);
+            ggml_backend_load_all_from_path(lib_dir);
+        } else {
+            LOGI("load_backends: no lib dir given, using default search paths");
+            ggml_backend_load_all();
+        }
+    }
+
+    /* Cheap + idempotent: inits ggml's F16 lookup tables. Safe to call even
+     * if backend loading above found nothing (matches llama.cpp's own
+     * reference Android app — examples/llama.android/lib/src/main/cpp). */
+    llama_backend_init();
+
+    const size_t n_devices = ggml_backend_dev_count();
+    if (n_devices == 0) {
+        LOGE("load_backends: zero backend devices registered — model load will fail");
+        return;
+    }
+    for (size_t i = 0; i < n_devices; i++) {
+        ggml_backend_dev_t dev = ggml_backend_dev_get(i);
+        ggml_backend_reg_t reg = ggml_backend_dev_backend_reg(dev);
+        LOGI("load_backends: device[%zu] %s (%s) via %s",
+             i,
+             ggml_backend_dev_name(dev),
+             ggml_backend_dev_description(dev),
+             reg ? ggml_backend_reg_name(reg) : "?");
+    }
+}
+
 } /* namespace */
 
 /* ==========================================================================
@@ -191,9 +337,15 @@ ma_init_result ma_core_init(
         int         threads_batch,
         int         use_flash_attn,
         int         kv_quant_ordinal,
-        int         use_mlock) {
+        int         use_mlock,
+        const char *backend_lib_dir) {
 
     ma_init_result result = { 0, 0, 0, 0, 0, 0 };
+
+    /* Must happen before the first llama_model_load_from_file — the CPU
+     * backend has to be registered (loaded + scored) before anything asks
+     * for a device to run on. See load_cpu_backends_once's header. */
+    load_cpu_backends_once(backend_lib_dir);
 
     // Route llama.cpp's own log into ours — a "failed to load model" without the
     // loader's reason ("unknown tensor", "missing key", mmap failure) is

@@ -41,6 +41,15 @@ interface MaInferenceBackend {
      * @param kvQuantOrdinal Ordinal of [KvCacheType]: 0=F16, 1=Q8_0.
      *   Any non-F16 value requires [useFlashAttn] = true.
      * @param useMlock When true asks llama.cpp to mlock model weights into RAM.
+     * @param nativeLibraryDir Absolute path to this app's extracted native library
+     *   directory (Android: `context.applicationInfo.nativeLibraryDir`). The native
+     *   bridge scans it once per process for `libggml-cpu-*.so` runtime-dispatch
+     *   variants and loads the best match for the CPU it's actually running on —
+     *   see `ma_core_init`'s header for why a single hard-coded `-march` flag isn't
+     *   safe here. Empty string = fall back to the process's default search paths
+     *   (executable dir + cwd), which won't find anything useful on Android; pass
+     *   the real directory in production. Ignored by implementations that don't
+     *   need it (e.g. a future static-linked iOS bridge).
      * @return Opaque handle (non-zero) on success, 0 on failure
      */
     fun init(
@@ -53,6 +62,7 @@ interface MaInferenceBackend {
         useFlashAttn: Boolean = false,
         kvQuantOrdinal: Int = 0,
         useMlock: Boolean = false,
+        nativeLibraryDir: String = "",
     ): Long
 
     /**
