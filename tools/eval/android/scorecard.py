@@ -57,8 +57,24 @@ def load_run(run_dir):
     return manifest["header"], cells
 
 
+def _kind_of(r):
+    # A hung or errored fixture can carry a null kind; label it so it stays
+    # visible in the table instead of crashing len(None) downstream.
+    return r.get("kind") or "(unscored)"
+
+
 def summarise(cells):
-    kinds = list(OrderedDict.fromkeys(r["kind"] for c in cells for r in c["results"]))
+    # A relaunch after a native hang leaves an earlier attempt for the same
+    # fixtureId in the report; keep only the last result per fixture (the
+    # authoritative final state, matching the on-device report), so a
+    # hung-then-resumed fixture is counted once, not twice.
+    for c in cells:
+        deduped = OrderedDict()
+        for r in c["results"]:
+            deduped[r.get("fixtureId")] = r
+        c["results"] = list(deduped.values())
+
+    kinds = list(OrderedDict.fromkeys(_kind_of(r) for c in cells for r in c["results"]))
     table = {c["id"]: defaultdict(lambda: [0, 0]) for c in cells}
     latencies = defaultdict(list)
     tokens = defaultdict(list)
@@ -66,7 +82,7 @@ def summarise(cells):
 
     for c in cells:
         for r in c["results"]:
-            entry = table[c["id"]][r["kind"]]
+            entry = table[c["id"]][_kind_of(r)]
             entry[1] += 1
             entry[0] += int(bool(r.get("passed")))
             # A native hang produced no tokens/latency — exclude it from the
@@ -162,7 +178,7 @@ def markdown(header, cells, kinds, table, latencies, flags, source):
         out.append(f"**{c['id']}** ({len(fails)}):\n")
         for r in fails:
             why = "; ".join(r.get("failedChecks", [])) or r.get("error") or "no detail captured"
-            out.append(f"- `{r['fixtureId']}` [{r['kind']}] — {why}")
+            out.append(f"- `{r['fixtureId']}` [{_kind_of(r)}] — {why}")
         out.append("")
     if not any_fail:
         out.append("_No failures recorded._")
