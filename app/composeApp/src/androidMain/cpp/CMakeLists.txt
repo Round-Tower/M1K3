@@ -59,11 +59,11 @@ target_include_directories(ma_core PUBLIC
     ${LLAMA_DIR}/include
     ${LLAMA_DIR}/ggml/include
     ${LLAMA_DIR}/common
-    ${LLAMA_DIR}/common/vendor
+    ${LLAMA_DIR}/vendor
 )
 
 target_link_libraries(ma_core PUBLIC
-    common
+    llama-common
     llama
 )
 

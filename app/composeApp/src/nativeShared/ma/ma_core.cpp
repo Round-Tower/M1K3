@@ -25,7 +25,7 @@
 
 #include "llama.h"
 #include "chat.h"                 // common/chat.h — native chat-template rendering + tool-call parsing
-#include "nlohmann/json.hpp"      // vendored in llama.cpp/common/vendor
+#include "nlohmann/json.hpp"      // vendored in llama.cpp/vendor (moved from common/vendor upstream)
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -223,7 +223,11 @@ ma_init_result ma_core_init(
 
     llama_model_params mparams = llama_model_default_params();
     mparams.n_gpu_layers = 0; /* CPU-only on mobile for now */
-    mparams.use_mlock    = use_mlock != 0;
+    // use_mmap/use_mlock were consolidated into a single load_mode enum
+    // upstream. Preserve prior behaviour exactly: mmap always on, mlock
+    // toggled by the caller (was the implicit default before this merge —
+    // we never touched use_mmap, so it stayed true).
+    mparams.load_mode = (use_mlock != 0) ? LLAMA_LOAD_MODE_MMAP_MLOCK : LLAMA_LOAD_MODE_MMAP;
 
     llama_model *model = llama_model_load_from_file(model_path, mparams);
     if (!model) {
@@ -392,6 +396,7 @@ char *ma_core_generate(
     }
     llama_sampler_chain_add(smpl, llama_sampler_init_temp(temperature));
     llama_sampler_chain_add(smpl, llama_sampler_init_penalties(
+            /*n_vocab=*/llama_vocab_n_tokens(vocab),
             /*penalty_last_n=*/64,
             /*penalty_repeat=*/repeat_penalty,
             /*penalty_freq=*/0.0f,
@@ -576,6 +581,7 @@ char *ma_core_generate_chat(
     }
     llama_sampler_chain_add(smpl, llama_sampler_init_temp(temperature));
     llama_sampler_chain_add(smpl, llama_sampler_init_penalties(
+            /*n_vocab=*/llama_vocab_n_tokens(vocab),
             /*penalty_last_n=*/64,
             /*penalty_repeat=*/repeat_penalty,
             /*penalty_freq=*/0.0f,
