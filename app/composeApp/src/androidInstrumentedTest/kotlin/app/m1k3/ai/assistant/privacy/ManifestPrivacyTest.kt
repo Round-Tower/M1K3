@@ -83,12 +83,17 @@ class ManifestPrivacyTest {
      * of these will break the test at CI time, not at release time.
      *
      * `com.google.android.datatransport.runtime.TransportRuntime` used to be
-     * deliberately excluded here as an ML Kit GenAI transitive dependency —
-     * that engine (MlKitGenAiEngine/OnDeviceAi) was never wired into the
-     * real chat flow and was cut 2026-08 along with ML Kit vision/CameraX
-     * (also unreferenced). No ML Kit dependency remains on the classpath, so
-     * this test enforces "no first-party telemetry SDK chosen" with no
-     * carve-out needed.
+     * deliberately excluded here as an ML Kit GenAI transitive dependency,
+     * back when that engine (MlKitGenAiEngine/OnDeviceAi) was cut 2026-08 as
+     * dead weight (never wired into the real chat flow). **ML Kit GenAI is
+     * back** as of 2026-08-22 (`GeminiNanoEngine`, ADR-0007) — this time
+     * actually wired to Mini M1K3 — and `datatransport` is transitively on
+     * the classpath again. It is still not banned here: this list only
+     * covers first-party analytics SDKs a developer would *consciously add*
+     * (Firebase Analytics/Crashlytics, Google Analytics, Sentry, Mixpanel,
+     * Segment, Amplitude); `datatransport`'s usage-stats pipe was audited in
+     * ADR-0006 (invocation counts/latency/crash reports, never prompt or
+     * response content) and stays a documented exception, not a gap.
      */
     @Test
     fun noAnalyticsLibraries_onClasspath() {
