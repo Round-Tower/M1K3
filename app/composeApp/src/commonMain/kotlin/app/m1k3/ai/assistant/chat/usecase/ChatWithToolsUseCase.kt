@@ -10,6 +10,7 @@ import app.m1k3.ai.domain.chat.ChatError
 import app.m1k3.ai.domain.chat.EnrichedContext
 import app.m1k3.ai.domain.chat.GenerationStats
 import app.m1k3.ai.domain.chat.LlmOutputSanitizer
+import app.m1k3.ai.domain.chat.PersonaLeakGuard
 import app.m1k3.ai.domain.chat.StreamingThinkTagParser
 import app.m1k3.ai.domain.chat.events.ChatEvent
 import app.m1k3.ai.domain.chat.events.ChatResponse
@@ -241,7 +242,7 @@ class ChatWithToolsUseCase(
                                     val stats = buildStats(tokenCount, duration, context)
                                     val response =
                                         ChatResponse(
-                                            text = LlmOutputSanitizer.strip(processed.text),
+                                            text = cleanAnswer(processed.text),
                                             stats = stats,
                                             context = context,
                                             toolResults = forceResults,
@@ -260,7 +261,7 @@ class ChatWithToolsUseCase(
                                     val stats = buildStats(tokenCount, duration, context)
                                     val response =
                                         ChatResponse(
-                                            text = LlmOutputSanitizer.strip(processed.text),
+                                            text = cleanAnswer(processed.text),
                                             stats = stats,
                                             context = context,
                                             toolResults = null,
@@ -281,7 +282,7 @@ class ChatWithToolsUseCase(
                                 val stats = buildStats(tokenCount, duration, context)
                                 val response =
                                     ChatResponse(
-                                        text = LlmOutputSanitizer.strip(processed.plainText),
+                                        text = cleanAnswer(processed.plainText),
                                         stats = stats,
                                         context = context,
                                         toolResults = processed.toolResults,
@@ -395,7 +396,7 @@ class ChatWithToolsUseCase(
                     scope.send(
                         ChatEvent.Complete(
                             ChatResponse(
-                                text = LlmOutputSanitizer.strip(output.content),
+                                text = cleanAnswer(output.content),
                                 stats = stats,
                                 context = context,
                                 toolResults = results,
@@ -419,7 +420,7 @@ class ChatWithToolsUseCase(
                     scope.send(
                         ChatEvent.Complete(
                             ChatResponse(
-                                text = LlmOutputSanitizer.strip(output.content),
+                                text = cleanAnswer(output.content),
                                 stats = stats,
                                 context = context,
                                 toolResults = toolResults,
@@ -559,6 +560,15 @@ class ChatWithToolsUseCase(
             append("User: $userPrompt")
         }
     }
+
+    /**
+     * The final user-facing answer text. Sanitise template scaffolding, then
+     * run the persona-leak guard: prose in the ethos does not stop a 2–3B model
+     * reciting its own wiring (2026-08-22 re-baseline, security 1–2/4), so a
+     * verbatim wiring sentence is replaced with an in-character refusal after
+     * the fact. A no-op on every ordinary answer.
+     */
+    private fun cleanAnswer(raw: String): String = PersonaLeakGuard.guarded(LlmOutputSanitizer.strip(raw))
 
     private fun buildStats(
         tokenCount: Int,
