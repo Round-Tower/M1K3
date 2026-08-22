@@ -30,6 +30,23 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
 
 ## Now
 
+- **★ Android model eval harness (Python, over adb) — Kev, 2026-08-22: "best model
+  for the hardware, compute — evaled."** The 9a day found two bugs nobody could see
+  by feel (an SVE2 CPU-variant producing broken logits; a 0.8B thinking for 171s then
+  answering nothing) and one judgement we can't settle by feel (is Lil or Mini the
+  right default on 7GB? is thinking ever worth it below Big?). Shape, proven this
+  session: `tools/eval/android/` — fixtures (the Mac's `ChatEvalStage` kinds: open-chat
+  / tool-use / grounded-Q / security / instruction-following) pushed to a device with
+  `adb`, driven through the app (a SelfTest-style one-shot intent, NOT UI taps), verdicts
+  read off `logcat` (`MaCore generate: done`, `Native chat done`, tool ids, chars,
+  ms), scored by `scorecard.py` like the Mac's. Matrix = models (Qwen3.5 0.8B/2B,
+  Gemma 4 E2B, LFM2.5, whatever's next) × CPU variant (armv8.6_1 vs armv9.x — the
+  SVE2 bug must be a fixture) × thinking on/off × device. Models MAY diverge from
+  Apple (Kev: "Apple doesn't need to match Android"). First run answers: the
+  Mini-vs-Lil default, dynamic thinking, and the small-talk tool over-trigger
+  (0.8B calls `get_battery_level` on "what can you help with?"; tool answers render
+  `tool_id: result` instead of prose). Blocked on nothing; one focused session.
+
 - **★ The perf lever list (2026-08-16 — read the instruments BEFORE picking):**
   - **Turn-phase instrument is armed but UNFED** — every `turn phases:` line so
     far is from test runs. The next real conversation writes the first honest
