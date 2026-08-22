@@ -81,10 +81,13 @@ Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeInit(
         jboolean useFlashAttn,
         jint     kvQuantOrdinal,
         jboolean useMlock,
-        jstring  jNativeLibDir) {
+        jstring  jNativeLibDir,
+        jstring  jPreferredCpuVariant) {
 
     const char *modelPath    = env->GetStringUTFChars(jModelPath, nullptr);
     const char *nativeLibDir = jNativeLibDir ? env->GetStringUTFChars(jNativeLibDir, nullptr) : nullptr;
+    const char *preferredVariant =
+            jPreferredCpuVariant ? env->GetStringUTFChars(jPreferredCpuVariant, nullptr) : nullptr;
     ma_init_result res = ma_core_init(
             modelPath,
             (int) nCtx,
@@ -95,14 +98,25 @@ Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeInit(
             useFlashAttn == JNI_TRUE ? 1 : 0,
             (int) kvQuantOrdinal,
             useMlock == JNI_TRUE ? 1 : 0,
-            nativeLibDir);
+            nativeLibDir,
+            preferredVariant);
     env->ReleaseStringUTFChars(jModelPath, modelPath);
     if (jNativeLibDir) env->ReleaseStringUTFChars(jNativeLibDir, nativeLibDir);
+    if (jPreferredCpuVariant) env->ReleaseStringUTFChars(jPreferredCpuVariant, preferredVariant);
 
     if (res.handle == 0) {
         LOGE("init: ma_core_init returned 0");
     }
     return static_cast<jlong>(res.handle);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeLastLoadedCpuVariant(
+        JNIEnv *env, jobject /*thiz*/) {
+    char *out = ma_core_last_loaded_cpu_variant();
+    jstring jOut = env->NewStringUTF(out ? out : "");
+    ma_core_free_string(out);
+    return jOut;
 }
 
 extern "C" JNIEXPORT jstring JNICALL

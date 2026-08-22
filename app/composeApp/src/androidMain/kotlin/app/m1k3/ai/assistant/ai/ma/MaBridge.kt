@@ -51,6 +51,7 @@ object MaBridge : MaInferenceBackend {
         kvQuantOrdinal: Int,
         useMlock: Boolean,
         nativeLibraryDir: String,
+        preferredCpuVariant: String,
     ): Long =
         nativeInit(
             modelPath,
@@ -63,7 +64,14 @@ object MaBridge : MaInferenceBackend {
             kvQuantOrdinal,
             useMlock,
             nativeLibraryDir,
+            preferredCpuVariant,
         )
+
+    /**
+     * The CPU backend variant that actually registered on this process's
+     * first [init] call. See [MaInferenceBackend.lastLoadedCpuVariant].
+     */
+    override fun lastLoadedCpuVariant(): String = nativeLastLoadedCpuVariant()
 
     /**
      * Generate text from a pre-formatted prompt.
@@ -162,7 +170,11 @@ object MaBridge : MaInferenceBackend {
         kvQuantOrdinal: Int,
         useMlock: Boolean,
         nativeLibraryDir: String,
+        preferredCpuVariant: String,
     ): Long
+
+    /** JNI entry point backing [lastLoadedCpuVariant]. */
+    private external fun nativeLastLoadedCpuVariant(): String
 
     /**
      * JNI entry point for generation.

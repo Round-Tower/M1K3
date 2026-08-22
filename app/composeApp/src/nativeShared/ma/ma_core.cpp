@@ -281,7 +281,11 @@ static const char *kAndroidCpuBackendVariants[] = {
  * immediately, so switching between model tiers (Mini/Lil/Big) within one
  * app process never re-scans anything or re-dlopens anything.
  * ---------------------------------------------------------------------- */
-void load_cpu_backends_once(const char *lib_dir) {
+/* Set once, at the first successful backend load — see this function's own
+ * "Idempotent" note. Read back via ma_core_last_loaded_cpu_variant(). */
+std::string g_last_loaded_cpu_variant;
+
+void load_cpu_backends_once(const char *lib_dir, const char *preferred_variant) {
     static bool loaded = false;
     if (loaded) return;
     loaded = true;
@@ -289,11 +293,33 @@ void load_cpu_backends_once(const char *lib_dir) {
     bool got_cpu_backend = false;
 
 #ifdef __ANDROID__
-    for (const char *name : kAndroidCpuBackendVariants) {
-        if (ggml_backend_load(name)) {
-            LOGI("load_backends: loaded CPU backend variant %s", name);
+    /* Eval-harness override (CpuVariantOverride, Kotlin side): try this exact
+     * variant name FIRST, before the built-in most-capable-first order. See
+     * ma_core_init's header for why this only ever fires from the eval
+     * harness — production always passes "". */
+    if (preferred_variant && *preferred_variant) {
+        if (ggml_backend_load(preferred_variant)) {
+            LOGI("load_backends: loaded PREFERRED CPU backend variant %s", preferred_variant);
+            g_last_loaded_cpu_variant = preferred_variant;
             got_cpu_backend = true;
-            break;
+        } else {
+            LOGI("load_backends: preferred variant %s did not load on this device, "
+                 "falling back to the default order", preferred_variant);
+        }
+    }
+
+    if (!got_cpu_backend) {
+        for (const char *name : kAndroidCpuBackendVariants) {
+            /* Preferred variant already tried above; skip re-trying it. */
+            if (preferred_variant && *preferred_variant && std::strcmp(name, preferred_variant) == 0) {
+                continue;
+            }
+            if (ggml_backend_load(name)) {
+                LOGI("load_backends: loaded CPU backend variant %s", name);
+                g_last_loaded_cpu_variant = name;
+                got_cpu_backend = true;
+                break;
+            }
         }
     }
 #endif
@@ -347,14 +373,15 @@ ma_init_result ma_core_init(
         int         use_flash_attn,
         int         kv_quant_ordinal,
         int         use_mlock,
-        const char *backend_lib_dir) {
+        const char *backend_lib_dir,
+        const char *preferred_cpu_variant) {
 
     ma_init_result result = { 0, 0, 0, 0, 0, 0 };
 
     /* Must happen before the first llama_model_load_from_file — the CPU
      * backend has to be registered (loaded + scored) before anything asks
      * for a device to run on. See load_cpu_backends_once's header. */
-    load_cpu_backends_once(backend_lib_dir);
+    load_cpu_backends_once(backend_lib_dir, preferred_cpu_variant);
 
     // Route llama.cpp's own log into ours — a "failed to load model" without the
     // loader's reason ("unknown tensor", "missing key", mmap failure) is
@@ -859,6 +886,12 @@ char *ma_core_generate_chat(
          result.contains("tool_calls") ? result["tool_calls"].size() : 0);
 
     return heap_cstr(result.dump());
+}
+
+/* ---------------------------------------------------------------------- */
+
+char *ma_core_last_loaded_cpu_variant(void) {
+    return heap_cstr(g_last_loaded_cpu_variant);
 }
 
 /* ---------------------------------------------------------------------- */

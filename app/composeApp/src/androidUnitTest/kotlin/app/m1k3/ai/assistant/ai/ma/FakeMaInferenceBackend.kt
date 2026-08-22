@@ -23,6 +23,10 @@ class FakeMaInferenceBackend : MaInferenceBackend {
     var lastInitKvQuantOrdinal: Int = 0
     var lastInitUseMlock: Boolean = false
     var lastInitNativeLibDir: String? = null
+    var lastInitPreferredCpuVariant: String? = null
+
+    /** Value [lastLoadedCpuVariant] returns — tests set this to simulate what the native side reported. */
+    var fakeLastLoadedCpuVariant: String = ""
 
     // === generate() controls ===
     var generateResponse: String = "Test response from fake backend"
@@ -54,6 +58,7 @@ class FakeMaInferenceBackend : MaInferenceBackend {
         kvQuantOrdinal: Int,
         useMlock: Boolean,
         nativeLibraryDir: String,
+        preferredCpuVariant: String,
     ): Long {
         initCalled = true
         initCallCount++
@@ -67,8 +72,11 @@ class FakeMaInferenceBackend : MaInferenceBackend {
         lastInitKvQuantOrdinal = kvQuantOrdinal
         lastInitUseMlock = useMlock
         lastInitNativeLibDir = nativeLibraryDir
+        lastInitPreferredCpuVariant = preferredCpuVariant
         return initHandle
     }
+
+    override fun lastLoadedCpuVariant(): String = fakeLastLoadedCpuVariant
 
     override fun generate(
         handle: Long,
@@ -148,6 +156,8 @@ class FakeMaInferenceBackend : MaInferenceBackend {
         lastInitKvQuantOrdinal = 0
         lastInitUseMlock = false
         lastInitNativeLibDir = null
+        lastInitPreferredCpuVariant = null
+        fakeLastLoadedCpuVariant = ""
         generateCalled = false
         generateCallCount = 0
         lastGenerateHandle = 0L

@@ -3,12 +3,14 @@ package app.m1k3.ai.assistant.ai
 import android.content.Context
 import app.m1k3.ai.assistant.ai.ma.MaBridge
 import app.m1k3.ai.assistant.utils.Logger
+import app.m1k3.ai.domain.ai.CpuVariantOverride
 import app.m1k3.ai.domain.ai.GenerationConfig
 import app.m1k3.ai.domain.ai.InferenceTuning
 import app.m1k3.ai.domain.ai.LlmModel
 import app.m1k3.ai.domain.ai.MaInferenceBackend
-import app.m1k3.ai.domain.chat.format.MessageRole
+import app.m1k3.ai.domain.ai.NativeDiagnostics
 import app.m1k3.ai.domain.ai.ThinkingPolicy
+import app.m1k3.ai.domain.chat.format.MessageRole
 import app.m1k3.ai.domain.chat.services.ChatFormatter
 import app.m1k3.ai.domain.chat.services.DefaultChatFormatter
 import app.m1k3.ai.domain.platform.DeviceTier
@@ -165,6 +167,8 @@ class LlamaCppEngine(
                             // libma.so in the app's extracted native library directory — see
                             // MaInferenceBackend.init's KDoc and ma_core.cpp's header comment.
                             nativeLibraryDir = context.applicationInfo.nativeLibraryDir ?: "",
+                            // Empty everywhere except the eval harness — see CpuVariantOverride's KDoc.
+                            preferredCpuVariant = CpuVariantOverride.preferred ?: "",
                         )
                     if (handle == 0L) {
                         return@withLock Result.failure(
@@ -174,6 +178,9 @@ class LlamaCppEngine(
 
                     contextHandle = handle
                     isInitialized = true
+                    // Records which libggml-cpu-*.so actually registered for this
+                    // process — the eval harness's cpu-variant column reads this.
+                    NativeDiagnostics.lastLoadedCpuVariant = backend.lastLoadedCpuVariant().ifBlank { null }
                     logger.i { "Initialization complete (handle=$handle)" }
 
                     Result.success(Unit)

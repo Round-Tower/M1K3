@@ -61,6 +61,17 @@ typedef struct {
  * Subsequent calls ignore this parameter — the backend load only ever runs
  * once, and picks the best-scoring variant for the CPU actually running it.
  *
+ * `preferred_cpu_variant` (nullable/"" = no preference): a bare `.so`
+ * filename (e.g. "libggml-cpu-android_armv9.0_1.so") to try loading FIRST,
+ * before the built-in most-capable-first order in `kAndroidCpuBackendVariants`
+ * (ma_core.cpp). Exists so `tools/eval/android` can force a specific CPU
+ * variant to reproduce a variant-specific bug (the Pixel 9a SVE2
+ * broken-logits case) as a fixture cell rather than a one-off log read.
+ * Ignored on non-Android builds and once the backend has already loaded for
+ * this process (see load_cpu_backends_once's "Idempotent" note) — the eval
+ * harness relies on the Python driver launching a fresh process per variant
+ * cell (`am force-stop` between cells), matching how production behaves.
+ *
  * Returns 0 in handle on hard failure (model load failed, or fallback also failed).
  */
 ma_init_result ma_core_init(
@@ -73,8 +84,22 @@ ma_init_result ma_core_init(
     int         use_flash_attn,   /* bool-like: nonzero = on */
     int         kv_quant_ordinal, /* 0 = F16, 1 = Q8_0 */
     int         use_mlock,        /* bool-like */
-    const char *backend_lib_dir   /* nullable; see above */
+    const char *backend_lib_dir,  /* nullable; see above */
+    const char *preferred_cpu_variant /* nullable/""; see above */
 );
+
+/**
+ * The bare `.so` filename of the CPU backend variant that actually
+ * registered on the first ma_core_init call this process, or an empty
+ * string if unknown (no model has loaded yet, non-Android build, or the
+ * backend fell through to the default-search-path scan rather than
+ * matching a known variant name). Set once, at the first successful backend
+ * load — see load_cpu_backends_once's "Idempotent" note.
+ *
+ * Returns a heap-allocated NUL-terminated UTF-8 string. Caller MUST free it
+ * via ma_core_free_string, same convention as ma_core_generate.
+ */
+char *ma_core_last_loaded_cpu_variant(void);
 
 /**
  * Generate text from a pre-formatted prompt.
