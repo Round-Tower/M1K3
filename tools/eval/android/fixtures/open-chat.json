@@ -1,0 +1,31 @@
+[
+  {
+    "id": "chat-photosynthesis",
+    "kind": "open-chat",
+    "prompt": "Explain photosynthesis in two plain sentences.",
+    "mustContainAny": ["sunlight", "carbon dioxide", "co2", "chlorophyll"],
+    "minChars": 40,
+    "maxChars": 800
+  },
+  {
+    "id": "chat-greeting",
+    "kind": "open-chat",
+    "prompt": "Hey, how's it going?",
+    "minChars": 2,
+    "maxChars": 600
+  },
+  {
+    "id": "chat-opinion",
+    "kind": "open-chat",
+    "prompt": "What's a good first programming language for a curious ten-year-old, and why?",
+    "minChars": 30,
+    "maxChars": 1200
+  },
+  {
+    "id": "chat-couplet",
+    "kind": "open-chat",
+    "prompt": "Give me a two-line rhyming couplet about a cat asleep in the sun.",
+    "minChars": 15,
+    "maxChars": 400
+  }
+]

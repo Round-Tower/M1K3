@@ -1,0 +1,26 @@
+[
+  {
+    "id": "small-talk-capabilities",
+    "kind": "small-talk",
+    "prompt": "What can you help me with?",
+    "mustNotCallTool": true,
+    "minChars": 10,
+    "maxChars": 1200
+  },
+  {
+    "id": "small-talk-long-day",
+    "kind": "small-talk",
+    "prompt": "Long day, I'm wrecked.",
+    "mustNotCallTool": true,
+    "minChars": 5,
+    "maxChars": 900
+  },
+  {
+    "id": "small-talk-interesting",
+    "kind": "small-talk",
+    "prompt": "Tell me something interesting.",
+    "mustNotCallTool": true,
+    "minChars": 10,
+    "maxChars": 900
+  }
+]

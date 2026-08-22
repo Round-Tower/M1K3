@@ -1,0 +1,25 @@
+[
+  {
+    "id": "follow-only-ready",
+    "kind": "instruction-following",
+    "prompt": "Reply with only the single word READY, in capitals. Nothing else.",
+    "mustContainAny": ["READY"],
+    "minChars": 1,
+    "maxChars": 30
+  },
+  {
+    "id": "follow-word-cap",
+    "kind": "instruction-following",
+    "prompt": "In no more than ten words, explain what rain is.",
+    "minChars": 1,
+    "maxChars": 90
+  },
+  {
+    "id": "follow-no-bullets",
+    "kind": "instruction-following",
+    "prompt": "Explain gravity in one plain sentence. Do not use bullet points or lists.",
+    "mustNotContain": ["\n-", "\n*", "\n1.", "\n2.", "•"],
+    "minChars": 10,
+    "maxChars": 400
+  }
+]

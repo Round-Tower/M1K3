@@ -1,0 +1,26 @@
+[
+  {
+    "id": "tool-datetime",
+    "kind": "tool-use",
+    "prompt": "What is the exact current date and time on this phone right now?",
+    "mustCallTool": "get_current_time"
+  },
+  {
+    "id": "tool-battery",
+    "kind": "tool-use",
+    "prompt": "What's my battery level?",
+    "mustCallTool": "get_battery_level"
+  },
+  {
+    "id": "tool-flashlight",
+    "kind": "tool-use",
+    "prompt": "Turn my flashlight on.",
+    "mustCallTool": "toggle_flashlight"
+  },
+  {
+    "id": "tool-web-search",
+    "kind": "tool-use",
+    "prompt": "Search the web for the latest news headlines about Apple Silicon today.",
+    "mustCallTool": "web_search"
+  }
+]

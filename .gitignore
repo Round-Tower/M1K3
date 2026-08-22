@@ -205,3 +205,6 @@ macos/scratch/**
 !macos/scratch/brain-at-home/
 !macos/scratch/brain-at-home/spikes/
 !macos/scratch/brain-at-home/spikes/**
+
+# Android on-device model-eval run output (tools/eval/android) — regenerable
+tools/eval/android/runs/
