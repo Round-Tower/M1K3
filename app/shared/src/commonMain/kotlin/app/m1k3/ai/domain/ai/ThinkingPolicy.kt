@@ -14,7 +14,16 @@ package app.m1k3.ai.domain.ai
  * Signed: Kev + claude-fable-5, 2026-08-22, Confidence 0.8 (the failure is
  * read off a device log; "better fast than slow" for Lil is a judgement
  * pending the on-device eval). Prior: Unknown.
+ *
+ * [override] is the eval harness's seam (`tools/eval/android`): the matrix
+ * needs to force thinking on/off per cell regardless of tier, so the
+ * per-model default below isn't the only word. Set before any
+ * `ChatScreenViewModel`/`ChatWithToolsUseCase` is constructed — both read
+ * [enabled] once, at construction/prime time, not on every turn. `null`
+ * (the default) restores the per-model default.
  */
 object ThinkingPolicy {
-    fun enabled(model: LlmModel): Boolean = model == LlmModel.Gemma4_E2B
+    var override: Boolean? = null
+
+    fun enabled(model: LlmModel): Boolean = override ?: (model == LlmModel.Gemma4_E2B)
 }
