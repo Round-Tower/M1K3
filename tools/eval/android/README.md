@@ -12,11 +12,16 @@ knows one can read the other.
 The Pixel 9a day (2026-08-22) found two bugs nobody could see by feel and one
 judgement call the team can't settle by feel:
 
-1. An SVE2 CPU-variant (`android_armv9.0_1`) produced broken logits on
-   Tensor G4 — every answer `<think></think>` + end-of-generation at ~6
-   tokens. Fixed in production by reordering `armv8.6_1` first
-   (`ma_core.cpp`'s `kAndroidCpuBackendVariants`), but the bug needs to stay
-   a reproducible fixture, not a one-off log read.
+1. A cell produced broken output — every answer `<think></think>` +
+   end-of-generation at ~6 tokens. First blamed on the `android_armv9.0_1`
+   (SVE2) CPU-variant on Tensor G4, and `armv8.6_1` was reordered first.
+   ⚠️ **Correction (2026-08-22):** on the F1/F2/KV-clear/thinking-off
+   re-baseline that shape did NOT reproduce — `armv9.0_1` scored 17/22 with
+   real answers. It was the thinking/parse/dirty-KV bugs, not the CPU
+   kernel. `armv8.6_1` stays first on *latency* (faster + slightly higher),
+   not correctness. The BROKEN tripwire (below) is still the right
+   instrument — the lesson is that a broken-output cell has several possible
+   causes and the eval, not a log guess, tells them apart.
 2. Qwen3.5-0.8B with thinking on spent its whole 2048-token budget reasoning
    and answered nothing. Fixed by `ThinkingPolicy` (Big-tier only by
    default), but "is thinking ever worth it below Big" is an open question

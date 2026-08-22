@@ -13,10 +13,12 @@ as ordinary pass/fail — a model can "pass" fixtures at 6 tokens of garbage if
 nothing checks the token count, and a model can burn its whole budget
 thinking and still technically not fail any single substring check:
 
-  * BROKEN — median output tokens across a cell < 8. The android_armv9.0_1
-    (SVE2) CPU-variant-produces-broken-logits bug reproduces as exactly this
-    shape: `<think></think>` + end-of-generation at ~6 tokens, on every
-    fixture, regardless of what the fixture actually asked.
+  * BROKEN — median output tokens across a cell < 8. A cell where every
+    answer is `<think></think>` + end-of-generation at ~6 tokens, regardless
+    of what was asked. First blamed on the android_armv9.0_1 (SVE2) CPU
+    variant; the 2026-08-22 re-baseline showed the real cause was the
+    thinking/parse/dirty-KV bugs (F1/F2/KV-clear), not the kernel — which is
+    exactly why this stays an instrument, not a log guess.
   * THINKING RUNAWAY — median thinking-block length across a cell > 2000
     chars. The Qwen3.5-0.8B-spent-2048-tokens-reasoning-and-answered-nothing
     bug.

@@ -214,15 +214,24 @@ char *heap_cstr(const char *literal) {
  * when it works; when it doesn't, armv9.0_1 and armv9.2_1 have disjoint
  * feature sets (SVE2-no-SVE/SME vs SVE+SME-no-SVE2) so at most one of them
  * can ever load on a given device — their relative order doesn't matter. */
-/* ⚠️ The SVE/SVE2/SME variants (armv9.x) are deliberately tried AFTER
- * armv8.6_1. On a Pixel 9a (Tensor G4, 2026-08-22, llama.cpp e85caa81e)
- * android_armv9.0_1 loaded and Qwen3.5-0.8B then answered EVERY prompt with
- * an empty think block + end-of-generation at ~6 tokens, while the same
- * build on armv8.2_2 (emulator) and armv8.6_1 (this device, after this
- * reorder) generated normally. The SVE2 kernels are producing broken
- * logits for this model on this core; i8mm (armv8.6_1) is the real win on
- * phones anyway. Re-verify the armv9 tiers on every llama.cpp bump before
- * promoting them back above 8.6. */
+/* The SVE/SVE2/SME variants (armv9.x) are tried AFTER armv8.6_1 — for
+ * LATENCY, not correctness. On a Pixel 9a (Tensor G4, llama.cpp e85caa81e)
+ * armv8.6_1 is both faster and slightly higher-scoring than armv9.0_1 in
+ * the eval matrix (5017ms vs 5912ms median, 19/22 vs 17/22, 2026-08-22
+ * F1/F2 re-baseline), and i8mm is the real win on phones.
+ *
+ * ⚠️ CORRECTION (2026-08-22): the earlier claim here — that armv9.0_1
+ * "produces broken logits" because Qwen3.5-0.8B answered every prompt with
+ * an empty think block + end-of-generation at ~6 tokens — DID NOT
+ * reproduce once F1 (PEG parser), F2 (reasoning_format=AUTO) and the
+ * per-call KV-cache clear landed (68712e0f) and thinking was disabled for
+ * the small tiers (ThinkingPolicy). On the clean re-baseline armv9.0_1
+ * generates real answers (17/22: correct "Canberra", a working time tool,
+ * a proper photosynthesis explanation). The empty-think+EOG shape was the
+ * thinking-on / dirty-KV / unparsed bugs, not the CPU kernel. So armv9 is
+ * NOT broken — keep armv8.6_1 first on latency, but do not treat armv9 as
+ * unusable. Single-run scores are noisy; re-confirm on the next device
+ * session and on every llama.cpp bump. */
 static const char *kAndroidCpuBackendVariants[] = {
     "libggml-cpu-android_armv8.6_1.so",
     "libggml-cpu-android_armv9.2_2.so",
