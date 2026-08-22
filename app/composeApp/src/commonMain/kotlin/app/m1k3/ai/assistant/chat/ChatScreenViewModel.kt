@@ -85,7 +85,7 @@ class ChatScreenViewModel(
     // Model download check (platform-injected, optional — for large downloadable models)
     private val isModelDownloaded: ((LlmModel) -> Boolean)? = null,
     // Model download trigger (platform-injected, optional)
-    private val downloadModel: ((LlmModel, (ModelDownloadState) -> Unit) -> Unit)? = null,
+    private val downloadModel: ModelDownloader? = null,
     /** Deletes a model's weights from disk — the retry path after a file that downloaded but won't load. */
     private val deleteModel: ((LlmModel) -> Boolean)? = null,
     // TTS callbacks (platform-injected, optional)
@@ -335,8 +335,11 @@ class ChatScreenViewModel(
         if (model == _uiState.value.currentModel) return
         if (_uiState.value.generationState.isGenerating) return
 
-        // Check if model needs downloading (large models like Gemma 4)
-        if (model.minRamGB > 0 && isModelDownloaded?.invoke(model) == false) {
+        // Nothing is bundled any more — every brain's weights are downloaded
+        // (or, for Mini on a Nano device, reported present by the system-model
+        // probe). The old `minRamGB > 0` gate skipped Mini (minRamGB = 0) and sent
+        // it straight to an engine init with no file on disk.
+        if (isModelDownloaded?.invoke(model) == false) {
             logger.i { "Model ${model.displayName} needs download" }
             startModelDownload(model, factory)
             return
@@ -358,26 +361,47 @@ class ChatScreenViewModel(
                 return
             }
 
+        // One download at a time. Picking a second brain mid-download used to run
+        // both: each overwrote the same progress state (the "pulsing between Qwen
+        // & Gemma" Kev saw, 2026-08-22) and whichever finished LAST won the brain.
+        activeDownload?.let { (active, handle) ->
+            if (active == model) {
+                logger.d { "${model.displayName} is already downloading" }
+                return
+            }
+            logger.i { "Cancelling download of ${active.displayName} — ${model.displayName} picked instead" }
+            handle.cancel()
+        }
+
         _uiState.update {
             it.copy(modelDownload = ModelDownloadState.Starting(model.displayName))
         }
 
-        download(model) { state ->
-            _uiState.update { it.copy(modelDownload = state) }
+        val handle =
+            download(model) { state ->
+                // A cancelled download can still emit a straggler; only the
+                // active one may touch the UI or switch the brain.
+                if (activeDownload?.first != model) return@download
+                _uiState.update { it.copy(modelDownload = state) }
 
-            if (state is ModelDownloadState.Complete) {
-                // Download finished — now switch
-                performModelSwitch(model, factory)
-                _uiState.update { it.copy(modelDownload = null) }
-            } else if (state is ModelDownloadState.Failed) {
-                // Clear download state after a delay
-                viewModelScope.launch {
-                    kotlinx.coroutines.delay(3000)
+                if (state is ModelDownloadState.Complete) {
+                    activeDownload = null
+                    performModelSwitch(model, factory)
                     _uiState.update { it.copy(modelDownload = null) }
+                } else if (state is ModelDownloadState.Failed) {
+                    activeDownload = null
+                    // Clear download state after a delay
+                    viewModelScope.launch {
+                        kotlinx.coroutines.delay(3000)
+                        _uiState.update { it.copy(modelDownload = null) }
+                    }
                 }
             }
-        }
+        activeDownload = model to handle
     }
+
+    /** The in-flight weights download, if any — see [startModelDownload]. */
+    private var activeDownload: Pair<LlmModel, DownloadHandle>? = null
 
     /**
      * Perform the actual model switch (release old, create new, init).

@@ -28,6 +28,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -260,7 +261,10 @@ class ChatScreenViewModelToolsTest {
                 createViewModel(
                     preferences = TestPreferencesStore(),
                     engineFactory = { MockBaseLlmEngine() },
-                    downloadModel = { model, _ -> downloaded += model },
+                    downloadModel = { model, _ ->
+                        downloaded += model
+                        DownloadHandle {}
+                    },
                     deleteModel = { model -> deleted += model; true },
                 )
 
@@ -269,6 +273,49 @@ class ChatScreenViewModelToolsTest {
 
             assertEquals(listOf(viewModel.uiState.value.currentModel), deleted)
             assertEquals(listOf(viewModel.uiState.value.currentModel), downloaded)
+        }
+
+    // ===== One download at a time =====
+
+    @Test
+    fun `picking a second brain cancels the first download and ignores its late progress`() =
+        runTest {
+            // Kev's Pixel (2026-08-22): "pulsing between Qwen & Gemma" — two concurrent
+            // downloads each overwriting the same progress state, and the loser still
+            // switching the brain when it finished.
+            val cancelled = mutableListOf<LlmModel>()
+            val callbacks = mutableMapOf<LlmModel, (ModelDownloadState) -> Unit>()
+            val viewModel =
+                createViewModel(
+                    preferences = TestPreferencesStore(),
+                    engineFactory = { MockBaseLlmEngine() },
+                    downloadModel = { model, onProgress ->
+                        callbacks[model] = onProgress
+                        DownloadHandle { cancelled += model }
+                    },
+                    isModelDownloaded = { false },
+                )
+
+            viewModel.switchModel(LlmModel.Qwen35_0B8)
+            viewModel.switchModel(LlmModel.Gemma4_E2B)
+            advanceUntilIdle()
+
+            assertEquals(listOf<LlmModel>(LlmModel.Qwen35_0B8), cancelled)
+
+            // A straggling progress event from the cancelled download must not reach the UI.
+            callbacks.getValue(LlmModel.Qwen35_0B8)(
+                ModelDownloadState.InProgress(LlmModel.Qwen35_0B8.displayName, 50, 500, 1000),
+            )
+            callbacks.getValue(LlmModel.Gemma4_E2B)(
+                ModelDownloadState.InProgress(LlmModel.Gemma4_E2B.displayName, 10, 200, 2000),
+            )
+            val shown = viewModel.uiState.value.modelDownload as ModelDownloadState.InProgress
+            assertEquals(LlmModel.Gemma4_E2B.displayName, shown.modelName)
+
+            // And its completion must not switch the brain out from under the user.
+            callbacks.getValue(LlmModel.Qwen35_0B8)(ModelDownloadState.Complete(LlmModel.Qwen35_0B8.displayName))
+            advanceUntilIdle()
+            assertNotEquals(LlmModel.Qwen35_0B8, viewModel.uiState.value.currentModel)
         }
 
     // ===== Helper Methods =====
@@ -280,8 +327,9 @@ class ChatScreenViewModelToolsTest {
         aiEngine: MockBaseLlmEngine = MockBaseLlmEngine(),
         engineFactory: ((LlmModel) -> BaseLlmEngine)? = null,
         onSpeakText: (suspend (String) -> Unit)? = null,
-        downloadModel: ((LlmModel, (ModelDownloadState) -> Unit) -> Unit)? = null,
+        downloadModel: ModelDownloader? = null,
         deleteModel: ((LlmModel) -> Boolean)? = null,
+        isModelDownloaded: ((LlmModel) -> Boolean)? = null,
     ): ChatScreenViewModel {
         val database = TestDatabaseFactory.createInMemoryDatabase()
         return ChatScreenViewModel(
@@ -298,6 +346,7 @@ class ChatScreenViewModelToolsTest {
             onSpeakText = onSpeakText,
             downloadModel = downloadModel,
             deleteModel = deleteModel,
+            isModelDownloaded = isModelDownloaded,
         )
     }
 

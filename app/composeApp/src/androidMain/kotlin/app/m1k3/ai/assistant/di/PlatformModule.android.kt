@@ -481,8 +481,9 @@ actual val platformModule =
                 downloadModel = { model, onProgress ->
                     val httpManager = get<ModelDownloadManager>() as HttpModelDownloadManager
                     @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-                    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                        httpManager.download(model).collect { progress ->
+                    val job =
+                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            httpManager.download(model).collect { progress ->
                             val state =
                                 when (progress) {
                                     is app.m1k3.ai.assistant.ai.download.DownloadProgress.Starting -> {
@@ -514,6 +515,9 @@ actual val platformModule =
                             }
                         }
                     }
+                    // Cancelling the collector aborts the HTTP read mid-stream; the
+                    // .tmp stays and the next attempt resumes it (Range request).
+                    app.m1k3.ai.assistant.chat.DownloadHandle { job.cancel() }
                 },
                 onSpeakText = { text -> get<Speaker>().speak(text) },
                 userNameProvider = {
