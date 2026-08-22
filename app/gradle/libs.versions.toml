@@ -36,6 +36,11 @@ kermit = "2.1.0"
 koin-core = "4.2.2"
 koin-compose = "4.2.2"
 
+# ML Kit GenAI Prompt API (Gemini Nano / AICore) — Mini M1K3's system-model
+# brain when the device has one. Verified latest via maven-metadata.xml
+# 2026-08-22. See docs/adr/0007-system-model-gemini-nano.md.
+mlkit-genai-prompt = "1.0.0-beta4"
+
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -63,6 +68,7 @@ androidx-security-crypto = { module = "androidx.security:security-crypto", versi
 
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 jvector = { module = "io.github.jbellis:jvector", version.ref = "jvector" }
+mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkit-genai-prompt" }
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
