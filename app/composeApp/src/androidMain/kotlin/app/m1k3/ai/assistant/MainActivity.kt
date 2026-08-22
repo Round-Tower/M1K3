@@ -157,6 +157,15 @@ class MainActivity : ComponentActivity() {
         // Handle share intent on cold start
         handleShareIntent(intent)
 
+        // tools/eval/android's launch contract — a strict no-op on an ordinary
+        // launch (no m1k3.eval.* extras); see EvalHarness's KDoc for why this
+        // must run BEFORE the normal setContent below, not alongside it.
+        if (app.m1k3.ai.assistant.eval.EvalHarness
+                .installFromIntent(this, intent)
+        ) {
+            return
+        }
+
         setContent {
             MaApp()
         }
