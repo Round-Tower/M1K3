@@ -51,15 +51,20 @@ struct KeychainScriptApprovalStore: ScriptApprovalStoring {
         persist(approvals().filter { $0.name != name })
     }
 
-    private func persist(_ approvals: [ScriptApproval]) {
-        guard let data = try? JSONEncoder().encode(approvals) else { return }
+    /// Returns whether the write actually landed — callers that clear the
+    /// legacy store MUST gate on this (a failed write must not also delete the
+    /// old copy). Never silently downgrades to the tamperable store: a failed
+    /// write means the approval didn't stick and the tool refuses the run
+    /// (unknown verdict) — fail closed, and say why.
+    @discardableResult
+    private func persist(_ approvals: [ScriptApproval]) -> Bool {
+        guard let data = try? JSONEncoder().encode(approvals) else { return false }
         do {
             try keyStore.setData(data, forAccount: Self.account)
+            return true
         } catch {
-            // Never silently downgrade to the tamperable store: a failed write
-            // means the approval didn't stick, and the tool will refuse the run
-            // (unknown verdict) — fail closed, and say why.
             Self.log.error("script approval keychain write failed: \(String(describing: error), privacy: .public)")
+            return false
         }
     }
 
@@ -75,7 +80,14 @@ struct KeychainScriptApprovalStore: ScriptApprovalStoring {
         for approval in decoded where !merged.contains(where: { $0.name == approval.name }) {
             merged.append(approval)
         }
-        persist(merged)
+        // Only drop the legacy copy (and claim success) if the Keychain write
+        // actually landed — otherwise the approvals would vanish from BOTH
+        // stores while the log said "migrated" (F-review-2). On failure keep
+        // the plist copy so a later launch can retry.
+        guard persist(merged) else {
+            Self.log.error("script approval migration deferred — keychain write failed, legacy copy kept")
+            return
+        }
         defaults.removeObject(forKey: legacyKey)
         Self.log.notice("migrated \(decoded.count) script approval(s) from UserDefaults to Keychain")
     }

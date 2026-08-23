@@ -147,9 +147,11 @@ public final class UserScriptRunner: ScriptRunning, Sendable {
 
         switch winner {
         case .timedOut:
-            // Cannot kill an NSUserUnixTask — abandon the wait, keep the
-            // reader handler detached, and report honestly.
+            // Cannot kill an NSUserUnixTask — abandon the wait, detach the
+            // reader handler, close our read end (the child keeps the write
+            // end; we just stop holding an fd for it), and report honestly.
             pipe.fileHandleForReading.readabilityHandler = nil
+            try? pipe.fileHandleForReading.close()
             return ScriptRunOutcome(
                 succeeded: false, failureReason: "timed out after \(Int(timeout))s",
                 output: collector.text, duration: duration, timedOut: true

@@ -64,8 +64,7 @@ public struct ExecuteScriptTool: AgentTool {
             && !name.hasPrefix(".")
             && !name.contains("/")
             && !name.contains("\\")
-            && !name.contains(" ")
-            && name.rangeOfCharacter(from: .newlines) == nil
+            && name.rangeOfCharacter(from: .whitespacesAndNewlines) == nil
     }
 
     /// A validated, parsed invocation — or a recoverable error to return.
@@ -90,7 +89,9 @@ public struct ExecuteScriptTool: AgentTool {
         }
         let timeout: TimeInterval
         if let raw = input["timeout_seconds"]?.trimmingCharacters(in: .whitespaces), !raw.isEmpty {
-            guard let parsed = TimeInterval(raw) else {
+            // .isFinite rejects "inf"/"nan": a non-finite value survives the
+            // min/max clamp and then crashes Task.sleep's UInt64(seconds*1e9) cast.
+            guard let parsed = TimeInterval(raw), parsed.isFinite else {
                 return .error("Error: timeout_seconds must be a number, got \"\(raw)\".")
             }
             timeout = min(max(parsed, timeoutRange.lowerBound), timeoutRange.upperBound)

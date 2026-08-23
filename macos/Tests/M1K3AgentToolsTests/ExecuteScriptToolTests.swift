@@ -137,6 +137,24 @@ struct ExecuteScriptToolTests {
         #expect(runner.runs.isEmpty)
     }
 
+    @Test("a non-finite timeout (inf/nan) is refused, nothing runs — no Task.sleep crash")
+    func nonFiniteTimeout() async throws {
+        let (tool, runner) = makeTool()
+        for raw in ["inf", "-inf", "nan", "1e400"] {
+            let result = try await tool.execute(input: ["script": "backup.sh", "timeout_seconds": raw])
+            #expect(result.output.hasPrefix("Error:"), "expected refusal for \(raw)")
+        }
+        #expect(runner.runs.isEmpty)
+    }
+
+    @Test("a tab in the script name is refused (plain-file-name intent)")
+    func tabInNameRefused() async throws {
+        let (tool, runner) = makeTool()
+        let result = try await tool.execute(input: ["script": "back\tup.sh"])
+        #expect(result.output.hasPrefix("Error:"))
+        #expect(runner.runs.isEmpty)
+    }
+
     @Test("an empty script name is a recoverable error")
     func emptyName() async throws {
         let (tool, runner) = makeTool()
