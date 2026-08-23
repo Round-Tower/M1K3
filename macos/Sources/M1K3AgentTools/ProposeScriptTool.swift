@@ -31,9 +31,11 @@ public struct ScriptProposal: Sendable, Equatable {
 public struct ProposeScriptTool: AgentTool {
     public let name = "propose_script"
     public let description =
-        "Draft a shell script for the user to review and install into M1K3's scripts folder. "
-            + "Nothing runs until they approve it. Use when execute_script has no installed script "
-            + "that fits the task. Keep scripts short, readable, and single-purpose."
+        "Draft a script for the user to review and install into M1K3's scripts folder, with "
+            + "one-click install-and-run. Use this WHENEVER the user asks you to write, create, or "
+            + "make a runnable script (shell/bash/zsh) — call it with the full source instead of "
+            + "pasting the script in a code block, so they get a real tool in their kit, not text "
+            + "to copy. Nothing runs until they approve it. Keep scripts short, readable, single-purpose."
     public let parameters = [
         ToolParameter(name: "name", description: "file name for the script, e.g. disk_report.sh"),
         ToolParameter(name: "content", description: "the full script source, starting with a shebang"),

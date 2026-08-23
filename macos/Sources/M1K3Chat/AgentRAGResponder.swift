@@ -696,6 +696,23 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             + "DO, not a lookup — just produce it. No tools, no grounding, no citations, "
             + "no \"found nothing\"; those are for factual questions."
 
+    /// The carve-out when the "hands" (propose_script) are in the palette: still
+    /// "just produce it", but a runnable SCRIPT routes to propose_script — a
+    /// one-click review-and-install — instead of a code block the user has to
+    /// save and chmod. Without this, the plain carve-out above ("just produce
+    /// it. No tools") steers the model to PASTE the script and never call the
+    /// tool (observed live 2026-08-23, the whole reason the hands looked inert
+    /// even with the toggle on). Selected in `groundingBody`; a pin asserts
+    /// both styles carry it verbatim when propose_script is offered.
+    static let generativeCarveOutWithScripts =
+        "- A request to write, create, code, or compose something is a task to "
+            + "DO, not a lookup — just produce it (no grounding, no citations, no "
+            + "\"found nothing\"; those are for factual questions). ONE exception: when "
+            + "the user asks you to write, create, or make a SCRIPT you could run on "
+            + "\(HostPlatform.thisDevice), call propose_script with the full source "
+            + "instead of pasting it in a code block — that gives them a one-click "
+            + "review-and-install, not just text to copy."
+
     private static func groundingBody(
         chunks: [ChunkHit], memories: [ChunkHit], toolNames: Set<String>, style: PromptStyle,
         now: Date
@@ -733,11 +750,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 + "unsure, the detail is obscure or easy to mix up, or it could have "
                 + "changed over time; then cite its Source."
         }
+        // The hands reshape the generative carve-out: a runnable script routes
+        // to propose_script, not a pasted code block (2026-08-23 live fix).
+        let carveOut = toolNames.contains("propose_script")
+            ? Self.generativeCarveOutWithScripts
+            : Self.generativeCarveOut
         let rules = switch style {
         case .react:
             """
             RULES:
-            \(Self.generativeCarveOut)
+            \(carveOut)
             - Pure small talk — greetings, banter — needs no tools or knowledge: \
             reply IMMEDIATELY starting with "CONCLUSION:". A question about the \
             current world is NOT small talk, even phrased casually.
@@ -757,7 +779,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         case .native:
             """
             RULES:
-            \(Self.generativeCarveOut)
+            \(carveOut)
             - Pure small talk — greetings, banter — needs no tools or knowledge; just reply. \
             A question about the current world is NOT small talk, even phrased casually.
             - If the KNOWLEDGE above answers the question, answer from it directly.
