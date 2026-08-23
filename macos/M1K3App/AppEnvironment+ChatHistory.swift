@@ -166,7 +166,8 @@ extension AppEnvironment {
         embedder: any EmbeddingService,
         onHits: @escaping @Sendable ([ChunkHit]) -> Void,
         onOpenLink: (@Sendable (URL) -> Void)?,
-        deepDelegation: DeepDelegationHook? = nil
+        deepDelegation: DeepDelegationHook? = nil,
+        scriptExecution: ScriptExecutionHook? = nil
     ) -> [any AgentTool] {
         var tools: [any AgentTool] = [
             DateTimeTool(),
@@ -204,6 +205,17 @@ extension AppEnvironment {
         if let onOpenLink {
             tools.append(OpenLinkTool(onOpen: onOpenLink))
         }
+        // The hands (context-tools charter): interactive chat ONLY (non-nil
+        // hook comes solely from the main responder + its warm), and only
+        // while the default-OFF Settings toggle is on — off means the tools
+        // are ABSENT from the palette, not refused (charter rule 1). MCP's
+        // LAN scope additionally fails closed (not in lanAllowedTools).
+        if let scriptExecution, defaults.bool(forKey: Self.scriptToolsEnabledKey) {
+            tools.append(ExecuteScriptTool(
+                runner: scriptExecution.runner, approvals: scriptExecution.approvals
+            ))
+            tools.append(ProposeScriptTool(onPropose: scriptExecution.onPropose))
+        }
         return tools
     }
 
@@ -228,7 +240,8 @@ extension AppEnvironment {
         provider: any InferenceProvider,
         forcedThinkingMode: ThinkingMode? = nil,
         onOpenLink: (@Sendable (URL) -> Void)? = nil,
-        deepDelegation: DeepDelegationHook? = nil
+        deepDelegation: DeepDelegationHook? = nil,
+        scriptExecution: ScriptExecutionHook? = nil
     ) -> any RAGResponding {
         // Hits the model retrieves itself (search_knowledge) flow through the
         // collector into the turn's sources + the citation allow-list.
@@ -243,7 +256,8 @@ extension AppEnvironment {
                     embedder: embedder,
                     onHits: { hits in sourceCollector.record(hits) },
                     onOpenLink: onOpenLink,
-                    deepDelegation: deepDelegation
+                    deepDelegation: deepDelegation,
+                    scriptExecution: scriptExecution
                 )
             },
             sourceCollector: sourceCollector,

@@ -127,6 +127,11 @@ public enum M1K3Log {
         /// pairing ceremony milestones, advertise, refused sources). Device
         /// display NAMES and counts only — never prompts, tokens, or keys.
         case brainServe = "brain-serve"
+        /// The execute_script agent tool (the hands): install approvals,
+        /// run start/finish with script NAME, hash prefix, duration and
+        /// success/timeout only — never script output or content (a script's
+        /// stdout is user data, same rule as heartbeat narrative text).
+        case scriptRun = "script-run"
         /// The headless CHATEVAL harness: fixture boundaries and phase marks.
         /// Exists because a 2026-08-10 run showed 177 SECONDS of total log
         /// silence between one fixture ending and the next producing its first

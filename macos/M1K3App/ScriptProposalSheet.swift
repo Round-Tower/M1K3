@@ -1,0 +1,64 @@
+//
+//  ScriptProposalSheet.swift
+//  M1K3App
+//
+//  The review half of the hands' consent ceremony: M1K3 proposed a script
+//  (propose_script) and this sheet shows the user its full source before
+//  anything exists on disk. Install writes it into the Application Scripts
+//  folder (one-time grant panel on first use) and pins its hash in the
+//  approval ledger; Not Now discards. The source is shown verbatim and
+//  read-only — what you approve is byte-for-byte what can run.
+//
+//  Signed: Kev + claude-fable-5, 2026-08-23, Confidence 0.8 (layout
+//  verify-at-⌘R; install path's ledger behaviour test-pinned). Prior: Unknown.
+
+import M1K3AgentTools
+import SwiftUI
+
+struct ScriptProposalSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    let proposal: ScriptProposal
+    @State private var failure: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("M1K3 proposes a script", systemImage: "hand.raised")
+                .font(.headline)
+            LabeledContent("Name", value: proposal.name)
+            if !proposal.purpose.isEmpty {
+                LabeledContent("Purpose", value: proposal.purpose)
+            }
+            ScrollView {
+                Text(proposal.content)
+                    .font(.system(.caption, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+                    .padding(8)
+            }
+            .frame(minHeight: 160, maxHeight: 280)
+            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+            Text("""
+            Nothing runs until you install it. Installed scripts live in M1K3's \
+            scripts folder, and only the exact bytes you approve can ever run — \
+            if the file changes, M1K3 refuses until you re-approve.
+            """)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            if let failure {
+                Text(failure).font(.caption).foregroundStyle(.red)
+            }
+            HStack {
+                Spacer()
+                Button("Not Now") {
+                    env.scriptProposals.pending = nil
+                }
+                Button("Review & Install") {
+                    failure = env.installProposedScript(proposal)
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 480)
+    }
+}

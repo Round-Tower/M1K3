@@ -679,6 +679,18 @@ public final class ChatSession {
         spawnDistillation()
     }
 
+    /// The turns eligible for distillation: complete, non-empty, and NOT
+    /// tainted by a tool whose output must never become permanent memory
+    /// (P3, context-tools charter — see DistillationTaint). Pure, so the
+    /// taint rule is testable without spinning a session.
+    nonisolated static func distillableTurns(_ messages: ArraySlice<ChatMessage>) -> [ChatTurn] {
+        messages.compactMap { message -> ChatTurn? in
+            guard case .complete = message.status, !message.text.isEmpty else { return nil }
+            guard !DistillationTaint.isTainted(toolsUsed: message.toolsUsed) else { return nil }
+            return ChatTurn(role: message.role == .user ? .user : .assistant, text: message.text)
+        }
+    }
+
     /// The distillation worker, deliberately WITHOUT an `isResponding` guard.
     /// ⚠️ Contract: callers must guarantee no response is actively streaming —
     /// `scheduleDistillationIfNeeded` enforces it via the latch for the
@@ -693,10 +705,7 @@ public final class ChatSession {
         let snapshotCount = messages.count
         let watermark = (try? history.distilledWatermark(id: conversationID)) ?? 0
         guard watermark < snapshotCount else { return }
-        let fresh = messages[min(watermark, snapshotCount)...].compactMap { message -> ChatTurn? in
-            guard case .complete = message.status, !message.text.isEmpty else { return nil }
-            return ChatTurn(role: message.role == .user ? .user : .assistant, text: message.text)
-        }
+        let fresh = Self.distillableTurns(messages[min(watermark, snapshotCount)...])
         // At least one full new exchange — never distill a lone dangling turn.
         guard fresh.contains(where: { $0.role == .user }),
               fresh.contains(where: { $0.role == .assistant }) else { return }

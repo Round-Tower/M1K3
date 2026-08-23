@@ -30,6 +30,9 @@ import os
 public struct WebSearchTool: AgentTool {
     private static let log = Logger(subsystem: M1K3Log.subsystem, category: "web-search")
     public let name = "web_search"
+    /// P1 same-turn exclusion (context-tools charter): this tool reaches the
+    /// network, so it never runs in the same turn as a local-sensitive tool.
+    public let exclusionClass: ToolExclusionClass? = .network
     public let description =
         "Search the web via DuckDuckGo for current or external information "
             + "(news, facts, anything not in stored knowledge). Argument: the search query."

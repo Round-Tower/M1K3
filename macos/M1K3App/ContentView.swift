@@ -393,6 +393,16 @@ struct ContentView: View {
                 attachImages(at: urls)
             }
         }
+        .sheet(isPresented: Binding(
+            get: { env.scriptProposals.pending != nil },
+            set: { if !$0 { env.scriptProposals.pending = nil } }
+        )) {
+            // The hands' consent sheet: the agent proposed a script; the user
+            // reads the source and decides. See ScriptProposalSheet.
+            if let proposal = env.scriptProposals.pending {
+                ScriptProposalSheet(proposal: proposal)
+            }
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             // The mic/speech recovery outranks ingest status — it's the only
             // way back from a denied grant (which used to fail silently).

@@ -96,6 +96,8 @@ final class AppEnvironment {
     /// `open_link` tool, and the local agent all converge here. Default-initialised
     /// (no deps) so it's available to capture while the rest of init runs.
     let review = ReviewModel()
+    /// Scripts the agent proposed, awaiting the user's review (the hands).
+    let scriptProposals = ScriptProposalInbox()
     /// TTS behind a swappable seam: Built-in (Apple) by default, M1K3 Voice
     /// (Kokoro) once downloaded. Callers never see the swap.
     let speech: SwappableSpeechProvider
@@ -361,6 +363,11 @@ final class AppEnvironment {
     /// then never offered to the model). The one capability that sends
     /// chat-derived queries off this Mac.
     nonisolated static let webSearchEnabledKey = "webSearchEnabled"
+    /// The hands (context-tools charter): execute_script + propose_script in
+    /// chat — OFF by default; off means the model never sees the tools. Runs
+    /// are folder-scoped (Application Scripts), approval-pinned (SHA-256),
+    /// and same-turn-excluded from the web tools.
+    nonisolated static let scriptToolsEnabledKey = "scriptToolsEnabled"
     /// Settings (testing aid): show per-turn generation stats — context tokens +
     /// tok/s — under each assistant answer. Default OFF; MLX tiers only.
     nonisolated static let showGenerationStatsKey = "showGenerationStats"
@@ -734,6 +741,7 @@ final class AppEnvironment {
         // self isn't fully initialised here. The agent's open_link tool routes a
         // link into the panel on the MainActor.
         let review = review
+        let scriptProposals = scriptProposals
         responder = Self.makeAgentResponder(
             store: store,
             embedder: swappable,
@@ -741,7 +749,14 @@ final class AppEnvironment {
             onOpenLink: { url in
                 Task { @MainActor in review.open(url: url) }
             },
-            deepDelegation: deepDelegationHook
+            deepDelegation: deepDelegationHook,
+            scriptExecution: ScriptExecutionHook(
+                runner: UserScriptRunner(),
+                approvals: KeychainScriptApprovalStore(),
+                onPropose: { proposal in
+                    Task { @MainActor in scriptProposals.pending = proposal }
+                }
+            )
         )
 
         // TTS seam: Built-in Apple voice wrapped in a swappable façade so the
@@ -1279,7 +1294,8 @@ final class AppEnvironment {
         ).map(\.toolDefinition)
         let interactiveTools = Self.interactiveAgentTools(
             store: store, embedder: embedder,
-            onHits: { _ in }, onOpenLink: { _ in }, deepDelegation: deepDelegationHook
+            onHits: { _ in }, onOpenLink: { _ in }, deepDelegation: deepDelegationHook,
+            scriptExecution: .forWarm
         ).map(\.toolDefinition)
         // weak: a brain swap mid-warm must not have this task pin the OUTGOING
         // provider's multi-GB weights alive while the new brain's are loading
@@ -1674,6 +1690,9 @@ extension AppEnvironment {
             showBrainUpgradeNotice(notice)
         }
         M1K3Persona.setUserProfile(try? store.meta(key: Self.userProfileMetaKey))
+        // Lift any pre-Keychain script approvals into the Keychain once, then
+        // drop the tamperable plist copy (Finding 3).
+        KeychainScriptApprovalStore().migrateFromUserDefaultsIfNeeded()
         installGenerationMetricsSink()
         await quarantineSelfWiringDocuments()
         await quarantineModelThinkingDocuments()
