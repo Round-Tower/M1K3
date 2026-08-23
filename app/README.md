@@ -131,7 +131,7 @@ canonical.
 | **AI engine** | `Ma` — our own JNI bridge to llama.cpp (submodule) |
 | **Models** | Qwen3.5 0.8B / 2B (Mini/Lil), Gemma 4 E2B (Big), GGUF Q4_K_M |
 | **Database** | SQLDelight 2.0.2 + SQLCipher (AES-256 at rest) |
-| **Embeddings** | MiniLM-L6 (384-dim, ONNX) |
+| **Embeddings** | EmbeddingGemma-300m (768-dim, GGUF via Ma) |
 | **Native tool calling** | GBNF grammar-constrained decoding |
 | **DI** | Koin |
 | **Build** | AGP 9.0.1, Kotlin 2.2.20, NDK 28.2.13676358 (pinned) |

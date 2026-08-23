@@ -159,6 +159,44 @@ char *ma_core_generate_chat(
     void       *cb_user_data
 );
 
+/**
+ * Load a GGUF EMBEDDING model (e.g. EmbeddingGemma) with mean pooling.
+ *
+ * Separate from ma_core_init on purpose: an embedding context needs no
+ * FA/KV/sampling tuning and no chat template — it decodes a whole sequence
+ * once, pools it, and returns a vector. It DOES share the once-per-process CPU
+ * backend load (same backend_lib_dir / preferred_cpu_variant contract as
+ * ma_core_init; see that function's header). The context is created with
+ * embeddings=true and mean pooling (EmbeddingGemma's pooling), F16 KV, no
+ * flash-attn — embeddings are cheap and the simple path is the robust one.
+ *
+ * Returns 0 in the handle on failure (model load or context creation failed).
+ */
+ma_handle ma_core_init_embedding(
+    const char *model_path,
+    int         n_ctx,
+    const char *backend_lib_dir,
+    const char *preferred_cpu_variant
+);
+
+/**
+ * Embed `text` into a single L2-normalized float vector.
+ *
+ * Tokenizes with the model's own (Gemma) tokenizer, runs one decode of the
+ * whole sequence, reads the pooled sequence embedding, L2-normalizes it, and
+ * writes the model's n_embd floats into `out` (must hold at least
+ * `out_capacity`). Returns the number of floats written (n_embd), or a
+ * negative value on error (bad handle, tokenize failure, out_capacity too
+ * small, or decode failure). The handle MUST come from ma_core_init_embedding.
+ * Not thread-safe per handle — one shared context, serialize calls host-side.
+ */
+int ma_core_embed(
+    ma_handle   handle,
+    const char *text,
+    float      *out,
+    int         out_capacity
+);
+
 /** Free a string returned by ma_core_generate / ma_core_generate_chat. */
 void ma_core_free_string(char *s);
 

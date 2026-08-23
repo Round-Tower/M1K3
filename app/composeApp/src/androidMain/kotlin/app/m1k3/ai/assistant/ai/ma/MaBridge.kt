@@ -144,6 +144,34 @@ object MaBridge : MaInferenceBackend {
     }
 
     /**
+     * Load a GGUF EMBEDDING model (EmbeddingGemma) with mean pooling.
+     *
+     * A separate context from [init]: no sampling/FA/KV tuning, no chat
+     * template — it only produces pooled sequence embeddings. Reuses the same
+     * llama.cpp engine and the model's own (Gemma) tokenizer, so there is no
+     * second inference runtime or tokenizer on the device.
+     *
+     * @return an opaque context handle (Long), or 0 on failure.
+     */
+    fun initEmbedding(
+        modelPath: String,
+        nCtx: Int,
+        nativeLibraryDir: String,
+        preferredCpuVariant: String = "",
+    ): Long = nativeInitEmbedding(modelPath, nCtx, nativeLibraryDir, preferredCpuVariant)
+
+    /**
+     * Embed [text] into a single L2-normalized vector (cosine-ready) using an
+     * embedding [handle] from [initEmbedding]. Not thread-safe per handle —
+     * serialize calls. Returns null on failure (bad handle, tokenize/decode
+     * failure); the engine maps that to a degraded-retrieval result.
+     */
+    fun embed(
+        handle: Long,
+        text: String,
+    ): FloatArray? = nativeEmbed(handle, text)
+
+    /**
      * Release native resources for this context handle.
      * After calling release(), [handle] must not be used.
      */
@@ -218,4 +246,24 @@ object MaBridge : MaInferenceBackend {
         enableThinking: Boolean,
         callback: MaTokenCallback?,
     ): String
+
+    /**
+     * JNI entry point for embedding-model init. Same backend-load contract as
+     * [nativeInit] ([nativeLibraryDir] / [preferredCpuVariant]); no tuning knobs.
+     */
+    private external fun nativeInitEmbedding(
+        modelPath: String,
+        nCtx: Int,
+        nativeLibraryDir: String,
+        preferredCpuVariant: String,
+    ): Long
+
+    /**
+     * JNI entry point for embedding. Returns the L2-normalized vector as a
+     * FloatArray of length n_embd, or null on failure.
+     */
+    private external fun nativeEmbed(
+        handle: Long,
+        text: String,
+    ): FloatArray?
 }

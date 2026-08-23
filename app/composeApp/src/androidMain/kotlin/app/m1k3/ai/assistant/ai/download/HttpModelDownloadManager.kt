@@ -57,102 +57,142 @@ class HttpModelDownloadManager(
      * @param model The LlmModel to download
      * @return Flow emitting DownloadProgress updates
      */
-    fun download(model: LlmModel): Flow<DownloadProgress> =
+    fun download(model: LlmModel): Flow<DownloadProgress> = download(model.id, model.displayName, getDownloadUrl(model), model.filename)
+
+    /**
+     * Generic file download — same single-flight / resume / integrity path as the
+     * model download, but for anything the [LlmModel] sealed type doesn't cover
+     * (the EmbeddingGemma GGUF). Lands under the same `filesDir/models` dir.
+     */
+    fun download(
+        id: String,
+        displayName: String,
+        url: String,
+        filename: String,
+    ): Flow<DownloadProgress> =
         flow {
-            // Single-flight per model: a second collector while one is writing would
+            // Single-flight per id: a second collector while one is writing would
             // see the .tmp, send a Range header, get a 206 and APPEND to a file the
             // first writer is still filling (the 2x file of 2026-08-21).
-            if (!inFlight.add(model.id)) {
-                logger.w { "Download of ${model.displayName} already in flight — ignoring duplicate request" }
-                emit(DownloadProgress.Failed(model.id, "Already downloading ${model.displayName}."))
+            if (!inFlight.add(id)) {
+                logger.w { "Download of $displayName already in flight — ignoring duplicate request" }
+                emit(DownloadProgress.Failed(id, "Already downloading $displayName."))
                 return@flow
             }
             try {
-                downloadExclusive(model)
+                downloadExclusive(id, displayName, url, filename)
             } finally {
-                inFlight.remove(model.id)
+                inFlight.remove(id)
             }
         }.flowOn(Dispatchers.IO)
 
-    private val inFlight = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val inFlight =
+        java.util.concurrent.ConcurrentHashMap
+            .newKeySet<String>()
 
-    private suspend fun kotlinx.coroutines.flow.FlowCollector<DownloadProgress>.downloadExclusive(model: LlmModel) {
-            val targetFile = File(modelsDir, model.filename)
-            val tempFile = File(modelsDir, "${model.filename}.tmp")
+    /**
+     * True if [filename] is on disk at ≥ [minFileSizeMb] (a complete download).
+     * Absolute path via [localPath].
+     */
+    fun isFileAvailable(
+        filename: String,
+        minFileSizeMb: Int,
+    ): Boolean = localPath(filename, minFileSizeMb) != null
 
-            // Capture existing bytes BEFORE opening any connection
-            val existingBytes = if (tempFile.exists()) tempFile.length() else 0L
+    /** Absolute path of a complete [filename] (≥ [minFileSizeMb]), or null. */
+    fun localPath(
+        filename: String,
+        minFileSizeMb: Int,
+    ): String? {
+        val file = File(modelsDir, filename)
+        val minBytes = minFileSizeMb.toLong() * 1024 * 1024
+        return if (file.exists() && file.length() >= minBytes) file.absolutePath else null
+    }
 
-            logger.i { "Downloading ${model.displayName} (already on disk: ${existingBytes / 1_000_000}MB)" }
-            emit(DownloadProgress.Starting(model.id))
+    private suspend fun kotlinx.coroutines.flow.FlowCollector<DownloadProgress>.downloadExclusive(
+        id: String,
+        displayName: String,
+        url: String,
+        filename: String,
+    ) {
+        val targetFile = File(modelsDir, filename)
+        val tempFile = File(modelsDir, "$filename.tmp")
 
-            try {
-                val conn = followRedirects(getDownloadUrl(model), tempFile)
-                val isResume = conn.responseCode == 206 && existingBytes > 0
+        // Capture existing bytes BEFORE opening any connection
+        val existingBytes = if (tempFile.exists()) tempFile.length() else 0L
 
-                // For a 206 response the server sends only the remaining bytes,
-                // so totalBytes = server content-length + already on disk.
-                // For a 200 (server ignored Range) start fresh.
-                val totalBytes = conn.contentLengthLong + if (isResume) existingBytes else 0L
-                var downloadedBytes = if (isResume) existingBytes else 0L
+        logger.i { "Downloading ${displayName} (already on disk: ${existingBytes / 1_000_000}MB)" }
+        emit(DownloadProgress.Starting(id))
 
-                logger.i { "Response ${conn.responseCode}, server bytes: ${conn.contentLengthLong / 1_000_000}MB, resume: $isResume" }
+        try {
+            val conn = followRedirects(url, tempFile)
+            val isResume = conn.responseCode == 206 && existingBytes > 0
 
-                conn.inputStream.use { input ->
-                    // CRITICAL: append when resuming so prior bytes are not overwritten
-                    java.io.FileOutputStream(tempFile, isResume).use { output ->
-                        val buf = ByteArray(65536)
-                        var n: Int
-                        while (input.read(buf).also { n = it } != -1) {
-                            output.write(buf, 0, n)
-                            downloadedBytes += n
-                            val pct = if (totalBytes > 0) (downloadedBytes * 100L / totalBytes).toInt() else 0
-                            emit(DownloadProgress.InProgress(model.id, downloadedBytes, totalBytes, pct))
-                        }
+            // For a 206 response the server sends only the remaining bytes,
+            // so totalBytes = server content-length + already on disk.
+            // For a 200 (server ignored Range) start fresh.
+            val totalBytes = conn.contentLengthLong + if (isResume) existingBytes else 0L
+            var downloadedBytes = if (isResume) existingBytes else 0L
+
+            logger.i { "Response ${conn.responseCode}, server bytes: ${conn.contentLengthLong / 1_000_000}MB, resume: $isResume" }
+
+            conn.inputStream.use { input ->
+                // CRITICAL: append when resuming so prior bytes are not overwritten
+                java.io.FileOutputStream(tempFile, isResume).use { output ->
+                    val buf = ByteArray(65536)
+                    var n: Int
+                    while (input.read(buf).also { n = it } != -1) {
+                        output.write(buf, 0, n)
+                        downloadedBytes += n
+                        val pct = if (totalBytes > 0) (downloadedBytes * 100L / totalBytes).toInt() else 0
+                        emit(DownloadProgress.InProgress(id, downloadedBytes, totalBytes, pct))
                     }
                 }
-
-                // Validate completeness before declaring success.
-                // HTTP streams can end early without an IOException — the loop exits
-                // normally but the file is truncated. Check we got ≥99% of expected bytes.
-                val actualBytes = tempFile.length()
-                when (DownloadIntegrity.check(actualBytes, totalBytes)) {
-                    DownloadIntegrity.Verdict.TRUNCATED -> {
-                        logger.e { "Truncated download: got ${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB" }
-                        // Keep as .tmp so next attempt resumes from this point
-                        emit(
-                            DownloadProgress.Failed(
-                                model.id,
-                                "Download incomplete (${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB). Tap retry to resume.",
-                            ),
-                        )
-                        return
-                    }
-
-                    DownloadIntegrity.Verdict.OVERSIZE -> {
-                        // Never a good file — two writers landed on one .tmp. Start clean.
-                        logger.e { "Oversize download: ${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB — discarding" }
-                        tempFile.delete()
-                        emit(DownloadProgress.Failed(model.id, "Download was corrupted. Tap retry to download again."))
-                        return
-                    }
-
-                    DownloadIntegrity.Verdict.COMPLETE -> Unit
-                }
-
-                tempFile.renameTo(targetFile)
-                logger.i { "Download complete: ${targetFile.length() / 1_000_000}MB" }
-                emit(DownloadProgress.Complete(model.id, targetFile.absolutePath))
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                // A cancelled download (another brain picked) is not a failure —
-                // the .tmp stays for resume. Rethrow so the flow completes cleanly.
-                logger.i { "Download of ${model.displayName} cancelled (${tempFile.length() / 1_000_000}MB kept for resume)" }
-                throw e
-            } catch (e: Exception) {
-                logger.e(e) { "Download failed: ${e.message}" }
-                emit(DownloadProgress.Failed(model.id, e.message ?: "Download failed"))
             }
+
+            // Validate completeness before declaring success.
+            // HTTP streams can end early without an IOException — the loop exits
+            // normally but the file is truncated. Check we got ≥99% of expected bytes.
+            val actualBytes = tempFile.length()
+            when (DownloadIntegrity.check(actualBytes, totalBytes)) {
+                DownloadIntegrity.Verdict.TRUNCATED -> {
+                    logger.e { "Truncated download: got ${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB" }
+                    // Keep as .tmp so next attempt resumes from this point
+                    emit(
+                        DownloadProgress.Failed(
+                            id,
+                            "Download incomplete (${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB). Tap retry to resume.",
+                        ),
+                    )
+                    return
+                }
+
+                DownloadIntegrity.Verdict.OVERSIZE -> {
+                    // Never a good file — two writers landed on one .tmp. Start clean.
+                    logger.e { "Oversize download: ${actualBytes / 1_000_000}MB of ${totalBytes / 1_000_000}MB — discarding" }
+                    tempFile.delete()
+                    emit(DownloadProgress.Failed(id, "Download was corrupted. Tap retry to download again."))
+                    return
+                }
+
+                DownloadIntegrity.Verdict.COMPLETE -> {
+                    Unit
+                }
+            }
+
+            tempFile.renameTo(targetFile)
+            logger.i { "Download complete: ${targetFile.length() / 1_000_000}MB" }
+            emit(DownloadProgress.Complete(id, targetFile.absolutePath))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // A cancelled download (another brain picked) is not a failure —
+            // the .tmp stays for resume. Rethrow so the flow completes cleanly.
+            logger.i { "Download of ${displayName} cancelled (${tempFile.length() / 1_000_000}MB kept for resume)" }
+            throw e
+        } catch (e: Exception) {
+            logger.e(e) { "Download failed: ${e.message}" }
+            emit(DownloadProgress.Failed(id, e.message ?: "Download failed"))
         }
+    }
 
     /**
      * Follow HTTP redirects manually, including cross-host redirects.

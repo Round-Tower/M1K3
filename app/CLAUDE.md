@@ -93,7 +93,7 @@ Two Gradle modules — `:shared` (pure Kotlin domain) and `:composeApp`
 - **Big M1K3** — Gemma 4 E2B, 8GB+ RAM devices.
 - All served via `Ma` (our own JNI bridge to llama.cpp), GGUF Q4_K_M,
   GBNF grammar-constrained native tool calling. See `M1K3Tier.kt`.
-- **MiniLM-L6**: embeddings (384-dim, ONNX).
+- **EmbeddingGemma-300m**: embeddings (768-dim, GGUF via the Ma bridge — same runtime + tokenizer as the brains). Downloaded on first use.
 
 ## Key Patterns
 - Sealed classes for UI state

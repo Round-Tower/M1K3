@@ -19,7 +19,7 @@ import app.m1k3.ai.assistant.database.MaDatabase
 import app.m1k3.ai.assistant.embedding.EmbeddingEngine
 import app.m1k3.ai.assistant.embedding.EmbeddingEngineManager
 import app.m1k3.ai.assistant.embedding.EmbeddingEngineManagerImpl
-import app.m1k3.ai.assistant.embedding.EmbeddingModelManager
+import app.m1k3.ai.assistant.embedding.MaEmbeddingEngine
 import app.m1k3.ai.assistant.history.ConversationRepository
 import app.m1k3.ai.assistant.history.ExportManager
 import app.m1k3.ai.assistant.history.HistoryViewModel
@@ -160,17 +160,19 @@ actual val platformModule =
          * EmbeddingEngine
          *
          * Provides text-to-vector embeddings for semantic search and RAG.
-         * Uses EmbeddingModelManager to select between MiniLM (default) and Gemma (optional).
          *
-         * Model selection:
-         * - MiniLM-L6-v2 (384-dim, 80MB, built-in)
-         * - Embedding Gemma (512-dim, 180MB, dynamic module)
+         * EmbeddingGemma-300m (768-dim) via the Ma / llama.cpp bridge — one
+         * runtime and tokenizer shared with the chat brains. The GGUF is
+         * downloaded on first load through the shared HttpModelDownloadManager
+         * (the prior MiniLM ONNX model was never bundled, so RAG was dead).
          *
          * Note: Engine is created but NOT loaded. Call EmbeddingEngineManager.initialize() in MainActivity to load model.
          */
         single<EmbeddingEngine> {
-            val manager = EmbeddingModelManager(get<Context>())
-            manager.getEmbeddingEngine()
+            MaEmbeddingEngine(
+                context = get<Context>(),
+                downloadManager = get<ModelDownloadManager>() as HttpModelDownloadManager,
+            )
         }
 
         // ===== TTS Engine Layer =====
@@ -480,44 +482,46 @@ actual val platformModule =
                 },
                 downloadModel = { model, onProgress ->
                     val httpManager = get<ModelDownloadManager>() as HttpModelDownloadManager
+
                     @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
                     val job =
                         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                             httpManager.download(model).collect { progress ->
-                            val state =
-                                when (progress) {
-                                    is app.m1k3.ai.assistant.ai.download.DownloadProgress.Starting -> {
-                                        app.m1k3.ai.assistant.chat.ModelDownloadState
-                                            .Starting(model.displayName)
-                                    }
+                                val state =
+                                    when (progress) {
+                                        is app.m1k3.ai.assistant.ai.download.DownloadProgress.Starting -> {
+                                            app.m1k3.ai.assistant.chat.ModelDownloadState
+                                                .Starting(model.displayName)
+                                        }
 
-                                    is app.m1k3.ai.assistant.ai.download.DownloadProgress.InProgress -> {
-                                        app.m1k3.ai.assistant.chat.ModelDownloadState.InProgress(
-                                            modelName = model.displayName,
-                                            progressPercent = progress.progressPercent,
-                                            downloadedMB = progress.bytesDownloaded / 1_000_000,
-                                            totalMB = progress.totalBytes / 1_000_000,
-                                        )
-                                    }
+                                        is app.m1k3.ai.assistant.ai.download.DownloadProgress.InProgress -> {
+                                            app.m1k3.ai.assistant.chat.ModelDownloadState.InProgress(
+                                                modelName = model.displayName,
+                                                progressPercent = progress.progressPercent,
+                                                downloadedMB = progress.bytesDownloaded / 1_000_000,
+                                                totalMB = progress.totalBytes / 1_000_000,
+                                            )
+                                        }
 
-                                    is app.m1k3.ai.assistant.ai.download.DownloadProgress.Complete -> {
-                                        app.m1k3.ai.assistant.chat.ModelDownloadState
-                                            .Complete(model.displayName)
-                                    }
+                                        is app.m1k3.ai.assistant.ai.download.DownloadProgress.Complete -> {
+                                            app.m1k3.ai.assistant.chat.ModelDownloadState
+                                                .Complete(model.displayName)
+                                        }
 
-                                    is app.m1k3.ai.assistant.ai.download.DownloadProgress.Failed -> {
-                                        app.m1k3.ai.assistant.chat.ModelDownloadState
-                                            .Failed(model.displayName, progress.error)
+                                        is app.m1k3.ai.assistant.ai.download.DownloadProgress.Failed -> {
+                                            app.m1k3.ai.assistant.chat.ModelDownloadState
+                                                .Failed(model.displayName, progress.error)
+                                        }
                                     }
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    onProgress(state)
                                 }
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                onProgress(state)
                             }
                         }
-                    }
                     // Cancelling the collector aborts the HTTP read mid-stream; the
                     // .tmp stays and the next attempt resumes it (Range request).
-                    app.m1k3.ai.assistant.chat.DownloadHandle { job.cancel() }
+                    app.m1k3.ai.assistant.chat
+                        .DownloadHandle { job.cancel() }
                 },
                 onSpeakText = { text -> get<Speaker>().speak(text) },
                 userNameProvider = {

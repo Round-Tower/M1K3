@@ -46,6 +46,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cmath>
 #include <cstring>
 #include <exception>
 #include <string>
@@ -940,6 +941,157 @@ char *ma_core_last_loaded_cpu_variant(void) {
 
 void ma_core_free_string(char *s) {
     if (s) std::free(s);
+}
+
+/* ---------------------------------------------------------------------- */
+
+ma_handle ma_core_init_embedding(
+        const char *model_path,
+        int         n_ctx,
+        const char *backend_lib_dir,
+        const char *preferred_cpu_variant) {
+
+    /* Same once-per-process backend registration as ma_core_init — harmless if
+     * a generation model already loaded it (idempotent). */
+    load_cpu_backends_once(backend_lib_dir, preferred_cpu_variant);
+
+    LOGI("embed-init: loading %s", model_path ? model_path : "(null)");
+    if (!model_path) {
+        LOGE("embed-init: null model_path");
+        return 0;
+    }
+
+    llama_model_params mparams = llama_model_default_params();
+    mparams.n_gpu_layers = 0; /* CPU-only on mobile, same as generation */
+    mparams.load_mode    = LLAMA_LOAD_MODE_MMAP;
+
+    llama_model *model = llama_model_load_from_file(model_path, mparams);
+    if (!model) {
+        LOGE("embed-init: failed to load model");
+        return 0;
+    }
+
+    const int hw_threads = (int) std::thread::hardware_concurrency();
+    const uint32_t ctxLen = (uint32_t)(n_ctx > 0 ? n_ctx : 2048);
+
+    llama_context_params cparams = llama_context_default_params();
+    cparams.n_ctx           = ctxLen;
+    /* An embedding pass decodes the whole sequence in one batch (no
+     * autoregression), so the logical batch must be able to hold it. */
+    cparams.n_batch         = ctxLen;
+    cparams.n_ubatch        = ctxLen;
+    cparams.n_threads       = std::min(4, hw_threads);
+    cparams.n_threads_batch = std::min(hw_threads, 6);
+    cparams.embeddings      = true;
+    cparams.pooling_type    = LLAMA_POOLING_TYPE_MEAN; /* EmbeddingGemma pools by mean */
+    cparams.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_DISABLED;
+
+    llama_context *ctx = llama_init_from_model(model, cparams);
+    if (!ctx) {
+        LOGE("embed-init: failed to create context");
+        llama_model_free(model);
+        return 0;
+    }
+
+    auto *ma = new MaContext();
+    ma->model = model;
+    ma->ctx   = ctx;
+    /* No chat templates — an embedding context never generates. */
+
+    LOGI("embed-init: success (handle=%p, n_ctx=%u, n_embd=%d, pooling=mean)",
+         ma, ctxLen, llama_model_n_embd(model));
+    return ctx_to_handle(ma);
+}
+
+int ma_core_embed(
+        ma_handle   handle,
+        const char *text,
+        float      *out,
+        int         out_capacity) {
+
+    MaContext *ma = handle_to_ctx(handle);
+    if (!ma || !ma->ctx || !ma->model) {
+        LOGE("embed: invalid handle");
+        return -1;
+    }
+    if (!text || !out) {
+        LOGE("embed: null text/out");
+        return -1;
+    }
+
+    const int n_embd = llama_model_n_embd(ma->model);
+    if (n_embd <= 0) {
+        LOGE("embed: model reports n_embd=%d", n_embd);
+        return -1;
+    }
+    if (n_embd > out_capacity) {
+        LOGE("embed: n_embd %d exceeds out_capacity %d", n_embd, out_capacity);
+        return -1;
+    }
+
+    const llama_vocab *vocab = llama_model_get_vocab(ma->model);
+    const int n_ctx = (int) llama_n_ctx(ma->ctx);
+
+    /* Tokenize with the model's own tokenizer (Gemma SentencePiece), adding the
+     * special BOS the embedding model expects. A negative return is
+     * "buffer too small": clamp to the context and truncate the tail. */
+    std::vector<llama_token> tokens(n_ctx);
+    int n_tok = llama_tokenize(
+            vocab, text, (int32_t) std::strlen(text),
+            tokens.data(), (int32_t) tokens.size(),
+            /*add_special=*/true, /*parse_special=*/true);
+    if (n_tok < 0) {
+        LOGI("embed: input longer than n_ctx (%d), truncating", n_ctx);
+        n_tok = n_ctx;
+    }
+    if (n_tok == 0) {
+        LOGE("embed: empty tokenization");
+        return -1;
+    }
+    tokens.resize(n_tok);
+
+    /* Fresh sequence: an embedding context keeps no cross-call state. */
+    llama_memory_clear(llama_get_memory(ma->ctx), true);
+
+    /* Build a batch with output enabled on EVERY token — mean pooling
+     * aggregates over all of them, unlike generation which only needs the
+     * last. (llama_batch_get_one leaves per-token logits unset.) */
+    llama_batch batch = llama_batch_init(n_tok, 0, 1);
+    for (int i = 0; i < n_tok; i++) {
+        batch.token[i]      = tokens[i];
+        batch.pos[i]        = i;
+        batch.n_seq_id[i]   = 1;
+        batch.seq_id[i][0]  = 0;
+        batch.logits[i]     = 1;
+    }
+    batch.n_tokens = n_tok;
+
+    const bool has_encoder = llama_model_has_encoder(ma->model);
+    const int rc = has_encoder ? llama_encode(ma->ctx, batch)
+                               : llama_decode(ma->ctx, batch);
+    llama_batch_free(batch);
+    if (rc != 0) {
+        LOGE("embed: %s failed rc=%d", has_encoder ? "encode" : "decode", rc);
+        return -1;
+    }
+
+    /* Pooled sequence embedding; fall back to the last token if a model ever
+     * reports NONE pooling despite our request. */
+    float *emb = llama_get_embeddings_seq(ma->ctx, 0);
+    if (!emb) emb = llama_get_embeddings_ith(ma->ctx, -1);
+    if (!emb) {
+        LOGE("embed: no embeddings returned");
+        return -1;
+    }
+
+    /* L2-normalize into the caller's buffer (cosine-ready). */
+    double norm = 0.0;
+    for (int i = 0; i < n_embd; i++) norm += (double) emb[i] * (double) emb[i];
+    norm = std::sqrt(norm);
+    const float inv = (norm > 0.0) ? (float)(1.0 / norm) : 0.0f;
+    for (int i = 0; i < n_embd; i++) out[i] = emb[i] * inv;
+
+    return n_embd;
 }
 
 /* ---------------------------------------------------------------------- */

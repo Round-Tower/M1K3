@@ -2,6 +2,7 @@ package app.m1k3.ai.assistant.embedding
 
 import android.content.Context
 import android.util.Log
+import app.m1k3.ai.assistant.ai.download.HttpModelDownloadManager
 
 /**
  * Embedding Model Manager - Model Selection
@@ -47,8 +48,8 @@ class EmbeddingModelManager(
      * Get the embedding engine to use.
      */
     fun getEmbeddingEngine(): EmbeddingEngine {
-        Log.d(TAG, "Using MiniLM-L6 embedding engine (default)")
-        return MiniLmEmbeddingEngine(context)
+        Log.d(TAG, "Using EmbeddingGemma engine (Ma bridge, default)")
+        return MaEmbeddingEngine(context, HttpModelDownloadManager(context))
     }
 
     /**

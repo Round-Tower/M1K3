@@ -18,6 +18,7 @@
 #include <android/log.h>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 #include "ma_core.h"
 
@@ -201,6 +202,63 @@ Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeGenerateChat(
     jstring jOut = env->NewStringUTF(out ? out : "{\"error\":\"null result\"}");
     ma_core_free_string(out);
     return jOut;
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeInitEmbedding(
+        JNIEnv *env, jobject /*thiz*/,
+        jstring jModelPath,
+        jint    nCtx,
+        jstring jNativeLibDir,
+        jstring jPreferredCpuVariant) {
+
+    const char *modelPath    = env->GetStringUTFChars(jModelPath, nullptr);
+    const char *nativeLibDir = jNativeLibDir ? env->GetStringUTFChars(jNativeLibDir, nullptr) : nullptr;
+    const char *preferredVariant =
+            jPreferredCpuVariant ? env->GetStringUTFChars(jPreferredCpuVariant, nullptr) : nullptr;
+
+    ma_handle handle = ma_core_init_embedding(
+            modelPath, (int) nCtx, nativeLibDir, preferredVariant);
+
+    env->ReleaseStringUTFChars(jModelPath, modelPath);
+    if (jNativeLibDir) env->ReleaseStringUTFChars(jNativeLibDir, nativeLibDir);
+    if (jPreferredCpuVariant) env->ReleaseStringUTFChars(jPreferredCpuVariant, preferredVariant);
+
+    if (handle == 0) {
+        LOGE("embed-init: ma_core_init_embedding returned 0");
+    }
+    return static_cast<jlong>(handle);
+}
+
+extern "C" JNIEXPORT jfloatArray JNICALL
+Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeEmbed(
+        JNIEnv *env, jobject /*thiz*/,
+        jlong   handle,
+        jstring jText) {
+
+    const char *text = env->GetStringUTFChars(jText, nullptr);
+
+    // Generous upper bound on embedding width; ma_core_embed returns the real
+    // n_embd (EmbeddingGemma is 768) and refuses if it would exceed this.
+    static const int kMaxDim = 4096;
+    std::vector<float> buf(kMaxDim);
+    const int n = ma_core_embed(
+            static_cast<ma_handle>(handle), text, buf.data(), kMaxDim);
+
+    env->ReleaseStringUTFChars(jText, text);
+
+    if (n <= 0) {
+        LOGE("embed: ma_core_embed returned %d", n);
+        return nullptr; // caller maps null → failure
+    }
+
+    jfloatArray out = env->NewFloatArray(n);
+    if (!out) {
+        LOGE("embed: NewFloatArray(%d) failed", n);
+        return nullptr;
+    }
+    env->SetFloatArrayRegion(out, 0, n, buf.data());
+    return out;
 }
 
 extern "C" JNIEXPORT void JNICALL

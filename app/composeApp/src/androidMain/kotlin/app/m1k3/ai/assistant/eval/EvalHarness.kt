@@ -14,12 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import app.m1k3.ai.assistant.MainActivity
 import app.m1k3.ai.assistant.chat.ChatScreenViewModel
+import app.m1k3.ai.assistant.embedding.EmbeddingEngine
 import app.m1k3.ai.assistant.platform.PreferenceKeys
 import app.m1k3.ai.assistant.platform.PreferencesStoreInterface
 import app.m1k3.ai.domain.ai.CpuVariantOverride
 import app.m1k3.ai.domain.ai.LlmModel
 import app.m1k3.ai.domain.ai.NativeDiagnostics
 import app.m1k3.ai.domain.ai.ThinkingPolicy
+import app.m1k3.ai.domain.embedding.EmbeddingTaskType
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.getKoin
 import org.koin.androidx.viewmodel.ext.android.getViewModel
@@ -76,6 +78,13 @@ object EvalHarness {
     ): Boolean {
         if (!isDebuggable(activity)) return false
 
+        // Embed self-probe — a parallel path to the fixture eval, deliberately
+        // NOT routed through EvalRunRequest (no fixtures/model contract to
+        // satisfy): loads the embedder and checks a query embeds closer to a
+        // matching document than an unrelated one. Verifies the whole native
+        // embedding chain (JNI → pooling → decode → cosine) on device.
+        if (maybeRunEmbedProbe(activity, intent)) return true
+
         // EXTRA_THINKING is sent as a boolean (`--ez`, not `--es` — run.py's
         // choice, matching Android's own am-start convention for flags), so
         // it can't be read via getStringExtra like the others: a String and
@@ -113,6 +122,67 @@ object EvalHarness {
             runAndWriteResults(activity, viewModel, request)
         }
 
+        return true
+    }
+
+    /** Extra: `--ez m1k3.eval.embed_probe true` runs the embedding sanity probe. */
+    private const val EXTRA_EMBED_PROBE = "m1k3.eval.embed_probe"
+
+    /**
+     * Loads the embedder and proves retrieval geometry on device: a query must
+     * embed closer to a matching document than to an unrelated one (asymmetric
+     * QUERY vs RETRIEVAL prompts, as EmbeddingGemma expects). Writes a one-line
+     * JSON to `m1k3.eval.out` (if given) and logs it. Returns true iff it ran.
+     */
+    private fun maybeRunEmbedProbe(
+        activity: MainActivity,
+        intent: Intent,
+    ): Boolean {
+        if (!intent.getBooleanExtra(EXTRA_EMBED_PROBE, false)) return false
+        val outPath = intent.getStringExtra(EvalRunRequest.EXTRA_OUT)
+
+        activity.setContent { EvalRunningPlaceholder() }
+        activity.lifecycleScope.launch {
+            val result =
+                try {
+                    val engine = activity.getKoin().get<EmbeddingEngine>()
+                    Log.i(TAG, "embed-probe: loading ${engine.modelName}…")
+                    engine.loadModel().getOrThrow()
+
+                    val query = engine.embed("where does the user live", EmbeddingTaskType.QUERY).getOrThrow()
+                    val match =
+                        engine
+                            .embed(
+                                "Kev lives in Ardmore, County Waterford, on the south coast of Ireland.",
+                                EmbeddingTaskType.RETRIEVAL,
+                            ).getOrThrow()
+                    val unrelated =
+                        engine
+                            .embed(
+                                "The mitochondria is the powerhouse of the cell.",
+                                EmbeddingTaskType.RETRIEVAL,
+                            ).getOrThrow()
+
+                    val cosMatch = engine.cosineSimilarity(query, match)
+                    val cosUnrelated = engine.cosineSimilarity(query, unrelated)
+                    val pass = cosMatch > cosUnrelated
+                    """{"probe":"embed","model":"${engine.modelName}","dim":${query.size},""" +
+                        """"cos_match":$cosMatch,"cos_unrelated":$cosUnrelated,"pass":$pass}"""
+                } catch (e: Exception) {
+                    Log.e(TAG, "embed-probe failed", e)
+                    """{"probe":"embed","error":"${e.message?.replace("\"", "'")?.take(300)}"}"""
+                }
+
+            Log.i(TAG, "embed-probe result: $result")
+            outPath?.let {
+                try {
+                    java.io.File(it).writeText(result)
+                } catch (e: Exception) {
+                    Log.e(TAG, "embed-probe: failed to write $it", e)
+                }
+            }
+            activity.finish()
+        }
         return true
     }
 
@@ -161,6 +231,7 @@ object EvalHarness {
         // fixture id behind. tools/eval/android/run.py resumes past it.
         val out = java.io.File(request.outPath)
         val tmp = java.io.File(request.outPath + ".tmp")
+
         fun write(report: EvalRunReport) {
             try {
                 tmp.writeText(report.toJson())
