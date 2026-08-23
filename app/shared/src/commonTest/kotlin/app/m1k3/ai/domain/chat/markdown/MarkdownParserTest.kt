@@ -76,6 +76,45 @@ class MarkdownParserTest {
         assertEquals("world", (italic.children[0] as MarkdownNode.Text).content)
     }
 
+    // ===== Underscore word-boundary (CommonMark left/right-flanking) =====
+
+    @Test
+    fun `intra-word underscores stay literal`() {
+        // snake_case, file paths, dunders — the most common real corruption.
+        val nodes = parser.parse("The file_name_here is fine")
+        val paragraph = nodes[0] as MarkdownNode.Paragraph
+        val text = paragraph.children.joinToString("") { (it as MarkdownNode.Text).content }
+        assertEquals("The file_name_here is fine", text)
+        assertTrue(paragraph.children.none { it is MarkdownNode.Italic || it is MarkdownNode.Bold })
+    }
+
+    @Test
+    fun `snake_case identifier stays literal`() {
+        // A single underscore flanked by word chars on BOTH sides never emphasizes.
+        val nodes = parser.parse("set the max_tokens value")
+        val paragraph = nodes[0] as MarkdownNode.Paragraph
+        assertTrue(paragraph.children.none { it is MarkdownNode.Italic || it is MarkdownNode.Bold })
+        val text = paragraph.children.joinToString("") { (it as MarkdownNode.Text).content }
+        assertEquals("set the max_tokens value", text)
+    }
+
+    @Test
+    fun `close underscore followed by word char does not emphasize`() {
+        // "_b_c" — the closing underscore hugs a word char, so it is not a valid closer.
+        val nodes = parser.parse("a _b_c d")
+        val paragraph = nodes[0] as MarkdownNode.Paragraph
+        assertTrue(paragraph.children.none { it is MarkdownNode.Italic })
+    }
+
+    @Test
+    fun `underscore emphasis still works at word boundaries`() {
+        val nodes = parser.parse("say _hi_ now")
+        val paragraph = nodes[0] as MarkdownNode.Paragraph
+        val italic = paragraph.children.firstOrNull { it is MarkdownNode.Italic } as? MarkdownNode.Italic
+        assertTrue(italic != null, "boundary underscore should still italicize")
+        assertEquals("hi", (italic.children[0] as MarkdownNode.Text).content)
+    }
+
     // ===== Bold + Italic =====
 
     @Test

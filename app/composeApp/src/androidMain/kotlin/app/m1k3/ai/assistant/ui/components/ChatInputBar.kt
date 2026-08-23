@@ -26,7 +26,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -49,8 +48,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -81,6 +78,8 @@ fun ChatInputBar(
     onMicClick: (() -> Unit)? = null,
     listeningPartialText: String = "",
     onFocusChanged: (Boolean) -> Unit = {},
+    isGenerating: Boolean = false,
+    onStop: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -88,8 +87,6 @@ fun ChatInputBar(
     val hasText = text.isNotBlank()
     val haptics = rememberHapticFeedback()
     val focusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
 
     var previousText by remember { mutableStateOf(text) }
 
@@ -174,18 +171,10 @@ fun ChatInputBar(
                         ),
                     cursorBrush = SolidColor(MaColors.Orange),
                     maxLines = 8,
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
-                    keyboardActions =
-                        KeyboardActions(
-                            onSend = {
-                                if (hasText && enabled) {
-                                    haptics.strong()
-                                    onSend()
-                                    keyboardController?.hide()
-                                    focusManager.clearFocus()
-                                }
-                            },
-                        ),
+                    // Return inserts a newline; sending is the button's job (iOS /
+                    // ChatGPT behaviour). No more surprise-send-on-Enter, and the
+                    // keyboard stays up after send so the conversation keeps flowing.
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Default),
                     interactionSource = interactionSource,
                     decorationBox = { innerTextField ->
                         Box(contentAlignment = Alignment.CenterStart) {
@@ -211,79 +200,110 @@ fun ChatInputBar(
                     },
                 )
 
-                if (!hasText && onMicClick != null && sendButtonScale < 0.01f) {
-                    val micPulse by animateFloatAsState(
-                        targetValue = if (isListening) 1.15f else 1f,
-                        animationSpec =
-                            if (isListening) {
-                                infiniteRepeatable(
-                                    animation = tween(600, easing = FastOutSlowInEasing),
-                                    repeatMode = RepeatMode.Reverse,
-                                )
-                            } else {
-                                tween(200)
-                            },
-                        label = "micPulse",
-                    )
-
-                    Box(
-                        modifier =
-                            Modifier
-                                .testTag("mic_button")
-                                .padding(end = MaSpacing.xs, bottom = MaSpacing.xs)
-                                .size(40.dp)
-                                .scale(micPulse)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isListening) MaColors.Orange else MaColors.Orange.copy(alpha = 0.15f),
-                                    CircleShape,
-                                ).clickable(
-                                    enabled = enabled,
-                                    onClick = {
-                                        haptics.medium()
-                                        onMicClick()
-                                    },
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() },
-                                ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        MicIcon(color = if (isListening) MaColors.White else MaColors.Orange)
+                // One trailing action, chosen by state: STOP while generating,
+                // SEND when there's text to send, MIC otherwise. Exactly one
+                // renders — no more mic-vanishing-the-instant-you-type jank.
+                when {
+                    isGenerating -> {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .testTag("stop_button")
+                                    .padding(end = MaSpacing.xs, bottom = MaSpacing.xs)
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(MaColors.Orange, CircleShape)
+                                    .clickable(
+                                        onClick = {
+                                            haptics.medium()
+                                            onStop()
+                                        },
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() },
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            // Filled square — the universal "stop" glyph.
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .size(14.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(MaColors.White),
+                            )
+                        }
                     }
-                }
 
-                if (sendButtonScale > 0.01f) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .testTag("send_button")
-                                .padding(end = MaSpacing.xs, bottom = MaSpacing.xs)
-                                .size(40.dp)
-                                .scale(sendButtonScale)
-                                .clip(CircleShape)
-                                .background(MaColors.Orange, CircleShape)
-                                .clickable(
-                                    enabled = hasText && enabled,
-                                    onClick = {
-                                        haptics.strong()
-                                        onSend()
-                                        keyboardController?.hide()
-                                        focusManager.clearFocus()
-                                    },
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() },
-                                ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        // Filled circle + arrow-up — the same shape as iOS's
-                        // `arrow.up.circle.fill` (finding: a proper icon, not
-                        // a hand-drawn Canvas arrow).
-                        Icon(
-                            imageVector = Icons.Default.ArrowUpward,
-                            contentDescription = "Send",
-                            tint = MaColors.White,
-                            modifier = Modifier.size(20.dp),
+                    sendButtonScale > 0.01f -> {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .testTag("send_button")
+                                    .padding(end = MaSpacing.xs, bottom = MaSpacing.xs)
+                                    .size(40.dp)
+                                    .scale(sendButtonScale)
+                                    .clip(CircleShape)
+                                    .background(MaColors.Orange, CircleShape)
+                                    .clickable(
+                                        enabled = hasText && enabled,
+                                        onClick = {
+                                            haptics.strong()
+                                            onSend()
+                                            // Keyboard intentionally stays up (see note above).
+                                        },
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() },
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowUpward,
+                                contentDescription = "Send",
+                                tint = MaColors.White,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+
+                    onMicClick != null -> {
+                        val micPulse by animateFloatAsState(
+                            targetValue = if (isListening) 1.15f else 1f,
+                            animationSpec =
+                                if (isListening) {
+                                    infiniteRepeatable(
+                                        animation = tween(600, easing = FastOutSlowInEasing),
+                                        repeatMode = RepeatMode.Reverse,
+                                    )
+                                } else {
+                                    tween(200)
+                                },
+                            label = "micPulse",
                         )
+
+                        Box(
+                            modifier =
+                                Modifier
+                                    .testTag("mic_button")
+                                    .padding(end = MaSpacing.xs, bottom = MaSpacing.xs)
+                                    .size(40.dp)
+                                    .scale(micPulse)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isListening) MaColors.Orange else MaColors.Orange.copy(alpha = 0.15f),
+                                        CircleShape,
+                                    ).clickable(
+                                        enabled = enabled,
+                                        onClick = {
+                                            haptics.medium()
+                                            onMicClick()
+                                        },
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() },
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            MicIcon(color = if (isListening) MaColors.White else MaColors.Orange)
+                        }
                     }
                 }
             }

@@ -436,6 +436,8 @@ fun ChatScreen(
                     onMicClick = dictationToggle,
                     listeningPartialText = partialTranscript,
                     onFocusChanged = { focused -> inputFocused = focused },
+                    isGenerating = uiState.generationState.isGenerating,
+                    onStop = { viewModel.stopGeneration() },
                 )
                 ChatContextBar(
                     state = contextBarState,

@@ -266,3 +266,9 @@ Java_app_m1k3_ai_assistant_ai_ma_MaBridge_release(
         JNIEnv */*env*/, jobject /*thiz*/, jlong handle) {
     ma_core_release(static_cast<ma_handle>(handle));
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeRequestStop(
+        JNIEnv */*env*/, jobject /*thiz*/, jlong handle) {
+    ma_core_request_stop(static_cast<ma_handle>(handle));
+}

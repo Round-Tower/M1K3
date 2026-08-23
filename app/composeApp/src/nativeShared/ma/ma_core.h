@@ -200,6 +200,15 @@ int ma_core_embed(
 /** Free a string returned by ma_core_generate / ma_core_generate_chat. */
 void ma_core_free_string(char *s);
 
+/**
+ * Cooperatively stop an in-flight generation on [handle]. Thread-safe: called
+ * from a different thread than the one running ma_core_generate(_chat). The
+ * generation loop breaks at its next iteration and returns the text produced
+ * so far (not an error). The flag auto-resets at the start of the next
+ * generation, so a stale stop can never cancel a future turn.
+ */
+void ma_core_request_stop(ma_handle handle);
+
 /** Release a context. After this call the handle is invalid. */
 void ma_core_release(ma_handle handle);
 

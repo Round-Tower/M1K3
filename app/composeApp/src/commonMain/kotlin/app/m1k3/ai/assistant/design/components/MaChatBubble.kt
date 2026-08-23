@@ -28,11 +28,11 @@ import app.m1k3.ai.assistant.design.tokens.MaColors
 import app.m1k3.ai.assistant.design.tokens.MaRadius
 import app.m1k3.ai.assistant.design.tokens.MaSpacing
 import app.m1k3.ai.assistant.design.tokens.MaTypography
-import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 /**
  * M1K3 Bubble Components
@@ -197,17 +197,11 @@ fun MaChatBubbleAI(
                                         "",
                                     ).trim()
                             if (strippedText.isNotEmpty()) {
-                                // During streaming: plain Text (no markdown parse overhead)
-                                // On complete: full MarkdownText
-                                if (isStreaming) {
-                                    androidx.compose.material3.Text(
-                                        text = strippedText,
-                                        style = app.m1k3.ai.assistant.design.tokens.MaTypography.bodyLarge,
-                                        color = if (isError) MaColors.Error else MaColors.textPrimary(),
-                                    )
-                                } else {
-                                    MarkdownText(text = strippedText, isError = isError)
-                                }
+                                // Live markdown even while streaming — the parser treats
+                                // unclosed markers as literal and self-corrects as tokens
+                                // arrive, and on-device decode makes per-token parse cost
+                                // negligible (iOS renders live the same way).
+                                MarkdownText(text = strippedText, isError = isError)
                             }
                             artifactContent()
                         } else {
@@ -218,24 +212,20 @@ fun MaChatBubbleAI(
                                         Regex("< *think *>[\\s\\S]*?</ *think *>", RegexOption.IGNORE_CASE),
                                         "",
                                     ).trim()
-                            if (isStreaming) {
-                                androidx.compose.material3.Text(
-                                    text = displayText,
-                                    style = app.m1k3.ai.assistant.design.tokens.MaTypography.bodyLarge,
-                                    color = if (isError) MaColors.Error else MaColors.textPrimary(),
-                                )
-                            } else {
-                                MarkdownText(text = displayText, isError = isError)
-                            }
+                            // Live markdown while streaming (see note above).
+                            MarkdownText(text = displayText, isError = isError)
                         }
 
-                        // Timestamp
-                        Text(
-                            text = formatTimestamp(timestamp),
-                            style = MaTypography.labelSmall,
-                            color = MaColors.textDisabled(),
-                            modifier = Modifier.padding(top = MaSpacing.xs),
-                        )
+                        // Timestamp — only once the turn is final; while streaming the
+                        // time isn't settled and a live-updating label just adds jitter.
+                        if (!isStreaming) {
+                            Text(
+                                text = formatTimestamp(timestamp),
+                                style = MaTypography.labelSmall,
+                                color = MaColors.textDisabled(),
+                                modifier = Modifier.padding(top = MaSpacing.xs),
+                            )
+                        }
 
                         // Speak button row. `inferenceStats` (tokens/sec, duration) is an
                         // engineering noun (doctrine principle 7) — kept as an instrument

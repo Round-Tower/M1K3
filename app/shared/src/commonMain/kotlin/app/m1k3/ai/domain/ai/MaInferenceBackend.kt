@@ -159,6 +159,17 @@ interface MaInferenceBackend {
     fun release(handle: Long)
 
     /**
+     * Cooperatively stop an in-flight [generate] / [generateChat] on [handle].
+     * Safe to call from another thread; the native generation loop breaks at
+     * its next token and returns the text produced so far (not an error). The
+     * stop flag auto-resets at the next generation, so a stale request can
+     * never cancel a future turn.
+     *
+     * Default no-op — safe for fakes/doubles that never touch native code.
+     */
+    fun requestStop(handle: Long) {}
+
+    /**
      * The bare `.so` filename of the CPU backend variant that actually
      * registered on the FIRST [init] call this process (`ma_core.cpp`'s
      * `load_cpu_backends_once` runs once per process — see [preferredCpuVariant]

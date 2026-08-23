@@ -314,6 +314,17 @@ class ChatScreenViewModel(
     }
 
     /**
+     * Stop the in-flight generation. The native loop breaks at its next token
+     * and returns whatever was produced; the normal success path then finalizes
+     * that partial answer. No-op when nothing is generating.
+     */
+    fun stopGeneration() {
+        if (!_uiState.value.generationState.isGenerating) return
+        logger.i { "User stopped generation" }
+        aiEngine.stopGeneration()
+    }
+
+    /**
      * Clear the current error.
      */
     fun clearError() {

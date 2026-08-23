@@ -334,6 +334,14 @@ class LlamaCppEngine(
 
     override fun getOptimalMaxTokens(): Int = tuning.maxTokens
 
+    override fun stopGeneration() {
+        val handle = contextHandle
+        if (handle != 0L) {
+            logger.i { "Stop requested — breaking native generation loop" }
+            backend.requestStop(handle)
+        }
+    }
+
     // ============================================================
     // NativeChatCapable — llama.cpp common_chat_templates_apply path
     // ============================================================

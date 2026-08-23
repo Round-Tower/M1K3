@@ -177,6 +177,14 @@ object MaBridge : MaInferenceBackend {
      */
     external override fun release(handle: Long)
 
+    /**
+     * Cooperatively stop an in-flight generation on [handle]. The native loop
+     * breaks at its next token and returns the partial text as a normal result.
+     */
+    override fun requestStop(handle: Long) = nativeRequestStop(handle)
+
+    private external fun nativeRequestStop(handle: Long)
+
     // --- Private JNI ---
 
     /**

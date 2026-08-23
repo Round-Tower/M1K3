@@ -44,6 +44,7 @@
 #include "ma_core.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -79,6 +80,10 @@ struct MaContext {
     llama_model               *model = nullptr;
     llama_context             *ctx   = nullptr;
     common_chat_templates_ptr  tmpls; /* null if templates_init failed */
+    /* Cooperative stop: the UI's "stop" button sets this via
+     * ma_core_request_stop; the generation loops check it each iteration and
+     * break, returning whatever was produced so far (like ChatGPT's stop). */
+    std::atomic<bool>          stop_requested{false};
 };
 
 MaContext *handle_to_ctx(ma_handle handle) {
@@ -524,6 +529,7 @@ char *ma_core_generate(
         LOGE("generate: invalid handle");
         return heap_cstr("");
     }
+    ma->stop_requested.store(false, std::memory_order_relaxed);
     if (!prompt) {
         LOGE("generate: null prompt");
         return heap_cstr("");
@@ -620,6 +626,10 @@ char *ma_core_generate(
     const int n_max = std::min(max_tokens, n_ctx - n_prompt - 4);
 
     for (int i = 0; i < n_max; ++i) {
+        if (ma->stop_requested.load(std::memory_order_relaxed)) {
+            LOGD("generate: stop requested at position %d", i);
+            break;
+        }
         llama_token token = llama_sampler_sample(smpl, ma->ctx, -1);
 
         if (llama_vocab_is_eog(vocab, token)) {
@@ -686,6 +696,7 @@ char *ma_core_generate_chat(
         LOGE("generate_chat: invalid handle");
         return heap_cstr("{\"error\":\"invalid handle\"}");
     }
+    ma->stop_requested.store(false, std::memory_order_relaxed);
     if (!ma->tmpls) {
         LOGE("generate_chat: no chat templates available");
         return heap_cstr("{\"error\":\"no chat templates\"}");
@@ -815,6 +826,10 @@ char *ma_core_generate_chat(
     const int n_max = std::min(max_tokens, n_ctx - n_prompt - 4);
 
     for (int i = 0; i < n_max; ++i) {
+        if (ma->stop_requested.load(std::memory_order_relaxed)) {
+            LOGD("generate_chat: stop requested at position %d", i);
+            break;
+        }
         llama_token token = llama_sampler_sample(smpl, ma->ctx, -1);
 
         if (llama_vocab_is_eog(vocab, token)) {
@@ -941,6 +956,11 @@ char *ma_core_last_loaded_cpu_variant(void) {
 
 void ma_core_free_string(char *s) {
     if (s) std::free(s);
+}
+
+void ma_core_request_stop(ma_handle handle) {
+    MaContext *ma = handle_to_ctx(handle);
+    if (ma) ma->stop_requested.store(true, std::memory_order_relaxed);
 }
 
 /* ---------------------------------------------------------------------- */
