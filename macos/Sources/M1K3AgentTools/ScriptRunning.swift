@@ -78,6 +78,23 @@ public enum ScriptRunDisposition: Equatable, Sendable {
             self = .succeeded
         }
     }
+
+    /// The plain (unfenced, human-facing) body for the app's Install & Run
+    /// landing pad: the capped `tail`, prefixed with a one-line status on the
+    /// non-clean paths. Kept here — pure and tested — rather than inline in the
+    /// thin app target (macos/CLAUDE.md discipline; review catch, 2026-08-23).
+    /// execute_script keeps its own richer, model-fenced rendering (it carries
+    /// scriptName + duration the enum doesn't); only the branch is shared.
+    public func plainOutputBody(tail: String) -> String {
+        switch self {
+        case .timedOut:
+            return "Timed out — it may still be running.\n\(tail)"
+        case let .failed(reason):
+            return "\(reason)\n\(tail)"
+        case .succeeded:
+            return tail
+        }
+    }
 }
 
 /// Unrecoverable launch problems (missing file, not executable, bad name).

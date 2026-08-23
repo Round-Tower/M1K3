@@ -543,6 +543,32 @@ public final class ChatSession {
     /// agent's replay history AND `toolsUsed = [execute_script]` keeps it out
     /// of distillation — the output never re-feeds M1K3. No responder call, no
     /// user bubble; persisted at once (the deliverBackgroundAnswer shape).
+    /// Wrap untrusted text in a Markdown code fence it cannot break out of:
+    /// the fence is one backtick longer than the longest backtick run inside
+    /// `body` (the CommonMark technique). A fixed three-backtick fence is not
+    /// safe here — script stdout can contain a ``` line (cat-ing a markdown
+    /// file, printing a heredoc, dumping another script), which closes the
+    /// fence early and renders the remainder as LIVE Markdown in the chat:
+    /// spoofed headings, fake M1K3 text, clickable links built from data the
+    /// user never authored. `contextExcluded` keeps this text away from the
+    /// MODEL, but it still renders to the human — so the display path needs its
+    /// own fencing, the same way execute_script fences for the model (review
+    /// catch, 2026-08-23). Pure, so the fence choice is testable.
+    nonisolated static func fencedCodeBlock(_ body: String) -> String {
+        var longestRun = 0
+        var currentRun = 0
+        for character in body {
+            if character == "`" {
+                currentRun += 1
+                longestRun = max(longestRun, currentRun)
+            } else {
+                currentRun = 0
+            }
+        }
+        let fence = String(repeating: "`", count: max(3, longestRun + 1))
+        return "\(fence)\n\(body)\n\(fence)"
+    }
+
     public func deliverScriptOutput(scriptName: String, output: String, succeeded: Bool) async {
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
         let body = trimmed.isEmpty ? "(no output)" : trimmed
@@ -551,7 +577,7 @@ public final class ChatSession {
             : "Couldn't finish `\(scriptName)` (see output):"
         var message = ChatMessage(
             role: .assistant,
-            text: "\(header)\n\n```\n\(body)\n```",
+            text: "\(header)\n\n\(Self.fencedCodeBlock(body))",
             status: .complete
         )
         message.contextExcluded = true

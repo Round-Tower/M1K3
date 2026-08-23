@@ -48,4 +48,23 @@ struct ScriptRunDispositionTests {
         )
         #expect(ScriptRunDisposition(outcome) == .timedOut)
     }
+
+    @Test("plainOutputBody: a clean run is just the tail")
+    func plainBodySucceeded() {
+        #expect(ScriptRunDisposition.succeeded.plainOutputBody(tail: "Free 120Gi") == "Free 120Gi")
+    }
+
+    @Test("plainOutputBody: a failure prefixes the reason")
+    func plainBodyFailed() {
+        #expect(
+            ScriptRunDisposition.failed(reason: "exit 3").plainOutputBody(tail: "boom")
+                == "exit 3\nboom"
+        )
+    }
+
+    @Test("plainOutputBody: a timeout says it may still be running")
+    func plainBodyTimedOut() {
+        let body = ScriptRunDisposition.timedOut.plainOutputBody(tail: "partial")
+        #expect(body == "Timed out — it may still be running.\npartial")
+    }
 }
