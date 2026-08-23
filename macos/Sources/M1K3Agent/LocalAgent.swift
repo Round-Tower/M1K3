@@ -81,6 +81,11 @@ public actor LocalAgent {
 
     public internal(set) var reasoningTrace: [ReasoningStep] = []
 
+    /// Exclusion classes that have FIRED this turn (P1, context-tools charter):
+    /// once a class fires, tools of any OTHER class are steered away for the
+    /// rest of the turn. Reset per run alongside the reasoning trace.
+    var firedExclusionClasses: Set<ToolExclusionClass> = []
+
     public init(
         inferenceProvider: any InferenceProvider,
         tools: [any AgentTool],
@@ -108,6 +113,7 @@ public actor LocalAgent {
         onReasoningToken: (@Sendable (String) -> Void)? = nil
     ) async throws -> AgentResult {
         reasoningTrace.removeAll()
+        firedExclusionClasses.removeAll()
         // One re-arm per TURN, whatever path or exit: a per-generate re-arm
         // would interleave prewarm daemon calls between the ReAct floor's rapid
         // provider calls (the logged AFM rate-collapse shape). Cancellation
@@ -258,6 +264,9 @@ public actor LocalAgent {
                     + "Available tools: \(available.isEmpty ? "(none)" : available)."
             )
         }
+        if let excluded = sameTurnExclusionSteer(for: tool) {
+            return .steer(excluded)
+        }
         onEvent?(.actionStarted(tool: site.toolName, argument: site.eventArgument))
         executedActions.insert(site.displayDescription)
         // Used means DISPATCHED, success or throw — mirroring the .actionStarted
@@ -267,6 +276,24 @@ public actor LocalAgent {
         // through synthesis (which filters errors and degrades to plain RAG).
         usedTools.insert(site.toolName)
         return .run(tool)
+    }
+
+    /// P1 same-turn exclusion (context-tools charter): a resolved tool whose
+    /// exclusion class conflicts with one that already fired this turn is
+    /// steered away instead of executed — and never counted as used, so the
+    /// blocked call leaves no trace in `toolsUsed`. Firing is recorded here
+    /// (at plan time, before execution) so a concurrent native batch cannot
+    /// interleave a conflicting call past the guard.
+    private func sameTurnExclusionSteer(for tool: any AgentTool) -> String? {
+        guard let cls = tool.exclusionClass else { return nil }
+        if firedExclusionClasses.contains(where: { $0 != cls }) {
+            return "Error: \(tool.name) is unavailable for the rest of this turn — "
+                + "local script output and web access never mix in one turn "
+                + "(M1K3's privacy rule). Answer from what you already have, or "
+                + "suggest the user ask again in a fresh message."
+        }
+        firedExclusionClasses.insert(cls)
+        return nil
     }
 
     /// Shared dispatch core for BOTH the ReAct and native paths — the serial

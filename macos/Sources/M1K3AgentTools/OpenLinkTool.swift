@@ -16,6 +16,9 @@ import M1K3Preview
 
 public struct OpenLinkTool: AgentTool {
     public let name = "open_link"
+    /// P1 same-turn exclusion (context-tools charter): this tool reaches the
+    /// network, so it never runs in the same turn as a local-sensitive tool.
+    public let exclusionClass: ToolExclusionClass? = .network
     public let description =
         "Open a web link in M1K3's review panel beside the conversation, so the user "
             + "can see the page without leaving M1K3. Use when you reference a URL worth looking at. "

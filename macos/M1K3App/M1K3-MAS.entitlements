@@ -14,6 +14,11 @@
 	<true/>
 	<key>com.apple.security.files.user-selected.read-only</key>
 	<true/>
+	<!-- Write access ONLY to folders the user picks in an open panel — used
+	     solely for installing approved scripts into the Application Scripts
+	     folder (the hands' one-time grant; see AppEnvironment+Scripts). -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
 	<!-- Outbound: on-device model-weight downloads (HuggingFace) on first use. -->
 	<key>com.apple.security.network.client</key>
 	<true/>

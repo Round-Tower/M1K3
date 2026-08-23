@@ -93,6 +93,9 @@ public struct FetchPageTool: AgentTool {
     private static let log = Logger(subsystem: M1K3Log.subsystem, category: "fetch-page")
 
     public let name = "fetch_page"
+    /// P1 same-turn exclusion (context-tools charter): this tool reaches the
+    /// network, so it never runs in the same turn as a local-sensitive tool.
+    public let exclusionClass: ToolExclusionClass? = .network
     public let description =
         "Read a web page's actual content. Use after web_search: pass the most "
             + "relevant result URL to get the page's text. Argument: the page URL."

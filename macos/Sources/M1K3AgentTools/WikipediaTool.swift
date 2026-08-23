@@ -23,6 +23,9 @@ import os
 public struct WikipediaTool: AgentTool {
     private static let log = Logger(subsystem: M1K3Log.subsystem, category: "wikipedia")
     public let name = "lookup_fact"
+    /// P1 same-turn exclusion (context-tools charter): this tool reaches the
+    /// network, so it never runs in the same turn as a local-sensitive tool.
+    public let exclusionClass: ToolExclusionClass? = .network
     public let description =
         "Look up an established fact from Wikipedia — people, places, concepts, history, "
             + "definitions. NOT for current events, prices, or weather (use web_search for those). "

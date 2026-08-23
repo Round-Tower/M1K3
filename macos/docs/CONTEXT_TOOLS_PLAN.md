@@ -1,6 +1,16 @@
 # Context Tools — the Mac as M1K3's senses (plan)
 
-**Status:** PARKED (2026-08-03) — plan only, zero code, not on the roadmap.
+**Status:** FIRST RESIDENT LANDED (2026-08-23) — the hands (`execute_script`
++ `propose_script`, feat/hands-run-script) shipped under this charter with the
+P1 same-turn exclusion (`ToolExclusionClass`, enforced in LocalAgent's dispatch
+core) and the P3 distillation taint (`DistillationTaint`) built as mechanism,
+default-OFF toggle in Settings → Privacy, and the LAN MCP scope failing closed.
+P2's second consent tier for the hands is satisfied structurally: the tools join
+ONLY the interactive-chat palette (hook-injection, the delegate_deep pattern) —
+`ask_m1k3` never receives the hook. The context SENSES below (battery, location,
+calendar, presence) remain unbuilt; their P1/P3 mechanisms now exist to inherit.
+Named honest gap: the eval/SelfTest palette does not yet carry the hands, so
+tool-use evals exercise the exclusion only via unit pins, not CHATEVAL.
 The folded security-audit findings (distillation-exclusion taint before Phase 2,
 second consent tier for `ask_m1k3`) remain the binding prerequisites whenever
 this is scheduled via ROADMAP.md. Security-audit pass required before the first
@@ -125,6 +135,61 @@ the plan's original claims weren't yet backed by mechanism. These are now
   repeated-snapshot call-rate floor per conversation (a sequence of snapshots
   is a history); prefer grid-cell coarse location over gazetteer place names
   (more private, no bundled-data supply chain).
+
+## Security-audit — the hands (2026-08-23, code-stage pass)
+
+The auditor walked the shipped diff against this charter. Three BLOCKING
+findings were fixed in-branch; the rest are documented residual risks (the
+brain-at-home precedent: named, not silent).
+
+**Fixed before merge:**
+- **F1 — same-turn exclusion bypass via `delegate_deep`.** A dive spins up a
+  separate web-capable agent the parent's `firedExclusionClasses` never saw, so
+  `execute_script → delegate_deep(<script output>) → web_search` was a same-turn
+  exfil chain. Fixed: `delegate_deep` now carries `.network`, so it is refused
+  once a local-sensitive tool has fired the turn (symmetric with the web tools).
+- **F2 — TOCTOU between the approval snapshot and launch.** The scripts folder
+  lives outside the sandbox container; a co-resident process could swap the
+  file in the await gap. Fixed: `UserScriptRunner.run` re-reads and re-hashes
+  the bytes against the approved SHA-256 immediately before launch (irreducible
+  micro-window remains — NSUserUnixTask re-opens the URL — but the check is at
+  the exec boundary, not a stale snapshot).
+- **F3 — approval ledger in UserDefaults.** A plist any co-resident process can
+  rewrite with `defaults write` was the entire human-review trust boundary.
+  Fixed: `KeychainScriptApprovalStore` (device-only, per-app ACL), one-time
+  migration off the plist. Fail-closed on a Keychain write error (the run is
+  refused, never silently downgraded).
+
+**Also hardened:** symlinks in the scripts folder are excluded from the listing
+and refused at run (F7); the persona-prefix warm hook uses inert
+`NullScriptRunning`/`EmptyScriptApprovalStore` stubs so a mis-wired warm can
+never execute (F9); script output is fenced as untrusted data in the
+observation (F6 — a prompt-injection speed bump, named as such).
+
+**Documented residual risks (not fixed in v1):**
+- **Cross-turn exfiltration (F5).** P1 is same-turn only: turn N's script output
+  lands in the transcript, and turn N+1 can reference it to a web tool. The
+  per-turn boundary is stated in the Settings copy; a cooldown window is a
+  possible follow-up.
+- **Argument confused-deputy (F4).** Approval pins the script's BYTES, not its
+  argv; a later turn can re-invoke an approved script with model-chosen
+  arguments. The Settings copy now warns to approve only scripts trusted with
+  any input; per-approval argument allow-lists are a possible follow-up.
+- **Entitlement possibly unnecessary (verify-at-⌘R, review R2).** A sandboxed
+  app MAY already have read/write to its own `~/Library/Application Scripts/
+  <bundle-id>/` without any entitlement. If a real-device check confirms it, the
+  whole `scriptsFolderForWriting()` bookmark/open-panel flow AND the
+  `files.user-selected.read-write` entitlement can be DROPPED — removing F10
+  entirely rather than documenting it. If the write is refused without the grant
+  (or MAS review needs it), the current implementation stands as-is.
+- **Entitlement scope (F10).** `files.user-selected.read-write` is app-wide, not
+  panel-scoped; the install panel narrows itself to the Application Scripts
+  folder by path check. Any future NSOpenPanel inherits write capability — a
+  note for whoever touches one next.
+- **Audio side-channel (F11).** Script output can be spoken via TTS in voice
+  mode, a different exposure than on-screen text.
+- **NSUserUnixTask is unkillable (F8).** A runaway approved script can only be
+  stopped via Activity Monitor — surfaced in BUGS.md, not just code comments.
 
 ## Open questions (Kev's calls)
 

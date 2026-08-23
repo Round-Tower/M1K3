@@ -10,6 +10,11 @@
 	<!-- Read PDFs / text the user explicitly drops or opens. -->
 	<key>com.apple.security.files.user-selected.read-only</key>
 	<true/>
+	<!-- Write access ONLY to folders the user picks in an open panel — used
+	     solely for installing approved scripts into the Application Scripts
+	     folder (the hands' one-time grant; see AppEnvironment+Scripts). -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
 	<!-- Outbound network — the ONLY reason the app reaches the internet: downloading
 	     on-device model weights (MLX brains + WhisperKit) from huggingface.co on
 	     first use. Without this the sandbox blocks DNS itself (NSURLError -1003,

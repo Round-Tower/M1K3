@@ -42,6 +42,20 @@ public struct ToolResult: Sendable, Equatable {
     }
 }
 
+/// P1 of the context-tools charter (docs/CONTEXT_TOOLS_PLAN.md): tools that
+/// read sensitive local data and tools that can move data off the Mac are
+/// mutually exclusive WITHIN a turn — once one class fires, the other is
+/// steered away for the rest of that turn (LocalAgent's dispatch core owns
+/// the enforcement). A persona rule alone would be prompt-injectable; this
+/// is mechanism. Tools with no class (datetime, knowledge search) never
+/// participate.
+public enum ToolExclusionClass: String, Sendable, Equatable {
+    /// Reaches the network (web search, page fetch, link opening).
+    case network
+    /// Reads or produces sensitive local data (script execution output).
+    case localSensitive = "local-sensitive"
+}
+
 public protocol AgentTool: Sendable {
     /// Identifier the agent uses in `ACTION: name(arg)`.
     var name: String { get }
@@ -57,6 +71,10 @@ public protocol AgentTool: Sendable {
     /// stays in the signature for genuinely unrecoverable tool states; the
     /// built-in web/OS tools deliberately never use it.
     func execute(input: [String: String]) async throws -> ToolResult
+
+    /// This tool's same-turn exclusion class, nil for most tools. See
+    /// `ToolExclusionClass` — enforcement is in the shared dispatch core.
+    var exclusionClass: ToolExclusionClass? { get }
 
     /// Whether this tool contends for the process's single Metal/MLX compute
     /// lane (query embedding, delegated generation). When one model turn
@@ -79,5 +97,11 @@ public extension AgentTool {
     /// Default: a plain network/disk/pure tool — safe to run concurrently.
     var requiresExclusiveCompute: Bool {
         false
+    }
+
+    /// Default: no exclusion class — the tool never joins the same-turn
+    /// script↔web exclusion.
+    var exclusionClass: ToolExclusionClass? {
+        nil
     }
 }

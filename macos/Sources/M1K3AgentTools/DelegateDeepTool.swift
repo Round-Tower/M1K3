@@ -38,6 +38,12 @@ public struct DelegateDeepTool: AgentTool {
     /// ORDERING (the dive is dispatched before a batch-mate's embed starts),
     /// not a hard mutual exclusion.
     public let requiresExclusiveCompute = true
+    /// P1 same-turn exclusion (Finding 1): a dive spins up a SEPARATE agent
+    /// whose palette carries the web tools, so delegate_deep is an off-Mac
+    /// egress path — classed `.network` so it is steered away once a
+    /// local-sensitive tool (execute_script) has fired this turn, and vice
+    /// versa. Closes the script→delegate_deep→web same-turn exfil chain.
+    public let exclusionClass: ToolExclusionClass? = .network
     /// Describes what the plumbing ACTUALLY does — third revision of this
     /// string, each tracking the plumbing (see the test's history note). Since
     /// 2026-08-15 the manager runs DeepDiveTarget.plan and, where this Mac

@@ -12,12 +12,15 @@
 //  (SettingsView.swift lineage, 2026-06-06).
 //
 
+import M1K3AgentTools
 import SwiftUI
 
 struct PrivacySettingsPane: View {
     @Environment(AppEnvironment.self) private var env
     @AppStorage(AppEnvironment.webSearchEnabledKey) private var webSearchEnabled = true
     @AppStorage(AppEnvironment.spotlightIndexingKey) private var spotlightIndexing = false
+    @AppStorage(AppEnvironment.scriptToolsEnabledKey) private var scriptToolsEnabled = false
+    @State private var scriptRows: [AppEnvironment.ScriptRow] = []
 
     var body: some View {
         Form {
@@ -58,12 +61,79 @@ struct PrivacySettingsPane: View {
                 .font(.caption).foregroundStyle(.secondary)
             }
 
+            scriptsSection
+
             mcpSection
 
             BrainAtHomeSection()
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
+    }
+
+    /// The hands: approved-scripts execution (context-tools charter, default
+    /// OFF — off means the model never sees the tools).
+    private var scriptsSection: some View {
+        Section {
+            Toggle("Run approved scripts", isOn: $scriptToolsEnabled)
+            if scriptToolsEnabled {
+                if scriptRows.isEmpty {
+                    Text("No scripts installed yet — M1K3 can propose one in chat, or drop your own in the scripts folder and approve it here.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(scriptRows) { row in
+                    HStack {
+                        Text(row.script.name).font(.system(.body, design: .monospaced))
+                        Spacer()
+                        switch row.state {
+                        case .approved:
+                            Text("Approved").font(.caption).foregroundStyle(.secondary)
+                            Button("Revoke") {
+                                env.revokeScriptApproval(named: row.script.name)
+                                Task { await refreshScriptRows() }
+                            }
+                        case .unapproved:
+                            Button("Approve") {
+                                env.approveScript(row.script)
+                                Task { await refreshScriptRows() }
+                            }
+                        case .drifted:
+                            Text("Changed since approval").font(.caption).foregroundStyle(.orange)
+                            Button("Re-approve") {
+                                env.approveScript(row.script)
+                                Task { await refreshScriptRows() }
+                            }
+                        }
+                        Button("Uninstall", role: .destructive) {
+                            _ = env.uninstallScript(named: row.script.name)
+                            Task { await refreshScriptRows() }
+                        }
+                    }
+                }
+                Button("Open Scripts Folder…") { env.revealScriptsFolder() }
+            }
+        } header: {
+            Text("Scripts")
+        } footer: {
+            // Multiline literal, not a + chain (the PR #92 type-checker lesson).
+            Text("""
+            Lets M1K3 run scripts you have installed and approved — its \
+            "hands". M1K3 can only propose scripts; every install and \
+            approval is your click, and only the exact approved bytes ever \
+            run. Within a single turn, script output can't reach the web \
+            tools (or vice versa), and it never becomes a remembered fact. \
+            An approved script can still be re-run later with different \
+            arguments, so approve only scripts whose behaviour you trust \
+            with any input. Off means the model can't see these tools at all.
+            """)
+            .font(.caption).foregroundStyle(.secondary)
+        }
+        .task(id: scriptToolsEnabled) { await refreshScriptRows() }
+    }
+
+    private func refreshScriptRows() async {
+        scriptRows = await env.scriptRows()
     }
 
     /// In-process MCP server controls.
