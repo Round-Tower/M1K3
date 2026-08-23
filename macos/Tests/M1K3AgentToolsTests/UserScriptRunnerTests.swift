@@ -95,6 +95,33 @@ struct UserScriptRunnerTests {
         #expect(!outcome.output.contains("finished"))
     }
 
+    @Test("a genuinely non-terminating script's wait is abandoned near the timeout", .timeLimit(.minutes(1)))
+    func abandonsNonTerminatingScript() async throws {
+        let dir = try makeScriptsDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        // A script that will not exit within any test timescale (an hour) —
+        // unlike `sleep 30`, which the abandon-elapsed assertion below couldn't
+        // distinguish from "returned once the process ended" if the timeout
+        // were near 30s (the review's F2 coverage gap). Deliberately a long
+        // `sleep`, NOT a `while true` busy-loop: NSUserUnixTask children can't
+        // be killed, so a spinner would peg a core for an hour and starve the
+        // parallel suite (it flaked exactly this way once). A sleeping child
+        // costs nothing and self-reaps. The .timeLimit trait is the outer
+        // watchdog: a race regression that hangs fails fast instead of hanging CI.
+        let body = "#!/bin/sh\nsleep 3600\n"
+        try write("spin.sh", body, in: dir)
+        let runner = UserScriptRunner(directory: { dir })
+        let start = Date()
+        let outcome = try await runner.run(
+            named: "spin.sh", arguments: [], timeout: 1, expectedSHA256: sha(body)
+        )
+        let elapsed = Date().timeIntervalSince(start)
+        #expect(outcome.timedOut)
+        #expect(outcome.succeeded == false)
+        // Returned near the 1s timeout, NOT after the child's 3600s exit.
+        #expect(elapsed < 10)
+    }
+
     @Test("a missing script throws launchFailed")
     func missingScript() async throws {
         let dir = try makeScriptsDir()

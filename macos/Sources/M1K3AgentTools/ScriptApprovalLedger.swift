@@ -33,9 +33,11 @@ public protocol ScriptApprovalStoring: Sendable {
     func revoke(name: String)
 }
 
-/// UserDefaults-backed approval store (the app default). JSON-encoded array
-/// under one key. `@unchecked Sendable`: `UserDefaults` is documented
-/// thread-safe.
+/// UserDefaults-backed approval store. SUPERSEDED as the app default by the
+/// app-target `KeychainScriptApprovalStore` (F3): this type is now reached only
+/// by that store's one-time migration read and its own unit test — do not wire
+/// it back in as the live store. JSON-encoded array under one key.
+/// `@unchecked Sendable`: `UserDefaults` is documented thread-safe.
 public struct UserDefaultsScriptApprovalStore: ScriptApprovalStoring, @unchecked Sendable {
     private let defaults: UserDefaults
     private let key: String

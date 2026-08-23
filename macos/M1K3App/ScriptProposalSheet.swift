@@ -19,6 +19,7 @@ struct ScriptProposalSheet: View {
     @Environment(AppEnvironment.self) private var env
     let proposal: ScriptProposal
     @State private var failure: String?
+    @State private var replacesExisting = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -44,6 +45,13 @@ struct ScriptProposalSheet: View {
             """)
             .font(.caption)
             .foregroundStyle(.secondary)
+            if replacesExisting {
+                Label(
+                    "This replaces an existing script named \(proposal.name).",
+                    systemImage: "exclamationmark.triangle"
+                )
+                .font(.caption).foregroundStyle(.orange)
+            }
             if let failure {
                 Text(failure).font(.caption).foregroundStyle(.red)
             }
@@ -60,5 +68,8 @@ struct ScriptProposalSheet: View {
         }
         .padding(20)
         .frame(width: 480)
+        .task(id: proposal.name) {
+            replacesExisting = await env.scriptExists(named: proposal.name)
+        }
     }
 }

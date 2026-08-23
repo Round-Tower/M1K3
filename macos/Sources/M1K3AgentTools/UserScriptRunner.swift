@@ -20,7 +20,7 @@
 import CryptoKit
 import Foundation
 
-public final class UserScriptRunner: ScriptRunning, @unchecked Sendable {
+public final class UserScriptRunner: ScriptRunning, Sendable {
     /// Bytes of combined stdout+stderr kept (tail). A chatty script can emit
     /// unbounded output; the collector keeps the end, where verdicts live.
     static let outputByteLimit = 64 * 1024

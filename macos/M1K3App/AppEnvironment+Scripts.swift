@@ -72,6 +72,12 @@ extension AppEnvironment {
         }
     }
 
+    /// True when an install of `name` would overwrite a script already in the
+    /// folder — so the review sheet can say so before the user commits (F4).
+    func scriptExists(named name: String) async -> Bool {
+        await UserScriptRunner().installedScripts().contains { $0.name == name }
+    }
+
     func scriptRows() async -> [ScriptRow] {
         let approvals = KeychainScriptApprovalStore().approvals()
         return await UserScriptRunner().installedScripts().map { script in

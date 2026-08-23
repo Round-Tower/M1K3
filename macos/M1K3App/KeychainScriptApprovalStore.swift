@@ -21,10 +21,11 @@ import M1K3AgentTools
 import M1K3Calls
 import M1K3LogCore
 
-/// Keychain-backed approval ledger. `@unchecked Sendable`: the KeyStore is a
-/// value type over the thread-safe Security framework; the in-memory cache is
-/// only ever touched behind the store's own serial use here.
-struct KeychainScriptApprovalStore: ScriptApprovalStoring, @unchecked Sendable {
+/// Keychain-backed approval ledger. Plain `Sendable`: its one stored property
+/// is an immutable `any KeyStore` (itself `Sendable`), so the compiler verifies
+/// the conformance — no `@unchecked` to hide a future mutable field on the type
+/// the header calls "the ENTIRE trust boundary".
+struct KeychainScriptApprovalStore: ScriptApprovalStoring {
     private static let log = M1K3Log.logger(.scriptRun)
     private static let account = "scriptApprovals"
 
