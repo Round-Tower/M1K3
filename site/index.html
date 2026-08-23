@@ -36,13 +36,14 @@
   "name": "M1K3 for Mac",
   "operatingSystem": "macOS 26",
   "applicationCategory": "UtilitiesApplication",
-  "description": "A privacy-first AI companion that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice, a personal knowledge graph with RAG, encrypted call transcription, a local agent, and an MCP server.",
+  "description": "A privacy-first AI companion that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), a native screensaver, and an MCP server with 16 tools.",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
   "url": "https://m1k3.app/",
-  "downloadUrl": "https://github.com/Round-Tower/m1k3",
+  "downloadUrl": "https://github.com/Round-Tower/m1k3/releases/latest/download/M1K3.dmg",
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie", "sameAs": ["https://github.com/Round-Tower"] },
   "sameAs": ["https://github.com/Round-Tower/m1k3"],
-  "dateModified": "2026-08-03"
+  "dateModified": "2026-08-22"
 }
 </script>
 <script type="application/ld+json">
@@ -51,17 +52,21 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Does M1K3 send my data to a server?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 runs entirely on your Mac: inference, voice, embeddings, and storage are all on-device. Zero bytes of your conversations, documents, or calls are sent to any server. The optional web-search tool is off by default and clearly toggled." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 runs entirely on your Mac: inference, voice, embeddings, and storage are all on-device. Zero bytes of your conversations, documents, or calls are sent to any server. Even the thumbs-up/down feedback you leave on answers stays local. The optional web-search tool is off by default and clearly toggled." } },
     { "@type": "Question", "name": "What AI models does M1K3 run?",
-      "acceptedAnswer": { "@type": "Answer", "text": "M1K3 runs three brains, all on your Mac: Mini on Apple Foundation Models for instant answers, Lil on Qwen 3 4B, and Big on Google Gemma 4 12B for deep reasoning — via MLX-Swift on Apple Silicon. Switch brains in Settings any time." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "M1K3 runs three brains, all on your Mac: Mini on Apple Foundation Models for instant answers, Lil on Qwen 3 4B — the fast everyday brain that fronts the conversation — and Big on Google Gemma 4 12B, reached by delegation for deep work. All via MLX-Swift on Apple Silicon; switch brains in Settings any time." } },
     { "@type": "Question", "name": "Which Macs does M1K3 support?",
       "acceptedAnswer": { "@type": "Answer", "text": "M1K3 requires an Apple Silicon Mac running macOS 26 Tahoe. It is a native SwiftUI app with Metal-accelerated inference, not an Electron wrapper." } },
     { "@type": "Question", "name": "How is M1K3 different from Ollama or ChatGPT?",
       "acceptedAnswer": { "@type": "Answer", "text": "Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI companion: local models plus live voice, a personal knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server, in one sandboxed native Mac app." } },
     { "@type": "Question", "name": "Can Claude or other AI agents use my M1K3 knowledge?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an in-app MCP (Model Context Protocol) server with 15 tools — knowledge search, documents, voice, memory, and ask-M1K3 — over local HTTP at 127.0.0.1:4242, so Claude and other MCP clients can query your local knowledge base without a byte leaving the Mac." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an in-app MCP (Model Context Protocol) server with 16 tools — knowledge search, documents, voice, memory, and ask-M1K3 with an async job API for long asks — over local HTTP at 127.0.0.1:4242, so Claude and other MCP clients can query your local knowledge base without a byte leaving the Mac." } },
+    { "@type": "Question", "name": "Does M1K3 do anything when I'm not talking to it?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Only if you ask it to. The Heartbeat is an ambient pulse — every two hours, a short narrative about your machine and your day, composed from facts the code gathered, respecting quiet hours. It is off by default, lives on its own screen with a one-tap Clear, and never enters your chat transcript. There is also a native macOS screensaver — the pixel M in ambient rain — installable from Settings." } },
+    { "@type": "Question", "name": "Can my other devices use my Mac's brain?",
+      "acceptedAnswer": { "@type": "Answer", "text": "That's Brain at Home: your Mac can serve its brain to your own devices over the local network — discovered via Bonjour, paired once by QR code, encrypted with TLS-PSK, with paired devices limited to a scoped read-only tool set. It is off by default and nothing ever crosses the internet; everything stays inside your walls." } },
     { "@type": "Question", "name": "Is M1K3 free and open source?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 is free for humans, forever, and open source, developed by Round Tower in Ireland — no account, no subscription, no telemetry. You can download the signed Mac app directly, join the TestFlight beta, or build it from source on GitHub. An optional GitHub Sponsors page funds development without gating features." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 is free for humans, forever, and open source under the Apache-2.0 license, developed by Round Tower in Ireland — no account, no subscription, no telemetry. You can download the signed Mac app directly, join the TestFlight beta, or build it from source on GitHub. An optional GitHub Sponsors page funds development without gating features." } }
   ]
 }
 </script>
@@ -426,14 +431,14 @@
     <div class="cell reveal">
       <div class="cell-icon">▚▚</div>
       <h3>On-device inference</h3>
-      <p>Gemma 4 and Qwen 3 on MLX-Swift with Apple Foundation Models handling fast turns. Pick your brain in Settings and switch any time.</p>
-      <span class="tag">mlx-swift · gemma-4 · qwen3 · afm</span>
+      <p>Three brains: Mini on Apple Foundation Models answers instantly, Lil (Qwen 3 4B) fronts the conversation, and Big (Gemma 4 12B) is delegated the deep work. Switch in Settings any time.</p>
+      <span class="tag">mlx-swift · afm · qwen3 · gemma-4</span>
     </div>
     <div class="cell reveal">
       <div class="cell-icon">◉))</div>
       <h3>Live voice</h3>
-      <p>Streaming speech recognition and natural speech out, with karaoke-style read-along highlighting. Talk to it like it's in the room — because it is.</p>
-      <span class="tag">whisperkit · streaming stt + tts</span>
+      <p>On-device speech recognition in; Kokoro neural TTS out — pure MLX, streamed sentence by sentence, with karaoke captions. M1K3 makes its own end-of-turn call, and ending on &ldquo;please&rdquo; hands it the floor.</p>
+      <span class="tag">kokoro · mlx · whisperkit · say please</span>
     </div>
     <div class="cell reveal">
       <div class="cell-icon">◢◣◥</div>
@@ -456,8 +461,26 @@
     <div class="cell reveal">
       <div class="cell-icon">&lt;/&gt;</div>
       <h3>MCP server</h3>
-      <p>M1K3 exposes your knowledge to Claude and other agents over the Model Context Protocol. Your second brain, available to your other AIs — locally.</p>
-      <span class="tag">mcp · 15 tools · 127.0.0.1:4242</span>
+      <p>M1K3 exposes your knowledge, memory, and voice to Claude and other agents over the Model Context Protocol — with an async job API for the slow, deep asks. Your second brain, available to your other AIs — locally.</p>
+      <span class="tag">mcp · 16 tools · 127.0.0.1:4242</span>
+    </div>
+    <div class="cell reveal">
+      <div class="cell-icon">◇◆◇</div>
+      <h3>Memory that repairs itself</h3>
+      <p>A temporal graph of dated facts. Correct M1K3 and the dream cycle supersedes the stale fact instead of silently losing either version — history stays visible.</p>
+      <span class="tag">temporal graph · dream cycle · supersede, don't delete</span>
+    </div>
+    <div class="cell reveal">
+      <div class="cell-icon">♥⎍♥</div>
+      <h3>Heartbeat</h3>
+      <p>Every two hours, a short narrative pulse about your machine and your day — facts from code, never confabulated, quiet hours respected. Off by default; never enters your chat.</p>
+      <span class="tag">ambient · quiet hours · off by default</span>
+    </div>
+    <div class="cell reveal">
+      <div class="cell-icon">⌂⇄⌂</div>
+      <h3>Brain at Home</h3>
+      <p>Serve your Mac's brain to your own devices over the LAN: Bonjour discovery, one-time QR pairing, TLS-PSK encryption, and a scoped read-only tool set. Everything stays inside your walls.</p>
+      <span class="tag">tls-psk · bonjour · qr pairing · off by default</span>
     </div>
   </div>
 </section>
@@ -476,7 +499,8 @@
         <li><span>Metal-accelerated local models</span><span>mlx-swift</span></li>
         <li><span>3D companion avatar</span><span>realitykit</span></li>
         <li><span>App-sandboxed, encrypted store</span><span>grdb + keychain</span></li>
-        <li><span>Swift 6.2, strict concurrency</span><span>200+ tests</span></li>
+        <li><span>Native screensaver — the pixel M in rain</span><span>installs from settings</span></li>
+        <li><span>Swift 6.2, strict concurrency</span><span>2,800+ tests</span></li>
       </ul>
     </div>
     <div class="term reveal">
@@ -508,11 +532,19 @@ the action list?<br />
   <div class="faq-list">
     <details class="reveal">
       <summary>Does M1K3 send my data to a server?</summary>
-      <p>No. M1K3 runs entirely on your Mac — inference, voice, embeddings, and storage are all on-device. Zero bytes of your conversations, documents, or calls go to any server. The optional web-search tool is off by default and clearly toggled.</p>
+      <p>No. M1K3 runs entirely on your Mac — inference, voice, embeddings, and storage are all on-device. Zero bytes of your conversations, documents, or calls go to any server. Even the thumbs-up/down feedback you leave on answers stays local — it's yours, for tuning, and no visiting agent can read or write it. The optional web-search tool is off by default and clearly toggled.</p>
     </details>
     <details class="reveal">
       <summary>What AI models does it run?</summary>
-      <p>Three brains, all local: Apple Foundation Models for instant answers, Qwen 3 4B, and Gemma 4 12B for deep reasoning — via MLX-Swift on Apple Silicon. Switch in Settings any time.</p>
+      <p>Three brains, all local: Mini on Apple Foundation Models for instant answers, Lil on Qwen 3 4B — the fast brain that fronts the conversation — and Big on Gemma 4 12B, delegated the deep work. Via MLX-Swift on Apple Silicon; switch in Settings any time.</p>
+    </details>
+    <details class="reveal">
+      <summary>Does it do anything when I'm not talking to it?</summary>
+      <p>Only if you ask it to. The <em>Heartbeat</em> is an ambient pulse — every two hours, a short narrative about your machine and your day, composed from facts the code gathered, respecting quiet hours. Off by default, one-tap Clear, never enters your chat transcript. There's also a native screensaver — the pixel M in ambient rain — installable from Settings.</p>
+    </details>
+    <details class="reveal">
+      <summary>Can my other devices use my Mac's brain?</summary>
+      <p>That's <em>Brain at Home</em>: your Mac serves its brain to your own devices over the local network — Bonjour discovery, one-time QR pairing, TLS-PSK encryption, and a scoped read-only tool set for paired devices. Off by default; nothing ever crosses the internet.</p>
     </details>
     <details class="reveal">
       <summary>Which Macs are supported?</summary>
@@ -524,11 +556,11 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>Can Claude use my M1K3 knowledge?</summary>
-      <p>Yes. M1K3 ships an MCP server exposing <code>search_knowledge</code>, <code>list_documents</code>, and <code>get_document</code> — Claude and other MCP clients can query your local knowledge base, locally.</p>
+      <p>Yes. M1K3 ships an MCP server with 16 tools — <code>search_knowledge</code>, <code>ask_m1k3</code>, memory recall, documents, even <code>speak</code> — over local HTTP at <code>127.0.0.1:4242</code>. Long asks get an async job API. Claude and other MCP clients query your local knowledge base, locally.</p>
     </details>
     <details class="reveal">
       <summary>Is it free?</summary>
-      <p>Free for humans, forever — and open source, made by Round Tower in Ireland. No account, no subscription, no telemetry. Download the signed Mac app, join the TestFlight beta, or build from source today. If M1K3 earns a place on your Mac, there's an optional <a href="https://github.com/sponsors/Round-Tower">GitHub Sponsors</a> page — it funds development, never gates features.</p>
+      <p>Free for humans, forever — and open source under Apache-2.0, made by Round Tower in Ireland. No account, no subscription, no telemetry. Download the signed &amp; notarized Mac app, join the TestFlight beta, or build from source today. If M1K3 earns a place on your Mac, there's an optional <a href="https://github.com/sponsors/Round-Tower">GitHub Sponsors</a> page — it funds development, never gates features.</p>
     </details>
   </div>
 </section>
@@ -917,6 +949,24 @@ tick();
      per Kev's minimal-vendor call; Sponsors not yet enabled on GitHub, so the link
      is a dormant placeholder until flipped on. dateModified bumped per marketing
      README. No new network requests; "no tracking" promise intact. Prior: Kev +
-     claude-opus-4-8 (this file). -->
+     claude-opus-4-8 (this file).
+
+     Review: Kev + claude-fable-5, 2026-08-22, Confidence 0.85.
+     Pre-Show-HN content truth-up against master. Feature grid 6 → 9 cells:
+     added the self-repairing temporal memory graph (M1K3Memory, dream cycle),
+     Heartbeat (M1K3Heartbeat — 2-hourly pulse, quiet hours, default OFF, never
+     in chat), and Brain at Home (M1K3BrainServe — QR + TLS-PSK + Bonjour,
+     scoped read-only MCP, default OFF). Voice cell now tells the truth:
+     Kokoro TTS on pure MLX, sentence-streamed, M1K3's own endpointing, the
+     "please" accelerator (PoliteEndpoint.swift). Brains named Mini/Lil/Big
+     with Big reached by delegation (docs/MODEL_CHOICES.md roster table). MCP
+     15 → 16 tools (list_jobs landed post-July; counted from M1K3MCPKit
+     registrations). "200+ tests" → "2,800+ tests" (2,844 @Test functions
+     counted). Native screensaver line added (M1K3ScreensaverCore). FAQ +2
+     entries (Heartbeat/screensaver, Brain at Home) mirrored in JSON-LD;
+     Apache-2.0 named; per-answer local-only feedback noted in the privacy
+     answer (AnswerFeedback.swift). JSON-LD downloadUrl now the signed DMG;
+     dateModified 2026-08-22. Every claim verified in-repo; nothing added
+     that master doesn't ship. Prior: Kev + claude-opus-4-8 (this file). -->
 </body>
 </html>
