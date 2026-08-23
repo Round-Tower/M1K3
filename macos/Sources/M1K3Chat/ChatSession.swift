@@ -572,6 +572,10 @@ public final class ChatSession {
     public func deliverScriptOutput(scriptName: String, output: String, succeeded: Bool) async {
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
         let body = trimmed.isEmpty ? "(no output)" : trimmed
+        // scriptName is safe to interpolate into this inline-code span: it is
+        // gated upstream by ExecuteScriptTool.isValidScriptName (an ASCII
+        // filename allowlist that rejects backticks and every other Markdown
+        // metacharacter), so — unlike the body — it can't break out of the span.
         let header = succeeded
             ? "Ran `\(scriptName)`:"
             : "Couldn't finish `\(scriptName)` (see output):"

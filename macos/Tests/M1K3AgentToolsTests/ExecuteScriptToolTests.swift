@@ -249,4 +249,38 @@ struct ExecuteScriptToolTests {
         #expect(result.output.contains("TAIL-MARKER"))
         #expect(result.output.contains("trimmed"))
     }
+
+    /// The name is untrusted (web-influenced proposals) and gets interpolated
+    /// into the chat as an inline-code span, so the allowlist must reject every
+    /// Markdown metacharacter — otherwise a name could break out and inject a
+    /// link/heading exactly the way an unfenced body could. Review catch,
+    /// 2026-08-24.
+    @Test("script names with markdown metacharacters are rejected")
+    func rejectsMarkdownMetacharactersInName() {
+        let hostile = [
+            "disk`.sh", // backtick — closes the inline-code span
+            "x](http://evil).sh", // link-injection shape
+            "a(b).sh", // parens
+            "a[b].sh", // brackets
+            "a*b.sh", // emphasis
+            "a b.sh", // space (unchanged behaviour, allowlist-covered)
+        ]
+        for name in hostile {
+            #expect(!ExecuteScriptTool.isValidScriptName(name), "should reject \(name)")
+        }
+    }
+
+    @Test("ordinary script names still validate")
+    func acceptsOrdinaryNames() {
+        for name in ["backup.sh", "disk-report.sh", "my_script.sh", "backup.2026.sh", "run"] {
+            #expect(ExecuteScriptTool.isValidScriptName(name), "should accept \(name)")
+        }
+    }
+
+    @Test("path-traversal and hidden names remain rejected")
+    func stillRejectsTraversal() {
+        for name in ["../evil.sh", "/bin/sh", "dir/child.sh", ".hidden.sh", "a/../b.sh", "back\tup.sh", ""] {
+            #expect(!ExecuteScriptTool.isValidScriptName(name), "should reject \(name)")
+        }
+    }
 }

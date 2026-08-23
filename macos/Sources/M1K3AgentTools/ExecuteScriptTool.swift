@@ -60,11 +60,22 @@ public struct ExecuteScriptTool: AgentTool {
     /// A plain file name inside the folder: no separators, no traversal, not
     /// dot-hidden. Shared with ProposeScriptTool so both ends agree.
     public static func isValidScriptName(_ name: String) -> Bool {
-        !name.isEmpty
-            && !name.hasPrefix(".")
-            && !name.contains("/")
-            && !name.contains("\\")
-            && name.rangeOfCharacter(from: .whitespacesAndNewlines) == nil
+        // ALLOWLIST, not denylist: a script name must be a plain, conservative
+        // filename — non-empty, no leading dot (no hidden files, no `..`), and
+        // ONLY ASCII letters, digits, `.`, `_`, `-`. This rejects path
+        // separators (`/`, `\\`) and whitespace as before, AND every Markdown
+        // metacharacter (backtick, brackets, parens, `*`), so the name is safe
+        // to interpolate anywhere it's shown: the folder path, the approval
+        // ledger, os_log, and the delivered chat message's inline-code header.
+        // The name is untrusted — it rides the same web-influenced proposal
+        // path as the script body (see ProposeScriptTool; review catch,
+        // 2026-08-24).
+        guard !name.isEmpty, !name.hasPrefix(".") else { return false }
+        return name.allSatisfy { character in
+            character.isASCII
+                && (character.isLetter || character.isNumber
+                    || character == "." || character == "_" || character == "-")
+        }
     }
 
     /// A validated, parsed invocation — or a recoverable error to return.
