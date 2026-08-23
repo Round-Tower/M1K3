@@ -1,6 +1,16 @@
 package app.m1k3.ai.assistant.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -424,6 +435,16 @@ fun ChatScreen(
                         .background(MaColors.bgElevated(), islandShape)
                         .border(1.dp, MaColors.borderSubtle(), islandShape),
             ) {
+                // Dictation surface: while the mic is live, the transcript gets a
+                // roomy caption at the top of the island instead of being crammed
+                // into the input placeholder (iOS-style, less constrained).
+                AnimatedVisibility(
+                    visible = sttState.isListening,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    DictationCaption(partialTranscript)
+                }
                 ChatInputBar(
                     text = uiState.inputText,
                     onTextChange = { viewModel.updateInputText(it) },
@@ -434,7 +455,9 @@ fun ChatScreen(
                     enabled = uiState.isInputEnabled,
                     isListening = sttState.isListening,
                     onMicClick = dictationToggle,
-                    listeningPartialText = partialTranscript,
+                    // The DictationCaption above now carries the live transcript, so
+                    // the pill just shows a steady "Listening…" (no duplicate text).
+                    listeningPartialText = "",
                     onFocusChanged = { focused -> inputFocused = focused },
                     isGenerating = uiState.generationState.isGenerating,
                     onStop = { viewModel.stopGeneration() },
@@ -790,5 +813,49 @@ private fun ChatScreenGeneratingPreview() {
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
+    }
+}
+
+/**
+ * The live dictation surface shown at the top of the input island while the
+ * mic is listening: a pulsing orange dot + the growing transcript, given room
+ * to breathe (up to a few lines) rather than clipped into the input pill.
+ */
+@Composable
+private fun DictationCaption(partial: String) {
+    val infinite = rememberInfiniteTransition(label = "dictation")
+    val dotAlpha by infinite.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(700),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "dotAlpha",
+    )
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = MaSpacing.base, end = MaSpacing.base, top = MaSpacing.md, bottom = MaSpacing.xs),
+        horizontalArrangement = Arrangement.spacedBy(MaSpacing.sm),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .padding(top = 6.dp)
+                    .size(9.dp)
+                    .alpha(dotAlpha)
+                    .clip(RoundedCornerShape(50))
+                    .background(MaColors.Orange),
+        )
+        Text(
+            text = partial.ifBlank { "Listening…" },
+            style = MaTypography.titleMedium,
+            color = if (partial.isBlank()) MaColors.textMuted() else MaColors.textPrimary(),
+            maxLines = 4,
+        )
     }
 }
