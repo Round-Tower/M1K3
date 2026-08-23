@@ -65,6 +65,11 @@ struct ScriptProposalSheet: View {
                 Button("Install") {
                     failure = env.installProposedScript(proposal)
                 }
+                // Return maps to Install — the safe, non-executing action.
+                // RUNNING a script must be a deliberate click, never the
+                // reflexive default-key action (executing is its own consent —
+                // the context-tools charter; review catch, 2026-08-23).
+                .keyboardShortcut(.defaultAction)
                 .disabled(busy)
                 Button("Install & Run") {
                     busy = true
@@ -81,7 +86,6 @@ struct ScriptProposalSheet: View {
                         }
                     }
                 }
-                .keyboardShortcut(.defaultAction)
                 .disabled(busy)
             }
             if busy {
