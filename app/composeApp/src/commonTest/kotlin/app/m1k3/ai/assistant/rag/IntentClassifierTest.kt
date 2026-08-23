@@ -259,13 +259,17 @@ class IntentClassifierTest {
     // ========================================
 
     @Test
-    fun `requiresKnowledgeRetrieval returns false for conversational queries`() {
+    fun `requiresKnowledgeRetrieval returns false only for conversational queries`() {
+        // Only pure chitchat skips retrieval. GENERAL (any substantive question
+        // that didn't match a keyword intent) now grounds — see the true-case
+        // test. On-device grounding is the product; don't make the user phrase
+        // questions like a textbook to reach their own notes (2026-08-23).
         assertFalse(classifier.requiresKnowledgeRetrieval(Intent.CONVERSATIONAL))
-        assertFalse(classifier.requiresKnowledgeRetrieval(Intent.GENERAL))
     }
 
     @Test
     fun `requiresKnowledgeRetrieval returns true for knowledge queries`() {
+        assertTrue(classifier.requiresKnowledgeRetrieval(Intent.GENERAL))
         assertTrue(classifier.requiresKnowledgeRetrieval(Intent.DEVICE_TECH))
         assertTrue(classifier.requiresKnowledgeRetrieval(Intent.SECURITY))
         assertTrue(classifier.requiresKnowledgeRetrieval(Intent.TRIVIA))
@@ -284,7 +288,7 @@ class IntentClassifierTest {
         assertEquals(3, classifier.getRetrievalLimit(Intent.CODE_DEBUG), "Code debug needs 3 docs")
         assertEquals(1, classifier.getRetrievalLimit(Intent.TRIVIA), "Trivia needs 1 doc")
         assertEquals(0, classifier.getRetrievalLimit(Intent.CONVERSATIONAL), "Conversational needs 0 docs")
-        assertEquals(0, classifier.getRetrievalLimit(Intent.GENERAL), "General needs 0 docs")
+        assertEquals(2, classifier.getRetrievalLimit(Intent.GENERAL), "General grounds with 2 docs")
         assertEquals(2, classifier.getRetrievalLimit(Intent.HISTORY), "Default should be 2 docs")
     }
 

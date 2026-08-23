@@ -121,7 +121,12 @@ class IntentClassifier {
      * @return true if RAG retrieval should be triggered
      */
     fun requiresKnowledgeRetrieval(intent: Intent): Boolean {
-        return intent != Intent.CONVERSATIONAL && intent != Intent.GENERAL
+        // Only pure chitchat (greetings, thanks, "how are you") skips retrieval.
+        // GENERAL — any substantive question that didn't match a keyword intent,
+        // e.g. "what's my dog's name" — MUST ground in the user's documents:
+        // on-device grounding is the product, and the user should never have to
+        // phrase a question a special way to reach their own notes (2026-08-23).
+        return intent != Intent.CONVERSATIONAL
     }
 
     /**
@@ -136,7 +141,8 @@ class IntentClassifier {
             Intent.AI_ML -> 4 // Rich AI/ML educational content
             Intent.MATH, Intent.CODE_DEBUG -> 3 // Focused technical help
             Intent.TRIVIA -> 1 // Single fun fact
-            Intent.CONVERSATIONAL, Intent.GENERAL -> 0 // No retrieval
+            Intent.CONVERSATIONAL -> 0 // No retrieval for pure chitchat
+            Intent.GENERAL -> 2 // Substantive query without a keyword intent — ground it
             else -> 2 // Default: 2 relevant facts
         }
     }
