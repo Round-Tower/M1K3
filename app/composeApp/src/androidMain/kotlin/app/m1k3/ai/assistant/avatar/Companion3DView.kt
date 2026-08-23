@@ -5,9 +5,7 @@ import android.view.TextureView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import app.m1k3.ai.assistant.utils.Logger
@@ -46,15 +44,7 @@ private val logger = Logger.withTag("Companion3DView")
  * Prior: companion-fox-3d-plan.md; SharedModelCache.kt (SceneView era).
  */
 @Composable
-fun Companion3DView(
-    rotationSpeed: Float,
-    modifier: Modifier = Modifier,
-) {
-    // Latest rotation speed, read inside the frame callback without
-    // re-subscribing the Choreographer each recomposition.
-    val speedState = remember { mutableStateOf(rotationSpeed) }
-    speedState.value = rotationSpeed
-
+fun Companion3DView(modifier: Modifier = Modifier) {
     val holder = remember { FoxSceneHolder() }
 
     AndroidView(
@@ -62,11 +52,11 @@ fun Companion3DView(
         factory = { context ->
             TextureView(context).also { textureView ->
                 textureView.isOpaque = false
-                holder.attach(textureView, speedState)
                 runCatching {
+                    holder.attach(textureView)
                     val bytes = context.assets.open("companions/fox.glb").use { it.readBytes() }
                     holder.load(bytes)
-                }.onFailure { logger.e(it) { "Failed to load fox.glb" } }
+                }.onFailure { logger.e(it) { "fox attach/load failed" } }
             }
         },
     )
@@ -86,13 +76,8 @@ private class FoxSceneHolder {
     private var frameCallback: Choreographer.FrameCallback? = null
     private var startNanos = 0L
     private var destroyed = false
-    private val baseTransform = FloatArray(16)
-    private var haveBase = false
 
-    fun attach(
-        textureView: TextureView,
-        speed: androidx.compose.runtime.State<Float>,
-    ) {
+    fun attach(textureView: TextureView) {
         val viewer =
             ModelViewer(
                 textureView = textureView,
@@ -134,20 +119,11 @@ private class FoxSceneHolder {
                     if (startNanos == 0L) startNanos = frameTimeNanos
                     val seconds = (frameTimeNanos - startNanos) / 1_000_000_000.0
 
-                    val mv = modelViewer
-                    if (mv != null) {
-                        mv.animator?.let { anim ->
-                            if (anim.animationCount > 0) {
-                                // Survey (index 1 of Run/Survey/Walk) — the
-                                // calm idle head-turns.
-                                val clip = if (anim.animationCount > 1) 1 else 0
-                                anim.applyAnimation(clip, seconds.toFloat())
-                                anim.updateBoneMatrices()
-                            }
-                        }
-                        rotate(mv, seconds, speed.value)
-                        mv.render(frameTimeNanos)
-                    }
+                    // transformToUnitCube + ModelViewer's own camera frame
+                    // the fox; the CRT overlay carries the motion, so the model
+                    // renders static (a self-spin about the root swung it out of
+                    // frame — the Khronos Fox's pivot is not its centre).
+                    modelViewer?.render(frameTimeNanos)
                     chore.postFrameCallback(this)
                 }
             }
@@ -159,60 +135,6 @@ private class FoxSceneHolder {
         val mv = modelViewer ?: return
         mv.loadModelGlb(ByteBuffer.wrap(glb))
         mv.transformToUnitCube()
-        val asset = mv.asset
-        if (asset != null) {
-            val instance = mv.engine.transformManager.getInstance(asset.root)
-            if (instance != 0) {
-                mv.engine.transformManager.getTransform(instance, baseTransform)
-                haveBase = true
-            }
-            logger.i { "fox.glb loaded (${asset.entities.size} entities, ${mv.animator?.animationCount ?: 0} clips)" }
-        } else {
-            logger.e { "fox.glb: asset was null after load" }
-        }
-    }
-
-    private fun rotate(
-        mv: ModelViewer,
-        seconds: Double,
-        speed: Float,
-    ) {
-        if (!haveBase) return
-        val asset = mv.asset ?: return
-        val tm = mv.engine.transformManager
-        val instance = tm.getInstance(asset.root)
-        if (instance == 0) return
-        val angle = (seconds * speed).toFloat()
-        val c = kotlin.math.cos(angle)
-        val s = kotlin.math.sin(angle)
-        // Column-major Y rotation, applied AROUND the unit-cube-centred model:
-        // world = rotY * base (base = transformToUnitCube's centre+scale).
-        val rotY =
-            floatArrayOf(
-                c, 0f, -s, 0f,
-                0f, 1f, 0f, 0f,
-                s, 0f, c, 0f,
-                0f, 0f, 0f, 1f,
-            )
-        tm.setTransform(instance, mul(rotY, baseTransform))
-    }
-
-    /** Column-major 4x4 multiply: result = a * b. */
-    private fun mul(
-        a: FloatArray,
-        b: FloatArray,
-    ): FloatArray {
-        val r = FloatArray(16)
-        for (col in 0 until 4) {
-            for (row in 0 until 4) {
-                var sum = 0f
-                for (k in 0 until 4) {
-                    sum += a[k * 4 + row] * b[col * 4 + k]
-                }
-                r[col * 4 + row] = sum
-            }
-        }
-        return r
     }
 
     fun destroy() {

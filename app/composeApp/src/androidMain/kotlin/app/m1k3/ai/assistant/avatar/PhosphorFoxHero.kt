@@ -11,7 +11,6 @@ import app.m1k3.ai.domain.avatar.Companion3DDecision
 import app.m1k3.ai.domain.avatar.Companion3DInputs
 import app.m1k3.ai.domain.avatar.Companion3DPolicy
 import app.m1k3.ai.domain.avatar.CrtTreatment
-import app.m1k3.ai.assistant.utils.Logger
 
 /**
  * The empty-chat hero's face. Shows the 3D **Phosphor Fox** under a CRT skin
@@ -37,22 +36,14 @@ fun PhosphorFoxHero(
     val context = LocalContext.current
     val decision =
         remember(brainReady, heavyBrain, userEnabled) {
-            val inputs = readCompanion3DInputs(context, brainReady, heavyBrain, userEnabled)
-            val d = Companion3DPolicy.decide(inputs)
-            Logger.withTag("PhosphorFoxHero").i { "gate: $d ← $inputs" }
-            d
+            Companion3DPolicy.decide(readCompanion3DInputs(context, brainReady, heavyBrain, userEnabled))
         }
 
     when (decision) {
         Companion3DDecision.SHOW_3D -> {
             val treatment = CrtTreatment.forActivity(state.activity.isActive, state.intensity)
-            // Idle drifts slowly; active turns a touch livelier.
-            val rotationSpeed = if (state.activity.isActive) 0.5f else 0.28f
             Box(modifier) {
-                Companion3DView(
-                    rotationSpeed = rotationSpeed,
-                    modifier = Modifier.matchParentSize(),
-                )
+                Companion3DView(modifier = Modifier.matchParentSize())
                 CrtOverlay(
                     treatment = treatment,
                     modifier = Modifier.matchParentSize(),
