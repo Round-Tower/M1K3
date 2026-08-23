@@ -13,6 +13,25 @@ class EvalRunRequestTest {
     }
 
     @Test
+    fun `the androidMain caller's all-keys-null map is a no-op (launch-crash regression)`() {
+        // EvalHarness.installFromIntent builds the map by associating EVERY
+        // eval extra name with intent.getStringExtra(it), so on an ordinary
+        // launch all the m1k3.eval.* KEYS are present with null values. The
+        // no-op guard must key off null VALUES, not key presence — otherwise a
+        // normal launcher tap throws "fixtures is required" in onCreate and the
+        // app crashes on launch (2026-08-23).
+        val normalLaunch =
+            mapOf(
+                "m1k3.eval.fixtures" to null,
+                "m1k3.eval.out" to null,
+                "m1k3.eval.model" to null,
+                "m1k3.eval.cpu_variant" to null,
+                "m1k3.eval.thinking" to null,
+            )
+        assertNull(EvalRunRequest.fromExtras(normalLaunch))
+    }
+
+    @Test
     fun `parses the minimal required extras`() {
         val request =
             EvalRunRequest.fromExtras(

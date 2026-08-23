@@ -50,17 +50,20 @@ data class EvalRunRequest(
          * Builds a request from a `{extraName: value}` map (the androidMain
          * caller reads these off the real `Intent`'s string extras).
          *
-         * @return null when the launch carries no eval extras at all — the
-         *   harness must be a strict no-op on an ordinary launch. Otherwise
+         * @return null when the launch carries no eval extra VALUES — the
+         *   harness must be a strict no-op on an ordinary launch. The
+         *   androidMain caller populates every eval-extra KEY (from
+         *   getStringExtra) with a null value on a normal launch, so this
+         *   guards on a non-null value, never mere key presence. Otherwise
          *   requires both [EXTRA_FIXTURES] and [EXTRA_OUT]; missing either
-         *   on an eval-intending launch (any eval extra present) throws
+         *   on an eval-intending launch (any eval extra has a value) throws
          *   rather than silently starting the app normally, so a typo'd
          *   `adb` command fails loudly instead of quietly not running.
          */
         fun fromExtras(extras: Map<String, String?>): EvalRunRequest? {
             val fixturesPath = extras[EXTRA_FIXTURES]
             val outPath = extras[EXTRA_OUT]
-            val anyEvalExtra = extras.keys.any { it.startsWith("m1k3.eval.") }
+            val anyEvalExtra = extras.any { (k, v) -> k.startsWith("m1k3.eval.") && v != null }
             if (fixturesPath == null && outPath == null && !anyEvalExtra) return null
             requireNotNull(fixturesPath) { "$EXTRA_FIXTURES is required for an eval launch" }
             requireNotNull(outPath) { "$EXTRA_OUT is required for an eval launch" }
