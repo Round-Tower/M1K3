@@ -79,11 +79,11 @@ struct ScriptProposalSheet: View {
                         // display-only (never re-feeds the agent).
                         let result = await env.installAndRunProposedScript(proposal)
                         busy = false
-                        if let result {
-                            failure = result
-                        } else {
-                            env.scriptProposals.pending = nil
-                        }
+                        // installAndRunProposedScript clears `pending` itself on
+                        // every completion (success + both launch-failure paths);
+                        // only a write/approve failure returns a message with the
+                        // sheet still up, so we just surface that.
+                        if let result { failure = result }
                     }
                 }
                 .disabled(busy)
@@ -97,6 +97,12 @@ struct ScriptProposalSheet: View {
         }
         .padding(20)
         .frame(width: 480)
+        // A run keeps the sheet up: Escape / swipe-dismiss bypass the buttons'
+        // .disabled(busy), so without this a user could close the sheet mid-run,
+        // losing the "Running…" feedback while the (detached) script keeps going.
+        // Executing is its own consent — don't let the surface vanish mid-execute
+        // (review catch, 2026-08-24).
+        .interactiveDismissDisabled(busy)
         .task(id: proposal.name) {
             replacesExisting = await env.scriptExists(named: proposal.name)
         }

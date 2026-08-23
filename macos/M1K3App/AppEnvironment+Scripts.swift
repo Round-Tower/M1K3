@@ -203,19 +203,19 @@ extension AppEnvironment {
                 named: proposal.name, arguments: [],
                 timeout: ExecuteScriptTool.defaultTimeout, expectedSHA256: approvedSHA
             )
-        } catch let ScriptRunFailure.launchFailed(reason) {
+        } catch {
             // Pattern-match to surface the real reason — ScriptRunFailure isn't
-            // LocalizedError, so `localizedDescription` would drop it (review #3).
+            // LocalizedError, so `localizedDescription` would drop it; fall back
+            // to it only for other error kinds.
+            let reason: String
+            if case let ScriptRunFailure.launchFailed(launchReason) = error {
+                reason = launchReason
+            } else {
+                reason = error.localizedDescription
+            }
             await chat.deliverScriptOutput(
                 scriptName: proposal.name,
                 output: "Couldn't launch: \(reason)", succeeded: false
-            )
-            scriptProposals.pending = nil
-            return nil
-        } catch {
-            await chat.deliverScriptOutput(
-                scriptName: proposal.name,
-                output: "Couldn't launch: \(error.localizedDescription)", succeeded: false
             )
             scriptProposals.pending = nil
             return nil
