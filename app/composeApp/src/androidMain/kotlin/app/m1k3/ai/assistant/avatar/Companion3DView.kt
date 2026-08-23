@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import app.m1k3.ai.assistant.utils.Logger
+import com.google.android.filament.ColorGrading
 import com.google.android.filament.View
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.utils.ModelViewer
@@ -106,9 +107,23 @@ private class FoxSceneHolder {
             }
 
         // The default camera is f/16 daylight — far too dark for an
-        // emissive-only model. Open right up (EV ~1) so the amber wire glows
-        // and crosses the bloom threshold.
+        // emissive-only model. Open right up (EV ~1) so the wire glows and
+        // crosses the bloom threshold.
         viewer.camera.setExposure(1.0f, 0.5f, 100.0f)
+
+        // The ACES tonemapper desaturates the bright emissive toward white,
+        // and a Compose overlay can't tint a separate render surface — so the
+        // amber phosphor is graded in-Filament: warm white balance + a red-
+        // biased channel mix push the cream fox toward the M1K3 tube glow.
+        viewer.view.colorGrading =
+            ColorGrading.Builder()
+                .whiteBalance(-0.6f, 0.1f)
+                .channelMixer(
+                    floatArrayOf(1.0f, 0.0f, 0.0f),
+                    floatArrayOf(0.35f, 0.55f, 0.0f),
+                    floatArrayOf(0.05f, 0.10f, 0.20f),
+                )
+                .build(viewer.engine)
 
         val chore = Choreographer.getInstance()
         choreographer = chore
