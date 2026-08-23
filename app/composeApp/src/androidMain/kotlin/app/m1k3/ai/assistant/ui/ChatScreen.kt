@@ -336,6 +336,8 @@ fun ChatScreen(
             null
         }
 
+    // Big (Gemma 4 E2B) already claims the memory budget — the fox yields.
+    val heavyBrain = uiState.currentModel == LlmModel.Gemma4_E2B
     val currentBrainCaption =
         M1K3Tier
             .all()
@@ -391,6 +393,7 @@ fun ChatScreen(
                     onSpeak = { text -> viewModel.speakMessage(text) },
                     brainCaption = currentBrainCaption,
                     brainReady = uiState.isInputEnabled,
+                    heavyBrain = heavyBrain,
                     onStarterTap = { prompt ->
                         avatarVM?.processMessage(prompt, isUserMessage = true)
                         viewModel.updateInputText(prompt)

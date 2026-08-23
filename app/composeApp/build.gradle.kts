@@ -88,6 +88,14 @@ kotlin {
             // originate from OUR code here; AICore/Play Services own the
             // model download.
             implementation(libs.mlkit.genai.prompt)
+
+            // Filament core — the 3D Phosphor Fox companion (Companion3DView).
+            // Plain Android AARs (native .so + Kotlin helpers), independent of
+            // the Compose/Kotlin toolchain. 2D PixelFaceAvatar stays the
+            // default + fallback; 3D is gated on memory headroom + GL support.
+            implementation(libs.filament.android)
+            implementation(libs.filament.gltfio)
+            implementation(libs.filament.utils)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

@@ -39,6 +39,7 @@ fun ChatMessageList(
     onSpeak: ((String) -> Unit)? = null,
     brainCaption: String = "",
     brainReady: Boolean = false,
+    heavyBrain: Boolean = false,
     onStarterTap: (String) -> Unit = {},
     generationState: app.m1k3.ai.assistant.chat.GenerationState = app.m1k3.ai.assistant.chat.GenerationState.Idle,
     modifier: Modifier = Modifier,
@@ -71,6 +72,7 @@ fun ChatMessageList(
                 ChatHeroSplash(
                     brainCaption = brainCaption,
                     brainReady = brainReady,
+                    heavyBrain = heavyBrain,
                     onStarterTap = onStarterTap,
                 )
             }

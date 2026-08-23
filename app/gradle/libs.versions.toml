@@ -41,6 +41,12 @@ koin-compose = "4.2.2"
 # 2026-08-22. See docs/adr/0007-system-model-gemini-nano.md.
 mlkit-genai-prompt = "1.0.0-beta4"
 
+# Filament core (com.google.android.filament) — the 3D Phosphor Fox
+# companion. SceneView was cut in the reduction and tops out at 2.3.0
+# (incompatible with this toolchain); Filament core is version-independent
+# of Compose/Kotlin metadata. Latest verified on Maven Central 2026-08-23.
+filament = "1.75.0"
+
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -69,6 +75,10 @@ androidx-security-crypto = { module = "androidx.security:security-crypto", versi
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 jvector = { module = "io.github.jbellis:jvector", version.ref = "jvector" }
 mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkit-genai-prompt" }
+
+filament-android = { module = "com.google.android.filament:filament-android", version.ref = "filament" }
+filament-gltfio = { module = "com.google.android.filament:gltfio-android", version.ref = "filament" }
+filament-utils = { module = "com.google.android.filament:filament-utils-android", version.ref = "filament" }
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }

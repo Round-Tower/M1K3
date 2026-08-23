@@ -31,7 +31,7 @@ import app.m1k3.ai.assistant.avatar.AvatarState
 import app.m1k3.ai.assistant.avatar.AvatarViewModel
 import app.m1k3.ai.assistant.avatar.LocalSharedAvatarState
 import app.m1k3.ai.assistant.avatar.LocalSharedAvatarVM
-import app.m1k3.ai.assistant.avatar.PixelFaceAvatar
+import app.m1k3.ai.assistant.avatar.PhosphorFoxHero
 import app.m1k3.ai.assistant.design.tokens.MaColors
 import app.m1k3.ai.assistant.design.tokens.MaSpacing
 import app.m1k3.ai.assistant.design.tokens.MaTypography
@@ -56,6 +56,7 @@ fun ChatHeroSplash(
     brainReady: Boolean,
     onStarterTap: (String) -> Unit,
     modifier: Modifier = Modifier,
+    heavyBrain: Boolean = false,
 ) {
     val sharedVM: AvatarViewModel? = LocalSharedAvatarVM.current
     val collectedState by (sharedVM?.avatarState ?: kotlinx.coroutines.flow.MutableStateFlow(null))
@@ -77,8 +78,10 @@ fun ChatHeroSplash(
                     .height(180.dp),
             contentAlignment = Alignment.Center,
         ) {
-            PixelFaceAvatar(
+            PhosphorFoxHero(
                 state = avatarState ?: AvatarState(),
+                brainReady = brainReady,
+                heavyBrain = heavyBrain,
                 modifier = Modifier.fillMaxWidth().height(180.dp),
             )
         }
