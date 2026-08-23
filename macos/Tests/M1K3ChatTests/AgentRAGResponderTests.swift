@@ -1032,6 +1032,36 @@ struct AgentRAGResponderTests {
         #expect(rules.contains("CONCLUSION:"))
     }
 
+    @Test("with the hands offered, both styles carry the scripts carve-out — routing scripts to propose_script")
+    func scriptsCarveOutWhenHandsOffered() {
+        for style in [AgentRAGResponder.PromptStyle.react, .native] {
+            let rules = AgentRAGResponder.grounding(
+                chunks: [groundingChunk()],
+                toolNames: ["search_knowledge", "propose_script", "execute_script"],
+                style: style
+            )
+            // The scripts variant is present verbatim...
+            #expect(rules.contains(AgentRAGResponder.generativeCarveOutWithScripts), "\(style)")
+            // ...it names the tool as the route for scripts...
+            #expect(rules.contains("propose_script"), "\(style)")
+            // ...the "no tools" prohibition is KEPT (as an exception, not dropped)
+            // so a plain generative ask — poem, story — still never over-tools...
+            #expect(rules.lowercased().contains("no tools"), "\(style)")
+            #expect(rules.contains("no web_search, no lookup_fact"), "\(style)")
+        }
+    }
+
+    @Test("without the hands, the carve-out is unchanged — generation stays tool-free")
+    func plainCarveOutWhenNoHands() {
+        for style in [AgentRAGResponder.PromptStyle.react, .native] {
+            let rules = AgentRAGResponder.grounding(
+                chunks: [groundingChunk()], toolNames: ["search_knowledge"], style: style
+            )
+            #expect(rules.contains(AgentRAGResponder.generativeCarveOut), "\(style)")
+            #expect(!rules.contains(AgentRAGResponder.generativeCarveOutWithScripts), "\(style)")
+        }
+    }
+
     @Test("both prompt styles carry the IDENTICAL generative carve-out (shared constant, no drift)")
     func generativeCarveOutIsSharedVerbatim() {
         for style in [AgentRAGResponder.PromptStyle.react, .native] {
