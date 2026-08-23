@@ -197,9 +197,12 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// text never re-enters M1K3's context on a later turn. The Install & Run
     /// script-output landing pad sets it (Kev, 2026-08-23: script output should
     /// be visible but not fed back into the agent). Persisted, so a reloaded
-    /// conversation keeps the exclusion. Optional-defaulted to false: pre-flag
-    /// transcripts decode to false (the `toolsUsed` precedent).
-    public var contextExcluded: Bool = false
+    /// conversation keeps the exclusion. OPTIONAL (nil == false) so pre-flag
+    /// transcripts — which have no such key — decode via the synthesized
+    /// decoder's decodeIfPresent, exactly like `toolsUsed`/`brain`/`attachments`.
+    /// A non-Optional Bool-with-default would throw keyNotFound and silently
+    /// wipe every saved transcript on upgrade (review catch, 2026-08-23).
+    public var contextExcluded: Bool?
     public var status: Status
 
     enum CodingKeys: String, CodingKey {
@@ -718,7 +721,7 @@ public final class ChatSession {
     nonisolated static func replayableHistory(_ messages: [ChatMessage]) -> [ChatTurn] {
         messages.compactMap { message -> ChatTurn? in
             guard case .complete = message.status, !message.text.isEmpty,
-                  !message.contextExcluded else { return nil }
+                  message.contextExcluded != true else { return nil }
             return ChatTurn(role: message.role == .user ? .user : .assistant, text: message.text)
         }
     }
@@ -726,7 +729,7 @@ public final class ChatSession {
     nonisolated static func distillableTurns(_ messages: ArraySlice<ChatMessage>) -> [ChatTurn] {
         messages.compactMap { message -> ChatTurn? in
             guard case .complete = message.status, !message.text.isEmpty else { return nil }
-            guard !message.contextExcluded else { return nil }
+            guard message.contextExcluded != true else { return nil }
             guard !DistillationTaint.isTainted(toolsUsed: message.toolsUsed) else { return nil }
             return ChatTurn(role: message.role == .user ? .user : .assistant, text: message.text)
         }

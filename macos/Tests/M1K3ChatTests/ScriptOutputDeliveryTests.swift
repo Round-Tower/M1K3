@@ -42,7 +42,7 @@ struct ScriptOutputDeliveryTests {
     func flaggedContextExcluded() async {
         let session = ChatSession(responder: SilentResponder())
         await session.deliverScriptOutput(scriptName: "x.sh", output: "hi", succeeded: true)
-        #expect(session.messages[0].contextExcluded)
+        #expect(session.messages[0].contextExcluded == true)
         // Tagged execute_script so the distiller's P3 taint also skips it.
         #expect(session.messages[0].toolsUsed?.contains("execute_script") == true)
     }
@@ -72,6 +72,26 @@ struct ScriptOutputDeliveryTests {
         let session = ChatSession(responder: SilentResponder())
         await session.deliverScriptOutput(scriptName: "boom.sh", output: "exit 3", succeeded: false)
         #expect(session.messages[0].text.lowercased().contains("couldn't") || session.messages[0].text.contains("failed"))
-        #expect(session.messages[0].contextExcluded)
+        #expect(session.messages[0].contextExcluded == true)
+    }
+
+    /// The data-loss guard: a transcript persisted BEFORE contextExcluded existed
+    /// has no such key. Because the property is Optional, the synthesized decoder
+    /// uses decodeIfPresent and the message decodes to contextExcluded == nil
+    /// instead of throwing keyNotFound (which would wipe every saved conversation
+    /// on upgrade). Review catch, 2026-08-23.
+    @Test("a pre-flag transcript (no contextExcluded key) still decodes")
+    func preFlagTranscriptDecodes() throws {
+        let message = ChatMessage(role: .assistant, text: "hello from before", status: .complete)
+        let data = try JSONEncoder().encode(message)
+        var object = try #require(
+            try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        object.removeValue(forKey: "contextExcluded") // simulate the old on-disk shape
+        #expect(object["contextExcluded"] == nil)
+        let stripped = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder().decode(ChatMessage.self, from: stripped)
+        #expect(decoded.text == "hello from before")
+        #expect(decoded.contextExcluded == nil)
     }
 }

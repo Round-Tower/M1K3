@@ -120,6 +120,18 @@ extension AppEnvironment {
     /// Install a proposed script. Returns nil on success, else a user-facing
     /// failure line for the sheet to show.
     func installProposedScript(_ proposal: ScriptProposal) -> String? {
+        if let error = writeAndApproveProposedScript(proposal) { return error }
+        // Plain Install: the sheet's work is done, dismiss it. (Install & Run
+        // keeps the sheet up through the run and clears pending itself.)
+        scriptProposals.pending = nil
+        return nil
+    }
+
+    /// Write the script into the folder and pin its approval — WITHOUT clearing
+    /// the pending proposal (so Install & Run can keep the review sheet, and its
+    /// busy spinner, up through the run). Returns nil on success, else a
+    /// user-facing failure line.
+    private func writeAndApproveProposedScript(_ proposal: ScriptProposal) -> String? {
         guard ExecuteScriptTool.isValidScriptName(proposal.name) else {
             return "That script name isn't usable."
         }
@@ -145,7 +157,6 @@ extension AppEnvironment {
         Self.scriptsLog.notice(
             "script installed+approved: \(proposal.name, privacy: .public) sha=\(String(sha.prefix(12)), privacy: .public)"
         )
-        scriptProposals.pending = nil
         return nil
     }
 
@@ -156,10 +167,12 @@ extension AppEnvironment {
     /// the agent). Returns nil on success, else a user-facing failure line.
     /// Install failures return before any run.
     func installAndRunProposedScript(_ proposal: ScriptProposal) async -> String? {
-        if let installError = installProposedScript(proposal) {
+        // Write + approve WITHOUT clearing pending — the sheet (and its
+        // "Running…" spinner) must stay up through the run (review #2).
+        if let installError = writeAndApproveProposedScript(proposal) {
             return installError
         }
-        // installProposedScript recorded the approval under the exact bytes;
+        // writeAndApproveProposedScript recorded the approval under the exact bytes;
         // run through the same seam execute_script uses (folder-scoped,
         // hash-re-verified at the exec boundary).
         let runner = UserScriptRunner()
@@ -173,21 +186,39 @@ extension AppEnvironment {
                 named: proposal.name, arguments: [],
                 timeout: ExecuteScriptTool.defaultTimeout, expectedSHA256: approved.sha256
             )
+        } catch let ScriptRunFailure.launchFailed(reason) {
+            // Pattern-match to surface the real reason — ScriptRunFailure isn't
+            // LocalizedError, so `localizedDescription` would drop it (review #3).
+            await chat.deliverScriptOutput(
+                scriptName: proposal.name,
+                output: "Couldn't launch: \(reason)", succeeded: false
+            )
+            scriptProposals.pending = nil
+            return nil
         } catch {
             await chat.deliverScriptOutput(
                 scriptName: proposal.name,
                 output: "Couldn't launch: \(error.localizedDescription)", succeeded: false
             )
+            scriptProposals.pending = nil
             return nil
         }
         let tail = ExecuteScriptTool.cappedTail(outcome.output)
-        let body = outcome.timedOut
-            ? "Timed out — it may still be running.\n\(tail)"
-            : tail
+        let body: String
+        if outcome.timedOut {
+            body = "Timed out — it may still be running.\n\(tail)"
+        } else if !outcome.succeeded, let reason = outcome.failureReason {
+            // Surface the failure reason like execute_script does, not just the tail.
+            body = "\(reason)\n\(tail)"
+        } else {
+            body = tail
+        }
         await chat.deliverScriptOutput(
             scriptName: proposal.name, output: body,
             succeeded: outcome.succeeded && !outcome.timedOut
         )
+        // The run is done — now dismiss the sheet (review #2).
+        scriptProposals.pending = nil
         return nil
     }
 
