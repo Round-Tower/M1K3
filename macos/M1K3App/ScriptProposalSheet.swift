@@ -20,6 +20,7 @@ struct ScriptProposalSheet: View {
     let proposal: ScriptProposal
     @State private var failure: String?
     @State private var replacesExisting = false
+    @State private var busy = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -60,10 +61,34 @@ struct ScriptProposalSheet: View {
                 Button("Not Now") {
                     env.scriptProposals.pending = nil
                 }
-                Button("Review & Install") {
+                .disabled(busy)
+                Button("Install") {
                     failure = env.installProposedScript(proposal)
                 }
+                .disabled(busy)
+                Button("Install & Run") {
+                    busy = true
+                    Task {
+                        // The run fires from this click via the app, not the
+                        // model — deterministic. Output lands in the transcript
+                        // display-only (never re-feeds the agent).
+                        let result = await env.installAndRunProposedScript(proposal)
+                        busy = false
+                        if let result {
+                            failure = result
+                        } else {
+                            env.scriptProposals.pending = nil
+                        }
+                    }
+                }
                 .keyboardShortcut(.defaultAction)
+                .disabled(busy)
+            }
+            if busy {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Running \(proposal.name)…").font(.caption).foregroundStyle(.secondary)
+                }
             }
         }
         .padding(20)

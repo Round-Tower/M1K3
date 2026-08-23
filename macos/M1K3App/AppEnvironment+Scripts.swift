@@ -149,6 +149,48 @@ extension AppEnvironment {
         return nil
     }
 
+    /// Install a proposed script AND run it immediately — the "Install & Run"
+    /// path (Kev, 2026-08-23). The run fires HERE, from the user's click, via
+    /// UserScriptRunner — deterministic, with none of the model's tool-calling
+    /// in the loop. Output lands in the transcript display-only (never re-feeds
+    /// the agent). Returns nil on success, else a user-facing failure line.
+    /// Install failures return before any run.
+    func installAndRunProposedScript(_ proposal: ScriptProposal) async -> String? {
+        if let installError = installProposedScript(proposal) {
+            return installError
+        }
+        // installProposedScript recorded the approval under the exact bytes;
+        // run through the same seam execute_script uses (folder-scoped,
+        // hash-re-verified at the exec boundary).
+        let runner = UserScriptRunner()
+        let approvals = KeychainScriptApprovalStore().approvals()
+        guard let approved = approvals.first(where: { $0.name == proposal.name }) else {
+            return "Installed, but couldn't confirm the approval to run it."
+        }
+        let outcome: ScriptRunOutcome
+        do {
+            outcome = try await runner.run(
+                named: proposal.name, arguments: [],
+                timeout: ExecuteScriptTool.defaultTimeout, expectedSHA256: approved.sha256
+            )
+        } catch {
+            await chat.deliverScriptOutput(
+                scriptName: proposal.name,
+                output: "Couldn't launch: \(error.localizedDescription)", succeeded: false
+            )
+            return nil
+        }
+        let tail = ExecuteScriptTool.cappedTail(outcome.output)
+        let body = outcome.timedOut
+            ? "Timed out — it may still be running.\n\(tail)"
+            : tail
+        await chat.deliverScriptOutput(
+            scriptName: proposal.name, output: body,
+            succeeded: outcome.succeeded && !outcome.timedOut
+        )
+        return nil
+    }
+
     /// Delete an installed script and drop its approval.
     func uninstallScript(named name: String) -> String? {
         guard ExecuteScriptTool.isValidScriptName(name) else { return "Bad script name." }

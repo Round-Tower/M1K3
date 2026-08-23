@@ -44,7 +44,7 @@ public struct ExecuteScriptTool: AgentTool {
     /// Observation cap — summaries, not streams (charter rule 2). Tail kept:
     /// a script's verdict usually lives in its last lines.
     static let outputTailLimit = 4000
-    static let defaultTimeout: TimeInterval = 60
+    public static let defaultTimeout: TimeInterval = 60
     static let timeoutRange: ClosedRange<TimeInterval> = 1 ... 300
 
     private static let log = M1K3Log.logger(.scriptRun)
@@ -199,7 +199,7 @@ public struct ExecuteScriptTool: AgentTool {
 
     /// Keep the LAST `outputTailLimit` characters — the verdict lines — and
     /// say when earlier output was dropped.
-    static func cappedTail(_ output: String) -> String {
+    public static func cappedTail(_ output: String) -> String {
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "(no output)" }
         guard trimmed.count > outputTailLimit else { return trimmed }
