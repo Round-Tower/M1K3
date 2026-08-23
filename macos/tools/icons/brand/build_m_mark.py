@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Render the M1K3 "M" brand mark from its single source-of-truth pixel map.
 
-The mark is the leading glyph of the M1K3 wordmark, kept exactly: a 5×7 pixel
-matrix, 17 cells on. Everything downstream — the app-icon glass layer, the
+The mark is the leading glyph of the M1K3 wordmark, kept exactly: a 5×5 pixel
+matrix, 13 cells on. Everything downstream — the app-icon glass layer, the
 website favicon, the brand sheet — is a render of THIS map, so the shape can
 never drift between surfaces.
 
@@ -14,6 +14,7 @@ Outputs (into this directory):
 The icon layer is ALSO copied into ../../M1K3.icon/Assets/M-mark.png by the
 --install flag (that copy is the tracked icon source Icon Composer consumes).
 
+Reviewed: Kev + claude-opus-4-8, 2026-08-23 — reduced 5×7/17 → 5×5/13.
 Signed: Kev + claude-opus-4-8, 2026-08-20, Confidence 0.9 (the ON-map is read
 directly off the wordmark's own M; the compiled icon was verified in the built
 bundle, not merely rendered here). Prior: Unknown (wordmark art predates sig).
@@ -26,22 +27,18 @@ from PIL import Image, ImageDraw
 
 # The one source of truth: which cells of the 5×7 grid are "on".
 #   █ · · · █
-#   █ · · · █
 #   █ █ · █ █
 #   █ · █ · █
 #   █ · · · █
 #   █ · · · █
-#   █ · · · █
 ON = [
     (0, 0), (4, 0),
-    (0, 1), (4, 1),
-    (0, 2), (1, 2), (3, 2), (4, 2),
-    (0, 3), (2, 3), (4, 3),
+    (0, 1), (1, 1), (3, 1), (4, 1),
+    (0, 2), (2, 2), (4, 2),
+    (0, 3), (4, 3),
     (0, 4), (4, 4),
-    (0, 5), (4, 5),
-    (0, 6), (4, 6),
 ]
-COLS, ROWS = 5, 7
+COLS, ROWS = 5, 5
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -99,7 +96,7 @@ def main(install=False):
         dest = os.path.join(HERE, "..", "..", "..", "M1K3.icon", "Assets", "M-mark.png")
         shutil.copyfile(out("m-icon-layer-1024.png"), dest)
         print("installed →", os.path.normpath(dest))
-    print("rendered mark (17/35 pixels) into", HERE)
+    print("rendered mark (13/25 pixels) into", HERE)
 
 
 if __name__ == "__main__":

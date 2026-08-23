@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  M1K3's mark — the 5×7, 17-cell pixel M (the leading glyph of the wordmark,
+  M1K3's mark — the 5×5, 13-cell pixel M (the leading glyph of the wordmark,
   macos/tools/icons/brand/build_m_mark.py's ON-map, ported cell-for-cell so
   the shape can't drift from the Mac icon). Orange on the near-black
   background in ic_launcher_background.xml.
 
-  Sized to 50% of the 108dp adaptive-icon canvas height so it clears the
-  ~61%-diameter safe zone on every mask shape (circle, squircle, rounded
-  square) without clipping.
+  Reduced 5×7→5×5 (2026-08-23) alongside the shared PixelMark, so the mark is
+  square and reads identically across macOS / iOS / visionOS / Android.
+
+  Sized to ~43% of the 108dp adaptive-icon canvas (scale 0.88 on the 500-unit
+  grid → 440/1024), so the square's corners sit inside the ~61%-diameter safe
+  zone on every mask shape (circle, squircle, rounded square) without clipping.
 
   Finding 9 of the Android UX pass — replaces an unbranded Android Studio
   scaffold icon (concentric-ring placeholder art) that had never been
@@ -19,28 +22,24 @@
     android:viewportWidth="1024"
     android:viewportHeight="1024">
     <group
-        android:scaleX="0.731428"
-        android:scaleY="0.731428"
-        android:translateX="329.14"
-        android:translateY="256">
+        android:scaleX="0.88"
+        android:scaleY="0.88"
+        android:translateX="292.0"
+        android:translateY="292.0">
         <path
             android:fillColor="#D97706"
             android:pathData="M4,4h92v92h-92z
                 M404,4h92v92h-92z
                 M4,104h92v92h-92z
+                M104,104h92v92h-92z
+                M304,104h92v92h-92z
                 M404,104h92v92h-92z
                 M4,204h92v92h-92z
-                M104,204h92v92h-92z
-                M304,204h92v92h-92z
+                M204,204h92v92h-92z
                 M404,204h92v92h-92z
                 M4,304h92v92h-92z
-                M204,304h92v92h-92z
                 M404,304h92v92h-92z
                 M4,404h92v92h-92z
-                M404,404h92v92h-92z
-                M4,504h92v92h-92z
-                M404,504h92v92h-92z
-                M4,604h92v92h-92z
-                M404,604h92v92h-92z" />
+                M404,404h92v92h-92z" />
     </group>
 </vector>
