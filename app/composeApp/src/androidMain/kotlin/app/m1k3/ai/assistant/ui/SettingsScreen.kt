@@ -267,7 +267,7 @@ private fun GroundingSection(prefs: PreferencesStoreInterface) {
         mutableStateOf(prefs.getBoolean(PreferenceKeys.WEB_SEARCH_ENABLED, true))
     }
     var ragEnabled by remember {
-        mutableStateOf(prefs.getBoolean(PreferenceKeys.RAG_ENABLED, false))
+        mutableStateOf(prefs.getBoolean(PreferenceKeys.RAG_ENABLED, true))
     }
 
     Column {
@@ -299,6 +299,10 @@ private fun GroundingSection(prefs: PreferencesStoreInterface) {
                     },
                 )
             },
+        )
+        SectionFooter(
+            "On by default — M1K3 answers from the notes and documents you add. " +
+                "Runs entirely on this device; nothing is sent anywhere.",
         )
     }
 }
