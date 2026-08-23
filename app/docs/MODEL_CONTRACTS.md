@@ -802,6 +802,12 @@ This directly questions `ThinkingPolicy = Big only` — either the channel parse
 needs a Gemma arm, or Big should run thinking-off too. **Measured evidence for
 Kev's call; the signed ThinkingPolicy rationale is not unilaterally flipped.**
 
+**Update (same session): Kev ruled — disable thinking as default for every
+tier** (commit `40686348`). Big was the last tier defaulting thinking-on; the
+14-vs-16 + 53.9s + channel-leak measurement settled it. `ThinkingPolicy` now
+defaults `DEFAULT_THINKING = false` for all; the `override` seam still drives the
+eval matrix. Behaviourally identical to the Big-off run already captured.
+
 ### Lil thinking-on confirms the Big-only gate (decisively)
 
 `follow-only-ready` on Lil-on ran **180s**, burned 1536 tokens + 6535 chars of
