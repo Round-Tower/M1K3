@@ -192,10 +192,21 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// history replay can re-open them). Optional so pre-vision transcripts
     /// decode to nil (the `reasoning` precedent); nil and empty mean the same.
     public var attachments: [ImageAttachment]?
+    /// Display-only: shown in the transcript, but EXCLUDED from the agent's
+    /// replay history (`replayableHistory`) and from distillation — so its
+    /// text never re-enters M1K3's context on a later turn. The Install & Run
+    /// script-output landing pad sets it (Kev, 2026-08-23: script output should
+    /// be visible but not fed back into the agent). Persisted, so a reloaded
+    /// conversation keeps the exclusion. OPTIONAL (nil == false) so pre-flag
+    /// transcripts — which have no such key — decode via the synthesized
+    /// decoder's decodeIfPresent, exactly like `toolsUsed`/`brain`/`attachments`.
+    /// A non-Optional Bool-with-default would throw keyNotFound and silently
+    /// wipe every saved transcript on upgrade (review catch, 2026-08-23).
+    public var contextExcluded: Bool?
     public var status: Status
 
     enum CodingKeys: String, CodingKey {
-        case id, role, text, sources, status, reasoning, attachments, toolsUsed, brain
+        case id, role, text, sources, status, reasoning, attachments, toolsUsed, brain, contextExcluded
     }
 
     public init(
@@ -360,10 +371,7 @@ public final class ChatSession {
         // Capture the replayable history BEFORE this turn joins the transcript:
         // completed turns only, answer text only (reasoning/sources never leave
         // the message). HistoryWindow caps how much of it reaches the prompt.
-        let history = messages.compactMap { message -> ChatTurn? in
-            guard case .complete = message.status, !message.text.isEmpty else { return nil }
-            return ChatTurn(role: message.role == .user ? .user : .assistant, text: message.text)
-        }
+        let history = Self.replayableHistory(messages)
 
         messages.append(ChatMessage(
             role: .user, text: trimmed,
@@ -529,6 +537,59 @@ public final class ChatSession {
         await persistActiveConversation()
     }
 
+    /// Land the output of an Install & Run into the transcript as a
+    /// display-only assistant message (Kev, 2026-08-23): the user keeps the
+    /// result in the conversation, but `contextExcluded` keeps it out of the
+    /// agent's replay history AND `toolsUsed = [execute_script]` keeps it out
+    /// of distillation — the output never re-feeds M1K3. No responder call, no
+    /// user bubble; persisted at once (the deliverBackgroundAnswer shape).
+    /// Wrap untrusted text in a Markdown code fence it cannot break out of:
+    /// the fence is one backtick longer than the longest backtick run inside
+    /// `body` (the CommonMark technique). A fixed three-backtick fence is not
+    /// safe here — script stdout can contain a ``` line (cat-ing a markdown
+    /// file, printing a heredoc, dumping another script), which closes the
+    /// fence early and renders the remainder as LIVE Markdown in the chat:
+    /// spoofed headings, fake M1K3 text, clickable links built from data the
+    /// user never authored. `contextExcluded` keeps this text away from the
+    /// MODEL, but it still renders to the human — so the display path needs its
+    /// own fencing, the same way execute_script fences for the model (review
+    /// catch, 2026-08-23). Pure, so the fence choice is testable.
+    nonisolated static func fencedCodeBlock(_ body: String) -> String {
+        var longestRun = 0
+        var currentRun = 0
+        for character in body {
+            if character == "`" {
+                currentRun += 1
+                longestRun = max(longestRun, currentRun)
+            } else {
+                currentRun = 0
+            }
+        }
+        let fence = String(repeating: "`", count: max(3, longestRun + 1))
+        return "\(fence)\n\(body)\n\(fence)"
+    }
+
+    public func deliverScriptOutput(scriptName: String, output: String, succeeded: Bool) async {
+        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = trimmed.isEmpty ? "(no output)" : trimmed
+        // scriptName is safe to interpolate into this inline-code span: it is
+        // gated upstream by ExecuteScriptTool.isValidScriptName (an ASCII
+        // filename allowlist that rejects backticks and every other Markdown
+        // metacharacter), so — unlike the body — it can't break out of the span.
+        let header = succeeded
+            ? "Ran `\(scriptName)`:"
+            : "Couldn't finish `\(scriptName)` (see output):"
+        var message = ChatMessage(
+            role: .assistant,
+            text: "\(header)\n\n\(Self.fencedCodeBlock(body))",
+            status: .complete
+        )
+        message.contextExcluded = true
+        message.toolsUsed = ["execute_script"]
+        messages.append(message)
+        await persistActiveConversation()
+    }
+
     /// Save the live transcript to the active conversation's row and tell the
     /// drawer to refresh. Lazy row creation happens here — nowhere else writes.
     ///
@@ -679,13 +740,27 @@ public final class ChatSession {
         spawnDistillation()
     }
 
-    /// The turns eligible for distillation: complete, non-empty, and NOT
-    /// tainted by a tool whose output must never become permanent memory
-    /// (P3, context-tools charter — see DistillationTaint). Pure, so the
-    /// taint rule is testable without spinning a session.
+    /// The turns replayed into the agent's prompt as history: completed,
+    /// non-empty, and NOT display-only (contextExcluded) — so a script's run
+    /// output shown in the transcript never re-enters M1K3's context on the
+    /// next turn (Kev, 2026-08-23). Pure, so the exclusion is testable.
+    nonisolated static func replayableHistory(_ messages: [ChatMessage]) -> [ChatTurn] {
+        messages.compactMap { message -> ChatTurn? in
+            guard case .complete = message.status, !message.text.isEmpty,
+                  message.contextExcluded != true else { return nil }
+            return ChatTurn(role: message.role == .user ? .user : .assistant, text: message.text)
+        }
+    }
+
+    /// The turns eligible for distillation: complete, non-empty, not display-only
+    /// (contextExcluded), and NOT tainted by a tool whose output must never
+    /// become permanent memory (P3, context-tools charter — see
+    /// DistillationTaint). Pure, so the taint rule is testable without spinning
+    /// a session.
     nonisolated static func distillableTurns(_ messages: ArraySlice<ChatMessage>) -> [ChatTurn] {
         messages.compactMap { message -> ChatTurn? in
             guard case .complete = message.status, !message.text.isEmpty else { return nil }
+            guard message.contextExcluded != true else { return nil }
             guard !DistillationTaint.isTainted(toolsUsed: message.toolsUsed) else { return nil }
             return ChatTurn(role: message.role == .user ? .user : .assistant, text: message.text)
         }

@@ -52,6 +52,51 @@ public struct ScriptRunOutcome: Sendable, Equatable {
     }
 }
 
+/// The one true reading of a `ScriptRunOutcome`: did it time out, fail with a
+/// reason, or succeed? The classification is the subtle part — a timed-out run
+/// is NOT a success even if `succeeded` were somehow true, and `failureReason`
+/// nil-coalesces to a stable string. Both the agent tool (`ExecuteScriptTool`,
+/// which fences the tail for the model) and the app's Install & Run (plain
+/// display) branch on THIS so a future change can't silently diverge the two
+/// renderings (review catch, 2026-08-23). Pure + Equatable → tested without a
+/// runner. Callers keep their own copy for the body text; only the branch is
+/// shared.
+public enum ScriptRunDisposition: Equatable, Sendable {
+    /// The wait was abandoned at the timeout — the script may still be running.
+    case timedOut
+    /// The script exited non-zero (or launch-side failed post-start).
+    case failed(reason: String)
+    /// Clean completion within the timeout.
+    case succeeded
+
+    public init(_ outcome: ScriptRunOutcome) {
+        if outcome.timedOut {
+            self = .timedOut
+        } else if !outcome.succeeded {
+            self = .failed(reason: outcome.failureReason ?? "unknown failure")
+        } else {
+            self = .succeeded
+        }
+    }
+
+    /// The plain (unfenced, human-facing) body for the app's Install & Run
+    /// landing pad: the capped `tail`, prefixed with a one-line status on the
+    /// non-clean paths. Kept here — pure and tested — rather than inline in the
+    /// thin app target (macos/CLAUDE.md discipline; review catch, 2026-08-23).
+    /// execute_script keeps its own richer, model-fenced rendering (it carries
+    /// scriptName + duration the enum doesn't); only the branch is shared.
+    public func plainOutputBody(tail: String) -> String {
+        switch self {
+        case .timedOut:
+            return "Timed out — it may still be running.\n\(tail)"
+        case let .failed(reason):
+            return "\(reason)\n\(tail)"
+        case .succeeded:
+            return tail
+        }
+    }
+}
+
 /// Unrecoverable launch problems (missing file, not executable, bad name).
 /// Distinct from a script that ran and failed — that's a `ScriptRunOutcome`.
 public enum ScriptRunFailure: Error, Equatable {

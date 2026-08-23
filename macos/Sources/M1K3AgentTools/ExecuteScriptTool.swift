@@ -44,7 +44,7 @@ public struct ExecuteScriptTool: AgentTool {
     /// Observation cap — summaries, not streams (charter rule 2). Tail kept:
     /// a script's verdict usually lives in its last lines.
     static let outputTailLimit = 4000
-    static let defaultTimeout: TimeInterval = 60
+    public static let defaultTimeout: TimeInterval = 60
     static let timeoutRange: ClosedRange<TimeInterval> = 1 ... 300
 
     private static let log = M1K3Log.logger(.scriptRun)
@@ -60,11 +60,22 @@ public struct ExecuteScriptTool: AgentTool {
     /// A plain file name inside the folder: no separators, no traversal, not
     /// dot-hidden. Shared with ProposeScriptTool so both ends agree.
     public static func isValidScriptName(_ name: String) -> Bool {
-        !name.isEmpty
-            && !name.hasPrefix(".")
-            && !name.contains("/")
-            && !name.contains("\\")
-            && name.rangeOfCharacter(from: .whitespacesAndNewlines) == nil
+        // ALLOWLIST, not denylist: a script name must be a plain, conservative
+        // filename — non-empty, no leading dot (no hidden files, no `..`), and
+        // ONLY ASCII letters, digits, `.`, `_`, `-`. This rejects path
+        // separators (`/`, `\\`) and whitespace as before, AND every Markdown
+        // metacharacter (backtick, brackets, parens, `*`), so the name is safe
+        // to interpolate anywhere it's shown: the folder path, the approval
+        // ledger, os_log, and the delivered chat message's inline-code header.
+        // The name is untrusted — it rides the same web-influenced proposal
+        // path as the script body (see ProposeScriptTool; review catch,
+        // 2026-08-24).
+        guard !name.isEmpty, !name.hasPrefix(".") else { return false }
+        return name.allSatisfy { character in
+            character.isASCII
+                && (character.isLetter || character.isNumber
+                    || character == "." || character == "_" || character == "-")
+        }
     }
 
     /// A validated, parsed invocation — or a recoverable error to return.
@@ -165,25 +176,25 @@ public struct ExecuteScriptTool: AgentTool {
             "script run end: \(scriptName, privacy: .public) succeeded=\(outcome.succeeded) timedOut=\(outcome.timedOut) duration=\(String(format: "%.2f", outcome.duration), privacy: .public)s"
         )
         let tail = Self.cappedTail(outcome.output)
-        if outcome.timedOut {
+        switch ScriptRunDisposition(outcome) {
+        case .timedOut:
             return ToolResult(
                 output: "Error: \"\(scriptName)\" ran past its \(Int(timeout))s timeout — M1K3 stopped "
                     + "waiting, but the script may still be running.\n"
                     + Self.untrustedOutputBlock(tail)
             )
-        }
-        guard outcome.succeeded else {
-            let reason = outcome.failureReason ?? "unknown failure"
+        case let .failed(reason):
             return ToolResult(
                 output: "Error: \"\(scriptName)\" failed (\(reason)) "
                     + "after \(String(format: "%.1f", outcome.duration))s.\n"
                     + Self.untrustedOutputBlock(tail)
             )
+        case .succeeded:
+            return ToolResult(
+                output: "\"\(scriptName)\" finished in \(String(format: "%.1f", outcome.duration))s.\n"
+                    + Self.untrustedOutputBlock(tail)
+            )
         }
-        return ToolResult(
-            output: "\"\(scriptName)\" finished in \(String(format: "%.1f", outcome.duration))s.\n"
-                + Self.untrustedOutputBlock(tail)
-        )
     }
 
     /// Wrap a script's runtime output so the model treats it as DATA, not
@@ -199,7 +210,7 @@ public struct ExecuteScriptTool: AgentTool {
 
     /// Keep the LAST `outputTailLimit` characters — the verdict lines — and
     /// say when earlier output was dropped.
-    static func cappedTail(_ output: String) -> String {
+    public static func cappedTail(_ output: String) -> String {
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "(no output)" }
         guard trimmed.count > outputTailLimit else { return trimmed }

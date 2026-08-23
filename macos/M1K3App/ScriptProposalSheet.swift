@@ -20,6 +20,7 @@ struct ScriptProposalSheet: View {
     let proposal: ScriptProposal
     @State private var failure: String?
     @State private var replacesExisting = false
+    @State private var busy = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -60,14 +61,48 @@ struct ScriptProposalSheet: View {
                 Button("Not Now") {
                     env.scriptProposals.pending = nil
                 }
-                Button("Review & Install") {
+                .disabled(busy)
+                Button("Install") {
                     failure = env.installProposedScript(proposal)
                 }
+                // Return maps to Install — the safe, non-executing action.
+                // RUNNING a script must be a deliberate click, never the
+                // reflexive default-key action (executing is its own consent —
+                // the context-tools charter; review catch, 2026-08-23).
                 .keyboardShortcut(.defaultAction)
+                .disabled(busy)
+                Button("Install & Run") {
+                    busy = true
+                    Task {
+                        // The run fires from this click via the app, not the
+                        // model — deterministic. Output lands in the transcript
+                        // display-only (never re-feeds the agent).
+                        let result = await env.installAndRunProposedScript(proposal)
+                        busy = false
+                        // installAndRunProposedScript clears `pending` itself on
+                        // every completion (success + both launch-failure paths);
+                        // only a write/approve failure returns a message with the
+                        // sheet still up, so we just surface that.
+                        if let result { failure = result }
+                    }
+                }
+                .disabled(busy)
+            }
+            if busy {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Running \(proposal.name)…").font(.caption).foregroundStyle(.secondary)
+                }
             }
         }
         .padding(20)
         .frame(width: 480)
+        // A run keeps the sheet up: Escape / swipe-dismiss bypass the buttons'
+        // .disabled(busy), so without this a user could close the sheet mid-run,
+        // losing the "Running…" feedback while the (detached) script keeps going.
+        // Executing is its own consent — don't let the surface vanish mid-execute
+        // (review catch, 2026-08-24).
+        .interactiveDismissDisabled(busy)
         .task(id: proposal.name) {
             replacesExisting = await env.scriptExists(named: proposal.name)
         }

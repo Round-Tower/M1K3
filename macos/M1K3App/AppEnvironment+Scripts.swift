@@ -29,6 +29,16 @@ import os
     var pending: ScriptProposal?
 }
 
+/// The result of writing + approving a proposed script: the SHA-256 that was
+/// pinned to the ledger (so Install & Run can run the exact bytes without a
+/// Keychain re-read), or a user-facing failure line. A plain two-case enum —
+/// `Result` can't carry a `String` failure (String isn't `Error`), and the
+/// message here is display copy, not a thrown error.
+private enum ScriptInstallOutcome {
+    case installed(sha: String)
+    case failed(message: String)
+}
+
 /// Everything the script tools need, bundled so the palette builder's signature
 /// stays readable. Passed ONLY by the interactive chat responder (the
 /// delegate_deep precedent) — MCP's ask_m1k3, the menu-bar Ask, and the deep
@@ -120,11 +130,29 @@ extension AppEnvironment {
     /// Install a proposed script. Returns nil on success, else a user-facing
     /// failure line for the sheet to show.
     func installProposedScript(_ proposal: ScriptProposal) -> String? {
+        switch writeAndApproveProposedScript(proposal) {
+        case let .failed(message):
+            return message
+        case .installed:
+            // Plain Install: the sheet's work is done, dismiss it. (Install &
+            // Run keeps the sheet up through the run and clears pending itself.)
+            scriptProposals.pending = nil
+            return nil
+        }
+    }
+
+    /// Write the script into the folder and pin its approval — WITHOUT clearing
+    /// the pending proposal (so Install & Run can keep the review sheet, and its
+    /// busy spinner, up through the run). On success returns the SHA-256 it
+    /// wrote to the ledger so Install & Run can run against the exact bytes it
+    /// just approved (no Keychain re-read, no name-lookup failure mode on the
+    /// deterministic path); on failure returns a user-facing line.
+    private func writeAndApproveProposedScript(_ proposal: ScriptProposal) -> ScriptInstallOutcome {
         guard ExecuteScriptTool.isValidScriptName(proposal.name) else {
-            return "That script name isn't usable."
+            return .failed(message: "That script name isn't usable.")
         }
         guard let folder = scriptsFolderForWriting() else {
-            return "M1K3 needs access to its scripts folder to install — try again and click Grant Access."
+            return .failed(message: "M1K3 needs access to its scripts folder to install — try again and click Grant Access.")
         }
         let didAccess = folder.startAccessingSecurityScopedResource()
         defer { if didAccess { folder.stopAccessingSecurityScopedResource() } }
@@ -136,7 +164,7 @@ extension AppEnvironment {
                 [.posixPermissions: 0o755], ofItemAtPath: url.path
             )
         } catch {
-            return "Couldn't write the script: \(error.localizedDescription)"
+            return .failed(message: "Couldn't write the script: \(error.localizedDescription)")
         }
         let sha = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         KeychainScriptApprovalStore().record(
@@ -145,6 +173,60 @@ extension AppEnvironment {
         Self.scriptsLog.notice(
             "script installed+approved: \(proposal.name, privacy: .public) sha=\(String(sha.prefix(12)), privacy: .public)"
         )
+        return .installed(sha: sha)
+    }
+
+    /// Install a proposed script AND run it immediately — the "Install & Run"
+    /// path (Kev, 2026-08-23). The run fires HERE, from the user's click, via
+    /// UserScriptRunner — deterministic, with none of the model's tool-calling
+    /// in the loop. Output lands in the transcript display-only (never re-feeds
+    /// the agent). Returns nil on success, else a user-facing failure line.
+    /// Install failures return before any run.
+    func installAndRunProposedScript(_ proposal: ScriptProposal) async -> String? {
+        // Write + approve WITHOUT clearing pending — the sheet (and its
+        // "Running…" spinner) must stay up through the run (review #2). The
+        // returned SHA is the exact bytes we just approved — run against it
+        // directly, no Keychain re-read (review #3).
+        let approvedSHA: String
+        switch writeAndApproveProposedScript(proposal) {
+        case let .failed(message):
+            return message
+        case let .installed(sha):
+            approvedSHA = sha
+        }
+        // Run through the same seam execute_script uses (folder-scoped,
+        // hash-re-verified at the exec boundary against the SHA we just wrote).
+        let runner = UserScriptRunner()
+        let outcome: ScriptRunOutcome
+        do {
+            outcome = try await runner.run(
+                named: proposal.name, arguments: [],
+                timeout: ExecuteScriptTool.defaultTimeout, expectedSHA256: approvedSHA
+            )
+        } catch {
+            // Pattern-match to surface the real reason — ScriptRunFailure isn't
+            // LocalizedError, so `localizedDescription` would drop it; fall back
+            // to it only for other error kinds.
+            let reason: String
+            if case let ScriptRunFailure.launchFailed(launchReason) = error {
+                reason = launchReason
+            } else {
+                reason = error.localizedDescription
+            }
+            await chat.deliverScriptOutput(
+                scriptName: proposal.name,
+                output: "Couldn't launch: \(reason)", succeeded: false
+            )
+            scriptProposals.pending = nil
+            return nil
+        }
+        let tail = ExecuteScriptTool.cappedTail(outcome.output)
+        let disposition = ScriptRunDisposition(outcome)
+        await chat.deliverScriptOutput(
+            scriptName: proposal.name, output: disposition.plainOutputBody(tail: tail),
+            succeeded: disposition == .succeeded
+        )
+        // The run is done — now dismiss the sheet (review #2).
         scriptProposals.pending = nil
         return nil
     }
