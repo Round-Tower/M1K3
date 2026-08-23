@@ -1044,9 +1044,10 @@ struct AgentRAGResponderTests {
             #expect(rules.contains(AgentRAGResponder.generativeCarveOutWithScripts), "\(style)")
             // ...it names the tool as the route for scripts...
             #expect(rules.contains("propose_script"), "\(style)")
-            // ...and the plain "just produce it. No tools" absolutism that would
-            // contradict "call propose_script" is NOT present.
-            #expect(!rules.contains("just produce it. No tools"), "\(style)")
+            // ...the "no tools" prohibition is KEPT (as an exception, not dropped)
+            // so a plain generative ask — poem, story — still never over-tools...
+            #expect(rules.lowercased().contains("no tools"), "\(style)")
+            #expect(rules.contains("no web_search, no lookup_fact"), "\(style)")
         }
     }
 
