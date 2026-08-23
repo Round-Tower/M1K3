@@ -10,6 +10,7 @@
 //  Signed: Kev + claude-fable-5, 2026-08-23, Confidence 0.9, Prior: Unknown
 
 import Foundation
+import M1K3AgentTools
 @testable import M1K3Chat
 import Testing
 
@@ -20,6 +21,18 @@ struct DistillationTaintTests {
         var message = ChatMessage(role: role, text: text, status: .complete)
         message.toolsUsed = tools
         return message
+    }
+
+    @Test("the taint set matches the real execute_script tool name — not two literals that agree by luck")
+    func taintPinnedToRealToolName() {
+        // Cross-module pin (review R2): DistillationTaint.taintedToolNames and
+        // ExecuteScriptTool.name are string literals in two packages; without
+        // this, renaming the tool silently reopens the P3 memory-leak the taint
+        // exists to close. Assert they actually agree.
+        let toolName = ExecuteScriptTool(
+            runner: NullScriptRunning(), approvals: EmptyScriptApprovalStore()
+        ).name
+        #expect(DistillationTaint.taintedToolNames.contains(toolName))
     }
 
     @Test("execute_script taints; other tools and nil do not")

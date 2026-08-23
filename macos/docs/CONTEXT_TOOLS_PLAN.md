@@ -175,6 +175,13 @@ observation (F6 — a prompt-injection speed bump, named as such).
   argv; a later turn can re-invoke an approved script with model-chosen
   arguments. The Settings copy now warns to approve only scripts trusted with
   any input; per-approval argument allow-lists are a possible follow-up.
+- **Entitlement possibly unnecessary (verify-at-⌘R, review R2).** A sandboxed
+  app MAY already have read/write to its own `~/Library/Application Scripts/
+  <bundle-id>/` without any entitlement. If a real-device check confirms it, the
+  whole `scriptsFolderForWriting()` bookmark/open-panel flow AND the
+  `files.user-selected.read-write` entitlement can be DROPPED — removing F10
+  entirely rather than documenting it. If the write is refused without the grant
+  (or MAS review needs it), the current implementation stands as-is.
 - **Entitlement scope (F10).** `files.user-selected.read-write` is app-wide, not
   panel-scoped; the install panel narrows itself to the Application Scripts
   folder by path check. Any future NSOpenPanel inherits write capability — a
