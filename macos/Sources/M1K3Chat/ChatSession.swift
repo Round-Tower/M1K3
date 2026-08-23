@@ -710,10 +710,6 @@ public final class ChatSession {
         spawnDistillation()
     }
 
-    /// The turns eligible for distillation: complete, non-empty, and NOT
-    /// tainted by a tool whose output must never become permanent memory
-    /// (P3, context-tools charter — see DistillationTaint). Pure, so the
-    /// taint rule is testable without spinning a session.
     /// The turns replayed into the agent's prompt as history: completed,
     /// non-empty, and NOT display-only (contextExcluded) — so a script's run
     /// output shown in the transcript never re-enters M1K3's context on the
@@ -726,6 +722,11 @@ public final class ChatSession {
         }
     }
 
+    /// The turns eligible for distillation: complete, non-empty, not display-only
+    /// (contextExcluded), and NOT tainted by a tool whose output must never
+    /// become permanent memory (P3, context-tools charter — see
+    /// DistillationTaint). Pure, so the taint rule is testable without spinning
+    /// a session.
     nonisolated static func distillableTurns(_ messages: ArraySlice<ChatMessage>) -> [ChatTurn] {
         messages.compactMap { message -> ChatTurn? in
             guard case .complete = message.status, !message.text.isEmpty else { return nil }

@@ -49,11 +49,10 @@ struct ScriptOutputDeliveryTests {
 
     @Test("replayable history drops contextExcluded messages, keeps ordinary ones")
     func replayHistoryExcludes() {
-        var normal = ChatMessage(role: .user, text: "what's my disk?", status: .complete)
+        let normal = ChatMessage(role: .user, text: "what's my disk?", status: .complete)
         var output = ChatMessage(role: .assistant, text: "Ran disk_report.sh: Free 120Gi", status: .complete)
         output.contextExcluded = true
-        var reply = ChatMessage(role: .assistant, text: "Looks healthy.", status: .complete)
-        _ = normal; _ = reply
+        let reply = ChatMessage(role: .assistant, text: "Looks healthy.", status: .complete)
         let turns = ChatSession.replayableHistory([normal, output, reply])
         #expect(turns.map(\.text) == ["what's my disk?", "Looks healthy."])
     }

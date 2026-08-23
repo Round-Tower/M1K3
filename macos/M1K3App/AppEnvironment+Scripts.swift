@@ -204,18 +204,20 @@ extension AppEnvironment {
             return nil
         }
         let tail = ExecuteScriptTool.cappedTail(outcome.output)
+        let disposition = ScriptRunDisposition(outcome)
         let body: String
-        if outcome.timedOut {
+        switch disposition {
+        case .timedOut:
             body = "Timed out — it may still be running.\n\(tail)"
-        } else if !outcome.succeeded, let reason = outcome.failureReason {
+        case let .failed(reason):
             // Surface the failure reason like execute_script does, not just the tail.
             body = "\(reason)\n\(tail)"
-        } else {
+        case .succeeded:
             body = tail
         }
         await chat.deliverScriptOutput(
             scriptName: proposal.name, output: body,
-            succeeded: outcome.succeeded && !outcome.timedOut
+            succeeded: disposition == .succeeded
         )
         // The run is done — now dismiss the sheet (review #2).
         scriptProposals.pending = nil

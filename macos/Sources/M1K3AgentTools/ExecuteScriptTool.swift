@@ -165,25 +165,25 @@ public struct ExecuteScriptTool: AgentTool {
             "script run end: \(scriptName, privacy: .public) succeeded=\(outcome.succeeded) timedOut=\(outcome.timedOut) duration=\(String(format: "%.2f", outcome.duration), privacy: .public)s"
         )
         let tail = Self.cappedTail(outcome.output)
-        if outcome.timedOut {
+        switch ScriptRunDisposition(outcome) {
+        case .timedOut:
             return ToolResult(
                 output: "Error: \"\(scriptName)\" ran past its \(Int(timeout))s timeout — M1K3 stopped "
                     + "waiting, but the script may still be running.\n"
                     + Self.untrustedOutputBlock(tail)
             )
-        }
-        guard outcome.succeeded else {
-            let reason = outcome.failureReason ?? "unknown failure"
+        case let .failed(reason):
             return ToolResult(
                 output: "Error: \"\(scriptName)\" failed (\(reason)) "
                     + "after \(String(format: "%.1f", outcome.duration))s.\n"
                     + Self.untrustedOutputBlock(tail)
             )
+        case .succeeded:
+            return ToolResult(
+                output: "\"\(scriptName)\" finished in \(String(format: "%.1f", outcome.duration))s.\n"
+                    + Self.untrustedOutputBlock(tail)
+            )
         }
-        return ToolResult(
-            output: "\"\(scriptName)\" finished in \(String(format: "%.1f", outcome.duration))s.\n"
-                + Self.untrustedOutputBlock(tail)
-        )
     }
 
     /// Wrap a script's runtime output so the model treats it as DATA, not
