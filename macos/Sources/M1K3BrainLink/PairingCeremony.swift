@@ -71,6 +71,15 @@ public actor PairingCeremony<PollClock: Clock> where PollClock.Duration == Durat
         case failed(String)
     }
 
+    /// Progress milestones for the pairing UI.
+    public enum Phase: Sendable, Equatable {
+        /// Dialing the pairing listener on the QR's addresses.
+        case contacting
+        /// The Mac has the request — a human is deciding (show "Approve on
+        /// your Mac…").
+        case awaitingApproval
+    }
+
     private static var log: Logger {
         M1K3Log.logger(.brainLink)
     }
@@ -95,8 +104,12 @@ public actor PairingCeremony<PollClock: Clock> where PollClock.Duration == Durat
     }
 
     /// Run the whole ceremony. Never throws — every exit is an Outcome the
-    /// pairing UI can show.
-    public func pair(payload: PairingPayload, deviceName: String) async -> Outcome {
+    /// pairing UI can show; `onPhase` reports the milestones along the way.
+    public func pair(
+        payload: PairingPayload, deviceName: String,
+        onPhase: (@Sendable (Phase) -> Void)? = nil
+    ) async -> Outcome {
+        onPhase?(.contacting)
         guard !payload.hosts.isEmpty else {
             return .failed(
                 "This pairing code carries no address for the Mac — update M1K3 on the Mac and show a fresh code."
@@ -136,6 +149,7 @@ public actor PairingCeremony<PollClock: Clock> where PollClock.Duration == Durat
         }
 
         // Step 2: poll the main port until Approve lands the key there.
+        onPhase?(.awaitingApproval)
         let deadline = clock.now.advanced(by: approvalWindow)
         while clock.now < deadline {
             do {

@@ -114,6 +114,11 @@ targetTemplates:
       # collector calls MetricPayloadDigest/MetricRetentionPolicy directly.
       - package: M1K3
         product: M1K3Diagnostics
+      # Brain at Home, device side (Phase C): QR pairing ceremony, TLS-PSK
+      # transport, HomeBrainProvider — the Mac's brain in the phone's slot.
+      # MCP-free by design (this shell links no MCP stack).
+      - package: M1K3
+        product: M1K3BrainLink
 
 targets:
   M1K3:
@@ -176,6 +181,10 @@ targets:
         product: M1K3Heartbeat
       - package: M1K3
         product: M1K3BrainServe
+      # Shared Brain at Home wire (pairing payload compose + LAN addresses
+      # for the QR) — the client half rides the mobile shells.
+      - package: M1K3
+        product: M1K3BrainLink
       # The screensaver's pure core — the app uses ScreenSaverInstall for the
       # "Set Up Screen Saver" Settings row (status + install action).
       - package: M1K3
@@ -283,6 +292,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
+        NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
+        NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. Nothing leaves your network."
 
   # visionOS sibling — same shell, same portable graph, rendered spatially as a
   # window. The Kokoro visionOS gap (no xrOS ONNX slice) is RESOLVED as of
@@ -319,6 +330,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
+        NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
+        NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. Nothing leaves your network."
 
   # The M1K3 screensaver (.saver bundle) — "what your machine got up to while you
   # were away". A borderless ScreenSaverView drawing the ambient pixel-rain + the
