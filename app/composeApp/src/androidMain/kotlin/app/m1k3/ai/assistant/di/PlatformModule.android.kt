@@ -5,29 +5,21 @@ import app.m1k3.ai.assistant.ai.BaseLlmEngine
 import app.m1k3.ai.assistant.ai.LlamaCppEngine
 import app.m1k3.ai.assistant.ai.download.HttpModelDownloadManager
 import app.m1k3.ai.assistant.ai.download.ModelDownloadWorker
-import app.m1k3.ai.assistant.ai.ondevice.AndroidOnDeviceAi
-import app.m1k3.ai.assistant.ai.ondevice.LlamaCppFallbackEngine
-import app.m1k3.ai.assistant.ai.ondevice.MlKitAvailabilityChecker
-import app.m1k3.ai.assistant.ai.ondevice.MlKitGenAiEngine
-import app.m1k3.ai.assistant.ai.ondevice.OnDeviceAi
-import app.m1k3.ai.assistant.ai.ondevice.RealMlKitAvailabilityChecker
-import app.m1k3.ai.assistant.ai.ondevice.RealMlKitGenAiEngine
+import app.m1k3.ai.assistant.ai.ondevice.AndroidSystemBrainProbe
+import app.m1k3.ai.assistant.ai.ondevice.GeminiNanoEngine
 import app.m1k3.ai.assistant.app.AndroidDatabaseInitializer
 import app.m1k3.ai.assistant.app.IDatabaseInitializer
 import app.m1k3.ai.assistant.app.InitializationViewModel
 import app.m1k3.ai.assistant.app.LoggerAdapter
 import app.m1k3.ai.assistant.chat.ChatScreenViewModel
-import app.m1k3.ai.assistant.coding.CodeGenerationViewModel
 import app.m1k3.ai.assistant.database.AndroidDatabaseFactory
 import app.m1k3.ai.assistant.database.DatabaseConfig
 import app.m1k3.ai.assistant.database.DatabaseFactory
 import app.m1k3.ai.assistant.database.MaDatabase
-import app.m1k3.ai.assistant.eco.EcoMetricsRepository
-import app.m1k3.ai.assistant.eco.EcoStatsViewModel
 import app.m1k3.ai.assistant.embedding.EmbeddingEngine
 import app.m1k3.ai.assistant.embedding.EmbeddingEngineManager
 import app.m1k3.ai.assistant.embedding.EmbeddingEngineManagerImpl
-import app.m1k3.ai.assistant.embedding.EmbeddingModelManager
+import app.m1k3.ai.assistant.embedding.MaEmbeddingEngine
 import app.m1k3.ai.assistant.history.ConversationRepository
 import app.m1k3.ai.assistant.history.ExportManager
 import app.m1k3.ai.assistant.history.HistoryViewModel
@@ -45,9 +37,14 @@ import app.m1k3.ai.assistant.tts.AudioEffectsProcessor
 import app.m1k3.ai.assistant.tts.AudioPlayer
 import app.m1k3.ai.assistant.tts.KokoroTtsEngine
 import app.m1k3.ai.assistant.utils.Logger
-import app.m1k3.ai.domain.ai.AiCoreModelPreference
+import app.m1k3.ai.assistant.voice.KokoroOrPlatformSpeaker
+import app.m1k3.ai.assistant.voice.Speaker
+import app.m1k3.ai.assistant.voice.TextToSpeechSpeaker
 import app.m1k3.ai.domain.ai.LlmModel
+import app.m1k3.ai.domain.ai.MiniBrain
 import app.m1k3.ai.domain.ai.ModelDownloadManager
+import app.m1k3.ai.domain.ai.SystemBrainProbe
+import app.m1k3.ai.domain.ai.SystemBrainResolver
 import app.m1k3.ai.domain.chat.services.UnifiedPromptBuilder
 import app.m1k3.ai.domain.platform.DateTimeProviderInterface
 import app.m1k3.ai.domain.platform.DeviceTier
@@ -61,12 +58,38 @@ import org.koin.core.module.dsl.*
 import org.koin.dsl.module
 
 /**
+ * Resolves the brain the user actually installed during onboarding.
+ *
+ * `SELECTED_M1K3_TIER` is saved as "mini" | "lil" | "big" when onboarding's
+ * download completes. This is the ONE place that mapping lives — both the
+ * real [BaseLlmEngine] and [ChatScreenViewModel]'s initial UI state (what
+ * Settings' Brain section shows as selected) read it from here, so they
+ * can never drift apart the way they used to (Settings showing "Lil" while
+ * the tier the user actually picked, and the engine actually loaded, was
+ * Mini — a hardcoded [LlmModel.default] in `ChatUiState` vs. this same
+ * prefs-driven resolution done a second time, separately, for the engine).
+ */
+private fun resolveSelectedModel(prefs: PreferencesStoreInterface): LlmModel {
+    val tierKey =
+        prefs.getString(
+            app.m1k3.ai.assistant.platform.PreferenceKeys.SELECTED_M1K3_TIER,
+            "lil",
+        ) ?: "lil"
+    return when (tierKey) {
+        "mini" -> LlmModel.Qwen35_0B8
+        "big" -> LlmModel.Gemma4_E2B
+        else -> LlmModel.Qwen35_2B // "lil" + fallback
+    }
+}
+
+/**
  * Android platform module
  *
  * Provides Android-specific dependencies:
  * - SQLDelight Android driver
  * - Android Context
- * - AI Engines (OnDeviceAi, ML Kit GenAI, LlamaCpp fallback)
+ * - AI Engines (LlamaCppEngine — the real chat path. ML Kit GenAI/OnDeviceAi
+ *   was a parallel engine never wired into ChatScreenViewModel; cut 2026-08.)
  */
 actual val platformModule =
     module {
@@ -82,12 +105,6 @@ actual val platformModule =
         single {
             wipeLegacyPlaintextDbIfNeeded(get<Context>())
             DatabaseFactory(driver = get<AndroidDatabaseFactory>().buildEncryptedDriver())
-        }
-
-        // ===== User Context (singleton — shared across ViewModels) =====
-        single<app.m1k3.ai.domain.context.UserContextProvider> {
-            app.m1k3.ai.assistant.context
-                .UserContextManager(get<Context>())
         }
 
         // ===== Platform Abstractions =====
@@ -143,17 +160,19 @@ actual val platformModule =
          * EmbeddingEngine
          *
          * Provides text-to-vector embeddings for semantic search and RAG.
-         * Uses EmbeddingModelManager to select between MiniLM (default) and Gemma (optional).
          *
-         * Model selection:
-         * - MiniLM-L6-v2 (384-dim, 80MB, built-in)
-         * - Embedding Gemma (512-dim, 180MB, dynamic module)
+         * EmbeddingGemma-300m (768-dim) via the Ma / llama.cpp bridge — one
+         * runtime and tokenizer shared with the chat brains. The GGUF is
+         * downloaded on first load through the shared HttpModelDownloadManager
+         * (the prior MiniLM ONNX model was never bundled, so RAG was dead).
          *
          * Note: Engine is created but NOT loaded. Call EmbeddingEngineManager.initialize() in MainActivity to load model.
          */
         single<EmbeddingEngine> {
-            val manager = EmbeddingModelManager(get<Context>())
-            manager.getEmbeddingEngine()
+            MaEmbeddingEngine(
+                context = get<Context>(),
+                downloadManager = get<ModelDownloadManager>() as HttpModelDownloadManager,
+            )
         }
 
         // ===== TTS Engine Layer =====
@@ -186,7 +205,61 @@ actual val platformModule =
             KokoroTtsEngine(get<Context>())
         }
 
+        /**
+         * Speaker — the spoken-audio sink voice mode AND "speak replies aloud"
+         * both use. Kokoro when it's loaded and healthy; Android's platform
+         * TextToSpeech when it isn't (Kokoro's ONNX synth has a logged
+         * "/encoder/bert/Expand invalid shape" failure mode — this is the
+         * floor that never fails silently under it).
+         */
+        single<Speaker> {
+            val prefs = get<PreferencesStoreInterface>()
+            KokoroOrPlatformSpeaker(
+                kokoro = get<TtsEngine>(),
+                platform = TextToSpeechSpeaker(get<Context>()),
+                playAudio = { audio ->
+                    val warmed =
+                        get<AudioEffectsProcessor>()
+                            .apply(audio, app.m1k3.ai.domain.tts.TtsEffect.Chain.M1K3_DEFAULT)
+                    get<AudioPlayer>().playToCompletion(warmed)
+                },
+                stopAudio = { get<AudioPlayer>().stop() },
+                voice = {
+                    val voiceId =
+                        prefs.getString(
+                            app.m1k3.ai.assistant.platform.PreferenceKeys.SELECTED_VOICE,
+                            Voice.default.id,
+                        ) ?: Voice.default.id
+                    Voice.findById(voiceId) ?: Voice.default
+                },
+            )
+        }
+
         // ===== AI Engine Layer =====
+
+        /**
+         * SystemBrainProbe — asks ML Kit GenAI whether this device has (or can
+         * fetch) its own on-device model (Gemini Nano / AICore).
+         */
+        single<SystemBrainProbe> {
+            AndroidSystemBrainProbe(get<Context>())
+        }
+
+        /**
+         * SystemBrainResolver — the once-per-process resolution of what answers
+         * for [LlmModel.Qwen35_0B8] (M1K3Tier.Mini): the platform's system
+         * model, or our own weights. Started at Koin init (createdAtStart) on
+         * an IO scope and NEVER awaited on the main thread — the first cut did
+         * `runBlocking { probe.availability() }` here and ANR'd a Pixel 9a:
+         * ML Kit answers checkStatus() through a main-looper callback.
+         * `resolver.current` answers immediately (weights until the probe
+         * lands). Re-probed on next launch, not mid-session.
+         */
+        single(createdAtStart = true) {
+            SystemBrainResolver(get<SystemBrainProbe>(), LlmModel.Qwen35_0B8).also {
+                it.start(kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO))
+            }
+        }
 
         /**
          * LlamaCppEngine (BaseLlmEngine implementation)
@@ -195,82 +268,9 @@ actual val platformModule =
          * Also used directly for fine-grained LLM control.
          */
         single<BaseLlmEngine> {
-            // Use whichever model the user installed during onboarding.
-            // SELECTED_M1K3_TIER is saved as "mini" | "lil" | "big" when the
-            // download completes. Default to Gemma3_1B (Lil M1K3) if not set.
-            val prefs = get<PreferencesStoreInterface>()
-            val tierKey =
-                prefs.getString(
-                    app.m1k3.ai.assistant.platform.PreferenceKeys.SELECTED_M1K3_TIER,
-                    "lil",
-                ) ?: "lil"
-            val model: LlmModel =
-                when (tierKey) {
-                    "mini" -> LlmModel.Qwen35_0B8
-                    "big" -> LlmModel.Gemma4_E2B
-                    else -> LlmModel.Qwen35_2B // "lil" + fallback
-                }
+            val model = resolveSelectedModel(get<PreferencesStoreInterface>())
             val overridePath = get<ModelDownloadManager>().getModelPath(model.id)
-            LlamaCppEngine(get<Context>(), model, overrideModelPath = overridePath)
-        }
-
-        /**
-         * ML Kit GenAI Availability Checker
-         *
-         * Checks if Gemini Nano is available on this device.
-         * Requirements: Android 14+, Pixel 8+/Samsung S24+, locked bootloader
-         */
-        single<MlKitAvailabilityChecker> {
-            RealMlKitAvailabilityChecker(get<Context>())
-        }
-
-        /**
-         * ML Kit GenAI Engine
-         *
-         * Provides Gemini Nano / Gemma 4 on-device inference when available.
-         * Supports Prompt API and AICore Developer Preview.
-         *
-         * Default: STABLE (Gemini Nano). Can be recreated with PREVIEW_SPEED
-         * (Gemma 4 E2B) or PREVIEW_FULL (Gemma 4 E4B) via AndroidOnDeviceAi.
-         */
-        single<MlKitGenAiEngine> {
-            RealMlKitGenAiEngine(get<Context>(), AiCoreModelPreference.STABLE)
-        }
-
-        /**
-         * LlamaCpp Fallback Engine
-         *
-         * OnDeviceAi adapter wrapping BaseLlmEngine for older devices.
-         * Used when ML Kit GenAI is not available.
-         */
-        single {
-            LlamaCppFallbackEngine(get<BaseLlmEngine>())
-        }
-
-        /**
-         * AndroidOnDeviceAi
-         *
-         * Main on-device AI implementation for Android.
-         * Automatically uses ML Kit GenAI when available, falls back to LlamaCpp.
-         *
-         * Usage:
-         * ```kotlin
-         * val ai: OnDeviceAi = get()
-         * when (ai.checkAvailability()) {
-         *     is AiAvailability.Available -> // Using Gemini Nano
-         *     is AiAvailability.Fallback -> // Using SmolLM2-135M
-         * }
-         * ```
-         */
-        single<OnDeviceAi> {
-            AndroidOnDeviceAi(
-                mlKitChecker = get<MlKitAvailabilityChecker>(),
-                mlKitEngine = get<MlKitGenAiEngine>(),
-                fallbackEngine = get<LlamaCppFallbackEngine>(),
-                mlKitEngineFactory = { preference ->
-                    RealMlKitGenAiEngine(get<Context>(), preference)
-                },
-            )
+            engineForModel(get<Context>(), model, overridePath, get<SystemBrainResolver>().current)
         }
 
         // ===== Model Download Manager =====
@@ -284,7 +284,6 @@ actual val platformModule =
         single<ModelDownloadManager> {
             HttpModelDownloadManager(
                 context = get<Context>(),
-                ecoMetrics = get<EcoMetricsRepository>(),
             )
         }
 
@@ -301,7 +300,6 @@ actual val platformModule =
         single<ToolRegistry> {
             AndroidToolRegistry(
                 context = get<Context>(),
-                ecoMetrics = get<EcoMetricsRepository>(),
             )
         }
 
@@ -335,7 +333,8 @@ actual val platformModule =
          * rebuild on cold start is fine).
          */
         single<app.m1k3.ai.domain.passages.services.VectorIndex> {
-            app.m1k3.ai.assistant.passages.JVectorIndex()
+            app.m1k3.ai.domain.passages.services
+                .LinearScanVectorIndex()
         }
 
         single<app.m1k3.ai.domain.passages.repositories.PassageRepository> {
@@ -438,8 +437,6 @@ actual val platformModule =
         viewModel { params ->
             val projectId = params.getOrNull<String>() ?: "default"
             val context = get<Context>()
-            val ttsEngine = get<TtsEngine>()
-            val audioPlayer = get<AudioPlayer>()
 
             // MemoryManager is scoped per project — created here with projectId
             val memoryManager =
@@ -456,7 +453,6 @@ actual val platformModule =
             ChatScreenViewModel(
                 aiEngine = get<BaseLlmEngine>(),
                 conversationRepo = get<ConversationRepository>(),
-                ecoMetricsRepo = get<EcoMetricsRepository>(),
                 database = get<MaDatabase>(),
                 deviceInfo = get<DeviceInfoProviderInterface>(),
                 preferences = get<PreferencesStoreInterface>(),
@@ -469,74 +465,72 @@ actual val platformModule =
                 engineFactory = { model ->
                     val downloadManager = get<ModelDownloadManager>()
                     val overridePath = downloadManager.getModelPath(model.id)
-                    LlamaCppEngine(context, model, overrideModelPath = overridePath)
+                    engineForModel(context, model, overridePath, get<SystemBrainResolver>().current)
                 },
                 isModelDownloaded = { model ->
-                    get<ModelDownloadManager>().isModelAvailable(model.id)
+                    // Mini's system-model brain needs no weights download — it
+                    // ships with the OS/Play Services. Every other model still
+                    // gates on the real on-disk check.
+                    if (model == LlmModel.Qwen35_0B8 && get<SystemBrainResolver>().current is MiniBrain.SystemModel) {
+                        true
+                    } else {
+                        get<ModelDownloadManager>().isModelAvailable(model.id)
+                    }
+                },
+                deleteModel = { model ->
+                    get<ModelDownloadManager>().deleteModel(model.id)
                 },
                 downloadModel = { model, onProgress ->
                     val httpManager = get<ModelDownloadManager>() as HttpModelDownloadManager
+
                     @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
-                    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                        httpManager.download(model).collect { progress ->
-                            val state =
-                                when (progress) {
-                                    is app.m1k3.ai.assistant.ai.download.DownloadProgress.Starting -> {
-                                        app.m1k3.ai.assistant.chat.ModelDownloadState
-                                            .Starting(model.displayName)
-                                    }
+                    val job =
+                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            httpManager.download(model).collect { progress ->
+                                val state =
+                                    when (progress) {
+                                        is app.m1k3.ai.assistant.ai.download.DownloadProgress.Starting -> {
+                                            app.m1k3.ai.assistant.chat.ModelDownloadState
+                                                .Starting(model.displayName)
+                                        }
 
-                                    is app.m1k3.ai.assistant.ai.download.DownloadProgress.InProgress -> {
-                                        app.m1k3.ai.assistant.chat.ModelDownloadState.InProgress(
-                                            modelName = model.displayName,
-                                            progressPercent = progress.progressPercent,
-                                            downloadedMB = progress.bytesDownloaded / 1_000_000,
-                                            totalMB = progress.totalBytes / 1_000_000,
-                                        )
-                                    }
+                                        is app.m1k3.ai.assistant.ai.download.DownloadProgress.InProgress -> {
+                                            app.m1k3.ai.assistant.chat.ModelDownloadState.InProgress(
+                                                modelName = model.displayName,
+                                                progressPercent = progress.progressPercent,
+                                                downloadedMB = progress.bytesDownloaded / 1_000_000,
+                                                totalMB = progress.totalBytes / 1_000_000,
+                                            )
+                                        }
 
-                                    is app.m1k3.ai.assistant.ai.download.DownloadProgress.Complete -> {
-                                        app.m1k3.ai.assistant.chat.ModelDownloadState
-                                            .Complete(model.displayName)
-                                    }
+                                        is app.m1k3.ai.assistant.ai.download.DownloadProgress.Complete -> {
+                                            app.m1k3.ai.assistant.chat.ModelDownloadState
+                                                .Complete(model.displayName)
+                                        }
 
-                                    is app.m1k3.ai.assistant.ai.download.DownloadProgress.Failed -> {
-                                        app.m1k3.ai.assistant.chat.ModelDownloadState
-                                            .Failed(model.displayName, progress.error)
+                                        is app.m1k3.ai.assistant.ai.download.DownloadProgress.Failed -> {
+                                            app.m1k3.ai.assistant.chat.ModelDownloadState
+                                                .Failed(model.displayName, progress.error)
+                                        }
                                     }
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    onProgress(state)
                                 }
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                onProgress(state)
                             }
                         }
-                    }
+                    // Cancelling the collector aborts the HTTP read mid-stream; the
+                    // .tmp stays and the next attempt resumes it (Range request).
+                    app.m1k3.ai.assistant.chat
+                        .DownloadHandle { job.cancel() }
                 },
-                onSpeakText = { text ->
-                    if (text.isBlank()) return@ChatScreenViewModel
-                    if (!ttsEngine.isLoaded) ttsEngine.loadModel()
-                    val prefs = get<PreferencesStoreInterface>()
-                    val voiceId =
-                        prefs.getString(
-                            app.m1k3.ai.assistant.platform.PreferenceKeys.SELECTED_VOICE,
-                            Voice.default.id,
-                        ) ?: Voice.default.id
-                    val voice = Voice.findById(voiceId) ?: Voice.default
-                    val result = ttsEngine.synthesize(text, voice)
-                    when (result) {
-                        is app.m1k3.ai.domain.tts.TtsResult.Success -> {
-                            val warmed =
-                                get<AudioEffectsProcessor>()
-                                    .apply(result.audio, app.m1k3.ai.domain.tts.TtsEffect.Chain.M1K3_DEFAULT)
-                            audioPlayer.play(warmed)
-                        }
-
-                        is app.m1k3.ai.domain.tts.TtsResult.Error -> {
-                            throw RuntimeException("TTS failed: ${result.message}")
-                        }
-                    }
+                onSpeakText = { text -> get<Speaker>().speak(text) },
+                userNameProvider = {
+                    app.m1k3.ai.assistant.context
+                        .UserNameProvider(context)
+                        .getUserFirstName()
                 },
-                userContextProvider = get<app.m1k3.ai.domain.context.UserContextProvider>(),
                 toolExecutionDataSource = get<app.m1k3.ai.assistant.tools.ToolExecutionDataSource>(),
+                initialModel = resolveSelectedModel(get<PreferencesStoreInterface>()),
             )
         }
 
@@ -571,30 +565,6 @@ actual val platformModule =
         }
 
         /**
-         * CodeGenerationViewModel
-         *
-         * Handles code generation features.
-         * Requires Android Context for engine creation.
-         */
-        viewModel {
-            CodeGenerationViewModel(
-                context = get<Context>(),
-            )
-        }
-
-        /**
-         * EcoStatsViewModel
-         *
-         * Manages environmental impact statistics and tracking.
-         * Shows energy, water, and carbon savings from local AI inference.
-         */
-        viewModel {
-            EcoStatsViewModel(
-                repository = get<EcoMetricsRepository>(),
-            )
-        }
-
-        /**
          * HistoryViewModel
          *
          * Manages conversation history UI state.
@@ -623,3 +593,27 @@ private fun wipeLegacyPlaintextDbIfNeeded(context: Context) {
     context.deleteDatabase(DatabaseConfig.DATABASE_NAME)
     prefs.edit().putBoolean("sqlcipher_initialized", true).apply()
 }
+
+/**
+ * The one place that decides which [BaseLlmEngine] actually answers for a
+ * given [LlmModel] selection. Every tier maps 1:1 onto [LlamaCppEngine] over
+ * its GGUF weights EXCEPT [LlmModel.Qwen35_0B8] (Mini M1K3): when [miniBrain]
+ * resolved to [MiniBrain.SystemModel] (see the `single<MiniBrain>` binding
+ * above), Mini is answered by [GeminiNanoEngine] instead — the platform's own
+ * on-device model, never our weights, for that tier.
+ *
+ * Shared by both the initial `single<BaseLlmEngine>` pick and
+ * [ChatScreenViewModel]'s `engineFactory` (tier-switch mid-session) so the
+ * two paths can't disagree about which engine a given model resolves to.
+ */
+private fun engineForModel(
+    context: Context,
+    model: LlmModel,
+    overrideModelPath: String?,
+    miniBrain: MiniBrain,
+): BaseLlmEngine =
+    if (model == LlmModel.Qwen35_0B8 && miniBrain is MiniBrain.SystemModel) {
+        GeminiNanoEngine(context)
+    } else {
+        LlamaCppEngine(context, model, overrideModelPath = overrideModelPath)
+    }

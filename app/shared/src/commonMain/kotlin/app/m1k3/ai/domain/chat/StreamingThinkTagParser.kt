@@ -1,6 +1,6 @@
 package app.m1k3.ai.domain.chat
 
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 /**
  * Stateful streaming parser that separates <think>...</think> blocks

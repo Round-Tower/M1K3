@@ -1,13 +1,10 @@
 package app.m1k3.ai.assistant.di
 
 import androidx.lifecycle.viewmodel.compose.viewModel
-import app.m1k3.ai.assistant.avatar.PetMetricsRepository
 import app.m1k3.ai.assistant.chat.ChatScreenViewModel
 import app.m1k3.ai.assistant.chat.GenerationConfigBuilder
 import app.m1k3.ai.assistant.database.DatabaseFactory
 import app.m1k3.ai.assistant.database.MaDatabase
-import app.m1k3.ai.assistant.eco.EcoCalculator
-import app.m1k3.ai.assistant.eco.EcoMetricsRepository
 import app.m1k3.ai.assistant.history.ConversationRepository
 import app.m1k3.ai.assistant.history.ExportManager
 import app.m1k3.ai.assistant.history.SearchRepository
@@ -66,13 +63,6 @@ val appModule =
         singleOf(::ConversationRepository)
 
         /**
-         * Eco metrics repository
-         *
-         * Tracks environmental impact (water, energy, CO2 savings).
-         */
-        singleOf(::EcoMetricsRepository)
-
-        /**
          * Memory data source
          *
          * Manages semantic memory metadata via SQLDelight.
@@ -85,13 +75,6 @@ val appModule =
          * Persistent log of every tool call for analytics and debug history.
          */
         singleOf(::ToolExecutionDataSource)
-
-        /**
-         * Pet metrics repository
-         *
-         * Tracks pixel pet stats (happiness, energy, health).
-         */
-        singleOf(::PetMetricsRepository)
 
         /**
          * Search repository
@@ -235,16 +218,6 @@ val appModule =
         single<LlmOutputProcessor> {
             ProcessLlmOutputUseCase(parseToolCallUseCase = get(), executeToolUseCase = get())
         }
-
-        // ===== Utility Layer =====
-
-        /**
-         * Eco calculator
-         *
-         * Calculates environmental savings vs cloud AI.
-         * Stateless, so can be singleton.
-         */
-        single { EcoCalculator }
 
         // ===== Use Case Layer =====
 

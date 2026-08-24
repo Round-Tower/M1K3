@@ -6,7 +6,7 @@ import co.touchlab.kermit.StaticConfig
 import co.touchlab.kermit.platformLogWriter
 
 /**
- * 間 AI Logging Utility
+ * M1K3 Logging Utility
  *
  * Multiplatform logging using Kermit.
  * Provides structured, tagged logging across all platforms.
@@ -49,7 +49,7 @@ object Logger {
         config = StaticConfig(
             minSeverity = if (BuildConfig.DEBUG) Severity.Verbose else Severity.Info
         ),
-        tag = "MaAI"
+        tag = "M1K3"
     )
 
     /**

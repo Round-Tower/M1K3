@@ -22,17 +22,8 @@
     <!-- Microphone permission for voice input (STT) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <!-- User context — local intelligence ("never leaves your phone") -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Used by UserNameProvider to read the device's Google account first name -->
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
-    <!-- PACKAGE_USAGE_STATS is a special permission — granted via Settings, not runtime -->
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
-        tools:ignore="ProtectedPermissions" />
-
-    <!-- Health Connect permissions (declared but not enforced — granted via Health Connect UI) -->
-    <uses-permission android:name="android.permission.health.READ_STEPS" />
-    <uses-permission android:name="android.permission.health.READ_SLEEP" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
 
     <!-- Camera permission for multi-modal vision features -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -98,29 +89,6 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
-
-        <!-- Notification listener for unread count in context -->
-        <service
-            android:name=".context.MaNotificationListenerService"
-            android:exported="false"
-            android:label="M1K3 Notification Access"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
-
-        <!-- Health Connect privacy policy (required for Health Connect integration) -->
-        <activity-alias
-            android:name="ViewPermissionUsageActivity"
-            android:exported="true"
-            android:targetActivity=".MainActivity"
-            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
-                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
-            </intent-filter>
-        </activity-alias>
 
     </application>
 </manifest>

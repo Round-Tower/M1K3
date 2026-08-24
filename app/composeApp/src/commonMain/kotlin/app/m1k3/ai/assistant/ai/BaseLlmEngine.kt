@@ -82,7 +82,7 @@ interface BaseLlmEngine : LlmEngine {
      */
     override suspend fun generate(
         prompt: String,
-        config: GenerationConfig
+        config: GenerationConfig,
     ): Result<GenerationResult>
 
     /**
@@ -100,8 +100,19 @@ interface BaseLlmEngine : LlmEngine {
     override suspend fun generateStreaming(
         prompt: String,
         config: GenerationConfig,
-        onToken: (String) -> Unit
+        onToken: (String) -> Unit,
     ): Result<Unit>
+
+    /**
+     * Cooperatively stop an in-flight generation. The current [generateStreaming]
+     * / native chat call breaks at its next token and returns the text produced
+     * so far as a normal success — the caller finalizes the partial answer
+     * (like tapping "stop" mid-response in ChatGPT).
+     *
+     * Default no-op — engines without a native stop hook (mocks) simply run to
+     * completion.
+     */
+    fun stopGeneration() {}
 
     /**
      * Get device-appropriate maximum tokens for generation.

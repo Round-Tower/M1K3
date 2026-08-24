@@ -1,44 +1,28 @@
 package app.m1k3.ai.assistant.navigation
 
 /**
- * 間 AI - Navigation Routes
+ * M1K3 - Navigation Routes
  *
- * Type-safe navigation destinations for the 間 AI mobile app.
+ * Type-safe navigation destinations for the M1K3 mobile app.
  * Implements sealed class hierarchy for compile-time safety.
  *
  * **Philosophy:**
- * Navigation should be simple, predictable, and type-safe.
- * Every screen is a destination, every destination has a route.
- *
- * **Bottom Nav Tabs:**
- * - Chat: Main AI conversation interface
- * - History: Browse past conversations
- * - Eco Stats: Environmental impact dashboard
- * - Settings: App configuration and preferences
- * - Demo: Welcome/demo screen for new users
+ * Chat is the app. Everything else — Memories, Documents, Conversations,
+ * Settings — is a workspace room reached by pushing onto Chat's single
+ * NavigationStack-equivalent back stack (no drawer, no bottom nav).
  */
 sealed class Screen(
     val route: String,
 ) {
     /**
-     * Home/Demo screen - Welcome and feature showcase
-     */
-    data object Demo : Screen("demo")
-
-    /**
-     * Chat screen - Main AI conversation interface
+     * Chat screen - the app's home. Main AI conversation interface.
      */
     data object Chat : Screen("chat")
 
     /**
-     * History screen - Browse and search past conversations
+     * History screen - Browse and search past conversations ("Conversations" in UI).
      */
     data object History : Screen("history")
-
-    /**
-     * Eco Stats screen - Environmental impact dashboard
-     */
-    data object EcoStats : Screen("eco_stats")
 
     /**
      * Settings screen - App configuration and preferences
@@ -46,14 +30,9 @@ sealed class Screen(
     data object Settings : Screen("settings")
 
     /**
-     * WebView Avatar Demo - Test THREE.js avatar with shader effects (Phase 1)
+     * Memories screen — search what M1K3 remembers, on device.
      */
-    data object AvatarWebViewDemo : Screen("avatar-webview-demo")
-
-    /**
-     * Avatar Gallery screen - Full-screen avatar selection with 3D previews
-     */
-    data object AvatarGallery : Screen("avatar_gallery")
+    data object Memories : Screen("memories")
 
     /**
      * Documents screen — list + manage personal-knowledge sources the user imported.
@@ -61,34 +40,15 @@ sealed class Screen(
     data object Documents : Screen("documents")
 
     /**
-     * About M1K3 screen - App mission, privacy-first messaging, version info
+     * Voice mode — full-screen, spoken conversation. M1K3 owns the turn
+     * boundary (see `VoiceLoopController`), not the recogniser.
      */
-    data object About : Screen("about")
-
-    /**
-     * Help & Documentation screen - Feature guides, tips, FAQ
-     */
-    data object Help : Screen("help")
-
-    /**
-     * Send Feedback screen - GitHub issues, bug reports, feature requests
-     */
-    data object Feedback : Screen("feedback")
-
-    /**
-     * Privacy Policy screen - Zero-network promise, data handling
-     */
-    data object Privacy : Screen("privacy")
+    data object VoiceMode : Screen("voice")
 
     /**
      * Open Source Licenses screen - All third-party libraries, assets, and attributions
      */
     data object Licenses : Screen("licenses")
-
-    /**
-     * Export Data screen - Backup conversations, export eco stats
-     */
-    data object Export : Screen("export")
 
     /**
      * Onboarding screen — first-launch experience.
@@ -112,29 +72,5 @@ sealed class Screen(
             const val route = "conversation/{conversationId}"
             const val argConversationId = "conversationId"
         }
-    }
-
-    companion object {
-        /**
-         * Get all bottom nav destinations
-         */
-        val bottomNavScreens =
-            listOf(
-                Chat,
-                History,
-                EcoStats,
-                Settings,
-                Demo,
-            )
-
-        /**
-         * Get route from Screen instance
-         */
-        fun Screen.getRoute(): String = this.route
-
-        /**
-         * Check if route is a bottom nav destination
-         */
-        fun isBottomNavDestination(route: String?): Boolean = bottomNavScreens.any { it.route == route }
     }
 }

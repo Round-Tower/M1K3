@@ -50,6 +50,8 @@ object MaBridge : MaInferenceBackend {
         useFlashAttn: Boolean,
         kvQuantOrdinal: Int,
         useMlock: Boolean,
+        nativeLibraryDir: String,
+        preferredCpuVariant: String,
     ): Long =
         nativeInit(
             modelPath,
@@ -61,7 +63,15 @@ object MaBridge : MaInferenceBackend {
             useFlashAttn,
             kvQuantOrdinal,
             useMlock,
+            nativeLibraryDir,
+            preferredCpuVariant,
         )
+
+    /**
+     * The CPU backend variant that actually registered on this process's
+     * first [init] call. See [MaInferenceBackend.lastLoadedCpuVariant].
+     */
+    override fun lastLoadedCpuVariant(): String = nativeLastLoadedCpuVariant()
 
     /**
      * Generate text from a pre-formatted prompt.
@@ -134,16 +144,56 @@ object MaBridge : MaInferenceBackend {
     }
 
     /**
+     * Load a GGUF EMBEDDING model (EmbeddingGemma) with mean pooling.
+     *
+     * A separate context from [init]: no sampling/FA/KV tuning, no chat
+     * template — it only produces pooled sequence embeddings. Reuses the same
+     * llama.cpp engine and the model's own (Gemma) tokenizer, so there is no
+     * second inference runtime or tokenizer on the device.
+     *
+     * @return an opaque context handle (Long), or 0 on failure.
+     */
+    fun initEmbedding(
+        modelPath: String,
+        nCtx: Int,
+        nativeLibraryDir: String,
+        preferredCpuVariant: String = "",
+    ): Long = nativeInitEmbedding(modelPath, nCtx, nativeLibraryDir, preferredCpuVariant)
+
+    /**
+     * Embed [text] into a single L2-normalized vector (cosine-ready) using an
+     * embedding [handle] from [initEmbedding]. Not thread-safe per handle —
+     * serialize calls. Returns null on failure (bad handle, tokenize/decode
+     * failure); the engine maps that to a degraded-retrieval result.
+     */
+    fun embed(
+        handle: Long,
+        text: String,
+    ): FloatArray? = nativeEmbed(handle, text)
+
+    /**
      * Release native resources for this context handle.
      * After calling release(), [handle] must not be used.
      */
     external override fun release(handle: Long)
+
+    /**
+     * Cooperatively stop an in-flight generation on [handle]. The native loop
+     * breaks at its next token and returns the partial text as a normal result.
+     */
+    override fun requestStop(handle: Long) = nativeRequestStop(handle)
+
+    private external fun nativeRequestStop(handle: Long)
 
     // --- Private JNI ---
 
     /**
      * JNI entry point for model initialization.
      * All tuning fields map to llama_context_params / llama_model_params.
+     *
+     * [nativeLibraryDir] is scanned once per process for `libggml-cpu-*.so`
+     * runtime-dispatch variants (see [MaInferenceBackend.init]'s KDoc). Pass ""
+     * to fall back to the process's default search paths.
      */
     private external fun nativeInit(
         modelPath: String,
@@ -155,7 +205,12 @@ object MaBridge : MaInferenceBackend {
         useFlashAttn: Boolean,
         kvQuantOrdinal: Int,
         useMlock: Boolean,
+        nativeLibraryDir: String,
+        preferredCpuVariant: String,
     ): Long
+
+    /** JNI entry point backing [lastLoadedCpuVariant]. */
+    private external fun nativeLastLoadedCpuVariant(): String
 
     /**
      * JNI entry point for generation.
@@ -199,4 +254,24 @@ object MaBridge : MaInferenceBackend {
         enableThinking: Boolean,
         callback: MaTokenCallback?,
     ): String
+
+    /**
+     * JNI entry point for embedding-model init. Same backend-load contract as
+     * [nativeInit] ([nativeLibraryDir] / [preferredCpuVariant]); no tuning knobs.
+     */
+    private external fun nativeInitEmbedding(
+        modelPath: String,
+        nCtx: Int,
+        nativeLibraryDir: String,
+        preferredCpuVariant: String,
+    ): Long
+
+    /**
+     * JNI entry point for embedding. Returns the L2-normalized vector as a
+     * FloatArray of length n_embd, or null on failure.
+     */
+    private external fun nativeEmbed(
+        handle: Long,
+        text: String,
+    ): FloatArray?
 }

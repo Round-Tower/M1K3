@@ -393,10 +393,6 @@ class ChatUiStateTest {
                 memoryCount = 100,
                 maxContextTokens = 4096,
                 deviceTierName = "High-End",
-                lastSessionTokens = null,
-                lastSessionWaterMl = null,
-                lastSessionEnergyWh = null,
-                lastSessionCo2G = null,
             )
         val state = ChatUiState(chatStatus = chatStatus)
         assertEquals("Good afternoon!", state.chatStatus?.greeting)

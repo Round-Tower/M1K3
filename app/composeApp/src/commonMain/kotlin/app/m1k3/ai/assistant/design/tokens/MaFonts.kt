@@ -4,7 +4,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 
 /**
- * 間 AI Font System
+ * M1K3 Font System
  *
  * Custom font configuration for branded, accessible typography.
  * Uses system fonts optimized for readability on mobile.

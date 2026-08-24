@@ -12,7 +12,6 @@ import kotlin.test.assertTrue
  * Verifies tier properties and device-tier mapping.
  */
 class M1K3TierTest {
-
     // ===== Mini M1K3 =====
 
     @Test
@@ -27,8 +26,17 @@ class M1K3TierTest {
 
     @Test
     fun `Mini download size is reasonable`() {
-        assertTrue(M1K3Tier.Mini.downloadSizeMb in 100..700,
-            "Mini download should be 100–700MB, was ${M1K3Tier.Mini.downloadSizeMb}MB")
+        assertTrue(
+            M1K3Tier.Mini.downloadSizeMb in 100..700,
+            "Mini download should be 100–700MB, was ${M1K3Tier.Mini.downloadSizeMb}MB",
+        )
+    }
+
+    @Test
+    fun `only Mini uses the platform system model when available`() {
+        assertTrue(M1K3Tier.Mini.usesSystemModelWhenAvailable)
+        assertTrue(!M1K3Tier.Lil.usesSystemModelWhenAvailable)
+        assertTrue(!M1K3Tier.Big.usesSystemModelWhenAvailable)
     }
 
     // ===== Lil M1K3 =====
@@ -45,8 +53,10 @@ class M1K3TierTest {
 
     @Test
     fun `Lil download size is reasonable`() {
-        assertTrue(M1K3Tier.Lil.downloadSizeMb in 400..1400,
-            "Lil download should be 400–1400MB, was ${M1K3Tier.Lil.downloadSizeMb}MB")
+        assertTrue(
+            M1K3Tier.Lil.downloadSizeMb in 400..1400,
+            "Lil download should be 400–1400MB, was ${M1K3Tier.Lil.downloadSizeMb}MB",
+        )
     }
 
     // ===== Big M1K3 =====
@@ -63,8 +73,10 @@ class M1K3TierTest {
 
     @Test
     fun `Big download size is the largest`() {
-        assertTrue(M1K3Tier.Big.downloadSizeMb > M1K3Tier.Lil.downloadSizeMb,
-            "Big should require a larger download than Lil")
+        assertTrue(
+            M1K3Tier.Big.downloadSizeMb > M1K3Tier.Lil.downloadSizeMb,
+            "Big should require a larger download than Lil",
+        )
     }
 
     // ===== Device mapping =====

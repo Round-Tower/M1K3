@@ -25,7 +25,7 @@ import app.m1k3.ai.assistant.design.theme.MaTheme
 import app.m1k3.ai.assistant.design.preview.PreviewFixtures
 
 /**
- * 間 AI Button Components
+ * M1K3 Button Components
  *
  * M1K3 orange branded buttons with variants:
  * - MaButtonPrimary: Filled orange button (primary actions)

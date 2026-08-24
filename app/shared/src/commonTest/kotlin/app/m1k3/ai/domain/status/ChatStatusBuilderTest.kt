@@ -3,7 +3,6 @@ package app.m1k3.ai.domain.status
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 /**
  * Tests for ChatStatusBuilder.
@@ -48,10 +47,6 @@ class ChatStatusBuilderTest {
                 memoryCount = 127,
                 maxContextTokens = 4096,
                 deviceTierName = "Flagship",
-                lastSessionTokens = 5000,
-                lastSessionWaterMl = 2300,
-                lastSessionEnergyWh = 45,
-                lastSessionCo2G = 12,
             )
 
         assertEquals("Good afternoon!", status.greeting)
@@ -59,32 +54,6 @@ class ChatStatusBuilderTest {
         assertEquals(127, status.memoryCount)
         assertEquals(4096, status.maxContextTokens)
         assertEquals("Flagship", status.deviceTierName)
-        assertEquals(5000, status.lastSessionTokens)
-        assertEquals(2300, status.lastSessionWaterMl)
-        assertEquals(45, status.lastSessionEnergyWh)
-        assertEquals(12, status.lastSessionCo2G)
-    }
-
-    @Test
-    fun `build handles null last session stats`() {
-        val status =
-            builder.build(
-                hour = 9,
-                engineReady = true,
-                memoryCount = 0,
-                maxContextTokens = 2048,
-                deviceTierName = "Budget",
-                lastSessionTokens = null,
-                lastSessionWaterMl = null,
-                lastSessionEnergyWh = null,
-                lastSessionCo2G = null,
-            )
-
-        assertEquals("Good morning!", status.greeting)
-        assertNull(status.lastSessionTokens)
-        assertNull(status.lastSessionWaterMl)
-        assertNull(status.lastSessionEnergyWh)
-        assertNull(status.lastSessionCo2G)
     }
 
     @Test
@@ -96,10 +65,6 @@ class ChatStatusBuilderTest {
                 memoryCount = 0,
                 maxContextTokens = 0,
                 deviceTierName = "Unknown",
-                lastSessionTokens = null,
-                lastSessionWaterMl = null,
-                lastSessionEnergyWh = null,
-                lastSessionCo2G = null,
             )
 
         assertEquals(false, status.engineReady)
@@ -114,10 +79,6 @@ class ChatStatusBuilderTest {
                 memoryCount = 127,
                 maxContextTokens = 4096,
                 deviceTierName = "Flagship",
-                lastSessionTokens = null,
-                lastSessionWaterMl = null,
-                lastSessionEnergyWh = null,
-                lastSessionCo2G = null,
             )
 
         val text = builder.formatStatusText(status)
@@ -133,10 +94,6 @@ class ChatStatusBuilderTest {
                 memoryCount = 0,
                 maxContextTokens = 2048,
                 deviceTierName = "Budget",
-                lastSessionTokens = null,
-                lastSessionWaterMl = null,
-                lastSessionEnergyWh = null,
-                lastSessionCo2G = null,
             )
 
         val text = builder.formatStatusText(status)
@@ -152,10 +109,6 @@ class ChatStatusBuilderTest {
                 memoryCount = 42,
                 maxContextTokens = 4096,
                 deviceTierName = "High-End",
-                lastSessionTokens = null,
-                lastSessionWaterMl = null,
-                lastSessionEnergyWh = null,
-                lastSessionCo2G = null,
             )
 
         val text = builder.formatStatusText(status)
@@ -171,53 +124,9 @@ class ChatStatusBuilderTest {
                 memoryCount = 42,
                 maxContextTokens = 4096,
                 deviceTierName = "High-End",
-                lastSessionTokens = null,
-                lastSessionWaterMl = null,
-                lastSessionEnergyWh = null,
-                lastSessionCo2G = null,
             )
 
         val text = builder.formatStatusText(status)
         assert(!text.contains("Knowledge")) { "Status should no longer render a knowledge chip" }
-    }
-
-    @Test
-    fun `formatStatusText includes last session eco stats when present`() {
-        val status =
-            builder.build(
-                hour = 14,
-                engineReady = true,
-                memoryCount = 100,
-                maxContextTokens = 4096,
-                deviceTierName = "Flagship",
-                lastSessionTokens = 5000,
-                lastSessionWaterMl = 2300,
-                lastSessionEnergyWh = 45,
-                lastSessionCo2G = 12,
-            )
-
-        val text = builder.formatStatusText(status)
-        assertContains(text, "2.3L water")
-        assertContains(text, "45 Wh")
-        assertContains(text, "12g CO2")
-    }
-
-    @Test
-    fun `formatStatusText omits last session when no stats`() {
-        val status =
-            builder.build(
-                hour = 14,
-                engineReady = true,
-                memoryCount = 100,
-                maxContextTokens = 4096,
-                deviceTierName = "Flagship",
-                lastSessionTokens = null,
-                lastSessionWaterMl = null,
-                lastSessionEnergyWh = null,
-                lastSessionCo2G = null,
-            )
-
-        val text = builder.formatStatusText(status)
-        assert(!text.contains("Last session")) { "Should not contain 'Last session' when no stats" }
     }
 }

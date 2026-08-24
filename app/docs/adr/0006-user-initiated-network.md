@@ -13,7 +13,7 @@ network" — a lie. Fix the story.
 
 ## Context
 
-Early 間 AI shipped with a strong narrative: *Zero network permission. 100%
+Early M1K3 shipped with a strong narrative: *Zero network permission. 100%
 local.* That was true when the app did nothing but on-device inference.
 It is no longer true. Two shipped features need the network:
 
@@ -55,7 +55,7 @@ set of invariants.
 
 **"Your device is the cloud."**
 
-Support line: *"間 AI runs on your phone, not in someone else's data centre.
+Support line: *"M1K3 runs on your phone, not in someone else's data centre.
 Network is a tool you wield, not a default."*
 
 ### New privacy invariants (enforced, not aspirational)
@@ -129,6 +129,16 @@ These are the strongest parts of the story. They survive the pivot.
     usage counters (model version, crash reports) as part of Play
     Services — you can disable at the OS level in Settings → Google →
     Usage & Diagnostics."
+  - **Addendum, 2026-08.** This whole engine path (`MlKitGenAiEngine`,
+    `AndroidOnDeviceAi`, `MlKitAvailabilityChecker`, `OnDeviceAi`) was
+    traced and confirmed NEVER wired into the real chat flow —
+    `ChatScreenViewModel` has always talked to
+    `app.m1k3.ai.assistant.ai.BaseLlmEngine` (Ma/llama.cpp) directly. It
+    was dead weight: registered in Koin, never `get()`-ed. Removed
+    outright, along with the ML Kit Vision/CameraX deps it dragged in
+    (also unreferenced by any real feature). This audit's findings stay
+    here as the historical record of what that dependency actually did
+    while it shipped — nothing in the app depends on ML Kit any more.
 
 ### Alternatives rejected
 
@@ -151,3 +161,17 @@ These are the strongest parts of the story. They survive the pivot.
 - Follow-up task: EcoMetrics schema migration (`CHECK (bytes_sent = 0)`
   removal + `cloudBytesAvoided` field + real byte tracking in
   HttpModelDownloadManager + WebSearchExecutor).
+
+---
+
+## Addendum (2026-08-20)
+
+The ambient-context layer (`WeatherContextProvider`, `LocationContextProvider`,
+`HealthContextProvider`, `ScreenTimeContextProvider`, `NotificationContextProvider`
++ `MaNotificationListenerService`) was removed. `WeatherContextProvider` called
+`api.open-meteo.com` on its own initiative — not user-triggered — which violated
+this ADR's core invariant (#2) outright. The others were a privacy surface the
+Mac product (`macos/docs/CONTEXT_TOOLS_PLAN.md`) had already parked on a security
+audit: ambient facts spoken in a chat risk getting distilled into permanent
+memory without the consent model that owns deliberate writes. Only the user-name
+feature survives (`UserNameProvider`, no network, no ambient permission).

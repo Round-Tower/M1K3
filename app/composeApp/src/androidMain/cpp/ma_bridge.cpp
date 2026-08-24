@@ -18,6 +18,7 @@
 #include <android/log.h>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 #include "ma_core.h"
 
@@ -80,9 +81,14 @@ Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeInit(
         jint     threadsBatch,
         jboolean useFlashAttn,
         jint     kvQuantOrdinal,
-        jboolean useMlock) {
+        jboolean useMlock,
+        jstring  jNativeLibDir,
+        jstring  jPreferredCpuVariant) {
 
-    const char *modelPath = env->GetStringUTFChars(jModelPath, nullptr);
+    const char *modelPath    = env->GetStringUTFChars(jModelPath, nullptr);
+    const char *nativeLibDir = jNativeLibDir ? env->GetStringUTFChars(jNativeLibDir, nullptr) : nullptr;
+    const char *preferredVariant =
+            jPreferredCpuVariant ? env->GetStringUTFChars(jPreferredCpuVariant, nullptr) : nullptr;
     ma_init_result res = ma_core_init(
             modelPath,
             (int) nCtx,
@@ -92,13 +98,26 @@ Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeInit(
             (int) threadsBatch,
             useFlashAttn == JNI_TRUE ? 1 : 0,
             (int) kvQuantOrdinal,
-            useMlock == JNI_TRUE ? 1 : 0);
+            useMlock == JNI_TRUE ? 1 : 0,
+            nativeLibDir,
+            preferredVariant);
     env->ReleaseStringUTFChars(jModelPath, modelPath);
+    if (jNativeLibDir) env->ReleaseStringUTFChars(jNativeLibDir, nativeLibDir);
+    if (jPreferredCpuVariant) env->ReleaseStringUTFChars(jPreferredCpuVariant, preferredVariant);
 
     if (res.handle == 0) {
         LOGE("init: ma_core_init returned 0");
     }
     return static_cast<jlong>(res.handle);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeLastLoadedCpuVariant(
+        JNIEnv *env, jobject /*thiz*/) {
+    char *out = ma_core_last_loaded_cpu_variant();
+    jstring jOut = env->NewStringUTF(out ? out : "");
+    ma_core_free_string(out);
+    return jOut;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -185,8 +204,71 @@ Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeGenerateChat(
     return jOut;
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeInitEmbedding(
+        JNIEnv *env, jobject /*thiz*/,
+        jstring jModelPath,
+        jint    nCtx,
+        jstring jNativeLibDir,
+        jstring jPreferredCpuVariant) {
+
+    const char *modelPath    = env->GetStringUTFChars(jModelPath, nullptr);
+    const char *nativeLibDir = jNativeLibDir ? env->GetStringUTFChars(jNativeLibDir, nullptr) : nullptr;
+    const char *preferredVariant =
+            jPreferredCpuVariant ? env->GetStringUTFChars(jPreferredCpuVariant, nullptr) : nullptr;
+
+    ma_handle handle = ma_core_init_embedding(
+            modelPath, (int) nCtx, nativeLibDir, preferredVariant);
+
+    env->ReleaseStringUTFChars(jModelPath, modelPath);
+    if (jNativeLibDir) env->ReleaseStringUTFChars(jNativeLibDir, nativeLibDir);
+    if (jPreferredCpuVariant) env->ReleaseStringUTFChars(jPreferredCpuVariant, preferredVariant);
+
+    if (handle == 0) {
+        LOGE("embed-init: ma_core_init_embedding returned 0");
+    }
+    return static_cast<jlong>(handle);
+}
+
+extern "C" JNIEXPORT jfloatArray JNICALL
+Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeEmbed(
+        JNIEnv *env, jobject /*thiz*/,
+        jlong   handle,
+        jstring jText) {
+
+    const char *text = env->GetStringUTFChars(jText, nullptr);
+
+    // Generous upper bound on embedding width; ma_core_embed returns the real
+    // n_embd (EmbeddingGemma is 768) and refuses if it would exceed this.
+    static const int kMaxDim = 4096;
+    std::vector<float> buf(kMaxDim);
+    const int n = ma_core_embed(
+            static_cast<ma_handle>(handle), text, buf.data(), kMaxDim);
+
+    env->ReleaseStringUTFChars(jText, text);
+
+    if (n <= 0) {
+        LOGE("embed: ma_core_embed returned %d", n);
+        return nullptr; // caller maps null → failure
+    }
+
+    jfloatArray out = env->NewFloatArray(n);
+    if (!out) {
+        LOGE("embed: NewFloatArray(%d) failed", n);
+        return nullptr;
+    }
+    env->SetFloatArrayRegion(out, 0, n, buf.data());
+    return out;
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_app_m1k3_ai_assistant_ai_ma_MaBridge_release(
         JNIEnv */*env*/, jobject /*thiz*/, jlong handle) {
     ma_core_release(static_cast<ma_handle>(handle));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_app_m1k3_ai_assistant_ai_ma_MaBridge_nativeRequestStop(
+        JNIEnv */*env*/, jobject /*thiz*/, jlong handle) {
+    ma_core_request_stop(static_cast<ma_handle>(handle));
 }

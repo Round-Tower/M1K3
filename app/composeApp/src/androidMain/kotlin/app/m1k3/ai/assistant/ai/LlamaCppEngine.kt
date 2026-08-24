@@ -3,10 +3,13 @@ package app.m1k3.ai.assistant.ai
 import android.content.Context
 import app.m1k3.ai.assistant.ai.ma.MaBridge
 import app.m1k3.ai.assistant.utils.Logger
+import app.m1k3.ai.domain.ai.CpuVariantOverride
 import app.m1k3.ai.domain.ai.GenerationConfig
 import app.m1k3.ai.domain.ai.InferenceTuning
 import app.m1k3.ai.domain.ai.LlmModel
 import app.m1k3.ai.domain.ai.MaInferenceBackend
+import app.m1k3.ai.domain.ai.NativeDiagnostics
+import app.m1k3.ai.domain.ai.ThinkingPolicy
 import app.m1k3.ai.domain.chat.format.MessageRole
 import app.m1k3.ai.domain.chat.services.ChatFormatter
 import app.m1k3.ai.domain.chat.services.DefaultChatFormatter
@@ -52,7 +55,7 @@ private val nativeChatJson =
 class LlamaCppEngine(
     private val context: Context,
     private val model: LlmModel = LlmModel.default,
-    private val chatFormatter: ChatFormatter = DefaultChatFormatter(model.chatFormat),
+    private val chatFormatter: ChatFormatter = DefaultChatFormatter(model.chatFormat, thinking = ThinkingPolicy.enabled(model)),
     private val overrideModelPath: String? = null,
     private val backend: MaInferenceBackend = MaBridge,
     private val deviceRamGbOverride: Int = -1,
@@ -160,6 +163,12 @@ class LlamaCppEngine(
                             useFlashAttn = tuning.useFlashAttn,
                             kvQuantOrdinal = tuning.kvQuant.ordinal,
                             useMlock = tuning.useMlock,
+                            // Runtime CPU-dispatch backends (libggml-cpu-*.so) live beside
+                            // libma.so in the app's extracted native library directory — see
+                            // MaInferenceBackend.init's KDoc and ma_core.cpp's header comment.
+                            nativeLibraryDir = context.applicationInfo.nativeLibraryDir ?: "",
+                            // Empty everywhere except the eval harness — see CpuVariantOverride's KDoc.
+                            preferredCpuVariant = CpuVariantOverride.preferred ?: "",
                         )
                     if (handle == 0L) {
                         return@withLock Result.failure(
@@ -169,6 +178,9 @@ class LlamaCppEngine(
 
                     contextHandle = handle
                     isInitialized = true
+                    // Records which libggml-cpu-*.so actually registered for this
+                    // process — the eval harness's cpu-variant column reads this.
+                    NativeDiagnostics.lastLoadedCpuVariant = backend.lastLoadedCpuVariant().ifBlank { null }
                     logger.i { "Initialization complete (handle=$handle)" }
 
                     Result.success(Unit)
@@ -321,6 +333,14 @@ class LlamaCppEngine(
         }
 
     override fun getOptimalMaxTokens(): Int = tuning.maxTokens
+
+    override fun stopGeneration() {
+        val handle = contextHandle
+        if (handle != 0L) {
+            logger.i { "Stop requested — breaking native generation loop" }
+            backend.requestStop(handle)
+        }
+    }
 
     // ============================================================
     // NativeChatCapable — llama.cpp common_chat_templates_apply path

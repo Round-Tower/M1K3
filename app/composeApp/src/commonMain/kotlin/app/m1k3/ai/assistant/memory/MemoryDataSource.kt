@@ -4,7 +4,7 @@ import app.m1k3.ai.assistant.database.MaDatabase
 import app.m1k3.ai.assistant.database.MemoryMetadata
 
 /**
- * 間 AI - Memory Data Source
+ * M1K3 - Memory Data Source
  *
  * Data layer abstraction for semantic memory persistence.
  * Coordinates SQLDelight metadata storage with vector search indices.

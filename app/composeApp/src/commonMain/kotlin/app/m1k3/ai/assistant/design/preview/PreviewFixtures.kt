@@ -1,6 +1,6 @@
 package app.m1k3.ai.assistant.design.preview
 
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 /**
  * Shared Preview Fixtures for Compose Previews
@@ -274,57 +274,6 @@ object PreviewFixtures {
         "Line 1 of accessibility description.\n" +
         "Line 2 of accessibility description.\n" +
         "Line 3 of accessibility description."
-
-    // ============================================================
-    // Avatar/Pet State Fixtures (for Phase 3 avatar components)
-    // ============================================================
-
-    /**
-     * Create a PixelPetState with happy stats
-     * Note: This is a data class factory, not a fixture constant,
-     * because PixelPetState has complex initialization
-     */
-    fun createHappyPetState(
-        health: Float = 85f,
-        energy: Float = 70f,
-        happiness: Float = 85f
-    ) = mapOf(
-        "health" to health,
-        "energy" to energy,
-        "happiness" to happiness,
-        "lifetimeWaterMl" to 15000L,
-        "lifetimeEnergyWh" to 28000L,
-        "lifetimeCO2G" to 8500L,
-        "evolutionStage" to "ADOLESCENT"
-    )
-
-    fun createTiredPetState(
-        health: Float = 40f,
-        energy: Float = 20f,
-        happiness: Float = 50f
-    ) = mapOf(
-        "health" to health,
-        "energy" to energy,
-        "happiness" to happiness,
-        "lifetimeWaterMl" to 8000L,
-        "lifetimeEnergyWh" to 15000L,
-        "lifetimeCO2G" to 4500L,
-        "evolutionStage" to "BASIC"
-    )
-
-    fun createHealthyPetState(
-        health: Float = 95f,
-        energy: Float = 90f,
-        happiness: Float = 95f
-    ) = mapOf(
-        "health" to health,
-        "energy" to energy,
-        "happiness" to happiness,
-        "lifetimeWaterMl" to 35000L,
-        "lifetimeEnergyWh" to 62000L,
-        "lifetimeCO2G" to 19000L,
-        "evolutionStage" to "LEGENDARY"
-    )
 
     /**
      * Create an AvatarState with given emotion and activity

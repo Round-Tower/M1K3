@@ -49,6 +49,29 @@ typedef struct {
  * instantiate a context (some ARM kernel variants reject FA+Q8_0), it retries
  * once with F16 + FA disabled. The caller can detect this via `fell_back`.
  *
+ * On the FIRST call per process, this also loads the ggml CPU backend: when
+ * built with GGML_BACKEND_DL (see androidMain/cpp/CMakeLists.txt), the CPU
+ * backend ships as several `libggml-cpu-<variant>.so` runtime-dispatch
+ * modules rather than being linked in directly, and nothing registers a CPU
+ * device until something asks. `backend_lib_dir` is where those modules live
+ * (Android: the app's `nativeLibraryDir`, beside `libma.so`); pass NULL or ""
+ * to fall back to the process's default search paths (executable dir + cwd
+ * — rarely useful on Android, but harmless, and a no-op on builds that don't
+ * define GGML_BACKEND_DL, e.g. a future statically-linked iOS bridge).
+ * Subsequent calls ignore this parameter — the backend load only ever runs
+ * once, and picks the best-scoring variant for the CPU actually running it.
+ *
+ * `preferred_cpu_variant` (nullable/"" = no preference): a bare `.so`
+ * filename (e.g. "libggml-cpu-android_armv9.0_1.so") to try loading FIRST,
+ * before the built-in most-capable-first order in `kAndroidCpuBackendVariants`
+ * (ma_core.cpp). Exists so `tools/eval/android` can force a specific CPU
+ * variant to reproduce a variant-specific bug (the Pixel 9a SVE2
+ * broken-logits case) as a fixture cell rather than a one-off log read.
+ * Ignored on non-Android builds and once the backend has already loaded for
+ * this process (see load_cpu_backends_once's "Idempotent" note) — the eval
+ * harness relies on the Python driver launching a fresh process per variant
+ * cell (`am force-stop` between cells), matching how production behaves.
+ *
  * Returns 0 in handle on hard failure (model load failed, or fallback also failed).
  */
 ma_init_result ma_core_init(
@@ -60,8 +83,23 @@ ma_init_result ma_core_init(
     int         threads_batch,    /* 0 = hw-derived */
     int         use_flash_attn,   /* bool-like: nonzero = on */
     int         kv_quant_ordinal, /* 0 = F16, 1 = Q8_0 */
-    int         use_mlock         /* bool-like */
+    int         use_mlock,        /* bool-like */
+    const char *backend_lib_dir,  /* nullable; see above */
+    const char *preferred_cpu_variant /* nullable/""; see above */
 );
+
+/**
+ * The bare `.so` filename of the CPU backend variant that actually
+ * registered on the first ma_core_init call this process, or an empty
+ * string if unknown (no model has loaded yet, non-Android build, or the
+ * backend fell through to the default-search-path scan rather than
+ * matching a known variant name). Set once, at the first successful backend
+ * load — see load_cpu_backends_once's "Idempotent" note.
+ *
+ * Returns a heap-allocated NUL-terminated UTF-8 string. Caller MUST free it
+ * via ma_core_free_string, same convention as ma_core_generate.
+ */
+char *ma_core_last_loaded_cpu_variant(void);
 
 /**
  * Generate text from a pre-formatted prompt.
@@ -121,8 +159,55 @@ char *ma_core_generate_chat(
     void       *cb_user_data
 );
 
+/**
+ * Load a GGUF EMBEDDING model (e.g. EmbeddingGemma) with mean pooling.
+ *
+ * Separate from ma_core_init on purpose: an embedding context needs no
+ * FA/KV/sampling tuning and no chat template — it decodes a whole sequence
+ * once, pools it, and returns a vector. It DOES share the once-per-process CPU
+ * backend load (same backend_lib_dir / preferred_cpu_variant contract as
+ * ma_core_init; see that function's header). The context is created with
+ * embeddings=true and mean pooling (EmbeddingGemma's pooling), F16 KV, no
+ * flash-attn — embeddings are cheap and the simple path is the robust one.
+ *
+ * Returns 0 in the handle on failure (model load or context creation failed).
+ */
+ma_handle ma_core_init_embedding(
+    const char *model_path,
+    int         n_ctx,
+    const char *backend_lib_dir,
+    const char *preferred_cpu_variant
+);
+
+/**
+ * Embed `text` into a single L2-normalized float vector.
+ *
+ * Tokenizes with the model's own (Gemma) tokenizer, runs one decode of the
+ * whole sequence, reads the pooled sequence embedding, L2-normalizes it, and
+ * writes the model's n_embd floats into `out` (must hold at least
+ * `out_capacity`). Returns the number of floats written (n_embd), or a
+ * negative value on error (bad handle, tokenize failure, out_capacity too
+ * small, or decode failure). The handle MUST come from ma_core_init_embedding.
+ * Not thread-safe per handle — one shared context, serialize calls host-side.
+ */
+int ma_core_embed(
+    ma_handle   handle,
+    const char *text,
+    float      *out,
+    int         out_capacity
+);
+
 /** Free a string returned by ma_core_generate / ma_core_generate_chat. */
 void ma_core_free_string(char *s);
+
+/**
+ * Cooperatively stop an in-flight generation on [handle]. Thread-safe: called
+ * from a different thread than the one running ma_core_generate(_chat). The
+ * generation loop breaks at its next iteration and returns the text produced
+ * so far (not an error). The flag auto-resets at the start of the next
+ * generation, so a stale stop can never cancel a future turn.
+ */
+void ma_core_request_stop(ma_handle handle);
 
 /** Release a context. After this call the handle is invalid. */
 void ma_core_release(ma_handle handle);

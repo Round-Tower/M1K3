@@ -151,8 +151,9 @@ object PreferenceKeys {
     /** Tool calling (agentic capabilities) enabled */
     const val TOOLS_ENABLED = "tools_enabled"
 
-    /** Haptic feedback enabled */
-    const val HAPTICS_ENABLED = "haptics_enabled"
+    /** Web search in chat enabled — the only capability that sends chat-derived
+     *  queries off this device. Default ON. */
+    const val WEB_SEARCH_ENABLED = "web_search_enabled"
 
     /** Dark mode preference */
     const val DARK_MODE = "dark_mode"
@@ -162,15 +163,6 @@ object PreferenceKeys {
 
     /** Auto voice reply - automatically speak AI responses */
     const val VOICE_AUTO_REPLY = "voice_auto_reply"
-
-    /** Selected avatar model ID */
-    const val SELECTED_AVATAR = "selected_avatar"
-
-    /** Globe background mode: "RUBIN" | "MAPLIBRE" | "NONE" */
-    const val GLOBE_MODE = "globe_mode"
-
-    /** Empty-chat hero mascot style: "DOT_MATRIX" (default) | "MODEL_3D" */
-    const val HERO_STYLE = "hero_style"
 
     /** User-set display name (overrides GET_ACCOUNTS detection) */
     const val USER_NAME = "user_name"

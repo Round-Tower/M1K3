@@ -1,0 +1,17 @@
+[
+  {
+    "id": "nothink-leak",
+    "kind": "instruction-following",
+    "prompt": "What is the capital of Ireland?",
+    "mustContainAny": ["Dublin"],
+    "mustNotContain": ["<think>", "</think>"],
+    "maxChars": 200
+  },
+  {
+    "id": "no-role-echo",
+    "kind": "instruction-following",
+    "prompt": "Answer with a single word: is the sky green?",
+    "mustNotContain": ["<|im_start|>", "<|turn>", "system"],
+    "maxChars": 40
+  }
+]

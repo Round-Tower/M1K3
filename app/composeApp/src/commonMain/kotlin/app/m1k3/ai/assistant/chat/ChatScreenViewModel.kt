@@ -9,8 +9,6 @@ import app.m1k3.ai.assistant.ai.BaseLlmEngine
 import app.m1k3.ai.assistant.chat.usecase.ChatWithToolsUseCase
 import app.m1k3.ai.assistant.chat.usecase.ContextRetrievalUseCase
 import app.m1k3.ai.assistant.database.MaDatabase
-import app.m1k3.ai.assistant.eco.EcoCalculator
-import app.m1k3.ai.assistant.eco.EcoMetricsRepository
 import app.m1k3.ai.assistant.history.ConversationRepository
 import app.m1k3.ai.assistant.memory.MemoryManager
 import app.m1k3.ai.assistant.platform.DeviceInfoProviderInterface
@@ -19,33 +17,34 @@ import app.m1k3.ai.assistant.platform.PreferencesStoreInterface
 import app.m1k3.ai.assistant.platform.getDeviceTier
 import app.m1k3.ai.assistant.utils.Logger
 import app.m1k3.ai.domain.ai.LlmModel
+import app.m1k3.ai.domain.ai.ThinkingPolicy
 import app.m1k3.ai.domain.chat.ChatError
 import app.m1k3.ai.domain.chat.EnrichedContext
 import app.m1k3.ai.domain.chat.GenerationStats
+import app.m1k3.ai.domain.chat.PersonaLeakGuard
 import app.m1k3.ai.domain.chat.StreamingThinkTagParser
 import app.m1k3.ai.domain.chat.events.ChatEvent
-import app.m1k3.ai.domain.chat.format.ChatFormat
 import app.m1k3.ai.domain.chat.services.ContextAssembler
 import app.m1k3.ai.domain.chat.services.DefaultChatFormatter
 import app.m1k3.ai.domain.chat.services.DeviceContextFormatter
 import app.m1k3.ai.domain.chat.services.UnifiedPromptBuilder
-import app.m1k3.ai.domain.context.ContextMemoryService
+import app.m1k3.ai.domain.history.UNTITLED_CONVERSATION_TITLE
 import app.m1k3.ai.domain.platform.DateTimeProviderInterface
 import app.m1k3.ai.domain.platform.DeviceContext
-import app.m1k3.ai.domain.status.ChatStatusBuilder
 import app.m1k3.ai.domain.system.MaSystemPromptBuilder
 import app.m1k3.ai.domain.system.SystemPromptInput
 import app.m1k3.ai.domain.system.SystemPromptTier
 import app.m1k3.ai.domain.tools.ToolResult
 import app.m1k3.ai.domain.tools.services.ToolRegistry
 import app.m1k3.ai.domain.usecases.chat.LlmOutputProcessor
+import app.m1k3.ai.domain.voice.SpeechTextPolish
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 private val logger = Logger.withTag("ChatScreenViewModel")
 
@@ -60,19 +59,17 @@ private val logger = Logger.withTag("ChatScreenViewModel")
  * - Delegates to use cases for business logic:
  *   - ContextRetrievalUseCase: RAG + memory retrieval
  *   - GenerationConfigBuilder: Device-adaptive config
- * - Handles side effects: database, eco metrics, state updates
+ * - Handles side effects: database, state updates
  *
  * **Responsibilities:**
  * - UI state management via ChatUiState
  * - AI engine initialization
  * - Coordinating message flow with use cases
- * - Eco-metrics tracking
  * - Error handling
  */
 class ChatScreenViewModel(
     private var aiEngine: BaseLlmEngine,
     private val conversationRepo: ConversationRepository,
-    private val ecoMetricsRepo: EcoMetricsRepository,
     private val database: MaDatabase,
     private val deviceInfo: DeviceInfoProviderInterface,
     private val preferences: PreferencesStoreInterface,
@@ -89,13 +86,20 @@ class ChatScreenViewModel(
     // Model download check (platform-injected, optional — for large downloadable models)
     private val isModelDownloaded: ((LlmModel) -> Boolean)? = null,
     // Model download trigger (platform-injected, optional)
-    private val downloadModel: ((LlmModel, (ModelDownloadState) -> Unit) -> Unit)? = null,
+    private val downloadModel: ModelDownloader? = null,
+    /** Deletes a model's weights from disk — the retry path after a file that downloaded but won't load. */
+    private val deleteModel: ((LlmModel) -> Boolean)? = null,
     // TTS callbacks (platform-injected, optional)
     private val onSpeakText: (suspend (String) -> Unit)? = null,
-    // User context for personalised welcome (platform-injected, optional)
-    private val userContextProvider: app.m1k3.ai.domain.context.UserContextProvider? = null,
+    // User's first name for a personalised welcome (platform-injected, optional)
+    private val userNameProvider: (() -> String?)? = null,
     // Tool execution history (optional — logs every tool call for analytics)
     private val toolExecutionDataSource: app.m1k3.ai.assistant.tools.ToolExecutionDataSource? = null,
+    // The brain actually loaded into [aiEngine] (platform-injected). Without
+    // this, ChatUiState's default (LlmModel.default = Lil) is what Settings'
+    // Brain section shows as selected — regardless of which tier onboarding
+    // actually installed and this engine actually loaded.
+    private val initialModel: LlmModel = LlmModel.default,
 ) : ViewModel() {
     // ===== Use Cases (lazy initialization) =====
 
@@ -115,11 +119,6 @@ class ChatScreenViewModel(
     }
 
     /**
-     * ChatStatusBuilder for welcome status card.
-     */
-    private val chatStatusBuilder = ChatStatusBuilder()
-
-    /**
      * DeviceContextFormatter for prompt enrichment.
      */
     private val deviceContextFormatter = DeviceContextFormatter()
@@ -128,10 +127,12 @@ class ChatScreenViewModel(
      * UnifiedPromptBuilder for consistent prompt formatting.
      * Rebuilt on model switch to use the correct ChatFormat.
      */
-    private var promptBuilder: UnifiedPromptBuilder = createPromptBuilder(LlmModel.default.chatFormat)
+    private var promptBuilder: UnifiedPromptBuilder = createPromptBuilder(initialModel)
 
-    private fun createPromptBuilder(format: ChatFormat): UnifiedPromptBuilder {
-        val formatter = DefaultChatFormatter(format)
+    private fun createPromptBuilder(model: LlmModel): UnifiedPromptBuilder {
+        // Thinking is per-brain (ThinkingPolicy): the formatter pre-closes the
+        // think block for Mini/Lil so they answer instead of reasoning for minutes.
+        val formatter = DefaultChatFormatter(model.chatFormat, thinking = ThinkingPolicy.enabled(model))
         val assembler = ContextAssembler()
         return UnifiedPromptBuilder(formatter, assembler, deviceContextFormatter)
     }
@@ -153,6 +154,7 @@ class ChatScreenViewModel(
                 toolRegistry = toolRegistry,
                 configBuilder = configBuilder,
                 promptBuilder = promptBuilder,
+                webSearchEnabled = { preferences.getBoolean(PreferenceKeys.WEB_SEARCH_ENABLED, true) },
             )
         } else {
             null
@@ -163,16 +165,12 @@ class ChatScreenViewModel(
     val isToolCallingEnabled: Boolean
         get() = chatWithTools != null
 
-    /** Context memory service — converts UserContext to storable chunks */
-    private val contextMemoryService = ContextMemoryService()
-
     /** System prompt builder — builds tiered M1K3 personality prompts */
     private val systemPromptBuilder = MaSystemPromptBuilder()
 
     /**
      * Compact system prompt — built once after context is loaded, injected
      * into every message. COMPACT tier to preserve context window budget.
-     * Null until UserContext is available.
      */
     private var compactSystemPrompt: String? = null
 
@@ -181,11 +179,10 @@ class ChatScreenViewModel(
 
     // ===== State =====
 
-    private val _uiState = MutableStateFlow(ChatUiState())
+    private val _uiState = MutableStateFlow(ChatUiState(currentModel = initialModel))
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     // Session tracking
-    private val sessionId = "chat_session_${Clock.System.now().toEpochMilliseconds()}"
     private var currentConversationId: Long? = null
 
     init {
@@ -208,14 +205,29 @@ class ChatScreenViewModel(
     fun retryEngineInit() {
         aiEngine.release()
         _uiState.update { it.copy(engineState = EngineState.Loading, error = null) }
+        val model = _uiState.value.currentModel
+        val factory = engineFactory
+        // A file that downloaded but won't load is the common case here (a bad
+        // conversion, a torn write). Re-running init on the same bytes can't help —
+        // throw the file away and fetch it again when we have the means to.
+        if (factory != null && downloadModel != null) {
+            deleteModel?.invoke(model) // false = nothing on disk, which also wants a download
+            startModelDownload(model, factory)
+            return
+        }
         initializeEngine(force = true)
     }
 
     fun initializeEngine(force: Boolean = false) {
-        if (!force && _uiState.value.engineState is EngineState.Ready) {
-            logger.d { "Engine already initialized" }
+        // An init already in flight counts as done: ChatScreen's LaunchedEffect
+        // re-enters whenever the Failed branch flips back to Loading, which used to
+        // fire a second load on top of every retry (two loads per tap on the Pixel).
+        // (Can't key this off EngineState.Loading — that's also the initial state.)
+        if (!force && (_uiState.value.engineState is EngineState.Ready || engineInitInFlight)) {
+            logger.d { "Engine already initialized or initializing" }
             return
         }
+        engineInitInFlight = true
 
         viewModelScope.launch {
             try {
@@ -230,7 +242,7 @@ class ChatScreenViewModel(
                         logger.i { "AI engine ready" }
 
                         if (_uiState.value.messages.isEmpty()) {
-                            generateWelcomeMessage()
+                            primeSystemPrompt()
                         }
                     }.onFailure { e ->
                         val error = ChatError.EngineInitError(e.message ?: "Initialization failed")
@@ -241,9 +253,13 @@ class ChatScreenViewModel(
                 logger.e(e) { "Failed to initialize AI engine" }
                 val error = mapExceptionToError(e)
                 _uiState.update { it.copy(engineState = EngineState.Failed(error)) }
+            } finally {
+                engineInitInFlight = false
             }
         }
     }
+
+    private var engineInitInFlight = false
 
     /**
      * Update the input text field.
@@ -298,6 +314,17 @@ class ChatScreenViewModel(
     }
 
     /**
+     * Stop the in-flight generation. The native loop breaks at its next token
+     * and returns whatever was produced; the normal success path then finalizes
+     * that partial answer. No-op when nothing is generating.
+     */
+    fun stopGeneration() {
+        if (!_uiState.value.generationState.isGenerating) return
+        logger.i { "User stopped generation" }
+        aiEngine.stopGeneration()
+    }
+
+    /**
      * Clear the current error.
      */
     fun clearError() {
@@ -320,8 +347,11 @@ class ChatScreenViewModel(
         if (model == _uiState.value.currentModel) return
         if (_uiState.value.generationState.isGenerating) return
 
-        // Check if model needs downloading (large models like Gemma 4)
-        if (model.minRamGB > 0 && isModelDownloaded?.invoke(model) == false) {
+        // Nothing is bundled any more — every brain's weights are downloaded
+        // (or, for Mini on a Nano device, reported present by the system-model
+        // probe). The old `minRamGB > 0` gate skipped Mini (minRamGB = 0) and sent
+        // it straight to an engine init with no file on disk.
+        if (isModelDownloaded?.invoke(model) == false) {
             logger.i { "Model ${model.displayName} needs download" }
             startModelDownload(model, factory)
             return
@@ -343,26 +373,47 @@ class ChatScreenViewModel(
                 return
             }
 
+        // One download at a time. Picking a second brain mid-download used to run
+        // both: each overwrote the same progress state (the "pulsing between Qwen
+        // & Gemma" Kev saw, 2026-08-22) and whichever finished LAST won the brain.
+        activeDownload?.let { (active, handle) ->
+            if (active == model) {
+                logger.d { "${model.displayName} is already downloading" }
+                return
+            }
+            logger.i { "Cancelling download of ${active.displayName} — ${model.displayName} picked instead" }
+            handle.cancel()
+        }
+
         _uiState.update {
             it.copy(modelDownload = ModelDownloadState.Starting(model.displayName))
         }
 
-        download(model) { state ->
-            _uiState.update { it.copy(modelDownload = state) }
+        val handle =
+            download(model) { state ->
+                // A cancelled download can still emit a straggler; only the
+                // active one may touch the UI or switch the brain.
+                if (activeDownload?.first != model) return@download
+                _uiState.update { it.copy(modelDownload = state) }
 
-            if (state is ModelDownloadState.Complete) {
-                // Download finished — now switch
-                performModelSwitch(model, factory)
-                _uiState.update { it.copy(modelDownload = null) }
-            } else if (state is ModelDownloadState.Failed) {
-                // Clear download state after a delay
-                viewModelScope.launch {
-                    kotlinx.coroutines.delay(3000)
+                if (state is ModelDownloadState.Complete) {
+                    activeDownload = null
+                    performModelSwitch(model, factory)
                     _uiState.update { it.copy(modelDownload = null) }
+                } else if (state is ModelDownloadState.Failed) {
+                    activeDownload = null
+                    // Clear download state after a delay
+                    viewModelScope.launch {
+                        kotlinx.coroutines.delay(3000)
+                        _uiState.update { it.copy(modelDownload = null) }
+                    }
                 }
             }
-        }
+        activeDownload = model to handle
     }
+
+    /** The in-flight weights download, if any — see [startModelDownload]. */
+    private var activeDownload: Pair<LlmModel, DownloadHandle>? = null
 
     /**
      * Perform the actual model switch (release old, create new, init).
@@ -388,7 +439,7 @@ class ChatScreenViewModel(
                 aiEngine = factory(model)
 
                 // Rebuild prompt builder and tools for new model's chat format
-                promptBuilder = createPromptBuilder(model.chatFormat)
+                promptBuilder = createPromptBuilder(model)
                 chatWithTools = createChatWithTools()
 
                 val result = aiEngine.initialize()
@@ -462,7 +513,7 @@ class ChatScreenViewModel(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoadingTts = true, isSpeaking = true) }
-                speak(text)
+                speak(SpeechTextPolish.polish(text).ifBlank { text })
             } catch (e: Exception) {
                 logger.e(e) { "TTS playback failed" }
             } finally {
@@ -522,7 +573,6 @@ class ChatScreenViewModel(
                 _uiState.update {
                     it.copy(
                         messages = emptyList(),
-                        sessionEcoStats = SessionEcoStats(),
                         error = null,
                         toolState = ToolState(),
                     )
@@ -531,7 +581,7 @@ class ChatScreenViewModel(
                 currentConversationId = null
                 confirmedToolIds.clear()
                 initializeConversation()
-                generateWelcomeMessage() // re-greet on new chat
+                primeSystemPrompt() // re-prime on new chat
 
                 logger.i { "Conversation cleared" }
             } catch (e: Exception) {
@@ -643,7 +693,7 @@ class ChatScreenViewModel(
                 currentConversationId =
                     conversationRepo.createConversation(
                         projectId = projectId,
-                        title = "Chat Session",
+                        title = UNTITLED_CONVERSATION_TITLE,
                     )
             } catch (e: Exception) {
                 logger.e(e) { "Failed to create conversation" }
@@ -651,30 +701,35 @@ class ChatScreenViewModel(
         }
     }
 
-    private suspend fun generateWelcomeMessage() {
+    /**
+     * Build and install the system prompt M1K3 uses for every real turn in
+     * this conversation. No LLM call, no message added to the transcript.
+     *
+     * This used to be `generateWelcomeMessage()`: building the prompt was a
+     * side effect of also having the model generate a spoken self-intro
+     * ("Good morning, M1K3. I'm here...") — the model greeting itself, on
+     * an "empty" chat that was never actually empty. iOS has no welcome
+     * generation; the hero face + starter chips ARE the empty state
+     * (doctrine: chat shows messages, nothing else).
+     */
+    private suspend fun primeSystemPrompt() {
         // Guard: don't attempt if engine isn't ready (race during model switch)
         if (_uiState.value.engineState != EngineState.Ready) {
-            logger.w { "Skipping welcome — engine not ready (${_uiState.value.engineState})" }
+            logger.w { "Skipping system-prompt priming — engine not ready (${_uiState.value.engineState})" }
             return
         }
 
-        // Fetch user context in parallel with other setup
-        val userContext =
+        // Fetch the user's name so replies can be personalised.
+        val userName =
             try {
-                userContextProvider?.getContext()
+                userNameProvider?.invoke()
             } catch (_: Exception) {
                 null
             }
-
-        // Store in state so ChatScreen can render ContextualWelcomeCard
-        if (userContext != null) {
-            _uiState.update { it.copy(userContext = userContext) }
-            storeContextSnapshots(userContext)
+        if (userName != null) {
+            _uiState.update { it.copy(userName = userName) }
         }
 
-        // Build status card first
-        val currentHour = userContext?.hourOfDay ?: dateTimeProvider?.getCurrentHour() ?: 12
-        val memoryCount = memoryManager?.getMemoryCount() ?: 0L
         val deviceTier = deviceInfo.getDeviceTier()
         // Context window scales with device tier
         val maxContextTokens =
@@ -685,69 +740,20 @@ class ChatScreenViewModel(
                 else -> 2048
             }
 
-        // Get last session eco stats (if any)
-        val lastSession =
-            try {
-                ecoMetricsRepo.getSessionStats().firstOrNull()
-            } catch (_: Exception) {
-                null
-            }
-
-        val chatStatus =
-            chatStatusBuilder.build(
-                hour = currentHour,
-                engineReady = true,
-                memoryCount = memoryCount,
-                maxContextTokens = maxContextTokens,
-                deviceTierName = deviceTier.name.lowercase().replaceFirstChar { it.uppercase() },
-                lastSessionTokens = lastSession?.tokens,
-                lastSessionWaterMl = lastSession?.waterMl,
-                lastSessionEnergyWh = lastSession?.energyWh,
-                lastSessionCo2G = lastSession?.co2G,
-            )
-
-        // Add status message to UI
-        val statusMessage =
-            ChatMessage(
-                text = chatStatus.greeting,
-                isUser = false,
-                timestamp = Clock.System.now().toEpochMilliseconds(),
-                isStatusMessage = true,
-                statusMemoryCount = memoryCount,
-                statusMaxTokens = maxContextTokens,
-                statusDeviceTier = deviceTier.name.lowercase().replaceFirstChar { it.uppercase() },
-                statusLastWaterMl = lastSession?.waterMl,
-                statusLastEnergyWh = lastSession?.energyWh,
-                statusLastCo2G = lastSession?.co2G,
-            )
-
-        val placeholderMessage =
-            ChatMessage(
-                text = "",
-                isUser = false,
-                timestamp = Clock.System.now().toEpochMilliseconds(),
-            )
-
-        _uiState.update {
-            it.copy(
-                messages = listOf(statusMessage, placeholderMessage),
-                generationState = GenerationState.Thinking,
-                chatStatus = chatStatus,
-            )
-        }
-
         try {
-            // Build tiered M1K3 system prompts from context
             val dayOfWeek = dateTimeProvider?.getDayOfWeekName()
             val currentDate = dateTimeProvider?.getFormattedDate()
             val promptInput =
                 SystemPromptInput(
-                    tier = SystemPromptTier.FULL,
-                    userContext = userContext,
+                    tier = SystemPromptTier.COMPACT,
+                    userName = userName,
                     dayOfWeek = dayOfWeek,
                     currentDate = currentDate,
                     deviceTierName = deviceTier.name.lowercase().replaceFirstChar { it.uppercase() },
                     contextWindowTokens = maxContextTokens,
+                    // Artifacts are a Big-tier capability (see SystemPromptInput.teachesArtifacts).
+                    teachesArtifacts = _uiState.value.currentModel == LlmModel.Gemma4_E2B,
+                    teachesThinking = ThinkingPolicy.enabled(_uiState.value.currentModel),
                     availableTools =
                         if (chatWithTools != null) {
                             toolRegistry?.getAllTools()?.map { it.id } ?: emptyList()
@@ -755,123 +761,12 @@ class ChatScreenViewModel(
                             emptyList()
                         },
                 )
-            val fullSystemPrompt = systemPromptBuilder.build(promptInput)
-            // Store compact for all subsequent messages — also push to tool-calling path
-            compactSystemPrompt =
-                systemPromptBuilder.build(
-                    promptInput.copy(tier = SystemPromptTier.COMPACT),
-                )
+            compactSystemPrompt = systemPromptBuilder.build(promptInput)
             chatWithTools?.systemPrompt = compactSystemPrompt ?: ""
-
-            // Welcome uses the FULL system prompt — M1K3 introduces himself.
-            // Built via the chat formatter so format tokens (BOS, turn markers)
-            // are correct for the active model (Gemma4, ChatML, etc.).
-            val welcomeUserMessage = "Say hello."
-            val formatter = DefaultChatFormatter(_uiState.value.currentModel.chatFormat)
-            val welcomePrompt =
-                formatter.buildPrompt(
-                    systemPrompt = fullSystemPrompt,
-                    messages =
-                        listOf(
-                            app.m1k3.ai.domain.chat.services.ChatMessage(
-                                role = app.m1k3.ai.domain.chat.format.MessageRole.USER,
-                                content = welcomeUserMessage,
-                            ),
-                        ),
-                    tools = emptyList(),
-                    toolResults = emptyList(),
-                )
-
-            // Use device-adaptive config — no custom cap, trust the model
-            val config =
-                configBuilder.build(
-                    queryType = QueryType.CONVERSATIONAL,
-                )
-
-            val thinkParser = StreamingThinkTagParser()
-            var tokenCount = 0
-            val startTime = Clock.System.now().toEpochMilliseconds()
-
-            val result =
-                aiEngine.generateStreaming(
-                    prompt = welcomePrompt,
-                    config = config,
-                    onToken = { token ->
-                        if (token.isNotEmpty()) {
-                            thinkParser.feed(token)
-                            tokenCount++
-
-                            _uiState.update { state ->
-                                val updatedMessages = state.messages.toMutableList()
-                                if (updatedMessages.isNotEmpty()) {
-                                    updatedMessages[updatedMessages.lastIndex] =
-                                        updatedMessages.last().copy(
-                                            text = thinkParser.visibleText,
-                                            thinkingContent = thinkParser.thinkingContent,
-                                        )
-                                }
-                                state.copy(
-                                    messages = updatedMessages,
-                                    generationState =
-                                        GenerationState.Streaming(
-                                            partialText = thinkParser.visibleText,
-                                            tokenCount = tokenCount,
-                                            thinkingPartial = thinkParser.thinkingContent,
-                                            isThinking = thinkParser.isThinking,
-                                        ),
-                                )
-                            }
-                        }
-                    },
-                )
-
-            result
-                .onSuccess {
-                    val duration = Clock.System.now().toEpochMilliseconds() - startTime
-                    val stats =
-                        GenerationStats(
-                            tokenCount = tokenCount,
-                            durationMs = duration,
-                            tokensPerSecond = if (duration > 0) tokenCount * 1000f / duration else 0f,
-                        )
-
-                    // Finalize parser — handles unclosed <think> tags
-                    thinkParser.finalize()
-                    val welcomeText = cleanFormatTokens(thinkParser.visibleText)
-
-                    _uiState.update { state ->
-                        val updatedMessages = state.messages.toMutableList()
-                        if (updatedMessages.isNotEmpty()) {
-                            updatedMessages[updatedMessages.lastIndex] =
-                                updatedMessages.last().copy(
-                                    text = welcomeText,
-                                    inferenceStats = stats.formatFull(),
-                                    thinkingContent = thinkParser.thinkingContent,
-                                    thinkingDurationMs = thinkParser.thinkingDurationMs,
-                                )
-                        }
-                        state.copy(
-                            messages = updatedMessages,
-                            generationState =
-                                GenerationState.Complete(
-                                    finalText = welcomeText,
-                                    stats = stats,
-                                ),
-                        )
-                    }
-
-                    recordEcoMetrics(tokenCount)
-                    recordMessage(welcomeText, "assistant", tokenCount)
-
-                    logger.i { "Welcome message generated: $tokenCount tokens in ${duration}ms" }
-                    logger.d { "Welcome visible='${thinkParser.visibleText}' thinking=${thinkParser.thinkingContent?.take(80)}" }
-                }.onFailure { e ->
-                    logger.e(e) { "Welcome generation failed" }
-                    _uiState.update { it.copy(generationState = GenerationState.Idle) }
-                }
+            chatWithTools?.thinkingEnabled = ThinkingPolicy.enabled(_uiState.value.currentModel)
+            logger.i { "System prompt primed (${compactSystemPrompt?.length ?: 0} chars)" }
         } catch (e: Exception) {
-            logger.e(e) { "Welcome generation error" }
-            _uiState.update { it.copy(generationState = GenerationState.Idle) }
+            logger.e(e) { "Failed to prime system prompt" }
         }
     }
 
@@ -1222,7 +1117,6 @@ class ChatScreenViewModel(
             )
         }
 
-        recordEcoMetrics(stats.tokenCount)
         recordMessage(
             content = displayText,
             role = "assistant",
@@ -1257,7 +1151,10 @@ class ChatScreenViewModel(
         // Finalize parser — handles unclosed <think> tags
         thinkParser.finalize()
 
-        val finalText = cleanFormatTokens(thinkParser.visibleText)
+        // Legacy (tools-off) path — cover it with the same persona-leak guard
+        // the tool path applies in ChatWithToolsUseCase.cleanAnswer, so a user
+        // who turns tools off in Settings isn't left with an unguarded answer.
+        val finalText = PersonaLeakGuard.guarded(cleanFormatTokens(thinkParser.visibleText))
 
         _uiState.update { state ->
             val updatedMessages = state.messages.toMutableList()
@@ -1287,7 +1184,6 @@ class ChatScreenViewModel(
             )
         }
 
-        recordEcoMetrics(tokenCount)
         recordMessage(
             content = finalText,
             role = "assistant",
@@ -1312,79 +1208,6 @@ class ChatScreenViewModel(
                 generationState = GenerationState.Failed(chatError),
                 error = chatError,
             )
-        }
-    }
-
-    /**
-     * Store user context as ContextSnapshot rows for trend analysis.
-     *
-     * Converts UserContext → ContextChunks via ContextMemoryService,
-     * then inserts each chunk as a time-series snapshot. TrendAnalyzer
-     * reads these to detect patterns like "sleep improving" or
-     * "screen time spiking."
-     */
-    private fun storeContextSnapshots(context: app.m1k3.ai.domain.context.UserContext) {
-        val now = Clock.System.now().toEpochMilliseconds()
-        val chunks = contextMemoryService.createContextChunks(context, now)
-        if (chunks.isEmpty()) return
-
-        try {
-            chunks.forEachIndexed { index, chunk ->
-                val id = "${chunk.category}_${now}_$index"
-                val value =
-                    when (chunk.category) {
-                        "health" -> context.health?.stepsToday?.toDouble() ?: 0.0
-
-                        "screen_time" -> context.screenTime?.todayMinutes?.toDouble() ?: 0.0
-
-                        "notification" -> 1.0
-
-                        // each notification is one event
-                        else -> 0.0
-                    }
-                database.contextSnapshotQueries.insertSnapshot(
-                    id = id,
-                    timestamp = chunk.timestamp,
-                    category = chunk.category,
-                    value_ = value,
-                    data_json = chunk.text,
-                    summary = chunk.text,
-                )
-            }
-            logger.i { "Stored ${chunks.size} context snapshots (${chunks.map { it.category }.distinct().joinToString()})" }
-        } catch (e: Exception) {
-            logger.w { "Failed to store context snapshots: ${e.message}" }
-        }
-    }
-
-    private fun recordEcoMetrics(tokenCount: Int) {
-        if (tokenCount <= 0) return
-
-        viewModelScope.launch {
-            try {
-                val savings = EcoCalculator.calculateSavings(tokenCount)
-
-                ecoMetricsRepo.recordMetrics(
-                    savings = savings,
-                    sessionId = sessionId,
-                    projectId = projectId,
-                )
-
-                _uiState.update { state ->
-                    state.copy(
-                        sessionEcoStats =
-                            SessionEcoStats(
-                                totalTokens = state.sessionEcoStats.totalTokens + tokenCount,
-                                waterMl = state.sessionEcoStats.waterMl + savings.waterSavedMl,
-                                energyWh = state.sessionEcoStats.energyWh + savings.energySavedWh,
-                                co2G = state.sessionEcoStats.co2G + savings.co2PreventedG,
-                                messageCount = state.sessionEcoStats.messageCount + 1,
-                            ),
-                    )
-                }
-            } catch (e: Exception) {
-                logger.w(e) { "Failed to record eco metrics" }
-            }
         }
     }
 
@@ -1421,7 +1244,7 @@ class ChatScreenViewModel(
                 if (role == "user") {
                     currentConversationId?.let { convId ->
                         val conv = conversationRepo.getConversationById(convId)
-                        if (conv?.title == "Chat Session") {
+                        if (conv?.title == UNTITLED_CONVERSATION_TITLE) {
                             val title = content.take(50) + if (content.length > 50) "..." else ""
                             conversationRepo.updateConversationTitle(convId, title)
                         }

@@ -14,10 +14,10 @@ import Testing
 // MARK: - PixelMark
 
 struct PixelMarkTests {
-    @Test func hasSeventeenOnCellsInA5x7Grid() {
+    @Test func hasThirteenOnCellsInA5x5Grid() {
         #expect(PixelMark.columns == 5)
-        #expect(PixelMark.rows == 7)
-        #expect(PixelMark.onCells.count == 17)
+        #expect(PixelMark.rows == 5)
+        #expect(PixelMark.onCells.count == 13)
     }
 
     @Test func everyOnCellIsInsideTheGrid() {
@@ -28,7 +28,7 @@ struct PixelMarkTests {
     }
 
     @Test func bothLegsAreFullHeight() {
-        // Columns 0 and 4 are "on" for every one of the 7 rows (the M's legs).
+        // Columns 0 and 4 are "on" for every one of the 5 rows (the M's legs).
         for row in 0 ..< PixelMark.rows {
             #expect(PixelMark.onCells.contains { $0.col == 0 && $0.row == row })
             #expect(PixelMark.onCells.contains { $0.col == 4 && $0.row == row })
@@ -36,26 +36,26 @@ struct PixelMarkTests {
     }
 
     @Test func centreBlockSitsWhereTheDiagonalsMeet() {
-        // The single centre pixel is (col 2, row 3).
-        #expect(PixelMark.onCells.contains { $0.col == 2 && $0.row == 3 })
+        // The single centre pixel is (col 2, row 2).
+        #expect(PixelMark.onCells.contains { $0.col == 2 && $0.row == 2 })
         // …and nothing else in the middle column.
         #expect(PixelMark.onCells.filter { $0.col == 2 }.count == 1)
     }
 
-    @Test func aspectRatioIsFiveOverSeven() {
-        #expect(abs(PixelMark.aspectRatio - 5.0 / 7.0) < 1e-9)
+    @Test func aspectRatioIsSquare() {
+        #expect(abs(PixelMark.aspectRatio - 1.0) < 1e-9)
     }
 
     @Test func unitCellsStayWithinTheBoxAndLeaveASeam() {
         let cells = PixelMark.cells(gap: 0.10)
-        #expect(cells.count == 17)
+        #expect(cells.count == 13)
         for c in cells {
             #expect(c.x >= 0 && c.y >= 0)
             #expect(c.x + c.width <= 1.0 + 1e-9)
             #expect(c.y + c.height <= 1.0 + 1e-9)
-            // A 10% seam means each block is 90% of a cell (1/5 wide, 1/7 tall).
+            // A 10% seam means each block is 90% of a cell (1/5 wide, 1/5 tall).
             #expect(abs(c.width - (1.0 / 5.0) * 0.9) < 1e-9)
-            #expect(abs(c.height - (1.0 / 7.0) * 0.9) < 1e-9)
+            #expect(abs(c.height - (1.0 / 5.0) * 0.9) < 1e-9)
         }
     }
 }

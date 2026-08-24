@@ -28,8 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -67,7 +65,6 @@ fun ChatContextBar(
     state: ChatContextBarState,
     availableModels: List<LlmModel>,
     onModelSwitch: (LlmModel) -> Unit,
-    onEcoTap: () -> Unit,
     onContextTap: () -> Unit = {},
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
@@ -102,8 +99,6 @@ fun ChatContextBar(
                     state = state,
                     availableModels = availableModels,
                     onModelSwitch = onModelSwitch,
-                    onEcoTap = onEcoTap,
-                    onContextTap = onContextTap,
                     enabled = enabled,
                 )
             }
@@ -111,13 +106,20 @@ fun ChatContextBar(
     }
 }
 
+// `state.currentModel` / `availableModels` / `onModelSwitch` stay on the
+// footer's data contract (Settings' Brain section is the one place a brain
+// is chosen — doctrine principle 6, "show a state once") but the row itself
+// no longer renders the brain name or a tokens/sec figure: those are
+// engineering nouns (doctrine principle 7) that don't belong on the chat
+// face. The context-window % went the same way on the 2026-08-22 emulator
+// re-walk: a user never acts on "0%", and the Mac/iOS chat shows nothing
+// there. What's left is — while a tool call is in flight — that it's
+// happening (the Mac's tool-transparency precedent, #132).
 @Composable
 private fun FooterRow(
     state: ChatContextBarState,
     availableModels: List<LlmModel>,
     onModelSwitch: (LlmModel) -> Unit,
-    onEcoTap: () -> Unit,
-    onContextTap: () -> Unit,
     enabled: Boolean,
 ) {
     Row(
@@ -125,35 +127,11 @@ private fun FooterRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaSpacing.sm),
     ) {
-        ModelTag(
-            currentModel = state.currentModel,
-            availableModels = availableModels,
-            onModelSwitch = onModelSwitch,
-            enabled = enabled,
-        )
-
-        Dot()
-
-        ContextTag(
-            percent = state.contextPercent,
-            onTap = onContextTap,
-        )
-
-        Dot()
-
-        EcoTag(
-            waterMl = state.ecoStats.waterMl,
-            energyWh = state.ecoStats.energyWh,
-            onTap = onEcoTap,
-        )
-
         Spacer(modifier = Modifier.weight(1f))
 
-        val tokensPerSecond = state.lastTokensPerSecond
         val toolRunning = state.status as? ChatContextBarStatus.ToolRunning
-        when {
-            toolRunning != null -> ToolRunningChip(toolId = toolRunning.toolId)
-            tokensPerSecond != null -> TokensPerSecondTag(tokensPerSecond)
+        if (toolRunning != null) {
+            ToolRunningChip(toolId = toolRunning.toolId)
         }
     }
 }
@@ -167,109 +145,6 @@ private fun Dot() {
                 .clip(CircleShape)
                 .background(MaColors.textMuted().copy(alpha = 0.5f)),
     )
-}
-
-@Composable
-private fun ModelTag(
-    currentModel: LlmModel,
-    availableModels: List<LlmModel>,
-    onModelSwitch: (LlmModel) -> Unit,
-    enabled: Boolean,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        Text(
-            text = currentModel.displayName,
-            style = MaTypography.labelSmall,
-            color = if (enabled) MaColors.Orange.copy(alpha = 0.9f) else MaColors.textDisabled(),
-            fontWeight = FontWeight.Medium,
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(MaRadius.xs))
-                    .clickable(enabled = enabled) { expanded = true }
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            availableModels.forEach { model ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = model.displayName,
-                            style = MaTypography.bodyMedium,
-                            color = if (model == currentModel) MaColors.Orange else MaColors.textPrimary(),
-                        )
-                    },
-                    onClick = {
-                        expanded = false
-                        if (model != currentModel) onModelSwitch(model)
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ContextTag(
-    percent: Int,
-    onTap: () -> Unit,
-) {
-    val color =
-        when {
-            percent >= 80 -> MaColors.Error
-            percent >= 50 -> MaColors.Warning
-            else -> MaColors.Success
-        }
-    Row(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(MaRadius.xs))
-                .clickable(onClick = onTap)
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(5.dp)
-                    .clip(CircleShape)
-                    .background(color),
-        )
-        Text(
-            text = "$percent%",
-            style = MaTypography.labelSmall,
-            color = MaColors.textMuted(),
-        )
-    }
-}
-
-@Composable
-private fun EcoTag(
-    waterMl: Long,
-    energyWh: Long,
-    onTap: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .clip(RoundedCornerShape(MaRadius.xs))
-                .clickable(onClick = onTap)
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = "\uD83D\uDCA7 ${formatWater(waterMl)}",
-            style = MaTypography.labelSmall,
-            color = MaColors.textMuted(),
-        )
-        Text(
-            text = "⚡${formatEnergy(energyWh)}",
-            style = MaTypography.labelSmall,
-            color = MaColors.textMuted(),
-        )
-    }
 }
 
 @Composable
@@ -317,30 +192,6 @@ private fun ToolRunningChip(toolId: String) {
             modifier = Modifier.padding(start = slide.dp),
         )
     }
-}
-
-@Composable
-private fun TokensPerSecondTag(tokensPerSecond: Float) {
-    // Subtle shimmer on value change — a 400ms alpha bounce tied to the value.
-    val shimmerTrigger = remember { mutableStateOf(0) }
-    LaunchedEffect(tokensPerSecond) { shimmerTrigger.value++ }
-    val alpha by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
-        label = "tpsShimmer",
-    )
-
-    // Touch the trigger so recomposition happens on change.
-    @Suppress("UNUSED_VARIABLE")
-    val t = shimmerTrigger.value
-
-    Text(
-        text = "%.1f t/s".format(tokensPerSecond),
-        style = MaTypography.labelSmall,
-        color = MaColors.Orange.copy(alpha = 0.85f * alpha),
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier.padding(horizontal = 4.dp),
-    )
 }
 
 @Composable
@@ -407,7 +258,3 @@ private fun Waveform(
         }
     }
 }
-
-private fun formatWater(ml: Long): String = if (ml >= 1000) "%.1fL".format(ml / 1000.0) else "${ml}ml"
-
-private fun formatEnergy(wh: Long): String = if (wh >= 1000) "%.1fkWh".format(wh / 1000.0) else "${wh}Wh"

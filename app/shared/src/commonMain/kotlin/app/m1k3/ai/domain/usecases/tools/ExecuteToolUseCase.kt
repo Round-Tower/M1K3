@@ -4,7 +4,7 @@ import app.m1k3.ai.domain.tools.ToolCall
 import app.m1k3.ai.domain.tools.ToolError
 import app.m1k3.ai.domain.tools.ToolResult
 import app.m1k3.ai.domain.tools.services.ToolRegistry
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 /**
  * Execute Tool Use Case - Orchestrates tool execution

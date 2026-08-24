@@ -41,6 +41,23 @@ interface MaInferenceBackend {
      * @param kvQuantOrdinal Ordinal of [KvCacheType]: 0=F16, 1=Q8_0.
      *   Any non-F16 value requires [useFlashAttn] = true.
      * @param useMlock When true asks llama.cpp to mlock model weights into RAM.
+     * @param nativeLibraryDir Absolute path to this app's extracted native library
+     *   directory (Android: `context.applicationInfo.nativeLibraryDir`). The native
+     *   bridge scans it once per process for `libggml-cpu-*.so` runtime-dispatch
+     *   variants and loads the best match for the CPU it's actually running on —
+     *   see `ma_core_init`'s header for why a single hard-coded `-march` flag isn't
+     *   safe here. Empty string = fall back to the process's default search paths
+     *   (executable dir + cwd), which won't find anything useful on Android; pass
+     *   the real directory in production. Ignored by implementations that don't
+     *   need it (e.g. a future static-linked iOS bridge).
+     * @param preferredCpuVariant Bare `.so` filename (e.g.
+     *   "libggml-cpu-android_armv9.0_1.so") to try loading FIRST, before the
+     *   native side's own most-capable-first order. "" (default) = no
+     *   override; production never sets this. See [CpuVariantOverride] — the
+     *   Android eval harness (`tools/eval/android`) is the only caller that
+     *   passes a non-empty value, to make a specific CPU-variant bug (the
+     *   Pixel 9a SVE2 broken-logits case) a reproducible fixture cell rather
+     *   than a one-off log read.
      * @return Opaque handle (non-zero) on success, 0 on failure
      */
     fun init(
@@ -53,6 +70,8 @@ interface MaInferenceBackend {
         useFlashAttn: Boolean = false,
         kvQuantOrdinal: Int = 0,
         useMlock: Boolean = false,
+        nativeLibraryDir: String = "",
+        preferredCpuVariant: String = "",
     ): Long
 
     /**
@@ -138,4 +157,28 @@ interface MaInferenceBackend {
      * After calling release(), the handle is invalid and must not be used.
      */
     fun release(handle: Long)
+
+    /**
+     * Cooperatively stop an in-flight [generate] / [generateChat] on [handle].
+     * Safe to call from another thread; the native generation loop breaks at
+     * its next token and returns the text produced so far (not an error). The
+     * stop flag auto-resets at the next generation, so a stale request can
+     * never cancel a future turn.
+     *
+     * Default no-op — safe for fakes/doubles that never touch native code.
+     */
+    fun requestStop(handle: Long) {}
+
+    /**
+     * The bare `.so` filename of the CPU backend variant that actually
+     * registered on the FIRST [init] call this process (`ma_core.cpp`'s
+     * `load_cpu_backends_once` runs once per process — see [preferredCpuVariant]
+     * above). "" when unknown (no model has loaded yet, non-Android build, or
+     * the backend fell through to the default-search-path scan rather than
+     * matching a known variant name).
+     *
+     * Default implementation returns "" — safe for fakes/doubles that never
+     * touch native code.
+     */
+    fun lastLoadedCpuVariant(): String = ""
 }

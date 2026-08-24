@@ -55,7 +55,7 @@ import app.m1k3.ai.domain.passages.SourceKind
 import app.m1k3.ai.domain.passages.repositories.PassageRepository
 import app.m1k3.ai.domain.passages.usecases.ImportTextUseCase
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.koinInject
@@ -107,7 +107,7 @@ fun DocumentsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Personal knowledge", fontWeight = FontWeight.Medium) },
+                title = { Text("Documents", fontWeight = FontWeight.Medium) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

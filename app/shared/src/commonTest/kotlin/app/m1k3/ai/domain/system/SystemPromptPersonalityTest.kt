@@ -1,8 +1,5 @@
 package app.m1k3.ai.domain.system
 
-import app.m1k3.ai.domain.context.LocationContext
-import app.m1k3.ai.domain.context.UserContext
-import app.m1k3.ai.domain.context.WeatherContext
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -20,26 +17,15 @@ import kotlin.test.assertTrue
  * catch it. Run them after any system prompt change.
  */
 class SystemPromptPersonalityTest {
-
     private val builder = MaSystemPromptBuilder()
 
-    private fun buildWith(
-        name: String = "Kev",
-        city: String = "Cork",
-        country: String = "Ireland"
-    ): String {
-        val ctx = UserContext(
-            userName = name,
-            location = LocationContext(city = city, country = country),
-            hourOfDay = 22
-        )
-        return builder.build(
+    private fun buildWith(name: String = "Kev"): String =
+        builder.build(
             SystemPromptInput(
-                userContext = ctx,
-                tier = SystemPromptTier.FULL
-            )
+                userName = name,
+                tier = SystemPromptTier.FULL,
+            ),
         )
-    }
 
     // ===== Character is present =====
 
@@ -48,7 +34,7 @@ class SystemPromptPersonalityTest {
         val prompt = buildWith()
         assertTrue(
             prompt.contains("M1K3", ignoreCase = true),
-            "Prompt must establish M1K3 identity"
+            "Prompt must establish M1K3 identity",
         )
     }
 
@@ -57,9 +43,9 @@ class SystemPromptPersonalityTest {
         val prompt = buildWith()
         assertTrue(
             prompt.contains("device", ignoreCase = true) ||
-            prompt.contains("local", ignoreCase = true) ||
-            prompt.contains("cloud", ignoreCase = true),
-            "Prompt must reference local/private nature"
+                prompt.contains("local", ignoreCase = true) ||
+                prompt.contains("cloud", ignoreCase = true),
+            "Prompt must reference local/private nature",
         )
     }
 
@@ -68,16 +54,7 @@ class SystemPromptPersonalityTest {
         val prompt = buildWith(name = "Kev")
         assertTrue(
             prompt.contains("Kev"),
-            "Prompt must include the user's name naturally"
-        )
-    }
-
-    @Test
-    fun `prompt includes location context`() {
-        val prompt = buildWith(city = "Cork", country = "Ireland")
-        assertTrue(
-            prompt.contains("Cork") || prompt.contains("Ireland"),
-            "Prompt must weave in location like a friend would"
+            "Prompt must include the user's name naturally",
         )
     }
 
@@ -91,17 +68,17 @@ class SystemPromptPersonalityTest {
         // This test verifies the prohibition is encoded (word present as a negative example).
         assertTrue(
             prompt.contains("certainly", ignoreCase = true),
-            "Ethos should explicitly prohibit 'certainly'"
+            "Ethos should explicitly prohibit 'certainly'",
         )
         assertTrue(
             prompt.contains("great question", ignoreCase = true),
-            "Ethos should explicitly prohibit 'great question'"
+            "Ethos should explicitly prohibit 'great question'",
         )
         // The key: they appear in a "don't say" context, not as instructions to say them
         assertTrue(
             prompt.contains("don't", ignoreCase = true) ||
-            prompt.contains("not", ignoreCase = true),
-            "Prohibition language must accompany the examples"
+                prompt.contains("not", ignoreCase = true),
+            "Prohibition language must accompany the examples",
         )
     }
 
@@ -111,15 +88,15 @@ class SystemPromptPersonalityTest {
         // M1K3 should advocate, not be neutral
         assertTrue(
             prompt.contains("side", ignoreCase = true) ||
-            prompt.contains("advocate", ignoreCase = true) ||
-            prompt.contains("care", ignoreCase = true) ||
-            prompt.contains("corner", ignoreCase = true),
-            "Prompt must encode M1K3's advocacy stance"
+                prompt.contains("advocate", ignoreCase = true) ||
+                prompt.contains("care", ignoreCase = true) ||
+                prompt.contains("corner", ignoreCase = true),
+            "Prompt must encode M1K3's advocacy stance",
         )
         assertFalse(
             prompt.contains("remain neutral", ignoreCase = true) ||
-            prompt.contains("stay neutral", ignoreCase = true),
-            "Prompt must not instruct M1K3 to be neutral"
+                prompt.contains("stay neutral", ignoreCase = true),
+            "Prompt must not instruct M1K3 to be neutral",
         )
     }
 
@@ -130,10 +107,10 @@ class SystemPromptPersonalityTest {
         val prompt = buildWith()
         assertTrue(
             prompt.contains("brief", ignoreCase = true) ||
-            prompt.contains("concis", ignoreCase = true) ||
-            prompt.contains("don't pad", ignoreCase = true) ||
-            prompt.contains("preamble", ignoreCase = true),
-            "Prompt must encode M1K3's brevity principle"
+                prompt.contains("concis", ignoreCase = true) ||
+                prompt.contains("don't pad", ignoreCase = true) ||
+                prompt.contains("preamble", ignoreCase = true),
+            "Prompt must encode M1K3's brevity principle",
         )
     }
 
@@ -141,12 +118,11 @@ class SystemPromptPersonalityTest {
 
     @Test
     fun `compact tier produces shorter prompt than full`() {
-        val ctx = UserContext(userName = "Kev", location = LocationContext(city = "Cork", country = "Ireland"))
-        val full = builder.build(SystemPromptInput(userContext = ctx, tier = SystemPromptTier.FULL))
-        val compact = builder.build(SystemPromptInput(userContext = ctx, tier = SystemPromptTier.COMPACT))
+        val full = builder.build(SystemPromptInput(userName = "Kev", tier = SystemPromptTier.FULL))
+        val compact = builder.build(SystemPromptInput(userName = "Kev", tier = SystemPromptTier.COMPACT))
         assertTrue(
             compact.length < full.length,
-            "Compact tier should be shorter than full tier (compact=${compact.length}, full=${full.length})"
+            "Compact tier should be shorter than full tier (compact=${compact.length}, full=${full.length})",
         )
     }
 
@@ -159,15 +135,19 @@ class SystemPromptPersonalityTest {
         // These words must NOT appear (except "villain" may remain in tests, not the prompt).
         assertFalse(
             prompt.contains("theatrical", ignoreCase = true),
-            "Prompt must not instruct M1K3 to be theatrical"
+            "Prompt must not instruct M1K3 to be theatrical",
         )
         assertFalse(
             prompt.contains("magnificent", ignoreCase = true),
-            "Prompt must not instruct M1K3 to be magnificent"
+            "Prompt must not instruct M1K3 to be magnificent",
         )
-        assertFalse(
-            prompt.contains("villain", ignoreCase = true),
-            "Prompt must not cast M1K3 as a villain"
+        // 2026-08-20: the Mac persona (M1K3Persona.swift, DESIGN_DOCTRINE "protected
+        // species") names the costume once — "wearing every sci-fi villain's look but
+        // always on the user's side". That single, subverted mention is the character;
+        // instructing the model to ACT theatrical is what was retired, and stays out.
+        assertTrue(
+            prompt.contains("always on the user's side"),
+            "The costume line must keep its subversion clause",
         )
     }
 
@@ -176,8 +156,8 @@ class SystemPromptPersonalityTest {
         val prompt = buildWith()
         assertTrue(
             prompt.contains("dry", ignoreCase = true) ||
-            prompt.contains("sharp", ignoreCase = true),
-            "Prompt must encode M1K3's sharp, dry tone"
+                prompt.contains("sharp", ignoreCase = true),
+            "Prompt must encode M1K3's sharp, dry tone",
         )
     }
 
@@ -186,60 +166,80 @@ class SystemPromptPersonalityTest {
         val prompt = buildWith()
         assertTrue(
             prompt.contains("corporate", ignoreCase = true) ||
-            prompt.contains("filler", ignoreCase = true) ||
-            prompt.contains("pleasantries", ignoreCase = true),
-            "Prompt must explicitly push back against corporate-assistant framing"
+                prompt.contains("filler", ignoreCase = true) ||
+                prompt.contains("pleasantries", ignoreCase = true),
+            "Prompt must explicitly push back against corporate-assistant framing",
         )
     }
 
-    // ===== Thinking instruction =====
+    // ===== Thinking instruction (F6, 2026-08-22) =====
+    //
+    // `teachesThinking` is Big-tier only (see ThinkingPolicy). The builder must:
+    //   1. Emit NO thinking instruction when teachesThinking is false — a
+    //      thinking-OFF Qwen told to "reason inside <think>" opens a second,
+    //      visible reasoning block and dumps its wiring (and the ethos) into
+    //      the answer. This was unguarded in buildFull (the F6 bug).
+    //   2. Never name the literal `<think>` syntax at all: the only tier that
+    //      receives the instruction is Gemma 4, whose channel is
+    //      `<|channel>thought`, not `<think>`. With reasoning_format=AUTO (F2)
+    //      the template drives the actual thinking — the prompt only invites it.
 
     @Test
-    fun `full prompt instructs model to use think tags`() {
+    fun `full prompt invites private reasoning when teachesThinking`() {
         val prompt = buildWith()
         assertTrue(
-            prompt.contains("<think>", ignoreCase = true),
-            "Full prompt should instruct models to use <think> tags"
+            prompt.contains("reason", ignoreCase = true),
+            "Full prompt should invite private reasoning when teachesThinking",
         )
     }
 
     @Test
-    fun `compact prompt instructs model to use think tags`() {
-        val ctx = app.m1k3.ai.domain.context.UserContext(userName = "Kev")
-        val compact = builder.build(SystemPromptInput(userContext = ctx, tier = SystemPromptTier.COMPACT))
-        assertTrue(
-            compact.contains("<think>", ignoreCase = true),
-            "Compact prompt should instruct models to use <think> tags"
+    fun `full prompt drops the thinking instruction when teachesThinking is false`() {
+        val prompt =
+            builder.build(SystemPromptInput(userName = "Kev", tier = SystemPromptTier.FULL, teachesThinking = false))
+        assertFalse(
+            prompt.contains("--- Thinking ---"),
+            "teachesThinking=false must drop the FULL thinking instruction (F6)",
         )
     }
 
     @Test
-    fun `compact prompt contains artifact instructions`() {
-        val ctx = app.m1k3.ai.domain.context.UserContext(userName = "Kev")
-        val compact = builder.build(SystemPromptInput(userContext = ctx, tier = SystemPromptTier.COMPACT))
-        assertTrue(
-            compact.contains("artifact", ignoreCase = true),
-            "Compact prompt should contain artifact instructions"
-        )
+    fun `no tier ever names the literal think tag syntax`() {
+        for (tier in SystemPromptTier.entries) {
+            for (teaches in listOf(true, false)) {
+                val prompt =
+                    builder.build(SystemPromptInput(userName = "Kev", tier = tier, teachesThinking = teaches))
+                assertFalse(
+                    prompt.contains("<think>"),
+                    "$tier (teachesThinking=$teaches) must not name <think> — Gemma uses <|channel>thought",
+                )
+            }
+        }
     }
 
-    // ===== Weather =====
-
     @Test
-    fun `weather context flows into the prompt when provided`() {
-        val ctx = UserContext(userName = "Kev", location = LocationContext(city = "Cork", country = "Ireland"))
-        val weather = WeatherContext(
-            temperatureCelsius = 12.0,
-            conditionDescription = "light rain",
-            conditionCode = 51
-        )
-        val prompt = builder.build(
-            SystemPromptInput(userContext = ctx, weather = weather, tier = SystemPromptTier.FULL)
-        )
-        assertTrue(
-            prompt.contains("rain", ignoreCase = true) ||
-            prompt.contains("12", ignoreCase = true),
-            "Weather should be woven into the prompt naturally"
-        )
+    fun `thinking instruction is optional`() {
+        val off = builder.build(SystemPromptInput(userName = "Kev", tier = SystemPromptTier.COMPACT, teachesThinking = false))
+        assertFalse(off.contains("reason", ignoreCase = true), "teachesThinking=false must drop the think instruction")
+    }
+
+    // Artifacts are a Big-tier capability. On the 2026-08-22 emulator walk a
+    // 0.8B Mini answered "what can you help me with?" with a raw
+    // <artifact type="html"> checklist — taught the format, it reached for it
+    // on small talk. Small brains get markdown only.
+    @Test
+    fun `prompts teach artifacts only when asked to`() {
+        for (tier in SystemPromptTier.entries) {
+            val silent = builder.build(SystemPromptInput(userName = "Kev", tier = tier))
+            assertTrue(
+                !silent.contains("artifact", ignoreCase = true),
+                "$tier prompt must not teach artifacts by default",
+            )
+            val taught = builder.build(SystemPromptInput(userName = "Kev", tier = tier, teachesArtifacts = true))
+            assertTrue(
+                taught.contains("<artifact", ignoreCase = true),
+                "$tier prompt should teach artifacts when teachesArtifacts=true",
+            )
+        }
     }
 }

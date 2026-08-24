@@ -29,7 +29,6 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
  * @param messages List of chat messages to display
  * @param isGenerating Whether AI is currently generating a response
  * @param listState LazyList state for scroll control
- * @param showEcoIndicator Whether to show eco stats (affects top padding)
  * @param modifier Optional modifier for customization
  */
 @Composable
@@ -37,12 +36,10 @@ fun ChatMessageList(
     messages: List<ChatMessage>,
     isGenerating: Boolean,
     listState: LazyListState,
-    showEcoIndicator: Boolean,
     onSpeak: ((String) -> Unit)? = null,
-    userContext: app.m1k3.ai.domain.context.UserContext? = null,
-    onRequestLocation: (() -> Unit)? = null,
-    onRequestHealth: (() -> Unit)? = null,
-    onRequestScreenTime: (() -> Unit)? = null,
+    brainCaption: String = "",
+    brainReady: Boolean = false,
+    onStarterTap: (String) -> Unit = {},
     generationState: app.m1k3.ai.assistant.chat.GenerationState = app.m1k3.ai.assistant.chat.GenerationState.Idle,
     modifier: Modifier = Modifier,
 ) {
@@ -54,9 +51,13 @@ fun ChatMessageList(
                 .animateContentSize()
                 .fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
+        // top: ChatScreen now owns a real Scaffold/TopAppBar, which already
+        // insets the list correctly — this is just breathing room below it
+        // (was 180.dp, compensating for the old floating avatar toolbar).
+        // bottom: clearance for the floating input+context "island" overlay.
         contentPadding =
             PaddingValues(
-                top = if (showEcoIndicator) 180.dp else 120.dp,
+                top = 12.dp,
                 bottom = 200.dp,
             ),
     ) {
@@ -68,10 +69,9 @@ fun ChatMessageList(
         if (preConversation) {
             item {
                 ChatHeroSplash(
-                    userContext = userContext,
-                    onRequestLocation = onRequestLocation,
-                    onRequestHealth = onRequestHealth,
-                    onRequestScreenTime = onRequestScreenTime,
+                    brainCaption = brainCaption,
+                    brainReady = brainReady,
+                    onStarterTap = onStarterTap,
                 )
             }
             items(messages.filter { !it.isStatusMessage }) { message ->
@@ -79,10 +79,6 @@ fun ChatMessageList(
                 val streamingState = generationState as? app.m1k3.ai.assistant.chat.GenerationState.Streaming
                 ChatBubble(
                     message = message,
-                    userContext = userContext,
-                    onRequestLocation = onRequestLocation,
-                    onRequestHealth = onRequestHealth,
-                    onRequestScreenTime = onRequestScreenTime,
                     onSpeak = onSpeak,
                     isStreaming = isLastAiMessage && streamingState != null,
                     isThinking = isLastAiMessage && (streamingState?.isThinking == true),
@@ -94,10 +90,6 @@ fun ChatMessageList(
                 val streamingState = generationState as? app.m1k3.ai.assistant.chat.GenerationState.Streaming
                 ChatBubble(
                     message = message,
-                    userContext = userContext,
-                    onRequestLocation = onRequestLocation,
-                    onRequestHealth = onRequestHealth,
-                    onRequestScreenTime = onRequestScreenTime,
                     onSpeak = onSpeak,
                     isStreaming = isLastAiMessage && streamingState != null,
                     isThinking = isLastAiMessage && (streamingState?.isThinking == true),
@@ -132,7 +124,6 @@ private fun ChatMessageListEmptyPreview() {
             messages = emptyList(),
             isGenerating = false,
             listState = rememberLazyListState(),
-            showEcoIndicator = false,
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -158,7 +149,6 @@ private fun ChatMessageListWithMessagesPreview() {
                 ),
             isGenerating = false,
             listState = rememberLazyListState(),
-            showEcoIndicator = false,
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -179,28 +169,6 @@ private fun ChatMessageListGeneratingPreview() {
                 ),
             isGenerating = true,
             listState = rememberLazyListState(),
-            showEcoIndicator = false,
-            modifier = Modifier.fillMaxSize(),
-        )
-    }
-}
-
-@Preview
-@Composable
-private fun ChatMessageListWithEcoIndicatorPreview() {
-    MaTheme {
-        ChatMessageList(
-            messages =
-                List(5) { index ->
-                    ChatMessage(
-                        text = "Message $index",
-                        isUser = index % 2 == 0,
-                        timestamp = System.currentTimeMillis() + (index * 1000),
-                    )
-                },
-            isGenerating = false,
-            listState = rememberLazyListState(),
-            showEcoIndicator = true,
             modifier = Modifier.fillMaxSize(),
         )
     }

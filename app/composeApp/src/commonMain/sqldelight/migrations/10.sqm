@@ -1,0 +1,21 @@
+-- Migration 9 → 10: retire the ambient-context layer.
+--
+-- WeatherContextProvider called api.open-meteo.com without user
+-- initiation (ADR-0006 violation); the health/screen-time/notification-
+-- listener providers were a privacy surface the Mac product (macos/
+-- docs/CONTEXT_TOOLS_PLAN.md) explicitly parked, because spoken/sensed
+-- context facts risk getting distilled into permanent memory unasked.
+-- Android must not ship what the Mac product considers unsafe.
+--
+-- ContextSnapshot was write-only: ChatScreenViewModel.storeContextSnapshots
+-- inserted rows on every welcome message, but TrendAnalyzer (the reader
+-- it was built for) never actually queried the table — grep confirms
+-- zero SELECT call sites outside this .sq file's own generated code.
+-- With the context providers gone, nothing produces rows for it either.
+--
+-- SQLite: nothing references ContextSnapshot as a FK. Safe, one-way drop,
+-- same shape as migrations 7, 8 and 9.
+--
+-- MurphySig: kev+claude / confidence 0.9 / 2026-08-20
+
+DROP TABLE IF EXISTS ContextSnapshot;

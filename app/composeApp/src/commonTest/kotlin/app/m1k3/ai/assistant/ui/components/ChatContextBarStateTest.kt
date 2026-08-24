@@ -3,7 +3,6 @@ package app.m1k3.ai.assistant.ui.components
 import app.m1k3.ai.assistant.chat.ChatUiState
 import app.m1k3.ai.assistant.chat.ContextWindowState
 import app.m1k3.ai.assistant.chat.GenerationState
-import app.m1k3.ai.assistant.chat.SessionEcoStats
 import app.m1k3.ai.assistant.chat.ToolExecutionResult
 import app.m1k3.ai.assistant.chat.ToolState
 import app.m1k3.ai.domain.ai.LlmModel
@@ -20,7 +19,7 @@ import kotlin.test.assertTrue
  */
 class ChatContextBarStateTest {
     @Test
-    fun `from maps model, eco stats, and context percent from ChatUiState`() {
+    fun `from maps model and context percent from ChatUiState`() {
         val uiState =
             ChatUiState(
                 currentModel = LlmModel.Qwen35_2B,
@@ -31,22 +30,12 @@ class ChatContextBarStateTest {
                         maxContextTokens = 4096,
                         deviceTier = "Flagship",
                     ),
-                sessionEcoStats =
-                    SessionEcoStats(
-                        totalTokens = 250,
-                        waterMl = 1200,
-                        energyWh = 420,
-                        co2G = 18,
-                        messageCount = 2,
-                    ),
             )
 
         val state = ChatContextBarState.from(uiState, isListening = false, partialTranscript = "")
 
         assertEquals(LlmModel.Qwen35_2B, state.currentModel)
         assertEquals(25, state.contextPercent)
-        assertEquals(1200, state.ecoStats.waterMl)
-        assertEquals(420, state.ecoStats.energyWh)
     }
 
     @Test

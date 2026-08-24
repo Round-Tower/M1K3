@@ -104,13 +104,15 @@ class ContextRetrievalUseCaseTest {
     // ===== Use Case Preference Tests =====
 
     @Test
-    fun `isRagEnabled returns false by default`() {
+    fun `isRagEnabled returns true by default`() {
+        // On-device grounding is the product; it defaults ON (was off only
+        // while the embedder was unbundled and RAG was dead — 2026-08-23).
         val useCase =
             ContextRetrievalUseCase(
                 deviceInfo = MockDeviceInfoProvider.midRange(),
                 preferences = TestPreferencesStore(),
             )
-        assertFalse(useCase.isRagEnabled())
+        assertTrue(useCase.isRagEnabled())
     }
 
     @Test
@@ -402,6 +404,27 @@ class ContextRetrievalUseCaseTest {
 
             assertFalse(result.hasRagContext)
             assertNull(result.ragInfo)
+        }
+
+    @Test
+    fun `retrieveContext grounds in documents by DEFAULT (RAG on out of the box)`() =
+        runTest {
+            // Grounding in the user's own documents is 100% on-device, so it is
+            // ON by default — the killer feature must not hide behind a toggle
+            // (the old default-off dated to when the embedder was never bundled
+            // and RAG was dead). A fresh store sets nothing; retrieval must run.
+            val prefs = TestPreferencesStore() // RAG_ENABLED unset → default
+            val repo = StubPassageRepo(listOf(passage("p0", "src-a", "relevant content about photosynthesis")))
+            val useCase =
+                ContextRetrievalUseCase(
+                    deviceInfo = MockDeviceInfoProvider.midRange(),
+                    preferences = prefs,
+                    passageRetriever = RetrievePassagesUseCase(repo),
+                )
+
+            val result = useCase.retrieveContext("What is photosynthesis?")
+
+            assertTrue(result.hasRagContext, "RAG must ground by default with no pref set")
         }
 
     @Test

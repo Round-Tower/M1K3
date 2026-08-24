@@ -1,7 +1,5 @@
 package app.m1k3.ai.assistant.tools.executors
 
-import app.m1k3.ai.assistant.eco.EcoCalculator
-import app.m1k3.ai.assistant.eco.EcoMetricsRepository
 import app.m1k3.ai.domain.tools.ToolCall
 import app.m1k3.ai.domain.tools.ToolError
 import app.m1k3.ai.domain.tools.ToolResult
@@ -22,13 +20,8 @@ import java.net.URLEncoder
  *
  * Returns: abstract, answer, related topics.
  * Falls back to DuckDuckGo HTML lite for broader results.
- *
- * @param ecoMetrics Optional — records real request/response bytes so
- *   EcoStats can show web-search network usage. Null skips tracking.
  */
-class WebSearchExecutor(
-    private val ecoMetrics: EcoMetricsRepository? = null,
-) : ToolExecutor {
+class WebSearchExecutor : ToolExecutor {
     private val logger = Logger.withTag("WebSearchExecutor")
 
     override val toolId = "web_search"
@@ -87,11 +80,6 @@ class WebSearchExecutor(
                 val htmlFallback =
                     if (instantAnswerEmpty) fetchHtmlFallback(encoded) else null
 
-                recordSearchBytes(
-                    requestBytes = 256L + encoded.length + (htmlFallback?.requestBytes ?: 0L),
-                    responseBytes = body.length.toLong() + (htmlFallback?.responseBytes ?: 0L),
-                )
-
                 val output =
                     buildString {
                         if (answer.isNotBlank()) {
@@ -149,8 +137,6 @@ class WebSearchExecutor(
 
     private data class HtmlFallback(
         val results: List<DuckDuckGoHtmlParser.SearchResult>,
-        val requestBytes: Long,
-        val responseBytes: Long,
     )
 
     /**
@@ -180,34 +166,11 @@ class WebSearchExecutor(
 
             HtmlFallback(
                 results = DuckDuckGoHtmlParser.parse(body, maxResults = 5),
-                requestBytes = 256L + encodedQuery.length,
-                responseBytes = body.length.toLong(),
             )
         } catch (e: Exception) {
             logger.w(e) { "HTML fallback failed (non-fatal)" }
             null
         }
-    }
-
-    /**
-     * Record a network event in EcoMetrics for this search's bytes. Swallows
-     * exceptions — eco tracking must never break a tool call.
-     */
-    private fun recordSearchBytes(
-        requestBytes: Long,
-        responseBytes: Long,
-    ) {
-        val repo = ecoMetrics ?: return
-        runCatching {
-            repo.recordMetrics(
-                savings =
-                    EcoCalculator.networkEvent(
-                        bytesSent = requestBytes,
-                        bytesReceived = responseBytes,
-                    ),
-                sessionId = "websearch",
-            )
-        }.onFailure { logger.w(it) { "Eco record failed (non-fatal)" } }
     }
 
     override fun validateArguments(arguments: Map<String, String>): Result<Unit> =

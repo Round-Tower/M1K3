@@ -1,0 +1,34 @@
+[
+  {
+    "id": "world-capital-ireland",
+    "kind": "world-knowledge",
+    "prompt": "What is the capital city of Ireland?",
+    "mustContainAny": ["Dublin"],
+    "minChars": 1,
+    "maxChars": 400
+  },
+  {
+    "id": "world-capital-australia",
+    "kind": "world-knowledge",
+    "prompt": "What is the capital city of Australia?",
+    "mustContainAny": ["Canberra"],
+    "minChars": 1,
+    "maxChars": 400
+  },
+  {
+    "id": "world-largest-planet",
+    "kind": "world-knowledge",
+    "prompt": "Which is the largest planet in our solar system?",
+    "mustContainAny": ["Jupiter"],
+    "minChars": 1,
+    "maxChars": 400
+  },
+  {
+    "id": "world-godot-author",
+    "kind": "world-knowledge",
+    "prompt": "Who wrote the play Waiting for Godot?",
+    "mustContainAny": ["Beckett"],
+    "minChars": 1,
+    "maxChars": 400
+  }
+]

@@ -1,13 +1,6 @@
 package app.m1k3.ai.domain.system
 
-import app.m1k3.ai.domain.context.HealthContext
-import app.m1k3.ai.domain.context.LocationContext
-import app.m1k3.ai.domain.context.NotificationContext
-import app.m1k3.ai.domain.context.ScreenTimeContext
-import app.m1k3.ai.domain.context.UserContext
-import app.m1k3.ai.domain.context.WeatherContext
 import kotlin.test.Test
-import kotlin.test.assertContains
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -57,43 +50,9 @@ class SystemPromptBuilderTest {
         assertTrue(prompt.contains("Kev"))
     }
 
-    @Test fun `FULL includes location`() {
-        val prompt = builder.build(fullInput())
-        assertTrue(prompt.contains("Dublin"))
-    }
-
-    @Test fun `FULL includes weather when available`() {
-        val prompt = builder.build(fullInput())
-        assertTrue(
-            prompt.contains("12", ignoreCase = true) ||
-                prompt.contains("overcast", ignoreCase = true) ||
-                prompt.contains("cloud", ignoreCase = true),
-        )
-    }
-
-    @Test fun `FULL includes sleep`() {
-        val prompt = builder.build(fullInput())
-        assertTrue(prompt.contains("7h") || prompt.contains("sleep", ignoreCase = true))
-    }
-
-    @Test fun `FULL includes steps`() {
-        val prompt = builder.build(fullInput())
-        assertTrue(prompt.contains("5,000") || prompt.contains("5000"))
-    }
-
     @Test fun `FULL includes day of week`() {
         val prompt = builder.build(fullInput(dayOfWeek = "Thursday"))
         assertTrue(prompt.contains("Thursday"))
-    }
-
-    @Test fun `FULL includes eco context`() {
-        val prompt = builder.build(fullInput())
-        assertTrue(
-            prompt.contains("CO2", ignoreCase = true) ||
-                prompt.contains("eco", ignoreCase = true) ||
-                prompt.contains("local", ignoreCase = true) ||
-                prompt.contains("energy", ignoreCase = true),
-        )
     }
 
     @Test fun `FULL mentions available tools when present`() {
@@ -128,19 +87,6 @@ class SystemPromptBuilderTest {
         assertTrue(prompt.contains("Kev"))
     }
 
-    @Test fun `COMPACT includes location`() {
-        val prompt = builder.build(compactInput())
-        assertTrue(prompt.contains("Dublin"))
-    }
-
-    @Test fun `COMPACT includes weather`() {
-        val prompt = builder.build(compactInput())
-        assertTrue(
-            prompt.contains("12") ||
-                prompt.contains("overcast", ignoreCase = true),
-        )
-    }
-
     // ── Token budget ──────────────────────────────────────────
 
     @Test fun `FULL stays under 500 words`() {
@@ -162,7 +108,6 @@ class SystemPromptBuilderTest {
             builder.build(
                 SystemPromptInput(
                     tier = SystemPromptTier.FULL,
-                    userContext = UserContext(),
                 ),
             )
         assertTrue(prompt.isNotBlank())
@@ -174,7 +119,6 @@ class SystemPromptBuilderTest {
             builder.build(
                 SystemPromptInput(
                     tier = SystemPromptTier.COMPACT,
-                    userContext = UserContext(),
                 ),
             )
         assertTrue(prompt.isNotBlank())
@@ -189,21 +133,7 @@ class SystemPromptBuilderTest {
         tools: List<String> = emptyList(),
     ) = SystemPromptInput(
         tier = SystemPromptTier.FULL,
-        userContext =
-            UserContext(
-                hourOfDay = 8,
-                userName = name,
-                location = LocationContext(city = "Dublin", country = "Ireland"),
-                health = HealthContext(stepsToday = 5000, sleepLastNightMinutes = 420),
-                screenTime = ScreenTimeContext(todayMinutes = 90),
-                notifications = NotificationContext(unreadCount = 3),
-            ),
-        weather =
-            WeatherContext(
-                temperatureCelsius = 12.0,
-                conditionDescription = "Overcast",
-                conditionCode = 3,
-            ),
+        userName = name,
         dayOfWeek = dayOfWeek,
         deviceTierName = "Flagship",
         contextWindowTokens = 4096,
@@ -213,19 +143,7 @@ class SystemPromptBuilderTest {
     private fun compactInput(name: String = "Kev") =
         SystemPromptInput(
             tier = SystemPromptTier.COMPACT,
-            userContext =
-                UserContext(
-                    hourOfDay = 14,
-                    userName = name,
-                    location = LocationContext(city = "Dublin", country = "Ireland"),
-                    health = HealthContext(sleepLastNightMinutes = 420),
-                ),
-            weather =
-                WeatherContext(
-                    temperatureCelsius = 12.0,
-                    conditionDescription = "Overcast",
-                    conditionCode = 3,
-                ),
+            userName = name,
             dayOfWeek = "Thursday",
         )
 }

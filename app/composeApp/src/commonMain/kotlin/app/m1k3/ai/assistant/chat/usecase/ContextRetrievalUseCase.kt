@@ -133,7 +133,7 @@ class ContextRetrievalUseCase(
     /**
      * Check if RAG is enabled in preferences.
      */
-    override fun isRagEnabled(): Boolean = preferences.getBoolean(PreferenceKeys.RAG_ENABLED, false)
+    override fun isRagEnabled(): Boolean = preferences.getBoolean(PreferenceKeys.RAG_ENABLED, true)
 
     /**
      * Get the memory topK value based on device tier.

@@ -2,7 +2,6 @@ package app.m1k3.ai.assistant.ui.components
 
 import app.m1k3.ai.assistant.chat.ChatUiState
 import app.m1k3.ai.assistant.chat.GenerationState
-import app.m1k3.ai.assistant.chat.SessionEcoStats
 import app.m1k3.ai.domain.ai.LlmModel
 
 /**
@@ -14,7 +13,6 @@ import app.m1k3.ai.domain.ai.LlmModel
 data class ChatContextBarState(
     val currentModel: LlmModel,
     val contextPercent: Int,
-    val ecoStats: SessionEcoStats,
     val lastTokensPerSecond: Float?,
     val status: ChatContextBarStatus,
 ) {
@@ -37,7 +35,6 @@ data class ChatContextBarState(
             return ChatContextBarState(
                 currentModel = uiState.currentModel,
                 contextPercent = percent,
-                ecoStats = uiState.sessionEcoStats,
                 lastTokensPerSecond = tokensPerSecond,
                 status = status,
             )

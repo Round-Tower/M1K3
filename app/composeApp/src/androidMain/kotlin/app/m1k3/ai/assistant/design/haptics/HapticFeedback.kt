@@ -7,7 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
 
 /**
- * 間 AI Haptic Feedback System
+ * M1K3 Haptic Feedback System
  *
  * Provides tactile feedback for user interactions:
  * - Light touch feedback for typing, button presses

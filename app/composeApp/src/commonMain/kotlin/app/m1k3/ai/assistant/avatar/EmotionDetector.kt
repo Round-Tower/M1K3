@@ -1,7 +1,7 @@
 package app.m1k3.ai.assistant.avatar
 
 /**
- * 間 AI Emotion Detection Engine
+ * M1K3 Emotion Detection Engine
  *
  * Analyzes text messages to detect emotional content and determine
  * appropriate avatar reactions. Uses keyword matching and regex patterns.

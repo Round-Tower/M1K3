@@ -53,45 +53,10 @@ val LocalSharedAvatarVM =
  * val avatarState by LocalSharedAvatarState.current
  *     ?: return // Handle null case
  *
- * AvatarView(state = avatarState, modifier = Modifier.size(100.dp))
+ * DotMatrixAvatar(state = avatarState, modifier = Modifier.size(100.dp))
  * ```
  */
 val LocalSharedAvatarState =
     staticCompositionLocalOf<AvatarState?> {
         null
-    }
-
-/**
- * Provides the currently selected avatar model ID.
- *
- * Wrapped in [androidx.compose.runtime.State] so that Avatar3D renderers
- * recompose when the user picks a new avatar in the gallery.
- *
- * MurphySig: kev+claude / confidence 0.85 / 2026-04-19
- * Rationale: picker writes to prefs AND to this state so any open
- * avatar view swaps models live without a process restart.
- */
-val LocalSelectedAvatarId =
-    staticCompositionLocalOf<androidx.compose.runtime.State<String>> {
-        androidx.compose.runtime.mutableStateOf(ModelRegistry.DEFAULT_MODEL_ID)
-    }
-
-/**
- * Opt-in gate for the toolbar's 3D avatar. Defaults to FALSE so nothing
- * speculatively mounts a Filament scene before the current screen decides.
- *
- * Why false-by-default: the previous default-true raced with ChatScreen's
- * LaunchedEffect(preConversation) — for the first composition frame of an
- * empty chat we had hero + header + toolbar all alive (refCount=3), and
- * the aggregate Vulkan image-memory demand crashed the GPU allocator with
- * VK_ERROR_OUT_OF_HOST_MEMORY, cascading into a system-wide OOM wave
- * (Pixel 9a, 2026-04-19 21:16). Flipping the default to false means the
- * toolbar only mounts its 3D surface after ChatScreen explicitly opts in
- * once the chat has progressed past pre-conversation.
- *
- * MurphySig: kev+claude / confidence 0.85 / 2026-04-19
- */
-val LocalShowToolbarAvatar =
-    staticCompositionLocalOf<androidx.compose.runtime.State<Boolean>> {
-        androidx.compose.runtime.mutableStateOf(false)
     }

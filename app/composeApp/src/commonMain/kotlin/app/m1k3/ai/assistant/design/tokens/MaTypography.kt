@@ -68,9 +68,12 @@ val MaTypography =
                 lineHeight = 36.sp,
                 letterSpacing = 0.sp,
             ),
+        // headlineSmall carries multi-line copy (onboarding taglines, error
+        // text) — never the blocky brand font at that length; Silkscreen
+        // stays for headlineMedium/Large's short, single-line moments.
         headlineSmall =
             TextStyle(
-                fontFamily = MaFontFamilyBrand,
+                fontFamily = MaFontFamilyBody,
                 fontWeight = FontWeight.Normal,
                 fontSize = 24.sp,
                 lineHeight = 32.sp,
@@ -78,12 +81,18 @@ val MaTypography =
             ),
         // ============================================
         // Title Styles - Component headers, app bars
-        // Uses Silkscreen for consistent branding in UI components
+        //
+        // Normal type, not the brand pixel font. The pixel font is a
+        // costume M1K3 wears (his face, the wordmark, waking-up moments) —
+        // never Apple/Android's own chrome (screen titles, dialog titles,
+        // rendered markdown headings). See macos/docs/DESIGN_DOCTRINE.md
+        // principles 1–2. Screen titles ("Settings", "Memories",
+        // "Conversations") default to this role via TopAppBar.
         // ============================================
         titleLarge =
             TextStyle(
-                fontFamily = MaFontFamilyBrand,
-                fontWeight = FontWeight.Normal,
+                fontFamily = MaFontFamilyBody,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 22.sp,
                 lineHeight = 28.sp,
                 letterSpacing = 0.sp,

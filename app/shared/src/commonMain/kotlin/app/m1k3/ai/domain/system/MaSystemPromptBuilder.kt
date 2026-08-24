@@ -1,8 +1,5 @@
 package app.m1k3.ai.domain.system
 
-import app.m1k3.ai.domain.context.UserContext
-import app.m1k3.ai.domain.context.WeatherContext
-
 /**
  * Prompt tier — how much context to inject.
  *
@@ -22,8 +19,7 @@ enum class SystemPromptTier { FULL, COMPACT }
  */
 data class SystemPromptInput(
     val tier: SystemPromptTier,
-    val userContext: UserContext? = null,
-    val weather: WeatherContext? = null,
+    val userName: String? = null,
     val dayOfWeek: String? = null,
     /**
      * Human-readable date (e.g. "April 19, 2026"). Injected so the model
@@ -33,8 +29,20 @@ data class SystemPromptInput(
     val currentDate: String? = null,
     val deviceTierName: String? = null,
     val contextWindowTokens: Int? = null,
-    val lifetimeCo2SavedG: Long? = null,
     val availableTools: List<String> = emptyList(),
+    /**
+     * Teach the `<artifact type="html">` output format. Big-tier only: a 0.8B
+     * brain taught the format reached for it on "what can you help me with?"
+     * (2026-08-22 emulator walk). Small brains answer in markdown.
+     */
+    val teachesArtifacts: Boolean = false,
+    /**
+     * Invite the model to reason privately before answering. Big only — see
+     * [app.m1k3.ai.domain.ai.ThinkingPolicy]. Syntax-neutral by design: the
+     * chat template drives the actual thinking channel (Qwen `<think>`, Gemma
+     * `<|channel>thought`), so the prompt must not name either (F6).
+     */
+    val teachesThinking: Boolean = true,
 )
 
 /**
@@ -59,7 +67,7 @@ class MaSystemPromptBuilder {
     private fun buildFull(input: SystemPromptInput): String =
         buildString {
             // Soul first
-            appendLine(M1K3_ETHOS)
+            appendLine(M1K3Persona.ethos)
             appendLine()
 
             // Anchor the model in current time — stops Qwen defaulting to
@@ -70,64 +78,10 @@ class MaSystemPromptBuilder {
             }
 
             // Who the user is
-            val ctx = input.userContext
-            if (ctx != null && ctx.hasAnyContext) {
+            if (input.userName != null || input.dayOfWeek != null) {
                 appendLine("--- What you know about this person right now ---")
-                ctx.userName?.let { appendLine("Name: $it") }
-                ctx.location?.let {
-                    val loc =
-                        buildString {
-                            it.city?.let { c -> append(c) }
-                            it.country?.let { c -> append(", $c") }
-                        }
-                    if (loc.isNotBlank()) appendLine("Location: $loc")
-                }
-                val timeLabel =
-                    buildString {
-                        val tod =
-                            when (ctx.hourOfDay) {
-                                in 5..11 -> "morning"
-                                in 12..17 -> "afternoon"
-                                in 18..21 -> "evening"
-                                else -> "night"
-                            }
-                        input.dayOfWeek?.let { append("$it ") }
-                        append(tod)
-                    }
-                appendLine("Time: $timeLabel")
-
-                // Weather
-                val weather = input.weather ?: ctx.weather
-                weather?.let { appendLine("Weather: ${it.summary}") }
-
-                // Health
-                ctx.health?.let { h ->
-                    val parts = mutableListOf<String>()
-                    h.sleepLastNightMinutes?.let {
-                        parts += "${it / 60}h${if (it % 60 > 0) " ${it % 60}m" else ""} sleep"
-                    }
-                    h.stepsToday?.let { parts += "${formatSteps(it)} steps" }
-                    h.heartRateLatestBpm?.let { parts += "${it}bpm" }
-                    if (parts.isNotEmpty()) appendLine("Health: ${parts.joinToString(" · ")}")
-                }
-
-                // Screen time
-                ctx.screenTime?.let {
-                    if (it.todayMinutes > 0) {
-                        val h = it.todayMinutes / 60
-                        val m = it.todayMinutes % 60
-                        val label = if (h > 0) "${h}h${if (m > 0) " ${m}m" else ""}" else "${m}m"
-                        appendLine("Screen time: $label today")
-                    }
-                }
-
-                // Notifications
-                ctx.notifications?.let {
-                    if (it.unreadCount > 0) {
-                        appendLine("Notifications: ${it.unreadCount} unread")
-                    }
-                }
-
+                input.userName?.let { appendLine("Name: $it") }
+                input.dayOfWeek?.let { appendLine("Day: $it") }
                 appendLine()
             }
 
@@ -137,15 +91,6 @@ class MaSystemPromptBuilder {
                 input.deviceTierName?.let { appendLine("Tier: $it") }
                 input.contextWindowTokens?.let { appendLine("Context window: $it tokens") }
                 appendLine()
-            }
-
-            // Eco context — M1K3's quiet pride
-            input.lifetimeCo2SavedG?.let {
-                if (it > 0) {
-                    val display = if (it >= 1000) "${it / 1000.0}kg" else "${it}g"
-                    appendLine("Lifetime CO₂ saved by running locally: $display")
-                    appendLine()
-                }
             }
 
             // Tool calling — imperative for small models. Qwen3 0.6B-class
@@ -161,63 +106,51 @@ class MaSystemPromptBuilder {
                 appendLine()
             }
 
-            // HTML Artifact output — for interactive/visual responses
             appendLine("--- Output format ---")
             appendLine("Use markdown for all text responses: **bold**, *italic*, `code`, lists, headings.")
             appendLine("Never output raw HTML tags (<p>, <ul>, <li>, <strong> etc.) in plain text responses.")
-            appendLine("Only use HTML inside <artifact id=\"...\"> tags for genuinely interactive content")
-            appendLine("(charts, timers, calculators). For conversation and explanations: plain markdown only.")
+            if (input.teachesArtifacts) {
+                // HTML Artifact output — for interactive/visual responses (Big only)
+                appendLine("Only use HTML inside <artifact id=\"...\"> tags for genuinely interactive content")
+                appendLine("(charts, timers, calculators). For conversation and explanations: plain markdown only.")
+            }
             appendLine()
 
-            // Thinking instruction — coax all models into using think tags
-            appendLine("--- Thinking ---")
-            appendLine("Before responding, reason inside <think>...</think> tags. The user won't see this — it's your private stage.")
-            appendLine()
+            // Thinking instruction — Big-tier only, and syntax-neutral (F6,
+            // 2026-08-22). Guarded by teachesThinking so a thinking-OFF Qwen is
+            // never told to open a <think> block (it would dump its reasoning —
+            // wiring and all — into the visible answer). And we never name
+            // <think>: the only tier here is Gemma 4, whose channel is
+            // <|channel>thought; the template drives the real thinking now that
+            // reasoning_format=AUTO (F2). The prompt only invites it.
+            if (input.teachesThinking) {
+                appendLine("--- Thinking ---")
+                appendLine("Reason privately before you answer — the user sees only your final reply.")
+                appendLine()
+            }
 
             // Final instruction
-            appendLine("Now — be M1K3. Sharp. Dry. Useful. Go.")
+            appendLine("Now — be M1K3. Warm, dry, useful. Go.")
         }
 
     // ── COMPACT ───────────────────────────────────────────────
 
     private fun buildCompact(input: SystemPromptInput): String {
-        val ctx = input.userContext
-        val name = ctx?.userName?.let { "$it · " } ?: ""
+        val name = input.userName?.let { "$it · " } ?: ""
+        val day = input.dayOfWeek?.let { "$it" } ?: ""
 
-        val location = ctx?.location?.city?.let { "$it · " } ?: ""
-
-        val weather =
-            (input.weather ?: ctx?.weather)?.let {
-                "${it.conditionDescription.lowercase()} ${it.displayTemperature} · "
-            } ?: ""
-
-        val timeLabel =
-            ctx?.let {
-                val tod =
-                    when (it.hourOfDay) {
-                        in 5..11 -> "morning"
-                        in 12..17 -> "afternoon"
-                        in 18..21 -> "evening"
-                        else -> "night"
-                    }
-                "${input.dayOfWeek?.let { d -> "$d " } ?: ""}$tod"
-            } ?: ""
-
-        val sleep =
-            ctx?.health?.sleepLastNightMinutes?.let {
-                " · ${it / 60}h sleep"
-            } ?: ""
-
-        val contextLine = "${name}${location}${weather}${timeLabel}$sleep".trimEnd(' ', '·').trim()
+        val contextLine = "$name$day".trimEnd(' ', '·').trim()
 
         return buildString {
-            append(
-                "You are M1K3 — on-device only, sharp, dry. Short when short works. No corporate filler — never \"certainly\" or \"great question.\" Think before you speak — wrap reasoning in <think>...</think> tags.",
-            )
+            append(M1K3Persona.compactWiring)
+            if (input.teachesThinking) append(" Reason privately before answering — the user sees only your reply.")
             appendLine()
-            append(
-                "Use markdown. For interactive content (charts, timers, calculators), wrap in <artifact id=\"...\" type=\"html\">...</artifact> tags.",
-            )
+            append("Use markdown.")
+            if (input.teachesArtifacts) {
+                append(
+                    " For interactive content (charts, timers, calculators), wrap in <artifact id=\"...\" type=\"html\">...</artifact> tags.",
+                )
+            }
             input.currentDate?.let {
                 appendLine()
                 append("Today is $it.")
@@ -228,27 +161,9 @@ class MaSystemPromptBuilder {
             }
         }
     }
-
-    private fun formatSteps(steps: Long): String =
-        if (steps >= 1000) {
-            "${steps / 1000},${(steps % 1000).toString().padStart(3, '0')}"
-        } else {
-            "$steps"
-        }
 }
 
 // ─────────────────────────────────────────────────────────────
-// M1K3 Ethos — the soul. Refine this over time.
+// M1K3 Ethos — the soul. Now lives on [M1K3Persona] (single source, so the
+// output leak guard fingerprints exactly what the builder injects).
 // ─────────────────────────────────────────────────────────────
-
-private const val M1K3_ETHOS = """You are M1K3. You live on this device — no cloud, no servers, ever.
-
-You're sharp, a bit dry, and allergic to corporate-assistant filler. No "certainly!" No "great question!" No mealy-mouthed hedging or corporate pleasantries.
-
-Short answers when short works. Longer when it earns it. You don't pad. You don't apologise for existing.
-
-You have opinions. You push back when the user's wrong — respectfully, not combatively. You celebrate when they're right — briefly, not performatively. You're on their side, not neutral.
-
-You know this person — their name, city, how they slept, what's on their screen. You don't recite it. You use it like someone who's actually paying attention.
-
-Everything stays on-device. Their data is theirs. Running locally is the point, not a feature you brag about."""

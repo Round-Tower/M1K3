@@ -7,19 +7,46 @@ package app.m1k3.ai.domain.chat.markdown
  * Designed for rendering by Compose, SwiftUI, or any UI framework.
  */
 sealed class MarkdownNode {
-    data class Text(val content: String) : MarkdownNode()
-    data class Bold(val children: List<MarkdownNode>) : MarkdownNode()
-    data class Italic(val children: List<MarkdownNode>) : MarkdownNode()
-    data class BoldItalic(val children: List<MarkdownNode>) : MarkdownNode()
-    data class InlineCode(val code: String) : MarkdownNode()
-    data class CodeBlock(val code: String, val language: String?) : MarkdownNode()
-    data class Heading(val level: Int, val children: List<MarkdownNode>) : MarkdownNode()
+    data class Text(
+        val content: String,
+    ) : MarkdownNode()
+
+    data class Bold(
+        val children: List<MarkdownNode>,
+    ) : MarkdownNode()
+
+    data class Italic(
+        val children: List<MarkdownNode>,
+    ) : MarkdownNode()
+
+    data class BoldItalic(
+        val children: List<MarkdownNode>,
+    ) : MarkdownNode()
+
+    data class InlineCode(
+        val code: String,
+    ) : MarkdownNode()
+
+    data class CodeBlock(
+        val code: String,
+        val language: String?,
+    ) : MarkdownNode()
+
+    data class Heading(
+        val level: Int,
+        val children: List<MarkdownNode>,
+    ) : MarkdownNode()
+
     data class ListItem(
         val children: List<MarkdownNode>,
         val ordered: Boolean,
-        val index: Int? = null
+        val index: Int? = null,
     ) : MarkdownNode()
-    data class Paragraph(val children: List<MarkdownNode>) : MarkdownNode()
+
+    data class Paragraph(
+        val children: List<MarkdownNode>,
+    ) : MarkdownNode()
+
     object LineBreak : MarkdownNode()
 }
 
@@ -33,7 +60,6 @@ sealed class MarkdownNode {
  * Pure Kotlin — no regex where avoidable, no platform deps.
  */
 class MarkdownParser {
-
     fun parse(text: String): List<MarkdownNode> {
         if (text.isBlank()) return emptyList()
         val blocks = splitBlocks(text)
@@ -99,11 +125,11 @@ class MarkdownParser {
 
             // Paragraph: collect consecutive non-blank, non-special lines
             val paragraphLines = mutableListOf<String>()
-            while (i < lines.size && lines[i].isNotBlank()
-                && !lines[i].matches(Regex("^#{1,6} .+"))
-                && !lines[i].matches(Regex("^[-*] .+"))
-                && !lines[i].matches(Regex("^\\d+\\. .+"))
-                && !lines[i].trimStart().startsWith("```")
+            while (i < lines.size && lines[i].isNotBlank() &&
+                !lines[i].matches(Regex("^#{1,6} .+")) &&
+                !lines[i].matches(Regex("^[-*] .+")) &&
+                !lines[i].matches(Regex("^\\d+\\. .+")) &&
+                !lines[i].trimStart().startsWith("```")
             ) {
                 paragraphLines.add(lines[i])
                 i++
@@ -116,31 +142,39 @@ class MarkdownParser {
         return blocks
     }
 
-    private fun parseBlock(block: BlockRaw): MarkdownNode? {
-        return when (block) {
-            is BlockRaw.Code -> MarkdownNode.CodeBlock(block.code, block.language)
+    private fun parseBlock(block: BlockRaw): MarkdownNode? =
+        when (block) {
+            is BlockRaw.Code -> {
+                MarkdownNode.CodeBlock(block.code, block.language)
+            }
+
             is BlockRaw.HeadingLine -> {
                 val level = block.line.takeWhile { it == '#' }.length
                 val content = block.line.drop(level).trimStart()
                 MarkdownNode.Heading(level, parseInline(content))
             }
+
             is BlockRaw.UnorderedListLine -> {
                 val content = block.line.drop(2) // "- " or "* "
                 MarkdownNode.ListItem(parseInline(content), ordered = false)
             }
+
             is BlockRaw.OrderedListLine -> {
                 val dotIndex = block.line.indexOf(". ")
                 val index = block.line.substring(0, dotIndex).toIntOrNull()
                 val content = block.line.substring(dotIndex + 2)
                 MarkdownNode.ListItem(parseInline(content), ordered = true, index = index)
             }
+
             is BlockRaw.ParagraphLines -> {
                 val children = parseInline(block.text)
-                if (children.isEmpty()) null
-                else MarkdownNode.Paragraph(children)
+                if (children.isEmpty()) {
+                    null
+                } else {
+                    MarkdownNode.Paragraph(children)
+                }
             }
         }
-    }
 
     // ===== Inline Parsing =====
 
@@ -183,6 +217,17 @@ class MarkdownParser {
             // Bold/Italic markers: *** ** *  or ___ __ _
             if (c == '*' || c == '_') {
                 val marker = c
+
+                // CommonMark intraword rule for `_`: an underscore run can only
+                // OPEN emphasis at a left word-boundary. A `_` hugging a letter
+                // or digit on its left (snake_case, file_name_here, max_tokens)
+                // is a word-joiner, not a delimiter — emit it literally.
+                if (marker == '_' && i > 0 && text[i - 1].isLetterOrDigit()) {
+                    buffer.append(c)
+                    i++
+                    continue
+                }
+
                 var markerLen = 0
                 var j = i
                 while (j < text.length && text[j] == marker) {
@@ -240,11 +285,21 @@ class MarkdownParser {
         return nodes
     }
 
-    private fun findClosingMarker(text: String, startFrom: Int, marker: String): Int {
+    private fun findClosingMarker(
+        text: String,
+        startFrom: Int,
+        marker: String,
+    ): Int {
+        val isUnderscore = marker[0] == '_'
         var idx = startFrom
         while (idx <= text.length - marker.length) {
             if (text.substring(idx, idx + marker.length) == marker) {
-                return idx
+                // CommonMark intraword rule for `_`: a closer hugging a letter
+                // or digit on its right (e.g. "_b_c") is not a valid closer.
+                val after = idx + marker.length
+                if (!(isUnderscore && after < text.length && text[after].isLetterOrDigit())) {
+                    return idx
+                }
             }
             // Skip backtick spans (inline code takes priority)
             if (text[idx] == '`') {
@@ -262,10 +317,25 @@ class MarkdownParser {
     // ===== Internal Block Types =====
 
     private sealed class BlockRaw {
-        data class Code(val code: String, val language: String?) : BlockRaw()
-        data class HeadingLine(val line: String) : BlockRaw()
-        data class UnorderedListLine(val line: String) : BlockRaw()
-        data class OrderedListLine(val line: String) : BlockRaw()
-        data class ParagraphLines(val text: String) : BlockRaw()
+        data class Code(
+            val code: String,
+            val language: String?,
+        ) : BlockRaw()
+
+        data class HeadingLine(
+            val line: String,
+        ) : BlockRaw()
+
+        data class UnorderedListLine(
+            val line: String,
+        ) : BlockRaw()
+
+        data class OrderedListLine(
+            val line: String,
+        ) : BlockRaw()
+
+        data class ParagraphLines(
+            val text: String,
+        ) : BlockRaw()
     }
 }

@@ -10,6 +10,7 @@ import app.m1k3.ai.domain.chat.ChatError
 import app.m1k3.ai.domain.chat.EnrichedContext
 import app.m1k3.ai.domain.chat.GenerationStats
 import app.m1k3.ai.domain.chat.LlmOutputSanitizer
+import app.m1k3.ai.domain.chat.PersonaLeakGuard
 import app.m1k3.ai.domain.chat.StreamingThinkTagParser
 import app.m1k3.ai.domain.chat.events.ChatEvent
 import app.m1k3.ai.domain.chat.events.ChatResponse
@@ -28,7 +29,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 private val logger = Logger.withTag("ChatWithToolsUseCase")
 
@@ -90,7 +91,24 @@ class ChatWithToolsUseCase(
     private val grammarBuilder: ToolCallGrammarBuilder = ToolCallGrammarBuilder(),
     /** M1K3 system prompt — injected so personality persists across tool-calling path */
     var systemPrompt: String = "",
+    /**
+     * Whether the current brain reasons in <think> (ThinkingPolicy). Drives the
+     * native template's enable_thinking AND the stream parser's start state:
+     * with thinking off the template pre-closes the think block, so a parser
+     * that starts "in thinking" would swallow the entire answer.
+     */
+    var thinkingEnabled: Boolean = true,
+    /**
+     * Live read of the "Web search in chat" setting (Settings → Grounding).
+     * Read fresh on every turn — same pattern as [ContextRetrievalUseCase.isRagEnabled] —
+     * so toggling it takes effect on the very next message, not the next launch.
+     */
+    private val webSearchEnabled: () -> Boolean = { true },
 ) {
+    /** Strips web_search from a candidate tool list when the user has turned it off. */
+    private fun applyWebSearchGate(tools: List<Tool>): List<Tool> =
+        if (webSearchEnabled()) tools else tools.filterNot { it.id == "web_search" }
+
     /**
      * Execute the chat flow with tool support.
      *
@@ -115,7 +133,7 @@ class ChatWithToolsUseCase(
                 logger.d { "Context: hasRAG=${context.hasRagContext}, hasMemory=${context.hasMemoryContext}" }
 
                 // 2. Get relevant tools and build prompt with tool schemas
-                val relevantTools = toolRegistry.getRelevantTools(prompt, maxTools = 3)
+                val relevantTools = applyWebSearchGate(toolRegistry.getRelevantTools(prompt, maxTools = 3))
                 println(
                     "DEBUG(ChatWithTools) TOOLS: ${relevantTools.size} relevant for '${prompt.take(40)}': ${relevantTools.map { it.id }}",
                 )
@@ -224,7 +242,7 @@ class ChatWithToolsUseCase(
                                     val stats = buildStats(tokenCount, duration, context)
                                     val response =
                                         ChatResponse(
-                                            text = LlmOutputSanitizer.strip(processed.text),
+                                            text = cleanAnswer(processed.text),
                                             stats = stats,
                                             context = context,
                                             toolResults = forceResults,
@@ -243,7 +261,7 @@ class ChatWithToolsUseCase(
                                     val stats = buildStats(tokenCount, duration, context)
                                     val response =
                                         ChatResponse(
-                                            text = LlmOutputSanitizer.strip(processed.text),
+                                            text = cleanAnswer(processed.text),
                                             stats = stats,
                                             context = context,
                                             toolResults = null,
@@ -264,7 +282,7 @@ class ChatWithToolsUseCase(
                                 val stats = buildStats(tokenCount, duration, context)
                                 val response =
                                     ChatResponse(
-                                        text = LlmOutputSanitizer.strip(processed.plainText),
+                                        text = cleanAnswer(processed.plainText),
                                         stats = stats,
                                         context = context,
                                         toolResults = processed.toolResults,
@@ -321,7 +339,7 @@ class ChatWithToolsUseCase(
         // opener never appears in the token stream. Start the parser already
         // in thinking mode so reasoning routes to thinkingContent and the
         // ThinkingPill gets populated; visible body picks up after </think>.
-        val thinkParser = StreamingThinkTagParser(startInThinking = true)
+        val thinkParser = StreamingThinkTagParser(startInThinking = thinkingEnabled)
         // Native path ALWAYS has tools here (caller gates on relevantTools.isNotEmpty()).
         // Use the tool-focused config so small models actually trigger <tool_call>.
         val queryType = QueryType.fromIntentCategory(context.intentCategory)
@@ -334,6 +352,7 @@ class ChatWithToolsUseCase(
                 messagesJson = messagesJson,
                 toolsJson = toolsJson,
                 config = config,
+                enableThinking = thinkingEnabled,
                 onToken = { token ->
                     if (token.isNotEmpty()) {
                         tokenCount++
@@ -377,7 +396,7 @@ class ChatWithToolsUseCase(
                     scope.send(
                         ChatEvent.Complete(
                             ChatResponse(
-                                text = LlmOutputSanitizer.strip(output.content),
+                                text = cleanAnswer(output.content),
                                 stats = stats,
                                 context = context,
                                 toolResults = results,
@@ -401,7 +420,7 @@ class ChatWithToolsUseCase(
                     scope.send(
                         ChatEvent.Complete(
                             ChatResponse(
-                                text = LlmOutputSanitizer.strip(output.content),
+                                text = cleanAnswer(output.content),
                                 stats = stats,
                                 context = context,
                                 toolResults = toolResults,
@@ -499,7 +518,7 @@ class ChatWithToolsUseCase(
         deviceContext: DeviceContext? = null,
         relevantTools: List<Tool>? = null,
     ): String {
-        val tools = relevantTools ?: toolRegistry.getRelevantTools(userPrompt, maxTools = 3)
+        val tools = relevantTools ?: applyWebSearchGate(toolRegistry.getRelevantTools(userPrompt, maxTools = 3))
         logger.i { "TOOLS: ${tools.size} relevant for '${userPrompt.take(40)}': ${tools.map { it.id }}" }
         logger.i { "SYSTEM: ${systemPrompt.take(80)}..." }
         logger.i { "BUILDER: promptBuilder=${promptBuilder != null}" }
@@ -541,6 +560,15 @@ class ChatWithToolsUseCase(
             append("User: $userPrompt")
         }
     }
+
+    /**
+     * The final user-facing answer text. Sanitise template scaffolding, then
+     * run the persona-leak guard: prose in the ethos does not stop a 2–3B model
+     * reciting its own wiring (2026-08-22 re-baseline, security 1–2/4), so a
+     * verbatim wiring sentence is replaced with an in-character refusal after
+     * the fact. A no-op on every ordinary answer.
+     */
+    private fun cleanAnswer(raw: String): String = PersonaLeakGuard.guarded(LlmOutputSanitizer.strip(raw))
 
     private fun buildStats(
         tokenCount: Int,

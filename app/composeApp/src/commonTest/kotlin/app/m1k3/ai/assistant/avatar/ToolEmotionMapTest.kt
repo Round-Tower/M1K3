@@ -18,12 +18,6 @@ class ToolEmotionMapTest {
     }
 
     @Test
-    fun `get_health is LOVE on success`() {
-        val emotion = ToolEmotionMap.emotionFor("get_health", ToolCategory.DEVICE_INFO, success = true)
-        assertEquals(AvatarEmotion.LOVE, emotion)
-    }
-
-    @Test
     fun `app launcher is HAPPY on success`() {
         val emotion = ToolEmotionMap.emotionFor("open_camera", ToolCategory.APPS, success = true)
         assertEquals(AvatarEmotion.HAPPY, emotion)

@@ -1,58 +1,51 @@
 [versions]
-agp = "9.0.1"
+agp = "9.3.1"
 android-compileSdk = "36"
 android-minSdk = "27"
 android-targetSdk = "36"
-androidx-activity = "1.11.0"
-androidx-core = "1.17.0"
+androidx-activity = "1.13.0"
+androidx-core = "1.19.0"
 androidx-espresso = "3.7.0"
-androidx-lifecycle = "2.9.5"
-androidx-navigation = "2.9.1"
+androidx-lifecycle = "2.10.0"
+androidx-navigation = "2.9.2"
 androidx-testExt = "1.3.0"
 androidx-testCore = "1.7.0"
-robolectric = "4.14.1"
-composeHotReload = "1.0.0-rc02"
-composeMultiplatform = "1.9.2"
+robolectric = "4.16.1"
+composeHotReload = "1.2.0"
+composeMultiplatform = "1.11.1"
 junit = "4.13.2"
-kotlin = "2.2.20"
-kotlinx-coroutines = "1.10.2"
+kotlin = "2.4.10"
+kotlinx-coroutines = "1.11.0"
 
 # NDK pin — reproducible native builds (llama.cpp submodule).
 # Bump this file to bump CI/local. Matches installed ~/Library/Android/sdk/ndk/.
 ndk = "28.2.13676358"
 
-androidx-work = "2.10.1"
-
-# Legacy Play Core — split-install APIs for the (currently parked)
-# dynamic feature modules. Modern replacement is feature-delivery:2.1.0
-# when/if :codingModule and :gemmaEmbedding come back online.
-play-core = "1.10.3"
-play-core-ktx = "1.8.1"
-compose-webview-multiplatform = "2.0.3"
+androidx-work = "2.11.2"
 
 # M1K3 AI Dependencies
-sqldelight = "2.0.2"
-onnxruntime = "1.23.2"
-camerax = "1.4.0"
-mlkit-vision = "17.3.0"
-mlkit-imageLabeling = "17.0.9"
-mlkit-visionInternalVkp = "18.2.3"
-mlkit-text = "19.0.0"
-mlkit-objects = "17.0.1"
-mlkit-genai-prompt = "1.0.0-beta2"
-mlkit-genai-summarization = "1.0.0-beta1"
-kotlinx-serialization = "1.7.3"
-kotlinx-datetime = "0.6.2"
-sqlcipher = "4.14.1"
+sqldelight = "2.3.2"
+onnxruntime = "1.29.0"
+kotlinx-serialization = "1.11.0"
+kotlinx-datetime = "0.8.0"
+sqlcipher = "4.17.0"
 androidx-security = "1.1.0-alpha06"
-compose-ui-text-googlefonts = "1.9.5"
-jvector = "3.0.0"
-sceneview = "2.3.0"
-kermit = "2.0.4"
-koin-core = "4.1.0"
-koin-compose = "4.1.0"
-health-connect = "1.1.0-rc01"
-play-services-location = "21.3.0"
+compose-ui-text-googlefonts = "1.11.1"
+jvector = "3.0.6"
+kermit = "2.1.0"
+koin-core = "4.2.2"
+koin-compose = "4.2.2"
+
+# ML Kit GenAI Prompt API (Gemini Nano / AICore) — Mini M1K3's system-model
+# brain when the device has one. Verified latest via maven-metadata.xml
+# 2026-08-22. See docs/adr/0007-system-model-gemini-nano.md.
+mlkit-genai-prompt = "1.0.0-beta4"
+
+# Filament core (com.google.android.filament) — the 3D Phosphor Fox
+# companion. SceneView was cut in the reduction and tops out at 2.3.0
+# (incompatible with this toolchain); Filament core is version-independent
+# of Compose/Kotlin metadata. Latest verified on Maven Central 2026-08-23.
+filament = "1.75.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -81,32 +74,16 @@ androidx-security-crypto = { module = "androidx.security:security-crypto", versi
 
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 jvector = { module = "io.github.jbellis:jvector", version.ref = "jvector" }
-
-camerax-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }
-camerax-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
-camerax-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
-camerax-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
-
-mlkit-vision = { module = "com.google.mlkit:vision-common", version.ref = "mlkit-vision" }
-mlkit-text-recognition = { module = "com.google.android.gms:play-services-mlkit-text-recognition", version = "19.0.1" }
-mlkit-objectdetection = { module = "com.google.android.gms:play-services-mlkit-image-labeling", version = "16.0.8" }
-mlkit-image-labeling = { module = "com.google.mlkit:image-labeling", version.ref = "mlkit-imageLabeling" }
-mlkit-vision-internal-vkp = { module = "com.google.mlkit:vision-internal-vkp", version.ref = "mlkit-visionInternalVkp" }
 mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkit-genai-prompt" }
-mlkit-genai-summarization = { module = "com.google.mlkit:genai-summarization", version.ref = "mlkit-genai-summarization" }
+
+filament-android = { module = "com.google.android.filament:filament-android", version.ref = "filament" }
+filament-gltfio = { module = "com.google.android.filament:gltfio-android", version.ref = "filament" }
+filament-utils = { module = "com.google.android.filament:filament-utils-android", version.ref = "filament" }
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
 compose-ui-text-googlefonts = { module = "androidx.compose.ui:ui-text-google-fonts", version.ref = "compose-ui-text-googlefonts" }
-
-compose-webview-multiplatform = { module = "io.github.kevinnzou:compose-webview-multiplatform", version.ref = "compose-webview-multiplatform" }
-
-# Legacy Play Core (split-install for dynamic features, currently parked).
-play-core = { module = "com.google.android.play:core", version.ref = "play-core" }
-play-core-ktx = { module = "com.google.android.play:core-ktx", version.ref = "play-core-ktx" }
-
-sceneview = { module = "io.github.sceneview:sceneview", version.ref = "sceneview" }
 
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin-core" }
@@ -114,10 +91,6 @@ koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin-com
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin-core" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin-core" }
 koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin-core" }
-
-# User context — local intelligence
-health-connect = { module = "androidx.health.connect:connect-client", version.ref = "health-connect" }
-play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

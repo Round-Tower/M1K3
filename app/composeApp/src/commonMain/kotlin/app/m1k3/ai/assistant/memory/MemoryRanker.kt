@@ -2,11 +2,11 @@ package app.m1k3.ai.assistant.memory
 
 import app.m1k3.ai.assistant.database.MemoryMetadata
 import app.m1k3.ai.domain.repositories.VectorSearchResult
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlin.math.exp
 
 /**
- * 間 AI - Memory Ranker
+ * M1K3 - Memory Ranker
  *
  * Composite ranking system for selecting optimal memories for AI context.
  * Balances semantic relevance, recency, importance, and access patterns.

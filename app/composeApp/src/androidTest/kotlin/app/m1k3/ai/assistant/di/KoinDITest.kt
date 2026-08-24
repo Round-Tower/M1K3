@@ -41,7 +41,6 @@ import kotlin.test.assertTrue
  */
 @RunWith(AndroidJUnit4::class)
 class KoinDITest : KoinTest {
-
     @Before
     fun setup() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -159,22 +158,23 @@ class KoinDITest : KoinTest {
 
     @Test
     fun ChatScreenViewModelCanBeCreatedWithCustomProjectid() {
-        val viewModel = getKoin().get<ChatScreenViewModel>() {
-            org.koin.core.parameter.parametersOf("test-project")
-        }
+        val viewModel =
+            getKoin().get<ChatScreenViewModel> {
+                org.koin.core.parameter
+                    .parametersOf("test-project")
+            }
         assertNotNull(viewModel, "ChatScreenViewModel should accept projectId parameter")
     }
 
     @Test
     fun allViewmodelsCanBeInstantiated() {
         // Smoke test: Try to create all ViewModels
-        val viewModels = listOf(
-            getKoin().get<app.m1k3.ai.assistant.app.InitializationViewModel>(),
-            getKoin().get<ChatScreenViewModel>(),
-            getKoin().get<app.m1k3.ai.assistant.coding.CodeGenerationViewModel>(),
-            getKoin().get<app.m1k3.ai.assistant.eco.EcoStatsViewModel>(),
-            getKoin().get<app.m1k3.ai.assistant.history.HistoryViewModel>()
-        )
+        val viewModels =
+            listOf(
+                getKoin().get<app.m1k3.ai.assistant.app.InitializationViewModel>(),
+                getKoin().get<ChatScreenViewModel>(),
+                getKoin().get<app.m1k3.ai.assistant.history.HistoryViewModel>(),
+            )
 
         viewModels.forEach { vm ->
             assertNotNull(vm, "ViewModel should be instantiated: ${vm::class.simpleName}")
@@ -188,17 +188,18 @@ class KoinDITest : KoinTest {
         // This test validates the entire dependency graph by trying to
         // resolve all major dependencies. If any dependency is missing,
         // this will throw NoDefinitionFoundException
-        val criticalDependencies = listOf(
-            getKoin().get<Context>(),
-            getKoin().get<MaDatabase>(),
-            getKoin().get<DeviceInfoProviderInterface>(),
-            getKoin().get<EmbeddingEngine>(), // CRITICAL FIX
-            getKoin().get<BaseLlmEngine>(),
-            getKoin().get<RAGManager>(), // CRITICAL FIX
-            getKoin().get<ToolRegistry>(), // CRITICAL FIX
-            getKoin().get<LlmOutputProcessor>(), // CRITICAL FIX
-            getKoin().get<ChatScreenViewModel>()
-        )
+        val criticalDependencies =
+            listOf(
+                getKoin().get<Context>(),
+                getKoin().get<MaDatabase>(),
+                getKoin().get<DeviceInfoProviderInterface>(),
+                getKoin().get<EmbeddingEngine>(), // CRITICAL FIX
+                getKoin().get<BaseLlmEngine>(),
+                getKoin().get<RAGManager>(), // CRITICAL FIX
+                getKoin().get<ToolRegistry>(), // CRITICAL FIX
+                getKoin().get<LlmOutputProcessor>(), // CRITICAL FIX
+                getKoin().get<ChatScreenViewModel>(),
+            )
 
         criticalDependencies.forEach { dep ->
             assertNotNull(dep, "Dependency should not be null: ${dep::class.simpleName}")
@@ -250,7 +251,7 @@ class KoinDITest : KoinTest {
 
         assertTrue(
             database1 === database2,
-            "MaDatabase should be singleton (same instance)"
+            "MaDatabase should be singleton (same instance)",
         )
     }
 }

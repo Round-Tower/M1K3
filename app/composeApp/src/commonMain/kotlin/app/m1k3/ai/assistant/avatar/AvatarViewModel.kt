@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * 間 AI Avatar ViewModel
+ * M1K3 Avatar ViewModel
  *
  * Central state manager for avatar system:
  * - Tracks current emotion and activity
@@ -342,7 +342,7 @@ fun AvatarViewModel.collectAsState(): State<AvatarState> {
  *     }
  *
  *     // Display avatar
- *     AvatarView(state = avatarState)
+ *     DotMatrixAvatar(state = avatarState)
  * }
  *
  * // Manual emotion control

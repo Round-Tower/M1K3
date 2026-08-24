@@ -9,20 +9,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 import app.m1k3.ai.assistant.database.MaDatabase
 import app.m1k3.ai.assistant.design.haptics.HapticFeedbackType
 import app.m1k3.ai.assistant.design.haptics.rememberHapticFeedback
+import app.m1k3.ai.assistant.design.theme.MaTheme
 import app.m1k3.ai.assistant.design.tokens.MaColors
 import app.m1k3.ai.assistant.design.tokens.MaFontFamilyCaption
 import app.m1k3.ai.assistant.design.tokens.MaSpacing
 import app.m1k3.ai.assistant.design.tokens.MaTypography
-import app.m1k3.ai.assistant.design.theme.MaTheme
-import app.m1k3.ai.assistant.history.collectAsState
 import app.m1k3.ai.assistant.history.HistoryViewModel
+import app.m1k3.ai.assistant.history.collectAsState
 import app.m1k3.ai.assistant.ui.components.*
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -47,7 +47,7 @@ fun HistoryScreen(
     database: MaDatabase,
     projectId: String,
     onBackClick: () -> Unit = {},
-    onConversationClick: (Long) -> Unit = {}
+    onConversationClick: (Long) -> Unit = {},
 ) {
     val haptics = rememberHapticFeedback()
 
@@ -64,19 +64,36 @@ fun HistoryScreen(
     var showDeleteDialog by remember { mutableStateOf<Long?>(null) }
     var showExportDialog by remember { mutableStateOf<Long?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Conversations") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+            )
+        },
+    ) { scaffoldPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(scaffoldPadding)) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(MaSpacing.md)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(MaSpacing.md),
             ) {
                 // Search bar
                 HistorySearchBar(
                     query = state.searchQuery,
                     onQueryChange = { viewModel.searchConversations(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = MaSpacing.md)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = MaSpacing.md),
                 )
 
                 // Error display
@@ -84,7 +101,7 @@ fun HistoryScreen(
                     HistoryErrorCard(
                         message = error,
                         onDismiss = { viewModel.clearError() },
-                        modifier = Modifier.padding(bottom = MaSpacing.md)
+                        modifier = Modifier.padding(bottom = MaSpacing.md),
                     )
                 }
 
@@ -98,7 +115,7 @@ fun HistoryScreen(
                     onExportClick = { showExportDialog = it },
                     onResultClick = { result ->
                         result.conversationId?.let { onConversationClick(it) }
-                    }
+                    },
                 )
             }
 
@@ -110,7 +127,7 @@ fun HistoryScreen(
                         viewModel.deleteConversation(conversationId)
                         showDeleteDialog = null
                     },
-                    onDismiss = { showDeleteDialog = null }
+                    onDismiss = { showDeleteDialog = null },
                 )
             }
 
@@ -124,9 +141,10 @@ fun HistoryScreen(
                         println("Exported: ${exported?.take(100)}...")
                         showExportDialog = null
                     },
-                    onDismiss = { showExportDialog = null }
+                    onDismiss = { showExportDialog = null },
                 )
             }
+        }
     }
 }
 
@@ -137,7 +155,7 @@ fun HistoryScreen(
 @Composable
 private fun HistoryTopBar(
     conversationCount: Int,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
 ) {
     TopAppBar(
         title = {
@@ -146,18 +164,19 @@ private fun HistoryTopBar(
                     "Conversation History",
                     style = MaTypography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaColors.textPrimary()
+                    color = MaColors.textPrimary(),
                 )
                 Text(
                     "$conversationCount conversations",
-                    style = TextStyle(
-                        fontFamily = MaFontFamilyCaption,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
-                        letterSpacing = 0.25.sp
-                    ),
-                    color = MaColors.textSecondary()
+                    style =
+                        TextStyle(
+                            fontFamily = MaFontFamilyCaption,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            letterSpacing = 0.25.sp,
+                        ),
+                    color = MaColors.textSecondary(),
                 )
             }
         },
@@ -166,13 +185,14 @@ private fun HistoryTopBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = MaColors.textPrimary()
+                    tint = MaColors.textPrimary(),
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background
-        )
+        colors =
+            TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background,
+            ),
     )
 }
 
@@ -187,29 +207,31 @@ private fun HistoryContent(
     onConversationClick: (Long) -> Unit,
     onDeleteClick: (Long) -> Unit,
     onExportClick: (Long) -> Unit,
-    onResultClick: (app.m1k3.ai.assistant.history.SearchResult) -> Unit
+    onResultClick: (app.m1k3.ai.assistant.history.SearchResult) -> Unit,
 ) {
     when {
         isLoading -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(color = MaColors.Orange)
             }
         }
+
         searchResults != null -> {
             SearchResultsList(
                 results = searchResults,
-                onResultClick = onResultClick
+                onResultClick = onResultClick,
             )
         }
+
         else -> {
             ConversationsList(
                 conversations = conversations,
                 onConversationClick = onConversationClick,
                 onDeleteClick = onDeleteClick,
-                onExportClick = onExportClick
+                onExportClick = onExportClick,
             )
         }
     }
@@ -227,25 +249,26 @@ private fun HistoryScreenEmptyPreview() {
             topBar = {
                 HistoryTopBar(
                     conversationCount = 0,
-                    onBackClick = {}
+                    onBackClick = {},
                 )
-            }
+            },
         ) { paddingValues ->
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         "📭",
-                        style = MaterialTheme.typography.displayLarge
+                        style = MaterialTheme.typography.displayLarge,
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         "No conversations yet",
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 }
             }
@@ -261,15 +284,16 @@ private fun HistoryScreenLoadingPreview() {
             topBar = {
                 HistoryTopBar(
                     conversationCount = 0,
-                    onBackClick = {}
+                    onBackClick = {},
                 )
-            }
+            },
         ) { paddingValues ->
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(color = MaColors.Orange)
             }
@@ -285,33 +309,36 @@ private fun HistoryScreenWithConversationsPreview() {
             topBar = {
                 HistoryTopBar(
                     conversationCount = 3,
-                    onBackClick = {}
+                    onBackClick = {},
                 )
-            }
+            },
         ) { paddingValues ->
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(MaSpacing.md)
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(MaSpacing.md),
                 ) {
                     HistorySearchBar(
                         query = "",
                         onQueryChange = {},
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = MaSpacing.md)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = MaSpacing.md),
                     )
 
                     Text(
                         "Showing 3 conversations",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = MaSpacing.md)
+                        modifier = Modifier.padding(bottom = MaSpacing.md),
                     )
                 }
             }

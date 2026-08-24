@@ -1,6 +1,16 @@
 package app.m1k3.ai.assistant.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -16,14 +26,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -50,10 +69,8 @@ import app.m1k3.ai.assistant.chat.isGenerating
 import app.m1k3.ai.assistant.chat.isInputEnabled
 import app.m1k3.ai.assistant.chat.toEmoji
 import app.m1k3.ai.assistant.chat.toUserMessage
-import app.m1k3.ai.assistant.context.rememberContextPermissionRequester
 import app.m1k3.ai.assistant.design.components.MaChatBubbleAI
 import app.m1k3.ai.assistant.design.components.MaChatBubbleUser
-import app.m1k3.ai.assistant.design.components.MaStatusCard
 import app.m1k3.ai.assistant.design.components.ThinkingPill
 import app.m1k3.ai.assistant.design.components.ToolCallPill
 import app.m1k3.ai.assistant.design.haptics.rememberHapticFeedback
@@ -62,12 +79,6 @@ import app.m1k3.ai.assistant.design.tokens.MaColors
 import app.m1k3.ai.assistant.design.tokens.MaRadius
 import app.m1k3.ai.assistant.design.tokens.MaSpacing
 import app.m1k3.ai.assistant.design.tokens.MaTypography
-import app.m1k3.ai.assistant.globe.GlobeBackground
-import app.m1k3.ai.assistant.globe.GlobeMode
-import app.m1k3.ai.assistant.globe.TIER_HIGH
-import app.m1k3.ai.assistant.globe.TIER_LOW
-import app.m1k3.ai.assistant.globe.TIER_MEDIUM
-import app.m1k3.ai.assistant.platform.PreferenceKeys
 import app.m1k3.ai.assistant.stt.AndroidSttEngine
 import app.m1k3.ai.assistant.ui.components.ChatContextBar
 import app.m1k3.ai.assistant.ui.components.ChatContextBarState
@@ -76,15 +87,13 @@ import app.m1k3.ai.assistant.ui.components.ChatInputBarContainer
 import app.m1k3.ai.assistant.ui.components.ChatMessageList
 import app.m1k3.ai.assistant.ui.components.ClearConversationDialog
 import app.m1k3.ai.assistant.ui.components.ContextWindowIndicator
-import app.m1k3.ai.assistant.ui.components.LocalToolbarActions
-import app.m1k3.ai.assistant.ui.components.ToolbarActions
 import app.m1k3.ai.domain.ai.LlmModel
+import app.m1k3.ai.domain.ai.M1K3Tier
 import app.m1k3.ai.domain.chat.ChatError
 import app.m1k3.ai.domain.stt.SttState
 import app.m1k3.ai.domain.stt.isListening
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.androidx.compose.koinViewModel
-import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 import androidx.compose.runtime.collectAsState as collectFlowAsState
 
@@ -96,7 +105,7 @@ import androidx.compose.runtime.collectAsState as collectFlowAsState
  *
  * **Architecture:**
  * - Uses ChatScreenViewModel for state management
- * - Delegates to extracted components (ChatInputBar, ChatHeader, etc.)
+ * - Delegates to extracted components (ChatInputBar, ChatHeroSplash, etc.)
  * - Minimal UI logic - ViewModel handles business logic
  *
  * **Responsibilities:**
@@ -107,7 +116,8 @@ import androidx.compose.runtime.collectAsState as collectFlowAsState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    onEcoStatsClick: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToVoiceMode: () -> Unit = {},
     onClearConversationClick: (() -> Unit)? = null,
     projectId: String = "default",
 ) {
@@ -126,23 +136,6 @@ fun ChatScreen(
     var showClearDialog by remember { mutableStateOf(false) }
     var inputFocused by remember { mutableStateOf(false) }
     val haptics = rememberHapticFeedback()
-
-    // Permission requester for context providers
-    val permissionRequester =
-        rememberContextPermissionRequester { _ ->
-            // Permission state changed — ViewModel will pick up new context on next load
-        }
-
-    // Globe mode from preferences (user-configurable in Settings)
-    val prefs = koinInject<app.m1k3.ai.assistant.platform.PreferencesStoreInterface>()
-    val globeMode =
-        remember {
-            when (prefs.getString(PreferenceKeys.GLOBE_MODE, "RUBIN")) {
-                "MAPLIBRE" -> GlobeMode.MAPLIBRE
-                "NONE" -> GlobeMode.NONE
-                else -> GlobeMode.RUBIN
-            }
-        }
 
     // Speech-to-Text engine
     val sttEngine = remember { AndroidSttEngine(context) }
@@ -274,7 +267,7 @@ fun ChatScreen(
                 androidx.compose.material3.Button(
                     onClick = { viewModel.retryEngineInit() },
                 ) {
-                    androidx.compose.material3.Text("Re-download model")
+                    androidx.compose.material3.Text("Download again")
                 }
             }
         }
@@ -331,174 +324,188 @@ fun ChatScreen(
         }
     }
 
-    // Hero owns the 3D avatar scene while the chat is pre-conversation —
-    // tell the Toolbar to hide its own avatar so we don't spin up two
-    // Filament scenes on the same GLB (libgltfio-jni.so SIGSEGV otherwise).
-    val toolbarAvatarVisibility =
-        app.m1k3.ai.assistant.avatar.LocalShowToolbarAvatar.current as? androidx.compose.runtime.MutableState<Boolean>
-    val preConversation = uiState.messages.none { it.isUser }
-    LaunchedEffect(preConversation) {
-        toolbarAvatarVisibility?.value = !preConversation
-    }
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose { toolbarAvatarVisibility?.value = true }
-    }
-
-    // Publish the "New chat" action to the app-level Toolbar whenever the
-    // conversation has messages. Cleared on dispose so other screens don't
-    // inherit our action.
-    val toolbarActionsState =
-        LocalToolbarActions.current as? androidx.compose.runtime.MutableState<ToolbarActions>
-    LaunchedEffect(uiState.messages.isNotEmpty()) {
-        toolbarActionsState?.value =
-            if (uiState.messages.isNotEmpty()) {
-                ToolbarActions(onNewChat = { showClearDialog = true })
-            } else {
-                ToolbarActions()
+    // Dictation-into-the-field toggle — a DIFFERENT job from the toolbar's
+    // full-screen "Voice mode" (below): this types by voice, it doesn't hold
+    // a spoken conversation. Same AndroidSttEngine instance as before.
+    val dictationToggle: (() -> Unit)? =
+        if (sttEngine.isAvailable()) {
+            {
+                if (sttState.isListening) sttEngine.stopListening() else sttEngine.startListening()
             }
-    }
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose { toolbarActionsState?.value = ToolbarActions() }
-    }
-
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .animateContentSize(),
-    ) {
-        // Layer 0: Globe background — mode user-configurable in Settings
-        GlobeBackground(
-            mode = globeMode,
-            dimmed = uiState.generationState.isGenerating,
-            modifier = Modifier.fillMaxSize(),
-        )
-
-        // Layer 1: Messages list (behind overlays)
-        // Note: ContextWindowIndicator retired — its % lives in the
-        // ChatContextBar footer now (one signal, one place).
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Messages list
-            ChatMessageList(
-                messages = uiState.messages,
-                isGenerating = uiState.generationState.isGenerating,
-                listState = listState,
-                showEcoIndicator = true,
-                onSpeak = { text -> viewModel.speakMessage(text) },
-                userContext = uiState.userContext,
-                onRequestLocation = permissionRequester.onRequestLocation,
-                onRequestHealth = permissionRequester.onRequestHealth,
-                onRequestScreenTime = permissionRequester.onRequestScreenTime,
-                generationState = uiState.generationState,
-            )
+        } else {
+            null
         }
 
-        // Download progress overlay
-        uiState.modelDownload?.let { downloadState ->
-            ModelDownloadOverlay(
-                state = downloadState,
+    val currentBrainCaption =
+        M1K3Tier
+            .all()
+            .find { it.model == uiState.currentModel }
+            ?.displayName
+            ?.removeSuffix(" M1K3")
+            ?: uiState.currentModel.displayName
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                // No title text — the wordmark lives in the empty-state hero;
+                // once chatting, the transcript owns the screen.
+                title = {},
+                actions = {
+                    IconButton(
+                        onClick = { showClearDialog = true },
+                        enabled = uiState.messages.isNotEmpty() && !uiState.generationState.isGenerating,
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = "New chat")
+                    }
+                    IconButton(
+                        onClick = onNavigateToVoiceMode,
+                        enabled = uiState.isInputEnabled,
+                    ) {
+                        Icon(Icons.Default.GraphicEq, contentDescription = "Voice mode")
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaColors.bgPrimary()),
+            )
+        },
+        containerColor = MaColors.bgPrimary(),
+    ) { scaffoldPadding ->
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(top = scaffoldPadding.calculateTopPadding())
+                    .animateContentSize(),
+        ) {
+            // Layer 1: Messages list (behind overlays)
+            // Note: ContextWindowIndicator retired — its % lives in the
+            // ChatContextBar footer now (one signal, one place).
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Messages list
+                ChatMessageList(
+                    messages = uiState.messages,
+                    isGenerating = uiState.generationState.isGenerating,
+                    listState = listState,
+                    onSpeak = { text -> viewModel.speakMessage(text) },
+                    brainCaption = currentBrainCaption,
+                    brainReady = uiState.isInputEnabled,
+                    onStarterTap = { prompt ->
+                        avatarVM?.processMessage(prompt, isUserMessage = true)
+                        viewModel.updateInputText(prompt)
+                        viewModel.sendMessage()
+                    },
+                    generationState = uiState.generationState,
+                )
+            }
+
+            // Download progress overlay
+            uiState.modelDownload?.let { downloadState ->
+                ModelDownloadOverlay(
+                    state = downloadState,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 120.dp),
+                )
+            }
+
+            // Bottom overlay: context bar + input bar with gradient
+            val partialTranscript = (sttState as? SttState.Listening)?.partialText ?: ""
+            val contextBarState =
+                ChatContextBarState.from(
+                    uiState = uiState,
+                    isListening = sttState.isListening,
+                    partialTranscript = partialTranscript,
+                )
+            // Floating "island" cluster: input + footer share one rounded
+            // elevated surface, set off from the nav bar with breathing room
+
+            val islandShape = RoundedCornerShape(MaRadius.xxl)
+            Column(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 120.dp),
-            )
-        }
-
-        // Bottom overlay: context bar + input bar with gradient
-        val partialTranscript = (sttState as? SttState.Listening)?.partialText ?: ""
-        val contextBarState =
-            ChatContextBarState.from(
-                uiState = uiState,
-                isListening = sttState.isListening,
-                partialTranscript = partialTranscript,
-            )
-        // Floating "island" cluster: input + footer share one rounded
-        // elevated surface, set off from the nav bar with breathing room
-        // so the globe bleeds around and under it.
-        val islandShape = RoundedCornerShape(MaRadius.xxl)
-        Column(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .imePadding()
-                    .padding(horizontal = MaSpacing.sm, vertical = MaSpacing.sm)
-                    .clip(islandShape)
-                    .background(MaColors.bgElevated(), islandShape)
-                    .border(1.dp, MaColors.borderSubtle(), islandShape),
-        ) {
-            ChatInputBar(
-                text = uiState.inputText,
-                onTextChange = { viewModel.updateInputText(it) },
-                onSend = {
-                    avatarVM?.processMessage(uiState.inputText, isUserMessage = true)
-                    viewModel.sendMessage()
-                },
-                enabled = uiState.isInputEnabled,
-                isListening = sttState.isListening,
-                onMicClick =
-                    if (sttEngine.isAvailable()) {
-                        {
-                            if (sttState.isListening) {
-                                sttEngine.stopListening()
-                            } else {
-                                sttEngine.startListening()
-                            }
-                        }
-                    } else {
-                        null
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .padding(horizontal = MaSpacing.sm, vertical = MaSpacing.sm)
+                        .clip(islandShape)
+                        .background(MaColors.bgElevated(), islandShape)
+                        .border(1.dp, MaColors.borderSubtle(), islandShape),
+            ) {
+                // Dictation surface: while the mic is live, the transcript gets a
+                // roomy caption at the top of the island instead of being crammed
+                // into the input placeholder (iOS-style, less constrained).
+                AnimatedVisibility(
+                    visible = sttState.isListening,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    DictationCaption(partialTranscript)
+                }
+                ChatInputBar(
+                    text = uiState.inputText,
+                    onTextChange = { viewModel.updateInputText(it) },
+                    onSend = {
+                        avatarVM?.processMessage(uiState.inputText, isUserMessage = true)
+                        viewModel.sendMessage()
                     },
-                listeningPartialText = partialTranscript,
-                onFocusChanged = { focused -> inputFocused = focused },
-            )
-            ChatContextBar(
-                state = contextBarState,
-                availableModels = LlmModel.all(),
-                onModelSwitch = { model ->
-                    haptics.medium()
-                    viewModel.switchModel(model)
-                },
-                onEcoTap = {
-                    haptics.light()
-                    onEcoStatsClick()
-                },
-                enabled = uiState.isInputEnabled,
-            )
-        }
-
-        // Error dialog — haptic on appear
-        uiState.error?.let { error ->
-            LaunchedEffect(error) {
-                haptics.error()
+                    enabled = uiState.isInputEnabled,
+                    isListening = sttState.isListening,
+                    onMicClick = dictationToggle,
+                    // The DictationCaption above now carries the live transcript, so
+                    // the pill just shows a steady "Listening…" (no duplicate text).
+                    listeningPartialText = "",
+                    onFocusChanged = { focused -> inputFocused = focused },
+                    isGenerating = uiState.generationState.isGenerating,
+                    onStop = { viewModel.stopGeneration() },
+                )
+                ChatContextBar(
+                    state = contextBarState,
+                    availableModels = LlmModel.all(),
+                    onModelSwitch = { model ->
+                        haptics.medium()
+                        viewModel.switchModel(model)
+                    },
+                    enabled = uiState.isInputEnabled,
+                )
             }
-            ErrorSnackbar(
-                error = error,
-                onDismiss = {
-                    haptics.light()
-                    viewModel.clearError()
-                },
-            )
-        }
 
-        // Clear conversation dialog
-        if (showClearDialog) {
-            ClearConversationDialog(
-                sessionStats = uiState.sessionEcoStats,
-                onConfirm = {
-                    haptics.strong()
-                    viewModel.clearConversation()
-                    showClearDialog = false
-                },
-                onDismiss = {
-                    haptics.light()
-                    showClearDialog = false
-                },
-            )
+            // Error dialog — haptic on appear
+            uiState.error?.let { error ->
+                LaunchedEffect(error) {
+                    haptics.error()
+                }
+                ErrorSnackbar(
+                    error = error,
+                    onDismiss = {
+                        haptics.light()
+                        viewModel.clearError()
+                    },
+                )
+            }
+
+            // Clear conversation dialog
+            if (showClearDialog) {
+                ClearConversationDialog(
+                    messageCount = uiState.messages.size,
+                    onConfirm = {
+                        haptics.strong()
+                        viewModel.clearConversation()
+                        showClearDialog = false
+                    },
+                    onDismiss = {
+                        haptics.light()
+                        showClearDialog = false
+                    },
+                )
+            }
         }
     }
 
-    // Expose clear callback to parent (for Toolbar)
+    // Expose clear callback to parent (legacy hook — parent may show its own dialog)
     LaunchedEffect(onClearConversationClick) {
         // This registers the callback - when parent calls it, we show the dialog
     }
@@ -532,39 +539,16 @@ private fun ErrorSnackbar(
 @Composable
 fun ChatBubble(
     message: ChatMessage,
-    userContext: app.m1k3.ai.domain.context.UserContext? = null,
-    onRequestLocation: (() -> Unit)? = null,
-    onRequestHealth: (() -> Unit)? = null,
-    onRequestScreenTime: (() -> Unit)? = null,
     onSpeak: ((String) -> Unit)? = null,
     isStreaming: Boolean = false,
     isThinking: Boolean = false,
 ) {
     when {
-        message.isStatusMessage -> {
-            if (userContext != null) {
-                // Contextual welcome — uses real user data
-                app.m1k3.ai.assistant.context.ContextualWelcomeCard(
-                    context = userContext,
-                    onRequestLocation = onRequestLocation,
-                    onRequestHealth = onRequestHealth,
-                    onRequestScreenTime = onRequestScreenTime,
-                )
-            } else {
-                // Fallback — classic status card (no context available)
-                MaStatusCard(
-                    greeting = message.text.lines().firstOrNull() ?: "Hello!",
-                    engineReady = true,
-                    memoryCount = message.statusMemoryCount ?: 0,
-                    maxContextTokens = message.statusMaxTokens ?: 2048,
-                    deviceTierName = message.statusDeviceTier ?: "Unknown",
-                    lastSessionWaterMl = message.statusLastWaterMl,
-                    lastSessionEnergyWh = message.statusLastEnergyWh,
-                    lastSessionCo2G = message.statusLastCo2G,
-                )
-            }
-        }
-
+        // No welcome/status card — chat shows messages, nothing else
+        // (macos/docs/DESIGN_DOCTRINE.md principle 7). `isStatusMessage`
+        // is never set anymore (see ChatScreenViewModel.primeSystemPrompt);
+        // an old persisted status row just falls through and renders as a
+        // plain assistant bubble rather than vanishing.
         message.isUser -> {
             MaChatBubbleUser(
                 text = message.text,
@@ -718,7 +702,6 @@ private fun ChatScreenEmptyPreview() {
                     messages = emptyList(),
                     isGenerating = false,
                     listState = rememberLazyListState(),
-                    showEcoIndicator = false,
                 )
             }
 
@@ -765,7 +748,6 @@ private fun ChatScreenWithMessagesPreview() {
                         ),
                     isGenerating = false,
                     listState = rememberLazyListState(),
-                    showEcoIndicator = true,
                 )
             }
 
@@ -816,7 +798,6 @@ private fun ChatScreenGeneratingPreview() {
                         ),
                     isGenerating = true,
                     listState = rememberLazyListState(),
-                    showEcoIndicator = false,
                 )
             }
 
@@ -832,5 +813,49 @@ private fun ChatScreenGeneratingPreview() {
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
+    }
+}
+
+/**
+ * The live dictation surface shown at the top of the input island while the
+ * mic is listening: a pulsing orange dot + the growing transcript, given room
+ * to breathe (up to a few lines) rather than clipped into the input pill.
+ */
+@Composable
+private fun DictationCaption(partial: String) {
+    val infinite = rememberInfiniteTransition(label = "dictation")
+    val dotAlpha by infinite.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(700),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "dotAlpha",
+    )
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = MaSpacing.base, end = MaSpacing.base, top = MaSpacing.md, bottom = MaSpacing.xs),
+        horizontalArrangement = Arrangement.spacedBy(MaSpacing.sm),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .padding(top = 6.dp)
+                    .size(9.dp)
+                    .alpha(dotAlpha)
+                    .clip(RoundedCornerShape(50))
+                    .background(MaColors.Orange),
+        )
+        Text(
+            text = partial.ifBlank { "Listening…" },
+            style = MaTypography.titleMedium,
+            color = if (partial.isBlank()) MaColors.textMuted() else MaColors.textPrimary(),
+            maxLines = 4,
+        )
     }
 }

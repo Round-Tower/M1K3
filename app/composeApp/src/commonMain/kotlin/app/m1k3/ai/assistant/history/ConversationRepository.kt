@@ -1,7 +1,7 @@
 package app.m1k3.ai.assistant.history
 
 import app.m1k3.ai.assistant.database.MaDatabase
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 

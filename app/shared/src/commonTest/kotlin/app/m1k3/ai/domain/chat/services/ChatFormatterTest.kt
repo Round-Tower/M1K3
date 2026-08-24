@@ -17,6 +17,23 @@ class ChatFormatterTest {
     // ===== Basic Prompt Building =====
 
     @Test
+    fun `thinking off pre-closes the think block in the ChatML assistant turn`() {
+        val prompt =
+            DefaultChatFormatter(ChatFormat.ChatML, thinking = false).buildPrompt(
+                systemPrompt = "You are helpful.",
+                messages = listOf(ChatMessage(MessageRole.USER, "Hello")),
+            )
+        assertTrue(prompt.endsWith("<|im_start|>assistant\n<think>\n\n</think>\n\n"))
+
+        val thinking =
+            DefaultChatFormatter(ChatFormat.ChatML).buildPrompt(
+                systemPrompt = "You are helpful.",
+                messages = listOf(ChatMessage(MessageRole.USER, "Hello")),
+            )
+        assertTrue(thinking.endsWith("<|im_start|>assistant\n"))
+    }
+
+    @Test
     fun `builds prompt with system and user message`() {
         val formatter = DefaultChatFormatter(ChatFormat.ChatML)
 

@@ -64,36 +64,8 @@ kotlin {
             // and KokoroTtsEngine. Not used for LLM inference (that's Ma/llama.cpp).
             implementation(libs.onnxruntime.android)
 
-            // CameraX
-            implementation(libs.camerax.core)
-            implementation(libs.camerax.camera2)
-            implementation(libs.camerax.lifecycle)
-            implementation(libs.camerax.view)
-
-            // ML Kit Vision
-            implementation(libs.mlkit.vision)
-            implementation(libs.mlkit.text.recognition)
-            implementation(libs.mlkit.objectdetection)
-            implementation(libs.mlkit.image.labeling)
-
-            // ML Kit GenAI (Gemini Nano on-device)
-            implementation(libs.mlkit.genai.prompt)
-            implementation(libs.mlkit.genai.summarization)
-
             // Google Fonts for custom typography
             implementation(libs.compose.ui.text.googlefonts)
-
-            // SceneView for 3D avatar rendering
-            implementation(libs.sceneview)
-
-            // Play Core for dynamic feature delivery (split-install).
-            // Parked: no dynamic-feature modules currently wired.
-            implementation(libs.play.core)
-            implementation(libs.play.core.ktx)
-
-            // User context — local intelligence ("never leaves your phone")
-            implementation(libs.health.connect)
-            implementation(libs.play.services.location)
 
             // WorkManager — background downloads survive screen lock
             implementation(libs.androidx.work.runtime)
@@ -102,12 +74,28 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.koin.androidx.compose)
 
-            // Vector similarity search is currently linear-scan over cosine
-            // similarity (AndroidVectorSearchEngine, ~5-10 ms for <1K vectors).
-            // Fine at current corpus sizes. HNSW would want jvector-base, but
-            // io.github.jbellis:jvector-base still isn't on Maven Central as of
-            // last check — track there before introducing it.
+            // JVector HNSW graph, used by VectorSearchManager for memory
+            // semantic search (falls back to linear-scan when the graph is
+            // empty/stale). Personal-knowledge passage search is a separate
+            // path and uses LinearScanVectorIndex, not this dependency.
             implementation(libs.jvector)
+
+            // ML Kit GenAI Prompt API (Gemini Nano / AICore) — Mini M1K3's
+            // system-model brain. Pulls in com.google.android.datatransport
+            // transitively (usage-stats Firelog, NOT first-party analytics —
+            // see ManifestPrivacyTest.noAnalyticsLibraries_onClasspath and
+            // docs/adr/0007-system-model-gemini-nano.md). No network calls
+            // originate from OUR code here; AICore/Play Services own the
+            // model download.
+            implementation(libs.mlkit.genai.prompt)
+
+            // Filament core — the 3D Phosphor Fox companion (Companion3DView).
+            // Plain Android AARs (native .so + Kotlin helpers), independent of
+            // the Compose/Kotlin toolchain. 2D PixelFaceAvatar stays the
+            // default + fallback; 3D is gated on memory headroom + GL support.
+            implementation(libs.filament.android)
+            implementation(libs.filament.gltfio)
+            implementation(libs.filament.utils)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -129,9 +117,6 @@ kotlin {
 
             // Ma - our own JNI bridge to llama.cpp (replaces Llamatik)
             // Built via NDK/CMake, no Gradle dependency needed (libma.so is compiled locally)
-
-            // WebView for Three.js 3D avatar rendering
-            implementation(libs.compose.webview.multiplatform)
 
             // Kermit - Multiplatform logging
             implementation(libs.kermit)
@@ -158,14 +143,14 @@ kotlin {
             implementation(libs.sqldelight.driver.jdbc)
         }
         iosMain.dependencies {
-            // 間 AI - iOS-specific dependencies
+            // M1K3 - iOS-specific dependencies
             implementation(libs.sqldelight.driver.native)
         }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
 
-            // 間 AI - JVM/Desktop dependencies
+            // M1K3 - JVM/Desktop dependencies
             implementation(libs.sqldelight.driver.sqlite)
         }
     }
@@ -272,14 +257,10 @@ android {
 }
 
 dependencies {
-    // Pin vision-internal-vkp to a 16KB-page-aligned release (libmlkitcommonpipeline.so).
-    // Transitive through image-labeling; <18.2.0 ships 4KB-aligned .so and trips the
-    // Android 15+ PageSizeMismatchDialog on install. Drift-guarded by verify16KbAlignment*.
-    constraints {
-        implementation(libs.mlkit.vision.internal.vkp) {
-            because("Android 15+ requires 16KB ELF page alignment; vision-internal-vkp <18.2.0 is 4KB-aligned")
-        }
-    }
+    // The vision-internal-vkp 16KB-alignment pin (transitive through
+    // image-labeling) went with ML Kit Vision/GenAI + CameraX, cut 2026-08 as
+    // unreferenced dead weight — nothing left pulls that artifact in.
+    // Verify16KbAlignmentTask stays: it still guards sqlcipher/onnx/llama.
 
     debugImplementation(compose.uiTooling)
 
@@ -313,7 +294,7 @@ sqldelight {
             packageName.set("app.m1k3.ai.assistant.database")
             // Schema will be defined in src/commonMain/sqldelight
             schemaOutputDirectory.set(file("build/dbs"))
-            dialect("app.cash.sqldelight:sqlite-3-38-dialect:2.0.2")
+            dialect("app.cash.sqldelight:sqlite-3-38-dialect:2.3.2")
         }
     }
 }
