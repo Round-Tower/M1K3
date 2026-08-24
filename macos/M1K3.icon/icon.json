@@ -24,7 +24,7 @@
           "image-name" : "M-mark.png",
           "name" : "M mark",
           "position" : {
-            "scale" : 1,
+            "scale" : 0.44,
             "translation-in-points" : [
               0,
               0
