@@ -4,6 +4,9 @@ import android.app.ActivityManager
 import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -40,13 +43,23 @@ fun PhosphorFoxHero(
 
     when (decision) {
         Companion3DDecision.SHOW_3D -> {
-            val treatment = CrtTreatment.forActivity(state.activity.isActive, state.intensity)
-            Box(modifier) {
-                Companion3DView(modifier = Modifier.matchParentSize())
-                CrtOverlay(
-                    treatment = treatment,
-                    modifier = Modifier.matchParentSize(),
-                )
+            // If Filament init or the glb load fails, drop to the always-safe
+            // 2D face rather than stranding the user on an empty CRT.
+            var foxFailed by remember { mutableStateOf(false) }
+            if (foxFailed) {
+                PixelFaceAvatar(state = state, modifier = modifier)
+            } else {
+                val treatment = CrtTreatment.forActivity(state.activity.isActive, state.intensity)
+                Box(modifier) {
+                    Companion3DView(
+                        modifier = Modifier.matchParentSize(),
+                        onFailure = { foxFailed = true },
+                    )
+                    CrtOverlay(
+                        treatment = treatment,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                }
             }
         }
 
