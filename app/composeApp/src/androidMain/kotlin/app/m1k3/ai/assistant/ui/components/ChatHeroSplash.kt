@@ -56,7 +56,6 @@ fun ChatHeroSplash(
     brainReady: Boolean,
     onStarterTap: (String) -> Unit,
     modifier: Modifier = Modifier,
-    heavyBrain: Boolean = false,
 ) {
     val sharedVM: AvatarViewModel? = LocalSharedAvatarVM.current
     val collectedState by (sharedVM?.avatarState ?: kotlinx.coroutines.flow.MutableStateFlow(null))
@@ -81,7 +80,6 @@ fun ChatHeroSplash(
             PhosphorFoxHero(
                 state = avatarState ?: AvatarState(),
                 brainReady = brainReady,
-                heavyBrain = heavyBrain,
                 modifier = Modifier.fillMaxWidth().height(180.dp),
             )
         }

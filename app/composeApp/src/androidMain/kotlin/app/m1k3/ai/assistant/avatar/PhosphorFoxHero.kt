@@ -30,13 +30,12 @@ fun PhosphorFoxHero(
     state: AvatarState,
     brainReady: Boolean,
     modifier: Modifier = Modifier,
-    heavyBrain: Boolean = false,
     userEnabled: Boolean = true,
 ) {
     val context = LocalContext.current
     val decision =
-        remember(brainReady, heavyBrain, userEnabled) {
-            Companion3DPolicy.decide(readCompanion3DInputs(context, brainReady, heavyBrain, userEnabled))
+        remember(brainReady, userEnabled) {
+            Companion3DPolicy.decide(readCompanion3DInputs(context, brainReady, userEnabled))
         }
 
     when (decision) {
@@ -59,7 +58,6 @@ fun PhosphorFoxHero(
 private fun readCompanion3DInputs(
     context: Context,
     brainReady: Boolean,
-    heavyBrain: Boolean,
     userEnabled: Boolean,
 ): Companion3DInputs {
     val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -72,7 +70,6 @@ private fun readCompanion3DInputs(
         isLowRamDevice = am.isLowRamDevice,
         glesMajorVersion = glesMajor,
         brainResident = brainReady,
-        residentBrainHeavy = heavyBrain,
         userEnabled = userEnabled,
     )
 }

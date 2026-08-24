@@ -22,13 +22,6 @@ data class Companion3DInputs(
     val isLowRamDevice: Boolean,
     val glesMajorVersion: Int,
     val brainResident: Boolean,
-    /**
-     * True when the resident brain is the heavy tier (Big — Gemma 4 E2B,
-     * ~2.8 GB weights / ~6 GB working set). It already claims the memory
-     * budget, so stacking a Filament engine on top is the documented OOM
-     * path; the fox yields to the 2D face there.
-     */
-    val residentBrainHeavy: Boolean = false,
     val userEnabled: Boolean = true,
 )
 
@@ -51,7 +44,6 @@ object Companion3DPolicy {
             inputs.isLowRamDevice -> Companion3DDecision.FALLBACK_2D
             inputs.glesMajorVersion < 3 -> Companion3DDecision.FALLBACK_2D
             !inputs.brainResident -> Companion3DDecision.FALLBACK_2D
-            inputs.residentBrainHeavy -> Companion3DDecision.FALLBACK_2D
             inputs.availableMemMb < MIN_HEADROOM_MB -> Companion3DDecision.FALLBACK_2D
             else -> Companion3DDecision.SHOW_3D
         }

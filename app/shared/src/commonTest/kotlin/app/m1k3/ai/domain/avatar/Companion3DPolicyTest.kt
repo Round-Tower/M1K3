@@ -59,14 +59,6 @@ class Companion3DPolicyTest {
     }
 
     @Test
-    fun `heavy resident brain (Big) falls back to 2D even with headroom`() {
-        assertEquals(
-            Companion3DDecision.FALLBACK_2D,
-            Companion3DPolicy.decide(healthy().copy(residentBrainHeavy = true)),
-        )
-    }
-
-    @Test
     fun `exactly the headroom floor shows 3D`() {
         assertEquals(
             Companion3DDecision.SHOW_3D,
