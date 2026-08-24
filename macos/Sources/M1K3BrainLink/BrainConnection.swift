@@ -75,8 +75,13 @@ public enum BrainConnection {
             }
         }
         // Connection closed. With a head and no Content-Length, what arrived
-        // IS the body; otherwise the exchange died early.
+        // IS the body. A declared Content-Length that was under-delivered is
+        // a broken exchange, not a short success (PR #152 review, finding 2);
+        // no head at all means the exchange died before answering.
         if let parsed = parsedHead {
+            guard parsed.head.contentLength == nil else {
+                throw BrainLinkError.streamInterrupted("the Mac closed the connection mid-response")
+            }
             return (parsed.head, buffer.suffix(from: parsed.bodyStart))
         }
         throw BrainLinkError.timedOut
@@ -285,15 +290,17 @@ public enum BrainConnection {
 
 /// Kickable idle deadline: fires `onFire` if no kick lands within `timeout`.
 /// Lock-boxed (not an actor) because kick() is called from a tight receive
-/// loop and must not suspend.
+/// loop and must not suspend — a kick just stamps the clock; ONE long-lived
+/// task loops, sleeping until the stamped deadline (PR #152 review, finding
+/// 4: the earlier shape spawned a sleeping Task per network chunk).
 final class IdleWatchdog: Sendable {
     private struct State {
-        var generation = 0
+        var lastKick: ContinuousClock.Instant
         var stopped = false
         var fired = false
     }
 
-    private let state = OSAllocatedUnfairLock(initialState: State())
+    private let state: OSAllocatedUnfairLock<State>
     private let timeout: Duration
     private let onFire: @Sendable () -> Void
 
@@ -304,26 +311,34 @@ final class IdleWatchdog: Sendable {
     init(timeout: Duration, onFire: @escaping @Sendable () -> Void) {
         self.timeout = timeout
         self.onFire = onFire
-        kick()
+        state = OSAllocatedUnfairLock(initialState: State(lastKick: .now))
+        Task { [weak self] in
+            let clock = ContinuousClock()
+            while true {
+                guard let self else { return }
+                let deadline = state.withLock { $0.lastKick.advanced(by: timeout) }
+                try? await clock.sleep(until: deadline)
+                let verdict: Bool? = state.withLock { state in
+                    if state.stopped || state.fired { return nil } // end the loop
+                    guard clock.now >= state.lastKick.advanced(by: timeout) else { return false }
+                    state.fired = true
+                    return true
+                }
+                switch verdict {
+                case .some(true):
+                    onFire()
+                    return
+                case .some(false):
+                    continue // kicked while sleeping — re-arm to the new deadline
+                case .none:
+                    return // stopped (or already fired) — loop ends
+                }
+            }
+        }
     }
 
     func kick() {
-        let expected: Int? = state.withLock { state in
-            guard !state.stopped else { return nil }
-            state.generation += 1
-            return state.generation
-        }
-        guard let expected else { return }
-        Task { [weak self] in
-            guard let self else { return }
-            try? await Task.sleep(for: timeout)
-            let shouldFire = state.withLock { state in
-                let firing = !state.stopped && state.generation == expected && !state.fired
-                if firing { state.fired = true }
-                return firing
-            }
-            if shouldFire { onFire() }
-        }
+        state.withLock { $0.lastKick = .now }
     }
 
     func stop() {

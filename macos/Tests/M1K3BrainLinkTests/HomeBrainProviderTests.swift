@@ -149,6 +149,21 @@ struct HomeBrainProviderTests {
         #expect(!answer.contains("second"))
     }
 
+    @Test func nonStreamingGenerateAlsoNotesAMidStreamBreak() async throws {
+        // The same contract as the streaming path (PR #152 review, finding 3):
+        // a partial answer must carry the interruption note, never read complete.
+        let provider = HomeBrainProvider(
+            brain: brain(), key: key,
+            transport: ScriptedStreams(byHost: [
+                "192.168.1.24": .breaksAfter(["partial answ"], .streamInterrupted("preempted")),
+            ]).transport(),
+            onBrainUpdate: { _ in }
+        )
+        let answer = try await provider.generate(prompt: "hello")
+        #expect(answer.hasPrefix("partial answ"))
+        #expect(answer.contains("interrupted") || answer.contains("dropped"))
+    }
+
     @Test func generateThrowsWhenNothingArrived() async {
         let provider = HomeBrainProvider(
             brain: brain(), key: key,

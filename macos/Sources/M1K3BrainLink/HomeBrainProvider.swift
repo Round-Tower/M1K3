@@ -76,7 +76,10 @@ public final class HomeBrainProvider: InferenceProvider, Sendable {
             if assembled.isEmpty {
                 throw InferenceError.generationFailed(Self.friendlyLine(for: error))
             }
-            return assembled
+            // Same contract as the streaming path: a partial answer carries
+            // the interruption note — it must never read as complete
+            // (PR #152 review, finding 3).
+            return assembled + "\n\n" + Self.friendlyLine(for: error)
         }
         return assembled
     }
