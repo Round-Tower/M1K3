@@ -127,6 +127,10 @@ public enum M1K3Log {
         /// pairing ceremony milestones, advertise, refused sources). Device
         /// display NAMES and counts only — never prompts, tokens, or keys.
         case brainServe = "brain-serve"
+        /// Brain at Home, the DEVICE side (M1K3BrainLink): pairing ceremony
+        /// milestones, dial/host fallbacks, stream refusals. Mac display
+        /// names, hosts and counts only — never prompts, tokens, or keys.
+        case brainLink = "brain-link"
         /// The execute_script agent tool (the hands): install approvals,
         /// run start/finish with script NAME, hash prefix, duration and
         /// success/timeout only — never script output or content (a script's

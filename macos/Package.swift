@@ -88,6 +88,12 @@ let package = Package(
         // Brain at Home — the LAN brain-serving layer (TLS-PSK listener,
         // pairing, Bonjour advertiser, scoped LAN MCP route).
         .library(name: "M1K3BrainServe", targets: ["M1K3BrainServe"]),
+        // Brain at Home — the shared wire (TLS-PSK channel, pairing payload)
+        // + the CLIENT side: pairing ceremony, HTTP/SSE response parsing, the
+        // NWConnection transport, and HomeBrainProvider (the Mac's brain as
+        // an InferenceProvider on iOS/visionOS). No MCP dependency — the
+        // mobile shell links this without the server stack.
+        .library(name: "M1K3BrainLink", targets: ["M1K3BrainLink"]),
         // Pure model for the M1K3 screensaver (.saver): the M mark geometry, the
         // ambient rain sim, presence copy. Foundation-only so the sandboxed
         // legacyScreenSaver process links no app modules.
@@ -479,13 +485,32 @@ let package = Package(
             dependencies: [
                 "M1K3LogCore",
                 "M1K3MCPKit", // HTTPWireCodec + the scoped MCP session reuse
+                "M1K3BrainLink", // the shared TLS-PSK wire (PSKCredential, BrainServeTLS)
             ],
             path: "Sources/M1K3BrainServe"
         ),
         .testTarget(
             name: "M1K3BrainServeTests",
-            dependencies: ["M1K3BrainServe", "M1K3MCPKit"],
+            dependencies: ["M1K3BrainServe", "M1K3BrainLink", "M1K3MCPKit"],
             path: "Tests/M1K3BrainServeTests"
+        ),
+        // Brain at Home, the other end of the wire: shared TLS-PSK channel +
+        // pairing payload (both ends), and the client — ceremony, HTTP/SSE
+        // parsing, NWConnection transport, HomeBrainProvider. Deliberately
+        // MCP-free so the mobile shell can link it lean; the loopback
+        // integration tests borrow the real listener from M1K3BrainServe.
+        .target(
+            name: "M1K3BrainLink",
+            dependencies: [
+                "M1K3LogCore",
+                "M1K3Inference", // HomeBrainProvider conforms to the seam
+            ],
+            path: "Sources/M1K3BrainLink"
+        ),
+        .testTarget(
+            name: "M1K3BrainLinkTests",
+            dependencies: ["M1K3BrainLink", "M1K3BrainServe"],
+            path: "Tests/M1K3BrainLinkTests"
         ),
         // The heartbeat: pure pulse policies (schedule/quiet-hours/skip,
         // deterministic digest composer, narrative validator) + a capped GRDB

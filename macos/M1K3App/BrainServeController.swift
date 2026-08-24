@@ -28,6 +28,7 @@
 
 import CoreImage.CIFilterBuiltins
 import Foundation
+import M1K3BrainLink
 import M1K3BrainServe
 import M1K3Calls // KeychainKeyStore — PSKs at rest (afterFirstUnlock, device-only)
 import M1K3Inference // RawCompletionProviding — the persona-free /v1/generate seam

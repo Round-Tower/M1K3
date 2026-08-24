@@ -1,6 +1,6 @@
 //
-//  BrainServeTLS.swift
-//  M1K3BrainServe
+//  BrainWireTLS.swift
+//  M1K3BrainLink
 //
 //  The TLS-PSK channel builder — the mechanism spike A1 proved
 //  (scratch/brain-at-home/spikes/RESULTS.md): TLS 1.2 pinned (min = max) +
@@ -18,6 +18,9 @@
 //  are a straight lift of the passing spike; multi-identity add is the one
 //  part the spike ran with a single key — pinned by the listener tests).
 //  Prior: spikes/spike-a1-tls-psk.swift.
+//  Review: claude-fable-5, 2026-08-24 — moved verbatim from M1K3BrainServe
+//  into M1K3BrainLink (Phase C: client and server share one wire; type names
+//  unchanged so the server side reads as before).
 //
 
 import Foundation
@@ -27,7 +30,7 @@ import Security
 /// One paired device's channel credential. The identity is the opaque label
 /// TLS sends in the clear (audit S1 — never a device name); the key is the
 /// 32-byte secret from the QR ceremony.
-public struct PSKCredential: Sendable {
+public struct PSKCredential: Sendable, Equatable {
     public let identity: String
     public let key: Data
 
