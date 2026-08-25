@@ -36,6 +36,7 @@
 //
 
 import Foundation
+import M1K3BrainLink
 import M1K3MCPKit
 import MCP
 import Network

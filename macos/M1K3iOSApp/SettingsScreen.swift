@@ -12,6 +12,7 @@
 //  ReadingMode picker + live ReadingText preview), part of the Mac-feel pass.
 //
 
+import M1K3BrainLink
 import M1K3Inference
 import SwiftUI
 
@@ -57,13 +58,16 @@ struct SettingsScreen: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            if core.selectedBrain == tier {
+                            if core.selectedBrain == tier, !core.homeBrainActive {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.tint)
                             }
                         }
                     }
                     .buttonStyle(.plain)
+                }
+                if let brain = core.homeBrain {
+                    homeBrainRow(brain)
                 }
                 if let note = core.brainNote {
                     Text(note).font(.caption).foregroundStyle(.orange)
@@ -72,6 +76,8 @@ struct SettingsScreen: View {
                     Text(hint).font(.caption).foregroundStyle(.secondary)
                 }
             }
+
+            BrainAtHomeSection()
 
             CompanionPickerSection()
 
@@ -126,6 +132,32 @@ struct SettingsScreen: View {
             }
         }
         .navigationTitle("Settings")
+    }
+
+    /// The Home tier row: the paired Mac's brain, selectable like a tier.
+    private func homeBrainRow(_ brain: PairedBrain) -> some View {
+        Button {
+            core.selectHomeBrain()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "house")
+                    .font(.title3)
+                    .foregroundStyle(.tint)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Home").foregroundStyle(.primary)
+                    Text("\(brain.name)’s brain, over your Wi-Fi")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if core.homeBrainActive {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.tint)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private var readingMode: ReadingMode {

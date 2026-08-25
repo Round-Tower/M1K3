@@ -9,6 +9,7 @@
 //
 
 import Foundation
+import M1K3BrainLink
 @testable import M1K3BrainServe
 import Network
 import Testing

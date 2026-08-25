@@ -1,4 +1,15 @@
-# Brain at Home — the LAN brain service (v1.1, as built)
+# Brain at Home — the LAN brain service (v1.2, as built)
+
+> **Phase C addendum (2026-08-24):** the iPhone/iPad client is built —
+> `M1K3BrainLink` (the shared TLS-PSK wire + pairing payload + client
+> transport/ceremony/provider; MCP-free so the mobile shells link it lean).
+> The QR payload gained `hosts=<addr,addr,…>` — the Mac's private LAN
+> addresses — because the QR is the ONLY first-contact channel (§4's
+> Bonjour advertiser runs only once a paired device exists). The 2026-08-19
+> payload shape still parses (hosts empty → the client UI asks for an
+> address). The client confirmation flow is §4's as designed: the device
+> polls `/v1/health` on the main port until the Approve-minted key
+> handshakes. Android remains the open client.
 
 > Your other devices discover this Mac on the home network, pair once by QR,
 > and stream from its brain — everything stays inside your walls.

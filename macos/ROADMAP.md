@@ -336,7 +336,7 @@ Spike scaffolding, results, and Kev's open calls: `scratch/voice-mobile/PLAN-DRA
   is a privacy landmine on a listening surface (assert on-device, fail loud);
   thermals need a measured 10-minute burn, not a demo.
 
-### 2. Brain-at-home — **Mac side SHIPPED 2026-08-19** (`docs/BRAIN_AT_HOME_SPEC.md`)
+### 2. Brain-at-home — **Mac side SHIPPED 2026-08-19; iPhone/iPad client BUILT 2026-08-24** (`docs/BRAIN_AT_HOME_SPEC.md`)
 - **Phase A spikes all PASS** (`scratch/brain-at-home/spikes/RESULTS.md`) with
   one spec-impacting finding: TLS 1.3 external-PSK doesn't handshake on
   Network.framework — the mechanism is **TLS 1.2 pinned + ECDHE_PSK 0xD001**
@@ -348,11 +348,25 @@ Spike scaffolding, results, and Kev's open calls: `scratch/voice-mobile/PLAN-DRA
   Approve + separate candidate-only pairing listener, Bonjour advertise,
   429/preemption etiquette, and — **Kev's ruling** — the SCOPED LAN `/mcp`
   route (read/ask allowlist, its own default-OFF toggle).
-- **Next:** Phase C clients — iPhone (`NWConnection` SSE; URLSession can't do
-  PSK) then Android (Conscrypt PSKKeyManager, or the cert-pin fallback).
-  Hardware-owed: real second-device pairing + Tailscale-unreachable.
-  Follow-ups: canary→Keychain migration; LAN-MCP client-name stamping once
-  the heartbeat-timeline PR's identity capture merges.
+- **Phase C (iOS/visionOS client) — BUILT 2026-08-24.** New `M1K3BrainLink`
+  module (MCP-free; the shared TLS-PSK wire moved there): the QR
+  `PairingPayload` as ONE compose/parse type — **now carrying the Mac's LAN
+  `hosts=`** (the 08-19 QR had no address at all; a first-time device had
+  nothing to dial, since Bonjour only advertises once a device is paired) —
+  client HTTP/SSE codecs pinned against the server's own frames, the
+  `NWConnection` transport, the pairing ceremony (pair → poll-health-until-
+  Approve), `HomeBrainProvider` (the Mac's brain in the mobile inference
+  slot; refusals speak etiquette copy), and the device store (defaults +
+  Keychain). Shell: in-app QR scanner (iOS) / paste path (Simulator +
+  visionOS), the "Home" brain row, the Brain at Home Settings section with
+  live health + Forget. Loopback tests drive the production client against
+  the real listener (health, SSE, 429, 503, wrong-key, pair).
+  **Hardware-owed (Kev + iPad): the real ceremony** — QR scan, Approve,
+  Local Network dialog, a streamed answer, Tailscale-unreachable.
+- **Next:** Android client (Conscrypt PSKKeyManager, or the cert-pin
+  fallback). Follow-ups: canary→Keychain migration; LAN-MCP client-name
+  stamping (the paired device name is the natural stamp); N2/N3 escalation
+  UI now that a real client exists.
 
 ---
 

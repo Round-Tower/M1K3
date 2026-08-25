@@ -28,6 +28,7 @@
 
 import CoreImage.CIFilterBuiltins
 import Foundation
+import M1K3BrainLink
 import M1K3BrainServe
 import M1K3Calls // KeychainKeyStore — PSKs at rest (afterFirstUnlock, device-only)
 import M1K3Inference // RawCompletionProviding — the persona-free /v1/generate seam
@@ -347,12 +348,18 @@ final class BrainServeController {
         candidateSecret = secret
         pairing.beginDisplay(identity: identity, now: Date())
         let mac = Host.current().localizedName ?? "M1K3"
-        let psk = secret.base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-        pairingQRPayload = "m1k3-pair://v1?psk=\(psk)&id=\(identity)&port=\(pairingPort)"
-            + "&mainPort=\(port)&name=\(mac.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "M1K3")"
+        // Composed through the SHARED payload type (round-trip-pinned against
+        // the device's parser) — and it now carries the Mac's LAN addresses:
+        // the QR is the only channel a first-time device has, because the
+        // Bonjour advertiser only runs once a paired device already exists.
+        pairingQRPayload = PairingPayload(
+            psk: secret,
+            identity: identity,
+            pairingPort: pairingPort,
+            mainPort: port,
+            macName: mac,
+            hosts: LANAddresses.current()
+        ).composed()
         // Auto-expiry (≤60s): the candidate is discarded, the QR goes away.
         pairingExpiryTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(PairingSession.displayTTL))

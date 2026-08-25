@@ -30,6 +30,7 @@ import Foundation
 import M1K3Agent
 import M1K3AgentTools
 import M1K3Avatar
+import M1K3BrainLink
 import M1K3Chat
 import M1K3Inference
 import M1K3Knowledge
@@ -96,6 +97,17 @@ final class AppCore {
     /// on the Simulator). Surfaced in Settings under the picker.
     private(set) var brainNote: String?
 
+    // MARK: - Brain at Home (Phase C — the paired Mac's brain over the LAN)
+
+    /// The paired Mac, if any. Metadata only — the PSK lives in the Keychain
+    /// (PairedBrainStore's split, mirroring the Mac side).
+    private(set) var homeBrain: PairedBrain?
+    /// True while the inference slot points at the paired Mac's brain. The
+    /// local `selectedBrain` is kept untouched as the tier to return to.
+    private(set) var homeBrainActive = false
+    /// Device-side pairing persistence (defaults metadata + Keychain PSK).
+    let brainLinkStore = PairedBrainStore()
+
     // MARK: - Persistence keys (shared spelling with the Mac app so a brain
 
     // choice reads back consistently in the responder's brain-name provider).
@@ -104,6 +116,9 @@ final class AppCore {
     // @Sendable per-turn closures can read them off the main actor.
     nonisolated static let selectedBrainKey = "selectedBrain"
     nonisolated static let hasChosenBrainKey = "hasChosenBrain"
+    /// Whether the Home (paired Mac) brain fronts the slot — device-local,
+    /// deliberately NOT shared spelling with the Mac (it has no Home tier).
+    nonisolated static let homeBrainActiveKey = "brainLink.homeActive"
     nonisolated static let webSearchEnabledKey = "webSearchEnabled"
     /// The full-bleed reactive avatar behind chat — default ON; the Settings
     /// toggle is the opt-out (the Mac's avatarDisplay panel/background choice,
@@ -125,11 +140,14 @@ final class AppCore {
     }
 
     /// Ready to answer? Mini (AFM) manages its own availability at generate-time;
-    /// an MLX brain is ready only once its weights are warm.
+    /// an MLX brain is ready only once its weights are warm. The Home brain is
+    /// always "ready" — the Mac speaks its own availability per turn (etiquette
+    /// refusals render as words in the answer, never a blocked send button).
     var isReady: Bool {
+        if homeBrainActive { return true }
         switch selectedBrain.backing {
-        case .appleFoundationModels: afm.isAvailable
-        case .mlx: brainLoad == .ready
+        case .appleFoundationModels: return afm.isAvailable
+        case .mlx: return brainLoad == .ready
         }
     }
 
@@ -216,6 +234,12 @@ final class AppCore {
         )
 
         refreshCounts()
+        // Brain at Home: restore a paired Mac, and re-point the slot at it if
+        // Home was fronting when the app last ran.
+        homeBrain = brainLinkStore.load()
+        if homeBrain != nil, UserDefaults.standard.bool(forKey: Self.homeBrainActiveKey) {
+            activateHomeBrain()
+        }
         // Cheap + synchronous (registration only) — see AppCore+MetricKit.swift.
         startMetricKitCollection()
         // Speech lifecycle → avatar speaking state + the voice loop's completion
@@ -244,11 +268,20 @@ final class AppCore {
         }
         brainNote = nil
 
+        // Leaving the Home brain: the slot currently points at the Mac, so the
+        // no-op guard below MUST NOT fire even for the same settled local tier —
+        // the whole point of this call is re-pointing the slot at local compute.
+        let leavingHome = homeBrainActive
+        if leavingHome {
+            homeBrainActive = false
+            UserDefaults.standard.set(false, forKey: Self.homeBrainActiveKey)
+        }
+
         // No-op guard (the Mac AppEnvironment's fix): re-selecting the SAME,
         // already-settled brain would tear down a warm KV/persona cache and repay a
         // multi-GB load for nothing. Re-tapping Mini when already on Mini is also a
         // no-op. A switch that's mid-warm still falls through (lets the user cancel).
-        if tier == selectedBrain {
+        if tier == selectedBrain, !leavingHome {
             switch tier.mlxModelID {
             case nil where brainLoad == .idle:
                 return
@@ -280,6 +313,70 @@ final class AppCore {
         } else {
             warmSelectedBrain()
         }
+    }
+
+    // MARK: - Brain at Home selection
+
+    /// Point the inference slot at the paired Mac's brain. `selectedBrain`
+    /// stays untouched — it is the local tier a later selectBrain returns to.
+    func selectHomeBrain() {
+        guard homeBrain != nil, !homeBrainActive else { return }
+        activateHomeBrain()
+        if homeBrainActive {
+            UserDefaults.standard.set(true, forKey: Self.homeBrainActiveKey)
+        }
+    }
+
+    /// A fresh pairing succeeded: persist it and surface it in the UI.
+    /// Returns false when the Keychain write failed (the pairing is not kept).
+    func adoptPairedBrain(_ brain: PairedBrain, key: Data) -> Bool {
+        do {
+            try brainLinkStore.save(brain, key: key)
+        } catch {
+            Self.log.error("brain link: keychain save failed: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+        homeBrain = brain
+        return true
+    }
+
+    /// Forget the paired Mac (client side): key + metadata gone; if Home was
+    /// fronting, the slot returns to the local tier. The Mac's own paired-
+    /// devices list is cleaned up there (revoke) — pairing is two-sided.
+    func forgetHomeBrain() {
+        brainLinkStore.forget()
+        homeBrain = nil
+        if homeBrainActive {
+            selectBrain(selectedBrain) // leavingHome path re-points the slot
+        }
+    }
+
+    private func activateHomeBrain() {
+        guard let brain = homeBrain, let credential = brainLinkStore.credential() else {
+            // Metadata without a Keychain row (restore/migration edge): honest
+            // note, never a half-paired ghost.
+            brainNote = "This device’s pairing key is missing — pair with your Mac again."
+            return
+        }
+        warmTask?.cancel()
+        warmGeneration += 1
+        // Release local MLX weights — the decode is the Mac's while Home
+        // fronts, and holding multi-GB weights idle fights the mobile budget.
+        currentMLX?.releaseMemory()
+        currentMLX = nil
+        brainLoad = .idle
+        let store = brainLinkStore
+        let provider = HomeBrainProvider(
+            brain: brain,
+            key: credential.key,
+            onBrainUpdate: { [weak self] updated in
+                store.update(updated)
+                Task { @MainActor [weak self] in self?.homeBrain = updated }
+            }
+        )
+        activeProvider.setProvider(provider)
+        homeBrainActive = true
+        brainNote = nil
     }
 
     private func warmSelectedBrain() {
