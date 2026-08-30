@@ -4,10 +4,15 @@
 //
 //  The confabulation tripwire between the model's narrative and the pulse
 //  that gets stored. Heuristic by design: any digit run in the narrative
-//  must already appear in the material the prompt showed the model — the
-//  digest PLUS the day's earlier pulses (pulse 2's live rejection,
-//  2026-08-06 22:32: the model faithfully threaded "4GB" from the morning
-//  pulse and the digest-only check called it invented). Plus the Mac-noun
+//  must already appear in code-composed material — this pulse's digest PLUS
+//  the day's earlier DIGESTS (pulse 2's live rejection, 2026-08-06 22:32:
+//  the model faithfully threaded "4GB" from the morning pulse and the
+//  digest-only check called it invented). Earlier NARRATIVES are
+//  deliberately NOT evidence: admitting them (the original pulse-2 fix)
+//  opened a laundering path — a digit fabricated in pulse 1 was permanently
+//  allowed for every later pulse that day (2026-08-30 addendum, fix 6; the
+//  live "local foodies on the 19th"). The day-arc prompt still shows the
+//  model the narratives; only the evidence set narrows. Plus the Mac-noun
 //  tripwire (the first pulse opened "Mac's breathing easy"), emptiness,
 //  and length bounds.
 //
@@ -21,6 +26,10 @@
 //  Review: Kev + claude-fable-5, 2026-08-06 (late) — earlier-pulse digits
 //  admitted after the live pulse-2 rejection; Bool validate now wraps a
 //  reason-bearing verdict so the log can say WHY without content.
+//  Review: Kev + claude-fable-5, 2026-08-30, Confidence 0.9 — the
+//  laundering hole closed: `earlierPulses` → `earlierDigests`, so the
+//  evidence set is code-composed digests only, never earlier narratives.
+//  Red-first test pinned; the call site passes digests.
 //
 
 import Foundation
@@ -48,10 +57,13 @@ public enum NarrativeGuard {
     /// sound (the M1K3LogCore.LogPreview precedent).
     private nonisolated(unsafe) static let macNoun = /\bMacs?\b/.wordBoundaryKind(.simple).ignoresCase()
 
+    /// `earlierDigests` is the day's earlier DIGESTS — code-composed facts,
+    /// never earlier narratives. A narrative as evidence launders its own
+    /// fabrications into every later pulse (fix 6, 2026-08-30).
     public static func verdict(
         narrative: String,
         digest: String,
-        earlierPulses: [String] = [],
+        earlierDigests: [String] = [],
         maxLength: Int = NarrativeGuard.maxLength
     ) -> Verdict {
         let trimmed = narrative.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -59,8 +71,8 @@ public enum NarrativeGuard {
         guard trimmed.count <= maxLength else { return .tooLong }
         guard trimmed.firstMatch(of: macNoun) == nil else { return .macNoun }
         var allowed = digitRuns(in: digest)
-        for pulse in earlierPulses {
-            allowed.formUnion(digitRuns(in: pulse))
+        for earlier in earlierDigests {
+            allowed.formUnion(digitRuns(in: earlier))
         }
         guard digitRuns(in: narrative).isSubset(of: allowed) else { return .inventedDigit }
         return .pass
@@ -69,12 +81,12 @@ public enum NarrativeGuard {
     public static func validate(
         narrative: String,
         digest: String,
-        earlierPulses: [String] = [],
+        earlierDigests: [String] = [],
         maxLength: Int = NarrativeGuard.maxLength
     ) -> Bool {
         verdict(
             narrative: narrative, digest: digest,
-            earlierPulses: earlierPulses, maxLength: maxLength
+            earlierDigests: earlierDigests, maxLength: maxLength
         ) == .pass
     }
 

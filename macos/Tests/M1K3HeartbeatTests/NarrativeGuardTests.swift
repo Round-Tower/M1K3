@@ -81,15 +81,30 @@ struct NarrativeGuardTests {
         #expect(NarrativeGuard.validate(narrative: narrative, digest: digest))
     }
 
-    @Test("digits from the day's earlier pulses are allowed — the prompt asks for the arc (pulse 2 live rejection)")
-    func earlierPulseDigitsAllowed() {
+    @Test("digits from the day's earlier DIGESTS are allowed — the arc threads faithfully (pulse 2 live rejection)")
+    func earlierDigestDigitsAllowed() {
         let narrative = "Disk's breathing again — 4GB this morning, 210 now."
         #expect(!NarrativeGuard.validate(narrative: narrative, digest: digest))
         #expect(NarrativeGuard.validate(
             narrative: narrative,
             digest: digest,
-            earlierPulses: ["Cool and steady, 4GB of space to spare."]
+            earlierDigests: ["Cool and steady, 4GB of space to spare."]
         ))
+    }
+
+    @Test("the laundering path is closed — evidence is digests ONLY, never earlier narratives (2026-08-30 addendum, fix 6)")
+    func launderedDigitStaysInvented() {
+        // Pulse 1's model invented "the 19th". Under the old rule pulse 1's
+        // NARRATIVE joined the evidence set, so the fabrication was permanently
+        // allowed for every later pulse that day. The evidence parameter now
+        // takes digests — code-composed facts — so a fabricated digit stays
+        // invented no matter how many pulses ago it was fabricated.
+        let narrative = "You were busy exploring local foodies on the 19th."
+        #expect(NarrativeGuard.verdict(
+            narrative: narrative,
+            digest: digest,
+            earlierDigests: ["The machine is running cool. Battery at 84%, charging."]
+        ) == .inventedDigit)
     }
 
     @Test("the verdict names the rejection reason, content-free")
