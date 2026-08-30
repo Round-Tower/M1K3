@@ -22,6 +22,13 @@
 //  Signed: Kev + claude-fable-5, 2026-07-03, Confidence 0.85 (flow logic rides
 //  tested policy; look/feel + the AFM-unavailable path are verify-by-launch).
 //  Prior: none (new file; the wizard it replaces lives on as BrainPickerView).
+//  Review: Kev + claude-fable-5, 2026-08-30, Confidence 0.8 — the waits came
+//  alive: both the Lil download and the AFM warm now mount WakeSetupCarousel
+//  ("set up the room while I wake") instead of a dead bar/spinner. Completion
+//  rides WakeSetupFlow's pinned no-yank rule — an untouched deck auto-advances
+//  on ready exactly as before; an engaged one gets the invite. The avatar
+//  backdrop stays forward during the waits (it wakes as the bar fills — that's
+//  the show). Failure UI unchanged. Feel is verify-by-⌘R.
 
 import M1K3Avatar
 import M1K3Inference
@@ -43,6 +50,10 @@ struct HelloView: View {
     @State private var phase: Phase = .hello
     @State private var userName = ""
     @State private var afm: AFMAvailability = .available
+    /// The wake-setup deck shown during both waits. Its completion rule (pure,
+    /// pinned) owns the no-yank behaviour: an untouched deck auto-advances on
+    /// ready exactly like the old spinner did; an engaged one waits for a tap.
+    @State private var wakeFlow = WakeSetupFlow()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -65,8 +76,10 @@ struct HelloView: View {
         .background {
             // The live face is the room — same full-window reactive backdrop as
             // chat, mounted ONCE outside the phase switch (RealityView identity).
-            // He steps back while a download/wait fills the screen with copy.
-            AvatarChatBackground(env: env, isTyping: phase != .hello)
+            // He stays FORWARD during the waits now: the carousel's whole
+            // metaphor is the face waking up as the bar fills (WakeAlertness),
+            // so receding him would hide the show.
+            AvatarChatBackground(env: env, isTyping: false)
         }
         .glassBackdrop()
         .onAppear {
@@ -75,7 +88,12 @@ struct HelloView: View {
         }
         .onDisappear { env.avatar.resetToIdle() }
         .onChange(of: env.modelLoad) { _, state in
-            if case .ready = state, phase == .downloading { onComplete() }
+            guard case .ready = state, phase == .downloading else { return }
+            // No yank: readiness only auto-advances a user who never touched
+            // the setup deck (today's behaviour); an engaged one gets the
+            // carousel's invite and taps through when ready.
+            wakeFlow.markBrainReady()
+            if wakeFlow.completion == .autoComplete { onComplete() }
         }
     }
 
@@ -153,28 +171,27 @@ struct HelloView: View {
 
     private var waitingCard: some View {
         VStack(spacing: 16) {
-            Spacer(minLength: 80)
-            ProgressView().controlSize(.large)
-            Text("Mini is getting ready — Apple's on-device model is finishing a sync.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 400)
+            Spacer(minLength: 20)
+            // Same carousel, indeterminate progress source (O6): the AFM warm
+            // is usually short, but it's the same dead wait without this.
+            WakeSetupCarousel(flow: $wakeFlow, fraction: nil, onComplete: onComplete)
             Button("Use a downloaded brain instead (Lil, 2.3 GB)") {
                 startFallbackDownload()
             }
             .buttonStyle(.plain)
             .font(.caption)
             .foregroundStyle(.secondary)
-            Spacer(minLength: 80)
+            Spacer(minLength: 20)
         }
         .task {
-            // Re-poll while visible; completes the moment AFM turns available.
+            // Re-poll while visible; the moment AFM turns available the same
+            // no-yank rule as the download path decides auto-advance vs invite.
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
                 if case .available = env.afmAvailability {
                     env.selectBrain(.mini)
-                    onComplete()
+                    wakeFlow.markBrainReady()
+                    if wakeFlow.completion == .autoComplete { onComplete() }
                     return
                 }
             }
@@ -185,16 +202,19 @@ struct HelloView: View {
 
     private var downloadingCard: some View {
         VStack(spacing: 20) {
-            Spacer(minLength: 60)
+            Spacer(minLength: 20)
             switch env.modelLoad {
-            case let .downloading(fraction):
-                VStack(spacing: 6) {
-                    ProgressView(value: fraction).frame(maxWidth: 320)
-                    Text(env.modelLoad.label(modelName: BrainTier.lil.displayName))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    DialUpMuteButton()
-                }
+            case .downloading, .idle, .preparing, .ready:
+                // The wait IS the setup time (O1): cards up front, the honest
+                // bar + dial-up at the bottom. `.preparing` (downloaded, still
+                // loading into RAM) renders as the 99% home stretch rather
+                // than a copy-less spinner; `.ready` holds the carousel's own
+                // invite state (the no-yank onChange above owns completion).
+                WakeSetupCarousel(
+                    flow: $wakeFlow,
+                    fraction: downloadFraction,
+                    onComplete: onComplete
+                )
             case .failed:
                 VStack(spacing: 10) {
                     Label(env.modelLoad.label(modelName: BrainTier.lil.displayName),
@@ -213,10 +233,19 @@ struct HelloView: View {
                         .foregroundStyle(.secondary)
                     }
                 }
-            case .idle, .ready, .preparing:
-                ProgressView().controlSize(.large)
             }
-            Spacer(minLength: 60)
+            Spacer(minLength: 20)
+        }
+    }
+
+    /// The carousel's determinate progress source. `.preparing` is the
+    /// post-download RAM load — no honest fraction exists, so show the home
+    /// stretch (99% caps below 100 by construction; the ready line owns 100).
+    private var downloadFraction: Double {
+        switch env.modelLoad {
+        case let .downloading(fraction): fraction
+        case .preparing, .ready: 0.99
+        case .idle, .failed: 0
         }
     }
 
