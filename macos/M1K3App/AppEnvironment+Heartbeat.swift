@@ -31,6 +31,12 @@
 //  verify-owed — ⌘R with the toggle on, and gemma is prompt-fragile so the
 //  narrative wants an A/B look before the toggle defaults on).
 //  Prior: none (new file).
+//  Review: Kev + claude-fable-5, 2026-08-30, Confidence 0.85 — the addendum
+//  fixes wired: the render is gated on hasActivity (no news → no decode, the
+//  digest ships), the guard's evidence set is the day's DIGESTS, and the
+//  last three pulses cross the midnight boundary as anti-repetition
+//  material for prompt and guard. The reworded pulse is ⌘R/A-B verify-owed
+//  as a set — swift test proves the strings, not that a pulse reads well.
 //
 
 import AppKit
@@ -104,6 +110,7 @@ extension AppEnvironment {
             .compactMap(\.title)
         let brainStatus = HeartbeatContext.BrainStatus(
             residentTierName: selectedBrain.displayName,
+            residentTierDescriptor: selectedBrain.heartbeatDescriptor,
             downloadingModelName: nil // busy gate: a pulse never fires mid-download
         )
 
@@ -113,15 +120,7 @@ extension AppEnvironment {
         let knowledgeStore = store
         let mcpLogOn = UserDefaults.standard.bool(forKey: Self.conversationLogEnabledKey)
         let gathered = await Task.detached(priority: .utility) {
-            () -> (
-                device: HeartbeatContext.Device,
-                memory: HeartbeatContext.MemoryActivity?,
-                mcp: HeartbeatContext.MCPActivity?,
-                fact: HeartbeatContext.FunFact?,
-                earlierToday: [String],
-                earlierDigests: [String],
-                pulsesToday: Int
-            ) in
+            () -> GatheredPulse in
             let system = LiveSystemStatusProvider()
             let battery = system.batterySnapshot()
             let disk = try? system.diskSnapshot()
@@ -169,7 +168,20 @@ extension AppEnvironment {
             // guard's evidence set is the code-composed DIGESTS only —
             // an earlier narrative as evidence launders its own fabrications
             // into every later pulse (fix 6, 2026-08-30 addendum).
-            return (device, memory, mcp, fact, today.map(\.displayText), today.map(\.digest), today.count)
+            // recentPulses crosses the midnight boundary (fix 5): on a quiet
+            // day the day window is empty by construction, and the repetition
+            // lived exactly across days.
+            let recentAcrossDays = (try? pulseStore.recent(limit: 3)) ?? []
+            return GatheredPulse(
+                device: device,
+                memory: memory,
+                mcp: mcp,
+                fact: fact,
+                earlierToday: today.map(\.displayText),
+                earlierDigests: today.map(\.digest),
+                recentPulses: recentAcrossDays.map(\.displayText),
+                pulsesToday: today.count
+            )
         }.value
 
         let context = HeartbeatContext(
@@ -195,8 +207,10 @@ extension AppEnvironment {
         let digest = HeartbeatComposer.digest(from: context)
         let (narrative, renderedBy) = await renderHeartbeatNarrative(
             digest: digest,
+            hasActivity: context.hasActivity,
             earlierToday: gathered.earlierToday,
             earlierDigests: gathered.earlierDigests,
+            recentPulses: gathered.recentPulses,
             device: gathered.device
         )
 
@@ -221,10 +235,19 @@ extension AppEnvironment {
     /// Mini/AFM is deliberately NOT in this chain.
     private func renderHeartbeatNarrative(
         digest: String,
+        hasActivity: Bool,
         earlierToday: [String],
         earlierDigests: [String],
+        recentPulses: [String],
         device: HeartbeatContext.Device
     ) async -> (narrative: String?, renderedBy: String) {
+        // Don't ask the model when there is no news (fix 5): an ambience-only
+        // digest gave it nothing to retell but thermals and uptime — the
+        // pulse that read worst was also the one we were paying a decode for.
+        guard hasActivity else {
+            Self.heartbeatLog.notice("render skipped: no news — digest ships")
+            return (nil, "digest")
+        }
         guard selectedBrain.mlxModelID != nil, modelLoad == .ready else {
             return (nil, "digest")
         }
@@ -241,7 +264,9 @@ extension AppEnvironment {
             Self.heartbeatLog.notice("render skipped: machine became busy mid-pulse")
             return (nil, "digest")
         }
-        let prompt = HeartbeatPrompt.render(digest: digest, earlierToday: earlierToday)
+        let prompt = HeartbeatPrompt.render(
+            digest: digest, earlierToday: earlierToday, recentPulses: recentPulses
+        )
         // Marked background like the titler and the distiller (2026-08-12): nobody
         // is waiting on a pulse. Unmarked, it was the one background generate that
         // could TAKE a persona-prefix slot — and its bare-persona key is a third
@@ -274,7 +299,8 @@ extension AppEnvironment {
         // number still passes (pulse 2's live rejection), but a digit a
         // model fabricated earlier today stays invented (fix 6, 2026-08-30).
         let verdict = NarrativeGuard.verdict(
-            narrative: cleaned, digest: digest, earlierDigests: earlierDigests
+            narrative: cleaned, digest: digest, earlierDigests: earlierDigests,
+            recentPulses: recentPulses
         )
         guard verdict == .pass else {
             Self.heartbeatLog.notice(
@@ -284,4 +310,23 @@ extension AppEnvironment {
         }
         return (cleaned, selectedBrain.displayName)
     }
+}
+
+/// The off-main gather's payload — a named shape instead of the seven-member
+/// tuple SwiftLint rightly flagged. Everything here crosses back from the
+/// detached utility task, so it stays Sendable value data.
+private struct GatheredPulse {
+    var device: HeartbeatContext.Device
+    var memory: HeartbeatContext.MemoryActivity?
+    var mcp: HeartbeatContext.MCPActivity?
+    var fact: HeartbeatContext.FunFact?
+    /// The day's earlier pulse NARRATIVES (displayText) — the arc the prompt
+    /// continues.
+    var earlierToday: [String]
+    /// The day's earlier DIGESTS — the guard's evidence set (fix 6).
+    var earlierDigests: [String]
+    /// The last few pulses ACROSS the midnight boundary — anti-repetition
+    /// material for the prompt's openers rule and the guard's opener check.
+    var recentPulses: [String]
+    var pulsesToday: Int
 }

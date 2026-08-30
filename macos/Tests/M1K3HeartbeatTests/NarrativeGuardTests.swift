@@ -107,6 +107,40 @@ struct NarrativeGuardTests {
         ) == .inventedDigit)
     }
 
+    @Test("a repeated opener is rejected — three live days began with the same sentence (2026-08-30 addendum)")
+    func repeatedOpenerRejected() {
+        let narrative = "I'm keeping things steady on this end; the machine is running cool at 84%."
+        #expect(NarrativeGuard.verdict(
+            narrative: narrative,
+            digest: digest,
+            recentPulses: ["I'm keeping things steady on this end, all quiet."]
+        ) == .repeatsOpener)
+    }
+
+    @Test("the opener check is case- and punctuation-insensitive, and six words is the bar")
+    func repeatedOpenerNormalised() {
+        #expect(NarrativeGuard.verdict(
+            narrative: "im keeping things STEADY on this end tonight.",
+            digest: digest,
+            recentPulses: ["I'm keeping things steady on this — end of a long day."]
+        ) == .repeatsOpener)
+        // Five shared words then divergence — passes.
+        #expect(NarrativeGuard.verdict(
+            narrative: "I'm keeping things steady this evening at 84%.",
+            digest: digest,
+            recentPulses: ["I'm keeping things steady on this end."]
+        ) == .pass)
+    }
+
+    @Test("a fresh opener passes with recent pulses present")
+    func freshOpenerPasses() {
+        #expect(NarrativeGuard.verdict(
+            narrative: "A busy stretch — 3 new things learned at 84%.",
+            digest: digest,
+            recentPulses: ["I'm keeping things steady on this end."]
+        ) == .pass)
+    }
+
     @Test("the verdict names the rejection reason, content-free")
     func verdictReasons() {
         #expect(NarrativeGuard.verdict(narrative: "", digest: digest) == .empty)
