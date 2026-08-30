@@ -12,9 +12,23 @@
 //  on-device-only, and surfacing a reply on the lock screen / Notification Centre
 //  would leak exactly the private content the product exists to keep local.
 //
+//  Titles carry the NEWS, never the app name: macOS already prints "M1K3" in
+//  the banner header and the Notification Centre group header, so "M1K3 is
+//  ready" spent its one useful line saying the app name twice (Kev,
+//  2026-08-30). Say a promise once — doctrine principle 5.
+//
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.8 (policy TDD'd; the
 //  UNUserNotificationCenter effect + the permission flow are verify-by-launch).
 //  Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-08-30 — titles de-duplicated against the
+//  app name; stable per-kind identifiers replace UUIDs (a re-fired ping now
+//  REPLACES its predecessor rather than stacking — the observed double
+//  "M1K3 is ready / Lil has finished loading"); thread grouping added; the
+//  heartbeat pulse demoted to silent + .passive + low relevance, because an
+//  ambient 2-hourly chime is a notification you switch off, not one you read.
+//  Confidence 0.85 (string/identifier contract is plain; the banner's live
+//  look, the replace-in-place behaviour and the passive level are
+//  verify-by-launch — ⌘R with both toggles on).
 
 import Foundation
 import M1K3Chat
@@ -27,6 +41,30 @@ private let notifyLog = Logger(subsystem: "app.m1k3", category: "notify")
 /// decision of WHETHER to fire is the pure TurnNotificationPolicy; this is the
 /// platform effect, so it's verify-by-launch.
 enum TurnNotifier {
+    /// One case per ping M1K3 can raise. Two jobs beyond naming:
+    ///
+    /// 1. **A stable identifier per kind.** `UUID().uuidString` meant every
+    ///    post was a NEW notification, so six pulses a day stacked six banners
+    ///    and a re-fired "ready" showed up twice (observed 2026-08-30). Posting
+    ///    the same identifier REPLACES the pending one — Notification Centre
+    ///    holds the CURRENT pulse, not a transcript of them.
+    /// 2. **A thread**, so macOS groups a kind under one stack rather than
+    ///    scattering it through the day's list.
+    private enum Kind: String {
+        case turnFinished = "turn.finished"
+        case downloadComplete = "brain.download"
+        case brainReady = "brain.ready"
+        case deepDive = "deepdive.finished"
+        case heartbeat = "heartbeat.pulse"
+
+        /// The heartbeat is AMBIENT: it must never wake a screen or make a
+        /// sound, and it should sort below anything you actually asked for.
+        /// Everything else answers a thing you started, so it keeps its chime.
+        var isAmbient: Bool {
+            self == .heartbeat
+        }
+    }
+
     /// Request authorization — called only when the user opts in, so the system
     /// prompt appears on an explicit toggle, never at launch. Returns whether it
     /// was granted (the toggle reflects the real grant).
@@ -43,25 +81,26 @@ enum TurnNotifier {
     /// Post the generic "answer ready" notification. No content preview by design
     /// (privacy). The center silently drops it if authorization was never granted.
     static func notifyTurnFinished() async {
-        await post(title: "M1K3 has your answer", body: "Your reply is ready.")
+        await post(.turnFinished, title: "Your answer's ready", body: "It's waiting in the chat.")
     }
 
-    /// A model finished downloading in the background — ready to switch to. The
-    /// model NAME is not private (it's a public model id), so it's safe to show,
-    /// unlike a turn's content.
+    /// A brain finished downloading in the background — ready to load. The brain
+    /// NAME is not private (it's a public model id), so it's safe to show,
+    /// unlike a turn's content. The name leads the TITLE: the news is WHICH
+    /// brain, and a title that repeats the app name says nothing (principle 5).
     static func notifyDownloadComplete(modelName: String) async {
-        await post(title: "Download complete", body: "\(modelName) is downloaded and ready to load.")
+        await post(.downloadComplete, title: "\(modelName) downloaded", body: "Ready to load.")
     }
 
-    /// A model finished loading and M1K3 can now answer with it.
+    /// A brain finished loading and M1K3 can now answer with it.
     static func notifyModelReady(modelName: String) async {
-        await post(title: "M1K3 is ready", body: "\(modelName) has finished loading.")
+        await post(.brainReady, title: "\(modelName) is ready", body: "Loaded and ready to answer.")
     }
 
     /// A delegated deep dive landed in the chat. No content preview by design
     /// (privacy — same stance as the turn-finished ping).
     static func notifyDeepDiveFinished() async {
-        await post(title: "Deep dive finished", body: "M1K3's background work is ready in the chat.")
+        await post(.deepDive, title: "Deep dive finished", body: "The background work is ready in the chat.")
     }
 
     /// A heartbeat pulse landed. DELIBERATE exception to the generic-body rule
@@ -69,19 +108,38 @@ enum TurnNotifier {
     /// composed under the digest's privacy rules (titles/counts, never message
     /// text), behind its own opt-in, so the "status update" actually reaches
     /// the lock screen it was made for. macOS preview-hiding still applies.
+    ///
+    /// Title is the bare noun (Kev, 2026-08-30): the banner already carries
+    /// "M1K3" as its header, so "M1K3's heartbeat" spent a title line saying
+    /// the app name twice.
     static func notifyHeartbeatPulse(text: String) async {
-        await post(title: "M1K3's heartbeat", body: text)
+        await post(.heartbeat, title: "Heartbeat", body: text)
     }
 
-    /// Shared post path — generic content, no trigger (immediate). The center
-    /// silently drops it if authorization was never granted.
-    private static func post(title: String, body: String) async {
+    /// Shared post path — no trigger (immediate). The center silently drops it
+    /// if authorization was never granted.
+    ///
+    /// Title rule (Kev, 2026-08-30): a title NEVER contains "M1K3". macOS puts
+    /// the app name in the banner header and the Notification Centre group
+    /// header already, so a title that names the app burns the one line that
+    /// could have carried the news. Say a promise once (doctrine principle 5).
+    private static func post(_ kind: Kind, title: String, body: String) async {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        content.sound = .default
+        content.threadIdentifier = kind.rawValue
+        if kind.isAmbient {
+            // Silent and non-waking: an ambient pulse that chimes every couple
+            // of hours is a notification you turn off, not one you read.
+            content.sound = nil
+            content.interruptionLevel = .passive
+            content.relevanceScore = 0.2
+        } else {
+            content.sound = .default
+            content.interruptionLevel = .active
+        }
         let request = UNNotificationRequest(
-            identifier: UUID().uuidString, content: content, trigger: nil
+            identifier: kind.rawValue, content: content, trigger: nil
         )
         do {
             try await UNUserNotificationCenter.current().add(request)
