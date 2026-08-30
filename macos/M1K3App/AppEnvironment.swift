@@ -1905,6 +1905,16 @@ extension AppEnvironment {
         M1K3Persona.setUserProfile(capped.isEmpty ? nil : capped)
     }
 
+    /// The wake-setup "anything I should know?" card: APPEND a note to the
+    /// profile blob, never clobber it — About You owns the blob after first
+    /// run (the same rule saveFirstRunName's seed-only write follows).
+    func appendToUserProfile(_ note: String) {
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let existing = ((try? store.meta(key: Self.userProfileMetaKey)) ?? nil) ?? ""
+        saveUserProfile(existing.isEmpty ? trimmed : existing + "\n" + trimmed)
+    }
+
     /// Re-embed the store when the running embedder's vector space doesn't
     /// match the one that produced the stored vectors — e.g. after an mlx-swift
     /// bump changes the embedding kernels. Background, one-time; the Settings
