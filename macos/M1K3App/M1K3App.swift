@@ -198,6 +198,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @Published private(set) var startupError: String?
 
     func applicationWillFinishLaunching(_: Notification) {
+        // Before any MLX use: the quit-during-generation guard (MLXExitGuard
+        // header has the crash story). Normal errors stay fail-loud.
+        MLXExitGuard.install()
         // The phosphor Fox is the house default (Kev, 2026-08-06: "pretty
         // awesome — default standard"). Registered defaults, not writes: an
         // explicit persisted choice (any face, any skin — including pixel
@@ -229,6 +232,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let os = ProcessInfo.processInfo.operatingSystemVersionString
         let sha = Bundle.main.object(forInfoDictionaryKey: "GitCommitSHA") as? String ?? "—"
         launchLog.notice("launch: M1K3 \(version, privacy: .public) (\(build, privacy: .public)) sha=\(sha, privacy: .public) on \(os, privacy: .public)")
+    }
+
+    /// Terminate is always allowed — this only STAMPS that termination has
+    /// begun, so an MLX eval interrupted by the coming exit() logs and parks
+    /// instead of fatalError-ing over a clean quit (MLXExitGuard).
+    func applicationShouldTerminate(_: NSApplication) -> NSApplication.TerminateReply {
+        MLXExitGuard.markTerminating()
+        return .terminateNow
     }
 
     func applicationDidFinishLaunching(_: Notification) {
