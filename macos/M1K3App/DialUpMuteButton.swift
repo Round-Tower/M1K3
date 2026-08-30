@@ -24,20 +24,23 @@ struct DialUpMuteButton: View {
         // Only meaningful while sound effects are on — otherwise the master
         // switch already silences everything and this would be a dead control.
         if soundEffectsEnabled {
+            // Labelled, not icon-only (Kev, 2026-08-30): mid-download the bare
+            // speaker glyph didn't read as "this stops the modem" — the words
+            // are the affordance.
             Button(action: toggle) {
                 Label(
-                    dialUpSound ? "Mute dial-up sound" : "Dial-up muted",
+                    dialUpSound ? "Mute the modem" : "Modem muted",
                     systemImage: dialUpSound ? "speaker.wave.2.fill" : "speaker.slash.fill"
                 )
-                .labelStyle(.iconOnly)
-                .font(.callout)
+                .font(.caption)
                 .contentTransition(.symbolEffect(.replace))
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.glass)
+            .controlSize(.small)
             .foregroundStyle(.secondary)
             .help(dialUpSound ? "Mute the dial-up connecting sound" : "Unmute the dial-up connecting sound")
             .accessibilityLabel(dialUpSound ? "Mute dial-up sound" : "Unmute dial-up sound")
-            .padding()
+            .padding(.top, 6)
         }
     }
 

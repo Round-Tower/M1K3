@@ -127,4 +127,46 @@ struct SoundEffectPlayerTests {
         player.isEnabled = false
         #expect(rec.loops.map(\.1) == [true, false])
     }
+
+    // MARK: - The courtesy window (the gag lands, then leaves the room)
+
+    @Test("a courtesy-windowed loop stops itself once the window elapses")
+    func courtesyWindowAutoStops() async throws {
+        let rec = Recorder()
+        let player = SoundEffectPlayer(
+            isEnabled: true, isSpeaking: { false }, sink: rec.sink, loopSink: rec.loopSink
+        )
+        player.startLoop(.dialup, courtesyWindow: .milliseconds(20))
+        #expect(rec.loops.map(\.1) == [true])
+        try await Task.sleep(for: .milliseconds(200))
+        #expect(rec.loops.map(\.1) == [true, false])
+    }
+
+    @Test("a restart WITHOUT a window never auto-stops — explicit unmute means play to the end")
+    func explicitRestartOutlivesCourtesy() async throws {
+        let rec = Recorder()
+        let player = SoundEffectPlayer(
+            isEnabled: true, isSpeaking: { false }, sink: rec.sink, loopSink: rec.loopSink
+        )
+        player.startLoop(.dialup, courtesyWindow: .milliseconds(20))
+        try await Task.sleep(for: .milliseconds(200))
+        player.startLoop(.dialup)
+        try await Task.sleep(for: .milliseconds(200))
+        // start · courtesy-stop · restart — and nothing after.
+        #expect(rec.loops.map(\.1) == [true, false, true])
+    }
+
+    @Test("an explicit stop cancels the pending courtesy — a stale timer must never kill a later restart")
+    func explicitStopCancelsCourtesy() async throws {
+        let rec = Recorder()
+        let player = SoundEffectPlayer(
+            isEnabled: true, isSpeaking: { false }, sink: rec.sink, loopSink: rec.loopSink
+        )
+        player.startLoop(.dialup, courtesyWindow: .milliseconds(50))
+        player.stopLoop(.dialup)
+        player.startLoop(.dialup)
+        try await Task.sleep(for: .milliseconds(250))
+        // start · stop · restart — the 50ms timer died with the stop.
+        #expect(rec.loops.map(\.1) == [true, false, true])
+    }
 }

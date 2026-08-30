@@ -47,6 +47,8 @@ public final class SoundEffectPlayer {
     private let loopSink: @MainActor (SoundEffect, Bool) -> Void
     /// Effects currently looping — so a mute can stop them, and a stop is idempotent.
     private var looping: Set<SoundEffect> = []
+    /// Pending courtesy-window timers, keyed by effect; any stop cancels them.
+    private var courtesyTasks: [SoundEffect: Task<Void, Never>] = [:]
 
     /// Designated init — `sink` performs one-shot playback, `loopSink` starts/
     /// stops a sustained loop. Both injectable so the policy is testable without
@@ -71,15 +73,30 @@ public final class SoundEffectPlayer {
     /// Begin a sustained looping sound (the dial-up "connecting…" hum). Gated
     /// like `play`: only when enabled and M1K3 isn't speaking. Idempotent — a
     /// second start while already looping is a no-op.
-    public func startLoop(_ effect: SoundEffect) {
+    ///
+    /// `courtesyWindow` is the "gag lands, then leaves the room" rule (Kev,
+    /// 2026-08-30 — a 15-second joke over a minutes-long download): after the
+    /// window the loop stops ITSELF. A start without a window (the mute
+    /// button's explicit unmute) plays to the end — asking for it back means
+    /// wanting the whole thing.
+    public func startLoop(_ effect: SoundEffect, courtesyWindow: Duration? = nil) {
         guard SoundGate.allows(enabled: isEnabled, isSpeaking: isSpeaking()) else { return }
         guard looping.insert(effect).inserted else { return }
         loopSink(effect, true)
+        guard let courtesyWindow else { return }
+        courtesyTasks[effect] = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: courtesyWindow)
+            guard !Task.isCancelled else { return }
+            self?.stopLoop(effect)
+        }
     }
 
     /// Stop a sustained sound. NOT gated — a stop must always land (e.g. the
     /// load finished) even if the effect was never started; then it's a no-op.
+    /// Always kills a pending courtesy timer, so a stale window can never
+    /// silence a loop the user explicitly restarted.
     public func stopLoop(_ effect: SoundEffect) {
+        courtesyTasks.removeValue(forKey: effect)?.cancel()
         guard looping.remove(effect) != nil else { return }
         loopSink(effect, false)
     }
@@ -111,8 +128,16 @@ public extension SoundEffectPlayer {
 private final class AVAudioEarconPool {
     private static let log = Logger(subsystem: "app.m1k3", category: "sfx")
     private var players: [SoundEffect: AVAudioPlayer] = [:]
+    private let volume: Float
+    /// In-flight fade-out completions, so a restart during the fade cancels
+    /// the pending hard stop instead of being killed by it.
+    private var fadeStops: [SoundEffect: DispatchWorkItem] = [:]
+    /// Loop stops fade rather than cut — 0.4s reads as instant on a mute tap
+    /// but spares the ear the hard chop mid-screech.
+    private let loopFadeSeconds = 0.4
 
     init(volume: Float) {
+        self.volume = volume
         for effect in SoundEffect.allCases {
             guard let url = SoundEffectAssets.url(for: effect) else {
                 Self.log.error("earcon WAV missing for \(effect.rawValue, privacy: .public)")
@@ -141,13 +166,24 @@ private final class AVAudioEarconPool {
     func loop(_ effect: SoundEffect, start: Bool) {
         guard let player = players[effect] else { return }
         if start {
+            // A restart mid-fade cancels the pending hard stop and restores
+            // full volume — otherwise the stale completion would kill it.
+            fadeStops.removeValue(forKey: effect)?.cancel()
+            player.volume = volume
             player.numberOfLoops = -1
             player.currentTime = 0
             player.play()
         } else {
-            player.stop()
-            player.numberOfLoops = 0
-            player.currentTime = 0
+            player.setVolume(0, fadeDuration: loopFadeSeconds)
+            let restoreVolume = volume // by value — no self capture in the stored item
+            let stop = DispatchWorkItem { [weak player] in
+                player?.stop()
+                player?.numberOfLoops = 0
+                player?.currentTime = 0
+                player?.volume = restoreVolume
+            }
+            fadeStops[effect] = stop
+            DispatchQueue.main.asyncAfter(deadline: .now() + loopFadeSeconds, execute: stop)
         }
     }
 }
