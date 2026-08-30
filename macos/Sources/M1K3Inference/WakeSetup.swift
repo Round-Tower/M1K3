@@ -51,6 +51,12 @@ public struct WakeSetupFlow: Sendable, Equatable {
     /// the gentle invite over today's auto-advance.
     public private(set) var hasEngaged = false
     public private(set) var brainReady = false
+    /// The about-you card's draft note. Lives in the FLOW, not view @State,
+    /// because HelloView mounts a separate carousel per phase — the AFM-wait →
+    /// download-fallback switch tears the view down, and a draft that lived
+    /// there died with it (review catch, PR #155). Committed to the profile
+    /// exactly once, at completion.
+    public private(set) var note = ""
 
     public init(cards: [WakeSetupCard] = WakeSetupCard.allCases) {
         self.cards = cards.isEmpty ? WakeSetupCard.allCases : cards
@@ -81,6 +87,13 @@ public struct WakeSetupFlow: Sendable, Equatable {
     /// A card interaction that doesn't move the deck (typing a name, picking
     /// a face) still counts as engagement.
     public mutating func engage() {
+        hasEngaged = true
+    }
+
+    /// Update the about-you draft. Any edit counts as engagement — clearing
+    /// the field doesn't un-touch the deck.
+    public mutating func setNote(_ text: String) {
+        note = text
         hasEngaged = true
     }
 

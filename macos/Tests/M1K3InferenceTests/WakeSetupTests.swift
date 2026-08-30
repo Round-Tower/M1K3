@@ -59,6 +59,27 @@ struct WakeSetupFlowTests {
         #expect(flow.completion == .autoComplete)
     }
 
+    @Test("the about-you note lives in the FLOW, so it survives a phase switch (review catch: two carousel mounts share one flow)")
+    func noteLivesInFlow() {
+        var flow = WakeSetupFlow()
+        flow.setNote("I teach primary school")
+        #expect(flow.note == "I teach primary school")
+        #expect(flow.hasEngaged)
+        // Copying the flow into a freshly-mounted view keeps the text — the
+        // exact AFM-wait → download-fallback teardown that lost it as @State.
+        let remounted = flow
+        #expect(remounted.note == "I teach primary school")
+    }
+
+    @Test("clearing the note doesn't un-engage — the user still touched the deck")
+    func clearedNoteStaysEngaged() {
+        var flow = WakeSetupFlow()
+        flow.setNote("hi")
+        flow.setNote("")
+        #expect(flow.note.isEmpty)
+        #expect(flow.hasEngaged)
+    }
+
     @Test("engaged + ready → invite, never a yank — regardless of which came first")
     func engagedReadyInvites() {
         var engagedFirst = WakeSetupFlow()
@@ -109,13 +130,21 @@ struct WakeProgressCopyTests {
 
     @Test("the AFM warming wait cycles deterministic lines and wraps")
     func warmingLinesCycle() {
-        let count = 4
+        // Discover the distinct lines by scanning, then assert the actual
+        // invariant — every tick repeats one period later — so the test
+        // survives lines being added or removed (review nit: the old assert
+        // leaned on a count coincidence).
         var seen = Set<String>()
-        for tick in 0 ..< count {
+        for tick in 0 ..< 10 {
             seen.insert(WakeProgressCopy.warmingLine(tick: tick))
         }
         #expect(seen.count > 1)
-        #expect(WakeProgressCopy.warmingLine(tick: 0) == WakeProgressCopy.warmingLine(tick: seen.count))
+        for tick in 0 ..< seen.count {
+            #expect(
+                WakeProgressCopy.warmingLine(tick: tick)
+                    == WakeProgressCopy.warmingLine(tick: tick + seen.count)
+            )
+        }
     }
 
     @Test("the ready line greets by name, and stands alone without one")

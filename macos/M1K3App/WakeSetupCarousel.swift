@@ -32,11 +32,11 @@ struct WakeSetupCarousel: View {
     let fraction: Double?
     let onComplete: () -> Void
 
-    @State private var aboutNote = ""
-    @State private var committedNote = ""
     @State private var warmingTick = 0
     @State private var lastAlertness: WakeAlertness = .dozing
     @State private var hasGreeted = false
+    @State private var hasCommittedNote = false
+    @State private var invitePulse = false
     @AppStorage(ReadingMode.storageKey) private var readingMode: ReadingMode = .standard
     @AppStorage(AppEnvironment.voiceCompanionKey) private var voiceCompanion = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -87,11 +87,17 @@ struct WakeSetupCarousel: View {
     private var aboutYouCard: some View {
         VStack(spacing: 12) {
             cardTitle("About you")
-            TextField("Anything I should know? (optional)", text: $aboutNote)
-                .textFieldStyle(.roundedBorder)
-                .font(.body)
-                .onSubmit { commitAboutNote() }
-                .onChange(of: aboutNote) { _, _ in flow.engage() }
+            // The draft binds into the FLOW (not local @State) so it survives
+            // HelloView's phase switch remounting the carousel; setNote also
+            // marks engagement. Return just moves on — the commit happens
+            // exactly once, at completion.
+            TextField(
+                "Anything I should know? (optional)",
+                text: Binding(get: { flow.note }, set: { flow.setNote($0) })
+            )
+            .textFieldStyle(.roundedBorder)
+            .font(.body)
+            .onSubmit { flow.advance() }
             cardCaption("A line about you seeds my memory — \"I teach primary school\", "
                 + "\"short answers, please\". It stays on this Mac, and you can edit it "
                 + "any time in Settings → You.")
@@ -183,7 +189,6 @@ struct WakeSetupCarousel: View {
     private var navigation: some View {
         HStack(spacing: 16) {
             Button {
-                commitAboutNote()
                 flow.back()
             } label: {
                 Image(systemName: "chevron.left")
@@ -202,7 +207,6 @@ struct WakeSetupCarousel: View {
             .accessibilityLabel("Card \(flow.index + 1) of \(flow.cards.count)")
 
             Button {
-                commitAboutNote()
                 flow.advance()
             } label: {
                 Image(systemName: "chevron.right")
@@ -229,6 +233,14 @@ struct WakeSetupCarousel: View {
             }
             .buttonStyle(.glassProminent)
             .frame(maxWidth: 360)
+            // The gentle pulse the no-yank rule promises: an invitation that
+            // breathes, never a modal shove. Still under Reduce Motion.
+            .scaleEffect(invitePulse ? 1.035 : 1.0)
+            .animation(
+                reduceMotion ? nil : .easeInOut(duration: 0.9).repeatForever(autoreverses: true),
+                value: invitePulse
+            )
+            .onAppear { invitePulse = true }
         case .autoComplete, .keepWaiting:
             if let fraction {
                 VStack(spacing: 6) {
@@ -292,14 +304,15 @@ struct WakeSetupCarousel: View {
         }
     }
 
-    /// Commit-once: the field keeps its text (flipping back to the card must
-    /// never look like data loss), and the guard stops the CTA re-appending a
-    /// note the Return key already saved.
+    /// The ONE commit point (review catch, PR #155): the invite CTA is the
+    /// only writer, so edit-and-resubmit can never stack near-duplicate lines
+    /// into the capped profile blob. The guard is just double-tap armour.
     private func commitAboutNote() {
-        let note = aboutNote.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !note.isEmpty, note != committedNote else { return }
+        guard !hasCommittedNote else { return }
+        let note = flow.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !note.isEmpty else { return }
+        hasCommittedNote = true
         env.appendToUserProfile(note)
-        committedNote = note
     }
 
     private var displayName: String? {
