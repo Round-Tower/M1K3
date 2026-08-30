@@ -206,3 +206,209 @@ the interval… actually don't — just leave it running an afternoon.
 composer, guard, store all TDD-pinned red-first; app wiring compiles and
 mirrors named house patterns; the live pulse is verify-owed as stated).
 Prior: none (new doc).*
+
+## Addendum — the pulse reads odd (2026-08-30)
+
+Six live days of pulses, read back off the banner stack and the Heartbeat
+destination (Kev: *"reading kinda odd at times"*). Seven named failures. Each
+one has a root cause in code, so none of this is "tune the prompt and hope."
+
+### 1. The chat line loses its subject
+
+`HeartbeatComposer.chatLine` emits a passive with no actor —
+`Conversations touched: 'The Ballmer Legacy'.` The model filled the gap two
+ways across the week, both wrong:
+
+- **as M1K3's own work** — *"I've been processing 'The Ballmer Legacy'"*.
+  M1K3 processed nothing; Kev had a conversation.
+- **as a report filed on Kev** — *"though I note you've been seeking out
+  authentic Irish coffee in Cork"*. Correct facts, surveillance register.
+  This is the one that actually stings on a product whose pitch is that
+  nothing leaves.
+
+**Fix (composer):** name the actor, make it mutual — `We talked about 'X'.`
+A resident says *we*; a monitor says *you were observed*.
+
+### 2. The brain becomes a housemate
+
+`brainLine` emits `Big is resident.` and nothing anywhere says what Big *is*.
+Three consecutive pulses anthropomorphised it: *"keeping Big company on the
+shelf"* · *"Big is still here with us"* · *"with Big still hanging around the
+workspace."* Predictable — the render is a bare generate with no persona seed
+(deliberately, per #98), so an unexplained proper noun gets the friendliest
+available reading.
+
+**Fix (composer):** `Running on Big, the larger brain.`
+**Fix (prompt):** the brain is what M1K3 thinks *with*, never a companion.
+
+### 3. "From the shelf" leaks its metaphor
+
+The fun-fact prefix is the only figurative phrase in the whole digest, and
+it is exactly the phrase the model borrowed for Big ("on the shelf"). A
+metaphor in the digest is a metaphor the retelling will reuse somewhere else.
+
+It is also a **principle 3 violation** we shipped without noticing: the closed
+noun list spends `documents` on the corpus. `shelf` is a second noun for the
+same thing.
+
+**Fix:** `From your documents: … [title]`.
+
+### 4. Ambience drives the sentences
+
+Device state is always present and never interesting. Activity sections are
+frequently absent. So the digest's *stable* half outweighs its *newsworthy*
+half, every pulse opens on thermals and uptime, and the model is left making
+something of a disk number — *"there's plenty of disk space left to occupy."*
+
+**Fix (prompt):** split the digest into **NEWS** (memory · chat · visiting
+agents) and **AMBIENT** (machine · brain), and instruct: lead with the news;
+touch ambient only when it changed, or when there is no news at all.
+
+### 5. Three days, one sentence — the structural one
+
+> 08-28 · *"I'm keeping things steady on this end; the machine is running cool
+> and I've been up for three days…"*
+> 08-29 · *"…the machine is running cool and we've been up for four days…"*
+> 08-30 · *"I'm keeping things steady on this end…"*
+
+Not a style problem. `earlierPulsesToday` comes from
+`HeartbeatStore.since(startOfDay)` — it **resets at midnight** — and
+`HeartbeatEmptyRule` suppresses quiet windows, so on a quiet day the only
+pulse that fires is the day's *first*, which by construction sees an empty
+arc and a near-identical digest. "Continue the day's thread, don't repeat it"
+has had nothing to continue, every single day.
+
+**Two fixes, both cheap:**
+
+- **Don't ask the model when there is no news.** Gate the render on
+  `context.hasActivity`; an ambience-only pulse ships the digest. This kills
+  the repetition at its source *and* saves a decode — the pulse that reads
+  worst is also the one we were paying for.
+- **Cross the midnight boundary for anti-repetition material.** Add
+  `HeartbeatStore.recent(limit:)` beside `since(_:)`, feed the last three
+  pulses regardless of day, and say plainly: don't open the way these opened.
+
+### 6. Digit laundering through the day-arc — a real bug
+
+`NarrativeGuard` admits digits found in earlier **narratives** as well as the
+digest (the pulse-2 fix, 2026-08-06). That closed a false reject and opened a
+laundering path: **a digit fabricated in pulse 1 is permanently allowed for
+every later pulse that day.** The guard's whole job is the one thing it then
+stops doing.
+
+*"You were busy exploring global events and local foodies on the 19th"* — with
+no date anywhere in that pulse's material — is what the hole looks like from
+outside.
+
+**Fix:** admit digits from earlier **digests** only. The digests are already
+in hand — `HeartbeatStore.since` returns whole `HeartbeatEntry` rows and the
+engine maps them to `displayText`, discarding `digest`. So it is a call-site
+change plus renaming the guard's parameter `earlierPulses` → `earlierDigests`.
+The day-arc prompt keeps using the narratives; only the *evidence set* narrows.
+
+### 7. "I've stayed busy while you were away"
+
+No work was done. **Prompt rule:** report what happened; never claim work.
+
+### One new verdict worth having
+
+`NarrativeGuard` already carries a Mac-noun tripwire — a register check, not a
+truth check. Add a cheap sibling: **`.repeatsOpener`** — reject when the first
+six words match a recent pulse's first six. Pure, deterministic, trivially
+TDD'd, and the fallback asymmetry still holds: a false reject costs style
+because the digest ships.
+
+### The fixes by layer
+
+| Layer | Change | Shape |
+|---|---|---|
+| `HeartbeatComposer` | `We talked about 'X'` · `Running on Big, the larger brain` · `From your documents:` · NEWS/AMBIENT sectioning | pure, test-pinned |
+| `HeartbeatPrompt` | lead-with-news rule · don't personify the brain · don't claim work · don't editorialise numbers · don't open like these | string contract, test-pinned |
+| `NarrativeGuard` | `earlierPulses` → `earlierDigests` (closes laundering) · new `.repeatsOpener` verdict | pure, TDD red-first |
+| `HeartbeatStore` | `recent(limit:)` beside `since(_:)` | GRDB, round-trip test |
+| `AppEnvironment+Heartbeat` | render gated on `hasActivity` · pass digests to the guard, narratives to the prompt | app wiring, ⌘R |
+
+Ordering note: fix 6 is the only one that is a *defect* rather than a matter of
+taste. It ships first and alone, so its test tells the truth about one change.
+
+## Addendum — pulse tags (2026-08-30)
+
+Kev's ask: *"maybe add tags / knowledge graph stuff?"* Ruling taken the same
+day: **structural only.**
+
+### The rule
+
+**A tag describes the shape of a window, never its content.** Same rule as the
+CRT rain, for the same reason — and here it binds harder, because a tag is a
+*persistent, filterable index*, and an index over conversation and memory
+titles is precisely the "history of what you talked about" that the
+OFF-by-default stance in §"The double-bind" exists to avoid. Topic tags were
+considered and declined: they would have made the pulse store's privacy answer
+worse than the pulse store's privacy question.
+
+### The vocabulary (closed, and versioned like the noun list)
+
+- `pulse:first-today` · `pulse:quiet` · `pulse:active`
+- `machine:cool` · `machine:warm` · `machine:hot` · `machine:low-power`
+- `power:charging` · `power:battery`
+- `memory:learned` · `memory:corrected`
+- `chat:touched`
+- `agent:visited`, plus `agent:<client>` — the MCP client's self-reported
+  name (Claude, Cursor). Client identity is not user content, and the
+  timeline's visit headers already show it.
+- `brain:big` · `brain:lil` · `told-by:digest`
+- `hold:quiet-hours` · `hold:warm` · `hold:busy` · `hold:quiet-window`
+  (on the hold record, not on a pulse — a hold is the absence of one)
+
+**Explicitly not tags:** conversation titles · memory titles or keywords drawn
+from them · fun-fact source titles · tool arguments · any exact count.
+
+**Counts are banded, never exact.** `memory:learned` says a fact was learned;
+*how many* stays in the digest, which is capped at a week and cleared with one
+tap. A tag carrying `17` is a durable data point about somebody's week.
+
+### Where it lives
+
+`pulse_tags(pulse_id, tag)` in `heartbeat.sqlite`, foreign key
+`ON DELETE CASCADE`. The store's "nothing survives Clear" guarantee must not
+acquire an exception on its first extension — the cap trim and Clear take the
+tags with them or the schema is wrong.
+
+### Who composes them
+
+`HeartbeatComposer.tags(from: HeartbeatContext) -> Set<PulseTag>` — pure,
+deterministic, the #102 guard extended verbatim. **The model never sees a tag
+and never produces one.** Tags are facts, and facts come from code.
+
+### What it buys
+
+Filter chips over the interaction timeline: *only pulses where an agent
+visited* · *only pulses where the machine ran hot* · *only the days something
+was learned*. That is the honest version of the knowledge-graph ask — the pulse
+store gets its own small graph (pulse ⟶ tag ⟶ pulse) without adding one node
+to the memory graph.
+
+### And deliberately NOT the memory graph
+
+Writing pulses as `MemoryStore` nodes would undo store safeguard #6. Pulses are
+kept out of the chat transcript *precisely* so `MemoryDistillationCoordinator`
+can never mint a permanent fact from one; nodes would hand it a second door
+into the same room. If a pulse ever needs to point at a memory it points **one
+way** — a stored memory ID as a read-only reference, so the timeline can link
+out to the constellation. No edge. No node. No new distillation surface.
+
+### Verify-owed
+
+The seven fixes above are ⌘R-owed as a set: toggle the heartbeat on, live with
+it a few days, and read the pulses back cold. `swift test` will prove the
+composer strings, the guard verdicts, the store round-trip and the tag
+function; it cannot prove that a pulse reads well, and that was the whole
+complaint.
+
+*Signed: Kev + claude-opus-5, 2026-08-30, Confidence 0.85 (root causes are
+read directly off the shipped code and six days of live pulses, and each fix
+lands in a pure, testable layer; the digit-laundering hole is the one claim I'd
+stake a bug report on. What remains judgement is whether the reworded composer
+lines actually read better in the model's mouth — gemma is prompt-fragile and
+that is an A/B, not an assertion). Prior: v1 SHIPPED 2026-08-06 + the honest-
+holds addendum 2026-08-08.*

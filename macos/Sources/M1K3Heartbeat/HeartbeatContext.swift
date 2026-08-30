@@ -94,10 +94,19 @@ public struct HeartbeatContext: Sendable, Equatable {
 
     public struct BrainStatus: Sendable, Equatable {
         public var residentTierName: String?
+        /// What the tier IS, in apposition — "the larger brain". A bare "Big"
+        /// in the digest reads as a housemate to a model that never heard the
+        /// name (three live pulses kept it company on the shelf, 2026-08-30).
+        public var residentTierDescriptor: String?
         public var downloadingModelName: String?
 
-        public init(residentTierName: String? = nil, downloadingModelName: String? = nil) {
+        public init(
+            residentTierName: String? = nil,
+            residentTierDescriptor: String? = nil,
+            downloadingModelName: String? = nil
+        ) {
             self.residentTierName = residentTierName
+            self.residentTierDescriptor = residentTierDescriptor
             self.downloadingModelName = downloadingModelName
         }
     }
