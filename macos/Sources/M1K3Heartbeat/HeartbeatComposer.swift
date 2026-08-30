@@ -13,6 +13,13 @@
 //  Signed: Kev + claude-fable-5, 2026-08-06, Confidence 0.9 (pure function,
 //  phrasing pinned by tests; whether the lines read well aloud is Kev's ear).
 //  Prior: none (new file).
+//  Review: Kev + claude-fable-5, 2026-08-30, Confidence 0.85 — the register
+//  fixes from six live days (HEARTBEAT_DESIGN addendum 1–4): the chat line
+//  gains its actor ("We talked about"), the brain line says what the brain
+//  IS ("Running on Big, the larger brain"), the shelf metaphor goes ("From
+//  your documents"), and the digest splits NEWS-first / AMBIENT-after.
+//  Strings test-pinned; whether they read better in the model's mouth is
+//  the named A/B, not an assertion here.
 //
 
 import Foundation
@@ -20,30 +27,94 @@ import Foundation
 public enum HeartbeatComposer {
     /// Compose the deterministic digest for one pulse. Same context, same
     /// bytes — the tests pin it.
+    ///
+    /// Structure (2026-08-30 addendum, fix 4): NEWS (memory · chat · visiting
+    /// agents) leads, AMBIENT (machine · brain) follows — device state is
+    /// always present and never interesting, and an unstructured digest let
+    /// the stable half outweigh the newsworthy half every pulse. A quiet
+    /// digest carries no headers; there is nothing to lead with (and the
+    /// render gate means it never reaches the model anyway).
     public static func digest(from context: HeartbeatContext) -> String {
+        var news: [String] = []
+        if let memory = memoryLines(context.memory) { news.append(memory) }
+        if let chat = chatLine(context.chat) { news.append(chat) }
+        if let mcp = mcpLine(context.mcp) { news.append(mcp) }
+
+        var ambient: [String] = []
+        ambient.append(deviceLine(context.device))
+        if let battery = batteryLine(context.device) { ambient.append(battery) }
+        if let disk = diskLine(context.device) { ambient.append(disk) }
+        if let uptime = uptimeLine(context.device) { ambient.append(uptime) }
+        if let brain = brainLine(context.brain) { ambient.append(brain) }
+
         var lines: [String] = []
-        lines.append(deviceLine(context.device))
-        if let battery = batteryLine(context.device) { lines.append(battery) }
-        if let disk = diskLine(context.device) { lines.append(disk) }
-        if let uptime = uptimeLine(context.device) { lines.append(uptime) }
-        if let memory = memoryLines(context.memory) { lines.append(memory) }
-        if let chat = chatLine(context.chat) { lines.append(chat) }
-        if let mcp = mcpLine(context.mcp) { lines.append(mcp) }
-        if let brain = brainLine(context.brain) { lines.append(brain) }
-        if !context.hasActivity {
+        if news.isEmpty {
             lines.append("A quiet stretch — nothing new since the last pulse.")
+            lines.append(contentsOf: ambient)
+        } else {
+            lines.append("News:")
+            lines.append(contentsOf: news)
+            lines.append("Ambient:")
+            lines.append(contentsOf: ambient)
         }
         if let fact = context.funFact {
             // A remembered fact's title often IS its body (truncated) — a
             // duplicate bracket reads broken (first live pulse, 2026-08-06).
+            // "From your documents", not "from the shelf": the closed noun
+            // list already spends `documents` on the corpus, and the shelf
+            // metaphor was exactly the phrase the model borrowed for the
+            // brain (fix 3).
             let bareTitle = fact.sourceTitle.trimmingCharacters(in: CharacterSet(charactersIn: "…, "))
             if fact.text.hasPrefix(bareTitle) || bareTitle.hasPrefix(fact.text) {
-                lines.append("From the shelf: \(fact.text)")
+                lines.append("From your documents: \(fact.text)")
             } else {
-                lines.append("From the shelf: \(fact.text) [\(fact.sourceTitle)]")
+                lines.append("From your documents: \(fact.text) [\(fact.sourceTitle)]")
             }
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// Compose the structural tags for one pulse (2026-08-30 addendum) —
+    /// the #102 guard extended verbatim: tags are facts, facts come from
+    /// code, and the model never sees or produces one. Shape only — see
+    /// PulseTag for the closed vocabulary and the never-content rule.
+    /// `renderedBy` is the teller the engine settled on ("Big"/"Lil"/
+    /// "digest"), known only after the render — hence a parameter, not a
+    /// context field.
+    public static func tags(from context: HeartbeatContext, renderedBy: String) -> Set<PulseTag> {
+        var tags: Set<PulseTag> = []
+        if context.earlierPulsesToday.isEmpty { tags.insert(.firstToday) }
+        tags.insert(context.hasActivity ? .active : .quiet)
+        switch context.device.thermal {
+        case .nominal: tags.insert(.machineCool)
+        case .fair: tags.insert(.machineWarm)
+        case .serious, .critical: tags.insert(.machineHot)
+        }
+        if context.device.lowPowerMode { tags.insert(.lowPower) }
+        if let charging = context.device.isCharging {
+            tags.insert(charging ? .charging : .onBattery)
+        }
+        if let memory = context.memory {
+            if !memory.newFactTitles.isEmpty { tags.insert(.memoryLearned) }
+            if memory.supersededCount > 0 { tags.insert(.memoryCorrected) }
+        }
+        if let chat = context.chat, !chat.touchedConversationTitles.isEmpty {
+            tags.insert(.chatTouched)
+        }
+        if let mcp = context.mcp, mcp.callCount > 0 {
+            tags.insert(.agentVisited)
+            for client in mcp.clientNames {
+                tags.insert(.agentClient(client))
+            }
+        }
+        switch context.brain?.residentTierName?.lowercased() {
+        case "big": tags.insert(.brainBig)
+        case "lil": tags.insert(.brainLil)
+        case "mini": tags.insert(.brainMini)
+        default: break
+        }
+        if renderedBy == "digest" { tags.insert(.toldByDigest) }
+        return tags
     }
 
     /// Sentence-safe excerpt for the fun fact: cut at the last sentence end
@@ -115,12 +186,16 @@ public enum HeartbeatComposer {
         return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
+    /// Named actor, mutual voice (fix 1): the old "Conversations touched:"
+    /// passive left the model to fill the gap — as M1K3's own work, or as a
+    /// report filed on the user. A resident says WE; a monitor says you were
+    /// observed.
     private static func chatLine(_ chat: HeartbeatContext.ChatActivity?) -> String? {
         guard let chat, !chat.touchedConversationTitles.isEmpty else { return nil }
         let titles = chat.touchedConversationTitles.prefix(3)
             .map { "'\($0)'" }
             .joined(separator: ", ")
-        return "Conversations touched: \(titles)."
+        return "We talked about \(titles)."
     }
 
     private static func mcpLine(_ mcp: HeartbeatContext.MCPActivity?) -> String? {
@@ -132,11 +207,19 @@ public enum HeartbeatComposer {
         return "\(mcp.callCount) visiting-agent calls (\(tools))."
     }
 
+    /// The brain is what M1K3 thinks WITH (fix 2): "Big is resident." made
+    /// an unexplained proper noun of it, and a bare generate gave it the
+    /// friendliest available reading — a housemate on the shelf, three
+    /// pulses running.
     private static func brainLine(_ brain: HeartbeatContext.BrainStatus?) -> String? {
         guard let brain else { return nil }
         var parts: [String] = []
         if let resident = brain.residentTierName {
-            parts.append("\(resident) is resident.")
+            if let descriptor = brain.residentTierDescriptor {
+                parts.append("Running on \(resident), \(descriptor).")
+            } else {
+                parts.append("Running on \(resident).")
+            }
         }
         if let downloading = brain.downloadingModelName {
             parts.append("Fetching \(downloading).")

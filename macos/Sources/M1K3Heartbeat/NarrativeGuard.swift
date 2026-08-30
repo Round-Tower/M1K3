@@ -45,6 +45,7 @@ public enum NarrativeGuard {
         case tooLong = "too-long"
         case macNoun = "mac-noun"
         case inventedDigit = "invented-digit"
+        case repeatsOpener = "repeats-opener"
     }
 
     /// The platform-honesty tripwire. `.simple` word boundaries: the default
@@ -57,13 +58,23 @@ public enum NarrativeGuard {
     /// sound (the M1K3LogCore.LogPreview precedent).
     private nonisolated(unsafe) static let macNoun = /\bMacs?\b/.wordBoundaryKind(.simple).ignoresCase()
 
+    /// How many leading words must match a recent pulse's before the opener
+    /// counts as repeated. Six is the bar: short enough to catch the observed
+    /// three-day "I'm keeping things steady on this end", long enough that a
+    /// shared two-word greeting never trips it.
+    public static let openerWordCount = 6
+
     /// `earlierDigests` is the day's earlier DIGESTS — code-composed facts,
     /// never earlier narratives. A narrative as evidence launders its own
     /// fabrications into every later pulse (fix 6, 2026-08-30).
+    /// `recentPulses` feeds the opener check — a register tripwire like the
+    /// Mac noun, not a truth check; cross the midnight boundary when
+    /// gathering them, since the repetition lived exactly there.
     public static func verdict(
         narrative: String,
         digest: String,
         earlierDigests: [String] = [],
+        recentPulses: [String] = [],
         maxLength: Int = NarrativeGuard.maxLength
     ) -> Verdict {
         let trimmed = narrative.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -75,6 +86,12 @@ public enum NarrativeGuard {
             allowed.formUnion(digitRuns(in: earlier))
         }
         guard digitRuns(in: narrative).isSubset(of: allowed) else { return .inventedDigit }
+        let opener = firstWords(of: trimmed)
+        if opener.count == openerWordCount,
+           recentPulses.contains(where: { firstWords(of: $0) == opener })
+        {
+            return .repeatsOpener
+        }
         return .pass
     }
 
@@ -82,12 +99,25 @@ public enum NarrativeGuard {
         narrative: String,
         digest: String,
         earlierDigests: [String] = [],
+        recentPulses: [String] = [],
         maxLength: Int = NarrativeGuard.maxLength
     ) -> Bool {
         verdict(
             narrative: narrative, digest: digest,
-            earlierDigests: earlierDigests, maxLength: maxLength
+            earlierDigests: earlierDigests, recentPulses: recentPulses,
+            maxLength: maxLength
         ) == .pass
+    }
+
+    /// The first `openerWordCount` words, case- and punctuation-normalised —
+    /// "I'm" and "im" are the same opener.
+    private static func firstWords(of text: String) -> [String] {
+        text.split(whereSeparator: \.isWhitespace)
+            .lazy
+            .map { word in String(word.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }).lowercased() }
+            .filter { !$0.isEmpty }
+            .prefix(openerWordCount)
+            .map { $0 }
     }
 
     private static func digitRuns(in text: String) -> Set<String> {

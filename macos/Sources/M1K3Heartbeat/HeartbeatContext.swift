@@ -82,22 +82,36 @@ public struct HeartbeatContext: Sendable, Equatable {
 
     /// Inbound visiting-agent traffic — present ONLY when the Agent
     /// Interaction Log toggle is already on (its consent, not ours).
+    /// `clientNames` are the callers' self-reported identities (Claude,
+    /// Cursor) — not user content; the timeline's visit headers already
+    /// show them. Feeds the `agent:<client>` pulse tags.
     public struct MCPActivity: Sendable, Equatable {
         public var callCount: Int
         public var topTools: [String]
+        public var clientNames: [String]
 
-        public init(callCount: Int, topTools: [String]) {
+        public init(callCount: Int, topTools: [String], clientNames: [String] = []) {
             self.callCount = callCount
             self.topTools = topTools
+            self.clientNames = clientNames
         }
     }
 
     public struct BrainStatus: Sendable, Equatable {
         public var residentTierName: String?
+        /// What the tier IS, in apposition — "the larger brain". A bare "Big"
+        /// in the digest reads as a housemate to a model that never heard the
+        /// name (three live pulses kept it company on the shelf, 2026-08-30).
+        public var residentTierDescriptor: String?
         public var downloadingModelName: String?
 
-        public init(residentTierName: String? = nil, downloadingModelName: String? = nil) {
+        public init(
+            residentTierName: String? = nil,
+            residentTierDescriptor: String? = nil,
+            downloadingModelName: String? = nil
+        ) {
             self.residentTierName = residentTierName
+            self.residentTierDescriptor = residentTierDescriptor
             self.downloadingModelName = downloadingModelName
         }
     }

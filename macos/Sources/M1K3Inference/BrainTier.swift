@@ -112,6 +112,18 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         self == .mini || self == .lil
     }
 
+    /// How the heartbeat digest explains the tier in apposition — "Running on
+    /// Big, the larger brain." A bare proper noun in a bare-generate prompt
+    /// reads as a housemate (three live pulses kept Big company on the shelf,
+    /// 2026-08-30).
+    public var heartbeatDescriptor: String {
+        switch self {
+        case .mini: "the built-in brain"
+        case .lil: "the smaller brain"
+        case .big: "the larger brain"
+        }
+    }
+
     /// The one-line personality hook (lifted from the KMP tiers).
     public var tagline: String {
         switch self {

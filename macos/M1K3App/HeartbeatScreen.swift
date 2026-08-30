@@ -39,6 +39,11 @@ struct HeartbeatScreen: View {
     @State private var days: [InteractionTimeline.Day] = []
     @State private var pulseCount = 0
     @State private var newestPulse: HeartbeatEntry?
+    /// The structural filter (2026-08-30): chips over the timeline — only
+    /// pulses where an agent visited, only the days something was learned.
+    /// Shape, never content — see PulseTag.
+    @State private var selectedTag: PulseTag?
+    @State private var availableTags: [PulseTag] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -79,8 +84,34 @@ struct HeartbeatScreen: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            if heartbeatOn, !availableTags.isEmpty {
+                tagChips
+            }
         }
         .padding(16)
+    }
+
+    /// One chip per tag present in the loaded pulses; tap filters, tap again
+    /// clears. A pulse filter only — agent visits keep their own rows in the
+    /// Agent Log, and hiding them here would misread as deletion.
+    private var tagChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(availableTags, id: \.rawValue) { tag in
+                    let isSelected = selectedTag == tag
+                    Button {
+                        selectedTag = isSelected ? nil : tag
+                    } label: {
+                        Text(tag.displayLabel)
+                            .font(.caption)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(isSelected ? Color.accentColor : .secondary)
+                    .help("Show only pulses tagged \(tag.displayLabel)")
+                }
+            }
+        }
+        .padding(.top, 4)
     }
 
     private var currentHoldLine: String? {
@@ -122,7 +153,7 @@ struct HeartbeatScreen: View {
                 if !agentLogOn {
                     agentCommsOffer
                 }
-                ForEach(days) { day in
+                ForEach(filteredDays) { day in
                     Section {
                         ForEach(day.events) { event in
                             eventRow(event)
@@ -152,6 +183,19 @@ struct HeartbeatScreen: View {
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 2)
+        }
+    }
+
+    /// The timeline through the selected chip: pulses carrying the tag, days
+    /// with none dropped. No selection = the whole timeline, visits included.
+    private var filteredDays: [InteractionTimeline.Day] {
+        guard let selectedTag else { return days }
+        return days.compactMap { day in
+            let pulses = day.events.filter { event in
+                if case let .pulse(pulse) = event { return pulse.tags.contains(selectedTag) }
+                return false
+            }
+            return pulses.isEmpty ? nil : InteractionTimeline.Day(day: day.day, events: pulses)
         }
     }
 
@@ -271,6 +315,12 @@ struct HeartbeatScreen: View {
         pulseCount = pulses.count
         newestPulse = pulses.first
         days = built
+        availableTags = Set(pulses.flatMap(\.tags)).sorted()
+        // A cleared or trimmed-away tag must not leave a phantom filter that
+        // renders an empty timeline.
+        if let selected = selectedTag, !availableTags.contains(selected) {
+            selectedTag = nil
+        }
     }
 
     private func clearPulses() async {

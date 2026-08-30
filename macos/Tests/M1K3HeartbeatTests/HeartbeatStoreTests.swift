@@ -95,4 +95,56 @@ struct HeartbeatStoreTests {
         #expect(try store.count() == 0)
         #expect(try store.latestDate() == nil)
     }
+
+    // MARK: - Pulse tags (2026-08-30 addendum: structural only, cascade on delete)
+
+    @Test("tags round-trip with their pulse")
+    func tagsRoundTrip() throws {
+        let store = try makeStore()
+        store.record(
+            digest: "d", narrative: nil, renderedBy: "digest",
+            tags: [.quiet, .machineCool, .firstToday], at: Date()
+        )
+        let entry = try #require(try store.recent().first)
+        #expect(entry.tags == [.quiet, .machineCool, .firstToday])
+    }
+
+    @Test("a tagless record stays a valid pulse with an empty set")
+    func taglessRecord() throws {
+        let store = try makeStore()
+        store.record(digest: "d", narrative: nil, renderedBy: "digest", at: Date())
+        #expect(try store.recent()[0].tags.isEmpty)
+    }
+
+    @Test("Clear takes the tags with it — nothing survives, no exceptions on the first extension")
+    func clearTakesTags() throws {
+        let store = try makeStore()
+        store.record(digest: "d", narrative: nil, renderedBy: "digest", tags: [.active], at: Date())
+        try store.clear()
+        #expect(try store.tagRowCount() == 0)
+    }
+
+    @Test("the cap trim cascades to the trimmed pulses' tags")
+    func capTrimCascadesTags() throws {
+        let store = try makeStore(capacity: 1)
+        let base = Date(timeIntervalSince1970: 1_754_480_000)
+        store.record(digest: "old", narrative: nil, renderedBy: "digest", tags: [.quiet], at: base)
+        store.record(
+            digest: "new", narrative: nil, renderedBy: "digest",
+            tags: [.active], at: base.addingTimeInterval(7200)
+        )
+        #expect(try store.count() == 1)
+        // Only the surviving pulse's tag remains — the trimmed pulse's went with it.
+        #expect(try store.tagRowCount() == 1)
+        #expect(try store.recent()[0].tags == [.active])
+    }
+
+    @Test("since() carries tags too — the arc reader sees the same shape")
+    func sinceCarriesTags() throws {
+        let store = try makeStore()
+        let base = Date(timeIntervalSince1970: 1_754_480_000)
+        store.record(digest: "a", narrative: nil, renderedBy: "digest", tags: [.agentVisited], at: base)
+        let today = try store.since(base.addingTimeInterval(-1))
+        #expect(today[0].tags == [.agentVisited])
+    }
 }

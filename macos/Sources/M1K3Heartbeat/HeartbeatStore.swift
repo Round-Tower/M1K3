@@ -23,6 +23,11 @@
 //  in ConversationLogStore; round-trip/cap/watermark/since pinned by tests;
 //  the file-path wiring + backup-exclusion xattr are app-side, named there).
 //  Prior: none (new file).
+//  Review: Kev + claude-fable-5, 2026-08-30, Confidence 0.9 — pulse_tags
+//  (v2 migration): structural tags per pulse, FK ON DELETE CASCADE so the
+//  cap trim and Clear take the tags with them — the "nothing survives
+//  Clear" guarantee gains no exception on its first extension. Cascade
+//  pinned red-first.
 //
 
 import Foundation
@@ -37,13 +42,20 @@ public struct HeartbeatEntry: Identifiable, Equatable, Sendable {
     public var narrative: String?
     public var renderedBy: String
     public var createdAt: Date
+    /// Structural shape tags (2026-08-30) — composed by HeartbeatComposer,
+    /// never content. Empty for pre-tag rows.
+    public var tags: Set<PulseTag>
 
-    public init(id: Int64, digest: String, narrative: String?, renderedBy: String, createdAt: Date) {
+    public init(
+        id: Int64, digest: String, narrative: String?, renderedBy: String,
+        createdAt: Date, tags: Set<PulseTag> = []
+    ) {
         self.id = id
         self.digest = digest
         self.narrative = narrative
         self.renderedBy = renderedBy
         self.createdAt = createdAt
+        self.tags = tags
     }
 
     /// What the UI shows: the narrative when one passed the guard, else the
@@ -83,6 +95,18 @@ public final class HeartbeatStore: @unchecked Sendable {
                 t.column("created_at", .double).notNull().indexed()
             }
         }
+        // Structural tags (2026-08-30). ON DELETE CASCADE is load-bearing:
+        // the store's "nothing survives Clear" guarantee must not acquire an
+        // exception on its first extension — the cap trim and Clear take the
+        // tags with them or the schema is wrong.
+        migrator.registerMigration("v2-tags") { db in
+            try db.create(table: "pulse_tags") { t in
+                t.column("pulse_id", .integer).notNull().indexed()
+                    .references("pulses", onDelete: .cascade)
+                t.column("tag", .text).notNull()
+                t.primaryKey(["pulse_id", "tag"])
+            }
+        }
         try migrator.migrate(dbQueue)
     }
 
@@ -90,8 +114,12 @@ public final class HeartbeatStore: @unchecked Sendable {
 
     /// Record one pulse. Never throws — a write failure loses one pulse,
     /// never the app. `at:` is injectable for tests; the cap trims inside
-    /// the same transaction so the store can never exceed it between writes.
-    public func record(digest: String, narrative: String?, renderedBy: String, at date: Date = Date()) {
+    /// the same transaction so the store can never exceed it between writes
+    /// (the FK cascade takes trimmed pulses' tags in the same breath).
+    public func record(
+        digest: String, narrative: String?, renderedBy: String,
+        tags: Set<PulseTag> = [], at date: Date = Date()
+    ) {
         try? dbQueue.write { [capacity] db in
             try db.execute(
                 sql: """
@@ -100,6 +128,13 @@ public final class HeartbeatStore: @unchecked Sendable {
                 """,
                 arguments: [digest, narrative, renderedBy, date.timeIntervalSince1970]
             )
+            let pulseID = db.lastInsertedRowID
+            for tag in tags.sorted() {
+                try db.execute(
+                    sql: "INSERT OR IGNORE INTO pulse_tags (pulse_id, tag) VALUES (?, ?)",
+                    arguments: [pulseID, tag.rawValue]
+                )
+            }
             try db.execute(
                 sql: """
                 DELETE FROM pulses WHERE id NOT IN (
@@ -121,7 +156,7 @@ public final class HeartbeatStore: @unchecked Sendable {
                 sql: "SELECT * FROM pulses ORDER BY id DESC LIMIT ?",
                 arguments: [limit]
             )
-            return rows.map(Self.entry(from:))
+            return try Self.attachTags(to: rows.map(Self.entry(from:)), db: db)
         }
     }
 
@@ -135,7 +170,14 @@ public final class HeartbeatStore: @unchecked Sendable {
                 sql: "SELECT * FROM pulses WHERE created_at >= ? ORDER BY id ASC",
                 arguments: [date.timeIntervalSince1970]
             )
-            return rows.map(Self.entry(from:))
+            return try Self.attachTags(to: rows.map(Self.entry(from:)), db: db)
+        }
+    }
+
+    /// Total tag rows — the cascade tests' probe.
+    func tagRowCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pulse_tags") ?? 0
         }
     }
 
@@ -171,5 +213,28 @@ public final class HeartbeatStore: @unchecked Sendable {
             renderedBy: row["rendered_by"] ?? "digest",
             createdAt: Date(timeIntervalSince1970: row["created_at"] ?? 0)
         )
+    }
+
+    /// One grouped fetch for the batch's tags — never a query per pulse.
+    private static func attachTags(to entries: [HeartbeatEntry], db: Database) throws -> [HeartbeatEntry] {
+        guard !entries.isEmpty else { return entries }
+        let ids = entries.map(\.id)
+        let placeholders = databaseQuestionMarks(count: ids.count)
+        let rows = try Row.fetchAll(
+            db,
+            sql: "SELECT pulse_id, tag FROM pulse_tags WHERE pulse_id IN (\(placeholders))",
+            arguments: StatementArguments(ids)
+        )
+        var byPulse: [Int64: Set<PulseTag>] = [:]
+        for row in rows {
+            let pulseID: Int64 = row["pulse_id"] ?? 0
+            let tag: String = row["tag"] ?? ""
+            byPulse[pulseID, default: []].insert(PulseTag(rawValue: tag))
+        }
+        return entries.map { entry in
+            var tagged = entry
+            tagged.tags = byPulse[entry.id] ?? []
+            return tagged
+        }
     }
 }

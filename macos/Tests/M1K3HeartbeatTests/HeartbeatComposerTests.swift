@@ -117,6 +117,68 @@ struct HeartbeatComposerTests {
         #expect(digest.contains("Big"))
     }
 
+    // MARK: - The 2026-08-30 register fixes (addendum 1–4)
+
+    @Test("the chat line has an actor and it's mutual — a resident says we, a monitor says you were observed")
+    func chatLineIsMutual() {
+        let digest = HeartbeatComposer.digest(from: makeContext(
+            chat: .init(touchedConversationTitles: ["The Ballmer Legacy"])
+        ))
+        #expect(digest.contains("We talked about 'The Ballmer Legacy'."))
+        #expect(!digest.contains("Conversations touched"))
+    }
+
+    @Test("the brain line says what the brain IS — an unexplained proper noun becomes a housemate")
+    func brainLineExplainsItself() {
+        let digest = HeartbeatComposer.digest(from: makeContext(
+            brain: .init(residentTierName: "Big", residentTierDescriptor: "the larger brain")
+        ))
+        #expect(digest.contains("Running on Big, the larger brain."))
+        #expect(!digest.contains("is resident"))
+    }
+
+    @Test("without a descriptor the brain line still runs, not resides")
+    func brainLineNoDescriptor() {
+        let digest = HeartbeatComposer.digest(from: makeContext(
+            brain: .init(residentTierName: "Lil")
+        ))
+        #expect(digest.contains("Running on Lil."))
+    }
+
+    @Test("the fun fact comes from your documents — the shelf metaphor leaked into the narratives (principle 3)")
+    func documentsNotShelf() {
+        let digest = HeartbeatComposer.digest(from: makeContext(
+            funFact: .init(text: "Round towers were bell houses.", sourceTitle: "Irish towers")
+        ))
+        #expect(digest.contains("From your documents:"))
+        #expect(!digest.contains("shelf"))
+    }
+
+    @Test("news leads, ambient follows — the digest's newsworthy half outweighs its stable half")
+    func newsLeadsAmbientFollows() {
+        let digest = HeartbeatComposer.digest(from: makeContext(
+            memory: .init(newFactTitles: ["Ardmore round tower"], supersededCount: 0),
+            chat: .init(touchedConversationTitles: ["Quantum homework"])
+        ))
+        let news = try? #require(digest.range(of: "News:"))
+        let ambient = try? #require(digest.range(of: "Ambient:"))
+        let learned = try? #require(digest.range(of: "Learned"))
+        let machine = try? #require(digest.range(of: "The machine"))
+        if let news, let ambient, let learned, let machine {
+            #expect(news.lowerBound < learned.lowerBound)
+            #expect(learned.lowerBound < ambient.lowerBound)
+            #expect(ambient.lowerBound < machine.lowerBound)
+        }
+    }
+
+    @Test("a quiet digest carries no section headers — nothing to lead with")
+    func quietDigestNoHeaders() {
+        let digest = HeartbeatComposer.digest(from: makeContext())
+        #expect(!digest.contains("News:"))
+        #expect(!digest.contains("Ambient:"))
+        #expect(digest.contains("quiet stretch"))
+    }
+
     @Test("a quiet stretch says so instead of rendering nothing")
     func quietStretch() {
         let digest = HeartbeatComposer.digest(from: makeContext())
