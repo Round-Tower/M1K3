@@ -156,6 +156,21 @@ struct SoundEffectPlayerTests {
         #expect(rec.loops.map(\.1) == [true, false, true])
     }
 
+    @Test("the MASTER mute also cancels the pending courtesy — same stale-timer rule, different door (review catch)")
+    func masterMuteCancelsCourtesy() async throws {
+        let rec = Recorder()
+        let player = SoundEffectPlayer(
+            isEnabled: true, isSpeaking: { false }, sink: rec.sink, loopSink: rec.loopSink
+        )
+        player.startLoop(.dialup, courtesyWindow: .milliseconds(50))
+        player.isEnabled = false
+        player.isEnabled = true
+        player.startLoop(.dialup)
+        try await Task.sleep(for: .milliseconds(250))
+        // start · master-mute stop · restart — the 50ms timer died with the mute.
+        #expect(rec.loops.map(\.1) == [true, false, true])
+    }
+
     @Test("an explicit stop cancels the pending courtesy — a stale timer must never kill a later restart")
     func explicitStopCancelsCourtesy() async throws {
         let rec = Recorder()

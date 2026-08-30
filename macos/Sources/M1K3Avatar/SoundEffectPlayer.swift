@@ -12,6 +12,11 @@
 //  Review: Kev + claude-fable-5, 2026-07-02 — removed the unused
 //  SoundEffectPlaying protocol (nothing in the repo typed against it; sink
 //  injection is the test seam, and the app holds the concrete player).
+//  Review: Kev + claude-fable-5, 2026-08-30, Confidence 0.85 — the courtesy
+//  window ("the gag lands, then leaves the room"): startLoop can now carry a
+//  self-stop timer, every stop path (explicit, master mute) cancels it, and
+//  the AVAudioPlayer pool fades loop stops over 0.4s instead of hard-cutting.
+//  Timer semantics test-pinned; the fade itself is verify-by-ear.
 //
 
 import AVFoundation
@@ -35,6 +40,10 @@ public final class SoundEffectPlayer {
         didSet {
             guard !isEnabled, !looping.isEmpty else { return }
             for effect in looping {
+                // Kill any pending courtesy timer too (review catch) — the
+                // master mute is just another stop, and a stale window must
+                // never silence a loop the user later restarts.
+                courtesyTasks.removeValue(forKey: effect)?.cancel()
                 loopSink(effect, false)
             }
             looping.removeAll()
