@@ -125,6 +125,8 @@ struct M1K3App: App {
         .commands {
             ConstellationCommands()
             AgentLogCommands()
+            // File ▸ Export Memories… — ADR 0003's one menu item.
+            MemoryExportCommands(env: appDelegate.environment)
         }
 
         // The 3D memory constellation — memories as motes, edges as threads, the
