@@ -82,13 +82,18 @@ public struct HeartbeatContext: Sendable, Equatable {
 
     /// Inbound visiting-agent traffic — present ONLY when the Agent
     /// Interaction Log toggle is already on (its consent, not ours).
+    /// `clientNames` are the callers' self-reported identities (Claude,
+    /// Cursor) — not user content; the timeline's visit headers already
+    /// show them. Feeds the `agent:<client>` pulse tags.
     public struct MCPActivity: Sendable, Equatable {
         public var callCount: Int
         public var topTools: [String]
+        public var clientNames: [String]
 
-        public init(callCount: Int, topTools: [String]) {
+        public init(callCount: Int, topTools: [String], clientNames: [String] = []) {
             self.callCount = callCount
             self.topTools = topTools
+            self.clientNames = clientNames
         }
     }
 

@@ -74,6 +74,49 @@ public enum HeartbeatComposer {
         return lines.joined(separator: "\n")
     }
 
+    /// Compose the structural tags for one pulse (2026-08-30 addendum) —
+    /// the #102 guard extended verbatim: tags are facts, facts come from
+    /// code, and the model never sees or produces one. Shape only — see
+    /// PulseTag for the closed vocabulary and the never-content rule.
+    /// `renderedBy` is the teller the engine settled on ("Big"/"Lil"/
+    /// "digest"), known only after the render — hence a parameter, not a
+    /// context field.
+    public static func tags(from context: HeartbeatContext, renderedBy: String) -> Set<PulseTag> {
+        var tags: Set<PulseTag> = []
+        if context.earlierPulsesToday.isEmpty { tags.insert(.firstToday) }
+        tags.insert(context.hasActivity ? .active : .quiet)
+        switch context.device.thermal {
+        case .nominal: tags.insert(.machineCool)
+        case .fair: tags.insert(.machineWarm)
+        case .serious, .critical: tags.insert(.machineHot)
+        }
+        if context.device.lowPowerMode { tags.insert(.lowPower) }
+        if let charging = context.device.isCharging {
+            tags.insert(charging ? .charging : .onBattery)
+        }
+        if let memory = context.memory {
+            if !memory.newFactTitles.isEmpty { tags.insert(.memoryLearned) }
+            if memory.supersededCount > 0 { tags.insert(.memoryCorrected) }
+        }
+        if let chat = context.chat, !chat.touchedConversationTitles.isEmpty {
+            tags.insert(.chatTouched)
+        }
+        if let mcp = context.mcp, mcp.callCount > 0 {
+            tags.insert(.agentVisited)
+            for client in mcp.clientNames {
+                tags.insert(.agentClient(client))
+            }
+        }
+        switch context.brain?.residentTierName?.lowercased() {
+        case "big": tags.insert(.brainBig)
+        case "lil": tags.insert(.brainLil)
+        case "mini": tags.insert(.brainMini)
+        default: break
+        }
+        if renderedBy == "digest" { tags.insert(.toldByDigest) }
+        return tags
+    }
+
     /// Sentence-safe excerpt for the fun fact: cut at the last sentence end
     /// within `maxLength`; failing that, at a word boundary with an ellipsis.
     public static func excerpt(_ text: String, maxLength: Int = 180) -> String {

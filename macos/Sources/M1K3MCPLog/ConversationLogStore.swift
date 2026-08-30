@@ -196,10 +196,14 @@ public final class ConversationLogStore: MCPCallLogSink, @unchecked Sendable {
     public struct WindowedActivity: Sendable, Equatable {
         public let callCount: Int
         public let toolNames: [String]
+        /// Distinct self-reported client identities in the window — identity,
+        /// not content; feeds the heartbeat's `agent:<client>` pulse tags.
+        public let clientNames: [String]
 
-        public init(callCount: Int, toolNames: [String]) {
+        public init(callCount: Int, toolNames: [String], clientNames: [String] = []) {
             self.callCount = callCount
             self.toolNames = toolNames
+            self.clientNames = clientNames
         }
     }
 
@@ -215,9 +219,19 @@ public final class ConversationLogStore: MCPCallLogSink, @unchecked Sendable {
                 arguments: [since.timeIntervalSince1970]
             )
             let counts = rows.map { (tool: $0["tool"] ?? "", uses: $0["uses"] ?? 0) as (String, Int) }
+            let clients = try String.fetchAll(
+                db,
+                sql: """
+                SELECT DISTINCT client_name FROM mcp_calls
+                WHERE created_at >= ? AND client_name IS NOT NULL
+                ORDER BY client_name ASC
+                """,
+                arguments: [since.timeIntervalSince1970]
+            )
             return WindowedActivity(
                 callCount: counts.reduce(0) { $0 + $1.1 },
-                toolNames: counts.map(\.0)
+                toolNames: counts.map(\.0),
+                clientNames: clients
             )
         }
     }
