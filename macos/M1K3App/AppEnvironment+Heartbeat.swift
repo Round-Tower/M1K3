@@ -119,6 +119,7 @@ extension AppEnvironment {
                 mcp: HeartbeatContext.MCPActivity?,
                 fact: HeartbeatContext.FunFact?,
                 earlierToday: [String],
+                earlierDigests: [String],
                 pulsesToday: Int
             ) in
             let system = LiveSystemStatusProvider()
@@ -164,7 +165,11 @@ extension AppEnvironment {
                 }
             }
 
-            return (device, memory, mcp, fact, today.map(\.displayText), today.count)
+            // displayText (the narratives) feeds the day-arc PROMPT; the
+            // guard's evidence set is the code-composed DIGESTS only —
+            // an earlier narrative as evidence launders its own fabrications
+            // into every later pulse (fix 6, 2026-08-30 addendum).
+            return (device, memory, mcp, fact, today.map(\.displayText), today.map(\.digest), today.count)
         }.value
 
         let context = HeartbeatContext(
@@ -191,6 +196,7 @@ extension AppEnvironment {
         let (narrative, renderedBy) = await renderHeartbeatNarrative(
             digest: digest,
             earlierToday: gathered.earlierToday,
+            earlierDigests: gathered.earlierDigests,
             device: gathered.device
         )
 
@@ -216,6 +222,7 @@ extension AppEnvironment {
     private func renderHeartbeatNarrative(
         digest: String,
         earlierToday: [String],
+        earlierDigests: [String],
         device: HeartbeatContext.Device
     ) async -> (narrative: String?, renderedBy: String) {
         guard selectedBrain.mlxModelID != nil, modelLoad == .ready else {
@@ -262,11 +269,12 @@ extension AppEnvironment {
         // the guard sees the text.
         let cleaned = FollowUpSplit.split(raw).answer
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        // earlierToday joins the allowed material: the prompt asks the model
-        // to thread the day's arc, so digits carried from earlier pulses are
-        // faithful, not invented (pulse 2's live rejection).
+        // The guard's evidence is the day's earlier DIGESTS, not the
+        // narratives the prompt shows: a faithful thread of a code-composed
+        // number still passes (pulse 2's live rejection), but a digit a
+        // model fabricated earlier today stays invented (fix 6, 2026-08-30).
         let verdict = NarrativeGuard.verdict(
-            narrative: cleaned, digest: digest, earlierPulses: earlierToday
+            narrative: cleaned, digest: digest, earlierDigests: earlierDigests
         )
         guard verdict == .pass else {
             Self.heartbeatLog.notice(
