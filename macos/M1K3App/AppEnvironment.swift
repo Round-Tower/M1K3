@@ -527,6 +527,9 @@ final class AppEnvironment {
     /// overrides the ladder's rung as `brainUpgradeTarget` while set — see
     /// `stageDirectedBrainFetch`). Cleared by `cancelBrainUpgradeFetch`, so a
     /// manual brain change or the completing swap both reset it.
+    /// Deliberately NOT @ObservationIgnored (unlike its task/monitor
+    /// neighbours): `brainUpgradeTarget` computes off it, and the Settings
+    /// progress row needs the Observation dependency to repaint.
     var directedBrainTarget: BrainTier?
 
     /// Progress of warming the MLX Gemma weights, surfaced in Settings (and the
