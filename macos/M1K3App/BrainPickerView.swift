@@ -30,6 +30,12 @@
 //  and the Step enum removed (HelloView + Settings own those beats); the brain
 //  picker, wake/download screen, alreadyAwake guard and Use-Mini fallback kept
 //  byte-equivalent. Look/feel verify-by-launch.
+//  Review: Kev + claude-fable-5, 2026-08-30, Confidence 0.85 — background
+//  downloads: a pick that needs weights no longer parks you on the progress
+//  bar when the current brain can keep serving (stageDirectedBrainFetch +
+//  toast + immediate completion; the upgrade ladder's fetch/swap machinery
+//  does the rest). The blocking wake screen remains only for the
+//  nothing-resident case. Verify-owed: the felt hand-back on ⌘R.
 
 import M1K3Avatar
 import M1K3Inference
@@ -199,9 +205,31 @@ struct BrainPickerView: View {
     }
 
     private func wakeBrain() {
-        // Auto-route: M1K3 resolves the concrete brain for this Mac, then we drive
-        // the SAME download/wake path as a manual pick (the resolved tier may need
-        // a download — e.g. Lil — so the wake screen shows what it chose).
+        // Resolve the concrete tier WITHOUT waking it first — the background
+        // path below must decide before selectBrain starts a blocking load.
+        let picked = autoSelected ? env.resolvedAutoRouteTier() : selectedBrain
+
+        // Background path: the pick needs a download, but the CURRENT brain can
+        // keep serving while it lands. Stage the fetch through the upgrade
+        // machinery (the pick IS the consent — it stages consented and
+        // hot-swaps at the next idle moment) and hand the room straight back
+        // instead of parking the user on a progress bar.
+        if picked.requiresDownload, !env.isBrainDownloaded(picked), env.isReady {
+            UserDefaults.standard.set(autoSelected, forKey: AppEnvironment.autoRouteBrainKey)
+            selectedBrain = picked
+            let serving = env.selectedBrain.displayName
+            env.stageDirectedBrainFetch(picked)
+            env.showBrainUpgradeNotice(
+                "I'll keep us on \(serving) while \(picked.displayName) downloads — switching the moment it's ready."
+            )
+            onComplete()
+            return
+        }
+
+        // Blocking path — nothing resident to serve meanwhile (or no download
+        // needed): the original wake. Auto-route: M1K3 resolves the concrete
+        // brain for this Mac, then drives the SAME download/wake path as a
+        // manual pick.
         let alreadyAwake: Bool
         if autoSelected {
             let resolved = env.enableAutoRouteForOnboarding()

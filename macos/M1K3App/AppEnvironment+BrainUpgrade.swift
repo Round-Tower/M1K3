@@ -94,9 +94,25 @@ extension AppEnvironment {
         introductionOffered = false
     }
 
-    /// The rung the ladder currently offers on this Mac, or nil at the top.
+    /// The tier the background machinery is working toward: a directed
+    /// BrainPicker pick when one is in flight, else the rung the ladder
+    /// currently offers on this Mac (nil at the top).
     var brainUpgradeTarget: BrainTier? {
-        UpgradeTarget.nextForThisMac(from: selectedBrain)
+        directedBrainTarget ?? UpgradeTarget.nextForThisMac(from: selectedBrain)
+    }
+
+    /// A BrainPicker pick of a not-yet-downloaded tier, fetched WITHOUT
+    /// blocking the app — the pick is the consent, so the fetch stages
+    /// consented and hot-swaps at the next idle moment (same SwapSafety +
+    /// selectBrain path as the ladder). The resident brain keeps serving
+    /// throughout; progress rides the same `brainUpgrade` state Settings
+    /// already renders.
+    func stageDirectedBrainFetch(_ tier: BrainTier) {
+        cancelBrainUpgradeFetch() // one writer to the Hub cache; also clears a prior directed pick
+        directedBrainTarget = tier
+        brainUpgrade = BrainUpgradePolicy.transition(brainUpgrade, on: .pickerFetchStarted)
+        Self.upgradeLog.notice("directed picker fetch: \(tier.rawValue, privacy: .public) in background")
+        runBrainUpgradeFetch(attempt: 1)
     }
 
     /// Whether the current offer is a struggle-earned RE-offer (drives the
@@ -306,6 +322,10 @@ extension AppEnvironment {
         brainUpgradeFetchTask = nil
         brainUpgradeRetryTask?.cancel()
         brainUpgradeRetryTask = nil
+        // A directed pick lives exactly as long as its fetch: a manual brain
+        // change or the completing swap (selectBrain cancels first) both land
+        // here, so the ladder's own rung is the target again afterwards.
+        directedBrainTarget = nil
     }
 
     // MARK: - Swap

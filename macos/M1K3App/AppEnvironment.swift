@@ -523,6 +523,11 @@ final class AppEnvironment {
     /// Live network-path snapshot for OfferEligibility (expensive/constrained).
     @ObservationIgnored var brainUpgradePathMonitor: NWPathMonitor?
     @ObservationIgnored var brainUpgradeNetworkPath: NWPath?
+    /// A BrainPicker pick being fetched in the background (session-scoped,
+    /// overrides the ladder's rung as `brainUpgradeTarget` while set — see
+    /// `stageDirectedBrainFetch`). Cleared by `cancelBrainUpgradeFetch`, so a
+    /// manual brain change or the completing swap both reset it.
+    var directedBrainTarget: BrainTier?
 
     /// Progress of warming the MLX Gemma weights, surfaced in Settings (and the
     /// chat send path). Stays `.idle` for the Apple Foundation Models default.

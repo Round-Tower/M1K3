@@ -18,6 +18,12 @@
 //  brain the user didn't ask for this session.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-03, Confidence 0.9. Prior: none (new file).
+//  Review: Kev + claude-fable-5, 2026-08-30, Confidence 0.9 — added
+//  `.pickerFetchStarted`: the BrainPicker's explicit pick rides this same
+//  machine in the background instead of blocking the app. The pick is the
+//  consent (stages consented → auto-swaps), and the event is sovereign from
+//  any state. The invitation-first promise is untouched — this path only
+//  exists because the user tapped Download.
 
 import Foundation
 
@@ -52,6 +58,11 @@ public enum BrainUpgradeEvent: Sendable, Equatable {
     case answerCompleted(eligible: Bool)
     case userAccepted
     case userDismissed
+    /// The BrainPicker's explicit pick of a not-yet-downloaded tier: the pick
+    /// IS the consent, and it's sovereign — it supersedes any offer, park,
+    /// failure, or in-flight ladder fetch (the coordinator cancels that task
+    /// first; this event resets the machine to a fresh fetch).
+    case pickerFetchStarted
     case fetchProgressed(fraction: Double)
     case fetchSucceeded
     case fetchFailed(attempts: Int, transient: Bool)
@@ -90,6 +101,9 @@ public enum BrainUpgradePolicy {
             case .offered, .staged(consented: false): return .dismissed
             default: return state
             }
+
+        case .pickerFetchStarted:
+            return .fetching(fraction: 0)
 
         case let .fetchProgressed(fraction):
             guard case .fetching = state else { return state }
