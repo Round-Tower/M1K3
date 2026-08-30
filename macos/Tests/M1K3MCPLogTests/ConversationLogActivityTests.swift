@@ -21,9 +21,10 @@ struct ConversationLogActivityTests {
         try ConversationLogStore(path: nil)
     }
 
-    private func entry(tool: String) -> MCPCallLogEntry {
+    private func entry(tool: String, client: String? = nil) -> MCPCallLogEntry {
         MCPCallLogEntry(
-            tool: tool, arguments: nil, responseText: "ok", isError: false, durationMS: 5
+            tool: tool, arguments: nil, responseText: "ok", isError: false, durationMS: 5,
+            clientName: client
         )
     }
 
@@ -49,6 +50,19 @@ struct ConversationLogActivityTests {
 
         #expect(activity.callCount == 0)
         #expect(activity.toolNames.isEmpty)
+    }
+
+    @Test("distinct client names ride the window — identity for the pulse tags, still no payloads")
+    func clientNames() throws {
+        let store = try makeStore()
+        store.record(entry(tool: "speak", client: "Claude Code"))
+        store.record(entry(tool: "speak", client: "Claude Code"))
+        store.record(entry(tool: "search_knowledge", client: "Cursor"))
+        store.record(entry(tool: "listen")) // pre-identity row: no client
+
+        let activity = try store.activity(since: Date(timeIntervalSinceNow: -60))
+
+        #expect(Set(activity.clientNames) == ["Claude Code", "Cursor"])
     }
 
     @Test("tool names come most-frequent first")

@@ -356,7 +356,8 @@ worse than the pulse store's privacy question.
 - `agent:visited`, plus `agent:<client>` — the MCP client's self-reported
   name (Claude, Cursor). Client identity is not user content, and the
   timeline's visit headers already show it.
-- `brain:big` · `brain:lil` · `told-by:digest`
+- `brain:big` · `brain:lil` · `brain:mini` · `told-by:digest` (Mini can be
+  the resident too — added at implementation, same shape rule)
 - `hold:quiet-hours` · `hold:warm` · `hold:busy` · `hold:quiet-window`
   (on the hold record, not on a pulse — a hold is the absence of one)
 

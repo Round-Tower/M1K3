@@ -151,7 +151,11 @@ extension AppEnvironment {
 
             var mcp: HeartbeatContext.MCPActivity?
             if mcpLogOn, let activity = try? conversationLog?.activity(since: since), activity.callCount > 0 {
-                mcp = .init(callCount: activity.callCount, topTools: activity.toolNames)
+                mcp = .init(
+                    callCount: activity.callCount,
+                    topTools: activity.toolNames,
+                    clientNames: activity.clientNames
+                )
             }
 
             var fact: HeartbeatContext.FunFact?
@@ -214,8 +218,13 @@ extension AppEnvironment {
             device: gathered.device
         )
 
+        // Tags come from the composer, deterministically — the model never
+        // sees or produces one (the #102 guard, extended verbatim).
+        let tags = HeartbeatComposer.tags(from: context, renderedBy: renderedBy)
         await Task.detached(priority: .utility) {
-            pulseStore.record(digest: digest, narrative: narrative, renderedBy: renderedBy, at: now)
+            pulseStore.record(
+                digest: digest, narrative: narrative, renderedBy: renderedBy, tags: tags, at: now
+            )
         }.value
         heartbeatRevision += 1
         heartbeatLastHold = nil
