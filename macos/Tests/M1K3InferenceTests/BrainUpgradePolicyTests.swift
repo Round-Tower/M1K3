@@ -99,6 +99,30 @@ struct BrainUpgradePolicyTests {
         #expect(next(.staged(consented: false), .userAccepted) == .staged(consented: true))
     }
 
+    // MARK: - Directed picker fetch (the BrainPicker's explicit pick IS consent)
+
+    @Test("a picker fetch starts from any state — an explicit pick is sovereign")
+    func pickerFetchStartsFromAnywhere() {
+        for state in [BrainUpgradeState.idle, .offered, .staged(consented: false),
+                      .staged(consented: true), .dismissed, .done,
+                      .failed(attempts: 3, transient: false)]
+        {
+            #expect(next(state, .pickerFetchStarted) == .fetching(fraction: 0))
+        }
+    }
+
+    @Test("a picker fetch restart resets in-flight progress to zero")
+    func pickerFetchRestartResetsProgress() {
+        #expect(next(.fetching(fraction: 0.7), .pickerFetchStarted) == .fetching(fraction: 0))
+    }
+
+    @Test("a picker fetch lands staged CONSENTED — the pick was the consent")
+    func pickerFetchStagesConsented() {
+        let fetched = next(next(.idle, .pickerFetchStarted), .fetchSucceeded)
+        #expect(fetched == .staged(consented: true))
+        #expect(BrainUpgradePolicy.wantsAutoSwap(fetched))
+    }
+
     @Test("dismiss from offered or unconsented staged → dismissed (terminal for nudging)")
     func dismissParks() {
         #expect(next(.offered, .userDismissed) == .dismissed)

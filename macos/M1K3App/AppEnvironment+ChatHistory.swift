@@ -46,7 +46,14 @@ extension AppEnvironment {
     func applyAutoRouteIfEnabled() {
         guard UserDefaults.standard.bool(forKey: Self.autoRouteBrainKey) else { return }
         let tier = resolvedAutoRouteTier()
-        guard tier != selectedBrain else { return }
+        // The directed-fetch guard (review catch, PR #154): "Let M1K3 choose"
+        // with a not-yet-downloaded resolution stages a BACKGROUND fetch and
+        // keeps the resident brain serving. Without this guard the very next
+        // turn would selectBrain(tier) — cancelling that fetch and yanking the
+        // user onto the blocking download path the feature exists to avoid.
+        // The staged swap completes through attemptAutoSwapIfStaged, which
+        // clears directedBrainTarget; from then on tier == selectedBrain.
+        guard tier != selectedBrain, tier != directedBrainTarget else { return }
         Self.routeLog.info("auto-route → \(tier.rawValue, privacy: .public)")
         selectBrain(tier)
     }
