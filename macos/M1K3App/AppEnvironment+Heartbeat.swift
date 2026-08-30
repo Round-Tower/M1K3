@@ -222,7 +222,7 @@ extension AppEnvironment {
     private func renderHeartbeatNarrative(
         digest: String,
         earlierToday: [String],
-        earlierDigests _: [String],
+        earlierDigests: [String],
         device: HeartbeatContext.Device
     ) async -> (narrative: String?, renderedBy: String) {
         guard selectedBrain.mlxModelID != nil, modelLoad == .ready else {
