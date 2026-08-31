@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>M1K3 for Mac — Your AI. Your Mac. Nothing leaves.</title>
-<meta name="description" content="M1K3 is a fully on-device AI companion for macOS. Local inference, live voice, a knowledge graph, encrypted call memory, and an MCP server. Zero bytes leave your Mac." />
+<meta name="description" content="M1K3 is fully on-device AI for macOS. Local inference, live voice, a knowledge graph, encrypted call memory, and an MCP server. Zero bytes leave your Mac." />
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 <!-- NOTE: canonical domain: m1k3.app (m1k3.ai + m1k3.bot 301-redirect here) (also in sitemap.xml, robots.txt, llms.txt) -->
 <link rel="canonical" href="https://m1k3.app/" />
@@ -23,7 +23,7 @@
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; a private, on-device AI companion for macOS." />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="M1K3 for Mac — Your AI. Your Mac. Nothing leaves." />
 <meta name="twitter:description" content="Privacy-first local AI for macOS. Zero bytes leave your Mac." />
@@ -36,7 +36,7 @@
   "name": "M1K3 for Mac",
   "operatingSystem": "macOS 26",
   "applicationCategory": "UtilitiesApplication",
-  "description": "A privacy-first AI companion that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), a native screensaver, and an MCP server with 16 tools.",
+  "description": "Privacy-first AI that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), a native screensaver, and an MCP server with 16 tools.",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
   "url": "https://m1k3.app/",
   "downloadUrl": "https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg",
@@ -58,7 +58,7 @@
     { "@type": "Question", "name": "Which Macs does M1K3 support?",
       "acceptedAnswer": { "@type": "Answer", "text": "M1K3 requires an Apple Silicon Mac running macOS 26 Tahoe. It is a native SwiftUI app with Metal-accelerated inference, not an Electron wrapper." } },
     { "@type": "Question", "name": "How is M1K3 different from Ollama or ChatGPT?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI companion: local models plus live voice, a personal knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server, in one sandboxed native Mac app." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models plus live voice, a personal knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server, in one sandboxed native Mac app." } },
     { "@type": "Question", "name": "Can Claude or other AI agents use my M1K3 knowledge?",
       "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an in-app MCP (Model Context Protocol) server with 16 tools — knowledge search, documents, voice, memory, and ask-M1K3 with an async job API for long asks — over local HTTP at 127.0.0.1:4242, so Claude and other MCP clients can query your local knowledge base without a byte leaving the Mac." } },
     { "@type": "Question", "name": "Does M1K3 do anything when I'm not talking to it?",
@@ -395,7 +395,7 @@
   <div class="hero-copy">
     <div class="boot" id="boot"></div>
     <h1 class="headline reveal in">Your AI.<br />Your Mac.<br /><span class="dim" id="rotator">Nothing leaves.</span></h1>
-    <p class="sub reveal in">M1K3 is a native AI companion that runs <strong>entirely on your Mac</strong>. Local models, live voice, a knowledge graph that remembers everything — and a network cable it never asks for.</p>
+    <p class="sub reveal in">M1K3 is local AI that runs <strong>entirely on your Mac</strong>. Local models, live voice, a knowledge graph that remembers everything — and a network call it never asks for.</p>
     <div class="cta-row reveal in">
       <a class="btn btn-primary" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">Download for Mac</a>
       <a class="btn btn-ghost" href="#features">See what's inside</a>
@@ -552,7 +552,7 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>How is it different from Ollama or ChatGPT?</summary>
-      <p>Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device companion: local models <em>plus</em> live voice, a knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server — one sandboxed native app.</p>
+      <p>Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models <em>plus</em> live voice, a knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server — one sandboxed native app.</p>
     </details>
     <details class="reveal">
       <summary>Can Claude use my M1K3 knowledge?</summary>
@@ -704,7 +704,7 @@ the action list?<br />
       var canonical = document.querySelector('link[rel=canonical]');
       var shareData = {
         title: 'M1K3 for Mac',
-        text: 'M1K3 — a private AI companion that runs entirely on your Mac. Nothing leaves.',
+        text: 'M1K3 — private AI that runs entirely on your Mac. Nothing leaves.',
         url: (canonical && canonical.href) || location.href
       };
       shareBtn.addEventListener('click', function () {

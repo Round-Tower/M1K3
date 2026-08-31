@@ -20,7 +20,7 @@
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; a private, on-device AI companion for macOS." />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Give Claude a Local Memory — M1K3 as an MCP Knowledge Server" />
 <meta name="twitter:description" content="Connect Claude to M1K3's on-device knowledge base over MCP — served from 127.0.0.1, never the cloud." />
@@ -45,7 +45,7 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "How do I give Claude a local memory with MCP?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Run an MCP knowledge server on your machine and register it with your Claude client. M1K3, a free open-source AI companion for Apple Silicon Macs, serves MCP over loopback HTTP at http://127.0.0.1:4242/mcp while the app runs. Import your documents into M1K3, add the server to Claude Code or Claude Desktop, and Claude can search and read that knowledge through tools like search_knowledge — with retrieval happening entirely on your Mac." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Run an MCP knowledge server on your machine and register it with your Claude client. M1K3, a free open-source AI app for Apple Silicon Macs, serves MCP over loopback HTTP at http://127.0.0.1:4242/mcp while the app runs. Import your documents into M1K3, add the server to Claude Code or Claude Desktop, and Claude can search and read that knowledge through tools like search_knowledge — with retrieval happening entirely on your Mac." } },
     { "@type": "Question", "name": "What MCP tools does M1K3 expose?",
       "acceptedAnswer": { "@type": "Answer", "text": "Sixteen tools spanning knowledge (search_knowledge, list_documents, get_document), memory (remember, recall_memory, related_memory, forget_memory, memory_stats), intelligence (ask_m1k3, get_answer, list_jobs), voice (speak, stop_speaking, listen), and utility (get_status, open_link)." } },
     { "@type": "Question", "name": "Is an MCP knowledge server private?",
@@ -84,7 +84,7 @@
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: run an MCP knowledge server on your Mac and point Claude at it.</strong> M1K3 — a free, open-source AI companion for Apple Silicon Macs — serves the Model Context Protocol over loopback HTTP at <code>http://127.0.0.1:4242/mcp</code> while the app runs. Import your documents and notes into M1K3, register the server with Claude Code, and Claude gains tools like <code>search_knowledge</code>, <code>recall_memory</code>, and <code>remember</code> over <em>your</em> knowledge — with retrieval, embeddings, and storage all happening on your machine. Claude Desktop connects too, via a knowledge-only stdio binary. Setup is one config snippet; the walkthrough is below.</p>
+    <p><strong>Short answer: run an MCP knowledge server on your Mac and point Claude at it.</strong> M1K3 — a free, open-source AI app for Apple Silicon Macs — serves the Model Context Protocol over loopback HTTP at <code>http://127.0.0.1:4242/mcp</code> while the app runs. Import your documents and notes into M1K3, register the server with Claude Code, and Claude gains tools like <code>search_knowledge</code>, <code>recall_memory</code>, and <code>remember</code> over <em>your</em> knowledge — with retrieval, embeddings, and storage all happening on your machine. Claude Desktop connects too, via a knowledge-only stdio binary. Setup is one config snippet; the walkthrough is below.</p>
   </div>
 
   <h2>What is an MCP knowledge server?</h2>

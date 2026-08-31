@@ -20,7 +20,7 @@
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; a private, on-device AI companion for macOS." />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="How to Run a Local LLM on a Mac (2026 Guide)" />
 <meta name="twitter:description" content="What hardware you need and the four main routes — Ollama, LM Studio, Apple's MLX, and M1K3." />
@@ -47,7 +47,7 @@
     { "@type": "Question", "name": "What do I need to run a local LLM on a Mac?",
       "acceptedAnswer": { "@type": "Answer", "text": "An Apple Silicon Mac (M1 or later) and enough unified memory for the model you want. As a rule of thumb with 4-bit quantized models: 8 GB of RAM runs small models around 1–4B parameters, 16 GB runs the 4–8B class comfortably, and 32 GB or more opens up 8–14B and beyond. Apple Silicon's unified memory lets the GPU address the full RAM pool, which is why Macs are unusually good at this." } },
     { "@type": "Question", "name": "What is the easiest way to run a local LLM on a Mac?",
-      "acceptedAnswer": { "@type": "Answer", "text": "For a finished assistant: M1K3, a free open-source on-device AI companion for Apple Silicon Macs (requires macOS 26) with chat, voice, and document memory built in — its first-run brain needs no download at all. For a developer tool: Ollama — install it and 'ollama run' a model. For a graphical model browser: LM Studio." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "For a finished assistant: M1K3, a free open-source on-device AI app for Apple Silicon Macs (requires macOS 26) with chat, voice, and document memory built in — its first-run brain needs no download at all. For a developer tool: Ollama — install it and 'ollama run' a model. For a graphical model browser: LM Studio." } },
     { "@type": "Question", "name": "Do local LLMs match ChatGPT?",
       "acceptedAnswer": { "@type": "Answer", "text": "No — frontier cloud models remain more capable than anything a laptop runs, especially for hard reasoning and state-of-the-art coding. But current local models such as Gemma and Qwen are genuinely useful for everyday summarising, drafting, and question-answering over your own documents, and they work offline, cost nothing per query, and keep your data on the machine." } },
     { "@type": "Question", "name": "Is running a local LLM private?",
@@ -127,7 +127,7 @@
   </div>
   <p>Thousands of pre-quantized models live under <code>mlx-community</code> on Hugging Face. <strong>Best for:</strong> Python developers, researchers, fine-tuners, and the curious. <strong>What it doesn't do:</strong> anything product-shaped — it's a framework, and that's the point.</p>
 
-  <h2 id="m1k3">Option 4: M1K3 — a finished local AI companion</h2>
+  <h2 id="m1k3">Option 4: M1K3 — finished, local AI</h2>
   <p>The three options above give you a model. <a href="/">M1K3</a> (free, open source, Apache-2.0, by Round Tower) gives you the <em>assistant</em>: a native SwiftUI app for Apple Silicon Macs that runs Gemma and Qwen via MLX-Swift — the same MLX from option 3, in Swift, on the Metal GPU — plus Apple Foundation Models for instant turns, and builds the rest of the experience around them:</p>
   <ul>
     <li><strong>Live voice</strong> — streaming on-device speech recognition and natural speech out.</li>
@@ -151,7 +151,7 @@
       </tbody>
     </table>
   </div>
-  <p>These aren't rivals so much as layers — M1K3 is literally built on MLX, and plenty of people run Ollama for work and a companion app for everything else. See the full <a href="/vs-ollama">M1K3 vs Ollama comparison</a>.</p>
+  <p>These aren't rivals so much as layers — M1K3 is literally built on MLX, and plenty of people run Ollama for work and a finished assistant app for everything else. See the full <a href="/vs-ollama">M1K3 vs Ollama comparison</a>.</p>
 
   <h2>Do local models match ChatGPT?</h2>
   <p>No — and this guide is more useful if we say that plainly. Frontier cloud models are ahead of anything a laptop runs, particularly for hard reasoning and state-of-the-art coding. What local models offer instead: they work offline, cost nothing per query, and your data never leaves the machine — privacy by architecture rather than by policy. For summarising, drafting, voice interaction, and Q&amp;A over your own documents, the current Gemma/Qwen class is genuinely good. Full argument: <a href="/private-chatgpt-alternative-mac">private ChatGPT alternative for Mac</a>.</p>

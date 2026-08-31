@@ -1,6 +1,6 @@
 # M1K3 for Mac
 
-> M1K3 is a free, open-source (Apache-2.0), privacy-first AI companion for
+> M1K3 is free, open-source (Apache-2.0), privacy-first AI for
 > macOS that runs entirely on-device. Local LLM inference (Gemma + Qwen via
 > MLX-Swift + Apple Foundation Models), live voice (streaming STT + on-device
 > Kokoro neural TTS), a personal knowledge graph with RAG over your documents,
@@ -44,7 +44,7 @@ Key facts:
 
 ## Answers
 
-- [M1K3 vs Ollama](https://m1k3.app/vs-ollama): Ollama is a model server you build on; M1K3 is a finished on-device companion app — fair comparison table
+- [M1K3 vs Ollama](https://m1k3.app/vs-ollama): Ollama is a model server you build on; M1K3 is a finished on-device AI app — fair comparison table
 - [Private ChatGPT alternative for Mac](https://m1k3.app/private-chatgpt-alternative-mac): privacy by architecture vs by policy; M1K3 vs Ollama vs LM Studio vs the ChatGPT desktop app
 - [How to run a local LLM on a Mac](https://m1k3.app/local-llm-mac-guide): hardware needs plus the four routes — Ollama, LM Studio, MLX, M1K3
 - [Give Claude a local memory with MCP](https://m1k3.app/mcp-knowledge-server): connect Claude Code/Desktop to M1K3's knowledge at http://127.0.0.1:4242/mcp

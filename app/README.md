@@ -1,11 +1,11 @@
-# M1K3 for Android — a local, private AI companion
+# M1K3 for Android — local, private, on-device AI
 
 > On-device chat. Your device is the cloud — network is a tool you wield,
 > not a default. See `docs/adr/0006-user-initiated-network.md`.
 
 ## Overview
 
-M1K3 for Android is the mobile companion to
+M1K3 for Android is the mobile counterpart to
 [M1K3](../macos/CLAUDE.md) (the Mac-native SwiftUI flagship), built with
 Kotlin Multiplatform. Every inference, every memory, every conversation
 stays on your device.

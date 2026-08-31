@@ -2,7 +2,7 @@
 
 @.claude/project-memory.md
 
-Privacy-first AI companion via Kotlin Multiplatform. Your device is the cloud — on-device chat, user-initiated network only (see ADR-0006).
+Privacy-first, on-device AI via Kotlin Multiplatform. Your device is the cloud — on-device chat, user-initiated network only (see ADR-0006).
 
 Note on naming: the product is **M1K3**. The internal `Ma*` class/file
 prefix (`MaTheme`, `MaButton`, `MaBridge`, …) is a historical
