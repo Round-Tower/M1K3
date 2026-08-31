@@ -1,7 +1,7 @@
 # Contributing to M1K3
 
-Thanks for wanting to help build a private, local AI companion. This page gets
-you from clone to green tests, and explains how we work.
+Thanks for wanting to help build private, on-device AI. This page gets you
+from clone to green tests, and explains how we work.
 
 ## The lay of the land
 

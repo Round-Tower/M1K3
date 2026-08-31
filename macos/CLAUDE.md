@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Orientation
 
-This directory (`macos/`) is the **live product**: M1K3, a private AI companion
+This directory (`macos/`) is the **live product**: M1K3, private on-device AI
 with live voice, a knowledge graph, document memory, an embedded agent, call
 transcription, a 3D avatar, and an MCP server. The **macOS 26 (Tahoe)** app
 (`M1K3App/`, real Liquid Glass + on-device Foundation Models) is the primary
@@ -122,7 +122,7 @@ shell that wires concrete backends to the seams; `AppEnvironment` (+ its
 | `M1K3Avatar` | 3D companion (RealityKit) + pure emotion/animation types + earcons. Per-clip companion USDZs as resources. |
 | `M1K3MCPKit` / `M1K3MCP` | MCP server: testable tool handlers (`-Kit`) + the thin stdio executable (`M1K3MCP`) Claude spawns. |
 | `M1K3MCPLog` | Opt-in Agent Interaction Log: a GRDB sink (conforms to `MCPCallLogSink`) capturing full MCP request+response text ONLY when the Settings toggle is on — since 2026-08-19 also the calling client's self-reported name (`client_name`, v2), which folds the Heartbeat timeline's per-client visits. Separate target so the PII-bearing capture stays out of the tool-dispatch core. |
-| `M1K3Launch` | Launch-at-login (SMAppService seam) for the menu-bar companion. |
+| `M1K3Launch` | Launch-at-login (SMAppService seam) for the menu-bar app. |
 | `M1K3Preview` | Review-panel router (link/file → `ReviewTarget`); QuickLook/WKWebView renderers live in the app. |
 | `M1K3Diagnostics` | Privacy scrub + issue-report formatting + the diagnostic log partition for the secret-free "Report an issue" flow, plus the MetricKit payload digest (`MetricPayloadDigest`) and the bounded on-disk store's pure retention/pruning decision (`MetricRetentionPolicy`). Pure/dependency-free so the redaction + digest/retention rules are unit-pinned. |
 | `M1K3Heartbeat` | The 2-hourly narrative pulse: pure schedule/quiet-hours/empty-pulse policies, the deterministic digest composer (the #102 guard — facts from code, never the model), `NarrativeGuard` (confabulation tripwire), and a capped GRDB pulse store (own file, one-tap Clear, backup- and diagnostics-excluded, never enters the chat transcript), plus `InteractionTimeline` — the pure fold behind the Heartbeat destination screen (pulses + agent calls → day-bucketed, per-client visits). The scheduler effect + resident-MLX render live in `AppEnvironment+Heartbeat.swift`. |

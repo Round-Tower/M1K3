@@ -14,7 +14,7 @@
 > tree, old repo-root layout intact). The live MCP surface is the Mac app's
 > in-app HTTP server (`.mcp.json` points at `127.0.0.1:4242/mcp`).
 
-Privacy-focused local AI companion for macOS — MLX inference, live voice,
+Privacy-focused, on-device AI for macOS — MLX inference, live voice,
 knowledge graph + RAG, and an MCP server.
 
 ## Pointers

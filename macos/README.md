@@ -22,7 +22,7 @@ that it runs fully offline (web search is opt-in).
 ## Build & run
 
 ```bash
-git clone https://github.com/Round-Tower/m1k3.git
+git clone https://github.com/Round-Tower/M1K3.git
 cd m1k3/macos
 
 # project.yml is the source of truth — M1K3.xcodeproj is generated, not tracked
@@ -89,4 +89,4 @@ any MCP client.
 
 See [`CONTRIBUTING.md`](../CONTRIBUTING.md) at the repo root. Found a bug?
 In the app: **Settings → Report an issue…** generates a redacted diagnostic
-you can attach to a [GitHub issue](https://github.com/Round-Tower/m1k3/issues).
+you can attach to a [GitHub issue](https://github.com/Round-Tower/M1K3/issues).
