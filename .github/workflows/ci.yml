@@ -72,8 +72,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: macos/.build
-          key: spm-${{ runner.os }}-${{ hashFiles('macos/Package.resolved') }}
-          restore-keys: spm-${{ runner.os }}-
+          # github.repository is IN the key deliberately: the self-hosted runner's
+          # workspace path is /Users/runner/work/<repo>/<repo>, and Clang's module
+          # cache bakes absolute paths into its .pcm files. The 2026-08-31 repo
+          # rename (m1k3 -> M1K3) left a stale cache with the OLD path baked in,
+          # which collided with the NEW path mid-build ("module '_DarwinFoundation1'
+          # is defined in both ... m1k3/m1k3 ... and ... M1K3/M1K3 ...", clang
+          # segfault). Keying on the repo name means any future rename busts the
+          # cache instead of poisoning it.
+          key: spm-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('macos/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-${{ github.repository }}-
 
       - name: swift test
         working-directory: macos
@@ -110,8 +118,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: macos/.spm-cache
-          key: xcodebuild-spm-${{ runner.os }}-${{ hashFiles('macos/Package.resolved') }}
-          restore-keys: xcodebuild-spm-${{ runner.os }}-
+          # github.repository in the key: see the swift-mac job's cache step for why.
+          key: xcodebuild-spm-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('macos/Package.resolved') }}
+          restore-keys: xcodebuild-spm-${{ runner.os }}-${{ github.repository }}-
 
       # M1K3.xcodeproj is gitignored (project.yml is the source of truth). xcodegen
       # regenerates it. xcbeautify formats the build log. Homebrew works on the
@@ -165,8 +174,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: macos/.spm-cache
-          key: xcodebuild-spm-mobile-${{ runner.os }}-${{ hashFiles('macos/Package.resolved') }}
-          restore-keys: xcodebuild-spm-mobile-${{ runner.os }}-
+          # github.repository in the key: see the swift-mac job's cache step for why.
+          key: xcodebuild-spm-mobile-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('macos/Package.resolved') }}
+          restore-keys: xcodebuild-spm-mobile-${{ runner.os }}-${{ github.repository }}-
 
       - name: Install xcodegen + xcbeautify
         run: brew install xcodegen xcbeautify
