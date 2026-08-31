@@ -12,7 +12,7 @@ Edge AI you actually own: no cloud, no telemetry, no network cable it never asks
 </p>
 
 <p align="center">
-  <a href="https://github.com/Round-Tower/m1k3/releases/latest/download/M1K3.dmg"><strong>⬇ Download for macOS</strong></a>
+  <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><strong>⬇ Download for macOS</strong></a>
   · <a href="https://m1k3.app">m1k3.app</a>
   · <a href="https://testflight.apple.com/join/Fxp2F5Je">TestFlight beta</a>
 </p>
@@ -20,17 +20,17 @@ Edge AI you actually own: no cloud, no telemetry, no network cable it never asks
 <p align="center"><em>Requires macOS 26 Tahoe · Apple Silicon · signed & notarized (Developer ID).</em></p>
 
 <p align="center">
-  <a href="https://github.com/Round-Tower/m1k3/actions/workflows/ci.yml"><img src="https://github.com/Round-Tower/m1k3/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/Round-Tower/m1k3/actions/workflows/security.yml"><img src="https://github.com/Round-Tower/m1k3/actions/workflows/security.yml/badge.svg" alt="Security"></a>
-  <a href="https://github.com/Round-Tower/m1k3/actions/workflows/claude-code-review-mac.yml"><img src="https://github.com/Round-Tower/m1k3/actions/workflows/claude-code-review-mac.yml/badge.svg" alt="Mac review"></a>
+  <a href="https://github.com/Round-Tower/M1K3/actions/workflows/ci.yml"><img src="https://github.com/Round-Tower/M1K3/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Round-Tower/M1K3/actions/workflows/security.yml"><img src="https://github.com/Round-Tower/M1K3/actions/workflows/security.yml/badge.svg" alt="Security"></a>
+  <a href="https://github.com/Round-Tower/M1K3/actions/workflows/claude-code-review-mac.yml"><img src="https://github.com/Round-Tower/M1K3/actions/workflows/claude-code-review-mac.yml/badge.svg" alt="Mac review"></a>
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Round-Tower/m1k3?color=0a0a0a&labelColor=0a0a0a" alt="Apache-2.0"></a>
-  <a href="https://github.com/Round-Tower/m1k3/releases/latest"><img src="https://img.shields.io/github/v/release/Round-Tower/m1k3?color=0a0a0a&labelColor=0a0a0a&label=release" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Round-Tower/M1K3?color=0a0a0a&labelColor=0a0a0a" alt="Apache-2.0"></a>
+  <a href="https://github.com/Round-Tower/M1K3/releases/latest"><img src="https://img.shields.io/github/v/release/Round-Tower/M1K3?color=0a0a0a&labelColor=0a0a0a&label=release" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/platform-macOS%2026%20·%20Apple%20Silicon-0a0a0a?labelColor=0a0a0a" alt="macOS 26 · Apple Silicon">
   <img src="https://img.shields.io/badge/swift-6.2%20strict-0a0a0a?labelColor=0a0a0a" alt="Swift 6.2">
-  <a href="https://murphysig.dev/signed/Round-Tower/m1k3/"><img src="https://murphysig.dev/badge/Round-Tower/m1k3.svg" alt="MurphySig: signed"></a>
+  <a href="https://murphysig.dev/signed/Round-Tower/M1K3/"><img src="https://murphysig.dev/badge/Round-Tower/M1K3.svg" alt="MurphySig: signed"></a>
 </p>
 
 ---
@@ -67,7 +67,7 @@ one-time model download and an optional, explicitly-enabled web search.
 ## Get M1K3
 
 - **[TestFlight beta](https://testflight.apple.com/join/Fxp2F5Je)** — the easiest way in.
-- **[Download the DMG](https://github.com/Round-Tower/m1k3/releases/latest/download/M1K3.dmg)** — signed & notarized.
+- **[Download the DMG](https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)** — signed & notarized.
 - **Build from source** — [`macos/README.md`](./macos/README.md): clone → `xcodegen generate` → ⌘R.
 
 ## MCP integration

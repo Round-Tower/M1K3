@@ -81,7 +81,7 @@ metadata correctly.
 Serving the files is enough for manual placement and import. If you want the
 app itself to fetch from your mirror, note that it currently talks to one
 endpoint — a runtime fallback source is
-[tracked separately](https://github.com/Round-Tower/m1k3/issues) and would
+[tracked separately](https://github.com/Round-Tower/M1K3/issues) and would
 require your mirror to answer two HuggingFace API routes so a pinned commit can
 be resolved.
 

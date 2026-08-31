@@ -61,7 +61,7 @@ for the full contract and its addenda.
 ### Build & run
 
 ```bash
-git clone https://github.com/Round-Tower/m1k3.git
+git clone https://github.com/Round-Tower/M1K3.git
 cd m1k3/app
 
 # Build debug APK

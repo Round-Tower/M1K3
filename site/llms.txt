@@ -33,14 +33,14 @@ Key facts:
   with an async job API for long asks) over local HTTP at
   http://127.0.0.1:4242/mcp
 - Install: signed & notarized DMG at
-  https://github.com/Round-Tower/m1k3/releases/latest/download/M1K3.dmg,
+  https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg,
   TestFlight beta, or build from source
-- License/source: Apache-2.0, https://github.com/Round-Tower/m1k3
+- License/source: Apache-2.0, https://github.com/Round-Tower/M1K3
 
 ## Docs
 
-- [Repository and build-from-source](https://github.com/Round-Tower/m1k3): monorepo; the Mac app lives in macos/
-- [macOS app roadmap](https://github.com/Round-Tower/m1k3/blob/master/macos/ROADMAP.md): what's next (PLAN.md in the same folder is the historical decision record)
+- [Repository and build-from-source](https://github.com/Round-Tower/M1K3): monorepo; the Mac app lives in macos/
+- [macOS app roadmap](https://github.com/Round-Tower/M1K3/blob/master/macos/ROADMAP.md): what's next (PLAN.md in the same folder is the historical decision record)
 
 ## Answers
 

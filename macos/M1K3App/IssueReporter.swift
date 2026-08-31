@@ -35,7 +35,7 @@ import OSLog
 enum IssueReporter {
     /// The repo issues land in. Public new-issue page; the user is already signed
     /// in via their browser, so no app-side auth is needed.
-    private static let repo = "Round-Tower/m1k3"
+    private static let repo = "Round-Tower/M1K3"
 
     /// Build the redacted report, stash the full body on the clipboard, and open
     /// the prefilled GitHub issue page. Returns whether the body was truncated in

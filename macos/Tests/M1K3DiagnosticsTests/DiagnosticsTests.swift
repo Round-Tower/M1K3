@@ -124,13 +124,13 @@ struct GitHubIssueURLTests {
     @Test("a short body builds a prefilled, encoded new-issue URL")
     func shortBody() throws {
         let built = try #require(GitHubIssueURL.newIssue(
-            repo: "Round-Tower/m1k3",
+            repo: "Round-Tower/M1K3",
             title: "Bug: thing",
             body: "a body with spaces & symbols"
         ))
         #expect(!built.truncated)
         let s = built.url.absoluteString
-        #expect(s.hasPrefix("https://github.com/Round-Tower/m1k3/issues/new?"))
+        #expect(s.hasPrefix("https://github.com/Round-Tower/M1K3/issues/new?"))
         #expect(s.contains("title="))
         #expect(s.contains("body="))
         // Querystring is percent-encoded — no raw spaces leak through.
@@ -141,7 +141,7 @@ struct GitHubIssueURLTests {
     func longBody() throws {
         let huge = String(repeating: "x", count: 10000)
         let built = try #require(GitHubIssueURL.newIssue(
-            repo: "Round-Tower/m1k3",
+            repo: "Round-Tower/M1K3",
             title: "Big",
             body: huge,
             maxBodyChars: 100

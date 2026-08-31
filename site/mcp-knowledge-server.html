@@ -71,7 +71,7 @@
     <a href="/">Home</a>
     <a href="/#features">Features</a>
     <a href="/#faq">FAQ</a>
-    <a href="https://github.com/Round-Tower/m1k3">GitHub</a>
+    <a href="https://github.com/Round-Tower/M1K3">GitHub</a>
     <a class="btn btn-ghost" href="/#get" style="padding:10px 18px;">Download</a>
   </div>
 </nav>
@@ -92,7 +92,7 @@
   <p>Cloud assistants usually solve "memory" with cloud storage. The local variant flips that: M1K3 keeps the knowledge base on your Mac — app-sandboxed, encrypted with a Keychain-held key — and exposes it only on <code>127.0.0.1</code>, the loopback interface no other machine can reach. Claude gets a second brain; the second brain stays home.</p>
 
   <h2>What tools does M1K3 expose over MCP?</h2>
-  <p>Sixteen, spanning knowledge, memory, intelligence, and voice (the <a href="https://github.com/Round-Tower/m1k3#tools">README's table</a> is generated live from the running server):</p>
+  <p>Sixteen, spanning knowledge, memory, intelligence, and voice (the <a href="https://github.com/Round-Tower/M1K3#tools">README's table</a> is generated live from the running server):</p>
   <div class="table-scroll">
     <table class="cmp">
       <thead>
@@ -119,7 +119,7 @@
   </div>
 
   <h2>How do I connect Claude Code to M1K3?</h2>
-  <p><strong>Step 1 — install M1K3 and give it something to know.</strong> Get the app (<a href="https://testflight.apple.com/join/Fxp2F5Je">TestFlight</a>, <a href="https://github.com/Round-Tower/m1k3/releases/latest/download/M1K3.dmg">DMG</a>, or <a href="https://github.com/Round-Tower/m1k3">source</a>; requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.</p>
+  <p><strong>Step 1 — install M1K3 and give it something to know.</strong> Get the app (<a href="https://testflight.apple.com/join/Fxp2F5Je">TestFlight</a>, <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">DMG</a>, or <a href="https://github.com/Round-Tower/M1K3">source</a>; requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.</p>
   <p><strong>Step 2 — register the server.</strong> With the app running, either add this to a <code>.mcp.json</code> in your project (this is verbatim the config M1K3's own repo uses):</p>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
@@ -147,7 +147,7 @@
   <p>Claude now cites your files, not its training data. The <code>remember</code> / <code>recall_memory</code> tools work the same way — an agent can persist a fact today and another agent can recall it next week, all from the same local store.</p>
 
   <h2>How do I connect Claude Desktop or other clients?</h2>
-  <p>The repo documents two surfaces: the in-app HTTP server above (the live way agents reach M1K3's voice, RAG, and memory), and a <code>M1K3MCP</code> stdio binary you can build from source and register in <code>claude_desktop_config.json</code> for knowledge-only access. Client-by-client setup lives in <a href="https://github.com/Round-Tower/m1k3/blob/master/macos/docs/MCP_SETUP.md">macos/docs/MCP_SETUP.md</a>. MCP is an open protocol, so any MCP-capable client — not just Claude — can connect to the same endpoint.</p>
+  <p>The repo documents two surfaces: the in-app HTTP server above (the live way agents reach M1K3's voice, RAG, and memory), and a <code>M1K3MCP</code> stdio binary you can build from source and register in <code>claude_desktop_config.json</code> for knowledge-only access. Client-by-client setup lives in <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/docs/MCP_SETUP.md">macos/docs/MCP_SETUP.md</a>. MCP is an open protocol, so any MCP-capable client — not just Claude — can connect to the same endpoint.</p>
 
   <h2>Does this stay private?</h2>
   <p>The server side, yes, structurally: it binds to <code>127.0.0.1</code> (unreachable from the network), and search, embeddings, and storage all run on-device in a sandboxed app with an encrypted store.</p>
@@ -179,7 +179,7 @@
     <p>M1K3 is free, open source, and entirely on-device. One config snippet and Claude knows what you know.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
-      <a class="btn btn-ghost" href="https://github.com/Round-Tower/m1k3">Build from source</a>
+      <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Build from source</a>
     </div>
   </section>
 
@@ -197,7 +197,7 @@
 
 <footer>
   <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER</a> · MADE IN IRELAND</span>
-  <span><a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/m1k3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
+  <span><a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
 </footer>
 
 <!-- Signed: Kev + claude-fable-5, 2026-07-10, Confidence 0.85.

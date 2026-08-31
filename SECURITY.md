@@ -7,7 +7,7 @@ security reports are the most valuable contributions this project can receive.
 
 **Please do not open a public issue for security problems.**
 
-- Preferred: [GitHub private vulnerability reporting](https://github.com/Round-Tower/m1k3/security/advisories/new)
+- Preferred: [GitHub private vulnerability reporting](https://github.com/Round-Tower/M1K3/security/advisories/new)
   (Security tab → "Report a vulnerability").
 - Or email **kevin@round-tower.ie** with `[M1K3 SECURITY]` in the subject.
 
