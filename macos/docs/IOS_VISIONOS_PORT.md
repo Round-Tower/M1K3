@@ -68,7 +68,7 @@ push a mobile app toward jetsam. Two pure, tested policy changes (desktop stays 
 default — zero Mac behaviour change):
 
 - **`MLXMemoryBudget.DeviceProfile{.desktop,.mobile}`** — `.mobile` caps the MLX
-  back-pressure ceiling at 4 GB (vs the 12 GB Mac companion ceiling), so a 4-bit 4B
+  back-pressure ceiling at 4 GB (vs the 12 GB Mac app ceiling), so a 4-bit 4B
   brain + KV fits and MLX yields before the OS jetsams. Applied via `#if os(iOS) ||
   os(visionOS)` in `applyOnce`.
 - **`BrainTier.recommended(…, platform:)`** — `.mobile` never recommends Big
@@ -87,7 +87,7 @@ The library graph is portable; the remaining work is the front end and the runti
    need a `.playAndRecord` session + interruption/route handling behind the existing
    `SpeechProvider`/`TranscriptionProvider` seams before mic or playback works. Compiles
    today, silent at runtime.
-2. **The app shell** — `M1K3App/` is an AppKit menu-bar companion (`NSApplicationDelegateAdaptor`,
+2. **The app shell** — `M1K3App/` is an AppKit menu-bar app (`NSApplicationDelegateAdaptor`,
    `MenuBarExtra`, single-`Window`/`Settings` scenes, `.hiddenTitleBar`, launch-at-login).
    A fresh SwiftUI scene graph per platform; `NSColor`→`UIColor`, `NSImage`→`UIImage`, four
    `NSViewRepresentable`→`UIViewRepresentable` wrappers (QuickLook/WebKit/GlassBackground/Artifact),
@@ -130,7 +130,7 @@ it's load-bearing and only tested through the Mac app today.
   interruption/route handling.
 - **Phase C — Shell & navigation (iOS-native, not a port).** TabView/NavigationStack
   for Chat / Memories / Documents / Settings; onboarding + capability ladder. The
-  menu-bar companion's iOS soul: Home/Lock-Screen widgets, App Intents/Shortcuts
+  menu-bar app's iOS soul: Home/Lock-Screen widgets, App Intents/Shortcuts
   (already in the codebase), a Live Activity for long thinks, a Control Center control.
 - **Phase D — Spatial (visionOS), the flagship.** The avatar as a volumetric companion +
   the 3D memory constellation (M1K3MemoryViz, already green) as a walkable field.
@@ -174,7 +174,7 @@ regression risk to the shipping Mac product** (proved: 1749/258 still green).
 - **`ChatScreen.swift`** — the spine: real grounded streaming chat over `ChatSession`, the
   avatar as hero→dock, brain-load progress, asymmetric bubbles.
 - **`RootView.swift`** — first-run onboarding gate → `TabView` (Chat / Memories / Documents
-  / Settings), iOS-native navigation (not a port of the menu-bar companion).
+  / Settings), iOS-native navigation (not a port of the menu-bar app).
 - **`DocumentsScreen`** (list + `fileImporter` ingest + delete over the real ingester),
   **`MemoriesScreen`** (live count + hybrid `MemoryStore.recall`), **`SettingsScreen`**
   (mobile-safe brain picker, web-search toggle, AFM availability, about),

@@ -30,8 +30,8 @@ port — is evidence of residency. If a feature doesn't make M1K3 more
 
 3. **One noun per concept — the list is closed.**
    `brain` (never model / engine / runtime / tier in UI) ·
-   `companion` (the product) · `face` (the pixel avatar) ·
-   `creature` (the opt-in 3D pet) · `memory` (the fact graph) ·
+   `face` (the pixel avatar) · `creature`/`companion` (the opt-in 3D pet —
+   both names ship; see Standing decisions) · `memory` (the fact graph) ·
    `documents` (the corpus). A new noun requires killing an old one.
 
    **The machine / Mac split** (Kev, 2026-08-03 — *"M1K3 is a mechanic
@@ -105,10 +105,16 @@ These look like clutter in an audit and are actually the soul. Do not
 - **One name: M1K3.** The leetspeak already reads as "Mike" — the product
   never explains the joke or introduces a second name. Users may call it
   whatever they like.
-- **Companion, not assistant.** An assistant is defined by tasks and is
-  replaced by the next benchmark. A companion is defined by staying —
-  and every M1K3 differentiator (memory, self-correction, face, voice) is
-  a residency feature. "Assistant" survives only as an App Store keyword.
+- **Edge AI, not "companion."** SUPERSEDED 2026-08-31 (Kev). The 2026-08-03
+  "companion, not assistant" call is retired as product positioning — it
+  read as a chatbot-persona pitch when the actual differentiator is
+  architectural: on-device, edge inference with nothing leaving the Mac.
+  Lead with that. The residency argument (memory, self-correction, face,
+  voice as evidence the product *stays*, not a chat toy) still holds and
+  still motivates the roadmap — it's the reasoning, not the label, that's
+  retired. "Companion" remains the shipped name of the opt-in 3D pet
+  feature (Fox/Gecko/etc., `site/companions.html`, `CompanionSpec.swift`)
+  — that's a feature name, not the product's positioning, and is unchanged.
 - **One mark: the pixel M.** Single source of truth for favicon, app icon,
   visionOS stack, and OG imagery. The labyrinth family is history (attic).
 - **The face fronts the brand; creatures are guests.** OG images and
@@ -125,3 +131,11 @@ recommendations Kev has not yet ratified item-by-item. Treat "Standing
 decisions" as proposals until a human merge confirms them — EXCEPT the
 machine/Mac split, which is Kev's own call, made in-session). Prior: none —
 new doc.*
+
+*Signed: Kev + claude-sonnet-5, 2026-08-31, Confidence 0.85 (the "companion,
+not assistant" standing decision is superseded, Kev's explicit call — it was
+never fully ratified per this doc's own caveat above, and a docs sweep
+removing "AI companion" from README/CLAUDE.md/site surfaced the conflict
+directly. The noun list is amended, not rewritten: "companion" keeps its
+life as the shipped 3D-pet feature name.). Prior: Kev + claude-fable-5
+(this file).*
