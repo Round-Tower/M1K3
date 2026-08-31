@@ -5,10 +5,10 @@
 <h1 align="center">M1K3 — Own your AI</h1>
 
 <p align="center">
-A native AI companion that runs <strong>entirely on your Apple-Silicon Mac</strong> —
-local LLM inference, live voice, a personal knowledge graph with RAG, encrypted
-call transcription, a local agent, and an MCP server.<br>
-Edge AI you actually own: no cloud, no telemetry, no network cable it never asks for.
+Local AI that runs <strong>entirely on your Apple-Silicon Mac</strong> —
+on-device LLM inference, live voice, a personal knowledge graph with RAG,
+encrypted call transcription, a local agent, and an MCP server.<br>
+Edge AI you actually own: no cloud, no telemetry, no network call it never asks for.
 </p>
 
 <p align="center">
@@ -47,7 +47,7 @@ Edge AI you actually own: no cloud, no telemetry, no network cable it never asks
   when you correct something, the dream cycle supersedes the stale fact instead
   of silently losing either version, and keeps the history visible.
 - **A face, and creatures** — the pixel face by default; an opt-in cast of
-  low-poly 3D companions rendered on-device with RealityKit.
+  low-poly 3D creatures rendered on-device with RealityKit.
 - **Call memory** — encrypted, on-device call transcription.
 - **A local agent** — tools that *do* things, grounded in your own data, with
   markdown + syntax-highlighted code in chat.
