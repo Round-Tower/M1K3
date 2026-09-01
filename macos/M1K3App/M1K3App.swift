@@ -198,6 +198,11 @@ struct M1K3App: App {
 final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @Published private(set) var environment: AppEnvironment?
     @Published private(set) var startupError: String?
+    /// Owns the notch HUD's poll/animate loops for the app's lifetime — the
+    /// Settings toggle gates whether it can ever actually show (see
+    /// NotchHUDController), so this starts unconditionally alongside the
+    /// environment rather than needing its own enable/disable wiring.
+    private var notchHUD: NotchHUDController?
 
     func applicationWillFinishLaunching(_: Notification) {
         // Before any MLX use: the quit-during-generation guard (MLXExitGuard
@@ -255,6 +260,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 let env = try AppEnvironment()
                 environment = env
                 AppEnvironment.registerShared(env)
+                let hud = NotchHUDController(env: env)
+                hud.start()
+                notchHUD = hud
                 // Warm the restored brain now so a resident-but-windowless M1K3 can
                 // answer a quiet ask. Idempotent with ContentView's own warm-up.
                 await env.warmUpSelectedBrainOnLaunch()

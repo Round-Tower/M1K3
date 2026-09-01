@@ -24,6 +24,7 @@ struct GeneralSettingsPane: View {
     @AppStorage(AppEnvironment.notifyOnLongTurnKey) private var notifyOnLongTurn = false
     @AppStorage(AppEnvironment.soundEffectsEnabledKey) private var soundEffectsEnabled = true
     @AppStorage(AppEnvironment.dialUpSoundEnabledKey) private var dialUpSound = true
+    @AppStorage(AppEnvironment.notchHUDEnabledKey) private var notchHUDEnabled = false
     @AppStorage(AppEnvironment.voiceEchoCancellationKey) private var preferEchoCancellation = true
     @AppStorage(AppEnvironment.thinkingModeKey) private var thinkingMode = ThinkingMode.auto.rawValue
     @AppStorage(StartupPreferences.menuBarOnlyKey) private var menuBarOnly = false
@@ -84,6 +85,17 @@ struct GeneralSettingsPane: View {
                     + "hear itself. Turn this off to always use the sharper transcriber "
                     + "instead \u{2014} more accurate in a quiet room, but it hears whatever "
                     + "your speakers are playing. Takes effect on your next turn.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Show a heads-up display while M1K3 talks", isOn: $notchHUDEnabled)
+            } header: {
+                Text("Narration HUD")
+            } footer: {
+                Text("A small pill docks under your menu bar with your companion and "
+                    + "what M1K3 is saying, live \u{2014} even if the window's closed. "
+                    + "Off by default.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
