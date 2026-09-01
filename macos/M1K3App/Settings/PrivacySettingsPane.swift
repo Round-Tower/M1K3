@@ -20,6 +20,12 @@ struct PrivacySettingsPane: View {
     @AppStorage(AppEnvironment.webSearchEnabledKey) private var webSearchEnabled = true
     @AppStorage(AppEnvironment.spotlightIndexingKey) private var spotlightIndexing = false
     @AppStorage(AppEnvironment.scriptToolsEnabledKey) private var scriptToolsEnabled = false
+    @AppStorage(AppEnvironment.contextBatteryEnabledKey) private var contextBattery = false
+    @AppStorage(AppEnvironment.contextCalendarEnabledKey) private var contextCalendar = false
+    @AppStorage(AppEnvironment.contextLocationEnabledKey) private var contextLocation = false
+    @AppStorage(AppEnvironment.contextLocationPreciseKey) private var contextLocationPrecise = false
+    @State private var calendarDenied = false
+    @State private var locationDenied = false
     @State private var scriptRows: [AppEnvironment.ScriptRow] = []
 
     var body: some View {
@@ -53,6 +59,8 @@ struct PrivacySettingsPane: View {
                 .font(.caption).foregroundStyle(.secondary)
             }
 
+            contextSection
+
             scriptsSection
 
             mcpSection
@@ -61,6 +69,60 @@ struct PrivacySettingsPane: View {
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
+    }
+
+    /// The context senses (context-tools charter): per-sense consent, all
+    /// default OFF — off means the model can't see the tool. Toggle first,
+    /// then macOS asks its own permission on first use; a system-level
+    /// denial auto-reverts the toggle here with calm copy (charter fold —
+    /// never a per-turn "permission denied" loop).
+    private var contextSection: some View {
+        Section {
+            Toggle("Battery", isOn: $contextBattery)
+            Toggle("Calendar (titles & times)", isOn: $contextCalendar)
+            if calendarDenied {
+                Text("macOS has calendar access off for M1K3 — grant it in System "
+                    + "Settings → Privacy & Security → Calendars, then switch this "
+                    + "back on.")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+            Toggle("Location", isOn: $contextLocation)
+            if contextLocation {
+                Toggle("Precise location", isOn: $contextLocationPrecise)
+            }
+            if locationDenied {
+                Text("macOS has location access off for M1K3 — grant it in System "
+                    + "Settings → Privacy & Security → Location Services, then "
+                    + "switch this back on.")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+        } header: {
+            Text("Context")
+        } footer: {
+            Text("""
+            Lets M1K3 ground answers in the moment — battery, your next \
+            events, where you are (a coarse ~10 km area unless Precise is \
+            on). Snapshots only: never remembered, never mixed with web \
+            tools in a turn. macOS asks its own permission on first use.
+            """)
+            .font(.caption).foregroundStyle(.secondary)
+        }
+        .task(id: "\(contextCalendar)-\(contextLocation)") { refreshContextAuth() }
+    }
+
+    private func refreshContextAuth() {
+        if ContextSenseAuth.calendarDenied {
+            calendarDenied = true
+            contextCalendar = false
+        } else {
+            calendarDenied = false
+        }
+        if ContextSenseAuth.locationDenied {
+            locationDenied = true
+            contextLocation = false
+        } else {
+            locationDenied = false
+        }
     }
 
     /// The hands: approved-scripts execution (context-tools charter, default

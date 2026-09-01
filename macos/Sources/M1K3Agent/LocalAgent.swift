@@ -288,9 +288,9 @@ public actor LocalAgent {
         guard let cls = tool.exclusionClass else { return nil }
         if firedExclusionClasses.contains(where: { $0 != cls }) {
             return "Error: \(tool.name) is unavailable for the rest of this turn — "
-                + "local script output and web access never mix in one turn "
-                + "(M1K3's privacy rule). Answer from what you already have, or "
-                + "suggest the user ask again in a fresh message."
+                + "sensitive local data (scripts, calendar, location) and web access "
+                + "never mix in one turn (M1K3's privacy rule). Answer from what you "
+                + "already have, or suggest the user ask again in a fresh message."
         }
         firedExclusionClasses.insert(cls)
         return nil

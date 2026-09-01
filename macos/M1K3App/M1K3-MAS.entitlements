@@ -29,5 +29,12 @@
 	<!-- Microphone for on-device voice input (Apple Speech / WhisperKit). -->
 	<key>com.apple.security.device.audio-input</key>
 	<true/>
+	<!-- The context senses (docs/CONTEXT_TOOLS_PLAN.md): calendar_peek and
+	     current_location — both behind default-OFF Settings toggles AND the
+	     system TCC prompt; snapshots only, never off-device. -->
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+	<key>com.apple.security.personal-information.location</key>
+	<true/>
 </dict>
 </plist>

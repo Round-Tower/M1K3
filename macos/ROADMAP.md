@@ -30,6 +30,19 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
 
 ## Now
 
+- **★ The context senses are BUILT (2026-09-01) — verify-by-launch owed.**
+  `battery_status` + `calendar_peek` + `current_location` shipped under the
+  context-tools charter (docs/CONTEXT_TOOLS_PLAN.md — Kev's rulings: coarse
+  grid-cell location by default with a precise opt-up toggle; calendar shows
+  titles + times). Per-sense default-OFF toggles in Settings → Privacy →
+  Context; interactive-chat-only via ContextSenseHook; sensitive pair is
+  `.localSensitive` + distillation-tainted. **Owed on the next ⌘R:** the
+  first-use TCC dance for Calendars and Location (toggle → ask → grant/deny →
+  the pane's auto-revert), a live `calendar_peek` answer ("what's my day
+  look like?"), and a coarse + precise location read. Note each toggle flip
+  changes the palette = one cold persona-prefix rebuild on the next turn
+  (the documented trade; capacity question tracked below).
+
 - **★ Android model eval harness (Python, over adb) — Kev, 2026-08-22: "best model
   for the hardware, compute — evaled."** The 9a day found two bugs nobody could see
   by feel (an SVE2 CPU-variant producing broken logits; a 0.8B thinking for 171s then

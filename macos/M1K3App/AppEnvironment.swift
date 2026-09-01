@@ -770,7 +770,8 @@ final class AppEnvironment {
                 onPropose: { proposal in
                     Task { @MainActor in scriptProposals.pending = proposal }
                 }
-            )
+            ),
+            contextSenses: .live
         )
 
         // TTS seam: Built-in Apple voice wrapped in a swappable façade so the
@@ -1315,7 +1316,7 @@ final class AppEnvironment {
         let interactiveTools = Self.interactiveAgentTools(
             store: store, embedder: embedder,
             onHits: { _ in }, onOpenLink: { _ in }, deepDelegation: deepDelegationHook,
-            scriptExecution: .forWarm
+            scriptExecution: .forWarm, contextSenses: .forWarm
         ).map(\.toolDefinition)
         // weak: a brain swap mid-warm must not have this task pin the OUTGOING
         // provider's multi-GB weights alive while the new brain's are loading

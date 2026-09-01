@@ -234,6 +234,10 @@ targets:
         NSLocalNetworkUsageDescription: "Brain at Home serves M1K3's brain to devices you pair by QR code — on your local network only, encrypted, off by default."
         NSBonjourServices:
           - "_m1k3._tcp"
+        # The context senses (default OFF, docs/CONTEXT_TOOLS_PLAN.md): TCC
+        # prompts fire only on first use, after the in-app toggle is on.
+        NSCalendarsFullAccessUsageDescription: "M1K3 reads your next few events (titles and times) to ground answers — only while the Calendar context toggle is on. Nothing leaves your Mac."
+        NSLocationUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. Nothing leaves your Mac."
         # Export compliance: M1K3 uses only standard, exempt encryption (HTTPS/TLS
         # for on-device model-weight downloads). Declaring this up front skips the
         # per-submission encryption prompt in App Store Connect and prevents an

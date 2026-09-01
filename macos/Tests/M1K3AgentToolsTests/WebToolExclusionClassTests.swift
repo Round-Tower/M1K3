@@ -29,5 +29,14 @@ struct WebToolExclusionClassTests {
     func localToolsAreUnclassed() {
         #expect(DateTimeTool().exclusionClass == nil)
         #expect(SystemStatusTool().exclusionClass == nil)
+        // battery_status is exclusion-EXEMPT by charter, explicitly.
+        #expect(BatteryStatusTool(provider: LiveBatteryHealthProvider()).exclusionClass == nil)
+    }
+
+    @Test("the context senses carry .localSensitive — they must never mix with web tools in a turn")
+    func sensesAreLocalSensitive() {
+        #expect(CalendarPeekTool(provider: NullCalendarPeeking()).exclusionClass == .localSensitive)
+        #expect(CurrentLocationTool(provider: NullLocationProviding(), precision: .coarse)
+            .exclusionClass == .localSensitive)
     }
 }

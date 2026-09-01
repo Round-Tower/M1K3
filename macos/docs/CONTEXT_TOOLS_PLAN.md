@@ -1,16 +1,25 @@
 # Context Tools — the Mac as M1K3's senses (plan)
 
-**Status:** FIRST RESIDENT LANDED (2026-08-23) — the hands (`execute_script`
-+ `propose_script`, feat/hands-run-script) shipped under this charter with the
-P1 same-turn exclusion (`ToolExclusionClass`, enforced in LocalAgent's dispatch
-core) and the P3 distillation taint (`DistillationTaint`) built as mechanism,
-default-OFF toggle in Settings → Privacy, and the LAN MCP scope failing closed.
-P2's second consent tier for the hands is satisfied structurally: the tools join
-ONLY the interactive-chat palette (hook-injection, the delegate_deep pattern) —
-`ask_m1k3` never receives the hook. The context SENSES below (battery, location,
-calendar, presence) remain unbuilt; their P1/P3 mechanisms now exist to inherit.
-Named honest gap: the eval/SelfTest palette does not yet carry the hands, so
-tool-use evals exercise the exclusion only via unit pins, not CHATEVAL.
+**Status:** THE FIRST THREE SENSES BUILT (2026-09-01) — `battery_status`
+(Phase 1, exclusion-exempt), `calendar_peek` and `current_location` (Phase 2,
+both `.localSensitive` + distillation-tainted) shipped under this charter on
+Kev's rulings below: per-sense default-OFF toggles in Settings → Privacy →
+Context (with TCC-denial auto-revert + calm copy), interactive-chat-only via
+`ContextSenseHook` (the ScriptExecutionHook pattern — `ask_m1k3`/menu-bar/
+deep-dive structurally never see them, and the warm variant's inert providers
+can never fire a TCC prompt at launch), grid-cell coarse location with the
+precise opt-up as its own toggle, calendar titles+times capped at five
+events. Entitlements + usage strings in both entitlement files + project.yml.
+Still unbuilt from this charter: `now_playing` (spike-gated), `wifi_context`,
+Phase 3 `device_presence`. Named honest gaps: the eval/SelfTest palette
+carries neither the hands nor the senses (unit pins only, not CHATEVAL), and
+the EventKit/CoreLocation adapters are verify-by-launch — the TCC dance has
+not yet been driven on a real ⌘R.
+Earlier milestone (2026-08-23): the hands (`execute_script` +
+`propose_script`) landed first, proving the P1 same-turn exclusion
+(`ToolExclusionClass` in LocalAgent's dispatch core), the P3 distillation
+taint (`DistillationTaint`), and the LAN MCP fail-closed scope the senses
+now inherit.
 The folded security-audit findings (distillation-exclusion taint before Phase 2,
 second consent tier for `ask_m1k3`) remain the binding prerequisites whenever
 this is scheduled via ROADMAP.md. Security-audit pass required before the first
@@ -82,6 +91,18 @@ repo. The version that ships:
 - **BLE promiscuous scan / third-party device logging** — see Phase 3.
 - **Screen contents / screen time** — a different trust conversation entirely;
   not in this plan.
+- **Reading other apps' notifications** (Kev's ask, 2026-09-01: "a way of
+  telling what's going on… without integrating with any other apps") —
+  ruled OUT, twice over. Structurally: macOS has no public API for another
+  app's notifications; the real routes are the private Notification Center
+  sqlite (outside our sandbox, needs Full Disk Access, undocumented format
+  that breaks across releases) or AX-scraping banners — both fragile and
+  surveillance-shaped. And content-wise it's the hottest stream on the
+  machine (2FA codes, private messages) — the screen-contents trust
+  conversation, not this charter's. The shippable cousin is a
+  **`focus_status`** sense: ONE bit ("a Focus is on"), no content, via the
+  `com.apple.developer.focus-status` entitlement — a candidate for a later
+  phase alongside `device_presence`.
 
 ## Architecture
 
@@ -191,13 +212,19 @@ observation (F6 — a prompt-injection speed bump, named as such).
 - **NSUserUnixTask is unkillable (F8).** A runaway approved script can only be
   stopped via Activity Monitor — surfaced in BUGS.md, not just code comments.
 
-## Open questions (Kev's calls)
+## Open questions — RULED (Kev, 2026-09-01)
 
-1. Location granularity: town-level default with a "precise" opt-up, or
-   precise-only-when-asked?
-2. Does `calendar_peek` include event titles by default, or busy/free only?
-3. Phase order — battery first (zero friction) is my recommendation; anything
-   you want promoted?
+1. Location granularity: **coarse by default, precise opt-up** — the default
+   snapshot is a grid-cell coarse location; a separate "precise" toggle (or
+   per-ask escalation) opts up. Coarse is the toggle's promise; precise is a
+   second, explicit consent.
+2. `calendar_peek` **includes event titles** (plus times) by default — the
+   companion win ("you've got the dentist at 3") needs the title to be worth
+   anything. Busy/free-only was considered and rejected.
+3. Phase order confirmed: **battery first** (zero friction, exclusion-exempt),
+   then calendar_peek + current_location together (same consent shape, same
+   toggle-then-TCC ordering). Email is explicitly NOT in this charter — if it
+   ever happens it gets its own consent ceremony, metadata-first.
 
 *Signed: Kev + claude-fable-5, 2026-07-25, Confidence 0.8 (plan only — APIs
 verified against platform knowledge but not spiked; the now_playing and
