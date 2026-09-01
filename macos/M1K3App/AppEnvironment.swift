@@ -246,6 +246,12 @@ final class AppEnvironment {
     /// in the input bar as the user speaks.
     private(set) var isListening = false
     private(set) var liveTranscript = ""
+    /// A dictation that finished while a PREVIOUS turn was still streaming —
+    /// queued here instead of silently discarded (#126: `ChatSession.send`
+    /// no-ops re-entrantly, so firing straight at it dropped the user's words
+    /// without a trace). The input row folds this into its draft and clears
+    /// it via `consumePendingDictationText()`.
+    private(set) var pendingDictationText: String?
     /// The M1K3 Voice earned-moment offer is live (set on leaving voice mode
     /// once VoiceUpgradeOfferPolicy says the user has genuinely heard the
     /// everyday voice). Drives the one-line banner; cleared on accept/dismiss.
@@ -2304,13 +2310,26 @@ extension AppEnvironment {
         // Hygiene-clean the final transcript (repetition / silence hallucinations /
         // whitespace) before it reaches the model — an all-noise dictation becomes "".
         let cleaned = TranscriptSanitizer.clean(text, confidence: confidence)
-        // Drop a dictated turn that finished before the brain is ready (a slow
-        // first model load) rather than firing it at a still-loading backend.
-        guard !cleaned.isEmpty, isReady else {
+        // The pure decision table (#126): empty/not-ready still drops exactly as
+        // before; a turn already streaming now QUEUES instead of vanishing into
+        // ChatSession.send's silent re-entrancy no-op.
+        switch DictationCompletionPolicy.decide(cleanedText: cleaned, isReady: isReady, isResponding: chat.isResponding) {
+        case .drop:
             avatar.resetToIdle()
-            return
+        case let .queueForLater(queued):
+            pendingDictationText = queued
+            avatar.resetToIdle()
+        case let .sendNow(ready):
+            await send(ready)
         }
-        await send(cleaned)
+    }
+
+    /// Pop a queued dictation (if any) so the input row can fold it into the
+    /// draft exactly once — consuming clears it, so a stale value can't be
+    /// re-folded on a later view refresh.
+    func consumePendingDictationText() -> String? {
+        defer { pendingDictationText = nil }
+        return pendingDictationText
     }
 }
 

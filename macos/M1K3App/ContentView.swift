@@ -780,8 +780,12 @@ struct ContentView: View {
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
                 .tint(env.isListening ? .red : nil)
-                .disabled(!env.canDictate && !env.isListening)
-                .help(env.canDictate ? "Voice input — tap to speak, tap to send" : "Microphone unavailable")
+                // Matches the voice-mode button's own pattern (line ~1004): don't let
+                // a NEW dictation start while a turn is streaming (#126) — but never
+                // disable out from under an ALREADY-listening user, so they can still
+                // tap to stop/cancel a dictation that was already in flight.
+                .disabled((!env.canDictate || env.chat.isResponding) && !env.isListening)
+                .help(micButtonHelp)
                 .accessibilityLabel("Voice input")
                 .accessibilityValue(env.isListening ? "Listening" : "Off")
                 .accessibilityHint("Dictate a message")
@@ -801,6 +805,14 @@ struct ContentView: View {
             .padding(16)
             .frame(maxWidth: Self.chatContentMaxWidth)
             .frame(maxWidth: .infinity) // centre with the transcript column
+            // #126: a dictation that finished mid-answer is queued (never
+            // dropped) — fold it into the draft the moment it's ready and
+            // focus the field so the user sees their own words land.
+            .onChange(of: env.pendingDictationText) { _, newValue in
+                guard newValue != nil, let queued = env.consumePendingDictationText() else { return }
+                draft = draft.isEmpty ? queued : "\(draft) \(queued)"
+                inputFocused = true
+            }
         }
     }
 
@@ -808,6 +820,16 @@ struct ContentView: View {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !env.chat.isResponding
             && env.chatGate.canTakeTurn // open, or interim (Mini serving)
+    }
+
+    /// The mic button's tooltip: names WHY it's disabled rather than leaving
+    /// an unexplained greyed-out control (#126 — the busy state is new).
+    private var micButtonHelp: String {
+        guard env.canDictate else { return "Microphone unavailable" }
+        if env.chat.isResponding, !env.isListening {
+            return "Voice input — wait for M1K3 to finish answering"
+        }
+        return "Voice input — tap to speak, tap to send"
     }
 
     /// Cue for the ambient animated backdrop: audio capture (dictation / call
