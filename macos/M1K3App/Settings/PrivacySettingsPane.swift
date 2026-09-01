@@ -111,8 +111,9 @@ struct PrivacySettingsPane: View {
             Text("""
             M1K3's "hands" — it can only propose a script; every install and \
             approval is your click, and only the exact approved bytes ever run. \
-            An approved script can be re-run later with different input, so \
-            approve only scripts you trust with anything.
+            Script output can't reach the web tools in the same turn and never \
+            becomes a remembered fact. An approved script can be re-run later \
+            with different input, so approve only scripts you trust with anything.
             """)
             .font(.caption).foregroundStyle(.secondary)
         }
