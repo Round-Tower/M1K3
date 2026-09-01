@@ -48,6 +48,14 @@ public actor LocalMCPHTTPServer {
     private var listener: NWListener?
     private var session: (server: Server, transport: StatelessHTTPServerTransport)?
 
+    /// Monotonic source of process-unique JSON-RPC ids. The shared stateless
+    /// transport routes responses by request id GLOBALLY; clients all start at
+    /// id 1, so without this two concurrent requests collide and orphan each
+    /// other (issue #176). Rewriting every request to a unique id before the
+    /// transport sees it makes the waiter keys collision-proof. Actor-isolated
+    /// → the increment needs no extra lock.
+    private var requestIDCounter: UInt64 = 0
+
     public private(set) var isRunning = false
 
     public init(
@@ -202,7 +210,29 @@ public actor LocalMCPHTTPServer {
         guard let transport = session?.transport else {
             return .error(statusCode: 500, MCPError.internalError("MCP session unavailable"))
         }
-        return await transport.handleRequest(request)
+
+        // Isolate this request's response waiter from client id collisions:
+        // rewrite its JSON-RPC id to a process-unique token before the shared
+        // transport registers a waiter for it, then map the response's id back
+        // to what the client sent. A notification (no id) is passed straight
+        // through — it registers no waiter, so nothing can collide. See #176.
+        guard
+            let body = request.body,
+            let clientID = HTTPWireCodec.requestID(inBody: body)
+        else {
+            return await transport.handleRequest(request)
+        }
+        requestIDCounter &+= 1
+        let uniqueID = JSONRPCID.string("m1k3#\(requestIDCounter)")
+        guard let rewrittenBody = HTTPWireCodec.replacingID(inBody: body, with: uniqueID) else {
+            return await transport.handleRequest(request)
+        }
+        let rewrittenRequest = HTTPRequest(
+            method: request.method, headers: request.headers,
+            body: rewrittenBody, path: request.path
+        )
+        let response = await transport.handleRequest(rewrittenRequest)
+        return HTTPWireCodec.replacingResponseID(response, with: clientID)
     }
 
     private func receiveChunk(_ connection: NWConnection) async -> Data? {
