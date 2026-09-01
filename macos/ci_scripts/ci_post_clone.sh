@@ -15,6 +15,17 @@ swift --version | head -1
 
 MACOS_DIR="$CI_PRIMARY_REPOSITORY_PATH/macos"
 
+# 0. Package-plugin validation OFF — the mlx-swift 0.31.6 bump (2026-08-08)
+# ships a `CudaBuild` plugin that fails Xcode's fingerprint validation on an
+# unattended build ("Plugin 'CudaBuild' from package 'mlx-swift' must be
+# enabled before it can be used" — run #263's failure, the first VM this lane
+# reached after the dangling-toolchain fix). Local CI and the release scripts
+# pass `-skipPackagePluginValidation`; Xcode Cloud owns its own xcodebuild
+# invocation for Archive, so the equivalent is these defaults, which xcodebuild
+# reads at run time.
+defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidation -bool YES
+defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
+
 # 1. Tooling — xcodegen WITHOUT Homebrew.
 # Xcode Cloud's macOS-27-beta image has NO route to formulae.brew.sh (build 59:
 # curl exit 7, "Couldn't connect" in ~4ms) and Homebrew can't resolve a bottle
@@ -70,6 +81,7 @@ fi
 # 4. Resolve SPM packages — Xcode Cloud starts with empty DerivedData.
 echo "--- Resolving Swift packages..."
 xcodebuild -resolvePackageDependencies \
+  -skipPackagePluginValidation \
   -scheme M1K3 \
   -project "$MACOS_DIR/M1K3.xcodeproj"
 
