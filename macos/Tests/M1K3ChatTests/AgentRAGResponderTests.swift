@@ -900,7 +900,7 @@ struct AgentRAGResponderTests {
         let prompt = try #require(provider.allPrompts.first)
         #expect(prompt.contains("weather, news"))
         #expect(prompt.contains("use web_search"))
-        #expect(prompt.contains("already stored on this Mac"))
+        #expect(prompt.contains("already stored on this machine"))
     }
 
     @Test("with fetch_page available, the rules note web_search auto-reads the top result + point fetch_page elsewhere")

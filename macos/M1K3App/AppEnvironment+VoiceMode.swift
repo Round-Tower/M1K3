@@ -91,6 +91,13 @@ extension AppEnvironment {
     /// CompanionAvatarView (applies it) and Settings (picks it) — default off.
     nonisolated static let companionShadingKey = CompanionDefaults.shadingStyleKey
 
+    /// The notch HUD — a heads-up narration pill (companion + live spoken
+    /// text) that appears while M1K3 is talking, from any surface, even a
+    /// closed/menu-bar-only window. OFF by default (a new floating overlay
+    /// earns its opt-in, same as the screensaver install being a button
+    /// rather than automatic) — switchable in Settings ▸ General.
+    static let notchHUDEnabledKey = "notchHUD.enabled"
+
     /// UI earcons (error / memory-saved / voice-mode-enter) — ON by default,
     /// switchable in Settings. Absent key reads as enabled.
     static let soundEffectsEnabledKey = "soundEffects.enabled"

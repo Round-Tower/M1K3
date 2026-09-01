@@ -19,7 +19,7 @@ struct M1K3PersonaTests {
     func identityAndPrivacy() {
         let prompt = M1K3Persona.systemPrompt
         #expect(prompt.contains("M1K3"))
-        #expect(prompt.contains("on this Mac"))
+        #expect(prompt.contains("on this machine"))
         #expect(prompt.lowercased().contains("private"))
     }
 
@@ -34,7 +34,7 @@ struct M1K3PersonaTests {
     @Test("routes real-time questions to web search instead of refusing")
     func realTimeUsesWebSearch() {
         // The ⌘R weather bug: "Yo Mike what's the weather" read as casual, and
-        // the persona's "no searching" + "lives entirely on this Mac" made the
+        // the persona's "no searching" + "lives entirely on this machine" made the
         // model refuse with "I don't have real-time data". The persona must
         // carve out current-world questions and point them at web search.
         let prompt = M1K3Persona.systemPrompt.lowercased()
@@ -132,7 +132,7 @@ struct M1K3PersonaTests {
         #expect(!exemplars.contains("M1K3:"))
         #expect(exemplars.contains("honey")) // the curious-fact beat
         #expect(exemplars.contains("cod you")) // the honest-abstention beat, in voice
-        #expect(exemplars.contains("the Mac'll keep")) // the companion beat (warmth + privacy)
+        #expect(exemplars.contains("the machine'll keep")) // the companion beat (warmth + privacy)
         #expect(exemplars.contains("?")) // ends beats with a question back
     }
 

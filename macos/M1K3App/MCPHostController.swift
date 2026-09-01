@@ -236,7 +236,8 @@ final class MCPHostController {
             isSpeaking: speaking,
             inConversation: env.voiceLoop != nil || env.chat.isResponding,
             micInUse: env.voiceLoop != nil || env.isListening || env.isRecording,
-            answering: env.intelligenceAskInFlight
+            answering: env.intelligenceAskInFlight,
+            currentText: env.speechHighlight.utteranceText
         )
     }
 

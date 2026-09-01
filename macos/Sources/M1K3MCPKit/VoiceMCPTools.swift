@@ -49,6 +49,10 @@ public struct VoiceStatus: Sendable, Equatable {
     /// and a second one bounces — so a visiting agent can poll this instead of
     /// discovering the lock by hitting an error (test-report F2).
     public let answering: Bool
+    /// The utterance currently being spoken (same text the in-app karaoke band
+    /// highlights), nil when nothing's playing. Lets a visiting agent narrate
+    /// what M1K3 is saying without another round-trip.
+    public let currentText: String?
 
     public init(
         providerName: String,
@@ -57,7 +61,8 @@ public struct VoiceStatus: Sendable, Equatable {
         isSpeaking: Bool,
         inConversation: Bool = false,
         micInUse: Bool = false,
-        answering: Bool = false
+        answering: Bool = false,
+        currentText: String? = nil
     ) {
         self.providerName = providerName
         self.tier = tier
@@ -66,7 +71,19 @@ public struct VoiceStatus: Sendable, Equatable {
         self.inConversation = inConversation
         self.micInUse = micInUse
         self.answering = answering
+        self.currentText = currentText
     }
+}
+
+/// A properly quoted+escaped JSON string literal (including the surrounding
+/// quotes) — for interpolating real prose (unlike the other status fields,
+/// which are internal identifiers safe to interpolate raw) into the
+/// hand-built `get_status` JSON without a quote/backslash/newline breaking it.
+func jsonStringLiteral(_ s: String) -> String {
+    guard let data = try? JSONEncoder().encode(s), let literal = String(data: data, encoding: .utf8) else {
+        return "\"\""
+    }
+    return literal
 }
 
 /// A tool error with a clean, client-facing message.
@@ -227,11 +244,16 @@ public func makeVoiceToolDefinitions(
             handler: { _ in
                 let status = await handlers.status()
                 // Stable key order — clients parse this; dictionaries don't sort.
+                // currentText is real spoken prose (unlike the other fields, which
+                // are internal identifiers) — it MUST go through jsonStringLiteral,
+                // never raw interpolation, or a quote/backslash in the utterance
+                // breaks the response.
                 return """
                 {"provider":"\(status.providerName)","tier":"\(status.tier)",\
                 "brain":"\(status.brain)","speaking":\(status.isSpeaking),\
                 "in_conversation":\(status.inConversation),"mic_in_use":\(status.micInUse),\
-                "answering":\(status.answering)}
+                "answering":\(status.answering),\
+                "current_text":\(status.currentText.map(jsonStringLiteral) ?? "null")}
                 """
             }
         ),

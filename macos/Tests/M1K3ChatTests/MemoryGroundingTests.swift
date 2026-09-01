@@ -119,7 +119,7 @@ struct MemoryGroundingTests {
         are answered from your persona; never search stored documents for them.
         - For current or external information — weather, news, prices, \
         anything happening now — use web_search. search_knowledge only \
-        finds documents already stored on this Mac.
+        finds documents already stored on this machine.
         - web_search returns snippets AND automatically reads the \
         top result's page for you. Use fetch_page only to read a \
         DIFFERENT result in full, then conclude from the page text.
@@ -157,7 +157,7 @@ struct MemoryGroundingTests {
         are answered from your persona; never search stored documents for them.
         - For current or external information — weather, news, prices, \
         anything happening now — use web_search. search_knowledge only \
-        finds documents already stored on this Mac.
+        finds documents already stored on this machine.
         - web_search returns snippets AND automatically reads the \
         top result's page for you. Use fetch_page only to read a \
         DIFFERENT result in full, then conclude from the page text.

@@ -49,7 +49,8 @@ private func makeHandlers(
                 isSpeaking: false,
                 inConversation: true,
                 micInUse: false,
-                answering: true
+                answering: true,
+                currentText: "she said \"grand\" — a real quote, to prove escaping"
             )
         },
         listen: { timeout in
@@ -179,6 +180,21 @@ struct VoiceMCPToolsTests {
         #expect(decoded["in_conversation"] as? Bool == true)
         #expect(decoded["mic_in_use"] as? Bool == false)
         #expect(decoded["answering"] as? Bool == true)
+        #expect(decoded["current_text"] as? String == "she said \"grand\" — a real quote, to prove escaping")
+    }
+
+    @Test("get_status renders current_text as null when nothing's being said")
+    func statusNoCurrentText() async throws {
+        let handlers = VoiceToolHandlers(
+            speak: { _, _, _ in }, stopSpeaking: {},
+            status: { VoiceStatus(providerName: "kokoro", tier: "M1K3 Voice", isSpeaking: false) },
+            listen: { _ in "" }
+        )
+        let registry = MCPToolRegistry(makeVoiceToolDefinitions(handlers: handlers))
+        let result = await registry.call(name: "get_status", arguments: nil)
+        let payload = try #require(text(result)?.data(using: .utf8))
+        let decoded = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(decoded["current_text"] is NSNull)
     }
 
     @Test("listen defaults the timeout and returns the transcript")
