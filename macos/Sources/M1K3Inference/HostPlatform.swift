@@ -5,17 +5,17 @@
 //  Platform-honest device nouns for the prompt surface. Mini introduced itself
 //  with "I, M1K3, am running directly on this Mac" ON AN IPHONE (caught
 //  on-simulator, 2026-07-18) — every persona/tool string that names the machine
-//  now interpolates these instead of hardcoding "Mac".
+//  now interpolates these instead of hardcoding a literal.
 //
-//  ⚠️ THE CONSTRAINT: on macOS these MUST stay byte-identical to the literals
-//  they replaced ("this Mac" / "your Mac") — gemma is prompt-fragile and the
-//  Mac persona is A/B-frozen, so this fix ships ZERO Mac prompt-byte changes
-//  (pinned by HostPlatformTests). Compile-time #if — no runtime branching, no
-//  UIKit dependency (why iOS says "device", not iPhone/iPad-by-idiom).
+//  macOS says "machine", not "Mac" (Kev, 2026-08-31) — the brand name read as
+//  brand voice, not M1K3's own; every call site is prose, so the swap is
+//  byte-safe (pinned by HostPlatformTests). Compile-time #if — no runtime
+//  branching, no UIKit dependency (why iOS says "device", not iPhone/iPad-by-idiom).
 //
-//  Signed: Kev + claude-fable-5, 2026-07-18, Confidence 0.85 (macOS arms
-//  test-pinned byte-identical; mobile arms compile-proven, honesty-by-
-//  inspection; live mobile persona feel is verify-on-device). Prior: none.
+//  Signed: Kev + claude-fable-5, 2026-08-31, Confidence 0.85 (macOS arm
+//  test-pinned exactly; mobile arms compile-proven, honesty-by-inspection;
+//  live voice feel is verify-by-ear). Prior: Kev + claude-fable-5, 2026-07-18
+//  (froze "Mac" — this session supersedes that freeze on Kev's word).
 //
 
 public enum HostPlatform {
@@ -23,7 +23,7 @@ public enum HostPlatform {
     /// needs ("the \(noun)'ll keep", "My \(noun)'s gone properly warm").
     public static let noun: String = {
         #if os(macOS)
-            return "Mac"
+            return "machine"
         #elseif os(visionOS)
             return "Vision Pro"
         #else
@@ -31,9 +31,9 @@ public enum HostPlatform {
         #endif
     }()
 
-    /// "…running entirely on this Mac." — the subject form.
+    /// "…running entirely on this machine." — the subject form.
     public static let thisDevice = "this \(noun)"
 
-    /// "…just me and your Mac…" — the possessive form.
+    /// "…just me and your machine…" — the possessive form.
     public static let yourDevice = "your \(noun)"
 }

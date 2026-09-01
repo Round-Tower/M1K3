@@ -44,7 +44,7 @@ struct BrainTierTests {
     @Test("macOS keeps Lil's exact card copy — the platform-honesty byte freeze")
     func lilDetailMacOSBytesFrozen() {
         #if os(macOS)
-            #expect(BrainTier.lil.detail.hasSuffix("Runs entirely on your Mac."))
+            #expect(BrainTier.lil.detail.hasSuffix("Runs entirely on your machine."))
         #else
             #expect(!BrainTier.lil.detail.contains("Mac"))
         #endif
