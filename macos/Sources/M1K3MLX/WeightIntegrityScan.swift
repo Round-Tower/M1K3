@@ -161,6 +161,34 @@ public enum WeightIntegrityScan {
         }
     }
 
+    /// True when `directory` already verifies FULLY against `pin` — every
+    /// pinned file present on disk with bytes matching the manifest (the
+    /// receipt fast path applies here too, so a hot cache costs a stat, not a
+    /// rehash).
+    ///
+    /// Reuses `enforce`'s own decision core rather than a second verdict
+    /// path. `enforce` returns normally for BOTH `.verified` and
+    /// `.incomplete` (an empty or partial directory is not an error — it's
+    /// the ordinary pre-download or mid-download state), so a not-throwing
+    /// result alone cannot mean "fully present"; every pinned file must
+    /// actually exist too. This is the exact idiom `WeightImport.
+    /// verifiedAlready` already used privately — factored out here so
+    /// `HubApiDownloader.download`'s #72 pre-network check shares ONE
+    /// implementation with it instead of a second copy of the same logic.
+    static func isFullyPresentAndVerified(
+        directory: URL,
+        pin: WeightIntegrity.Pin,
+        repoID: String
+    ) -> Bool {
+        do {
+            try enforce(directory: directory, pin: pin, repoID: repoID)
+        } catch {
+            return false
+        }
+        let fm = FileManager.default
+        return pin.files.keys.allSatisfy { fm.fileExists(atPath: directory.appendingPathComponent($0).path) }
+    }
+
     // MARK: - Receipt
 
     /// True when a previous run hashed THESE bytes under THIS revision and

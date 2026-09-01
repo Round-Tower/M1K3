@@ -43,6 +43,18 @@
 //  another hyphen/underscore footgun in this file). `voices-v1.0.bin` is
 //  UNCHANGED — M1K3's own KokoroVoices npz reader stays, not the new repo's
 //  per-voice `.safetensors` files.
+//  Review: Kev + claude-sonnet-5, 2026-09-01 (issue #70) — `configURL`/
+//  `modelURL` fetched an unpinned `main`, and nothing checked the bytes
+//  before handing them to MLX (the same gap ADR 0002 closed for the two chat
+//  brains + the retrieval embedder, explicitly left open here). Now both
+//  resolve against `KokoroPinnedWeights.revision` (a pinned commit SHA) and
+//  are verified against a digest manifest before `_ready` is ever set true —
+//  a stale/tampered pre-existing file self-heals like the floor check
+//  already did; a freshly downloaded file that still disagrees THROWS
+//  (`KokoroWeightTamperError`) rather than silently retrying. `voices-v1.0.bin`
+//  (a GitHub release, not HuggingFace) is unchanged — out of this pin's scope.
+//  See `KokoroPinnedWeights.swift` for why this duplicates rather than
+//  imports M1K3MLX's WeightIntegrity shape. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -60,11 +72,17 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
     /// destination filename and `modelURL`'s BOTH stay as the HF repo names
     /// them; the weights are renamed on download to `model.safetensors` (see
     /// `prepare(progress:)`) — the vendored loader's expected name.
+    ///
+    /// Resolved against `KokoroPinnedWeights.revision` — a pinned commit SHA
+    /// — rather than `main` (#70): both files are verified against a digest
+    /// manifest below before `_ready` is ever set true, so an unpinned
+    /// `main` that changed under us (or a compromised host) can no longer
+    /// silently hand MLX arbitrary tensors.
     private static let configURL = URL(
-        string: "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/main/config.json"
+        string: "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/\(KokoroPinnedWeights.revision)/config.json"
     )!
     private static let modelURL = URL(
-        string: "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/main/kokoro-v1_0.safetensors"
+        string: "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/\(KokoroPinnedWeights.revision)/kokoro-v1_0.safetensors"
     )!
     private static let voicesURL = URL(
         string: "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
@@ -213,6 +231,34 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
             try? fileManager.removeItem(at: dest)
         }
 
+        // #70: digest verification against the pinned HuggingFace manifest.
+        // The floor check above only catches an obviously-wrong file (an
+        // HTTP error body); a plausible-sized file whose BYTES were swapped
+        // for something else entirely (a compromised host, a hijacked org
+        // account, `main` moving under us before this pin existed) sails
+        // through a size floor undetected. Runs every time `prepare()` is
+        // called with `_ready` still false — i.e. once per app launch,
+        // BEFORE the "already staged" fast path below is ever trusted — so a
+        // cache poisoned on a previous run (or before this pin shipped)
+        // cannot be silently trusted just because the files are already
+        // there. Unlike M1K3MLX's WeightIntegrity (which never auto-heals a
+        // digest mismatch on the multi-GB brains, by design), a PRE-EXISTING
+        // mismatch self-heals here the same way the floor check above does:
+        // Kokoro's own files are ~327 MB, not 6.7 GB, so re-fetching from the
+        // pinned revision is cheap enough to be the right recovery, not just
+        // an accepted risk. A mismatch on a FRESH download (just staged by
+        // this same call) is treated more strictly below — see the throwing
+        // check after the download blocks. `voices-v1.0.bin` is out of this
+        // pin's scope (GitHub, not HF).
+        for (dest, name) in [(configDest, "config.json"), (modelDest, "model.safetensors")]
+            where fileManager.fileExists(atPath: dest.path) && !Self.matchesPinnedDigest(dest, name: name)
+        {
+            Self.log.fault(
+                "Kokoro \(name, privacy: .public) does not match the pinned digest — discarding and re-downloading"
+            )
+            try? fileManager.removeItem(at: dest)
+        }
+
         if fileManager.fileExists(atPath: configDest.path),
            fileManager.fileExists(atPath: modelDest.path),
            fileManager.fileExists(atPath: voicesDest.path)
@@ -235,20 +281,46 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
         let modelWeight = 0.91
         let voicesWeight = 0.08
 
+        // Tracks which of the two HF-pinned files this call ACTUALLY fetched,
+        // so the post-download verification below only re-hashes bytes that
+        // are new this call rather than re-checking ones the self-heal pass
+        // already verified moments ago.
+        var freshlyDownloaded: Set<String> = []
+
         if !fileManager.fileExists(atPath: configDest.path) {
             try await FileDownloader.download(Self.configURL, to: configDest) { fraction in
                 progress(fraction * configWeight)
             }
+            freshlyDownloaded.insert("config.json")
         }
         if !fileManager.fileExists(atPath: modelDest.path) {
             try await FileDownloader.download(Self.modelURL, to: modelDest) { fraction in
                 progress(configWeight + fraction * modelWeight)
             }
+            freshlyDownloaded.insert("model.safetensors")
         }
         if !fileManager.fileExists(atPath: voicesDest.path) {
             try await FileDownloader.download(Self.voicesURL, to: voicesDest) { fraction in
                 progress(configWeight + modelWeight + fraction * voicesWeight)
             }
+        }
+
+        // #70: verify whatever we just downloaded against the pinned
+        // digests BEFORE ever marking Kokoro ready. Unlike the self-heal
+        // pass above (which silently discards a STALE pre-existing file so
+        // the blocks above re-fetch it), a mismatch reaching THIS point
+        // means the bytes we just downloaded from the pinned revision
+        // disagree with the manifest RIGHT NOW — surfacing that as a thrown
+        // error, rather than silently retrying inside this same call (which
+        // would spin forever against a host serving the same bad bytes), is
+        // the honest signal.
+        for (dest, name) in [(configDest, "config.json"), (modelDest, "model.safetensors")]
+            where freshlyDownloaded.contains(name) && !Self.matchesPinnedDigest(dest, name: name)
+        {
+            Self.log.fault(
+                "Kokoro \(name, privacy: .public) does not match the pinned digest after downloading — refusing to use it"
+            )
+            throw KokoroWeightTamperError(file: name)
         }
 
         lock.withLock { _ready = true }
@@ -260,6 +332,18 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
             Self.log.warning("Kokoro preload failed: \(error.localizedDescription, privacy: .public)")
         }
         progress(1)
+    }
+
+    /// Whether the file at `dest` matches the digest pinned for `name`
+    /// (`KokoroPinnedWeights`). Shared by both the pre-existing self-heal
+    /// pass and the post-download throwing check, so the size+hash lookup
+    /// exists in exactly one place.
+    private static func matchesPinnedDigest(_ dest: URL, name: String) -> Bool {
+        guard
+            let size = (try? FileManager.default.attributesOfItem(atPath: dest.path)[.size]) as? Int64,
+            let digest = KokoroPinnedWeights.sha256Digest(of: dest)
+        else { return false }
+        return KokoroPinnedWeights.matches(size: size, sha256: digest, file: name)
     }
 
     private static func defaultModelDirectory() -> URL {
@@ -312,6 +396,17 @@ struct KokoroDownloadHTTPError: LocalizedError {
     let statusCode: Int
     var errorDescription: String? {
         "Kokoro download failed with HTTP status \(statusCode)"
+    }
+}
+
+/// A file just downloaded from the pinned Kokoro revision does not match the
+/// digest in `KokoroPinnedWeights` (#70) — thrown rather than silently
+/// retried, so a live compromise or a very unlucky corruption on the fresh
+/// download surfaces instead of spinning silently against the same source.
+struct KokoroWeightTamperError: LocalizedError {
+    let file: String
+    var errorDescription: String? {
+        "Kokoro's \(file) does not match the digest pinned for mlx-community/Kokoro-82M-bf16 — refusing to use it"
     }
 }
 

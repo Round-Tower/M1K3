@@ -25,6 +25,7 @@
 
 import Foundation
 import Hub
+import M1K3Inference
 import MLXLMCommon
 import os
 import Synchronization
@@ -130,12 +131,30 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
         id: String,
         revision: String?,
         matching patterns: [String],
-        useLatest _: Bool,
+        useLatest: Bool,
         progressHandler: @Sendable @escaping (Progress) -> Void
     ) async throws -> URL {
         let repo = Hub.Repo(id: id)
         let localPath = hub.localRepoLocation(repo)
         let startSizeMB = Self.directorySizeMB(localPath)
+
+        // #72 item 1: when the caller does not want a refresh and the cache
+        // already verifies fully against the pinned manifest, the network
+        // round-trip has nothing to offer — the revision is a pinned commit
+        // hash, so there is nothing newer to discover. Skipping it here means
+        // a captive portal, DNS blip, or Hub 5xx never blocks a load whose
+        // verified bytes are already sitting on disk. An unpinned repo has no
+        // completeness oracle (nothing to check "fully present" against), so
+        // it always falls through to the network exactly as before.
+        if Self.shouldSkipNetworkFetch(
+            useLatest: useLatest, directory: localPath, pin: PinnedWeights.pin(for: id), repoID: id
+        ) {
+            downloadLog.notice(
+                "useLatest=false and \(id, privacy: .public) already verified locally (localMB=\(startSizeMB)) — skipping network"
+            )
+            return localPath
+        }
+
         // Resolve to the PINNED commit for anything we ship — the pin beats the
         // caller, deliberately. mlx-swift-lm's `resolve` passes a revision
         // EXPLICITLY (defaulting to the literal "main"), so honouring callers
@@ -234,10 +253,17 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
             // Never swallowed by the network-error handling below.
             throw error
         } catch {
-            let nserror = error as NSError
-            if nserror.domain == NSURLErrorDomain, nserror.code == NSURLErrorNotConnectedToInternet {
+            // #72 item 2: broadened beyond true offline. A timeout, DNS
+            // failure, or Hub 5xx looks nothing like NSURLErrorNotConnected-
+            // ToInternet, so the ORIGINAL narrow check here let 11 GB of
+            // verified weights sit unusable through a captive portal or a
+            // momentary Hub outage — the exact class `RetryPolicy.
+            // isTransientNetworkError` already burned 3 attempts on
+            // upstream (`withRetry`, the Gemma path) before this ever fires.
+            if Self.isFallbackWorthy(error) {
+                let reason = error.localizedDescription
                 downloadLog.warning(
-                    "offline — using local copy of \(id, privacy: .public) (localMB=\(startSizeMB))"
+                    "network trouble (\(reason, privacy: .public)) for \(id, privacy: .public) — using local copy (localMB=\(startSizeMB))"
                 )
                 try Gemma4TemplateFix.apply(directory: localPath, repoID: id)
                 try WeightIntegrityScan.enforce(directory: localPath, repoID: id)
@@ -249,6 +275,43 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
             )
             throw error
         }
+    }
+
+    // MARK: - #72: pre-network local-verification decisions
+
+    /// Whether `download` can skip the network entirely and hand back
+    /// `directory` as-is: the caller does not want a refresh AND `pin` is
+    /// non-nil AND every pinned file already verifies on disk. `pin` is a
+    /// parameter rather than a `PinnedWeights` lookup so this is directly
+    /// testable against fixtures without touching the shipped manifest —
+    /// the same shape as `WeightIntegrityScan.enforce(directory:pin:repoID:)`.
+    /// An unpinned repo (`pin == nil`) has no completeness oracle at all, so
+    /// it always falls through to the network, same as today.
+    static func shouldSkipNetworkFetch(
+        useLatest: Bool,
+        directory: URL,
+        pin: WeightIntegrity.Pin?,
+        repoID: String
+    ) -> Bool {
+        guard !useLatest, let pin else { return false }
+        return WeightIntegrityScan.isFullyPresentAndVerified(directory: directory, pin: pin, repoID: repoID)
+    }
+
+    /// Errors worth falling back to a verified local copy for (#72 item 2) —
+    /// broader than the original "true offline" check. A timeout, DNS blip,
+    /// or a Hub 5xx is indistinguishable from offline from the load's own
+    /// perspective, and reaching here at all means any upstream retry policy
+    /// has already exhausted its attempts on exactly this class — falling
+    /// back to verified bytes beats surfacing the raw failure. A Hub 4xx
+    /// (bad request, repo truly missing) is deliberately EXCLUDED: that is a
+    /// real problem, not a transient one, and `authorizationRequired` already
+    /// has its own dedicated catch clause above this one.
+    static func isFallbackWorthy(_ error: Error) -> Bool {
+        if RetryPolicy.isTransientNetworkError(error) { return true }
+        if case let Hub.HubClientError.httpStatusCode(code) = error {
+            return (500 ..< 600).contains(code)
+        }
+        return false
     }
 
     /// One throttled progress line: byte-accurate percent when the tree gave
