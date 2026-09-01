@@ -16,8 +16,14 @@
 import Foundation
 
 public enum DistillationTaint {
-    /// Tools whose output must never flow into distilled memory.
-    public static let taintedToolNames: Set<String> = ["execute_script"]
+    /// Tools whose output must never flow into distilled memory. The context
+    /// senses (calendar_peek, current_location — 2026-09-01) join
+    /// execute_script: an event title or a coordinate must not outlive its
+    /// consent toggle as a memory-graph fact. battery_status is exempt by
+    /// charter (unclassed, harmless).
+    public static let taintedToolNames: Set<String> = [
+        "execute_script", "calendar_peek", "current_location",
+    ]
 
     public static func isTainted(toolsUsed: [String]?) -> Bool {
         guard let toolsUsed else { return false }

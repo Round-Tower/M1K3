@@ -174,7 +174,8 @@ extension AppEnvironment {
         onHits: @escaping @Sendable ([ChunkHit]) -> Void,
         onOpenLink: (@Sendable (URL) -> Void)?,
         deepDelegation: DeepDelegationHook? = nil,
-        scriptExecution: ScriptExecutionHook? = nil
+        scriptExecution: ScriptExecutionHook? = nil,
+        contextSenses: ContextSenseHook? = nil
     ) -> [any AgentTool] {
         var tools: [any AgentTool] = [
             DateTimeTool(),
@@ -223,6 +224,28 @@ extension AppEnvironment {
             ))
             tools.append(ProposeScriptTool(onPropose: scriptExecution.onPropose))
         }
+        // The context senses (charter Phase 1+2): interactive chat ONLY (the
+        // hook, exactly like the hands'), each behind its own default-OFF
+        // toggle — absent when off, never refused. battery is
+        // exclusion-exempt; calendar/location are .localSensitive and
+        // distillation-tainted. Note each toggle is a palette-membership
+        // change, i.e. a new PersonaPrefixCache key — a flip pays one cold
+        // prefix build on the next turn (the documented trade).
+        if let contextSenses {
+            if defaults.bool(forKey: Self.contextBatteryEnabledKey) {
+                tools.append(BatteryStatusTool())
+            }
+            if defaults.bool(forKey: Self.contextCalendarEnabledKey) {
+                tools.append(CalendarPeekTool(provider: contextSenses.calendar))
+            }
+            if defaults.bool(forKey: Self.contextLocationEnabledKey) {
+                tools.append(CurrentLocationTool(
+                    provider: contextSenses.location,
+                    precision: defaults.bool(forKey: Self.contextLocationPreciseKey)
+                        ? .precise : .coarse
+                ))
+            }
+        }
         return tools
     }
 
@@ -248,7 +271,8 @@ extension AppEnvironment {
         forcedThinkingMode: ThinkingMode? = nil,
         onOpenLink: (@Sendable (URL) -> Void)? = nil,
         deepDelegation: DeepDelegationHook? = nil,
-        scriptExecution: ScriptExecutionHook? = nil
+        scriptExecution: ScriptExecutionHook? = nil,
+        contextSenses: ContextSenseHook? = nil
     ) -> any RAGResponding {
         // Hits the model retrieves itself (search_knowledge) flow through the
         // collector into the turn's sources + the citation allow-list.
@@ -264,7 +288,8 @@ extension AppEnvironment {
                     onHits: { hits in sourceCollector.record(hits) },
                     onOpenLink: onOpenLink,
                     deepDelegation: deepDelegation,
-                    scriptExecution: scriptExecution
+                    scriptExecution: scriptExecution,
+                    contextSenses: contextSenses
                 )
             },
             sourceCollector: sourceCollector,

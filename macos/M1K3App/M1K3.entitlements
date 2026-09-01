@@ -57,5 +57,12 @@
 	<array>
 		<string>com.apple.audioanalyticsd</string>
 	</array>
+	<!-- The context senses (docs/CONTEXT_TOOLS_PLAN.md): calendar_peek and
+	     current_location — both behind default-OFF Settings toggles AND the
+	     system TCC prompt; snapshots only, never off-device. -->
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+	<key>com.apple.security.personal-information.location</key>
+	<true/>
 </dict>
 </plist>
