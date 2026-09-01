@@ -23,6 +23,14 @@ MACOS_DIR="$CI_PRIMARY_REPOSITORY_PATH/macos"
 # pass `-skipPackagePluginValidation`; Xcode Cloud owns its own xcodebuild
 # invocation for Archive, so the equivalent is these defaults, which xcodebuild
 # reads at run time.
+#
+# ⚠️ Xcode 26's ACTUAL key is MISSPELLED: "…FingerprintValidatation" (extra
+# "ta") — read straight out of SwiftPM.framework/IDEFoundation with `strings`,
+# sitting beside the exact "must be enabled before it can be used" error run
+# #264 died on. The correctly-spelled key is written too in case a future
+# Xcode fixes the typo. Do not "fix" the spelling here without checking the
+# binary first.
+defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidatation -bool YES
 defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidation -bool YES
 defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
 
