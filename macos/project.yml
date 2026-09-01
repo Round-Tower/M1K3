@@ -23,7 +23,10 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.2"
-    MARKETING_VERSION: "0.1.0"
+    # Versioning scheme: see /VERSIONING.md. This is the single source of truth
+    # for the user-facing version on every Apple surface (TestFlight, MAS, the
+    # nightly DMG's name). Build numbers are Xcode Cloud's (auto-managed).
+    MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     # A STABLE signing identity is load-bearing, not cosmetic: macOS keys both the
     # Keychain ACL and TCC (microphone / Speech) grants to the app's code-signing
