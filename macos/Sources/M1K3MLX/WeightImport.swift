@@ -149,21 +149,12 @@ public enum WeightImport {
     // MARK: - Idempotency
 
     /// True when `directory` already verifies against `pin` — reuses
-    /// `enforce`'s own receipt-aware check, so a previously imported (or
-    /// previously downloaded) destination costs a stat, not a rehash.
-    ///
-    /// `enforce` returns normally for BOTH `.verified` and `.incomplete` (an
-    /// empty destination is not an error, it is the ordinary pre-download
-    /// state) — so a not-throwing result alone cannot mean "already
-    /// present". Every pinned file must actually exist too.
+    /// `WeightIntegrityScan.isFullyPresentAndVerified` (the same receipt-aware,
+    /// fully-present check `HubApiDownloader.download`'s #72 pre-network
+    /// short-circuit now shares), so a previously imported (or previously
+    /// downloaded) destination costs a stat, not a rehash.
     private static func verifiedAlready(directory: URL, pin: WeightIntegrity.Pin, repoID: String) -> Bool {
-        do {
-            try WeightIntegrityScan.enforce(directory: directory, pin: pin, repoID: repoID)
-        } catch {
-            return false
-        }
-        let fm = FileManager.default
-        return pin.files.keys.allSatisfy { fm.fileExists(atPath: directory.appendingPathComponent($0).path) }
+        WeightIntegrityScan.isFullyPresentAndVerified(directory: directory, pin: pin, repoID: repoID)
     }
 
     // MARK: - Install

@@ -234,6 +234,65 @@ struct WeightIntegrityScanTests {
 
         #expect(!WeightIntegrityScan.receiptExists(forModelAt: sandbox.url))
     }
+
+    // MARK: - isFullyPresentAndVerified (#72 item 1: the useLatest pre-network check)
+
+    /// The decision `HubApiDownloader.download` needs before it ever touches
+    /// the network (#72 item 1): every pinned file present AND byte-verified.
+    /// Shares `enforce`'s own decision core rather than a second verdict path
+    /// — the same idiom `WeightImport.verifiedAlready` already used, now
+    /// factored out here so both callers reuse ONE implementation.
+    @Test("a fully downloaded, byte-matching directory is fully present and verified")
+    func fullyVerifiedDirectoryIsRecognised() throws {
+        let sandbox = try Sandbox()
+        try sandbox.write("weights", to: "model.safetensors")
+        try sandbox.write("{}", to: "config.json")
+        let pin = Self.pin(contents: ["model.safetensors": "weights", "config.json": "{}"])
+
+        #expect(WeightIntegrityScan.isFullyPresentAndVerified(directory: sandbox.url, pin: pin, repoID: "org/repo"))
+    }
+
+    @Test("a partial download (missing pinned files) is NOT fully present and verified")
+    func partialDownloadIsNotFullyVerified() throws {
+        let sandbox = try Sandbox()
+        try sandbox.write("weights", to: "model.safetensors")
+        // config.json never arrived — an ordinary in-flight download.
+        let pin = Self.pin(contents: ["model.safetensors": "weights", "config.json": "{}"])
+
+        #expect(!WeightIntegrityScan.isFullyPresentAndVerified(directory: sandbox.url, pin: pin, repoID: "org/repo"))
+    }
+
+    @Test("a tampered file is NOT fully present and verified")
+    func tamperedDirectoryIsNotFullyVerified() throws {
+        let sandbox = try Sandbox()
+        try sandbox.write("poisoned", to: "model.safetensors")
+        let pin = Self.pin(contents: ["model.safetensors": "weights!"])
+
+        #expect(!WeightIntegrityScan.isFullyPresentAndVerified(directory: sandbox.url, pin: pin, repoID: "org/repo"))
+    }
+
+    @Test("a directory holding a previous pinned revision's weights is NOT fully present and verified")
+    func staleRevisionIsNotFullyVerified() throws {
+        let sandbox = try Sandbox()
+        try sandbox.write("old weights", to: "model.safetensors")
+        try sandbox.writeDownloadMetadata(commit: "0000000000000000000000000000000000000000", for: "model.safetensors")
+        let pin = Self.pin(
+            revision: "1111111111111111111111111111111111111111",
+            contents: ["model.safetensors": "new weights"]
+        )
+
+        #expect(!WeightIntegrityScan.isFullyPresentAndVerified(directory: sandbox.url, pin: pin, repoID: "org/repo"))
+    }
+
+    @Test("a verified directory also leaves a receipt behind, same as enforce")
+    func fullyVerifiedWritesReceiptToo() throws {
+        let sandbox = try Sandbox()
+        try sandbox.write("weights", to: "model.safetensors")
+        let pin = Self.pin(contents: ["model.safetensors": "weights"])
+
+        #expect(WeightIntegrityScan.isFullyPresentAndVerified(directory: sandbox.url, pin: pin, repoID: "org/repo"))
+        #expect(WeightIntegrityScan.receiptExists(forModelAt: sandbox.url))
+    }
 }
 
 /// Tiny SHA256 so fixtures compute the same digest the production path does,
