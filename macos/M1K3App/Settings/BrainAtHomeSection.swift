@@ -57,18 +57,13 @@ struct BrainAtHomeSection: View {
         } header: {
             Text("Brain at Home")
         } footer: {
-            // Multiline literal, not a + chain (the PR #92 type-checker lesson).
             Text("""
-            Serve M1K3's brain to devices you pair with a QR code — raw \
-            generation over your local network only, encrypted end-to-end \
-            with a key that never travels the network. Raw means raw: no \
-            persona, memory, or documents ride along. The MCP toggle \
-            additionally offers paired devices M1K3's READ tools (search, \
-            documents, ask) — never remember, forget, voice, or the \
-            microphone. Asked questions run M1K3's normal answer loop, so \
-            they can reach the web exactly when the web-search toggle \
-            allows it. Off by default; revoking a device cuts it off \
-            immediately.
+            Serves raw generation to devices you pair by QR code — local \
+            network only, encrypted with a key that never travels the \
+            network; no persona, memory, or documents included. The MCP \
+            toggle adds read-only tools (search, documents, ask) — asks \
+            can reach the web when the web-search toggle allows. Off by \
+            default; revoking a device cuts it off immediately.
             """)
             .font(.caption).foregroundStyle(.secondary)
         }

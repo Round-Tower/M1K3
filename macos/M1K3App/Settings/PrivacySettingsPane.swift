@@ -29,15 +29,10 @@ struct PrivacySettingsPane: View {
             } header: {
                 Text("Tools")
             } footer: {
-                // Multiline literal (not a + chain): the SwiftUI ViewBuilder
-                // type-checker times out on multi-segment String concatenation
-                // (the PR #92 lesson) — backslash continuations keep it one line.
                 Text("""
-                M1K3 can search the web (DuckDuckGo) and read result pages \
-                mid-answer. This is the one capability that sends anything off \
-                this Mac — every search and page read is shown in the reply as \
-                it happens. Date, time and system status tools stay fully local. \
-                Off means the model can't see the web tools at all.
+                The one capability that sends anything off this Mac — every search \
+                and page read shows in the reply as it happens. Date, time, and \
+                system tools stay local either way.
                 """)
                 .font(.caption).foregroundStyle(.secondary)
             }
@@ -50,13 +45,10 @@ struct PrivacySettingsPane: View {
             } header: {
                 Text("Spotlight")
             } footer: {
-                // Multiline literal, not a + chain (see the web-search footer above).
                 Text("""
-                Puts the titles of your imported documents and calls into \
-                this Mac's Spotlight (⌘Space) search — never their contents, \
-                and never your memories. The index is private to this Mac \
-                and managed by macOS. Turning this off removes everything \
-                M1K3 donated.
+                Puts your document and call titles — never contents or memories — \
+                into Spotlight (⌘Space). Managed by macOS; turning off removes \
+                everything M1K3 donated.
                 """)
                 .font(.caption).foregroundStyle(.secondary)
             }
@@ -116,16 +108,12 @@ struct PrivacySettingsPane: View {
         } header: {
             Text("Scripts")
         } footer: {
-            // Multiline literal, not a + chain (the PR #92 type-checker lesson).
             Text("""
-            Lets M1K3 run scripts you have installed and approved — its \
-            "hands". M1K3 can only propose scripts; every install and \
-            approval is your click, and only the exact approved bytes ever \
-            run. Within a single turn, script output can't reach the web \
-            tools (or vice versa), and it never becomes a remembered fact. \
-            An approved script can still be re-run later with different \
-            arguments, so approve only scripts whose behaviour you trust \
-            with any input. Off means the model can't see these tools at all.
+            M1K3's "hands" — it can only propose a script; every install and \
+            approval is your click, and only the exact approved bytes ever run. \
+            Script output can't reach the web tools in the same turn and never \
+            becomes a remembered fact. An approved script can be re-run later \
+            with different input, so approve only scripts you trust with anything.
             """)
             .font(.caption).foregroundStyle(.secondary)
         }
@@ -149,14 +137,12 @@ struct PrivacySettingsPane: View {
         } header: {
             Text("MCP server")
         } footer: {
-            // Multiline literal, not a + chain (the PR #92 type-checker lesson).
             Text("""
-            Lets Claude (or any MCP client) on THIS Mac use M1K3's knowledge \
-            search, voice, and microphone. This server is loopback-only — \
-            other machines can never reach it; the only network path into \
-            M1K3 is Brain at Home below, for devices you pair, off by \
-            default. One client at a time. Connect with:  claude mcp add \
-            --transport http m1k3 http://127.0.0.1:\(env.mcpHost.port)/mcp
+            Lets Claude (or another MCP client) on this Mac use M1K3's \
+            knowledge search, voice, and mic. Loopback-only, one client at \
+            a time. Connect with:
+
+            claude mcp add --transport http m1k3 http://127.0.0.1:\(env.mcpHost.port)/mcp
             """)
             .font(.caption).foregroundStyle(.secondary)
             .textSelection(.enabled)

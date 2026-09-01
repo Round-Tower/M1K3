@@ -95,9 +95,8 @@ struct YouSettingsPane: View {
         } header: {
             Text("Memories")
         } footer: {
-            Text("When a conversation ends, M1K3 extracts durable facts about "
-                + "you — preferences, decisions, people — into its memory. "
-                + "Fully on-device. You can review and erase every memory.")
+            Text("M1K3 extracts durable facts about you — preferences, decisions, "
+                + "people — from conversations, on-device. Review and erase anytime.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .sheet(isPresented: $showMemories) {

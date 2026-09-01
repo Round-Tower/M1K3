@@ -2,13 +2,14 @@
 //  AdvancedSettingsPane.swift
 //  M1K3App
 //
-//  The "Advanced" Settings tab: embeddings backend, voice input (WhisperKit),
-//  call transcription, the generation-stats testing aid, the Agent
-//  Interaction Log, index status, diagnostics, and licenses. Split out of the
-//  old single-Form SettingsView (2026-07-13) — see SettingsView.swift for the
-//  shell. The index-status readout is retitled "Status" (was "Memory") to
-//  kill the duplicate-Memory-name problem now that the Memories consent
-//  section lives on the You tab.
+//  The "Advanced" Settings tab: embeddings backend, call transcription, the
+//  generation-stats testing aid, the Agent Interaction Log, index status,
+//  weight import, diagnostics, and licenses. Split out of the old single-Form
+//  SettingsView (2026-07-13) — see SettingsView.swift for the shell. The
+//  index-status readout is retitled "Status" (was "Memory") to kill the
+//  duplicate-Memory-name problem now that the Memories consent section lives
+//  on the You tab. Voice input (WhisperKit) moved to the M1K3 tab (2026-09-01
+//  IA pass) — it sits next to Voice output now, not stranded here.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-13, Confidence 0.85 (a straight move
 //  — every footer/copy verbatim except the Status retitle). Prior: Kev +
@@ -25,7 +26,6 @@
 import AppKit
 import M1K3Inference
 import M1K3MLX
-import M1K3WhisperKit
 import SwiftUI
 
 struct AdvancedSettingsPane: View {
@@ -70,57 +70,6 @@ struct AdvancedSettingsPane: View {
             } footer: {
                 Text("Semantic MLX embeddings improve retrieval but download a model on "
                     + "first use and re-embed every stored chunk.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-
-            Section {
-                LabeledContent("Active engine", value: env.activeTranscriberName)
-                Picker("Accuracy", selection: Binding(
-                    get: { env.selectedWhisperModel },
-                    set: { env.selectWhisperModel($0) }
-                )) {
-                    ForEach(WhisperModelVariant.allCases) { variant in
-                        Text("\(variant.displayName) · \(variant.sizeHint)").tag(variant)
-                    }
-                }
-                switch env.whisperLoad {
-                case .idle, .failed:
-                    Button("Enable WhisperKit (downloads model)") {
-                        Task { await env.enableWhisperKit() }
-                    }
-                    .buttonStyle(.glass)
-                    if case let .failed(msg) = env.whisperLoad {
-                        Label(msg, systemImage: "exclamationmark.triangle")
-                            .symbolRenderingMode(.hierarchical)
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
-                case let .downloading(fraction):
-                    VStack(alignment: .leading, spacing: 4) {
-                        ProgressView(value: fraction)
-                        Text(env.whisperLoad.label(modelName: "WhisperKit"))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                case .preparing:
-                    VStack(alignment: .leading, spacing: 4) {
-                        ProgressView() // indeterminate — load has no honest fraction
-                        Text(env.whisperLoad.label(modelName: "WhisperKit"))
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                case .ready:
-                    Label("WhisperKit ready", systemImage: "checkmark.circle.fill")
-                        .symbolRenderingMode(.hierarchical)
-                        .font(.callout)
-                        .foregroundStyle(.green)
-                }
-            } header: {
-                Text("Voice input")
-            } footer: {
-                Text("Tap the mic in the chat bar to dictate — tap again to send. Apple Speech "
-                    + "works out of the box; WhisperKit is higher accuracy after a one-time "
-                    + "model download (Small is the default). Changing the accuracy tier "
-                    + "applies on the next launch. On-device only.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -202,10 +151,9 @@ struct AdvancedSettingsPane: View {
                     ? (issueTruncated
                         ? "Full report copied to your clipboard — paste it into the issue body on GitHub."
                         : "Opened a prefilled issue on GitHub (also copied to your clipboard). Review before you submit.")
-                    : "Copies recent logs + this Mac's details, scrubbed of paths, emails and "
-                    + "your name, then opens a prefilled GitHub issue. MetricKit summaries "
-                    + "(crash/hang kind, date, version — never raw data) are opt-in above. "
-                    + "Nothing is sent until you submit.")
+                    : "Copies recent logs and this Mac's details, scrubbed of paths, "
+                    + "emails and your name, into a prefilled GitHub issue — nothing "
+                    + "sent until you submit. MetricKit summaries above are opt-in.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -237,10 +185,9 @@ struct AdvancedSettingsPane: View {
         } header: {
             Text("Agent conversation log")
         } footer: {
-            Text("On-device only, off by default. When on, M1K3 keeps the last "
-                + "500 tool calls a connected agent makes — including which agent "
-                + "called (its self-reported name). See them in Window → Agent Log, "
-                + "or folded into the Heartbeat timeline.")
+            Text("Off by default. When on, M1K3 keeps the last 500 tool calls a "
+                + "connected agent makes — see them in Window → Agent Log, or the "
+                + "Heartbeat timeline.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

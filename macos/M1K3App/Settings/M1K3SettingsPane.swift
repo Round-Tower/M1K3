@@ -2,16 +2,20 @@
 //  M1K3SettingsPane.swift
 //  M1K3App
 //
-//  The "M1K3" Settings tab: which brain, the companion face, how it sounds.
-//  Split out of the old single-Form SettingsView (2026-07-13) — see
-//  SettingsView.swift for the shell. Two Kev-approved cuts landed here:
-//  "Prefer Apple on-device" is gone — auto-route always prefers M1K3's own
-//  tuned model now (see AppEnvironment+ChatHistory.swift's
-//  resolvedAutoRouteTier) — and "Ease off when my Mac runs hot" is gone
-//  because Prudent Compute is ALWAYS ON now, not opt-in (`applyCoolHead()`,
-//  was `applyCoolHeadIfEnabled()`) — the footer below states that as fact,
-//  not as a toggle. "Show generation stats" moved to the Advanced pane (a
-//  testing aid, not a brain setting).
+//  The "M1K3" Settings tab: which brain, how it thinks, the companion face,
+//  and every voice setting — in and out. Split out of the old single-Form
+//  SettingsView (2026-07-13) — see SettingsView.swift for the shell. Two
+//  Kev-approved cuts landed here: "Prefer Apple on-device" is gone —
+//  auto-route always prefers M1K3's own tuned model now (see
+//  AppEnvironment+ChatHistory.swift's resolvedAutoRouteTier) — and "Ease off
+//  when my Mac runs hot" is gone because Prudent Compute is ALWAYS ON now,
+//  not opt-in (`applyCoolHead()`, was `applyCoolHeadIfEnabled()`) — the
+//  footer below states that as fact, not as a toggle. "Show generation
+//  stats" moved to the Advanced pane (a testing aid, not a brain setting).
+//  Reasoning and Voice input (WhisperKit) moved IN from General/Advanced
+//  (2026-09-01 IA pass) — everything about M1K3's mind and voice lives on
+//  this one tab now, so "how do I fix dictation" or "how do I make it think
+//  harder" is never a scavenger hunt across three tabs.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-13, Confidence 0.85 (a straight move
 //  of the Brain/Companion/Voice-output sections; the two cuts are honest
@@ -19,13 +23,17 @@
 //  claude-opus-4-8 (SettingsView.swift lineage, 2026-06-06).
 //
 
+import M1K3Chat
 import M1K3Inference
 import M1K3Voice
+import M1K3WhisperKit
 import SwiftUI
 
 struct M1K3SettingsPane: View {
     @Environment(AppEnvironment.self) private var env
     @AppStorage(AppEnvironment.autoRouteBrainKey) private var autoRouteBrain = false
+    @AppStorage(AppEnvironment.thinkingModeKey) private var thinkingMode = ThinkingMode.auto.rawValue
+    @AppStorage(AppEnvironment.voiceEchoCancellationKey) private var preferEchoCancellation = true
 
     var body: some View {
         Form {
@@ -57,16 +65,29 @@ struct M1K3SettingsPane: View {
                 // elsewhere in the file. `\` joins wrapped lines; blank-free line
                 // breaks become the paragraph `\n`s.
                 let copy = """
-                Mini is Apple's built-in model (instant). Lil and Big are local models \
-                that download once. On-device only — nothing leaves this Mac.
-                Auto-route lets M1K3 pick its own tuned model — always sized to what \
-                this Mac runs comfortably.
-                M1K3 automatically eases its effort when your Mac runs hot — it never \
-                changes your brain.
+                Mini is Apple's built-in model (instant). Lil and Big download once and \
+                run entirely on this Mac. Auto-route picks the model that fits the \
+                moment, and M1K3 eases off on its own when your Mac runs hot.
                 """
                 Text(copy)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Picker("Reasoning", selection: $thinkingMode) {
+                    Text("Auto").tag(ThinkingMode.auto.rawValue)
+                    Text("Always think").tag(ThinkingMode.always.rawValue)
+                    Text("Fast answers").tag(ThinkingMode.fast.rawValue)
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("Reasoning")
+            } footer: {
+                Text("Reasoning models think before answering — sharper on hard "
+                    + "questions, slower on small talk. Auto decides per turn; voice "
+                    + "mode has its own toggle and ignores this setting.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             CompanionSettingsSection(env: env)
@@ -94,14 +115,14 @@ struct M1K3SettingsPane: View {
             } header: {
                 Text("Voice output")
             } footer: {
-                Text("How M1K3 sounds when it speaks. Built-in is Apple's clear default; "
-                    + "M1K3 Voice runs the speech through M1K3's own voice character and "
-                    + "downloads the neural voice model for offline use. On-device only. "
-                    + "Character shapes that voice \u{2014} Clean is the full neural range, "
-                    + "M1K3 is the signature transmitted sound, Radio leans further into "
-                    + "lo-fi. Switch and hit \u{201C}Hear a sample\u{201D} to compare.")
+                Text("Built-in is Apple's default voice. M1K3 Voice downloads a neural "
+                    + "voice model and runs entirely offline. Character shapes the tone "
+                    + "\u{2014} Clean is the full range, M1K3 is the signature sound, Radio "
+                    + "leans lo-fi. Hit \u{201C}Hear a sample\u{201D} to compare.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+
+            voiceInputSection
 
             HeartbeatSettingsSection(env: env)
         }
@@ -195,6 +216,68 @@ struct M1K3SettingsPane: View {
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
+        }
+    }
+
+    /// Voice INPUT: recogniser choice + accuracy, and echo cancellation —
+    /// merged into one section (moved in from Advanced/General, 2026-09-01)
+    /// so every dictation question has one home, right under Voice output.
+    private var voiceInputSection: some View {
+        Section {
+            LabeledContent("Active engine", value: env.activeTranscriberName)
+            Picker("Accuracy", selection: Binding(
+                get: { env.selectedWhisperModel },
+                set: { env.selectWhisperModel($0) }
+            )) {
+                ForEach(WhisperModelVariant.allCases) { variant in
+                    Text("\(variant.displayName) · \(variant.sizeHint)").tag(variant)
+                }
+            }
+            whisperLoadRow
+            Toggle("Keep other audio out of the mic", isOn: $preferEchoCancellation)
+        } header: {
+            Text("Voice input")
+        } footer: {
+            Text("Apple Speech works by default; WhisperKit is higher accuracy after "
+                + "a one-time download and applies on the next launch. Echo "
+                + "cancellation stops M1K3 hearing itself, at some cost to accuracy "
+                + "in a quiet room.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var whisperLoadRow: some View {
+        switch env.whisperLoad {
+        case .idle, .failed:
+            Button("Enable WhisperKit (downloads model)") {
+                Task { await env.enableWhisperKit() }
+            }
+            .buttonStyle(.glass)
+            if case let .failed(msg) = env.whisperLoad {
+                Label(msg, systemImage: "exclamationmark.triangle")
+                    .symbolRenderingMode(.hierarchical)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        case let .downloading(fraction):
+            VStack(alignment: .leading, spacing: 4) {
+                ProgressView(value: fraction)
+                Text(env.whisperLoad.label(modelName: "WhisperKit"))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        case .preparing:
+            VStack(alignment: .leading, spacing: 4) {
+                ProgressView() // indeterminate — load has no honest fraction
+                Text(env.whisperLoad.label(modelName: "WhisperKit"))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        case .ready:
+            Label("WhisperKit ready", systemImage: "checkmark.circle.fill")
+                .symbolRenderingMode(.hierarchical)
+                .font(.callout)
+                .foregroundStyle(.green)
         }
     }
 }

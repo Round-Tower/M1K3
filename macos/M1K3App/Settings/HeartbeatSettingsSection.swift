@@ -54,10 +54,8 @@ struct HeartbeatSettingsSection: View {
         } header: {
             Text("Heartbeat")
         } footer: {
-            Text("Every couple of hours M1K3 takes stock — what it learned, who called in, "
-                + "how the machine is doing — and writes a short note, told by the best "
-                + "brain the moment allows. Kept on this machine only, capped at a week, "
-                + "never remembered as facts. Clear wipes every pulse.")
+            Text("Every couple of hours M1K3 takes stock and writes a short note. "
+                + "Kept on this machine, capped at a week, never remembered as facts.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .onChange(of: heartbeatOn) { _, enabled in
