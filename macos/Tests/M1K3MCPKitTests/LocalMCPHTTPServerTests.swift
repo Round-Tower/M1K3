@@ -29,6 +29,28 @@ private func makeServer(port: UInt16) -> LocalMCPHTTPServer {
     }
 }
 
+private func makeServerWithSlowAndFastTools(port: UInt16) -> LocalMCPHTTPServer {
+    LocalMCPHTTPServer(port: port) {
+        let registry = MCPToolRegistry([
+            MCPToolDefinition(
+                tool: Tool(name: "slow", description: "slow", inputSchema: ["type": "object"]),
+                handler: { _ in
+                    try await Task.sleep(for: .milliseconds(400))
+                    return "slow-done"
+                }
+            ),
+            MCPToolDefinition(
+                tool: Tool(name: "fast", description: "fast", inputSchema: ["type": "object"]),
+                handler: { _ in "fast-done" }
+            ),
+        ])
+        let transport = StatelessHTTPServerTransport()
+        let server = await makeM1K3Server(registry: registry)
+        try await server.start(transport: transport)
+        return (server, transport)
+    }
+}
+
 private func post(_ json: String, port: UInt16) async throws -> (status: Int, body: String) {
     var request = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/mcp")!)
     request.httpMethod = "POST"
@@ -100,6 +122,35 @@ struct LocalMCPHTTPServerTests {
         await server.stop()
         let stopped = await server.isRunning
         #expect(!stopped)
+    }
+
+    @Test("two concurrent requests sharing id=1 both return — no response-waiter collision (#176)")
+    func concurrentSameIDNoCollision() async throws {
+        // Pre-fix, the shared transport keyed responseWaiters by the client id,
+        // so the fast request's waiter[1] clobbered the slow request's, orphaning
+        // the slow one until timeout. The per-request id remap must let BOTH
+        // return with the correct id echoed back.
+        let port = UInt16.random(in: 52000 ... 59000)
+        let server = makeServerWithSlowAndFastTools(port: port)
+        try await server.start()
+        defer { Task { await server.stop() } }
+
+        async let slow = post(#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"slow"}}"#, port: port)
+        // Let the slow request register its waiter first; the fast one (same id)
+        // would then clobber it in the buggy version.
+        try await Task.sleep(for: .milliseconds(60))
+        async let fast = post(#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"fast"}}"#, port: port)
+
+        let (slowResp, fastResp) = try await (slow, fast)
+        #expect(slowResp.status == 200)
+        #expect(slowResp.body.contains("slow-done"))
+        #expect(fastResp.status == 200)
+        #expect(fastResp.body.contains("fast-done"))
+        // Each client sees its own id (1) echoed, not the internal token.
+        #expect(slowResp.body.contains("\"id\":1") || slowResp.body.contains("\"id\": 1"))
+        #expect(fastResp.body.contains("\"id\":1") || fastResp.body.contains("\"id\": 1"))
+
+        await server.stop()
     }
 
     @Test("initialize reports the self-declared client name; no clientInfo reports nil")

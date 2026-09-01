@@ -34,16 +34,24 @@ import MCP
 public enum JSONRPCID: Equatable, Sendable {
     case int(Int)
     case string(String)
+    /// An explicit `"id": null` — a valid (if discouraged) JSON-RPC REQUEST id,
+    /// distinct from an absent id (a notification). It must be remapped like any
+    /// other id, or two clients both sending `id: null` would collide exactly as
+    /// the numeric case does (claude-review #177, finding 1).
+    case null
 
     fileprivate var jsonValue: Any {
         switch self {
         case let .int(n): return n
         case let .string(s): return s
+        case .null: return NSNull()
         }
     }
 
     fileprivate init?(jsonValue: Any) {
-        if let s = jsonValue as? String {
+        if jsonValue is NSNull {
+            self = .null
+        } else if let s = jsonValue as? String {
             self = .string(s)
         } else if let n = jsonValue as? Int {
             self = .int(n)
@@ -59,8 +67,10 @@ public enum JSONRPCID: Equatable, Sendable {
 }
 
 public extension HTTPWireCodec {
-    /// The top-level JSON-RPC `id` of a body, or nil for a notification (no
-    /// `id`), a batch (array), or anything that doesn't parse as a JSON object.
+    /// The top-level JSON-RPC `id` of a body, or nil for a notification (the
+    /// `id` key is ABSENT), a batch (array), or anything that doesn't parse as a
+    /// JSON object. An explicit `"id": null` is a request id (`.null`), NOT a
+    /// notification — it is returned and remapped like any other id.
     static func requestID(inBody body: Data) -> JSONRPCID? {
         guard
             let obj = try? JSONSerialization.jsonObject(with: body) as? [String: Any],

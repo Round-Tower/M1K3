@@ -33,6 +33,20 @@ struct JSONRPCIDRemapTests {
         #expect(HTTPWireCodec.requestID(inBody: body(#"{"jsonrpc":"2.0","method":"notify"}"#)) == nil)
     }
 
+    @Test("an explicit id:null is a REQUEST id (.null), remapped like any other — not a notification")
+    func explicitNullID() throws {
+        #expect(HTTPWireCodec.requestID(inBody: body(#"{"jsonrpc":"2.0","id":null,"method":"x"}"#)) == .null)
+        let nullBody = body(#"{"jsonrpc":"2.0","id":null,"method":"x"}"#)
+        let rewritten = try #require(HTTPWireCodec.replacingID(inBody: nullBody, with: .string("m1k3#7")))
+        #expect(HTTPWireCodec.requestID(inBody: rewritten) == .string("m1k3#7"))
+        // and a server response addressed to m1k3#7 maps back to null
+        let resp = HTTPResponse.data(body(#"{"jsonrpc":"2.0","id":"m1k3#7","result":{}}"#))
+        guard case let .data(d, _) = HTTPWireCodec.replacingResponseID(resp, with: .null) else {
+            Issue.record("expected .data"); return
+        }
+        #expect(HTTPWireCodec.requestID(inBody: d) == .null)
+    }
+
     @Test("junk / non-object bodies read back nil")
     func junkHasNoID() {
         #expect(HTTPWireCodec.requestID(inBody: body("not json")) == nil)

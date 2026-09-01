@@ -225,6 +225,11 @@ public actor LocalMCPHTTPServer {
         requestIDCounter &+= 1
         let uniqueID = JSONRPCID.string("m1k3#\(requestIDCounter)")
         guard let rewrittenBody = HTTPWireCodec.replacingID(inBody: body, with: uniqueID) else {
+            // Unreachable in practice — requestID already parsed this same body,
+            // and replacingID re-serialises a dict JSONSerialization produced.
+            // But this fallback forwards the client's ORIGINAL id, re-opening the
+            // #176 collision for this one request, so make a regression loud.
+            Self.log.error("id-remap re-encode failed; forwarding un-isolated request (collision risk)")
             return await transport.handleRequest(request)
         }
         let rewrittenRequest = HTTPRequest(
