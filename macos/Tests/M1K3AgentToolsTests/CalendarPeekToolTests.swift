@@ -152,4 +152,24 @@ struct CalendarPeekToolTests {
             _ = try await NullCalendarPeeking().events(from: .distantPast, to: .distantFuture)
         }
     }
+
+    @Test("the two-day window is calendar-exact across a DST fall-back (review fold)")
+    func windowSurvivesDST() async throws {
+        // Dublin falls back on Sun 2026-10-25 — "tomorrow" is 25 hours long.
+        // A fixed 48h add would end the window at 23:00 on the 26th, clipping
+        // the last hour of tomorrow; calendar-aware adding must not.
+        final class WindowSpy: CalendarPeeking, @unchecked Sendable {
+            var capturedEnd: Date?
+            func events(from _: Date, to end: Date) async throws -> [CalendarEventSnapshot] {
+                capturedEnd = end
+                return []
+            }
+        }
+        let spy = WindowSpy()
+        let now = try #require(dublin.date(from: DateComponents(year: 2026, month: 10, day: 24, hour: 12)))
+        _ = try await CalendarPeekTool(provider: spy, now: { now }, calendar: dublin)
+            .execute(input: [:])
+        let expectedEnd = try #require(dublin.date(from: DateComponents(year: 2026, month: 10, day: 26, hour: 0)))
+        #expect(spy.capturedEnd == expectedEnd)
+    }
 }

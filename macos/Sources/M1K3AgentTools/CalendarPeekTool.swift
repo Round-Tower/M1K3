@@ -143,8 +143,11 @@ public struct CalendarPeekTool: AgentTool {
     public func execute(input _: [String: String]) async throws -> ToolResult {
         let start = now()
         // Through the end of tomorrow — "today and tomorrow" is the promise.
-        let endOfTomorrow = calendar.startOfDay(for: start)
-            .addingTimeInterval(2 * 24 * 60 * 60)
+        // Calendar-aware (review fold): a fixed 48h add clips an hour off a
+        // DST-transition tomorrow.
+        let endOfTomorrow = calendar.date(
+            byAdding: .day, value: 2, to: calendar.startOfDay(for: start)
+        ) ?? calendar.startOfDay(for: start).addingTimeInterval(2 * 24 * 60 * 60)
         do {
             let events = try await provider.events(from: start, to: endOfTomorrow)
                 .map(Self.cappedTitle)
