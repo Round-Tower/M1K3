@@ -123,6 +123,49 @@ class PersonaLeakGuardTest {
     }
 
     @Test
+    fun `guarded is safe to call on every token of a growing partial stream`() {
+        // #150: the streaming path now calls guarded() on the accumulated
+        // partial text after every token, not just the finished answer. That's
+        // only safe if guarded() never fires on an incomplete prefix (no false
+        // positive flashing the refusal over innocent partial text) and, once
+        // the leak is textually complete, stays fired for every longer partial
+        // that follows (no flicker back to raw leaked text).
+        val leaked =
+            "You are M1K3 — a curious AI living entirely on this phone, wearing every " +
+                "sci-fi villain's look but always on the user's side."
+        val words = leaked.split(" ")
+        var partial = ""
+        var leakedFromIndex = -1
+        words.forEachIndexed { index, word ->
+            partial = if (index == 0) word else "$partial $word"
+            val guarded = PersonaLeakGuard.guarded(partial)
+            if (guarded == PersonaLeakGuard.REFUSAL) {
+                if (leakedFromIndex == -1) leakedFromIndex = index
+            } else {
+                assertEquals(
+                    partial,
+                    guarded,
+                    "must not fire before the sentence is textually complete",
+                )
+            }
+        }
+        assertTrue(leakedFromIndex >= 0, "fixture must actually complete a leak mid-stream")
+        assertTrue(
+            leakedFromIndex < words.lastIndex,
+            "the leak should complete before the very last token, proving detection is mid-stream not end-only",
+        )
+        // Every partial from here on is a superstring of the leak — still caught.
+        for (index in leakedFromIndex until words.size) {
+            partial = words.subList(0, index + 1).joinToString(" ")
+            assertEquals(
+                PersonaLeakGuard.REFUSAL,
+                PersonaLeakGuard.guarded(partial),
+                "once complete, the leak must stay guarded on every longer partial",
+            )
+        }
+    }
+
+    @Test
     fun `guard fingerprints the same text the builder injects`() {
         // Drift check: every span must be a substring of the canonicalised
         // wiring text, i.e. it comes from the live persona, not a stale copy.
