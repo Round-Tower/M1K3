@@ -59,10 +59,11 @@ struct BrainAtHomeSection: View {
         } footer: {
             Text("""
             Serves raw generation to devices you pair by QR code — local \
-            network only, encrypted, no persona, memory, or documents \
-            included. The MCP toggle adds read-only tools (search, \
-            documents, ask). Off by default; revoking a device cuts it \
-            off immediately.
+            network only, encrypted with a key that never travels the \
+            network; no persona, memory, or documents included. The MCP \
+            toggle adds read-only tools (search, documents, ask) — asks \
+            can reach the web when the web-search toggle allows. Off by \
+            default; revoking a device cuts it off immediately.
             """)
             .font(.caption).foregroundStyle(.secondary)
         }
