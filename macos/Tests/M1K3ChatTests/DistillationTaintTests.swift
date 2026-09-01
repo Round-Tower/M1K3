@@ -35,6 +35,18 @@ struct DistillationTaintTests {
         #expect(DistillationTaint.taintedToolNames.contains(toolName))
     }
 
+    @Test("the taint set matches the real context-sense tool names too")
+    func taintPinnedToSenseToolNames() {
+        // Same cross-module pin for the senses (2026-09-01): the names in
+        // DistillationTaint and on the tools are literals in two packages.
+        let calendarName = CalendarPeekTool(provider: NullCalendarPeeking()).name
+        let locationName = CurrentLocationTool(
+            provider: NullLocationProviding(), precision: .coarse
+        ).name
+        #expect(DistillationTaint.taintedToolNames.contains(calendarName))
+        #expect(DistillationTaint.taintedToolNames.contains(locationName))
+    }
+
     @Test("execute_script taints; other tools and nil do not")
     func taintRule() {
         #expect(DistillationTaint.isTainted(toolsUsed: ["execute_script"]))
