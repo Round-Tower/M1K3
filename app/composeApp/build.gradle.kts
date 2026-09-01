@@ -176,8 +176,10 @@ android {
             libs.versions.android.targetSdk
                 .get()
                 .toInt()
-        versionCode = 1
-        versionName = "0.1.0"
+        // Versioning scheme: see /VERSIONING.md — versionCode = major×10000 +
+        // minor×100 + patch, so it stays derivable from versionName forever.
+        versionCode = 10000
+        versionName = "1.0.0"
 
         // Instrumented test runner
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
