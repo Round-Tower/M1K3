@@ -3,10 +3,13 @@
 //  M1K3App
 //
 //  The "General" Settings tab: startup + Dock behaviour, notifications, sound
-//  effects, reasoning budget. Split out of the old single-Form SettingsView
-//  (2026-07-13) — see SettingsView.swift for the shell. One Kev-approved cut
-//  landed here: the menu-bar glyph picker is gone — the pixel M ships as THE
-//  glyph (M1K3App.swift), not a choice (see MenuBarGlyph.swift).
+//  effects. Split out of the old single-Form SettingsView (2026-07-13) — see
+//  SettingsView.swift for the shell. One Kev-approved cut landed here: the
+//  menu-bar glyph picker is gone — the pixel M ships as THE glyph
+//  (M1K3App.swift), not a choice (see MenuBarGlyph.swift). Voice mode
+//  (echo cancellation) and Reasoning moved to the M1K3 tab (2026-09-01 IA
+//  pass) — they're brain/voice behaviour, not app chrome; General now covers
+//  ONLY things about the app itself, never M1K3's mind.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-13, Confidence 0.85 (a straight move
 //  of Startup/Notifications/Sound/Reasoning, minus the glyph picker). Prior:
@@ -14,7 +17,6 @@
 //
 
 import AppKit
-import M1K3Chat
 import M1K3Launch
 import SwiftUI
 
@@ -25,8 +27,6 @@ struct GeneralSettingsPane: View {
     @AppStorage(AppEnvironment.soundEffectsEnabledKey) private var soundEffectsEnabled = true
     @AppStorage(AppEnvironment.dialUpSoundEnabledKey) private var dialUpSound = true
     @AppStorage(AppEnvironment.notchHUDEnabledKey) private var notchHUDEnabled = false
-    @AppStorage(AppEnvironment.voiceEchoCancellationKey) private var preferEchoCancellation = true
-    @AppStorage(AppEnvironment.thinkingModeKey) private var thinkingMode = ThinkingMode.auto.rawValue
     @AppStorage(StartupPreferences.menuBarOnlyKey) private var menuBarOnly = false
     @State private var showResetOnboarding = false
 
@@ -44,11 +44,8 @@ struct GeneralSettingsPane: View {
             } header: {
                 Text("Notifications")
             } footer: {
-                Text("When you tab away, M1K3 pings you as things finish — a long "
-                    + "reply is ready, a brain finishes downloading, or a brain is "
-                    + "loaded and ready. Only while the app is in the background, "
-                    + "and never with the reply itself: on-device, private. Off by "
-                    + "default.")
+                Text("Pings you when a long reply finishes or a brain loads — only "
+                    + "while M1K3's in the background, never with the reply itself.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -67,24 +64,9 @@ struct GeneralSettingsPane: View {
             } header: {
                 Text("Sound effects")
             } footer: {
-                Text("Short earcons for a few moments — an error, a memory saved, "
-                    + "voice mode waking up. They never play over M1K3's voice. "
-                    + "On-device only. The dial-up \u{201C}connecting\u{201D} sound plays while "
-                    + "a brain downloads or loads — nostalgic, but a long loop, so "
-                    + "it has its own switch.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-
-            Section {
-                Toggle("Keep other audio out of the mic", isOn: $preferEchoCancellation)
-            } header: {
-                Text("Voice mode")
-            } footer: {
-                Text("In voice mode M1K3 listens with the recogniser it can put echo "
-                    + "cancellation on, so music ducks while you talk and M1K3 doesn't "
-                    + "hear itself. Turn this off to always use the sharper transcriber "
-                    + "instead \u{2014} more accurate in a quiet room, but it hears whatever "
-                    + "your speakers are playing. Takes effect on your next turn.")
+                Text("Short earcons for errors, saved memories, and voice mode waking "
+                    + "up — never over M1K3's voice. The dial-up sound plays while a "
+                    + "brain loads and has its own switch since it loops.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -93,31 +75,9 @@ struct GeneralSettingsPane: View {
             } header: {
                 Text("Narration HUD")
             } footer: {
-                Text("A small pill docks under your menu bar with your companion and "
-                    + "what M1K3 is saying, live \u{2014} even if the window's closed. "
-                    + "Off by default.")
+                Text("A small pill under your menu bar shows your companion and what "
+                    + "M1K3 is saying — even with the window closed. Off by default.")
                     .font(.caption).foregroundStyle(.secondary)
-            }
-
-            Section {
-                Picker("Reasoning", selection: $thinkingMode) {
-                    Text("Auto").tag(ThinkingMode.auto.rawValue)
-                    Text("Always think").tag(ThinkingMode.always.rawValue)
-                    Text("Fast answers").tag(ThinkingMode.fast.rawValue)
-                }
-                .pickerStyle(.segmented)
-            } header: {
-                Text("Reasoning")
-            } footer: {
-                // Multiline literal, not a + chain (see the web-search footer above).
-                Text("""
-                Reasoning models think out loud before answering — great for \
-                hard questions, slow for small talk. Auto skips the thinking \
-                on casual turns and keeps it for grounded or analytic ones. \
-                Voice mode has its own thinking toggle (the brain button) \
-                and ignores this setting while active.
-                """)
-                .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -180,10 +140,8 @@ struct GeneralSettingsPane: View {
         } header: {
             Text("Startup")
         } footer: {
-            Text("Keep M1K3 in your menu bar and start it automatically when you log "
-                + "in, so it's always a click away. \"Menu bar only\" hides the Dock "
-                + "icon and starts M1K3 quietly (no window) — open it any time from the "
-                + "menu. M1K3 stays on-device either way.")
+            Text("\u{201C}Menu bar only\u{201D} hides the Dock icon and starts M1K3 quietly "
+                + "— open it anytime from the menu bar.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
