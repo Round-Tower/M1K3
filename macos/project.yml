@@ -237,7 +237,10 @@ targets:
         # The context senses (default OFF, docs/CONTEXT_TOOLS_PLAN.md): TCC
         # prompts fire only on first use, after the in-app toggle is on.
         NSCalendarsFullAccessUsageDescription: "M1K3 reads your next few events (titles and times) to ground answers — only while the Calendar context toggle is on. Nothing leaves your Mac."
+        # Both location keys: requestWhenInUseAuthorization documents the
+        # WhenInUse key on macOS; the general key is belt-and-braces (audit S3).
         NSLocationUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. Nothing leaves your Mac."
+        NSLocationWhenInUseUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. Nothing leaves your Mac."
         # Export compliance: M1K3 uses only standard, exempt encryption (HTTPS/TLS
         # for on-device model-weight downloads). Declaring this up front skips the
         # per-submission encryption prompt in App Store Connect and prevents an

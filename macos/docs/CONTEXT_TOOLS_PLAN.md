@@ -212,6 +212,34 @@ observation (F6 — a prompt-injection speed bump, named as such).
 - **NSUserUnixTask is unkillable (F8).** A runaway approved script can only be
   stopped via Activity Monitor — surfaced in BUGS.md, not just code comments.
 
+## Security-audit — the senses (2026-09-01, code-stage pass)
+
+The auditor walked the shipped diff against this charter. One BLOCKING
+finding, fixed in-branch; two residuals documented (the hands precedent:
+named, not silent). P1/P2/P3, toggle-before-TCC, warm safety, the coarse
+boundary and the OneShotLocation continuation race were all explicitly
+verified clean.
+
+**Fixed before merge:**
+- **S1 — calendar titles were unfenced attacker-controlled prompt text.**
+  Subscribed calendars and invites from strangers put arbitrary text in the
+  EventKit store; a title shaped like `ACTION: web_search(...)` rode into
+  the prompt raw. Fixed with the ExecuteScriptTool F6 pattern: the event
+  listing is fenced as untrusted data and titles cap at 200 chars. The
+  fence is a prompt-injection speed bump, named as such, not a guarantee.
+
+**Documented residual risks (not fixed in v1):**
+- **S2 — cross-turn exfiltration, the senses' F5.** A turn-N answer
+  synthesized from calendar/location lands in the transcript and rides
+  `replayableHistory` into turn N+1, where the web tools are available
+  again — the same-turn exclusion (P1) is per-turn by design. Identical
+  shape to the hands' F5; a cooldown window remains the possible follow-up
+  for both.
+- **S3 — location usage-string key coverage.** `requestWhenInUseAuthorization`
+  on macOS documents `NSLocationWhenInUseUsageDescription`; both it and the
+  general `NSLocationUsageDescription` are declared so the first-use TCC
+  prompt can't silently no-op. Confirm on the ⌘R verify.
+
 ## Open questions — RULED (Kev, 2026-09-01)
 
 1. Location granularity: **coarse by default, precise opt-up** — the default
