@@ -832,13 +832,17 @@ class ChatScreenViewModel(
                         if (token.isNotEmpty()) {
                             thinkParser.feed(token)
                             tokenCount++
+                            // #150: guard the growing visible answer here too — this
+                            // legacy path builds its own thinkParser rather than going
+                            // through ChatWithToolsUseCase, so it needs the same fix.
+                            val guardedText = PersonaLeakGuard.guarded(thinkParser.visibleText)
 
                             _uiState.update { state ->
                                 val updatedMessages = state.messages.toMutableList()
                                 if (updatedMessages.isNotEmpty()) {
                                     updatedMessages[updatedMessages.lastIndex] =
                                         updatedMessages.last().copy(
-                                            text = thinkParser.visibleText,
+                                            text = guardedText,
                                             thinkingContent = thinkParser.thinkingContent,
                                         )
                                 }
@@ -846,7 +850,7 @@ class ChatScreenViewModel(
                                     messages = updatedMessages,
                                     generationState =
                                         GenerationState.Streaming(
-                                            partialText = thinkParser.visibleText,
+                                            partialText = guardedText,
                                             tokenCount = tokenCount,
                                             thinkingPartial = thinkParser.thinkingContent,
                                             isThinking = thinkParser.isThinking,

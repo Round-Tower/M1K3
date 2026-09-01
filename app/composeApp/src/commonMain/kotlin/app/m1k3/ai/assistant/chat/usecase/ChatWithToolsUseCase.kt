@@ -198,7 +198,13 @@ class ChatWithToolsUseCase(
                                 thinkParser.feed(token)
                                 trySend(
                                     ChatEvent.Streaming(
-                                        partialText = thinkParser.visibleText,
+                                        // #150: guard the growing visible answer, not just the
+                                        // final one — otherwise a persona leak streams raw on
+                                        // small tiers and only snaps to the refusal once the
+                                        // turn finishes. guarded() is pure/cheap and a no-op
+                                        // until the leak is textually complete, so it's safe to
+                                        // call on every token.
+                                        partialText = PersonaLeakGuard.guarded(thinkParser.visibleText),
                                         tokenCount = tokenCount,
                                         thinkingPartial = thinkParser.thinkingContent,
                                         isThinking = thinkParser.isThinking,
@@ -359,7 +365,9 @@ class ChatWithToolsUseCase(
                         thinkParser.feed(token)
                         scope.trySend(
                             ChatEvent.Streaming(
-                                partialText = thinkParser.visibleText,
+                                // #150: same guard as the legacy streaming path above —
+                                // the native chat path leaks just as raw otherwise.
+                                partialText = PersonaLeakGuard.guarded(thinkParser.visibleText),
                                 tokenCount = tokenCount,
                                 thinkingPartial = thinkParser.thinkingContent,
                                 isThinking = thinkParser.isThinking,
