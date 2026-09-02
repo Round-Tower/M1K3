@@ -119,6 +119,10 @@ def ipad_orientations(target: dict) -> set[str] | None:
 
 
 def requires_full_screen(target: dict) -> bool:
+    # Escape hatch as accepted by TODAY's ASC upload validator (altool, 2026-09):
+    # opting out of iPad multitasking waives the four-orientation rule. App Review
+    # has signalled UIRequiresFullScreen is being phased out, so this is not a
+    # permanent green light — none of our targets lean on it.
     value = _setting(target, "INFOPLIST_KEY_UIRequiresFullScreen")
     if value is None:
         value = _info_prop(target, "UIRequiresFullScreen")

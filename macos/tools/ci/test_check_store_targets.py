@@ -127,7 +127,6 @@ def test_aligned_project_has_no_problems():
 
 
 
-
 def _ios(settings=None, info_props=None):
     t = _app("iOS", "app.m1k3", "a.plist", templates=["MobileShell"], ipad_orientations=None)
     t["settings"]["base"].update(settings or {})
