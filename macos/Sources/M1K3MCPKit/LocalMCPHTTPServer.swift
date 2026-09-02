@@ -211,33 +211,18 @@ public actor LocalMCPHTTPServer {
             return .error(statusCode: 500, MCPError.internalError("MCP session unavailable"))
         }
 
-        // Isolate this request's response waiter from client id collisions:
-        // rewrite its JSON-RPC id to a process-unique token before the shared
-        // transport registers a waiter for it, then map the response's id back
-        // to what the client sent. A notification (no id) is passed straight
-        // through — it registers no waiter, so nothing can collide. See #176.
-        guard
-            let body = request.body,
-            let clientID = HTTPWireCodec.requestID(inBody: body)
-        else {
-            return await transport.handleRequest(request)
-        }
+        // Isolate this request's response waiter from client id collisions (the
+        // #176 DoS): the shared transport keys waiters by the client-chosen id
+        // globally. MCPRequestIDRemap is the SAME seam the LAN route applies. A
+        // notification (no id) forwards unchanged; a re-encode failure
+        // (unreachable in practice) forwards the original id and logs loudly.
         requestIDCounter &+= 1
-        let uniqueID = JSONRPCID.string("m1k3#\(requestIDCounter)")
-        guard let rewrittenBody = HTTPWireCodec.replacingID(inBody: body, with: uniqueID) else {
-            // Unreachable in practice — requestID already parsed this same body,
-            // and replacingID re-serialises a dict JSONSerialization produced.
-            // But this fallback forwards the client's ORIGINAL id, re-opening the
-            // #176 collision for this one request, so make a regression loud.
+        guard let isolated = MCPRequestIDRemap.isolate(request, as: .string("m1k3#\(requestIDCounter)")) else {
             Self.log.error("id-remap re-encode failed; forwarding un-isolated request (collision risk)")
             return await transport.handleRequest(request)
         }
-        let rewrittenRequest = HTTPRequest(
-            method: request.method, headers: request.headers,
-            body: rewrittenBody, path: request.path
-        )
-        let response = await transport.handleRequest(rewrittenRequest)
-        return HTTPWireCodec.replacingResponseID(response, with: clientID)
+        let response = await transport.handleRequest(isolated.request)
+        return MCPRequestIDRemap.restore(response, to: isolated.clientID)
     }
 
     private func receiveChunk(_ connection: NWConnection) async -> Data? {

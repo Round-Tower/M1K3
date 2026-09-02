@@ -101,3 +101,48 @@ public extension HTTPWireCodec {
         return .data(rewritten, headers: headers)
     }
 }
+
+/// The request-in / response-out halves of the id isolation, extracted so BOTH
+/// the loopback server (`LocalMCPHTTPServer`) and the LAN Brain-at-Home route
+/// (`BrainServeController.handleLANMCP`) apply it identically. The LAN route
+/// forwarded straight to its shared transport, so the #176 collision was still
+/// live there after the loopback fix (issue #176/#177 covered only loopback) —
+/// this shared seam closes that gap and keeps the two paths from drifting.
+public enum MCPRequestIDRemap {
+    public struct Isolated {
+        /// The request to forward to the shared transport: id rewritten onto the
+        /// caller's unique token, or the ORIGINAL request unchanged when there is
+        /// no id to isolate (a notification, or an unparseable body).
+        public let request: HTTPRequest
+        /// The client's original id to restore on the response, or nil when there
+        /// is nothing to restore (notification / pass-through).
+        public let clientID: JSONRPCID?
+    }
+
+    /// Rewrite `request`'s JSON-RPC id onto `uniqueID` for waiter isolation.
+    /// Returns nil ONLY when the body carries an id but re-encoding failed — the
+    /// caller should then forward the original request and log the (now
+    /// un-isolated) collision risk.
+    public static func isolate(_ request: HTTPRequest, as uniqueID: JSONRPCID) -> Isolated? {
+        guard let body = request.body, let clientID = HTTPWireCodec.requestID(inBody: body) else {
+            return Isolated(request: request, clientID: nil)
+        }
+        guard let rewrittenBody = HTTPWireCodec.replacingID(inBody: body, with: uniqueID) else {
+            return nil
+        }
+        return Isolated(
+            request: HTTPRequest(
+                method: request.method, headers: request.headers,
+                body: rewrittenBody, path: request.path
+            ),
+            clientID: clientID
+        )
+    }
+
+    /// Map a forwarded response's id back to the client's original id — a no-op
+    /// when `clientID` is nil.
+    public static func restore(_ response: HTTPResponse, to clientID: JSONRPCID?) -> HTTPResponse {
+        guard let clientID else { return response }
+        return HTTPWireCodec.replacingResponseID(response, with: clientID)
+    }
+}
