@@ -65,6 +65,36 @@ struct KokoroVoicesTests {
         }
     }
 
+    @Test("throws (does not trap) on a truncated file that is only the ZIP signature")
+    func truncatedSignatureOnly() {
+        #expect(throws: KokoroVoices.VoicesError.self) {
+            _ = try KokoroVoices(npzData: Data([0x50, 0x4B, 0x03, 0x04]))
+        }
+    }
+
+    @Test("throws (does not trap) when the local header is cut off mid-field")
+    func truncatedHeader() {
+        // Signature + 10 bytes — fewer than the 30-byte fixed local header, so
+        // reading compSize at cursor+18 would run past the end.
+        var data = Data([0x50, 0x4B, 0x03, 0x04])
+        data.append(contentsOf: [UInt8](repeating: 0, count: 10))
+        #expect(throws: KokoroVoices.VoicesError.self) {
+            _ = try KokoroVoices(npzData: data)
+        }
+    }
+
+    @Test("throws (does not trap) when the name length runs past the buffer")
+    func truncatedName() {
+        // A complete 30-byte header claiming a 200-byte name, with no name bytes.
+        var data = Data([0x50, 0x4B, 0x03, 0x04, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        data.append(contentsOf: [0, 0, 0, 0, 0, 0, 0, 0]) // comp + uncomp size (bytes 18…25)
+        data.append(contentsOf: [200, 0]) // name length = 200 (bytes 26…27)
+        data.append(contentsOf: [0, 0]) // extra length = 0 (bytes 28…29)
+        #expect(throws: KokoroVoices.VoicesError.self) {
+            _ = try KokoroVoices(npzData: data)
+        }
+    }
+
     @Test("reads the real voices-v1.0.bin if present (bm_daniel style[14] matches oracle)")
     func realFileIfPresent() throws {
         // Derive models/kokoro from this file's location (…/macos/Tests/M1K3KokoroTests/<file>).

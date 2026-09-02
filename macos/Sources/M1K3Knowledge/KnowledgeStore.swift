@@ -408,9 +408,20 @@ public extension KnowledgeStore {
     /// memory was listed but unfindable). When the strict query returns nothing,
     /// retry OR-joined — BM25 still ranks the best-covered chunk first, and the
     /// hybrid/grounding layers gate relevance downstream.
+    /// Clamp a caller-supplied result limit into a safe, total range. A negative
+    /// limit traps `Collection.prefix`'s `maxLength >= 0` precondition — an
+    /// uncatchable crash reachable straight from the MCP `search_knowledge`
+    /// limit arg (a local, and Brain-at-Home-remote, DoS) — and a near-`Int.max`
+    /// limit overflows the `limit * 2` candidate pull. 10_000 sits far above any
+    /// real query and leaves `* 2` headroom.
+    static func clampedSearchLimit(_ limit: Int) -> Int {
+        min(max(limit, 0), 10000)
+    }
+
     func searchFTS(
         query: String, limit: Int = 10, kinds: Set<KnowledgeKind>? = nil
     ) throws -> [ChunkHit] {
+        let limit = Self.clampedSearchLimit(limit)
         guard let sanitized = FTSQuery.sanitized(query) else { return [] }
         let strict = try ftsMatch(sanitized, limit: limit, kinds: kinds)
         if !strict.isEmpty { return strict }
@@ -456,6 +467,7 @@ public extension KnowledgeStore {
     func searchVector(
         queryVector: [Float], limit: Int = 10, kinds: Set<KnowledgeKind>? = nil
     ) throws -> [ChunkHit] {
+        let limit = Self.clampedSearchLimit(limit)
         let rows = try dbQueue.read { db in
             try Row.fetchAll(
                 db,
@@ -497,6 +509,7 @@ public extension KnowledgeStore {
         limit: Int = 10,
         kinds: Set<KnowledgeKind>? = nil
     ) throws -> [ChunkHit] {
+        let limit = Self.clampedSearchLimit(limit)
         // Pull a wider candidate set from each signal before fusing.
         let ftsHits = try searchFTS(query: query, limit: limit * 2, kinds: kinds)
         let vectorHits = try searchVector(queryVector: queryVector, limit: limit * 2, kinds: kinds)
