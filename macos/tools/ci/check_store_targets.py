@@ -76,9 +76,10 @@ def info_path(target: dict) -> str | None:
 
 
 def _carries_manifest(paths: list[str]) -> bool:
-    # A whole-directory sweep (`M1K3App`) carries the manifest implicitly; a
-    # cherry-picking target must list the file itself.
-    return any(p.endswith(MANIFEST) or p.rstrip("/") == "M1K3App" for p in paths)
+    # Mobile targets cherry-pick from M1K3App/, so the manifest ships only if a
+    # source entry names it. (The Mac target sweeps its whole directory and is
+    # not audited for the manifest at all — see the platform gate in audit().)
+    return any(p.endswith(MANIFEST) for p in paths)
 
 
 def audit(project: dict) -> list[str]:

@@ -326,7 +326,7 @@ targets:
         # top of NSLocalNetworkUsageDescription. Without it NWBrowser finds nothing
         # and only the QR's `hosts=` dial-in works (the Mac declares it too).
         NSBonjourServices:
-          - _m1k3._tcp
+          - "_m1k3._tcp"
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
@@ -371,7 +371,7 @@ targets:
         CFBundleDisplayName: M1K3
         ITSAppUsesNonExemptEncryption: false
         NSBonjourServices:
-          - _m1k3._tcp
+          - "_m1k3._tcp"
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."

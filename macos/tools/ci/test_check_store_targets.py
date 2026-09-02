@@ -71,11 +71,21 @@ def test_missing_privacy_manifest_on_a_mobile_target_is_flagged():
     assert "PrivacyInfo.xcprivacy" in problems[0] and "M1K3iOS" in problems[0]
 
 
-def test_mac_target_is_not_asked_for_an_explicit_manifest_entry():
-    # The Mac sweeps its whole directory (the manifest rides along); the folder
-    # sweep is accepted as carrying it — the guard is for cherry-picking templates.
+def test_mac_target_manifest_is_not_audited():
+    # The Mac sweeps its whole directory (the manifest rides along), so the
+    # manifest rule is gated to iOS/visionOS — a Mac-only project never trips it.
     project = _project({"M1K3": _app("macOS", "app.m1k3", "m.plist", sources=[{"path": "M1K3App"}])})
     assert m.audit(project) == []
+
+
+def test_mobile_target_sweeping_the_mac_folder_must_still_name_the_manifest():
+    # A wholesale `M1K3App` sweep is never a real mobile config (it would drag
+    # every Mac file in), so it earns no exemption: name the manifest or fail.
+    project = _project(
+        {"M1K3iOS": _app("iOS", "app.m1k3", "a.plist", sources=[{"path": "M1K3App"}])},
+    )
+    problems = m.audit(project)
+    assert len(problems) == 1 and "PrivacyInfo.xcprivacy" in problems[0]
 
 
 def test_two_targets_sharing_one_generated_info_plist_is_flagged():
