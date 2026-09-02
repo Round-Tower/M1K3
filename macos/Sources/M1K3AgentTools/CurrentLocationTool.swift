@@ -109,6 +109,11 @@ public struct CurrentLocationTool: AgentTool {
             return ToolResult(output: CoarseLocation.describe(snapshot, precision: precision))
         } catch let unavailable as ContextSenseUnavailable {
             return ToolResult(output: "Error: \(unavailable.message)")
+        } catch {
+            // Any other failure is a raw OS error (a CLError in kCLErrorDomain,
+            // say) — never leak its domain/code text to the model. Render a calm,
+            // recoverable observation instead, the ContextSenseUnavailable shape.
+            return ToolResult(output: "Error: Location isn't available right now — try again.")
         }
     }
 }
