@@ -693,7 +693,10 @@ public final class MemoryStore: @unchecked Sendable {
                            r.hops + 1
                     FROM memory_edges e
                     JOIN reachable r ON r.id IN (e.from_id, e.to_id)
-                    WHERE r.hops < ?
+                    -- `supersedes` is a correction relation, not a topical one:
+                    -- walking it pulls facts about a corrected version into the
+                    -- current one's neighbourhood. Traverse only topical edges.
+                    WHERE r.hops < ? AND e.relation <> 'supersedes'
                 )
                 SELECT m.*, MIN(r.hops) AS hops FROM reachable r
                 JOIN memories m ON m.id = r.id

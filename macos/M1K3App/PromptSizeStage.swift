@@ -194,6 +194,19 @@ extension RecordingProvider: ToolCallingProvider {
     }
 }
 
+/// Forwards the tokenizer seam to the wrapped provider — the #134 rule (every
+/// façade forwards every capability). Without it the grounding cap's
+/// `provider as? TokenCounting` cast fails on THIS wrapper, so the instrument
+/// would measure grounding that was budgeted by the ~4.4 chars/token estimate,
+/// not the real tokenizer — the exact eval-vs-production divergence this stage
+/// exists to expose. A wrapped provider with no tokenizer reads nil through
+/// here, which callers already treat as "estimate, never skip".
+extension RecordingProvider: TokenCounting {
+    func tokenCount(_ text: String) async -> Int? {
+        await (wrapped as? TokenCounting)?.tokenCount(text)
+    }
+}
+
 /// Wraps a real `ToolTurnSession` so every `send` call's messages are
 /// captured at their ACTUAL call site — the exact `[ToolMessage]`
 /// LocalAgent+Native assembled, before the provider ever renders them into

@@ -188,14 +188,23 @@ private final class OneShotLocation: NSObject, CLLocationManagerDelegate {
         }
     }
 
-    nonisolated func locationManager(_: CLLocationManager, didFailWithError error: Error) {
+    nonisolated func locationManager(_: CLLocationManager, didFailWithError _: Error) {
         MainActor.assumeIsolated {
-            finish(.failure(error))
+            // Map at the source too (belt-and-braces with the tool's catch-all):
+            // a raw CLError must never reach the agent turn — the tool renders
+            // ContextSenseUnavailable as calm copy, a CLError as its domain text.
+            finish(.failure(Self.unavailableFix))
         }
     }
 
     private static var denied: ContextSenseUnavailable {
         ContextSenseUnavailable(message: "Location access is off for M1K3 in macOS "
             + "System Settings (Privacy & Security → Location Services).")
+    }
+
+    /// A transient CoreLocation failure (no fix, network, unknown) rendered as
+    /// calm copy — never the raw CLError domain/code text.
+    private static var unavailableFix: ContextSenseUnavailable {
+        ContextSenseUnavailable(message: "Location isn't available right now — try again.")
     }
 }

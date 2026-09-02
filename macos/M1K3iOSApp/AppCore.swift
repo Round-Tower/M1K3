@@ -246,8 +246,10 @@ final class AppCore {
         // signal (speechDidEnd). One-time wiring, like the Mac's.
         wireSpeechCallbacks()
         // Warm a restored MLX brain so it's ready to answer (Mini needs nothing;
-        // never on the Simulator, where MLX aborts).
-        if brain.mlxModelID != nil, Self.mlxAvailable {
+        // never on the Simulator, where MLX aborts). Not when Home is fronting —
+        // the slot is already pointed at the paired Mac; warming local MLX would
+        // swap it away right after activateHomeBrain() above set it.
+        if brain.mlxModelID != nil, Self.mlxAvailable, !homeBrainActive {
             warmSelectedBrain()
         }
     }
@@ -462,6 +464,11 @@ final class AppCore {
     /// `releaseForBackground`) or a user re-selection. Retrying a persistent failure
     /// on every app-switch would be a retry-storm; the failure surfaces once and stays.
     func warmForForeground() {
+        // Home brain fronting: the slot points at the paired Mac, and
+        // `selectedBrain` is only the LOCAL fallback tier. Warming it here would
+        // swap the slot to local MLX — silently dropping the user off Home on
+        // every app-switch. Leave the slot on Home.
+        guard !homeBrainActive else { return }
         guard selectedBrain.mlxModelID != nil, currentMLX == nil, brainLoad == .idle else { return }
         warmSelectedBrain()
     }
