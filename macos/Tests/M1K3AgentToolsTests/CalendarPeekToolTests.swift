@@ -65,18 +65,15 @@ struct CalendarPeekFormatterTests {
 
     @Test("day labels follow the injected clock, not the wall clock")
     func labelsFollowInjectedNow() throws {
-        // A `now` no CI runner will ever share: if the formatter consults Date(),
-        // this fails on every day of the year instead of on all but one.
-        let far = try #require(dublin.date(from: DateComponents(year: 2031, month: 3, day: 10, hour: 12)))
+        /// A `now` no CI runner will ever share: if the formatter consults Date(),
+        /// this fails on every day of the year instead of on all but one.
+        func march(_ day: Int, _ hour: Int) throws -> Date {
+            try #require(dublin.date(from: DateComponents(year: 2031, month: 3, day: day, hour: hour)))
+        }
+        let far = try march(10, 12)
         let events = try [
-            CalendarEventSnapshot(
-                title: "Retro", start: #require(dublin.date(from: DateComponents(year: 2031, month: 3, day: 10, hour: 15))),
-                end: #require(dublin.date(from: DateComponents(year: 2031, month: 3, day: 10, hour: 16))), isAllDay: false
-            ),
-            CalendarEventSnapshot(
-                title: "Launch", start: #require(dublin.date(from: DateComponents(year: 2031, month: 3, day: 11, hour: 0))),
-                end: #require(dublin.date(from: DateComponents(year: 2031, month: 3, day: 12, hour: 0))), isAllDay: true
-            ),
+            CalendarEventSnapshot(title: "Retro", start: march(10, 15), end: march(10, 16), isAllDay: false),
+            CalendarEventSnapshot(title: "Launch", start: march(11, 0), end: march(12, 0), isAllDay: true),
         ]
         #expect(CalendarPeekFormatter.format(events: events, now: far, calendar: dublin)
             == "Today 15:00–16:00 — Retro\nTomorrow (all day) — Launch")
