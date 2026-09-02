@@ -21,6 +21,7 @@
 
 import Foundation
 import M1K3Agent
+import M1K3Preview
 import os
 
 /// Pure HTML → readable text: drop head/script/style/comments, turn block
@@ -153,7 +154,11 @@ public struct FetchPageTool: AgentTool {
         guard let url = URL(string: raw),
               let scheme = url.scheme?.lowercased(),
               ["http", "https"].contains(scheme),
-              url.host() != nil
+              url.host() != nil,
+              // fetch_page fires from the user's Mac and returns the body to the
+              // model — a strong SSRF primitive. Refuse loopback / private /
+              // metadata targets, the same gate open_link uses.
+              !WebURLPolicy.isLocalOrPrivate(url)
         else { return nil }
         return url
     }

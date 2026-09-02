@@ -99,6 +99,24 @@ struct FetchPageToolTests {
         #expect(fetcher.requests.isEmpty)
     }
 
+    @Test("SSRF: loopback / private / obfuscated-local targets are refused, never fetched")
+    func refusesLocalTargets() async throws {
+        let fetcher = ScriptedFetcher(body: "secret internal content")
+        let tool = FetchPageTool(fetcher: fetcher)
+        for target in [
+            "http://127.0.0.1:5000/admin",
+            "http://169.254.169.254/latest/meta-data/",
+            "http://0177.0.0.1/",
+            "http://2130706433/",
+            "http://[::1]/",
+            "http://192.168.1.1/",
+        ] {
+            let result = try await tool.execute(input: ["url": target])
+            #expect(result.output.hasPrefix("Error:"), "expected refusal for \(target)")
+        }
+        #expect(fetcher.requests.isEmpty)
+    }
+
     @Test("long pages are capped so a small model's context survives")
     func capsOutput() async throws {
         let longBody = "<body><p>" + String(repeating: "forecast words ", count: 500) + "</p></body>"
