@@ -78,17 +78,23 @@ public enum CalendarPeekFormatter {
             .filter { $0.end > now }
             .sorted { $0.start < $1.start }
         guard !upcoming.isEmpty else { return emptyWindowMessage }
-        var lines = upcoming.prefix(maxCount).map { line(for: $0, calendar: calendar) }
+        var lines = upcoming.prefix(maxCount).map { line(for: $0, now: now, calendar: calendar) }
         if upcoming.count > maxCount {
             lines.append("…and \(upcoming.count - maxCount) more.")
         }
         return lines.joined(separator: "\n")
     }
 
-    private static func line(for event: CalendarEventSnapshot, calendar: Calendar) -> String {
-        let day: String = if calendar.isDateInToday(event.start) {
+    private static func line(for event: CalendarEventSnapshot, now: Date, calendar: Calendar) -> String {
+        // Day labels come from the INJECTED clock, never the wall clock:
+        // `isDateInToday`/`isDateInTomorrow` silently compare against `Date()`,
+        // which made every pinned-`now` test green on exactly one calendar day
+        // (2026-09-01) and red the morning after. Same `byAdding: .day` as the
+        // tool's window end, so a DST-stretched tomorrow labels correctly.
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: now)
+        let day: String = if calendar.isDate(event.start, inSameDayAs: now) {
             "Today"
-        } else if calendar.isDateInTomorrow(event.start) {
+        } else if let tomorrow, calendar.isDate(event.start, inSameDayAs: tomorrow) {
             "Tomorrow"
         } else {
             clock(event.start, calendar: calendar, style: .day)
