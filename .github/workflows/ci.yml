@@ -229,8 +229,16 @@ jobs:
       - name: Check store targets share the one App Store record
         working-directory: macos
         run: |
-          python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --quiet pyyaml
+          python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --quiet 'pyyaml>=6,<7'
           python3 tools/ci/check_store_targets.py
+      # The guards' pure helpers have unit tests (test_check_*.py) that nothing
+      # ran until 2026-09-02 — a helper regression would have passed CI while the
+      # guard quietly stopped guarding. Run them.
+      - name: Unit-test the guards themselves
+        working-directory: macos/tools/ci
+        run: |
+          python3 -m pip install --quiet 'pytest>=8,<9' 'pyyaml>=6,<7'
+          python3 -m pytest -q
 
   doc-drift:
     # Guard the docs against silent staleness: every `.library` product in

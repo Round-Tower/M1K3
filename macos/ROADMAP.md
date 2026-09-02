@@ -408,7 +408,9 @@ local-network + camera-for-QR explained), privacy label "Data Not Collected",
 4+, external TestFlight → Beta App Review. Budget one rejection round.
 
 **Phase 5 — Vision Pro (Phase D).** A visionOS archive action (the target is
-already `app.m1k3`); the volumetric avatar + walkable constellation flagship.
+already `app.m1k3`) plus its own entitlements file — the increased-memory-limit
+entitlement is wired to `M1K3iOS` only today, a conscious carry-forward, and the
+store-targets guard does not pin entitlements; the volumetric avatar + walkable constellation flagship.
 Hardware-owed. What's already banked from the July spikes, so nobody
 re-runs them:
 - K0 (MLX-Kokoro feasibility) ✅ · K1 (on-device A/B, Kev's ear passed it) ✅
