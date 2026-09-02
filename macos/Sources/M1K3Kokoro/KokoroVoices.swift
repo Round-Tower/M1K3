@@ -84,10 +84,15 @@ public struct KokoroVoices: Sendable {
             guard data[cursor] == 0x50, data[cursor + 1] == 0x4B,
                   data[cursor + 2] == 0x03, data[cursor + 3] == 0x04
             else { break }
+            // The fixed local-file header is 30 bytes; a truncated/corrupt file
+            // that ends inside one must stop the walk, not read past the end
+            // (the field reads below would trap on a short buffer).
+            guard cursor + 30 <= count else { break }
             var compSize = u32(cursor + 18)
             let nameLen = u16(cursor + 26)
             let extraLen = u16(cursor + 28)
             let nameStart = cursor + 30
+            guard nameStart + nameLen <= count else { break }
             let name = String(bytes: data[nameStart ..< nameStart + nameLen], encoding: .utf8) ?? ""
             let extraStart = nameStart + nameLen
             // ZIP64: numpy's savez streams entries, so the local header sizes are the
@@ -109,12 +114,14 @@ public struct KokoroVoices: Sendable {
     /// header both sizes are present, in order [uncompressedSize, compressedSize].
     private static func zip64CompSize(_ data: Data, extraStart: Int, extraLen: Int) -> Int? {
         var cursor = extraStart
-        let end = extraStart + extraLen
+        // Never read past the real buffer even if extraLen (corrupt/tampered) claims more.
+        let end = min(extraStart + extraLen, data.count)
         while cursor + 4 <= end {
             let fieldID = Int(data[cursor]) | Int(data[cursor + 1]) << 8
             let size = Int(data[cursor + 2]) | Int(data[cursor + 3]) << 8
             if fieldID == 0x0001, size >= 16 {
                 let compAt = cursor + 4 + 8 // skip uncompressedSize, read compressedSize
+                guard compAt + 8 <= end else { return nil }
                 return (0 ..< 8).reduce(0) { $0 | Int(data[compAt + $1]) << (8 * $1) }
             }
             cursor += 4 + size
