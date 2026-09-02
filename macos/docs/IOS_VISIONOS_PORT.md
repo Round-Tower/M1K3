@@ -584,10 +584,12 @@ visionOS target's **own** generated Info.plist (the two
 mobile targets were writing the same file), and `ci_post_clone.sh` resolving
 packages against `CI_XCODE_SCHEME` instead of the hardcoded Mac scheme.
 
-**The guard:** `tools/ci/check_store_targets.py` (+ unit tests) pins all three
+**The guard:** `tools/ci/check_store_targets.py` (+ unit tests) pins all four
 invariants in the PR CI's project-guards job — red against the pre-change
 `project.yml`, green after — so the next "reasonable-looking" rename fails in
-seconds, not at upload.
+seconds, not at upload. The fourth (all four iPad orientations declared, or
+`UIRequiresFullScreen`) was added after run #272 archived and exported cleanly
+and then died at "Preparing build for App Store Connect" with ITMS-90474.
 
 **The lane itself** is one `PATCH` on the existing `Release` workflow: a second
 `ARCHIVE` action (`platform: IOS`, `scheme: M1K3iOS`, App-Store-eligible), so a

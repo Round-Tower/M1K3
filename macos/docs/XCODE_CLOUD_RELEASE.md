@@ -64,6 +64,13 @@ separate Developer-ID DMG path (`tools/release/release-macos.sh`).
    /v1/ciWorkflows/{id}` appending an `ARCHIVE` action with `platform: IOS`,
    `scheme: M1K3iOS`, `buildDistributionAudience: APP_STORE_ELIGIBLE`) — the UI
    route is Edit Workflow → Actions → Archive → iOS.
+   **First run (#272) died at "Preparing build for App Store Connect"** with no
+   detail in the API or the log bundle: the archive and export both succeeded,
+   then ASC refused the IPA with **ITMS-90474** (an iPad-capable app with no
+   `UISupportedInterfaceOrientations~ipad`). Diagnose that stage by downloading
+   the run's `ARCHIVE_EXPORT` artifact and running
+   `xcrun altool --validate-app -f <ipa> -t ios --apiKey … --apiIssuer …` locally —
+   it names the ITMS code the cloud swallows.
 
 > **Live state (read via the API 2026-09-02):** the workflow's actions are the
 > Archive actions only — no Analyze/Test action. The test gate is
@@ -74,7 +81,9 @@ separate Developer-ID DMG path (`tools/release/release-macos.sh`).
 > `tools/ci/check_store_targets.py`:** every store target uploads under the one
 > universal bundle ID `app.m1k3` (a per-platform suffix has no ASC record and fails
 > only at upload), the mobile targets ship `PrivacyInfo.xcprivacy` (Apple rejects an
-> iOS binary without one), and each target owns its generated Info.plist.
+> iOS binary without one), each target owns its generated Info.plist, and the iOS
+> target declares all four iPad orientations (ITMS-90474 otherwise rejects the
+> upload after a successful archive).
 
 > **⚠️ The Test action MUST use the workspace `M1K3.xcworkspace` + scheme `M1K3-Tests`,
 > NOT the app project's `M1K3` scheme.** This is the one piece you wire in App Store Connect.

@@ -10,11 +10,23 @@ TEMPLATE_WITH_MANIFEST = {
 }
 
 
-def _app(platform, bundle_id, info_path, templates=None, sources=None, type_="application"):
+ALL_FOUR = (
+    "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown "
+    "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+)
+
+
+def _app(platform, bundle_id, info_path, templates=None, sources=None, type_="application", ipad_orientations=ALL_FOUR):
+    # iOS fixtures declare the full iPad orientation set by default so that each
+    # test sees only the finding it is about; pass ipad_orientations=None for a
+    # bare target (the orientation tests build their own).
+    settings = {"PRODUCT_BUNDLE_IDENTIFIER": bundle_id}
+    if platform == "iOS" and ipad_orientations:
+        settings["INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad"] = ipad_orientations
     t = {
         "type": type_,
         "platform": platform,
-        "settings": {"base": {"PRODUCT_BUNDLE_IDENTIFIER": bundle_id}},
+        "settings": {"base": settings},
         "info": {"path": info_path},
     }
     if templates:
@@ -111,4 +123,47 @@ def test_aligned_project_has_no_problems():
         },
         templates={"MobileShell": TEMPLATE_WITH_MANIFEST},
     )
+    assert m.audit(project) == []
+
+
+
+def _ios(settings=None, info_props=None):
+    t = _app("iOS", "app.m1k3", "a.plist", templates=["MobileShell"], ipad_orientations=None)
+    t["settings"]["base"].update(settings or {})
+    if info_props:
+        t["info"]["properties"] = info_props
+    return _project({"M1K3iOS": t}, templates={"MobileShell": TEMPLATE_WITH_MANIFEST})
+
+
+def test_ios_target_without_any_orientations_is_flagged_as_itms_90474():
+    # The exact rejection Apple returned for build 272: no orientations at all.
+    problems = m.audit(_ios())
+    assert len(problems) == 1
+    assert "90474" in problems[0] and "M1K3iOS" in problems[0]
+
+
+def test_ios_target_with_all_four_ipad_orientations_via_build_settings_passes():
+    project = _ios(settings={
+        "INFOPLIST_KEY_UISupportedInterfaceOrientations": "UIInterfaceOrientationPortrait",
+        "INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad": ALL_FOUR,
+    })
+    assert m.audit(project) == []
+
+
+def test_ios_target_with_all_four_ipad_orientations_via_info_properties_passes():
+    project = _ios(info_props={"UISupportedInterfaceOrientations~ipad": ALL_FOUR.split()})
+    assert m.audit(project) == []
+
+
+def test_ios_target_with_a_partial_ipad_set_is_flagged():
+    project = _ios(settings={"INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad": "UIInterfaceOrientationPortrait"})
+    problems = m.audit(project)
+    assert len(problems) == 1 and "90474" in problems[0]
+
+
+def test_ios_target_opting_out_of_multitasking_with_full_screen_passes():
+    project = _ios(settings={
+        "INFOPLIST_KEY_UISupportedInterfaceOrientations": "UIInterfaceOrientationPortrait",
+        "INFOPLIST_KEY_UIRequiresFullScreen": "YES",
+    })
     assert m.audit(project) == []
