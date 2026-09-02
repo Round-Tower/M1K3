@@ -63,6 +63,23 @@ struct CalendarPeekFormatterTests {
             == "Tomorrow (all day) — Field trip")
     }
 
+    @Test("day labels follow the injected clock, not the wall clock")
+    func labelsFollowInjectedNow() throws {
+        /// A `now` no CI runner will ever share: if the formatter consults Date(),
+        /// this fails on every day of the year instead of on all but one (the
+        /// 2026-09-01 fixtures above went red the morning after they were written).
+        func march(_ day: Int, _ hour: Int) throws -> Date {
+            try #require(dublin.date(from: DateComponents(year: 2031, month: 3, day: day, hour: hour)))
+        }
+        let far = try march(10, 12)
+        let events = try [
+            CalendarEventSnapshot(title: "Retro", start: march(10, 15), end: march(10, 16), isAllDay: false),
+            CalendarEventSnapshot(title: "Launch", start: march(11, 0), end: march(12, 0), isAllDay: true),
+        ]
+        #expect(CalendarPeekFormatter.format(events: events, now: far, calendar: dublin)
+            == "Today 15:00–16:00 — Retro\nTomorrow (all day) — Launch")
+    }
+
     @Test("caps at five with an honest remainder")
     func capped() {
         let events = (0 ..< 7).map { index in
@@ -183,6 +200,8 @@ struct CalendarPeekToolTests {
         // Dublin falls back on Sun 2026-10-25 — "tomorrow" is 25 hours long.
         // A fixed 48h add would end the window at 23:00 on the 26th, clipping
         // the last hour of tomorrow; calendar-aware adding must not.
+        // @unchecked: each test drives the spy through ONE awaited call on a single
+        // task — no concurrent writers to `capturedEnd`, so the opt-out is sound.
         final class WindowSpy: CalendarPeeking, @unchecked Sendable {
             var capturedEnd: Date?
             func events(from _: Date, to end: Date) async throws -> [CalendarEventSnapshot] {

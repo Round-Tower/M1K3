@@ -78,19 +78,22 @@ public enum CalendarPeekFormatter {
             .filter { $0.end > now }
             .sorted { $0.start < $1.start }
         guard !upcoming.isEmpty else { return emptyWindowMessage }
-        var lines = upcoming.prefix(maxCount).map { line(for: $0, now: now, calendar: calendar) }
+        // One "tomorrow" per call, not one per line: the same `now` labels every event.
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) ?? now
+        var lines = upcoming.prefix(maxCount).map { line(for: $0, now: now, tomorrow: tomorrow, calendar: calendar) }
         if upcoming.count > maxCount {
             lines.append("…and \(upcoming.count - maxCount) more.")
         }
         return lines.joined(separator: "\n")
     }
 
-    private static func line(for event: CalendarEventSnapshot, now: Date, calendar: Calendar) -> String {
+    private static func line(
+        for event: CalendarEventSnapshot, now: Date, tomorrow: Date, calendar: Calendar
+    ) -> String {
         // Day labels are relative to the injected `now`, not the real clock. The
         // window filter above already uses `now`; Calendar.isDateInToday silently
         // reads the SYSTEM date, which made the labels non-deterministic and wrong
         // whenever `now` ≠ the real today (tests, or a replayed/rendered transcript).
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) ?? now
         let day: String = if calendar.isDate(event.start, inSameDayAs: now) {
             "Today"
         } else if calendar.isDate(event.start, inSameDayAs: tomorrow) {
