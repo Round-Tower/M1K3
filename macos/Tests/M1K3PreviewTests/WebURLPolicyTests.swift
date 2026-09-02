@@ -83,6 +83,25 @@ struct WebURLPolicyTests {
         #expect(try WebURLPolicy.isLocalOrPrivate(url("http://[fd00::1]")))
     }
 
+    // MARK: - Obfuscated IPv4 literals (the resolver still routes these to loopback)
+
+    @Test("obfuscated IPv4 literals (decimal/octal/hex/abbreviated/trailing-dot) are local")
+    func obfuscatedIPv4() throws {
+        #expect(try WebURLPolicy.isLocalOrPrivate(url("http://2130706433"))) // 127.0.0.1 as a 32-bit int
+        #expect(try WebURLPolicy.isLocalOrPrivate(url("http://0177.0.0.1"))) // octal 0177 = 127
+        #expect(try WebURLPolicy.isLocalOrPrivate(url("http://0x7f.0.0.1"))) // hex 0x7f = 127
+        #expect(try WebURLPolicy.isLocalOrPrivate(url("http://127.1"))) // abbreviated a.d
+        #expect(try WebURLPolicy.isLocalOrPrivate(url("http://127.0.0.1."))) // trailing FQDN dot
+        #expect(try WebURLPolicy.isLocalOrPrivate(url("http://2852039166"))) // 169.254.169.254 metadata as int
+        #expect(try WebURLPolicy.isLocalOrPrivate(url("http://0xA9FEA9FE"))) // 169.254.169.254 as a hex int
+    }
+
+    @Test("a public IP in non-canonical form is still allowed (no over-blocking)")
+    func obfuscatedPublicAllowed() throws {
+        #expect(try !WebURLPolicy.isLocalOrPrivate(url("http://1.1.1.1."))) // trailing dot, public
+        #expect(try !WebURLPolicy.isLocalOrPrivate(url("http://example.com.")))
+    }
+
     // MARK: - Defensive
 
     @Test("a URL with no host is treated as local (refused)")
