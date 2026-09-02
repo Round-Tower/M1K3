@@ -17,14 +17,16 @@ likely to meet.
   plausible-looking answer instead of saying so. Grounded answers cite their
   sources; a confident answer with no citations deserves your suspicion.
   [#125](https://github.com/Round-Tower/M1K3/issues/125)
-- **Dictating while M1K3 is mid-answer silently drops your words.** The mic
-  button doesn't disable while a turn is streaming.
-  [#126](https://github.com/Round-Tower/M1K3/issues/126)
 - **Deep questions on Big (12B) can be slow.** Prefill on a 12B model is real:
   an ordinary question can take tens of seconds, and over MCP a heavy turn can
   blow the 120s client deadline (the async job API exists for exactly this).
   A self-referential turn can also cost a ~6s prompt-cache rebuild.
   [#121](https://github.com/Round-Tower/M1K3/issues/121)
+- **Remembered facts can lose to documents in a packed answer.** When a grounded
+  reply already has a full set of document passages, the grounding token budget
+  can be spent before your remembered facts are added — so a personal fact you'd
+  expect it to use may not appear that turn.
+  [#186](https://github.com/Round-Tower/M1K3/issues/186)
 
 ## Honest model-quality notes
 
@@ -47,10 +49,9 @@ likely to meet.
   [#80](https://github.com/Round-Tower/M1K3/issues/80)
 - **A rare AppKit constraint-cycle crash** when streaming a chat turn with
   Settings open. [#77](https://github.com/Round-Tower/M1K3/issues/77)
-- **Some weight fetches sit outside the integrity choke point** (WhisperKit
-  CoreML + Kokoro TTS pull from unpinned upstream refs — being closed
-  methodically). [#74](https://github.com/Round-Tower/M1K3/issues/74) ·
-  [#70](https://github.com/Round-Tower/M1K3/issues/70)
+- **A weight fetch still sits outside the integrity choke point** (WhisperKit's
+  CoreML weights pull from an unpinned upstream ref — being closed methodically;
+  Kokoro's are already pinned). [#74](https://github.com/Round-Tower/M1K3/issues/74)
 
 <!--
 Signed: Kev + claude-fable-5, 2026-08-22
@@ -63,4 +64,12 @@ edit: entries leave when their issue closes, never because launch
 optics want them gone.
 Confidence: 0.9 — content verified against the live issue tracker and
 the published benchmark docs on 2026-08-22.
+
+Review: Kev + claude-opus-4-8, 2026-09-02, Confidence 0.9 — truth pass
+against the live tracker after the QA sweep. Removed #126 (dictation drop,
+closed via #170) and trimmed #70 from the integrity-choke entry (Kokoro
+weights now pinned, closed) — both per the "entries leave when their issue
+closes" contract. Added #186 (grounding budget can spend out before the
+memory lane on a document-packed turn), a user-observable rough edge the
+sweep surfaced. Issue states re-checked via `gh issue view` this day.
 -->
