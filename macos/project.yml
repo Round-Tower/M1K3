@@ -312,6 +312,14 @@ targets:
         # the jetsam budget so the 4 GB mobile MLX ceiling can actually be reached.
         # This is what Lil on an iPhone/iPad stands on.
         CODE_SIGN_ENTITLEMENTS: M1K3iOSApp/M1K3iOS.entitlements
+        # ITMS-90474: App Store Connect rejects an iPad-capable upload that
+        # declares no orientations (the archive AND export succeed first — run
+        # #272 died only at "Preparing build for App Store Connect"). iPad
+        # multitasking needs all four; iPhone gets the Xcode-template trio.
+        # Build settings, not plist properties: the generated-plist step honours
+        # these the same way it derived CFBundleName. Guarded.
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES

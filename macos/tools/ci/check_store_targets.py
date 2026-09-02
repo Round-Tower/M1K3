@@ -32,6 +32,15 @@ import sys
 EXPECTED_BUNDLE_ID = "app.m1k3"
 STORE_PLATFORMS = {"macOS", "iOS", "visionOS"}
 MANIFEST = "PrivacyInfo.xcprivacy"
+# ITMS-90474: an iPad-capable app that doesn't opt out of multitasking must
+# declare ALL FOUR orientations for iPad, or App Store Connect rejects the
+# upload — after the archive and export both succeed (Xcode Cloud run #272).
+ALL_ORIENTATIONS = {
+    "UIInterfaceOrientationPortrait",
+    "UIInterfaceOrientationPortraitUpsideDown",
+    "UIInterfaceOrientationLandscapeLeft",
+    "UIInterfaceOrientationLandscapeRight",
+}
 
 # --------------------------------------------------------------------------- #
 # Pure helpers (unit-tested)
@@ -75,6 +84,47 @@ def info_path(target: dict) -> str | None:
     return (target.get("info") or {}).get("path")
 
 
+def _setting(target: dict, key: str):
+    return ((target.get("settings") or {}).get("base") or {}).get(key)
+
+
+def _info_prop(target: dict, key: str):
+    return ((target.get("info") or {}).get("properties") or {}).get(key)
+
+
+def _as_set(value) -> set[str] | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return set(value.split())
+    return {str(v) for v in value}
+
+
+def ipad_orientations(target: dict) -> set[str] | None:
+    """The orientations an iPad build ends up declaring, or None if none at all.
+
+    Build settings win over plist properties (that is how Xcode's generated plist
+    behaves); the `~ipad`/`_iPad` variant wins over the shared key.
+    """
+    for value in (
+        _setting(target, "INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad"),
+        _info_prop(target, "UISupportedInterfaceOrientations~ipad"),
+        _setting(target, "INFOPLIST_KEY_UISupportedInterfaceOrientations"),
+        _info_prop(target, "UISupportedInterfaceOrientations"),
+    ):
+        got = _as_set(value)
+        if got:
+            return got
+    return None
+
+
+def requires_full_screen(target: dict) -> bool:
+    value = _setting(target, "INFOPLIST_KEY_UIRequiresFullScreen")
+    if value is None:
+        value = _info_prop(target, "UIRequiresFullScreen")
+    return str(value).upper() in {"YES", "TRUE", "1"}
+
+
 def _carries_manifest(paths: list[str]) -> bool:
     # Mobile targets cherry-pick from M1K3App/, so the manifest ships only if a
     # source entry names it. (The Mac target sweeps its whole directory and is
@@ -98,6 +148,14 @@ def audit(project: dict) -> list[str]:
                 f"{name}: no {MANIFEST} in its sources (template or own) — Apple rejects "
                 f"iOS/visionOS submissions without a privacy manifest at the bundle root"
             )
+        if t.get("platform") == "iOS" and not requires_full_screen(t):
+            got = ipad_orientations(t) or set()
+            if got != ALL_ORIENTATIONS:
+                problems.append(
+                    f"{name}: iPad orientations are {sorted(got) or 'unset'} — ITMS-90474 rejects the upload "
+                    f"unless all four are declared (INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad) "
+                    f"or the target sets UIRequiresFullScreen"
+                )
     by_plist: dict[str, list[str]] = {}
     for name, t in targets.items():
         p = info_path(t)
@@ -132,7 +190,7 @@ def main(argv: list[str]) -> int:
     names = sorted(store_targets(project))
     if not problems:
         print(f"✓ {len(names)} store targets ({', '.join(names)}) all upload into {EXPECTED_BUNDLE_ID!r} "
-              f"with a privacy manifest and their own Info.plist.")
+              f"with a privacy manifest, their own Info.plist, and iPad orientations declared.")
         return 0
     print("❌ project.yml store-target drift:")
     for p in problems:
