@@ -75,6 +75,13 @@ targetTemplates:
       # and CompanionAvatarView #if's out its shading calls on visionOS.
       - path: M1K3App/CompanionAvatarView.swift
       - path: M1K3App/CodeBlockView.swift
+      # App Store privacy manifest — Apple REQUIRES one at the bundle root of every
+      # iOS/visionOS submission (the Mac target sweeps it in with `M1K3App/`; this
+      # template cherry-picks, so it's explicit here). The SAME file: zero tracking,
+      # zero collected data, the same four required-reason APIs — one promise,
+      # three platforms. Guarded by tools/ci/check_store_targets.py.
+      - path: M1K3App/PrivacyInfo.xcprivacy
+        buildPhase: resources
       - path: M1K3App/Resources/Fonts/Silkscreen-Regular.ttf
         buildPhase: resources
       - path: M1K3App/Resources/Fonts/Silkscreen-Bold.ttf
@@ -288,8 +295,23 @@ targets:
       - path: M1K3App/Phosphor.metal
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.m1k3.ios
-        PRODUCT_NAME: M1K3iOS
+        # ONE App Store record for Mac + iPhone/iPad + Vision Pro (universal
+        # purchase). `app.m1k3` is registered UNIVERSAL in the developer portal and
+        # the ASC app record already carries IOS + VISION_OS version drafts, so every
+        # platform's archive must upload under the SAME identifier — a per-platform
+        # suffix (`app.m1k3.ios`, pre-2026-09-02) has no record to land in and fails
+        # only at upload, after the full build. Immutable once a build ships.
+        # Guarded by tools/ci/check_store_targets.py.
+        PRODUCT_BUNDLE_IDENTIFIER: app.m1k3
+        # Named like the Mac's product. Xcode derives CFBundleName from PRODUCT_NAME
+        # even with an explicit Info.plist (a `CFBundleName` property in the plist
+        # lost — verified on the 2026-09-02 archive), and `M1K3iOS` would leak into
+        # system dialogs. The scheme stays `M1K3iOS`; only the .app is renamed.
+        PRODUCT_NAME: M1K3
+        # Increased Memory Limit (entitlement-only; no portal capability) — raises
+        # the jetsam budget so the 4 GB mobile MLX ceiling can actually be reached.
+        # This is what Lil on an iPhone/iPad stands on.
+        CODE_SIGN_ENTITLEMENTS: M1K3iOSApp/M1K3iOS.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
@@ -300,6 +322,11 @@ targets:
       properties:
         CFBundleDisplayName: M1K3
         ITSAppUsesNonExemptEncryption: false
+        # Brain at Home discovery: iOS 14+ gates Bonjour BROWSING on this list, on
+        # top of NSLocalNetworkUsageDescription. Without it NWBrowser finds nothing
+        # and only the QR's `hosts=` dial-in works (the Mac declares it too).
+        NSBonjourServices:
+          - _m1k3._tcp
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
@@ -329,15 +356,22 @@ targets:
       - path: M1K3visionOS/Assets.xcassets
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.m1k3.visionos
-        PRODUCT_NAME: M1K3visionOS
+        # Same universal record as the Mac + iOS targets — see M1K3iOS above.
+        PRODUCT_BUNDLE_IDENTIFIER: app.m1k3
+        PRODUCT_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_VERSION: "6.2"
     info:
-      path: M1K3iOSApp/Info.generated.plist
+      # Its OWN generated plist (was shared with M1K3iOS — harmless while the two
+      # property sets were identical, a silent clobber the moment they diverge).
+      # Lives beside the visionOS asset catalog, outside the template's
+      # `M1K3iOSApp/` sweep, so the iOS target never bundles it as a stray resource.
+      path: M1K3visionOS/Info.generated.plist
       properties:
         CFBundleDisplayName: M1K3
         ITSAppUsesNonExemptEncryption: false
+        NSBonjourServices:
+          - _m1k3._tcp
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."

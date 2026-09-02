@@ -5,7 +5,12 @@ architecture/build/test, see `CLAUDE.md`. For *why* a decision was made (model
 swaps, phase rationale, the full session-by-session build log), see `PLAN.md` —
 it's a signed historical record and stays that way; this file doesn't repeat it.
 
-Last swept: 2026-08-20 — the **M brand mark** shipped (PR #142; app icon
+Last swept: 2026-09-02 — the **iOS TestFlight lane** opened (mobile bundle
+IDs unified onto the universal `app.m1k3` record, privacy manifest +
+entitlements + Bonjour key on the mobile targets, a CI guard pinning them) and
+the **iOS parity ladder** written down — flagship §1. Before that —
+
+2026-08-20 — the **M brand mark** shipped (PR #142; app icon
 reduced from the M1K3 wordmark to the single pixel-M, both platforms) and the
 **live wallpaper** greenlit as the Golden Gate flagship (Kev: *"the live
 wallpaper definitely is next — do whatever you need to deliver it"*); prior art
@@ -322,32 +327,109 @@ and **Kev chose the screensaver instead** on its recommendation.
   maybe never); a "Present/Ambient" in-app full-screen mode (cheap, live, opt-in
   "watch M1K3 think" — a possible later companion to the screensaver).
 
-### 1. Voice on iOS + the Vision Pro flagship
-Spike scaffolding, results, and Kev's open calls: `scratch/voice-mobile/PLAN-DRAFT.md`.
+### 1. iOS — to TestFlight, then parity: the ladder (opened 2026-09-02)
 
-- **Shipped:** K0 (MLX-Kokoro feasibility) ✅ · K1 (on-device A/B, Kev's ear
-  passed it) ✅ → **#58 merged** (Kokoro's ONNX backend replaced with pure MLX —
-  the visionOS unlock) · V0 (visionOS sim spike) ✅ → its dark-avatar finding
-  fixed in **#60** (camera-less `GeometryReader3D` framing — visionOS's eyes
-  *are* the camera).
-- **V0's tab-ornament finding: CLOSED BY REMOVAL** (PR #82, 2026-07-29) — the
-  mobile nav restructure retired the tab shell entirely (chat is the app;
-  Memories/Documents/Settings are pushes), so the dark-squares ornament and its
-  planned `.sidebarAdaptable` fix no longer exist.
-- **Scoping resolved by the same restructure:** "voice-forward, not voice-only"
-  — voice is a full-screen cover over the retained chat shell (setup/downloads/
-  TCC/consent stay visual), shipped as v1 in #82. Remaining Phase B/D work:
-  - **Phase B (iOS voice):** B-A1 AVAudioSession echo spike (incl. interruption/
-    route negative paths — this is genuinely unbuilt today, zero hits repo-wide)
-    → B-1 STT + karaoke captions, push-to-talk → B-2 Kokoro-vs-AVSpeech decided
-    on *measured* iOS thermals, not vibes → B-3 voice-mode UI composing the
-    Mac's existing pieces.
-  - **Phase D (visionOS flagship):** voice-forward view over the retained shell,
-    volumetric avatar, TTS per Phase B's pick.
-- **Landmines already named** (don't rediscover — see PLAN-DRAFT.md): self-echo
-  (no AEC anywhere — v1 is push-to-talk); Apple Speech's silent server-fallback
-  is a privacy landmine on a listening surface (assert on-device, fail loud);
-  thermals need a measured 10-minute burn, not a demo.
+**Where it stands.** The iOS/visionOS shell (`M1K3iOSApp/`, 19 files, ~3k lines,
+`AppCore` as its own composition root) is real: streaming grounded chat with
+tools + history + reading modes + markdown, voice mode (Apple Speech STT +
+AVSpeech TTS over the shared `VoiceLoopController`), the pixel face + the five
+3D companions, a Mini/Lil brain picker with download progress, Documents +
+Memories, the Brain at Home client (QR pairing, PR #152), MetricKit collection.
+It links 14 of the Mac's 26 package products, and the library graph is
+genuinely portable (one `import AppKit` in all of `Sources/`, seven
+`#if os(macOS)`). What it never had was a lane to TestFlight — and **no build
+has run on hardware since the July harness** (Mini + Lil verified on an
+iPhone 17 Pro then; the shell since, only compile-green in CI).
+
+**Phase 0 — the lane.** In PR (2026-09-02): the mobile bundle IDs unified onto
+the universal `app.m1k3` record (the developer portal registers it UNIVERSAL;
+the ASC record already carries IOS + VISION_OS 1.0.0 drafts — the `.ios`/
+`.visionos` suffixes had nowhere to upload), `PrivacyInfo.xcprivacy` on the
+mobile targets, `M1K3iOS.entitlements` (increased memory limit — what Lil on
+a phone stands on), `NSBonjourServices` for Brain at Home browsing, an
+Info.plist per target, and `tools/ci/check_store_targets.py` pinning all of
+it. **After merge:** one `PATCH` adds an `Archive — iOS` action to the
+existing `Release` workflow (`docs/XCODE_CLOUD_RELEASE.md` §3) → the next
+master push mints build N for Mac AND iOS → TestFlight Internal → Kev's
+iPhone 17 Pro. **Exit:** an IOS build reading VALID in ASC, installed via
+TestFlight, and the on-device smoke the shell has never had — a Mini turn,
+Lil download + turn under the entitlement (read `os_proc_available_memory()`
+and tune `MLXMemoryBudget`'s 4 GB), a voice round-trip, the Brain at Home
+ceremony with Bonjour declared.
+
+**Phase 1 — the cheap parity (Mac-only by linkage, not by nature).** Each is
+a package that already builds for iOS plus a thin `AppCore+` adapter, in the
+order the Mac's soul shows through:
+- **Heartbeat** — `M1K3Heartbeat` (pure) + `HeartbeatScreen`/`IdleCard`/
+  settings section; the engine in `AppEnvironment+Heartbeat.swift` has one
+  AppKit touch (`NSApp.isActive` gating the pulse notification — `UIApplication`
+  state on iOS), the rest is portable.
+- **Context senses** — `battery_status` needs a `UIDevice` provider (the Mac's
+  is IOKit-guarded and returns nil on iOS); `calendar_peek` +
+  `current_location` reuse the EventKit/CoreLocation adapters from
+  `AppEnvironment+ContextSenses.swift`, plus the Privacy toggles and usage
+  strings. Same charter: coarse by default, precise opt-up, default-OFF.
+- **Settings IA parity** — M1K3 / You / Privacy / General / Advanced (the
+  2026-09-01 reduction) over today's single Form, same footer copy.
+- **The wake carousel** for the Lil download wait — `WakeSetupCarousel` is
+  SwiftUI over `WakeSetupFlow` (M1K3Inference, pure); the cards apply as-is.
+- **Memory export** (OKF, ADR 0003) via `fileExporter`; **long-think
+  notifications** (`TurnNotificationPolicy` is pure, `UNUserNotificationCenter`
+  is the same API); **Spotlight** donation (CoreSpotlight, titles only).
+- **The constellation** — `M1K3MemoryViz` holds the one AppKit import
+  (NSColor in the palette/view); a UIColor branch unlocks the companion
+  option on mobile.
+**Exit:** the Settings tabs read the same on both platforms and every consent
+toggle exists on iOS with the same copy.
+
+**Phase 2 — voice parity (the port doc's Phase B).** Kokoro TTS (pure MLX
+since #58) vs AVSpeech decided on a **measured 10-minute thermal burn**;
+WhisperKit vs Apple Speech (assert on-device recognition, fail loud on the
+silent server fallback); sentence-streamed auto-speak in chat
+(`AppEnvironment+AutoSpeak`) + karaoke follow; interruption/route negatives;
+the `UIBackgroundModes: audio` call (only if voice must survive backgrounding —
+today the shell exits voice on background, deliberately). The #85 voice-mode
+crash triage reads `MXAppExitMetric` from the MetricKit store already
+collecting on the phone.
+
+**Phase 3 — the iOS-native soul (Phase C).** App Intents/Shortcuts
+(`M1K3App/Intents/`, five small portable files over the shared
+`AppEnvironment+Intelligence` core), a Lock Screen/Home widget carrying the
+last heartbeat pulse, a Live Activity for long thinks and weight downloads, a
+Control Center "Ask M1K3" control, a Share extension for drop-a-doc (the O5
+card the Mac still owes too). This is where the phone stops being a port and
+becomes the menu-bar app's sibling.
+
+**Phase 4 — the store pack** — one universal record, so the SAME session as
+the Mac's MAS pack: screenshots (6.9"/6.5" iPhone, 13" iPad),
+`fastlane/metadata_ios/` (copy drafted in `marketing/ios-launch/`), review
+notes (Mini's instant no-download path for the reviewer, on-demand weights,
+local-network + camera-for-QR explained), privacy label "Data Not Collected",
+4+, external TestFlight → Beta App Review. Budget one rejection round.
+
+**Phase 5 — Vision Pro (Phase D).** A visionOS archive action (the target is
+already `app.m1k3`); the volumetric avatar + walkable constellation flagship.
+Hardware-owed. What's already banked from the July spikes, so nobody
+re-runs them:
+- K0 (MLX-Kokoro feasibility) ✅ · K1 (on-device A/B, Kev's ear passed it) ✅
+  → **#58 merged** · V0 (visionOS sim spike) ✅ → its dark-avatar finding fixed
+  in **#60** (camera-less `GeometryReader3D` framing — visionOS's eyes *are*
+  the camera). V0's tab-ornament finding CLOSED BY REMOVAL (PR #82 retired the
+  tab shell; chat is the app, the rest are pushes).
+- Scoping: "voice-forward, not voice-only" — voice is a full-screen cover over
+  the retained chat shell (setup/downloads/TCC/consent stay visual), v1 in #82.
+- Landmines named in `scratch/voice-mobile/PLAN-DRAFT.md`: self-echo (no AEC
+  anywhere — v1 is push-to-talk); Apple Speech's silent server fallback is a
+  privacy landmine on a listening surface; thermals need a measured burn.
+
+**Not ported, by design (the Mac-shaped half):** the in-app MCP server (no
+desktop agents dial into a phone — Brain at Home is the phone's way of being
+served), the Brain at Home *server*, the screensaver, the menu bar, the notch
+HUD, scripts/hands (no `NSUserUnixTask` on iOS), launch-at-login, call
+recording's far-end capture (ScreenCaptureKit). **Parity means parity of soul
+— chat, voice, memory, companions, senses, heartbeat — not a window-for-window
+copy.** Each Mac-shaped surface either gets an iOS-shaped sibling in Phase 3
+or nothing, on purpose.
 
 ### 2. Brain-at-home — **Mac side SHIPPED 2026-08-19; iPhone/iPad client BUILT 2026-08-24** (`docs/BRAIN_AT_HOME_SPEC.md`)
 - **Phase A spikes all PASS** (`scratch/brain-at-home/spikes/RESULTS.md`) with

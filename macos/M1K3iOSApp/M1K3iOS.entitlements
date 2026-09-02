@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  M1K3iOS.entitlements — the iPhone/iPad target's entitlements.
+
+  iOS needs none of the Mac's set: the sandbox is implicit, files arrive through
+  the document picker, networking has no entitlement (local-network + Bonjour are
+  Info.plist usage keys), and the mic/calendar/location are usage strings + TCC.
+
+  The one entry is Increased Memory Limit. iOS jetsams a foreground app at a
+  FRACTION of physical RAM; the mobile MLX ceiling (MLXMemoryBudget, 4 GB) only
+  engages MLX back-pressure before the kernel's limit if that limit sits above it.
+  Entitlement-only — no developer-portal capability, automatic signing carries it.
+
+  Signed: Kev + claude-fable-5.1, 2026-09-02, Confidence 0.8 (the entitlement is
+  Apple's documented lever for exactly this; the 4 GB ceiling vs the real per-device
+  jetsam budget is still the verify-owed measurement — os_proc_available_memory()
+  on hardware). Prior: none (new file).
+-->
+<dict>
+	<key>com.apple.developer.kernel.increased-memory-limit</key>
+	<true/>
+</dict>
+</plist>

@@ -19,6 +19,8 @@ below), so no surface can drift.
 | Surface | Source of truth | Build number |
 |---|---|---|
 | macOS (TestFlight / MAS / nightly DMG) | `macos/project.yml` → `MARKETING_VERSION` | **Xcode Cloud auto-managed** — increments per cloud build, no repo commit. The repo's `CURRENT_PROJECT_VERSION: "1"` only feeds local/nightly builds, which never ship to a store. |
+| iOS / iPadOS (TestFlight / App Store) | `macos/project.yml` → `MARKETING_VERSION` (inherited by the `M1K3iOS` target — one number, no second edit) | **Xcode Cloud auto-managed**, the same counter as macOS: Mac and iOS archive in one `Release` run into the single universal `app.m1k3` record, so a run mints e.g. build `266` for both platforms (ASC keys build numbers per platform, so the shared number is legal and convenient). |
+| visionOS (target exists, no archive action yet) | same `MARKETING_VERSION` (`M1K3visionOS`) | Xcode Cloud, once a visionOS archive action is added to the workflow. |
 | Android (Play) | `app/composeApp/build.gradle.kts` → `versionName` | `versionCode = MAJOR×10000 + MINOR×100 + PATCH` (so `1.0.0` → `10000`, `1.2.3` → `10203`). Monotonic and derivable — never hand-pick an unrelated integer. |
 | Desktop (Compose, unshipped) | `app/composeApp/build.gradle.kts` → `packageVersion` | — |
 

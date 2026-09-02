@@ -214,7 +214,7 @@ jobs:
     # M1K3-Tests workspace scheme (the app project can't reference package test
     # targets). Guard against a `.testTarget` added to Package.swift but not the
     # scheme — which would silently never run. Pure-Python, no build, seconds.
-    name: Test scheme covers all targets
+    name: Project guards (test scheme · store targets)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -222,6 +222,15 @@ jobs:
       - name: Check M1K3-Tests scheme vs Package.swift
         working-directory: macos
         run: python3 tools/ci/check_test_scheme.py
+      # Every store-bound app target must upload into the ONE universal App Store
+      # record (`app.m1k3`), ship a privacy manifest (iOS/visionOS), and own its
+      # generated Info.plist. A drift here fails only at Xcode Cloud upload
+      # otherwise — after the full build, with no file:line. Seconds, pure Python.
+      - name: Check store targets share the one App Store record
+        working-directory: macos
+        run: |
+          python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --quiet pyyaml
+          python3 tools/ci/check_store_targets.py
 
   doc-drift:
     # Guard the docs against silent staleness: every `.library` product in
@@ -266,7 +275,7 @@ jobs:
             ${{ needs.swift-mac.result == 'success' && '✅' || (needs.swift-mac.result == 'skipped' && '⏭️' || '❌') }} : Swift · Mac MVP (swift test)
             ${{ needs.app-build.result == 'success' && '✅' || (needs.app-build.result == 'skipped' && '⏭️' || '❌') }} : Swift · App shell (xcodebuild)
             ${{ needs.mobile-build.result == 'success' && '✅' || (needs.mobile-build.result == 'skipped' && '⏭️' || '❌') }} : Swift · iOS + visionOS shells (xcodebuild)
-            ${{ needs.scheme-drift.result == 'success' && '✅' || '❌' }} : Test scheme covers all targets
+            ${{ needs.scheme-drift.result == 'success' && '✅' || '❌' }} : Project guards (test scheme · store targets)
             ${{ needs.doc-drift.result == 'success' && '✅' || '❌' }} : Docs match the code (module map)
 
             <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run> · by ${{ github.actor }}

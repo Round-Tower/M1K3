@@ -51,9 +51,12 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' build | xcbeautify   # alw
   compile breaks in `M1K3App/` fail at PR time, not only at release, and a
   `mobile-build` job (unsigned `M1K3iOS` + `M1K3visionOS` against the
   simulator SDKs) so the iOS/visionOS shell can't silently break either.
-  The app target builds for distribution via Xcode Cloud →
-  TestFlight; pushing to `master` triggers that pipeline (a deliberate,
-  user-gated action).
+  The app targets build for distribution via Xcode Cloud → TestFlight
+  (`M1K3` for macOS and `M1K3iOS` for iPhone/iPad, both archived by the one
+  `Release` workflow into the single universal `app.m1k3` App Store record);
+  pushing to `master` triggers that pipeline (a deliberate, user-gated
+  action). `tools/ci/check_store_targets.py` pins the bundle-ID /
+  privacy-manifest / Info.plist invariants the lane depends on.
 - Tests use the **swift-testing** framework (`import Testing`, `@Test`), not
   XCTest.
 
