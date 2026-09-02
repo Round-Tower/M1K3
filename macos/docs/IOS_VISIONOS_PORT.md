@@ -218,8 +218,9 @@ for it), so on-device run is verify-owed, same as the spike.
 - **Phase D — Spatial (visionOS flagship)** — volumetric avatar + walkable memory
   constellation. The shell renders as a window today; `m1k3Glass` is the seam to upgrade.
 - **Phase E — Distribution** — ~~iOS/visionOS icons~~ (DONE 2026-07-20, see below),
-  entitlements, an Xcode Cloud → TestFlight lane (the current lane is macOS-only),
-  device-tune the memory cap.
+  ~~entitlements, an Xcode Cloud → TestFlight lane~~ (DONE 2026-09-02, see the
+  addendum at the end), device-tune the memory cap (`os_proc_available_memory()`
+  on hardware — still owed).
 
 ### App icons (done 2026-07-20)
 
@@ -538,3 +539,69 @@ _Signed: Kev + claude-fable-5, 2026-07-30, Confidence 0.75 (compile-verified for
 iOS/visionOS; mirrors the SDK-header-verified Mac collector's shape but has no
 device-run or MXMetricManagerSubscriber smoke test of its own, by mobile-shell
 design). Prior: Kev + claude-fable-5 (this file)._
+
+---
+
+## Addendum (2026-09-02) — Phase E lands: the iOS → TestFlight lane
+
+> **This doc is the port's build log; the live iOS plan is `macos/ROADMAP.md` §1
+> (the parity ladder).** Everything after 2026-07-30 that isn't here — Brain at
+> Home Phase C on the device side (PR #152: `BrainPairingScreen`,
+> `BrainAtHomeSection`, `AppCore+BrainLink`, the `M1K3BrainLink` dep), the voice
+> turn-boundary work (#118/#124/#129), the grounding-budget fix crossing to mobile
+> (#101 → `AppCore.swift`) — is recorded in the ROADMAP and PR history, not
+> re-narrated here.
+
+**What the Mac's 1.0.0 (265) TestFlight build (2026-09-01) showed about iOS:** the
+whole lane was three facts apart from working.
+
+1. **The bundle ID was the wrong shape.** The mobile targets carried
+   `app.m1k3.ios` / `app.m1k3.visionos` — reasonable-looking, but the developer
+   portal registers `app.m1k3` as **UNIVERSAL** and the ASC app record (id
+   6780230835) already holds IOS + VISION_OS 1.0.0 version drafts. Universal
+   purchase means one record, one identifier, every platform. A suffixed ID has
+   no record to land in and fails only at upload, after the full build. Both
+   mobile targets now build as `app.m1k3` (`project.yml`). Immutable once a
+   build ships — this is the one-way door, chosen deliberately: one listing,
+   one rating pool, "Available on Mac · iPhone · iPad · Vision Pro".
+2. **No privacy manifest on the mobile bundles.** The Mac sweeps
+   `M1K3App/PrivacyInfo.xcprivacy` in with its directory; the `MobileShell`
+   template cherry-picks and never listed it. Apple rejects an iOS binary
+   without one. The template now ships the same file (zero tracking, zero
+   collected data).
+3. **No iOS entitlements at all.** New `M1K3iOSApp/M1K3iOS.entitlements` carries
+   exactly one entry — `com.apple.developer.kernel.increased-memory-limit` — the
+   lever that lets the 4 GB mobile MLX ceiling (`MLXMemoryBudget`) engage before
+   the kernel's jetsam does. iOS needs none of the Mac's sandbox/network/file
+   entitlements (all Info.plist usage keys or implicit).
+
+Also folded in: `NSBonjourServices: [_m1k3._tcp]` on both mobile targets (iOS
+gates Bonjour *browsing* on it — without it only the QR's `hosts=` dial-in
+worked), `PRODUCT_NAME: M1K3` on both mobile targets (Xcode derives
+`CFBundleName` from it even with an explicit plist — a plist `CFBundleName`
+lost on the first local archive; the schemes keep their platform names), the
+visionOS target's **own** generated Info.plist (the two
+mobile targets were writing the same file), and `ci_post_clone.sh` resolving
+packages against `CI_XCODE_SCHEME` instead of the hardcoded Mac scheme.
+
+**The guard:** `tools/ci/check_store_targets.py` (+ unit tests) pins all three
+invariants in the PR CI's project-guards job — red against the pre-change
+`project.yml`, green after — so the next "reasonable-looking" rename fails in
+seconds, not at upload.
+
+**The lane itself** is one `PATCH` on the existing `Release` workflow: a second
+`ARCHIVE` action (`platform: IOS`, `scheme: M1K3iOS`, App-Store-eligible), so a
+master merge mints a Mac build and an iOS build with the same number in one run
+(`docs/XCODE_CLOUD_RELEASE.md` §3). Sequenced AFTER this change merges — an iOS
+archive of a still-suffixed master would just fail at upload.
+
+**Verify-owed, in order:** the first iOS build reading VALID in ASC under
+platform IOS · TestFlight install on Kev's iPhone 17 Pro (iOS 27 beta) · the
+on-device smoke the July harness did but the shell never has (Mini chat, Lil
+download + a turn under the memory entitlement, voice round-trip, the Brain at
+Home ceremony with Bonjour now declared).
+
+_Signed: Kev + claude-fable-5.1, 2026-09-02, Confidence 0.85 (the three facts are
+read off the ASC API + developer portal the same day, not inferred; the guard is
+red-then-green against the real file; the cloud upload is the still-unverified
+step — nothing here is claimed to have reached TestFlight yet)._

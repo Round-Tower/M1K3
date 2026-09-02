@@ -18,6 +18,7 @@ xcuserdata/
 M1K3.xcodeproj/
 M1K3App/Info.generated.plist
 M1K3iOSApp/Info.generated.plist
+M1K3visionOS/Info.generated.plist
 
 # macOS
 .DS_Store

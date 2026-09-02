@@ -57,6 +57,24 @@ separate Developer-ID DMG path (`tools/release/release-macos.sh`).
 1. **Analyze** — **Scheme:** `M1K3` · **Platform:** macOS.
 2. **Test** — **Workspace:** `M1K3.xcworkspace` · **Scheme:** `M1K3-Tests` · **Platform:** macOS.
 3. **Archive** — **Scheme:** `M1K3` · **Platform:** macOS · **Distribution:** *TestFlight (Internal) and App Store*.
+4. **Archive — iOS** (added 2026-09-02) — **Scheme:** `M1K3iOS` · **Platform:** iOS ·
+   **Distribution:** *TestFlight (Internal) and App Store*. Same workflow, same
+   push, same build number: one master merge mints a Mac build AND an iPhone/iPad
+   build into the one universal `app.m1k3` record. Added via the API (a `PATCH
+   /v1/ciWorkflows/{id}` appending an `ARCHIVE` action with `platform: IOS`,
+   `scheme: M1K3iOS`, `buildDistributionAudience: APP_STORE_ELIGIBLE`) — the UI
+   route is Edit Workflow → Actions → Archive → iOS.
+
+> **Live state (read via the API 2026-09-02):** the workflow's actions are the
+> Archive actions only — no Analyze/Test action. The test gate is
+> `ci_post_clone.sh` step 5 (`swift test`, fails the run before Archive), which
+> runs once per action; two archive actions = two gate runs on parallel VMs.
+>
+> **The iOS lane's preconditions live in `project.yml`, pinned by
+> `tools/ci/check_store_targets.py`:** every store target uploads under the one
+> universal bundle ID `app.m1k3` (a per-platform suffix has no ASC record and fails
+> only at upload), the mobile targets ship `PrivacyInfo.xcprivacy` (Apple rejects an
+> iOS binary without one), and each target owns its generated Info.plist.
 
 > **⚠️ The Test action MUST use the workspace `M1K3.xcworkspace` + scheme `M1K3-Tests`,
 > NOT the app project's `M1K3` scheme.** This is the one piece you wire in App Store Connect.

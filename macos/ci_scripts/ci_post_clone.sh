@@ -87,10 +87,13 @@ else
 fi
 
 # 4. Resolve SPM packages — Xcode Cloud starts with empty DerivedData.
-echo "--- Resolving Swift packages..."
+# Resolve against the scheme THIS action archives (CI_XCODE_SCHEME: `M1K3` for the
+# macOS action, `M1K3iOS` for the iOS one — same package graph either way; the
+# fallback keeps local/manual runs on the Mac scheme).
+echo "--- Resolving Swift packages (scheme ${CI_XCODE_SCHEME:-M1K3})..."
 xcodebuild -resolvePackageDependencies \
   -skipPackagePluginValidation \
-  -scheme M1K3 \
+  -scheme "${CI_XCODE_SCHEME:-M1K3}" \
   -project "$MACOS_DIR/M1K3.xcodeproj"
 
 # 4b. SCHEME-DRIFT GUARD: the native Test action (Xcode Cloud) runs the test

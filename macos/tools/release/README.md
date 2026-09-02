@@ -64,10 +64,16 @@ The Apple mobile/spatial surface is the native SwiftUI shell under
 `../../M1K3iOSApp/` (`M1K3iOS` / `M1K3visionOS` targets), built on the SAME
 `Sources/` package graph as the Mac app — NOT the KMP `app/` (that's the Android
 effort). The on-device ladder is **Mini + Lil only** (Big is excluded on mobile;
-`M1K3iOSApp/AppCore.swift`). Release path: App Store Connect for iPhone/iPad/Vision
-Pro. See `../../docs/IOS_VISIONOS_PORT.md`.
+`M1K3iOSApp/AppCore.swift`). Release path: the SAME Xcode Cloud `Release` workflow
+as the Mac — a second Archive action (`M1K3iOS`, platform iOS) uploads into the one
+universal `app.m1k3` record on every master merge (`../../docs/XCODE_CLOUD_RELEASE.md`
+§3). No local script: Xcode Cloud signs and exports itself. The lane's
+preconditions (universal bundle ID, privacy manifest, own Info.plist) are pinned
+by `../ci/check_store_targets.py`. See `../../docs/IOS_VISIONOS_PORT.md`.
 
 ---
-*Bundle/app ID is `app.m1k3` across platforms (reverse-DNS of m1k3.app). It's
-invisible to users and immutable post-launch — ASO lives in the store listing,
-never the ID.*
+*Bundle/app ID is `app.m1k3` across platforms (reverse-DNS of m1k3.app) —
+registered UNIVERSAL, so Mac + iOS + visionOS builds share one record (universal
+purchase). It's invisible to users and immutable post-launch — ASO lives in the
+store listing, never the ID. (The mobile targets briefly carried `.ios`/`.visionos`
+suffixes until 2026-09-02; those had no record to upload into.)*
