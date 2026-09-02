@@ -85,3 +85,50 @@ struct JSONRPCIDRemapTests {
         }
     }
 }
+
+/// The shared isolate/restore seam BOTH the loopback server and the LAN
+/// Brain-at-Home route apply (the LAN route had missed it — #176 was still live
+/// there). Pinning it here covers both surfaces with one contract.
+struct MCPRequestIDRemapTests {
+    private func request(_ json: String) -> HTTPRequest {
+        HTTPRequest(method: "POST", headers: [:], body: body(json), path: "/mcp")
+    }
+
+    @Test("isolate rewrites the request id and restore maps the response back")
+    func isolateAndRestore() throws {
+        let isolated = try #require(
+            MCPRequestIDRemap.isolate(
+                request(#"{"jsonrpc":"2.0","id":1,"method":"tools/call"}"#), as: .string("m1k3-lan#5")
+            )
+        )
+        #expect(isolated.clientID == .int(1))
+        #expect(try HTTPWireCodec.requestID(inBody: #require(isolated.request.body)) == .string("m1k3-lan#5"))
+
+        let serverResponse = HTTPResponse.data(body(#"{"jsonrpc":"2.0","id":"m1k3-lan#5","result":{}}"#))
+        guard case let .data(mapped, _) = MCPRequestIDRemap.restore(serverResponse, to: isolated.clientID) else {
+            Issue.record("expected .data"); return
+        }
+        #expect(HTTPWireCodec.requestID(inBody: mapped) == .int(1))
+    }
+
+    @Test("a notification (no id) passes through untouched with nothing to restore")
+    func notificationPassesThrough() throws {
+        let original = request(#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#)
+        let isolated = try #require(MCPRequestIDRemap.isolate(original, as: .string("m1k3#1")))
+        #expect(isolated.clientID == nil)
+        #expect(isolated.request.body == original.body)
+        let accepted = HTTPResponse.accepted()
+        if case .accepted = MCPRequestIDRemap.restore(accepted, to: isolated.clientID) {} else {
+            Issue.record("restore with a nil clientID must pass through")
+        }
+    }
+
+    @Test("an explicit id:null is isolated like any other id")
+    func nullIDIsolated() throws {
+        let isolated = try #require(
+            MCPRequestIDRemap.isolate(request(#"{"jsonrpc":"2.0","id":null,"method":"x"}"#), as: .string("m1k3#9"))
+        )
+        #expect(isolated.clientID == .null)
+        #expect(try HTTPWireCodec.requestID(inBody: #require(isolated.request.body)) == .string("m1k3#9"))
+    }
+}

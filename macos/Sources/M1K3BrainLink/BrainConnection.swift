@@ -270,7 +270,17 @@ public enum BrainConnection {
                 var run: (@Sendable () -> Void)!
             }
             let box = LoopBox()
-            box.run = {
+            // `run` captures `box` WEAKLY, then re-binds a strong local for the
+            // receive callback. A strong self-reference (box → run → box) is a
+            // 2-node ARC cycle independent of the stream: after the stream ends,
+            // box and run keep each other alive forever, leaking the box plus the
+            // NWConnection + continuation it closes over — one per LAN turn. Here
+            // box stays alive only while a receive is pending (the callback holds
+            // the strong local) and deallocates once the loop stops. The callback
+            // captures the strong `let`, not the weak var, so there's no
+            // concurrently-executing mutable-capture warning either.
+            box.run = { [weak box] in
+                guard let box else { return }
                 connection.receive(minimumIncompleteLength: 1, maximumLength: 262_144) { data, _, isComplete, error in
                     if let data, !data.isEmpty {
                         continuation.yield(data)

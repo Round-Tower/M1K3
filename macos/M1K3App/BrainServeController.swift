@@ -60,6 +60,10 @@ final class BrainServeController {
     /// The scoped LAN MCP session — rebuilt per initialize, like the loopback
     /// server's session (one LAN MCP client at a time, same v1 shape).
     private var lanMCPSession: (server: Server, transport: StatelessHTTPServerTransport)?
+    /// Process-unique counter for the LAN route's JSON-RPC id isolation (#176):
+    /// paired devices all number their requests from 1, so their ids must be
+    /// remapped before the shared transport routes response waiters by id.
+    private var lanRequestIDCounter: UInt64 = 0
     /// One job store for the controller's lifetime, so a LAN ask_m1k3 job
     /// survives a session rebuild (the loopback server's own rationale).
     private let lanAskJobStore = AskJobStore()
@@ -281,7 +285,17 @@ final class BrainServeController {
         guard let transport = lanMCPSession?.transport else {
             return .error(statusCode: 500, MCPError.internalError("MCP session unavailable"))
         }
-        return await transport.handleRequest(request)
+        // The LAN transport routes response waiters by the client-chosen id
+        // GLOBALLY too, and each paired device numbers from 1 — so the #176
+        // collision was still live on this route (the loopback fix never reached
+        // it). Isolate every request's id, exactly as the loopback server does.
+        lanRequestIDCounter &+= 1
+        guard let isolated = MCPRequestIDRemap.isolate(request, as: .string("m1k3-lan#\(lanRequestIDCounter)")) else {
+            Self.log.error("lan id-remap re-encode failed; forwarding un-isolated request (collision risk)")
+            return await transport.handleRequest(request)
+        }
+        let response = await transport.handleRequest(isolated.request)
+        return MCPRequestIDRemap.restore(response, to: isolated.clientID)
     }
 
     // MARK: - Pairing ceremony

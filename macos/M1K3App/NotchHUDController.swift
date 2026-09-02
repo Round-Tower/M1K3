@@ -155,6 +155,11 @@ final class NotchHUDController {
                 if progress >= 1 { break }
                 try? await Task.sleep(for: .milliseconds(8)) // ~120Hz
             }
+            // If a newer animate() cancelled this task, the successor now owns the
+            // window — snapping to THIS animation's final frame (and firing its
+            // completion, e.g. hide's orderOut) would clobber it, leaving the HUD
+            // stuck at the superseded destination. Only settle if we finished.
+            guard !Task.isCancelled else { return }
             window?.setFrameOrigin(to.origin)
             window?.alphaValue = to.alpha
             completion?()

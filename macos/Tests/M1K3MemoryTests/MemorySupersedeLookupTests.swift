@@ -88,4 +88,21 @@ struct MemorySupersedeLookupTests {
         #expect(related.contains { $0.id == fresh.id })
         #expect(!related.contains { $0.id == stale.id })
     }
+
+    @Test("related(to:) does not walk supersedes edges as topical — a corrected fact's neighbours don't leak in")
+    func relatedIgnoresSupersedesEdges() async throws {
+        let f = try Fixture()
+        let old = try await f.remember("Kev works at OldCo.")
+        let anchor = try await f.remember("Kev works at NewCo.", supersedes: old.id)
+        // A fact that is ONLY about the old, corrected employer, linked to `old`.
+        let oldOnly = try await f.remember("OldCo is a bakery.")
+        try f.store.link(MemoryEdge(fromID: old.id, toID: oldOnly.id, relation: "about-place"))
+
+        let related = try f.store.related(to: anchor.id)
+
+        // The only path anchor→oldOnly runs through the anchor→old *supersedes*
+        // edge. A correction is not a topical relation, so a fact about the
+        // corrected version must not surface as related to the current one.
+        #expect(!related.contains { $0.id == oldOnly.id })
+    }
 }

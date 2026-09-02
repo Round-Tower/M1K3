@@ -79,6 +79,25 @@ struct CurrentLocationToolTests {
         #expect(result.output == "Error: Location access is off in System Settings.")
     }
 
+    @Test("a raw CoreLocation error is rendered as calm copy, never leaked to the model")
+    func rawErrorIsCalm() async throws {
+        struct FailingProvider: LocationProviding {
+            func currentLocation() async throws -> LocationSnapshot {
+                // A CLError is an NSError in kCLErrorDomain — the app adapter's
+                // didFailWithError resumes with exactly this, raw.
+                throw NSError(
+                    domain: "kCLErrorDomain", code: 2,
+                    userInfo: [NSLocalizedDescriptionKey:
+                        "The operation couldn't be completed. (kCLErrorDomain error 2.)"]
+                )
+            }
+        }
+        let result = try await CurrentLocationTool(provider: FailingProvider(), precision: .coarse)
+            .execute(input: [:])
+        #expect(result.output.hasPrefix("Error:"))
+        #expect(!result.output.contains("kCLErrorDomain"))
+    }
+
     @Test("location is local-sensitive by charter")
     func localSensitive() {
         let tool = CurrentLocationTool(
