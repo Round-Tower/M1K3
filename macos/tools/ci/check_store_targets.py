@@ -194,7 +194,7 @@ def main(argv: list[str]) -> int:
     names = sorted(store_targets(project))
     if not problems:
         print(f"✓ {len(names)} store targets ({', '.join(names)}) all upload into {EXPECTED_BUNDLE_ID!r} "
-              f"with a privacy manifest, their own Info.plist, and iPad orientations declared.")
+              f"with a privacy manifest and their own Info.plist; the iOS target declares its iPad orientations.")
         return 0
     print("❌ project.yml store-target drift:")
     for p in problems:
