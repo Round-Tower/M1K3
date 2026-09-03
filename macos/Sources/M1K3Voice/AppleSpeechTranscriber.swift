@@ -62,6 +62,10 @@
 //  identical error the moment speech arrives. Apple's recogniser does not run
 //  on the simulator at all; voice capture is device-only, and the loop now says
 //  so on screen instead of parking mutely. The on-device floor is untouched.
+//
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — the VPIO output bus gets a silent render source (mainMixerNode touched,
+//  volume 0): the phone was throwing ~330 render errors a second on every listen with voice processing on. Verify-owed
+//  by count on device (render err: -1 → 0); no behaviour change intended.
 
 import AVFoundation
 import Foundation
@@ -579,6 +583,16 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // mono at the device rate), so a format read first would install a tap
         // that no longer matches the node.
         enableVoiceProcessing(on: inputNode)
+        // Give the I/O unit's OUTPUT element a render source. With voice
+        // processing on, the engine's I/O unit is a VPIO whose output bus
+        // renders every cycle regardless; with nothing attached to
+        // `outputNode`, that render fails — the phone logged
+        // `AURemoteIO … render err: -1` ~330×/s through every listen, think
+        // and speak phase (2026-09-03, iPhone 17 Pro; the Mac's log shows
+        // none). Touching `mainMixerNode` implicitly connects mixer → output;
+        // an input-less mixer renders silence, so the bus is satisfied and
+        // nothing audible changes. Volume 0 is belt-and-braces.
+        audioEngine.mainMixerNode.outputVolume = 0
         let format = inputNode.outputFormat(forBus: 0)
         Self.log.notice(
             "stt mic input format \(format.sampleRate, privacy: .public)Hz ch=\(format.channelCount, privacy: .public)"
