@@ -12,6 +12,8 @@
 //  drive the TDD'd ceremony; the scanner + live pairing feel are the Phase C
 //  hardware verify). Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: shorter paired/expiry copy.
+//
 
 #if os(iOS)
     import AVFoundation
@@ -56,7 +58,7 @@ struct BrainPairingScreen: View {
             case .done:
                 Section {
                     Label(
-                        "Paired with \(core.homeBrain?.name ?? "your Mac") — pick “Home” under Brain in Settings to use it.",
+                        "Paired with \(core.homeBrain?.name ?? "your Mac"). Choose Home under Brain to use it.",
                         systemImage: "checkmark.circle.fill"
                     )
                     .foregroundStyle(.green)
@@ -101,7 +103,7 @@ struct BrainPairingScreen: View {
         } header: {
             Text("No camera? Paste the link")
         } footer: {
-            Text("The code expires about a minute after the Mac shows it — pair promptly.")
+            Text("Codes expire after about a minute.")
         }
     }
 

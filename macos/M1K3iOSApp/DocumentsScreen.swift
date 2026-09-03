@@ -8,6 +8,9 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-06, Confidence 0.8. Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: the empty-state description says what goes here,
+//  not how to do it — the button does that.
+//
 
 import M1K3Knowledge
 import SwiftUI
@@ -24,7 +27,7 @@ struct DocumentsScreen: View {
                 ContentUnavailableView {
                     Label("No documents yet", systemImage: "doc.text.magnifyingglass")
                 } description: {
-                    Text("Import a PDF or text file and M1K3 can ground its answers in it.")
+                    Text("PDFs and text files M1K3 can answer from.")
                 } actions: {
                     Button("Import a file") { importing = true }
                         .buttonStyle(.borderedProminent)

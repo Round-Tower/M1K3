@@ -10,6 +10,9 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-06, Confidence 0.75. Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: the two-line tagline became the one instruction the
+//  screen needs; the lock line below already carries the privacy promise.
+//
 
 import M1K3Avatar
 import M1K3Inference
@@ -37,10 +40,9 @@ struct OnboardingScreen: View {
                 .font(.pixel(34))
                 .kerning(3)
                 .foregroundStyle(.white)
-            Text("A local, private AI companion.\nPick a brain to get started.")
+            Text("Pick a brain.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
 
             VStack(spacing: 12) {
                 ForEach(brains) { tier in

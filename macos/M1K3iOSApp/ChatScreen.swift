@@ -22,6 +22,9 @@
 //  handoff to companions/None. 07-30: voice-mode button reuses !brainReady
 //  (PR #82 review DRY nit).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut (Kev's diff): the brain subtitle under the wordmark
+//  and the empty-state headline/tagline are gone; the chips carry the invitation. Dead brainSubtitle removed with it.
+//
 
 import M1K3Avatar
 import M1K3Chat
@@ -141,9 +144,6 @@ struct ChatScreen: View {
                     .font(.pixel(28))
                     .kerning(2)
                     .foregroundStyle(.white)
-                Text(brainSubtitle)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
             }
             if core.brainLoad.isActive {
                 brainLoadRow
@@ -198,13 +198,6 @@ struct ChatScreen: View {
         .padding(.horizontal, 24)
     }
 
-    private var brainSubtitle: String {
-        switch core.selectedBrain.backing {
-        case .appleFoundationModels: "Apple Intelligence"
-        case .mlx: core.selectedBrain.mlxModelID?.contains("Qwen") == true ? "MLX · Qwen3-4B" : "MLX · local"
-        }
-    }
-
     // MARK: - Transcript
 
     private var transcript: some View {
@@ -256,20 +249,11 @@ struct ChatScreen: View {
         }
     }
 
+    /// The blank canvas is just the starter chips — no headline, no tagline
+    /// (Kev's cognitive-load cut, 2026-09-03: the chips already say "ask").
     private var emptyState: some View {
-        VStack(spacing: 14) {
-            VStack(spacing: 8) {
-                Text("Ask me anything.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Text("Grounded in your documents and memories — on device.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-            }
-            starterChips
-        }
-        .padding(.top, 28)
+        starterChips
+            .padding(.top, 32) // one number: was 28 on the wrapper + 4 on the chips
     }
 
     /// Starter prompts for the blank canvas — the same tap-to-send path (and the
@@ -285,7 +269,6 @@ struct ChatScreen: View {
         // and canSend requires a non-empty draft — so canSend would dim them by
         // default and swallow every tap even when the brain is warm and ready.
         .opacity(brainReady ? 1 : 0.5)
-        .padding(.top, 4)
     }
 
     private var starterChipStack: some View {

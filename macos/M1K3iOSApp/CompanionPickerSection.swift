@@ -24,6 +24,9 @@
 //  Review: Kev + claude-fable-5, 2026-07-29 — icons removed (text-only cards) and
 //  the None option added on top of the package-pinned noneID sentinel.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: footers say what the choice is, not what to do
+//  next.
+//
 
 import M1K3Avatar
 import SwiftUI
@@ -58,15 +61,15 @@ struct CompanionPickerSection: View {
 
     private var footerText: String {
         if noneChosen {
-            return "No face — just the conversation. The chat backdrop stays a calm dark."
+            return "No face — just the conversation."
         }
         guard creatureChosen else {
-            return "M1K3's face in chat. Pick a 3D companion to bring it to life on device."
+            return "M1K3's face in chat."
         }
         #if os(visionOS)
-            return "Your companion appears in chat with its own textures."
+            return "Your companion shows its own textures."
         #else
-            return "Phosphor is a glowing rim that shifts with M1K3's mood; Cel toon-bands the creature's own texture."
+            return "Phosphor glows with M1K3's mood. Cel toon-shades the creature."
         #endif
     }
 

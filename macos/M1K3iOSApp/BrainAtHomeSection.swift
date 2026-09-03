@@ -5,9 +5,11 @@
 //  The Settings section for Brain at Home, device side: pair (→ the
 //  ceremony screen), the paired Mac's live status, and Forget. The privacy
 //  line states the honest boundary: prompts go to YOUR Mac over your own
-//  Wi-Fi, TLS-encrypted, and nowhere else.
+//  Wi-Fi, encrypted (TLS), and nowhere else.
 //
 //  Signed: Kev + claude-fable-5, 2026-08-24, Confidence 0.85. Prior: Unknown.
+//
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: both footers down to the fact + the guarantee.
 //
 
 import M1K3BrainLink
@@ -53,11 +55,8 @@ struct BrainAtHomeSection: View {
         } footer: {
             Text(
                 core.homeBrain == nil
-                    ? "Use your Mac’s bigger brain from this device. Pair once by QR; "
-                    + "everything stays on your own Wi-Fi."
-                    : "When Home is selected, this device sends prompts to your Mac over "
-                    + "your own Wi-Fi, TLS-encrypted — never to the internet. Your Mac "
-                    + "answers with its bigger brain; its own turns come first."
+                    ? "Use your Mac’s bigger brain from this device, over your own Wi-Fi."
+                    : "Prompts go to your Mac over your own Wi-Fi, encrypted — never to the internet."
             )
         }
     }
