@@ -382,7 +382,17 @@ order the Mac's soul shows through:
 **Exit:** the Settings tabs read the same on both platforms and every consent
 toggle exists on iOS with the same copy.
 
-**Phase 2 — voice parity (the port doc's Phase B).** Kokoro TTS (pure MLX
+**Phase 2 — voice parity (the port doc's Phase B).** *Landed 2026-09-03 (the
+voice-first pass): sentence-streamed speech + spoken tool interstitials (the
+Mac adapter's `runTurnStreaming`, ported), the karaoke Focus-reader line over a
+timeline of fading spoken bubbles (`SpeechHighlight` + `KaraokeReadingText`
+cherry-picked into the mobile shell), mute-while-listening + tap-the-face-to-wake,
+and the interruption/route negatives as a pure `AudioInterruptionPolicy` (a call
+or headphones-out PAUSES via the new `VoiceLoopMachine.pause`; an interruption
+ending never resumes the mic unasked; a media-services reset exits) — with
+AVAudioSession activation moved off the main actor (#85's watchdog suspect).
+Simulator-verified to the parked-idle screen; the spoken beat, karaoke follow,
+and interruptions are Kev's phone.* Still open here: Kokoro TTS (pure MLX
 since #58) vs AVSpeech decided on a **measured 10-minute thermal burn**;
 WhisperKit vs Apple Speech (assert on-device recognition, fail loud on the
 silent server fallback); sentence-streamed auto-speak in chat

@@ -74,6 +74,18 @@ final class AppCore {
     /// The live voice-first loop — non-nil while the mode is active (drives the
     /// full-screen VoiceScreen cover). Internal-set: AppCore+Voice owns entry/exit.
     var voiceLoop: VoiceLoopController?
+    /// Word-highlight state for the karaoke line in voice mode — the Mac's
+    /// SpeechHighlight, cherry-picked verbatim; fed by AVSpeechProvider's live
+    /// word ranges (AppCore+Voice.wireSpeechCallbacks).
+    let speechHighlight = SpeechHighlight()
+    /// Why the loop is parked after an audio interruption (a call, headphones
+    /// pulled) — shown in place of the idle caption; cleared on tap-to-talk.
+    var voicePauseNote: String?
+    /// The serialized speak dependency's waiter (AppCore+Voice.speakAndWait).
+    var pendingSpeechEnd: CheckedContinuation<Void, Never>?
+    /// AVAudioSession interruption / route-change / reset observers, installed
+    /// for the life of a voice session.
+    var audioSessionObservers: [any NSObjectProtocol] = []
 
     /// The single inference slot the responder holds. Re-pointed on brain switch
     /// (Mini = AFM, Lil = MLX) so the transcript is preserved across a swap.

@@ -15,9 +15,14 @@
 //    barge-in's stop() produces; an answerReady landing after exit).
 //  • exit is terminal and never cancels the in-flight turn — the answer still
 //    lands in the chat transcript, it just isn't spoken.
+//  • pause parks from ANY active state (the OS took the audio session: a call,
+//    headphones pulled) and, like exit, never cancels the turn — the answer
+//    lands unspoken; begin re-arms. Unlike mute it also stops speech.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.9 (pure, every
 //  transition test-pinned). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — `.pause` added for iOS audio
+//  interruptions (AudioInterruptionPolicy); five transitions pinned.
 //
 
 import Foundation
@@ -54,6 +59,9 @@ public enum VoiceLoopEvent: Equatable, Sendable {
     case interrupt
     /// Park the mic without leaving the mode.
     case mute
+    /// The audio session was taken away (interruption / route loss): stop
+    /// whichever direction is live and park. Not terminal — begin re-arms.
+    case pause
     case exit
 }
 
@@ -172,6 +180,23 @@ public struct VoiceLoopMachine: Sendable {
                 state = .idle
                 return [.stopListening]
             case .idle, .awaitingAnswer, .speaking, .ended:
+                return []
+            }
+
+        case .pause:
+            switch state {
+            case .listening:
+                state = .idle
+                return [.stopListening]
+            case .speaking:
+                // Later chunks / completion of the still-running generator
+                // land in idle and are dropped as stale — same shape as exit.
+                state = .idle
+                return [.stopSpeaking]
+            case .awaitingAnswer:
+                state = .idle
+                return []
+            case .idle, .ended:
                 return []
             }
 

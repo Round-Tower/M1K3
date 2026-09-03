@@ -168,6 +168,13 @@ public final class VoiceLoopController {
         dispatch(.mute)
     }
 
+    /// The OS took the audio session (a call, headphones pulled): park from
+    /// any active state. The in-flight turn is held, not cancelled — its
+    /// answer lands in the transcript unspoken. `begin()` re-arms.
+    public func pause() {
+        dispatch(.pause)
+    }
+
     public func exit() {
         dispatch(.exit)
     }
@@ -245,10 +252,10 @@ public final class VoiceLoopController {
             // it is time the user waited for nothing. Reported unsettled.
             timeline.completed(at: now)
             flushTimeline()
-        case .exit, .interrupt, .mute:
-            // A barge-in or exit mid-answer would otherwise lose the turn's
-            // numbers entirely, biasing every measurement towards the turns the
-            // user was patient enough to sit through.
+        case .exit, .interrupt, .mute, .pause:
+            // A barge-in, exit, or audio interruption mid-answer would otherwise
+            // lose the turn's numbers entirely, biasing every measurement
+            // towards the turns the user was patient enough to sit through.
             flushTimeline()
         case .begin, .partial, .speechFinished:
             break
