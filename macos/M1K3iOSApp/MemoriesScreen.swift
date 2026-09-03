@@ -9,6 +9,9 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-06, Confidence 0.75. Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: the description shows only while empty and lost its
+//  privacy clause (Settings carries the guarantee; the search prompt carries the instruction).
+//
 
 import M1K3Knowledge
 import M1K3Memory
@@ -33,13 +36,12 @@ struct MemoriesScreen: View {
                 ContentUnavailableView {
                     Label("\(liveCount) memories", systemImage: "brain")
                 } description: {
-                    // Now true on mobile: AppCore wires the shared
-                    // MemoryDistillationCoordinator, so durable facts are
-                    // distilled from chat into the corpus + the temporal graph,
-                    // all on device. (Runtime firing is verify-by-launch.)
-                    Text(liveCount == 0
-                        ? "Nothing here yet — memories build up as you chat, all on your device."
-                        : "Search what M1K3 remembers — all on your device.")
+                    // Distillation is live on mobile (AppCore wires the shared
+                    // MemoryDistillationCoordinator). One line, only while empty —
+                    // once there are memories the search bar is the instruction.
+                    if liveCount == 0 {
+                        Text("Memories build up as you chat.")
+                    }
                 }
             } else if hits.isEmpty, !searching {
                 ContentUnavailableView.search(text: query)

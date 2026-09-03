@@ -11,6 +11,10 @@
 //  Review: claude-fable-5, 2026-07-18 — added the Reading section (the shared
 //  ReadingMode picker + live ReadingText preview), part of the Mac-feel pass.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load pass (the Mac's #171 footer reduction, applied here):
+//  every footer down to the fact + the guarantee; the one-row Knowledge section folded into the Documents row; the
+//  reading sample stopped instructing.
+//
 
 import M1K3BrainLink
 import M1K3Inference
@@ -36,7 +40,13 @@ struct SettingsScreen: View {
                 NavigationLink {
                     DocumentsScreen()
                 } label: {
-                    Label("Documents", systemImage: "doc.text")
+                    // The indexed count rides the row — it was a one-row
+                    // "Knowledge" section of its own (cut 2026-09-03).
+                    LabeledContent {
+                        Text("\(core.indexedItemCount)")
+                    } label: {
+                        Label("Documents", systemImage: "doc.text")
+                    }
                 }
             }
 
@@ -86,10 +96,9 @@ struct SettingsScreen: View {
             } header: {
                 Text("Grounding")
             } footer: {
-                Text(
-                    "When on, M1K3 can search the web to answer. The only capability "
-                        + "that sends chat-derived queries off this device."
-                )
+                // "Internet", not "off this device": Brain at Home (above) sends prompts
+                // to your own Mac over Wi-Fi, and that stays true. Review catch, 2026-09-03.
+                Text("The only thing that reaches the internet. Every search shows in the reply as it happens.")
             }
 
             Section {
@@ -97,11 +106,7 @@ struct SettingsScreen: View {
             } header: {
                 Text("Appearance")
             } footer: {
-                Text(
-                    "M1K3's face fills the background while you chat — bright when idle, "
-                        + "receding while it thinks or you type. Off keeps a plain dark backdrop. "
-                        + "Reduce Transparency also turns it off."
-                )
+                Text("M1K3's face fills the background while you chat. Reduce Transparency also turns it off.")
             }
 
             Section {
@@ -110,16 +115,12 @@ struct SettingsScreen: View {
                         Text(mode.displayName).tag(mode.rawValue)
                     }
                 }
-                ReadingText("Reading should feel effortless — pick what suits your eyes.")
+                ReadingText("Reading should feel effortless.")
                     .font(.callout)
             } header: {
                 Text("Reading")
             } footer: {
                 Text(readingMode.detail)
-            }
-
-            Section("Knowledge") {
-                LabeledContent("Indexed documents", value: "\(core.indexedItemCount)")
             }
 
             Section {
@@ -128,7 +129,7 @@ struct SettingsScreen: View {
             } header: {
                 Text("About")
             } footer: {
-                Text("M1K3 — a local, private AI companion. Everything runs on your device.")
+                Text("Everything runs on your device.")
             }
         }
         .navigationTitle("Settings")
