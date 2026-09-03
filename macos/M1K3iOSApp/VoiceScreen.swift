@@ -22,7 +22,8 @@
 //  interruption's pause note replaces the idle caption. Same day, later: the
 //  parked caption reads "carry on" — the mode is hands-free, and parking now
 //  takes a long quiet spell (EndpointCadence.emptyListensBeforeParking), not
-//  a few seconds.
+//  a few seconds. And the bubble timeline no longer wipes itself at every
+//  sentence boundary (the per-chunk nil hop); it resets on a new answer.
 //
 
 import M1K3Avatar
@@ -76,11 +77,18 @@ struct VoiceScreen: View {
         }
         // The timeline: when the spoken utterance advances (sentence-streamed
         // lane) the finished line becomes a fading bubble behind the live one.
+        // `clear()` fires after EVERY chunk (one utterance per sentence), so
+        // the nil hop is a sentence boundary, not the end of the answer — a
+        // wipe keyed on it erased each bubble before its first frame (three
+        // reviews, 2026-09-03). Bubbles expire on their own clock; the
+        // timeline resets when a NEW answer starts.
         .onChange(of: core.speechHighlight.utteranceText) { oldText, newText in
             if let oldText, !oldText.isEmpty, oldText != newText {
                 retireSpokenBubble(oldText)
             }
-            if newText == nil { spokenBubbles.removeAll() }
+        }
+        .onChange(of: state) { _, newState in
+            if case .awaitingAnswer = newState { spokenBubbles.removeAll() }
         }
     }
 
