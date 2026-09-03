@@ -19,6 +19,8 @@
 //  VoiceTierRestore; the download, the swap, and Kokoro rendering through the
 //  phone's audio session are verify-by-launch on device — the Simulator has no
 //  MLX). Prior: none (new file, patterned on AppEnvironment.swift's extension).
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — a failed prepare drops the row back to Built-in (the tier that is
+//  actually wired), per the #199 review note; the Mac keeps the older optimistic behaviour.
 //
 
 import AVFoundation
@@ -89,6 +91,10 @@ extension AppCore {
                 // selectVoiceTier(.builtin) owns the state on this path.
             } catch {
                 guard !Task.isCancelled else { return }
+                // The façade never left Built-in — say so in the row, not just
+                // the banner (review note on #199; the Mac still shows the
+                // chosen-but-unwired tier here).
+                selectedVoiceTier = .builtin
                 voiceLoad = .failed(message: error.localizedDescription)
             }
         }
