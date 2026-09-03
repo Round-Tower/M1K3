@@ -145,6 +145,14 @@ extension AppCore {
     func resumeVoiceListening() {
         voicePauseNote = nil
         guard let controller = voiceLoop else { return }
+        // A pause can park MID-TURN (the answer lands unspoken while the turn
+        // keeps running). Re-arming the mic before that turn settles would send
+        // the next question into ChatSession.send's re-entrancy guard and fail
+        // it as "No answer arrived" (review, 2026-09-03). Say why instead.
+        guard !chat.isResponding else {
+            voicePauseNote = "Finishing the last answer — tap the face again in a moment."
+            return
+        }
         // Same gate as enterVoiceMode: a tap inside the activation window (or
         // after a pause left the session in an unknown state) must not arm the
         // engine against a session that isn't record-capable yet. Re-activating
@@ -421,6 +429,11 @@ extension AppCore {
             Self.voiceLog.notice("voice mode paused: \(String(describing: event), privacy: .public)")
             voiceLoop.pause()
             avatar.resetToIdle()
+            // As defensive as exit: a stop before the utterance started yields
+            // no didCancel on some OS builds, so onSpeakingEnded's clear() may
+            // never run — and the stale sentence would be "retired" as a bubble
+            // when the next real utterance begins (review, 2026-09-03).
+            speechHighlight.clear()
             voicePauseNote = note
         case .exit:
             Self.voiceLog.notice("voice mode exited: media services reset")
