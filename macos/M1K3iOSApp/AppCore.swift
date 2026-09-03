@@ -25,6 +25,10 @@
 //  for iOS/visionOS; on-device RUN is the Phase-B verify-owed — MLX needs Metal,
 //  which the simulator can't run). Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — voice output goes behind the Mac's SwappableSpeechProvider façade:
+//  Built-in stays the default, M1K3 Voice (Kokoro/MLX) is a Settings pick that downloads once (AppCore+VoiceOutput),
+//  restored on launch only when already staged (VoiceTierRestore).
+//
 
 import Foundation
 import M1K3Agent
@@ -35,6 +39,7 @@ import M1K3Chat
 import M1K3Inference
 import M1K3Knowledge
 import M1K3KnowledgeTools
+import M1K3Kokoro
 import M1K3Memory
 import M1K3MemoryChatBridge
 import M1K3MLX
@@ -65,9 +70,14 @@ final class AppCore {
 
     // MARK: - Voice-first mode (system providers; wiring in AppCore+Voice)
 
-    /// System TTS (AVSpeechSynthesizer) — the built-in voice tier. Kokoro/MLX
-    /// stays Mac-only for now, behind the same `SpeechProvider` seam.
-    let speech = AVSpeechProvider()
+    /// Voice OUTPUT, behind the swap façade the Mac uses: Built-in
+    /// (AVSpeechSynthesizer) is the first-run default and the swap-back target;
+    /// M1K3 Voice (Kokoro on pure MLX) downloads once on pick — see
+    /// AppCore+VoiceOutput. The loop and the karaoke callbacks only ever see the
+    /// façade, so a tier switch never re-wires them.
+    let speech: SwappableSpeechProvider
+    let builtinSpeech = AVSpeechProvider()
+    let kokoro: KokoroSpeechProvider
     /// Live on-device dictation (SFSpeechRecognizer + AVAudioEngine). On-device
     /// recognition is REQUIRED by the provider — no server fallback, by design.
     let transcriber = AppleSpeechTranscriber()
@@ -81,6 +91,18 @@ final class AppCore {
     /// Why the loop is parked after an audio interruption (a call, headphones
     /// pulled) — shown in place of the idle caption; cleared on tap-to-talk.
     var voicePauseNote: String?
+    /// The chosen TTS tier — restored on launch only when its weights are already
+    /// staged (VoiceTierRestore), persisted on pick.
+    /// Set only by AppCore+VoiceOutput (cross-file, so not `private(set)`).
+    var selectedVoiceTier: VoiceTier = .builtin
+    /// M1K3 Voice download/stage state — the Settings progress bar. Set only by
+    /// AppCore+VoiceOutput.
+    var voiceLoad: ModelLoadState = .idle
+    /// The in-flight M1K3 Voice download (AppCore+VoiceOutput) — held so a
+    /// Built-in pick mid-download can cancel it; generation-stamped like
+    /// `warmGeneration` so a cancel-then-repick can't clear the newer handle.
+    var voicePrepareTask: Task<Void, Never>?
+    var voicePrepareGeneration = 0
     /// The serialized speak dependency's waiter (AppCore+Voice.speakAndWait).
     var pendingSpeechEnd: CheckedContinuation<Void, Never>?
     /// The enqueue for the chunk being spoken, held so a stop that lands before
@@ -135,6 +157,8 @@ final class AppCore {
     /// deliberately NOT shared spelling with the Mac (it has no Home tier).
     nonisolated static let homeBrainActiveKey = "brainLink.homeActive"
     nonisolated static let webSearchEnabledKey = "webSearchEnabled"
+    /// Shared spelling with the Mac (AppEnvironment.selectedVoiceTierKey).
+    nonisolated static let selectedVoiceTierKey = "selectedVoiceTier"
     /// The full-bleed reactive avatar behind chat — default ON; the Settings
     /// toggle is the opt-out (the Mac's avatarDisplay panel/background choice,
     /// collapsed to a switch). Reduce Transparency also disables it, unstored.
@@ -182,6 +206,12 @@ final class AppCore {
     }()
 
     init() throws {
+        // Voice output starts on Built-in; M1K3 Voice is restored below only
+        // when it was chosen AND is already on disk. Constructing the Kokoro
+        // provider touches no MLX (safe on the Simulator) — prepare() does.
+        speech = SwappableSpeechProvider(builtinSpeech)
+        kokoro = KokoroSpeechProvider()
+
         // Same launch hygiene the Mac shell does, through the same shared call
         // (issue #85 makes a mid-conversation kill a real scenario here).
         VoiceModeDefaults.resetAtLaunch()
@@ -260,6 +290,19 @@ final class AppCore {
         // Speech lifecycle → avatar speaking state + the voice loop's completion
         // signal (speechDidEnd). One-time wiring, like the Mac's.
         wireSpeechCallbacks()
+        // Restore M1K3 Voice only if it was chosen AND already staged — never a
+        // silent ~354 MB re-download on launch (VoiceTierRestore, pinned). A
+        // chosen-but-purged voice shows as Built-in until picked again. Never on
+        // the Simulator: Kokoro's MLX preload would abort the process.
+        let persistedVoice = VoiceTierRestore.restoredTier(
+            persisted: UserDefaults.standard.string(forKey: Self.selectedVoiceTierKey)
+        )
+        if Self.neuralVoiceAvailable,
+           VoiceTierRestore.shouldRestore(selected: persistedVoice, modelStaged: kokoro.isModelStaged)
+        {
+            selectedVoiceTier = .m1k3Voice
+            prepareM1K3Voice()
+        }
         // Warm a restored MLX brain so it's ready to answer (Mini needs nothing;
         // never on the Simulator, where MLX aborts). Not when Home is fronting —
         // the slot is already pointed at the paired Mac; warming local MLX would
