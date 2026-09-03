@@ -18,6 +18,9 @@
 //  single-source-of-truth are pinned; the specific durations are judgement from a
 //  live complaint, and the felt beat is Kev's to settle at ⌘R). Prior: the two
 //  divergent literals in AppEnvironment+VoiceMode.swift and AppCore+Voice.swift.
+//  Review: Kev + claude-fable-5, 2026-09-03 — emptyListensBeforeParking joins the
+//  preset (conversational = 12) so patience through silence is a cadence
+//  property, not a hard-coded 2 in the machine.
 //
 
 import Foundation
@@ -41,6 +44,12 @@ public struct EndpointCadence: Sendable, Equatable {
     /// 1.2s default sits comfortably PAST the ~1s hop, not exactly on it
     /// (round-4 review, PR #124).
     public let polite: Duration
+    /// How many quiet listens in a row before the mic parks (the loop machine's
+    /// empty-listen budget). Each costs however long the recogniser waits before
+    /// calling a listen silent, so this is the felt quiet before M1K3 stops
+    /// listening and asks for a tap — the difference between a conversation and
+    /// a dictation box (2026-09-03).
+    public let emptyListensBeforeParking: Int
 
     public init(
         silence: Duration,
@@ -48,7 +57,8 @@ public struct EndpointCadence: Sendable, Equatable {
         maxWait: Duration,
         cadenceMargin: Duration,
         cadenceCeiling: Duration,
-        polite: Duration = .seconds(1.2)
+        polite: Duration = .seconds(1.2),
+        emptyListensBeforeParking: Int = 2
     ) {
         self.silence = silence
         self.hold = hold
@@ -56,6 +66,7 @@ public struct EndpointCadence: Sendable, Equatable {
         self.cadenceMargin = cadenceMargin
         self.cadenceCeiling = cadenceCeiling
         self.polite = polite
+        self.emptyListensBeforeParking = emptyListensBeforeParking
     }
 
     /// Human conversation, not command dictation: a complete-sounding sentence
@@ -65,11 +76,17 @@ public struct EndpointCadence: Sendable, Equatable {
     /// Every value here is paid AFTER the user stops talking, so it is felt
     /// latency — which is why the ceiling exists and why the adaptive floor is
     /// preferred over simply raising `silence` for everyone.
+    ///
+    /// Twelve quiet listens before parking: a thinking pause, a sip of tea, a
+    /// glance at something — none of those should end the conversation. Two
+    /// (the machine's dictation default) parked the mic in a few seconds of
+    /// quiet, which is what made voice mode read as tap-to-talk.
     public static let conversational = EndpointCadence(
         silence: .seconds(2.5),
         hold: .seconds(5.0),
         maxWait: .seconds(30),
         cadenceMargin: .seconds(0.75),
-        cadenceCeiling: .seconds(6.0)
+        cadenceCeiling: .seconds(6.0),
+        emptyListensBeforeParking: 12
     )
 }

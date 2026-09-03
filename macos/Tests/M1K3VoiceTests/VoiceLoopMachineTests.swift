@@ -345,3 +345,86 @@ struct VoiceLoopMachineTests {
         #expect(machine.state == .listening(partial: ""))
     }
 }
+
+// MARK: - Pause (audio interruptions: a call, headphones pulled)
+
+extension VoiceLoopMachineTests {
+    @Test("pause while listening parks the mic")
+    func pauseWhileListeningParks() {
+        var machine = VoiceLoopMachine()
+        _ = machine.handle(.begin)
+        let commands = machine.handle(.pause)
+        #expect(commands == [.stopListening])
+        #expect(machine.state == .idle)
+    }
+
+    @Test("pause while speaking stops speech, parks, and drops every later chunk")
+    func pauseWhileSpeakingStopsAndDropsChunks() {
+        var machine = VoiceLoopMachine()
+        _ = machine.handle(.begin)
+        _ = machine.handle(.endpointed("tell me a story"))
+        _ = machine.handle(.answerChunk("Once upon a time."))
+        let commands = machine.handle(.pause)
+        #expect(commands == [.stopSpeaking])
+        #expect(machine.state == .idle)
+        // The generator is still running — its late chunks and completion are stale.
+        #expect(machine.handle(.answerChunk("There was a fox.")).isEmpty)
+        #expect(machine.handle(.answerCompleted).isEmpty)
+        #expect(machine.handle(.speechFinished).isEmpty)
+        #expect(machine.state == .idle)
+    }
+
+    @Test("pause while thinking parks; the answer lands in the transcript unspoken")
+    func pauseWhileThinkingDropsTheAnswer() {
+        var machine = VoiceLoopMachine()
+        _ = machine.handle(.begin)
+        _ = machine.handle(.endpointed("tell me a story"))
+        let commands = machine.handle(.pause)
+        #expect(commands.isEmpty)
+        #expect(machine.state == .idle)
+        #expect(machine.handle(.answerReady("Once upon a time.")).isEmpty)
+        #expect(machine.state == .idle)
+    }
+
+    @Test("pause in idle is a no-op, and begin re-arms afterwards")
+    func pauseInIdleIsNoOpAndBeginRearms() {
+        var machine = VoiceLoopMachine()
+        #expect(machine.handle(.pause).isEmpty)
+        #expect(machine.state == .idle)
+        #expect(machine.handle(.begin) == [.startListening(afterEchoGrace: false)])
+    }
+
+    @Test("pause after exit stays terminal")
+    func pauseAfterExitIsNoOp() {
+        var machine = VoiceLoopMachine()
+        _ = machine.handle(.exit)
+        #expect(machine.handle(.pause).isEmpty)
+        #expect(machine.state == .ended)
+    }
+}
+
+// MARK: - Patience (2026-09-03: conversational parking)
+
+extension VoiceLoopMachineTests {
+    @Test("the empty-listen budget is configurable — under 3, the second quiet listen re-arms and the third parks")
+    func configurableEmptyListenBudget() {
+        var machine = VoiceLoopMachine(maxEmptyListens: 3)
+        _ = machine.handle(.begin)
+        _ = machine.handle(.endpointed(""))
+        let second = machine.handle(.endpointed(""))
+        #expect(second == [.stopListening, .startListening(afterEchoGrace: false)])
+        #expect(machine.state == .listening(partial: ""))
+        let third = machine.handle(.endpointed(""))
+        #expect(third == [.stopListening])
+        #expect(machine.state == .idle)
+    }
+
+    @Test("the default budget is unchanged — two quiet listens still park")
+    func defaultBudgetStaysTwo() {
+        var machine = VoiceLoopMachine()
+        _ = machine.handle(.begin)
+        _ = machine.handle(.endpointed(""))
+        #expect(machine.handle(.endpointed("")) == [.stopListening])
+        #expect(machine.state == .idle)
+    }
+}

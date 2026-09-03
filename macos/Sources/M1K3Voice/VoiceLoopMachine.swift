@@ -15,9 +15,17 @@
 //    barge-in's stop() produces; an answerReady landing after exit).
 //  • exit is terminal and never cancels the in-flight turn — the answer still
 //    lands in the chat transcript, it just isn't spoken.
+//  • pause parks from ANY active state (the OS took the audio session: a call,
+//    headphones pulled) and, like exit, never cancels the turn — the answer
+//    lands unspoken; begin re-arms. Unlike mute it also stops speech.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.9 (pure, every
 //  transition test-pinned). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — `.pause` added for iOS audio
+//  interruptions (AudioInterruptionPolicy); five transitions pinned.
+//  Review: Kev + claude-fable-5, 2026-09-03 — the empty-listen budget is an init
+//  parameter (was a private static 2) so the conversational cadence can keep the
+//  mic awake through a quiet spell. Default unchanged; the 2-listen pin still holds.
 //
 
 import Foundation
@@ -54,6 +62,9 @@ public enum VoiceLoopEvent: Equatable, Sendable {
     case interrupt
     /// Park the mic without leaving the mode.
     case mute
+    /// The audio session was taken away (interruption / route loss): stop
+    /// whichever direction is live and park. Not terminal — begin re-arms.
+    case pause
     case exit
 }
 
@@ -71,7 +82,10 @@ public struct VoiceLoopMachine: Sendable {
     public private(set) var state: VoiceLoopState = .idle
     /// Park after this many empty listens in a row.
     private var consecutiveEmptyListens = 0
-    private static let maxEmptyListens = 2
+    /// The budget above. The default (2) is dictation-shaped; a conversational
+    /// cadence feeds a far larger one (EndpointCadence.emptyListensBeforeParking,
+    /// 2026-09-03) so a quiet spell can't turn a hands-free mode into tap-to-talk.
+    private let maxEmptyListens: Int
     /// Sentence-streaming bookkeeping: utterances enqueued but not yet ended.
     /// The loop re-listens only when this drains AND generation finished —
     /// speechFinished arrives once per spoken chunk (the speech provider fires
@@ -80,7 +94,10 @@ public struct VoiceLoopMachine: Sendable {
     /// True once the streaming turn stopped producing (completed OR failed).
     private var generationDone = false
 
-    public init() {}
+    public init(maxEmptyListens: Int = 2) {
+        precondition(maxEmptyListens >= 1, "the loop must be allowed at least one empty listen")
+        self.maxEmptyListens = maxEmptyListens
+    }
 
     public mutating func handle(_ event: VoiceLoopEvent) -> [VoiceLoopCommand] {
         if case .ended = state { return [] }
@@ -175,6 +192,23 @@ public struct VoiceLoopMachine: Sendable {
                 return []
             }
 
+        case .pause:
+            switch state {
+            case .listening:
+                state = .idle
+                return [.stopListening]
+            case .speaking:
+                // Later chunks / completion of the still-running generator
+                // land in idle and are dropped as stale — same shape as exit.
+                state = .idle
+                return [.stopSpeaking]
+            case .awaitingAnswer:
+                state = .idle
+                return []
+            case .idle, .ended:
+                return []
+            }
+
         case .exit:
             state = .ended
             return [.stopSpeaking, .stopListening]
@@ -191,7 +225,7 @@ public struct VoiceLoopMachine: Sendable {
 
     private mutating func emptyListenEnded() -> [VoiceLoopCommand] {
         consecutiveEmptyListens += 1
-        if consecutiveEmptyListens >= Self.maxEmptyListens {
+        if consecutiveEmptyListens >= maxEmptyListens {
             state = .idle
             return [.stopListening]
         }

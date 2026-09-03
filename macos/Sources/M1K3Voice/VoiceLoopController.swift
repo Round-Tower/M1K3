@@ -20,6 +20,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.85 (behavior
 //  test-pinned with fakes; real-seam wiring is the app layer's). Prior: Unknown.
+//  Review: Kev + claude-fable-5, 2026-09-03 — `listenFailed(_:)` parks with the
+//  recogniser's own reason (a stream that opens and dies is not silence); the
+//  machine's empty-listen budget now comes from the cadence.
 //
 
 import Foundation
@@ -85,7 +88,7 @@ public final class VoiceLoopController {
     /// fakes rather than only observable by reading a log after the fact.
     public private(set) var lastTurnLatency: String?
 
-    private var machine = VoiceLoopMachine()
+    private var machine: VoiceLoopMachine
     private let dependencies: Dependencies
     private let echoGrace: Duration
     private let endpointTick: Duration
@@ -116,12 +119,14 @@ public final class VoiceLoopController {
         endpointTick: Duration = .milliseconds(300),
         cadenceMargin: Duration = EndpointCadence.conversational.cadenceMargin,
         cadenceCeiling: Duration = EndpointCadence.conversational.cadenceCeiling,
-        politeSilence: Duration = EndpointCadence.conversational.polite
+        politeSilence: Duration = EndpointCadence.conversational.polite,
+        emptyListensBeforeParking: Int = 2
     ) {
         self.dependencies = dependencies
         self.silence = silence
         self.echoGrace = echoGrace
         self.endpointTick = endpointTick
+        machine = VoiceLoopMachine(maxEmptyListens: emptyListensBeforeParking)
         endpointer = SilenceEndpointer(
             silence: silence,
             holdSilence: holdSilence,
@@ -149,11 +154,27 @@ public final class VoiceLoopController {
             endpointTick: endpointTick,
             cadenceMargin: cadence.cadenceMargin,
             cadenceCeiling: cadence.cadenceCeiling,
-            politeSilence: cadence.polite
+            politeSilence: cadence.polite,
+            emptyListensBeforeParking: cadence.emptyListensBeforeParking
         )
     }
 
     // MARK: - User intents
+
+    /// The recogniser itself failed — not the mic refusing to open (that's the
+    /// throwing `startListening` path) but a stream that opened and then ended
+    /// without a word because the engine underneath couldn't start. Park with
+    /// the reason on screen. Without this door every such failure counted as
+    /// an empty listen and the loop re-armed into the same wall every ~170ms
+    /// until it parked silently: "nothing is being captured", and the only
+    /// witness was the unified log (2026-09-03, the simulator's "Failed to
+    /// initialize recognizer"). Adapters call this BEFORE finishing the stream
+    /// so the pending listen is cancelled rather than counted.
+    public func listenFailed(_ message: String) {
+        lastError = message
+        Self.log.error("voice recogniser failed, parking: \(message, privacy: .public)")
+        dispatch(.mute)
+    }
 
     public func begin() {
         lastError = nil
@@ -166,6 +187,13 @@ public final class VoiceLoopController {
 
     public func mute() {
         dispatch(.mute)
+    }
+
+    /// The OS took the audio session (a call, headphones pulled): park from
+    /// any active state. The in-flight turn is held, not cancelled — its
+    /// answer lands in the transcript unspoken. `begin()` re-arms.
+    public func pause() {
+        dispatch(.pause)
     }
 
     public func exit() {
@@ -245,10 +273,10 @@ public final class VoiceLoopController {
             // it is time the user waited for nothing. Reported unsettled.
             timeline.completed(at: now)
             flushTimeline()
-        case .exit, .interrupt, .mute:
-            // A barge-in or exit mid-answer would otherwise lose the turn's
-            // numbers entirely, biasing every measurement towards the turns the
-            // user was patient enough to sit through.
+        case .exit, .interrupt, .mute, .pause:
+            // A barge-in, exit, or audio interruption mid-answer would otherwise
+            // lose the turn's numbers entirely, biasing every measurement
+            // towards the turns the user was patient enough to sit through.
             flushTimeline()
         case .begin, .partial, .speechFinished:
             break

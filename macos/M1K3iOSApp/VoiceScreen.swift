@@ -13,9 +13,21 @@
 //  test-pinned loop state; the felt beat — echo, endpointing, barge-in — is
 //  verify-by-launch on a real device). Prior: none (new file, patterned on the
 //  Mac's VoiceModeView).
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — the voice-first pass: the
+//  spoken line is now the Mac's KaraokeReadingText (follow-the-word Focus
+//  reader) over a timeline of fading spoken bubbles; the thinking caption
+//  names the live activity (tool in flight) instead of a flat "Thinking…";
+//  mic button mutes while listening; a tap on the face wakes a parked loop;
+//  first streamed tokens bump the avatar thinking → generating; an
+//  interruption's pause note replaces the idle caption. Same day, later: the
+//  parked caption reads "carry on" — the mode is hands-free, and parking now
+//  takes a long quiet spell (EndpointCadence.emptyListensBeforeParking), not
+//  a few seconds. And the bubble timeline no longer wipes itself at every
+//  sentence boundary (the per-chunk nil hop); it resets on a new answer.
 //
 
 import M1K3Avatar
+import M1K3Chat
 import M1K3Voice
 import SwiftUI
 
@@ -58,6 +70,26 @@ struct VoiceScreen: View {
             .accessibilityLabel("Leave voice mode")
         }
         .preferredColorScheme(.dark)
+        // While awaiting the answer, the first streamed tokens bump thinking →
+        // generating (observable signal — no timer). Same as the Mac.
+        .onChange(of: core.chat.messages.last?.text) {
+            bumpToGeneratingIfStreaming()
+        }
+        // The timeline: when the spoken utterance advances (sentence-streamed
+        // lane) the finished line becomes a fading bubble behind the live one.
+        // `clear()` fires after EVERY chunk (one utterance per sentence), so
+        // the nil hop is a sentence boundary, not the end of the answer — a
+        // wipe keyed on it erased each bubble before its first frame (three
+        // reviews, 2026-09-03). Bubbles expire on their own clock; the
+        // timeline resets when a NEW answer starts.
+        .onChange(of: core.speechHighlight.utteranceText) { oldText, newText in
+            if let oldText, !oldText.isEmpty, oldText != newText {
+                retireSpokenBubble(oldText)
+            }
+        }
+        .onChange(of: state) { _, newState in
+            if case .awaitingAnswer = newState { spokenBubbles.removeAll() }
+        }
     }
 
     // MARK: - The face
@@ -80,10 +112,10 @@ struct VoiceScreen: View {
         }
         .frame(maxWidth: .infinity)
         .contentShape(.rect)
-        .onTapGesture { bargeIn() }
+        .onTapGesture { primaryAction() }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityStateLabel)
-        .accessibilityHint("Double-tap to interrupt while M1K3 is speaking.")
+        .accessibilityHint("Double-tap to start talking, or to interrupt while M1K3 is speaking.")
     }
 
     /// Mic or speech actively moving — drives the waveform's variable-color pulse.
@@ -98,12 +130,16 @@ struct VoiceScreen: View {
 
     private var caption: some View {
         VStack(spacing: 10) {
-            Text(captionText)
-                .font(.title3.weight(.medium))
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.center)
-                .lineLimit(4)
-                .animation(.easeInOut(duration: 0.15), value: captionText)
+            if case .speaking = state {
+                spokenTimeline
+            } else {
+                Text(captionText)
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(4)
+                    .animation(.easeInOut(duration: 0.15), value: captionText)
+            }
             if let error = core.voiceLoop?.lastError {
                 Text(error)
                     .font(.caption)
@@ -125,15 +161,81 @@ struct VoiceScreen: View {
     private var captionText: String {
         switch state {
         case .idle:
-            "Tap the mic to talk"
+            // Parked (a long quiet spell, a failure, or not yet awake) — the
+            // mode is hands-free, so this reads as "carry on", never "talk".
+            core.voicePauseNote ?? "Tap the face to carry on."
         case let .listening(partial):
             partial.isEmpty ? "Listening…" : partial
         case .awaitingAnswer:
-            "Thinking…"
-        case let .speaking(answer):
-            answer
+            // The live activity (a tool in flight) beats a flat "Thinking…" —
+            // the Mac shows the same label.
+            core.chat.messages.last?.activityLabel ?? "Thinking…"
+        case .speaking:
+            "" // unreachable by construction: `caption` renders spokenTimeline here
         case .ended:
             ""
+        }
+    }
+
+    // MARK: - Spoken timeline (the Mac's bubbles, phone-sized)
+
+    private struct SpokenBubble: Identifiable, Equatable {
+        let id = UUID()
+        let text: String
+    }
+
+    @State private var spokenBubbles: [SpokenBubble] = []
+
+    /// Already-spoken sentences dim and fade above the live one; the live
+    /// bubble keeps the dyslexia Focus-reader following word-by-word.
+    private var spokenTimeline: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(spokenBubbles) { bubble in
+                Text(bubble.text)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .m1k3Glass(cornerRadius: 16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+            if let text = core.speechHighlight.utteranceText {
+                KaraokeReadingText(
+                    text: text,
+                    timeline: core.speechHighlight.timeline,
+                    currentWordRange: core.speechHighlight.currentWordRange,
+                    compact: true
+                )
+                .frame(maxHeight: 165)
+                .clipped()
+                .padding(.horizontal, 18)
+                .padding(.vertical, 14)
+                .m1k3Glass(cornerRadius: 18)
+                .accessibilityLabel("M1K3 is speaking")
+            } else if spokenBubbles.isEmpty {
+                Text("Speaking…")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .animation(.easeOut(duration: 0.3), value: spokenBubbles)
+    }
+
+    /// A finished line drifts into the timeline and fades out after a beat —
+    /// spoken words leave the stage; the transcript keeps the record.
+    private func retireSpokenBubble(_ text: String) {
+        let bubble = SpokenBubble(text: text)
+        withAnimation(.easeOut(duration: 0.3)) {
+            spokenBubbles.append(bubble)
+            if spokenBubbles.count > 2 { spokenBubbles.removeFirst() }
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            withAnimation(.easeOut(duration: 0.9)) {
+                spokenBubbles.removeAll { $0.id == bubble.id }
+            }
         }
     }
 
@@ -153,9 +255,10 @@ struct VoiceScreen: View {
     private var controls: some View {
         switch state {
         case .idle:
-            // Parked (muted, empty listens, or an error) — tap-to-talk re-arms.
+            // Parked (muted, empty listens, an interruption, or an error) —
+            // tap-to-talk re-arms and clears any pause note.
             Button {
-                core.voiceLoop?.begin()
+                core.resumeVoiceListening()
             } label: {
                 Image(systemName: "mic.fill")
                     .font(.system(size: 26))
@@ -175,10 +278,43 @@ struct VoiceScreen: View {
                     .m1k3Glass(cornerRadius: 24)
             }
             .buttonStyle(.plain)
-        case .listening, .awaitingAnswer, .ended:
+        case .listening:
+            // Mute parks the mic without leaving the mode (the Mac's mic button).
+            Button {
+                core.voiceLoop?.mute()
+            } label: {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 26))
+                    .foregroundStyle(.red)
+                    .symbolEffect(.breathe, isActive: true)
+                    .padding(22)
+                    .m1k3Glass(cornerRadius: 40)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Mute microphone")
+        case .awaitingAnswer, .ended:
             // The live states carry their own feedback; no extra chrome.
             Color.clear.frame(height: 52)
         }
+    }
+
+    /// Tap the face: wake from a parked idle, or barge in while M1K3 speaks.
+    private func primaryAction() {
+        switch state {
+        case .idle: core.resumeVoiceListening()
+        case .speaking: bargeIn()
+        default: break // listening / thinking: no-op (v1)
+        }
+    }
+
+    /// While awaiting the answer, the first streamed tokens bump thinking →
+    /// generating (observable signal — no timer).
+    private func bumpToGeneratingIfStreaming() {
+        guard case .awaitingAnswer = state,
+              let last = core.chat.messages.last,
+              last.role == .assistant, !last.text.isEmpty
+        else { return }
+        core.avatar.setActivity(.generating)
     }
 
     /// Barge-in: only meaningful while speaking (the machine ignores it

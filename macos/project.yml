@@ -66,6 +66,10 @@ targetTemplates:
       - path: M1K3App/PixelFont.swift
       - path: M1K3App/ReadingMode.swift
       - path: M1K3App/ReadingText.swift
+      # Voice mode's follow-the-spoken-word line (2026-09-03): the Mac's
+      # observable highlight state + the paint layer, both package-only deps.
+      - path: M1K3App/SpeechHighlight.swift
+      - path: M1K3App/KaraokeReadingText.swift
       # The opt-in 3D companion creatures (Fox/Inkfish/Sparrow/Gecko/Colobus): the
       # RealityKit render path, #if-guarded for iOS/visionOS. The assets ship in
       # M1K3Avatar's bundle already. NOTE: the shading glue (PhosphorMaterial.swift
