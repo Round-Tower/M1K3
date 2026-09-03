@@ -62,6 +62,14 @@ public enum ToolPalettePolicy {
         )
     }
 
+    /// The corpus fact from a count that may have failed to read. Fails OPEN:
+    /// an unreadable count keeps the knowledge tools — hiding capability on an
+    /// I/O hiccup is the wrong failure, and the tools answer honestly over an
+    /// empty store anyway. Shared by both shells so the default lives once.
+    public static func corpusHasItems(count: Int?) -> Bool {
+        (count ?? 1) > 0
+    }
+
     public static let knowledgeToolNames: Set<String> = ["search_knowledge", "list_documents", "get_document"]
     public static let webToolNames: Set<String> = ["web_search", "fetch_page", "lookup_fact", "open_link"]
     public static let deepBrainToolNames: Set<String> = ["delegate_deep"]

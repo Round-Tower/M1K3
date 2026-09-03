@@ -73,6 +73,13 @@ struct ToolPalettePolicyTests {
         #expect(kept == ["datetime", "custom_tool"])
     }
 
+    @Test("the corpus fact fails OPEN — an unreadable count keeps the knowledge tools")
+    func corpusFactFailsOpen() {
+        #expect(ToolPalettePolicy.corpusHasItems(count: nil))
+        #expect(!ToolPalettePolicy.corpusHasItems(count: 0))
+        #expect(ToolPalettePolicy.corpusHasItems(count: 3))
+    }
+
     /// The policy names tools as strings (M1K3Chat cannot link the tool
     /// modules); a rename that misses this pin would silently un-gate the tool.
     @Test("every governed name matches a live tool declaration")

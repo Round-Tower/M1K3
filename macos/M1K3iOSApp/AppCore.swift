@@ -602,9 +602,11 @@ final class AppCore {
                 // knowledge tools need a corpus, the web trio needs the toggle.
                 // This shell offers no bigger brain and no battery tool.
                 return ToolPalettePolicy.filter(tools, availability: .init(
-                    corpusHasItems: ((try? store.itemCount()) ?? 1) > 0,
+                    corpusHasItems: ToolPalettePolicy.corpusHasItems(count: try? store.itemCount()),
                     webAllowed: webAllowed,
                     deepBrainAvailable: false,
+                    // Inert until a battery tool is ever wired into this
+                    // palette (none is today); true because the phone has one.
                     hasBattery: true
                 ))
             },

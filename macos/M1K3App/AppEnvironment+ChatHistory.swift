@@ -180,7 +180,8 @@ extension AppEnvironment {
         onOpenLink: (@Sendable (URL) -> Void)?,
         deepDelegation: DeepDelegationHook? = nil,
         scriptExecution: ScriptExecutionHook? = nil,
-        contextSenses: ContextSenseHook? = nil
+        contextSenses: ContextSenseHook? = nil,
+        availability: ToolPalettePolicy.Availability? = nil
     ) -> [any AgentTool] {
         var tools: [any AgentTool] = [
             DateTimeTool(),
@@ -200,8 +201,7 @@ extension AppEnvironment {
             }))
         }
         let defaults = UserDefaults.standard
-        let webAllowed = defaults.object(forKey: Self.webSearchEnabledKey) == nil
-            || defaults.bool(forKey: Self.webSearchEnabledKey)
+        let webAllowed = Self.webSearchAllowed()
         if webAllowed {
             tools.insert(WikipediaTool(), at: 0)
             tools.insert(FetchPageTool(), at: 0)
@@ -255,14 +255,30 @@ extension AppEnvironment {
         // is offered only while the thing it does is actually there. Stable
         // facts only — never per query — so the palette stays a stable
         // PersonaPrefixCache key. Applied HERE, inside the shared builder, so
-        // the launch warm and the live turn can never disagree on the set.
-        let availability = ToolPalettePolicy.Availability(
-            corpusHasItems: ((try? store.itemCount()) ?? 1) > 0,
-            webAllowed: webAllowed,
-            deepBrainAvailable: Self.deepBrainAvailable(),
-            hasBattery: Self.hasBattery
-        )
+        // the launch warm and the live turn can never disagree on the set. The
+        // facts are real I/O (a SQLite count, a directory listing); a caller
+        // that builds several palettes at once passes them in, computed once
+        // off the main actor (the warm — review fold, #201).
+        let availability = availability ?? Self.paletteAvailability(store: store)
         return ToolPalettePolicy.filter(tools, availability: availability)
+    }
+
+    /// The Settings web toggle — absent means allowed (the shipped default).
+    nonisolated static func webSearchAllowed() -> Bool {
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: webSearchEnabledKey) == nil || defaults.bool(forKey: webSearchEnabledKey)
+    }
+
+    /// The four availability facts, read fresh. Real I/O — call it off the main
+    /// actor when the caller can (the warm does); a live turn already runs on
+    /// the responder's own task.
+    nonisolated static func paletteAvailability(store: KnowledgeStore) -> ToolPalettePolicy.Availability {
+        ToolPalettePolicy.Availability(
+            corpusHasItems: ToolPalettePolicy.corpusHasItems(count: try? store.itemCount()),
+            webAllowed: webSearchAllowed(),
+            deepBrainAvailable: deepBrainAvailable(),
+            hasBattery: hasBattery
+        )
     }
 
     /// delegate_deep is offered only when the dive would actually reach Big —
