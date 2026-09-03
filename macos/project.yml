@@ -97,8 +97,8 @@ targetTemplates:
     dependencies:
       # The portable package pipeline (protocol-seam first, so it cross-compiles):
       # RAG chat + knowledge + memory + inference + MLX + the agent tool loop +
-      # the avatar. NO Kokoro/WhisperKit/Calls/MCP — voice + the in-app server are
-      # Phase-B. M1K3Preview links transitively via M1K3AgentTools.
+      # the avatar. NO WhisperKit/Calls/MCP — the in-app server is Phase-B.
+      # M1K3Preview links transitively via M1K3AgentTools.
       - package: M1K3
         product: M1K3Chat
       - package: M1K3
@@ -120,10 +120,13 @@ targetTemplates:
       - package: M1K3
         product: M1K3Avatar
       # Voice-first mode (2026-07-29): the portable voice loop + system-framework
-      # providers (SFSpeechRecognizer STT, AVSpeechSynthesizer TTS). Kokoro and
-      # WhisperKit stay Mac-only for now.
+      # providers (SFSpeechRecognizer STT, AVSpeechSynthesizer TTS), and since
+      # 2026-09-03 M1K3 Voice — Kokoro on pure MLX (Settings ▸ Voice, downloads
+      # on pick; Built-in stays the default). WhisperKit stays Mac-only for now.
       - package: M1K3
         product: M1K3Voice
+      - package: M1K3
+        product: M1K3Kokoro
       # MetricKit digest/retention pure logic (#86) — AppCore+MetricKit.swift's
       # collector calls MetricPayloadDigest/MetricRetentionPolicy directly.
       - package: M1K3

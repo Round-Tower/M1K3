@@ -15,6 +15,9 @@
 //  every footer down to the fact + the guarantee; the one-row Knowledge section folded into the Documents row; the
 //  reading sample stopped instructing.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — the Voice section (VoiceOutputSection: Built-in vs M1K3 Voice) joins
+//  the face and the brain — mind, face, voice, the Mac's M1K3 tab.
+//
 
 import M1K3BrainLink
 import M1K3Inference
@@ -90,6 +93,8 @@ struct SettingsScreen: View {
             BrainAtHomeSection()
 
             CompanionPickerSection()
+
+            VoiceOutputSection()
 
             Section {
                 Toggle("Web search in chat", isOn: $webSearchEnabled)

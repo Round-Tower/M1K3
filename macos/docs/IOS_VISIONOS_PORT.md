@@ -212,7 +212,12 @@ for it), so on-device run is verify-owed, same as the spike.
 
 - **Phase B — Voice.** `AVAudioSession` lifecycle behind the `SpeechProvider`/
   `TranscriptionProvider` seams; Kokoro TTS (iOS ✓; visionOS dependency gap RESOLVED
-  2026-07-18 — MLX backend, no xrOS slice problem). Not wired in the shell.
+  2026-07-18 — MLX backend, no xrOS slice problem). **Wired 2026-09-03:** Settings ▸
+  Voice offers Built-in (the default) and M1K3 Voice behind the Mac's
+  `SwappableSpeechProvider` façade (`AppCore+VoiceOutput.swift`); the pick is the
+  download consent, launch restores it only when already staged (`VoiceTierRestore`).
+  Verify-owed on device: the download, Kokoro through the phone's audio session, and
+  the thermal burn with Lil resident. visionOS links it via the shared shell, unverified.
 - **On-device run** — MLX generation, memory behaviour under the 4 GB mobile ceiling, the
   streaming feel, first-run onboarding, AFM availability on real AI-off hardware.
 - **Phase D — Spatial (visionOS flagship)** — volumetric avatar + walkable memory

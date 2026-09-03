@@ -392,8 +392,9 @@ or headphones-out PAUSES via the new `VoiceLoopMachine.pause`; an interruption
 ending never resumes the mic unasked; a media-services reset exits) — with
 AVAudioSession activation moved off the main actor (#85's watchdog suspect).
 Simulator-verified to the parked-idle screen; the spoken beat, karaoke follow,
-and interruptions are Kev's phone.* Still open here: Kokoro TTS (pure MLX
-since #58) vs AVSpeech decided on a **measured 10-minute thermal burn**;
+and interruptions are Kev's phone.* Still open here: Kokoro TTS is now a Settings pick on iOS (2026-09-03, Built-in
+stays the default); whether it ever becomes the default is decided on a **measured
+10-minute thermal burn** with Lil resident;
 WhisperKit vs Apple Speech (assert on-device recognition, fail loud on the
 silent server fallback); sentence-streamed auto-speak in chat
 (`AppEnvironment+AutoSpeak`) + karaoke follow; interruption/route negatives;
