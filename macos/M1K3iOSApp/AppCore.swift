@@ -25,6 +25,9 @@
 //  for iOS/visionOS; on-device RUN is the Phase-B verify-owed — MLX needs Metal,
 //  which the simulator can't run). Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — the tool palette goes through the shared ToolPalettePolicy
+//  (availability-gated, same rule as the Mac) so both shells derive it from one rule.
+//
 
 import Foundation
 import M1K3Agent
@@ -595,7 +598,15 @@ final class AppCore {
                     let deepReader = FetchPageTool(fetcher: URLSessionHTTPFetcher(timeout: 8))
                     tools.insert(WebSearchTool(deepReader: deepReader), at: 0)
                 }
-                return tools
+                // Same availability rule as the Mac (ToolPalettePolicy): the
+                // knowledge tools need a corpus, the web trio needs the toggle.
+                // This shell offers no bigger brain and no battery tool.
+                return ToolPalettePolicy.filter(tools, availability: .init(
+                    corpusHasItems: ((try? store.itemCount()) ?? 1) > 0,
+                    webAllowed: webAllowed,
+                    deepBrainAvailable: false,
+                    hasBattery: true
+                ))
             },
             sourceCollector: sourceCollector,
             brainNameProvider: {

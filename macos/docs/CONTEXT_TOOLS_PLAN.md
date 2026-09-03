@@ -110,6 +110,7 @@ repo. The version that ships:
   `SystemStatusProviding` pattern): pure snapshot structs, fake providers in
   tests, thin adapters in the app target.
 - Palette gating: `AgentToolPalette` (wherever the tool list is assembled)
+  Since 2026-09-03 the assembled list also passes `ToolPalettePolicy` (M1K3Chat, shared with the iOS shell): availability gating on stable facts only — a corpus for the knowledge tools, the web toggle for the web trio + `open_link`, a dive that reaches Big for `delegate_deep`, a battery for `battery_status`. Never per question: the palette is a prefix-cache key.
   consults the consent flags — same withhold mechanism as the self-query gate.
 - MCP exposure: context tools are **NOT auto-exposed over MCP.** A visiting
   agent asking M1K3 where Kev is happens through `ask_m1k3` (the local brain

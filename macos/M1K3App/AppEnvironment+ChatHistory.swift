@@ -12,6 +12,10 @@
 //  Review: Kev + claude-opus-4-8, 2026-06-12 — relocated makeAgentResponder here
 //  (it pushed AppEnvironment past 1000) + added forcedThinkingMode for MCP fast-ask.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — the palette is availability-gated (ToolPalettePolicy, shared with the
+//  iOS shell): knowledge tools need a corpus, the web trio + open_link need the toggle, delegate_deep needs a dive that
+//  reaches Big, battery_status needs a battery. Applied inside the shared builder so the warm can't drift from the turn.
+//
 
 import Foundation
 import M1K3Agent
@@ -21,6 +25,7 @@ import M1K3Inference
 import M1K3Knowledge
 import M1K3KnowledgeTools
 import M1K3LanguageModel
+import M1K3MLX
 import os
 import Synchronization
 
@@ -246,8 +251,41 @@ extension AppEnvironment {
                 ))
             }
         }
-        return tools
+        // Dynamic tool calling on what's available (ToolPalettePolicy): a tool
+        // is offered only while the thing it does is actually there. Stable
+        // facts only — never per query — so the palette stays a stable
+        // PersonaPrefixCache key. Applied HERE, inside the shared builder, so
+        // the launch warm and the live turn can never disagree on the set.
+        let availability = ToolPalettePolicy.Availability(
+            corpusHasItems: ((try? store.itemCount()) ?? 1) > 0,
+            webAllowed: webAllowed,
+            deepBrainAvailable: Self.deepBrainAvailable(),
+            hasBattery: Self.hasBattery
+        )
+        return ToolPalettePolicy.filter(tools, availability: availability)
     }
+
+    /// delegate_deep is offered only when the dive would actually reach Big —
+    /// the same gate the handler applies (DeepDiveTarget.plan), read fresh per
+    /// turn so a finished Big download adds the tool on the next turn. Resident
+    /// Big counts: the dive runs on Big either way. Without Big the tool only
+    /// buys time on the same brain — cut, per "on what's available".
+    nonisolated static func deepBrainAvailable() -> Bool {
+        let resident = UserDefaults.standard.string(forKey: selectedBrainKey)
+            .flatMap(BrainTier.init(persisted:)) ?? .mini
+        if resident == .big { return true }
+        guard let bigID = BrainTier.big.mlxModelID else { return false }
+        return DeepDiveTarget.plan(
+            resident: resident,
+            bigWeightsPresent: LocalModelInventory().isInstalled(modelID: bigID),
+            physicalMemoryGB: Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
+        ).isEscalation
+    }
+
+    /// A desktop Mac has no battery to report — battery_status leaves the
+    /// palette rather than answering "no battery" to a tool call. Read once:
+    /// hardware doesn't change under a running process.
+    nonisolated static let hasBattery: Bool = LiveBatteryHealthProvider().healthSnapshot() != nil
 
     /// The tool-calling chat responder: every turn runs the agent loop with
     /// retrieve-first grounding, plus web search / datetime / system status /

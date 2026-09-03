@@ -132,6 +132,13 @@ pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
   "cut iterations, not tools" ruling. Full write-up, including the TTS-upgrade
   and background-conversation answers: `docs/VOICE_PERFORMANCE.md` (issue #121).
 
+- **2026-09-03 — the palette is availability-gated, not hand-listed.** `ToolPalettePolicy`
+  (M1K3Chat, both shells): knowledge tools need a corpus, the web trio + `open_link`
+  need the toggle, `delegate_deep` needs a dive that would reach Big, `battery_status`
+  needs a battery. Stable facts only, applied inside the shared builder so the warm
+  and the turn agree. Per-question routing stays OFF the table for the cache reason
+  above; Kev's phone-vs-Mac read (2026-09-03) is the felt A/B.
+
 - **Retrieval, the warm palette, and the model's own thinking in the corpus —
   2026-08-12, found by driving the live app over MCP.** Four things, all
   measured on Kev's real store rather than reasoned about:
