@@ -25,6 +25,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut (Kev's diff): the brain subtitle under the wordmark
 //  and the empty-state headline/tagline are gone; the chips carry the invitation. Dead brainSubtitle removed with it.
 //
+//
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — M1K3_VOICE_AT_LAUNCH harness switch (enter voice mode when the brain is
+//  ready) so a phone on the desk can be driven from the Mac via devicectl; inert otherwise.
 
 import M1K3Avatar
 import M1K3Chat
@@ -33,6 +36,7 @@ import SwiftUI
 
 struct ChatScreen: View {
     @Environment(AppCore.self) private var core
+    @State private var voiceLaunched = false
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
@@ -104,7 +108,20 @@ struct ChatScreen: View {
             )) {
                 VoiceScreen()
             }
+            // Harness switch for device field tests driven from the Mac: a launch
+            // environment of M1K3_VOICE_AT_LAUNCH=1 enters voice mode as soon as
+            // the brain is ready — devicectl can pass an environment, but it
+            // cannot tap. The Mac's SelfTest env keys are the precedent. Inert
+            // for every ordinary launch.
+            .task(id: brainReady) {
+                guard brainReady, !voiceLaunched, Self.voiceAtLaunch else { return }
+                voiceLaunched = true
+                core.enterVoiceMode()
+            }
     }
+
+    /// See the `.task(id: brainReady)` above — read once per process.
+    private static let voiceAtLaunch = ProcessInfo.processInfo.environment["M1K3_VOICE_AT_LAUNCH"] == "1"
 
     // MARK: - Backdrop
 
