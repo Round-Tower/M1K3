@@ -48,4 +48,14 @@ struct EndpointCadenceTests {
         #expect(cadence.cadenceCeiling <= .seconds(8))
         #expect(cadence.silence >= .seconds(1))
     }
+
+    @Test("conversation keeps listening through a quiet spell — the mic parks after many empty listens, not two")
+    func conversationalParkingIsPatient() {
+        // The machine's own default (2) is dictation-shaped: two quiet listens
+        // and the mic sleeps, which reads as "tap to talk" in a mode that is
+        // meant to be hands-free (2026-09-03). Bounded above so a forgotten
+        // phone can't hold the mic open indefinitely.
+        #expect(cadence.emptyListensBeforeParking >= 6)
+        #expect(cadence.emptyListensBeforeParking <= 30)
+    }
 }

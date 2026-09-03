@@ -52,6 +52,16 @@
 //  confidence yields nil (Apple reports a meaningless 0.0 there). Confidence
 //  0.8 — the restart glue is verify-by-launch per this file's convention; the
 //  policy/accumulator halves are test-pinned.
+//  Review: Kev + claude-fable-5, 2026-09-03 — `lastFailure`: the reason a
+//  session ended without a word (auth, no recogniser, mic route, engine error),
+//  generation-scoped, so a consumer can tell a failed listen from a silent one
+//  instead of parking mutely. Found while chasing "nothing is captured" on the
+//  iOS Simulator: it advertises on-device support and then fails every task
+//  with "Failed to initialize recognizer" — and a simulator-only server
+//  fallback was tried and REVERTED the same day: the server path dies with the
+//  identical error the moment speech arrives. Apple's recogniser does not run
+//  on the simulator at all; voice capture is device-only, and the loop now says
+//  so on screen instead of parking mutely. The on-device floor is untouched.
 
 import AVFoundation
 import Foundation
@@ -123,6 +133,9 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// or stop its running engine. The shared `AVAudioEngine` had session identity
     /// only in its state before; now it has an explicit owner.
     private var engineOwner: UInt64?
+    /// Why the current/most recent session ended without a word, when the
+    /// recogniser (not the caller) ended it — see `lastFailure`. Guarded by `lock`.
+    private var lastFailureMessage: String?
 
     public init(locale: Locale = .current) {
         self.locale = locale
@@ -134,6 +147,28 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     public var isAvailable: Bool {
         guard let recognizer = SFSpeechRecognizer(locale: locale) else { return false }
         return recognizer.isAvailable && recognizer.supportsOnDeviceRecognition
+    }
+
+    /// Why the most recent listen ended without yielding a word, if the
+    /// recogniser ended it: authorization refused, no recogniser for the locale,
+    /// the mic route not ready, or the engine failing mid-listen. The stream
+    /// itself can't say (AsyncStream is non-throwing), so the consumer reads
+    /// this when a listen ends empty and decides whether that was silence or a
+    /// failure worth putting on screen — until 2026-09-03 the simulator's
+    /// "Failed to initialize recognizer" looked exactly like silence. Cleared
+    /// when a new session starts; a superseded session can't overwrite it.
+    public var lastFailure: String? {
+        lock.withLock { lastFailureMessage }
+    }
+
+    /// Record why a session ended empty. Generation-scoped like every other
+    /// late path here: a superseded begin()'s unwind must not write over the
+    /// successor session's (clean) slate.
+    private func recordFailure(_ message: String, ifGeneration expected: UInt64? = nil) {
+        lock.withLock {
+            if let expected, expected != generation { return }
+            lastFailureMessage = message
+        }
     }
 
     public func startListening() throws -> AsyncStream<TranscriptSegment> {
@@ -148,6 +183,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 self.continuation = continuation
                 self.sessionFinality = finality
                 self.sessionHasText = false
+                self.lastFailureMessage = nil
                 return self.generation
             }
             // Consumer cancellation (task torn down without a paired
@@ -233,11 +269,19 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // than fall through to a request that could reach Apple's servers
         // (review fold, #129 — previously only `isAvailable` was re-checked
         // here and in restartRecognition).
-        guard await Self.authorized(),
-              let recognizer = SFSpeechRecognizer(locale: locale),
+        guard await Self.authorized() else {
+            recordFailure(
+                "Speech recognition isn't allowed — check Settings › Privacy & Security.",
+                ifGeneration: generation
+            )
+            continuation.finish()
+            return
+        }
+        guard let recognizer = SFSpeechRecognizer(locale: locale),
               recognizer.isAvailable,
               recognizer.supportsOnDeviceRecognition
         else {
+            recordFailure("Speech recognition isn't available right now.", ifGeneration: generation)
             continuation.finish()
             return
         }
@@ -272,6 +316,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // check it. A stale generation never installs.
         guard installTapAsOwner(generation) else {
             Self.log.error("mic input route not ready or session superseded — not listening")
+            recordFailure("The microphone isn't ready yet.", ifGeneration: generation)
             stopListening(ifGeneration: generation)
             continuation.finish()
             return
@@ -429,6 +474,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         if let error, isCurrent, !benign {
             let reason = error.localizedDescription
             Self.log.error("recognizer failed mid-listen — ending: \(reason, privacy: .public)")
+            recordFailure(reason, ifGeneration: generation)
         }
         guard isCurrent, benign, wantsRestart else {
             stopListening(ifGeneration: generation)
@@ -455,6 +501,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             // unexplained turn-endings are the bug this whole file exists to
             // end (round-2 review).
             Self.log.error("on-device recognizer unavailable at segment restart — ending listen")
+            recordFailure("Speech recognition became unavailable.", ifGeneration: generation)
             stopListening(ifGeneration: generation)
             return
         }

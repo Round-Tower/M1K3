@@ -402,3 +402,29 @@ extension VoiceLoopMachineTests {
         #expect(machine.state == .ended)
     }
 }
+
+// MARK: - Patience (2026-09-03: conversational parking)
+
+extension VoiceLoopMachineTests {
+    @Test("the empty-listen budget is configurable — under 3, the second quiet listen re-arms and the third parks")
+    func configurableEmptyListenBudget() {
+        var machine = VoiceLoopMachine(maxEmptyListens: 3)
+        _ = machine.handle(.begin)
+        _ = machine.handle(.endpointed(""))
+        let second = machine.handle(.endpointed(""))
+        #expect(second == [.stopListening, .startListening(afterEchoGrace: false)])
+        #expect(machine.state == .listening(partial: ""))
+        let third = machine.handle(.endpointed(""))
+        #expect(third == [.stopListening])
+        #expect(machine.state == .idle)
+    }
+
+    @Test("the default budget is unchanged — two quiet listens still park")
+    func defaultBudgetStaysTwo() {
+        var machine = VoiceLoopMachine()
+        _ = machine.handle(.begin)
+        _ = machine.handle(.endpointed(""))
+        #expect(machine.handle(.endpointed("")) == [.stopListening])
+        #expect(machine.state == .idle)
+    }
+}

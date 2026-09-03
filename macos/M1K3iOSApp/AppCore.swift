@@ -83,6 +83,9 @@ final class AppCore {
     var voicePauseNote: String?
     /// The serialized speak dependency's waiter (AppCore+Voice.speakAndWait).
     var pendingSpeechEnd: CheckedContinuation<Void, Never>?
+    /// The enqueue for the chunk being spoken, held so a stop that lands before
+    /// it has run can cancel the speak itself (see AppCore+Voice.speakAndWait).
+    var pendingSpeak: Task<Void, Never>?
     /// AVAudioSession interruption / route-change / reset observers, installed
     /// for the life of a voice session.
     var audioSessionObservers: [any NSObjectProtocol] = []

@@ -315,6 +315,84 @@ struct VoiceLoopControllerTests {
         #expect(controller.lastError == nil)
     }
 
+    // MARK: - Recogniser failure + patience (2026-09-03)
+
+    @Test("listenFailed parks with the reason instead of re-arming into the same wall")
+    func listenFailedParksWithReason() async {
+        let harness = Harness()
+        let controller = makeController(harness)
+        controller.begin()
+        await waitUntil { harness.listenStarts == 1 }
+
+        // The adapter reports BEFORE it finishes the stream — the pending
+        // listen must be cancelled, not counted as an empty listen.
+        controller.listenFailed("Failed to initialize recognizer")
+        await waitUntil { controller.state == .idle }
+        #expect(controller.lastError == "Failed to initialize recognizer")
+        #expect(harness.stopListens == 1)
+
+        // Give a stale re-arm every chance to show up: it must not.
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(harness.listenStarts == 1)
+    }
+
+    @Test("pause while speaking stops speech and parks; the stale end never re-listens")
+    func pauseWhileSpeakingParks() async {
+        let harness = Harness()
+        let controller = makeController(harness)
+
+        controller.begin()
+        await waitUntil { harness.continuation != nil }
+        harness.continuation?.yield(TranscriptSegment(text: "hi", isFinal: true))
+        harness.continuation?.finish()
+        await waitUntil { !harness.spoken.isEmpty }
+
+        controller.pause()
+        await waitUntil { harness.stopSpeaks == 1 }
+        #expect(controller.state == .idle)
+
+        // stop() makes the provider fire onSpeakingEnded → a stale speechFinished
+        // that must not wake the parked loop.
+        controller.speechDidEnd()
+        try? await Task.sleep(for: .milliseconds(30))
+        #expect(harness.listenStarts == 1)
+        #expect(controller.state == .idle)
+    }
+
+    @Test("the cadence's empty-listen budget reaches the machine")
+    func cadenceEmptyListenBudgetReachesTheMachine() async {
+        let harness = Harness()
+        let cadence = EndpointCadence(
+            silence: .milliseconds(50),
+            hold: .seconds(3),
+            maxWait: .seconds(20),
+            cadenceMargin: .zero,
+            cadenceCeiling: .seconds(3),
+            emptyListensBeforeParking: 3
+        )
+        let controller = VoiceLoopController(
+            dependencies: harness.dependencies(),
+            cadence: cadence,
+            echoGrace: .zero,
+            endpointTick: .milliseconds(10)
+        )
+        controller.begin()
+
+        // Two quiet listens (the recogniser ends each stream with no segments)
+        // re-arm under a budget of 3 — under the default they'd have parked.
+        for expected in 1 ... 2 {
+            await waitUntil { harness.listenStarts == expected && harness.continuation != nil }
+            harness.continuation?.finish()
+            await waitUntil { harness.listenStarts == expected + 1 }
+        }
+        #expect(controller.state == .listening(partial: ""))
+
+        await waitUntil { harness.continuation != nil }
+        harness.continuation?.finish()
+        await waitUntil { controller.state == .idle }
+        #expect(harness.listenStarts == 3)
+    }
+
     // MARK: - Sentence-streamed turns (2026-07-25)
 
     /// A streaming harness: the turn emits scripted chunks, then completes.

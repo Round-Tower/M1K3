@@ -19,7 +19,10 @@
 //  names the live activity (tool in flight) instead of a flat "Thinking…";
 //  mic button mutes while listening; a tap on the face wakes a parked loop;
 //  first streamed tokens bump the avatar thinking → generating; an
-//  interruption's pause note replaces the idle caption.
+//  interruption's pause note replaces the idle caption. Same day, later: the
+//  parked caption reads "carry on" — the mode is hands-free, and parking now
+//  takes a long quiet spell (EndpointCadence.emptyListensBeforeParking), not
+//  a few seconds.
 //
 
 import M1K3Avatar
@@ -150,7 +153,9 @@ struct VoiceScreen: View {
     private var captionText: String {
         switch state {
         case .idle:
-            core.voicePauseNote ?? "Tap the face to talk"
+            // Parked (a long quiet spell, a failure, or not yet awake) — the
+            // mode is hands-free, so this reads as "carry on", never "talk".
+            core.voicePauseNote ?? "Tap the face to carry on."
         case let .listening(partial):
             partial.isEmpty ? "Listening…" : partial
         case .awaitingAnswer:
@@ -158,7 +163,7 @@ struct VoiceScreen: View {
             // the Mac shows the same label.
             core.chat.messages.last?.activityLabel ?? "Thinking…"
         case .speaking:
-            "" // the spoken timeline owns this state
+            "" // unreachable by construction: `caption` renders spokenTimeline here
         case .ended:
             ""
         }

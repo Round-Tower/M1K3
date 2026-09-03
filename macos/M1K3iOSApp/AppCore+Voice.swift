@@ -40,6 +40,9 @@
 //  SpeechHighlight wiring, serialized speak, AudioInterruptionPolicy observers,
 //  and off-main audio-session activation. Confidence 0.75 (compile + simulator
 //  launch; the spoken beat, interruptions, and route changes are Kev's phone).
+//  Same day, later: the listen stream is wrapped so a listen that ends without
+//  a word reports the transcriber's `lastFailure` through `listenFailed` — the
+//  loop parks with the reason on screen instead of re-arming into the wall.
 //
 
 import AVFoundation
@@ -141,7 +144,16 @@ extension AppCore {
     /// Tap-to-talk from a parked idle (also after an interruption's pause).
     func resumeVoiceListening() {
         voicePauseNote = nil
-        voiceLoop?.begin()
+        guard let controller = voiceLoop else { return }
+        // Same gate as enterVoiceMode: a tap inside the activation window (or
+        // after a pause left the session in an unknown state) must not arm the
+        // engine against a session that isn't record-capable yet. Re-activating
+        // an active session is cheap (code-quality review, 2026-09-03).
+        Task { [weak self] in
+            await Self.activateVoiceAudioSession()
+            guard let self, voiceLoop === controller else { return }
+            controller.begin()
+        }
     }
 
     // MARK: - Loop dependencies
@@ -154,9 +166,30 @@ extension AppCore {
                 }
                 // Voice-first owns its turn boundary: recognizer finality is a
                 // segment boundary, not the end of the listen (FinalityPolicy).
-                let stream = try transcriber.startListening(finality: .keepsListening)
+                let upstream = try transcriber.startListening(finality: .keepsListening)
                 avatar.setActivity(.listening)
-                return stream
+                // Forward the segments, and when a listen ends without a word
+                // ask the transcriber whether that was silence or a failure.
+                // Report BEFORE finishing so the loop cancels the pending listen
+                // rather than counting it empty and re-arming into the same
+                // wall (2026-09-03: the simulator's recogniser failed to
+                // initialise every ~170ms and the screen said nothing).
+                return AsyncStream { continuation in
+                    let forwarder = Task { [weak self] in
+                        var sawSegments = false
+                        for await segment in upstream {
+                            sawSegments = true
+                            continuation.yield(segment)
+                        }
+                        if !sawSegments, !Task.isCancelled,
+                           let failure = self?.transcriber.lastFailure
+                        {
+                            self?.voiceLoop?.listenFailed(failure)
+                        }
+                        continuation.finish()
+                    }
+                    continuation.onTermination = { _ in forwarder.cancel() }
+                }
             },
             stopListening: { [weak self] in
                 self?.transcriber.stopListening()
@@ -189,6 +222,11 @@ extension AppCore {
                 await speakAndWait(spoken)
             },
             stopSpeaking: { [weak self] in
+                // A stop can run before the chunk's enqueue Task has — cancel
+                // that too, or the chunk speaks AFTER "paused for the call"
+                // (code-quality review, 2026-09-03).
+                self?.pendingSpeak?.cancel()
+                self?.pendingSpeak = nil
                 await self?.speech.stop()
                 // stop() before the utterance ever started yields no didCancel
                 // on some OS builds — never leave the drainer parked on it.
@@ -281,7 +319,10 @@ extension AppCore {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             resumePendingSpeech() // never strand an earlier waiter
             pendingSpeechEnd = continuation
-            Task { [weak self] in await self?.speech.speak(text) }
+            pendingSpeak = Task { [weak self] in
+                guard !Task.isCancelled else { return }
+                await self?.speech.speak(text)
+            }
         }
     }
 
@@ -379,6 +420,7 @@ extension AppCore {
         case .pause:
             Self.voiceLog.notice("voice mode paused: \(String(describing: event), privacy: .public)")
             voiceLoop.pause()
+            avatar.resetToIdle()
             voicePauseNote = note
         case .exit:
             Self.voiceLog.notice("voice mode exited: media services reset")
