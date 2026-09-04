@@ -34,7 +34,6 @@ from dataclasses import dataclass
 CONTAINER_DB = os.path.expanduser(
     "~/Library/Containers/app.m1k3/Data/Library/Application Support/M1K3/chat-history.sqlite"
 )
-APPLE_EPOCH = 978307200  # CFAbsoluteTime zero (2001-01-01) → Unix
 
 TOOL_WORDS = ("search", "web", "fetch", "open", "link", "browser", "page", "site", "tool", "look up", "lookup")
 GENERATIVE_LEADS = ("write", "create", "code", "make", "compose", "draft", "build", "generate")
@@ -132,7 +131,7 @@ def rows_from_sqlite(path: str) -> list[FeedbackRow]:
         )
         rows = []
         for mid, verdict, created, brain, question, answer, tools, comment in cur:
-            stamp = _dt.datetime.fromtimestamp(created + APPLE_EPOCH if created < 1e9 else created)
+            stamp = _dt.datetime.fromtimestamp(created)  # Unix epoch — what recordFeedback writes
             rows.append(
                 FeedbackRow(
                     message_id=mid,

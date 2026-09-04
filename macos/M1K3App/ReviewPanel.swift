@@ -115,7 +115,7 @@ struct ReviewPanel: View {
         case .empty:
             placeholder
         case let .web(url):
-            DeferredPanelMount { WebReviewView(url: url) { review.pageContext = $0 } }
+            DeferredPanelMount { WebReviewView(url: url) { review.setPageContext($0, for: url) } }
                 .id(url)
         case let .file(url):
             DeferredPanelMount { QuickLookPreview(url: url) }
