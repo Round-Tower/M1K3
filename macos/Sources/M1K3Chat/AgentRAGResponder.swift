@@ -67,6 +67,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-04 (late) — a user-given address is a READ:
 //  `fetchPageRouting` (offered-only) + one shared `describeOnlyRouting`; the search-deepen
 //  rule is scoped to "after a search"; open_link never names fetch_page when it is absent.
+//  Review: Kev + claude-fable-5.1, 2026-09-04 (late) — `pageReadSynthesisLine` in the synthesis
+//  prompt when a page was read; the native-synthesis log line says what it is.
 
 import Foundation
 import M1K3Agent
@@ -470,7 +472,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             if synthesiseOverEvidence || (!streamed && conclusion.isEmpty) {
                 await fallBack(
                     question: question, chunks: chunks, contextLine: contextLine,
-                    result: result, into: continuation
+                    result: result, synthesising: synthesiseOverEvidence, into: continuation
                 )
             } else {
                 var tail = streamed ? "" : conclusion
@@ -580,10 +582,17 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         chunks: [ChunkHit],
         contextLine: String,
         result: AgentResult,
+        synthesising: Bool = false,
         into continuation: AsyncStream<String>.Continuation
     ) async {
         let steps = result.reasoningTrace.count
-        Self.log.notice("agent returned empty (nothing streamed) — falling back with \(steps) trace step(s)")
+        // Two different roads end here — say which (the "returned empty" line
+        // read as a failure on every native tool turn, live 2026-09-04).
+        if synthesising {
+            Self.log.notice("native tool turn: synthesising over \(steps) trace step(s)")
+        } else {
+            Self.log.notice("agent returned empty (nothing streamed) — falling back with \(steps) trace step(s)")
+        }
         await streamFallback(
             question: question, chunks: chunks, contextLine: contextLine,
             gathered: result.reasoningTrace, into: continuation
@@ -632,6 +641,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         guard !observations.isEmpty else {
             return ChatPromptBuilder.build(chunks: chunks, userMessage: question)
         }
+        // A page the user asked for and a tool READ is not a search hit to be
+        // premise-checked — it is the thing itself. Without this the synthesis
+        // over m1k3.app's own text came back "we don't go there — no fetch, no
+        // pull" (live 2026-09-04): the persona answered instead of the page.
+        let pageRead = gathered.contains { step in
+            (step.action ?? "").hasPrefix("fetch_page") || (step.action ?? "").hasPrefix("open_link")
+        }
         return """
         Answer the user's question using the INFORMATION GATHERED below. Be \
         direct and plain — do not mention tools or actions.
@@ -642,12 +658,20 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         couldn't confirm it, and don't present a guess as fact. Do NOT stitch \
         tangential mentions into an affirmative answer.
 
-        INFORMATION GATHERED:
+        \(pageRead ? Self.pageReadSynthesisLine + "\n" : "")INFORMATION GATHERED:
         \(observations.joined(separator: "\n\n"))
 
         USER: \(question)
         """
     }
+
+    /// Appended to the synthesis prompt when a page was READ (fetch_page /
+    /// open_link): the page's own words outrank what the model already believes
+    /// about the site — including a site about itself.
+    static let pageReadSynthesisLine =
+        "A page that was read below IS the thing asked about: describe it from its own "
+            + "words — its title, what it says, what it offers — not from what you already "
+            + "believe about it."
 
     /// Which loop the prompt is feeding. The ReAct floor NEEDS its format
     /// scaffold (CONCLUSION:/call budget); the native loop speaks structured

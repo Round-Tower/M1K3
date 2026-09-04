@@ -21,6 +21,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-04 — the description no longer presumes a search
 //  came first: an address the user gives is read directly (live replay: it was searched for).
 //  Bare domains are coerced to https through ReviewTargetResolver (#208 review).
+//  Review: Kev + claude-fable-5.1, 2026-09-04 (late) — the read leads with "Page: <title>" + the meta
+//  description (live: an untitled stats strip read as "the site loads blank").
 
 import Foundation
 import M1K3Agent
@@ -141,16 +143,31 @@ public struct FetchPageTool: AgentTool {
                 return ToolResult(output: "The page at \(url.host() ?? "that address") had "
                     + "no readable text (it may need JavaScript). Try another result.")
             }
-            guard text.count > maxCharacters else {
-                return ToolResult(output: text)
-            }
-            let capped = text.prefix(maxCharacters)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            return ToolResult(output: capped + "…")
+            return ToolResult(output: Self.cap(Self.header(for: url, html: html) + "\n" + text, to: maxCharacters))
         } catch {
             Self.log.error("fetch failed for \(url.absoluteString, privacy: .public): \(error, privacy: .public)")
             return ToolResult(output: "Error: could not fetch the page — \(error.localizedDescription)")
         }
+    }
+
+    /// The frame a model reads FIRST: the page's own title (or its host) and its
+    /// meta description, ahead of the readable text. Live 2026-09-04: m1k3.app's
+    /// readable text opens with a stats strip ("0 bytes of your data sent to a
+    /// server…") and, untitled, a 4B model synthesised "the site loads blank"
+    /// over 1500 chars of it. The same helpers open_link's brief uses.
+    static func header(for url: URL, html: String) -> String {
+        var lines = ["Page: " + (PageBrief.title(from: html) ?? url.host() ?? url.absoluteString)]
+        if let description = PageBrief.metaDescription(from: html) {
+            lines.append(description)
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// The observation cap, header included — a small model's tool budget is
+    /// the same whatever the page says.
+    private static func cap(_ text: String, to max: Int) -> String {
+        guard text.count > max else { return text }
+        return text.prefix(max).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
     }
 
     /// Scheme/host-guarded http(s) URL, or nil if not a fetchable page. The

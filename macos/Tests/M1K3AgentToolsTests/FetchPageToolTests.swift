@@ -99,6 +99,44 @@ struct FetchPageToolTests {
         #expect(fetcher.requests.isEmpty)
     }
 
+    @Test("a read leads with the page's own title and description, then the text")
+    func titledRead() async throws {
+        let fetcher = ScriptedFetcher(body: """
+        <html><head><title>M1K3 for Mac — Nothing leaves.</title>
+        <meta name="description" content="A fully on-device AI companion for macOS."></head>
+        <body><p>0 bytes of your data sent to a server.</p></body></html>
+        """)
+        let tool = FetchPageTool(fetcher: fetcher)
+        let result = try await tool.execute(input: ["url": "https://m1k3.app"])
+        #expect(result.output.hasPrefix("Page: M1K3 for Mac — Nothing leaves."))
+        #expect(result.output.contains("A fully on-device AI companion for macOS."))
+        #expect(result.output.contains("0 bytes of your data sent to a server."))
+        // The header comes before the text, so a model reads the frame first.
+        let title = try #require(result.output.range(of: "Nothing leaves.")?.lowerBound)
+        let body = try #require(result.output.range(of: "0 bytes")?.lowerBound)
+        #expect(title < body)
+    }
+
+    @Test("an untitled page is still framed — by its host")
+    func untitledReadNamesTheHost() async throws {
+        let fetcher = ScriptedFetcher(body: "<body><p>Plain words.</p></body>")
+        let tool = FetchPageTool(fetcher: fetcher)
+        let result = try await tool.execute(input: ["url": "https://example.org/notes"])
+        #expect(result.output.hasPrefix("Page: example.org"))
+        #expect(result.output.contains("Plain words."))
+    }
+
+    @Test("the header counts against the cap — a long page still stays within it")
+    func headerIsInsideTheCap() async throws {
+        let long = String(repeating: "word ", count: 2000)
+        let fetcher = ScriptedFetcher(body: "<html><head><title>Long</title></head><body><p>\(long)</p></body></html>")
+        let tool = FetchPageTool(fetcher: fetcher, maxCharacters: 300)
+        let result = try await tool.execute(input: ["url": "https://example.org"])
+        #expect(result.output.hasPrefix("Page: Long"))
+        #expect(result.output.count <= 301)
+        #expect(result.output.hasSuffix("…"))
+    }
+
     @Test("a bare domain — what the routing rule tells the model to pass — is read over https")
     func bareDomainIsCoerced() async throws {
         let fetcher = ScriptedFetcher(body: "<html><body><p>M1K3 for Mac. Nothing leaves.</p></body></html>")

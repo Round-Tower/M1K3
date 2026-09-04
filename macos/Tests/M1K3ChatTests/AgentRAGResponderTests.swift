@@ -610,6 +610,26 @@ struct AgentRAGResponderTests {
         #expect(withObservations.contains("INFORMATION GATHERED"))
     }
 
+    @Test("a page the model READ is framed as the thing itself, not a search hit to premise-check")
+    func fallbackPromptFramesAPageRead() {
+        let read = AgentRAGResponder.fallbackPrompt(
+            question: "Fetch the web site m1k3.app and give me your read.", chunks: [],
+            gathered: [ReasoningStep(
+                iteration: 0, thought: "", action: "fetch_page(url=https://m1k3.app)",
+                observation: "Page: M1K3 for Mac — Nothing leaves.\n0 bytes of your data sent to a server."
+            )]
+        )
+        #expect(read.contains(AgentRAGResponder.pageReadSynthesisLine))
+        #expect(read.contains("INFORMATION GATHERED"))
+        // Still the premise guard — a read is not a licence to invent.
+        #expect(read.contains("couldn't confirm it"))
+        let searched = AgentRAGResponder.fallbackPrompt(
+            question: "q", chunks: [],
+            gathered: [ReasoningStep(iteration: 0, thought: "", action: "web_search(x)", observation: "1. A result.")]
+        )
+        #expect(!searched.contains(AgentRAGResponder.pageReadSynthesisLine))
+    }
+
     @Test("web-synthesis prompt makes the model verify the premise, not stitch tangential hits")
     func fallbackPromptGuardsAgainstFalsePremise() {
         // The Glanmire false-positive (caught live, web ON): a FICTIONAL entity
