@@ -100,8 +100,9 @@ public struct FetchPageTool: AgentTool {
     /// network, so it never runs in the same turn as a local-sensitive tool.
     public let exclusionClass: ToolExclusionClass? = .network
     public let description =
-        "Read a web page's actual content — a URL or domain the user gave you, or a "
-            + "web_search result you want in full. Argument: the page URL."
+        "Read a web page in full. Use it directly for any URL or domain the user "
+            + "gives you — do not search for it first — or to read a web_search result "
+            + "in full. Argument: the page URL."
     public let parameters = [
         ToolParameter(name: "url", description: "the http(s) page URL"),
     ]

@@ -763,7 +763,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             + "say so instead of describing it."
 
     /// The page-tool rules — search-deepen, direct address, open_link, and the
-    /// shared describe-only line — each offered-only; empty when no page tool is.
+    /// shared describe-only line — each offered-only; empty when no page tool is offered.
     static func pageToolRouting(toolNames: Set<String>, hasWebSearch: Bool) -> String {
         let hasFetchPage = toolNames.contains("fetch_page")
         let hasOpenLink = toolNames.contains("open_link")
