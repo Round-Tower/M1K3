@@ -75,12 +75,14 @@ public enum PageBrief {
 
     /// A served llms.txt is only usable if it's text: single-page apps answer
     /// every unknown path with their HTML shell, which would put the app's
-    /// markup where the site's description should be.
+    /// markup where the site's description should be. The sniff is on how the
+    /// body STARTS — a real llms.txt that mentions `<html>` in prose (a docs
+    /// site) must not be dropped for it (#207 review).
     static func usableLLMSText(_ raw: String) -> String? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
-        let head = trimmed.prefix(512).lowercased()
-        guard !head.hasPrefix("<!doctype"), !head.contains("<html"), !head.contains("<head") else { return nil }
+        let head = trimmed.prefix(64).lowercased()
+        guard !head.hasPrefix("<!doctype"), !head.hasPrefix("<html"), !head.hasPrefix("<head") else { return nil }
         return trimmed
     }
 

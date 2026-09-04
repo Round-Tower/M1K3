@@ -34,6 +34,30 @@ private final class RoutedFetcher: HTTPFetching, Sendable {
 
 private let offline = RoutedFetcher()
 
+/// Records when each fetch starts and ends, and holds each one open long enough
+/// that sequential calls can't overlap by accident.
+private final class TimingFetcher: HTTPFetching, @unchecked Sendable {
+    private let lock = NSLock()
+    private var starts: [String: Date] = [:]
+    private var ends: [String: Date] = [:]
+
+    func fetch(_ request: URLRequest) async throws -> (data: Data, response: HTTPURLResponse) {
+        let path = request.url!.path
+        lock.withLock { starts[path] = Date() }
+        try await Task.sleep(for: .milliseconds(150))
+        lock.withLock { ends[path] = Date() }
+        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        return (Data("<html><head><title>T</title></head><body>b</body></html>".utf8), response)
+    }
+
+    func window(_ path: String) -> (start: Date, end: Date)? {
+        lock.withLock {
+            guard let s = starts[path], let e = ends[path] else { return nil }
+            return (s, e)
+        }
+    }
+}
+
 struct OpenLinkToolTests {
     /// A thread-safe sink for the URL the tool hands back, so we can assert what
     /// would be opened without any UI.
@@ -130,6 +154,18 @@ struct OpenLinkToolTests {
         let result = try await tool.execute(input: ["url": "https://example.com/"])
         #expect(result.output.contains("Title: Plain"))
         #expect(!result.output.contains("llms.txt"))
+    }
+
+    @Test("the page and llms.txt are fetched concurrently — the model never waits for two timeouts")
+    func fetchesConcurrently() async throws {
+        let fetcher = TimingFetcher()
+        let tool = OpenLinkTool(fetcher: fetcher) { _ in }
+        _ = try await tool.execute(input: ["url": "https://example.com/docs"])
+        let page = try #require(fetcher.window("/docs"))
+        let llms = try #require(fetcher.window("/llms.txt"))
+        // The second request began before the first one finished.
+        #expect(llms.start < page.end)
+        #expect(page.start < llms.end)
     }
 
     @Test("the panel opens even when the read fails — and the brief says so, in words the model can't misread")

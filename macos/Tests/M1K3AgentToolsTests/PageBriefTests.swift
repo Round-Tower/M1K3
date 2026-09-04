@@ -91,6 +91,9 @@ struct PageBriefTests {
         #expect(PageBrief.usableLLMSText("<!doctype html><html><head></head><body>app</body></html>") == nil)
         #expect(PageBrief.usableLLMSText("   \n ") == nil)
         #expect(PageBrief.usableLLMSText("# Site\n> summary") == "# Site\n> summary")
+        // Prose that MENTIONS markup is still text (a docs site's llms.txt).
+        #expect(PageBrief.usableLLMSText("# Widgets\n> Embed with a <html> snippet.") != nil)
+        #expect(PageBrief.usableLLMSText("\n  <html><body>shell</body></html>") == nil)
     }
 
     @Test("llms.txt lives at the site origin, never under the page path")

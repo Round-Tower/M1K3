@@ -69,9 +69,20 @@ public struct OpenLinkTool: AgentTool {
     }
 
     /// The page (browser-headed, the same request fetch_page sends) and the
-    /// origin's llms.txt. Never throws: a failed page read becomes the brief's
-    /// explicit failure; a missing llms.txt is simply absent.
-    static func gather(url: URL, fetcher: any HTTPFetching) async -> PageBriefSources {
+    /// origin's llms.txt, fetched CONCURRENTLY — two independent round-trips
+    /// back-to-back would block the model for up to 2× the fetcher's timeout
+    /// (#207 review). Never throws: a failed page read becomes the brief's
+    /// explicit failure; a missing llms.txt is simply absent. Public so the MCP
+    /// host's open_link (visiting agents) returns the same brief.
+    public static func gather(url: URL, fetcher: any HTTPFetching) async -> PageBriefSources {
+        async let page = readPage(url: url, fetcher: fetcher)
+        async let llms = readLLMSText(origin: url, fetcher: fetcher)
+        var sources = await page
+        sources.llmsText = await llms
+        return sources
+    }
+
+    private static func readPage(url: URL, fetcher: any HTTPFetching) async -> PageBriefSources {
         var sources = PageBriefSources()
         do {
             let (data, response) = try await fetcher.fetch(FetchPageTool.pageRequest(for: url))
@@ -85,17 +96,18 @@ public struct OpenLinkTool: AgentTool {
         } catch {
             sources.failure = "fetch failed: \(error.localizedDescription)"
         }
-        if let llmsURL = PageBrief.llmsURL(for: url) {
-            var request = FetchPageTool.pageRequest(for: llmsURL)
-            request.setValue("text/plain, text/markdown;q=0.9, */*;q=0.1", forHTTPHeaderField: "Accept")
-            if let (data, response) = try? await fetcher.fetch(request),
-               HTTPStatus.classify(response.statusCode) == .ok
-            {
-                sources.llmsText = PageBrief.usableLLMSText(
-                    BodyDecoder.decode(data, contentType: response.value(forHTTPHeaderField: "Content-Type"))
-                )
-            }
-        }
         return sources
+    }
+
+    private static func readLLMSText(origin url: URL, fetcher: any HTTPFetching) async -> String? {
+        guard let llmsURL = PageBrief.llmsURL(for: url) else { return nil }
+        var request = FetchPageTool.pageRequest(for: llmsURL)
+        request.setValue("text/plain, text/markdown;q=0.9, */*;q=0.1", forHTTPHeaderField: "Accept")
+        guard let (data, response) = try? await fetcher.fetch(request),
+              HTTPStatus.classify(response.statusCode) == .ok
+        else { return nil }
+        return PageBrief.usableLLMSText(
+            BodyDecoder.decode(data, contentType: response.value(forHTTPHeaderField: "Content-Type"))
+        )
     }
 }
