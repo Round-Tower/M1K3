@@ -99,6 +99,30 @@ struct FetchPageToolTests {
         #expect(fetcher.requests.isEmpty)
     }
 
+    @Test("a bare domain — what the routing rule tells the model to pass — is read over https")
+    func bareDomainIsCoerced() async throws {
+        let fetcher = ScriptedFetcher(body: "<html><body><p>M1K3 for Mac. Nothing leaves.</p></body></html>")
+        let tool = FetchPageTool(fetcher: fetcher)
+        let result = try await tool.execute(input: ["url": "m1k3.app"])
+        #expect(!result.output.hasPrefix("Error:"))
+        #expect(result.output.contains("Nothing leaves"))
+        #expect(fetcher.requests.first?.url?.absoluteString == "https://m1k3.app")
+        // With a path too — the resolver's rule, mirrored.
+        let deep = try await tool.execute(input: ["url": "m1k3.app/blog/hello"])
+        #expect(!deep.output.hasPrefix("Error:"))
+        #expect(fetcher.requests.last?.url?.absoluteString == "https://m1k3.app/blog/hello")
+    }
+
+    @Test("the unusable-address error never points the model back at web_search")
+    func errorDoesNotRouteToSearch() async throws {
+        let fetcher = ScriptedFetcher(body: "nope")
+        let tool = FetchPageTool(fetcher: fetcher)
+        let junk = try await tool.execute(input: ["url": "not a url"])
+        #expect(junk.output.hasPrefix("Error:"))
+        #expect(!junk.output.contains("web_search"))
+        #expect(fetcher.requests.isEmpty)
+    }
+
     @Test("SSRF: loopback / private / obfuscated-local targets are refused, never fetched")
     func refusesLocalTargets() async throws {
         let fetcher = ScriptedFetcher(body: "secret internal content")

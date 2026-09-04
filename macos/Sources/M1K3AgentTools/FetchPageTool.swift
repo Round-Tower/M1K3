@@ -20,6 +20,7 @@
 //  agent-facing error strings. execute() behaviour is unchanged.
 //  Review: Kev + claude-fable-5.1, 2026-09-04 — the description no longer presumes a search
 //  came first: an address the user gives is read directly (live replay: it was searched for).
+//  Bare domains are coerced to https through ReviewTargetResolver (#208 review).
 
 import Foundation
 import M1K3Agent
@@ -104,7 +105,7 @@ public struct FetchPageTool: AgentTool {
             + "gives you — do not search for it first — or to read a web_search result "
             + "in full. Argument: the page URL."
     public let parameters = [
-        ToolParameter(name: "url", description: "the http(s) page URL"),
+        ToolParameter(name: "url", description: "the page URL, or a bare domain (https assumed)"),
     ]
 
     private let fetcher: any HTTPFetching
@@ -118,8 +119,8 @@ public struct FetchPageTool: AgentTool {
     public func execute(input: [String: String]) async throws -> ToolResult {
         let raw = (input["url"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = Self.validatedURL(raw) else {
-            return ToolResult(output: "Error: fetch_page needs a full http(s) URL "
-                + "(use one from the web_search results).")
+            return ToolResult(output: "Error: fetch_page needs a web address — a full "
+                + "http(s) URL or a domain like example.com.")
         }
 
         do {
@@ -152,9 +153,14 @@ public struct FetchPageTool: AgentTool {
         }
     }
 
-    /// Scheme/host-guarded http(s) URL, or nil if not a fetchable page.
+    /// Scheme/host-guarded http(s) URL, or nil if not a fetchable page. The
+    /// address gets the coercion open_link's resolver gives it — a bare domain
+    /// (m1k3.app, m1k3.app/blog) becomes https — because the routing rule tells
+    /// the model to pass exactly that (#208 review: the scheme guard alone
+    /// bounced the rule's own example straight back into web_search). Paths
+    /// never probe the filesystem here: a network tool has no business stat-ing.
     static func validatedURL(_ raw: String) -> URL? {
-        guard let url = URL(string: raw),
+        guard case let .web(url) = ReviewTargetResolver.resolve(raw, fileExists: { _ in false }),
               let scheme = url.scheme?.lowercased(),
               ["http", "https"].contains(scheme),
               url.host() != nil,
