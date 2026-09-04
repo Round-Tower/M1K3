@@ -28,6 +28,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — voice output goes behind the Mac's SwappableSpeechProvider façade:
 //  Built-in stays the default, M1K3 Voice (Kokoro/MLX) is a Settings pick that downloads once (AppCore+VoiceOutput),
 //  restored on launch only when already staged (VoiceTierRestore).
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — the tool palette goes through the shared ToolPalettePolicy
+//  (availability-gated, same rule as the Mac) so both shells derive it from one rule.
 //
 
 import Foundation
@@ -638,7 +640,17 @@ final class AppCore {
                     let deepReader = FetchPageTool(fetcher: URLSessionHTTPFetcher(timeout: 8))
                     tools.insert(WebSearchTool(deepReader: deepReader), at: 0)
                 }
-                return tools
+                // Same availability rule as the Mac (ToolPalettePolicy): the
+                // knowledge tools need a corpus, the web trio needs the toggle.
+                // This shell offers no bigger brain and no battery tool.
+                return ToolPalettePolicy.filter(tools, availability: .init(
+                    corpusHasItems: ToolPalettePolicy.corpusHasItems(count: try? store.itemCount()),
+                    webAllowed: webAllowed,
+                    deepBrainAvailable: false,
+                    // Inert until a battery tool is ever wired into this
+                    // palette (none is today); true because the phone has one.
+                    hasBattery: true
+                ))
             },
             sourceCollector: sourceCollector,
             brainNameProvider: {

@@ -1309,19 +1309,23 @@ final class AppEnvironment {
         // Order matters — the second warm becomes MRU, and the cache holds two.
         // Interactive goes last because a person waiting on their first chat turn
         // beats an agent's first ask.
-        let headlessTools = Self.interactiveAgentTools(
-            store: store, embedder: embedder,
-            onHits: { _ in }, onOpenLink: nil
-        ).map(\.toolDefinition)
-        let interactiveTools = Self.interactiveAgentTools(
-            store: store, embedder: embedder,
-            onHits: { _ in }, onOpenLink: { _ in }, deepDelegation: deepDelegationHook,
-            scriptExecution: .forWarm, contextSenses: .forWarm
-        ).map(\.toolDefinition)
         // weak: a brain swap mid-warm must not have this task pin the OUTGOING
         // provider's multi-GB weights alive while the new brain's are loading
         // (releaseMemory's reclaim would silently wait on the warm otherwise).
-        Task.detached(priority: .utility) { [weak mlx] in
+        Task.detached(priority: .utility) { [weak mlx, store, embedder, deepDelegationHook] in
+            // The palette's availability facts are real I/O (a SQLite count, a
+            // directory listing, IOKit once) — computed ONCE, here, off the
+            // main actor, and shared by both palettes (review fold, #201).
+            let availability = Self.paletteAvailability(store: store)
+            let headlessTools = Self.interactiveAgentTools(
+                store: store, embedder: embedder,
+                onHits: { _ in }, onOpenLink: nil, availability: availability
+            ).map(\.toolDefinition)
+            let interactiveTools = Self.interactiveAgentTools(
+                store: store, embedder: embedder,
+                onHits: { _ in }, onOpenLink: { _ in }, deepDelegation: deepDelegationHook,
+                scriptExecution: .forWarm, contextSenses: .forWarm, availability: availability
+            ).map(\.toolDefinition)
             // Sequentially: one ModelContainer, and the coalescer only dedupes
             // IDENTICAL keys — two concurrent builds of different keys would just
             // queue on the actor anyway, with the loser's ordering unpredictable.
