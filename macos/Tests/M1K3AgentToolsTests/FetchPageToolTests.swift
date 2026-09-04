@@ -117,6 +117,17 @@ struct FetchPageToolTests {
         #expect(title < body)
     }
 
+    @Test("the search-deepen read carries the same titled frame")
+    func deepenReadIsTitled() async throws {
+        let fetcher = ScriptedFetcher(body: """
+        <html><head><title>M1K3 for Mac</title></head><body><p>0 bytes sent.</p></body></html>
+        """)
+        let tool = FetchPageTool(fetcher: fetcher)
+        let read = try #require(await tool.readablePage(at: "https://m1k3.app"))
+        #expect(read.hasPrefix("Page: M1K3 for Mac"))
+        #expect(read.contains("0 bytes sent."))
+    }
+
     @Test("an untitled page is still framed — by its host")
     func untitledReadNamesTheHost() async throws {
         let fetcher = ScriptedFetcher(body: "<body><p>Plain words.</p></body>")

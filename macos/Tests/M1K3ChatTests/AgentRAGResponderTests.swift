@@ -628,6 +628,20 @@ struct AgentRAGResponderTests {
             gathered: [ReasoningStep(iteration: 0, thought: "", action: "web_search(x)", observation: "1. A result.")]
         )
         #expect(!searched.contains(AgentRAGResponder.pageReadSynthesisLine))
+        // A read that ERRORED beside a good search is not a page read — the
+        // observation was filtered out, so the frame must not claim one.
+        let mixed = AgentRAGResponder.fallbackPrompt(
+            question: "q", chunks: [],
+            gathered: [
+                ReasoningStep(iteration: 0, thought: "", action: "web_search(x)", observation: "1. A result."),
+                ReasoningStep(
+                    iteration: 1, thought: "", action: "fetch_page(url=https://x.example)",
+                    observation: "Error: could not fetch that page."
+                ),
+            ]
+        )
+        #expect(!mixed.contains(AgentRAGResponder.pageReadSynthesisLine))
+        #expect(mixed.contains("1. A result."))
     }
 
     @Test("web-synthesis prompt makes the model verify the premise, not stitch tangential hits")

@@ -645,8 +645,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // premise-checked — it is the thing itself. Without this the synthesis
         // over m1k3.app's own text came back "we don't go there — no fetch, no
         // pull" (live 2026-09-04): the persona answered instead of the page.
+        // Only a read whose observation SURVIVED the filter above counts — a
+        // fetch that errored beside a good search must not frame the prompt as
+        // a page read (#209 review).
         let pageRead = gathered.contains { step in
-            (step.action ?? "").hasPrefix("fetch_page") || (step.action ?? "").hasPrefix("open_link")
+            guard let action = step.action, let observation = step.observation,
+                  !observation.hasPrefix("Error"), !observation.hasPrefix("You already ran")
+            else { return false }
+            return action.hasPrefix("fetch_page") || action.hasPrefix("open_link")
         }
         return """
         Answer the user's question using the INFORMATION GATHERED below. Be \

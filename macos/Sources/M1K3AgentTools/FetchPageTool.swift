@@ -214,8 +214,9 @@ public struct FetchPageTool: AgentTool {
             )
             let text = HTMLTextExtractor.text(from: html)
             guard !text.isEmpty else { return nil }
-            guard text.count > maxCharacters else { return text }
-            return text.prefix(maxCharacters).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
+            // The same titled frame execute() gives — the search-deepen read is
+            // the other road to an untitled stats strip (#209 review).
+            return Self.cap(Self.header(for: url, html: html) + "\n" + text, to: maxCharacters)
         } catch {
             return nil
         }
