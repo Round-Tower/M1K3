@@ -8,10 +8,17 @@
 //  repeat initialize for its lifetime, so this is the test that keeps a second
 //  `claude` session from 400ing until app restart.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-04 (#190) — every test binds through
+//  `startOnFreePort`: the old 52000…59000 pick sat INSIDE macOS's ephemeral
+//  range and collided with the Xcode Cloud VM's own outbound sockets
+//  (EADDRINUSE killed the deploy gate in runs #270 and #280). Ports now come
+//  from below that range, and a bind collision retries on a fresh port.
+//
 
 import Foundation
 @testable import M1K3MCPKit
 import MCP
+import Network
 import Testing
 
 private func makeServer(port: UInt16) -> LocalMCPHTTPServer {
@@ -87,6 +94,29 @@ private final class Counter: @unchecked Sendable {
     }
 }
 
+/// Every loopback test binds a fresh port. The old pick, 52000…59000, sits
+/// INSIDE macOS's ephemeral range (49152–65535): on the Xcode Cloud VM the
+/// package-resolution and upload sockets live there, and a listener landing on
+/// one of them throws EADDRINUSE (POSIX 48) — runs #270 and #280 died in this
+/// suite that way (#190). Pick below the ephemeral range, and if a bind still
+/// collides, build a fresh server on a fresh port rather than fail the run.
+private func startOnFreePort(
+    attempts: Int = 5, _ make: (UInt16) -> LocalMCPHTTPServer
+) async throws -> (server: LocalMCPHTTPServer, port: UInt16) {
+    var lastError: (any Error)?
+    for _ in 0 ..< attempts {
+        let port = UInt16.random(in: 20000 ... 40000)
+        let server = make(port)
+        do {
+            try await server.start()
+            return (server, port)
+        } catch let NWError.posix(code) where code == .EADDRINUSE {
+            lastError = NWError.posix(code)
+        }
+    }
+    throw lastError ?? MCPVoiceError("no free loopback port after \(attempts) attempts")
+}
+
 private let initializeBody = #"""
 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"wire-test","version":"0"}}}
 """#
@@ -94,9 +124,7 @@ private let initializeBody = #"""
 struct LocalMCPHTTPServerTests {
     @Test("initialize, list tools, and re-initialize round-trip over real loopback HTTP")
     func fullRoundTrip() async throws {
-        let port = UInt16.random(in: 52000 ... 59000)
-        let server = makeServer(port: port)
-        try await server.start()
+        let (server, port) = try await startOnFreePort { makeServer(port: $0) }
         defer { Task { await server.stop() } }
         // No sleep: start() now awaits the listener's real bind before returning.
 
@@ -130,9 +158,7 @@ struct LocalMCPHTTPServerTests {
         // so the fast request's waiter[1] clobbered the slow request's, orphaning
         // the slow one until timeout. The per-request id remap must let BOTH
         // return with the correct id echoed back.
-        let port = UInt16.random(in: 52000 ... 59000)
-        let server = makeServerWithSlowAndFastTools(port: port)
-        try await server.start()
+        let (server, port) = try await startOnFreePort { makeServerWithSlowAndFastTools(port: $0) }
         defer { Task { await server.stop() } }
 
         async let slow = post(#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"slow"}}"#, port: port)
@@ -172,23 +198,23 @@ struct LocalMCPHTTPServerTests {
             }
         }
         let box = NameBox()
-        let port = UInt16.random(in: 52000 ... 59000)
-        let server = LocalMCPHTTPServer(
-            port: port,
-            onClientInitialize: { box.append($0) }
-        ) {
-            let registry = MCPToolRegistry([
-                MCPToolDefinition(
-                    tool: Tool(name: "alpha", description: "first", inputSchema: ["type": "object"]),
-                    handler: { _ in "alpha says hi" }
-                ),
-            ])
-            let transport = StatelessHTTPServerTransport()
-            let server = await makeM1K3Server(registry: registry)
-            try await server.start(transport: transport)
-            return (server, transport)
+        let (server, port) = try await startOnFreePort { port in
+            LocalMCPHTTPServer(
+                port: port,
+                onClientInitialize: { box.append($0) }
+            ) {
+                let registry = MCPToolRegistry([
+                    MCPToolDefinition(
+                        tool: Tool(name: "alpha", description: "first", inputSchema: ["type": "object"]),
+                        handler: { _ in "alpha says hi" }
+                    ),
+                ])
+                let transport = StatelessHTTPServerTransport()
+                let server = await makeM1K3Server(registry: registry)
+                try await server.start(transport: transport)
+                return (server, transport)
+            }
         }
-        try await server.start()
         defer { Task { await server.stop() } }
 
         _ = try await post(initializeBody, port: port)
@@ -200,21 +226,21 @@ struct LocalMCPHTTPServerTests {
 
     @Test("a session-rebuild failure stops the server honestly instead of zombie 500s")
     func rebuildFailureStopsServer() async throws {
-        let port = UInt16.random(in: 52000 ... 59000)
         let attempts = Counter()
         let stopped = Counter()
-        let server = LocalMCPHTTPServer(
-            port: port,
-            onAbnormalStop: { _ in stopped.increment() }
-        ) {
-            if attempts.incrementAndGet() > 1 { throw MCPVoiceError("factory down") }
-            let transport = StatelessHTTPServerTransport()
-            let registry = MCPToolRegistry([])
-            let mcpServer = await makeM1K3Server(registry: registry)
-            try await mcpServer.start(transport: transport)
-            return (mcpServer, transport)
+        let (server, port) = try await startOnFreePort { port in
+            LocalMCPHTTPServer(
+                port: port,
+                onAbnormalStop: { _ in stopped.increment() }
+            ) {
+                if attempts.incrementAndGet() > 1 { throw MCPVoiceError("factory down") }
+                let transport = StatelessHTTPServerTransport()
+                let registry = MCPToolRegistry([])
+                let mcpServer = await makeM1K3Server(registry: registry)
+                try await mcpServer.start(transport: transport)
+                return (mcpServer, transport)
+            }
         }
-        try await server.start()
 
         _ = try await post(initializeBody, port: port)
         // Second initialize → factory throws → server must stop, not zombie.
@@ -232,9 +258,7 @@ struct LocalMCPHTTPServerTests {
         // The bug: start() ignored the async bind result, so a second instance on
         // an already-held port set isRunning=true and the host showed "Running"
         // while no socket ever bound. start() must now surface EADDRINUSE.
-        let port = UInt16.random(in: 52000 ... 59000)
-        let first = makeServer(port: port)
-        try await first.start()
+        let (first, port) = try await startOnFreePort { makeServer(port: $0) }
         defer { Task { await first.stop() } }
 
         let second = makeServer(port: port)
@@ -247,9 +271,7 @@ struct LocalMCPHTTPServerTests {
 
     @Test("start() returns only once bound — an immediate request needs no sleep")
     func startAwaitsBind() async throws {
-        let port = UInt16.random(in: 52000 ... 59000)
-        let server = makeServer(port: port)
-        try await server.start()
+        let (server, port) = try await startOnFreePort { makeServer(port: $0) }
         defer { Task { await server.stop() } }
         // No Task.sleep: start() awaited .ready, so this lands immediately.
         let response = try await post(initializeBody, port: port)
@@ -258,9 +280,7 @@ struct LocalMCPHTTPServerTests {
 
     @Test("tool calls dispatch through the live stack")
     func toolCall() async throws {
-        let port = UInt16.random(in: 52000 ... 59000)
-        let server = makeServer(port: port)
-        try await server.start()
+        let (server, port) = try await startOnFreePort { makeServer(port: $0) }
 
         _ = try await post(initializeBody, port: port)
         let call = try await post(
