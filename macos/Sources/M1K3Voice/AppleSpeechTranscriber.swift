@@ -62,6 +62,16 @@
 //  identical error the moment speech arrives. Apple's recogniser does not run
 //  on the simulator at all; voice capture is device-only, and the loop now says
 //  so on screen instead of parking mutely. The on-device floor is untouched.
+//
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — the VPIO output bus gets a silent render source (mainMixerNode touched,
+//  volume 0): the phone was throwing ~330 render errors a second on every listen with voice processing on. Verify-owed
+//  by count on device (render err: -1 → 0); no behaviour change intended.
+//  Review: Kev + claude-fable-5.1, 2026-09-04 (the double arm) — the
+//  configuration-change handler no longer tears the tap down unconditionally:
+//  `MicTapReinstallPolicy` compares the format the tap was installed at with the
+//  format read back (keep / restart / reinstall), so the iPhone's same-format
+//  notification ~0.5 s after the first arm stops bouncing the engine. Real route
+//  changes (a new sample rate or channel count) reinstall exactly as before.
 
 import AVFoundation
 import Foundation
@@ -133,6 +143,10 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// or stop its running engine. The shared `AVAudioEngine` had session identity
     /// only in its state before; now it has an explicit owner.
     private var engineOwner: UInt64?
+    /// The format the live tap was installed at — `engineLock`-guarded like
+    /// `engineOwner`. The configuration-change handler compares it with the
+    /// format read back to decide keep / restart / reinstall.
+    private var installedTapFormat: MicTapFormat?
     /// Why the current/most recent session ended without a word, when the
     /// recogniser (not the caller) ended it — see `lastFailure`. Guarded by `lock`.
     private var lastFailureMessage: String?
@@ -243,6 +257,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             audioEngine.stop()
             audioEngine.inputNode.removeTap(onBus: 0)
             engineOwner = nil
+            installedTapFormat = nil
         }
     }
 
@@ -561,6 +576,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             } catch {
                 audioEngine.inputNode.removeTap(onBus: 0)
                 engineOwner = nil
+                installedTapFormat = nil
                 return .failed
             }
         }
@@ -579,6 +595,16 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // mono at the device rate), so a format read first would install a tap
         // that no longer matches the node.
         enableVoiceProcessing(on: inputNode)
+        // Give the I/O unit's OUTPUT element a render source. With voice
+        // processing on, the engine's I/O unit is a VPIO whose output bus
+        // renders every cycle regardless; with nothing attached to
+        // `outputNode`, that render fails — the phone logged
+        // `AURemoteIO … render err: -1` ~330×/s through every listen, think
+        // and speak phase (2026-09-03, iPhone 17 Pro; the Mac's log shows
+        // none). Touching `mainMixerNode` implicitly connects mixer → output;
+        // an input-less mixer renders silence, so the bus is satisfied and
+        // nothing audible changes. Volume 0 is belt-and-braces.
+        audioEngine.mainMixerNode.outputVolume = 0
         let format = inputNode.outputFormat(forBus: 0)
         Self.log.notice(
             "stt mic input format \(format.sampleRate, privacy: .public)Hz ch=\(format.channelCount, privacy: .public)"
@@ -587,6 +613,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             sampleRate: format.sampleRate, channelCount: format.channelCount
         ) else {
             Self.log.error("degenerate mic format — not installing tap (route not ready)")
+            installedTapFormat = nil
             return false
         }
         // The closure reads `self?.request` FRESH per buffer rather than closing
@@ -629,6 +656,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 self.request?.append(audible)
             }
         }
+        installedTapFormat = MicTapFormat(sampleRate: format.sampleRate, channelCount: format.channelCount)
         return true
     }
 
@@ -687,32 +715,59 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         if !accepted { NotificationCenter.default.removeObserver(observer) }
     }
 
-    /// The audio route changed — a Bluetooth mic connecting, or starting capture
-    /// forcing the headset's A2DP→HFP profile switch. The installed tap is bound
-    /// to the OLD input format and now delivers nothing, so reinstall against the
-    /// new format and restart. Generation-scoped: an in-flight notification from a
-    /// removed observer must not re-arm the engine for a session that has since
-    /// been stopped (ownerless hot mic) or install a second tap into a starting
-    /// successor (a crash). The whole reinstall runs under `engineLock` with the
-    /// ownership check inside it, so it is atomic against every other engine op.
+    /// The engine posted a configuration change. Either a real route change (a
+    /// Bluetooth mic connecting, or starting capture forcing the headset's
+    /// A2DP→HFP profile switch) — the installed tap is bound to the OLD input
+    /// format and now delivers nothing, so reinstall against the new format and
+    /// restart — or the same-format notice the iPhone posts ~0.5 s after the
+    /// first arm of a session (2026-09-03), where tearing the tap down bounced
+    /// the engine for nothing. `MicTapReinstallPolicy` decides from the format
+    /// the tap was installed at, the format read back, and whether the engine is
+    /// still running (Apple's contract lets it stop itself before posting).
+    /// Generation-scoped: an in-flight notification from a removed observer must
+    /// not re-arm the engine for a session that has since been stopped
+    /// (ownerless hot mic) or install a second tap into a starting successor (a
+    /// crash). The whole decision runs under `engineLock` with the ownership
+    /// check inside it, so it is atomic against every other engine op.
     private func handleConfigurationChange(generation: UInt64) {
-        Self.log.notice("audio route changed — reinstalling mic tap at the new format")
         engineLock.withLock {
             // Only OUR session, still current, still the engine owner.
             guard engineOwner == generation,
                   lock.withLock({ generation == self.generation }) else { return }
-            audioEngine.inputNode.removeTap(onBus: 0)
-            if audioEngine.isRunning { audioEngine.stop() }
-            guard installInputTap() else {
-                // Route not ready yet; ownership stands so the next notification retries.
-                return
+            let readBack = audioEngine.inputNode.outputFormat(forBus: 0)
+            let action = MicTapReinstallPolicy.action(
+                installed: installedTapFormat,
+                current: MicTapFormat(sampleRate: readBack.sampleRate, channelCount: readBack.channelCount),
+                engineRunning: audioEngine.isRunning
+            )
+            switch action {
+            case .keep:
+                Self.log.notice("audio configuration notice — mic format unchanged, engine running; tap kept")
+            case .restart:
+                Self.log.notice("audio configuration notice — mic format unchanged, engine stopped; restarting")
+                restartEngineAfterConfigurationChange()
+            case .reinstall:
+                Self.log.notice("audio route changed — reinstalling mic tap at the new format")
+                audioEngine.inputNode.removeTap(onBus: 0)
+                if audioEngine.isRunning { audioEngine.stop() }
+                guard installInputTap() else {
+                    // Route not ready yet; ownership stands so the next notification retries.
+                    return
+                }
+                restartEngineAfterConfigurationChange()
             }
-            audioEngine.prepare()
-            do {
-                try audioEngine.start()
-            } catch {
-                Self.log.error("engine restart after route change failed: \(error.localizedDescription, privacy: .public)")
-            }
+        }
+    }
+
+    /// Caller holds `engineLock`.
+    private func restartEngineAfterConfigurationChange() {
+        audioEngine.prepare()
+        do {
+            try audioEngine.start()
+        } catch {
+            Self.log.error(
+                "engine restart after route change failed: \(error.localizedDescription, privacy: .public)"
+            )
         }
     }
 
