@@ -64,6 +64,9 @@
 //  poem→inline, generative-with-a-fact→still-no-tool.
 //  MurphySig: kevin+claude-fable-5 2026-08-23 confidence=0.8 — prompt content
 //  is pin-tested; the behavioural change on gemma is verify-at-⌘R.
+//  Review: Kev + claude-fable-5.1, 2026-09-04 (late) — a user-given address is a READ:
+//  `fetchPageRouting` (offered-only) + one shared `describeOnlyRouting`; the search-deepen
+//  rule is scoped to "after a search"; open_link never names fetch_page when it is absent.
 
 import Foundation
 import M1K3Agent
@@ -731,15 +734,58 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             + "Everything else generative — poems, stories, code snippets — is still "
             + "produced directly, no web_search, no lookup_fact."
 
-    /// open_link SHOWS; fetch_page READS — and a page is described only from what
-    /// a tool returned. Added 2026-09-04 after Lil, holding a bare "Opened host"
-    /// observation, narrated a page it never read (Kev's dislike). Offered-only,
-    /// like every routing line (a pin test asserts presence/absence).
+    /// open_link SHOWS; fetch_page READS. Added 2026-09-04 after Lil, holding a
+    /// bare "Opened host" observation, narrated a page it never read (Kev's
+    /// dislike); the describe-only rule itself lives in `describeOnlyRouting`.
+    /// Offered-only, like every routing line (a pin test asserts presence/absence).
     static let openLinkRouting =
         "- open_link shows a page beside the chat and returns a short brief of it; to "
-            + "READ a page in full, use fetch_page. Describe a page only from what a tool "
-            + "returned — if the brief says the page could not be read, say so instead of "
-            + "describing it."
+            + "READ a page in full, use fetch_page."
+
+    /// The same line when fetch_page isn't offered (web off) — a routing line
+    /// never advertises a tool the model can't call.
+    static let openLinkRoutingNoFetch =
+        "- open_link shows a page beside the chat and returns a short brief of it."
+
+    /// A user-given address is a READ, not a search. Live replay 2026-09-04:
+    /// "fetch the web site m1k3.app" became web_search("m1k3.app website content
+    /// and features") — the rules had only ever framed fetch_page as the way to
+    /// read a DIFFERENT search result — and the loop's fallback then blended
+    /// corpus chunks about the Android app into its read of the Mac site.
+    static let fetchPageRouting =
+        "- When the user gives an address — a URL or a domain like example.com — "
+            + "read it directly with fetch_page; do not web_search for it."
+
+    /// Attached ONCE whenever a page tool is offered (a duplication pin asserts
+    /// on the assembled prompt): describe only what actually came back.
+    static let describeOnlyRouting =
+        "- Describe a page only from what a tool returned — if it could not be read, "
+            + "say so instead of describing it."
+
+    /// The page-tool rules — search-deepen, direct address, open_link, and the
+    /// shared describe-only line — each offered-only; empty when no page tool is offered.
+    static func pageToolRouting(toolNames: Set<String>, hasWebSearch: Bool) -> String {
+        let hasFetchPage = toolNames.contains("fetch_page")
+        let hasOpenLink = toolNames.contains("open_link")
+        var lines: [String] = []
+        if hasWebSearch, hasFetchPage {
+            lines.append(
+                "- web_search returns snippets AND automatically reads the "
+                    + "top result's page for you; after a search, use fetch_page only to read a "
+                    + "DIFFERENT result in full, then conclude from the page text."
+            )
+        }
+        if hasFetchPage {
+            lines.append(Self.fetchPageRouting)
+        }
+        if hasOpenLink {
+            lines.append(hasFetchPage ? Self.openLinkRouting : Self.openLinkRoutingNoFetch)
+        }
+        if hasFetchPage || hasOpenLink {
+            lines.append(Self.describeOnlyRouting)
+        }
+        return lines.map { "\n" + $0 }.joined()
+    }
 
     /// `ambient`: what's open beside the chat (BrowserContext.render), placed
     /// between the remembered facts and the rules — present only while the
@@ -769,14 +815,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             "- You have no web access — if you don't know, say so plainly; "
                 + "do not guess."
         }
-        if hasWebSearch, toolNames.contains("fetch_page") {
-            routing += "\n- web_search returns snippets AND automatically reads the "
-                + "top result's page for you. Use fetch_page only to read a "
-                + "DIFFERENT result in full, then conclude from the page text."
-        }
-        if toolNames.contains("open_link") {
-            routing += "\n" + Self.openLinkRouting
-        }
+        routing += Self.pageToolRouting(toolNames: toolNames, hasWebSearch: hasWebSearch)
         if toolNames.contains("lookup_fact") {
             routing += "\n- Stable, well-known facts (who wrote a famous book, a "
                 + "capital city, basic science) you can just answer from what you know "
