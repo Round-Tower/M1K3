@@ -1,3 +1,15 @@
+//
+//  FetchPageRoutingTests.swift
+//  M1K3ChatTests
+//
+//  Pins the page-tool routing lines on the ASSEMBLED prompt: a user-given
+//  address is read with fetch_page (never searched for), the describe-only rule
+//  appears exactly once however many page tools are offered, and no line ever
+//  names a tool that isn't offered. Written red-first off the 2026-09-04 live
+//  replay (see the doc comment on the suite).
+//
+//  Signed: Kev + claude-fable-5.1, 2026-09-04, Confidence 0.9, Prior: Unknown
+
 import Foundation
 @testable import M1K3Chat
 import Testing

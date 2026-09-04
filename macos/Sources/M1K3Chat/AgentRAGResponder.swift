@@ -734,10 +734,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             + "Everything else generative — poems, stories, code snippets — is still "
             + "produced directly, no web_search, no lookup_fact."
 
-    /// open_link SHOWS; fetch_page READS — and a page is described only from what
-    /// a tool returned. Added 2026-09-04 after Lil, holding a bare "Opened host"
-    /// observation, narrated a page it never read (Kev's dislike). Offered-only,
-    /// like every routing line (a pin test asserts presence/absence).
+    /// open_link SHOWS; fetch_page READS. Added 2026-09-04 after Lil, holding a
+    /// bare "Opened host" observation, narrated a page it never read (Kev's
+    /// dislike); the describe-only rule itself lives in `describeOnlyRouting`.
+    /// Offered-only, like every routing line (a pin test asserts presence/absence).
     static let openLinkRouting =
         "- open_link shows a page beside the chat and returns a short brief of it; to "
             + "READ a page in full, use fetch_page."

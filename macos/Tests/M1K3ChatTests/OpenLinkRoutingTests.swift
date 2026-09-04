@@ -1,3 +1,12 @@
+//
+//  OpenLinkRoutingTests.swift
+//  M1K3ChatTests
+//
+//  Pins the open_link routing line (show vs read) as offered-only. Added with
+//  #207 (the page brief); header added with #208 — the file shipped unsigned.
+//
+//  Signed: Kev + claude-fable-5.1, 2026-09-04, Confidence 0.9, Prior: Unknown
+
 import Foundation
 @testable import M1K3Chat
 import Testing
