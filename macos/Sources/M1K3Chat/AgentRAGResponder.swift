@@ -724,6 +724,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             + "Everything else generative — poems, stories, code snippets — is still "
             + "produced directly, no web_search, no lookup_fact."
 
+    /// open_link SHOWS; fetch_page READS — and a page is described only from what
+    /// a tool returned. Added 2026-09-04 after Lil, holding a bare "Opened host"
+    /// observation, narrated a page it never read (Kev's dislike). Offered-only,
+    /// like every routing line (a pin test asserts presence/absence).
+    static let openLinkRouting =
+        "- open_link shows a page beside the chat and returns a short brief of it; to "
+            + "READ a page in full, use fetch_page. Describe a page only from what a tool "
+            + "returned — if the brief says the page could not be read, say so instead of "
+            + "describing it."
+
     private static func groundingBody(
         chunks: [ChunkHit], memories: [ChunkHit], toolNames: Set<String>, style: PromptStyle,
         now: Date
@@ -753,6 +763,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             routing += "\n- web_search returns snippets AND automatically reads the "
                 + "top result's page for you. Use fetch_page only to read a "
                 + "DIFFERENT result in full, then conclude from the page text."
+        }
+        if toolNames.contains("open_link") {
+            routing += "\n" + Self.openLinkRouting
         }
         if toolNames.contains("lookup_fact") {
             routing += "\n- Stable, well-known facts (who wrote a famous book, a "
