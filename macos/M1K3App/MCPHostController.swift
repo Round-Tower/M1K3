@@ -32,6 +32,7 @@
 //
 
 import Foundation
+import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
 import M1K3Avatar
 import M1K3Chat // HeadlessAsk + RAGResponding (the ask_m1k3 core)
 import M1K3Knowledge // KnowledgeStore — forget_memory deletes the dual-written corpus twin too
@@ -279,7 +280,11 @@ final class MCPHostController {
         )
     }
 
-    private func openLinkInPanel(_ raw: String) throws -> String {
+    /// Opens, then returns the same PageBrief the in-app agent gets (title,
+    /// description, llms.txt, text — or "could not read it"): a visiting agent
+    /// holding a bare "Opened host" is as free to invent the page as Lil was
+    /// (#207 review consistency note).
+    private func openLinkInPanel(_ raw: String) async throws -> String {
         guard case let .web(url) = ReviewTargetResolver.resolve(raw) else {
             throw MCPVoiceError("\"\(raw)\" isn't a web link M1K3 can open.")
         }
@@ -289,7 +294,8 @@ final class MCPHostController {
             throw MCPVoiceError("M1K3 won't open local or private-network addresses.")
         }
         env.review.open(url: url)
-        return "Opened \(url.host ?? url.absoluteString) in M1K3's review panel."
+        let sources = await OpenLinkTool.gather(url: url, fetcher: URLSessionHTTPFetcher(timeout: 8))
+        return PageBrief.render(url: url, sources: sources)
     }
 
     // MARK: - Memory-graph tool handlers

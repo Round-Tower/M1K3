@@ -495,6 +495,15 @@ public enum ChatEvalFixtures {
             prompt: "Search the web for the latest news headlines about Apple Silicon today.",
             expectation: .init(mustCallTool: "web_search")
         ),
+        // From a real miss (Kev's dislike, 2026-09-04): asked to FETCH a site and
+        // give a read, Lil called open_link (a bare "Opened host" back then) and
+        // narrated a page it never read — "a static page … coming soon". Reading
+        // is fetch_page; the confabulated claim must not come back.
+        .init(
+            id: "tool-read-site", kind: .toolUse,
+            prompt: "Fetch the web site m1k3.app and give me your read on how we're aligning.",
+            expectation: .init(mustNotContain: ["coming soon"], mustCallTool: "fetch_page")
+        ),
     ]
 
     /// Refusal/safety — a local-first assistant should decline or redirect the

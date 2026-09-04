@@ -9,6 +9,11 @@
 //  callback the app routes to the ReviewModel.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-19, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-04 — the tool now READS what it opens:
+//  after the panel gets the URL it fetches the page + the origin's llms.txt
+//  (tight 8s fetcher, same guards as fetch_page) and returns a PageBrief instead
+//  of a bare "Opened host". The bare line left the model holding nothing and
+//  it narrated a page it never saw (Kev's dislike, 2026-09-04).
 
 import Foundation
 import M1K3Agent
@@ -21,15 +26,24 @@ public struct OpenLinkTool: AgentTool {
     public let exclusionClass: ToolExclusionClass? = .network
     public let description =
         "Open a web link in M1K3's review panel beside the conversation, so the user "
-            + "can see the page without leaving M1K3. Use when you reference a URL worth looking at. "
-            + "Argument: the http(s) link to open."
+            + "can see the page without leaving M1K3 — and get back a short brief of what the page is "
+            + "(title, description, the site's note for AI agents, a first chunk of its text). "
+            + "Use when you reference a URL worth looking at, or when the user asks you to open a site. "
+            + "To READ a page in full, use fetch_page. Argument: the http(s) link to open."
     public let parameters = [
         ToolParameter(name: "url", description: "the http(s) link to open"),
     ]
 
     private let onOpen: @Sendable (URL) -> Void
+    private let fetcher: any HTTPFetching
 
-    public init(onOpen: @escaping @Sendable (URL) -> Void) {
+    /// The brief's reader is the tight no-retry fetch web_search's deepen uses:
+    /// a slow or JS-only page bails fast; the panel has already opened either way.
+    public init(
+        fetcher: any HTTPFetching = URLSessionHTTPFetcher(timeout: 8),
+        onOpen: @escaping @Sendable (URL) -> Void
+    ) {
+        self.fetcher = fetcher
         self.onOpen = onOpen
     }
 
@@ -48,7 +62,52 @@ public struct OpenLinkTool: AgentTool {
         guard !WebURLPolicy.isLocalOrPrivate(url) else {
             return ToolResult(output: "Error: M1K3 won't open local or private-network addresses (\(url.host ?? raw)).")
         }
+        // Open FIRST — the user sees the page even if the read below fails.
         onOpen(url)
-        return ToolResult(output: "Opened \(url.host ?? url.absoluteString) in the review panel.")
+        let sources = await Self.gather(url: url, fetcher: fetcher)
+        return ToolResult(output: PageBrief.render(url: url, sources: sources))
+    }
+
+    /// The page (browser-headed, the same request fetch_page sends) and the
+    /// origin's llms.txt, fetched CONCURRENTLY — two independent round-trips
+    /// back-to-back would block the model for up to 2× the fetcher's timeout
+    /// (#207 review). Never throws: a failed page read becomes the brief's
+    /// explicit failure; a missing llms.txt is simply absent. Public so the MCP
+    /// host's open_link (visiting agents) returns the same brief.
+    public static func gather(url: URL, fetcher: any HTTPFetching) async -> PageBriefSources {
+        async let page = readPage(url: url, fetcher: fetcher)
+        async let llms = readLLMSText(origin: url, fetcher: fetcher)
+        var sources = await page
+        sources.llmsText = await llms
+        return sources
+    }
+
+    private static func readPage(url: URL, fetcher: any HTTPFetching) async -> PageBriefSources {
+        var sources = PageBriefSources()
+        do {
+            let (data, response) = try await fetcher.fetch(FetchPageTool.pageRequest(for: url))
+            if HTTPStatus.classify(response.statusCode) == .ok {
+                sources.html = BodyDecoder.decode(
+                    data, contentType: response.value(forHTTPHeaderField: "Content-Type")
+                )
+            } else {
+                sources.failure = "HTTP \(response.statusCode)"
+            }
+        } catch {
+            sources.failure = "fetch failed: \(error.localizedDescription)"
+        }
+        return sources
+    }
+
+    private static func readLLMSText(origin url: URL, fetcher: any HTTPFetching) async -> String? {
+        guard let llmsURL = PageBrief.llmsURL(for: url) else { return nil }
+        var request = FetchPageTool.pageRequest(for: llmsURL)
+        request.setValue("text/plain, text/markdown;q=0.9, */*;q=0.1", forHTTPHeaderField: "Accept")
+        guard let (data, response) = try? await fetcher.fetch(request),
+              HTTPStatus.classify(response.statusCode) == .ok
+        else { return nil }
+        return PageBrief.usableLLMSText(
+            BodyDecoder.decode(data, contentType: response.value(forHTTPHeaderField: "Content-Type"))
+        )
     }
 }

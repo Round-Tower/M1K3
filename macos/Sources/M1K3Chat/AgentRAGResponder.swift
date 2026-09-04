@@ -128,6 +128,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// 27% of everything the model has. `GroundingBudgetPolicy` sizes it per
     /// tier. Defaults to the old constant so unwired callers are byte-identical.
     private let groundingBudgetProvider: @Sendable () -> Int
+    /// What's open beside the chat right now (the review panel's rendered page),
+    /// or nil — the app reads a snapshot the web view updates on load.
+    private let browserContextProvider: (@Sendable () -> BrowserContext?)?
 
     public init(
         store: KnowledgeStore,
@@ -144,7 +147,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         historyBudgetProvider: @escaping @Sendable () -> HistoryWindow.Budget = { .default },
         maxIterationsProvider: (@Sendable () -> Int)? = nil,
         defersHeavyGenerationProvider: (@Sendable () -> Bool)? = nil,
-        groundingBudgetProvider: @escaping @Sendable () -> Int = { GroundingBudget.defaultTokenBudget }
+        groundingBudgetProvider: @escaping @Sendable () -> Int = { GroundingBudget.defaultTokenBudget },
+        browserContextProvider: (@Sendable () -> BrowserContext?)? = nil
     ) {
         self.store = store
         self.embedder = embedder
@@ -159,6 +163,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.maxIterationsProvider = maxIterationsProvider
         self.fastThinkingProvider = fastThinkingProvider
         self.historyBudgetProvider = historyBudgetProvider
+        self.browserContextProvider = browserContextProvider
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
         self.groundingBudgetProvider = groundingBudgetProvider
     }
@@ -389,7 +394,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             chunks: chunks, memories: memories, toolNames: Set(tools.map(\.name)),
             history: history,
             historyBudget: historyBudgetProvider().reservingImages(images.count),
-            style: style
+            style: style,
+            ambient: browserContextProvider?()?.render()
         )
         Self.logTurnStart(chunks: chunks, tools: tools, grounding: grounding)
         // Fresh agent per turn — its reasoning trace must not bleed across
@@ -658,10 +664,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     static func grounding(
         chunks: [ChunkHit], memories: [ChunkHit] = [], toolNames: Set<String>,
         history: [ChatTurn] = [], historyBudget: HistoryWindow.Budget = .default,
-        style: PromptStyle = .react, now: Date = Date()
+        style: PromptStyle = .react, now: Date = Date(), ambient: String? = nil
     ) -> String {
         let body = groundingBody(
-            chunks: chunks, memories: memories, toolNames: toolNames, style: style, now: now
+            chunks: chunks, memories: memories, toolNames: toolNames, style: style, now: now,
+            ambient: ambient
         )
         guard let replay = HistoryWindow.render(history, budget: historyBudget) else { return body }
         return "\(replay)\n\n\(body)"
@@ -724,9 +731,22 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             + "Everything else generative — poems, stories, code snippets — is still "
             + "produced directly, no web_search, no lookup_fact."
 
+    /// open_link SHOWS; fetch_page READS — and a page is described only from what
+    /// a tool returned. Added 2026-09-04 after Lil, holding a bare "Opened host"
+    /// observation, narrated a page it never read (Kev's dislike). Offered-only,
+    /// like every routing line (a pin test asserts presence/absence).
+    static let openLinkRouting =
+        "- open_link shows a page beside the chat and returns a short brief of it; to "
+            + "READ a page in full, use fetch_page. Describe a page only from what a tool "
+            + "returned — if the brief says the page could not be read, say so instead of "
+            + "describing it."
+
+    /// `ambient`: what's open beside the chat (BrowserContext.render), placed
+    /// between the remembered facts and the rules — present only while the
+    /// review panel shows a page, so every pinned prompt is unchanged when nil.
     private static func groundingBody(
         chunks: [ChunkHit], memories: [ChunkHit], toolNames: Set<String>, style: PromptStyle,
-        now: Date
+        now: Date, ambient: String? = nil
     ) -> String {
         let hasWebSearch = toolNames.contains("web_search")
         // Every routing line names only tools actually offered THIS turn —
@@ -753,6 +773,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             routing += "\n- web_search returns snippets AND automatically reads the "
                 + "top result's page for you. Use fetch_page only to read a "
                 + "DIFFERENT result in full, then conclude from the page text."
+        }
+        if toolNames.contains("open_link") {
+            routing += "\n" + Self.openLinkRouting
         }
         if toolNames.contains("lookup_fact") {
             routing += "\n- Stable, well-known facts (who wrote a famous book, a "
@@ -833,7 +856,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 + "question; use only what genuinely answers it, and ignore the "
                 + "rest rather than working it into the answer):\n\(knowledge)"
         }
-        return [head, memoryBlock(memories, now: now), rules]
+        return [head, memoryBlock(memories, now: now), ambient, rules]
             .compactMap { $0 }
             .joined(separator: "\n\n")
     }

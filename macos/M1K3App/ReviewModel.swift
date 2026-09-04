@@ -12,9 +12,18 @@
 //  off — so the sandbox access doesn't leak across opens.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-19, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-04 — the panel now tells the model what
+//  it shows: `pageContext` (the rendered page's title + text, set by
+//  WebReviewView on load) mirrors into a nonisolated `liveContext` snapshot the
+//  agent responder reads each turn (BrowserContext). Cleared on every target
+//  change, so a closed or replaced page never lingers in the prompt — and a
+//  late arrival is checked against the page still on screen (`setPageContext`),
+//  so a slow page's capture can't land on top of the page that replaced it.
 
 import Foundation
+import M1K3Chat
 import M1K3Preview
+import Synchronization
 
 @MainActor
 @Observable
@@ -35,9 +44,31 @@ final class ReviewModel {
     /// The file URL we hold security-scoped access to (from a drop / open panel).
     private var scopedURL: URL?
 
+    /// What the web view last finished rendering — nil unless a web page is
+    /// showing. Mirrors into `liveContext` for the (non-main-actor) responder.
+    private(set) var pageContext: BrowserContext? {
+        didSet { Self.liveContext.withLock { $0 = pageContext } }
+    }
+
+    /// Accept a finished page's context only while `requested` is still the
+    /// page on screen. The web view is keyed by the REQUESTED url, so a capture
+    /// that completes after the panel moved on (a second open_link, a pasted
+    /// address, a clear) is dropped instead of overwriting the live page —
+    /// the capture is async and can outlive its page. Compared on the requested
+    /// url, not the rendered one, so a redirect (m1k3.app → www…) still lands.
+    func setPageContext(_ context: BrowserContext, for requested: URL) {
+        guard currentWebURL == requested else { return }
+        pageContext = context
+    }
+
+    /// The responder's read of `pageContext` — a lock, not the main actor, because
+    /// the turn runs off it (the CoolHead snapshot pattern).
+    nonisolated static let liveContext = Mutex<BrowserContext?>(nil)
+
     /// Resolve whatever's in `input` (a typed link or path).
     func openTyped() {
         releaseScopedAccess()
+        pageContext = nil
         target = ReviewTargetResolver.resolve(input)
     }
 
@@ -47,6 +78,8 @@ final class ReviewModel {
     /// validated through the resolver. Presents the panel unless told otherwise.
     func open(url: URL, present: Bool = true) {
         releaseScopedAccess()
+        let restoredContext = pageContext
+        pageContext = nil
         if url.isFileURL {
             // `startAccessingSecurityScopedResource()` returns false for URLs that
             // are ALREADY reachable without scoping (the common case for a file
@@ -65,7 +98,11 @@ final class ReviewModel {
             // forGranted is the safety net: chip-tap and tool callers pre-validate
             // (web-only), but a drag-drop of a non-file URL hasn't been — so we
             // still route it through the resolver here rather than trusting it raw.
-            target = .forGranted(url)
+            let next = ReviewTarget.forGranted(url)
+            // Re-opening the page already showing doesn't reload the keyed web
+            // view, so its context stays; only a real change clears it.
+            if next == target { pageContext = restoredContext }
+            target = next
         }
         if present {
             isPresented = true
@@ -76,6 +113,7 @@ final class ReviewModel {
     /// presents it in the artifact view (preview + code + export).
     func open(artifact: CodeArtifact, present: Bool = true) {
         releaseScopedAccess()
+        pageContext = nil
         let formatted = ArtifactFormatter.format(artifact)
         input = "M1K3 generated · \(formatted.filename)"
         target = .artifact(formatted)
@@ -87,6 +125,7 @@ final class ReviewModel {
     /// Reset to the empty resting state.
     func clear() {
         releaseScopedAccess()
+        pageContext = nil
         input = ""
         target = .empty
     }

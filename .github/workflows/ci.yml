@@ -234,11 +234,11 @@ jobs:
       # The guards' pure helpers have unit tests (test_check_*.py) that nothing
       # ran until 2026-09-02 — a helper regression would have passed CI while the
       # guard quietly stopped guarding. Run them.
-      - name: Unit-test the guards themselves
-        working-directory: macos/tools/ci
+      - name: Unit-test the guards themselves (+ the eval tooling)
+        working-directory: macos
         run: |
           python3 -m pip install --quiet 'pytest>=8,<9' 'pyyaml>=6,<7'
-          python3 -m pytest -q
+          python3 -m pytest -q tools/ci tools/eval
 
   doc-drift:
     # Guard the docs against silent staleness: every `.library` product in
