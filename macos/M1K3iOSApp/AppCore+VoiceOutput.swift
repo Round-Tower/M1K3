@@ -21,6 +21,8 @@
 //  MLX). Prior: none (new file, patterned on AppEnvironment.swift's extension).
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — a failed prepare drops the row back to Built-in (the tier that is
 //  actually wired), per the #199 review note; the Mac keeps the older optimistic behaviour.
+//  Review: Kev + claude-fable-5.1, 2026-09-03 (post-merge folds) — the progress tick is generation-stamped, and an
+//  explicit Built-in pick clears a stale failure banner.
 //
 
 import AVFoundation
@@ -49,7 +51,9 @@ extension AppCore {
             speech.setProvider(builtinSpeech)
             selectedVoiceTier = .builtin
             UserDefaults.standard.set(VoiceTier.builtin.rawValue, forKey: Self.selectedVoiceTierKey)
-            if voiceLoad.isActive { voiceLoad = .idle }
+            // Unconditional: an explicit Built-in pick also clears a stale
+            // `.failed` banner from an earlier attempt (review note, #199).
+            voiceLoad = .idle
         case .m1k3Voice:
             guard Self.neuralVoiceAvailable else { return }
             prepareM1K3Voice()
@@ -75,8 +79,11 @@ extension AppCore {
                 try await kokoro.prepare { fraction in
                     Task { @MainActor [weak self] in
                         // Only while still downloading — the late-hop-over-.ready
-                        // guard the Mac's preloadGemma/enableWhisperKit use too.
-                        guard let self, case .downloading = voiceLoad else { return }
+                        // guard the Mac's preloadGemma/enableWhisperKit use too —
+                        // and only for THIS generation: a cancelled download's
+                        // last queued tick must not paint over a fresh one.
+                        guard let self, voicePrepareGeneration == generation,
+                              case .downloading = voiceLoad else { return }
                         voiceLoad = .progress(fraction)
                     }
                 }

@@ -11,6 +11,11 @@
 //  Signed: Kev + claude-fable-5, 2026-08-24, Confidence 0.9 (pure flow over
 //  an injected transport, TDD'd red-first). Prior: BRAIN_AT_HOME_SPEC §4.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-03 — approvalWindow 5 s → 60 s in the two poll tests (#192). The window is
+//  a DEADLINE the scripted transport never needs to reach (three 1 ms polls), but under `swift test --parallel` on the
+//  CI runner the actor hops alone blew past 5 s (five hits in three days, 5.6–6.8 s each) and the ceremony honestly
+//  reported "not approved". Sixty seconds keeps the deadline as a hang guard without racing the scheduler.
+//
 
 import Foundation
 import M1K3BrainLink
@@ -76,7 +81,7 @@ struct PairingCeremonyTests {
             ("192.168.1.24", 4243, .success((200, health))),
         ])
         let ceremony = PairingCeremony(
-            transport: scripted.transport(), pollInterval: .milliseconds(1), approvalWindow: .seconds(5)
+            transport: scripted.transport(), pollInterval: .milliseconds(1), approvalWindow: .seconds(60)
         )
         let outcome = await ceremony.pair(payload: payload(), deviceName: "iPad")
         guard case let .paired(brain, brainHealth) = outcome else {
@@ -99,7 +104,7 @@ struct PairingCeremonyTests {
             ("192.168.1.24", 4243, .success((200, health))),
         ])
         let ceremony = PairingCeremony(
-            transport: scripted.transport(), pollInterval: .milliseconds(1), approvalWindow: .seconds(5)
+            transport: scripted.transport(), pollInterval: .milliseconds(1), approvalWindow: .seconds(60)
         )
         let outcome = await ceremony.pair(
             payload: payload(hosts: ["10.0.0.9", "192.168.1.24"]), deviceName: "iPad"
