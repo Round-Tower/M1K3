@@ -15,31 +15,39 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-19, Confidence 0.8, Prior: Unknown
 
+import M1K3Chat
 import SwiftUI
 import WebKit
 
 struct WebReviewView: View {
     let url: URL
+    /// Fired when a page finishes loading, with the rendered document's title
+    /// and text — what the model gets to know about "this page" (BrowserContext).
+    /// Read from the live DOM, so JavaScript-rendered sites count too.
+    var onPageLoaded: @MainActor (BrowserContext) -> Void = { _ in }
 
     @State private var webView = WebReviewView.makeWebView()
     @State private var isLoading = false
     @State private var loadError: String?
 
     var body: some View {
-        WebViewContainer(webView: webView, url: url, isLoading: $isLoading, loadError: $loadError)
-            // A thin indeterminate hairline while loading — slicker than a spinner
-            // button, and it takes no chrome height of its own.
-            .overlay(alignment: .top) {
-                if isLoading {
-                    ProgressView()
-                        .progressViewStyle(.linear)
-                        .tint(.accentColor)
-                        .frame(maxWidth: .infinity)
-                        .transition(.opacity)
-                }
+        WebViewContainer(
+            webView: webView, url: url, isLoading: $isLoading, loadError: $loadError,
+            onPageLoaded: onPageLoaded
+        )
+        // A thin indeterminate hairline while loading — slicker than a spinner
+        // button, and it takes no chrome height of its own.
+        .overlay(alignment: .top) {
+            if isLoading {
+                ProgressView()
+                    .progressViewStyle(.linear)
+                    .tint(.accentColor)
+                    .frame(maxWidth: .infinity)
+                    .transition(.opacity)
             }
-            .overlay { if let loadError { errorOverlay(loadError) } }
-            .animation(.easeOut(duration: 0.2), value: isLoading)
+        }
+        .overlay { if let loadError { errorOverlay(loadError) } }
+        .animation(.easeOut(duration: 0.2), value: isLoading)
     }
 
     /// A private, non-persistent WebKit profile: no cookies/cache/history survive.
@@ -74,6 +82,7 @@ private struct WebViewContainer: NSViewRepresentable {
     let url: URL
     @Binding var isLoading: Bool
     @Binding var loadError: String?
+    let onPageLoaded: @MainActor (BrowserContext) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -103,8 +112,23 @@ private struct WebViewContainer: NSViewRepresentable {
             parent.isLoading = true
         }
 
-        func webView(_: WKWebView, didFinish _: WKNavigation!) {
+        func webView(_ webView: WKWebView, didFinish _: WKNavigation!) {
             parent.isLoading = false
+            capturePage(webView)
+        }
+
+        /// The rendered document, capped in the page (4k chars) before it crosses
+        /// into Swift; BrowserContext caps again for the prompt. Errors (a page
+        /// that blocks script evaluation, a torn-down view) just mean no context.
+        private func capturePage(_ webView: WKWebView) {
+            let script = "[document.title || '', ((document.body && document.body.innerText) || '').slice(0, 4000)]"
+            let pageURL = webView.url ?? parent.url
+            webView.evaluateJavaScript(script) { [parent] result, _ in
+                guard let pair = result as? [String], pair.count == 2 else { return }
+                MainActor.assumeIsolated {
+                    parent.onPageLoaded(BrowserContext(url: pageURL, title: pair[0], text: pair[1]))
+                }
+            }
         }
 
         func webView(_: WKWebView, didFail _: WKNavigation!, withError error: Error) {

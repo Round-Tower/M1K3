@@ -433,7 +433,10 @@ extension AppEnvironment {
                     for: BrainTier(persisted: raw),
                     spoken: defaults.bool(forKey: Self.voiceModeActiveKey)
                 )
-            }
+            },
+            // What's open beside the chat (the review panel's rendered page) — a
+            // snapshot the web view updates on load; nil when no page is showing.
+            browserContextProvider: { ReviewModel.liveContext.withLock { $0 } }
         )
     }
 
