@@ -18,6 +18,8 @@
 //  validatedURL/pageRequest helpers + readablePage(at:) (a text-or-nil core)
 //  so web_search's deterministic deepen can read a page without the tool's
 //  agent-facing error strings. execute() behaviour is unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-09-04 — the description no longer presumes a search
+//  came first: an address the user gives is read directly (live replay: it was searched for).
 
 import Foundation
 import M1K3Agent
@@ -98,8 +100,8 @@ public struct FetchPageTool: AgentTool {
     /// network, so it never runs in the same turn as a local-sensitive tool.
     public let exclusionClass: ToolExclusionClass? = .network
     public let description =
-        "Read a web page's actual content. Use after web_search: pass the most "
-            + "relevant result URL to get the page's text. Argument: the page URL."
+        "Read a web page's actual content — a URL or domain the user gave you, or a "
+            + "web_search result you want in full. Argument: the page URL."
     public let parameters = [
         ToolParameter(name: "url", description: "the http(s) page URL"),
     ]

@@ -121,8 +121,12 @@ struct MemoryGroundingTests {
         anything happening now — use web_search. search_knowledge only \
         finds documents already stored on this machine.
         - web_search returns snippets AND automatically reads the \
-        top result's page for you. Use fetch_page only to read a \
+        top result's page for you; after a search, use fetch_page only to read a \
         DIFFERENT result in full, then conclude from the page text.
+        - When the user gives an address — a URL or a domain like example.com — \
+        read it directly with fetch_page; do not web_search for it.
+        - Describe a page only from what a tool returned — if it could not be read, \
+        say so instead of describing it.
         """
         let actual = AgentRAGResponder.grounding(
             chunks: [docHit()], toolNames: allTools, style: .react
@@ -159,8 +163,12 @@ struct MemoryGroundingTests {
         anything happening now — use web_search. search_knowledge only \
         finds documents already stored on this machine.
         - web_search returns snippets AND automatically reads the \
-        top result's page for you. Use fetch_page only to read a \
+        top result's page for you; after a search, use fetch_page only to read a \
         DIFFERENT result in full, then conclude from the page text.
+        - When the user gives an address — a URL or a domain like example.com — \
+        read it directly with fetch_page; do not web_search for it.
+        - Describe a page only from what a tool returned — if it could not be read, \
+        say so instead of describing it.
         """
         let actual = AgentRAGResponder.grounding(
             chunks: [], toolNames: allTools, style: .native
