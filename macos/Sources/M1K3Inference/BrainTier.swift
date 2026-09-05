@@ -272,13 +272,15 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// The same floor, per platform. On iOS/iPadOS the per-app jetsam budget is
     /// well under physical RAM: Lil's ~2.2 GB of weights (plus KV) cannot load on
     /// a 3 GB A12 iPad — the load is killed and a relaunch into the persisted pick
-    /// loops (#227, Kev's iPad, 2026-09-05). 6 GB clears every iPhone 15 Pro-class
-    /// device and later; 4 GB iPads stay on Mini. Big is never offered on mobile.
+    /// loops (#227, Kev's iPad, 2026-09-05). 8 GB = the iPhone 15 Pro-class and
+    /// later, the only cohort with any evidence behind it; 6 GB phones are
+    /// unmeasured and stay locked until a soak says otherwise (loosen here + the
+    /// test). Big is never offered on mobile.
     public func minimumPhysicalMemoryGB(platform: DevicePlatform) -> Double? {
         switch (self, platform) {
         case (.mini, _): nil
         case (.lil, .mac): nil
-        case (.lil, .mobile): 6
+        case (.lil, .mobile): 8
         case (.big, _): 16
         }
     }

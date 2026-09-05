@@ -204,7 +204,7 @@ final class AppCore {
         Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
     }
 
-    /// Whether this device can offer the tier at all (mobile floors: Lil 6 GB).
+    /// Whether this device can offer the tier at all (mobile floors: Lil 8 GB).
     static func isSelectableOnThisDevice(_ tier: BrainTier) -> Bool {
         tier.isSelectable(forPhysicalMemoryGB: physicalMemoryGB, platform: .mobile)
     }
