@@ -29,9 +29,9 @@
 //  Built-in stays the default, M1K3 Voice (Kokoro/MLX) is a Settings pick that downloads once (AppCore+VoiceOutput),
 //  restored on launch only when already staged (VoiceTierRestore).
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — the tool palette goes through the shared ToolPalettePolicy
+//  (availability-gated, same rule as the Mac) so both shells derive it from one rule.
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — a device with no local brain fronts the paired Mac on its own
 //  (after pairing + at launch, MobileBrainMenu.hasLocalBrain). Confidence now 0.85.
-//  (availability-gated, same rule as the Mac) so both shells derive it from one rule.
 //
 
 import Foundation
