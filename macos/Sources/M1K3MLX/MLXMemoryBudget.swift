@@ -62,9 +62,19 @@ public struct MLXMemoryBudget: Sendable, Equatable {
     private static let mobileCeilingBytes = 4 * mebibyte * 1024 // 4 GB (iOS/visionOS)
 
     /// The budget for a machine with the given physical RAM and device class.
+    /// - Parameter overrideLimitGB: an operator escape hatch for measurement
+    ///   (`defaults write app.m1k3 mlxMemoryLimitGB -int 24`). A brain whose
+    ///   weights exceed the companion ceiling (Qwen3.8-27B-4bit is 14.7 GB
+    ///   active against the 12 GB desktop ceiling) makes MLX back-pressure on
+    ///   EVERY decode step — measured 2026-09-05 at 0.1–0.4 tok/s where the
+    ///   4B sibling ran 49–84. The override lets the ceiling be raised for a
+    ///   run without shipping a per-tier budget; clamped to 90% of physical
+    ///   RAM so a typo cannot ask for more than the machine has. nil / ≤0 →
+    ///   the standard ceiling.
     public static func budget(
         forPhysicalMemory physicalMemoryBytes: UInt64,
-        profile: DeviceProfile = .desktop
+        profile: DeviceProfile = .desktop,
+        overrideLimitGB: Int? = nil
     ) -> MLXMemoryBudget {
         let physicalGB = Double(physicalMemoryBytes) / Double(gibibyte)
         let cacheMB = switch physicalGB {
@@ -74,6 +84,14 @@ public struct MLXMemoryBudget: Sendable, Equatable {
         }
         let ceiling = profile == .mobile ? mobileCeilingBytes : companionCeilingBytes
         let threeQuarters = Int(physicalMemoryBytes / 4 * 3)
+        if let overrideLimitGB, overrideLimitGB > 0, profile == .desktop {
+            let requested = overrideLimitGB * mebibyte * 1024
+            let ninetyPercent = Int(physicalMemoryBytes / 10 * 9)
+            return MLXMemoryBudget(
+                cacheLimitBytes: cacheMB * mebibyte,
+                memoryLimitBytes: min(requested, ninetyPercent)
+            )
+        }
         return MLXMemoryBudget(
             cacheLimitBytes: cacheMB * mebibyte,
             memoryLimitBytes: min(threeQuarters, ceiling)
@@ -95,7 +113,12 @@ public struct MLXMemoryBudget: Sendable, Equatable {
         #else
             let profile = DeviceProfile.desktop
         #endif
-        let budget = Self.budget(forPhysicalMemory: ProcessInfo.processInfo.physicalMemory, profile: profile)
+        let override = UserDefaults.standard.integer(forKey: "mlxMemoryLimitGB")
+        let budget = Self.budget(
+            forPhysicalMemory: ProcessInfo.processInfo.physicalMemory, profile: profile,
+            overrideLimitGB: override > 0 ? override : nil
+        )
+        if override > 0 { log.notice("memory limit OVERRIDE via defaults mlxMemoryLimitGB=\(override)") }
         MLX.Memory.cacheLimit = budget.cacheLimitBytes
         MLX.Memory.memoryLimit = budget.memoryLimitBytes
         let cacheMB = budget.cacheLimitBytes / mebibyte
