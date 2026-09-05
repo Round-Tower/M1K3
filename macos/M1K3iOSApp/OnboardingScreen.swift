@@ -81,6 +81,13 @@ struct OnboardingScreen: View {
         .sheet(isPresented: $pairing, onDismiss: pairingDismissed) {
             NavigationStack { BrainPairingScreen() }
         }
+        // The ceremony's Task outlives a swiped-away sheet: when the Mac's
+        // approval lands late, the pairing still counts as the pick (review catch).
+        .onChange(of: core.homeBrain?.identity) { _, identity in
+            guard identity != nil, step == .brain, !pairing else { return }
+            core.selectHomeBrain()
+            step = .face
+        }
         .onAppear {
             // A lively "hello" beat that settles into a warm smile — the face
             // greets you rather than sitting neutral behind the copy.

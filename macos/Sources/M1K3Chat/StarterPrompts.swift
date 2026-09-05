@@ -37,17 +37,21 @@ public enum StarterPrompts {
 
     /// Three chips: up to two from `memoryTitles` (newest first, blanks skipped,
     /// long titles trimmed), the rest a shuffle of the pool. Never duplicates.
+    /// `count` beyond the pool + memory chips returns what exists, no repeats.
     public static func pick(
         memoryTitles: [String],
         count: Int = 3,
         using rng: inout some RandomNumberGenerator
     ) -> [String] {
-        let memoryChips = memoryTitles
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .prefix(maxMemoryChips)
-            .map(memoryChip)
-        var picks = Array(memoryChips.prefix(count))
+        // Dedupe AFTER trimming to chip form: two memories with the same title,
+        // or two long titles that collide once truncated, must not print twice.
+        var picks: [String] = []
+        for title in memoryTitles where picks.count < min(maxMemoryChips, count) {
+            let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            let chip = memoryChip(trimmed)
+            if !picks.contains(chip) { picks.append(chip) }
+        }
         for prompt in pool.shuffled(using: &rng) where picks.count < count {
             if !picks.contains(prompt) { picks.append(prompt) }
         }

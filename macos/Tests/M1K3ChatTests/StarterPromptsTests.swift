@@ -61,6 +61,15 @@ struct StarterPromptsTests {
         #expect(picks.allSatisfy { StarterPrompts.pool.contains($0) })
     }
 
+    @Test("duplicate titles — and long titles that collide once trimmed — yield one chip each")
+    func dedupesMemoryChips() {
+        var rng = FixedRNG(state: 5)
+        let long = String(repeating: "same start ", count: 8)
+        let picks = StarterPrompts.pick(memoryTitles: ["Ardmore", "Ardmore", long + "A", long + "B"], using: &rng)
+        #expect(picks.count == 3)
+        #expect(Set(picks).count == 3)
+    }
+
     @Test("a long title is trimmed so the chip stays one line")
     func trimsLongTitle() {
         var rng = FixedRNG(state: 3)

@@ -27,6 +27,7 @@ import SwiftUI
 struct BrainPairingScreen: View {
     @Environment(AppCore.self) private var core
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     private enum Phase: Equatable {
         case scanning
@@ -75,6 +76,13 @@ struct BrainPairingScreen: View {
             }
         }
         .navigationTitle("Pair with your Mac")
+        #if os(iOS)
+            // Back from the Settings app after allowing the camera: the view is
+            // not recreated, so re-read the status on every return to foreground.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { cameraAccess = AVCaptureDevice.authorizationStatus(for: .video) }
+            }
+        #endif
     }
 
     @ViewBuilder private var scanSections: some View {
@@ -110,6 +118,10 @@ struct BrainPairingScreen: View {
                             _ = await AVCaptureDevice.requestAccess(for: .video)
                             cameraAccess = AVCaptureDevice.authorizationStatus(for: .video)
                         }
+                    case .restricted:
+                        // Parental controls / MDM — not the user's to flip.
+                        Label("The camera is restricted on this device.", systemImage: "camera.fill")
+                            .foregroundStyle(.orange)
                     default:
                         Label("Camera access is off for M1K3.", systemImage: "camera.fill")
                             .foregroundStyle(.orange)
