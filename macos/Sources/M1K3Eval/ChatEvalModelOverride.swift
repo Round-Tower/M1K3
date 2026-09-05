@@ -40,8 +40,17 @@ public enum ChatEvalModelOverride {
         }
         guard mlxTiersSelected.contains(tier) else { return .stock }
 
-        let entries = raw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-        let isPerTier = entries.allSatisfy { $0.contains("=") }
+        let entries = raw.split(separator: ",", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        let keyed = entries.filter { $0.contains("=") }.count
+        // A mix of bare ids and tier=id entries (or a dangling comma) is neither
+        // form — name that, rather than the bare-id refusal that would mislead.
+        if keyed > 0, keyed != entries.count || entries.contains(where: \.isEmpty) {
+            return .refused(
+                "mixed override '\(raw)' — use EITHER one bare id (single MLX brain) OR only <tier>=<id> entries"
+            )
+        }
+        let isPerTier = keyed == entries.count
         guard isPerTier else {
             if entries.count == 1, mlxTiersSelected.count == 1 { return .override(entries[0]) }
             let selected = mlxTiersSelected.joined(separator: ",")

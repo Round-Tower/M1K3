@@ -9,6 +9,11 @@
 //  "qwen" substring and picked JSON). Quiet on every failure: before the first
 //  download there is no config.json, and the name heuristic still applies.
 //
+//  This is a synchronous read of a ~1–5 KB file, and MLXGemmaProvider.init
+//  calls it from main-actor sites (selectBrain, the Mini→Big escalation).
+//  Measured class: sub-millisecond on APFS. If it is ever observed on a
+//  trace, hoist the read to the provider's async load path (review 1, #212).
+//
 //  Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.85. Prior: Unknown
 
 import Foundation

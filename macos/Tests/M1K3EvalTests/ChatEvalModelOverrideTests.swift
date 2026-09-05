@@ -61,6 +61,18 @@ struct ChatEvalModelOverrideTests {
         }
     }
 
+    @Test("a mixed bare-id + per-tier string, or a dangling comma, is refused as MIXED — not as a bare id")
+    func mixedFormRefusedHonestly() {
+        for raw in ["mlx-community/foo,big=bar", "big=x,", "lil=a,,big=b"] {
+            let r = ChatEvalModelOverride.resolve(raw: raw, tier: "big", mlxTiersSelected: ["lil", "big"])
+            guard case let .refused(reason) = r else {
+                Issue.record("expected .refused for '\(raw)', got \(r)")
+                continue
+            }
+            #expect(reason.contains("mixed"), "'\(raw)' → \(reason)")
+        }
+    }
+
     @Test("the non-MLX tier never sees an override")
     func miniIgnored() {
         #expect(ChatEvalModelOverride.resolve(raw: "x/y", tier: "mini", mlxTiersSelected: ["lil"]) == .stock)

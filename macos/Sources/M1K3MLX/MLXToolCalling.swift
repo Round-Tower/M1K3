@@ -306,7 +306,9 @@ extension MLXGemmaProvider: ToolCallingProvider {
         let type = modelType.lowercased()
         if type.hasPrefix("gemma4") { return .gemma4 }
         if type.hasPrefix("gemma3") || type == "gemma" || type == "gemma2" { return .gemma }
-        if type.hasPrefix("qwen3_5") || type == "qwen3_next" { return .xmlFunction }
+        // qwen3_next is NOT listed: same SSM/hybrid lineage, but its tool template is
+        // unverified — add it only with the config + chat_template check the other arms carry.
+        if type.hasPrefix("qwen3_5") { return .xmlFunction }
         if type == "qwen3" || type == "qwen3_moe" || type == "qwen2" || type == "llama" || type == "phi3"
             || type == "mistral" || type == "mistral3" { return .json }
         if type.hasPrefix("glm4") { return .glm4 }
