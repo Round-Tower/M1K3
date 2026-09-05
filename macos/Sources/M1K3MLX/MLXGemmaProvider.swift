@@ -600,7 +600,7 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             // not pollute the reusable prefix).
             var prefill = parameters
             prefill.maxTokens = 1
-            let cache = context.model.newCache(parameters: parameters)
+            let cache = try context.model.newCache(parameters: parameters)
             let stream = try MLXLMCommon.generate(
                 input: LMInput(tokens: MLXArray(ids)),
                 cache: cache,

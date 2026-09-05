@@ -127,14 +127,14 @@ let package = Package(
         // both. This revision also carries the #502 ChatConventionsProviding
         // migration — our .gemma4 dialect integration was re-verified against
         // it in the same commit that changed this line.
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", revision: "c97539da0e8554d2fad90cc79692381eab1c7906"),
+        .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", revision: "e3d4a20e9e20e7b8ab39aded7bbfad4ae22c9438"),
         // mlx-swift itself (MLX/MLXNN/MLXFFT/MLXFast) — mlx-swift-lm depends on
         // this but doesn't re-export its products, so M1K3Kokoro (which needs
         // the raw neural-net/FFT primitives for the vendored Kokoro port, not
         // mlx-swift-lm's LLM-loading machinery) declares it directly. SAME URL
         // mlx-swift-lm itself pins (`https://github.com/ml-explore/mlx-swift`,
         // no `.git` suffix) so SwiftPM resolves one copy, not two.
-        .package(url: "https://github.com/ml-explore/mlx-swift", .upToNextMinor(from: "0.31.4")),
+        .package(url: "https://github.com/ml-explore/mlx-swift", .upToNextMinor(from: "0.31.6")),
         // Downloader/Tokenizer for the MLX stack. 3.x removed the built-in HF
         // client; the official adapter packages (swift-tokenizers-mlx) clash
         // with WhisperKit's swift-transformers (duplicate `Tokenizers` target),

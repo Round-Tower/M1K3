@@ -701,7 +701,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 self.cachedIDs = Array(fullIDs[..<reuse])
                 input = LMInput(tokens: MLXArray(Array(fullIDs[reuse...])))
             } else {
-                cache = context.model.newCache(parameters: parameters)
+                cache = try context.model.newCache(parameters: parameters)
                 self.cachedIDs = []
                 input = prepared
             }
