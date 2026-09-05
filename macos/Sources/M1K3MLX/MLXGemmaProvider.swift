@@ -364,6 +364,7 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
         personaPrefix.invalidate()
         conversationTail.invalidate()
         MLXMemoryBudget.reclaim(label: "releaseModel")
+        MLXMemoryBudget.settle(label: "released model")
     }
 
     /// Eagerly release cached Metal state (persona KV prefix) and return
@@ -448,7 +449,11 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     ) async throws -> ModelContainer {
         // Bound the process-global Metal cache BEFORE any MLX work can run.
         MLXMemoryBudget.applyOnce()
-        return try await loader.value(progress: progress)
+        let container = try await loader.value(progress: progress)
+        // Per-tier budget: the limit follows the brain that is resident now (a 27B needs
+        // more than the companion floor; a 4B leaves it where it was).
+        MLXMemoryBudget.settle(label: "loaded \(modelIdentifier)")
+        return container
     }
 
     /// One-shot upstream session for the plain-chat paths: seeded from the

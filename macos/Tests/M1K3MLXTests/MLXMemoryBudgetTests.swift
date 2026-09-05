@@ -93,6 +93,40 @@ struct MLXMemoryBudgetTests {
         #expect(MLXMemoryBudget.budget(forPhysicalMemory: gigabytes(16), profile: .mobile, overrideLimitGB: 12).memoryLimitBytes == mobile)
     }
 
+    @Test("the per-tier limit follows the brain that actually loaded: 1.5× its active weights, never below the base, never above 75% of RAM")
+    func perTierLimitFollowsLoadedWeights() {
+        let gb = 1_073_741_824
+        let base64 = MLXMemoryBudget.budget(forPhysicalMemory: gigabytes(64)).memoryLimitBytes // 12 GB ceiling
+        // Lil (2.2 GB active) on a 64 GB Mac: the companion ceiling already holds it — unchanged.
+        #expect(MLXMemoryBudget.limit(accommodatingActiveBytes: Int(2.2 * Double(gb)), physicalMemoryBytes: gigabytes(64)) == base64)
+        // Qwen3.8-27B-4bit (~15 GB active) on 64 GB: raised to 1.5× = 22.5 GB (measured 2026-09-05: 24 GB gave 10–16 tok/s,
+        // the 12 GB ceiling gave 0.1–0.4).
+        #expect(MLXMemoryBudget.limit(accommodatingActiveBytes: 15 * gb, physicalMemoryBytes: gigabytes(64)) == 15 * gb / 2 * 3)
+        // The same brain on a 16 GB Mac: 1.5× would be 22.5 GB; capped at 75% of RAM = 12 GB = the base. No raise.
+        #expect(MLXMemoryBudget.limit(accommodatingActiveBytes: 15 * gb, physicalMemoryBytes: gigabytes(16)) == 12 * gb)
+        // On a 32 GB Mac: min(22.5, 24) = 22.5 GB.
+        #expect(MLXMemoryBudget.limit(accommodatingActiveBytes: 15 * gb, physicalMemoryBytes: gigabytes(32)) == 15 * gb / 2 * 3)
+        // An operator override is the floor, never lowered by a small brain.
+        #expect(MLXMemoryBudget.limit(accommodatingActiveBytes: 2 * gb, physicalMemoryBytes: gigabytes(64), overrideLimitGB: 24) == 24 * gb)
+        // Mobile never raises: the jetsam ceiling is the law there.
+        let mobile = MLXMemoryBudget.budget(forPhysicalMemory: gigabytes(16), profile: .mobile).memoryLimitBytes
+        #expect(MLXMemoryBudget.limit(accommodatingActiveBytes: 6 * gb, physicalMemoryBytes: gigabytes(16), profile: .mobile) == mobile)
+        // Nothing loaded: the base.
+        #expect(MLXMemoryBudget.limit(accommodatingActiveBytes: 0, physicalMemoryBytes: gigabytes(64)) == base64)
+    }
+
+    @Test("the per-tier limit never shrinks as the loaded brain grows")
+    func perTierLimitIsMonotonicInWeights() {
+        let gb = 1_073_741_824
+        let samples = stride(from: 0, through: 40, by: 2).map {
+            MLXMemoryBudget.limit(accommodatingActiveBytes: $0 * gb, physicalMemoryBytes: gigabytes(64))
+        }
+        for (smaller, larger) in zip(samples, samples.dropFirst()) {
+            #expect(larger >= smaller)
+        }
+        #expect(samples.last == 48 * gb) // 75% of 64 GB is the hard top
+    }
+
     @Test("budget never shrinks as physical memory grows")
     func budgetIsMonotonic() {
         let samples = stride(from: 4.0, through: 128.0, by: 4.0)
