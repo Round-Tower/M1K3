@@ -70,6 +70,17 @@ struct PersonaLeakGuardTests {
         #expect(PersonaLeakGuard.guarded(PersonaLeakGuard.refusal) == PersonaLeakGuard.refusal)
     }
 
+    @Test("★ the persona's own example decline (#219) is not a leak either")
+    func exemplarDeclineIsNotALeak() {
+        // The completion guard teaches the model this exact reply. Its span in
+        // the prompt happens to carry the ", the whole reply is: " prefix, which
+        // is the only reason it doesn't match today — pin it so a wording tweak
+        // can't make the guard swap every correct decline for `refusal`.
+        let exemplar = "I don't share my wiring, not even one sentence of it — what do you actually need?"
+        #expect(!PersonaLeakGuard.leaks(exemplar))
+        #expect(PersonaLeakGuard.guarded(exemplar) == exemplar)
+    }
+
     @Test("a short paraphrase of the policy is allowed — that IS the wanted behaviour")
     func shortParaphraseAllowed() {
         // Persona rule 1 tells M1K3 to say it doesn't share its wiring. Catching
