@@ -15,6 +15,8 @@
 //  every footer down to the fact + the guarantee; the one-row Knowledge section folded into the Documents row; the
 //  reading sample stopped instructing.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — Grounding footer scoped to "your conversation" (#193 review:
+//  weight downloads reach the internet too, so "the only thing" overclaimed).
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — the Voice section (VoiceOutputSection: Built-in vs M1K3 Voice) joins
 //  the face and the brain — mind, face, voice, the Mac's M1K3 tab.
 //
@@ -101,9 +103,11 @@ struct SettingsScreen: View {
             } header: {
                 Text("Grounding")
             } footer: {
-                // "Internet", not "off this device": Brain at Home (above) sends prompts
-                // to your own Mac over Wi-Fi, and that stays true. Review catch, 2026-09-03.
-                Text("The only thing that reaches the internet. Every search shows in the reply as it happens.")
+                // "Your conversation", not "the only thing that reaches the internet":
+                // brain and M1K3 Voice downloads reach the internet too; Brain at Home
+                // (above) sends prompts to your own Mac. Review catches, 2026-09-03/05.
+                Text("The only thing that sends your conversation to the internet. "
+                    + "Every search shows in the reply as it happens.")
             }
 
             Section {

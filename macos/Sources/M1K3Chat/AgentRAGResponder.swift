@@ -64,6 +64,8 @@
 //  poem→inline, generative-with-a-fact→still-no-tool.
 //  MurphySig: kevin+claude-fable-5 2026-08-23 confidence=0.8 — prompt content
 //  is pin-tested; the behavioural change on gemma is verify-at-⌘R.
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — fallbackPrompt filters the trace ONCE (survivors) and derives both
+//  the observations and the page-read flag from it (#209 review 2: duplicated predicate).
 //  Review: Kev + claude-fable-5.1, 2026-09-04 (late) — a user-given address is a READ:
 //  `fetchPageRouting` (offered-only) + one shared `describeOnlyRouting`; the search-deepen
 //  rule is scoped to "after a search"; open_link never names fetch_page when it is absent.
@@ -630,14 +632,17 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     static func fallbackPrompt(
         question: String, chunks: [ChunkHit], gathered: [ReasoningStep]
     ) -> String {
-        let observations = gathered.compactMap { step -> String? in
+        // ONE filter, so "what lands in the prompt" and "was a page read" can
+        // never disagree (#209 review 2: two copies of this predicate).
+        let survivors = gathered.compactMap { step -> (action: String, observation: String)? in
             guard let action = step.action,
                   let observation = step.observation,
                   !observation.hasPrefix("Error"),
                   !observation.hasPrefix("You already ran")
             else { return nil }
-            return "\(action):\n\(observation)"
+            return (action, observation)
         }
+        let observations = survivors.map { "\($0.action):\n\($0.observation)" }
         guard !observations.isEmpty else {
             return ChatPromptBuilder.build(chunks: chunks, userMessage: question)
         }
@@ -648,11 +653,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // Only a read whose observation SURVIVED the filter above counts — a
         // fetch that errored beside a good search must not frame the prompt as
         // a page read (#209 review).
-        let pageRead = gathered.contains { step in
-            guard let action = step.action, let observation = step.observation,
-                  !observation.hasPrefix("Error"), !observation.hasPrefix("You already ran")
-            else { return false }
-            return action.hasPrefix("fetch_page") || action.hasPrefix("open_link")
+        let pageRead = survivors.contains {
+            $0.action.hasPrefix("fetch_page") || $0.action.hasPrefix("open_link")
         }
         return """
         Answer the user's question using the INFORMATION GATHERED below. Be \

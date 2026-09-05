@@ -148,6 +148,20 @@ struct FetchPageToolTests {
         #expect(result.output.hasSuffix("…"))
     }
 
+    @Test("a runaway meta description cannot eat the whole cap — the text always gets a share")
+    func headerLeavesRoomForText() async throws {
+        let description = String(repeating: "blurb ", count: 200) // ~1200 chars
+        let fetcher = ScriptedFetcher(
+            body: "<html><head><title>T</title><meta name=\"description\" content=\"\(description)\">"
+                + "</head><body><p>THE ACTUAL PAGE TEXT</p></body></html>"
+        )
+        let tool = FetchPageTool(fetcher: fetcher, maxCharacters: 300)
+        let result = try await tool.execute(input: ["url": "https://example.org"])
+        #expect(result.output.hasPrefix("Page: T"))
+        #expect(result.output.contains("THE ACTUAL PAGE TEXT"))
+        #expect(result.output.count <= 301)
+    }
+
     @Test("a bare domain — what the routing rule tells the model to pass — is read over https")
     func bareDomainIsCoerced() async throws {
         let fetcher = ScriptedFetcher(body: "<html><body><p>M1K3 for Mac. Nothing leaves.</p></body></html>")

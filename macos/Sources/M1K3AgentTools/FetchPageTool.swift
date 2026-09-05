@@ -21,6 +21,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-04 — the description no longer presumes a search
 //  came first: an address the user gives is read directly (live replay: it was searched for).
 //  Bare domains are coerced to https through ReviewTargetResolver (#208 review).
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — the header is capped to a third of the observation budget
+//  (#209 review 2: a long meta description could consume the whole cap and leave no page text).
 //  Review: Kev + claude-fable-5.1, 2026-09-04 (late) — the read leads with "Page: <title>" + the meta
 //  description (live: an untitled stats strip read as "the site loads blank").
 
@@ -143,7 +145,9 @@ public struct FetchPageTool: AgentTool {
                 return ToolResult(output: "The page at \(url.host() ?? "that address") had "
                     + "no readable text (it may need JavaScript). Try another result.")
             }
-            return ToolResult(output: Self.cap(Self.header(for: url, html: html) + "\n" + text, to: maxCharacters))
+            return ToolResult(
+                output: Self.frame(header: Self.header(for: url, html: html), text: text, cap: maxCharacters)
+            )
         } catch {
             Self.log.error("fetch failed for \(url.absoluteString, privacy: .public): \(error, privacy: .public)")
             return ToolResult(output: "Error: could not fetch the page — \(error.localizedDescription)")
@@ -161,6 +165,16 @@ public struct FetchPageTool: AgentTool {
             lines.append(description)
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// Header + text under ONE cap, with the header held to a third of it so a
+    /// runaway meta description can never leave the model a frame and no page
+    /// (#209 review 2). The header is the page's own title/description; the
+    /// text is what the read was for — it always gets at least two thirds.
+    static func frame(header: String, text: String, cap max: Int) -> String {
+        let headerBudget = max / 3
+        let head = cap(header, to: headerBudget)
+        return cap(head + "\n" + text, to: max)
     }
 
     /// The observation cap, header included — a small model's tool budget is
@@ -216,7 +230,7 @@ public struct FetchPageTool: AgentTool {
             guard !text.isEmpty else { return nil }
             // The same titled frame execute() gives — the search-deepen read is
             // the other road to an untitled stats strip (#209 review).
-            return Self.cap(Self.header(for: url, html: html) + "\n" + text, to: maxCharacters)
+            return Self.frame(header: Self.header(for: url, html: html), text: text, cap: maxCharacters)
         } catch {
             return nil
         }
