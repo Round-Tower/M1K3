@@ -323,6 +323,15 @@ extension MLXGemmaProvider: ToolCallingProvider {
         resolvedToolCallFormat != nil
     }
 
+    /// Per-model prompt layout (see `NativePromptShape`). LFM2 is the measured
+    /// case: grounding in the user turn silences its tool calls (0/5 → 5/5 when
+    /// moved to the system turn, 2026-09-05). Its recurrent cache can't be
+    /// trimmed, so it never had a persona-prefix cache to protect. Extend this
+    /// table only with a same-session A/B behind it.
+    public var nativePromptShape: NativePromptShape {
+        resolvedToolCallFormat == .lfm2 ? .groundingInSystem : .groundingInUser
+    }
+
     /// Run one model turn over the transcript + tools, returning structure. The
     /// library parses the model's native dialect into `.toolCall` events inline;
     /// we collect them (and any free text) into a `ToolTurn`. Stateless-renders-
@@ -358,12 +367,25 @@ extension MLXGemmaProvider: ToolCallingProvider {
             let stream = try MLXLMCommon.generate(input: input, parameters: parameters, context: context)
             var text = ""
             var calls: [ParsedToolCall] = []
+            var rejections = 0
             for await event in stream {
                 switch event {
                 case let .chunk(piece):
                     text += piece
                 case let .toolCall(libraryCall):
                     calls.append(MLXToolMapping.parsedToolCall(from: libraryCall))
+                case let .rejectedToolCall(rejection):
+                    // The runtime strips a rejected call's span from the text, so
+                    // without this line a rejected call is indistinguishable from
+                    // "the model never called" (LFM2.5 read 0/6 that way, 2026-09-05).
+                    rejections += 1
+                    let reason = rejection.reason.rawValue
+                    let tool = rejection.toolName ?? "?"
+                    let format = String(describing: rejection.format)
+                    let preview = rejection.rawTextPreview
+                    mlxToolLog.notice(
+                        "toolTurn REJECTED tool call: reason=\(reason, privacy: .public) tool=\(tool, privacy: .public) format=\(format, privacy: .public) raw=\(preview, privacy: .public)"
+                    )
                 case let .info(info):
                     logGenerationInfo(info, label: "toolTurn", model: modelIdentifier)
                 @unknown default:
@@ -371,6 +393,15 @@ extension MLXGemmaProvider: ToolCallingProvider {
                 }
             }
             if calls.isEmpty {
+                // Why no call? Say what the model actually produced and whether the
+                // rendered prompt even carried the tool block (template drift shows here).
+                let promptText = context.tokenizer.decode(tokenIds: input.text.tokens.asArray(Int.self))
+                let toolNames = tools.map(\.name)
+                let promptHasTools = toolNames.allSatisfy { promptText.contains($0) }
+                let rawHead = String(text.prefix(220))
+                mlxToolLog.notice(
+                    "toolTurn no call: rejections=\(rejections) promptHasTools=\(promptHasTools) raw=\(rawHead, privacy: .public)"
+                )
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 return ToolTurn.text(Self.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded))
             }

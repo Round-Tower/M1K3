@@ -229,6 +229,20 @@ public extension ToolTurnSession {
     func finish() async {}
 }
 
+/// Where the per-turn grounding (knowledge, memories, RULES, routing) goes in a
+/// native tool turn. Measured 2026-09-05 on LFM2.5-1.2B (mlx-lm control, greedy,
+/// 5 tool fixtures): grounding inside the USER turn ahead of the goal → 0/5 tool
+/// calls, whatever the order or wording; the same text appended to the SYSTEM
+/// turn → 5/5. The 4B tiers are indifferent, and their persona-prefix cache is
+/// keyed on the system text, so they keep the user-turn layout. Per model,
+/// decided by eval — not a global switch.
+public enum NativePromptShape: Sendable, Equatable {
+    /// Today's layout: system = persona; user = preamble + Context + Goal.
+    case groundingInUser
+    /// Small-model layout: system = persona + grounding; user = preamble + Goal.
+    case groundingInSystem
+}
+
 /// Capability refinement: an `InferenceProvider` that speaks its model's NATIVE
 /// tool-call dialect. `LocalAgent` runs the structured loop when the active
 /// provider conforms; otherwise the prompt-ReAct floor.
@@ -239,6 +253,10 @@ public protocol ToolCallingProvider: InferenceProvider {
     /// `false` so the agent uses the ReAct floor instead of burning iterations
     /// on a model that will never call a tool.
     var supportsToolCalls: Bool { get }
+
+    /// How the agent should lay out grounding for THIS model (see
+    /// `NativePromptShape`). Defaults to the cached-tier layout.
+    var nativePromptShape: NativePromptShape { get }
 
     /// Continue the conversation: given the transcript so far and the available
     /// tools, return the model's next turn (final text, or tool calls to run).
@@ -264,6 +282,10 @@ public extension ToolCallingProvider {
     /// to opt into the native loop — the default is a floor, not a hint.
     var supportsToolCalls: Bool {
         false
+    }
+
+    var nativePromptShape: NativePromptShape {
+        .groundingInUser
     }
 
     func makeToolTurnSession(

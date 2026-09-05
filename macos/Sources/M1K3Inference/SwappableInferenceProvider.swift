@@ -61,6 +61,11 @@ extension SwappableInferenceProvider: ToolCallingProvider {
         (active as? ToolCallingProvider)?.supportsToolCalls ?? false
     }
 
+    /// Forwarded like every capability (the façade-forwarding rule, #133/#134).
+    public var nativePromptShape: NativePromptShape {
+        (active as? ToolCallingProvider)?.nativePromptShape ?? .groundingInUser
+    }
+
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
         guard let toolProvider = active as? ToolCallingProvider else {
             // Defensive against the swap RACE, not against logic: `active` may
