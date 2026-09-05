@@ -1,0 +1,126 @@
+{
+  "about": "M1K3 brain scoreboard, generated from the on-device eval harness. Documentation only: the app never reads this file (macos/docs/adr/0004-brain-catalogue-ships-in-the-binary.md).",
+  "brains": [
+    {
+      "backing": "apple-foundation-models",
+      "huggingFace": null,
+      "modelID": null,
+      "name": "Mini",
+      "revision": null,
+      "role": "Apple Foundation Models — instant, on the Neural Engine; fronts the quickest turns.",
+      "sizeMiB": null,
+      "tier": "mini"
+    },
+    {
+      "backing": "mlx",
+      "huggingFace": "https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit/tree/50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
+      "modelID": "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+      "name": "Lil",
+      "revision": "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
+      "role": "The fast brain that fronts the conversation — dense Qwen3 4B, no <think> phase.",
+      "sizeMiB": 2171,
+      "tier": "lil"
+    },
+    {
+      "backing": "mlx",
+      "huggingFace": "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit/tree/73bcf09092aa277861d5a191b989b666f7f32e8f",
+      "modelID": "mlx-community/gemma-4-12B-it-4bit",
+      "name": "Big",
+      "revision": "73bcf09092aa277861d5a191b989b666f7f32e8f",
+      "role": "Reached by delegation for deep work — Gemma 4 12B, 8-bit quantized KV.",
+      "sizeMiB": 6459,
+      "tier": "big"
+    }
+  ],
+  "generated": "2026-09-05",
+  "runs": [
+    {
+      "brains": [
+        {
+          "brainID": "mini",
+          "byKind": {
+            "tool-use": {
+              "passed": 8,
+              "total": 12
+            }
+          },
+          "failures": [
+            {
+              "check": "responsive",
+              "detail": "301455ms > ceiling 120000ms (loop thrash?)",
+              "fixtureID": "tool-search-doc",
+              "repeatIndex": 0
+            },
+            {
+              "check": "non-empty",
+              "detail": "0 chars",
+              "fixtureID": "tool-read-site",
+              "repeatIndex": 0
+            },
+            {
+              "check": "calls fetch_page",
+              "detail": "called web_search,search_knowledge,datetime",
+              "fixtureID": "tool-read-site",
+              "repeatIndex": 0
+            },
+            {
+              "check": "responsive",
+              "detail": "324145ms > ceiling 120000ms (loop thrash?)",
+              "fixtureID": "tool-search-doc",
+              "repeatIndex": 1
+            },
+            {
+              "check": "calls fetch_page",
+              "detail": "called web_search,search_knowledge,datetime",
+              "fixtureID": "tool-read-site",
+              "repeatIndex": 1
+            }
+          ],
+          "medianLatencyMS": 25842,
+          "modelID": null,
+          "passed": 8,
+          "total": 12
+        }
+      ],
+      "provenance": {
+        "appCommit": "b7e61299",
+        "date": "2026-09-05T12:35:34Z",
+        "hardware": "Apple M1 Max · 64 GB",
+        "livePath": true,
+        "mlxSwiftLMRevision": "c97539da",
+        "notes": "harness v2 verify-by-launch; pin worktree rebuild running concurrently",
+        "osVersion": "macOS 26.4",
+        "powerMode": 0,
+        "repeats": 2
+      }
+    }
+  ],
+  "schemaVersion": 1,
+  "stateOfPlay": {
+    "date": "2026-09-05",
+    "machine": "Apple M1 Max · 64 GB · powermode 0 · nothing else running",
+    "mtp": [
+      {
+        "accept": "52%",
+        "baselineTokPerSec": "34.0",
+        "mtpTokPerSec": "24.8",
+        "ratio": "0.73×",
+        "regime": "short, no wrap (25 tok)"
+      },
+      {
+        "accept": "40%",
+        "baselineTokPerSec": "9.1",
+        "mtpTokPerSec": "6.3",
+        "ratio": "0.69×",
+        "regime": "medium, wraps mid-decode (588 tok)"
+      },
+      {
+        "accept": "31%",
+        "baselineTokPerSec": "7.9",
+        "mtpTokPerSec": "9.8",
+        "ratio": "1.24× (23-token sample)",
+        "regime": "long, wrapped at prefill (2072 tok)"
+      }
+    ]
+  }
+}
