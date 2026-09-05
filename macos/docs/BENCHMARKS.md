@@ -122,7 +122,7 @@ regression — it invalidated one of our own comparisons on 2026-08-08. Worse:
 on 2026-09-05 a whole day of tok/s was measured on battery under Adaptive
 Power while `powermode` read 0 — plugged in, Gemma's plain decode DOUBLED
 (9.1 → 21.1 tok/s) and the MTP ratios fell. The harness now stamps
-`powerSource` (ac / battery / ups, read from IOKit) into the JSON provenance;
+`powerSource` (ac / battery, read from IOKit) into the JSON provenance;
 `powerMode` still only knows Low Power Mode (0/1), so pass the real pmset value
 as `M1K3_SELFTEST_POWERMODE=2` when you run in High Power mode. Publish nothing
 measured on battery as a headline number.

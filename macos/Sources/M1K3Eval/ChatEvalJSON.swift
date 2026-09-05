@@ -34,7 +34,7 @@ public struct EvalProvenance: Sendable, Equatable, Codable {
     /// read 0-or-1 itself (`ProcessInfo.isLowPowerModeEnabled`); the operator states 2 via
     /// `M1K3_SELFTEST_POWERMODE`. Adaptive Power is invisible here — see `powerSource`.
     public let powerMode: Int?
-    /// "ac" / "battery" / "ups", read from IOKit. Added 2026-09-05 after a day of tok/s measured on battery
+    /// "ac" / "battery", read from IOKit (nil when off-line or on a UPS). Added 2026-09-05 after a day of tok/s measured on battery
     /// under Adaptive Power read as "powermode 0": plugged in, plain decode doubled. Optional so scorecards
     /// written before the field decode as `nil` ("unknown"), never as a guess.
     public let powerSource: String?

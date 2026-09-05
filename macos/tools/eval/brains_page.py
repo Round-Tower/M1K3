@@ -304,7 +304,7 @@ def render_html(doc: dict) -> str:
     for i, run in enumerate(doc["runs"], 1):
         p = run["provenance"]
         runs_html.append(
-            f'<h3>Run {i} · {_e((p.get("date") or "")[:10])} · app <code>{_e(p.get("appCommit") or "?")}</code></h3>'
+            f'<h3>Run {i} · {_e((p.get("date") or "")[:10])} · app <code>{_e(p.get("appCommit") or "unknown")}</code></h3>'
             + _provenance(p) + _matrix(run) + f"<h4>Failed checks — run {i}</h4>" + _failures(run)
         )
     head_desc = ("Which local models M1K3 ships, pinned to exact revisions, and how they score on M1K3's own "

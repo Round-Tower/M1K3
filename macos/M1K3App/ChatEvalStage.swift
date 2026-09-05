@@ -322,14 +322,17 @@ enum ChatEvalStage {
         )
     }
 
-    /// "ac" / "battery" / "ups" from IOKit's providing power source; nil when it cannot tell. The one field
-    /// that would have caught 2026-09-05's battery-measured day (see EvalProvenance.powerSource).
+    /// "ac" / "battery" from IOKit's providing power source; nil when it cannot tell (off-line, or a UPS —
+    /// that needs a source-list walk like `BatteryStatusTool`). The one field that would have caught
+    /// 2026-09-05's battery-measured day (see EvalProvenance.powerSource). Same idiom as
+    /// `SystemStatusProviding`: Copy-rule → takeRetained, Get-rule → takeUnretained.
     private static func currentPowerSource() -> String? {
-        guard let type = IOPSGetProvidingPowerSourceType(nil)?.takeRetainedValue() as String? else { return nil }
+        guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let type = IOPSGetProvidingPowerSourceType(blob)?.takeUnretainedValue() as String?
+        else { return nil }
         switch type {
-        case kIOPMACPowerKey: return "ac"
-        case kIOPMBatteryPowerKey: return "battery"
-        case kIOPMUPSPowerKey: return "ups"
+        case kIOPSACPowerValue: return "ac"
+        case kIOPSBatteryPowerValue: return "battery"
         default: return nil
         }
     }
