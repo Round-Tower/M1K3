@@ -78,8 +78,10 @@ JSON
 open /path/to/M1K3.app
 
 # 4. Reshape the transcript into a scorecard (text) — or publish the JSON:
-#    python3 tools/eval/brains_page.py --run scorecard.txt.json --json ../site/brains.json --html ../site/brains.html
-#    (SelfTest writes the JSON beside the transcript as <M1K3_SELFTEST_OUT>.json)
+#    cp ~/Library/Containers/app.m1k3/Data/scorecard.txt.json docs/evals/<date>-<what>.json   # the published source
+#    python3 tools/eval/brains_page.py --json ../site/brains.json --html ../site/brains.html
+#    (SelfTest writes the JSON beside the transcript as <M1K3_SELFTEST_OUT>.json; the page is
+#     generated from every docs/evals/*.json so a reader can re-derive it)
 #    regenerates m1k3.app/brains + brains.json (ADR 0004: documentation, never read by the app)
 python3 tools/eval/scorecard.py \
   ~/Library/Containers/app.m1k3/Data/scorecard.txt --markdown scorecard.md
@@ -114,9 +116,16 @@ PR cites and what the site's `brains.json` is generated from (ADR 0004).
 > the two arms is the scaffolding's cost**, and that gap is the number that
 > matters for issue #102.
 
-**Record `pmset -g | rg powermode` with any timing you publish.** A Low Power
-Mode run reads 15–20% slower and looks exactly like a regression — it
-invalidated one of our own comparisons on 2026-08-08.
+**Record the power SOURCE and `pmset -g | rg powermode` with any timing you
+publish.** A Low Power Mode run reads 15–20% slower and looks exactly like a
+regression — it invalidated one of our own comparisons on 2026-08-08. Worse:
+on 2026-09-05 a whole day of tok/s was measured on battery under Adaptive
+Power while `powermode` read 0 — plugged in, Gemma's plain decode DOUBLED
+(9.1 → 21.1 tok/s) and the MTP ratios fell. The harness now stamps
+`powerSource` (ac / battery / ups, read from IOKit) into the JSON provenance;
+`powerMode` still only knows Low Power Mode (0/1), so pass the real pmset value
+as `M1K3_SELFTEST_POWERMODE=2` when you run in High Power mode. Publish nothing
+measured on battery as a headline number.
 
 ---
 

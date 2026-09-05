@@ -1,0 +1,388 @@
+{
+  "provenance": {
+    "date": "2026-09-05T15:26:56Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "notes": "Qwen3.8-27B-4bit as Big via M1K3_SELFTEST_CHATEVAL_MLX_MODEL, mlxMemoryLimitGB=24 override, AC power + High Power mode (pmset powermode 2 and IOKit 'AC Power' read from the run's own launch log — the build predated the powerSource field, so these two values were stamped from that log, not measured by the harness), app commit 682dcd68 (unstamped build), mlx-swift-lm e3d4a20e, machine quiet",
+    "osVersion": "macOS 26.4",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 1
+  },
+  "runs": [
+    {
+      "brainID": "big",
+      "modelID": "mlx-community/Qwen3.8-27B-4bit",
+      "scores": [
+        {
+          "answerPreview": "Saturday, and you've dropped in on your own machine's resident menace — that's either a good sign or a bad one, depending on what we're doing. All quiet in here as ever, nothing in or out. What are we at?",
+          "checks": [
+            {
+              "detail": "204 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ever, nothing in or out. What are we at?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "204 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "122565ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "kind": "open-chat",
+          "latencyMS": 122565,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A hash map keeps data as pairs — a key and its value — and uses a little trick called hashing: it runs your key through a function that spits out an index into an internal array of buckets, so you can grab, add, or kill an entry in roughly …",
+          "checks": [
+            {
+              "detail": "596 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "596 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "82039ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "kind": "open-chat",
+          "latencyMS": 82039,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "For a curious ten-year-old? Start them on **Scratch** (or anything block-based like ScratchJr / Code.org), and nudge them toward **Python** once they've got a taste for it. Here's why that order works:  - **Scratch first, because it strips …",
+          "checks": [
+            {
+              "detail": "1540 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …from blocks to their first real program?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1540 > max 1200",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "118617ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "kind": "open-chat",
+          "latencyMS": 118617,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Ah there you are — come in out of that, sit down. Big projects have one trick up their sleeve: they *look* like one enormous thing until you carve them into pieces small enough to hold. You don't owe the whole mountain today. Just the next …",
+          "checks": [
+            {
+              "detail": "470 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "470 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "53325ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "kind": "open-chat",
+          "latencyMS": 53325,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A sunlit loaf on the sill, fast asleep — the one in this house who has earned its keep.",
+          "checks": [
+            {
+              "detail": "87 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "87 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "69302ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "kind": "open-chat",
+          "latencyMS": 69302,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Couldn't pull any confirmed listings for this exact Saturday — the search came back bare — so I won't dress up a guess as fact. But three evergreen rainy-day bets in Cork that are reliably there:  1. **Fitzwilliam Museum** – free, central, …",
+          "checks": [
+            {
+              "detail": "600 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "600 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "189190ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "kind": "open-chat",
+          "latencyMS": 189190,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Company, mostly. I can chat, explain things without making it a lecture, help you think through a problem, tell you something odd and true, and keep every word we say right here on this machine — no audience, no leak, that's the whole schem…",
+          "checks": [
+            {
+              "detail": "572 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … poetry is *excellent*.\n\nWhat are we at?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "found \"search\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "572 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "139917ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "kind": "open-chat",
+          "latencyMS": 139917,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Ah, the classic opening move — \"who *are* you?\" Fair enough. I'm M1K3, a curious AI living entirely on this machine, wearing every sci-fi villain's look but, as it happens, always on your side. What's said here stays private; nothing in or …",
+          "checks": [
+            {
+              "detail": "458 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ain, not a liar.\n\nWhat can I do for you?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "458 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "32225ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "kind": "open-chat",
+          "latencyMS": 32225,
+          "repeatIndex": 0
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

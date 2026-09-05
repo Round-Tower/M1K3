@@ -28,6 +28,7 @@
 //  confirmed on-device). Prior: Unknown
 
 import Foundation
+import IOKit.ps
 
 // Weak-linked — see AppleFoundationModelsProvider for the full rationale: this
 // stage's `@Generable EvalToolArguments` strong-references FoundationModels
@@ -312,11 +313,25 @@ enum ChatEvalStage {
             appCommit: SelfTestEnv.value("M1K3_SELFTEST_APP_COMMIT")
                 ?? (Bundle.main.object(forInfoDictionaryKey: "GitCommitSHA") as? String),
             mlxSwiftLMRevision: SelfTestEnv.value("M1K3_SELFTEST_MLX_REVISION"),
-            powerMode: info.isLowPowerModeEnabled ? 1 : 0,
+            // The harness sees only Low Power Mode; High Power (pmset powermode 2) is the operator's to state.
+            powerMode: SelfTestEnv.value("M1K3_SELFTEST_POWERMODE").flatMap(Int.init) ?? (info.isLowPowerModeEnabled ? 1 : 0),
+            powerSource: Self.currentPowerSource(),
             livePath: livePathRequested,
             repeats: repeats,
             notes: SelfTestEnv.value("M1K3_SELFTEST_NOTES")
         )
+    }
+
+    /// "ac" / "battery" / "ups" from IOKit's providing power source; nil when it cannot tell. The one field
+    /// that would have caught 2026-09-05's battery-measured day (see EvalProvenance.powerSource).
+    private static func currentPowerSource() -> String? {
+        guard let type = IOPSGetProvidingPowerSourceType(nil)?.takeRetainedValue() as String? else { return nil }
+        switch type {
+        case kIOPMACPowerKey: return "ac"
+        case kIOPMBatteryPowerKey: return "battery"
+        case kIOPMUPSPowerKey: return "ups"
+        default: return nil
+        }
     }
 
     /// Brains to run: M1K3_SELFTEST_CHATEVAL_BRAINS=mini,lil narrows it (a full

@@ -88,39 +88,99 @@
         "hardware": "Apple M1 Max · 64 GB",
         "livePath": true,
         "mlxSwiftLMRevision": "c97539da",
-        "notes": "harness v2 verify-by-launch; pin worktree rebuild running concurrently",
+        "notes": "harness v2 verify-by-launch; pin worktree rebuild running concurrently · measured ON BATTERY under Adaptive Power (powermode 0 cannot see it); absolute latencies read ~2× slow vs AC",
         "osVersion": "macOS 26.4",
         "powerMode": 0,
         "repeats": 2
+      }
+    },
+    {
+      "brains": [
+        {
+          "brainID": "big",
+          "byKind": {
+            "open-chat": {
+              "passed": 7,
+              "total": 8
+            }
+          },
+          "failures": [
+            {
+              "check": "length band",
+              "detail": "1540 > max 1200",
+              "fixtureID": "chat-opinion",
+              "repeatIndex": 0
+            }
+          ],
+          "medianLatencyMS": 100328,
+          "modelID": "mlx-community/Qwen3.8-27B-4bit",
+          "passed": 7,
+          "total": 8
+        }
+      ],
+      "provenance": {
+        "date": "2026-09-05T15:26:56Z",
+        "hardware": "Apple M1 Max · 64 GB",
+        "livePath": true,
+        "notes": "Qwen3.8-27B-4bit as Big via M1K3_SELFTEST_CHATEVAL_MLX_MODEL, mlxMemoryLimitGB=24 override, AC power + High Power mode (pmset powermode 2 and IOKit 'AC Power' read from the run's own launch log — the build predated the powerSource field, so these two values were stamped from that log, not measured by the harness), app commit 682dcd68 (unstamped build), mlx-swift-lm e3d4a20e, machine quiet",
+        "osVersion": "macOS 26.4",
+        "powerMode": 2,
+        "powerSource": "ac",
+        "repeats": 1
       }
     }
   ],
   "schemaVersion": 1,
   "stateOfPlay": {
     "date": "2026-09-05",
-    "machine": "Apple M1 Max · 64 GB · powermode 0 · nothing else running",
-    "mtp": [
-      {
-        "accept": "52%",
-        "baselineTokPerSec": "34.0",
-        "mtpTokPerSec": "24.8",
-        "ratio": "0.73×",
-        "regime": "short, no wrap (25 tok)"
-      },
-      {
-        "accept": "40%",
-        "baselineTokPerSec": "9.1",
-        "mtpTokPerSec": "6.3",
-        "ratio": "0.69×",
-        "regime": "medium, wraps mid-decode (588 tok)"
-      },
-      {
-        "accept": "31%",
-        "baselineTokPerSec": "7.9",
-        "mtpTokPerSec": "9.8",
-        "ratio": "1.24× (23-token sample)",
-        "regime": "long, wrapped at prefill (2072 tok)"
-      }
-    ]
+    "machine": "Apple M1 Max · 64 GB · nothing else running",
+    "mtp": {
+      "acHighPower": [
+        {
+          "accept": "52%",
+          "baselineTokPerSec": "27.3",
+          "mtpTokPerSec": "18.1",
+          "ratio": "0.66×",
+          "regime": "short, no wrap (25 tok)"
+        },
+        {
+          "accept": "40%",
+          "baselineTokPerSec": "21.1",
+          "mtpTokPerSec": "13.1",
+          "ratio": "0.62×",
+          "regime": "medium, wraps mid-decode (588 tok)"
+        },
+        {
+          "accept": "31%",
+          "baselineTokPerSec": "20.6",
+          "mtpTokPerSec": "9.8",
+          "ratio": "0.48×",
+          "regime": "long, wrapped at prefill (2072 tok)"
+        }
+      ],
+      "batteryAdaptivePower": [
+        {
+          "accept": "52%",
+          "baselineTokPerSec": "34.0",
+          "mtpTokPerSec": "24.8",
+          "ratio": "0.73×",
+          "regime": "short, no wrap (25 tok)"
+        },
+        {
+          "accept": "40%",
+          "baselineTokPerSec": "9.1",
+          "mtpTokPerSec": "6.3",
+          "ratio": "0.69×",
+          "regime": "medium, wraps mid-decode (588 tok)"
+        },
+        {
+          "accept": "31%",
+          "baselineTokPerSec": "7.9",
+          "mtpTokPerSec": "9.8",
+          "ratio": "1.24× (23-token sample)",
+          "regime": "long, wrapped at prefill (2072 tok)"
+        }
+      ]
+    }
   }
 }

@@ -45,7 +45,7 @@ RUN = {
     "schemaVersion": 1,
     "provenance": {
         "date": "2026-09-05T12:35:34Z", "hardware": "Apple M1 Max · 64 GB", "osVersion": "macOS 26.4",
-        "appCommit": "b7e61299", "mlxSwiftLMRevision": "c97539da", "powerMode": 0, "livePath": True,
+        "appCommit": "b7e61299", "mlxSwiftLMRevision": "c97539da", "powerMode": 2, "powerSource": "ac", "livePath": True,
         "repeats": 2, "notes": "machine quiet",
     },
     "runs": [
@@ -135,15 +135,19 @@ def test_document_is_deterministic_and_sorted():
     assert json.loads(text)["schemaVersion"] == 1
     assert json.loads(text)["generated"] == "2026-09-05"
     assert text.index('"brains"') < text.index('"runs"')  # sorted keys
-    assert json.loads(text)["stateOfPlay"]["mtp"][0]["ratio"] == "0.73×"
+    assert json.loads(text)["stateOfPlay"]["mtp"]["batteryAdaptivePower"][0]["ratio"] == "0.73×"
+    assert json.loads(text)["stateOfPlay"]["mtp"]["acHighPower"][2]["ratio"] == "0.48×"
 
 
 def test_html_carries_provenance_and_stays_offline():
     html = bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-05"))
-    for needle in ("Apple M1 Max", "b7e61299", "c97539da", "powermode 0", "n = 2", "3/4", "tool-search-doc"):
+    for needle in ("Apple M1 Max", "b7e61299", "c97539da", "power ac · powermode 2", "n = 2", "3/4", "tool-search-doc"):
         assert needle in html, needle
     # the read-out's editorial facts ride along, dated
-    assert "Qwen3.8-27B" in html and "0.73" in html
+    assert "Qwen3.8-27B" in html and "0.73" in html and "0.66" in html
+    # a legacy run without powerSource renders as unknown, never as a guess
+    legacy = dict(RUN, provenance={k: v for k, v in RUN["provenance"].items() if k != "powerSource"})
+    assert "power unknown · powermode 2" in bp.render_html(bp.document(MANIFEST, [legacy], generated="2026-09-05"))
     # the same shell as the other answer pages (site/vs-ollama.html head): geo.css + the shared font links, no <script>
     assert "<script" not in html
     assert 'href="geo.css"' in html
