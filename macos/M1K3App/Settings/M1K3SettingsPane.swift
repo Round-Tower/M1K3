@@ -162,7 +162,7 @@ struct M1K3SettingsPane: View {
                     .symbolRenderingMode(.hierarchical)
             }
             if let failure = env.retiredWeightsFailure {
-                Label(failure, systemImage: "exclamationmark.triangle")
+                Label(failure.message, systemImage: "exclamationmark.triangle")
                     .font(.caption).foregroundStyle(.red)
             }
             ForEach(env.retiredWeights) { weights in

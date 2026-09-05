@@ -223,8 +223,9 @@ final class AppEnvironment {
     /// Brain folders on disk that nothing claims (a previous pin, an eval
     /// override) — Settings ▸ Brain offers to remove them. See +RetiredWeights.
     var retiredWeights: [InstalledWeights] = []
-    /// Why the last removal did not free the space, shown in the row; nil = fine.
-    var retiredWeightsFailure: String?
+    /// Why the last removal did not free the space, keyed to the folder it was
+    /// about; shown in the row and dropped once that folder is no longer retired.
+    var retiredWeightsFailure: RetiredWeightsFailure?
     /// The single MLX slot behind `RuntimeOption.mlxGemma` in the façade; re-pointed
     /// at `currentMLXProvider` whenever the brain switches between Lil and Big, so
     /// the swap is seen without rebuilding the RAGResponder. Internal (not

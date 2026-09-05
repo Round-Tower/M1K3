@@ -18,6 +18,13 @@ import M1K3Inference
 import M1K3MLX
 import os
 
+/// A removal that did not free its space — the reason travels with the folder
+/// it was about, so a stale banner can never sit above a different folder.
+struct RetiredWeightsFailure: Equatable {
+    let repoID: String
+    let message: String
+}
+
 extension AppEnvironment {
     private nonisolated static let retiredLog = Logger(subsystem: "app.m1k3", category: "mlx-load")
 
@@ -43,6 +50,11 @@ extension AppEnvironment {
                 RetiredWeightsPolicy.retired(installed: inventory.installedWeights(), keep: keep)
             }.value
             self?.retiredWeights = retired
+            // The folder the banner was about is gone (removed, or claimed again):
+            // the banner goes with it. A failure for a folder still listed stays.
+            if let failed = self?.retiredWeightsFailure, !retired.contains(where: { $0.repoID == failed.repoID }) {
+                self?.retiredWeightsFailure = nil
+            }
         }
     }
 
@@ -55,7 +67,7 @@ extension AppEnvironment {
         let inventory = brainInventory
         retiredWeightsFailure = nil
         Task { [weak self] in
-            let failure: String? = await Task.detached(priority: .utility) {
+            let failure: RetiredWeightsFailure? = await Task.detached(priority: .utility) {
                 do {
                     try inventory.remove(modelID: weights.repoID)
                     Self.retiredLog.notice(
@@ -68,7 +80,10 @@ extension AppEnvironment {
                     )
                     // The dialog promised freed space; a silent failure would break that
                     // promise. The row shows the reason until the next successful removal.
-                    return "Couldn't remove \(weights.repoID): \(error.localizedDescription)"
+                    return RetiredWeightsFailure(
+                        repoID: weights.repoID,
+                        message: "Couldn't remove \(weights.repoID): \(error.localizedDescription)"
+                    )
                 }
             }.value
             self?.retiredWeightsFailure = failure
