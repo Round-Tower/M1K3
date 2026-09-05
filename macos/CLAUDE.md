@@ -176,10 +176,11 @@ format runs **native** (`runNative`); otherwise the **ReAct** floor
   one afternoon, log-evidenced); `ModelStoreLocation` migrates a surviving
   Caches store across on first touch. `DEVELOPMENT_TEAM` is pinned in `project.yml` because a
   stable signing identity is load-bearing for persistent Keychain/TCC grants.
-- **`Package.swift` mlx-swift-lm is on a main REVISION pin** (`c97539da`,
-  2026-08-06 — since 2026-08-08, for Gemma-4 MTP: #415's entry points and
-  #506's sliding-cache stand-down are both post-3.31.4 and untagged). Move
-  back to a tag when one carries both. `mlx-swift` moved 0.31.4 → 0.31.6 in
+- **`Package.swift` mlx-swift-lm is on a main REVISION pin** (`e3d4a20e`,
+  2026-09-05 — moved from `c97539da` for #516's MTP rewind fix, #533, #514
+  and #575; all post-3.31.4 and untagged). Move back to a tag when one
+  carries #516. `newCache(parameters:)` throws on this revision — every call
+  site needs `try`. `mlx-swift` moved 0.31.4 → 0.31.6 in
   the same bump — main needs it (`DType.greatestFiniteMagnitudeArray`,
   `MLXArray.maskFill`). Dep bumps are probe-first (`swift package resolve`)
   because of the WhisperKit/swift-transformers `Tokenizers` clash landmine,

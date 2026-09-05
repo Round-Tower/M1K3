@@ -85,7 +85,12 @@ public struct MLXMemoryBudget: Sendable, Equatable {
         let ceiling = profile == .mobile ? mobileCeilingBytes : companionCeilingBytes
         let threeQuarters = Int(physicalMemoryBytes / 4 * 3)
         if let overrideLimitGB, overrideLimitGB > 0, profile == .desktop {
-            let requested = overrideLimitGB * mebibyte * 1024
+            // Clamp the GB figure BEFORE the multiply: `Int * Int` traps on overflow, and
+            // this value is a human typing a raw integer into `defaults write` (a pasted
+            // byte count is the obvious slip). Anything past 1 PB is nonsense and simply
+            // resolves to the 90% clamp below.
+            let saneGB = min(overrideLimitGB, 1_048_576)
+            let requested = saneGB * mebibyte * 1024
             let ninetyPercent = Int(physicalMemoryBytes / 10 * 9)
             return MLXMemoryBudget(
                 cacheLimitBytes: cacheMB * mebibyte,

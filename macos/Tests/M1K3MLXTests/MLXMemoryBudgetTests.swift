@@ -78,6 +78,10 @@ struct MLXMemoryBudgetTests {
         let gb = 1_073_741_824
         // 24 GB on a 64 GB Mac: honoured exactly (above the 12 GB ceiling).
         #expect(MLXMemoryBudget.budget(forPhysicalMemory: gigabytes(64), overrideLimitGB: 24).memoryLimitBytes == 24 * gb)
+        // A byte count pasted where a GB count belongs (24 GB written as 25_769_803_776) must clamp to
+        // 90% of RAM, never overflow the multiply and trap at the first MLX entry point.
+        #expect(MLXMemoryBudget.budget(forPhysicalMemory: gigabytes(64), overrideLimitGB: 25_769_803_776).memoryLimitBytes == 64 * gb / 10 * 9)
+        #expect(MLXMemoryBudget.budget(forPhysicalMemory: gigabytes(64), overrideLimitGB: Int.max).memoryLimitBytes == 64 * gb / 10 * 9)
         // 100 GB on a 64 GB Mac: clamped to 90% of physical.
         #expect(MLXMemoryBudget.budget(forPhysicalMemory: gigabytes(64), overrideLimitGB: 100).memoryLimitBytes == Int(gigabytes(64) / 10 * 9))
         // nil / zero / negative: the standard ceiling.

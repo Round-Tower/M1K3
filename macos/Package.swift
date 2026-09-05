@@ -118,15 +118,16 @@ let package = Package(
         // the tag. Verify-owed on any bump here: a gemma-4 NATIVE TOOL-CALL
         // smoke (not just load-and-generate) — tool-calling is the reason this
         // dependency moves.
-        // Pinned to a main revision (2026-08-06, "Olmo3: fix newCache signature",
-        // c97539da) for Gemma-4 MTP speculative decoding: #415 (the
-        // Gemma4Unified MTP entry points + drafter registration — the #61
-        // unlock) and #506 (stand down before the sliding cache wraps) are
-        // both post-3.31.4 and unreleased as tags. Revision-pin + release-watch
-        // (the 2026-06 pattern): move back to a tag when one ships carrying
-        // both. This revision also carries the #502 ChatConventionsProviding
-        // migration — our .gemma4 dialect integration was re-verified against
-        // it in the same commit that changed this line.
+        // Pinned to a main revision (2026-09-05, e3d4a20e, "Gemma4Text: expose
+        // decoder layers as loraLayers") — moved from c97539da (2026-08-06) for
+        // #516 (MTP rewind fix: rejected drafts never touch the sliding cache),
+        // #533 (draft/verify logit-processor split), #514 (typed KV-cache
+        // configuration; `newCache(parameters:)` now THROWS) and #575 (faster
+        // cold loads). Still post-3.31.4 and untagged: revision-pin +
+        // release-watch (the 2026-06 pattern), move back to a tag when one ships
+        // carrying #516. Gemma-4 native tool-call smoke re-verified on this
+        // revision the day it was pinned (6/6 native calls). MTP itself stays
+        // parked — measured 0.73×/0.69×/1.24× on M1 Max at batch 1.
         .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", revision: "e3d4a20e9e20e7b8ab39aded7bbfad4ae22c9438"),
         // mlx-swift itself (MLX/MLXNN/MLXFFT/MLXFast) — mlx-swift-lm depends on
         // this but doesn't re-export its products, so M1K3Kokoro (which needs
