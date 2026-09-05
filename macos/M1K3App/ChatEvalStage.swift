@@ -241,13 +241,32 @@ enum ChatEvalStage {
             + (kinds.map { " [kinds: \($0.map(\.label).sorted().joined(separator: ","))]" } ?? "")
             + (livePathRequested ? " [LIVE PATH: AgentRAGResponder]" : "") + "…")
         var runs: [ChatEvalReport.BrainRun] = []
-        for tier in selectedBrains() {
-            emit("• chateval brain \(tier.rawValue) (\(tier.displayName))…")
-            guard let scores = await evalBrain(tier, emit: emit) else {
+        let brains = selectedBrains()
+        let mlxTiers = brains.filter { if case .mlx = $0.backing { true } else { false } }.map(\.rawValue)
+        for tier in brains {
+            // The A/B override is resolved PER TIER: a bare id with two MLX
+            // brains selected used to run one model twice under two column
+            // names — refuse loudly instead (ChatEvalModelOverride).
+            let override = ChatEvalModelOverride.resolve(
+                raw: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_MLX_MODEL"),
+                tier: tier.rawValue, mlxTiersSelected: mlxTiers
+            )
+            let modelID: String?
+            switch (tier.backing, override) {
+            case (.appleFoundationModels, _): modelID = nil
+            case let (.mlx, .refused(reason)):
+                emit("  – \(tier.rawValue): override refused — \(reason) (skipped)")
+                continue
+            case let (.mlx(stock), .stock): modelID = stock
+            case let (.mlx, .override(id)): modelID = id
+            }
+            emit("• chateval brain \(tier.rawValue) (\(tier.displayName))"
+                + (modelID.map { " → \($0)" } ?? "") + "…")
+            guard let scores = await evalBrain(tier, modelID: modelID, emit: emit) else {
                 emit("  – \(tier.rawValue): unavailable (skipped)")
                 continue
             }
-            runs.append(ChatEvalReport.BrainRun(brainID: tier.rawValue, scores: scores))
+            runs.append(ChatEvalReport.BrainRun(brainID: tier.rawValue, modelID: modelID, scores: scores))
         }
         emit("")
         emit(ChatEvalReport.matrix(runs))
@@ -284,8 +303,11 @@ enum ChatEvalStage {
         return kinds.isEmpty ? nil : Set(kinds)
     }
 
+    /// - Parameter modelID: the MLX model to run under this tier's name — the
+    ///   stock id or the resolved A/B override (a local fused dir from
+    ///   `mlx_lm.fuse`, or a challenger hub id). nil for Mini.
     private static func evalBrain(
-        _ tier: BrainTier, emit: @escaping (String) -> Void
+        _ tier: BrainTier, modelID: String?, emit: @escaping (String) -> Void
     ) async -> [ChatEvalScore]? {
         let provider: any InferenceProvider
         switch tier.backing {
@@ -297,16 +319,10 @@ enum ChatEvalStage {
             let afm = AppleFoundationModelsProvider(nativeToolCalling: afmNativeTools)
             guard afm.isAvailable else { return nil }
             provider = afm
-        case let .mlx(modelID):
-            // A/B hook (Phase 16): point an MLX brain at a FUSED LoRA model to
-            // compare base vs adapter through the real harness. Set
-            // M1K3_SELFTEST_CHATEVAL_MLX_MODEL to a local fused-model dir (from
-            // `mlx_lm.fuse`) to override the hub id. Unset → the stock brain.
-            // (Verify-owed: confirm the MLX loader resolves a local path on-device.)
-            let resolvedID = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_MLX_MODEL") ?? modelID
+        case let .mlx(stockID):
             // 2048 like the per-model eval: a reasoning brain can spend hundreds
             // of tokens inside <think> before a one-word answer.
-            provider = MLXGemmaProvider(modelID: resolvedID, maxTokens: 2048)
+            provider = MLXGemmaProvider(modelID: modelID ?? stockID, maxTokens: 2048)
         }
 
         let kinds = selectedKinds()

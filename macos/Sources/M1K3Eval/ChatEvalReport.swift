@@ -18,11 +18,22 @@ public enum ChatEvalReport {
     /// One brain's run: its id and every fixture score, in fixture order.
     public struct BrainRun: Sendable, Equatable {
         public let brainID: String
+        /// The model that actually ran under this tier's name (hub id or local
+        /// path) — nil for tiers with no swappable model (Mini). Without it an
+        /// A/B override leaves no trace in the transcript, and a matrix column
+        /// labelled "big" can be any model at all.
+        public let modelID: String?
         public let scores: [ChatEvalScore]
 
-        public init(brainID: String, scores: [ChatEvalScore]) {
+        public init(brainID: String, modelID: String? = nil, scores: [ChatEvalScore]) {
             self.brainID = brainID
+            self.modelID = modelID
             self.scores = scores
+        }
+
+        /// `big [mlx-community/…]` when the model is known, else the bare tier.
+        var label: String {
+            modelID.map { "\(brainID) [\($0)]" } ?? brainID
         }
 
         public var passedCount: Int {
@@ -48,7 +59,7 @@ public enum ChatEvalReport {
     public static func verbose(_ runs: [BrainRun]) -> String {
         var lines: [String] = []
         for run in runs {
-            lines.append("--- \(run.brainID): \(run.passedCount)/\(run.total) "
+            lines.append("--- \(run.label): \(run.passedCount)/\(run.total) "
                 + "(median \(run.medianLatencyMS)ms) ---")
             for score in run.scores {
                 lines.append(score.rendered)
@@ -111,6 +122,13 @@ public enum ChatEvalReport {
             let line = pad(row.label, rowLabelWidth) + " | "
                 + row.cells.indices.map { pad(row.cells[$0], colWidths[$0]) }.joined(separator: " | ")
             out.append(line)
+        }
+        // Legend: which model stood behind each column. Columns stay the short
+        // tier name so the table keeps its width; the legend keeps it honest.
+        let legend = runs.compactMap { run in run.modelID.map { "\(run.brainID) = \($0)" } }
+        if !legend.isEmpty {
+            out.append(String(repeating: "-", count: header.count))
+            out.append(contentsOf: legend)
         }
         return out.joined(separator: "\n")
     }

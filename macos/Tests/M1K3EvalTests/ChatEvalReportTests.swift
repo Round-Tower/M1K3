@@ -43,6 +43,22 @@ struct ChatEvalReportTests {
         #expect(run.medianLatencyMS == 200)
     }
 
+    @Test("a run that names its model carries the id in the verbose header and a matrix legend")
+    func modelIDLabels() {
+        let run = ChatEvalReport.BrainRun(
+            brainID: "big", modelID: "mlx-community/Qwen3.8-27B-4bit",
+            scores: [score("o1", .openChat, passed: true, latency: 500)]
+        )
+        let verbose = ChatEvalReport.verbose([run])
+        #expect(verbose.contains("--- big [mlx-community/Qwen3.8-27B-4bit]: 1/1"))
+        let matrix = ChatEvalReport.matrix([run])
+        #expect(matrix.contains("big = mlx-community/Qwen3.8-27B-4bit"))
+        // A run without a model id renders exactly as before — no empty legend.
+        let plain = ChatEvalReport.BrainRun(brainID: "mini", scores: [score("o1", .openChat, passed: true, latency: 5)])
+        #expect(ChatEvalReport.verbose([plain]).contains("--- mini: 1/1"))
+        #expect(!ChatEvalReport.matrix([plain]).contains(" = "))
+    }
+
     @Test("the matrix carries a column per brain and a row per kind plus overall")
     func matrixShape() {
         let mini = ChatEvalReport.BrainRun(brainID: "mini", scores: [
