@@ -130,9 +130,9 @@ public struct MLXMemoryBudget: Sendable, Equatable {
         return max(floor, min(needed, threeQuarters))
     }
 
-    /// Re-settle the process-global limit around the brain that is resident NOW: call
-    /// after a model loads (raise for a big tier) and after one is released (fall back
-    /// to the floor). Idempotent; logs only when the limit actually moves.
+    /// Re-settle the process-global limit around the brain that is resident NOW: called
+    /// after a model loads (raise for a big tier) and from `reclaim` (after a release,
+    /// fall back to the floor). Idempotent; logs only when the limit actually moves.
     public static func settle(label: String) {
         applyOnce()
         #if os(iOS) || os(visionOS)
@@ -185,6 +185,9 @@ public struct MLXMemoryBudget: Sendable, Equatable {
     public static func reclaim(label: String) {
         MLX.Memory.clearCache()
         logSnapshot(label: label)
+        // After a release the resident weights are gone: fall back to the floor. After an
+        // ordinary generation the target is unchanged and this is a snapshot + compare.
+        settle(label: label)
     }
 
     /// Log MLX memory (active/cache/peak) plus the process physical
