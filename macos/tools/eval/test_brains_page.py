@@ -10,8 +10,8 @@ import brains_page as bp
 MANIFEST = {
     "schemaVersion": 1,
     "repos": {
-        "mlx-community/Qwen3-4B-Instruct-2507-4bit": {
-            "revision": "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
+        "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": {
+            "revision": "c073725c8ac051eabad9d64f4dcd3019d1072559",
             "downloadBase": "llm",
             "files": {"model.safetensors": {"size": 2263022417, "sha256": "aa"}, "config.json": {"size": 938, "sha256": "bb"}},
         },
@@ -56,7 +56,7 @@ RUN = {
             score("tool-search-doc", "tool-use", True, 25000, repeat=1),
             score("open-hello", "open-chat", True, 1200),
         ]},
-        {"brainID": "lil", "modelID": "mlx-community/Qwen3-4B-Instruct-2507-4bit", "scores": [
+        {"brainID": "lil", "modelID": "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510", "scores": [
             score("tool-datetime", "tool-use", True, 4400),
         ]},
     ],
@@ -69,9 +69,9 @@ def test_brains_come_from_the_manifest_not_prose():
     assert [b["tier"] for b in brains] == ["mini", "lil", "big"]
     assert by_tier["mini"]["backing"] == "apple-foundation-models" and by_tier["mini"]["modelID"] is None
     lil = by_tier["lil"]
-    assert lil["modelID"] == "mlx-community/Qwen3-4B-Instruct-2507-4bit"
-    assert lil["revision"] == "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b"
-    assert lil["huggingFace"] == "https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit/tree/50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b"
+    assert lil["modelID"] == "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510"
+    assert lil["revision"] == "c073725c8ac051eabad9d64f4dcd3019d1072559"
+    assert lil["huggingFace"] == "https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510/tree/c073725c8ac051eabad9d64f4dcd3019d1072559"
     assert lil["sizeMiB"] == 2158  # every pinned file, not just the weights
     assert by_tier["big"]["sizeMiB"] == 6458
     # the embedder is not a brain
@@ -94,7 +94,7 @@ def test_summary_counts_every_trial_and_keeps_the_failures():
         {"fixtureID": "tool-search-doc", "repeatIndex": 0, "check": "calls search_knowledge", "detail": "expected datetime"}
     ]
     lil = doc["brains"][1]
-    assert lil["modelID"] == "mlx-community/Qwen3-4B-Instruct-2507-4bit" and lil["total"] == 1
+    assert lil["modelID"] == "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510" and lil["total"] == 1
 
 
 def test_a_skipped_check_counts_as_a_pass():

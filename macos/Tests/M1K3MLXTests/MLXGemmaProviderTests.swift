@@ -397,7 +397,7 @@ struct MLXGemmaProviderTests {
 
         // Dense attention: no window, so a prefix of any size stays trimmable
         // and reuse genuinely works — which is why Lil is 10x faster per turn.
-        let lil = "mlx-community/Qwen3-4B-Instruct-2507-4bit"
+        let lil = "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510"
         #expect(MLXGemmaProvider.slidingWindow(forModelID: lil) == nil)
         #expect(MLXGemmaProvider.prefixIsReusable(tokens: 1878, modelID: lil))
     }

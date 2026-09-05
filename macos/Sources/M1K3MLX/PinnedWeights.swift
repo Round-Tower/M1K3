@@ -24,18 +24,18 @@ import Foundation
 /// unverified by design — see `WeightIntegrity.Verdict.unpinned`.
 public enum PinnedWeights {
     public static let all: [String: WeightIntegrity.Pin] = [
-        "mlx-community/Qwen3-4B-Instruct-2507-4bit": .init(
-            revision: "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
+        "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": .init(
+            revision: "c073725c8ac051eabad9d64f4dcd3019d1072559",
             files: [
                 "added_tokens.json": .init(size: 707, sha256: "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680"),
-                "chat_template.jinja": .init(size: 4040, sha256: "40c21f34cf67d8c760ef72f8ad3ae5afad514299d4b06e91dd9a8d705af7b541"),
-                "config.json": .init(size: 938, sha256: "574349e5a343236546fda55e4744a76e181f534182d7dc60ff1bad7e7a502849"),
+                "chat_template.jinja": .init(size: 2630, sha256: "64f85b198065d0fba2a81f37e10ed68161ce2c19a754c7100e67e0ca2ee9c326"),
+                "config.json": .init(size: 990, sha256: "387b98441ee36d609cb2657646fb8ab7cedaecbff1c83422e4d4a61b4f49e8a3"),
                 "generation_config.json": .init(size: 238, sha256: "835fffe355c9438e7a25be099b3fccaa98350b83451f9fd2d99512e74f1ade48"),
-                "model.safetensors": .init(size: 2_263_022_417, sha256: "2a73c6c248601ab904e035548abd8e6abb65ea27dcb5f342fb0a8910eb44173f"),
+                "model.safetensors": .init(size: 2_263_022_417, sha256: "bf7129c6518c5743080e687855a6ae4a4fb307de5d6239a18527d270dd960f69"),
                 "model.safetensors.index.json": .init(size: 63964, sha256: "388d811b8b7c2608dd04cce1bcb04a8bf715d19b42790894e6d3427ff429a777"),
                 "special_tokens_map.json": .init(size: 613, sha256: "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd"),
                 "tokenizer.json": .init(size: 11_422_654, sha256: "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"),
-                "tokenizer_config.json": .init(size: 5440, sha256: "4397cc477eb6d79715ccd2000accd6b3531928f30029665832fa1b255f24d2b9"),
+                "tokenizer_config.json": .init(size: 5405, sha256: "4b5f2f80f84faefe8420e1616671adb1dd3d7e632038d34b1f0e3a1363a51059"),
                 "vocab.json": .init(size: 2_776_833, sha256: "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"),
             ]
         ),
@@ -80,7 +80,7 @@ public enum PinnedWeights {
     /// installing files has to know which — assuming one base puts the
     /// embedder where its loader never looks.
     public static let bases: [String: WeightIntegrity.DownloadBase] = [
-        "mlx-community/Qwen3-4B-Instruct-2507-4bit": .llm,
+        "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": .llm,
         "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ": .embedder,
         "mlx-community/gemma-4-12B-it-4bit": .llm,
     ]

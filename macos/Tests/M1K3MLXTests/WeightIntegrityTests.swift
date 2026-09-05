@@ -272,7 +272,7 @@ struct PinnedWeightsTests {
     @Test("both shipping brains are pinned — the tiers a user can actually select")
     func shippingBrainsArePinned() {
         #expect(PinnedWeights.pin(for: "mlx-community/gemma-4-12B-it-4bit") != nil)
-        #expect(PinnedWeights.pin(for: "mlx-community/Qwen3-4B-Instruct-2507-4bit") != nil)
+        #expect(PinnedWeights.pin(for: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510") != nil)
     }
 
     /// The embedder is quieter than the brains but is the same exposure:
@@ -293,7 +293,7 @@ struct PinnedWeightsTests {
     @Test("each pinned repo declares which download base it belongs to")
     func everyPinnedRepoHasADownloadBase() {
         #expect(PinnedWeights.downloadBase(for: "mlx-community/gemma-4-12B-it-4bit") == .llm)
-        #expect(PinnedWeights.downloadBase(for: "mlx-community/Qwen3-4B-Instruct-2507-4bit") == .llm)
+        #expect(PinnedWeights.downloadBase(for: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510") == .llm)
         #expect(
             PinnedWeights.downloadBase(for: "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ") == .embedder
         )

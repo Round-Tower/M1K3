@@ -74,7 +74,10 @@ struct BrainTierTests {
         // dense-qwen3 family/size, but no <think> phase — tools 4.4s vs 21.0s
         // median, reasoning answers 1.8s vs 11.9s, security parity with the
         // model it replaces (Run E, macos/scratch/eval-2026-07-15-model-runs/).
-        #expect(BrainTier.lil.mlxModelID == "mlx-community/Qwen3-4B-Instruct-2507-4bit")
+        // DWQ-2510 since 2026-09-05: the same weights under the DWQ quantization
+        // recipe — 18/21 vs 15/21 on mains (security 6/7 vs 3/7; ×3 repeats
+        // 16/21 vs 12/21), median turn 1774 ms vs 2011 ms (docs/evals/2026-09-05-lil-*).
+        #expect(BrainTier.lil.mlxModelID == "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510")
         // big is gemma-4-12B since 2026-07-15: both June blockers cleared on the
         // pinned mlx-swift-lm 3.31.4 (vision_embedder sanitize IS in the tag;
         // the RotatingKVCache.temporalOrder tool-use crash did not reproduce),

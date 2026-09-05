@@ -13,11 +13,11 @@
     },
     {
       "backing": "mlx",
-      "huggingFace": "https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit/tree/50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
-      "modelID": "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+      "huggingFace": "https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510/tree/c073725c8ac051eabad9d64f4dcd3019d1072559",
+      "modelID": "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
       "name": "Lil",
-      "revision": "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
-      "role": "The fast brain that fronts the conversation — dense Qwen3 4B, no <think> phase.",
+      "revision": "c073725c8ac051eabad9d64f4dcd3019d1072559",
+      "role": "The fast brain that fronts the conversation — dense Qwen3 4B (DWQ 4-bit), no <think> phase.",
       "sizeMiB": 2171,
       "tier": "lil"
     },
