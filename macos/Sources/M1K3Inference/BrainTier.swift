@@ -45,6 +45,8 @@
 //  slot with a floor once upstream fixes RotatingKVCache.temporalOrder.
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — platform-aware selection floor: Lil is 8 GB on .mobile,
 //  Big never (a 3 GB A12 iPad crash-looped on Lil, #227); every Mac accessor unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — Mini's glyph is `apple.intelligence` (Kev's call, mobile QA pass);
+//  pinned in BrainTierTests. Confidence now 0.9.
 //
 
 import Foundation
@@ -157,11 +159,11 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
             + "reasoning that keeps up with you. Runs entirely on \(HostPlatform.yourDevice)."
     }
 
-    /// SF Symbol for the brain card. Speed → power, echoing the KMP emojis
-    /// (🤏 / ⚡ / 🧠).
+    /// SF Symbol for the brain card. Mini wears Apple Intelligence's own mark
+    /// (it IS Apple Intelligence); Lil/Big keep speed → power.
     public var glyph: String {
         switch self {
-        case .mini: "hare.fill"
+        case .mini: "apple.intelligence"
         case .lil: "bolt.fill"
         case .big: "brain.head.profile.fill"
         }

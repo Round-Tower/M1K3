@@ -28,6 +28,9 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — M1K3_VOICE_AT_LAUNCH harness switch (enter voice mode when the brain is
 //  ready) so a phone on the desk can be driven from the Mac via devicectl; inert otherwise.
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — starter chips are drawn per blank canvas (StarterPrompts: shuffled
+//  pool + recent memories); the readiness hint names the real alternative on a device without Lil (Brain at Home).
+//  Confidence now 0.85.
 
 import M1K3Avatar
 import M1K3Chat
@@ -41,6 +44,7 @@ struct ChatScreen: View {
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
     @State private var draft = ""
+    @State private var starters: [String] = []
     @FocusState private var inputFocused: Bool
 
     private var chatting: Bool {
@@ -113,6 +117,10 @@ struct ChatScreen: View {
             // the brain is ready — devicectl can pass an environment, but it
             // cannot tap. The Mac's SelfTest env keys are the precedent. Inert
             // for every ordinary launch.
+            // Blank canvas (first appearance and every New chat) → new chips.
+            .task(id: chatting) {
+                if !chatting { reshuffleStarters() }
+            }
             .task(id: brainReady) {
                 guard brainReady, !voiceLaunched, Self.voiceAtLaunch else { return }
                 voiceLaunched = true
@@ -187,9 +195,10 @@ struct ChatScreen: View {
             case .available: return nil
             case .notReady: return "Apple Intelligence is still downloading on this device…"
             case let .blocked(userFixable):
+                let alternative = core.brainMenu.localFallback.map { "pick \($0.displayName)" } ?? "pair with your Mac"
                 return userFixable
-                    ? "Turn on Apple Intelligence in Settings — or pick Lil in Settings."
-                    : "This device can't run Apple Intelligence — pick Lil in Settings."
+                    ? "Turn on Apple Intelligence in Settings — or \(alternative) in Settings."
+                    : "This device can't run Apple Intelligence — \(alternative) in Settings."
             }
         case .mlx:
             if case let .failed(message) = core.brainLoad { return message }
@@ -290,7 +299,7 @@ struct ChatScreen: View {
 
     private var starterChipStack: some View {
         VStack(spacing: 8) {
-            ForEach(Self.starters, id: \.self) { prompt in
+            ForEach(starters, id: \.self) { prompt in
                 Button { sendStarter(prompt) } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "sparkle")
@@ -312,11 +321,12 @@ struct ChatScreen: View {
         }
     }
 
-    private static let starters = [
-        "What can you help me with?",
-        "Explain something simply",
-        "What do you remember about me?",
-    ]
+    /// A fresh draw every time the canvas goes blank: a shuffle of the pool with
+    /// up to two of the newest memories woven in (StarterPrompts, pure + tested).
+    private func reshuffleStarters() {
+        var rng = SystemRandomNumberGenerator()
+        starters = StarterPrompts.pick(memoryTitles: core.recentMemoryTitles(), using: &rng)
+    }
 
     private func sendStarter(_ prompt: String) {
         // The chip carries its own prompt, so gate on brain readiness only — NOT

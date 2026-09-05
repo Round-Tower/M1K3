@@ -589,6 +589,24 @@ final class AppCore {
         afm.availabilityState
     }
 
+    /// The brains this device may list (onboarding + Settings): Mini only where
+    /// Apple Intelligence can run, Lil only above its mobile floor, Brain at Home
+    /// always — the pure table in MobileBrainMenu.
+    var brainMenu: MobileBrainMenu {
+        MobileBrainMenu.resolve(afm: miniAvailability, physicalMemoryGB: Self.physicalMemoryGB)
+    }
+
+    /// Titles of the newest live memories, for the blank-canvas chips. Empty when
+    /// the store is absent or nothing has a title yet.
+    func recentMemoryTitles(limit: Int = 4) -> [String] {
+        guard let memoryStore, let memories = try? memoryStore.allMemories(limit: 40) else { return [] }
+        // allMemories is already newest-first.
+        return memories
+            .compactMap(\.title)
+            .prefix(limit)
+            .map { $0 }
+    }
+
     // MARK: - Send (drives the avatar around ChatSession's streaming send)
 
     func send(_ text: String) async {

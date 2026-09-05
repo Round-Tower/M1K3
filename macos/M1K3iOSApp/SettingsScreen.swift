@@ -19,6 +19,9 @@
 //  weight downloads reach the internet too, so "the only thing" overclaimed).
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — the Voice section (VoiceOutputSection: Built-in vs M1K3 Voice) joins
 //  the face and the brain — mind, face, voice, the Mac's M1K3 tab.
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — the Brain rows come from MobileBrainMenu (no Mini on a device that
+//  can't run Apple Intelligence, no locked Lil rows, Home listed even before pairing); the hint names the real
+//  alternative. Confidence now 0.85 (verify-by-launch on the iPad 8th gen + 17 Pro).
 //
 
 import M1K3BrainLink
@@ -31,8 +34,15 @@ struct SettingsScreen: View {
     @AppStorage(ReadingMode.storageKey) private var readingModeRaw = ReadingMode.standard.rawValue
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
 
-    /// Mobile-safe tiers only (see file header).
-    private let brains: [BrainTier] = [.mini, .lil]
+    /// What THIS device may list — Mini only where Apple Intelligence runs, Lil only
+    /// above its memory floor, Brain at Home always (MobileBrainMenu).
+    private var menu: MobileBrainMenu {
+        core.brainMenu
+    }
+
+    private var brains: [BrainTier] {
+        menu.options.compactMap { if case let .tier(tier) = $0 { tier } else { nil } }
+    }
 
     var body: some View {
         Form {
@@ -73,21 +83,21 @@ struct SettingsScreen: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            if let floor = AppCore.lockedFloor(tier) {
-                                Text(AppCore.lockedFloorLabel(floor))
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                            } else if core.selectedBrain == tier, !core.homeBrainActive {
+                            if core.selectedBrain == tier, !core.homeBrainActive {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.tint)
                             }
                         }
                     }
                     .buttonStyle(.plain)
-                    .disabled(AppCore.lockedFloor(tier) != nil)
                 }
                 if let brain = core.homeBrain {
                     homeBrainRow(brain)
+                } else {
+                    pairRow
+                }
+                if let note = menu.note {
+                    Text(note).font(.caption).foregroundStyle(.secondary)
                 }
                 if let note = core.brainNote {
                     Text(note).font(.caption).foregroundStyle(.orange)
@@ -175,6 +185,27 @@ struct SettingsScreen: View {
         .buttonStyle(.plain)
     }
 
+    /// Home before a Mac is paired: the same row shape, leading into the ceremony —
+    /// on a device with no local brain this is the only row (QA pass, 2026-09-05).
+    private var pairRow: some View {
+        NavigationLink {
+            BrainPairingScreen()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "house")
+                    .font(.title3)
+                    .foregroundStyle(.tint)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Home").foregroundStyle(.primary)
+                    Text("Your Mac’s brain, over your Wi‑Fi — pair to use it")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
     private var readingMode: ReadingMode {
         ReadingMode(rawValue: readingModeRaw) ?? .standard
     }
@@ -185,9 +216,10 @@ struct SettingsScreen: View {
         case .available: return nil
         case .notReady: return "Apple Intelligence is still downloading on this device."
         case let .blocked(userFixable):
+            let alternative = menu.localFallback.map { "choose \($0.displayName)" } ?? "use Home"
             return userFixable
-                ? "Turn on Apple Intelligence in Settings, or choose Lil."
-                : "This device can't run Apple Intelligence — choose Lil."
+                ? "Turn on Apple Intelligence in Settings, or \(alternative)."
+                : "This device can't run Apple Intelligence — \(alternative)."
         }
     }
 
