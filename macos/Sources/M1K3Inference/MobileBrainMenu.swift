@@ -52,6 +52,13 @@ public struct MobileBrainMenu: Equatable, Sendable {
     /// One plain-words line when this device can run NO local brain, else nil.
     public let note: String?
 
+    /// False when Home is the only row: the shell then activates a paired Mac
+    /// on its own (after pairing, and at launch) instead of leaving the device on
+    /// a Mini that can never answer (Kev's iPad, round 3).
+    public var hasLocalBrain: Bool {
+        options.contains { if case .tier = $0 { true } else { false } }
+    }
+
     public static func resolve(afm: AFMAvailability, physicalMemoryGB gigabytes: Double) -> MobileBrainMenu {
         var options: [MobileBrainOption] = []
         if afm != .blocked(userFixable: false) {

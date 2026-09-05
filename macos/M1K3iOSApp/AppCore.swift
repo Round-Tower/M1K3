@@ -307,7 +307,10 @@ final class AppCore {
         // Brain at Home: restore a paired Mac, and re-point the slot at it if
         // Home was fronting when the app last ran.
         homeBrain = brainLinkStore.load()
-        if homeBrain != nil, UserDefaults.standard.bool(forKey: Self.homeBrainActiveKey) {
+        // Home fronts when it was chosen — or when nothing local CAN front (#230's
+        // Home-only half: a persisted Mini on an AFM-ineligible device would sit
+        // unready forever).
+        if homeBrain != nil, UserDefaults.standard.bool(forKey: Self.homeBrainActiveKey) || !brainMenu.hasLocalBrain {
             activateHomeBrain()
         }
         // Cheap + synchronous (registration only) — see AppCore+MetricKit.swift.
@@ -436,6 +439,9 @@ final class AppCore {
             return false
         }
         homeBrain = brain
+        // A device with no local brain of its own paired for one reason: front the
+        // Mac now, don't leave it on an unrunnable Mini behind a "Choose Home" note.
+        if !brainMenu.hasLocalBrain { selectHomeBrain() }
         return true
     }
 

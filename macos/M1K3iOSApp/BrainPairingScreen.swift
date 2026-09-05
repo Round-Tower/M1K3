@@ -65,7 +65,9 @@ struct BrainPairingScreen: View {
             case .done:
                 Section {
                     Label(
-                        "Paired with \(core.homeBrain?.name ?? "your Mac"). Choose Home under Brain to use it.",
+                        core.homeBrainActive
+                            ? "Paired with \(core.homeBrain?.name ?? "your Mac") — using its brain now."
+                            : "Paired with \(core.homeBrain?.name ?? "your Mac"). Choose Home under Brain to use it.",
                         systemImage: "checkmark.circle.fill"
                     )
                     .foregroundStyle(.green)
