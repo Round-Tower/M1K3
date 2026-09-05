@@ -211,7 +211,25 @@ struct BrainTierTests {
         #expect(BrainTier.selectableOrEased(.big, forPhysicalMemoryGB: 8) != .big)
     }
 
-    @Test("Big-12B carries the promised 16GB selection floor; Mini/Lil stay floorless")
+    @Test("Lil needs 6 GB on mobile — a 3 GB A12 iPad locks the card, a 12 GB iPhone 17 Pro passes (#227)")
+    func lilMobileFloor() {
+        // Kev's iPad (iPad11,6, 3 GB): picked Lil, iOS jetsam killed the load and
+        // the relaunch re-entered the same brain — a crash loop. Lil is ~2.2 GB of
+        // weights before KV; the per-app budget on a 3 GB device can never hold it.
+        #expect(BrainTier.lil.minimumPhysicalMemoryGB(platform: .mobile) == 6)
+        #expect(!BrainTier.lil.isSelectable(forPhysicalMemoryGB: 3, platform: .mobile))
+        #expect(!BrainTier.lil.isSelectable(forPhysicalMemoryGB: 4, platform: .mobile))
+        #expect(BrainTier.lil.isSelectable(forPhysicalMemoryGB: 6, platform: .mobile))
+        #expect(BrainTier.lil.isSelectable(forPhysicalMemoryGB: 12, platform: .mobile))
+        // Mini has no MLX footprint anywhere; the Mac ladder is untouched.
+        #expect(BrainTier.mini.isSelectable(forPhysicalMemoryGB: 3, platform: .mobile))
+        #expect(BrainTier.lil.minimumPhysicalMemoryGB(platform: .mac) == nil)
+        #expect(BrainTier.lil.isSelectable(forPhysicalMemoryGB: 8, platform: .mac))
+        // A persisted locked pick eases to a selectable tier on restore — the loop breaker.
+        #expect(BrainTier.selectableOrEased(.lil, forPhysicalMemoryGB: 3, platform: .mobile) == .mini)
+        #expect(BrainTier.selectableOrEased(.lil, forPhysicalMemoryGB: 12, platform: .mobile) == .lil)
+    }
+
     func bigTwelveBSelectionFloor() {
         // The seam this test's predecessor kept warm ("gemma-4-12B will want it
         // back when Big upgrades") is now armed: 12B peaks ~7.4GB at inference

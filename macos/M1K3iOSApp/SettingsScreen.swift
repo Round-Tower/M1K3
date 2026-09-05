@@ -34,6 +34,12 @@ struct SettingsScreen: View {
     /// Mobile-safe tiers only (see file header).
     private let brains: [BrainTier] = [.mini, .lil]
 
+    /// The memory floor a tier fails on this device, or nil when selectable
+    /// (#227: Lil on a 3 GB iPad crash-looped; the row now says why it's off).
+    private func lockedFloor(_ tier: BrainTier) -> Double? {
+        AppCore.isSelectableOnThisDevice(tier) ? nil : tier.minimumPhysicalMemoryGB(platform: .mobile)
+    }
+
     var body: some View {
         Form {
             Section("Workspace") {
@@ -73,13 +79,18 @@ struct SettingsScreen: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            if core.selectedBrain == tier, !core.homeBrainActive {
+                            if let floor = lockedFloor(tier) {
+                                Text("Needs \(Int(floor)) GB")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            } else if core.selectedBrain == tier, !core.homeBrainActive {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.tint)
                             }
                         }
                     }
                     .buttonStyle(.plain)
+                    .disabled(lockedFloor(tier) != nil)
                 }
                 if let brain = core.homeBrain {
                     homeBrainRow(brain)

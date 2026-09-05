@@ -199,6 +199,16 @@ final class AppCore {
     /// the only brain, and the memory budget is skipped. A real device (proven on
     /// iPhone 17 Pro) runs the full Mini + Lil ladder. Verified: the crash stack
     /// bottomed out at `MLXMemoryBudget.applyOnce()` from `AppCore.init`.
+    /// Physical RAM in GB; the memory floors compare against this.
+    static var physicalMemoryGB: Double {
+        Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
+    }
+
+    /// Whether this device can offer the tier at all (mobile floors: Lil 6 GB).
+    static func isSelectableOnThisDevice(_ tier: BrainTier) -> Bool {
+        tier.isSelectable(forPhysicalMemoryGB: physicalMemoryGB, platform: .mobile)
+    }
+
     static let mlxAvailable: Bool = {
         #if targetEnvironment(simulator)
             return false
@@ -239,8 +249,14 @@ final class AppCore {
         // stale "huge" migrates to Big — though the mobile ladder never offers Big.
         // On the Simulator, an MLX pick falls back to Mini for this launch (the
         // persisted choice is untouched, so a real device honours it).
-        let restored = UserDefaults.standard.string(forKey: Self.selectedBrainKey)
-            .flatMap(BrainTier.init(persisted:)) ?? .mini
+        // A persisted pick below its mobile memory floor eases to Mini — the
+        // crash-loop breaker (#227): Lil on a 3 GB iPad was killed mid-load and
+        // every relaunch walked straight back into the same wall.
+        let restored = BrainTier.selectableOrEased(
+            UserDefaults.standard.string(forKey: Self.selectedBrainKey)
+                .flatMap(BrainTier.init(persisted:)) ?? .mini,
+            forPhysicalMemoryGB: Self.physicalMemoryGB, platform: .mobile
+        )
         let brain = (restored.mlxModelID != nil && !Self.mlxAvailable) ? .mini : restored
         selectedBrain = brain
 
@@ -325,6 +341,14 @@ final class AppCore {
         // note and stay on Mini so chat still works; a real device runs Lil.
         if tier.mlxModelID != nil, !Self.mlxAvailable {
             brainNote = "\(tier.displayName) runs on a real device — the Simulator has no GPU for MLX. Staying on Mini."
+            selectBrain(.mini)
+            return
+        }
+        // Below the tier's memory floor the load cannot succeed — iOS kills it
+        // (#227). The rows render locked; this is the belt for a stale tap.
+        if !Self.isSelectableOnThisDevice(tier), let floor = tier.minimumPhysicalMemoryGB(platform: .mobile) {
+            brainNote = "\(tier.displayName) needs \(Int(floor)) GB of memory — this device has "
+                + "\(Int(Self.physicalMemoryGB.rounded())) GB. Staying on Mini."
             selectBrain(.mini)
             return
         }

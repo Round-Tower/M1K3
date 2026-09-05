@@ -266,15 +266,31 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// only swap-thrash. 16GB is tight-but-runnable; the RECOMMENDATION floor
     /// stays 24GB.
     public var minimumPhysicalMemoryGB: Double? {
-        switch self {
-        case .mini, .lil: nil
-        case .big: 16
+        minimumPhysicalMemoryGB(platform: .mac)
+    }
+
+    /// The same floor, per platform. On iOS/iPadOS the per-app jetsam budget is
+    /// well under physical RAM: Lil's ~2.2 GB of weights (plus KV) cannot load on
+    /// a 3 GB A12 iPad — the load is killed and a relaunch into the persisted pick
+    /// loops (#227, Kev's iPad, 2026-09-05). 6 GB clears every iPhone 15 Pro-class
+    /// device and later; 4 GB iPads stay on Mini. Big is never offered on mobile.
+    public func minimumPhysicalMemoryGB(platform: DevicePlatform) -> Double? {
+        switch (self, platform) {
+        case (.mini, _): nil
+        case (.lil, .mac): nil
+        case (.lil, .mobile): 6
+        case (.big, _): 16
         }
     }
 
     /// Whether this Mac has enough memory to offer the tier at all.
     public func isSelectable(forPhysicalMemoryGB gigabytes: Double) -> Bool {
-        guard let floor = minimumPhysicalMemoryGB else { return true }
+        isSelectable(forPhysicalMemoryGB: gigabytes, platform: .mac)
+    }
+
+    /// Whether this device has enough memory to offer the tier at all.
+    public func isSelectable(forPhysicalMemoryGB gigabytes: Double, platform: DevicePlatform) -> Bool {
+        guard let floor = minimumPhysicalMemoryGB(platform: platform) else { return true }
         return gigabytes >= floor
     }
 
@@ -356,8 +372,10 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// a too-heavy brain on a small Mac (Big has no hard memory floor, so without
     /// this it would ride along on an 8GB machine and thrash swap). Manual
     /// selection is the user's sovereign choice and is deliberately NOT capped.
-    public static func capped(_ tier: BrainTier, forPhysicalMemoryGB gigabytes: Double) -> BrainTier {
-        min(tier, recommended(forPhysicalMemoryGB: gigabytes))
+    public static func capped(
+        _ tier: BrainTier, forPhysicalMemoryGB gigabytes: Double, platform: DevicePlatform = .mac
+    ) -> BrainTier {
+        min(tier, recommended(forPhysicalMemoryGB: gigabytes, platform: platform))
     }
 
     /// Convenience: `capped` for the machine we're running on.
@@ -373,11 +391,11 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// demoting it would violate #81's never-touch-an-explicit-pick honesty rule.
     /// Armed by the 12B floor (2026-07-15); a no-op while no tier carried one.
     public static func selectableOrEased(
-        _ tier: BrainTier, forPhysicalMemoryGB gigabytes: Double
+        _ tier: BrainTier, forPhysicalMemoryGB gigabytes: Double, platform: DevicePlatform = .mac
     ) -> BrainTier {
-        tier.isSelectable(forPhysicalMemoryGB: gigabytes)
+        tier.isSelectable(forPhysicalMemoryGB: gigabytes, platform: platform)
             ? tier
-            : capped(tier, forPhysicalMemoryGB: gigabytes)
+            : capped(tier, forPhysicalMemoryGB: gigabytes, platform: platform)
     }
 
     /// Convenience: whether this tier is selectable on the machine we're on.
