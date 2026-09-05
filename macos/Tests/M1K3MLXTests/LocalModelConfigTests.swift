@@ -36,11 +36,14 @@ struct LocalModelConfigTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         try #"{"model_type":"qwen3"}"#.write(to: dir.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
         #expect(LocalModelConfig.modelType(forRepoID: dir.path) == "qwen3")
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        if dir.path.hasPrefix(home) {
-            let tilde = "~" + dir.path.dropFirst(home.count)
-            #expect(LocalModelConfig.modelType(forRepoID: tilde) == "qwen3")
-        }
+        // Tilde expansion: the fixture must live under $HOME for "~/…" to name
+        // it — temporaryDirectory is under /private/var, so build one there.
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let homeDir = home.appendingPathComponent(".m1k3-test-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: homeDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: homeDir) }
+        try #"{"model_type":"llama"}"#.write(to: homeDir.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
+        #expect(LocalModelConfig.modelType(forRepoID: "~/" + homeDir.lastPathComponent) == "llama")
         // A hub id with nothing on disk is quiet nil, never a throw.
         #expect(LocalModelConfig.modelType(forRepoID: "acme/never-downloaded-\(UUID().uuidString)") == nil)
     }
