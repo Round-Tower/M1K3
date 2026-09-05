@@ -16,6 +16,8 @@
 //  the M1K3App target into M1K3Inference so the swap logic is `swift test`-covered,
 //  matching its siblings SwappableSpeechProvider/SwappableEmbeddingService. Behaviour
 //  unchanged; members made `public`.
+//  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.9 — PR #232: forwards
+//  `nativePromptShape` to the active provider (the façade-forwarding rule, #133/#134).
 
 import Foundation
 import Synchronization

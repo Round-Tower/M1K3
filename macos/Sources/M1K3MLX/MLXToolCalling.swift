@@ -44,6 +44,14 @@
 //  path; untested by design, same as its sibling `tokenCount`/
 //  `templatedTokenCount` (Metal-backed, verify-by-launch — see M1K3MLXTests'
 //  PersonaPrefixCacheTests, which tests only the pure cache-key half).
+//  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 — PR #232. swift-jinja's
+//  `tojson` sorts keys; LFM2.5-1.2B made 0/5 tool calls on that rendering, 5/5 in the
+//  trained order (mlx-lm replay of the app's exact prompt). `templateInputs`/`seedInputs`
+//  render the lfm2 block ourselves into the system turn (one seam: stateless turn, session,
+//  persona seed, probe). `nativePromptShape` (lfm2 → grounding in the system turn; the
+//  seed-miss alarm is gated on it). `ToolTurnDiagnostics`: both loops used to swallow
+//  `.rejectedToolCall`; no-call turns log a count always, content only on anomaly or when
+//  `M1K3_SELFTEST_DUMP_PROMPT` asks. Measured: tool-use 0/6 → 5/6 (Lil DWQ 5/6).
 
 import Foundation
 import M1K3Inference
@@ -111,8 +119,12 @@ enum MLXToolMapping {
     /// keys (`.sortedKeys`), which put `function` before `type` and
     /// `description` before `name`; LFM2.5-1.2B went silent on that rendering
     /// (0/5 → 5/5 in an mlx-lm replay of the app's exact prompt, 2026-09-05).
-    /// Property names are sorted for determinism; `required` is emitted only
-    /// when non-empty.
+    /// Property names are sorted for determinism — measured irrelevant to the
+    /// model (two-parameter tool, declaration vs alphabetical: 5/5 both,
+    /// 2026-09-06); `required` is emitted only when non-empty. Strings are
+    /// escaped like `json.dumps(ensure_ascii=False)`: non-ASCII stays raw UTF-8,
+    /// where Python's default would emit `\uXXXX` — tool descriptions are
+    /// ASCII today; revisit if a localised description ever reaches a template.
     static func canonicalToolJSON(_ spec: ToolSpec) -> String {
         let function = spec["function"] as? [String: Any] ?? [:]
         let parameters = function["parameters"] as? [String: Any] ?? [:]
@@ -461,11 +473,9 @@ extension MLXGemmaProvider: ToolCallingProvider {
                 }
             }
             if calls.isEmpty {
-                ToolTurnDiagnostics.logNoCall(
-                    label: "toolTurn", rejections: rejections,
-                    promptText: context.tokenizer.decode(tokenIds: input.text.tokens.asArray(Int.self)),
-                    toolNames: tools.map(\.name), text: text
-                )
+                ToolTurnDiagnostics.noteNoCall(
+                    label: "toolTurn", rejections: rejections, toolNames: tools.map(\.name), text: text
+                ) { context.tokenizer.decode(tokenIds: input.text.tokens.asArray(Int.self)) }
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 return ToolTurn.text(Self.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded))
             }
@@ -604,6 +614,10 @@ extension MLXGemmaProvider: ToolCallingProvider {
             imagesAllowed: supportsImageInput,
             seed: seed,
             seedSource: seedSource,
+            // With grounding riding the system turn the persona seed is a
+            // prefix of the PERSONA only, never of the whole system message —
+            // falling short there is the layout, not a drift to alarm on.
+            seedMayFallShort: nativePromptShape == .groundingInSystem,
             adoptTail: adoptTail
         )
     }
@@ -648,24 +662,47 @@ enum ToolTurnDiagnostics {
         )
     }
 
-    /// Says what the model actually produced and whether the rendered prompt
-    /// even carried every tool name (template drift shows up here).
-    static func logNoCall(label: String, rejections: Int, promptText: String, toolNames: [String], text: String) {
+    /// A no-call turn. Always: one content-free notice (count + tool count) —
+    /// this branch is ALSO every ordinary final answer, so nothing heavier
+    /// runs unless something is off. On an anomaly (a rejection happened) or
+    /// when a harness dump is asked for: decode the prompt ONCE, check every
+    /// tool name reached it, log the raw head of the reply, dump.
+    static func noteNoCall(
+        label: String, rejections: Int, toolNames: [String], text: String, decodePrompt: () -> String
+    ) {
+        mlxToolLog.notice(
+            "\(label, privacy: .public) no call: rejections=\(rejections) tools=\(toolNames.count)"
+        )
+        guard rejections > 0 || dumpDirectory != nil else { return }
+        let promptText = decodePrompt()
         let promptHasTools = toolNames.allSatisfy { promptText.contains($0) }
         let rawHead = String(text.prefix(220))
         mlxToolLog.notice(
-            "\(label, privacy: .public) no call: rejections=\(rejections) promptHasTools=\(promptHasTools) raw=\(rawHead, privacy: .public)"
+            "\(label, privacy: .public) no call detail: promptHasTools=\(promptHasTools) raw=\(rawHead, privacy: .public)"
         )
+        dumpPromptIfAsked(promptText, reply: text)
     }
 
-    /// Harness-only: `M1K3_SELFTEST_DUMP_PROMPT=<dir>` writes each no-call
-    /// turn's rendered prompt + reply so the exact bytes can be replayed
-    /// through mlx-lm. Never set in production; no-op without the variable.
+    /// Harness-only: `M1K3_SELFTEST_DUMP_PROMPT=<dir inside the app container>`.
+    private static var dumpDirectory: String? {
+        let dir = ProcessInfo.processInfo.environment["M1K3_SELFTEST_DUMP_PROMPT"]
+        return (dir?.isEmpty ?? true) ? nil : dir
+    }
+
+    /// Writes a no-call turn's rendered prompt + reply so the exact bytes can
+    /// be replayed through mlx-lm (how the sorted-key bug was found). No-op
+    /// without the variable; never set in production.
     static func dumpPromptIfAsked(_ prompt: String, reply: String) {
-        guard let dir = ProcessInfo.processInfo.environment["M1K3_SELFTEST_DUMP_PROMPT"], !dir.isEmpty else { return }
+        guard let dir = dumpDirectory else { return }
         let stamp = Int(Date().timeIntervalSince1970 * 1000)
         let url = URL(fileURLWithPath: dir).appendingPathComponent("prompt-\(stamp).txt")
-        try? (prompt + "\n\n=== REPLY ===\n" + reply).write(to: url, atomically: true, encoding: .utf8)
+        do {
+            try (prompt + "\n\n=== REPLY ===\n" + reply).write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            // A path outside the app container is silently unwritable under the
+            // sandbox — say so, or the next person rediscovers it.
+            mlxToolLog.notice("prompt dump failed (\(dir, privacy: .public)): \(String(describing: error), privacy: .public)")
+        }
     }
 
     static func toolNames(from specs: [ToolSpec]?) -> [String] {
@@ -705,6 +742,10 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     /// Where the seed came from — printed in the reuse log so a working
     /// conversation tail is distinguishable from a warm persona prefix.
     private let seedSource: PrefixSeedSource
+    /// True when the provider's prompt shape puts grounding in the system turn
+    /// (`.groundingInSystem`): the persona seed then legitimately stops at the
+    /// persona, so the first-send miss diagnostic stays quiet.
+    private let seedMayFallShort: Bool
     /// Hand-off for the end-of-turn cache (nil = drop, today's behaviour).
     /// Installed by the provider for interactive turns only.
     private let adoptTail: (([KVCache], [Int]) -> ConversationTailCache.AdoptOutcome)?
@@ -724,8 +765,10 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         imagesAllowed: Bool = false,
         seed: PersonaPrefixSnapshot? = nil,
         seedSource: PrefixSeedSource = .none,
+        seedMayFallShort: Bool = false,
         adoptTail: (([KVCache], [Int]) -> ConversationTailCache.AdoptOutcome)? = nil
     ) {
+        self.seedMayFallShort = seedMayFallShort
         self.container = container
         self.modelID = modelID
         self.parameters = parameters
@@ -797,7 +840,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             // seeds ONLY: a conversation tail legitimately falls short whenever
             // the grounding changed or the history window slid — that's the
             // fail-soft working as designed, not a mismatch to alarm on.
-            if self.seedSource == .persona,
+            if self.seedSource == .persona, !self.seedMayFallShort,
                self.sendCount == 0, seedCount > 0, reuse < seedCount, !turnCarriesImages
             {
                 let window = { (ids: [Int]) -> String in
@@ -907,12 +950,10 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
 
             let turn: ToolTurn
             if calls.isEmpty {
-                ToolTurnDiagnostics.dumpPromptIfAsked(context.tokenizer.decode(tokenIds: fullIDs), reply: text)
-                ToolTurnDiagnostics.logNoCall(
+                ToolTurnDiagnostics.noteNoCall(
                     label: "toolTurnSession", rejections: rejections,
-                    promptText: context.tokenizer.decode(tokenIds: fullIDs),
                     toolNames: ToolTurnDiagnostics.toolNames(from: specs), text: text
-                )
+                ) { context.tokenizer.decode(tokenIds: fullIDs) }
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 turn = .text(MLXGemmaProvider.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded))
             } else {

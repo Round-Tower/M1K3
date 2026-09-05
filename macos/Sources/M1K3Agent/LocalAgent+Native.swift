@@ -19,6 +19,11 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-10, Confidence 0.85, Prior: Unknown
 //  Context: pressure-tested by the challenger — typed transcript + typed args +
 //  runtime capability flag adopted over a stateless prompt-string seam.
+//  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 — PR #232: the opening two
+//  messages come from `buildNativeMessages(…shape:)`, laid out per the provider's
+//  `nativePromptShape`. `.groundingInUser` is the historical pair byte-for-byte;
+//  `.groundingInSystem` (lfm2) appends the grounding to the system turn. Persona stays the
+//  token prefix in both. Tested in NativeGoalOrderTests.
 
 import Foundation
 import M1K3Inference

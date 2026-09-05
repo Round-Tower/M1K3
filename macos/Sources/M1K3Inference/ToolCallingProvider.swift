@@ -31,6 +31,9 @@
 //  follow-ups: JSONValue Codable is now MANUAL RFC-8259 (the synthesized
 //  encoding was wire-garbage for the .json dialect, test-pinned);
 //  supportsToolCalls default flipped to false (native loop is opt-in).
+//  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 — PR #232: `NativePromptShape`
+//  + `nativePromptShape` requirement (default `.groundingInUser`, today's layout). Per model,
+//  decided by eval — the MLX provider returns `.groundingInSystem` for lfm2 only.
 
 import Foundation
 import Synchronization

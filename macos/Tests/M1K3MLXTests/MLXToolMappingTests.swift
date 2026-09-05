@@ -493,6 +493,17 @@ struct LFM2ToolBlockTests {
         }
     }
 
+    @Test("lfm2 with no system message gets one carrying only the block")
+    func lfm2NoSystemMessage() {
+        let chat = [Chat.Message(role: .user, content: "hi")]
+        let out = MLXToolMapping.templateInputs(chat: chat, specs: [clock], format: .lfm2)
+        #expect(out.specs == nil)
+        #expect(out.chat.count == 2)
+        #expect(out.chat[0].role == .system)
+        #expect(out.chat[0].content == MLXToolMapping.lfm2ToolsBlock([clock]))
+        #expect(out.chat[1].content == "hi")
+    }
+
     @Test("lfm2 with no tools changes nothing")
     func lfm2NoTools() {
         let chat = [Chat.Message(role: .system, content: "PERSONA")]
