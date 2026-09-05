@@ -176,7 +176,10 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         // (Run E, 44 fixtures, macos/docs/MODEL_CHOICES.md 2026-07-16 entry).
         // The thinking TOGGLE is pinned off for the 2507 line in MLXGemmaProvider
         // (its template has no enable_thinking — the reasoning picker hides).
-        case .lil: .mlx(modelID: "mlx-community/Qwen3-4B-Instruct-2507-4bit")
+        // DWQ-2510 since 2026-09-05: identical weights, the distilled-weight-
+        // quantization recipe; A/B on mains 18/21 vs 15/21, security 6/7 vs 3/7
+        // (docs/evals/2026-09-05-lil-*.json, published at m1k3.app/brains).
+        case .lil: .mlx(modelID: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510")
         // gemma-4-12B since 2026-07-15 (was e4b): both June blockers cleared on
         // the pinned mlx-swift-lm 3.31.4 — the vision_embedder sanitize fix IS
         // in the tag, and the RotatingKVCache.temporalOrder tool-use crash did

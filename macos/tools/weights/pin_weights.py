@@ -44,12 +44,18 @@ import urllib.request
 # Caches, embedder weights under Documents. Both flow through the same
 # HubApiDownloader.download choke point, so both are enforceable.
 CONTAINER = pathlib.Path.home() / "Library/Containers/app.m1k3/Data"
-LLM_CACHE = CONTAINER / "Library/Caches/models"
+# LLM weights moved from Library/Caches to Application Support on 2026-08-08
+# (#92: macOS purges Caches under disk pressure). ModelStoreLocation is the
+# Swift source of truth; this mirrors it.
+LLM_CACHE = CONTAINER / "Library/Application Support/models"
 EMBEDDER_CACHE = CONTAINER / "Documents/huggingface/models"
 
 SHIPPED_REPOS = {
     "mlx-community/gemma-4-12B-it-4bit": LLM_CACHE,
-    "mlx-community/Qwen3-4B-Instruct-2507-4bit": LLM_CACHE,
+    # Lil: the DWQ-2510 recipe of the same Qwen3-4B-Instruct-2507 weights beat
+    # the plain 4-bit 18/21 vs 15/21 (security 6/7 vs 3/7; x3 repeats 16/21 vs
+    # 12/21) on 2026-09-05 — docs/evals/2026-09-05-lil-*.json.
+    "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": LLM_CACHE,
     # The retrieval embedder. Smaller, but it is still third-party weights
     # fetched at runtime and fed to MLX — the same exposure, just quieter.
     "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ": EMBEDDER_CACHE,
