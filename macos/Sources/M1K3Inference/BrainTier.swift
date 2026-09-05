@@ -37,14 +37,14 @@
 //  real Qwen3 template); quantized KV stays safe (attentionWithCacheUpdate path).
 //  See macos/docs/MODEL_CHOICES.md.
 //  Review: Kev + claude-fable-5, 2026-07-02 — HUGE RETIRED (the all-gemma
-//  Review: Kev + claude-fable-5.1, 2026-09-05 — platform-aware selection floor: Lil is 8 GB on
-//  .mobile (a 3 GB A12 iPad crash-looped on it, #227); every Mac accessor unchanged.
 //  reshuffle, step 1). Qwen3-8B was the weakest tool-caller and nobody's
 //  favourite at anything; gemma-4 native tool-calling is Kev-verified live on
 //  3.31.4. Three tiers again. A persisted "huge" migrates to .big via
 //  `init(persisted:)` — never a silent Mini downgrade. The memory-floor /
 //  isSelectable seam is KEPT (returns nil today): gemma-4-12B takes the Big
 //  slot with a floor once upstream fixes RotatingKVCache.temporalOrder.
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — platform-aware selection floor: Lil is 8 GB on .mobile,
+//  Big never (a 3 GB A12 iPad crash-looped on Lil, #227); every Mac accessor unchanged.
 //
 
 import Foundation
@@ -277,13 +277,16 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// loops (#227, Kev's iPad, 2026-09-05). 8 GB = the iPhone 15 Pro-class and
     /// later, the only cohort with any evidence behind it; 6 GB phones are
     /// unmeasured and stay locked until a soak says otherwise (loosen here + the
-    /// test). Big is never offered on mobile.
+    /// test). Big is never SELECTABLE on mobile — the pickers don't list it, and
+    /// an infinite floor makes a persisted/migrated `.big` ease down on restore
+    /// instead of warming gemma-4-12B on a phone (the same loop, different brain).
     public func minimumPhysicalMemoryGB(platform: DevicePlatform) -> Double? {
         switch (self, platform) {
         case (.mini, _): nil
         case (.lil, .mac): nil
         case (.lil, .mobile): 8
-        case (.big, _): 16
+        case (.big, .mac): 16
+        case (.big, .mobile): .infinity
         }
     }
 

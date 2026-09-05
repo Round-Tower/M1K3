@@ -93,7 +93,7 @@ struct OnboardingScreen: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(tier.displayName).font(.headline).foregroundStyle(.white)
-                        if let floor = lockedFloor(tier) {
+                        if let floor = AppCore.lockedFloor(tier) {
                             Text("Needs \(Int(floor)) GB")
                                 .font(.caption2.weight(.semibold))
                                 .padding(.horizontal, 7).padding(.vertical, 2)
@@ -128,16 +128,11 @@ struct OnboardingScreen: View {
             .m1k3Glass(cornerRadius: 18)
         }
         .buttonStyle(.plain)
-        .disabled(lockedFloor(tier) != nil)
-        .opacity(lockedFloor(tier) == nil ? 1 : 0.55)
-    }
-
-    /// The memory floor a tier fails on this device, or nil when selectable (#227).
-    private func lockedFloor(_ tier: BrainTier) -> Double? {
-        AppCore.isSelectableOnThisDevice(tier) ? nil : tier.minimumPhysicalMemoryGB(platform: .mobile)
+        .disabled(AppCore.lockedFloor(tier) != nil)
+        .opacity(AppCore.lockedFloor(tier) == nil ? 1 : 0.55)
     }
 
     static var physicalMemoryGB: Double {
-        Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
+        AppCore.physicalMemoryGB
     }
 }

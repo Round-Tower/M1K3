@@ -232,6 +232,15 @@ struct BrainTierTests {
         #expect(BrainTier.selectableOrEased(.lil, forPhysicalMemoryGB: 12, platform: .mobile) == .lil)
     }
 
+    @Test("Big is never selectable on mobile, whatever the RAM — a persisted Big eases down on restore")
+    func bigNeverSelectableOnMobile() {
+        for gigabytes in [8.0, 16, 64] {
+            #expect(!BrainTier.big.isSelectable(forPhysicalMemoryGB: gigabytes, platform: .mobile))
+            #expect(BrainTier.selectableOrEased(.big, forPhysicalMemoryGB: gigabytes, platform: .mobile) != .big)
+        }
+        #expect(BrainTier.big.isSelectable(forPhysicalMemoryGB: 16, platform: .mac))
+    }
+
     @Test("Big-12B carries the promised 16GB selection floor; Mini/Lil stay floorless (on the Mac)")
     func bigTwelveBSelectionFloor() {
         // The seam this test's predecessor kept warm ("gemma-4-12B will want it
