@@ -30,7 +30,8 @@ public struct EvalProvenance: Sendable, Equatable, Codable {
     public let appCommit: String?
     /// The mlx-swift-lm revision the build was compiled against, when known.
     public let mlxSwiftLMRevision: String?
-    /// `pmset -g | rg powermode` — 0 is normal, 1 is Low Power Mode.
+    /// From `ProcessInfo.isLowPowerModeEnabled` (no shell-out) — 0 is normal, 1 is Low Power Mode;
+    /// the same value `pmset -g | rg powermode` reports.
     public let powerMode: Int?
     /// Whether fixtures ran through the live AgentRAGResponder path.
     public let livePath: Bool

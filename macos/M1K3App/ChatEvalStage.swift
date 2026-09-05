@@ -310,7 +310,7 @@ enum ChatEvalStage {
             hardware: "\(chipName.isEmpty ? "unknown chip" : chipName) · \(gb) GB",
             osVersion: "macOS \(v.majorVersion).\(v.minorVersion)" + (v.patchVersion > 0 ? ".\(v.patchVersion)" : ""),
             appCommit: SelfTestEnv.value("M1K3_SELFTEST_APP_COMMIT")
-                ?? (Bundle.main.infoDictionary?["M1K3GitCommit"] as? String),
+                ?? (Bundle.main.object(forInfoDictionaryKey: "GitCommitSHA") as? String),
             mlxSwiftLMRevision: SelfTestEnv.value("M1K3_SELFTEST_MLX_REVISION"),
             powerMode: info.isLowPowerModeEnabled ? 1 : 0,
             livePath: livePathRequested,
