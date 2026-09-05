@@ -29,6 +29,8 @@
 //  Built-in stays the default, M1K3 Voice (Kokoro/MLX) is a Settings pick that downloads once (AppCore+VoiceOutput),
 //  restored on launch only when already staged (VoiceTierRestore).
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — the tool palette goes through the shared ToolPalettePolicy
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — a device with no local brain fronts the paired Mac on its own
+//  (after pairing + at launch, MobileBrainMenu.hasLocalBrain). Confidence now 0.85.
 //  (availability-gated, same rule as the Mac) so both shells derive it from one rule.
 //
 
@@ -442,7 +444,7 @@ final class AppCore {
         // A device with no local brain of its own paired for one reason: front the
         // Mac now, don't leave it on an unrunnable Mini behind a "Choose Home" note.
         if !brainMenu.hasLocalBrain { selectHomeBrain() }
-        return true
+        return true // the pairing screen reads homeBrainActive for its copy; a failed activation left brainNote
     }
 
     /// Forget the paired Mac (client side): key + metadata gone; if Home was

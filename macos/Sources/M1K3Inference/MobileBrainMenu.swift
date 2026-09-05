@@ -24,6 +24,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.85 (pinned by
 //  MobileBrainMenuTests; the device-shape assumptions come from Kev's iPad
 //  8th gen + iPhone 17 Pro). Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — `hasLocalBrain` (backed by `note`): the shell auto-activates a paired
+//  Mac when it is false. Confidence now 0.9.
 //
 
 import Foundation
@@ -56,7 +58,7 @@ public struct MobileBrainMenu: Equatable, Sendable {
     /// on its own (after pairing, and at launch) instead of leaving the device on
     /// a Mini that can never answer (Kev's iPad, round 3).
     public var hasLocalBrain: Bool {
-        options.contains { if case .tier = $0 { true } else { false } }
+        note == nil // one truth table: `resolve` sets the note exactly when no tier is listed
     }
 
     public static func resolve(afm: AFMAvailability, physicalMemoryGB gigabytes: Double) -> MobileBrainMenu {
