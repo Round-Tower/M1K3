@@ -30,9 +30,14 @@ public struct EvalProvenance: Sendable, Equatable, Codable {
     public let appCommit: String?
     /// The mlx-swift-lm revision the build was compiled against, when known.
     public let mlxSwiftLMRevision: String?
-    /// From `ProcessInfo.isLowPowerModeEnabled` (no shell-out) — 0 is normal, 1 is Low Power Mode;
-    /// the same value `pmset -g | rg powermode` reports.
+    /// 0 normal / 1 Low Power / 2 High Power, as `pmset -g | rg powermode` reports. The harness can only
+    /// read 0-or-1 itself (`ProcessInfo.isLowPowerModeEnabled`); the operator states 2 via
+    /// `M1K3_SELFTEST_POWERMODE`. Adaptive Power is invisible here — see `powerSource`.
     public let powerMode: Int?
+    /// "ac" / "battery", read from IOKit (nil when off-line or on a UPS). Added 2026-09-05 after a day of tok/s measured on battery
+    /// under Adaptive Power read as "powermode 0": plugged in, plain decode doubled. Optional so scorecards
+    /// written before the field decode as `nil` ("unknown"), never as a guess.
+    public let powerSource: String?
     /// Whether fixtures ran through the live AgentRAGResponder path.
     public let livePath: Bool
     /// Trials per fixture.
@@ -42,7 +47,7 @@ public struct EvalProvenance: Sendable, Equatable, Codable {
 
     public init(
         date: String, hardware: String, osVersion: String, appCommit: String?, mlxSwiftLMRevision: String?,
-        powerMode: Int?, livePath: Bool, repeats: Int, notes: String? = nil
+        powerMode: Int?, powerSource: String? = nil, livePath: Bool, repeats: Int, notes: String? = nil
     ) {
         self.date = date
         self.hardware = hardware
@@ -50,6 +55,7 @@ public struct EvalProvenance: Sendable, Equatable, Codable {
         self.appCommit = appCommit
         self.mlxSwiftLMRevision = mlxSwiftLMRevision
         self.powerMode = powerMode
+        self.powerSource = powerSource
         self.livePath = livePath
         self.repeats = repeats
         self.notes = notes
@@ -64,7 +70,7 @@ public struct EvalProvenance: Sendable, Equatable, Codable {
             "os \(osVersion)",
             "app \(appCommit ?? "unstamped")",
             "mlx-swift-lm \(mlxSwiftLMRevision ?? "unknown")",
-            "powermode \(powerMode.map(String.init) ?? "unknown")",
+            "power \(powerSource ?? "unknown") · powermode \(powerMode.map(String.init) ?? "unknown")",
             "live-path \(livePath ? "yes" : "no")",
             "repeats \(repeats)",
         ]

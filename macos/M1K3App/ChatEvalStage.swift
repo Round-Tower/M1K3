@@ -28,6 +28,7 @@
 //  confirmed on-device). Prior: Unknown
 
 import Foundation
+import IOKit.ps
 
 // Weak-linked — see AppleFoundationModelsProvider for the full rationale: this
 // stage's `@Generable EvalToolArguments` strong-references FoundationModels
@@ -312,11 +313,28 @@ enum ChatEvalStage {
             appCommit: SelfTestEnv.value("M1K3_SELFTEST_APP_COMMIT")
                 ?? (Bundle.main.object(forInfoDictionaryKey: "GitCommitSHA") as? String),
             mlxSwiftLMRevision: SelfTestEnv.value("M1K3_SELFTEST_MLX_REVISION"),
-            powerMode: info.isLowPowerModeEnabled ? 1 : 0,
+            // The harness sees only Low Power Mode; High Power (pmset powermode 2) is the operator's to state.
+            powerMode: SelfTestEnv.value("M1K3_SELFTEST_POWERMODE").flatMap(Int.init) ?? (info.isLowPowerModeEnabled ? 1 : 0),
+            powerSource: Self.currentPowerSource(),
             livePath: livePathRequested,
             repeats: repeats,
             notes: SelfTestEnv.value("M1K3_SELFTEST_NOTES")
         )
+    }
+
+    /// "ac" / "battery" from IOKit's providing power source; nil when it cannot tell (off-line, or a UPS —
+    /// that needs a source-list walk like `BatteryStatusTool`). The one field that would have caught
+    /// 2026-09-05's battery-measured day (see EvalProvenance.powerSource). Same idiom as
+    /// `SystemStatusProviding`: Copy-rule → takeRetained, Get-rule → takeUnretained.
+    private static func currentPowerSource() -> String? {
+        guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let type = IOPSGetProvidingPowerSourceType(blob)?.takeUnretainedValue() as String?
+        else { return nil }
+        switch type {
+        case kIOPSACPowerValue: return "ac"
+        case kIOPSBatteryPowerValue: return "battery"
+        default: return nil
+        }
     }
 
     /// Brains to run: M1K3_SELFTEST_CHATEVAL_BRAINS=mini,lil narrows it (a full

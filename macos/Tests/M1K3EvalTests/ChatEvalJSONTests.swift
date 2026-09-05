@@ -26,8 +26,8 @@ struct ChatEvalJSONTests {
     private var provenance: EvalProvenance {
         EvalProvenance(
             date: "2026-09-05T12:00:00Z", hardware: "Apple M1 Max · 64 GB", osVersion: "macOS 26.4",
-            appCommit: "6d41624c", mlxSwiftLMRevision: "c97539da", powerMode: 0, livePath: true, repeats: 2,
-            notes: "machine quiet"
+            appCommit: "6d41624c", mlxSwiftLMRevision: "c97539da", powerMode: 2, powerSource: "ac", livePath: true,
+            repeats: 2, notes: "machine quiet"
         )
     }
 
@@ -82,11 +82,23 @@ struct ChatEvalJSONTests {
         #expect(stamped.fixtureID == base.fixtureID && stamped.checks == base.checks && stamped.latencyMS == 10)
     }
 
+    @Test("a scorecard written before powerSource existed still decodes, with the source unknown")
+    func decodesWithoutPowerSource() throws {
+        let legacy = """
+        {"date":"2026-09-05T12:00:00Z","hardware":"h","osVersion":"o","powerMode":0,"livePath":true,"repeats":1}
+        """
+        let p = try JSONDecoder().decode(EvalProvenance.self, from: Data(legacy.utf8))
+        #expect(p.powerSource == nil)
+        #expect(p.rendered.contains("power unknown · powermode 0"))
+    }
+
     @Test("provenance renders as a header block the text transcript carries too")
     func provenanceHeader() {
         let header = provenance.rendered
         #expect(header.contains("Apple M1 Max"))
-        #expect(header.contains("powermode 0"))
+        // 2026-09-05: a day of tok/s was measured on battery under Adaptive Power while "powermode 0" read as
+        // normal — the SOURCE is the fact that moved the numbers 2×, so it rides beside the mode.
+        #expect(header.contains("power ac · powermode 2"))
         #expect(header.contains("live-path yes"))
         #expect(header.contains("repeats 2"))
         #expect(header.contains("mlx-swift-lm c97539da"))

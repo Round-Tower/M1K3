@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Generate the site's brains scoreboard from the harness's own output.
 
-    ./brains_page.py --run chateval.json [--run another.json …] \
-        --manifest ../weights-manifest.json \
-        --json ../../site/brains.json --html ../../site/brains.html
+    ./brains_page.py --json ../../site/brains.json --html ../../site/brains.html
+        # reads every macos/docs/evals/*.json (committed run documents), or --run <file> …
 
 Two inputs, both already in the repo or written by the app itself:
 
@@ -134,10 +133,18 @@ def summarise_run(doc: dict) -> dict:
 
 
 # The verified 2026-09-05 read-out. Dated in the page; edit when re-measured.
+# Two MTP tables on purpose: the first was measured on BATTERY under Adaptive Power (pmset said
+# "powermode 0", which cannot see Adaptive Power); the second on AC in High Power mode (powermode 2),
+# same build, same fixtures, 40 minutes apart. Baselines ~doubled; the ratios got worse.
 STATE_OF_PLAY = {
     "date": "2026-09-05",
-    "machine": "Apple M1 Max · 64 GB · powermode 0 · nothing else running",
-    "mtp": [
+    "machine": "Apple M1 Max · 64 GB · nothing else running",
+    "mtp_ac": [
+        ("short, no wrap (25 tok)", "27.3", "18.1", "0.66×", "52%"),
+        ("medium, wraps mid-decode (588 tok)", "21.1", "13.1", "0.62×", "40%"),
+        ("long, wrapped at prefill (2072 tok)", "20.6", "9.8", "0.48×", "31%"),
+    ],
+    "mtp_battery": [
         ("short, no wrap (25 tok)", "34.0", "24.8", "0.73×", "52%"),
         ("medium, wraps mid-decode (588 tok)", "9.1", "6.3", "0.69×", "40%"),
         ("long, wrapped at prefill (2072 tok)", "7.9", "9.8", "1.24× (23-token sample)", "31%"),
@@ -157,7 +164,10 @@ def document(manifest: dict, runs: list[dict], generated: str) -> dict:
         "stateOfPlay": {
             "date": STATE_OF_PLAY["date"],
             "machine": STATE_OF_PLAY["machine"],
-            "mtp": [dict(zip(("regime", "baselineTokPerSec", "mtpTokPerSec", "ratio", "accept"), r)) for r in STATE_OF_PLAY["mtp"]],
+            "mtp": {
+                "acHighPower": [dict(zip(("regime", "baselineTokPerSec", "mtpTokPerSec", "ratio", "accept"), r)) for r in STATE_OF_PLAY["mtp_ac"]],
+                "batteryAdaptivePower": [dict(zip(("regime", "baselineTokPerSec", "mtpTokPerSec", "ratio", "accept"), r)) for r in STATE_OF_PLAY["mtp_battery"]],
+            },
         },
     }
 
@@ -198,7 +208,7 @@ def _provenance(p: dict) -> str:
         f"os          {_e(p.get('osVersion'))}",
         f"app commit  {_e(p.get('appCommit') or 'unknown')}",
         f"mlx-swift-lm {_e(p.get('mlxSwiftLMRevision') or 'unknown')}",
-        f"powermode {p.get('powerMode', '?')} · live-path {live} · n = {n} per fixture",
+        f"power {_e(p.get('powerSource') or 'unknown')} · powermode {p.get('powerMode', '?')} · live-path {live} · n = {n} per fixture",
     ]
     if p.get("notes"):
         lines.append(f"notes       {_e(p['notes'])}")
@@ -256,20 +266,33 @@ def _failures(run: dict) -> str:
     return "<ul>" + "".join(items) + "</ul>"
 
 
+def _mtp_rows(rows) -> str:
+    return "".join(
+        f"<tr><th scope=\"row\">{_e(r[0])}</th><td>{r[1]} tok/s</td><td>{r[2]} tok/s</td><td>{_e(r[3])}</td><td>{r[4]}</td></tr>"
+        for r in rows
+    )
+
+
+def _mtp_table(rows) -> str:
+    return ('<div class="table-scroll"><table class="cmp"><thead><tr><th scope="col">Regime</th><th scope="col">Plain decode</th>'
+            '<th scope="col">MTP</th><th scope="col">Ratio</th><th scope="col">Accept</th></tr></thead><tbody>' + _mtp_rows(rows) + "</tbody></table></div>")
+
+
 def _state_of_play() -> str:
     s = STATE_OF_PLAY
-    rows = "".join(
-        f"<tr><td>{_e(r[0])}</td><td>{r[1]} tok/s</td><td>{r[2]} tok/s</td><td>{_e(r[3])}</td><td>{r[4]}</td></tr>"
-        for r in s["mtp"]
-    )
     return f"""
   <h2>State of play, {s['date']}</h2>
   <p>What we measured on {_e(s['machine'])}, through the real app bundle. Dated on purpose: this block ages.</p>
-  <h3>Multi-token prediction stays parked</h3>
-  <p>Speculative decoding with Gemma 4 12B and its assistant drafter, greedy, on mlx-swift-lm main <code>e3d4a20e</code> (the post-#516 rewind fix). Acceptance is healthy and the old stand-down bugs are gone, but the drafter's per-round cost eats the gain on an M1 Max at batch 1.</p>
-  <div class="table-scroll"><table class="cmp"><thead><tr><th scope="col">Regime</th><th scope="col">Plain decode</th><th scope="col">MTP</th><th scope="col">Ratio</th><th scope="col">Accept</th></tr></thead><tbody>{rows}</tbody></table></div>
-  <h3>Qwen3.8-27B runs, and is not a front brain</h3>
-  <p><code>mlx-community/Qwen3.8-27B-4bit</code> (16 GB, 48 GatedDeltaNet + 16 full-attention layers) loads through the same path as Lil and answers coherently. It first decoded at 0.1–0.4 tok/s, and that was our fault, not the model's: M1K3's 12 GB companion memory ceiling sat below the model's 14.7 GB of active weights, so MLX back-pressured every step. With the ceiling lifted to 24 GB it ran 4–5 tok/s with a 1.5 s first token, base-M4-mini class. That makes it a delegation-only brain for 64 GB machines at best, never the one you talk to. Its 4-bit quantization also loses the most quality of the family (KL 0.113 vs bf16; 6-bit is 0.029 at 22.8 GB).</p>
+  <h3>Power source moved every number by 2×. The ratios survived; the absolutes did not.</h3>
+  <p>Most of the day's figures were taken on battery with Adaptive Power on, while the harness recorded "powermode 0" in good faith: that field only knows Low Power Mode, and Adaptive Power is invisible to it. Plugged in, in High Power mode, plain decode on Gemma 4 12B roughly doubled (medium prompt 9.1 → 21.1 tok/s, long prompt 7.9 → 20.6). Every run below now records its power source, and nothing measured on battery is quoted as a headline again.</p>
+  <h3>Multi-token prediction stays parked, and a faster machine made it worse</h3>
+  <p>Speculative decoding with Gemma 4 12B and its assistant drafter, greedy, on mlx-swift-lm main <code>e3d4a20e</code> (the post-#516 rewind fix). Acceptance is healthy and the old stand-down bugs are gone. On wall power the baseline sped up and the drafter's fixed per-round cost did not, so the ratio fell on every regime.</p>
+  <p><strong>AC power, High Power mode (powermode 2):</strong></p>
+  {_mtp_table(s['mtp_ac'])}
+  <p><strong>Battery, Adaptive Power, earlier the same day:</strong></p>
+  {_mtp_table(s['mtp_battery'])}
+  <h3>Qwen3.8-27B runs, and on wall power it is a real delegation brain</h3>
+  <p><code>mlx-community/Qwen3.8-27B-4bit</code> (16 GB, 48 GatedDeltaNet + 16 full-attention layers) loads through the same path as Lil and answers coherently. It first decoded at 0.1–0.4 tok/s, and that was our fault, not the model's: M1K3's 12 GB companion memory ceiling sat below the model's 14.7 GB of active weights, so MLX back-pressured every step. With the ceiling lifted to 24 GB it ran 4–5 tok/s on battery and <strong>10–16 tok/s on AC</strong>, with a 2,000-token prefill taking 25–40 s. Run 2 below is that configuration through the live path: 7 of 8 open-chat fixtures, the miss a length-band overrun. It is a delegation brain for 64 GB machines, not the one you talk to; the prefill is the cost. Its 4-bit quantization also loses the most quality of the family (KL 0.113 vs bf16; 6-bit is 0.029 at 22.8 GB).</p>
   <h3>Why there is no remote model catalogue</h3>
   <p>We wanted one. The design review killed it, and the objections are verified in the app's own source: a remote re-pin would be a remote kill switch through the weights-integrity check, the offline fallback is a downgrade attack, and a periodic fetch from every install is telemetry. So model pins ship in the binary, and this page is documentation the app never reads. The full reasoning is <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/docs/adr/0004-brain-catalogue-ships-in-the-binary.md">ADR 0004</a>.</p>
 """
@@ -281,7 +304,7 @@ def render_html(doc: dict) -> str:
     for i, run in enumerate(doc["runs"], 1):
         p = run["provenance"]
         runs_html.append(
-            f'<h3>Run {i} · {_e((p.get("date") or "")[:10])} · app <code>{_e(p.get("appCommit") or "?")}</code></h3>'
+            f'<h3>Run {i} · {_e((p.get("date") or "")[:10])} · app <code>{_e(p.get("appCommit") or "unknown")}</code></h3>'
             + _provenance(p) + _matrix(run) + f"<h4>Failed checks — run {i}</h4>" + _failures(run)
         )
     head_desc = ("Which local models M1K3 ships, pinned to exact revisions, and how they score on M1K3's own "
@@ -351,7 +374,7 @@ def render_html(doc: dict) -> str:
   {_brains_table(doc["brains"])}
 
   <h2>Eval runs</h2>
-  <p>The harness runs the same fixtures against each brain through the live path (retrieval, grounding, tools, the agent loop), scores each answer with named checks, and writes this JSON. A repeat is a separate trial. Failures are listed with the scorer's own reason.</p>
+  <p>The harness runs the same fixtures against each brain through the live path (retrieval, grounding, tools, the agent loop), scores each answer with named checks, and writes this JSON. A repeat is a separate trial. Failures are listed with the scorer's own reason. The source documents for every run on this page are committed under <code>macos/docs/evals/</code>.</p>
   {"".join(runs_html)}
 {_state_of_play()}
   <h2>How to read this honestly</h2>
@@ -391,14 +414,18 @@ def render_html(doc: dict) -> str:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--run", action="append", required=True, type=Path, help="ChatEvalDocument JSON (repeatable)")
+    ap.add_argument("--run", action="append", type=Path, default=None,
+                    help="ChatEvalDocument JSON (repeatable). Default: every *.json under macos/docs/evals, sorted by name")
     ap.add_argument("--manifest", type=Path, default=Path(__file__).resolve().parents[2] / "weights-manifest.json")
     ap.add_argument("--json", type=Path, required=True, help="where to write brains.json")
     ap.add_argument("--html", type=Path, required=True, help="where to write brains.html")
     ap.add_argument("--generated", default=_dt.date.today().isoformat(), help="date stamp (default: today)")
     a = ap.parse_args(argv)
     manifest = json.loads(a.manifest.read_text())
-    runs = [json.loads(p.read_text()) for p in a.run]
+    run_paths = a.run or sorted((Path(__file__).resolve().parents[2] / "docs" / "evals").glob("*.json"))
+    if not run_paths:
+        ap.error("no run documents: pass --run or commit some under macos/docs/evals/")
+    runs = [json.loads(p.read_text()) for p in run_paths]
     doc = document(manifest, runs, generated=a.generated)
     # Render both BEFORE writing either, so a render error can't leave brains.json ahead of brains.html.
     json_text, html_text = to_json(doc), render_html(doc)
