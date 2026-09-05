@@ -37,6 +37,8 @@
 //  real Qwen3 template); quantized KV stays safe (attentionWithCacheUpdate path).
 //  See macos/docs/MODEL_CHOICES.md.
 //  Review: Kev + claude-fable-5, 2026-07-02 — HUGE RETIRED (the all-gemma
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — platform-aware selection floor: Lil is 8 GB on
+//  .mobile (a 3 GB A12 iPad crash-looped on it, #227); every Mac accessor unchanged.
 //  reshuffle, step 1). Qwen3-8B was the weakest tool-caller and nobody's
 //  favourite at anything; gemma-4 native tool-calling is Kev-verified live on
 //  3.31.4. Three tiers again. A persisted "huge" migrates to .big via

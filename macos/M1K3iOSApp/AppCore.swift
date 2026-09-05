@@ -339,17 +339,21 @@ final class AppCore {
     func selectBrain(_ tier: BrainTier) {
         // Simulator: MLX can't run (no Metal GPU — touching it aborts). Record the
         // note and stay on Mini so chat still works; a real device runs Lil.
+        // Both refusals fall back to Mini THROUGH this same function, whose
+        // first act is `brainNote = nil` — so the note is written AFTER the
+        // recursive call returns, or it is wiped before SwiftUI ever sees it
+        // (#228 review; the Simulator branch had the same dead note).
         if tier.mlxModelID != nil, !Self.mlxAvailable {
-            brainNote = "\(tier.displayName) runs on a real device — the Simulator has no GPU for MLX. Staying on Mini."
             selectBrain(.mini)
+            brainNote = "\(tier.displayName) runs on a real device — the Simulator has no GPU for MLX. Staying on Mini."
             return
         }
         // Below the tier's memory floor the load cannot succeed — iOS kills it
         // (#227). The rows render locked; this is the belt for a stale tap.
         if !Self.isSelectableOnThisDevice(tier), let floor = tier.minimumPhysicalMemoryGB(platform: .mobile) {
+            selectBrain(.mini)
             brainNote = "\(tier.displayName) needs \(Int(floor)) GB of memory — this device has "
                 + "\(Int(Self.physicalMemoryGB.rounded())) GB. Staying on Mini."
-            selectBrain(.mini)
             return
         }
         brainNote = nil
