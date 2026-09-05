@@ -21,6 +21,8 @@
 //  Review: claude-fable-5, 2026-08-24 — moved verbatim from M1K3BrainServe
 //  into M1K3BrainLink (Phase C: client and server share one wire; type names
 //  unchanged so the server side reads as before).
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — TLS session resumption OFF: a resumed session skipped the PSK
+//  exchange and let an unapproved identity through (the iPad re-pair bug). Confidence now 0.9 (red→green test).
 //
 
 import Foundation
@@ -62,6 +64,15 @@ public enum BrainServeTLS {
         sec_protocol_options_append_tls_ciphersuite(
             sec, tls_ciphersuite_t(rawValue: ecdhePSKSuite)!
         )
+        // NO session resumption, either side. A resumed TLS 1.2 session skips
+        // the PSK exchange entirely, so a client presenting a DIFFERENT (never
+        // approved) identity to the same host:port seconds after a good handshake
+        // was served — the iPad's second pairing round "succeeded" against the main
+        // listener and overwrote its approved key with one the Mac never held
+        // (2026-09-05; pinned by BrainServeListenerTests.noResumptionAcrossIdentities).
+        // Every connection now proves its identity; on a LAN the extra ECDHE
+        // round-trip is noise.
+        sec_protocol_options_set_tls_resumption_enabled(sec, false)
         sec_protocol_options_set_min_tls_protocol_version(sec, .TLSv12)
         sec_protocol_options_set_max_tls_protocol_version(sec, .TLSv12)
         return options

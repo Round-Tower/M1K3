@@ -183,6 +183,29 @@ struct BrainServeListenerTests {
         await listener.stop()
     }
 
+    @Test("a second connection with an UNKNOWN identity is refused even right after a good one — no TLS session resumption")
+    func noResumptionAcrossIdentities() async throws {
+        // The iPad pairing bug (2026-09-05): round two's health poll to the SAME
+        // host:port rode the resumed TLS session from round one, skipped the PSK
+        // exchange, got 200, and the device adopted a never-approved key.
+        let listener = BrainServeListener(port: 0, credentials: [credential], handlers: makeHandlers())
+        try await listener.start()
+        let port = try #require(await listener.boundPort)
+
+        let first = String(decoding: await exchange(
+            port: port, parameters: goodParams(), request: get("/v1/health")
+        ), as: UTF8.self)
+        #expect(first.contains("200 OK"))
+
+        let stranger = PSKCredential(identity: "never-approved", key: credential.key)
+        let second = await exchange(
+            port: port, parameters: NWParameters(tls: BrainServeTLS.options(credentials: [stranger])),
+            request: get("/v1/health")
+        )
+        #expect(!String(decoding: second, as: UTF8.self).contains("200 OK"))
+        await listener.stop()
+    }
+
     @Test("a wrong-PSK client gets ZERO bytes — the handshake never completes")
     func wrongPSKZeroBytes() async throws {
         let listener = BrainServeListener(port: 0, credentials: [credential], handlers: makeHandlers())

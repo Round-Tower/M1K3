@@ -37,6 +37,8 @@ struct OnboardingScreen: View {
 
     @State private var step: Step = .brain
     @State private var pairing = false
+    /// A creature's USDZ takes a beat to load on an A12 — say so (QA round 2).
+    @State private var faceLoading = false
 
     private var menu: MobileBrainMenu {
         core.brainMenu
@@ -51,9 +53,16 @@ struct OnboardingScreen: View {
                     .font(.pixel(34))
                     .kerning(3)
                     .foregroundStyle(.white)
-                Text(step == .brain ? "Pick a brain." : "Pick a face.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Text(step == .brain ? "Pick a brain." : "Pick a face.")
+                    if faceLoading {
+                        ProgressView().controlSize(.small)
+                        Text("Loading…")
+                    }
+                }
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .animation(.easeInOut(duration: 0.2), value: faceLoading)
 
                 switch step {
                 case .brain: brainStep
@@ -101,8 +110,8 @@ struct OnboardingScreen: View {
 
     // MARK: - Backdrop
 
-    /// The chosen face, full-bleed, through the CRT pass. The pixel face carries
-    /// its own scanlines (AvatarView), so the overlay is added only for a creature;
+    /// The chosen face, full-bleed, through the CRT pass — both faces carry their
+    /// own scanlines (AvatarView and CompanionAvatarView), so nothing is added here;
     /// a gradient scrim keeps the cards legible over a bright body.
     private var backdrop: some View {
         ZStack {
@@ -111,14 +120,9 @@ struct OnboardingScreen: View {
                 startPoint: .top, endPoint: .bottom
             )
             if !CompanionDefaults.hidesAvatar(companion) {
-                AvatarSurface(controller: core.avatar)
+                AvatarSurface(controller: core.avatar, loading: $faceLoading)
                     .scaleEffect(1.15)
                     .opacity(0.85)
-                // Same test AvatarSurface uses to render a creature — a spec with no
-                // installed assets falls back to the pixel face, which has its own CRT.
-                if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
-                    CRTOverlay()
-                }
             }
             LinearGradient(
                 stops: [

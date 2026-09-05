@@ -200,6 +200,24 @@ struct BrainPairingScreen: View {
             var previewLayer: AVCaptureVideoPreviewLayer {
                 layer as! AVCaptureVideoPreviewLayer
             }
+
+            /// The preview follows the interface orientation — without this the
+            /// iPad's landscape viewfinder rendered upside-down (QA round 2).
+            override func layoutSubviews() {
+                super.layoutSubviews()
+                guard let connection = previewLayer.connection,
+                      let orientation = window?.windowScene?.interfaceOrientation
+                else { return }
+                let angle: CGFloat = switch orientation {
+                case .landscapeRight: 0
+                case .landscapeLeft: 180
+                case .portraitUpsideDown: 270
+                default: 90
+                }
+                if connection.isVideoRotationAngleSupported(angle) {
+                    connection.videoRotationAngle = angle
+                }
+            }
         }
 
         final class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
