@@ -28,7 +28,7 @@ generated from the same data by the same script, so they cannot disagree.
   "schemaVersion": 1,
   "repos": {
     "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": {
-      "revision": "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
+      "revision": "c073725c8ac051eabad9d64f4dcd3019d1072559",
       "files": {
         "config.json": { "size": 938, "sha256": "574349e5…" }
       }
