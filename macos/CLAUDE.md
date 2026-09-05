@@ -171,7 +171,7 @@ format runs **native** (`runNative`); otherwise the **ReAct** floor
   (renamed from `dev.murphysig.M1K3` on 2026-06-14 — translate any old ref on
   read). MLX LLM weights live **inside the sandbox container** under
   `~/Library/Containers/app.m1k3/Data/Library/Application Support/models/<org>/<repo>/`
-  — moved OUT of `…/Library/Caches/models/` on 2026-07-31 because macOS
+  — moved OUT of `…/Library/Caches/models/` on 2026-08-02 (#92) because macOS
   purges Caches under disk pressure and really did eat the brains (twice in
   one afternoon, log-evidenced); `ModelStoreLocation` migrates a surviving
   Caches store across on first touch. `DEVELOPMENT_TEAM` is pinned in `project.yml` because a
