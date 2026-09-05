@@ -93,7 +93,13 @@ struct OnboardingScreen: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(tier.displayName).font(.headline).foregroundStyle(.white)
-                        if tier == recommended {
+                        if let floor = AppCore.lockedFloor(tier) {
+                            Text(AppCore.lockedFloorLabel(floor))
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 7).padding(.vertical, 2)
+                                .background(.white.opacity(0.15), in: .capsule)
+                                .foregroundStyle(.secondary)
+                        } else if tier == recommended {
                             Text("Recommended")
                                 .font(.caption2.weight(.semibold))
                                 .padding(.horizontal, 7).padding(.vertical, 2)
@@ -122,9 +128,11 @@ struct OnboardingScreen: View {
             .m1k3Glass(cornerRadius: 18)
         }
         .buttonStyle(.plain)
+        .disabled(AppCore.lockedFloor(tier) != nil)
+        .opacity(AppCore.lockedFloor(tier) == nil ? 1 : 0.55)
     }
 
     static var physicalMemoryGB: Double {
-        Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
+        AppCore.physicalMemoryGB
     }
 }

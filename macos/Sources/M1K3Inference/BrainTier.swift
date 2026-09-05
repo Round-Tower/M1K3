@@ -43,6 +43,8 @@
 //  `init(persisted:)` — never a silent Mini downgrade. The memory-floor /
 //  isSelectable seam is KEPT (returns nil today): gemma-4-12B takes the Big
 //  slot with a floor once upstream fixes RotatingKVCache.temporalOrder.
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — platform-aware selection floor: Lil is 8 GB on .mobile,
+//  Big never (a 3 GB A12 iPad crash-looped on Lil, #227); every Mac accessor unchanged.
 //
 
 import Foundation
@@ -266,15 +268,36 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// only swap-thrash. 16GB is tight-but-runnable; the RECOMMENDATION floor
     /// stays 24GB.
     public var minimumPhysicalMemoryGB: Double? {
-        switch self {
-        case .mini, .lil: nil
-        case .big: 16
+        minimumPhysicalMemoryGB(platform: .mac)
+    }
+
+    /// The same floor, per platform. On iOS/iPadOS the per-app jetsam budget is
+    /// well under physical RAM: Lil's ~2.2 GB of weights (plus KV) cannot load on
+    /// a 3 GB A12 iPad — the load is killed and a relaunch into the persisted pick
+    /// loops (#227, Kev's iPad, 2026-09-05). 8 GB = the iPhone 15 Pro-class and
+    /// later, the only cohort with any evidence behind it; 6 GB phones are
+    /// unmeasured and stay locked until a soak says otherwise (loosen here + the
+    /// test). Big is never SELECTABLE on mobile — the pickers don't list it, and
+    /// an infinite floor makes a persisted/migrated `.big` ease down on restore
+    /// instead of warming gemma-4-12B on a phone (the same loop, different brain).
+    public func minimumPhysicalMemoryGB(platform: DevicePlatform) -> Double? {
+        switch (self, platform) {
+        case (.mini, _): nil
+        case (.lil, .mac): nil
+        case (.lil, .mobile): 8
+        case (.big, .mac): 16
+        case (.big, .mobile): .infinity
         }
     }
 
     /// Whether this Mac has enough memory to offer the tier at all.
     public func isSelectable(forPhysicalMemoryGB gigabytes: Double) -> Bool {
-        guard let floor = minimumPhysicalMemoryGB else { return true }
+        isSelectable(forPhysicalMemoryGB: gigabytes, platform: .mac)
+    }
+
+    /// Whether this device has enough memory to offer the tier at all.
+    public func isSelectable(forPhysicalMemoryGB gigabytes: Double, platform: DevicePlatform) -> Bool {
+        guard let floor = minimumPhysicalMemoryGB(platform: platform) else { return true }
         return gigabytes >= floor
     }
 
@@ -356,8 +379,10 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// a too-heavy brain on a small Mac (Big has no hard memory floor, so without
     /// this it would ride along on an 8GB machine and thrash swap). Manual
     /// selection is the user's sovereign choice and is deliberately NOT capped.
-    public static func capped(_ tier: BrainTier, forPhysicalMemoryGB gigabytes: Double) -> BrainTier {
-        min(tier, recommended(forPhysicalMemoryGB: gigabytes))
+    public static func capped(
+        _ tier: BrainTier, forPhysicalMemoryGB gigabytes: Double, platform: DevicePlatform = .mac
+    ) -> BrainTier {
+        min(tier, recommended(forPhysicalMemoryGB: gigabytes, platform: platform))
     }
 
     /// Convenience: `capped` for the machine we're running on.
@@ -373,11 +398,11 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// demoting it would violate #81's never-touch-an-explicit-pick honesty rule.
     /// Armed by the 12B floor (2026-07-15); a no-op while no tier carried one.
     public static func selectableOrEased(
-        _ tier: BrainTier, forPhysicalMemoryGB gigabytes: Double
+        _ tier: BrainTier, forPhysicalMemoryGB gigabytes: Double, platform: DevicePlatform = .mac
     ) -> BrainTier {
-        tier.isSelectable(forPhysicalMemoryGB: gigabytes)
+        tier.isSelectable(forPhysicalMemoryGB: gigabytes, platform: platform)
             ? tier
-            : capped(tier, forPhysicalMemoryGB: gigabytes)
+            : capped(tier, forPhysicalMemoryGB: gigabytes, platform: platform)
     }
 
     /// Convenience: whether this tier is selectable on the machine we're on.

@@ -73,13 +73,18 @@ struct SettingsScreen: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            if core.selectedBrain == tier, !core.homeBrainActive {
+                            if let floor = AppCore.lockedFloor(tier) {
+                                Text(AppCore.lockedFloorLabel(floor))
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            } else if core.selectedBrain == tier, !core.homeBrainActive {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.tint)
                             }
                         }
                     }
                     .buttonStyle(.plain)
+                    .disabled(AppCore.lockedFloor(tier) != nil)
                 }
                 if let brain = core.homeBrain {
                     homeBrainRow(brain)
