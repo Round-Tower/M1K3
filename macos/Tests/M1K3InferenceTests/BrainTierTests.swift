@@ -236,8 +236,13 @@ struct BrainTierTests {
     func bigNeverSelectableOnMobile() {
         for gigabytes in [8.0, 16, 64] {
             #expect(!BrainTier.big.isSelectable(forPhysicalMemoryGB: gigabytes, platform: .mobile))
-            #expect(BrainTier.selectableOrEased(.big, forPhysicalMemoryGB: gigabytes, platform: .mobile) != .big)
         }
+        // Eases to the mobile ladder's pick for that RAM: Mini under 16 GB, Lil at 16+.
+        #expect(BrainTier.selectableOrEased(.big, forPhysicalMemoryGB: 8, platform: .mobile) == .mini)
+        #expect(BrainTier.selectableOrEased(.big, forPhysicalMemoryGB: 16, platform: .mobile) == .lil)
+        #expect(BrainTier.selectableOrEased(.big, forPhysicalMemoryGB: 64, platform: .mobile) == .lil)
+        // The floor is infinite by design — callers must never format it through Int.
+        #expect(BrainTier.big.minimumPhysicalMemoryGB(platform: .mobile) == .infinity)
         #expect(BrainTier.big.isSelectable(forPhysicalMemoryGB: 16, platform: .mac))
     }
 

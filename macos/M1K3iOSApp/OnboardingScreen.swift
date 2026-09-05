@@ -94,7 +94,7 @@ struct OnboardingScreen: View {
                     HStack(spacing: 6) {
                         Text(tier.displayName).font(.headline).foregroundStyle(.white)
                         if let floor = AppCore.lockedFloor(tier) {
-                            Text("Needs \(Int(floor)) GB")
+                            Text(AppCore.lockedFloorLabel(floor))
                                 .font(.caption2.weight(.semibold))
                                 .padding(.horizontal, 7).padding(.vertical, 2)
                                 .background(.white.opacity(0.15), in: .capsule)

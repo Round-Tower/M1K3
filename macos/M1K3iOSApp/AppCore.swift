@@ -208,6 +208,13 @@ final class AppCore {
         isSelectableOnThisDevice(tier) ? nil : tier.minimumPhysicalMemoryGB(platform: .mobile)
     }
 
+    /// The badge text for a locked floor. Big's mobile floor is `.infinity`
+    /// (never selectable) and `Int(.infinity)` TRAPS — so the words never go
+    /// through `Int` unless the floor is finite (#228 reviews).
+    static func lockedFloorLabel(_ floor: Double) -> String {
+        floor.isFinite ? "Needs \(Int(floor)) GB" : "Not for this device"
+    }
+
     /// MLX needs a real Metal GPU. The iOS/visionOS **Simulator has none**, and
     /// merely SETTING MLX's cache limit force-initialises the Metal device, which
     /// aborts (`mlx::core::metal::Device` → `std::__libcpp_verbose_abort`). So on
@@ -358,8 +365,10 @@ final class AppCore {
         // (#227). The rows render locked; this is the belt for a stale tap.
         if !Self.isSelectableOnThisDevice(tier), let floor = tier.minimumPhysicalMemoryGB(platform: .mobile) {
             selectBrain(.mini)
-            brainNote = "\(tier.displayName) needs \(Int(floor)) GB of memory — this device has "
+            brainNote = floor.isFinite
+                ? "\(tier.displayName) needs \(Int(floor)) GB of memory — this device has "
                 + "\(Int(Self.physicalMemoryGB.rounded())) GB. Staying on Mini."
+                : "\(tier.displayName) doesn't run on this device. Staying on Mini."
             return
         }
         brainNote = nil

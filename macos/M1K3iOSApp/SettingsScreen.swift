@@ -74,7 +74,7 @@ struct SettingsScreen: View {
                             }
                             Spacer()
                             if let floor = AppCore.lockedFloor(tier) {
-                                Text("Needs \(Int(floor)) GB")
+                                Text(AppCore.lockedFloorLabel(floor))
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(.secondary)
                             } else if core.selectedBrain == tier, !core.homeBrainActive {
