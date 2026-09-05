@@ -25,6 +25,7 @@
 
 import M1K3Chat
 import M1K3Inference
+import M1K3MLX
 import M1K3Voice
 import M1K3WhisperKit
 import SwiftUI
@@ -32,6 +33,8 @@ import SwiftUI
 struct M1K3SettingsPane: View {
     @Environment(AppEnvironment.self) private var env
     @AppStorage(AppEnvironment.autoRouteBrainKey) private var autoRouteBrain = false
+    /// The retired folder awaiting the user's confirmation to delete.
+    @State private var pendingRemoval: InstalledWeights?
     @AppStorage(AppEnvironment.thinkingModeKey) private var thinkingMode = ThinkingMode.auto.rawValue
     @AppStorage(AppEnvironment.voiceEchoCancellationKey) private var preferEchoCancellation = true
 
@@ -55,6 +58,7 @@ struct M1K3SettingsPane: View {
                 .buttonStyle(.glass)
                 Toggle("Auto-route (M1K3 picks the brain)", isOn: $autoRouteBrain)
                     .onChange(of: autoRouteBrain) { _, _ in env.applyAutoRouteIfEnabled() }
+                retiredWeightsRows
             } header: {
                 Text("Brain")
             } footer: {
@@ -127,7 +131,54 @@ struct M1K3SettingsPane: View {
             HeartbeatSettingsSection(env: env)
         }
         .formStyle(.grouped)
+        .onAppear { env.refreshRetiredWeights() }
+        // Destructive, so hoisted off the leaf Button (see GeneralSettingsPane):
+        // a confirmationDialog on a Button inside a Form can silently not show.
+        .confirmationDialog(
+            "Remove \(pendingRemoval?.repoID ?? "these weights")?",
+            isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Remove", role: .destructive) {
+                if let weights = pendingRemoval { env.removeRetiredWeights(weights) }
+                pendingRemoval = nil
+            }
+        } message: {
+            Text("Frees \((pendingRemoval?.bytes ?? 0).formatted(.byteCount(style: .file))) on this Mac. "
+                + "Nothing uses these weights any more; picking that brain again would download them fresh.")
+        }
         .scrollContentBackground(.hidden)
+    }
+
+    /// One row per brain folder nothing claims (#222). Hidden when there is
+    /// nothing to free — the common case.
+    @ViewBuilder private var retiredWeightsRows: some View {
+        if !env.retiredWeights.isEmpty {
+            LabeledContent {
+                Text(RetiredWeightsPolicy.totalBytes(env.retiredWeights).formatted(.byteCount(style: .file)))
+                    .foregroundStyle(.secondary)
+            } label: {
+                Label("Free up space", systemImage: "internaldrive")
+                    .symbolRenderingMode(.hierarchical)
+            }
+            if let failure = env.retiredWeightsFailure {
+                Label(failure.message, systemImage: "exclamationmark.triangle")
+                    .font(.caption).foregroundStyle(.red)
+            }
+            ForEach(env.retiredWeights) { weights in
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(weights.repoID.split(separator: "/").last.map(String.init) ?? weights.repoID)
+                            .font(.callout)
+                        Text("No longer used · \(weights.bytes.formatted(.byteCount(style: .file)))")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Remove…") { pendingRemoval = weights }
+                        .buttonStyle(.glass)
+                }
+            }
+        }
     }
 
     /// Shows the MLX Gemma weight download as a real progress bar while it

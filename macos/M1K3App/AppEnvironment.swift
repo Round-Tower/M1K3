@@ -219,7 +219,13 @@ final class AppEnvironment {
     private(set) var afmProvider: AppleFoundationModelsProvider
     /// "Is this brain's weights already on disk?" — drives the onboarding card's
     /// "On disk · ready" hint instead of dangling a download the user already did.
-    private let brainInventory = LocalModelInventory()
+    let brainInventory = LocalModelInventory()
+    /// Brain folders on disk that nothing claims (a previous pin, an eval
+    /// override) — Settings ▸ Brain offers to remove them. See +RetiredWeights.
+    var retiredWeights: [InstalledWeights] = []
+    /// Why the last removal did not free the space, keyed to the folder it was
+    /// about; shown in the row and dropped once that folder is no longer retired.
+    var retiredWeightsFailure: RetiredWeightsFailure?
     /// The single MLX slot behind `RuntimeOption.mlxGemma` in the façade; re-pointed
     /// at `currentMLXProvider` whenever the brain switches between Lil and Big, so
     /// the swap is seen without rebuilding the RAGResponder. Internal (not
