@@ -26,6 +26,8 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: footers say what the choice is, not what to do
 //  next.
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — the word "Companion" leaves the UI (header, footer, a11y labels):
+//  it is the FACE. Type names keep the old word so the Mac sibling still reads as kin. Confidence now 0.85.
 //
 
 import M1K3Avatar
@@ -67,7 +69,7 @@ struct CompanionPickerSection: View {
             return "M1K3's face in chat."
         }
         #if os(visionOS)
-            return "Your companion shows its own textures."
+            return "The creature shows its own textures."
         #else
             return "Phosphor glows with M1K3's mood. Cel toon-shades the creature."
         #endif
@@ -92,7 +94,7 @@ struct CompanionPickerSection: View {
                 }
             #endif
         } header: {
-            Text("Companion")
+            Text("Face")
         } footer: {
             Text(footerText)
         }
@@ -116,7 +118,7 @@ struct CompanionPickerSection: View {
             }
             .listRowInsets(EdgeInsets(top: 10, leading: 12, bottom: 6, trailing: 12))
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Live preview of the chosen companion face")
+            .accessibilityLabel("Live preview of the chosen face")
     }
 
     private var faceGrid: some View {
@@ -130,7 +132,7 @@ struct CompanionPickerSection: View {
         }
         .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 10, trailing: 12))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Companion face")
+        .accessibilityLabel("Face")
     }
 
     private func faceCard(_ choice: FaceChoice) -> some View {

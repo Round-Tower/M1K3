@@ -17,6 +17,7 @@
 //  absent on the simulator). Prior: Kev + claude-fable-5 (the harness form).
 //
 
+import M1K3Avatar
 import SwiftUI
 
 @main
@@ -27,6 +28,14 @@ struct M1K3iOSApp: App {
 
     init() {
         BundledFonts.register() // Silkscreen — the pixel wordmark face.
+        // The Phosphor Fox is the house default on every surface (the Mac registers
+        // Fox + phosphor skin; the phone ships the baked-lattice creature, so no
+        // shader is needed). Registered, not written: an explicit persisted choice
+        // (any face, including the pixel face's "") always wins, and if the assets
+        // were ever absent the resolver falls back to the pixel face, never blank.
+        UserDefaults.standard.register(defaults: [
+            CompanionDefaults.companionKey: CompanionSpec.phosphorFox.id,
+        ])
     }
 
     var body: some Scene {

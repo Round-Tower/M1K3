@@ -41,6 +41,11 @@ struct BrainTierTests {
         }
     }
 
+    @Test("Mini wears the Apple Intelligence symbol — it is Apple Intelligence")
+    func miniGlyph() {
+        #expect(BrainTier.mini.glyph == "apple.intelligence")
+    }
+
     @Test("macOS keeps Lil's exact card copy — the platform-honesty byte freeze")
     func lilDetailMacOSBytesFrozen() {
         #if os(macOS)

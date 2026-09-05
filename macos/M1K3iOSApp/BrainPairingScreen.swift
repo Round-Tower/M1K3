@@ -13,6 +13,9 @@
 //  hardware verify). Prior: Unknown.
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: shorter paired/expiry copy.
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — the viewfinder mounts only once camera access is AUTHORIZED
+//  (request first; denied → a Settings link). Fixes the dark scanner on the iPad (QA pass, item 12). Confidence now
+//  0.8 (verify-by-launch on the iPad).
 //
 
 #if os(iOS)
@@ -24,6 +27,7 @@ import SwiftUI
 struct BrainPairingScreen: View {
     @Environment(AppCore.self) private var core
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     private enum Phase: Equatable {
         case scanning
@@ -34,6 +38,9 @@ struct BrainPairingScreen: View {
 
     @State private var phase: Phase = .scanning
     @State private var pastedLink = ""
+    #if os(iOS)
+        @State private var cameraAccess: AVAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+    #endif
 
     var body: some View {
         Form {
@@ -69,6 +76,13 @@ struct BrainPairingScreen: View {
             }
         }
         .navigationTitle("Pair with your Mac")
+        #if os(iOS)
+            // Back from the Settings app after allowing the camera: the view is
+            // not recreated, so re-read the status on every return to foreground.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { cameraAccess = AVCaptureDevice.authorizationStatus(for: .video) }
+            }
+        #endif
     }
 
     @ViewBuilder private var scanSections: some View {
@@ -83,11 +97,38 @@ struct BrainPairingScreen: View {
         #if os(iOS)
             if QRScannerView.cameraLikelyAvailable {
                 Section {
-                    QRScannerView { code in
-                        begin(code)
+                    switch cameraAccess {
+                    case .authorized:
+                        QRScannerView { code in
+                            begin(code)
+                        }
+                        .frame(height: 280)
+                        .listRowInsets(EdgeInsets())
+                    case .notDetermined:
+                        // Ask FIRST, on the main queue, then mount the viewfinder. The old
+                        // path built the capture session on a background queue before the
+                        // system prompt — on the iPad the session started against a
+                        // not-yet-granted device and the viewfinder stayed dark for good.
+                        HStack(spacing: 12) {
+                            ProgressView()
+                            Text("Camera permission…")
+                                .foregroundStyle(.secondary)
+                        }
+                        .task {
+                            _ = await AVCaptureDevice.requestAccess(for: .video)
+                            cameraAccess = AVCaptureDevice.authorizationStatus(for: .video)
+                        }
+                    case .restricted:
+                        // Parental controls / MDM — not the user's to flip.
+                        Label("The camera is restricted on this device.", systemImage: "camera.fill")
+                            .foregroundStyle(.orange)
+                    default:
+                        Label("Camera access is off for M1K3.", systemImage: "camera.fill")
+                            .foregroundStyle(.orange)
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            Link("Allow the camera in Settings", destination: url)
+                        }
                     }
-                    .frame(height: 280)
-                    .listRowInsets(EdgeInsets())
                 }
             }
         #endif
@@ -158,6 +199,24 @@ struct BrainPairingScreen: View {
 
             var previewLayer: AVCaptureVideoPreviewLayer {
                 layer as! AVCaptureVideoPreviewLayer
+            }
+
+            /// The preview follows the interface orientation — without this the
+            /// iPad's landscape viewfinder rendered upside-down (QA round 2).
+            override func layoutSubviews() {
+                super.layoutSubviews()
+                guard let connection = previewLayer.connection,
+                      let orientation = window?.windowScene?.interfaceOrientation
+                else { return }
+                let angle: CGFloat = switch orientation {
+                case .landscapeRight: 0
+                case .landscapeLeft: 180
+                case .portraitUpsideDown: 270
+                default: 90
+                }
+                if connection.isVideoRotationAngleSupported(angle) {
+                    connection.videoRotationAngle = angle
+                }
             }
         }
 

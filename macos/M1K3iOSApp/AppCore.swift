@@ -202,19 +202,6 @@ final class AppCore {
         tier.isSelectable(forPhysicalMemoryGB: physicalMemoryGB, platform: .mobile)
     }
 
-    /// The memory floor a tier fails on this device, or nil when selectable —
-    /// the pickers render a "Needs N GB" badge from it (#227).
-    static func lockedFloor(_ tier: BrainTier) -> Double? {
-        isSelectableOnThisDevice(tier) ? nil : tier.minimumPhysicalMemoryGB(platform: .mobile)
-    }
-
-    /// The badge text for a locked floor. Big's mobile floor is `.infinity`
-    /// (never selectable) and `Int(.infinity)` TRAPS — so the words never go
-    /// through `Int` unless the floor is finite (#228 reviews).
-    static func lockedFloorLabel(_ floor: Double) -> String {
-        floor.isFinite ? "Needs \(Int(floor)) GB" : "Not for this device"
-    }
-
     /// MLX needs a real Metal GPU. The iOS/visionOS **Simulator has none**, and
     /// merely SETTING MLX's cache limit force-initialises the Metal device, which
     /// aborts (`mlx::core::metal::Device` → `std::__libcpp_verbose_abort`). So on
@@ -587,6 +574,24 @@ final class AppCore {
     /// drives the onboarding / settings availability hint.
     var miniAvailability: AFMAvailability {
         afm.availabilityState
+    }
+
+    /// The brains this device may list (onboarding + Settings): Mini only where
+    /// Apple Intelligence can run, Lil only above its mobile floor, Brain at Home
+    /// always — the pure table in MobileBrainMenu.
+    var brainMenu: MobileBrainMenu {
+        MobileBrainMenu.resolve(afm: miniAvailability, physicalMemoryGB: Self.physicalMemoryGB)
+    }
+
+    /// Titles of the newest live memories, for the blank-canvas chips. Empty when
+    /// the store is absent or nothing has a title yet.
+    func recentMemoryTitles(limit: Int = 4) -> [String] {
+        guard let memoryStore, let memories = try? memoryStore.allMemories(limit: 40) else { return [] }
+        // allMemories is already newest-first.
+        return memories
+            .compactMap(\.title)
+            .prefix(limit)
+            .map { $0 }
     }
 
     // MARK: - Send (drives the avatar around ChatSession's streaming send)

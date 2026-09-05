@@ -27,6 +27,9 @@ struct AvatarSurface: View {
     /// it today (same as the Mac, where the companion `paused` pass-through is a
     /// logged follow-up).
     var paused = false
+    /// Optional: mirrors a creature's mesh load (true while loading). The pixel
+    /// face is instant and never sets it.
+    var loading: Binding<Bool>? = nil
 
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
 
@@ -38,7 +41,7 @@ struct AvatarSurface: View {
             // in its update closure (a persistent root, one RealityView), so we keep
             // the same view identity and let it swap the mesh itself. (The Mac's
             // AvatarSurface keeps .id — recreation renders fine there.)
-            CompanionAvatarView(controller: controller, companion: spec)
+            CompanionAvatarView(controller: controller, companion: spec, loading: loading)
         } else {
             AvatarView(controller: controller, paused: paused)
         }

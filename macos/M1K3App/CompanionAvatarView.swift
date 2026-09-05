@@ -139,6 +139,10 @@ struct CompanionAvatarView: View {
         CompanionShadingStyle(rawValue: shadingRaw) ?? .off
     }
 
+    /// Optional mirror of the mesh load for a host that wants a spinner (the
+    /// iOS onboarding face step). Set on the main actor around `reload(to:)`.
+    var loading: Binding<Bool>? = nil
+
     @State private var scene = CompanionScene()
     /// Bumped once at the end of every successful `reload(to:)` — a plain
     /// counter with no meaning of its own, purely to force a fresh SwiftUI
@@ -289,6 +293,8 @@ struct CompanionAvatarView: View {
         guard let root = scene.root else { return }
         scene.loadToken += 1
         let token = scene.loadToken
+        loading?.wrappedValue = true
+        defer { if token == scene.loadToken { loading?.wrappedValue = false } }
         // `loadedCompanionID` was claimed synchronously by the caller (make/update).
 
         guard let idleURL = CompanionAssets.clipURL(companion: companion.id, clip: companion.idleClip),
