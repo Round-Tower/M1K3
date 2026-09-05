@@ -13,6 +13,10 @@ Key facts:
 - Privacy: all inference, embeddings, voice, and storage are on-device; the
   optional web-search tool is off by default; even per-answer thumbs feedback
   stays local and is never writable over MCP
+- Brains scoreboard: https://m1k3.app/brains (human) and https://m1k3.app/brains.json
+  (machine) — the pinned model revisions and dated on-device eval runs with
+  hardware, power mode, app commit and runtime revision beside every number;
+  documentation the app itself never reads
 - Models: three brains — Mini (Apple Foundation Models, instant), Lil (Qwen 3
   4B, the fast brain that fronts the conversation), Big (Gemma 4 12B, reached
   by delegation for deep work) — MLX-Swift on Metal, switchable in Settings

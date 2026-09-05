@@ -77,7 +77,9 @@ JSON
 # 3. Launch the built app. It runs headless and exits.
 open /path/to/M1K3.app
 
-# 4. Reshape the transcript into a scorecard
+# 4. Reshape the transcript into a scorecard (text) — or publish the JSON:
+#    python3 tools/eval/brains_page.py --run <OUT>.json --json ../site/brains.json --html ../site/brains.html
+#    regenerates m1k3.app/brains + brains.json (ADR 0004: documentation, never read by the app)
 python3 tools/eval/scorecard.py \
   ~/Library/Containers/app.m1k3/Data/scorecard.txt --markdown scorecard.md
 ```

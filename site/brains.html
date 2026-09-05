@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1K3 Brains — Models and Evals (2026-09-05)</title>
+<meta name="description" content="Which local models M1K3 ships, pinned to exact revisions, and how they score on M1K3&#x27;s own on-device eval harness — with the hardware, power mode, app commit and runtime revision beside every number." />
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+<link rel="canonical" href="https://m1k3.app/brains" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="theme-color" content="#050505" />
+<meta property="og:site_name" content="M1K3" />
+<meta property="og:locale" content="en_IE" />
+<meta property="og:title" content="M1K3 Brains — Models and Evals" />
+<meta property="og:description" content="Which local models M1K3 ships, pinned to exact revisions, and how they score on M1K3&#x27;s own on-device eval harness — with the hardware, power mode, app commit and runtime revision beside every number." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://m1k3.app/brains" />
+<meta property="og:image" content="https://m1k3.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="M1K3 Brains — Models and Evals" />
+<meta name="twitter:description" content="Which local models M1K3 ships, pinned to exact revisions, and how they score on M1K3&#x27;s own on-device eval harness — with the hardware, power mode, app commit and runtime revision beside every number." />
+<meta name="twitter:image" content="https://m1k3.app/og.png" />
+<link rel="alternate" type="application/json" href="/brains.json" />
+<link rel="stylesheet" href="fonts.css" />
+<link rel="stylesheet" href="geo.css" />
+</head>
+<body>
+
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<nav>
+  <a class="wordmark" href="/">M1K3<span class="cursor">_</span></a>
+  <div class="links">
+    <a href="/">Home</a>
+    <a href="/#features">Features</a>
+    <a href="/#faq">FAQ</a>
+    <a href="https://github.com/Round-Tower/M1K3">GitHub</a>
+    <a class="btn btn-ghost" href="/#get" style="padding:10px 18px;">Download</a>
+  </div>
+</nav>
+
+<main class="article">
+  <header class="article-head">
+    <span class="label">// brains</span>
+    <h1>The brains, and how they score</h1>
+    <p class="meta">Generated 2026-09-05 from the app's own eval harness · machine-readable copy at <a href="/brains.json">/brains.json</a> · By Round Tower, the makers of M1K3.</p>
+  </header>
+
+  <div class="answer">
+    <p><strong>Short answer: M1K3 ships three brains, pinned to exact model revisions, and this page is the evidence for those picks.</strong> Every number below was measured on a real Mac through the shipping app, and each run carries the hardware, OS, power mode, app commit and inference-runtime revision it was measured with. The app never reads this page: models are chosen in a reviewed pull request, not by a server. Read it the way you would read a lab notebook, failures included.</p>
+  </div>
+
+  <h2>What ships today</h2>
+  <p>Three tiers. Mini answers the quickest turns, Lil fronts the conversation, Big is reached by delegation for deep work. Each MLX model is pinned to one Hugging Face revision and every downloaded file is checked against a SHA-256 digest before it loads, so any mirror can serve the bytes.</p>
+  <div class="table-scroll"><table class="cmp"><thead><tr><th scope="col">Brain</th><th scope="col">Model</th><th scope="col">Pinned</th><th scope="col">Role</th></tr></thead><tbody><tr><td>Mini</td><td>Apple Foundation Models (system)</td><td>ships with macOS 26</td><td>Apple Foundation Models — instant, on the Neural Engine; fronts the quickest turns.</td></tr><tr><td>Lil</td><td><a href="https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit/tree/50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b">mlx-community/Qwen3-4B-Instruct-2507-4bit</a></td><td><code>50d427756c6b</code> · 2,171 MiB</td><td>The fast brain that fronts the conversation — dense Qwen3 4B, no &lt;think&gt; phase.</td></tr><tr><td>Big</td><td><a href="https://huggingface.co/mlx-community/gemma-4-12B-it-4bit/tree/73bcf09092aa277861d5a191b989b666f7f32e8f">mlx-community/gemma-4-12B-it-4bit</a></td><td><code>73bcf09092aa</code> · 6,459 MiB</td><td>Reached by delegation for deep work — Gemma 4 12B, 8-bit quantized KV.</td></tr></tbody></table></div>
+
+  <h2>Eval runs</h2>
+  <p>The harness runs the same fixtures against each brain through the live path (retrieval, grounding, tools, the agent loop), scores each answer with named checks, and writes this JSON. A repeat is a separate trial. Failures are listed with the scorer's own reason.</p>
+  <h3>Run 1 · 2026-09-05 · app <code>b7e61299</code></h3><div class="term"><div class="term-bar"><span></span><span></span><span></span></div><div class="term-body"><pre><span class="c">// provenance</span>
+date        2026-09-05T12:35:34Z
+hardware    Apple M1 Max · 64 GB
+os          macOS 26.4
+app commit  b7e61299
+mlx-swift-lm c97539da
+powermode 0 · live-path yes · n = 2 per fixture
+notes       harness v2 verify-by-launch; pin worktree rebuild running concurrently</pre></div></div><div class="table-scroll"><table class="cmp"><thead><tr><th scope="col">Kind</th><th scope="col">Mini<br><span class="table-note">Apple FM</span></th></tr></thead><tbody><tr><td>tool-use</td><td class="">8/12</td></tr><tr><td>all fixtures</td><td class="yes">8/12</td></tr><tr><td>median latency</td><td>25.8 s</td></tr></tbody></table></div><p class="table-note">passed/total counts every trial; a repeat is a trial. Median, not mean.</p><h4>Failed checks</h4><ul><li><strong>Mini</strong> · <code>tool-search-doc</code> (trial 1) — responsive: 301455ms &gt; ceiling 120000ms (loop thrash?)</li><li><strong>Mini</strong> · <code>tool-read-site</code> (trial 1) — non-empty: 0 chars</li><li><strong>Mini</strong> · <code>tool-read-site</code> (trial 1) — calls fetch_page: called web_search,search_knowledge,datetime</li><li><strong>Mini</strong> · <code>tool-search-doc</code> (trial 2) — responsive: 324145ms &gt; ceiling 120000ms (loop thrash?)</li><li><strong>Mini</strong> · <code>tool-read-site</code> (trial 2) — calls fetch_page: called web_search,search_knowledge,datetime</li></ul>
+
+  <h2>State of play, 2026-09-05</h2>
+  <p>What we measured on Apple M1 Max · 64 GB · powermode 0 · nothing else running, through the real app bundle. Dated on purpose: this block ages.</p>
+  <h3>Multi-token prediction stays parked</h3>
+  <p>Speculative decoding with Gemma 4 12B and its assistant drafter, greedy, on mlx-swift-lm main <code>e3d4a20e</code> (the post-#516 rewind fix). Acceptance is healthy and the old stand-down bugs are gone, but the drafter's per-round cost eats the gain on an M1 Max at batch 1.</p>
+  <div class="table-scroll"><table class="cmp"><thead><tr><th scope="col">Regime</th><th scope="col">Plain decode</th><th scope="col">MTP</th><th scope="col">Ratio</th><th scope="col">Accept</th></tr></thead><tbody><tr><td>short, no wrap (25 tok)</td><td>34.0 tok/s</td><td>24.8 tok/s</td><td>0.73×</td><td>52%</td></tr><tr><td>medium, wraps mid-decode (588 tok)</td><td>9.1 tok/s</td><td>6.3 tok/s</td><td>0.69×</td><td>40%</td></tr><tr><td>long, wrapped at prefill (2072 tok)</td><td>7.9 tok/s</td><td>9.8 tok/s</td><td>1.24× (23-token sample)</td><td>31%</td></tr></tbody></table></div>
+  <h3>Qwen3.8-27B runs, and is not a front brain</h3>
+  <p><code>mlx-community/Qwen3.8-27B-4bit</code> (16 GB, 48 GatedDeltaNet + 16 full-attention layers) loads through the same path as Lil and answers coherently. It first decoded at 0.1–0.4 tok/s, and that was our fault, not the model's: M1K3's 12 GB companion memory ceiling sat below the model's 14.7 GB of active weights, so MLX back-pressured every step. With the ceiling lifted to 24 GB it ran 4–5 tok/s with a 1.5 s first token, base-M4-mini class. That makes it a delegation-only brain for 64 GB machines at best, never the one you talk to. Its 4-bit quantization also loses the most quality of the family (KL 0.113 vs bf16; 6-bit is 0.029 at 22.8 GB).</p>
+  <h3>Why there is no remote model catalogue</h3>
+  <p>We wanted one. The design review killed it, and the objections are verified in the app's own source: a remote re-pin would be a remote kill switch through the weights-integrity check, the offline fallback is a downgrade attack, and a periodic fetch from every install is telemetry. So model pins ship in the binary, and this page is documentation the app never reads. The full reasoning is <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/docs/adr/0004-brain-catalogue-ships-in-the-binary.md">ADR 0004</a>.</p>
+
+  <h2>How to read this honestly</h2>
+  <ul>
+    <li><strong>Small n.</strong> Two trials per fixture is enough to catch a flake, not enough for a percentage. Treat cells as evidence, not scores.</li>
+    <li><strong>One machine.</strong> Everything here is one Apple M1 Max. Newer chips run every brain faster; the ordering between brains is what travels.</li>
+    <li><strong>Latency includes the tools.</strong> A tool-use median counts retrieval and the tool call, not just token generation.</li>
+    <li><strong>Reproduce it.</strong> The harness is in the repository: <code>macos/docs/BENCHMARKS.md</code>. This page is generated by <code>macos/tools/eval/brains_page.py</code> from its JSON.</li>
+  </ul>
+
+  <aside class="related">
+    <span class="label">// related</span>
+    <div class="related-links">
+      <a href="/local-llm-mac-guide">Running a local LLM on a Mac</a>
+      <a href="/vs-ollama">M1K3 vs Ollama</a>
+      <a href="/privacy">Is M1K3 really private?</a>
+      <a href="/">M1K3 home</a>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER</a> · MADE IN IRELAND</span>
+  <span><a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
+</footer>
+
+<!-- Generated by macos/tools/eval/brains_page.py on 2026-09-05. Do not hand-edit: re-run the generator.
+     Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.85 (numbers are the harness's own JSON;
+     the dated state-of-play block is the 2026-09-05 read-out, measured on this machine). Prior: none (new file). -->
+</body>
+</html>

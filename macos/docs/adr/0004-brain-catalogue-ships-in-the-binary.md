@@ -45,7 +45,8 @@ the binary already move at the speed of a merge.
   adding a brain is a reviewed PR that re-pins `weights-manifest.json` and runs
   the gemma-4 native tool-call smoke in CI.
 - **The site publishes evaluations as documentation the app never reads.**
-  `brains.json` and a human page are generated from the on-device harness's
+  `brains.json` and a human page (`site/brains.html`, via
+  `tools/eval/brains_page.py`) are generated from the on-device harness's
   output (dated runs, hardware, power mode, app commit, mlx-swift-lm revision,
   n). Readers decide with it; the app does not fetch it.
 - **The catalogue's invariants are banked here, not built.** If a real trigger
