@@ -280,6 +280,33 @@ struct MLXToolFormatResolutionTests {
         ) == .xmlFunction)
     }
 
+    @Test("config.json model_type decides the dialect before the name heuristic")
+    func modelTypeWins() {
+        // Qwen3.8-27B is model_type qwen3_5 (verified against the HF config
+        // 2026-09-05) and its template emits <function=…>. The name contains
+        // "qwen" but not "qwen3.5", so the name arm alone routed it to .json —
+        // silently degrading tool-use to 0/5, the exact 08-08 regression shape.
+        let qwen38 = ModelConfiguration(id: "mlx-community/Qwen3.8-27B-4bit")
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: qwen38, modelType: "qwen3_5") == .xmlFunction)
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: qwen38, modelType: "qwen3_5_text") == .xmlFunction)
+        // A dense Qwen3 under a brand id with no "qwen" substring — the type
+        // carries what the name cannot.
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "acme/brand-8B"), modelType: "qwen3") == .json)
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "gemma4_unified") == .gemma4)
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "gemma3_text") == .gemma)
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "lfm2") == .lfm2)
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "glm4") == .glm4)
+        // An unknown type falls through to the name heuristic, never to nil.
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "x/Qwen3-4B"), modelType: "novel_arch") == .json)
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "some/unknown"), modelType: "novel_arch") == nil)
+    }
+
+    @Test("Qwen3.8 resolves to xmlFunction by name too (pre-download, before config.json exists)")
+    func qwen38NameArm() {
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.8-27B-4bit")) == .xmlFunction)
+        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "lmstudio-community/Qwen3.8-27B-MLX-6bit")) == .xmlFunction)
+    }
+
     @Test("an explicit configuration format wins over the family heuristic")
     func explicitWins() {
         var config = ModelConfiguration(id: "some/unknown-model")

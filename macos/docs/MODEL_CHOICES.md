@@ -291,6 +291,54 @@ are deliberately left unpinned so the evaluation loop stays usable.
 
 ## Decision log
 
+- **2026-09-05: the landscape review — MTP door opened upstream, Qwen3.8-27B identified,
+  the remote catalogue REJECTED (ADR 0004), two harness/dialect bugs fixed (#212).**
+  A 54-agent verified sweep (every claim fetched from a primary source and adversarially
+  checked; read-out artifact 87802135). What matters for the next brain decision:
+  - **MTP: unpark door 2 is open, the gate must change.** mlx-swift-lm #516 (merged
+    2026-08-11, base = our pin c97539da) stages draft rounds on `KVCacheStorage`, so rejected
+    drafts never touch the sliding cache — both #506 stand-down strings our spike reports as
+    `passthroughReason` are retired; E4B wrapped-regime 0.84× → 1.17×. #533 fixed a shared
+    stateful logit processor between the draft/verify legs (our 08-08 divergence may have
+    been partly that). BUT byte-identical greedy is unattainable on quantized 12B — 1-token
+    and N-token verify use different Metal kernels and flip near-tie argmax; Apple declined
+    (mlx#4279). New gate: first 64 tokens identical + CHATEVAL pass; greedy-only on
+    `delegate_deep`; ship at ≥~1.15× on REAL prompts. gemma-4-31B keeps `sliding_window=1024`
+    (door 3 via Gemma is dead).
+  - **Qwen3.8-27B** (`Qwen/Qwen3.8-27B`, 2026-08-14, Apache-2.0) is `model_type qwen3_5`:
+    48 GatedDeltaNet + 16 full-attention layers, no sliding window, 262k ctx.
+    `mlx-community/Qwen3.8-27B-4bit` rev 3e6447f0 = 16.07 GB (3 shards); 6-bit 22.8 GB is the
+    KL sweet spot (27B KLD vs bf16: 8-bit 0.014 / 6-bit 0.029 / 4-bit 0.113; 6-bit ~26%
+    slower decode). Its 239 MB MTP drafter (`Qwen3.8-27B-MTP-4bit`, 1.5× at greedy on M4 Pro
+    per mlx-lm #990) is unusable at our pin: `Qwen35.sanitize` drops `mtp.*` and the iterator
+    throws on an untrimmable MambaCache (needs main ≥01472a78 + #545/#510). Seams before it
+    can be a tier: tool dialect (FIXED #212 — keyed on model_type), `enable_thinking:false`
+    through a template using `namespace()`/`[::-1]`/macros, the hybrid cache vs
+    `PersonaPrefixCache`/quantized-KV/`HistoryBudgetPolicy`, the 12 GB `MLXMemoryBudget`
+    companion ceiling (a 16–23 GB resident Big breaks "shares the machine"), a 24 GB floor.
+    Load spike on the M1 Max 64 GB: see the 2026-09-05 project-memory block.
+  - **Quant formats:** DWQ / mixed-precision checkpoints are plain affine files the pinned
+    loader parses (per-layer `{bits, group_size}`) — the June "no OptiQ loader" verdict is
+    probably stale; one SelfTest load settles it. No clean mxfp4-vs-affine A/B exists on
+    Metal — don't move a shipping tier. Phone stays affine 4-bit gs64;
+    `LFM2.5-2.6B-4bit` (1.52 GB, lfm2 parser, leads E4B on BFCLv4) is a credible phone brain
+    (license revenue clause). Granite 4.2 8B is a clean dense Mac alt (needs a dialect
+    override — `GraniteModel` declares none).
+  - **"Corioli"** in Kev's voice note ≈ Apple **Core AI** (WWDC26 session 326: `.aimodel`,
+    int4/FP4/palettization, `CoreAILanguageModel(resourcesAt:)` into `LanguageModelSession`,
+    no speculative decoding). A fourth brain path (ADR 0001's adapter), not an MTP door.
+    Unconfirmed by Kev.
+  - **MLX:** no "MLX 2". core v0.32.2 (08-25); mlx-swift newest tag 0.31.6 (main untagged
+    until mlx-c exposes `clear_streams`); mlx-swift-lm newest tag 3.31.4, main 62 commits
+    past our pin, tools-version 6.2, mlx-swift floor 0.31.6 (our `Package.swift:137` floors
+    0.31.4 — must move on the bump). Post-pin wins: #516, #533, #514 `KVCacheStatus`
+    (Big's 12 global layers become bounded at 8192 — re-validate `HistoryBudgetPolicy`),
+    #575 ~1.8× faster cold loads. NAX fused prefill (M5/M6) needs mlx ≥0.32.3.
+  - **Two bugs found and fixed (#212):** `M1K3_SELFTEST_CHATEVAL_MLX_MODEL` applied to every
+    MLX tier (a `lil,big` run with an override compared a model with itself — treat past
+    two-brain A/Bs that used the hook as suspect); `resolveToolCallFormat` keyed on the repo
+    NAME, so Qwen3.8 would have routed to `.json` and silently scored 0/5 on tool-use.
+
 - **2026-08-08: pin bumped to main `c97539da` (MTP-capable) · gemma-4 chat template FIXED
   in-app · MTP re-measured and still PARKED — now for a measured reason.**
   Three findings, in order of how much they cost:
