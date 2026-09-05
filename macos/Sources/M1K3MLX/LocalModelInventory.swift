@@ -50,6 +50,13 @@ public struct LocalModelInventory: Sendable {
     /// Every `models/<org>/<repo>` folder under the download base with its size
     /// on disk (all files, recursively). Dot-folders (`.m1k3-receipts`) are not
     /// repos and are skipped. Feeds `RetiredWeightsPolicy` — listing only.
+    ///
+    /// Load-bearing separation: this walks ONLY the LLM store
+    /// (`Application Support/models/…`). WhisperKit stages under
+    /// `Application Support/M1K3/models/…` and Kokoro under
+    /// `Application Support/M1K3/kokoro` — one path segment away, so neither can
+    /// ever appear here. Point those downloaders at `ModelStoreLocation.llmBase()`
+    /// and they become deletable from Settings.
     public func installedWeights() -> [InstalledWeights] {
         let fm = FileManager.default
         let models = hub.localRepoLocation(Hub.Repo(id: "org/repo"))
@@ -68,10 +75,29 @@ public struct LocalModelInventory: Sendable {
         return out
     }
 
+    /// A repo id `remove(modelID:)` will act on: exactly `org/repo`, both
+    /// non-empty, neither a dot-component. The one caller today only passes ids
+    /// `installedWeights()` read off disk, but this is a public recursive delete
+    /// in a shared module — it carries its own guard rather than trusting the
+    /// next caller to.
+    public static func isRemovableRepoID(_ modelID: String) -> Bool {
+        let parts = modelID.split(separator: "/", omittingEmptySubsequences: false)
+        guard parts.count == 2 else { return false }
+        return parts.allSatisfy { !$0.isEmpty && !$0.hasPrefix(".") && !$0.contains("\\") }
+    }
+
+    public struct UnsafeRepoIDError: Error, Equatable { public let modelID: String }
+
     /// Delete one repo folder. A folder that is already gone is not an error —
-    /// the user's intent (not on disk) is met either way.
+    /// the user's intent (not on disk) is met either way. A malformed id
+    /// (`..`, absolute path, bare name) is refused before any filesystem call.
     public func remove(modelID: String) throws {
+        guard Self.isRemovableRepoID(modelID) else { throw UnsafeRepoIDError(modelID: modelID) }
         let dir = hub.localRepoLocation(Hub.Repo(id: modelID))
+        // The integrity receipt is a sibling file, not inside the folder — drop it
+        // too or every removal strands one forever (review, #226).
+        let receipt = WeightIntegrityScan.receiptURL(forModelAt: dir)
+        if FileManager.default.fileExists(atPath: receipt.path) { try FileManager.default.removeItem(at: receipt) }
         guard FileManager.default.fileExists(atPath: dir.path) else { return }
         try FileManager.default.removeItem(at: dir)
     }

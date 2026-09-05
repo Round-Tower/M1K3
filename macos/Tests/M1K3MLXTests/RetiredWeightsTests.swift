@@ -82,6 +82,31 @@ struct RetiredWeightsTests {
         #expect(inventory.installedWeights().map(\.repoID) == ["mlx-community/New-4bit"])
     }
 
+    @Test("removing a folder also drops its sibling integrity receipt")
+    func removeDropsReceipt() throws {
+        let base = try makeBase()
+        let fm = FileManager.default
+        let repo = base.appendingPathComponent("models/org/Old", isDirectory: true)
+        try fm.createDirectory(at: repo, withIntermediateDirectories: true)
+        let receipt = base.appendingPathComponent("models/org/.m1k3-receipts/Old.receipt")
+        try fm.createDirectory(at: receipt.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: receipt)
+        try LocalModelInventory(downloadBase: base).remove(modelID: "org/Old")
+        #expect(!fm.fileExists(atPath: repo.path))
+        #expect(!fm.fileExists(atPath: receipt.path))
+    }
+
+    @Test("a malformed repo id is refused before any filesystem call")
+    func removeRefusesMalformedIDs() throws {
+        let base = try makeBase()
+        let inventory = LocalModelInventory(downloadBase: base)
+        for bad in ["../../Documents", "/etc", "bare", "org/../x", "org/.hidden", "", "a/b/c", "org/"] {
+            #expect(!LocalModelInventory.isRemovableRepoID(bad), "\(bad) should be refused")
+            #expect(throws: LocalModelInventory.UnsafeRepoIDError.self) { try inventory.remove(modelID: bad) }
+        }
+        #expect(LocalModelInventory.isRemovableRepoID("mlx-community/Qwen3-4B-Instruct-2507-4bit"))
+    }
+
     @Test("an empty inventory lists nothing and removal of a missing folder is not an error")
     func inventoryEmpty() throws {
         let base = try makeBase()

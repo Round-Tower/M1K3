@@ -19,7 +19,7 @@ import M1K3MLX
 import os
 
 extension AppEnvironment {
-    private nonisolated static let retiredLog = Logger(subsystem: "app.m1k3", category: "brain")
+    private nonisolated static let retiredLog = Logger(subsystem: "app.m1k3", category: "mlx-load")
 
     /// The ids nothing may offer for removal: pinned, shipped, or loaded now.
     var retiredWeightsKeepSet: Set<String> {
@@ -34,11 +34,15 @@ extension AppEnvironment {
     /// Re-list retired folders off the main actor (directory walks over GBs of
     /// weights); publishes into `retiredWeights` for the Settings row.
     func refreshRetiredWeights() {
-        let inventory = LocalModelInventory()
+        let inventory = brainInventory
         let keep = retiredWeightsKeepSet
-        Task.detached(priority: .utility) {
-            let retired = RetiredWeightsPolicy.retired(installed: inventory.installedWeights(), keep: keep)
-            await MainActor.run { self.retiredWeights = retired }
+        // House idiom: the outer Task stays on the main actor; only the pure,
+        // Sendable disk walk is sent away. `self` never crosses isolation.
+        Task { [weak self] in
+            let retired = await Task.detached(priority: .utility) {
+                RetiredWeightsPolicy.retired(installed: inventory.installedWeights(), keep: keep)
+            }.value
+            self?.retiredWeights = retired
         }
     }
 
@@ -48,19 +52,27 @@ extension AppEnvironment {
             Self.retiredLog.notice("refused to remove \(weights.repoID, privacy: .public): claimed")
             return
         }
-        let inventory = LocalModelInventory()
-        Task.detached(priority: .utility) {
-            do {
-                try inventory.remove(modelID: weights.repoID)
-                Self.retiredLog.notice(
-                    "removed retired weights \(weights.repoID, privacy: .public) (\(weights.bytes) bytes)"
-                )
-            } catch {
-                Self.retiredLog.error(
-                    "remove \(weights.repoID, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
-                )
-            }
-            await MainActor.run { self.refreshRetiredWeights() }
+        let inventory = brainInventory
+        retiredWeightsFailure = nil
+        Task { [weak self] in
+            let failure: String? = await Task.detached(priority: .utility) {
+                do {
+                    try inventory.remove(modelID: weights.repoID)
+                    Self.retiredLog.notice(
+                        "removed retired weights \(weights.repoID, privacy: .public) (\(weights.bytes) bytes)"
+                    )
+                    return nil
+                } catch {
+                    Self.retiredLog.error(
+                        "remove \(weights.repoID, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
+                    )
+                    // The dialog promised freed space; a silent failure would break that
+                    // promise. The row shows the reason until the next successful removal.
+                    return "Couldn't remove \(weights.repoID): \(error.localizedDescription)"
+                }
+            }.value
+            self?.retiredWeightsFailure = failure
+            self?.refreshRetiredWeights()
         }
     }
 }

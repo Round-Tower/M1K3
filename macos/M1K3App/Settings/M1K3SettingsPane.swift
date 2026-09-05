@@ -150,9 +150,6 @@ struct M1K3SettingsPane: View {
         .scrollContentBackground(.hidden)
     }
 
-    /// Shows the MLX Gemma weight download as a real progress bar while it
-    /// streams (~1GB on first use), or the failure, so selecting MLX never looks
-    /// like a silent hang. Renders nothing when idle or ready.
     /// One row per brain folder nothing claims (#222). Hidden when there is
     /// nothing to free — the common case.
     @ViewBuilder private var retiredWeightsRows: some View {
@@ -163,6 +160,10 @@ struct M1K3SettingsPane: View {
             } label: {
                 Label("Free up space", systemImage: "internaldrive")
                     .symbolRenderingMode(.hierarchical)
+            }
+            if let failure = env.retiredWeightsFailure {
+                Label(failure, systemImage: "exclamationmark.triangle")
+                    .font(.caption).foregroundStyle(.red)
             }
             ForEach(env.retiredWeights) { weights in
                 HStack {
@@ -180,6 +181,9 @@ struct M1K3SettingsPane: View {
         }
     }
 
+    /// Shows the MLX Gemma weight download as a real progress bar while it
+    /// streams (~1GB on first use), or the failure, so selecting MLX never looks
+    /// like a silent hang. Renders nothing when idle or ready.
     @ViewBuilder private var modelLoadRow: some View {
         switch env.modelLoad {
         case let .downloading(fraction):
