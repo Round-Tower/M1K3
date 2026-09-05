@@ -52,9 +52,13 @@ extension AppEnvironment {
         Task.detached(priority: .utility) {
             do {
                 try inventory.remove(modelID: weights.repoID)
-                Self.retiredLog.notice("removed retired weights \(weights.repoID, privacy: .public) (\(weights.bytes) bytes)")
+                Self.retiredLog.notice(
+                    "removed retired weights \(weights.repoID, privacy: .public) (\(weights.bytes) bytes)"
+                )
             } catch {
-                Self.retiredLog.error("remove \(weights.repoID, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+                Self.retiredLog.error(
+                    "remove \(weights.repoID, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
+                )
             }
             await MainActor.run { self.refreshRetiredWeights() }
         }
