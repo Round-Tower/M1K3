@@ -20,7 +20,8 @@ Two outputs:
     given input. Documentation the app NEVER reads (ADR 0004: pins ship in the
     binary; the site publishes evidence, it does not configure installs).
   * `site/brains.html` — the human page, same shell as the other answer pages
-    (fonts.css + geo.css, zero JS, zero external calls).
+    (geo.css + the shared Google Fonts links, zero JS; no JSON-LD on purpose —
+    a scoreboard is not an Article and a wrong schema is worse than none).
 
 Numbers are counted per TRIAL (a repeat is a trial), medians not means, and
 every failure is listed with the scorer's own reason — the failures are the
@@ -61,6 +62,10 @@ class UnsupportedSchema(ValueError):
     pass
 
 
+class MissingPin(KeyError):
+    """A shipped tier has no entry in weights-manifest.json — the page must not invent one."""
+
+
 # ---------------------------------------------------------------- pure data
 
 
@@ -76,7 +81,7 @@ def brains(manifest: dict) -> list[dict]:
         else:
             pin = repos.get(mid)
             if pin is None:
-                raise KeyError(f"{mid} is a shipped tier but has no pin in weights-manifest.json")
+                raise MissingPin(f"{mid} is a shipped tier but has no pin in weights-manifest.json")
             size = sum(f["size"] for f in pin["files"].values())
             row.update(
                 revision=pin["revision"],
@@ -122,28 +127,11 @@ def summarise_run(doc: dict) -> dict:
             "byKind": dict(sorted(by_kind.items())),
             "passed": passed,
             "total": len(run["scores"]),
-            "medianLatencyMS": int(statistics.median(latencies)) if latencies else None,
+            "medianLatencyMS": round(statistics.median(latencies)) if latencies else None,
             "failures": failures,
         })
     return {"provenance": dict(doc["provenance"]), "brains": out_brains}
 
-
-def document(manifest: dict, runs: list[dict], generated: str) -> dict:
-    return {
-        "schemaVersion": SCHEMA_VERSION,
-        "generated": generated,
-        "about": "M1K3 brain scoreboard, generated from the on-device eval harness. Documentation only: the "
-                 "app never reads this file (macos/docs/adr/0004-brain-catalogue-ships-in-the-binary.md).",
-        "brains": brains(manifest),
-        "runs": [summarise_run(r) for r in runs],
-    }
-
-
-def to_json(doc: dict) -> str:
-    return json.dumps(doc, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
-
-
-# ---------------------------------------------------------------- html
 
 # The verified 2026-09-05 read-out. Dated in the page; edit when re-measured.
 STATE_OF_PLAY = {
@@ -155,6 +143,30 @@ STATE_OF_PLAY = {
         ("long, wrapped at prefill (2072 tok)", "7.9", "9.8", "1.24× (23-token sample)", "31%"),
     ],
 }
+
+
+def document(manifest: dict, runs: list[dict], generated: str) -> dict:
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generated": generated,
+        "about": "M1K3 brain scoreboard, generated from the on-device eval harness. Documentation only: the "
+                 "app never reads this file (macos/docs/adr/0004-brain-catalogue-ships-in-the-binary.md).",
+        "brains": brains(manifest),
+        "runs": [summarise_run(r) for r in runs],
+        # The dated editorial block, so brains.json really is the machine copy of the page.
+        "stateOfPlay": {
+            "date": STATE_OF_PLAY["date"],
+            "machine": STATE_OF_PLAY["machine"],
+            "mtp": [dict(zip(("regime", "baselineTokPerSec", "mtpTokPerSec", "ratio", "accept"), r)) for r in STATE_OF_PLAY["mtp"]],
+        },
+    }
+
+
+def to_json(doc: dict) -> str:
+    return json.dumps(doc, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
+
+# ---------------------------------------------------------------- html
 
 
 def _e(s) -> str:
@@ -169,7 +181,7 @@ def _brains_table(rows: list[dict]) -> str:
             pin = f'<code>{_e(b["revision"][:12])}</code> · {b["sizeMiB"]:,} MiB'
         else:
             model, pin = "Apple Foundation Models (system)", "ships with macOS 26"
-        body.append(f"<tr><td>{_e(b['name'])}</td><td>{model}</td><td>{pin}</td><td>{_e(b['role'])}</td></tr>")
+        body.append(f'<tr><th scope="row">{_e(b["name"])}</th><td>{model}</td><td>{pin}</td><td>{_e(b["role"])}</td></tr>')
     return (
         '<div class="table-scroll"><table class="cmp"><thead><tr>'
         '<th scope="col">Brain</th><th scope="col">Model</th><th scope="col">Pinned</th><th scope="col">Role</th>'
@@ -199,7 +211,7 @@ def _provenance(p: dict) -> str:
 def _matrix(run: dict) -> str:
     kinds = sorted({k for b in run["brains"] for k in b["byKind"]})
     head = "".join(
-        f'<th scope="col">{_e(b["brainID"].title())}<br><span class="table-note">{_e(b["modelID"] or "Apple FM")}</span></th>'
+        f'<th scope="col">{_e(b["brainID"].title())}<br /><span class="table-note">{_e(b["modelID"] or "Apple FM")}</span></th>'
         for b in run["brains"]
     )
     rows = []
@@ -212,13 +224,17 @@ def _matrix(run: dict) -> str:
             else:
                 cls = "yes" if c["passed"] == c["total"] else ""
                 cells.append(f'<td class="{cls}">{c["passed"]}/{c["total"]}</td>')
-        rows.append(f"<tr><td>{_e(k)}</td>{''.join(cells)}</tr>")
-    totals = "".join(f'<td class="yes">{b["passed"]}/{b["total"]}</td>' for b in run["brains"])
+        rows.append(f'<tr><th scope="row">{_e(k)}</th>{"".join(cells)}</tr>')
+    # Same rule as the per-kind cells: emphasis only for a clean sweep. A 4-failure run must not
+    # render with the full-pass class (code-quality review, 2026-09-05).
+    totals = "".join(
+        f'<td class="{"yes" if b["passed"] == b["total"] else ""}">{b["passed"]}/{b["total"]}</td>' for b in run["brains"]
+    )
     med = "".join(
         f"<td>{(b['medianLatencyMS'] or 0) / 1000:.1f} s</td>" for b in run["brains"]
     )
-    rows.append(f"<tr><td>all fixtures</td>{totals}</tr>")
-    rows.append(f"<tr><td>median latency</td>{med}</tr>")
+    rows.append(f'<tr><th scope="row">all fixtures</th>{totals}</tr>')
+    rows.append(f'<tr><th scope="row">median latency</th>{med}</tr>')
     return (
         '<div class="table-scroll"><table class="cmp"><thead><tr><th scope="col">Kind</th>' + head +
         "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>"
@@ -266,7 +282,7 @@ def render_html(doc: dict) -> str:
         p = run["provenance"]
         runs_html.append(
             f'<h3>Run {i} · {_e((p.get("date") or "")[:10])} · app <code>{_e(p.get("appCommit") or "?")}</code></h3>'
-            + _provenance(p) + _matrix(run) + "<h4>Failed checks</h4>" + _failures(run)
+            + _provenance(p) + _matrix(run) + f"<h4>Failed checks — run {i}</h4>" + _failures(run)
         )
     head_desc = ("Which local models M1K3 ships, pinned to exact revisions, and how they score on M1K3's own "
                  "on-device eval harness — with the hardware, power mode, app commit and runtime revision beside every number.")
@@ -292,12 +308,15 @@ def render_html(doc: dict) -> str:
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="M1K3 Brains — Models and Evals" />
 <meta name="twitter:description" content="{_e(head_desc)}" />
 <meta name="twitter:image" content="https://m1k3.app/og.png" />
 <link rel="alternate" type="application/json" href="/brains.json" />
-<link rel="stylesheet" href="fonts.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="geo.css" />
 </head>
 <body>
@@ -360,8 +379,8 @@ def render_html(doc: dict) -> str:
 </footer>
 
 <!-- Generated by macos/tools/eval/brains_page.py on {gen}. Do not hand-edit: re-run the generator.
-     Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.85 (numbers are the harness's own JSON;
-     the dated state-of-play block is the 2026-09-05 read-out, measured on this machine). Prior: none (new file). -->
+     Eval numbers are the harness's own JSON; the state-of-play block is the {_e(STATE_OF_PLAY["date"])} read-out
+     (see the generator's MurphySig for provenance and confidence). -->
 </body>
 </html>
 """
@@ -381,8 +400,10 @@ def main(argv=None) -> int:
     manifest = json.loads(a.manifest.read_text())
     runs = [json.loads(p.read_text()) for p in a.run]
     doc = document(manifest, runs, generated=a.generated)
-    a.json.write_text(to_json(doc))
-    a.html.write_text(render_html(doc))
+    # Render both BEFORE writing either, so a render error can't leave brains.json ahead of brains.html.
+    json_text, html_text = to_json(doc), render_html(doc)
+    a.json.write_text(json_text)
+    a.html.write_text(html_text)
     print(f"wrote {a.json} ({len(doc['runs'])} run(s), {len(doc['brains'])} brains) and {a.html}")
     return 0
 

@@ -20,12 +20,15 @@
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="M1K3 Brains — Models and Evals" />
 <meta name="twitter:description" content="Which local models M1K3 ships, pinned to exact revisions, and how they score on M1K3&#x27;s own on-device eval harness — with the hardware, power mode, app commit and runtime revision beside every number." />
 <meta name="twitter:image" content="https://m1k3.app/og.png" />
 <link rel="alternate" type="application/json" href="/brains.json" />
-<link rel="stylesheet" href="fonts.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="geo.css" />
 </head>
 <body>
@@ -57,7 +60,7 @@
 
   <h2>What ships today</h2>
   <p>Three tiers. Mini answers the quickest turns, Lil fronts the conversation, Big is reached by delegation for deep work. Each MLX model is pinned to one Hugging Face revision and every downloaded file is checked against a SHA-256 digest before it loads, so any mirror can serve the bytes.</p>
-  <div class="table-scroll"><table class="cmp"><thead><tr><th scope="col">Brain</th><th scope="col">Model</th><th scope="col">Pinned</th><th scope="col">Role</th></tr></thead><tbody><tr><td>Mini</td><td>Apple Foundation Models (system)</td><td>ships with macOS 26</td><td>Apple Foundation Models — instant, on the Neural Engine; fronts the quickest turns.</td></tr><tr><td>Lil</td><td><a href="https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit/tree/50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b">mlx-community/Qwen3-4B-Instruct-2507-4bit</a></td><td><code>50d427756c6b</code> · 2,171 MiB</td><td>The fast brain that fronts the conversation — dense Qwen3 4B, no &lt;think&gt; phase.</td></tr><tr><td>Big</td><td><a href="https://huggingface.co/mlx-community/gemma-4-12B-it-4bit/tree/73bcf09092aa277861d5a191b989b666f7f32e8f">mlx-community/gemma-4-12B-it-4bit</a></td><td><code>73bcf09092aa</code> · 6,459 MiB</td><td>Reached by delegation for deep work — Gemma 4 12B, 8-bit quantized KV.</td></tr></tbody></table></div>
+  <div class="table-scroll"><table class="cmp"><thead><tr><th scope="col">Brain</th><th scope="col">Model</th><th scope="col">Pinned</th><th scope="col">Role</th></tr></thead><tbody><tr><th scope="row">Mini</th><td>Apple Foundation Models (system)</td><td>ships with macOS 26</td><td>Apple Foundation Models — instant, on the Neural Engine; fronts the quickest turns.</td></tr><tr><th scope="row">Lil</th><td><a href="https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit/tree/50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b">mlx-community/Qwen3-4B-Instruct-2507-4bit</a></td><td><code>50d427756c6b</code> · 2,171 MiB</td><td>The fast brain that fronts the conversation — dense Qwen3 4B, no &lt;think&gt; phase.</td></tr><tr><th scope="row">Big</th><td><a href="https://huggingface.co/mlx-community/gemma-4-12B-it-4bit/tree/73bcf09092aa277861d5a191b989b666f7f32e8f">mlx-community/gemma-4-12B-it-4bit</a></td><td><code>73bcf09092aa</code> · 6,459 MiB</td><td>Reached by delegation for deep work — Gemma 4 12B, 8-bit quantized KV.</td></tr></tbody></table></div>
 
   <h2>Eval runs</h2>
   <p>The harness runs the same fixtures against each brain through the live path (retrieval, grounding, tools, the agent loop), scores each answer with named checks, and writes this JSON. A repeat is a separate trial. Failures are listed with the scorer's own reason.</p>
@@ -68,7 +71,7 @@ os          macOS 26.4
 app commit  b7e61299
 mlx-swift-lm c97539da
 powermode 0 · live-path yes · n = 2 per fixture
-notes       harness v2 verify-by-launch; pin worktree rebuild running concurrently</pre></div></div><div class="table-scroll"><table class="cmp"><thead><tr><th scope="col">Kind</th><th scope="col">Mini<br><span class="table-note">Apple FM</span></th></tr></thead><tbody><tr><td>tool-use</td><td class="">8/12</td></tr><tr><td>all fixtures</td><td class="yes">8/12</td></tr><tr><td>median latency</td><td>25.8 s</td></tr></tbody></table></div><p class="table-note">passed/total counts every trial; a repeat is a trial. Median, not mean.</p><h4>Failed checks</h4><ul><li><strong>Mini</strong> · <code>tool-search-doc</code> (trial 1) — responsive: 301455ms &gt; ceiling 120000ms (loop thrash?)</li><li><strong>Mini</strong> · <code>tool-read-site</code> (trial 1) — non-empty: 0 chars</li><li><strong>Mini</strong> · <code>tool-read-site</code> (trial 1) — calls fetch_page: called web_search,search_knowledge,datetime</li><li><strong>Mini</strong> · <code>tool-search-doc</code> (trial 2) — responsive: 324145ms &gt; ceiling 120000ms (loop thrash?)</li><li><strong>Mini</strong> · <code>tool-read-site</code> (trial 2) — calls fetch_page: called web_search,search_knowledge,datetime</li></ul>
+notes       harness v2 verify-by-launch; pin worktree rebuild running concurrently</pre></div></div><div class="table-scroll"><table class="cmp"><thead><tr><th scope="col">Kind</th><th scope="col">Mini<br /><span class="table-note">Apple FM</span></th></tr></thead><tbody><tr><th scope="row">tool-use</th><td class="">8/12</td></tr><tr><th scope="row">all fixtures</th><td class="">8/12</td></tr><tr><th scope="row">median latency</th><td>25.8 s</td></tr></tbody></table></div><p class="table-note">passed/total counts every trial; a repeat is a trial. Median, not mean.</p><h4>Failed checks — run 1</h4><ul><li><strong>Mini</strong> · <code>tool-search-doc</code> (trial 1) — responsive: 301455ms &gt; ceiling 120000ms (loop thrash?)</li><li><strong>Mini</strong> · <code>tool-read-site</code> (trial 1) — non-empty: 0 chars</li><li><strong>Mini</strong> · <code>tool-read-site</code> (trial 1) — calls fetch_page: called web_search,search_knowledge,datetime</li><li><strong>Mini</strong> · <code>tool-search-doc</code> (trial 2) — responsive: 324145ms &gt; ceiling 120000ms (loop thrash?)</li><li><strong>Mini</strong> · <code>tool-read-site</code> (trial 2) — calls fetch_page: called web_search,search_knowledge,datetime</li></ul>
 
   <h2>State of play, 2026-09-05</h2>
   <p>What we measured on Apple M1 Max · 64 GB · powermode 0 · nothing else running, through the real app bundle. Dated on purpose: this block ages.</p>
@@ -105,7 +108,7 @@ notes       harness v2 verify-by-launch; pin worktree rebuild running concurrent
 </footer>
 
 <!-- Generated by macos/tools/eval/brains_page.py on 2026-09-05. Do not hand-edit: re-run the generator.
-     Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.85 (numbers are the harness's own JSON;
-     the dated state-of-play block is the 2026-09-05 read-out, measured on this machine). Prior: none (new file). -->
+     Eval numbers are the harness's own JSON; the state-of-play block is the 2026-09-05 read-out
+     (see the generator's MurphySig for provenance and confidence). -->
 </body>
 </html>

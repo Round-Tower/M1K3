@@ -95,5 +95,32 @@
       }
     }
   ],
-  "schemaVersion": 1
+  "schemaVersion": 1,
+  "stateOfPlay": {
+    "date": "2026-09-05",
+    "machine": "Apple M1 Max · 64 GB · powermode 0 · nothing else running",
+    "mtp": [
+      {
+        "accept": "52%",
+        "baselineTokPerSec": "34.0",
+        "mtpTokPerSec": "24.8",
+        "ratio": "0.73×",
+        "regime": "short, no wrap (25 tok)"
+      },
+      {
+        "accept": "40%",
+        "baselineTokPerSec": "9.1",
+        "mtpTokPerSec": "6.3",
+        "ratio": "0.69×",
+        "regime": "medium, wraps mid-decode (588 tok)"
+      },
+      {
+        "accept": "31%",
+        "baselineTokPerSec": "7.9",
+        "mtpTokPerSec": "9.8",
+        "ratio": "1.24× (23-token sample)",
+        "regime": "long, wrapped at prefill (2072 tok)"
+      }
+    ]
+  }
 }
