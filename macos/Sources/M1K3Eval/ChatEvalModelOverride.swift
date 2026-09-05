@@ -72,6 +72,9 @@ public enum ChatEvalModelOverride {
                     "override names '\(parts[0])', which is not a selected MLX brain (\(mlxTiersSelected.joined(separator: ",")))"
                 )
             }
+            guard byTier[parts[0]] == nil else {
+                return .refused("override names '\(parts[0])' twice — one entry per tier")
+            }
             byTier[parts[0]] = parts[1]
         }
         return byTier[tier].map(Resolution.override) ?? .stock

@@ -30,6 +30,21 @@ struct LocalModelConfigTests {
         #expect(LocalModelConfig.modelType(inDirectory: dir) == "qwen3_5")
     }
 
+    @Test("a local path id (an A/B fused dir) is read directly, tilde expanded")
+    func localPathRepoID() throws {
+        let dir = try tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try #"{"model_type":"qwen3"}"#.write(to: dir.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
+        #expect(LocalModelConfig.modelType(forRepoID: dir.path) == "qwen3")
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        if dir.path.hasPrefix(home) {
+            let tilde = "~" + dir.path.dropFirst(home.count)
+            #expect(LocalModelConfig.modelType(forRepoID: tilde) == "qwen3")
+        }
+        // A hub id with nothing on disk is quiet nil, never a throw.
+        #expect(LocalModelConfig.modelType(forRepoID: "acme/never-downloaded-\(UUID().uuidString)") == nil)
+    }
+
     @Test("nil on a missing directory, a missing file, malformed JSON, or a missing key")
     func quietFailures() throws {
         let dir = try tempDir()

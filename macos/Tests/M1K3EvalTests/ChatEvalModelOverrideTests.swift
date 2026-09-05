@@ -73,6 +73,16 @@ struct ChatEvalModelOverrideTests {
         }
     }
 
+    @Test("a tier named twice is refused, not last-write-wins")
+    func duplicateKeyRefused() {
+        let r = ChatEvalModelOverride.resolve(raw: "lil=a,lil=b", tier: "lil", mlxTiersSelected: ["lil", "big"])
+        guard case let .refused(reason) = r else {
+            Issue.record("expected .refused, got \(r)")
+            return
+        }
+        #expect(reason.contains("twice"))
+    }
+
     @Test("the non-MLX tier never sees an override")
     func miniIgnored() {
         #expect(ChatEvalModelOverride.resolve(raw: "x/y", tier: "mini", mlxTiersSelected: ["lil"]) == .stock)
