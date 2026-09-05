@@ -126,6 +126,12 @@ def test_unknown_schema_fails_loudly():
         raise AssertionError("a schema we have never seen must not be silently reshaped")
 
 
+def test_runs_are_ordered_by_date_not_input_order():
+    later = dict(RUN, provenance=dict(RUN["provenance"], date="2026-09-06T09:00:00Z"))
+    doc = bp.document(MANIFEST, [later, RUN], generated="2026-09-06")
+    assert [r["provenance"]["date"][:10] for r in doc["runs"]] == ["2026-09-05", "2026-09-06"]
+
+
 def test_document_is_deterministic_and_sorted():
     a = bp.document(MANIFEST, [RUN], generated="2026-09-05")
     b = bp.document(MANIFEST, [RUN], generated="2026-09-05")

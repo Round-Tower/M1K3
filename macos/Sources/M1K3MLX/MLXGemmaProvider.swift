@@ -448,7 +448,9 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     ) async throws -> ModelContainer {
         // Bound the process-global Metal cache BEFORE any MLX work can run.
         MLXMemoryBudget.applyOnce()
-        return try await loader.value(progress: progress)
+        let container = try await loader.value(progress: progress)
+        MLXMemoryBudget.settle(label: "loaded \(modelIdentifier)") // per-tier: the limit follows the resident brain
+        return container
     }
 
     /// One-shot upstream session for the plain-chat paths: seeded from the

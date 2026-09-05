@@ -23,6 +23,11 @@
 //  MLX grow to ~72–96 GB (the observed 73.9 GB Activity Monitor footprint).
 //  Deliberately tighter than MLX's default (1.5x the device's recommended
 //  working set) because M1K3 shares the machine with the user's real work.
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — the ceiling is now a FLOOR the
+//  per-tier `limit(accommodatingActiveBytes:)` raises for the brain that loaded
+//  (`settle(label:)` after load/release), capped at 75% of RAM, desktop only.
+//  Review fold, same day: settle is serialised (NSLock — the LLM and the embedder both
+//  reclaim) and the raise is quantised to 512 MB so KV wobble never moves the limit.
 //
 
 import Foundation
@@ -103,7 +108,64 @@ public struct MLXMemoryBudget: Sendable, Equatable {
         )
     }
 
+    /// The PER-TIER budget: what the process-global limit should be once a brain of
+    /// `activeBytes` weights is resident. `budget(...)` is the floor a machine gets before
+    /// anything loads (the 12 GB companion ceiling, or the operator override); a brain the
+    /// floor cannot hold makes MLX back-pressure on EVERY decode step (Qwen3.8-27B-4bit,
+    /// 14.7 GB active: 0.1–0.4 tok/s under the 12 GB ceiling, 10–16 tok/s at 24 GB —
+    /// 2026-09-05, AC power). So the limit follows the tier that actually loaded:
+    /// 1.5× its active weights (KV + intermediates headroom, the ratio the 24 GB run
+    /// validated) rounded up to a 512 MB step, never below the floor, never above 75% of RAM unless the operator
+    /// override already floored it higher (that override may reach 90%), and never on
+    /// mobile (the jetsam ceiling is the law there). Driven by the MEASURED weights, not a
+    /// table that drifts from the manifest — a tier's budget is what it weighs.
+    public static func limit(
+        accommodatingActiveBytes activeBytes: Int,
+        physicalMemoryBytes: UInt64,
+        profile: DeviceProfile = .desktop,
+        overrideLimitGB: Int? = nil
+    ) -> Int {
+        let floor = budget(forPhysicalMemory: physicalMemoryBytes, profile: profile, overrideLimitGB: overrideLimitGB)
+            .memoryLimitBytes
+        guard profile == .desktop, activeBytes > 0 else { return floor }
+        // Rounded up to a 512 MB step: `activeMemory` wobbles by tens of MB across turns
+        // (KV + intermediates in the snapshot) and the limit must not chase every wobble.
+        let step = 512 * mebibyte
+        let needed = (activeBytes / 2 * 3 + step - 1) / step * step
+        let threeQuarters = Int(physicalMemoryBytes / 4 * 3)
+        return max(floor, min(needed, threeQuarters))
+    }
+
+    /// Re-settle the process-global limit around the brain that is resident NOW: called
+    /// after a model loads (raise for a big tier) and from `reclaim` (after a release,
+    /// fall back to the floor). Idempotent; logs only when the limit actually moves.
+    /// Serialised: the LLM provider and the embedder are separate classes that both
+    /// `reclaim`, and the read → compare → write on the process-global limit must not
+    /// interleave (two racing settles could pin a just-loaded big brain to the small
+    /// tier's floor and bring the back-pressure straight back).
+    public static func settle(label: String) {
+        applyOnce()
+        settleLock.lock()
+        defer { settleLock.unlock() }
+        #if os(iOS) || os(visionOS)
+            let profile = DeviceProfile.mobile
+        #else
+            let profile = DeviceProfile.desktop
+        #endif
+        let override = UserDefaults.standard.integer(forKey: "mlxMemoryLimitGB")
+        let active = MLX.Memory.snapshot().activeMemory
+        let target = limit(
+            accommodatingActiveBytes: active, physicalMemoryBytes: ProcessInfo.processInfo.physicalMemory,
+            profile: profile, overrideLimitGB: override > 0 ? override : nil
+        )
+        let current = MLX.Memory.memoryLimit
+        guard target != current else { return }
+        MLX.Memory.memoryLimit = target
+        log.notice("\(label, privacy: .public): memoryLimit \(current / mebibyte)MB → \(target / mebibyte)MB for \(active / mebibyte)MB active weights")
+    }
+
     private static let log = Logger(subsystem: "app.m1k3", category: "mlx-memory")
+    private static let settleLock = NSLock()
 
     /// One-shot application of this machine's budget to the process-global MLX
     /// memory state. Thread-safe and idempotent (static-let once token); call
@@ -136,6 +198,9 @@ public struct MLXMemoryBudget: Sendable, Equatable {
     public static func reclaim(label: String) {
         MLX.Memory.clearCache()
         logSnapshot(label: label)
+        // After a release the resident weights are gone: fall back to the floor. After an
+        // ordinary generation the target is unchanged and this is a snapshot + compare.
+        settle(label: label)
     }
 
     /// Log MLX memory (active/cache/peak) plus the process physical
