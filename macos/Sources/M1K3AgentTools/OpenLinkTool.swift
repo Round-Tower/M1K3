@@ -37,10 +37,14 @@ public struct OpenLinkTool: AgentTool {
     private let onOpen: @Sendable (URL) -> Void
     private let fetcher: any HTTPFetching
 
+    /// The brief's fetch timeout, shared with the MCP `open_link` surface
+    /// (MCPHostController) so the two can't drift (#207 review 4).
+    public static let briefFetchTimeout: TimeInterval = 8
+
     /// The brief's reader is the tight no-retry fetch web_search's deepen uses:
     /// a slow or JS-only page bails fast; the panel has already opened either way.
     public init(
-        fetcher: any HTTPFetching = URLSessionHTTPFetcher(timeout: 8),
+        fetcher: any HTTPFetching = URLSessionHTTPFetcher(timeout: briefFetchTimeout),
         onOpen: @escaping @Sendable (URL) -> Void
     ) {
         self.fetcher = fetcher

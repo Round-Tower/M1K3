@@ -156,7 +156,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", help="write the Swift drafts here instead of stdout")
     args = ap.parse_args(argv)
     if args.jsonl:
-        rows = rows_from_jsonl(open(args.jsonl, encoding="utf-8").read())
+        with open(args.jsonl, encoding="utf-8") as f:
+            rows = rows_from_jsonl(f.read())
     else:
         if not os.path.exists(args.sqlite):
             print(f"no database at {args.sqlite}", file=sys.stderr)

@@ -294,7 +294,9 @@ final class MCPHostController {
             throw MCPVoiceError("M1K3 won't open local or private-network addresses.")
         }
         env.review.open(url: url)
-        let sources = await OpenLinkTool.gather(url: url, fetcher: URLSessionHTTPFetcher(timeout: 8))
+        let sources = await OpenLinkTool.gather(
+            url: url, fetcher: URLSessionHTTPFetcher(timeout: OpenLinkTool.briefFetchTimeout)
+        )
         return PageBrief.render(url: url, sources: sources)
     }
 
