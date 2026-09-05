@@ -245,7 +245,8 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
         // configuration. `ToolCallFormat.infer` matches model_type == "gemma"
         // EXACTLY, so Gemma-3/3n (and Qwen) would silently fall back to .json
         // and never parse — we set the format explicitly per model family.
-        let resolved = Self.resolveToolCallFormat(for: configuration)
+        let modelType = LocalModelConfig.modelType(forRepoID: configuration.name)
+        let resolved = Self.resolveToolCallFormat(for: configuration, modelType: modelType)
         resolvedToolCallFormat = resolved
         self.thinkingEnabled = thinkingEnabled
         modelIdentifier = configuration.name

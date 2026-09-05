@@ -251,8 +251,18 @@ extension MLXGemmaProvider: ToolCallingProvider {
     /// configuration wins; otherwise the model family decides. `nil` means we
     /// don't recognise the family → the agent falls back to the ReAct floor
     /// rather than running a native loop that will never parse a call.
-    static func resolveToolCallFormat(for configuration: ModelConfiguration) -> ToolCallFormat? {
+    ///
+    /// `modelType` is config.json's `model_type` when the repo is already on
+    /// disk (`LocalModelConfig`). It decides FIRST: the architecture names the
+    /// dialect regardless of what the repo is called — "Qwen3.8-27B" is
+    /// model_type qwen3_5 and speaks XML functions, but the name arm alone
+    /// read "qwen" and picked JSON, which degrades tool-use to 0/5 silently.
+    /// An unknown type falls through to the name heuristic (never to nil).
+    static func resolveToolCallFormat(
+        for configuration: ModelConfiguration, modelType: String? = nil
+    ) -> ToolCallFormat? {
         if let explicit = configuration.toolCallFormat { return explicit }
+        if let byType = modelType.flatMap(toolCallFormat(forModelType:)) { return byType }
         let name = configuration.name.lowercased()
         // Gemma 4 emits a NEW dialect (<|tool_call>…<tool_call|>, escape <|"|>) parsed by
         // upstream's GemmaFunctionParser(.gemma4) — available since #183 now that we build
@@ -267,8 +277,11 @@ extension MLXGemmaProvider: ToolCallingProvider {
         // <parameter=…> template verified against HF 2026-07-17, the
         // re-verification the old nil pin demanded. Exact size id: the 8B is
         // dense Qwen3 and rides the .json arm below.
+        // Qwen3.8 (Aug 2026) is the same qwen3_5 family under a new number —
+        // config verified 2026-09-05. Listed by name for the pre-download case;
+        // once config.json is on disk the model_type arm above owns it.
         if name.contains("qwen3.5") || name.contains("qwen3_5") || name.contains("qwen3-5")
-            || name.contains("ternary-bonsai-27b")
+            || name.contains("qwen3.8") || name.contains("ternary-bonsai-27b")
         {
             return .xmlFunction
         }
@@ -282,6 +295,22 @@ extension MLXGemmaProvider: ToolCallingProvider {
             || name.contains("mistral") || name.contains("phi") { return .json }
         if name.contains("glm") { return .glm4 }
         if name.contains("lfm2") { return .lfm2 }
+        return nil
+    }
+
+    /// The dialect by architecture (`config.json` model_type), for the families
+    /// whose template we have verified. Mirrors upstream's registry names
+    /// (`LLMModelFactory` / `VLMModelFactory` keys); a type not listed here
+    /// returns nil so the caller falls back to the name heuristic.
+    static func toolCallFormat(forModelType modelType: String) -> ToolCallFormat? {
+        let type = modelType.lowercased()
+        if type.hasPrefix("gemma4") { return .gemma4 }
+        if type.hasPrefix("gemma3") || type == "gemma" || type == "gemma2" { return .gemma }
+        if type.hasPrefix("qwen3_5") || type == "qwen3_next" { return .xmlFunction }
+        if type == "qwen3" || type == "qwen3_moe" || type == "qwen2" || type == "llama" || type == "phi3"
+            || type == "mistral" || type == "mistral3" { return .json }
+        if type.hasPrefix("glm4") { return .glm4 }
+        if type.hasPrefix("lfm2") { return .lfm2 }
         return nil
     }
 
