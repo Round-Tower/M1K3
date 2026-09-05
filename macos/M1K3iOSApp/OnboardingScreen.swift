@@ -114,7 +114,9 @@ struct OnboardingScreen: View {
                 AvatarSurface(controller: core.avatar)
                     .scaleEffect(1.15)
                     .opacity(0.85)
-                if CompanionSpec.named(companion) != nil {
+                // Same test AvatarSurface uses to render a creature — a spec with no
+                // installed assets falls back to the pixel face, which has its own CRT.
+                if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
                     CRTOverlay()
                 }
             }
@@ -141,13 +143,6 @@ struct OnboardingScreen: View {
                 case let .tier(tier): brainCard(tier)
                 case .brainAtHome: homeCard
                 }
-            }
-            if let note = menu.note {
-                Text(note)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 4)
             }
         }
         .padding(.horizontal, 20)
