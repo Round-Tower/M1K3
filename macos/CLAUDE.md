@@ -134,8 +134,8 @@ shell that wires concrete backends to the seams; `AppEnvironment` (+ its
 | `M1K3ScreensaverCore` | The M1K3 screensaver's pure model (Foundation-only, so the sandboxed `legacyScreenSaver` process links no app modules): the M mark geometry (`PixelMark`, same 5×7 map as the app icon), the ambient rain sim (`RainField`, deterministic), the presence copy (`PresenceFormatter`), and `ScreenSaverInstall` (the sandbox-safe install helper — status/path). The `.saver` bundle target (`M1K3Screensaver/`) draws it in AppKit; the app embeds the .saver and installs it via a Settings ▸ General button. |
 
 **Brains** (`BrainTier.swift`): three tiers — **Mini** (Apple Foundation Models,
-instant, no download), **Lil** (`Qwen3-4B-Instruct-2507-4bit`, since 2026-07-16 —
-the non-thinking refresh; the reasoning toggle is pinned off for the 2507 line),
+instant, no download), **Lil** (`Qwen3-4B-Instruct-2507-4bit-DWQ-2510`, since 2026-09-05 — the DWQ
+recipe of the 2026-07-16 non-thinking refresh; the reasoning toggle is pinned off for the 2507 line),
 **Big** (`gemma-4-12B-it-4bit`, since 2026-07-15 — 16GB selection floor).
 First run is **Mini-first** (one screen, `HelloView` — instant AFM, nothing to
 download); Lil/Big are opt-in upgrades surfaced after the first answer or in
@@ -171,7 +171,7 @@ format runs **native** (`runNative`); otherwise the **ReAct** floor
   (renamed from `dev.murphysig.M1K3` on 2026-06-14 — translate any old ref on
   read). MLX LLM weights live **inside the sandbox container** under
   `~/Library/Containers/app.m1k3/Data/Library/Application Support/models/<org>/<repo>/`
-  — moved OUT of `…/Library/Caches/models/` on 2026-07-31 because macOS
+  — moved OUT of `…/Library/Caches/models/` on 2026-08-02 (#92) because macOS
   purges Caches under disk pressure and really did eat the brains (twice in
   one afternoon, log-evidenced); `ModelStoreLocation` migrates a surviving
   Caches store across on first touch. `DEVELOPMENT_TEAM` is pinned in `project.yml` because a

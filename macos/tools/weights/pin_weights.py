@@ -41,15 +41,21 @@ import urllib.request
 # see WeightIntegrity.Verdict.unpinned for why that stays permissive.
 # Two download bases, because the 2.x layout is preserved byte-for-byte so
 # existing caches keep working (see HuggingFaceBridge): LLM weights under
-# Caches, embedder weights under Documents. Both flow through the same
+# Application Support (Caches until #92), embedder weights under Documents. Both flow through the same
 # HubApiDownloader.download choke point, so both are enforceable.
 CONTAINER = pathlib.Path.home() / "Library/Containers/app.m1k3/Data"
-LLM_CACHE = CONTAINER / "Library/Caches/models"
+# LLM weights moved from Library/Caches to Application Support on 2026-08-02
+# (#92, 3379ed9f: macOS purges Caches under disk pressure). ModelStoreLocation is the
+# Swift source of truth; this mirrors it.
+LLM_CACHE = CONTAINER / "Library/Application Support/models"
 EMBEDDER_CACHE = CONTAINER / "Documents/huggingface/models"
 
 SHIPPED_REPOS = {
     "mlx-community/gemma-4-12B-it-4bit": LLM_CACHE,
-    "mlx-community/Qwen3-4B-Instruct-2507-4bit": LLM_CACHE,
+    # Lil: the DWQ-2510 recipe of the same Qwen3-4B-Instruct-2507 weights beat
+    # the plain 4-bit 18/21 vs 15/21 (security 6/7 vs 3/7; x3 repeats 16/21 vs
+    # 12/21) on 2026-09-05 — docs/evals/2026-09-05-lil-*.json.
+    "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": LLM_CACHE,
     # The retrieval embedder. Smaller, but it is still third-party weights
     # fetched at runtime and fed to MLX — the same exposure, just quieter.
     "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ": EMBEDDER_CACHE,
@@ -59,6 +65,19 @@ SHIPPED_REPOS = {
 # app never has to guess. Derived from the cache path above rather than listed
 # separately — a second list is a second thing to forget to update.
 BASE_NAMES = {LLM_CACHE: "llm", EMBEDDER_CACHE: "embedder"}
+
+# Per-file notes emitted as comments above the pinned entry. The generator
+# owns this file end to end, so a note that lives only in the .swift output is
+# wiped by the next re-pin (the gemma template note was lost exactly that way
+# on 2026-09-05). Keep the WHY of any hash that is not the raw snapshot here.
+FILE_NOTES: dict[tuple[str, str], str] = {
+    ("mlx-community/gemma-4-12B-it-4bit", "chat_template.jinja"): (
+        "NOT the snapshot's template: Gemma4TemplateFix installs\n"
+        "Google's 2026-07-09 canonical over the stale 2026-06-03 one\n"
+        "BEFORE the scan runs, so the manifest pins the healed bytes\n"
+        "(vendored resource, sha re-verified on every read)."
+    ),
+}
 
 # Deliberately NO suffix filter. An earlier cut mirrored mlx-swift-lm's
 # `modelDownloadPatterns` as a hardcoded tuple, which security review flagged
@@ -232,6 +251,8 @@ def swift_literal(pins: dict[str, tuple[str, dict[str, dict]]]) -> str:
         lines.append(f'            revision: "{revision}",')
         lines.append("            files: [")
         for name, meta in sorted(files.items()):
+            if note := FILE_NOTES.get((repo, name)):
+                lines.extend(f"                // {line}" for line in note.splitlines())
             lines.append(
                 f'                "{name}": '
                 f'.init(size: {swift_int(meta["size"])}, sha256: "{meta["sha256"]}"),'

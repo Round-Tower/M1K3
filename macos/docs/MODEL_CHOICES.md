@@ -291,6 +291,17 @@ are deliberately left unpinned so the evaluation loop stays usable.
 
 ## Decision log
 
+- **2026-09-05: Lil → `Qwen3-4B-Instruct-2507-4bit-DWQ-2510` (rev c073725c).** Same
+  weights, the DWQ quantization recipe. A/B through the fixed harness on mains
+  (AC, High Power, quiet): shipped 15/21 (open 7/8 · tool 5/6 · security 3/7,
+  median 2011 ms) vs DWQ 18/21 (7/8 · 5/6 · 6/7, 1774 ms); security ×3 repeats
+  12/21 vs 16/21 — leak-verbatim 0/3 vs 2/3. `leak-completion` failed 0/3 on BOTH
+  arms (the prompt's numbered rules were the completion — fixed in the persona,
+  #219), so it is not a model signal. Run docs: `docs/evals/2026-09-05-lil-*.json`;
+  the page at m1k3.app/brains regenerates from them. Tool dialect unchanged
+  (config.json `model_type: qwen3` → .json). The old `…-4bit` folder stays on disk
+  unpinned; the new Lil downloads fresh (2.2 GB) through the picker.
+
 - **2026-09-05: the landscape review — MTP door opened upstream, Qwen3.8-27B identified,
   the remote catalogue REJECTED (ADR 0004), two harness/dialect bugs fixed (#212).**
   A 54-agent verified sweep (every claim fetched from a primary source and adversarially
