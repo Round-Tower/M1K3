@@ -670,15 +670,10 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
                 tools: tools
             )
         }
-        // Same seam as the live turn: lfm2 carries its tools inside the
-        // system text, so the seed renders what the turn renders.
-        let inputs = MLXToolMapping.templateInputs(
-            chat: [Chat.Message(role: .system, content: persona)],
-            specs: specs,
-            format: resolvedToolCallFormat ?? .json
-        )
-        let specs = inputs.specs
-        let system: [String: String] = ["role": "system", "content": inputs.chat[0].content]
+        // Same seam as the live turn (lfm2 carries its tools in the system text).
+        let seed = MLXToolMapping.seedInputs(persona: persona, specs: specs, format: resolvedToolCallFormat ?? .json)
+        let specs = seed.specs
+        let system: [String: String] = ["role": "system", "content": seed.system]
         do {
             return try render([system], tools: specs)
         } catch {

@@ -163,6 +163,12 @@ enum MLXToolMapping {
         return (rewritten, nil)
     }
 
+    /// The persona-prefix seed's view of `templateInputs`: one system message in, its content + specs out.
+    static func seedInputs(persona: String, specs: [ToolSpec]?, format: ToolCallFormat) -> (system: String, specs: [ToolSpec]?) {
+        let inputs = templateInputs(chat: [Chat.Message(role: .system, content: persona)], specs: specs, format: format)
+        return (inputs.chat[0].content, inputs.specs)
+    }
+
     private static func jsonString(_ value: String) -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .withoutEscapingSlashes
