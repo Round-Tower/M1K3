@@ -62,6 +62,14 @@ struct MobileBrainMenuTests {
         #expect(!menu.options.contains(.tier(.big)))
     }
 
+    @Test("hasLocalBrain is false only when Home is the sole row — the auto-activate trigger")
+    func hasLocalBrain() {
+        #expect(!MobileBrainMenu.resolve(afm: .blocked(userFixable: false), physicalMemoryGB: 2.9).hasLocalBrain)
+        #expect(MobileBrainMenu.resolve(afm: .blocked(userFixable: false), physicalMemoryGB: 11.7).hasLocalBrain)
+        #expect(MobileBrainMenu.resolve(afm: .blocked(userFixable: true), physicalMemoryGB: 2.9).hasLocalBrain)
+        #expect(MobileBrainMenu.resolve(afm: .available, physicalMemoryGB: 2.9).hasLocalBrain)
+    }
+
     @Test("Brain at Home is always the last option")
     func homeIsLast() {
         for gb in [2.9, 11.7, 16] {

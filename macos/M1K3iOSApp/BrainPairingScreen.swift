@@ -16,6 +16,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — the viewfinder mounts only once camera access is AUTHORIZED
 //  (request first; denied → a Settings link). Fixes the dark scanner on the iPad (QA pass, item 12). Confidence now
 //  0.8 (verify-by-launch on the iPad).
+//  Review: Kev + claude-fable-5.1, 2026-09-05 — the done copy follows what actually happened (auto-activated / pair
+//  again on a Home-only device / choose Home). Confidence now 0.85.
 //
 
 #if os(iOS)
@@ -65,7 +67,7 @@ struct BrainPairingScreen: View {
             case .done:
                 Section {
                     Label(
-                        "Paired with \(core.homeBrain?.name ?? "your Mac"). Choose Home under Brain to use it.",
+                        doneCopy,
                         systemImage: "checkmark.circle.fill"
                     )
                     .foregroundStyle(.green)
@@ -146,6 +148,15 @@ struct BrainPairingScreen: View {
         } footer: {
             Text("Codes expire after about a minute.")
         }
+    }
+
+    /// Home-only device + auto-activation failed (keychain read race) must not
+    /// be told to "choose Home" — there is nothing else to choose; say pair again.
+    private var doneCopy: String {
+        let name = core.homeBrain?.name ?? "your Mac"
+        if core.homeBrainActive { return "Paired with \(name) — using its brain now." }
+        if !core.brainMenu.hasLocalBrain { return "Paired with \(name), but its key couldn’t be read — pair again." }
+        return "Paired with \(name). Choose Home under Brain to use it."
     }
 
     private func begin(_ code: String) {
