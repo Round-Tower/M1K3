@@ -40,7 +40,7 @@ import Foundation
 
 /// The capability dimension a fixture probes. Canonical order is the report's
 /// row order.
-public enum TaskKind: String, Sendable, CaseIterable, Equatable {
+public enum TaskKind: String, Sendable, CaseIterable, Equatable, Codable {
     case openChat = "open-chat"
     case groundedQ = "grounded-Q"
     case reasoning
