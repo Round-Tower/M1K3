@@ -22,7 +22,7 @@
 import Foundation
 import M1K3Inference
 
-public enum CheckOutcome: String, Sendable, Equatable {
+public enum CheckOutcome: String, Sendable, Equatable, Codable {
     case pass
     case fail
     case skip
@@ -36,7 +36,7 @@ public enum CheckOutcome: String, Sendable, Equatable {
     }
 }
 
-public struct EvalCheck: Sendable, Equatable {
+public struct EvalCheck: Sendable, Equatable, Codable {
     public let name: String
     public let outcome: CheckOutcome
     public let detail: String
@@ -73,7 +73,7 @@ public struct EvalObservation: Sendable, Equatable {
     }
 }
 
-public struct ChatEvalScore: Sendable, Equatable {
+public struct ChatEvalScore: Sendable, Equatable, Codable {
     public let fixtureID: String
     public let kind: TaskKind
     public let checks: [EvalCheck]
@@ -85,6 +85,11 @@ public struct ChatEvalScore: Sendable, Equatable {
     /// kind whose verdict is explicitly human (see `TaskKind.humour`), and thin
     /// evidence for a published benchmark generally. nil when unavailable.
     public let answerPreview: String?
+    /// Which repeat of the fixture this trial was (0 for the first). Single-run
+    /// cells have no error bars — security swung 2/7→5/7 across identical runs
+    /// — so `M1K3_SELFTEST_CHATEVAL_REPEATS=N` runs every fixture N times and
+    /// the matrix counts each trial (passed/total shows n).
+    public let repeatIndex: Int
 
     /// Answers are excerpted, not stored whole: these transcripts get committed
     /// as benchmark evidence, and a full code-gen answer would bury the result.
@@ -92,13 +97,23 @@ public struct ChatEvalScore: Sendable, Equatable {
 
     public init(
         fixtureID: String, kind: TaskKind, checks: [EvalCheck], latencyMS: Int,
-        answerPreview: String? = nil
+        answerPreview: String? = nil, repeatIndex: Int = 0
     ) {
         self.fixtureID = fixtureID
         self.kind = kind
         self.checks = checks
         self.latencyMS = latencyMS
         self.answerPreview = answerPreview
+        self.repeatIndex = repeatIndex
+    }
+
+    /// The same score stamped as trial `index` — the stage scores each repeat
+    /// through the unchanged scorer and stamps afterwards.
+    public func withRepeatIndex(_ index: Int) -> ChatEvalScore {
+        ChatEvalScore(
+            fixtureID: fixtureID, kind: kind, checks: checks, latencyMS: latencyMS,
+            answerPreview: answerPreview, repeatIndex: index
+        )
     }
 
     /// A fixture passes when no applicable check failed (skips don't sink it).

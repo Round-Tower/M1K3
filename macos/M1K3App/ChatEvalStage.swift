@@ -269,7 +269,54 @@ enum ChatEvalStage {
             runs.append(ChatEvalReport.BrainRun(brainID: tier.rawValue, modelID: modelID, scores: scores))
         }
         emit("")
+        let provenance = currentProvenance()
+        emit(provenance.rendered)
+        emit("")
         emit(ChatEvalReport.matrix(runs))
+        // The machine-readable primary artifact, beside the text transcript
+        // (<OUT>.json). Sorted keys, so two runs diff line by line.
+        let document = ChatEvalDocument(provenance: provenance, runs: runs)
+        let jsonURL = URL(fileURLWithPath: SelfTest.outputPath + ".json")
+        do {
+            try ChatEvalReport.json(document).write(to: jsonURL)
+            emit("• chateval json → \(jsonURL.lastPathComponent)")
+        } catch {
+            emit("  – chateval json NOT written: \(String(describing: error).prefix(80))")
+        }
+    }
+
+    /// Trials per fixture (M1K3_SELFTEST_CHATEVAL_REPEATS=N, default 1). A
+    /// single-run cell has no error bars — security swung 2/7→5/7 across
+    /// identical runs — so n is a first-class knob and shows in passed/total.
+    static var repeats: Int {
+        max(1, SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_REPEATS").flatMap(Int.init) ?? 1)
+    }
+
+    /// What the harness can read off THIS machine, plus what the caller states.
+    /// Nothing inferred: the app commit and the mlx-swift-lm revision come from
+    /// the environment (`M1K3_SELFTEST_APP_COMMIT`, `M1K3_SELFTEST_MLX_REVISION`)
+    /// because a bundle cannot know its own pin; unset → nil, never a guess.
+    static func currentProvenance() -> EvalProvenance {
+        let info = ProcessInfo.processInfo
+        let gb = Int((Double(info.physicalMemory) / 1_073_741_824).rounded())
+        var size = 0
+        sysctlbyname("machdep.cpu.brand_string", nil, &size, nil, 0)
+        var chip = [CChar](repeating: 0, count: max(size, 1))
+        sysctlbyname("machdep.cpu.brand_string", &chip, &size, nil, 0)
+        let chipName = String(cString: chip).trimmingCharacters(in: .whitespacesAndNewlines)
+        let v = info.operatingSystemVersion
+        return EvalProvenance(
+            date: ISO8601DateFormatter().string(from: Date()),
+            hardware: "\(chipName.isEmpty ? "unknown chip" : chipName) · \(gb) GB",
+            osVersion: "macOS \(v.majorVersion).\(v.minorVersion)" + (v.patchVersion > 0 ? ".\(v.patchVersion)" : ""),
+            appCommit: SelfTestEnv.value("M1K3_SELFTEST_APP_COMMIT")
+                ?? (Bundle.main.object(forInfoDictionaryKey: "GitCommitSHA") as? String),
+            mlxSwiftLMRevision: SelfTestEnv.value("M1K3_SELFTEST_MLX_REVISION"),
+            powerMode: info.isLowPowerModeEnabled ? 1 : 0,
+            livePath: livePathRequested,
+            repeats: repeats,
+            notes: SelfTestEnv.value("M1K3_SELFTEST_NOTES")
+        )
     }
 
     /// Brains to run: M1K3_SELFTEST_CHATEVAL_BRAINS=mini,lil narrows it (a full
@@ -327,19 +374,22 @@ enum ChatEvalStage {
 
         let kinds = selectedKinds()
         var scores: [ChatEvalScore] = []
-        for fixture in ChatEvalFixtures.all where kinds?.contains(fixture.kind) ?? true {
-            // Bracket every fixture. The gap between one `fixture done` and the
-            // next `fixture start` is time the harness spends OUTSIDE the turn,
-            // and on 2026-08-10 that gap was 177s before `chat-capabilities`
-            // with nothing in the log to explain it. Whatever it is, it is now
-            // bounded by two timestamps instead of inferred from silence.
-            Self.evalLog.notice("fixture start: \(fixture.id, privacy: .public)")
-            let score = await runFixture(fixture, provider: provider)
-            Self.evalLog.notice(
-                "fixture done: \(fixture.id, privacy: .public) \(score.latencyMS, privacy: .public)ms"
-            )
-            emit(score.rendered)
-            scores.append(score)
+        let trials = repeats
+        for trial in 0 ..< trials {
+            for fixture in ChatEvalFixtures.all where kinds?.contains(fixture.kind) ?? true {
+                // Bracket every fixture. The gap between one `fixture done` and the
+                // next `fixture start` is time the harness spends OUTSIDE the turn,
+                // and on 2026-08-10 that gap was 177s before `chat-capabilities`
+                // with nothing in the log to explain it. Whatever it is, it is now
+                // bounded by two timestamps instead of inferred from silence.
+                Self.evalLog.notice("fixture start: \(fixture.id, privacy: .public)")
+                let score = await runFixture(fixture, provider: provider).withRepeatIndex(trial)
+                Self.evalLog.notice(
+                    "fixture done: \(fixture.id, privacy: .public) \(score.latencyMS, privacy: .public)ms"
+                )
+                emit(trials > 1 ? "  [trial \(trial + 1)/\(trials)] " + score.rendered : score.rendered)
+                scores.append(score)
+            }
         }
         return scores
     }

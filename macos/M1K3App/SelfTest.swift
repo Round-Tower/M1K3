@@ -79,7 +79,7 @@ enum SelfTest {
 
     /// Where the streamed report goes. A bundled GUI .app sends stdio to the
     /// unified log, not an inherited fd — so we write to a file we can read back.
-    private static var outputPath: String {
+    static var outputPath: String {
         SelfTestEnv.value("M1K3_SELFTEST_OUT") ?? "/tmp/m1k3_selftest.log"
     }
 

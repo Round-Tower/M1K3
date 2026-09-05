@@ -84,7 +84,18 @@ python3 tools/eval/scorecard.py \
 
 Useful knobs: `M1K3_SELFTEST_CHATEVAL_KINDS` (comma-separated, e.g.
 `tool-use,world-knowledge`), `M1K3_SELFTEST_CHATEVAL_MLX_MODEL` (point a tier
-at a different hub id — how challenger models are A/B'd).
+at a different hub id or local fused dir — how challenger models are A/B'd;
+a bare id applies only when ONE MLX brain is selected, otherwise use the
+per-tier form `lil=<id>,big=<id>` — anything ambiguous is refused, never
+guessed), `M1K3_SELFTEST_CHATEVAL_REPEATS=N` (trials per fixture; the matrix
+counts every trial so `passed/total` shows n — single-run cells have no error
+bars, security swung 2/7→5/7 across identical runs), and
+`M1K3_SELFTEST_APP_COMMIT` / `M1K3_SELFTEST_MLX_REVISION` / `M1K3_SELFTEST_NOTES`
+(provenance the bundle cannot know about itself). Every run writes a
+**PROVENANCE** header (hardware, OS, power mode, live-path, repeats) into the
+transcript AND a `<OUT>.json` beside it — a Codable `ChatEvalDocument`
+(schemaVersion 1, sorted keys) that is the primary artifact: what a promotion
+PR cites and what the site's `brains.json` is generated from (ADR 0004).
 
 > ⚠️ **`M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1` is in the config above deliberately
 > — do not drop it.** Without it, every kind except `grounded-Q` and `tool-use`

@@ -16,7 +16,7 @@ import Foundation
 
 public enum ChatEvalReport {
     /// One brain's run: its id and every fixture score, in fixture order.
-    public struct BrainRun: Sendable, Equatable {
+    public struct BrainRun: Sendable, Equatable, Codable {
         public let brainID: String
         /// The model that actually ran under this tier's name (hub id or local
         /// path) — nil for tiers with no swappable model (Mini). Without it an
