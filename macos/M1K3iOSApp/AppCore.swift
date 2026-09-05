@@ -265,11 +265,18 @@ final class AppCore {
         // A persisted pick below its mobile memory floor eases to Mini — the
         // crash-loop breaker (#227): Lil on a 3 GB iPad was killed mid-load and
         // every relaunch walked straight back into the same wall.
+        let storedBrainRaw = UserDefaults.standard.string(forKey: Self.selectedBrainKey)
         let restored = BrainTier.selectableOrEased(
-            UserDefaults.standard.string(forKey: Self.selectedBrainKey)
-                .flatMap(BrainTier.init(persisted:)) ?? .mini,
+            storedBrainRaw.flatMap(BrainTier.init(persisted:)) ?? .mini,
             forPhysicalMemoryGB: Self.physicalMemoryGB, platform: .mobile
         )
+        // Persist the eased pick (the Mac's restore does the same): makeResponder's
+        // brain-name / thinking / grounding-budget closures read the KEY, not
+        // `selectedBrain` — without this they would size prompts for Lil while
+        // Mini answers (#228 review).
+        if let storedBrainRaw, storedBrainRaw != restored.rawValue {
+            UserDefaults.standard.set(restored.rawValue, forKey: Self.selectedBrainKey)
+        }
         let brain = (restored.mlxModelID != nil && !Self.mlxAvailable) ? .mini : restored
         selectedBrain = brain
 
@@ -367,7 +374,7 @@ final class AppCore {
             selectBrain(.mini)
             brainNote = floor.isFinite
                 ? "\(tier.displayName) needs \(Int(floor)) GB of memory — this device has "
-                + "\(Int(Self.physicalMemoryGB.rounded())) GB. Staying on Mini."
+                + "\(Int(Self.physicalMemoryGB.rounded(.down))) GB. Staying on Mini."
                 : "\(tier.displayName) doesn't run on this device. Staying on Mini."
             return
         }
