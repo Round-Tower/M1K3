@@ -157,16 +157,19 @@ def test_html_carries_provenance_and_stays_offline():
     html = bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-05"))
     for needle in ("Apple M1 Max", "b7e61299", "c97539da", "power ac · powermode 2", "n = 2", "3/4", "tool-search-doc"):
         assert needle in html, needle
+    # offline means offline: the type is self-hosted (site/fonts.css), never a Google Fonts request
+    assert "fonts.googleapis.com" not in html and "fonts.gstatic.com" not in html
+    assert 'href="fonts.css"' in html and "vt323-latin-400-normal.woff2" in html
+    # the phosphor mark rides beside the wordmark, same as every other page
+    assert 'class="mark"' in html and 'src="favicon.svg"' in html
     # the read-out's editorial facts ride along, dated
     assert "Qwen3.8-27B" in html and "0.73" in html and "0.66" in html
     # a legacy run without powerSource renders as unknown, never as a guess
     legacy = dict(RUN, provenance={k: v for k, v in RUN["provenance"].items() if k != "powerSource"})
     assert "power unknown · powermode 2" in bp.render_html(bp.document(MANIFEST, [legacy], generated="2026-09-05"))
-    # the same shell as the other answer pages (site/vs-ollama.html head): geo.css + the shared font links, no <script>
+    # the same shell as the other answer pages (site/vs-ollama.html head): geo.css + the self-hosted fonts.css, no <script>
     assert "<script" not in html
     assert 'href="geo.css"' in html
-    assert "fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono" in html
-    assert "fonts.css" not in html  # does not exist on master
     # the full-pass emphasis class is earned, not default: Mini is 4/5 here
     assert '<td class="">4/5</td>' in html and '<td class="yes">1/1</td>' in html
     assert '<th scope="row">tool-use</th>' in html

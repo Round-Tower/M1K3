@@ -130,6 +130,7 @@
     backdrop-filter: blur(2px);
   }
   .wordmark { font-family: var(--pixel); font-size: 28px; color: var(--ink-bright); text-decoration: none; text-shadow: var(--glow); }
+  .wordmark .mark { width: 22px; height: 22px; vertical-align: -3px; margin-right: 8px; filter: drop-shadow(0 0 6px rgba(255,255,255,.55)); }
   .wordmark .cursor { animation: blink 1.1s step-end infinite; }
   nav .links { display: flex; gap: 32px; align-items: center; }
   nav .links a {
@@ -208,8 +209,14 @@
     font-family: var(--pixel); font-size: clamp(48px, 6vw, 80px);
     color: var(--ink-bright); line-height: 1; text-shadow: var(--glow-soft);
   }
-  /* VT323's lone "0" is a tall terminal glyph; widen it so it reads as a pixel zero (matches the App Store frames) */
-  .stat .num.zero { display: inline-block; transform: scaleX(1.45); transform-origin: 0 50%; }
+  /* VT323's "0" is a tall terminal glyph; every zero in the strip is widened so it reads as a
+     pixel zero (matches the App Store frames). The decode script wraps them in .z as it settles. */
+  .stat .num .z { display: inline-block; transform: scaleX(1.45); transform-origin: 0 50%; margin-right: .18em; }
+  .band-label { max-width: 1200px; margin: 0 auto; padding: 72px 40px 0; }
+  .band-label .label { color: var(--ink); }
+  .band-label + .band-inner { padding-top: 32px; }
+  .stat .desc a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .stat .desc a:hover { color: var(--ink-bright); }
   .stat .desc { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); letter-spacing: 0.08em; margin-top: 10px; line-height: 1.7; }
 
   /* features */
@@ -380,7 +387,7 @@
 <div class="vignette"></div>
 
 <nav>
-  <a class="wordmark" href="#">M1K3<span class="cursor">_</span></a>
+  <a class="wordmark" href="#"><img class="mark" src="favicon.svg" alt="" width="22" height="22" />M1K3<span class="cursor">_</span></a>
   <div class="links">
     <a href="#private">Private</a>
     <a href="#features">Features</a>
@@ -412,9 +419,10 @@
 <!-- ================= PRIVACY BAND ================= -->
 <hr class="rule" />
 <div class="band" id="private">
+  <div class="band-label reveal"><span class="label">// receipts</span></div>
   <div class="band-inner">
-    <div class="stat reveal"><div class="num zero" data-num="0">0</div><div class="desc">bytes of your data sent to a server. Inference, voice, and memory are all on-device.</div></div>
-    <div class="stat reveal"><div class="num" data-num="100%">100%</div><div class="desc">local model stack — MLX-Swift Gemma 4 + Qwen 3 plus Apple Foundation Models, switchable in Settings.</div></div>
+    <div class="stat reveal"><div class="num" data-num="0">0</div><div class="desc">bytes of your data sent to a server. Inference, voice, and memory are all on-device.</div></div>
+    <div class="stat reveal"><div class="num" data-num="100%">100%</div><div class="desc">local model stack. Three brains, every one on your Mac — switch in Settings, <a href="/brains">see how they score</a>.</div></div>
     <div class="stat reveal"><div class="num" data-num="1">1</div><div class="desc">place your knowledge lives: an encrypted store on your Mac, keyed from your Keychain.</div></div>
     <div class="stat reveal"><div class="num" data-num="∞">∞</div><div class="desc">things it remembers. Documents, conversations, calls — searchable forever, by you alone.</div></div>
   </div>
@@ -432,7 +440,7 @@
     <div class="cell reveal">
       <div class="cell-icon">▚▚</div>
       <h3>On-device inference</h3>
-      <p>Three brains: Mini on Apple Foundation Models answers instantly, Lil (Qwen 3 4B) fronts the conversation, and Big (Gemma 4 12B) is delegated the deep work. Switch in Settings any time.</p>
+      <p>Three brains: Mini answers instantly, Lil fronts the conversation, and Big is delegated the deep work. Switch in Settings any time — <a href="/brains">which models, and how they score</a>.</p>
       <span class="tag">mlx-swift · afm · qwen3 · gemma-4</span>
     </div>
     <div class="cell reveal">
@@ -537,7 +545,7 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>What AI models does it run?</summary>
-      <p>Three brains, all local: Mini on Apple Foundation Models for instant answers, Lil on Qwen 3 4B — the fast brain that fronts the conversation — and Big on Gemma 4 12B, delegated the deep work. Via MLX-Swift on Apple Silicon; switch in Settings any time.</p>
+      <p>Three brains, all local: Mini for instant answers, Lil — the fast brain that fronts the conversation — and Big, delegated the deep work. Switch in Settings any time; the models behind each name, and their scores, live on <a href="/brains">/brains</a>.</p>
     </details>
     <details class="reveal">
       <summary>Does it do anything when I'm not talking to it?</summary>
@@ -649,7 +657,9 @@ the action list?<br />
       if (!el || el.dataset.decoded) return;
       el.dataset.decoded = '1';
       var target = el.getAttribute('data-num') || el.textContent;
-      if (reduceMotion) { el.textContent = target; return; }
+      /* settle: zeros become .z spans so the pixel-zero widen applies to every 0, not just the lone one */
+      function settle() { el.innerHTML = target.replace(/0/g, '<span class="z">0</span>'); }
+      if (reduceMotion) { settle(); return; }
       var pool = '0123456789%/<>#█▚▮∞';
       var L = target.length, tick = 0, ticks = 11;
       var iv = setInterval(function () {
@@ -660,7 +670,7 @@ the action list?<br />
           out += i < revealed ? target[i] : pool[Math.floor(Math.random() * pool.length)];
         }
         el.textContent = out;
-        if (tick >= ticks) { clearInterval(iv); el.textContent = target; el.classList.add('lit'); }
+        if (tick >= ticks) { clearInterval(iv); settle(); el.classList.add('lit'); }
       }, 42);
     }
 

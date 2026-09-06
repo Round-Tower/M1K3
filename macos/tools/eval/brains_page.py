@@ -345,9 +345,8 @@ def render_html(doc: dict) -> str:
 <meta name="twitter:description" content="{_e(head_desc)}" />
 <meta name="twitter:image" content="https://m1k3.app/og.png" />
 <link rel="alternate" type="application/json" href="/brains.json" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="preload" href="fonts/vt323-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="fonts.css" />
 <link rel="stylesheet" href="geo.css" />
 </head>
 <body>
@@ -356,7 +355,7 @@ def render_html(doc: dict) -> str:
 <div class="vignette"></div>
 
 <nav>
-  <a class="wordmark" href="/">M1K3<span class="cursor">_</span></a>
+  <a class="wordmark" href="/"><img class="mark" src="favicon.svg" alt="" width="22" height="22" />M1K3<span class="cursor">_</span></a>
   <div class="links">
     <a href="/">Home</a>
     <a href="/#features">Features</a>
