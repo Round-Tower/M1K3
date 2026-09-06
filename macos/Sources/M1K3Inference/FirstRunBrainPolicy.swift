@@ -13,7 +13,8 @@
 //      "your brain is kept")
 //    · `.notReady` is a transient asset sync — wait for Mini, never answer it
 //      with a 2.3GB download
-//    · only a genuinely blocked AFM falls back to the Lil download; the
+//    · a blocked AFM falls back to the pocket download (LFM2.5-1.2B, ~630 MB —
+//      was Lil's 2.3 GB before 2026-09-06); the
 //      user-fixable flavour (Apple Intelligence switched off) also offers the
 //      OS-settings fix alongside.
 //

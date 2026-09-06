@@ -100,6 +100,10 @@ extension AppEnvironment {
         case .mlxFloor, .privateCloud, .thirdParty:
             // No network-brain backends are wired yet, so those rungs resolve to the
             // local MLX floor: keep the current MLX brain, else default to Lil.
+            // DELIBERATELY not pocket: auto-route picks the most capable local
+            // brain (Lil 18/21 vs pocket's 91/140, security 0/14), and "Let M1K3
+            // choose" is an explicit opt-in that already promises a download.
+            // The one-Mini rule governs what pickers SHOW, not this ladder.
             routedTier = selectedBrain.mlxModelID != nil ? selectedBrain : .lil
         }
         // Prudent compute: ease the automatic pick down to what THIS Mac can run

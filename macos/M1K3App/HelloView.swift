@@ -12,7 +12,7 @@
 //
 //  The only decision made here is FirstRunBrainPolicy's (pure, tested): AFM
 //  available → Mini now; AFM warming → wait honestly, never download; AFM
-//  blocked → the Lil fallback with an honest size and, when it's user-fixable,
+//  blocked → the pocket fallback (LFM2, ~630 MB; Lil before 2026-09-06) with an honest size and, when it's user-fixable,
 //  the Apple Intelligence pointer. A re-run keeps a non-Mini brain untouched.
 //
 //  GAP-1 note: `selectBrain` no longer writes the first-run gate key — the
