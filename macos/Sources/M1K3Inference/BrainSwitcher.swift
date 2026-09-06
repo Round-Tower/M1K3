@@ -76,8 +76,7 @@ public enum BrainSwitcher {
     /// "~2.9 GB" / "~600 MB" from an approx MB figure (1 GB = 1000 MB, matching
     /// how download sizes are quoted to users — not the 1024 binary divisor).
     private static func downloadSize(_ megabytes: Int) -> String {
-        guard megabytes >= 1000 else { return "~\(megabytes) MB" }
-        return String(format: "~%.1f GB", Double(megabytes) / 1000)
+        "~" + BrainTier.downloadSizeLabel(megabytes: megabytes)
     }
 
     /// TRUE when re-selecting `tier` would be a pure no-op: it is already the

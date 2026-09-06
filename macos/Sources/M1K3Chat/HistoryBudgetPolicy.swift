@@ -33,6 +33,10 @@
 //  window mid-answer and silently rotated the persona head out — the #112
 //  review blocker). perTurn/maxTurns now reference HistoryWindow's constants
 //  (one home, no silent divergence). Review-debt paydown: #112-1, #112-3.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — margin + generation cap key on `hasClampedContext` (Big AND pocket)
+//  rather than the cache mechanism — pocket's 8k window is the 3.5 GB device's jetsam budget, and without the cap a
+//  long chat plus a 4096-token decode could ask an unbounded KVCacheSimple for ~10k tokens (PR #234 review 4).
+//  Confidence now 0.85.
 //
 
 import Foundation
@@ -104,7 +108,7 @@ public enum HistoryBudgetPolicy {
         generationTokens: Int,
         latencyCeilingTokens: Int = defaultLatencyCeilingTokens
     ) -> HistoryWindow.Budget {
-        let margin = tier.usesRotatingKVCache ? rotatingSafetyMarginTokens : 0
+        let margin = tier.hasClampedContext ? rotatingSafetyMarginTokens : 0
         let contextTokens = max(
             0, tier.approximateContextTokens - reservedTokens - generationTokens - margin
         )
@@ -143,6 +147,6 @@ public enum HistoryBudgetPolicy {
     /// `tier` — capped on a rotating-KV tier (see `rotatingGenerationTokenCap`),
     /// the provider's default elsewhere.
     public static func generationTokenCap(for tier: BrainTier, defaultCap: Int = 4096) -> Int {
-        tier.usesRotatingKVCache ? min(rotatingGenerationTokenCap, defaultCap) : defaultCap
+        tier.hasClampedContext ? min(rotatingGenerationTokenCap, defaultCap) : defaultCap
     }
 }

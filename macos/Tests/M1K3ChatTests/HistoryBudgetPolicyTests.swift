@@ -9,6 +9,8 @@
 //  capped only by the latency ceiling (replay prefill doesn't amortize).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-30, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — pocket's clamped window pinned (cap + margin + sum inside 8192).
+//  Confidence 0.9.
 //
 
 @testable import M1K3Chat
@@ -111,6 +113,18 @@ struct HistoryBudgetPolicyTests {
         for tier in [BrainTier.mini, .lil] {
             #expect(HistoryBudgetPolicy.generationTokenCap(for: tier) == 4096, "\(tier.rawValue)")
         }
+    }
+
+    @Test("pocket's 8k window is clamped like Big's: capped generation, margin, and the sum stays inside")
+    func pocketWindowClamped() {
+        #expect(HistoryBudgetPolicy.generationTokenCap(for: .pocket) == HistoryBudgetPolicy.rotatingGenerationTokenCap)
+        let budget = HistoryBudgetPolicy.budget(
+            for: .pocket, reservedTokens: 3000,
+            generationTokens: HistoryBudgetPolicy.rotatingGenerationTokenCap
+        )
+        let total = 3000 + HistoryBudgetPolicy.rotatingGenerationTokenCap
+            + historyTokens(budget) + HistoryBudgetPolicy.rotatingSafetyMarginTokens
+        #expect(total <= BrainTier.pocket.approximateContextTokens)
     }
 
     @Test("per-turn cap and turn ceiling are HistoryWindow's own constants — one home, no drift")

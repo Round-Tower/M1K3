@@ -279,9 +279,7 @@ struct HelloView: View {
 
     /// "630 MB" / "2.2 GB" from the tier's own figure — one source for every copy line.
     private static func downloadSize(_ tier: BrainTier) -> String {
-        tier.approxDownloadMB.map { mb in
-            mb >= 1000 ? String(format: "%.1f GB", Double(mb) / 1000) : "\(mb) MB"
-        } ?? "small"
+        tier.approxDownloadMB.map(BrainTier.downloadSizeLabel(megabytes:)) ?? "small"
     }
 
     private func startFallbackDownload(_ tier: BrainTier = .pocket) {

@@ -11,9 +11,10 @@
 //  `swift test`-able; the shell supplies live AFM availability + RAM.
 //
 //  Rules:
-//    · Mini is listed unless the hardware is ineligible (`.blocked(userFixable:
-//      false)`) — switched-off Apple Intelligence is the user's to fix, so the
-//      row stays with its hint; `.notReady` is a transient sync.
+//    · One Mini per device (`BrainTier.offered(afm:)`): Apple's when it can serve
+//      (`.available`, and `.notReady` — a transient sync), pocket (LFM2.5-1.2B)
+//      whenever it is `.blocked` — either reason; the Settings hint still points
+//      a user-fixable block at the switch. Pocket has its own mobile floor.
 //    · Lil is listed only when it clears the mobile memory floor (BrainTier).
 //    · Big is never listed on mobile (the floor is infinite there).
 //    · Brain at Home is ALWAYS listed, last — pairing is a real choice on every

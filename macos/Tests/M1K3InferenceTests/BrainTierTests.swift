@@ -326,6 +326,8 @@ struct BrainTierTests {
         #expect(!BrainTier.mini.usesRotatingKVCache)
         // Only big rotates — the clamp is a correctness bound there, a latency knob elsewhere.
         #expect(BrainTier.allCases.filter(\.usesRotatingKVCache) == [.big])
+        // …but pocket's self-imposed 8k is a hard budget too: both get the history clamp.
+        #expect(BrainTier.allCases.filter(\.hasClampedContext) == [.pocket, .big])
     }
 
     @Test("image input is a Big-only capability — gemma-4-12B through the VLM load path")
@@ -417,5 +419,12 @@ struct BrainTierTests {
         // Already offered: unchanged.
         #expect(BrainTier.offered(afm: .available, including: .lil) == [.mini, .lil, .big])
         #expect(BrainTier.offered(afm: .blocked(userFixable: true), including: .pocket) == [.pocket, .lil, .big])
+    }
+
+    @Test("one download-size formatter for every shell: MB below a gigabyte, one decimal above")
+    func downloadSizeLabel() {
+        #expect(BrainTier.downloadSizeLabel(megabytes: 630) == "630 MB")
+        #expect(BrainTier.downloadSizeLabel(megabytes: 2150) == "2.1 GB") // %.1f rounds half-even here
+        #expect(BrainTier.downloadSizeLabel(megabytes: 1000) == "1.0 GB")
     }
 }

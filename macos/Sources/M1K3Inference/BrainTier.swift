@@ -290,6 +290,23 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         self == .big
     }
 
+    /// Tiers whose window is a HARD budget the history policy must protect
+    /// with the safety margin and the 2048-token live generation cap: Big
+    /// (RotatingKVCache truncates) and pocket (8k self-imposed so a 3.5 GB
+    /// device's KV stays inside its jetsam budget — an unbounded KVCacheSimple
+    /// that must never be asked to grow past it). Distinct from
+    /// `usesRotatingKVCache`, which is about the cache MECHANISM.
+    public var hasClampedContext: Bool {
+        self == .big || self == .pocket
+    }
+
+    /// "630 MB" / "2.2 GB" from an approx MB figure (1 GB = 1000 MB, matching
+    /// how download sizes are quoted to users) — the one formatter every shell
+    /// copies from.
+    public static func downloadSizeLabel(megabytes: Int) -> String {
+        megabytes >= 1000 ? String(format: "%.1f GB", Double(megabytes) / 1000) : "\(megabytes) MB"
+    }
+
     /// The memory floor below which this brain shouldn't even be SELECTABLE
     /// (the card disables with a "needs NN GB" badge), or nil for no gate.
     /// Distinct from `recommended` — selection is permissive, recommendation
