@@ -62,6 +62,13 @@
 //  renders the persona seed through `MLXToolMapping.seedInputs`, the same seam the live
 //  turn uses, so an lfm2 seed carries the self-rendered tool block (swift-jinja's sorted-key
 //  `tojson` sidestepped) and stays a true token-prefix of what the model sees.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 (evening), Confidence 0.85 — the plain
+//  paths no longer hand the persona seed to `ChatSession(cache:)`: upstream renders
+//  the next turn ALONE, and on LFM2's BOS-opening template that put a second
+//  start-of-text after the cached persona — pocket lost its rules on every plain
+//  turn (security 0/14). Seeded turns now run `runSeededPlainTurn` (one
+//  [system, user] render, suffix prefill — the tool path's shape); the unseeded
+//  fallback keeps the inline-instructions ChatSession. Byte-replay proven.
 
 import Foundation
 import Hub
@@ -387,15 +394,24 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
         // Return cached Metal buffers after every generation — without this the
         // process-global MLX cache holds each generation's peak forever.
         defer { MLXMemoryBudget.reclaim(label: "generate") }
-        let (session, seedTokens) = await makeUpstreamSession(container)
+        let key = toolTurnCacheKey(toolNames: [])
+        if let seed = await personaPrefixSnapshot(container: container, specs: nil, toolNames: [], key: key) {
+            // Seeded: ONE [system, user] render, prefill past the seed — never a
+            // lone user render on the cache (the double-BOS bug, see the extension).
+            let collected = OSAllocatedUnfairLock(initialState: "")
+            try await runSeededPlainTurn(
+                container: container, seed: seed, persona: key.personaText, prompt: prompt, label: "generate"
+            ) { piece in
+                collected.withLock { $0 += piece }
+            }
+            return Self.normaliseThinkPrefix(collected.withLock { $0 }, preOpened: thinkPrefixNeeded)
+        }
+        let session = makeUpstreamSession(container)
         var raw = ""
         for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
             if let piece = event.chunk { raw += piece }
             if let info = event.info {
-                logGenerationInfo(
-                    info, label: "generate", model: modelIdentifier,
-                    totalContextTokens: seedTokens + info.promptTokenCount
-                )
+                logGenerationInfo(info, label: "generate", model: modelIdentifier)
             }
         }
         return Self.normaliseThinkPrefix(raw, preOpened: thinkPrefixNeeded)
@@ -409,19 +425,25 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
                 defer { MLXMemoryBudget.reclaim(label: "generateStreaming") }
                 do {
                     let container = try await ensureLoaded()
-                    let (session, seedTokens) = await makeUpstreamSession(container)
                     // Qwen3.5's template pre-opens <think>, so the stream's
                     // first real token is already chain-of-thought — surface
                     // the opener so live reasoning splitting engages from
                     // token one instead of after the closing tag.
                     if thinkPrefixNeeded { continuation.yield("<think>") }
-                    for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
-                        if let chunk = event.chunk { continuation.yield(chunk) }
-                        if let info = event.info {
-                            logGenerationInfo(
-                                info, label: "stream", model: modelIdentifier,
-                                totalContextTokens: seedTokens + info.promptTokenCount
-                            )
+                    let key = toolTurnCacheKey(toolNames: [])
+                    if let seed = await personaPrefixSnapshot(container: container, specs: nil, toolNames: [], key: key) {
+                        try await runSeededPlainTurn(
+                            container: container, seed: seed, persona: key.personaText, prompt: prompt, label: "stream"
+                        ) { piece in
+                            continuation.yield(piece)
+                        }
+                    } else {
+                        let session = makeUpstreamSession(container)
+                        for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
+                            if let chunk = event.chunk { continuation.yield(chunk) }
+                            if let info = event.info {
+                                logGenerationInfo(info, label: "stream", model: modelIdentifier)
+                            }
                         }
                     }
                     continuation.finish()
@@ -457,38 +479,22 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
         return container
     }
 
-    /// One-shot upstream session for the plain-chat paths: seeded from the
-    /// persona prefix cache when available (instructions stay nil — the cache
-    /// IS the system turn), falling back to plain instructions. Thinking
-    /// toggle rendered when the family supports it.
-    /// Also returns how many tokens the seeded persona prefix already holds, so
-    /// callers can report TRUE context (seed + this call's prefill) rather than
-    /// the suffix-only count the completion info carries. 0 when unseeded (the
-    /// persona rides inline and is counted by the prefill itself).
-    private func makeUpstreamSession(
-        _ container: ModelContainer
-    ) async -> (session: ChatSession, seedTokens: Int) {
-        let session: ChatSession
-        let seedTokens: Int
-        if let seed = await personaPrefixSnapshot(container: container, specs: nil, toolNames: []) {
-            session = ChatSession(
-                container,
-                cache: seed.cache,
-                generateParameters: generateParameters
-            )
-            seedTokens = seed.tokenIDs.count
-        } else {
-            session = ChatSession(
-                container,
-                instructions: M1K3Persona.systemPrompt,
-                generateParameters: generateParameters
-            )
-            seedTokens = 0
-        }
+    /// One-shot upstream session for the UNSEEDED plain-chat paths: the persona
+    /// rides inline as instructions, so upstream renders [system, user] as one
+    /// template pass. The seeded case no longer goes through ChatSession at
+    /// all — `ChatSession(cache:)` renders each new turn alone, which on a
+    /// BOS-opening template (LFM2) planted a second start-of-text after the
+    /// cached persona and erased it (see MLXGemmaProvider+SeededPlainTurn).
+    private func makeUpstreamSession(_ container: ModelContainer) -> ChatSession {
+        let session = ChatSession(
+            container,
+            instructions: M1K3Persona.systemPrompt,
+            generateParameters: generateParameters
+        )
         if let context = thinkingAdditionalContext {
             session.additionalContext = context
         }
-        return (session, seedTokens)
+        return session
     }
 
     /// Get-or-build the persona prefix for this model + tool set. Best-effort:
