@@ -30,6 +30,9 @@
 //  single-flight lock), both shared by the MCP `ask_m1k3` tool AND the new Ask App
 //  Intent (logic in AppEnvironment+Intelligence.swift). Additive; existing wiring
 //  unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 (3) — the launch restore runs `BrainRestoreConsent` (#237): an eased
+//  Mini → pocket that would download is OFFERED (`pendingBrainDownloadOffer`, accepted via selectBrain), never
+//  started; the app sits on the persisted Mini meanwhile. Confidence now 0.85 (gate UI unverified by launch).
 
 import AppKit
 import Foundation
@@ -527,6 +530,10 @@ final class AppEnvironment {
     /// One-line transient notice ("Lil's awake — switched you over."), shown in
     /// the top banner slot and self-clearing.
     var brainUpgradeNotice: String?
+    /// #237: the tier the launch restore WOULD have eased to, held back because it
+    /// needs a download nobody tapped for. The readiness gate offers it; accepting
+    /// is a normal `selectBrain` (persist + warm with the real download bar).
+    private(set) var pendingBrainDownloadOffer: BrainTier?
     /// The in-flight background fetch, so `selectBrain`/the picker route can
     /// cancel it synchronously (single writer to the Hub cache dir).
     @ObservationIgnored var brainUpgradeFetchTask: Task<Void, Never>?
@@ -713,10 +720,34 @@ final class AppEnvironment {
         // The Mini this Mac can run first (pocket when Apple Intelligence is
         // blocked, back to AFM's Mini when it returns), then the memory floor —
         // the iOS restore's order (PR #234 review 2).
-        let brain = BrainTier.selectableOrEased(
-            (realigned?.tier ?? decoded).easedToOfferedMini(afm: Self.afmAvailabilityAtLaunch),
-            forPhysicalMemoryGB: physicalMemoryGB
-        )
+        // #237: an EASED pick that would have to download waits for a tap. The
+        // consent runs on the Apple-Intelligence axis ONLY (Mini ↔ pocket), AFTER
+        // the realignment nudge has settled (its downhill move is its own,
+        // noticed, decision — PR #239 review) and BEFORE the memory floor. On
+        // `.askFirst` the app sits on the settled tier (Mini, unready here) and the
+        // readiness gate carries the offer; accepting goes through selectBrain.
+        let settled = realigned?.tier ?? decoded
+        let afmEased: BrainTier
+        switch BrainRestoreConsent.resolve(
+            persisted: settled,
+            eased: settled.easedToOfferedMini(afm: Self.afmAvailabilityAtLaunch),
+            staged: { [brainInventory] tier in
+                tier.mlxModelID.map { brainInventory.isInstalled(modelID: $0) } ?? false
+            }
+        ) {
+        case let .warm(tier):
+            afmEased = tier
+        case let .askFirst(offer, keep):
+            afmEased = keep
+            // The OFFER must clear the memory floor too, or the button invites a
+            // download the device can never run (PR #239 review). No floor for
+            // pocket on the Mac today; the guard keeps both shells identical.
+            if BrainTier.selectableOrEased(offer, forPhysicalMemoryGB: physicalMemoryGB) == offer {
+                pendingBrainDownloadOffer = offer
+                frontTierLog.notice("restore: \(offer.rawValue, privacy: .public) needs a download — offered, not started (#237)")
+            }
+        }
+        let brain = BrainTier.selectableOrEased(afmEased, forPhysicalMemoryGB: physicalMemoryGB)
         if let storedBrainRaw, storedBrainRaw != brain.rawValue {
             UserDefaults.standard.set(brain.rawValue, forKey: Self.selectedBrainKey)
         }
@@ -1122,6 +1153,12 @@ final class AppEnvironment {
         return brainInventory.isInstalled(modelID: modelID)
     }
 
+    /// Accept the launch offer (#237): the tap this download was waiting for.
+    func acceptPendingBrainDownloadOffer() {
+        guard let offer = pendingBrainDownloadOffer else { return }
+        selectBrain(offer)
+    }
+
     /// Choose a brain: persist it, re-point the active provider, and (for Lil/Big)
     /// warm the model so onboarding / Settings show a real download bar. Mini is
     /// instant — Apple Foundation Models, no download.
@@ -1131,6 +1168,9 @@ final class AppEnvironment {
     /// onChange for readiness (onboarding's waking screen) must advance itself.
     @discardableResult
     func selectBrain(_ tier: BrainTier) -> Bool {
+        // An explicit pick always wins over a restore-time offer (#237): a stale
+        // offer must never resurface and re-route a brain the user chose.
+        pendingBrainDownloadOffer = nil
         // Refuse a brain switch WHILE a deep dive is running on the MLX slot:
         // re-pointing `swappableMLX` (and loading a new model into it) under
         // the in-flight delegated generation both corrupts that run's provider

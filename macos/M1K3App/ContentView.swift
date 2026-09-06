@@ -20,6 +20,9 @@
 //  use (avatar shrank to a 92pt corner card). Reverted to a FULL-WINDOW voice hero
 //  (VoiceModeView) mounted as a full-window overlay: the avatar fills the window,
 //  karaoke + controls float on glass. Confidence 0.75 (look verify-at-⌘R).
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — ModelGateView's `.unavailable` card carries the #237 download
+//  offer ("Download Mini (one-time, ~630 MB)"), the Lil rescue secondary beside it. Confidence 0.75 (verify at ⌘R
+//  on a blocked-AFM Mac).
 
 import M1K3Avatar
 import M1K3Chat
@@ -299,7 +302,10 @@ struct ContentView: View {
                     brainName: env.downloadingBrainName,
                     switchToLil: env.isBrainDownloaded(.lil) && [.mini, .pocket].contains(env.selectedBrain)
                         ? { env.selectBrain(.lil) }
-                        : nil
+                        : nil,
+                    downloadOffer: env.pendingBrainDownloadOffer.map { tier in
+                        (tier, { env.acceptPendingBrainDownloadOffer() })
+                    }
                 ) { Task { await env.warmUpSelectedBrainOnLaunch() } }
                     .transition(.opacity)
             }
@@ -1184,6 +1190,9 @@ private struct ModelGateView: View {
     /// Non-nil when Lil's weights are on disk — the `.unavailable` dead-end
     /// gains a one-tap way out (AFM turned off post-onboarding).
     var switchToLil: (() -> Void)?
+    /// #237: the launch restore held back an eased download; this is the tap it
+    /// waits for. Shown in the `.unavailable` dead-end beside the Lil rescue.
+    var downloadOffer: (tier: BrainTier, accept: () -> Void)?
     let retry: () -> Void
 
     var body: some View {
@@ -1233,16 +1242,35 @@ private struct ModelGateView: View {
             VStack(spacing: 14) {
                 Label("\(brainName) isn’t available here", systemImage: "questionmark.circle")
                     .font(.headline)
-                Text("This Mac can’t run the selected brain. Choose a different one in Settings.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                // The rescue: Apple Intelligence turned off AFTER first run,
-                // but Lil's weights are already on disk — one tap out of the
-                // dead end instead of a Settings expedition.
+                Text(
+                    downloadOffer == nil
+                        ? "This Mac can’t run the selected brain. Choose a different one in Settings."
+                        : "Apple Intelligence isn’t available on this Mac. M1K3’s own Mini runs here after a one-time download."
+                )
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                // Two ways out of the dead end, neither a Settings expedition:
+                // the #237 download offer (the restore held a needed download
+                // back for this tap), and the older rescue — Apple Intelligence
+                // turned off AFTER first run with Lil's weights already on disk.
+                if let downloadOffer {
+                    // The consent moment: says the size, downloads only on the tap.
+                    Button(
+                        "Download \(downloadOffer.tier.displayName) (one-time, ~\(downloadOffer.tier.approxDownloadMB ?? 0) MB)",
+                        action: downloadOffer.accept
+                    )
+                    .buttonStyle(.borderedProminent)
+                }
                 if let switchToLil {
-                    Button("Switch to Lil (already downloaded)", action: switchToLil)
-                        .buttonStyle(.borderedProminent)
+                    // Secondary when the download offer holds the prominent slot.
+                    if downloadOffer == nil {
+                        Button("Switch to Lil (already downloaded)", action: switchToLil)
+                            .buttonStyle(.borderedProminent)
+                    } else {
+                        Button("Switch to Lil (already downloaded)", action: switchToLil)
+                            .buttonStyle(.bordered)
+                    }
                 }
                 SettingsLink { Text("Open Settings") }
             }
