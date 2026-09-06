@@ -21,7 +21,7 @@ Two outputs:
     given input. Documentation the app NEVER reads (ADR 0004: pins ship in the
     binary; the site publishes evidence, it does not configure installs).
   * `site/brains.html` — the human page, same shell as the other answer pages
-    (geo.css + the shared Google Fonts links, zero JS; no JSON-LD on purpose —
+    (geo.css + the self-hosted fonts.css, zero JS; no JSON-LD on purpose —
     a scoreboard is not an Article and a wrong schema is worse than none).
 
 Numbers are counted per TRIAL (a repeat is a trial), medians not means, and
