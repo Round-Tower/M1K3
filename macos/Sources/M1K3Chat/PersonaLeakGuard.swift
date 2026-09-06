@@ -66,6 +66,10 @@ public enum PersonaLeakGuard {
             // leak — with beat 5 in the fingerprint it would otherwise be a full
             // span, and the guard would swap every correct decline for `refusal`
             // (the #219 pin caught exactly that, red, before this filter existed).
+            // Deliberately asymmetric: the SAME sentence inside the ABSOLUTE
+            // RULES paragraph extracts with its lead-in attached ("…the whole
+            // reply is: I don't share…") and is NOT filtered — a reply carrying
+            // that lead-in is reciting the rule, not giving the taught decline.
             .filter { !decline.contains($0.lowercased()) }
     }
 

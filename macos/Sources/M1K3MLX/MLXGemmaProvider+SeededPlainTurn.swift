@@ -59,8 +59,10 @@ extension MLXGemmaProvider {
         let thinkingContext = thinkingAdditionalContext
         let model = modelIdentifier
         let seedIDs = seed.tokenIDs
-        // `@unchecked Sendable` box: the cache crosses into `perform` exactly the
-        // way MLXToolTurnSession's does (evaluated by the prefill that built it).
+        // `@unchecked Sendable` box: the cache crosses into `perform` the way
+        // MLXToolTurnSession's does. It is safe to move because it is already a
+        // private deep copy — `PersonaPrefixCache.snapshot(for:)` `.copy()`s the
+        // seed before this function is entered, so no other task holds it.
         struct SeedBox: @unchecked Sendable {
             let cache: [KVCache]
         }
