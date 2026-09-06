@@ -277,26 +277,27 @@ final class AppCore {
         // Mini is pocket — LFM2 — and back once Apple Intelligence returns), THEN
         // the memory floor, so a pocket below its 4 GB floor eases to Mini and
         // the Home-only path above takes over (#230) instead of a doomed load.
-        let eased = BrainTier.selectableOrEased(
-            (storedBrainRaw.flatMap(BrainTier.init(persisted:)) ?? .mini)
-                .easedToOfferedMini(afm: afm.availabilityState),
-            forPhysicalMemoryGB: Self.physicalMemoryGB, platform: .mobile
-        )
         // #237: an eased pick that would download waits for a tap — the chat's
         // readiness hint carries the offer; accepting goes through selectBrain.
-        let restored: BrainTier
+        // Consent runs on the Apple-Intelligence axis only, BEFORE the memory
+        // floor (same order as the Mac; a pocket below its floor still eases to Mini).
+        let persisted = storedBrainRaw.flatMap(BrainTier.init(persisted:)) ?? .mini
+        let afmEased: BrainTier
         switch BrainRestoreConsent.resolve(
-            persisted: storedBrainRaw.flatMap(BrainTier.init(persisted:)),
-            eased: eased,
+            persisted: persisted,
+            eased: persisted.easedToOfferedMini(afm: afm.availabilityState),
             staged: { tier in tier.mlxModelID.map { LocalModelInventory().isInstalled(modelID: $0) } ?? false }
         ) {
         case let .warm(tier):
-            restored = tier
+            afmEased = tier
         case let .askFirst(offer, keep):
-            restored = keep
+            afmEased = keep
             pendingBrainDownloadOffer = offer
             Self.log.notice("restore: \(offer.rawValue, privacy: .public) needs a download — offered, not started (#237)")
         }
+        let restored = BrainTier.selectableOrEased(
+            afmEased, forPhysicalMemoryGB: Self.physicalMemoryGB, platform: .mobile
+        )
         // Persist the eased pick (the Mac's restore does the same): makeResponder's
         // brain-name / thinking / grounding-budget closures read the KEY, not
         // `selectedBrain` — without this they would size prompts for Lil while
@@ -389,11 +390,12 @@ final class AppCore {
     /// Accept the launch offer (#237): the tap this download was waiting for.
     func acceptPendingBrainDownloadOffer() {
         guard let offer = pendingBrainDownloadOffer else { return }
-        pendingBrainDownloadOffer = nil
         selectBrain(offer)
     }
 
     func selectBrain(_ tier: BrainTier) {
+        // An explicit pick always wins over a restore-time offer (#237).
+        pendingBrainDownloadOffer = nil
         // Simulator: MLX can't run (no Metal GPU — touching it aborts). Record the
         // note and stay on Mini so chat still works; a real device runs Lil.
         // Both refusals fall back to Mini THROUGH this same function, whose
