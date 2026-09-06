@@ -297,7 +297,7 @@ struct ContentView: View {
                 ModelGateView(
                     readiness: env.readiness,
                     brainName: env.downloadingBrainName,
-                    switchToLil: env.isBrainDownloaded(.lil) && env.selectedBrain == .mini
+                    switchToLil: env.isBrainDownloaded(.lil) && [.mini, .pocket].contains(env.selectedBrain)
                         ? { env.selectBrain(.lil) }
                         : nil
                 ) { Task { await env.warmUpSelectedBrainOnLaunch() } }
@@ -1055,12 +1055,15 @@ struct ContentView: View {
     /// onboarding brain step (the honest download UI) rather than silently pulling
     /// gigabytes from a single tap.
     /// Signed: Kev + claude-opus-4-8, 2026-06-21, Confidence 0.8, Prior: Unknown
+    /// Review: Kev + claude-fable-5.1, 2026-09-06 — rows follow `BrainTier.offered(afm:)`: a blocked Mac
+    /// lists pocket as its Mini and never the AFM Mini (PR #234 review 1). Confidence now 0.8.
     private var brainSwitcher: some View {
         Menu {
             ForEach(BrainSwitcher.rows(
                 active: env.selectedBrain,
                 isDownloaded: { env.isBrainDownloaded($0) },
-                isLocked: { !$0.isSelectableOnThisMac }
+                isLocked: { !$0.isSelectableOnThisMac },
+                afm: env.afmAvailability
             )) { row in
                 Button {
                     if row.needsDownload {

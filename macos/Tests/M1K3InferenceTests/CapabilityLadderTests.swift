@@ -15,6 +15,7 @@
 //      permanently. Respect beats conversion.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-03, Confidence 0.9. Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — pocket's long-ask struggle pinned. Confidence 0.9.
 
 @testable import M1K3Inference
 import Testing
@@ -76,6 +77,16 @@ struct CapabilityLadderTests {
     func longAskOnMiniStruggles() {
         #expect(StrugglePolicy.isStruggle(
             brain: .mini,
+            questionCharacters: StrugglePolicy.longAskCharacterThreshold,
+            answerFailed: false,
+            generationHitTokenCap: false
+        ))
+    }
+
+    @Test("a long-form ask on pocket is a struggle too — the same role, a 1.2B")
+    func longAskOnPocketStruggles() {
+        #expect(StrugglePolicy.isStruggle(
+            brain: .pocket,
             questionCharacters: StrugglePolicy.longAskCharacterThreshold,
             answerFailed: false,
             generationHitTokenCap: false

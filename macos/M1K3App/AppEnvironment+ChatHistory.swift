@@ -36,6 +36,13 @@ extension AppEnvironment {
     /// mid-session Apple-Intelligence change is honoured.
     private static let afmAvailabilityProbe = AppleFoundationModelsProvider()
 
+    /// The same live read, callable from `init` (before `self` is whole) — the
+    /// launch restore needs it to ease a persisted Mini onto the Mini this Mac
+    /// can run (PR #234).
+    static var afmAvailabilityAtLaunch: AFMAvailability {
+        afmAvailabilityProbe.availabilityState
+    }
+
     /// Apple Foundation Models availability in product terms — HelloView's
     /// FirstRunBrainPolicy input. Lives here (not on the class body) because the
     /// probe is file-private to this extension. Live read per call, same as the

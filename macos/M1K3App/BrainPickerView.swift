@@ -56,7 +56,14 @@ struct BrainPickerView: View {
     @State private var isWakingBrain = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let recommended = BrainTier.recommendedForThisMac
+    /// Computed, not stored: the badge must land on pocket when Apple
+    /// Intelligence is blocked (PR #234 review 1).
+    private var recommended: BrainTier {
+        BrainTier.recommended(
+            forPhysicalMemoryGB: Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824,
+            afm: env.afmAvailability
+        )
+    }
 
     init(onComplete: @escaping () -> Void) {
         self.onComplete = onComplete

@@ -166,11 +166,8 @@ struct HelloView: View {
         case .useMini, .waitForMini:
             return "Runs on Mini, Apple's on-device model · change anytime in Settings."
         case let .downloadFallback(tier, _):
-            let size = tier.approxDownloadMB.map { mb in
-                mb >= 1000 ? String(format: "%.1f GB", Double(mb) / 1000) : "\(mb) MB"
-            } ?? "small"
             return "Apple Intelligence isn't available here, so I'll fetch my own brain — "
-                + "\(tier.displayName) M1K3, a one-time \(size) download. Still fully on this Mac."
+                + "\(tier.displayName) M1K3, a one-time \(Self.downloadSize(tier)) download. Still fully on this Mac."
         }
     }
 
@@ -184,7 +181,7 @@ struct HelloView: View {
             WakeSetupCarousel(flow: $wakeFlow, fraction: nil, onComplete: onComplete)
             // AFM is merely syncing here, so the offered Mini is still Apple's:
             // the escape hatch is Lil, not pocket.
-            Button("Use a downloaded brain instead (Lil, 2.3 GB)") {
+            Button("Use a downloaded brain instead (Lil, \(Self.downloadSize(.lil)))") {
                 startFallbackDownload(.lil)
             }
             .buttonStyle(.plain)
@@ -226,7 +223,7 @@ struct HelloView: View {
                 )
             case .failed:
                 VStack(spacing: 10) {
-                    Label(env.modelLoad.label(modelName: BrainTier.lil.displayName),
+                    Label(env.modelLoad.label(modelName: env.selectedBrain.displayName),
                           systemImage: "exclamationmark.triangle")
                         .symbolRenderingMode(.hierarchical)
                         .font(.callout)
@@ -278,6 +275,13 @@ struct HelloView: View {
         case let .downloadFallback(tier, _):
             startFallbackDownload(tier)
         }
+    }
+
+    /// "630 MB" / "2.2 GB" from the tier's own figure — one source for every copy line.
+    private static func downloadSize(_ tier: BrainTier) -> String {
+        tier.approxDownloadMB.map { mb in
+            mb >= 1000 ? String(format: "%.1f GB", Double(mb) / 1000) : "\(mb) MB"
+        } ?? "small"
     }
 
     private func startFallbackDownload(_ tier: BrainTier = .pocket) {

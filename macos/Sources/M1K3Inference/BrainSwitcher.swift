@@ -41,7 +41,7 @@ public struct BrainSwitchRow: Identifiable, Equatable, Sendable {
 }
 
 public enum BrainSwitcher {
-    /// One row per tier, in `BrainTier.allCases` order. `isDownloaded` and
+    /// One row per OFFERED tier (`BrainTier.offered(afm:)`), in tier order. `isDownloaded` and
     /// `isLocked` are injected predicates (the view passes `env.isBrainDownloaded`
     /// and `{ !$0.isSelectableOnThisMac }`) so this stays pure and deterministic.
     public static func rows(

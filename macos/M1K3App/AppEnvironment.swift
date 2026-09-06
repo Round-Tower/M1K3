@@ -21,6 +21,9 @@
 //  wireSpeechCallbacks() (+ word-timing → SpeechHighlight); voiceLoop stored
 //  property + speechDidEnd routing; voice-mode Auto→fast thinking override;
 //  stale voiceMode.active cleared at launch. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — launch restore eases a persisted Mini via
+//  `easedToOfferedMini(afm:)` before the memory floor (pocket on a blocked Mac, and back).
+//  Confidence now 0.8.
 //  Review: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.85 — added the shared
 //  intelligence surface's stored state: `intelligenceResponder` (one lazy,
 //  brain-switch-tracking RAGResponder) + `intelligenceAskInFlight` (one
@@ -707,8 +710,12 @@ final class AppEnvironment {
                 "front tier realigned \(decoded.rawValue, privacy: .public) → \(realigned.tier.rawValue, privacy: .public) (once)"
             )
         }
+        // The Mini this Mac can run first (pocket when Apple Intelligence is
+        // blocked, back to AFM's Mini when it returns), then the memory floor —
+        // the iOS restore's order (PR #234 review 2).
         let brain = BrainTier.selectableOrEased(
-            realigned?.tier ?? decoded, forPhysicalMemoryGB: physicalMemoryGB
+            (realigned?.tier ?? decoded).easedToOfferedMini(afm: Self.afmAvailabilityAtLaunch),
+            forPhysicalMemoryGB: physicalMemoryGB
         )
         if let storedBrainRaw, storedBrainRaw != brain.rawValue {
             UserDefaults.standard.set(brain.rawValue, forKey: Self.selectedBrainKey)
