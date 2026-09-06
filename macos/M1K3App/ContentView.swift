@@ -1242,13 +1242,18 @@ private struct ModelGateView: View {
             VStack(spacing: 14) {
                 Label("\(brainName) isn’t available here", systemImage: "questionmark.circle")
                     .font(.headline)
-                Text("This Mac can’t run the selected brain. Choose a different one in Settings.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                // The rescue: Apple Intelligence turned off AFTER first run,
-                // but Lil's weights are already on disk — one tap out of the
-                // dead end instead of a Settings expedition.
+                Text(
+                    downloadOffer == nil
+                        ? "This Mac can’t run the selected brain. Choose a different one in Settings."
+                        : "Apple Intelligence isn’t available on this Mac. M1K3’s own Mini runs here after a one-time download."
+                )
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                // Two ways out of the dead end, neither a Settings expedition:
+                // the #237 download offer (the restore held a needed download
+                // back for this tap), and the older rescue — Apple Intelligence
+                // turned off AFTER first run with Lil's weights already on disk.
                 if let downloadOffer {
                     // The consent moment: says the size, downloads only on the tap.
                     Button(
