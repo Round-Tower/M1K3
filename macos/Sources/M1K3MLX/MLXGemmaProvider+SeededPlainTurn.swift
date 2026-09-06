@@ -22,6 +22,10 @@
 //  pinned in SeededPlainTurnTests; the render + generate is verify-by-launch
 //  through SelfTest security on pocket AND Lil — one seam for every seeded
 //  MLX tier). Prior: Kev + claude-fable-5 (MLXGemmaProvider plain paths).
+//  Review: claude-fable-5.1, 2026-09-06 — PR #240 review 1: reuse now also
+//  requires every seed layer trimmable (an untrimmed wrapped seed is one
+//  position longer than its ids), mirroring MLXToolTurnSession's gate; the
+//  fresh branch says why when that is the reason. Confidence now 0.85.
 //
 
 import Foundation
@@ -73,7 +77,10 @@ extension MLXGemmaProvider {
             let fullIDs = prepared.text.tokens.asArray(Int.self)
             let cache: [KVCache]
             let input: LMInput
-            switch SeededPlainTurn.plan(seed: seedIDs, full: fullIDs) {
+            let seedTrimmed = CrossTurnCacheReuse.cacheReusable(
+                layersTrimmable: box.cache.map(\.isTrimmable)
+            )
+            switch SeededPlainTurn.plan(seed: seedIDs, full: fullIDs, seedTrimmed: seedTrimmed) {
             case let .reuse(prefixTokens):
                 cache = box.cache
                 input = LMInput(tokens: MLXArray(Array(fullIDs[prefixTokens...])))
@@ -83,6 +90,14 @@ extension MLXGemmaProvider {
                 // persona-drift class of bug, not a normal turn. Decode either
                 // side of the first divergence so the cause is readable in the
                 // log (the tool path's seed-miss instrument, same idea).
+                if !seedTrimmed {
+                    mlxTTFTLog.notice(
+                        """
+                        \(label, privacy: .public): persona seed (\(seedIDs.count)tok) wrapped its \
+                        sliding window (untrimmed cache) — full prefill, no reuse
+                        """
+                    )
+                }
                 var at = 0
                 while at < min(seedIDs.count, fullIDs.count), seedIDs[at] == fullIDs[at] {
                     at += 1

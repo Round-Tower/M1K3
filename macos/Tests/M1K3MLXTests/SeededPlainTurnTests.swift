@@ -22,6 +22,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.9 (the arithmetic is
 //  pinned here; the double-BOS cause was proven by byte replay, not inferred).
 //  Prior: Kev + claude-opus-4-8 (CrossTurnCacheReuseTests, the sibling seam).
+//  Review: claude-fable-5.1, 2026-09-06 — PR #240 review 1: pins that an
+//  untrimmed (wrapped) seed is never reused, even as an exact prefix.
 //
 
 import Foundation
@@ -32,26 +34,26 @@ struct SeededPlainTurnTests {
     @Test("the seed is an exact prefix of the full render → prefill only the suffix")
     func exactPrefixReusesSeed() {
         // seed = [BOS, system…]; full = seed + [user turn…]
-        let plan = SeededPlainTurn.plan(seed: [1, 10, 11, 12], full: [1, 10, 11, 12, 20, 21, 22])
+        let plan = SeededPlainTurn.plan(seed: [1, 10, 11, 12], full: [1, 10, 11, 12, 20, 21, 22], seedTrimmed: true)
         #expect(plan == .reuse(prefixTokens: 4))
     }
 
     @Test("a render that diverges inside the seed cannot use it — fresh, full prefill")
     func divergenceIsFresh() {
         // A persona-text or tool-palette mismatch between seed and render.
-        let plan = SeededPlainTurn.plan(seed: [1, 10, 11, 12], full: [1, 10, 99, 12, 20])
+        let plan = SeededPlainTurn.plan(seed: [1, 10, 11, 12], full: [1, 10, 99, 12, 20], seedTrimmed: true)
         #expect(plan == .fresh)
     }
 
     @Test("a render no longer than the seed leaves nothing to prefill — fresh")
     func nothingPastTheSeedIsFresh() {
-        #expect(SeededPlainTurn.plan(seed: [1, 10, 11], full: [1, 10, 11]) == .fresh)
-        #expect(SeededPlainTurn.plan(seed: [1, 10, 11], full: [1, 10]) == .fresh)
+        #expect(SeededPlainTurn.plan(seed: [1, 10, 11], full: [1, 10, 11], seedTrimmed: true) == .fresh)
+        #expect(SeededPlainTurn.plan(seed: [1, 10, 11], full: [1, 10], seedTrimmed: true) == .fresh)
     }
 
     @Test("an empty seed is never reused")
     func emptySeedIsFresh() {
-        #expect(SeededPlainTurn.plan(seed: [], full: [1, 2, 3]) == .fresh)
+        #expect(SeededPlainTurn.plan(seed: [], full: [1, 2, 3], seedTrimmed: true) == .fresh)
     }
 
     @Test("a lone user render (the old bug: BOS first) is NOT a continuation of the seed")
@@ -59,7 +61,16 @@ struct SeededPlainTurnTests {
         // What upstream ChatSession(cache:) fed after the seed: [BOS, user…] —
         // it shares only the BOS with the seed and must never be treated as
         // the seed's suffix.
-        let plan = SeededPlainTurn.plan(seed: [1, 10, 11, 12], full: [1, 20, 21, 22])
+        let plan = SeededPlainTurn.plan(seed: [1, 10, 11, 12], full: [1, 20, 21, 22], seedTrimmed: true)
+        #expect(plan == .fresh)
+    }
+
+    @Test("a seed whose cache was not trimmed (wrapped a sliding window) is never appended to")
+    func untrimmedSeedIsFresh() {
+        // renderPersonaPrefix leaves the throwaway sample token in place when a
+        // layer wrapped: the cache is one position longer than the seed ids, so
+        // an exact-prefix render would still land one slot off. Full prefill.
+        let plan = SeededPlainTurn.plan(seed: [1, 10, 11, 12], full: [1, 10, 11, 12, 20, 21], seedTrimmed: false)
         #expect(plan == .fresh)
     }
 }
