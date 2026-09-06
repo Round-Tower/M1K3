@@ -16,6 +16,7 @@
 //
 
 @testable import M1K3Agent
+import M1K3Inference
 import Testing
 
 struct NativeGoalOrderTests {
@@ -42,6 +43,54 @@ struct NativeGoalOrderTests {
         let message = LocalAgent.buildNativeGoal(goal: "hello there", grounding: nil)
         #expect(!message.contains("Context:"))
         #expect(message.hasSuffix("Goal: hello there"))
+    }
+
+    @Test("groundingInUser reproduces today's two messages byte-for-byte")
+    func shapeUserMatchesLegacy() {
+        let persona = "PERSONA"
+        let messages = LocalAgent.buildNativeMessages(
+            persona: persona, goal: "hi", grounding: "FACT A", shape: .groundingInUser
+        )
+        #expect(messages.count == 2)
+        guard case let .system(system) = messages[0], case let .user(user, _) = messages[1] else {
+            Issue.record("expected system then user"); return
+        }
+        #expect(system == persona)
+        #expect(user == LocalAgent.buildNativeGoal(goal: "hi", grounding: "FACT A"))
+    }
+
+    @Test("groundingInSystem moves the context into the system turn; the user turn carries only the goal (#LFM 0/5→5/5)")
+    func shapeSystemMovesGrounding() {
+        let messages = LocalAgent.buildNativeMessages(
+            persona: "PERSONA", goal: "hi", grounding: "FACT A\nRULES:\n- x", shape: .groundingInSystem
+        )
+        guard case let .system(system) = messages[0], case let .user(user, _) = messages[1] else {
+            Issue.record("expected system then user"); return
+        }
+        #expect(system.hasPrefix("PERSONA"))
+        #expect(system.contains("FACT A\nRULES:\n- x"))
+        #expect(!user.contains("Context:"))
+        #expect(!user.contains("FACT A"))
+        #expect(user.hasSuffix("Goal: hi"))
+        #expect(user.hasPrefix("Use the available tools"))
+    }
+
+    @Test("groundingInSystem with EMPTY grounding is the persona alone too")
+    func shapeSystemEmptyGrounding() {
+        let messages = LocalAgent.buildNativeMessages(
+            persona: "PERSONA", goal: "hi", grounding: "", shape: .groundingInSystem
+        )
+        guard case let .system(system) = messages[0] else { Issue.record("expected system"); return }
+        #expect(system == "PERSONA")
+    }
+
+    @Test("groundingInSystem with no grounding is the persona alone — no dangling separator")
+    func shapeSystemNoGrounding() {
+        let messages = LocalAgent.buildNativeMessages(
+            persona: "PERSONA", goal: "hi", grounding: nil, shape: .groundingInSystem
+        )
+        guard case let .system(system) = messages[0] else { Issue.record("expected system"); return }
+        #expect(system == "PERSONA")
     }
 
     @Test("the preamble still opens the message — it is part of the stable prefix")

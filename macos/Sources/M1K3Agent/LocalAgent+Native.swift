@@ -19,6 +19,11 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-10, Confidence 0.85, Prior: Unknown
 //  Context: pressure-tested by the challenger — typed transcript + typed args +
 //  runtime capability flag adopted over a stateless prompt-string seam.
+//  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 — PR #232: the opening two
+//  messages come from `buildNativeMessages(…shape:)`, laid out per the provider's
+//  `nativePromptShape`. `.groundingInUser` is the historical pair byte-for-byte;
+//  `.groundingInSystem` (lfm2) appends the grounding to the system turn. Persona stays the
+//  token prefix in both. Tested in NativeGoalOrderTests.
 
 import Foundation
 import M1K3Inference
@@ -60,6 +65,7 @@ extension LocalAgent {
                 goal: goal,
                 images: images,
                 grounding: grounding,
+                shape: provider.nativePromptShape,
                 onEvent: onEvent,
                 onConclusionToken: onConclusionToken,
                 onReasoningToken: onReasoningToken
@@ -77,6 +83,7 @@ extension LocalAgent {
         goal: String,
         images: [ImageAttachment] = [],
         grounding: String?,
+        shape: NativePromptShape,
         onEvent: (@Sendable (AgentLoopEvent) -> Void)?,
         onConclusionToken: (@Sendable (String) -> Void)?,
         onReasoningToken: (@Sendable (String) -> Void)?
@@ -91,10 +98,15 @@ extension LocalAgent {
         // this system text matches the persona-prefix seed token-for-token —
         // that exact match is what lets the cache reuse the persona block at
         // iteration 0 (MLXToolTurnSession's cross-turn reuse).
-        var pendingMessages: [ToolMessage] = [
-            .system(M1K3Persona.systemPrompt(includeExemplars: true)),
-            .user(Self.buildNativeGoal(goal: goal, grounding: grounding), images: images),
-        ]
+        // Where the grounding goes is the provider's call (`nativePromptShape`):
+        // small models stop calling tools when it rides in the user turn.
+        var pendingMessages = Self.buildNativeMessages(
+            persona: M1K3Persona.systemPrompt(includeExemplars: true),
+            goal: goal,
+            grounding: grounding,
+            images: images,
+            shape: shape
+        )
 
         logRunStart(goal: goal, grounding: grounding)
 
@@ -375,6 +387,37 @@ extension LocalAgent {
 
         \(groundingBlock)Goal: \(goal)
         """
+    }
+
+    /// The opening two messages of a native tool turn, laid out per the
+    /// provider's `NativePromptShape`. `.groundingInUser` is byte-for-byte the
+    /// historical layout (persona alone in the system turn keeps the
+    /// persona-prefix cache seed exact). `.groundingInSystem` appends the
+    /// grounding to the system turn and leaves the user turn as preamble +
+    /// goal — LFM2.5-1.2B made 0/5 tool calls with the Context block in the
+    /// user turn and 5/5 with it here (mlx-lm control, 2026-09-05). The
+    /// persona is still the token prefix either way.
+    static func buildNativeMessages(
+        persona: String,
+        goal: String,
+        grounding: String?,
+        images: [ImageAttachment] = [],
+        shape: NativePromptShape
+    ) -> [ToolMessage] {
+        switch shape {
+        case .groundingInUser:
+            return [
+                .system(persona),
+                .user(buildNativeGoal(goal: goal, grounding: grounding), images: images),
+            ]
+        case .groundingInSystem:
+            // Empty grounding counts as none — no dangling separator after the persona.
+            let system = grounding.flatMap { $0.isEmpty ? nil : persona + "\n\n" + $0 } ?? persona
+            return [
+                .system(system),
+                .user(buildNativeGoal(goal: goal, grounding: nil), images: images),
+            ]
+        }
     }
 
     /// Join the tool observations gathered so far — the evidence-rescue fallback

@@ -431,3 +431,84 @@ struct MLXParsedToolCallTests {
         #expect(MLXToolMapping.chatMessage(from: .user("hi"), imagesAllowed: true).images.isEmpty)
     }
 }
+
+/// swift-jinja's `tojson` sorts keys, so the template renders a tool as
+/// `{"function":{"description":…,"name":…},"type":"function"}` — LFM2.5-1.2B
+/// made 0/5 tool calls on that rendering and 5/5 on the OpenAI order it was
+/// trained on (mlx-lm replay of the app's exact prompt, 2026-09-05). For the
+/// lfm2 dialect we render the block ourselves into the system turn and hand
+/// the template no tools, so `tojson` never runs.
+struct LFM2ToolBlockTests {
+    private let search: ToolSpec = MLXToolMapping.toolSpec(from: ToolDefinition(
+        name: "search_knowledge", description: "Search the user's notes.",
+        parameters: [ToolParameterDefinition(name: "query", description: "what to look up")]
+    ))
+    private let clock: ToolSpec = MLXToolMapping.toolSpec(from: ToolDefinition(
+        name: "datetime", description: "Current date and time.", parameters: []
+    ))
+
+    @Test("canonical JSON keeps the trained key order: type, function{name, description, parameters}")
+    func canonicalOrder() {
+        let json = MLXToolMapping.canonicalToolJSON(search)
+        #expect(json == """
+        {"type": "function", "function": {"name": "search_knowledge", "description": "Search the user's notes.", \
+        "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "what to look up"}}, \
+        "required": ["query"]}}}
+        """)
+    }
+
+    @Test("a parameterless tool renders an empty properties object and no required list")
+    func parameterless() {
+        let json = MLXToolMapping.canonicalToolJSON(clock)
+        #expect(json == """
+        {"type": "function", "function": {"name": "datetime", "description": "Current date and time.", \
+        "parameters": {"type": "object", "properties": {}}}}
+        """)
+    }
+
+    @Test("the block matches the Liquid template's own joins: newline, 'List of tools: [', ', ' between, ']'")
+    func blockShape() {
+        let block = MLXToolMapping.lfm2ToolsBlock([clock, search])
+        #expect(block.hasPrefix("\nList of tools: [{\"type\": \"function\", \"function\": {\"name\": \"datetime\""))
+        #expect(block.contains("}}}, {\"type\": \"function\", \"function\": {\"name\": \"search_knowledge\""))
+        #expect(block.hasSuffix("]"))
+    }
+
+    @Test("lfm2: the block lands on the system turn and the template gets no tools")
+    func lfm2Rewrite() {
+        let chat = [Chat.Message(role: .system, content: "PERSONA"), Chat.Message(role: .user, content: "hi")]
+        let out = MLXToolMapping.templateInputs(chat: chat, specs: [clock], format: .lfm2)
+        #expect(out.specs == nil)
+        #expect(out.chat[0].content == "PERSONA" + MLXToolMapping.lfm2ToolsBlock([clock]))
+        #expect(out.chat[1].content == "hi")
+    }
+
+    @Test("other dialects pass through untouched — their templates own the rendering")
+    func othersUntouched() {
+        let chat = [Chat.Message(role: .system, content: "PERSONA")]
+        for format in [ToolCallFormat.json, .xmlFunction, .gemma] {
+            let out = MLXToolMapping.templateInputs(chat: chat, specs: [clock], format: format)
+            #expect(out.specs?.count == 1)
+            #expect(out.chat[0].content == "PERSONA")
+        }
+    }
+
+    @Test("lfm2 with no system message gets one carrying only the block")
+    func lfm2NoSystemMessage() {
+        let chat = [Chat.Message(role: .user, content: "hi")]
+        let out = MLXToolMapping.templateInputs(chat: chat, specs: [clock], format: .lfm2)
+        #expect(out.specs == nil)
+        #expect(out.chat.count == 2)
+        #expect(out.chat[0].role == .system)
+        #expect(out.chat[0].content == MLXToolMapping.lfm2ToolsBlock([clock]))
+        #expect(out.chat[1].content == "hi")
+    }
+
+    @Test("lfm2 with no tools changes nothing")
+    func lfm2NoTools() {
+        let chat = [Chat.Message(role: .system, content: "PERSONA")]
+        let out = MLXToolMapping.templateInputs(chat: chat, specs: nil, format: .lfm2)
+        #expect(out.specs == nil)
+        #expect(out.chat[0].content == "PERSONA")
+    }
+}

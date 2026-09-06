@@ -58,6 +58,10 @@
 //  unload incl. the container via SingleFlightLoader.reset) for the escalated
 //  deep dive's parked-brain memory story (PR #130). Idle-only by doc contract.
 //  Confidence 0.85 — Metal half is verify-by-launch per the metallib wall.
+//  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 — PR #232: `systemBlockIDs`
+//  renders the persona seed through `MLXToolMapping.seedInputs`, the same seam the live
+//  turn uses, so an lfm2 seed carries the self-rendered tool block (swift-jinja's sorted-key
+//  `tojson` sidestepped) and stays a true token-prefix of what the model sees.
 
 import Foundation
 import Hub
@@ -670,16 +674,19 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
                 tools: tools
             )
         }
-        let system: [String: String] = ["role": "system", "content": persona]
+        // Same seam as the live turn (lfm2 carries its tools in the system text).
+        let seed = MLXToolMapping.seedInputs(persona: persona, specs: specs, format: resolvedToolCallFormat ?? .json)
+        let renderSpecs = seed.specs
+        let system: [String: String] = ["role": "system", "content": seed.system]
         do {
-            return try render([system], tools: specs)
+            return try render([system], tools: renderSpecs)
         } catch {
             let userA: [String: String] = ["role": "user", "content": "x"]
             let userB: [String: String] = ["role": "user", "content": "7"]
             // Probes carry the SAME tools (R) / none (U) as the persona render,
             // so the user-header length the subtraction removes is exact.
-            let renderA = try render([system, userA], tools: specs)
-            let renderB = try render([system, userB], tools: specs)
+            let renderA = try render([system, userA], tools: renderSpecs)
+            let renderB = try render([system, userB], tools: renderSpecs)
             let userOnlyA = try render([userA], tools: nil)
             let userOnlyB = try render([userB], tools: nil)
             guard let length = SystemBlockBoundary.systemBlockLength(

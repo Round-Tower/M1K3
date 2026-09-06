@@ -44,6 +44,14 @@
 //  path; untested by design, same as its sibling `tokenCount`/
 //  `templatedTokenCount` (Metal-backed, verify-by-launch — see M1K3MLXTests'
 //  PersonaPrefixCacheTests, which tests only the pure cache-key half).
+//  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 — PR #232. swift-jinja's
+//  `tojson` sorts keys; LFM2.5-1.2B made 0/5 tool calls on that rendering, 5/5 in the
+//  trained order (mlx-lm replay of the app's exact prompt). `templateInputs`/`seedInputs`
+//  render the lfm2 block ourselves into the system turn (one seam: stateless turn, session,
+//  persona seed, probe). `nativePromptShape` (lfm2 → grounding in the system turn; the
+//  seed-miss alarm is gated on it). `ToolTurnDiagnostics`: both loops used to swallow
+//  `.rejectedToolCall`; no-call turns log a count always, content only on anomaly or when
+//  `M1K3_SELFTEST_DUMP_PROMPT` asks. Measured: tool-use 0/6 → 5/6 (Lil DWQ 5/6).
 
 import Foundation
 import M1K3Inference
@@ -102,6 +110,84 @@ enum MLXToolMapping {
                 ] as [String: any Sendable],
             ] as [String: any Sendable],
         ]
+    }
+
+    // MARK: - LFM2 tool block (works around swift-jinja's sorted-key `tojson`)
+
+    /// One tool in the OpenAI key order the Liquid models were trained on,
+    /// with Python `json.dumps` spacing. swift-jinja's `tojson` filter sorts
+    /// keys (`.sortedKeys`), which put `function` before `type` and
+    /// `description` before `name`; LFM2.5-1.2B went silent on that rendering
+    /// (0/5 → 5/5 in an mlx-lm replay of the app's exact prompt, 2026-09-05).
+    /// Property names are sorted for determinism — measured irrelevant to the
+    /// model (two-parameter tool, declaration vs alphabetical: 5/5 both,
+    /// 2026-09-06); `required` is emitted only when non-empty. Strings are
+    /// escaped like `json.dumps(ensure_ascii=False)`: non-ASCII stays raw UTF-8,
+    /// where Python's default would emit `\uXXXX` — tool descriptions are
+    /// ASCII today; revisit if a localised description ever reaches a template.
+    static func canonicalToolJSON(_ spec: ToolSpec) -> String {
+        let function = spec["function"] as? [String: Any] ?? [:]
+        let parameters = function["parameters"] as? [String: Any] ?? [:]
+        let properties = parameters["properties"] as? [String: Any] ?? [:]
+        let required = parameters["required"] as? [String] ?? []
+        let props = properties.keys.sorted().map { name -> String in
+            let schema = properties[name] as? [String: Any] ?? [:]
+            var fields: [String] = []
+            if let type = schema["type"] as? String { fields.append("\"type\": \(jsonString(type))") }
+            if let description = schema["description"] as? String {
+                fields.append("\"description\": \(jsonString(description))")
+            }
+            return "\(jsonString(name)): {\(fields.joined(separator: ", "))}"
+        }
+        var params = "\"type\": \"object\", \"properties\": {\(props.joined(separator: ", "))}"
+        if !required.isEmpty {
+            params += ", \"required\": [\(required.map(jsonString).joined(separator: ", "))]"
+        }
+        let name = jsonString(function["name"] as? String ?? "")
+        let description = jsonString(function["description"] as? String ?? "")
+        return "{\"type\": \"function\", \"function\": {\"name\": \(name), \"description\": \(description), "
+            + "\"parameters\": {\(params)}}}"
+    }
+
+    /// The system-turn suffix exactly as the Liquid template would build it —
+    /// `"\n" + "List of tools: [" + tools joined by ", " + "]"` — minus the
+    /// sorted keys.
+    static func lfm2ToolsBlock(_ specs: [ToolSpec]) -> String {
+        "\nList of tools: [" + specs.map(canonicalToolJSON).joined(separator: ", ") + "]"
+    }
+
+    /// What actually goes to the chat template. For `.lfm2` the tools ride
+    /// inside the system message (the template inserts a string tool verbatim
+    /// and only `tojson`s objects, so passing no tools sidesteps the filter);
+    /// every other dialect keeps the template's own rendering. ONE seam for the
+    /// stateless turn, the session turn, and the persona-prefix seed, so the
+    /// three can never disagree about what the model saw.
+    static func templateInputs(
+        chat: [Chat.Message], specs: [ToolSpec]?, format: ToolCallFormat
+    ) -> (chat: [Chat.Message], specs: [ToolSpec]?) {
+        guard format == .lfm2, let specs, !specs.isEmpty else { return (chat, specs) }
+        var rewritten = chat
+        if let index = rewritten.firstIndex(where: { $0.role == .system }) {
+            rewritten[index].content += lfm2ToolsBlock(specs)
+        } else {
+            rewritten.insert(Chat.Message(role: .system, content: lfm2ToolsBlock(specs)), at: 0)
+        }
+        return (rewritten, nil)
+    }
+
+    /// The persona-prefix seed's view of `templateInputs`: one system message in, its content + specs out.
+    static func seedInputs(persona: String, specs: [ToolSpec]?, format: ToolCallFormat) -> (system: String, specs: [ToolSpec]?) {
+        let inputs = templateInputs(chat: [Chat.Message(role: .system, content: persona)], specs: specs, format: format)
+        return (inputs.chat[0].content, inputs.specs)
+    }
+
+    private static func jsonString(_ value: String) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .withoutEscapingSlashes
+        guard let data = try? encoder.encode(value), let text = String(data: data, encoding: .utf8) else {
+            return "\"\""
+        }
+        return text
     }
 
     /// Map one transcript turn to a `Chat.Message`. Tool results become the
@@ -323,6 +409,15 @@ extension MLXGemmaProvider: ToolCallingProvider {
         resolvedToolCallFormat != nil
     }
 
+    /// Per-model prompt layout (see `NativePromptShape`). LFM2 is the measured
+    /// case: grounding in the user turn silences its tool calls (0/5 → 5/5 when
+    /// moved to the system turn, 2026-09-05). Its recurrent cache can't be
+    /// trimmed, so it never had a persona-prefix cache to protect. Extend this
+    /// table only with a same-session A/B behind it.
+    public var nativePromptShape: NativePromptShape {
+        resolvedToolCallFormat == .lfm2 ? .groundingInSystem : .groundingInUser
+    }
+
     /// Run one model turn over the transcript + tools, returning structure. The
     /// library parses the model's native dialect into `.toolCall` events inline;
     /// we collect them (and any free text) into a `ToolTurn`. Stateless-renders-
@@ -346,11 +441,14 @@ extension MLXGemmaProvider: ToolCallingProvider {
         defer { MLXMemoryBudget.reclaim(label: "toolTurn") }
 
         return try await container.perform { context in
-            let chat = messages.map { MLXToolMapping.chatMessage(from: $0, format: format) }
-            let specs = tools.map(MLXToolMapping.toolSpec(from:))
+            let rendered = MLXToolMapping.templateInputs(
+                chat: messages.map { MLXToolMapping.chatMessage(from: $0, format: format) },
+                specs: tools.isEmpty ? nil : tools.map(MLXToolMapping.toolSpec(from:)),
+                format: format
+            )
             let userInput = UserInput(
-                chat: chat,
-                tools: specs.isEmpty ? nil : specs,
+                chat: rendered.chat,
+                tools: rendered.specs,
                 additionalContext: thinkingContext
             )
             let input = try await context.processor.prepare(input: userInput)
@@ -358,12 +456,16 @@ extension MLXGemmaProvider: ToolCallingProvider {
             let stream = try MLXLMCommon.generate(input: input, parameters: parameters, context: context)
             var text = ""
             var calls: [ParsedToolCall] = []
+            var rejections = 0
             for await event in stream {
                 switch event {
                 case let .chunk(piece):
                     text += piece
                 case let .toolCall(libraryCall):
                     calls.append(MLXToolMapping.parsedToolCall(from: libraryCall))
+                case let .rejectedToolCall(rejection):
+                    rejections += 1
+                    ToolTurnDiagnostics.logRejected(rejection, label: "toolTurn")
                 case let .info(info):
                     logGenerationInfo(info, label: "toolTurn", model: modelIdentifier)
                 @unknown default:
@@ -371,6 +473,9 @@ extension MLXGemmaProvider: ToolCallingProvider {
                 }
             }
             if calls.isEmpty {
+                ToolTurnDiagnostics.noteNoCall(
+                    label: "toolTurn", rejections: rejections, toolNames: tools.map(\.name), text: text
+                ) { context.tokenizer.decode(tokenIds: input.text.tokens.asArray(Int.self)) }
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 return ToolTurn.text(Self.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded))
             }
@@ -509,6 +614,10 @@ extension MLXGemmaProvider: ToolCallingProvider {
             imagesAllowed: supportsImageInput,
             seed: seed,
             seedSource: seedSource,
+            // With grounding riding the system turn the persona seed is a
+            // prefix of the PERSONA only, never of the whole system message —
+            // falling short there is the layout, not a drift to alarm on.
+            seedMayFallShort: nativePromptShape == .groundingInSystem,
             adoptTail: adoptTail
         )
     }
@@ -538,6 +647,85 @@ extension MLXGemmaProvider: ToolCallingProvider {
 /// state hands off through a Mutex, and the cache arrays are evaluated by the
 /// generation loop before the next send (the same cross-isolation contract
 /// upstream ChatSession relies on).
+/// Why did a tool turn produce no call? The runtime STRIPS a rejected call's
+/// protocol span from the streamed text, so without these lines a rejected
+/// call is indistinguishable from "the model never called" (LFM2.5-1.2B read
+/// 0/6 that way on 2026-09-05). Shared by the stateless and session loops.
+enum ToolTurnDiagnostics {
+    static func logRejected(_ rejection: RejectedToolCall, label: String) {
+        let reason = rejection.reason.rawValue
+        let tool = rejection.toolName ?? "?"
+        let format = String(describing: rejection.format)
+        let preview = rejection.rawTextPreview
+        // Model text stays PRIVATE in the unified log (the issue-report bundle
+        // reads the last ten minutes of it); it goes public only when the
+        // harness dump is on, i.e. never on a user's machine.
+        if dumpDirectory != nil {
+            mlxToolLog.notice(
+                "\(label, privacy: .public) REJECTED tool call: reason=\(reason, privacy: .public) tool=\(tool, privacy: .public) format=\(format, privacy: .public) raw=\(preview, privacy: .public)"
+            )
+        } else {
+            mlxToolLog.notice(
+                "\(label, privacy: .public) REJECTED tool call: reason=\(reason, privacy: .public) tool=\(tool, privacy: .public) format=\(format, privacy: .public) raw=\(preview, privacy: .private)"
+            )
+        }
+    }
+
+    /// A no-call turn. Always: one content-free notice (count + tool count) —
+    /// this branch is ALSO every ordinary final answer, so nothing heavier
+    /// runs unless something is off. On an anomaly (a rejection happened) or
+    /// when a harness dump is asked for: decode the prompt ONCE, check every
+    /// tool name reached it, log the raw head of the reply, dump.
+    static func noteNoCall(
+        label: String, rejections: Int, toolNames: [String], text: String, decodePrompt: () -> String
+    ) {
+        mlxToolLog.notice(
+            "\(label, privacy: .public) no call: rejections=\(rejections) tools=\(toolNames.count)"
+        )
+        guard rejections > 0 || dumpDirectory != nil else { return }
+        let promptText = decodePrompt()
+        let promptHasTools = toolNames.allSatisfy { promptText.contains($0) }
+        let rawHead = String(text.prefix(220))
+        // Same rule as `logRejected`: reply text is private unless the harness dump is on.
+        if dumpDirectory != nil {
+            mlxToolLog.notice(
+                "\(label, privacy: .public) no call detail: promptHasTools=\(promptHasTools) raw=\(rawHead, privacy: .public)"
+            )
+        } else {
+            mlxToolLog.notice(
+                "\(label, privacy: .public) no call detail: promptHasTools=\(promptHasTools) raw=\(rawHead, privacy: .private)"
+            )
+        }
+        dumpPromptIfAsked(promptText, reply: text)
+    }
+
+    /// Harness-only: `M1K3_SELFTEST_DUMP_PROMPT=<dir inside the app container>`.
+    private static var dumpDirectory: String? {
+        let dir = ProcessInfo.processInfo.environment["M1K3_SELFTEST_DUMP_PROMPT"]
+        return (dir?.isEmpty ?? true) ? nil : dir
+    }
+
+    /// Writes a no-call turn's rendered prompt + reply so the exact bytes can
+    /// be replayed through mlx-lm (how the sorted-key bug was found). No-op
+    /// without the variable; never set in production.
+    static func dumpPromptIfAsked(_ prompt: String, reply: String) {
+        guard let dir = dumpDirectory else { return }
+        let stamp = Int(Date().timeIntervalSince1970 * 1000)
+        let url = URL(fileURLWithPath: dir).appendingPathComponent("prompt-\(stamp).txt")
+        do {
+            try (prompt + "\n\n=== REPLY ===\n" + reply).write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            // A path outside the app container is silently unwritable under the
+            // sandbox — say so, or the next person rediscovers it.
+            mlxToolLog.notice("prompt dump failed (\(dir, privacy: .public)): \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    static func toolNames(from specs: [ToolSpec]?) -> [String] {
+        (specs ?? []).compactMap { ($0["function"] as? [String: Any])?["name"] as? String }
+    }
+}
+
 final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     private let container: ModelContainer
     private let modelID: String
@@ -570,6 +758,10 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     /// Where the seed came from — printed in the reuse log so a working
     /// conversation tail is distinguishable from a warm persona prefix.
     private let seedSource: PrefixSeedSource
+    /// True when the provider's prompt shape puts grounding in the system turn
+    /// (`.groundingInSystem`): the persona seed then legitimately stops at the
+    /// persona, so the first-send miss diagnostic stays quiet.
+    private let seedMayFallShort: Bool
     /// Hand-off for the end-of-turn cache (nil = drop, today's behaviour).
     /// Installed by the provider for interactive turns only.
     private let adoptTail: (([KVCache], [Int]) -> ConversationTailCache.AdoptOutcome)?
@@ -589,8 +781,10 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         imagesAllowed: Bool = false,
         seed: PersonaPrefixSnapshot? = nil,
         seedSource: PrefixSeedSource = .none,
+        seedMayFallShort: Bool = false,
         adoptTail: (([KVCache], [Int]) -> ConversationTailCache.AdoptOutcome)? = nil
     ) {
+        self.seedMayFallShort = seedMayFallShort
         self.container = container
         self.modelID = modelID
         self.parameters = parameters
@@ -625,11 +819,14 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             // query, so strict templates never reject it — but we prefill only
             // the suffix past what the live cache already holds.
             let imagesAllowed = self.imagesAllowed
-            let fullChat = self.transcript.full.map {
-                MLXToolMapping.chatMessage(from: $0, format: format, imagesAllowed: imagesAllowed)
-            }
+            let rendered = MLXToolMapping.templateInputs(
+                chat: self.transcript.full.map {
+                    MLXToolMapping.chatMessage(from: $0, format: format, imagesAllowed: imagesAllowed)
+                },
+                specs: self.specs, format: format
+            )
             let prepared = try await context.processor.prepare(
-                input: UserInput(chat: fullChat, tools: self.specs, additionalContext: thinkingContext)
+                input: UserInput(chat: rendered.chat, tools: rendered.specs, additionalContext: thinkingContext)
             )
             let fullIDs = prepared.text.tokens.asArray(Int.self)
 
@@ -659,7 +856,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             // seeds ONLY: a conversation tail legitimately falls short whenever
             // the grounding changed or the history window slid — that's the
             // fail-soft working as designed, not a mismatch to alarm on.
-            if self.seedSource == .persona,
+            if self.seedSource == .persona, !self.seedMayFallShort,
                self.sendCount == 0, seedCount > 0, reuse < seedCount, !turnCarriesImages
             {
                 let window = { (ids: [Int]) -> String in
@@ -725,6 +922,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             )
             var text = ""
             var calls: [ParsedToolCall] = []
+            var rejections = 0
             for await event in stream {
                 switch event {
                 case let .chunk(piece):
@@ -732,6 +930,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                     onToken(piece)
                 case let .toolCall(libraryCall):
                     calls.append(MLXToolMapping.parsedToolCall(from: libraryCall))
+                case let .rejectedToolCall(rejection):
+                    rejections += 1
+                    ToolTurnDiagnostics.logRejected(rejection, label: "toolTurnSession")
                 case let .info(info):
                     // fullIDs.count = the whole rendered conversation — the true
                     // context for the readout; info's own count is suffix-only
@@ -765,6 +966,10 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
 
             let turn: ToolTurn
             if calls.isEmpty {
+                ToolTurnDiagnostics.noteNoCall(
+                    label: "toolTurnSession", rejections: rejections,
+                    toolNames: ToolTurnDiagnostics.toolNames(from: specs), text: text
+                ) { context.tokenizer.decode(tokenIds: fullIDs) }
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 turn = .text(MLXGemmaProvider.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded))
             } else {
