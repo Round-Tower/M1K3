@@ -657,7 +657,8 @@ the action list?<br />
       if (!el || el.dataset.decoded) return;
       el.dataset.decoded = '1';
       var target = el.getAttribute('data-num') || el.textContent;
-      /* settle: zeros become .z spans so the pixel-zero widen applies to every 0, not just the lone one */
+      /* settle: zeros become .z spans so the pixel-zero widen applies to every 0, not just the lone one.
+         innerHTML is safe ONLY because data-num is author-written literal text — never wire it to dynamic data. */
       function settle() { el.innerHTML = target.replace(/0/g, '<span class="z">0</span>'); }
       if (reduceMotion) { settle(); return; }
       var pool = '0123456789%/<>#█▚▮∞';

@@ -160,6 +160,7 @@ def test_html_carries_provenance_and_stays_offline():
     # offline means offline: the type is self-hosted (site/fonts.css), never a Google Fonts request
     assert "fonts.googleapis.com" not in html and "fonts.gstatic.com" not in html
     assert 'href="fonts.css"' in html and "vt323-latin-400-normal.woff2" in html
+    assert 'as="font" type="font/woff2" crossorigin' in html  # a font preload without crossorigin double-downloads
     # the phosphor mark rides beside the wordmark, same as every other page
     assert 'class="mark"' in html and 'src="favicon.svg"' in html
     # the read-out's editorial facts ride along, dated
