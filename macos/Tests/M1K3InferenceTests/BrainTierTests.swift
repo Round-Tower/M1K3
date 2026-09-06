@@ -427,4 +427,15 @@ struct BrainTierTests {
         #expect(BrainTier.downloadSizeLabel(megabytes: 2150) == "2.1 GB") // %.1f rounds half-even here
         #expect(BrainTier.downloadSizeLabel(megabytes: 1000) == "1.0 GB")
     }
+
+    @Test("a pocket below its floor eases to Mini (unready → the shell's Home-only path), never to itself")
+    func pocketBelowFloorEasesToMiniNotItself() {
+        // The 3 GB A12 iPad, Apple Intelligence blocked: easedToOfferedMini says pocket,
+        // the floor says no — the landing is Mini, and the shell reads hasLocalBrain == false.
+        let eased = BrainTier.selectableOrEased(.pocket, forPhysicalMemoryGB: 2.9, platform: .mobile)
+        #expect(eased == .mini)
+        #expect(!BrainTier.pocket.isSelectable(forPhysicalMemoryGB: 2.9, platform: .mobile))
+        // Above the floor it stays.
+        #expect(BrainTier.selectableOrEased(.pocket, forPhysicalMemoryGB: 3.8, platform: .mobile) == .pocket)
+    }
 }

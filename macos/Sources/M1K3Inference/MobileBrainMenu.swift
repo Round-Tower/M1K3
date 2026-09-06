@@ -89,12 +89,12 @@ public struct MobileBrainMenu: Equatable, Sendable {
         )
         // A roomy device without Apple Intelligence gets Lil over pocket —
         // capability first where the memory allows it.
+        // Not blocked → the ladder's Mini is always listed, so the second arm
+        // covers every remaining case (review 10: the old Lil fallback was dead).
         let recommended: MobileBrainOption = if options.contains(.tier(.lil)), afm.isBlocked {
             .tier(.lil)
         } else if options.contains(ladder) {
             ladder
-        } else if options.contains(.tier(.lil)) {
-            .tier(.lil)
         } else {
             .brainAtHome
         }

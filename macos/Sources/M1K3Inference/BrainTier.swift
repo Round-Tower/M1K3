@@ -496,6 +496,12 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     public static func capped(
         _ tier: BrainTier, forPhysicalMemoryGB gigabytes: Double, platform: DevicePlatform = .mac
     ) -> BrainTier {
+        // DELIBERATELY memory-only (afm defaults to .available): a pocket below
+        // its floor on a blocked device must land on `.mini` — unready, so the
+        // shell's Home-only path (#230) takes over — never stay on a pocket the
+        // device cannot load (PR #234 review 10 proposed threading afm here;
+        // that would re-open the doomed-load door the floor closed). Pinned in
+        // BrainTierTests.pocketBelowFloorEasesToMiniNotItself.
         min(tier, recommended(forPhysicalMemoryGB: gigabytes, platform: platform))
     }
 
