@@ -164,11 +164,10 @@ final class AppCore {
     /// `nonisolated` (like the Mac AppEnvironment's keys) so the responder's
     /// @Sendable per-turn closures can read them off the main actor.
     nonisolated static let selectedBrainKey = "selectedBrain"
-    /// Prompt tokens set aside before history (persona + tools + grounding) and
-    /// the decode reserve the history window is sized against — the Mac's
-    /// figures (`AppEnvironment.historyReserveTokens`), one policy, two shells.
-    nonisolated static let historyReserveTokens = 3000
-    nonisolated static let historyGenerationReserveTokens = 2048
+    /// The history window's reserves — the policy's own figures, shared with the
+    /// Mac shell so the two cannot drift.
+    nonisolated static let historyReserveTokens = HistoryBudgetPolicy.liveReserveTokens
+    nonisolated static let historyGenerationReserveTokens = HistoryBudgetPolicy.liveGenerationReserveTokens
     nonisolated static let hasChosenBrainKey = "hasChosenBrain"
     /// Whether the Home (paired Mac) brain fronts the slot — device-local,
     /// deliberately NOT shared spelling with the Mac (it has no Home tier).

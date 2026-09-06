@@ -14,8 +14,8 @@
 //    · `.notReady` is a transient asset sync — wait for Mini, never answer it
 //      with a 2.3GB download
 //    · a blocked AFM falls back to the pocket download (LFM2.5-1.2B, ~630 MB —
-//      was Lil's 2.3 GB before 2026-09-06); the
-//      user-fixable flavour (Apple Intelligence switched off) also offers the
+//      was Lil's 2.3 GB before 2026-09-06); the user-fixable flavour (Apple
+//      Intelligence switched off) also offers the
 //      OS-settings fix alongside.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-03, Confidence 0.9. Prior: none (new file).

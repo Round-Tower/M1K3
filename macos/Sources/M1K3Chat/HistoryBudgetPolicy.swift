@@ -71,6 +71,16 @@ public enum HistoryBudgetPolicy {
     /// aligns the live path with it.)
     public static let rotatingGenerationTokenCap = 2048
 
+    /// The live shells' inputs to `budget(for:reservedTokens:generationTokens:)`
+    /// — ONE home for both composition roots (Mac `AppEnvironment`, iOS
+    /// `AppCore`), so a tune cannot drift between them (PR #234 review 16).
+    /// `liveReserveTokens`: the non-history prompt (persona + exemplars ~1130,
+    /// tools ~600, grounding ~1100, goal ~170) — a verify-by-launch estimate;
+    /// `liveGenerationReserveTokens`: the decode headroom the window is sized
+    /// against, equal to the clamped-context cap so prefill + decode fit together.
+    public static let liveReserveTokens = 3000
+    public static let liveGenerationReserveTokens = 2048
+
     /// Apple Foundation Models (mini) has its own ~4K window, and its real
     /// effective budget is unmeasured (the [SPIKE]). So mini gets a fixed
     /// CONSERVATIVE replay — wider per-turn than the legacy 6×400 (less answer
@@ -99,7 +109,8 @@ public enum HistoryBudgetPolicy {
 
     /// The replay budget for a tier, reserving room for the fixed prompt (persona
     /// + tools + grounding + goal, in `reservedTokens`) and the generation
-    /// headroom (`generationTokens`). On a rotating-KV tier the result is
+    /// headroom (`generationTokens`). On a clamped-context tier (Big's rotating
+    /// KV, pocket's self-imposed 8k — `hasClampedContext`) the result is
     /// hard-clamped with margin so the TOTAL prompt provably stays under the
     /// window. The latency ceiling caps the replay on the wide tiers.
     public static func budget(
@@ -144,7 +155,8 @@ public enum HistoryBudgetPolicy {
     }
 
     /// The `maxTokens` the app should construct the MLX provider with for
-    /// `tier` — capped on a rotating-KV tier (see `rotatingGenerationTokenCap`),
+    /// `tier` — capped on a clamped-context tier, Big AND pocket (see
+    /// `rotatingGenerationTokenCap`, named for the tier that first needed it),
     /// the provider's default elsewhere.
     public static func generationTokenCap(for tier: BrainTier, defaultCap: Int = 4096) -> Int {
         tier.hasClampedContext ? min(rotatingGenerationTokenCap, defaultCap) : defaultCap

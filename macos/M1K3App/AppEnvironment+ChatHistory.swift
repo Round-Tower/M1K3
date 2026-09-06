@@ -496,13 +496,13 @@ extension AppEnvironment {
     /// conversation replay gets what's left. Bigger = safer (less history, less
     /// chance of crossing gemma's 8192). Tune from the `ttft` token-count log
     /// (the [SPIKE]) — this is a verify-by-launch estimate, not a measured fact.
-    nonisolated static let historyReserveTokens = 3000
+    nonisolated static let historyReserveTokens = HistoryBudgetPolicy.liveReserveTokens
 
     /// Generation headroom (tokens) kept clear of a rotating-KV window so a normal
     /// answer can't rotate gemma's persona/grounding head out mid-decode. 2048 is
     /// generous for these brains' typical answers; a pathologically long gemma
     /// answer at a full history budget is the residual verify-owed (SelfTest step).
-    nonisolated static let historyGenerationReserveTokens = 2048
+    nonisolated static let historyGenerationReserveTokens = HistoryBudgetPolicy.liveGenerationReserveTokens
 
     /// Turns of SUSTAINED relief required before effort recovers (hysteresis) —
     /// degrade now, recover slow, so a bouncing thermalState can't flap the level.

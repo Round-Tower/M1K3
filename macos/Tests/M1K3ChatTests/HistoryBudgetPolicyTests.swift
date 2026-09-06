@@ -182,4 +182,10 @@ struct HistoryBudgetPolicyTests {
         #expect(flooded.totalChars == 0)
         #expect(flooded.perTurnChars == 0)
     }
+
+    @Test("the live reserves are the policy's own — one home for both shells")
+    func liveReservesAreShared() {
+        #expect(HistoryBudgetPolicy.liveReserveTokens == 3000)
+        #expect(HistoryBudgetPolicy.liveGenerationReserveTokens == HistoryBudgetPolicy.rotatingGenerationTokenCap)
+    }
 }

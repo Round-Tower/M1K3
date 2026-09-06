@@ -133,8 +133,10 @@ shell that wires concrete backends to the seams; `AppEnvironment` (+ its
 | `M1K3BrainLink` | Brain at Home, the DEVICE side (Phase C): the shared TLS-PSK wire (`PSKCredential`/`BrainServeTLS` live here now; M1K3BrainServe re-imports), the QR `PairingPayload` (compose + parse, one round-trip-pinned type — carries the Mac's LAN `hosts=` since first pairing has no Bonjour), client HTTP/SSE codecs pinned against the server's own frames, the `NWConnection` transport (URLSession can't do external PSK), the pairing ceremony (pair → poll-health-until-Approve), `HomeBrainProvider` (the Mac's brain as an `InferenceProvider` — refusals render as etiquette copy, never empty bubbles), and the device-side store (metadata defaults + Keychain PSK). MCP-free so the mobile shells link it lean. |
 | `M1K3ScreensaverCore` | The M1K3 screensaver's pure model (Foundation-only, so the sandboxed `legacyScreenSaver` process links no app modules): the M mark geometry (`PixelMark`, same 5×7 map as the app icon), the ambient rain sim (`RainField`, deterministic), the presence copy (`PresenceFormatter`), and `ScreenSaverInstall` (the sandbox-safe install helper — status/path). The `.saver` bundle target (`M1K3Screensaver/`) draws it in AppKit; the app embeds the .saver and installs it via a Settings ▸ General button. |
 
-**Brains** (`BrainTier.swift`): three tiers — **Mini** (Apple Foundation Models,
-instant, no download), **Lil** (`Qwen3-4B-Instruct-2507-4bit-DWQ-2510`, since 2026-09-05 — the DWQ
+**Brains** (`BrainTier.swift`): four tiers, three shown per device — **Mini** (Apple Foundation Models,
+instant, no download) or, wherever Apple Intelligence is blocked, **pocket** shown as "Mini"
+(`LFM2.5-1.2B-Instruct-4bit`, ~630 MB, since 2026-09-06; one Mini per device via
+`BrainTier.offered(afm:)`; mobile floor 3.5 GB — the 3 GB A12 class can't build MLX's kernels), **Lil** (`Qwen3-4B-Instruct-2507-4bit-DWQ-2510`, since 2026-09-05 — the DWQ
 recipe of the 2026-07-16 non-thinking refresh; the reasoning toggle is pinned off for the 2507 line),
 **Big** (`gemma-4-12B-it-4bit`, since 2026-07-15 — 16GB selection floor).
 First run is **Mini-first** (one screen, `HelloView` — instant AFM, nothing to
