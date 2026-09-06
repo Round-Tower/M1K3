@@ -33,6 +33,9 @@
 //  M1K3, a one-time 630 MB download") instead of hard-coding Lil; the AFM-syncing escape hatch stays Lil explicitly
 //  (Apple's Mini is still this Mac's Mini while it syncs). Confidence now 0.8 (copy verify-by-launch on a blocked
 //  Mac).
+//  Review: Kev + claude-fable-5.1, 2026-09-06 (2) — Try again retries `env.selectedBrain`, the tier that failed;
+//  `startFallbackDownload` lost its default so no call site can drift between Lil and pocket (PR #234 review 8).
+//  Confidence now 0.8.
 
 import M1K3Avatar
 import M1K3Inference
@@ -228,7 +231,9 @@ struct HelloView: View {
                         .symbolRenderingMode(.hierarchical)
                         .font(.callout)
                         .foregroundStyle(.orange)
-                    Button("Try again") { startFallbackDownload() }
+                    // The tier that failed, never a default: the escape hatch may have
+                    // picked Lil while the policy picks pocket (PR #234 review 8).
+                    Button("Try again") { startFallbackDownload(env.selectedBrain) }
                         .buttonStyle(.glass)
                     if case .blocked(userFixable: true) = afm {
                         Button("Or turn on Apple Intelligence in System Settings") {
@@ -282,7 +287,7 @@ struct HelloView: View {
         tier.approxDownloadMB.map(BrainTier.downloadSizeLabel(megabytes:)) ?? "small"
     }
 
-    private func startFallbackDownload(_ tier: BrainTier = .pocket) {
+    private func startFallbackDownload(_ tier: BrainTier) {
         phase = .downloading
         // selectBrain drives the honest modelLoad bar; this IS the active
         // selection now, so using modelLoad here is correct (unlike the
