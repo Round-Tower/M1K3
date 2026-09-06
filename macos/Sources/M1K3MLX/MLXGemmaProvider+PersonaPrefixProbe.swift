@@ -97,7 +97,9 @@ extension MLXGemmaProvider {
                         addGenerationPrompt: gen, truncation: false, maxLength: nil, tools: tools
                     )
                 }
-                // Ground truth renders through the SAME seam production does:
+                // Ground truth renders through the SAME seam production does
+                // (recomputed here on purpose, independently of the call inside
+                // `systemBlockIDs` — the probe must not borrow the thing it checks):
                 // for lfm2 the tools ride inside the system text (sidestepping
                 // swift-jinja's sorted-key tojson), so `full` must too — or the
                 // probe false-FAILs the one family the seam exists for.

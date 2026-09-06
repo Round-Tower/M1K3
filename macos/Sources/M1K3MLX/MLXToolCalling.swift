@@ -657,9 +657,18 @@ enum ToolTurnDiagnostics {
         let tool = rejection.toolName ?? "?"
         let format = String(describing: rejection.format)
         let preview = rejection.rawTextPreview
-        mlxToolLog.notice(
-            "\(label, privacy: .public) REJECTED tool call: reason=\(reason, privacy: .public) tool=\(tool, privacy: .public) format=\(format, privacy: .public) raw=\(preview, privacy: .public)"
-        )
+        // Model text stays PRIVATE in the unified log (the issue-report bundle
+        // reads the last ten minutes of it); it goes public only when the
+        // harness dump is on, i.e. never on a user's machine.
+        if dumpDirectory != nil {
+            mlxToolLog.notice(
+                "\(label, privacy: .public) REJECTED tool call: reason=\(reason, privacy: .public) tool=\(tool, privacy: .public) format=\(format, privacy: .public) raw=\(preview, privacy: .public)"
+            )
+        } else {
+            mlxToolLog.notice(
+                "\(label, privacy: .public) REJECTED tool call: reason=\(reason, privacy: .public) tool=\(tool, privacy: .public) format=\(format, privacy: .public) raw=\(preview, privacy: .private)"
+            )
+        }
     }
 
     /// A no-call turn. Always: one content-free notice (count + tool count) —
@@ -677,9 +686,16 @@ enum ToolTurnDiagnostics {
         let promptText = decodePrompt()
         let promptHasTools = toolNames.allSatisfy { promptText.contains($0) }
         let rawHead = String(text.prefix(220))
-        mlxToolLog.notice(
-            "\(label, privacy: .public) no call detail: promptHasTools=\(promptHasTools) raw=\(rawHead, privacy: .public)"
-        )
+        // Same rule as `logRejected`: reply text is private unless the harness dump is on.
+        if dumpDirectory != nil {
+            mlxToolLog.notice(
+                "\(label, privacy: .public) no call detail: promptHasTools=\(promptHasTools) raw=\(rawHead, privacy: .public)"
+            )
+        } else {
+            mlxToolLog.notice(
+                "\(label, privacy: .public) no call detail: promptHasTools=\(promptHasTools) raw=\(rawHead, privacy: .private)"
+            )
+        }
         dumpPromptIfAsked(promptText, reply: text)
     }
 

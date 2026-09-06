@@ -75,6 +75,15 @@ struct NativeGoalOrderTests {
         #expect(user.hasPrefix("Use the available tools"))
     }
 
+    @Test("groundingInSystem with EMPTY grounding is the persona alone too")
+    func shapeSystemEmptyGrounding() {
+        let messages = LocalAgent.buildNativeMessages(
+            persona: "PERSONA", goal: "hi", grounding: "", shape: .groundingInSystem
+        )
+        guard case let .system(system) = messages[0] else { Issue.record("expected system"); return }
+        #expect(system == "PERSONA")
+    }
+
     @Test("groundingInSystem with no grounding is the persona alone — no dangling separator")
     func shapeSystemNoGrounding() {
         let messages = LocalAgent.buildNativeMessages(

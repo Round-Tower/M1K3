@@ -411,7 +411,8 @@ extension LocalAgent {
                 .user(buildNativeGoal(goal: goal, grounding: grounding), images: images),
             ]
         case .groundingInSystem:
-            let system = grounding.map { persona + "\n\n" + $0 } ?? persona
+            // Empty grounding counts as none — no dangling separator after the persona.
+            let system = grounding.flatMap { $0.isEmpty ? nil : persona + "\n\n" + $0 } ?? persona
             return [
                 .system(system),
                 .user(buildNativeGoal(goal: goal, grounding: nil), images: images),
