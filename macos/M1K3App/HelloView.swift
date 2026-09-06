@@ -29,6 +29,10 @@
 //  on ready exactly as before; an engaged one gets the invite. The avatar
 //  backdrop stays forward during the waits (it wakes as the bar fills — that's
 //  the show). Failure UI unchanged. Feel is verify-by-⌘R.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — the fallback copy names the tier the policy chose (pocket: "Mini
+//  M1K3, a one-time 630 MB download") instead of hard-coding Lil; the AFM-syncing escape hatch stays Lil explicitly
+//  (Apple's Mini is still this Mac's Mini while it syncs). Confidence now 0.8 (copy verify-by-launch on a blocked
+//  Mac).
 
 import M1K3Avatar
 import M1K3Inference
@@ -161,9 +165,12 @@ struct HelloView: View {
             return "Runs on \(tier.displayName), your chosen brain · change anytime in Settings."
         case .useMini, .waitForMini:
             return "Runs on Mini, Apple's on-device model · change anytime in Settings."
-        case .downloadFallback:
+        case let .downloadFallback(tier, _):
+            let size = tier.approxDownloadMB.map { mb in
+                mb >= 1000 ? String(format: "%.1f GB", Double(mb) / 1000) : "\(mb) MB"
+            } ?? "small"
             return "Apple Intelligence isn't available here, so I'll fetch my own brain — "
-                + "Lil M1K3, a one-time 2.3 GB download. Still fully on this Mac."
+                + "\(tier.displayName) M1K3, a one-time \(size) download. Still fully on this Mac."
         }
     }
 
@@ -175,8 +182,10 @@ struct HelloView: View {
             // Same carousel, indeterminate progress source (O6): the AFM warm
             // is usually short, but it's the same dead wait without this.
             WakeSetupCarousel(flow: $wakeFlow, fraction: nil, onComplete: onComplete)
+            // AFM is merely syncing here, so the offered Mini is still Apple's:
+            // the escape hatch is Lil, not pocket.
             Button("Use a downloaded brain instead (Lil, 2.3 GB)") {
-                startFallbackDownload()
+                startFallbackDownload(.lil)
             }
             .buttonStyle(.plain)
             .font(.caption)
@@ -271,7 +280,7 @@ struct HelloView: View {
         }
     }
 
-    private func startFallbackDownload(_ tier: BrainTier = .lil) {
+    private func startFallbackDownload(_ tier: BrainTier = .pocket) {
         phase = .downloading
         // selectBrain drives the honest modelLoad bar; this IS the active
         // selection now, so using modelLoad here is correct (unlike the

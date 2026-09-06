@@ -19,6 +19,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — the full sweep: full-bleed avatar + CRT behind the cards; brain rows
 //  from MobileBrainMenu (Home included, locked rows gone); a second step picks the face (Phosphor Fox is the registered
 //  default); Home pairs in-place. Confidence now 0.8 (layout verify-by-launch on iPad 8th gen + iPhone 17 Pro).
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — the privacy line keys on `menu.hasLocalBrain` rather than "Mini
+//  listed" — pocket is a local brain too. Confidence now 0.8.
 //
 
 import M1K3Avatar
@@ -71,7 +73,7 @@ struct OnboardingScreen: View {
 
                 // Honest on a Home-only device: the brain is your Mac, not this iPad.
                 Label(
-                    menu.localFallback == nil && !menu.options.contains(.tier(.mini))
+                    !menu.hasLocalBrain
                         ? "Runs on your own Mac, over your own Wi‑Fi"
                         : "Everything runs on your device",
                     systemImage: "lock.fill"

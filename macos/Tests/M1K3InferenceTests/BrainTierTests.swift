@@ -20,15 +20,18 @@
 //  tool-caller, nobody's favourite at anything; the all-gemma reshuffle).
 //  Three tiers again; a persisted "huge" migrates to .big via
 //  BrainTier(persisted:) — the Huge user is exactly who wants Big.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — four tiers again — pocket (LFM2.5-1.2B as the non-AFM Mini): facts,
+//  the measured 3.5 GB mobile floor, ordering, `offered(afm:)`, `recommended(…afm:)`, `easedToOfferedMini`.
+//  Confidence 0.9.
 //
 
 @testable import M1K3Inference
 import Testing
 
 struct BrainTierTests {
-    @Test("there are exactly three tiers, mini/lil/big")
+    @Test("there are exactly four tiers, mini/pocket/lil/big — pocket is the Mini for devices without Apple Intelligence")
     func threeTiers() {
-        #expect(BrainTier.allCases == [.mini, .lil, .big])
+        #expect(BrainTier.allCases == [.mini, .pocket, .lil, .big])
     }
 
     @Test("every tier carries non-empty display copy")
@@ -161,11 +164,12 @@ struct BrainTierTests {
         #expect(BrainTier.recommended(forPhysicalMemoryGB: 24, platform: .mac) == .lil)
     }
 
-    @Test("tiers order by capability — mini < lil < big")
+    @Test("tiers order by capability — mini < pocket < lil < big")
     func tierOrdering() {
-        #expect(BrainTier.mini < .lil)
+        #expect(BrainTier.mini < .pocket)
+        #expect(BrainTier.pocket < .lil)
         #expect(BrainTier.lil < .big)
-        #expect(BrainTier.allCases.sorted() == [.mini, .lil, .big])
+        #expect(BrainTier.allCases.sorted() == [.mini, .pocket, .lil, .big])
         // min/max read naturally off the ordering (what `capped` relies on).
         #expect(min(BrainTier.big, .lil) == .lil)
         #expect(max(BrainTier.mini, .big) == .big)
@@ -338,5 +342,71 @@ struct BrainTierTests {
         // never offers an attach that would be silently dropped.
         #expect(!BrainTier.mini.supportsImageInput)
         #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.big])
+    }
+
+    // MARK: - Pocket: the Mini for devices without Apple Intelligence (2026-09-06)
+
+    @Test("pocket shows as Mini, runs LFM2.5-1.2B on MLX, one-time ~630 MB download")
+    func pocketFacts() {
+        #expect(BrainTier.pocket.displayName == "Mini")
+        #expect(BrainTier.pocket.backing == .mlx(modelID: "mlx-community/LFM2.5-1.2B-Instruct-4bit"))
+        #expect(BrainTier.pocket.mlxModelID == "mlx-community/LFM2.5-1.2B-Instruct-4bit")
+        #expect(BrainTier.pocket.approxDownloadMB == 630)
+        #expect(BrainTier.pocket.requiresDownload)
+        #expect(BrainTier.pocket.prefersFastThinking)
+        #expect(!BrainTier.pocket.supportsImageInput)
+        #expect(!BrainTier.pocket.usesRotatingKVCache)
+        #expect(BrainTier.pocket.approximateContextTokens == 8192)
+        #expect(BrainTier.pocket.glyph != BrainTier.mini.glyph)
+        #expect(BrainTier(persisted: "pocket") == .pocket)
+    }
+
+    @Test("pocket: no Mac floor; 3.5 GB on mobile — the 3 GB A12 iPad fails its first generation (measured)")
+    func pocketFloors() {
+        #expect(BrainTier.pocket.minimumPhysicalMemoryGB(platform: .mac) == nil)
+        // 3.5 GB on mobile: the 3 GB A12 iPad (reports ~2.9) loads LFM2 and dies on
+        // the first generation (Metal compiler LLVM error on the bf16 gather kernel).
+        #expect(BrainTier.pocket.minimumPhysicalMemoryGB(platform: .mobile) == 3.5)
+        #expect(!BrainTier.pocket.isSelectable(forPhysicalMemoryGB: 2.9, platform: .mobile))
+        #expect(BrainTier.pocket.isSelectable(forPhysicalMemoryGB: 3.8, platform: .mobile))
+    }
+
+    @Test("pocket sits between mini and lil in the ladder")
+    func pocketOrder() {
+        #expect(BrainTier.mini < BrainTier.pocket)
+        #expect(BrainTier.pocket < BrainTier.lil)
+    }
+
+    @Test("offered tiers: exactly one of mini/pocket per device — pocket replaces mini whenever AFM is blocked")
+    func offered() {
+        #expect(BrainTier.offered(afm: .available) == [.mini, .lil, .big])
+        #expect(BrainTier.offered(afm: .notReady) == [.mini, .lil, .big])
+        #expect(BrainTier.offered(afm: .blocked(userFixable: true)) == [.pocket, .lil, .big])
+        #expect(BrainTier.offered(afm: .blocked(userFixable: false)) == [.pocket, .lil, .big])
+    }
+
+    @Test("the ladder recommends pocket where it would have recommended an unavailable Mini")
+    func ladderWithoutAFM() {
+        #expect(BrainTier.recommended(forPhysicalMemoryGB: 8, platform: .mac, afm: .blocked(userFixable: false)) == .pocket)
+        #expect(BrainTier.recommended(forPhysicalMemoryGB: 8, platform: .mac, afm: .available) == .mini)
+        #expect(BrainTier.recommended(forPhysicalMemoryGB: 16, platform: .mac, afm: .blocked(userFixable: true)) == .lil)
+        // The ladder names pocket even below its floor — MobileBrainMenu applies the floor.
+        #expect(BrainTier.recommended(forPhysicalMemoryGB: 2.9, platform: .mobile, afm: .blocked(userFixable: false)) == .pocket)
+        #expect(BrainTier.recommended(forPhysicalMemoryGB: 6, platform: .mobile, afm: .notReady) == .mini)
+    }
+
+    @Test("a persisted Mini eases to whichever Mini this device can run — and back")
+    func easedToOfferedMini() {
+        // Blocked: the AFM Mini never answers here — pocket does.
+        #expect(BrainTier.mini.easedToOfferedMini(afm: .blocked(userFixable: false)) == .pocket)
+        #expect(BrainTier.mini.easedToOfferedMini(afm: .blocked(userFixable: true)) == .pocket)
+        // Apple Intelligence back on: the instant Mini takes over (pocket is no longer offered).
+        #expect(BrainTier.pocket.easedToOfferedMini(afm: .available) == .mini)
+        // notReady is a transient sync: neither direction moves.
+        #expect(BrainTier.mini.easedToOfferedMini(afm: .notReady) == .mini)
+        #expect(BrainTier.pocket.easedToOfferedMini(afm: .notReady) == .pocket)
+        // An explicit heavier pick is sovereign.
+        #expect(BrainTier.lil.easedToOfferedMini(afm: .blocked(userFixable: false)) == .lil)
+        #expect(BrainTier.big.easedToOfferedMini(afm: .available) == .big)
     }
 }

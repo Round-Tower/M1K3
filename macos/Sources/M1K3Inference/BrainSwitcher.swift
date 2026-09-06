@@ -15,6 +15,9 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-21, Confidence 0.85 (textbook composition;
 //  the no-lie-during-download + locked-not-dropped rules are pinned by tests; the
 //  toolbar wiring + look are verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — `rows(…afm:)` lists `BrainTier.offered(afm:)` — never two brains
+//  called Mini, never the AFM Mini on a blocked Mac. Default `.available` keeps every existing caller byte-identical.
+//  Confidence now 0.85.
 
 import Foundation
 
@@ -44,9 +47,10 @@ public enum BrainSwitcher {
     public static func rows(
         active: BrainTier,
         isDownloaded: (BrainTier) -> Bool,
-        isLocked: (BrainTier) -> Bool
+        isLocked: (BrainTier) -> Bool,
+        afm: AFMAvailability = .available
     ) -> [BrainSwitchRow] {
-        BrainTier.allCases.map { tier in
+        BrainTier.offered(afm: afm).map { tier in
             let locked = isLocked(tier)
             let needsDownload = !locked && tier.requiresDownload && !isDownloaded(tier)
             return BrainSwitchRow(

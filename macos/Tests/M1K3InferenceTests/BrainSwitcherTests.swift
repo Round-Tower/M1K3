@@ -8,6 +8,8 @@
 //  active tier BEFORE the weights finish, so the label must compose with load).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-21, Confidence 0.85. Prior: this file.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — rows follow `BrainTier.offered(afm:)` — the AFM device lists
+//  mini/lil/big, a blocked one pocket/lil/big with pocket titled "Mini · … download". Confidence 0.9.
 
 @testable import M1K3Inference
 import Testing
@@ -31,9 +33,10 @@ struct BrainSwitcherTests {
 
     // MARK: - rows
 
-    @Test("one row per tier, in BrainTier.allCases order")
+    @Test("one row per OFFERED tier, in BrainTier order — the AFM Mini's device never lists pocket")
     func ordering() {
-        #expect(rows(active: .mini).map(\.tier) == BrainTier.allCases)
+        #expect(rows(active: .mini).map(\.tier) == [.mini, .lil, .big])
+        #expect(rows(active: .mini).map(\.tier) == BrainTier.offered(afm: .available))
     }
 
     @Test("only the active tier is marked active")
@@ -148,5 +151,20 @@ struct BrainSwitcherTests {
         #expect(!BrainSwitcher.reselectIsNoOp(
             tier: .mini, selected: .mini, load: .ready, loadedModelID: nil
         ))
+    }
+
+    @Test("without Apple Intelligence the switcher offers pocket as Mini and never the AFM Mini")
+    func pocketReplacesMiniWhenBlocked() {
+        let rows = BrainSwitcher.rows(
+            active: .pocket,
+            isDownloaded: { _ in false },
+            isLocked: { _ in false },
+            afm: .blocked(userFixable: false)
+        )
+        #expect(rows.map(\.tier) == [.pocket, .lil, .big])
+        #expect(rows[0].isActive)
+        #expect(rows[0].needsDownload)
+        #expect(rows[0].menuTitle.hasPrefix("Mini · "))
+        #expect(rows[0].menuTitle.hasSuffix("download"))
     }
 }

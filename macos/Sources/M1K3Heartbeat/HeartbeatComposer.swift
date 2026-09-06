@@ -20,6 +20,8 @@
 //  your documents"), and the digest splits NEWS-first / AMBIENT-after.
 //  Strings test-pinned; whether they read better in the model's mouth is
 //  the named A/B, not an assertion here.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — "pocket" (LFM2 as Mini) tags `.brainMini` like "mini" — the register
+//  is the tier's role, not its backing. Confidence now 0.85.
 //
 
 import Foundation
@@ -110,7 +112,7 @@ public enum HeartbeatComposer {
         switch context.brain?.residentTierName?.lowercased() {
         case "big": tags.insert(.brainBig)
         case "lil": tags.insert(.brainLil)
-        case "mini": tags.insert(.brainMini)
+        case "mini", "pocket": tags.insert(.brainMini)
         default: break
         }
         if renderedBy == "digest" { tags.insert(.toldByDigest) }

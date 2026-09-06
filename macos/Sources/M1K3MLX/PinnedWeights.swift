@@ -24,6 +24,19 @@ import Foundation
 /// unverified by design — see `WeightIntegrity.Verdict.unpinned`.
 public enum PinnedWeights {
     public static let all: [String: WeightIntegrity.Pin] = [
+        "mlx-community/LFM2.5-1.2B-Instruct-4bit": .init(
+            revision: "dee2f8a2786e6648bb644a7ca40652842490034b",
+            files: [
+                "chat_template.jinja": .init(size: 1836, sha256: "3acb41f339d069a43037e6b9a9715cbeece8874eb25a7cabf1a33903d7724d6d"),
+                "config.json": .init(size: 1572, sha256: "3201758c1b68e92a8102583626b0d76f70ff4c6fc2e2b99d32e96cdbe6788cea"),
+                "generation_config.json": .init(size: 132, sha256: "5ffd97da1dec4308543894569662d96e923ed01f7a9d8c7ff5aea7f800738cbd"),
+                "model.safetensors": .init(size: 658_540_250, sha256: "d837f243744bbdbe7dd032f90b482a1c45d5b6035b25c1d7804d0f4c74b5c004"),
+                "model.safetensors.index.json": .init(size: 23414, sha256: "3074009e9be56358bf8edc25354572cbca2b5a625e02f8a2c2789a656f51f5a1"),
+                "special_tokens_map.json": .init(size: 434, sha256: "742aefe2b7dec496e8caffdba03a75d0c1a9925d53bd3f3e0d388c96b591b6f4"),
+                "tokenizer.json": .init(size: 4_733_389, sha256: "df1d8d5ec5d091b460562ffd545e4a5e91d17d4a0db7ebe733be34ed374377bd"),
+                "tokenizer_config.json": .init(size: 92225, sha256: "2a52ec012d3df831ba434b081bef3726a6ee22501f062ad8353c557a0cfa0d01"),
+            ]
+        ),
         "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": .init(
             revision: "c073725c8ac051eabad9d64f4dcd3019d1072559",
             files: [
@@ -80,6 +93,7 @@ public enum PinnedWeights {
     /// installing files has to know which — assuming one base puts the
     /// embedder where its loader never looks.
     public static let bases: [String: WeightIntegrity.DownloadBase] = [
+        "mlx-community/LFM2.5-1.2B-Instruct-4bit": .llm,
         "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": .llm,
         "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ": .embedder,
         "mlx-community/gemma-4-12B-it-4bit": .llm,

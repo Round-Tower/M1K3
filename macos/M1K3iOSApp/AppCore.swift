@@ -32,6 +32,11 @@
 //  (availability-gated, same rule as the Mac) so both shells derive it from one rule.
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — a device with no local brain fronts the paired Mac on its own
 //  (after pairing + at launch, MobileBrainMenu.hasLocalBrain). Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — launch restore chains `easedToOfferedMini(afm:)` BEFORE the memory
+//  floor: a persisted Mini on a blocked device becomes pocket (and back when AFM returns); below pocket's floor it
+//  eases to Mini and the Home-only path takes over. Verified on the 3 GB iPad: pre-floor build eased to pocket,
+//  downloaded 632 MB and warmed ("Mini ready"), then died on the first generation (Metal compiler); the floored
+//  build launches without touching MLX. Confidence now 0.8.
 //
 
 import Foundation
@@ -255,8 +260,13 @@ final class AppCore {
         // crash-loop breaker (#227): Lil on a 3 GB iPad was killed mid-load and
         // every relaunch walked straight back into the same wall.
         let storedBrainRaw = UserDefaults.standard.string(forKey: Self.selectedBrainKey)
+        // Order matters: first the Mini this device can run (a blocked device's
+        // Mini is pocket — LFM2 — and back once Apple Intelligence returns), THEN
+        // the memory floor, so a pocket below its 4 GB floor eases to Mini and
+        // the Home-only path above takes over (#230) instead of a doomed load.
         let restored = BrainTier.selectableOrEased(
-            storedBrainRaw.flatMap(BrainTier.init(persisted:)) ?? .mini,
+            (storedBrainRaw.flatMap(BrainTier.init(persisted:)) ?? .mini)
+                .easedToOfferedMini(afm: afm.availabilityState),
             forPhysicalMemoryGB: Self.physicalMemoryGB, platform: .mobile
         )
         // Persist the eased pick (the Mac's restore does the same): makeResponder's

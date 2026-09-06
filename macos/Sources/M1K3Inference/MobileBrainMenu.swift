@@ -26,6 +26,10 @@
 //  8th gen + iPhone 17 Pro). Prior: none (new file).
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — `hasLocalBrain` (backed by `note`): the shell auto-activates a paired
 //  Mac when it is false. Confidence now 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — options come from `BrainTier.offered(afm:)` filtered by the mobile
+//  floor (Big never); a blocked device gets pocket as its Mini, Lil recommended over pocket where memory allows;
+//  `localFallback` falls back to pocket. The 3 GB A12 class is still Home-only (pocket's 3.5 GB floor). Confidence
+//  now 0.9.
 //
 
 import Foundation
@@ -62,24 +66,25 @@ public struct MobileBrainMenu: Equatable, Sendable {
     }
 
     public static func resolve(afm: AFMAvailability, physicalMemoryGB gigabytes: Double) -> MobileBrainMenu {
-        var options: [MobileBrainOption] = []
-        if afm != .blocked(userFixable: false) {
-            options.append(.tier(.mini))
-        }
-        if BrainTier.lil.isSelectable(forPhysicalMemoryGB: gigabytes, platform: .mobile) {
-            options.append(.tier(.lil))
-        }
+        // One Mini per device (BrainTier.offered): AFM's when it can serve,
+        // pocket (LFM2.5-1.2B) when Apple Intelligence is blocked. Big never
+        // fits a mobile budget; Lil needs its 8 GB floor.
+        var options: [MobileBrainOption] = BrainTier.offered(afm: afm)
+            .filter { $0 != .big && $0.isSelectable(forPhysicalMemoryGB: gigabytes, platform: .mobile) }
+            .map(MobileBrainOption.tier)
         options.append(.brainAtHome)
 
         let ladder = MobileBrainOption.tier(
-            BrainTier.recommended(forPhysicalMemoryGB: gigabytes, platform: .mobile)
+            BrainTier.recommended(forPhysicalMemoryGB: gigabytes, platform: .mobile, afm: afm)
         )
-        let recommended: MobileBrainOption = if options.contains(ladder) {
+        // A roomy device without Apple Intelligence gets Lil over pocket —
+        // capability first where the memory allows it.
+        let recommended: MobileBrainOption = if options.contains(.tier(.lil)), afm.isBlocked {
+            .tier(.lil)
+        } else if options.contains(ladder) {
             ladder
         } else if options.contains(.tier(.lil)) {
             .tier(.lil)
-        } else if options.contains(.tier(.mini)) {
-            .tier(.mini)
         } else {
             .brainAtHome
         }
@@ -90,7 +95,8 @@ public struct MobileBrainMenu: Equatable, Sendable {
         return MobileBrainMenu(
             options: options,
             recommended: recommended,
-            localFallback: options.contains(.tier(.lil)) ? .lil : nil,
+            localFallback: options.contains(.tier(.lil)) ? .lil
+                : options.contains(.tier(.pocket)) ? .pocket : nil,
             note: hasLocal ? nil : "\(sentenceDevice) can’t run a brain of its own — use your Mac’s over Wi‑Fi."
         )
     }
