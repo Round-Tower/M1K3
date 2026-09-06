@@ -33,6 +33,8 @@
 //  Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-06 — readiness hint uses `localFallbackPhrase` — never "pick Mini" while
 //  Mini is the selected brain (PR #234 review 12). Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 (2) — the readiness slot shows the #237 download offer as a button
+//  before the plain hint. Confidence now 0.8 (unverified on a blocked device).
 
 import M1K3Avatar
 import M1K3Chat

@@ -40,6 +40,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06 (2) — `historyBudgetProvider` + a capped `maxTokens` on both MLX
 //  provider sites, the Mac's HistoryBudgetPolicy wiring mirrored: pocket's 8k window gets its clamp on the phone
 //  too (PR #234 review 6). Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 (3) — the restore runs `BrainRestoreConsent` (#237): an eased pick
+//  that would download is offered (`pendingBrainDownloadOffer`), not started; staged-ness via LocalModelInventory.
+//  Confidence now 0.8.
 //
 
 import Foundation

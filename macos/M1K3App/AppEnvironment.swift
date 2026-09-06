@@ -30,6 +30,9 @@
 //  single-flight lock), both shared by the MCP `ask_m1k3` tool AND the new Ask App
 //  Intent (logic in AppEnvironment+Intelligence.swift). Additive; existing wiring
 //  unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 (3) — the launch restore runs `BrainRestoreConsent` (#237): an eased
+//  Mini → pocket that would download is OFFERED (`pendingBrainDownloadOffer`, accepted via selectBrain), never
+//  started; the app sits on the persisted Mini meanwhile. Confidence now 0.85 (gate UI unverified by launch).
 
 import AppKit
 import Foundation

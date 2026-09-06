@@ -20,6 +20,9 @@
 //  use (avatar shrank to a 92pt corner card). Reverted to a FULL-WINDOW voice hero
 //  (VoiceModeView) mounted as a full-window overlay: the avatar fills the window,
 //  karaoke + controls float on glass. Confidence 0.75 (look verify-at-⌘R).
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — ModelGateView's `.unavailable` card carries the #237 download
+//  offer ("Download Mini (one-time, ~630 MB)"), the Lil rescue secondary beside it. Confidence 0.75 (verify at ⌘R
+//  on a blocked-AFM Mac).
 
 import M1K3Avatar
 import M1K3Chat
