@@ -23,9 +23,12 @@
 //  through SelfTest security on pocket AND Lil — one seam for every seeded
 //  MLX tier). Prior: Kev + claude-fable-5 (MLXGemmaProvider plain paths).
 //  Review: claude-fable-5.1, 2026-09-06 — PR #240 review 1: reuse now also
-//  requires every seed layer trimmable (an untrimmed wrapped seed is one
-//  position longer than its ids), mirroring MLXToolTurnSession's gate; the
-//  fresh branch says why when that is the reason. Confidence now 0.85.
+//  requires every seed layer trimmable (an untrimmed seed is one position
+//  longer than its ids), mirroring MLXToolTurnSession's gate. Not academic:
+//  LFM2's MambaCache is NEVER trimmable, so pocket's seed was always
+//  untrimmed and the pre-fold reuse appended one token off; pocket now
+//  prefills fresh every plain turn (~1 s on M1 Max) until the seed can be
+//  built without the sampled token (follow-up issue). Confidence now 0.85.
 //
 
 import Foundation
@@ -90,17 +93,25 @@ extension MLXGemmaProvider {
                 // persona-drift class of bug, not a normal turn. Decode either
                 // side of the first divergence so the cause is readable in the
                 // log (the tool path's seed-miss instrument, same idea).
-                if !seedTrimmed {
-                    mlxTTFTLog.notice(
-                        """
-                        \(label, privacy: .public): persona seed (\(seedIDs.count)tok) wrapped its \
-                        sliding window (untrimmed cache) — full prefill, no reuse
-                        """
-                    )
-                }
                 var at = 0
                 while at < min(seedIDs.count, fullIDs.count), seedIDs[at] == fullIDs[at] {
                     at += 1
+                }
+                if !seedTrimmed, at == seedIDs.count {
+                    // An exact prefix on a cache that could not be trimmed back to
+                    // it: a wrapped sliding window, or a recurrent layer (LFM2's
+                    // MambaCache is never trimmable) — the seed holds one sampled
+                    // token past its ids. Correct answer is a full prefill; say so
+                    // without the divergence line, which would read as a bug.
+                    mlxTTFTLog.notice(
+                        """
+                        \(label, privacy: .public): persona seed (\(seedIDs.count)tok) is an untrimmed \
+                        cache (recurrent or wrapped layer) — full prefill, no reuse
+                        """
+                    )
+                    cache = try context.model.newCache(parameters: parameters)
+                    input = prepared
+                    break
                 }
                 let window = { (ids: [Int]) -> String in
                     let lo = max(0, at - 4), hi = min(ids.count, at + 8)
