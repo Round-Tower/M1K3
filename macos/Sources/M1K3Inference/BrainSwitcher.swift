@@ -64,13 +64,16 @@ public enum BrainSwitcher {
     }
 
     private static func menuTitle(tier: BrainTier, locked: Bool, needsDownload: Bool) -> String {
+        // Through the notReady window both Minis can sit in one menu: pocket
+        // says whose it is so two rows never share a title (PR #234 review 12).
+        let name = tier == .pocket ? "Mini (M1K3's own)" : tier.displayName
         if locked, let floor = tier.minimumPhysicalMemoryGB {
-            return "\(tier.displayName) · needs \(Int(floor))GB+"
+            return "\(name) · needs \(Int(floor))GB+"
         }
         if needsDownload, let megabytes = tier.approxDownloadMB {
-            return "\(tier.displayName) · \(downloadSize(megabytes)) download"
+            return "\(name) · \(downloadSize(megabytes)) download"
         }
-        return tier.displayName
+        return name
     }
 
     /// "~2.9 GB" / "~600 MB" from an approx MB figure (1 GB = 1000 MB, matching

@@ -419,6 +419,9 @@ struct BrainTierTests {
         // Already offered: unchanged.
         #expect(BrainTier.offered(afm: .available, including: .lil) == [.mini, .lil, .big])
         #expect(BrainTier.offered(afm: .blocked(userFixable: true), including: .pocket) == [.pocket, .lil, .big])
+        // A stranded AFM Mini on a blocked device is never rescued — it cannot answer.
+        #expect(BrainTier.offered(afm: .blocked(userFixable: false), including: .mini) == [.pocket, .lil, .big])
+        #expect(BrainTier.offered(afm: .blocked(userFixable: true), including: .mini) == [.pocket, .lil, .big])
     }
 
     @Test("one download-size formatter for every shell: MB below a gigabyte, one decimal above")

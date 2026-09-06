@@ -29,6 +29,10 @@ struct MobileBrainMenuTests {
 
     @Test("the 3 GB A12 iPad stays Home-only — pocket's floor is the measured Metal-compiler failure")
     func a12IPadStaysHomeOnly() {
+        // The shape AppCore actually calls: the eased pick (.mini, unready) rides along as `active`.
+        let live = MobileBrainMenu.resolve(afm: .blocked(userFixable: false), physicalMemoryGB: 2.9, active: .mini)
+        #expect(live.options == [.brainAtHome])
+        #expect(!live.hasLocalBrain)
         let menu = MobileBrainMenu.resolve(afm: .blocked(userFixable: false), physicalMemoryGB: 2.9)
         #expect(menu.options == [.brainAtHome])
         #expect(menu.recommended == .brainAtHome)
@@ -100,5 +104,15 @@ struct MobileBrainMenuTests {
         #expect(menu.options == [.tier(.mini), .tier(.pocket), .brainAtHome])
         // Without the active hint the plain offered set applies.
         #expect(MobileBrainMenu.resolve(afm: .notReady, physicalMemoryGB: 3.8).options == [.tier(.mini), .brainAtHome])
+    }
+
+    @Test("the fallback hint never says \"choose Mini\" beside a Mini that cannot serve")
+    func localFallbackPhrase() {
+        let pocketDevice = MobileBrainMenu.resolve(afm: .blocked(userFixable: true), physicalMemoryGB: 3.8, active: .mini)
+        #expect(pocketDevice.localFallbackPhrase(verb: "choose") == "download M1K3's own Mini")
+        let roomy = MobileBrainMenu.resolve(afm: .blocked(userFixable: true), physicalMemoryGB: 11.7, active: .mini)
+        #expect(roomy.localFallbackPhrase(verb: "pick") == "pick Lil")
+        let homeOnly = MobileBrainMenu.resolve(afm: .blocked(userFixable: false), physicalMemoryGB: 2.9, active: .mini)
+        #expect(homeOnly.localFallbackPhrase(verb: "choose") == nil)
     }
 }

@@ -64,6 +64,16 @@ public struct MobileBrainMenu: Equatable, Sendable {
     /// False when Home is the only row: the shell then activates a paired Mac
     /// on its own (after pairing, and at launch) instead of leaving the device on
     /// a Mini that can never answer (Kev's iPad, round 3).
+    /// The words a hint uses for `localFallback` — pocket is ALSO called "Mini",
+    /// so "choose Mini" beside an unready Mini would read as nonsense; name it
+    /// by what it is (PR #234 review 12). `verb` is the hint's own ("choose",
+    /// "pick"); nil when there is no local fallback.
+    public func localFallbackPhrase(verb: String) -> String? {
+        localFallback.map { tier in
+            tier == .pocket ? "download M1K3's own Mini" : "\(verb) \(tier.displayName)"
+        }
+    }
+
     public var hasLocalBrain: Bool {
         note == nil // one truth table: `resolve` sets the note exactly when no tier is listed
     }

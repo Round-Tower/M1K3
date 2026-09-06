@@ -164,7 +164,7 @@ struct BrainSwitcherTests {
         #expect(rows.map(\.tier) == [.pocket, .lil, .big])
         #expect(rows[0].isActive)
         #expect(rows[0].needsDownload)
-        #expect(rows[0].menuTitle.hasPrefix("Mini · "))
+        #expect(rows[0].menuTitle.hasPrefix("Mini (M1K3's own) · "))
         #expect(rows[0].menuTitle.hasSuffix("download"))
     }
 
@@ -175,5 +175,7 @@ struct BrainSwitcherTests {
         )
         #expect(rows.map(\.tier) == [.mini, .pocket, .lil, .big])
         #expect(rows.first { $0.tier == .pocket }?.isActive == true)
+        // Two Minis in one menu — the titles must still tell them apart.
+        #expect(Set(rows.map(\.menuTitle)).count == rows.count)
     }
 }

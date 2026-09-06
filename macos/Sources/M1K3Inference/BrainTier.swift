@@ -392,6 +392,11 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// picker must never show no row for the brain that is answering.
     public static func offered(afm: AFMAvailability, including active: BrainTier) -> [BrainTier] {
         let base = offered(afm: afm)
+        // The AFM Mini on a blocked device is the one "active" tier that cannot
+        // serve (a below-floor pocket eases onto it): re-admitting it would make
+        // `MobileBrainMenu.hasLocalBrain` true and defeat the Home-only path
+        // (#230, PR #234 review 12).
+        if active == .mini, afm.isBlocked { return base }
         return base.contains(active) ? base : allCases.filter { base.contains($0) || $0 == active }
     }
 
