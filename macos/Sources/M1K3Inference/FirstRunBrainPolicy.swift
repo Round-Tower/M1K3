@@ -13,11 +13,14 @@
 //      "your brain is kept")
 //    · `.notReady` is a transient asset sync — wait for Mini, never answer it
 //      with a 2.3GB download
-//    · only a genuinely blocked AFM falls back to the Lil download; the
-//      user-fixable flavour (Apple Intelligence switched off) also offers the
+//    · a blocked AFM falls back to the pocket download (LFM2.5-1.2B, ~630 MB —
+//      was Lil's 2.3 GB before 2026-09-06); the user-fixable flavour (Apple
+//      Intelligence switched off) also offers the
 //      OS-settings fix alongside.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-03, Confidence 0.9. Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — `AFMAvailability.isBlocked`; the blocked-AFM fallback downloads
+//  pocket (LFM2.5-1.2B, ~630 MB) instead of Lil's 2.3 GB. Confidence now 0.9.
 
 import Foundation
 
@@ -43,6 +46,12 @@ public enum AFMAvailability: Sendable, Equatable {
     /// user might enable Apple Intelligence any moment) MUST re-probe, or the
     /// interim-Mini bridge freezes on a first-read `.notReady`/`.blocked(true)`
     /// and never activates for the session (2026-07-25 review finding).
+    /// Blocked for either reason — the state in which `.pocket` stands in for `.mini`.
+    public var isBlocked: Bool {
+        if case .blocked = self { return true }
+        return false
+    }
+
     public var isStableForCaching: Bool {
         switch self {
         case .available: true
@@ -76,7 +85,8 @@ public enum FirstRunBrainPolicy {
         case .notReady:
             return .waitForMini
         case let .blocked(userFixable):
-            return .downloadFallback(.lil, offerAppleIntelligenceFix: userFixable)
+            // pocket (LFM2.5-1.2B, ~630 MB) since 2026-09-06 — was Lil's 2.3 GB.
+            return .downloadFallback(.pocket, offerAppleIntelligenceFix: userFixable)
         }
     }
 }

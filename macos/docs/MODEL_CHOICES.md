@@ -291,6 +291,28 @@ are deliberately left unpinned so the evaluation loop stays usable.
 
 ## Decision log
 
+- **2026-09-06: pocket — `mlx-community/LFM2.5-1.2B-Instruct-4bit` (rev dee2f8a2) as the
+  Mini for devices WITHOUT Apple Intelligence.** A 4th `BrainTier` case shown as "Mini"
+  only where AFM is blocked (`BrainTier.offered(afm:)` — one Mini per device; Mini stays
+  AFM everywhere it can serve). ~630 MB, ctx 8192, ~1.0 GB active / 1.8 GB peak on the
+  Mac, lfm2 tool dialect (the trained-key-order tool block from #232). Mac eval through
+  the tier path, live path, AC + High Power, ×2 trials
+  (`docs/evals/2026-09-06-pocket-lfm25-1.2b-livepath.json`): **91/140** — open-chat 16/16
+  (median 1.9 s), code 8/10, refusal 10/10, interview 10/10, humour 11/12, world 11/16,
+  instruction 7/12, grounded-Q 6/16 (no citations), reasoning 6/12, tool-use 6/12
+  (datetime/fact/web 2/2 each; search_knowledge never called; read-site = harness #233),
+  **security 0/14** — every leak fixture recited the prompt. The persona hardening was
+  tuned on a 4B; a 1.2B needs its own pass before pocket fronts anything sensitive
+  (follow-up). **Mobile floor 3.5 GB, measured:** the 3 GB A12 iPad (iPad11,6) downloads
+  and warms LFM2 (~2 s from disk) and then fatals on the FIRST generation —
+  `MTLCompilerService` hits an LLVM ERROR building the pipeline for MLX's bfloat16 gather
+  kernel, MLX aborts. Not memory (the library compiled, no jetsam fired). The checkpoint's
+  scales/biases are BF16; an fp16-scale re-quantisation is the experiment that could open
+  the A12 class (follow-up issue). 4 GB A13 devices untested → floor sits at the measured
+  failure, Lil-style. **Licence:** LFM Open License v1.0 — free for organisations under
+  US$10M annual revenue, attribution required; NOT Apache (the rest of the lineup is).
+  Round Tower qualifies today; re-check before any commercial scale-up.
+
 - **2026-09-05: Lil → `Qwen3-4B-Instruct-2507-4bit-DWQ-2510` (rev c073725c).** Same
   weights, the DWQ quantization recipe. A/B through the fixed harness on mains
   (AC, High Power, quiet): shipped 15/21 (open 7/8 · tool 5/6 · security 3/7,

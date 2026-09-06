@@ -15,6 +15,11 @@ MANIFEST = {
             "downloadBase": "llm",
             "files": {"model.safetensors": {"size": 2263022417, "sha256": "aa"}, "config.json": {"size": 938, "sha256": "bb"}},
         },
+        "mlx-community/LFM2.5-1.2B-Instruct-4bit": {
+            "revision": "dee2f8a2786e6648bb644a7ca40652842490034b",
+            "downloadBase": "llm",
+            "files": {"model.safetensors": {"size": 663000000, "sha256": "dd"}},
+        },
         "mlx-community/gemma-4-12B-it-4bit": {
             "revision": "73bcf09092aa000000000000000000000000dead",
             "downloadBase": "llm",
@@ -66,8 +71,11 @@ RUN = {
 def test_brains_come_from_the_manifest_not_prose():
     brains = bp.brains(MANIFEST)
     by_tier = {b["tier"]: b for b in brains}
-    assert [b["tier"] for b in brains] == ["mini", "lil", "big"]
+    assert [b["tier"] for b in brains] == ["mini", "pocket", "lil", "big"]
     assert by_tier["mini"]["backing"] == "apple-foundation-models" and by_tier["mini"]["modelID"] is None
+    # pocket is the Mini for devices without Apple Intelligence — same name, its own pin.
+    assert by_tier["pocket"]["name"] == "Mini" and by_tier["pocket"]["modelID"] == "mlx-community/LFM2.5-1.2B-Instruct-4bit"
+    assert by_tier["pocket"]["revision"] == "dee2f8a2786e6648bb644a7ca40652842490034b"
     lil = by_tier["lil"]
     assert lil["modelID"] == "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510"
     assert lil["revision"] == "c073725c8ac051eabad9d64f4dcd3019d1072559"

@@ -12,7 +12,8 @@
 //
 //  The only decision made here is FirstRunBrainPolicy's (pure, tested): AFM
 //  available → Mini now; AFM warming → wait honestly, never download; AFM
-//  blocked → the Lil fallback with an honest size and, when it's user-fixable,
+//  blocked → the pocket fallback (LFM2, ~630 MB; Lil before 2026-09-06) with an
+//  honest size and, when it's user-fixable,
 //  the Apple Intelligence pointer. A re-run keeps a non-Mini brain untouched.
 //
 //  GAP-1 note: `selectBrain` no longer writes the first-run gate key — the
@@ -29,6 +30,13 @@
 //  on ready exactly as before; an engaged one gets the invite. The avatar
 //  backdrop stays forward during the waits (it wakes as the bar fills — that's
 //  the show). Failure UI unchanged. Feel is verify-by-⌘R.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — the fallback copy names the tier the policy chose (pocket: "Mini
+//  M1K3, a one-time 630 MB download") instead of hard-coding Lil; the AFM-syncing escape hatch stays Lil explicitly
+//  (Apple's Mini is still this Mac's Mini while it syncs). Confidence now 0.8 (copy verify-by-launch on a blocked
+//  Mac).
+//  Review: Kev + claude-fable-5.1, 2026-09-06 (2) — Try again retries `env.selectedBrain`, the tier that failed;
+//  `startFallbackDownload` lost its default so no call site can drift between Lil and pocket (PR #234 review 8).
+//  Confidence now 0.8.
 
 import M1K3Avatar
 import M1K3Inference
@@ -161,9 +169,9 @@ struct HelloView: View {
             return "Runs on \(tier.displayName), your chosen brain · change anytime in Settings."
         case .useMini, .waitForMini:
             return "Runs on Mini, Apple's on-device model · change anytime in Settings."
-        case .downloadFallback:
+        case let .downloadFallback(tier, _):
             return "Apple Intelligence isn't available here, so I'll fetch my own brain — "
-                + "Lil M1K3, a one-time 2.3 GB download. Still fully on this Mac."
+                + "\(tier.displayName) M1K3, a one-time \(Self.downloadSize(tier)) download. Still fully on this Mac."
         }
     }
 
@@ -175,8 +183,10 @@ struct HelloView: View {
             // Same carousel, indeterminate progress source (O6): the AFM warm
             // is usually short, but it's the same dead wait without this.
             WakeSetupCarousel(flow: $wakeFlow, fraction: nil, onComplete: onComplete)
-            Button("Use a downloaded brain instead (Lil, 2.3 GB)") {
-                startFallbackDownload()
+            // AFM is merely syncing here, so the offered Mini is still Apple's:
+            // the escape hatch is Lil, not pocket.
+            Button("Use a downloaded brain instead (Lil, \(Self.downloadSize(.lil)))") {
+                startFallbackDownload(.lil)
             }
             .buttonStyle(.plain)
             .font(.caption)
@@ -217,12 +227,14 @@ struct HelloView: View {
                 )
             case .failed:
                 VStack(spacing: 10) {
-                    Label(env.modelLoad.label(modelName: BrainTier.lil.displayName),
+                    Label(env.modelLoad.label(modelName: env.selectedBrain.displayName),
                           systemImage: "exclamationmark.triangle")
                         .symbolRenderingMode(.hierarchical)
                         .font(.callout)
                         .foregroundStyle(.orange)
-                    Button("Try again") { startFallbackDownload() }
+                    // The tier that failed, never a default: the escape hatch may have
+                    // picked Lil while the policy picks pocket (PR #234 review 8).
+                    Button("Try again") { startFallbackDownload(env.selectedBrain) }
                         .buttonStyle(.glass)
                     if case .blocked(userFixable: true) = afm {
                         Button("Or turn on Apple Intelligence in System Settings") {
@@ -271,7 +283,12 @@ struct HelloView: View {
         }
     }
 
-    private func startFallbackDownload(_ tier: BrainTier = .lil) {
+    /// "630 MB" / "2.2 GB" from the tier's own figure — one source for every copy line.
+    private static func downloadSize(_ tier: BrainTier) -> String {
+        tier.approxDownloadMB.map(BrainTier.downloadSizeLabel(megabytes:)) ?? "small"
+    }
+
+    private func startFallbackDownload(_ tier: BrainTier) {
         phase = .downloading
         // selectBrain drives the honest modelLoad bar; this IS the active
         // selection now, so using modelLoad here is correct (unlike the

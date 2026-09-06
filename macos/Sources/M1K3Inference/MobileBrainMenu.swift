@@ -11,9 +11,10 @@
 //  `swift test`-able; the shell supplies live AFM availability + RAM.
 //
 //  Rules:
-//    · Mini is listed unless the hardware is ineligible (`.blocked(userFixable:
-//      false)`) — switched-off Apple Intelligence is the user's to fix, so the
-//      row stays with its hint; `.notReady` is a transient sync.
+//    · One Mini per device (`BrainTier.offered(afm:)`): Apple's when it can serve
+//      (`.available`, and `.notReady` — a transient sync), pocket (LFM2.5-1.2B)
+//      whenever it is `.blocked` — either reason; the Settings hint still points
+//      a user-fixable block at the switch. Pocket has its own mobile floor.
 //    · Lil is listed only when it clears the mobile memory floor (BrainTier).
 //    · Big is never listed on mobile (the floor is infinite there).
 //    · Brain at Home is ALWAYS listed, last — pairing is a real choice on every
@@ -26,6 +27,12 @@
 //  8th gen + iPhone 17 Pro). Prior: none (new file).
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — `hasLocalBrain` (backed by `note`): the shell auto-activates a paired
 //  Mac when it is false. Confidence now 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — options come from `BrainTier.offered(afm:)` filtered by the mobile
+//  floor (Big never); a blocked device gets pocket as its Mini, Lil recommended over pocket where memory allows;
+//  `localFallback` falls back to pocket. The 3 GB A12 class is still Home-only (pocket's 3.5 GB floor). Confidence
+//  now 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 (2) — `resolve(…active:)` keeps the serving tier listed through the
+//  notReady window (the Mac switcher's fix, PR #234 review 6). Confidence now 0.9.
 //
 
 import Foundation
@@ -57,29 +64,47 @@ public struct MobileBrainMenu: Equatable, Sendable {
     /// False when Home is the only row: the shell then activates a paired Mac
     /// on its own (after pairing, and at launch) instead of leaving the device on
     /// a Mini that can never answer (Kev's iPad, round 3).
+    /// The words a hint uses for `localFallback` — pocket is ALSO called "Mini",
+    /// so "choose Mini" beside an unready Mini would read as nonsense; name it
+    /// by what it is (PR #234 review 12). `verb` is the hint's own ("choose",
+    /// "pick"); nil when there is no local fallback.
+    public func localFallbackPhrase(verb: String) -> String? {
+        localFallback.map { tier in
+            tier == .pocket ? "download M1K3's own Mini" : "\(verb) \(tier.displayName)"
+        }
+    }
+
     public var hasLocalBrain: Bool {
         note == nil // one truth table: `resolve` sets the note exactly when no tier is listed
     }
 
-    public static func resolve(afm: AFMAvailability, physicalMemoryGB gigabytes: Double) -> MobileBrainMenu {
-        var options: [MobileBrainOption] = []
-        if afm != .blocked(userFixable: false) {
-            options.append(.tier(.mini))
-        }
-        if BrainTier.lil.isSelectable(forPhysicalMemoryGB: gigabytes, platform: .mobile) {
-            options.append(.tier(.lil))
-        }
+    /// `active` is the tier answering right now: kept listed even when the
+    /// offered set would drop it (the `.notReady` window after Apple
+    /// Intelligence is switched on while pocket serves) — Settings must never
+    /// show no row for the brain that is answering.
+    public static func resolve(
+        afm: AFMAvailability, physicalMemoryGB gigabytes: Double, active: BrainTier? = nil
+    ) -> MobileBrainMenu {
+        // One Mini per device (BrainTier.offered): AFM's when it can serve,
+        // pocket (LFM2.5-1.2B) when Apple Intelligence is blocked. Big never
+        // fits a mobile budget; Lil needs its 8 GB floor.
+        let offered = active.map { BrainTier.offered(afm: afm, including: $0) } ?? BrainTier.offered(afm: afm)
+        var options: [MobileBrainOption] = offered
+            .filter { $0 != .big && $0.isSelectable(forPhysicalMemoryGB: gigabytes, platform: .mobile) }
+            .map(MobileBrainOption.tier)
         options.append(.brainAtHome)
 
         let ladder = MobileBrainOption.tier(
-            BrainTier.recommended(forPhysicalMemoryGB: gigabytes, platform: .mobile)
+            BrainTier.recommended(forPhysicalMemoryGB: gigabytes, platform: .mobile, afm: afm)
         )
-        let recommended: MobileBrainOption = if options.contains(ladder) {
-            ladder
-        } else if options.contains(.tier(.lil)) {
+        // A roomy device without Apple Intelligence gets Lil over pocket —
+        // capability first where the memory allows it.
+        // Not blocked → the ladder's Mini is always listed, so the second arm
+        // covers every remaining case (review 10: the old Lil fallback was dead).
+        let recommended: MobileBrainOption = if options.contains(.tier(.lil)), afm.isBlocked {
             .tier(.lil)
-        } else if options.contains(.tier(.mini)) {
-            .tier(.mini)
+        } else if options.contains(ladder) {
+            ladder
         } else {
             .brainAtHome
         }
@@ -90,7 +115,8 @@ public struct MobileBrainMenu: Equatable, Sendable {
         return MobileBrainMenu(
             options: options,
             recommended: recommended,
-            localFallback: options.contains(.tier(.lil)) ? .lil : nil,
+            localFallback: options.contains(.tier(.lil)) ? .lil
+                : options.contains(.tier(.pocket)) ? .pocket : nil,
             note: hasLocal ? nil : "\(sentenceDevice) can’t run a brain of its own — use your Mac’s over Wi‑Fi."
         )
     }

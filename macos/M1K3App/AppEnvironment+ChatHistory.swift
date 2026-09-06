@@ -36,6 +36,13 @@ extension AppEnvironment {
     /// mid-session Apple-Intelligence change is honoured.
     private static let afmAvailabilityProbe = AppleFoundationModelsProvider()
 
+    /// The same live read, callable from `init` (before `self` is whole) — the
+    /// launch restore needs it to ease a persisted Mini onto the Mini this Mac
+    /// can run (PR #234).
+    static var afmAvailabilityAtLaunch: AFMAvailability {
+        afmAvailabilityProbe.availabilityState
+    }
+
     /// Apple Foundation Models availability in product terms — HelloView's
     /// FirstRunBrainPolicy input. Lives here (not on the class body) because the
     /// probe is file-private to this extension. Live read per call, same as the
@@ -93,6 +100,10 @@ extension AppEnvironment {
         case .mlxFloor, .privateCloud, .thirdParty:
             // No network-brain backends are wired yet, so those rungs resolve to the
             // local MLX floor: keep the current MLX brain, else default to Lil.
+            // DELIBERATELY not pocket: auto-route picks the most capable local
+            // brain (Lil 18/21 vs pocket's 91/140, security 0/14), and "Let M1K3
+            // choose" is an explicit opt-in that already promises a download.
+            // The one-Mini rule governs what pickers SHOW, not this ladder.
             routedTier = selectedBrain.mlxModelID != nil ? selectedBrain : .lil
         }
         // Prudent compute: ease the automatic pick down to what THIS Mac can run
@@ -485,13 +496,13 @@ extension AppEnvironment {
     /// conversation replay gets what's left. Bigger = safer (less history, less
     /// chance of crossing gemma's 8192). Tune from the `ttft` token-count log
     /// (the [SPIKE]) — this is a verify-by-launch estimate, not a measured fact.
-    nonisolated static let historyReserveTokens = 3000
+    nonisolated static let historyReserveTokens = HistoryBudgetPolicy.liveReserveTokens
 
     /// Generation headroom (tokens) kept clear of a rotating-KV window so a normal
     /// answer can't rotate gemma's persona/grounding head out mid-decode. 2048 is
     /// generous for these brains' typical answers; a pathologically long gemma
     /// answer at a full history budget is the residual verify-owed (SelfTest step).
-    nonisolated static let historyGenerationReserveTokens = 2048
+    nonisolated static let historyGenerationReserveTokens = HistoryBudgetPolicy.liveGenerationReserveTokens
 
     /// Turns of SUSTAINED relief required before effort recovers (hysteresis) —
     /// degrade now, recover slow, so a bouncing thermalState can't flap the level.

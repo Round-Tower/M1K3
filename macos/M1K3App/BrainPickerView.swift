@@ -36,6 +36,9 @@
 //  toast + immediate completion; the upgrade ladder's fetch/swap machinery
 //  does the rest). The blocking wake screen remains only for the
 //  nothing-resident case. Verify-owed: the felt hand-back on ⌘R.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — cards iterate `BrainTier.offered(afm:)` (pocket in Mini's place when
+//  Apple Intelligence is blocked); the failed-wake "Use Mini (built-in) instead" escape is hidden on a blocked Mac —
+//  it would land on a brain that never answers. Confidence now 0.8 (verify-by-launch on a blocked Mac owed).
 
 import M1K3Avatar
 import M1K3Inference
@@ -53,7 +56,11 @@ struct BrainPickerView: View {
     @State private var isWakingBrain = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let recommended = BrainTier.recommendedForThisMac
+    /// Computed, not stored: the badge must land on pocket when Apple
+    /// Intelligence is blocked (PR #234 review 1).
+    private var recommended: BrainTier {
+        BrainTier.recommendedForThisMac(afm: env.afmAvailability)
+    }
 
     init(onComplete: @escaping () -> Void) {
         self.onComplete = onComplete
@@ -125,7 +132,8 @@ struct BrainPickerView: View {
         VStack(spacing: 16) {
             AutoBrainCard(isSelected: autoSelected) { autoSelected = true }
 
-            ForEach(BrainTier.allCases) { tier in
+            // One Mini per Mac: AFM's when it can serve, pocket when it is blocked.
+            ForEach(BrainTier.offered(afm: env.afmAvailability, including: env.selectedBrain)) { tier in
                 BrainCard(
                     tier: tier,
                     isSelected: !autoSelected && selectedBrain == tier,
@@ -177,15 +185,19 @@ struct BrainPickerView: View {
                         .foregroundStyle(.orange)
                     Button("Try again") { wakeBrain() }
                         .buttonStyle(.glass)
-                    Button("Use Mini (built-in) instead") {
-                        selectedBrain = .mini
-                        isWakingBrain = false
-                        env.selectBrain(.mini)
-                        onComplete()
+                    // Only where Apple's Mini can actually serve — on a blocked
+                    // Mac the escape would land on a brain that never answers.
+                    if !env.afmAvailability.isBlocked {
+                        Button("Use Mini (built-in) instead") {
+                            selectedBrain = .mini
+                            isWakingBrain = false
+                            env.selectBrain(.mini)
+                            onComplete()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
                 }
             case .idle, .ready, .preparing:
                 ProgressView().controlSize(.large)

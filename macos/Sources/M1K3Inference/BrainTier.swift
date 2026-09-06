@@ -47,6 +47,12 @@
 //  Big never (a 3 GB A12 iPad crash-looped on Lil, #227); every Mac accessor unchanged.
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — Mini's glyph is `apple.intelligence` (Kev's call, mobile QA pass);
 //  pinned in BrainTierTests. Confidence now 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — the pocket tier: LFM2.5-1.2B on MLX (~630 MB, ctx 8192) shown as
+//  "Mini" only where Apple Intelligence is blocked — `offered(afm:)` lists exactly one of mini/pocket,
+//  `recommended(…afm:)` swaps mini→pocket when blocked, `easedToOfferedMini(afm:)` moves a persisted pick either
+//  way. Mobile floor 3.5 GB is MEASURED, not memory: the 3 GB A12 iPad loads LFM2 then fatals on its first
+//  generation (Metal compiler LLVM error on MLX's bf16 gather kernel); 4 GB A13s untested. Mac eval through the
+//  tier path: 91/140 live path ×2 (open 16/16, tool 6/12, security 0/14). Confidence now 0.8.
 //
 
 import Foundation
@@ -64,6 +70,15 @@ public enum BrainBacking: Sendable, Equatable {
 /// which also migrates the retired "huge" (2026-07-02) to `.big`.
 public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable {
     case mini
+    /// The Mini for devices WITHOUT Apple Intelligence (a 3 GB A12 iPad, an
+    /// older iPhone, a Mac with it switched off): LFM2.5-1.2B on MLX, ~630 MB.
+    /// Shown as "Mini" — pickers offer exactly one of `.mini`/`.pocket` per
+    /// device (`offered(afm:)`), so the name never doubles up. A distinct case
+    /// rather than a device-dependent `.mini` so persistence, the simulator
+    /// guard, the interim bridge and the AFM-only budgets keep their meaning
+    /// (challenger, 2026-09-06). Tool-use 5/6 live path once PR #232 rendered
+    /// its tool block in trained key order; open-chat 7–8/8 at ~1.9 s/turn.
+    case pocket
     case lil
     case big
 
@@ -90,8 +105,9 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     private var weight: Int {
         switch self {
         case .mini: 0
-        case .lil: 1
-        case .big: 2
+        case .pocket: 1
+        case .lil: 2
+        case .big: 3
         }
     }
 
@@ -101,7 +117,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
 
     public var displayName: String {
         switch self {
-        case .mini: "Mini"
+        case .mini, .pocket: "Mini"
         case .lil: "Lil"
         case .big: "Big"
         }
@@ -113,7 +129,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// Models (no think toggle), so the flag is a harmless no-op there; Lil is the
     /// MLX speed tier this actually accelerates.
     public var prefersFastThinking: Bool {
-        self == .mini || self == .lil
+        self == .mini || self == .pocket || self == .lil
     }
 
     /// How the heartbeat digest explains the tier in apposition — "Running on
@@ -123,6 +139,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     public var heartbeatDescriptor: String {
         switch self {
         case .mini: "the built-in brain"
+        case .pocket: "the small brain"
         case .lil: "the smaller brain"
         case .big: "the larger brain"
         }
@@ -131,7 +148,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// The one-line personality hook (lifted from the KMP tiers).
     public var tagline: String {
         switch self {
-        case .mini: "Fast and focused"
+        case .mini, .pocket: "Fast and focused"
         case .lil: "Sharp and capable"
         case .big: "Full intelligence"
         }
@@ -143,6 +160,9 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         case .mini:
             "Apple's built-in on-device model. "
                 + "No download. The quickest way to start."
+        case .pocket:
+            "A small brain of M1K3's own, for devices without Apple Intelligence. "
+                + "One-time download. Runs entirely on \(HostPlatform.yourDevice)."
         case .lil:
             Self.lilDetail
         case .big:
@@ -164,6 +184,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     public var glyph: String {
         switch self {
         case .mini: "apple.intelligence"
+        case .pocket: "bolt.circle.fill"
         case .lil: "bolt.fill"
         case .big: "brain.head.profile.fill"
         }
@@ -172,6 +193,10 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     public var backing: BrainBacking {
         switch self {
         case .mini: .appleFoundationModels
+        // LFM2.5-1.2B (Liquid, 2026-09-05 eval): 630 MB, ~1.0 GB active /
+        // 1.77 GB peak on the Mac, lfm2 tool dialect. Pinned in
+        // PinnedWeights.swift from the evaluated local bytes.
+        case .pocket: .mlx(modelID: "mlx-community/LFM2.5-1.2B-Instruct-4bit")
         // DENSE Qwen3, the NON-THINKING Instruct-2507 refresh since 2026-07-16
         // (was bare Qwen3-4B-4bit): same family/size/arch — .json tools,
         // quantized KV, no pre-open-think — but no <think> phase at all, which
@@ -210,6 +235,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     public var approxDownloadMB: Int? {
         switch self {
         case .mini: nil
+        case .pocket: 630
         case .lil: 2150
         case .big: 6740
         }
@@ -235,6 +261,9 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     public var approximateContextTokens: Int {
         switch self {
         case .mini: 4096
+        // LFM2.5 advertises 32k; 8k keeps the KV inside a small device's
+        // jetsam budget — the 3 GB iPad is the design target, measured there.
+        case .pocket: 8192
         case .lil: 32768
         case .big: 8192
         }
@@ -261,6 +290,23 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         self == .big
     }
 
+    /// Tiers whose window is a HARD budget the history policy must protect
+    /// with the safety margin and the 2048-token live generation cap: Big
+    /// (RotatingKVCache truncates) and pocket (8k self-imposed so a 3.5 GB
+    /// device's KV stays inside its jetsam budget — an unbounded KVCacheSimple
+    /// that must never be asked to grow past it). Distinct from
+    /// `usesRotatingKVCache`, which is about the cache MECHANISM.
+    public var hasClampedContext: Bool {
+        self == .big || self == .pocket
+    }
+
+    /// "630 MB" / "2.2 GB" from an approx MB figure (1 GB = 1000 MB, matching
+    /// how download sizes are quoted to users) — the one formatter every shell
+    /// copies from.
+    public static func downloadSizeLabel(megabytes: Int) -> String {
+        megabytes >= 1000 ? String(format: "%.1f GB", Double(megabytes) / 1000) : "\(megabytes) MB"
+    }
+
     /// The memory floor below which this brain shouldn't even be SELECTABLE
     /// (the card disables with a "needs NN GB" badge), or nil for no gate.
     /// Distinct from `recommended` — selection is permissive, recommendation
@@ -285,6 +331,19 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     public func minimumPhysicalMemoryGB(platform: DevicePlatform) -> Double? {
         switch (self, platform) {
         case (.mini, _): nil
+        case (.pocket, .mac): nil
+        // MEASURED 2026-09-06 on the 3 GB A12 iPad (iPad11,6, iPadOS 26.4): the
+        // 632 MB download and the load both succeed ("brain warm: Mini ready",
+        // ~2 s from disk), then the FIRST generation dies — MTLCompilerService
+        // hits an LLVM ERROR building the pipeline for MLX's bfloat16 gather
+        // kernel (gather_frontbfloat16_int32_int_2) and MLX fatals. Not memory
+        // (the library compiled; free pages were ~120 MB but no jetsam fired):
+        // the A12 GPU cannot build that kernel. 3.5 GB excludes the whole 3 GB
+        // A12 class (XR/XS, iPad 8/Air 3/mini 5 — they report ~2.9) and admits
+        // 4 GB devices (which report ~3.8); those A13s are UNTESTED and may need
+        // the fp16-scale checkpoint (follow-up issue) — the Lil precedent: a
+        // floor at the measured failure, widened only by a soak.
+        case (.pocket, .mobile): 3.5
         case (.lil, .mac): nil
         case (.lil, .mobile): 8
         case (.big, .mac): 16
@@ -312,6 +371,48 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     ///
     /// 24GB is the same comfortable bar Big's recommendation used to carry; the
     /// number didn't change, only what it governs.
+    /// The tiers a picker shows on a device with this Apple Intelligence
+    /// state: `.pocket` stands in for `.mini` whenever AFM is blocked (either
+    /// reason — the user can still flip it on, and the menu then changes at
+    /// the next launch), so a device never sees two brains called "Mini".
+    /// `.notReady` is a transient asset sync: Mini stays listed.
+    public static func offered(afm: AFMAvailability) -> [BrainTier] {
+        allCases.filter { tier in
+            switch tier {
+            case .mini: !afm.isBlocked
+            case .pocket: afm.isBlocked
+            case .lil, .big: true
+            }
+        }
+    }
+
+    /// `offered(afm:)` plus the tier that is ACTIVE right now if the set would
+    /// omit it — the `.notReady` window after a user switches Apple Intelligence
+    /// on while pocket is serving (`easedToOfferedMini` keeps pocket then). A
+    /// picker must never show no row for the brain that is answering.
+    public static func offered(afm: AFMAvailability, including active: BrainTier) -> [BrainTier] {
+        let base = offered(afm: afm)
+        // The AFM Mini on a blocked device is the one "active" tier that cannot
+        // serve (a below-floor pocket eases onto it): re-admitting it would make
+        // `MobileBrainMenu.hasLocalBrain` true and defeat the Home-only path
+        // (#230, PR #234 review 12).
+        if active == .mini, afm.isBlocked { return base }
+        return base.contains(active) ? base : allCases.filter { base.contains($0) || $0 == active }
+    }
+
+    /// The persisted pick, moved onto the Mini this device can actually run:
+    /// `.mini` → `.pocket` when Apple Intelligence is blocked (a restored AFM
+    /// Mini would sit unready forever — #230's shape), `.pocket` → `.mini` once
+    /// it is back (`offered` no longer lists pocket). `.notReady` moves nothing;
+    /// any other tier is sovereign.
+    public func easedToOfferedMini(afm: AFMAvailability) -> BrainTier {
+        switch (self, afm) {
+        case (.mini, .blocked): .pocket
+        case (.pocket, .available): .mini
+        default: self
+        }
+    }
+
     public static let deepReasoningFloorGB: Double = 24
 
     /// Whether this Mac can comfortably host Big for a deep dive.
@@ -326,7 +427,18 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// 2026-07-02). Tunable thresholds.
     public static func recommended(
         forPhysicalMemoryGB gigabytes: Double,
-        platform: DevicePlatform = .mac
+        platform: DevicePlatform = .mac,
+        afm: AFMAvailability = .available
+    ) -> BrainTier {
+        let ladder = recommendedByMemory(forPhysicalMemoryGB: gigabytes, platform: platform)
+        // Where the ladder lands on a Mini this device can't run, the Mini it
+        // CAN run: pocket (the offered-set rule, one Mini per device).
+        return ladder == .mini && afm.isBlocked ? .pocket : ladder
+    }
+
+    private static func recommendedByMemory(
+        forPhysicalMemoryGB gigabytes: Double,
+        platform: DevicePlatform
     ) -> BrainTier {
         switch platform {
         case .mac:
@@ -369,7 +481,12 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
 
     /// Convenience: the recommendation for the machine we're running on.
     public static var recommendedForThisMac: BrainTier {
-        recommended(forPhysicalMemoryGB: physicalMemoryGB)
+        recommendedForThisMac(afm: .available)
+    }
+
+    /// The same, for the Mac's live Apple Intelligence state (pocket when blocked).
+    public static func recommendedForThisMac(afm: AFMAvailability) -> BrainTier {
+        recommended(forPhysicalMemoryGB: physicalMemoryGB, afm: afm)
     }
 
     /// Ease an AUTOMATIC brain pick down to what this much memory comfortably
@@ -384,6 +501,12 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     public static func capped(
         _ tier: BrainTier, forPhysicalMemoryGB gigabytes: Double, platform: DevicePlatform = .mac
     ) -> BrainTier {
+        // DELIBERATELY memory-only (afm defaults to .available): a pocket below
+        // its floor on a blocked device must land on `.mini` — unready, so the
+        // shell's Home-only path (#230) takes over — never stay on a pocket the
+        // device cannot load (PR #234 review 10 proposed threading afm here;
+        // that would re-open the doomed-load door the floor closed). Pinned in
+        // BrainTierTests.pocketBelowFloorEasesToMiniNotItself.
         min(tier, recommended(forPhysicalMemoryGB: gigabytes, platform: platform))
     }
 

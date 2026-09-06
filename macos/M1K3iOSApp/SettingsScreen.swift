@@ -22,6 +22,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — the Brain rows come from MobileBrainMenu (no Mini on a device that
 //  can't run Apple Intelligence, no locked Lil rows, Home listed even before pairing); the hint names the real
 //  alternative. Confidence now 0.85 (verify-by-launch on the iPad 8th gen + 17 Pro).
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — the blocked-Mini hint names pocket by what it is
+//  (`localFallbackPhrase`) — "choose Mini" beside a Mini row was the one-Mini rule leaking into copy (PR #234
+//  review 12). Confidence now 0.8.
 //
 
 import M1K3BrainLink
@@ -216,7 +219,7 @@ struct SettingsScreen: View {
         case .available: return nil
         case .notReady: return "Apple Intelligence is still downloading on this device."
         case let .blocked(userFixable):
-            let alternative = menu.localFallback.map { "choose \($0.displayName)" } ?? "use Home"
+            let alternative = menu.localFallbackPhrase(verb: "choose") ?? "use Home"
             return userFixable
                 ? "Turn on Apple Intelligence in Settings, or \(alternative)."
                 : "This device can't run Apple Intelligence — \(alternative)."

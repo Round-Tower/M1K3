@@ -23,6 +23,8 @@
 //  Signed: Kev + claude-fable-5, 2026-07-03, Confidence 0.85 (thresholds are
 //  product taste — tunable constants, pinned by tests; the shape is the
 //  decision). Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — the long-ask struggle covers pocket as well as Mini (same role, PR
+//  #234 code-quality review). Confidence now 0.85.
 
 import Foundation
 
@@ -58,7 +60,8 @@ public enum StrugglePolicy {
         guard brain < .big else { return false }
         if answerFailed { return true }
         if generationHitTokenCap { return true }
-        if brain == .mini, questionCharacters >= longAskCharacterThreshold { return true }
+        // Mini's ceiling is the point — and pocket wears the same role (a 1.2B).
+        if brain == .mini || brain == .pocket, questionCharacters >= longAskCharacterThreshold { return true }
         return false
     }
 }

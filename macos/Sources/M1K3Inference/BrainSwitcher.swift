@@ -15,6 +15,9 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-21, Confidence 0.85 (textbook composition;
 //  the no-lie-during-download + locked-not-dropped rules are pinned by tests; the
 //  toolbar wiring + look are verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — `rows(…afm:)` lists `BrainTier.offered(afm:)` — never two brains
+//  called Mini, never the AFM Mini on a blocked Mac. Default `.available` keeps every existing caller byte-identical.
+//  Confidence now 0.85.
 
 import Foundation
 
@@ -38,15 +41,16 @@ public struct BrainSwitchRow: Identifiable, Equatable, Sendable {
 }
 
 public enum BrainSwitcher {
-    /// One row per tier, in `BrainTier.allCases` order. `isDownloaded` and
+    /// One row per OFFERED tier (`BrainTier.offered(afm:)`), in tier order. `isDownloaded` and
     /// `isLocked` are injected predicates (the view passes `env.isBrainDownloaded`
     /// and `{ !$0.isSelectableOnThisMac }`) so this stays pure and deterministic.
     public static func rows(
         active: BrainTier,
         isDownloaded: (BrainTier) -> Bool,
-        isLocked: (BrainTier) -> Bool
+        isLocked: (BrainTier) -> Bool,
+        afm: AFMAvailability = .available
     ) -> [BrainSwitchRow] {
-        BrainTier.allCases.map { tier in
+        BrainTier.offered(afm: afm, including: active).map { tier in
             let locked = isLocked(tier)
             let needsDownload = !locked && tier.requiresDownload && !isDownloaded(tier)
             return BrainSwitchRow(
@@ -60,20 +64,22 @@ public enum BrainSwitcher {
     }
 
     private static func menuTitle(tier: BrainTier, locked: Bool, needsDownload: Bool) -> String {
+        // Through the notReady window both Minis can sit in one menu: pocket
+        // says whose it is so two rows never share a title (PR #234 review 12).
+        let name = tier == .pocket ? "Mini (M1K3's own)" : tier.displayName
         if locked, let floor = tier.minimumPhysicalMemoryGB {
-            return "\(tier.displayName) · needs \(Int(floor))GB+"
+            return "\(name) · needs \(Int(floor))GB+"
         }
         if needsDownload, let megabytes = tier.approxDownloadMB {
-            return "\(tier.displayName) · \(downloadSize(megabytes)) download"
+            return "\(name) · \(downloadSize(megabytes)) download"
         }
-        return tier.displayName
+        return name
     }
 
     /// "~2.9 GB" / "~600 MB" from an approx MB figure (1 GB = 1000 MB, matching
     /// how download sizes are quoted to users — not the 1024 binary divisor).
     private static func downloadSize(_ megabytes: Int) -> String {
-        guard megabytes >= 1000 else { return "~\(megabytes) MB" }
-        return String(format: "~%.1f GB", Double(megabytes) / 1000)
+        "~" + BrainTier.downloadSizeLabel(megabytes: megabytes)
     }
 
     /// TRUE when re-selecting `tier` would be a pure no-op: it is already the

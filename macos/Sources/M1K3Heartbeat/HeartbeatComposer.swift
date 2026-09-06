@@ -20,6 +20,9 @@
 //  your documents"), and the digest splits NEWS-first / AMBIENT-after.
 //  Strings test-pinned; whether they read better in the model's mouth is
 //  the named A/B, not an assertion here.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — pocket (LFM2 as Mini) reaches this switch as "Mini" (the resident
+//  name is the display name), so it tags `.brainMini` with no arm of its own; noted rather than a dead case
+//  (PR #234 review 4). Confidence now 0.85.
 //
 
 import Foundation
@@ -110,6 +113,7 @@ public enum HeartbeatComposer {
         switch context.brain?.residentTierName?.lowercased() {
         case "big": tags.insert(.brainBig)
         case "lil": tags.insert(.brainLil)
+        // pocket arrives here as "Mini" already (residentTierName is displayName).
         case "mini": tags.insert(.brainMini)
         default: break
         }

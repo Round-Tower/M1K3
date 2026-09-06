@@ -9,6 +9,8 @@
 //  capped only by the latency ceiling (replay prefill doesn't amortize).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-30, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — pocket's clamped window pinned (cap + margin + sum inside 8192).
+//  Confidence 0.9.
 //
 
 @testable import M1K3Chat
@@ -113,6 +115,18 @@ struct HistoryBudgetPolicyTests {
         }
     }
 
+    @Test("pocket's 8k window is clamped like Big's: capped generation, margin, and the sum stays inside")
+    func pocketWindowClamped() {
+        #expect(HistoryBudgetPolicy.generationTokenCap(for: .pocket) == HistoryBudgetPolicy.rotatingGenerationTokenCap)
+        let budget = HistoryBudgetPolicy.budget(
+            for: .pocket, reservedTokens: 3000,
+            generationTokens: HistoryBudgetPolicy.rotatingGenerationTokenCap
+        )
+        let total = 3000 + HistoryBudgetPolicy.rotatingGenerationTokenCap
+            + historyTokens(budget) + HistoryBudgetPolicy.rotatingSafetyMarginTokens
+        #expect(total <= BrainTier.pocket.approximateContextTokens)
+    }
+
     @Test("per-turn cap and turn ceiling are HistoryWindow's own constants — one home, no drift")
     func perTurnConstantsShareOneHome() {
         let budget = HistoryBudgetPolicy.budget(for: .lil, reservedTokens: 1000, generationTokens: 1024)
@@ -167,5 +181,11 @@ struct HistoryBudgetPolicyTests {
         let flooded = base.reservingImages(100)
         #expect(flooded.totalChars == 0)
         #expect(flooded.perTurnChars == 0)
+    }
+
+    @Test("the live reserves are the policy's own — one home for both shells")
+    func liveReservesAreShared() {
+        #expect(HistoryBudgetPolicy.liveReserveTokens == 3000)
+        #expect(HistoryBudgetPolicy.liveGenerationReserveTokens == HistoryBudgetPolicy.rotatingGenerationTokenCap)
     }
 }

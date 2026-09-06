@@ -31,6 +31,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — starter chips are drawn per blank canvas (StarterPrompts: shuffled
 //  pool + recent memories); the readiness hint names the real alternative on a device without Lil (Brain at Home).
 //  Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — readiness hint uses `localFallbackPhrase` — never "pick Mini" while
+//  Mini is the selected brain (PR #234 review 12). Confidence now 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -195,7 +197,7 @@ struct ChatScreen: View {
             case .available: return nil
             case .notReady: return "Apple Intelligence is still downloading on this device…"
             case let .blocked(userFixable):
-                let alternative = core.brainMenu.localFallback.map { "pick \($0.displayName)" } ?? "pair with your Mac"
+                let alternative = core.brainMenu.localFallbackPhrase(verb: "pick") ?? "pair with your Mac"
                 return userFixable
                     ? "Turn on Apple Intelligence in Settings — or \(alternative) in Settings."
                     : "This device can't run Apple Intelligence — \(alternative) in Settings."

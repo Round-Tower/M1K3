@@ -13,6 +13,7 @@
 //      user-fixable flavour (Apple Intelligence off) also offers the OS fix.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-03, Confidence 0.9. Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — the blocked fallback is pocket, not Lil. Confidence 0.9.
 
 @testable import M1K3Inference
 import Testing
@@ -30,19 +31,19 @@ struct FirstRunBrainPolicyTests {
         #expect(FirstRunBrainPolicy.resolve(afm: .notReady, currentBrain: .mini) == .waitForMini)
     }
 
-    @Test("Apple Intelligence off (user-fixable) → Lil fallback, offering the OS fix too")
+    @Test("Apple Intelligence off (user-fixable) → pocket (the Mini for devices without Apple Intelligence) fallback, offering the OS fix too")
     func blockedUserFixableOffersBoth() {
         #expect(
             FirstRunBrainPolicy.resolve(afm: .blocked(userFixable: true), currentBrain: .mini)
-                == .downloadFallback(.lil, offerAppleIntelligenceFix: true)
+                == .downloadFallback(.pocket, offerAppleIntelligenceFix: true)
         )
     }
 
-    @Test("device not eligible (hard block) → Lil fallback, no pointless OS-settings offer")
+    @Test("device not eligible (hard block) → pocket fallback, no pointless OS-settings offer")
     func blockedHardDownloadsOnly() {
         #expect(
             FirstRunBrainPolicy.resolve(afm: .blocked(userFixable: false), currentBrain: .mini)
-                == .downloadFallback(.lil, offerAppleIntelligenceFix: false)
+                == .downloadFallback(.pocket, offerAppleIntelligenceFix: false)
         )
     }
 
@@ -60,7 +61,7 @@ struct FirstRunBrainPolicyTests {
     func rerunOnMiniReEvaluates() {
         #expect(
             FirstRunBrainPolicy.resolve(afm: .blocked(userFixable: true), currentBrain: .mini)
-                == .downloadFallback(.lil, offerAppleIntelligenceFix: true)
+                == .downloadFallback(.pocket, offerAppleIntelligenceFix: true)
         )
     }
 }
