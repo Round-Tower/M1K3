@@ -37,6 +37,9 @@
 //  eases to Mini and the Home-only path takes over. Verified on the 3 GB iPad: pre-floor build eased to pocket,
 //  downloaded 632 MB and warmed ("Mini ready"), then died on the first generation (Metal compiler); the floored
 //  build launches without touching MLX. Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 (2) — `historyBudgetProvider` + a capped `maxTokens` on both MLX
+//  provider sites, the Mac's HistoryBudgetPolicy wiring mirrored: pocket's 8k window gets its clamp on the phone
+//  too (PR #234 review 6). Confidence now 0.8.
 //
 
 import Foundation
@@ -158,9 +161,14 @@ final class AppCore {
 
     // choice reads back consistently in the responder's brain-name provider).
 
-    // `nonisolated` (like the Mac AppEnvironment's keys) so the responder's
-    // @Sendable per-turn closures can read them off the main actor.
+    /// `nonisolated` (like the Mac AppEnvironment's keys) so the responder's
+    /// @Sendable per-turn closures can read them off the main actor.
     nonisolated static let selectedBrainKey = "selectedBrain"
+    /// Prompt tokens set aside before history (persona + tools + grounding) and
+    /// the decode reserve the history window is sized against — the Mac's
+    /// figures (`AppEnvironment.historyReserveTokens`), one policy, two shells.
+    nonisolated static let historyReserveTokens = 3000
+    nonisolated static let historyGenerationReserveTokens = 2048
     nonisolated static let hasChosenBrainKey = "hasChosenBrain"
     /// Whether the Home (paired Mac) brain fronts the slot — device-local,
     /// deliberately NOT shared spelling with the Mac (it has no Home tier).
@@ -283,7 +291,7 @@ final class AppCore {
         // directly; an MLX brain starts on a provider that's warmed below.
         let initialBackend: any InferenceProvider
         if let modelID = brain.mlxModelID, Self.mlxAvailable {
-            let mlx = MLXGemmaProvider(modelID: modelID)
+            let mlx = MLXGemmaProvider(modelID: modelID, maxTokens: Self.generationCap(for: brain))
             currentMLX = mlx
             initialBackend = mlx
         } else {
@@ -496,6 +504,12 @@ final class AppCore {
         brainNote = nil
     }
 
+    /// The live decode cap for an MLX tier — 2048 where the window is a hard
+    /// budget (pocket; Big never runs here), the provider default elsewhere.
+    nonisolated static func generationCap(for tier: BrainTier) -> Int {
+        HistoryBudgetPolicy.generationTokenCap(for: tier, defaultCap: MLXGemmaProvider.defaultMaxTokens)
+    }
+
     private func warmSelectedBrain() {
         guard let modelID = selectedBrain.mlxModelID else { return }
         let tierName = selectedBrain.displayName
@@ -512,7 +526,7 @@ final class AppCore {
                 mlx = existing
             } else {
                 currentMLX?.releaseMemory()
-                mlx = MLXGemmaProvider(modelID: modelID)
+                mlx = MLXGemmaProvider(modelID: modelID, maxTokens: Self.generationCap(for: selectedBrain))
             }
             do {
                 try await mlx.prepare { fraction in
@@ -598,7 +612,7 @@ final class AppCore {
     /// Apple Intelligence can run, Lil only above its mobile floor, Brain at Home
     /// always — the pure table in MobileBrainMenu.
     var brainMenu: MobileBrainMenu {
-        MobileBrainMenu.resolve(afm: miniAvailability, physicalMemoryGB: Self.physicalMemoryGB)
+        MobileBrainMenu.resolve(afm: miniAvailability, physicalMemoryGB: Self.physicalMemoryGB, active: selectedBrain)
     }
 
     /// Titles of the newest live memories, for the blank-canvas chips. Empty when
@@ -680,7 +694,7 @@ final class AppCore {
 
     // MARK: - Responder factory (the iOS mirror of makeAgentResponder — simpler:
 
-    // no CoolHead/voice-mode/history-budget plumbing, all of which default safely)
+    // no CoolHead/voice-mode plumbing (defaults safely); the history budget + decode cap ARE wired (PR #234))
 
     private static func makeResponder(
         store: KnowledgeStore,
@@ -733,6 +747,19 @@ final class AppCore {
             fastThinkingProvider: {
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.prefersFastThinking ?? false
+            },
+            historyBudgetProvider: {
+                // The Mac's brain-aware replay window, mirrored (PR #234 review 6):
+                // pocket's 8k window is a HARD budget on a 4 GB phone — the
+                // tier-blind default (8000 chars) plus an uncapped decode could
+                // ask its unbounded KV cache for more than the window the 3.5 GB
+                // floor was measured against. Read fresh each turn (hot-swap).
+                let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
+                return HistoryBudgetPolicy.budget(
+                    for: BrainTier(persisted: raw),
+                    reservedTokens: Self.historyReserveTokens,
+                    generationTokens: Self.historyGenerationReserveTokens
+                )
             },
             groundingBudgetProvider: {
                 // This shell had NO budget provider at all until 2026-08-13, so

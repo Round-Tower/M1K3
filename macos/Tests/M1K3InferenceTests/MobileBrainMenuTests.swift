@@ -93,4 +93,12 @@ struct MobileBrainMenuTests {
             #expect(MobileBrainMenu.resolve(afm: .available, physicalMemoryGB: gb).options.last == .brainAtHome)
         }
     }
+
+    @Test("an active pocket stays listed while Apple Intelligence syncs (notReady) — Settings never loses the answering brain")
+    func activePocketSurvivesNotReady() {
+        let menu = MobileBrainMenu.resolve(afm: .notReady, physicalMemoryGB: 3.8, active: .pocket)
+        #expect(menu.options == [.tier(.mini), .tier(.pocket), .brainAtHome])
+        // Without the active hint the plain offered set applies.
+        #expect(MobileBrainMenu.resolve(afm: .notReady, physicalMemoryGB: 3.8).options == [.tier(.mini), .brainAtHome])
+    }
 }

@@ -31,6 +31,8 @@
 //  floor (Big never); a blocked device gets pocket as its Mini, Lil recommended over pocket where memory allows;
 //  `localFallback` falls back to pocket. The 3 GB A12 class is still Home-only (pocket's 3.5 GB floor). Confidence
 //  now 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 (2) — `resolve(…active:)` keeps the serving tier listed through the
+//  notReady window (the Mac switcher's fix, PR #234 review 6). Confidence now 0.9.
 //
 
 import Foundation
@@ -66,11 +68,18 @@ public struct MobileBrainMenu: Equatable, Sendable {
         note == nil // one truth table: `resolve` sets the note exactly when no tier is listed
     }
 
-    public static func resolve(afm: AFMAvailability, physicalMemoryGB gigabytes: Double) -> MobileBrainMenu {
+    /// `active` is the tier answering right now: kept listed even when the
+    /// offered set would drop it (the `.notReady` window after Apple
+    /// Intelligence is switched on while pocket serves) — Settings must never
+    /// show no row for the brain that is answering.
+    public static func resolve(
+        afm: AFMAvailability, physicalMemoryGB gigabytes: Double, active: BrainTier? = nil
+    ) -> MobileBrainMenu {
         // One Mini per device (BrainTier.offered): AFM's when it can serve,
         // pocket (LFM2.5-1.2B) when Apple Intelligence is blocked. Big never
         // fits a mobile budget; Lil needs its 8 GB floor.
-        var options: [MobileBrainOption] = BrainTier.offered(afm: afm)
+        let offered = active.map { BrainTier.offered(afm: afm, including: $0) } ?? BrainTier.offered(afm: afm)
+        var options: [MobileBrainOption] = offered
             .filter { $0 != .big && $0.isSelectable(forPhysicalMemoryGB: gigabytes, platform: .mobile) }
             .map(MobileBrainOption.tier)
         options.append(.brainAtHome)
