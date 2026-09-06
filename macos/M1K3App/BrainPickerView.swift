@@ -59,10 +59,7 @@ struct BrainPickerView: View {
     /// Computed, not stored: the badge must land on pocket when Apple
     /// Intelligence is blocked (PR #234 review 1).
     private var recommended: BrainTier {
-        BrainTier.recommended(
-            forPhysicalMemoryGB: Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824,
-            afm: env.afmAvailability
-        )
+        BrainTier.recommendedForThisMac(afm: env.afmAvailability)
     }
 
     init(onComplete: @escaping () -> Void) {
@@ -136,7 +133,7 @@ struct BrainPickerView: View {
             AutoBrainCard(isSelected: autoSelected) { autoSelected = true }
 
             // One Mini per Mac: AFM's when it can serve, pocket when it is blocked.
-            ForEach(BrainTier.offered(afm: env.afmAvailability)) { tier in
+            ForEach(BrainTier.offered(afm: env.afmAvailability, including: env.selectedBrain)) { tier in
                 BrainCard(
                     tier: tier,
                     isSelected: !autoSelected && selectedBrain == tier,

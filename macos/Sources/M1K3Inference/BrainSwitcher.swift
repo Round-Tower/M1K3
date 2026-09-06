@@ -50,7 +50,7 @@ public enum BrainSwitcher {
         isLocked: (BrainTier) -> Bool,
         afm: AFMAvailability = .available
     ) -> [BrainSwitchRow] {
-        BrainTier.offered(afm: afm).map { tier in
+        BrainTier.offered(afm: afm, including: active).map { tier in
             let locked = isLocked(tier)
             let needsDownload = !locked && tier.requiresDownload && !isDownloaded(tier)
             return BrainSwitchRow(

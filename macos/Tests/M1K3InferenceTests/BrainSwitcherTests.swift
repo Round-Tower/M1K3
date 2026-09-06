@@ -167,4 +167,13 @@ struct BrainSwitcherTests {
         #expect(rows[0].menuTitle.hasPrefix("Mini · "))
         #expect(rows[0].menuTitle.hasSuffix("download"))
     }
+
+    @Test("an active pocket stays a row while Apple Intelligence syncs (notReady)")
+    func activePocketSurvivesNotReady() {
+        let rows = BrainSwitcher.rows(
+            active: .pocket, isDownloaded: { _ in true }, isLocked: { _ in false }, afm: .notReady
+        )
+        #expect(rows.map(\.tier) == [.mini, .pocket, .lil, .big])
+        #expect(rows.first { $0.tier == .pocket }?.isActive == true)
+    }
 }

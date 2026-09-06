@@ -24,6 +24,8 @@
 //  Signed: Kev + claude-opus-5, 2026-08-09, Confidence 0.85, Prior: Unknown
 //  Context: macos/docs/NEXT_SESSION.md #102. The MLX figure is untouched;
 //  only Mini moves, and an on-device re-measure of the split is owed.
+//  Review: Kev + claude-fable-5.1, 2026-09-06 — pocket shares Mini's budget (PR #234 review 2); measured on pocket
+//  before it ever widens. Confidence now 0.85.
 //
 
 import Foundation
@@ -90,7 +92,10 @@ public enum GroundingBudgetPolicy {
         // nil is an unresolvable persisted brain string. Fail small, matching
         // HistoryBudgetPolicy's nil guard: the cost of being wrong is asymmetric.
         let typed: Int
-        if let tier, tier != .mini {
+        // pocket (LFM2.5-1.2B, the non-AFM Mini) takes Mini's budget: a 1.2B with
+        // an 8k window, never measured with the 1100-token MLX default — its
+        // grounded-Q cell was 6/16 on PR #234's eval. Fail small until measured.
+        if let tier, tier != .mini, tier != .pocket {
             typed = GroundingBudget.defaultTokenBudget
         } else {
             typed = miniTokenBudget

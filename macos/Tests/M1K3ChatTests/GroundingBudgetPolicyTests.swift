@@ -150,4 +150,10 @@ struct GroundingBudgetPolicyTests {
             )
         }
     }
+
+    @Test("pocket (LFM2 as the non-AFM Mini) takes Mini's budget, spoken cap included")
+    func pocketTakesMiniBudget() {
+        #expect(GroundingBudgetPolicy.tokens(for: .pocket) == GroundingBudgetPolicy.tokens(for: .mini))
+        #expect(GroundingBudgetPolicy.tokens(for: .pocket, spoken: true) == GroundingBudgetPolicy.tokens(for: .mini, spoken: true))
+    }
 }

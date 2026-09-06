@@ -369,6 +369,15 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         }
     }
 
+    /// `offered(afm:)` plus the tier that is ACTIVE right now if the set would
+    /// omit it — the `.notReady` window after a user switches Apple Intelligence
+    /// on while pocket is serving (`easedToOfferedMini` keeps pocket then). A
+    /// picker must never show no row for the brain that is answering.
+    public static func offered(afm: AFMAvailability, including active: BrainTier) -> [BrainTier] {
+        let base = offered(afm: afm)
+        return base.contains(active) ? base : allCases.filter { base.contains($0) || $0 == active }
+    }
+
     /// The persisted pick, moved onto the Mini this device can actually run:
     /// `.mini` → `.pocket` when Apple Intelligence is blocked (a restored AFM
     /// Mini would sit unready forever — #230's shape), `.pocket` → `.mini` once
@@ -450,7 +459,12 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
 
     /// Convenience: the recommendation for the machine we're running on.
     public static var recommendedForThisMac: BrainTier {
-        recommended(forPhysicalMemoryGB: physicalMemoryGB)
+        recommendedForThisMac(afm: .available)
+    }
+
+    /// The same, for the Mac's live Apple Intelligence state (pocket when blocked).
+    public static func recommendedForThisMac(afm: AFMAvailability) -> BrainTier {
+        recommended(forPhysicalMemoryGB: physicalMemoryGB, afm: afm)
     }
 
     /// Ease an AUTOMATIC brain pick down to what this much memory comfortably

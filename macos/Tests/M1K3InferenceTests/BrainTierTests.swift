@@ -409,4 +409,13 @@ struct BrainTierTests {
         #expect(BrainTier.lil.easedToOfferedMini(afm: .blocked(userFixable: false)) == .lil)
         #expect(BrainTier.big.easedToOfferedMini(afm: .available) == .big)
     }
+
+    @Test("offered(afm:including:) keeps the serving tier visible through the notReady window")
+    func offeredIncludingActive() {
+        // Apple Intelligence just switched on, assets syncing, pocket still answering.
+        #expect(BrainTier.offered(afm: .notReady, including: .pocket) == [.mini, .pocket, .lil, .big])
+        // Already offered: unchanged.
+        #expect(BrainTier.offered(afm: .available, including: .lil) == [.mini, .lil, .big])
+        #expect(BrainTier.offered(afm: .blocked(userFixable: true), including: .pocket) == [.pocket, .lil, .big])
+    }
 }

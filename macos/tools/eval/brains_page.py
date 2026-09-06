@@ -52,6 +52,9 @@ HF = "https://huggingface.co"
 TIERS = (
     {"tier": "mini", "name": "Mini", "backing": "apple-foundation-models", "modelID": None,
      "role": "Apple Foundation Models — instant, on the Neural Engine; fronts the quickest turns."},
+    {"tier": "pocket", "name": "Mini", "backing": "mlx", "modelID": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+     "role": "The Mini for devices without Apple Intelligence — LFM2.5 1.2B (4-bit), ~630 MB; "
+             "shown only where Apple's model is blocked. LFM Open License v1.0, not Apache."},
     {"tier": "lil", "name": "Lil", "backing": "mlx", "modelID": "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
      "role": "The fast brain that fronts the conversation — dense Qwen3 4B (DWQ 4-bit), no <think> phase."},
     {"tier": "big", "name": "Big", "backing": "mlx", "modelID": "mlx-community/gemma-4-12B-it-4bit",
@@ -371,11 +374,11 @@ def render_html(doc: dict) -> str:
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: M1K3 ships three brains, pinned to exact model revisions, and this page is the evidence for those picks.</strong> Every number below was measured on a real Mac through the shipping app, and each run carries the hardware, OS, power mode, app commit and inference-runtime revision it was measured with. The app never reads this page: models are chosen in a reviewed pull request, not by a server. Read it the way you would read a lab notebook, failures included.</p>
+    <p><strong>Short answer: M1K3 ships four brains, pinned to exact model revisions, and this page is the evidence for those picks.</strong> Every number below was measured on a real Mac through the shipping app, and each run carries the hardware, OS, power mode, app commit and inference-runtime revision it was measured with. The app never reads this page: models are chosen in a reviewed pull request, not by a server. Read it the way you would read a lab notebook, failures included.</p>
   </div>
 
   <h2>What ships today</h2>
-  <p>Three tiers. Mini answers the quickest turns, Lil fronts the conversation, Big is reached by delegation for deep work. Each MLX model is pinned to one Hugging Face revision and every downloaded file is checked against a SHA-256 digest before it loads, so any mirror can serve the bytes.</p>
+  <p>Four tiers, three shown per device. Mini answers the quickest turns (Apple's model where it can run, LFM2.5 1.2B where it can't), Lil fronts the conversation, Big is reached by delegation for deep work. Each MLX model is pinned to one Hugging Face revision and every downloaded file is checked against a SHA-256 digest before it loads, so any mirror can serve the bytes.</p>
   {_brains_table(doc["brains"])}
 
   <h2>Eval runs</h2>
