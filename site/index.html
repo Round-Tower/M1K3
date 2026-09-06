@@ -70,9 +70,8 @@
   ]
 }
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="preload" href="fonts/vt323-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="fonts.css" />
 <style>
   :root {
     --bg: #050505;
@@ -209,6 +208,8 @@
     font-family: var(--pixel); font-size: clamp(48px, 6vw, 80px);
     color: var(--ink-bright); line-height: 1; text-shadow: var(--glow-soft);
   }
+  /* VT323's lone "0" is a tall terminal glyph; widen it so it reads as a pixel zero (matches the App Store frames) */
+  .stat .num.zero { display: inline-block; transform: scaleX(1.45); transform-origin: 0 50%; }
   .stat .desc { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); letter-spacing: 0.08em; margin-top: 10px; line-height: 1.7; }
 
   /* features */
@@ -412,7 +413,7 @@
 <hr class="rule" />
 <div class="band" id="private">
   <div class="band-inner">
-    <div class="stat reveal"><div class="num" data-num="0">0</div><div class="desc">bytes of your data sent to a server. Inference, voice, and memory are all on-device.</div></div>
+    <div class="stat reveal"><div class="num zero" data-num="0">0</div><div class="desc">bytes of your data sent to a server. Inference, voice, and memory are all on-device.</div></div>
     <div class="stat reveal"><div class="num" data-num="100%">100%</div><div class="desc">local model stack — MLX-Swift Gemma 4 + Qwen 3 plus Apple Foundation Models, switchable in Settings.</div></div>
     <div class="stat reveal"><div class="num" data-num="1">1</div><div class="desc">place your knowledge lives: an encrypted store on your Mac, keyed from your Keychain.</div></div>
     <div class="stat reveal"><div class="num" data-num="∞">∞</div><div class="desc">things it remembers. Documents, conversations, calls — searchable forever, by you alone.</div></div>

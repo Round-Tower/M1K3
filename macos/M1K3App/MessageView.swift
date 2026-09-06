@@ -293,6 +293,7 @@ struct MessageView: View {
         // apart). When the full-window avatar is the backdrop, a subtle scrim fades in
         // behind the text so it stays readable over the moving image.
         .modifier(LegibilityScrim(active: avatarDisplay == .background))
+        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
