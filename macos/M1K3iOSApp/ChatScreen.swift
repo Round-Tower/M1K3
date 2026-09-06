@@ -174,6 +174,13 @@ struct ChatScreen: View {
             }
             if core.brainLoad.isActive {
                 brainLoadRow
+            } else if let offer = core.pendingBrainDownloadOffer, !core.isReady {
+                // #237: the consent moment — says the size, downloads only on the tap.
+                Button("Download \(offer.displayName) (one-time, ~\(offer.approxDownloadMB ?? 0) MB)") {
+                    core.acceptPendingBrainDownloadOffer()
+                }
+                .font(.caption)
+                .buttonStyle(.borderedProminent)
             } else if let hint = readinessHint {
                 Text(hint)
                     .font(.caption2)

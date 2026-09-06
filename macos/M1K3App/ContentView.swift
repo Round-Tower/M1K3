@@ -299,7 +299,10 @@ struct ContentView: View {
                     brainName: env.downloadingBrainName,
                     switchToLil: env.isBrainDownloaded(.lil) && [.mini, .pocket].contains(env.selectedBrain)
                         ? { env.selectBrain(.lil) }
-                        : nil
+                        : nil,
+                    downloadOffer: env.pendingBrainDownloadOffer.map { tier in
+                        (tier, { env.acceptPendingBrainDownloadOffer() })
+                    }
                 ) { Task { await env.warmUpSelectedBrainOnLaunch() } }
                     .transition(.opacity)
             }
@@ -1184,6 +1187,9 @@ private struct ModelGateView: View {
     /// Non-nil when Lil's weights are on disk — the `.unavailable` dead-end
     /// gains a one-tap way out (AFM turned off post-onboarding).
     var switchToLil: (() -> Void)?
+    /// #237: the launch restore held back an eased download; this is the tap it
+    /// waits for. Shown in the `.unavailable` dead-end beside the Lil rescue.
+    var downloadOffer: (tier: BrainTier, accept: () -> Void)?
     let retry: () -> Void
 
     var body: some View {
@@ -1240,9 +1246,23 @@ private struct ModelGateView: View {
                 // The rescue: Apple Intelligence turned off AFTER first run,
                 // but Lil's weights are already on disk — one tap out of the
                 // dead end instead of a Settings expedition.
+                if let downloadOffer {
+                    // The consent moment: says the size, downloads only on the tap.
+                    Button(
+                        "Download \(downloadOffer.tier.displayName) (one-time, ~\(downloadOffer.tier.approxDownloadMB ?? 0) MB)",
+                        action: downloadOffer.accept
+                    )
+                    .buttonStyle(.borderedProminent)
+                }
                 if let switchToLil {
-                    Button("Switch to Lil (already downloaded)", action: switchToLil)
-                        .buttonStyle(.borderedProminent)
+                    // Secondary when the download offer holds the prominent slot.
+                    if downloadOffer == nil {
+                        Button("Switch to Lil (already downloaded)", action: switchToLil)
+                            .buttonStyle(.borderedProminent)
+                    } else {
+                        Button("Switch to Lil (already downloaded)", action: switchToLil)
+                            .buttonStyle(.bordered)
+                    }
                 }
                 SettingsLink { Text("Open Settings") }
             }

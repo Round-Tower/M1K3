@@ -527,6 +527,10 @@ final class AppEnvironment {
     /// One-line transient notice ("Lil's awake — switched you over."), shown in
     /// the top banner slot and self-clearing.
     var brainUpgradeNotice: String?
+    /// #237: the tier the launch restore WOULD have eased to, held back because it
+    /// needs a download nobody tapped for. The readiness gate offers it; accepting
+    /// is a normal `selectBrain` (persist + warm with the real download bar).
+    private(set) var pendingBrainDownloadOffer: BrainTier?
     /// The in-flight background fetch, so `selectBrain`/the picker route can
     /// cancel it synchronously (single writer to the Hub cache dir).
     @ObservationIgnored var brainUpgradeFetchTask: Task<Void, Never>?
@@ -713,10 +717,28 @@ final class AppEnvironment {
         // The Mini this Mac can run first (pocket when Apple Intelligence is
         // blocked, back to AFM's Mini when it returns), then the memory floor —
         // the iOS restore's order (PR #234 review 2).
-        let brain = BrainTier.selectableOrEased(
+        let eased = BrainTier.selectableOrEased(
             (realigned?.tier ?? decoded).easedToOfferedMini(afm: Self.afmAvailabilityAtLaunch),
             forPhysicalMemoryGB: physicalMemoryGB
         )
+        // #237: an EASED pick that would have to download waits for a tap. The app
+        // sits on the persisted tier (Mini, unready here) and the readiness gate
+        // carries the offer; accepting it goes through selectBrain like any pick.
+        let brain: BrainTier
+        switch BrainRestoreConsent.resolve(
+            persisted: storedBrainRaw.flatMap(BrainTier.init(persisted:)),
+            eased: eased,
+            staged: { [brainInventory] tier in
+                tier.mlxModelID.map { brainInventory.isInstalled(modelID: $0) } ?? false
+            }
+        ) {
+        case let .warm(tier):
+            brain = tier
+        case let .askFirst(offer, keep):
+            brain = keep
+            pendingBrainDownloadOffer = offer
+            frontTierLog.notice("restore: \(offer.rawValue, privacy: .public) needs a download — offered, not started (#237)")
+        }
         if let storedBrainRaw, storedBrainRaw != brain.rawValue {
             UserDefaults.standard.set(brain.rawValue, forKey: Self.selectedBrainKey)
         }
@@ -1129,7 +1151,14 @@ final class AppEnvironment {
     /// Returns `true` when the pick was the already-loaded no-op — `modelLoad`
     /// will NOT transition (it's already .ready), so a caller waiting on an
     /// onChange for readiness (onboarding's waking screen) must advance itself.
+    /// Accept the launch offer (#237): the tap this download was waiting for.
     @discardableResult
+    func acceptPendingBrainDownloadOffer() {
+        guard let offer = pendingBrainDownloadOffer else { return }
+        pendingBrainDownloadOffer = nil
+        selectBrain(offer)
+    }
+
     func selectBrain(_ tier: BrainTier) -> Bool {
         // Refuse a brain switch WHILE a deep dive is running on the MLX slot:
         // re-pointing `swappableMLX` (and loading a new model into it) under
