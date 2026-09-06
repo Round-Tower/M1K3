@@ -282,18 +282,24 @@ final class AppCore {
         // Consent runs on the Apple-Intelligence axis only, BEFORE the memory
         // floor (same order as the Mac; a pocket below its floor still eases to Mini).
         let persisted = storedBrainRaw.flatMap(BrainTier.init(persisted:)) ?? .mini
+        let inventory = LocalModelInventory()
         let afmEased: BrainTier
         switch BrainRestoreConsent.resolve(
             persisted: persisted,
             eased: persisted.easedToOfferedMini(afm: afm.availabilityState),
-            staged: { tier in tier.mlxModelID.map { LocalModelInventory().isInstalled(modelID: $0) } ?? false }
+            staged: { tier in tier.mlxModelID.map { inventory.isInstalled(modelID: $0) } ?? false }
         ) {
         case let .warm(tier):
             afmEased = tier
         case let .askFirst(offer, keep):
             afmEased = keep
-            pendingBrainDownloadOffer = offer
-            Self.log.notice("restore: \(offer.rawValue, privacy: .public) needs a download — offered, not started (#237)")
+            // The OFFER must clear the mobile floor too — a 3 GB A12 must never be
+            // invited to download a pocket it can't load (PR #239 review); it stays
+            // on Mini and the Home-only path (#230/#231) takes over as before.
+            if BrainTier.selectableOrEased(offer, forPhysicalMemoryGB: Self.physicalMemoryGB, platform: .mobile) == offer {
+                pendingBrainDownloadOffer = offer
+                Self.log.notice("restore: \(offer.rawValue, privacy: .public) needs a download — offered, not started (#237)")
+            }
         }
         let restored = BrainTier.selectableOrEased(
             afmEased, forPhysicalMemoryGB: Self.physicalMemoryGB, platform: .mobile

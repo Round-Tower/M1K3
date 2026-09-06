@@ -739,8 +739,13 @@ final class AppEnvironment {
             afmEased = tier
         case let .askFirst(offer, keep):
             afmEased = keep
-            pendingBrainDownloadOffer = offer
-            frontTierLog.notice("restore: \(offer.rawValue, privacy: .public) needs a download — offered, not started (#237)")
+            // The OFFER must clear the memory floor too, or the button invites a
+            // download the device can never run (PR #239 review). No floor for
+            // pocket on the Mac today; the guard keeps both shells identical.
+            if BrainTier.selectableOrEased(offer, forPhysicalMemoryGB: physicalMemoryGB) == offer {
+                pendingBrainDownloadOffer = offer
+                frontTierLog.notice("restore: \(offer.rawValue, privacy: .public) needs a download — offered, not started (#237)")
+            }
         }
         let brain = BrainTier.selectableOrEased(afmEased, forPhysicalMemoryGB: physicalMemoryGB)
         if let storedBrainRaw, storedBrainRaw != brain.rawValue {
