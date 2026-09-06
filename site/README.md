@@ -3,8 +3,10 @@
 Single-page launch site for M1K3 for Mac. Self-contained: THREE.js is vendored
 in `vendor/` (originally from the attic's web-avatar node_modules — history
 before `7545b4a4`), the hero fox is a local GLB —
-no CDN required for the 3D, fitting for a "no cloud attached" product. The only
-external request is Google Fonts (degrades gracefully to system mono).
+no CDN required for the 3D, and fonts are self-hosted in `fonts/` (`fonts.css`) —
+zero external requests, fitting for a "no cloud attached" product. VT323 is
+preloaded so the headline never paints in the fallback mono (which is how the
+first `og.png` ended up in the wrong face).
 
 ## Run
 

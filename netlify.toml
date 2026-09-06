@@ -20,7 +20,9 @@
   # The `:/` magic prefix anchors pathspecs to the repo top level, cwd-proof.
   ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- ':/site' ':/netlify.toml'"
 
-# No CSP so the one external request (Google Fonts) keeps working.
+# No CSP yet. The type is self-hosted now (site/fonts.css), so nothing external
+# needs whitelisting — a strict CSP is a follow-up; the inline scripts and the
+# blob: worker the 3D scene uses need their own allowances first.
 [[headers]]
   for = "/*"
   [headers.values]

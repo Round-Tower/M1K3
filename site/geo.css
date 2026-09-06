@@ -64,6 +64,7 @@ nav {
   backdrop-filter: blur(2px);
 }
 .wordmark { font-family: var(--pixel); font-size: 28px; color: var(--ink-bright); text-decoration: none; text-shadow: var(--glow); }
+.wordmark .mark { width: 22px; height: 22px; vertical-align: -3px; margin-right: 8px; filter: drop-shadow(0 0 6px rgba(255,255,255,.55)); }
 .wordmark .cursor { animation: blink 1.1s step-end infinite; }
 nav .links { display: flex; gap: 32px; align-items: center; }
 nav .links a {
