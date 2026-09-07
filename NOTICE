@@ -9,6 +9,35 @@ the commit history records human–AI collaboration on the record. Per the
 LICENSE, please retain attribution and provenance notices in derivative works.
 
 ------------------------------------------------------------------------------
+Trademarks and brand assets
+------------------------------------------------------------------------------
+
+"M1K3", "M1K3 Voice", "Lil M1K3", "Brain at Home", the M mark, the companion
+faces, the app icon, the artwork, and the M1K3 voice are trademarks and brand
+assets of Kevin Murphy / Round Tower. They are NOT licensed under the Apache
+License (see Section 6 of the LICENSE) and are all rights reserved. Forks may
+not be distributed under the M1K3 name or with these assets. See
+TRADEMARKS.md for the policy and how to ask.
+
+Brand-asset files EXCLUDED from the Apache License grant. A trademark policy
+cannot narrow a copyright grant on its own, so the exclusion is stated here,
+in the repository's licence notice: from the commit that adds this paragraph
+onward, the following files are NOT part of "the Work" licensed under the
+Apache License and are copyright Kevin Murphy / Round Tower, all rights
+reserved (revisions published before this notice remain under the grant they
+were published with):
+
+  - site/favicon.svg, site/icon-192.png, site/icon-512.png,
+    site/apple-touch-icon.png, site/og.png          (the M mark + site artwork)
+  - assets/brand/**                                (README hero, brand plates)
+  - the app icon sets and App Store screenshots/previews, wherever committed
+
+The companion face meshes and shaders (macos/Sources/M1K3Avatar/Companions/**)
+are NOT on this list: their files stay under the repository licence, and only
+their use as M1K3's trade dress (presenting a fork as the official app) is
+restricted by TRADEMARKS.md.
+
+------------------------------------------------------------------------------
 Third-party components
 ------------------------------------------------------------------------------
 
@@ -21,6 +50,8 @@ into macos/M1K3App/ThirdPartyLicenses.plist; notable components include:
   - MLX / mlx-swift / mlx-swift-lm — MIT License
   - WhisperKit — MIT License
   - Model weights (Qwen3, Gemma 4) — Apache License 2.0, retrieved at runtime
+  - Model weights (LFM2.5-1.2B, the Mini where Apple Intelligence is blocked)
+    — LFM Open License v1.0, retrieved at runtime
   - 3D avatar assets — Creative Commons / asset-store terms; see the license
     files within their respective directories (e.g. app/3d/, and per-asset
     license.txt files such as app/3d/mask/license.txt)
