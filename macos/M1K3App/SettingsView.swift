@@ -26,21 +26,33 @@
 //  is a named ⌘R verify-owed like every SwiftUI move in this file family).
 //
 
+import M1K3Screengrab
 import SwiftUI
 
 struct SettingsView: View {
+    enum Pane: Hashable { case m1k3, you, privacy, general, advanced }
+
+    /// Opens on M1K3 as before; the screengrab harness lands on Privacy for its
+    /// privacy-label plate (no-op without M1K3_SCREENGRAB=1).
+    @State private var pane: Pane = ScreengrabHarness.current.showsPrivacyPane ? .privacy : .m1k3
+
     var body: some View {
-        TabView {
+        TabView(selection: $pane) {
             M1K3SettingsPane()
                 .tabItem { Label("M1K3", systemImage: "brain") }
+                .tag(Pane.m1k3)
             YouSettingsPane()
                 .tabItem { Label("You", systemImage: "person.crop.circle") }
+                .tag(Pane.you)
             PrivacySettingsPane()
                 .tabItem { Label("Privacy", systemImage: "hand.raised") }
+                .tag(Pane.privacy)
             GeneralSettingsPane()
                 .tabItem { Label("General", systemImage: "gearshape") }
+                .tag(Pane.general)
             AdvancedSettingsPane()
                 .tabItem { Label("Advanced", systemImage: "wrench.and.screwdriver") }
+                .tag(Pane.advanced)
         }
         .frame(width: 480)
         .glassBackdrop()

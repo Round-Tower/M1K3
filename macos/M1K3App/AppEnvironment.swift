@@ -33,6 +33,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06 (3) — the launch restore runs `BrainRestoreConsent` (#237): an eased
 //  Mini → pocket that would download is OFFERED (`pendingBrainDownloadOffer`, accepted via selectBrain), never
 //  started; the app sits on the persisted Mini meanwhile. Confidence now 0.85 (gate UI unverified by launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-07 — screengrab seed hooks: the hero conversation lands BEFORE the ChatSession's
+//  resume-most-recent read; memories + documents seed as a launch task (AppEnvironment+Screengrab).
 
 import AppKit
 import Foundation
@@ -854,6 +856,9 @@ final class AppEnvironment {
         // provider; the legacy transcript.json imports once (factory runs the
         // migrator BEFORE init so resume-most-recent finds the import).
         let chatHistory = Self.makeChatHistoryStore(in: url.deletingLastPathComponent())
+        // Screengrab harness: the hero conversation must exist BEFORE the
+        // session's resume-most-recent read below (AppEnvironment+Screengrab).
+        Self.seedScreengrabHistory(into: chatHistory, root: url.deletingLastPathComponent())
         chat = ChatSession(
             responder: responder,
             history: chatHistory,
@@ -881,6 +886,7 @@ final class AppEnvironment {
 
         refreshCounts()
         Task { await self.runStartupMaintenance() }
+        seedScreengrabKnowledgeIfActive(root: url.deletingLastPathComponent())
 
         // Wire avatar + word highlight ↔ speech after all stored properties are
         // initialized (see the Voice output extension).

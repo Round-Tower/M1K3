@@ -11,6 +11,8 @@
 # surface now, not at ship.
 #
 # Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+# Review: Kev + claude-fable-5.1, 2026-09-07 — M1K3ScreengrabUITests / M1K3iOSScreengrabUITests (bundle.ui-testing) + the
+# test plans that switch XCTest's automatic screen capture OFF; both shells link M1K3Screengrab.
 
 name: M1K3
 
@@ -136,6 +138,10 @@ targetTemplates:
       # MCP-free by design (this shell links no MCP stack).
       - package: M1K3
         product: M1K3BrainLink
+      # App Store screengrab harness (isolated store root + demo persona) —
+      # inert without M1K3_SCREENGRAB=1; driven by M1K3iOSScreengrabUITests.
+      - package: M1K3
+        product: M1K3Screengrab
 
 targets:
   M1K3:
@@ -206,6 +212,10 @@ targets:
       # "Set Up Screen Saver" Settings row (status + install action).
       - package: M1K3
         product: M1K3ScreensaverCore
+      # App Store screengrab harness (isolated store root + demo persona) —
+      # inert without M1K3_SCREENGRAB=1; driven by M1K3ScreengrabUITests.
+      - package: M1K3
+        product: M1K3Screengrab
       # Embed the .saver so Settings can install it: M1K3 is sandboxed and can't
       # write to ~/Library/Screen Savers directly, so the app ships the bundle
       # and hands it to macOS via NSWorkspace.open (the native install prompt).
@@ -392,6 +402,43 @@ targets:
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
         NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. Nothing leaves your network."
 
+  # App Store screengrab suites (marketing/app-store/CAPTURE-PLAN.md): one XCUITest
+  # per plate, launching the app under M1K3_SCREENGRAB=1 with the plate's launch
+  # recipe (isolated store root + demo persona + argument-domain overrides), then
+  # capturing the WINDOW (Mac) / screen (iOS) as a PNG attachment. Driven by
+  # tools/screengrab/capture.sh, which files the PNGs into marketing/app-store/plates/.
+  M1K3ScreengrabUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: UITests/Screengrab
+    dependencies:
+      - target: M1K3
+      - package: M1K3
+        product: M1K3Screengrab
+    settings:
+      base:
+        TEST_TARGET_NAME: M1K3
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.2"
+  M1K3iOSScreengrabUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: UITests/ScreengrabiOS
+    dependencies:
+      - target: M1K3iOS
+      - package: M1K3
+        product: M1K3Screengrab
+    settings:
+      base:
+        TEST_TARGET_NAME: M1K3iOS
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.2"
+        TARGETED_DEVICE_FAMILY: "1,2"
+
   # The M1K3 screensaver (.saver bundle) — "what your machine got up to while you
   # were away". A borderless ScreenSaverView drawing the ambient pixel-rain + the
   # M brand mark; the pure sim/geometry/copy is the M1K3ScreensaverCore package.
@@ -437,8 +484,14 @@ schemes:
         M1K3: all
     run:
       config: Debug
+    # The plan turns XCTest's AUTOMATIC failure screen capture OFF: it records
+    # the whole display (every other window on it), which is the one thing the
+    # screengrab suite must never do. The plates are explicit attachments.
     test:
       config: Debug
+      testPlans:
+        - path: UITests/Screengrab.xctestplan
+          defaultPlan: true
     profile:
       config: Release
     analyze:
@@ -452,6 +505,11 @@ schemes:
         M1K3iOS: all
     run:
       config: Debug
+    test:
+      config: Debug
+      testPlans:
+        - path: UITests/ScreengrabiOS.xctestplan
+          defaultPlan: true
     profile:
       config: Release
     analyze:

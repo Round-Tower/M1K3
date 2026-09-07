@@ -35,10 +35,13 @@
 //  Mini is the selected brain (PR #234 review 12). Confidence now 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-09-06 (2) — the readiness slot shows the #237 download offer as a button
 //  before the plain hint. Confidence now 0.8 (unverified on a blocked device).
+//  Review: Kev + claude-fable-5.1, 2026-09-07 — the brain-ready task also fires the screengrab beat (voice mode + the spoken hero
+//  line for the store plates); M1K3_VOICE_AT_LAUNCH keeps precedence. Inert without the harness env.
 
 import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
+import M1K3Screengrab
 import SwiftUI
 
 struct ChatScreen: View {
@@ -126,9 +129,15 @@ struct ChatScreen: View {
                 if !chatting { reshuffleStarters() }
             }
             .task(id: brainReady) {
-                guard brainReady, !voiceLaunched, Self.voiceAtLaunch else { return }
-                voiceLaunched = true
-                core.enterVoiceMode()
+                guard brainReady, !voiceLaunched else { return }
+                if Self.voiceAtLaunch {
+                    voiceLaunched = true
+                    core.enterVoiceMode()
+                } else if ScreengrabHarness.current.isActive {
+                    // The App Store screengrab suite's per-plate beat (AppCore+Screengrab).
+                    voiceLaunched = true
+                    await core.performScreengrabBeat()
+                }
             }
     }
 
