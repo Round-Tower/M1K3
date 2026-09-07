@@ -18,10 +18,21 @@ The following are trademarks and brand assets of Kevin Murphy / Round Tower
   the per-companion USDZ meshes and shaders shipped with the app.
 - The app icons, the `og.png` / `readme-hero.png` artwork, the App Store
   screenshots, and the m1k3.app site design.
-- The M1K3 spoken voice as configured and shipped in the app.
+- The M1K3 spoken voice as configured and shipped in the app (a sound mark
+  is claimed as intent; it earns protection through use in commerce, and
+  this is stated so nobody mistakes it for a settled right today).
 
-These are licensed to nobody by default. They are **not** covered by the
-Apache 2.0 grant and are **all rights reserved**, except as stated below.
+The **names and marks** are outside the Apache 2.0 grant by the License's own
+Section 6. The **brand-asset files** (the M mark files, the site artwork, the
+brand plates, the app icon and App Store artwork) are excluded from the grant
+by the notice in [`NOTICE`](./NOTICE), from the commit that added it onward;
+they are all rights reserved. The companion face files are *not* excluded —
+they stay under the repository licence — and only their use as M1K3's trade
+dress is restricted below.
+
+Most of these marks are unregistered. Unregistered marks are real but narrower
+than a registration: they reach the markets M1K3 has actually reached, and
+carry no presumption of validity. Registration is a separate step.
 
 ## What you may do without asking
 
@@ -38,8 +49,11 @@ Apache 2.0 grant and are **all rights reserved**, except as stated below.
   the name M1K3** or any confusingly similar name, on any app store, download
   site, or package registry. That includes the Mac App Store, TestFlight,
   Homebrew, Setapp, and direct DMG downloads.
-- Ship the M mark, the companion faces, the app icon, the artwork, or the
-  M1K3 voice in any product that is not the official M1K3 build.
+- Ship the M mark, the app icon, the artwork, or the M1K3 voice in any
+  product that is not the official M1K3 build.
+- Use the companion faces, the CRT look, or the M1K3 voice as the
+  source-identifying face of another product — trade dress that makes a fork
+  look like, or pass for, the official M1K3.
 - Present a fork as the official M1K3, or imply endorsement by Kevin Murphy
   or Round Tower.
 
@@ -66,3 +80,9 @@ truthful and does not confuse people about what the official app is.
 follows the Apache 2.0 §6 carve-out and the shape used by other open-core
 Mac apps; the list of marks is complete as of the App Store submission race.
 Prior: Unknown)*
+*Review: claude-fable-5.1, 2026-09-07 — PR #242 review 1: a policy doc cannot
+claw back files the root LICENSE already grants, so the brand-asset file
+exclusion now lives in NOTICE (forward from that commit, earlier revisions
+stay granted); companion faces scoped to trade-dress use, not redistribution
+(their provenance is not all first-party); sound-mark and unregistered-scope
+caveats added. Confidence now 0.85.*
