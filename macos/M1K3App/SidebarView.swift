@@ -61,6 +61,8 @@ struct SidebarView: View {
                 // the wrong side as a footer window-opener.
                 Label("Heartbeat", systemImage: "waveform.path.ecg")
                     .tag(SidebarSelection.heartbeat)
+                Label("Todos", systemImage: "checklist")
+                    .tag(SidebarSelection.todos)
             }
 
             Section("Conversations") {

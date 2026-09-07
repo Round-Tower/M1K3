@@ -22,6 +22,8 @@
 //  midnight boundary (fix 5 — the day-scoped arc had nothing to continue,
 //  every day). String contract pinned; effectiveness stays the named A/B.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: `mayProposeTodo` appends the one-
+//  TODO-line rule only when the app allows it; default false keeps every pinned prompt unchanged.
 
 import Foundation
 
@@ -34,10 +36,16 @@ public enum HeartbeatPrompt {
     /// like-these rule. On a quiet day the arc is empty by construction
     /// (the store's day window resets at midnight), so the openers are the
     /// only thing standing between three days and one sentence.
+    /// `mayProposeTodo`: the resident's one write. When the app has room
+    /// under ProposalCeiling (and the user's toggle is on) the model may end
+    /// the note with a single `TODO: <title>` line, which TodoProposalLine
+    /// strips before the guard and the app files as a PENDING todo. Off by
+    /// default so every pinned prompt is unchanged.
     public static func render(
         digest: String,
         earlierToday: [String],
-        recentPulses: [String] = []
+        recentPulses: [String] = [],
+        mayProposeTodo: Bool = false
     ) -> String {
         var sections: [String] = []
         sections.append(
@@ -71,6 +79,16 @@ public enum HeartbeatPrompt {
                 Your recent notes opened with these lines. Do not open like them — \
                 find a different first sentence:
                 \(openers)
+                """
+            )
+        }
+        if mayProposeTodo {
+            sections.append(
+                """
+                If, and only if, the digest shows something the user still needs to \
+                do, end the note with one final line of the form `TODO: <short title>` \
+                — the user's own task, not yours, in five words or fewer. Otherwise \
+                write no such line.
                 """
             )
         }

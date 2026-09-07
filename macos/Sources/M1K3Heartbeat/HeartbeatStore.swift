@@ -29,6 +29,8 @@
 //  Clear" guarantee gains no exception on its first extension. Cascade
 //  pinned red-first.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: `latestID()` — the row id a todo
+//  proposed by this pulse records as its origin.
 
 import Foundation
 import GRDB
@@ -116,11 +118,15 @@ public final class HeartbeatStore: @unchecked Sendable {
     /// never the app. `at:` is injectable for tests; the cap trims inside
     /// the same transaction so the store can never exceed it between writes
     /// (the FK cascade takes trimmed pulses' tags in the same breath).
+    /// Returns the inserted row id (nil = the write failed) — a todo the
+    /// pulse proposed records it as its origin, off the real insert rather
+    /// than a second MAX(id) that only lines up when nothing failed.
+    @discardableResult
     public func record(
         digest: String, narrative: String?, renderedBy: String,
         tags: Set<PulseTag> = [], at date: Date = Date()
-    ) {
-        try? dbQueue.write { [capacity] db in
+    ) -> Int64? {
+        try? dbQueue.write { [capacity] db -> Int64 in
             try db.execute(
                 sql: """
                 INSERT INTO pulses (digest, narrative, rendered_by, created_at)
@@ -143,6 +149,7 @@ public final class HeartbeatStore: @unchecked Sendable {
                 """,
                 arguments: [capacity]
             )
+            return pulseID
         }
     }
 
@@ -187,6 +194,14 @@ public final class HeartbeatStore: @unchecked Sendable {
         try dbQueue.read { db in
             try Double.fetchOne(db, sql: "SELECT MAX(created_at) FROM pulses")
                 .map(Date.init(timeIntervalSince1970:))
+        }
+    }
+
+    /// The newest pulse's row id — what a todo proposed by that pulse's
+    /// narrative records as its origin (TodoOrigin.pulseId).
+    public func latestID() throws -> Int64? {
+        try dbQueue.read { db in
+            try Int64.fetchOne(db, sql: "SELECT MAX(id) FROM pulses")
         }
     }
 

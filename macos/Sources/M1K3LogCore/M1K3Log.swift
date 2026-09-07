@@ -117,6 +117,10 @@ public enum M1K3Log {
         /// and entry COUNTS only — never digest or narrative content (the
         /// pulse text summarizes memories/chat and must not leak into logs).
         case heartbeat
+        /// Todos: store opens, state transitions, proposals (resident /
+        /// visitor) and their refusals. Counts, states and sources only —
+        /// never a title or note (a todo is the user's own list).
+        case todos
         /// Apple Foundation Models (the Mini tier): session lifecycle, prompt
         /// SIZE, and the throws that were previously swallowed whole. Mini had
         /// no logger at all, so a context overflow, a guardrail refusal and a

@@ -13,6 +13,8 @@
 // Context: First Mac-native surface for M1K3. Scaffold begins with the pure,
 // dependency-free knowledge primitives (VectorMath, RRFFusion) ported from
 // the prior knowledge-server project so the foundation builds in seconds before MLX/GRDB enter the graph.
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: new M1K3Todos target (GRDB only) +
+//  tests; M1K3MCPKit depends on it for the todo value types.
 
 import Foundation
 import PackageDescription
@@ -85,6 +87,9 @@ let package = Package(
         // Clear, excluded from diagnostics AND from memory distillation — a
         // pulse history must never become permanent memory-graph facts).
         .library(name: "M1K3Heartbeat", targets: ["M1K3Heartbeat"]),
+        // Todos — one list, three sources (user / resident / visitor); pure
+        // consent + ceiling policies, the grounding block, and a GRDB store.
+        .library(name: "M1K3Todos", targets: ["M1K3Todos"]),
         // Brain at Home — the LAN brain-serving layer (TLS-PSK listener,
         // pairing, Bonjour advertiser, scoped LAN MCP route).
         .library(name: "M1K3BrainServe", targets: ["M1K3BrainServe"]),
@@ -443,13 +448,14 @@ let package = Package(
             dependencies: [
                 "M1K3Knowledge",
                 "M1K3Memory",
+                "M1K3Todos",
                 .product(name: "MCP", package: "swift-sdk"),
             ],
             path: "Sources/M1K3MCPKit"
         ),
         .testTarget(
             name: "M1K3MCPKitTests",
-            dependencies: ["M1K3MCPKit", "M1K3Knowledge", "M1K3Memory"],
+            dependencies: ["M1K3MCPKit", "M1K3Knowledge", "M1K3Memory", "M1K3Todos"],
             path: "Tests/M1K3MCPKitTests"
         ),
         // The thin executable Claude Desktop/Code spawns — just runs the server.
@@ -530,6 +536,24 @@ let package = Package(
             name: "M1K3HeartbeatTests",
             dependencies: ["M1K3Heartbeat"],
             path: "Tests/M1K3HeartbeatTests"
+        ),
+        // Todos: the item model, TodoConsentPolicy (only the user accepts or
+        // closes), ProposalCeiling (the resident holds ≤3 pending), the chat
+        // grounding block, the heartbeat TODO-line extractor, and a GRDB store
+        // in HeartbeatStore's idioms. App wiring (store path, MCP handlers,
+        // heartbeat hook) lives in the app target.
+        .target(
+            name: "M1K3Todos",
+            dependencies: [
+                "M1K3LogCore",
+                .product(name: "GRDB", package: "GRDB.swift"),
+            ],
+            path: "Sources/M1K3Todos"
+        ),
+        .testTarget(
+            name: "M1K3TodosTests",
+            dependencies: ["M1K3Todos"],
+            path: "Tests/M1K3TodosTests"
         ),
         // Launch-at-login. The LaunchAtLogin policy is pure (TDD against a fake);
         // SMAppServiceLoginItem wraps the system ServiceManagement framework

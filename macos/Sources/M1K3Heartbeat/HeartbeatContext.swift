@@ -14,6 +14,8 @@
 //  the consent-at-the-gather-site contract is enforced by the app wiring,
 //  named there). Prior: none (new file).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: `TodoActivity` (openCount +
+//  overdueTitles) — ambient by design, `hasActivity` ignores it.
 
 import Foundation
 
@@ -128,6 +130,20 @@ public struct HeartbeatContext: Sendable, Equatable {
         }
     }
 
+    /// The user's todo list as it stands — ambient, never news: a list that
+    /// hasn't changed must not wake the model (`hasActivity` ignores it).
+    /// `overdueTitles` are the user's own words, quoted in the digest like
+    /// memory titles are.
+    public struct TodoActivity: Sendable, Equatable {
+        public var openCount: Int
+        public var overdueTitles: [String]
+
+        public init(openCount: Int, overdueTitles: [String] = []) {
+            self.openCount = openCount
+            self.overdueTitles = overdueTitles
+        }
+    }
+
     public var date: Date
     public var device: Device
     public var memory: MemoryActivity?
@@ -135,6 +151,7 @@ public struct HeartbeatContext: Sendable, Equatable {
     public var mcp: MCPActivity?
     public var brain: BrainStatus?
     public var funFact: FunFact?
+    public var todos: TodoActivity?
     /// The day's earlier pulse texts, oldest first — the arc the next
     /// narrative continues.
     public var earlierPulsesToday: [String]
@@ -147,6 +164,7 @@ public struct HeartbeatContext: Sendable, Equatable {
         mcp: MCPActivity? = nil,
         brain: BrainStatus? = nil,
         funFact: FunFact? = nil,
+        todos: TodoActivity? = nil,
         earlierPulsesToday: [String] = []
     ) {
         self.date = date
@@ -156,6 +174,7 @@ public struct HeartbeatContext: Sendable, Equatable {
         self.mcp = mcp
         self.brain = brain
         self.funFact = funFact
+        self.todos = todos
         self.earlierPulsesToday = earlierPulsesToday
     }
 }
