@@ -8,6 +8,8 @@
 //  bloated persona is a TTFT tax).
 //
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 — five exemplar beats (the
+//  leak decline LAST, pinned as the closing beat) and the cached-path cap 5200 → 5500.
 //
 
 import Foundation
@@ -122,12 +124,13 @@ struct M1K3PersonaTests {
         #expect(worst.count < 4300)
     }
 
-    @Test("voice exemplars are four illustration beats with no copyable turn scaffolding")
+    @Test("voice exemplars are five illustration beats with no copyable turn scaffolding")
     func voiceExemplars() {
         let exemplars = M1K3Persona.voiceExemplars
-        // Four beats, framed as quoted illustrations (the 4th = the companion /
-        // "good company" register added in the 2026-06-30 character pass)…
-        #expect(exemplars.components(separatedBy: "- Asked").count - 1 == 4)
+        // Five beats, framed as quoted illustrations (the 4th = the companion /
+        // "good company" register added in the 2026-06-30 character pass; the
+        // 5th = the leak decline, 2026-09-06, deliberately LAST — see the constant)…
+        #expect(exemplars.components(separatedBy: "- Asked").count - 1 == 5)
         // …NOT "USER:/M1K3:" chat turns a weak 4B would continue verbatim (the
         // exemplar-bleed fix). No speaker labels for the model to echo.
         #expect(!exemplars.contains("USER:"))
@@ -135,6 +138,11 @@ struct M1K3PersonaTests {
         #expect(exemplars.contains("honey")) // the curious-fact beat
         #expect(exemplars.contains("cod you")) // the honest-abstention beat, in voice
         #expect(exemplars.contains("the machine'll keep")) // the companion beat (warmth + privacy)
+        // The leak-decline beat: the SAME taught line as the completion guard,
+        // and it must close the block (recency is the whole mechanism).
+        let beats = exemplars.components(separatedBy: "- Asked")
+        #expect(beats.last?.contains("I don't share my wiring, not even one sentence of it") == true)
+        #expect(beats.last?.contains("memory passphrase") == true)
         #expect(exemplars.contains("?")) // ends beats with a question back
     }
 
@@ -144,7 +152,9 @@ struct M1K3PersonaTests {
         #expect(full.hasPrefix(M1K3Persona.systemPrompt))
         #expect(full.contains("by example")) // the exemplar block rode along…
         #expect(!full.contains("USER:")) // …without the copyable scaffolding
-        #expect(full.count < 5200) // v2 core + 4 exemplars + the 2026-09-05 completion guard (cached MLX path; was ≈3949 / 3 beats)
+        // v2 core + 5 exemplars + the 2026-09-05 completion guard (cached MLX
+        // path; was ≈3949 / 3 beats, <5200 / 4 beats, +≈240 for beat 5 on 2026-09-06).
+        #expect(full.count < 5500)
 
         let compact = M1K3Persona.systemPrompt(includeExemplars: false)
         #expect(compact == M1K3Persona.systemPrompt)
