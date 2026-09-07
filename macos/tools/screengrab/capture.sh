@@ -32,6 +32,9 @@ rm -rf "$xcresult"
 case $target in
   mac)
     scheme=M1K3; testTarget=M1K3ScreengrabUITests; dest='platform=macOS'
+    # Automatic (Apple Development) signing only: a Developer ID + hardened-runtime
+    # build has no get-task-allow, so XCTest cannot drive it ("Running Background").
+    sign=()
     if pgrep -x M1K3 >/dev/null && [[ ${M1K3_SCREENGRAB_ALLOW_LIVE:-0} != 1 ]]; then
       echo "quit the live M1K3 app first (pgrep -x M1K3), or M1K3_SCREENGRAB_ALLOW_LIVE=1 to run beside it (ports collide)"; exit 2
     fi
@@ -39,6 +42,7 @@ case $target in
   ios)
     udid=${1:?device udid}; shift
     scheme=M1K3iOS; testTarget=M1K3iOSScreengrabUITests; dest="id=$udid"
+    sign=()
     ;;
   *) echo "target must be mac or ios"; exit 2 ;;
 esac
@@ -57,7 +61,7 @@ set +e
 xcodebuild test -project M1K3.xcodeproj -scheme "$scheme" -destination "$dest" \
   -derivedDataPath "$dd" -resultBundlePath "$xcresult" \
   -skipPackagePluginValidation -skipMacroValidation \
-  -only-testing:"$testTarget" "${only[@]}" \
+  -only-testing:"$testTarget" "${only[@]}" "${sign[@]}" \
   TEST_RUNNER_M1K3_SCREENGRAB_OUT="$([[ $target == mac ]] && print -r -- "$plates")" \
   2>&1 | xcbeautify --quiet
 rc=$pipestatus[1]

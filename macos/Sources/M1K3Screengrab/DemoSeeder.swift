@@ -28,6 +28,8 @@ public enum DemoSeeder {
         let id = UUID()
         try history.save(id: id, messages: DemoPersona.heroConversation, updatedAt: Date())
         try history.setTitle(id: id, title: DemoPersona.heroTitle)
+        // Already "distilled": the launch catch-up must not mine the seed for memories.
+        try history.setDistilledWatermark(id: id, count: DemoPersona.heroConversation.count)
         try Data().write(to: marker)
     }
 

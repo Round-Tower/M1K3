@@ -19,7 +19,7 @@ import M1K3Screengrab
 import os
 
 extension AppCore {
-    private static let screengrabLog = Logger(subsystem: "app.m1k3", category: "screengrab")
+    private nonisolated static let screengrabLog = Logger(subsystem: "app.m1k3", category: "screengrab")
 
     /// Synchronous, from init, BEFORE `ChatSession` reads the most recent row.
     static func seedScreengrabHistory(into history: (any ChatHistoryPersisting)?, root: URL) {
@@ -34,11 +34,12 @@ extension AppCore {
     /// Memories + documents ride the embedder, so they land as a launch task.
     func seedScreengrabKnowledgeIfActive(root: URL) {
         guard ScreengrabHarness.current.isActive else { return }
-        Task {
+        // Detached, off the main actor — see the Mac twin: the embedder's first
+        // embed must never block the main thread during launch.
+        let memory = memoryStore, ingester = ingester, embedder = embedder
+        Task.detached(priority: .utility) {
             do {
-                try await DemoSeeder.seedKnowledge(
-                    memory: memoryStore, ingester: ingester, embedder: embedder, root: root
-                )
+                try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
                 Self.screengrabLog.notice("demo persona seeded under \(root.lastPathComponent, privacy: .public)")
             } catch {
                 Self.screengrabLog.error("knowledge seed failed: \(error.localizedDescription, privacy: .public)")

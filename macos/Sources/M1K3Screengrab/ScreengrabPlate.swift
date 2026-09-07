@@ -66,6 +66,12 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
             // Brain at Home serving reads the paired-device keys from the Keychain;
             // off for every plate (the pairing plate shows the QR from Settings).
             ["-brainServe.enabled", "NO"],
+            // No auto-distillation of the seeded conversation: the Memories plate
+            // shows the persona's dated facts, not "I noticed" rows stamped today.
+            ["-memoryAutoCapture", "NO"],
+            // AppKit: never restore the saved window state — a killed run can leave
+            // one with no visible window, and every later launch inherits it.
+            ["-ApplePersistenceIgnoreState", "YES"],
         ]
         if self == .onboarding {
             // A fresh Mac lands on HelloView, never the brain-only repick.

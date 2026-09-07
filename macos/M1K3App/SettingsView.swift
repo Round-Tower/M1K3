@@ -24,6 +24,8 @@
 //  instead of three tabs for what's really one topic each. Confidence 0.85
 //  (compiles + app builds; the tab-hop reduction is the intended win, feel
 //  is a named ⌘R verify-owed like every SwiftUI move in this file family).
+//  Review: Kev + claude-fable-5.1, 2026-09-07 — TabView gained a selection (`Pane`) so the screengrab harness can
+//  open on Privacy for its privacy-label plate; every ordinary launch still opens on M1K3. Confidence now 0.9.
 //
 
 import M1K3Screengrab

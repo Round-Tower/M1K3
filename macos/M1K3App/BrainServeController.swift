@@ -96,7 +96,7 @@ final class BrainServeController {
         return UInt16(stored)
     }
 
-    init(environment: AppEnvironment, keyStore: any KeyStore = KeychainKeyStore()) {
+    init(environment: AppEnvironment, keyStore: any KeyStore = AppEnvironment.makeKeyStore()) {
         env = environment
         self.keyStore = keyStore
         isEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey)

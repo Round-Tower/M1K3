@@ -31,7 +31,7 @@ struct KeychainScriptApprovalStore: ScriptApprovalStoring {
 
     private let keyStore: any KeyStore
 
-    init(keyStore: any KeyStore = KeychainKeyStore(protection: .afterFirstUnlock)) {
+    init(keyStore: any KeyStore = AppEnvironment.makeKeyStore(protection: .afterFirstUnlock)) {
         self.keyStore = keyStore
     }
 

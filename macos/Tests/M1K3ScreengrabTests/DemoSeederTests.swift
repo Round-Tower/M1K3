@@ -36,6 +36,7 @@ struct DemoSeederTests {
         let messages = try history.loadMessages(id: list[0].id)
         #expect(messages?.map(\.text) == DemoPersona.heroConversation.map(\.text))
         #expect(messages?.allSatisfy { $0.status == .complete } == true)
+        #expect(try history.distilledWatermark(id: list[0].id) == DemoPersona.heroConversation.count)
     }
 
     @Test func knowledgeSeedLandsMemoriesAndDocumentsOnce() async throws {

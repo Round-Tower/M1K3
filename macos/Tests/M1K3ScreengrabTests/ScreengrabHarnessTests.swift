@@ -71,6 +71,8 @@ struct ScreengrabHarnessTests {
         #expect(recipe.arguments.contains(["-voiceMode.companion", "Fox"]))
         #expect(recipe.arguments.contains(["-hasChosenBrain", "YES"]))
         #expect(recipe.arguments.contains(["-brainServe.enabled", "NO"]))
+        #expect(recipe.arguments.contains(["-memoryAutoCapture", "NO"]))
+        #expect(recipe.arguments.contains(["-ApplePersistenceIgnoreState", "YES"]))
 
         let onboarding = ScreengrabPlate.onboarding.launchRecipe
         #expect(onboarding.arguments.contains(["-hasChosenBrain", "NO"]))
