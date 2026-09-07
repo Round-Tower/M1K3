@@ -135,6 +135,12 @@ on your machine. Network is only used to download models on first run.
 it, build on it, commercially or otherwise. Attribution and third-party notices
 are in [`NOTICE`](./NOTICE).
 
+The code is open; the name is not. **M1K3**, the M mark, the companion faces,
+the icon, and the voice are trademarks and brand assets, all rights reserved
+and outside the Apache grant. Ship a fork under your own name and icon — see
+[`TRADEMARKS.md`](./TRADEMARKS.md). The only official builds are Round Tower's
+(`app.m1k3` on the App Store / TestFlight, and the DMGs on [m1k3.app](https://m1k3.app)).
+
 Contributions are accepted under the same Apache-2.0 terms (per
 section 5 of the License). M1K3 is built in the open with
 [MurphySig](https://murphysig.dev) provenance — the git history is signed,

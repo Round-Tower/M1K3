@@ -40,6 +40,7 @@ Key facts:
   https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg,
   TestFlight beta, or build from source
 - License/source: Apache-2.0, https://github.com/Round-Tower/M1K3
+- Trademarks: the name M1K3, the M mark, the companion faces, icon and voice are brand assets of Round Tower, all rights reserved and outside the Apache grant; the only official builds are app.m1k3 (App Store/TestFlight) and the DMGs on m1k3.app. Policy: https://github.com/Round-Tower/M1K3/blob/master/TRADEMARKS.md
 
 ## Docs
 

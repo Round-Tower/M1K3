@@ -63,6 +63,10 @@ It's a lightweight convention, not a gate — see [`.murphysig`](./.murphysig).
 M1K3 is [Apache-2.0](./LICENSE). By contributing you agree your contribution
 is licensed the same way (inbound = outbound). No CLA.
 
+The M1K3 name, mark, faces, icon, and voice are trademarks outside that grant
+(see [`TRADEMARKS.md`](./TRADEMARKS.md)); contributions to the brand assets are
+welcome but do not change who owns them.
+
 ## Questions
 
 Open an issue, or say hi at kevin@round-tower.ie. Security reports go through
