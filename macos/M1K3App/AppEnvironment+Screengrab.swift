@@ -16,6 +16,7 @@
 import Foundation
 import M1K3Calls
 import M1K3Chat
+import M1K3LogCore
 import M1K3Screengrab
 import os
 
@@ -41,7 +42,7 @@ final class ScreengrabKeyStore: KeyStore, @unchecked Sendable {
 }
 
 extension AppEnvironment {
-    private nonisolated static let screengrabLog = Logger(subsystem: "app.m1k3", category: "screengrab")
+    private nonisolated static let screengrabLog = M1K3Log.logger(.screengrab)
     private nonisolated static let screengrabKeys = ScreengrabKeyStore()
 
     /// The Keychain for every ordinary launch; the in-memory store under the harness.

@@ -15,11 +15,12 @@
 
 import Foundation
 import M1K3Chat
+import M1K3LogCore
 import M1K3Screengrab
 import os
 
 extension AppCore {
-    private nonisolated static let screengrabLog = Logger(subsystem: "app.m1k3", category: "screengrab")
+    private nonisolated static let screengrabLog = M1K3Log.logger(.screengrab)
 
     /// Synchronous, from init, BEFORE `ChatSession` reads the most recent row.
     static func seedScreengrabHistory(into history: (any ChatHistoryPersisting)?, root: URL) {
