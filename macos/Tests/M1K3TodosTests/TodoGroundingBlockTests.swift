@@ -59,13 +59,30 @@ struct TodoGroundingBlockTests {
         #expect(block.contains("- [due in 2 weeks] d"))
     }
 
-    @Test("a resident proposal that was accepted shows no source; a nameless visitor is a paired device")
+    @Test("a resident proposal that was accepted shows no source; a nameless visitor is an unnamed agent")
     func sources() throws {
         let block = try #require(TodoGroundingBlock.render(open: [
             open("r", source: .resident), open("v", source: .visitor(clientName: nil)),
         ], now: now))
         #expect(block.contains("\n- r\n"))
-        #expect(block.hasSuffix("- v (from a paired device)"))
+        #expect(block.hasSuffix("- v (from an unnamed agent)"))
+    }
+
+    @Test("dueBand: every band and its boundaries, off a plain 86 400-second day")
+    func dueBandContract() {
+        func band(_ seconds: TimeInterval) -> String {
+            TodoGroundingBlock.dueBand(now.addingTimeInterval(seconds), now: now)
+        }
+        #expect(band(0) == "due today")
+        #expect(band(86399) == "due today")
+        #expect(band(86400) == "due tomorrow")
+        #expect(band(2 * 86400) == "due in 2 days")
+        #expect(band(13 * 86400 + 3600) == "due in 13 days")
+        #expect(band(14 * 86400) == "due in 2 weeks")
+        #expect(band(30 * 86400) == "due in 4 weeks")
+        #expect(band(-1) == "overdue 1 day")
+        #expect(band(-86400) == "overdue 1 day")
+        #expect(band(-2 * 86400) == "overdue 2 days")
     }
 
     @Test("caps at eight lines")

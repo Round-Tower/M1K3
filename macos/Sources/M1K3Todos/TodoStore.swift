@@ -20,6 +20,15 @@
 import Foundation
 import GRDB
 
+public enum TodoStoreError: Error, Equatable {
+    /// `addProposal` only files PENDING todos — the user's own go through `add`.
+    case notAProposal
+    /// A row the schema cannot read back (unknown state, unparseable id) —
+    /// surfaced rather than silently defaulted, which could un-dismiss an
+    /// item or orphan it from its real id.
+    case corruptRow(id: String)
+}
+
 public final class TodoStore: @unchecked Sendable {
     private let dbQueue: DatabaseQueue
 
@@ -56,20 +65,40 @@ public final class TodoStore: @unchecked Sendable {
     // MARK: - Write
 
     public func add(_ todo: Todo) throws {
-        try dbQueue.write { db in
-            let (source, client) = Self.columns(for: todo.source)
-            try db.execute(
-                sql: """
-                INSERT INTO todos (id, title, note, source, source_client, state,
-                    origin_memory_id, origin_pulse_id, due, created_at, resolved_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                arguments: [
-                    todo.id.uuidString, todo.title, todo.note, source, client, todo.state.rawValue,
-                    todo.origin?.memoryId, todo.origin?.pulseId, todo.due?.timeIntervalSince1970,
-                    todo.createdAt.timeIntervalSince1970, todo.resolvedAt?.timeIntervalSince1970,
-                ]
-            )
+        try dbQueue.write { db in try Self.insert(todo, db) }
+    }
+
+    private static func insert(_ todo: Todo, _ db: Database) throws {
+        let (source, client) = columns(for: todo.source)
+        try db.execute(
+            sql: """
+            INSERT INTO todos (id, title, note, source, source_client, state,
+                origin_memory_id, origin_pulse_id, due, created_at, resolved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            arguments: [
+                todo.id.uuidString, todo.title, todo.note, source, client, todo.state.rawValue,
+                todo.origin?.memoryId, todo.origin?.pulseId, todo.due?.timeIntervalSince1970,
+                todo.createdAt.timeIntervalSince1970, todo.resolvedAt?.timeIntervalSince1970,
+            ]
+        )
+    }
+
+    /// File a proposal only while the proposer's PENDING count is below
+    /// `max` — the count and the insert share one write transaction, so two
+    /// racing proposals cannot both pass the ceiling (review fold). Returns
+    /// whether it was filed.
+    @discardableResult
+    public func addProposal(_ todo: Todo, ifPendingCountBelow max: Int) throws -> Bool {
+        guard todo.state == .pending, todo.source.kind != .user else { throw TodoStoreError.notAProposal }
+        return try dbQueue.write { db in
+            let pending = try Int.fetchOne(
+                db, sql: "SELECT COUNT(*) FROM todos WHERE state = ? AND source = ?",
+                arguments: [TodoState.pending.rawValue, todo.source.kind.rawValue]
+            ) ?? 0
+            guard pending < max else { return false }
+            try Self.insert(todo, db)
+            return true
         }
     }
 
@@ -149,7 +178,12 @@ public final class TodoStore: @unchecked Sendable {
     }
 
     private static func todo(from row: Row) throws -> Todo {
-        let kind = TodoSourceKind(rawValue: row["source"]) ?? .user
+        let idString: String = row["id"]
+        guard let id = UUID(uuidString: idString), let kind = TodoSourceKind(rawValue: row["source"]),
+              let state = TodoState(rawValue: row["state"])
+        else {
+            throw TodoStoreError.corruptRow(id: idString)
+        }
         let source: TodoSource = switch kind {
         case .user: .user
         case .resident: .resident
@@ -160,11 +194,8 @@ public final class TodoStore: @unchecked Sendable {
         let origin = (memoryId == nil && pulseId == nil) ? nil : TodoOrigin(memoryId: memoryId, pulseId: pulseId)
         let due: Double? = row["due"]
         let resolved: Double? = row["resolved_at"]
-        let idString: String = row["id"]
         return Todo(
-            id: UUID(uuidString: idString) ?? UUID(),
-            title: row["title"], note: row["note"], source: source,
-            state: TodoState(rawValue: row["state"]) ?? .open, origin: origin,
+            id: id, title: row["title"], note: row["note"], source: source, state: state, origin: origin,
             due: due.map(Date.init(timeIntervalSince1970:)),
             createdAt: Date(timeIntervalSince1970: row["created_at"]),
             resolvedAt: resolved.map(Date.init(timeIntervalSince1970:))

@@ -47,8 +47,10 @@ public enum TodoGroundingBlock {
         var text = "- "
         if let due = todo.due { text += "[\(dueBand(due, now: now))] " }
         text += todo.title
+        // nil = a loopback client that never sent `initialize` (the LAN scope
+        // cannot propose at all), so the honest label is an unnamed agent.
         if case let .visitor(clientName) = todo.source {
-            text += " (from \(clientName ?? "a paired device"))"
+            text += " (from \(clientName ?? "an unnamed agent"))"
         }
         return text
     }

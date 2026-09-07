@@ -146,7 +146,7 @@ func formatTodoList(_ todos: [Todo], now: Date) -> String {
     let lines = todos.enumerated().map { index, todo -> String in
         var line = "\(index + 1). \(todo.title) — \(todo.state.rawValue)"
         if let due = todo.due { line += ", \(TodoGroundingBlock.dueBand(due, now: now))" }
-        if case let .visitor(clientName) = todo.source { line += " (from \(clientName ?? "a paired device"))" }
+        if case let .visitor(clientName) = todo.source { line += " (from \(clientName ?? "an unnamed agent"))" }
         if todo.source.kind == .resident { line += " (suggested by M1K3)" }
         if let note = todo.note, !note.isEmpty { line += "\n   \(note)" }
         return line

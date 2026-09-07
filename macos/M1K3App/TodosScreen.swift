@@ -178,7 +178,7 @@ struct TodosScreen: View {
         switch todo.source {
         case .user: break
         case .resident: parts.append("suggested by M1K3")
-        case let .visitor(name): parts.append("from \(name ?? "a paired device")")
+        case let .visitor(name): parts.append("from \(name ?? "an unnamed agent")")
         }
         if let due = todo.due { parts.append(TodoGroundingBlock.dueBand(due, now: Date())) }
         if let note = todo.note, !note.isEmpty { parts.append(note) }

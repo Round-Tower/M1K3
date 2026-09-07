@@ -213,27 +213,27 @@ struct MenuBarPopover: View {
 
     // MARK: Todos — the count, ambient (the list itself is the sidebar destination)
 
-    @ViewBuilder
+    /// One `.task` on a stable container (review fold): a task on either
+    /// branch restarts when the 0 ↔ >0 identity flips, fetching twice.
     private func todosSection(_ env: AppEnvironment) -> some View {
-        if todoCounts.open + todoCounts.pending > 0 {
-            Button {
-                env.pendingSidebarRequest = .todos
-            } label: {
-                Label {
-                    Text(todoCountLine)
-                } icon: {
-                    Image(systemName: "checklist")
+        Group {
+            if todoCounts.open + todoCounts.pending > 0 {
+                Button {
+                    env.pendingSidebarRequest = .todos
+                } label: {
+                    Label {
+                        Text(todoCountLine)
+                    } icon: {
+                        Image(systemName: "checklist")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
                 }
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
+                Divider()
             }
-            .buttonStyle(.plain)
-            .task(id: env.todosRevision) { await refreshTodoCounts(env) }
-            Divider()
-        } else {
-            Color.clear.frame(height: 0)
-                .task(id: env.todosRevision) { await refreshTodoCounts(env) }
         }
+        .task(id: env.todosRevision) { await refreshTodoCounts(env) }
     }
 
     private var todoCountLine: String {

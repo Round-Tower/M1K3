@@ -98,19 +98,16 @@ extension AppEnvironment {
     /// the inbox meanwhile. Silent on refusal (logged): the pulse itself is
     /// the user-facing artefact.
     func proposeTodoFromResident(title: String, origin: TodoOrigin?) async {
-        guard let store = todoStore, Self.todoSuggestionsEnabled() else { return }
-        let pending = await Task.detached(priority: .utility) {
-            (try? store.pendingCount(source: .resident)) ?? 0
-        }.value
-        guard ProposalCeiling.mayPropose(pendingResidentCount: pending) else {
-            Self.todosLog.notice("resident proposal refused: ceiling (\(pending, privacy: .public) pending)")
-            return
-        }
+        guard todoStore != nil, Self.todoSuggestionsEnabled() else { return }
         let todo = Todo(
             title: title, source: .resident,
             state: TodoConsentPolicy.initialState(for: .resident), origin: origin
         )
-        await write("resident proposal") { store in try store.add(todo) }
+        // Count + insert in ONE store transaction (review fold: two racing
+        // proposals could both pass a separate read).
+        if await propose(todo, max: ProposalCeiling.residentMax, label: "resident proposal") == nil {
+            Self.todosLog.notice("resident proposal refused: ceiling")
+        }
     }
 
     /// An MCP client's proposal. Stamped with its self-reported name (a
@@ -119,24 +116,39 @@ extension AppEnvironment {
     func proposeTodoFromVisitor(
         title: String, note: String?, due: Date?, clientName: String?
     ) async -> TodoProposeOutcome {
-        guard let store = todoStore, Self.todoSuggestionsEnabled() else {
+        guard todoStore != nil, Self.todoSuggestionsEnabled() else {
             Self.todosLog.notice("visitor proposal refused: suggestions off")
             return .disabled
-        }
-        let pending = await Task.detached(priority: .utility) {
-            (try? store.pendingCount(source: .visitor)) ?? 0
-        }.value
-        guard pending < Self.visitorPendingMax else {
-            Self.todosLog.notice("visitor proposal refused: ceiling (\(pending, privacy: .public) pending)")
-            return .atCeiling
         }
         let source = TodoSource.visitor(clientName: clientName)
         let todo = Todo(
             title: title, note: note, source: source,
             state: TodoConsentPolicy.initialState(for: source), due: due
         )
-        await write("visitor proposal") { store in try store.add(todo) }
-        return .proposed(todo)
+        guard let filed = await propose(todo, max: Self.visitorPendingMax, label: "visitor proposal") else {
+            Self.todosLog.notice("visitor proposal refused: ceiling")
+            return .atCeiling
+        }
+        return .proposed(filed)
+    }
+
+    /// The transactional door: the store counts the proposer's pending items
+    /// and inserts under the same write lock. nil = at the ceiling (or a
+    /// write failure, logged).
+    private func propose(_ todo: Todo, max: Int, label: String) async -> Todo? {
+        guard let store = todoStore else { return nil }
+        let filed: Bool? = await Task.detached(priority: .utility) {
+            try? store.addProposal(todo, ifPendingCountBelow: max)
+        }.value
+        guard let filed else {
+            Self.todosLog.error("todo write failed: \(label, privacy: .public)")
+            return nil
+        }
+        guard filed else { return nil }
+        Self.todosLog.notice("todo write: \(label, privacy: .public)")
+        await refreshTodoGrounding()
+        todosRevision += 1
+        return todo
     }
 
     // MARK: - Plumbing

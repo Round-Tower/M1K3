@@ -77,6 +77,21 @@ struct TodoStoreTests {
         #expect(try store.pendingCount(source: .user) == 0)
     }
 
+    @Test("addProposal counts and inserts in one transaction — the ceiling cannot be overshot by a race")
+    func addProposalCeiling() throws {
+        let store = try TodoStore()
+        #expect(try store.addProposal(todo("a", source: .resident), ifPendingCountBelow: 2))
+        #expect(try store.addProposal(todo("b", source: .resident), ifPendingCountBelow: 2))
+        #expect(try !(store.addProposal(todo("c", source: .resident), ifPendingCountBelow: 2)))
+        #expect(try store.pendingCount(source: .resident) == 2)
+        // A visitor's inbox is counted on its own.
+        #expect(try store.addProposal(todo("v", source: .visitor(clientName: "Claude")), ifPendingCountBelow: 2))
+        // Only a PENDING todo goes through this door.
+        #expect(throws: TodoStoreError.self) {
+            try store.addProposal(todo("u", source: .user), ifPendingCountBelow: 2)
+        }
+    }
+
     @Test("clearResolved removes done and dismissed, keeps open and pending")
     func clearResolved() throws {
         let store = try TodoStore()
