@@ -76,6 +76,9 @@
          <TestableReference skipped = "NO">
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3KokoroTests" BuildableName = "M1K3KokoroTests" BlueprintName = "M1K3KokoroTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
+         <TestableReference skipped = "NO">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3ScreengrabTests" BuildableName = "M1K3ScreengrabTests" BlueprintName = "M1K3ScreengrabTests" ReferencedContainer = "container:"></BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
 </Scheme>
