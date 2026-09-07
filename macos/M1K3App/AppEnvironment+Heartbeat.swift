@@ -267,7 +267,9 @@ extension AppEnvironment {
             return try? pulseStore.latestID()
         }.value
         if let title = rendered.proposedTitle {
-            await proposeTodoFromResident(title: title, origin: TodoOrigin(pulseId: pulseID))
+            // No pulse id → no origin at all (an all-nil TodoOrigin would not
+            // survive a store round-trip as non-nil — review fold).
+            await proposeTodoFromResident(title: title, origin: pulseID.map { TodoOrigin(pulseId: $0) })
         }
         heartbeatRevision += 1
         heartbeatLastHold = nil
@@ -366,7 +368,13 @@ extension AppEnvironment {
             Self.heartbeatLog.notice(
                 "render rejected by NarrativeGuard (\(verdict.rawValue, privacy: .public)) — digest ships"
             )
-            return .digest
+            // A model that wrote ONLY the TODO line leaves empty prose — the
+            // digest ships, but a permitted, well-formed title still reaches
+            // the inbox (review fold). Any other rejection (invented digit,
+            // repeated opener…) discredits the title too.
+            return RenderedPulse(
+                narrative: nil, renderedBy: "digest", proposedTitle: verdict == .empty ? proposedTitle : nil
+            )
         }
         return RenderedPulse(narrative: cleaned, renderedBy: selectedBrain.displayName, proposedTitle: proposedTitle)
     }

@@ -52,9 +52,9 @@ public struct TodoToolHandlers: Sendable {
     }
 }
 
-public func makeTodoToolDefinitions(handlers: TodoToolHandlers, now: @escaping @Sendable () -> Date = { Date() })
-    -> [MCPToolDefinition]
-{
+public func makeTodoToolDefinitions(
+    handlers: TodoToolHandlers, now: @escaping @Sendable () -> Date = { Date() }
+) -> [MCPToolDefinition] {
     [
         MCPToolDefinition(
             tool: Tool(
@@ -120,7 +120,8 @@ public func makeTodoToolDefinitions(handlers: TodoToolHandlers, now: @escaping @
                 }
                 switch try await handlers.propose(title, note?.isEmpty == true ? nil : note, due) {
                 case let .proposed(todo):
-                    return "Proposed “\(todo.title)” — pending in the user's inbox. Only the user can accept or close it."
+                    return "Proposed “\(todo.title)” — pending in the user's inbox. "
+                        + "Only the user can accept or close it."
                 case .atCeiling:
                     return "Not proposed: the inbox already holds unanswered proposals. Nothing was written."
                 case .disabled:
