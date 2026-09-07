@@ -38,6 +38,10 @@
 //  material for prompt and guard. The reworded pulse is ⌘R/A-B verify-owed
 //  as a set — swift test proves the strings, not that a pulse reads well.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: the todo list rides the pulse:
+//  gathered off-main as ambient TodoActivity, `mayProposeTodo` (toggle + ProposalCeiling) lets the prompt end
+//  with one TODO line, extracted BEFORE NarrativeGuard and filed PENDING via proposeTodoFromResident; the
+//  record tail moved to `recordPulse` + `RenderedPulse` (the tick was already over the advisory 100-line bar).
 
 import AppKit
 import Foundation
@@ -45,6 +49,7 @@ import M1K3AgentTools
 import M1K3Heartbeat
 import M1K3Inference
 import M1K3LogCore
+import M1K3Todos
 
 extension AppEnvironment {
     private static let heartbeatLog = M1K3Log.logger(.heartbeat)
@@ -119,6 +124,7 @@ extension AppEnvironment {
         let conversationLog = conversationLog
         let knowledgeStore = store
         let mcpLogOn = UserDefaults.standard.bool(forKey: Self.conversationLogEnabledKey)
+        let todoStore = todoStore
         let gathered = await Task.detached(priority: .utility) {
             () -> GatheredPulse in
             let system = LiveSystemStatusProvider()
@@ -176,11 +182,24 @@ extension AppEnvironment {
             // day the day window is empty by construction, and the repetition
             // lived exactly across days.
             let recentAcrossDays = (try? pulseStore.recent(limit: 3)) ?? []
+
+            // The list as it stands — ambient, never news (a list that hasn't
+            // changed must not wake the model). Overdue = open AND past due.
+            var todos: HeartbeatContext.TodoActivity?
+            if let open = try? todoStore?.list(states: [.open]), !open.isEmpty {
+                todos = .init(
+                    openCount: open.count,
+                    overdueTitles: open.filter { $0.isOverdue(now: now) }.map(\.title)
+                )
+            }
+            let pendingFromResident = (try? todoStore?.pendingCount(source: .resident)) ?? 0
             return GatheredPulse(
                 device: device,
                 memory: memory,
                 mcp: mcp,
                 fact: fact,
+                todos: todos,
+                pendingResidentProposals: pendingFromResident,
                 earlierToday: today.map(\.displayText),
                 earlierDigests: today.map(\.digest),
                 recentPulses: recentAcrossDays.map(\.displayText),
@@ -196,6 +215,7 @@ extension AppEnvironment {
             mcp: gathered.mcp,
             brain: brainStatus,
             funFact: gathered.fact,
+            todos: gathered.todos,
             earlierPulsesToday: gathered.earlierToday
         )
 
@@ -209,23 +229,46 @@ extension AppEnvironment {
         }
 
         let digest = HeartbeatComposer.digest(from: context)
-        let (narrative, renderedBy) = await renderHeartbeatNarrative(
+        // The resident's one write: with the toggle on and room under the
+        // ceiling, the prompt may end with a TODO line (stripped before the
+        // guard; filed PENDING below — the user still decides).
+        let mayProposeTodo = todoStore != nil && Self.todoSuggestionsEnabled()
+            && ProposalCeiling.mayPropose(pendingResidentCount: gathered.pendingResidentProposals)
+        let rendered = await renderHeartbeatNarrative(
             digest: digest,
             hasActivity: context.hasActivity,
             earlierToday: gathered.earlierToday,
             earlierDigests: gathered.earlierDigests,
             recentPulses: gathered.recentPulses,
-            device: gathered.device
+            device: gathered.device,
+            mayProposeTodo: mayProposeTodo
         )
+        await recordPulse(rendered, digest: digest, context: context, store: pulseStore, at: now)
+    }
 
+    /// Store the pulse, file the resident's proposal (if the narrative
+    /// carried one), then the ambient + notification side-effects.
+    private func recordPulse(
+        _ rendered: RenderedPulse, digest: String, context: HeartbeatContext,
+        store pulseStore: HeartbeatStore, at now: Date
+    ) async {
+        let narrative = rendered.narrative
+        let renderedBy = rendered.renderedBy
         // Tags come from the composer, deterministically — the model never
-        // sees or produces one (the #102 guard, extended verbatim).
-        let tags = HeartbeatComposer.tags(from: context, renderedBy: renderedBy)
-        await Task.detached(priority: .utility) {
+        // sees or produces one (the #102 guard, extended verbatim). The one
+        // exception is `todoProposed`: it marks that the narrative CARRIED a
+        // proposal, still a fact the code observed, not a tag the model chose.
+        var tags = HeartbeatComposer.tags(from: context, renderedBy: renderedBy)
+        if rendered.proposedTitle != nil { tags.insert(.todoProposed) }
+        let pulseID = await Task.detached(priority: .utility) {
             pulseStore.record(
                 digest: digest, narrative: narrative, renderedBy: renderedBy, tags: tags, at: now
             )
+            return try? pulseStore.latestID()
         }.value
+        if let title = rendered.proposedTitle {
+            await proposeTodoFromResident(title: title, origin: TodoOrigin(pulseId: pulseID))
+        }
         heartbeatRevision += 1
         heartbeatLastHold = nil
         Self.heartbeatLog.notice(
@@ -248,33 +291,35 @@ extension AppEnvironment {
         earlierToday: [String],
         earlierDigests: [String],
         recentPulses: [String],
-        device: HeartbeatContext.Device
-    ) async -> (narrative: String?, renderedBy: String) {
+        device: HeartbeatContext.Device,
+        mayProposeTodo: Bool = false
+    ) async -> RenderedPulse {
         // Don't ask the model when there is no news (fix 5): an ambience-only
         // digest gave it nothing to retell but thermals and uptime — the
         // pulse that read worst was also the one we were paying a decode for.
         guard hasActivity else {
             Self.heartbeatLog.notice("render skipped: no news — digest ships")
-            return (nil, "digest")
+            return .digest
         }
         guard selectedBrain.mlxModelID != nil, modelLoad == .ready else {
-            return (nil, "digest")
+            return .digest
         }
         guard HeartbeatRenderPolicy.shouldRender(
             batteryPercent: device.batteryPercent, isCharging: device.isCharging
         ) else {
             Self.heartbeatLog.notice("render skipped: battery floor")
-            return (nil, "digest")
+            return .digest
         }
         // Re-sample busy at the last moment (#103 review): the tick's gate
         // ran before the off-main gather, and a chat/voice turn started in
         // that window deserves the slot — the digest ships instead.
         if chat.isResponding || voiceLoop != nil || deepDelegationTaskLabel != nil {
             Self.heartbeatLog.notice("render skipped: machine became busy mid-pulse")
-            return (nil, "digest")
+            return .digest
         }
         let prompt = HeartbeatPrompt.render(
-            digest: digest, earlierToday: earlierToday, recentPulses: recentPulses
+            digest: digest, earlierToday: earlierToday, recentPulses: recentPulses,
+            mayProposeTodo: mayProposeTodo
         )
         // Marked background like the titler and the distiller (2026-08-12): nobody
         // is waiting on a pulse. Unmarked, it was the one background generate that
@@ -296,13 +341,19 @@ extension AppEnvironment {
         }
         guard let raw = try? await InferenceIntent.backgroundUtility(render) else {
             Self.heartbeatLog.notice("render failed: generate error — digest ships")
-            return (nil, "digest")
+            return .digest
         }
         // The models emit their trained FOLLOWUPS trailer even here (the #100
         // bug class, re-observed on the FIRST live pulse) — strip it before
         // the guard sees the text.
-        let cleaned = FollowUpSplit.split(raw).answer
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        // The TODO line comes off BEFORE the guard (it would count against
+        // length and could carry a digit). Without permission it is dropped
+        // on the floor — an unasked proposal never reaches the inbox.
+        let split = TodoProposalLine.extract(
+            from: FollowUpSplit.split(raw).answer.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        let cleaned = split.narrative
+        let proposedTitle = mayProposeTodo ? split.title : nil
         // The guard's evidence is the day's earlier DIGESTS, not the
         // narratives the prompt shows: a faithful thread of a code-composed
         // number still passes (pulse 2's live rejection), but a digit a
@@ -315,10 +366,20 @@ extension AppEnvironment {
             Self.heartbeatLog.notice(
                 "render rejected by NarrativeGuard (\(verdict.rawValue, privacy: .public)) — digest ships"
             )
-            return (nil, "digest")
+            return .digest
         }
-        return (cleaned, selectedBrain.displayName)
+        return RenderedPulse(narrative: cleaned, renderedBy: selectedBrain.displayName, proposedTitle: proposedTitle)
     }
+}
+
+/// What the render settled on: the narrative (nil = the digest ships), the
+/// teller, and — with permission — the TODO title the narrative ended with.
+private struct RenderedPulse {
+    var narrative: String?
+    var renderedBy: String
+    var proposedTitle: String?
+
+    static let digest = RenderedPulse(narrative: nil, renderedBy: "digest", proposedTitle: nil)
 }
 
 /// The off-main gather's payload — a named shape instead of the seven-member
@@ -329,6 +390,9 @@ private struct GatheredPulse {
     var memory: HeartbeatContext.MemoryActivity?
     var mcp: HeartbeatContext.MCPActivity?
     var fact: HeartbeatContext.FunFact?
+    var todos: HeartbeatContext.TodoActivity?
+    /// How many of the resident's proposals sit unanswered — the ceiling's input.
+    var pendingResidentProposals: Int
     /// The day's earlier pulse NARRATIVES (displayText) — the arc the prompt
     /// continues.
     var earlierToday: [String]

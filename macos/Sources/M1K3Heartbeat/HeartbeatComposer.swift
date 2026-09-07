@@ -24,6 +24,9 @@
 //  name is the display name), so it tags `.brainMini` with no arm of its own; noted rather than a dead case
 //  (PR #234 review 4). Confidence now 0.85.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: `todoLine` in the AMBIENT group
+//  (never news) + the todo:open / todo:overdue tags from TodoActivity; todo:proposed is the app's to add after
+//  the render.
 
 import Foundation
 
@@ -49,6 +52,7 @@ public enum HeartbeatComposer {
         if let disk = diskLine(context.device) { ambient.append(disk) }
         if let uptime = uptimeLine(context.device) { ambient.append(uptime) }
         if let brain = brainLine(context.brain) { ambient.append(brain) }
+        if let todos = todoLine(context.todos) { ambient.append(todos) }
 
         var lines: [String] = []
         if news.isEmpty {
@@ -103,6 +107,10 @@ public enum HeartbeatComposer {
         }
         if let chat = context.chat, !chat.touchedConversationTitles.isEmpty {
             tags.insert(.chatTouched)
+        }
+        if let todos = context.todos {
+            if todos.openCount > 0 { tags.insert(.todosOpen) }
+            if !todos.overdueTitles.isEmpty { tags.insert(.todoOverdue) }
         }
         if let mcp = context.mcp, mcp.callCount > 0 {
             tags.insert(.agentVisited)
@@ -229,6 +237,20 @@ public enum HeartbeatComposer {
             parts.append("Fetching \(downloading).")
         }
         return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
+
+    /// The todo list, ambient: "Todos: 2 open; overdue: “Renew passport”."
+    /// Nothing when the list is empty — an empty list is not a fact worth a
+    /// line. Overdue titles are capped at three; the rest is a count.
+    static func todoLine(_ todos: HeartbeatContext.TodoActivity?) -> String? {
+        guard let todos, todos.openCount > 0 else { return nil }
+        var line = "Todos: \(todos.openCount) open"
+        if !todos.overdueTitles.isEmpty {
+            let quoted = todos.overdueTitles.prefix(3).map { "“\($0)”" }.joined(separator: ", ")
+            let rest = todos.overdueTitles.count - 3
+            line += "; overdue: \(quoted)" + (rest > 0 ? " and \(rest) more" : "")
+        }
+        return line + "."
     }
 }
 

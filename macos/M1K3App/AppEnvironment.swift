@@ -33,6 +33,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06 (3) — the launch restore runs `BrainRestoreConsent` (#237): an eased
 //  Mini → pocket that would download is OFFERED (`pendingBrainDownloadOffer`, accepted via selectBrain), never
 //  started; the app sits on the persisted Mini meanwhile. Confidence now 0.85 (gate UI unverified by launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: `todoStore` (todos.sqlite, backup-
+//  excluded, best-effort open beside the heartbeat store), `todosRevision`, and the launch-time OPEN TODOS
+//  snapshot warm.
 
 import AppKit
 import Foundation
@@ -51,6 +54,7 @@ import M1K3Memory
 import M1K3MemoryChatBridge
 import M1K3MLX
 import M1K3Preview
+import M1K3Todos
 import M1K3Voice
 import M1K3WhisperKit
 import Network
@@ -96,6 +100,11 @@ final class AppEnvironment {
     /// `heartbeatEnabledKey` (OFF by default); best-effort, same
     /// inert-on-open-failure stance as `memoryStore`.
     let heartbeatStore: HeartbeatStore?
+    /// The todo list (todos.sqlite — one list, three sources; only the user
+    /// moves an item, see TodoConsentPolicy). Never enters the transcript;
+    /// reaches the model only as the per-turn OPEN TODOS block. Best-effort
+    /// open like the heartbeat store.
+    let todoStore: TodoStore?
     let provider: any InferenceProvider
     let responder: any RAGResponding
     /// The review panel's shared state: the inspector, chat link-chips, the MCP
@@ -176,6 +185,10 @@ final class AppEnvironment {
     /// Bumped after each recorded pulse so SwiftUI surfaces re-read the store
     /// (the `historyRevision` idiom).
     var heartbeatRevision = 0
+    /// Bumped after every todo write (add / accept / done / dismiss / a
+    /// proposal landing) so the Todos screen, the menu-bar count and the
+    /// grounding snapshot re-read.
+    var todosRevision = 0
     /// Bumped after each captured MCP call (via the stamping sink) so the
     /// Heartbeat timeline + Agent Log re-read live — before this, agent
     /// comms had no observable invalidator and the Agent Log needed a manual
@@ -674,6 +687,21 @@ final class AppEnvironment {
             Self.memoryLog.error("heartbeat store open failed — heartbeat inert: \(error.localizedDescription, privacy: .public)")
         }
 
+        // The todo list — its own file beside the heartbeat's. Backup-excluded
+        // for the same reason the memory graph's siblings are: a local list
+        // the user can clear, not an archive.
+        let todosURL = url.deletingLastPathComponent().appendingPathComponent("todos.sqlite")
+        do {
+            todoStore = try TodoStore(path: todosURL.path)
+            var resourceURL = todosURL
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? resourceURL.setResourceValues(values)
+        } catch {
+            todoStore = nil
+            Self.memoryLog.error("todo store open failed — todos inert: \(error.localizedDescription, privacy: .public)")
+        }
+
         // Embeddings define the stored vector space, so the choice must persist
         // across launches (Hashing query vectors against MLX-stored vectors would
         // not match). Honour the saved preference; switching at runtime re-embeds
@@ -897,6 +925,9 @@ final class AppEnvironment {
         brainServe = BrainServeController(environment: self)
         brainServe.startIfEnabled()
         menuBarAsk = MenuBarAsk(environment: self)
+        // The OPEN TODOS grounding snapshot: rendered once here and after
+        // every write — the responder only ever reads it.
+        Task { await refreshTodoGrounding() }
         // Cheap + synchronous (registration only) — see AppEnvironment+MetricKit.swift.
         startMetricKitCollection()
         // The heartbeat's coarse check loop (no-op while the toggle is off) —

@@ -32,6 +32,8 @@ enum SidebarSelection: Hashable {
     /// which is exactly the destination-vs-app-action line SidebarView
     /// polices). Other scenes reach it via `pendingSidebarRequest`.
     case heartbeat
+    /// The todo list — one list, three sources (2026-09-07).
+    case todos
     /// A tap on a past-conversation row — transient, see file header.
     case conversation(UUID)
 }

@@ -150,3 +150,12 @@ struct MCPToolScopeTests {
         #expect(lan.isEmpty)
     }
 }
+
+struct TodoScopeTests {
+    @Test("the LAN scope may list todos but never propose one")
+    func lanListsNotProposes() {
+        #expect(MCPToolScope.lan.allows("list_todos"))
+        #expect(!MCPToolScope.lan.allows("propose_todo"))
+        #expect(MCPToolScope.loopback.allows("propose_todo"))
+    }
+}

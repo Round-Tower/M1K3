@@ -42,6 +42,7 @@ public enum MCPToolScope: Sendable, Equatable {
         "ask_m1k3", "get_answer", "list_jobs",
         "get_status", "memory_stats", // status/counters
         "recall_memory", "related_memory", // memory-graph reads
+        "list_todos", // the todo list, read-only (propose_todo is a write — loopback only)
         // EXCLUDED by default (future per-device grants, never inherited):
         // remember/forget_memory (writes to the user's permanent memory),
         // speak/listen/stop_speaking (drives the Mac's speakers + microphone),
