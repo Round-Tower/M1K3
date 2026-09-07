@@ -92,6 +92,30 @@ struct TodoStoreTests {
         }
     }
 
+    @Test("a corrupt row is skipped by list and counted, never blanks the healthy rows; a single lookup surfaces it")
+    func corruptRow() throws {
+        let store = try TodoStore()
+        let good = todo("good")
+        try store.add(good)
+        try store.insertRawForTesting(id: "not-a-uuid", state: "open", source: "user")
+        let bad = UUID()
+        try store.insertRawForTesting(id: bad.uuidString, state: "later", source: "user")
+        #expect(try store.list(states: [.open]).map(\.title) == ["good"])
+        #expect(try store.openCount() == 2) // counts read the schema; the unknown-state row is not open
+        #expect(try store.corruptRowCount() == 2)
+        #expect(throws: TodoStoreError.self) { try store.todo(id: bad) }
+    }
+
+    @Test("setOrigin backfills the pulse a proposal came from")
+    func setOrigin() throws {
+        let store = try TodoStore()
+        let item = todo("p", source: .resident)
+        try store.add(item)
+        try store.setOrigin(id: item.id, TodoOrigin(pulseId: 42))
+        #expect(try store.todo(id: item.id)?.origin == TodoOrigin(pulseId: 42))
+        #expect(try store.pendingCount() == 1)
+    }
+
     @Test("clearResolved removes done and dismissed, keeps open and pending")
     func clearResolved() throws {
         let store = try TodoStore()

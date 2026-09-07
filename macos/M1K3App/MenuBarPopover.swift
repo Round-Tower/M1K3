@@ -245,7 +245,7 @@ struct MenuBarPopover: View {
     private func refreshTodoCounts(_ env: AppEnvironment) async {
         guard let store = env.todoStore else { return }
         todoCounts = await Task.detached(priority: .utility) {
-            ((try? store.openCount()) ?? 0, (try? store.list(states: [.pending]).count) ?? 0)
+            ((try? store.openCount()) ?? 0, (try? store.pendingCount()) ?? 0)
         }.value
     }
 

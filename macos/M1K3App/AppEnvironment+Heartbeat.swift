@@ -254,23 +254,29 @@ extension AppEnvironment {
     ) async {
         let narrative = rendered.narrative
         let renderedBy = rendered.renderedBy
+        // The proposal is filed BEFORE the pulse so the pulse's tag can tell
+        // the truth: `todoProposed` ("Suggested") marks that a proposal
+        // LANDED, not that the narrative merely carried a TODO line the
+        // ceiling then refused (review fold). Its origin is back-filled with
+        // the pulse's real row id below.
+        var filedTodoID: UUID?
+        if let title = rendered.proposedTitle {
+            filedTodoID = await proposeTodoFromResident(title: title, origin: nil)
+        }
         // Tags come from the composer, deterministically — the model never
-        // sees or produces one (the #102 guard, extended verbatim). The one
-        // exception is `todoProposed`: it marks that the narrative CARRIED a
-        // proposal, still a fact the code observed, not a tag the model chose.
+        // sees or produces one (the #102 guard, extended verbatim); the
+        // proposal tag is a fact the code observed about the store.
         var tags = HeartbeatComposer.tags(from: context, renderedBy: renderedBy)
-        if rendered.proposedTitle != nil { tags.insert(.todoProposed) }
-        let pulseID = await Task.detached(priority: .utility) {
-            pulseStore.record(
+        if filedTodoID != nil { tags.insert(.todoProposed) }
+        let todoStore = todoStore
+        await Task.detached(priority: .utility) {
+            let pulseID = pulseStore.record(
                 digest: digest, narrative: narrative, renderedBy: renderedBy, tags: tags, at: now
             )
-            return try? pulseStore.latestID()
+            if let filedTodoID, let pulseID {
+                try? todoStore?.setOrigin(id: filedTodoID, TodoOrigin(pulseId: pulseID))
+            }
         }.value
-        if let title = rendered.proposedTitle {
-            // No pulse id → no origin at all (an all-nil TodoOrigin would not
-            // survive a store round-trip as non-nil — review fold).
-            await proposeTodoFromResident(title: title, origin: pulseID.map { TodoOrigin(pulseId: $0) })
-        }
         heartbeatRevision += 1
         heartbeatLastHold = nil
         Self.heartbeatLog.notice(

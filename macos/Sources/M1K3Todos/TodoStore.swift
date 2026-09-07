@@ -19,6 +19,7 @@
 
 import Foundation
 import GRDB
+import M1K3LogCore
 
 public enum TodoStoreError: Error, Equatable {
     /// `addProposal` only files PENDING todos — the user's own go through `add`.
@@ -30,6 +31,7 @@ public enum TodoStoreError: Error, Equatable {
 }
 
 public final class TodoStore: @unchecked Sendable {
+    private static let log = M1K3Log.logger(.todos)
     private let dbQueue: DatabaseQueue
 
     /// `nil` path → in-memory store (tests).
@@ -132,7 +134,10 @@ public final class TodoStore: @unchecked Sendable {
         }
     }
 
-    /// Newest first. An empty set lists nothing.
+    /// Newest first. An empty set lists nothing. A row the schema cannot
+    /// read (a state a newer build wrote, tampering) is SKIPPED and logged
+    /// by id — one bad row must not blank the healthy list on every
+    /// surface at once (review fold); `corruptRowCount()` says how many.
     public func list(states: Set<TodoState>) throws -> [Todo] {
         guard !states.isEmpty else { return [] }
         let marks = Array(repeating: "?", count: states.count).joined(separator: ", ")
@@ -141,7 +146,46 @@ public final class TodoStore: @unchecked Sendable {
                 db,
                 sql: "SELECT * FROM todos WHERE state IN (\(marks)) ORDER BY created_at DESC, id DESC",
                 arguments: StatementArguments(states.map(\.rawValue).sorted())
-            ).map(Self.todo(from:))
+            ).compactMap { row in
+                do { return try Self.todo(from: row) } catch {
+                    let id: String = row["id"]
+                    Self.log.error("skipping unreadable todo row \(id, privacy: .public)")
+                    return nil
+                }
+            }
+        }
+    }
+
+    /// Rows `list` would skip — a diagnostics number, not a content read.
+    public func corruptRowCount() throws -> Int {
+        try dbQueue.read { db in
+            try Row.fetchAll(db, sql: "SELECT id, state, source FROM todos").filter { row in
+                let id: String = row["id"]
+                return UUID(uuidString: id) == nil || TodoState(rawValue: row["state"]) == nil
+                    || TodoSourceKind(rawValue: row["source"]) == nil
+            }.count
+        }
+    }
+
+    /// Back-fill where a proposal came from once the pulse that carried it
+    /// has a row id (the pulse is recorded AFTER the proposal is filed so its
+    /// "Suggested" tag can tell the truth).
+    public func setOrigin(id: UUID, _ origin: TodoOrigin) throws {
+        try dbQueue.write { db in
+            try db.execute(
+                sql: "UPDATE todos SET origin_memory_id = ?, origin_pulse_id = ? WHERE id = ?",
+                arguments: [origin.memoryId, origin.pulseId, id.uuidString]
+            )
+        }
+    }
+
+    /// Test hook: write a row the schema may not be able to read back.
+    func insertRawForTesting(id: String, state: String, source: String) throws {
+        try dbQueue.write { db in
+            try db.execute(
+                sql: "INSERT INTO todos (id, title, source, state, created_at) VALUES (?, 'raw', ?, ?, 0)",
+                arguments: [id, source, state]
+            )
         }
     }
 
@@ -152,6 +196,12 @@ public final class TodoStore: @unchecked Sendable {
     /// What the ceiling reads.
     public func pendingCount(source: TodoSourceKind) throws -> Int {
         try count(state: .pending, source: source)
+    }
+
+    /// Every proposer's pending items — the menu-bar badge (a count, not a
+    /// row hydration).
+    public func pendingCount() throws -> Int {
+        try count(state: .pending, source: nil)
     }
 
     private func count(state: TodoState, source: TodoSourceKind?) throws -> Int {

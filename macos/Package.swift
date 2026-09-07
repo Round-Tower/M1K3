@@ -545,6 +545,7 @@ let package = Package(
         .target(
             name: "M1K3Todos",
             dependencies: [
+                "M1K3LogCore",
                 .product(name: "GRDB", package: "GRDB.swift"),
             ],
             path: "Sources/M1K3Todos"

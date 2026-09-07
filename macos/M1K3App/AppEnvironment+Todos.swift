@@ -40,9 +40,10 @@ extension AppEnvironment {
             || defaults.bool(forKey: todoSuggestionsKey)
     }
 
-    /// Visitors get a wider inbox than the resident (each caller is its own
-    /// voice) but still a ceiling — an MCP client in a loop must not fill
-    /// the list.
+    /// One shared pool for every visiting client (not per client — the
+    /// loopback surface is one trusted machine in v1), wider than the
+    /// resident's but still a ceiling: an MCP client in a loop must not
+    /// fill the list. Per-client isolation is a v1.1 question.
     nonisolated static let visitorPendingMax = 10
 
     /// The rendered OPEN TODOS block, or nil for none — read per turn by the
@@ -95,19 +96,22 @@ extension AppEnvironment {
 
     /// The heartbeat's proposal: already ceiling-checked at prompt time, but
     /// re-checked here — the pulse took a while and a visitor may have filled
-    /// the inbox meanwhile. Silent on refusal (logged): the pulse itself is
-    /// the user-facing artefact.
-    func proposeTodoFromResident(title: String, origin: TodoOrigin?) async {
-        guard todoStore != nil, Self.todoSuggestionsEnabled() else { return }
+    /// the inbox meanwhile. Returns the filed todo's id, nil on refusal
+    /// (logged) — the pulse tags itself "Suggested" only on a non-nil.
+    @discardableResult
+    func proposeTodoFromResident(title: String, origin: TodoOrigin?) async -> UUID? {
+        guard todoStore != nil, Self.todoSuggestionsEnabled() else { return nil }
         let todo = Todo(
             title: title, source: .resident,
             state: TodoConsentPolicy.initialState(for: .resident), origin: origin
         )
         // Count + insert in ONE store transaction (review fold: two racing
         // proposals could both pass a separate read).
-        if await propose(todo, max: ProposalCeiling.residentMax, label: "resident proposal") == nil {
+        guard let filed = await propose(todo, max: ProposalCeiling.residentMax, label: "resident proposal") else {
             Self.todosLog.notice("resident proposal refused: ceiling")
+            return nil
         }
+        return filed.id
     }
 
     /// An MCP client's proposal. Stamped with its self-reported name (a

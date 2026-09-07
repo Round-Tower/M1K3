@@ -149,13 +149,14 @@ struct HeartbeatStoreTests {
         #expect(today[0].tags == [.agentVisited])
     }
 
-    @Test("latestID names the newest pulse — the origin a proposed todo points back at")
-    func latestID() throws {
+    @Test("record returns the inserted row id — the origin a proposed todo points back at")
+    func recordReturnsID() throws {
         let store = try makeStore()
         #expect(try store.latestID() == nil)
-        store.record(digest: "one", narrative: nil, renderedBy: "digest")
-        store.record(digest: "two", narrative: nil, renderedBy: "digest")
-        let id = try #require(try store.latestID())
-        #expect(try store.recent(limit: 1).first?.id == id)
+        let first = store.record(digest: "one", narrative: nil, renderedBy: "digest")
+        let second = store.record(digest: "two", narrative: nil, renderedBy: "digest")
+        #expect(first != nil && second != nil && first != second)
+        #expect(try store.recent(limit: 1).first?.id == second)
+        #expect(try store.latestID() == second)
     }
 }
