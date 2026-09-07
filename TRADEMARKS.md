@@ -58,8 +58,9 @@ carry no presumption of validity. Registration is a separate step.
   or Round Tower.
 
 If you distribute a fork, give it its own name and its own icon, remove the
-M1K3 marks and the brand assets listed above, and keep the `LICENSE` and
-`NOTICE` files as the License requires.
+M1K3 marks and the brand-asset files excluded in `NOTICE` (the companion
+face files may stay — just don't present them as M1K3), and keep the
+`LICENSE` and `NOTICE` files as the License requires.
 
 ## The official builds
 
