@@ -78,11 +78,10 @@ final class ScreengrabUITests: XCTestCase {
         try capture(.brainAtHome, settle: 4, window: settingsWindow) { app in
             // The beat opens Settings (▸ M1K3, whose Brain at Home section runs the ceremony).
             waitForBrain(app)
-            let settings = settingsWindow(app)
-            XCTAssert(settings.waitForExistence(timeout: 60), "Settings window never appeared")
-            // Scoped to the Settings window: a whole-app query over the avatar
-            // surface timed out ("Failed to get matching snapshots").
-            waitForText("Brain at Home", in: app, scope: settings, timeout: 60)
+            // The window's existence is the anchor: the harness selects the M1K3
+            // pane itself, and any text query over this tree has timed out twice
+            // ("Failed to get matching snapshots").
+            XCTAssert(settingsWindow(app).waitForExistence(timeout: 60), "Settings window never appeared")
         }
     }
 
@@ -129,7 +128,8 @@ final class ScreengrabUITests: XCTestCase {
     /// hidden the moment the beat enters voice mode, so it is no anchor here.
     private func waitForVoiceSurface(_ app: XCUIApplication, timeout: TimeInterval = 120) {
         let caption = app.descendants(matching: .any).matching(NSPredicate(
-            format: "label CONTAINS[c] 'Listening' OR label CONTAINS[c] 'Tap the face' OR label CONTAINS[c] 'speaking'"
+            format: "label CONTAINS[c] 'Listening' OR value CONTAINS[c] 'Listening' OR label CONTAINS[c] 'Tap the face'"
+                + " OR value CONTAINS[c] 'Tap the face' OR label CONTAINS[c] 'speaking' OR value CONTAINS[c] 'speaking'"
         )).firstMatch
         XCTAssert(caption.waitForExistence(timeout: timeout), "voice surface never appeared")
     }
@@ -155,6 +155,17 @@ final class ScreengrabUITests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(settle))
         let target = window?(app) ?? app.windows.firstMatch
         XCTAssert(target.waitForExistence(timeout: 10), "\(plate.rawValue): no window to capture")
+        // A window screenshot is a screen-region grab: whatever is in front of
+        // the app lands in the frame. Bring M1K3 forward and REFUSE the plate if
+        // it is not the foreground app — a missing plate beats a stranger's
+        // window filed under a plate name (it happened: mail, contracts).
+        app.activate()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        guard app.state == .runningForeground else {
+            XCTFail("\(plate.rawValue): M1K3 is not the foreground app — plate NOT captured")
+            app.terminate()
+            return
+        }
         let shot = target.screenshot()
         let attachment = XCTAttachment(screenshot: shot)
         attachment.name = plate.rawValue

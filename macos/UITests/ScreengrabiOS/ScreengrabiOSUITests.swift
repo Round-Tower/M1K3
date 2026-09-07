@@ -124,7 +124,8 @@ final class ScreengrabiOSUITests: XCTestCase {
     /// gone the moment the beat enters voice mode, so it is no anchor here).
     private func waitForVoiceSurface(_ app: XCUIApplication, timeout: TimeInterval = 120) {
         let caption = app.descendants(matching: .any).matching(NSPredicate(
-            format: "label CONTAINS[c] 'Listening' OR label CONTAINS[c] 'Tap the face' OR label CONTAINS[c] 'speaking'"
+            format: "label CONTAINS[c] 'Listening' OR value CONTAINS[c] 'Listening' OR label CONTAINS[c] 'Tap the face'"
+                + " OR value CONTAINS[c] 'Tap the face' OR label CONTAINS[c] 'speaking' OR value CONTAINS[c] 'speaking'"
         )).firstMatch
         XCTAssert(caption.waitForExistence(timeout: timeout), "voice surface never appeared")
     }

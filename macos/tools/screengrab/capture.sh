@@ -37,9 +37,23 @@ if [[ $target == mac ]]; then
 fi
 rm -rf "$xcresult"
 
+# A window screenshot is a SCREEN-REGION grab: anything in front of the app lands
+# in the plate, and the glass materials sample whatever sits behind it. Run 2
+# on 2026-09-08 filed the owner's mail client into six plates. So: every other
+# app is hidden for the run and shown again at exit, the test refuses to write
+# a frame unless M1K3 is frontmost at the shot — and the Mac is left alone.
+hide_others() {
+  osascript -e 'tell application "System Events" to set visible of every process whose visible is true and name is not "M1K3" and name is not "Finder" to false' >/dev/null 2>&1 || true
+}
+show_others() {
+  osascript -e 'tell application "System Events" to set visible of every process whose visible is false and background only is false to true' >/dev/null 2>&1 || true
+}
+
 case $target in
   mac)
     scheme=M1K3; testTarget=M1K3ScreengrabUITests; dest='platform=macOS'
+    echo ">>> hiding every other app for the run — leave the Mac alone until CAPTURE_DONE"
+    hide_others; trap show_others EXIT
     # Automatic (Apple Development) signing only: a Developer ID + hardened-runtime
     # build has no get-task-allow, so XCTest cannot drive it ("Running Background").
     sign=()
