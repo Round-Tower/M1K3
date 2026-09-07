@@ -15,6 +15,8 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.9 (pure; root
 //  isolation + plate flags pinned), Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `livePartial`: the listening plate's
+//  hero question through the open mic. Confidence now 0.9.
 //
 
 import Foundation
@@ -59,6 +61,14 @@ public struct ScreengrabHarness: Sendable, Equatable {
 
     public var speaksHeroAnswer: Bool {
         plate == .voiceSpeaking
+    }
+
+    /// The listening plate's live partial: the hero question arriving word by
+    /// word through `OpenMicTranscriber`, so the frame shows a real listen
+    /// instead of an empty "Listening…". Nil everywhere else (a companion tile
+    /// is the face, not a bubble).
+    public var livePartial: String? {
+        plate == .voiceListening ? DemoPersona.heroConversation[0].text : nil
     }
 
     public var showsPairing: Bool {

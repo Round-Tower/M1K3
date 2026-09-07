@@ -53,4 +53,27 @@ struct DemoSeederTests {
         let hits = try memory.recall(query: "architect", queryVector: vector, limit: 3, threshold: 0)
         #expect(!hits.isEmpty)
     }
+
+    /// A kill between the row and the marker must not seed a second hero conversation.
+    @Test func historySeedSurvivesMarkerLoss() throws {
+        let root = try tempRoot()
+        let history = try GRDBChatHistoryStore(path: root.appendingPathComponent("chat-history.sqlite").path)
+        try DemoSeeder.seedHistory(into: history, root: root)
+        try FileManager.default.removeItem(at: root.appendingPathComponent(".demo-history-seeded"))
+        try DemoSeeder.seedHistory(into: history, root: root)
+        #expect(try history.list().count == 1)
+    }
+
+    @Test func knowledgeSeedSurvivesMarkerLoss() async throws {
+        let root = try tempRoot()
+        let store = try KnowledgeStore(path: root.appendingPathComponent("knowledge.sqlite").path)
+        let memory = try MemoryStore(path: root.appendingPathComponent("memory.sqlite").path)
+        let embedder = HashingEmbeddingService()
+        let ingester = DocumentIngester(store: store, embedder: embedder)
+        try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
+        try FileManager.default.removeItem(at: root.appendingPathComponent(".demo-knowledge-seeded"))
+        try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
+        #expect(try memory.liveCount() == DemoPersona.memories.count)
+        #expect(try store.allItems(kind: .document).count == DemoPersona.documents.count)
+    }
 }

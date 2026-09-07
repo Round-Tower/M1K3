@@ -15,6 +15,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.7 (drives a live
 //  app; anchors are the shell's visible labels — verify-by-launch per plate),
 //  Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — voice plates wait on the voice surface / the spoken line, not the
+//  composer (the beat hides it: 8 plates "composer never appeared"); brain-at-home queries the Settings window only.
 //
 
 import M1K3Screengrab
@@ -42,15 +44,20 @@ final class ScreengrabUITests: XCTestCase {
     }
 
     func testVoiceListening() throws {
-        try capture(.voiceListening, settle: 6) { app in
-            waitForBrain(app)
+        // The open mic feeds the hero question word by word; shoot mid-sentence,
+        // before the endpointer could ever consider the partial finished.
+        try capture(.voiceListening, settle: 0.5) { app in
+            waitForVoiceSurface(app)
+            waitForText("call with", in: app, timeout: 30)
         }
     }
 
     func testVoiceSpeaking() throws {
-        // The beat speaks the hero answer ~1.5 s after voice mode; shoot mid-line.
-        try capture(.voiceSpeaking, settle: 4) { app in
-            waitForBrain(app)
+        // The beat speaks the hero answer ~1.5 s after voice mode; shoot on the
+        // karaoke line, mid-sentence.
+        try capture(.voiceSpeaking, settle: 1) { app in
+            waitForVoiceSurface(app)
+            waitForText("roofline", in: app, timeout: 60)
         }
     }
 
@@ -71,7 +78,11 @@ final class ScreengrabUITests: XCTestCase {
         try capture(.brainAtHome, settle: 4, window: settingsWindow) { app in
             // The beat opens Settings (▸ M1K3, whose Brain at Home section runs the ceremony).
             waitForBrain(app)
-            waitForText("Brain at Home", in: app, timeout: 60)
+            let settings = settingsWindow(app)
+            XCTAssert(settings.waitForExistence(timeout: 60), "Settings window never appeared")
+            // Scoped to the Settings window: a whole-app query over the avatar
+            // surface timed out ("Failed to get matching snapshots").
+            waitForText("Brain at Home", in: app, scope: settings, timeout: 60)
         }
     }
 
@@ -110,8 +121,17 @@ final class ScreengrabUITests: XCTestCase {
     private func companion(_ plate: ScreengrabPlate) throws {
         // Voice mode is the full-window avatar surface; give the mesh time to load.
         try capture(plate, settle: 8) { app in
-            waitForBrain(app)
+            waitForVoiceSurface(app)
         }
+    }
+
+    /// Voice mode is up: one of its state captions is on screen. The composer is
+    /// hidden the moment the beat enters voice mode, so it is no anchor here.
+    private func waitForVoiceSurface(_ app: XCUIApplication, timeout: TimeInterval = 120) {
+        let caption = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label CONTAINS[c] 'Listening' OR label CONTAINS[c] 'Tap the face' OR label CONTAINS[c] 'speaking'"
+        )).firstMatch
+        XCTAssert(caption.waitForExistence(timeout: timeout), "voice surface never appeared")
     }
 
     /// Launch under the plate's recipe, drive, settle, shoot the window.
@@ -155,13 +175,22 @@ final class ScreengrabUITests: XCTestCase {
             .matching(NSPredicate(format: "placeholderValue BEGINSWITH[c] 'Ask M1K3'")).firstMatch
         XCTAssert(composer.waitForExistence(timeout: timeout), "composer never appeared")
         let expectation = XCTNSPredicateExpectation(predicate: ready, object: composer)
-        XCTWaiter().wait(for: [expectation], timeout: timeout)
+        // Deliberately non-fatal: a near-miss plate beats no plate. The miss is
+        // still on the record so a placeholder-looking capture has a cause.
+        if XCTWaiter().wait(for: [expectation], timeout: timeout) != .completed {
+            let note = XCTAttachment(string: "composer never became enabled within \(Int(timeout))s — captured anyway")
+            note.name = "brain-not-ready"
+            note.lifetime = .keepAlways
+            add(note)
+        }
     }
 
-    private func waitForText(_ fragment: String, in app: XCUIApplication, timeout: TimeInterval = 30) {
+    private func waitForText(
+        _ fragment: String, in app: XCUIApplication, scope: XCUIElement? = nil, timeout: TimeInterval = 30
+    ) {
         // Any element type: message text renders through custom views whose
         // accessibility role is not always StaticText.
-        let match = app.descendants(matching: .any)
+        let match = (scope ?? app).descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS[c] %@ OR value CONTAINS[c] %@", fragment, fragment)).firstMatch
         guard !match.waitForExistence(timeout: timeout) else { return }
         XCTFail("'\(fragment)' never appeared")

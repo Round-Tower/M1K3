@@ -14,13 +14,44 @@
 //
 
 import Foundation
+import M1K3BrainLink
 import M1K3Chat
 import M1K3LogCore
 import M1K3Screengrab
+import M1K3Voice
 import os
+
+/// The harness's Brain at Home key store: in-memory, process-lifetime, so a
+/// capture never reads the device's real PSK. `@unchecked Sendable`: every
+/// mutable member is read and written under `lock`.
+final class ScreengrabBrainKeyStore: BrainKeyStoring, @unchecked Sendable {
+    private let lock = NSLock()
+    private var keys: [String: Data] = [:]
+
+    func setKey(_ key: Data, identity: String) throws {
+        lock.withLock { keys[identity] = key }
+    }
+
+    func key(identity: String) -> Data? {
+        lock.withLock { keys[identity] }
+    }
+
+    func removeKey(identity: String) {
+        lock.withLock { _ = keys.removeValue(forKey: identity) }
+    }
+}
 
 extension AppCore {
     private nonisolated static let screengrabLog = M1K3Log.logger(.screengrab)
+
+    /// Pairing persistence: the real defaults + Keychain, or — under the harness —
+    /// a throwaway defaults suite and an in-memory key store, so neither the
+    /// owner's paired Mac nor its key can reach a plate.
+    static func makeBrainLinkStore() -> PairedBrainStore {
+        guard ScreengrabHarness.current.isActive else { return PairedBrainStore() }
+        let defaults = UserDefaults(suiteName: "app.m1k3.screengrab") ?? .standard
+        return PairedBrainStore(defaults: defaults, keys: ScreengrabBrainKeyStore())
+    }
 
     /// Synchronous, from init, BEFORE `ChatSession` reads the most recent row.
     static func seedScreengrabHistory(into history: (any ChatHistoryPersisting)?, root: URL) {
@@ -56,7 +87,8 @@ extension AppCore {
         guard harness.speaksHeroAnswer else { return }
         // Let the mode settle (avatar in, mic armed) before the karaoke line.
         try? await Task.sleep(for: .seconds(1.5))
-        let line = DemoPersona.heroConversation[1].text
+        // Same sanitiser as the voice loop's speak closure (AppCore+Voice).
+        let line = SpeechTextPolish.polish(DemoPersona.heroConversation[1].text)
         speechHighlight.beginUtterance(text: line)
         await speech.speak(line)
     }

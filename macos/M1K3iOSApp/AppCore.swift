@@ -45,6 +45,8 @@
 //  Confidence now 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-09-07 — the store root routes through `ScreengrabHarness.dataRoot` (a sibling root under
 //  M1K3_SCREENGRAB=1) and the demo persona seeds there: history before ChatSession, knowledge as a launch task.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — Brain at Home pairing is harness-aware too (in-memory key store, the
+//  restore skipped): review caught the real paired Mac's name + PSK reaching the iOS brain-at-home plate.
 //
 
 import Foundation
@@ -164,7 +166,7 @@ final class AppCore {
     /// local `selectedBrain` is kept untouched as the tier to return to.
     private(set) var homeBrainActive = false
     /// Device-side pairing persistence (defaults metadata + Keychain PSK).
-    let brainLinkStore = PairedBrainStore()
+    let brainLinkStore = AppCore.makeBrainLinkStore()
 
     // MARK: - Persistence keys (shared spelling with the Mac app so a brain
 
@@ -359,7 +361,12 @@ final class AppCore {
         refreshCounts()
         // Brain at Home: restore a paired Mac, and re-point the slot at it if
         // Home was fronting when the app last ran.
-        homeBrain = brainLinkStore.load()
+        // Never under the screengrab harness: a real paired Mac's name would
+        // land in the brain-at-home plate and its PSK would route the capture's
+        // turns to that Mac.
+        if !ScreengrabHarness.current.isActive {
+            homeBrain = brainLinkStore.load()
+        }
         // Home fronts when it was chosen — or when nothing local CAN front (#230's
         // Home-only half: a persisted Mini on an AFM-ineligible device would sit
         // unready forever).

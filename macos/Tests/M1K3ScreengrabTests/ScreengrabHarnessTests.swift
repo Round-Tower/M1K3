@@ -60,6 +60,9 @@ struct ScreengrabHarnessTests {
         #expect(h(.privacyLabel).opensSettings && h(.privacyLabel).showsPrivacyPane)
         #expect(!h(.chat).opensSettings)
         #expect(!h(.chat).showsOnboarding)
+        #expect(h(.voiceListening).livePartial == DemoPersona.heroConversation[0].text)
+        #expect(h(.voiceSpeaking).livePartial == nil)
+        #expect(h(.companionFox).livePartial == nil)
     }
 
     @Test func launchRecipeOverridesDefaultsThroughTheArgumentDomain() {

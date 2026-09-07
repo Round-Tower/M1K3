@@ -10,6 +10,10 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 (driven against
 //  the real GRDB stores in tests), Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — idempotency is content-based as
+//  well as marker-based (review: a kill between row and marker seeded twice);
+//  persona edits reset by clearing the sibling root (capture.sh does it per run).
+//  Confidence now 0.85.
 //
 
 import Foundation
@@ -25,6 +29,11 @@ public enum DemoSeeder {
     public static func seedHistory(into history: any ChatHistoryPersisting, root: URL) throws {
         let marker = root.appendingPathComponent(historyMarker)
         guard !FileManager.default.fileExists(atPath: marker.path) else { return }
+        // Content guard: a kill between the row and the marker must not seed twice.
+        if try history.list().contains(where: { $0.title == DemoPersona.heroTitle }) {
+            try Data().write(to: marker)
+            return
+        }
         let id = UUID()
         try history.save(id: id, messages: DemoPersona.heroConversation, updatedAt: Date())
         try history.setTitle(id: id, title: DemoPersona.heroTitle)
@@ -42,6 +51,11 @@ public enum DemoSeeder {
     ) async throws {
         let marker = root.appendingPathComponent(knowledgeMarker)
         guard !FileManager.default.fileExists(atPath: marker.path) else { return }
+        // Content guard (see seedHistory): seeded memories carry the demo source.
+        if let memory, try memory.liveCount() > 0 {
+            try Data().write(to: marker)
+            return
+        }
         if let memory {
             for fact in DemoPersona.memories {
                 try memory.remember(fact, embedding: await embedder.embed(fact.text))

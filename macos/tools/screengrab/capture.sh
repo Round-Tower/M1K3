@@ -14,6 +14,8 @@
 # Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.75 (Mac lane driven
 # end-to-end; the iOS lane needs a physical device — verify-by-launch),
 # Prior: Unknown
+# Review: Kev + claude-fable-5.1, 2026-09-08 — the Mac lane clears the sibling root per run
+# (content-idempotent seed; persona edits land). Confidence now 0.75.
 set -euo pipefail
 
 target=${1:?mac|ios}; shift
@@ -27,6 +29,12 @@ dd=${M1K3_SCREENGRAB_DD:-$scratch/dd-$target}   # reuse a warm DerivedData if yo
 xcresult=$scratch/$target.xcresult
 [[ -d $marketing ]] || { echo "no marketing/app-store at $marketing — set M1K3_MARKETING_DIR"; exit 2; }
 mkdir -p "$plates" "$scratch"
+# Every run starts from a fresh sibling root (Mac lane): the seed is idempotent
+# by content, so this is what picks up a persona edit. The live M1K3/ root is
+# never touched — the harness only ever opens the sibling.
+if [[ $target == mac ]]; then
+  rm -rf "$HOME/Library/Containers/app.m1k3/Data/Library/Application Support/M1K3-screengrab"
+fi
 rm -rf "$xcresult"
 
 case $target in

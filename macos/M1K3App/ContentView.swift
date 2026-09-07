@@ -24,7 +24,8 @@
 //  offer ("Download Mini (one-time, ~630 MB)"), the Lil rescue secondary beside it. Confidence 0.75 (verify at ⌘R
 //  on a blocked-AFM Mac).
 //  Review: Kev + claude-fable-5.1, 2026-09-07 — the App Store screengrab beat: once `isReady` flips, ContentView fires
-//  `performScreengrabBeat()` exactly once (no-op without M1K3_SCREENGRAB=1). Confidence now 0.85.
+//  `performScreengrabBeat()` exactly once (no-op without M1K3_SCREENGRAB=1); the attachment store
+//  routes through the harness root too (2026-09-08 fold). Confidence now 0.85.
 
 import M1K3Avatar
 import M1K3Chat
@@ -954,8 +955,9 @@ struct ContentView: View {
 
     /// Attachments live in the app container beside the other user data.
     private static let attachmentStore = AttachmentStore(
-        directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("attachments")
+        directory: ScreengrabHarness.current.dataRoot(
+            live: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        ).appendingPathComponent("attachments")
     )
 
     /// Keep the newest turn pinned to the bottom as it streams (text or reasoning).

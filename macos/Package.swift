@@ -11,6 +11,7 @@
 //
 // Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
 // Review: Kev + claude-fable-5.1, 2026-09-07 — M1K3Screengrab target + tests (the App Store screengrab harness).
+// Review: Kev + claude-fable-5.1, 2026-09-08 — M1K3Screengrab links M1K3Voice for the plates' open-mic transcriber.
 // Context: First Mac-native surface for M1K3. Scaffold begins with the pure,
 // dependency-free knowledge primitives (VectorMath, RRFFusion) ported from
 // the prior knowledge-server project so the foundation builds in seconds before MLX/GRDB enter the graph.
@@ -548,12 +549,12 @@ let package = Package(
         // stores it seeds; NO app-shell or MLX weight.
         .target(
             name: "M1K3Screengrab",
-            dependencies: ["M1K3Chat", "M1K3Memory", "M1K3Knowledge"],
+            dependencies: ["M1K3Chat", "M1K3Memory", "M1K3Knowledge", "M1K3Voice"],
             path: "Sources/M1K3Screengrab"
         ),
         .testTarget(
             name: "M1K3ScreengrabTests",
-            dependencies: ["M1K3Screengrab", "M1K3Chat", "M1K3Memory", "M1K3Knowledge"],
+            dependencies: ["M1K3Screengrab", "M1K3Chat", "M1K3Memory", "M1K3Knowledge", "M1K3Voice"],
             path: "Tests/M1K3ScreengrabTests"
         ),
         .testTarget(

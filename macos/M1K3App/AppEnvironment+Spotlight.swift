@@ -21,12 +21,16 @@
 //  Signed: Kev + claude-fable-5, 2026-07-13, Confidence 0.85 (policy layer is
 //  unit-pinned; CSSearchableIndex behaviour — expiry pin, domain delete —
 //  is verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the sync is skipped under the
+//  screengrab harness: the CoreSpotlight domain is global, so a reconcile against
+//  the sibling store would clobber the owner's real donations. Confidence now 0.85.
 //
 
 import CoreSpotlight
 import Foundation
 import M1K3Knowledge
 import M1K3LogCore
+import M1K3Screengrab
 import OSLog
 
 /// CSSearchableIndex adapter behind the pure `SystemSearchIndexing` seam.
@@ -95,6 +99,13 @@ extension AppEnvironment {
     /// `SpotlightReconciler` (M1K3Knowledge); this wrapper supplies live
     /// dependencies and maps outcomes to log lines.
     func syncSpotlightIndex() async {
+        // The screengrab harness must never touch the system index: the domain
+        // is global, so a reconcile against the sibling store would delete the
+        // owner's real donations and donate the demo persona in their place.
+        guard !ScreengrabHarness.current.isActive else {
+            Self.spotlightLog.notice("spotlight sync skipped under the screengrab harness")
+            return
+        }
         let outcomes = await spotlightReconciler.sync(
             enabled: { self.spotlightIndexingEnabled },
             backgroundWorkAllowed: { Self.backgroundWorkAllowed() },

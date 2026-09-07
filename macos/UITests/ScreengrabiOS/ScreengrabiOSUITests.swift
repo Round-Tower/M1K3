@@ -15,6 +15,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.65 (drives a live
 //  device; anchors are the shell's labels — verify-by-launch per plate),
 //  Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — voice plates wait on the voice surface / the spoken line, not the
+//  composer (the beat hides it: 8 plates "composer never appeared").
 //
 
 import M1K3Screengrab
@@ -42,11 +44,16 @@ final class ScreengrabiOSUITests: XCTestCase {
     }
 
     func testVoiceListening() throws {
-        try capture(.voiceListening, settle: 6) { app in waitForBrain(app) }
+        // The phone's mic is real (the harness's open mic is Mac-only so far):
+        // a quiet room shows "Listening…", which is the plate.
+        try capture(.voiceListening, settle: 2) { app in waitForVoiceSurface(app) }
     }
 
     func testVoiceSpeaking() throws {
-        try capture(.voiceSpeaking, settle: 4) { app in waitForBrain(app) }
+        try capture(.voiceSpeaking, settle: 1) { app in
+            waitForVoiceSurface(app)
+            waitForText("roofline", in: app, timeout: 60)
+        }
     }
 
     func testDocuments() throws {
@@ -110,7 +117,16 @@ final class ScreengrabiOSUITests: XCTestCase {
     // MARK: - Machinery
 
     private func companion(_ plate: ScreengrabPlate) throws {
-        try capture(plate, settle: 8) { app in waitForBrain(app) }
+        try capture(plate, settle: 8) { app in waitForVoiceSurface(app) }
+    }
+
+    /// Voice mode is up: one of its state captions is on screen (the composer is
+    /// gone the moment the beat enters voice mode, so it is no anchor here).
+    private func waitForVoiceSurface(_ app: XCUIApplication, timeout: TimeInterval = 120) {
+        let caption = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label CONTAINS[c] 'Listening' OR label CONTAINS[c] 'Tap the face' OR label CONTAINS[c] 'speaking'"
+        )).firstMatch
+        XCTAssert(caption.waitForExistence(timeout: timeout), "voice surface never appeared")
     }
 
     private func capture(
@@ -147,7 +163,14 @@ final class ScreengrabiOSUITests: XCTestCase {
         XCTAssert(composer.waitForExistence(timeout: timeout), "composer never appeared")
         let ready = NSPredicate(format: "isEnabled == true")
         let expectation = XCTNSPredicateExpectation(predicate: ready, object: composer)
-        XCTWaiter().wait(for: [expectation], timeout: timeout)
+        // Deliberately non-fatal: a near-miss plate beats no plate. The miss is
+        // still on the record so a placeholder-looking capture has a cause.
+        if XCTWaiter().wait(for: [expectation], timeout: timeout) != .completed {
+            let note = XCTAttachment(string: "composer never became enabled within \(Int(timeout))s — captured anyway")
+            note.name = "brain-not-ready"
+            note.lifetime = .keepAlways
+            add(note)
+        }
     }
 
     private func waitForText(_ fragment: String, in app: XCUIApplication, timeout: TimeInterval = 30) {

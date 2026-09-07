@@ -18,12 +18,14 @@ import M1K3Calls
 import M1K3Chat
 import M1K3LogCore
 import M1K3Screengrab
+import M1K3Voice
 import os
 
 /// The harness's key store: in-memory, process-lifetime. The Keychain items the
 /// live app owns (call key, script approvals, Brain at Home keys) are ACL'd to its
 /// signing identity, so a test build reading them gets a password prompt IN the
-/// frame — and none of them is a plate.
+/// frame — and none of them is a plate. `@unchecked Sendable`: every mutable
+/// member is read and written under `lock`.
 final class ScreengrabKeyStore: KeyStore, @unchecked Sendable {
     private let lock = NSLock()
     private var items: [String: Data] = [:]
@@ -48,6 +50,14 @@ extension AppEnvironment {
     /// The Keychain for every ordinary launch; the in-memory store under the harness.
     nonisolated static func makeKeyStore(protection: KeychainKeyStore.Protection = .afterFirstUnlock) -> any KeyStore {
         ScreengrabHarness.current.isActive ? screengrabKeys : KeychainKeyStore(protection: protection)
+    }
+
+    /// The voice plates' recogniser: an open mic, no TCC, the hero question as a
+    /// live partial on the listening plate. Nil (real recognisers) otherwise.
+    nonisolated static func screengrabTranscriber() -> (any TranscriptionProvider)? {
+        let harness = ScreengrabHarness.current
+        guard harness.isActive, harness.entersVoiceMode else { return nil }
+        return OpenMicTranscriber(partial: harness.livePartial)
     }
 
     /// Synchronous, from init, BEFORE `ChatSession` reads the most recent row.

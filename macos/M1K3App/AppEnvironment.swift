@@ -35,6 +35,8 @@
 //  started; the app sits on the persisted Mini meanwhile. Confidence now 0.85 (gate UI unverified by launch).
 //  Review: Kev + claude-fable-5.1, 2026-09-07 — screengrab seed hooks: the hero conversation lands BEFORE the ChatSession's
 //  resume-most-recent read; memories + documents seed as a launch task (AppEnvironment+Screengrab).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the transcription router takes the harness's open mic on voice plates
+//  (no TCC sheet in the frame; the loop holds `.listening`).
 
 import AppKit
 import Foundation
@@ -845,7 +847,11 @@ final class AppEnvironment {
         let whisperVariant = Self.resolveWhisperVariant(downloadBase: whisperDownloadBase)
         selectedWhisperModel = whisperVariant
         whisperKit = WhisperKitProvider(model: whisperVariant.modelID, downloadBase: whisperDownloadBase)
-        transcription = TranscriptionRouter(providers: [whisperKit, AppleSpeechTranscriber()])
+        // The screengrab harness listens through an open mic that needs no TCC
+        // grant (a permission sheet would land in the frame) — see +Screengrab.
+        transcription = TranscriptionRouter(
+            providers: Self.screengrabTranscriber().map { [$0] } ?? [whisperKit, AppleSpeechTranscriber()]
+        )
         batchTranscriber = WhisperKitBatchTranscriber(
             model: whisperVariant.modelID, downloadBase: whisperDownloadBase
         )
