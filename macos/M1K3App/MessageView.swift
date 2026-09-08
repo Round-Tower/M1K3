@@ -8,8 +8,9 @@
 //  tap away — honest RAG, the M1K3 way.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
-//  Review: Kev + claude-fable-5.1, 2026-09-08 — the thinking/reasoning header + activity label wear `.pixel(13)`
-//  (short, app-controlled); the reasoning body stays ReadingText. Confidence now 0.8 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the thinking/reasoning header wears `.pixel(13)` (a fixed
+//  two-string enum); the activity label stays caption — it carries the search query / page host (dynamic content,
+//  review 1 catch on #248); the reasoning body stays ReadingText. Confidence now 0.8 (verify-by-launch).
 
 import AppKit
 import M1K3Chat
@@ -189,11 +190,11 @@ struct MessageView: View {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
                     if let activity = message.activityLabel {
-                        // Same rule as the reasoning header: short, app-authored
-                        // (ActivityLabeler), so it wears the pixel face.
-                        Text(activity.uppercased())
-                            .font(.pixel(13))
-                            .kerning(0.5)
+                        // NOT the pixel face: web_search / fetch_page labels
+                        // interpolate the query and host — dynamic content the
+                        // house rule keeps off the bitmap font (review 1, #248).
+                        Text(activity)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                             .contentTransition(.opacity)
                     }

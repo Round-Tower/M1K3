@@ -57,6 +57,7 @@ final class SpeechHighlight {
 
     func clear() {
         utteranceText = nil
+        narrator = .m1k3
         timeline = nil
         currentWordRange = nil
     }

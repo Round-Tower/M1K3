@@ -19,8 +19,9 @@
 //  parameter (default 600s backstop; the App Intent passes its own 120s),
 //  and the guard routes through chatGate so interim-Mini serves visiting
 //  agents during a brain download instead of refusing (MCP-async package).
-//  Review: Kev + claude-fable-5.1, 2026-09-08 — `narrator:` — an MCP speak is voiced AS the visiting client (named in
-//  the notch HUD), never as M1K3. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `narrator:` — the MCP handler passes its visiting client; the
+//  default stays M1K3 because the Speak App Intent (Siri/Shortcuts) is M1K3 talking (review 1 catch on #248).
+//  Confidence now 0.85.
 //
 
 import Foundation
@@ -183,7 +184,7 @@ extension AppEnvironment {
     /// Deliberately no readiness guard (unlike `intelligenceAsk`): TTS is
     /// model-independent — it needs only the speech pipeline, which is always
     /// available.
-    func intelligenceSpeak(text: String, emotion: String?, wait: Bool, narrator: Narrator = .visitor(nil)) async throws {
+    func intelligenceSpeak(text: String, emotion: String?, wait: Bool, narrator: Narrator = .m1k3) async throws {
         guard voiceLoop == nil, !chat.isResponding else {
             throw MCPVoiceError("M1K3 is in a conversation right now — try again shortly")
         }
