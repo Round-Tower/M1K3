@@ -18,6 +18,8 @@
 //  read the same UserDefaults slots (same string values — no migration).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the screengrab cadence (maxWait 600 s) under the harness, so a slow
 //  XCTest snapshot cannot flip the listening plate into an answer. Confidence unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `speak(_:narrator:)` — the MCP path names its client; every
+//  other caller stays M1K3 by default. Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the synthesised vocabulary lands on the voice loop: listenStart when the
 //  mic opens, endpointHeard when a turn starts (both turn closures), voiceExit on leaving; enter keeps
 //  its (now synthesised) materialise. Confidence now 0.8 (felt beats are Kev's; the gate mutes over speech).
@@ -171,13 +173,13 @@ extension AppEnvironment {
     /// Web-sources block dropped) BEFORE the providers see it, so every
     /// downstream word timeline is built against the same string the karaoke
     /// view displays.
-    func speak(_ text: String) async {
+    func speak(_ text: String, narrator: Narrator = .m1k3) async {
         let polished = SpeechTextPolish.polish(text)
         // A message that is ONLY a sources block polishes to empty; never hand
         // providers "" — the voice loop waits on a speechDidEnd that would
         // not arrive.
         let spoken = polished.isEmpty ? text : polished
-        speechHighlight.beginUtterance(text: spoken)
+        speechHighlight.beginUtterance(text: spoken, narrator: narrator)
         await speech.speak(spoken)
     }
 

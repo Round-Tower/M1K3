@@ -8,6 +8,9 @@
 //  tap away — honest RAG, the M1K3 way.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the thinking/reasoning header wears `.pixel(13)` (a fixed
+//  two-string enum); the activity label stays caption — it carries the search query / page host (dynamic content,
+//  review 1 catch on #248); the reasoning body stays ReadingText. Confidence now 0.8 (verify-by-launch).
 
 import AppKit
 import M1K3Chat
@@ -187,6 +190,9 @@ struct MessageView: View {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
                     if let activity = message.activityLabel {
+                        // NOT the pixel face: web_search / fetch_page labels
+                        // interpolate the query and host — dynamic content the
+                        // house rule keeps off the bitmap font (review 1, #248).
                         Text(activity)
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -373,8 +379,13 @@ struct MessageView: View {
                 .padding(.top, 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
-            Label(isThinkingLive ? "Thinking…" : "Model reasoning", systemImage: "ellipsis.bubble")
-                .font(.caption.weight(.medium))
+            // App-controlled, short: the one place M1K3's thoughts get the
+            // house pixel face (hit list 2026-09-08, item 4). The reasoning
+            // BODY stays ReadingText — long, model-authored, and the text a
+            // dyslexic reader works hardest on.
+            Label(isThinkingLive ? "THINKING…" : "MODEL REASONING", systemImage: "ellipsis.bubble")
+                .font(.pixel(13))
+                .kerning(0.5)
                 .foregroundStyle(.secondary)
                 .contentTransition(.opacity)
                 // The bubble's dots iterate like a typing indicator while the
