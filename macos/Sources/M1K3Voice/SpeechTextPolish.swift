@@ -33,8 +33,9 @@
 //  collapseURLs would mangle the parenthesised URL.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — emoji stripped from the
 //  speech lane (Kev heard "party popper" read aloud). Per grapheme cluster,
-//  outside fences, keyed on emoji PRESENTATION so © and → still speak.
-//  Confidence now 0.9 (seven pinned cases incl. ZWJ/flag/keycap; the
+//  outside fences, keyed on emoji PRESENTATION so © and → still speak; bare
+//  Misc Symbols / Dingbats (✔ ☺ ♠) go too (review catch on #247).
+//  Confidence now 0.9 (eight pinned cases incl. ZWJ/flag/keycap; the
 //  "strip rather than voice as inflection" choice is taste).
 //
 
@@ -143,6 +144,11 @@ public enum SpeechTextPolish {
     private static func isEmojiCluster(_ character: Character) -> Bool {
         guard let lead = character.unicodeScalars.first else { return false }
         if lead.properties.isEmojiPresentation { return true }
+        // Text-presentation emoji the models emit bare (✔ ☺ ♠ ☀): Emoji=Yes
+        // but no default emoji face, so the presentation check misses them —
+        // and engines still read them by name. The Misc Symbols + Dingbats
+        // blocks are where they live; © ® ™ and digits sit outside them.
+        if lead.properties.isEmoji, (0x2600 ... 0x27BF).contains(lead.value) { return true }
         if (0x1F1E6 ... 0x1F1FF).contains(lead.value) { return true } // regional indicator
         return character.unicodeScalars.contains { $0.value == 0xFE0F }
     }

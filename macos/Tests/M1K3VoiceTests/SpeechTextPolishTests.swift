@@ -115,6 +115,11 @@ struct SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish("Rooms 1 and 2 \u{00A9} 2026 \u{2192} next") == "Rooms 1 and 2 \u{00A9} 2026 \u{2192} next")
     }
 
+    @Test("bare text-presentation emoji — ticks, faces, suits, weather — are not spoken either")
+    func bareTextPresentationEmojiStripped() {
+        #expect(SpeechTextPolish.polish("Done \u{2714} sunny \u{2600} \u{263A} \u{2660} ok") == "Done sunny ok")
+    }
+
     @Test("an emoji-only line collapses, the surrounding paragraphs still break")
     func emojiOnlyLine() {
         #expect(SpeechTextPolish.polish("First.\n\u{2728}\n\nSecond.") == "First.\n\nSecond.")
