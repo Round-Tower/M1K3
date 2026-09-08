@@ -106,7 +106,11 @@ struct DueDateParserTests {
         #expect(parse("Buy the Friday paper").title == "Buy the Friday paper")
         #expect(parse("Stand by").due == nil)
         #expect(parse("Stand by").title == "Stand by")
-        #expect(parse("  tomorrow  ").title == "")
+        // A draft that is NOTHING but a date phrase is a title, not a strip
+        // target — otherwise "tomorrow" + Return adds nothing and says nothing.
+        #expect(parse("  tomorrow  ") == ("tomorrow", nil))
+        #expect(parse("by friday") == ("by friday", nil))
+        #expect(parse("3 oct") == ("3 oct", nil))
         #expect(parse("Call Mum, tomorrow") == ("Call Mum", day("2026-09-09")))
     }
 }

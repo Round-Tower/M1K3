@@ -34,6 +34,10 @@ public enum DueDateParser {
             guard let day = rule.resolve(groups, now, calendar) else { continue }
             var title = String(trimmed[..<Range(match.range, in: trimmed)!.lowerBound])
             title = title.trimmingCharacters(in: CharacterSet(charactersIn: " ,;:-–—"))
+            // A draft that is only the phrase keeps it as its title (review
+            // fold): stripping it would hand the caller an empty title and
+            // the todo would vanish without a word.
+            guard !title.isEmpty else { return (trimmed, nil) }
             return (title, endOfDay(day, calendar))
         }
         return (trimmed, nil)
