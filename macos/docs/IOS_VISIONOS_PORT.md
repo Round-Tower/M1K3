@@ -21,7 +21,7 @@ shell — **not** in the library graph. After declaring `.iOS(.v26)` + `.visionO
 | M1K3MLX | ✅ | the full MLX/Metal graph cross-compiles |
 | M1K3Kokoro | ✅ | MLX backend since 2026-07-18 (was ONNX Runtime); see the RESOLVED note below |
 | M1K3WhisperKit | ✅ | after the M1K3Calls guard |
-| M1K3MemoryViz, M1K3Avatar | ✅ | RealityKit; `ConstellationPalette` was already `canImport(AppKit)`-guarded |
+| M1K3MemoryViz, M1K3Avatar | ✅ | RealityKit; `ConstellationPalette.materialColor` has a UIKit twin since 2026-09-08 — the memory constellation RENDERS on the iPad (`MemoryConstellationCanvas` in the shell, `ConstellationSeeding` shared with the Mac); phones fall through to the pixel face |
 | M1K3Chat, M1K3Agent | ✅ | FoundationModels (`@_weakLinked`) needs **no** availability change at deployment floor 26 |
 | M1K3Calls | ✅ | after the ScreenCaptureKit guard |
 | M1K3MCPKit, M1K3MCP | ✅ | after the `homeDirectoryForCurrentUser` guard |

@@ -8,11 +8,15 @@
 //  field reads as one palette rather than a rainbow.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.8. Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `materialColor` gains its UIKit twin (UIColor) so iOS motes are
+//  coloured like the Mac's. Confidence now 0.85.
 
 import SwiftUI
 
 #if canImport(AppKit)
     import AppKit
+#elseif canImport(UIKit)
+    import UIKit
 #endif
 
 public enum ConstellationPalette {
@@ -29,6 +33,13 @@ public enum ConstellationPalette {
         /// `UnlitMaterial(color:)` wants for a glowing mote.
         public static func materialColor(forHue hue: Float, saturation: Float) -> NSColor {
             NSColor(hue: CGFloat(hue), saturation: CGFloat(saturation), brightness: brightness, alpha: 1.0)
+        }
+
+    #elseif canImport(UIKit)
+        /// …and `UIColor` on iOS / visionOS — the same lit-star hue, so the
+        /// iPad field is coloured like the Mac's, not the white it fell back to.
+        public static func materialColor(forHue hue: Float, saturation: Float) -> UIColor {
+            UIColor(hue: CGFloat(hue), saturation: CGFloat(saturation), brightness: brightness, alpha: 1.0)
         }
     #endif
 }

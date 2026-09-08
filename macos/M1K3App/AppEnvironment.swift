@@ -43,6 +43,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `stopResponding()` — the Send button's Stop face: cuts the
 //  ChatSession turn AND auto-speak (a stopped answer must not keep talking); a stopped answer surfaces no
 //  code artifact and earns no finished-ping. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `.answerLanded` earcon on a finished turn (gate-muted mid-speech;
+//  silent for a stopped one). Confidence now 0.8.
 
 import AppKit
 import Foundation
@@ -1096,9 +1098,14 @@ final class AppEnvironment {
         } else if let answer {
             answerFailed = false
             // A stopped answer is finished-if-short for the transcript, but not
-            // for the side effects: a truncated code block is no artifact, and a
-            // turn the user cut short earns no "finished" ping (review 3, #249).
+            // for the side effects: no landing chime, a truncated code block is
+            // no artifact, and a turn the user cut short earns no "finished"
+            // ping (review 3, #249).
             if answer.interrupted != true {
+                // The answer is home — a settled resolve to the tonic. Muted by the
+                // gate while auto-speak is mid-sentence, so it only sounds when the
+                // finish is otherwise silent.
+                soundEffects.play(.answerLanded)
                 surfaceCodeArtifact(from: answer.text)
                 // Successful answer: ping if the user tabbed away during a long think
                 // (opt-in, backgrounded-only — the policy decides). Failures don't ping.

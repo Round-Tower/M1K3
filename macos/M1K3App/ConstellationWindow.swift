@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.75 (compiles against
 //  the viz target; the live look + the "grows over time" feel are Kev's ⌘R).
 //  Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `buildSeeded` delegates to the lifted `ConstellationSeeding`
+//  (M1K3MemoryViz) that the iPad canvas shares; behaviour byte-identical, pinned there. Confidence now 0.85.
 
 import M1K3Knowledge
 import M1K3Memory
@@ -120,19 +122,12 @@ struct MemoryConstellationCanvas: View {
     private nonisolated static func buildSeeded(
         graphMemories: [Memory], edges: [MemoryEdge], knowledge: KnowledgeStore?, maxNodes: Int
     ) -> ConstellationModel {
-        let merged = ConstellationSeed.merge(graph: graphMemories, seeds: knowledgeSeeds(from: knowledge))
-        // Cap to the newest `maxNodes` BEFORE scoring affinity. MemoryAffinity is
-        // O(n²) over the union, but only motes that survive the cap are drawn —
-        // scoring the discarded ones is wasted work AND would thread off-field
-        // motes. `build` re-applies the cap as a cheap no-op safety net.
-        let capped = merged.count > maxNodes
-            ? Array(merged.sorted { $0.createdAt > $1.createdAt }.prefix(maxNodes))
-            : merged
-        // Union the hard typed edges (supersedes / about-person / …) with soft
-        // topical-affinity edges so the field threads itself even when memories
-        // carry no explicit relations yet (seeds). Degree then drives star size.
-        let affinity = MemoryAffinity.edges(among: capped)
-        return ConstellationLayout.build(memories: capped, edges: edges + affinity, maxNodes: maxNodes)
+        // The recipe (merge → cap-before-affinity → typed ∪ affinity edges →
+        // layout) lives in `ConstellationSeeding` (M1K3MemoryViz) since the
+        // iPad canvas joined (2026-09-08) — one sky, two shells.
+        ConstellationSeeding.build(
+            graphMemories: graphMemories, edges: edges, seeds: knowledgeSeeds(from: knowledge), maxNodes: maxNodes
+        )
     }
 
     /// Existing memories from the document/knowledge store, mapped to motes.

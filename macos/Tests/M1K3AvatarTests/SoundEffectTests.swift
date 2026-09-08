@@ -11,22 +11,24 @@
 import Testing
 
 struct SoundEffectTests {
-    @Test("the catalogue is the earcon set plus the dial-up loop")
+    @Test("the catalogue is the synthesised vocabulary plus the dial-up loop")
     func catalogue() {
-        #expect(Set(SoundEffect.allCases) == [.error, .save, .voiceEnter, .dialup])
+        #expect(Set(SoundEffect.allCases) == [
+            .error, .save, .voiceEnter, .voiceExit, .listenStart, .endpointHeard, .thinkingTick,
+            .toolCall, .answerLanded, .stop, .soundMark, .dialup,
+        ])
+        #expect(SoundEffect.allCases.filter { $0.source != .synth } == [.dialup])
     }
 
-    @Test("each effect names a distinct resource")
-    func resourceNamesDistinct() {
-        let names = SoundEffect.allCases.map(\.resourceName)
-        #expect(Set(names).count == names.count)
+    @Test("the dial-up is the one bundled WAV, and it resolves")
+    func dialupBundled() {
+        #expect(SoundEffect.dialup.source == .bundled("dialup"))
+        #expect(SoundEffectAssets.url(for: .dialup) != nil)
+        #expect(SoundEffectAssets.url(for: .save) == nil)
     }
 
-    @Test("every effect resolves to a bundled WAV — bundled == playable")
-    func everyEffectBundled() {
-        for effect in SoundEffect.allCases {
-            #expect(SoundEffectAssets.url(for: effect) != nil, "no bundled WAV for \(effect)")
-        }
+    @Test("every effect is playable — bundled resolves, synth renders")
+    func everyEffectPlayable() {
         #expect(SoundEffectAssets.allInstalled)
     }
 }
