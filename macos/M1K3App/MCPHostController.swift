@@ -30,6 +30,10 @@
 //  the `listen` pre-wait budget fix. The 120s cap that cancelled long Big
 //  answers is gone (MCP-async package).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: list_todos / propose_todo join the
+//  loopback surface; `ClientIdentityBox` hoisted to a property so a proposal is stamped with its proposer (a
+//  label, never trusted); every proposal goes through AppEnvironment.proposeTodoFromVisitor (toggle + visitor
+//  ceiling).
 
 import Foundation
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
@@ -39,6 +43,7 @@ import M1K3Knowledge // KnowledgeStore — forget_memory deletes the dual-writte
 import M1K3MCPKit
 import M1K3Memory // MemoryStore, Memory — the temporal memory graph the new tools expose
 import M1K3Preview // ReviewTargetResolver — validate the open_link URL (web-only)
+import M1K3Todos
 import M1K3Voice
 import MCP // StatelessHTTPServerTransport (the SDK type the session factory builds)
 import Observation
@@ -99,6 +104,12 @@ final class MCPHostController {
     /// isRunning changing nearby.
     private(set) var isEnabled: Bool
 
+    /// Who's calling on the loopback surface: the HTTP shell reports each
+    /// initialize's client name here. Hoisted from `start()` so the todo
+    /// handlers can stamp a proposal with its proposer (a label, never
+    /// trusted). LAN callers never set it — they read as nil.
+    private let clientIdentity = ClientIdentityBox()
+
     init(environment: AppEnvironment) {
         env = environment
         isEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey)
@@ -134,6 +145,31 @@ final class MCPHostController {
             )
             + makeOpenLinkToolDefinitions(handlers: makeOpenLinkHandlers())
             + memoryToolDefinitions()
+            + makeTodoToolDefinitions(handlers: makeTodoHandlers())
+    }
+
+    // MARK: - Todo tool handlers
+
+    /// list_todos / propose_todo. A proposal is stamped with the caller's
+    /// self-reported name and lands PENDING via the app's one write path,
+    /// which applies the toggle and the visitor ceiling; nothing here can
+    /// move a todo (TodoConsentPolicy refuses every non-user transition).
+    private func makeTodoHandlers() -> TodoToolHandlers {
+        let store = env.todoStore
+        let identity = clientIdentity
+        let environment = env
+        return TodoToolHandlers(
+            list: { states in
+                guard let store else { return [] }
+                return try store.list(states: states)
+            },
+            propose: { title, note, due in
+                let client = identity.current()
+                return await environment.proposeTodoFromVisitor(
+                    title: title, note: note, due: due, clientName: client
+                )
+            }
+        )
     }
 
     func start() async {
@@ -146,7 +182,7 @@ final class MCPHostController {
         // into the box; the stamping sink copies it onto every captured call
         // (per-client visits in the Heartbeat timeline) and bumps the
         // observable revision so open surfaces re-read live.
-        let clientIdentity = ClientIdentityBox()
+        let clientIdentity = clientIdentity
         let logSink: (any MCPCallLogSink)? = env.conversationLog.map { store in
             StampingLogSink(
                 base: store,

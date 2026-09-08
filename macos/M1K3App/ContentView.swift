@@ -180,6 +180,8 @@ struct ContentView: View {
                 NavigationStack { CallsView() }
             case .heartbeat:
                 NavigationStack { HeartbeatScreen(env: env) }
+            case .todos:
+                NavigationStack { TodosScreen(env: env) }
             default:
                 // .chat, the transient .conversation(_) (see onChange below),
                 // and nil all read as chat.

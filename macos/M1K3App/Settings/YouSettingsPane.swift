@@ -11,6 +11,8 @@
 //  — every footer/copy verbatim). Prior: Kev + claude-opus-4-8
 //  (SettingsView.swift lineage, 2026-06-06).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: the Todos consent toggle ("M1K3 may
+//  suggest todos", default ON) — fact + guarantee footer.
 
 import M1K3Inference
 import SwiftUI
@@ -18,6 +20,7 @@ import SwiftUI
 struct YouSettingsPane: View {
     @Environment(AppEnvironment.self) private var env
     @AppStorage(AppEnvironment.memoryAutoCaptureKey) private var memoryAutoCapture = true
+    @AppStorage(AppEnvironment.todoSuggestionsKey) private var todoSuggestions = true
     @AppStorage(ReadingMode.storageKey) private var readingMode: ReadingMode = .standard
     @State private var showMemories = false
     @State private var profileDraft = ""
@@ -27,6 +30,8 @@ struct YouSettingsPane: View {
             aboutYouSection
 
             memorySection
+
+            todosSection
 
             Section {
                 Picker("Reading mode", selection: $readingMode) {
@@ -101,6 +106,20 @@ struct YouSettingsPane: View {
         }
         .sheet(isPresented: $showMemories) {
             MemoriesView().environment(env)
+        }
+    }
+
+    /// The resident's and visitors' one write — a PROPOSAL — is consent-gated
+    /// here. Fact + guarantee, nothing else (the cognitive-load rule).
+    private var todosSection: some View {
+        Section {
+            Toggle("M1K3 may suggest todos", isOn: $todoSuggestions)
+        } header: {
+            Text("Todos")
+        } footer: {
+            Text("Suggestions from M1K3 and connected agents land in your inbox as pending. "
+                + "Only you can accept or close a todo.")
+                .font(.caption).foregroundStyle(.secondary)
         }
     }
 }

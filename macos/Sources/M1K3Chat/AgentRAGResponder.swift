@@ -71,6 +71,9 @@
 //  rule is scoped to "after a search"; open_link never names fetch_page when it is absent.
 //  Review: Kev + claude-fable-5.1, 2026-09-04 (late) — `pageReadSynthesisLine` in the synthesis
 //  prompt when a page was read; the native-synthesis log line says what it is.
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: `todoContextProvider` + `todos:` on
+//  grounding/groundingBody — the OPEN TODOS block sits after the memory block and before the ambient page; nil
+//  is byte-identical (pinned by TodoGroundingTests).
 
 import Foundation
 import M1K3Agent
@@ -138,6 +141,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// What's open beside the chat right now (the review panel's rendered page),
     /// or nil — the app reads a snapshot the web view updates on load.
     private let browserContextProvider: (@Sendable () -> BrowserContext?)?
+    /// The user's open todos, already rendered (TodoGroundingBlock in
+    /// M1K3Todos — this target stays list-agnostic), or nil for none. Per-turn
+    /// content beside the memory block, never the cached persona prefix.
+    private let todoContextProvider: (@Sendable () -> String?)?
 
     public init(
         store: KnowledgeStore,
@@ -155,7 +162,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         maxIterationsProvider: (@Sendable () -> Int)? = nil,
         defersHeavyGenerationProvider: (@Sendable () -> Bool)? = nil,
         groundingBudgetProvider: @escaping @Sendable () -> Int = { GroundingBudget.defaultTokenBudget },
-        browserContextProvider: (@Sendable () -> BrowserContext?)? = nil
+        browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
+        todoContextProvider: (@Sendable () -> String?)? = nil
     ) {
         self.store = store
         self.embedder = embedder
@@ -171,6 +179,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.fastThinkingProvider = fastThinkingProvider
         self.historyBudgetProvider = historyBudgetProvider
         self.browserContextProvider = browserContextProvider
+        self.todoContextProvider = todoContextProvider
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
         self.groundingBudgetProvider = groundingBudgetProvider
     }
@@ -402,7 +411,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             history: history,
             historyBudget: historyBudgetProvider().reservingImages(images.count),
             style: style,
-            ambient: browserContextProvider?()?.render()
+            ambient: browserContextProvider?()?.render(),
+            todos: todoContextProvider?()
         )
         Self.logTurnStart(chunks: chunks, tools: tools, grounding: grounding)
         // Fresh agent per turn — its reasoning trace must not bleed across
@@ -699,11 +709,12 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     static func grounding(
         chunks: [ChunkHit], memories: [ChunkHit] = [], toolNames: Set<String>,
         history: [ChatTurn] = [], historyBudget: HistoryWindow.Budget = .default,
-        style: PromptStyle = .react, now: Date = Date(), ambient: String? = nil
+        style: PromptStyle = .react, now: Date = Date(), ambient: String? = nil,
+        todos: String? = nil
     ) -> String {
         let body = groundingBody(
             chunks: chunks, memories: memories, toolNames: toolNames, style: style, now: now,
-            ambient: ambient
+            ambient: ambient, todos: todos
         )
         guard let replay = HistoryWindow.render(history, budget: historyBudget) else { return body }
         return "\(replay)\n\n\(body)"
@@ -822,9 +833,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// `ambient`: what's open beside the chat (BrowserContext.render), placed
     /// between the remembered facts and the rules — present only while the
     /// review panel shows a page, so every pinned prompt is unchanged when nil.
+    /// `todos`: the rendered OPEN TODOS block, after the remembered facts and
+    /// before what's open beside the chat — the same nil-is-byte-identical rule.
     private static func groundingBody(
         chunks: [ChunkHit], memories: [ChunkHit], toolNames: Set<String>, style: PromptStyle,
-        now: Date, ambient: String? = nil
+        now: Date, ambient: String? = nil, todos: String? = nil
     ) -> String {
         let hasWebSearch = toolNames.contains("web_search")
         // Every routing line names only tools actually offered THIS turn —
@@ -927,7 +940,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 + "question; use only what genuinely answers it, and ignore the "
                 + "rest rather than working it into the answer):\n\(knowledge)"
         }
-        return [head, memoryBlock(memories, now: now), ambient, rules]
+        return [head, memoryBlock(memories, now: now), todos, ambient, rules]
             .compactMap { $0 }
             .joined(separator: "\n\n")
     }

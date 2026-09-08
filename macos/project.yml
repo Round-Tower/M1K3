@@ -203,6 +203,8 @@ targets:
       - package: M1K3
         product: M1K3Heartbeat
       - package: M1K3
+        product: M1K3Todos
+      - package: M1K3
         product: M1K3BrainServe
       # Shared Brain at Home wire (pairing payload compose + LAN addresses
       # for the QR) — the client half rides the mobile shells.

@@ -10,6 +10,8 @@
 //  the environment is still waking. VERIFY-BY-LAUNCH (SwiftUI + MainActor glue).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.7, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: a one-line todo count (open ·
+//  suggested) under the heartbeat line, tap → the Todos destination; store read off-main on todosRevision.
 
 import AppKit
 import M1K3Avatar
@@ -29,6 +31,7 @@ struct MenuBarPopover: View {
     @State private var question = ""
     @State private var showRecordConsent = false
     @State private var latestPulse: HeartbeatEntry?
+    @State private var todoCounts: (open: Int, pending: Int) = (0, 0)
     @FocusState private var askFocused: Bool
 
     var body: some View {
@@ -77,6 +80,7 @@ struct MenuBarPopover: View {
                     askSection(env)
                     Divider()
                     heartbeatSection(env)
+                    todosSection(env)
                     brainServeSection(env)
                     toggles(env)
                     Divider()
@@ -205,6 +209,44 @@ struct MenuBarPopover: View {
             Color.clear.frame(height: 0)
                 .task(id: env.heartbeatRevision) { await refreshLatestPulse(env) }
         }
+    }
+
+    // MARK: Todos — the count, ambient (the list itself is the sidebar destination)
+
+    /// One `.task` on a stable container (review fold): a task on either
+    /// branch restarts when the 0 ↔ >0 identity flips, fetching twice.
+    private func todosSection(_ env: AppEnvironment) -> some View {
+        Group {
+            if todoCounts.open + todoCounts.pending > 0 {
+                Button {
+                    env.pendingSidebarRequest = .todos
+                } label: {
+                    Label {
+                        Text(todoCountLine)
+                    } icon: {
+                        Image(systemName: "checklist")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                Divider()
+            }
+        }
+        .task(id: env.todosRevision) { await refreshTodoCounts(env) }
+    }
+
+    private var todoCountLine: String {
+        var parts = ["\(todoCounts.open) todo\(todoCounts.open == 1 ? "" : "s") open"]
+        if todoCounts.pending > 0 { parts.append("\(todoCounts.pending) suggested") }
+        return parts.joined(separator: " · ")
+    }
+
+    private func refreshTodoCounts(_ env: AppEnvironment) async {
+        guard let store = env.todoStore else { return }
+        todoCounts = await Task.detached(priority: .utility) {
+            ((try? store.openCount()) ?? 0, (try? store.pendingCount()) ?? 0)
+        }.value
     }
 
     /// Brain at Home's ambient honesty line (§8a.2: a steady presence the

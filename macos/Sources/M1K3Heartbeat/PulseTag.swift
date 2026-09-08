@@ -24,6 +24,8 @@
 //  type; vocabulary + normalisation + labels pinned red-first).
 //  Prior: none (new file).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: three todo:* tags (open / overdue /
+//  proposed) with labels.
 
 import Foundation
 
@@ -68,6 +70,13 @@ public struct PulseTag: RawRepresentable, Hashable, Sendable, Comparable {
     public static let brainMini = PulseTag(rawValue: "brain:mini")
     public static let toldByDigest = PulseTag(rawValue: "told-by:digest")
 
+    /// The todo list (2026-09-07): open items existed at pulse time, at
+    /// least one was overdue, and — the resident's one write — this pulse's
+    /// narrative PROPOSED a todo (pending until the user accepts).
+    public static let todosOpen = PulseTag(rawValue: "todo:open")
+    public static let todoOverdue = PulseTag(rawValue: "todo:overdue")
+    public static let todoProposed = PulseTag(rawValue: "todo:proposed")
+
     /// The MCP client's self-reported name, normalised to a slug: lowercase,
     /// whitespace to dashes, everything but letters/digits/dashes dropped.
     public static func agentClient(_ name: String) -> PulseTag {
@@ -100,6 +109,9 @@ public struct PulseTag: RawRepresentable, Hashable, Sendable, Comparable {
         case .brainLil: return "Lil"
         case .brainMini: return "Mini"
         case .toldByDigest: return "Digest-told"
+        case .todosOpen: return "Todos open"
+        case .todoOverdue: return "Overdue"
+        case .todoProposed: return "Suggested"
         default:
             let value = rawValue.split(separator: ":").dropFirst().joined(separator: ":")
             guard !value.isEmpty else { return rawValue }
