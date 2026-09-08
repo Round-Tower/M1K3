@@ -17,6 +17,8 @@
 //  self-stop timer, every stop path (explicit, master mute) cancels it, and
 //  the AVAudioPlayer pool fades loop stops over 0.4s instead of hard-cutting.
 //  Timer semantics test-pinned; the fade itself is verify-by-ear.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the pool builds `.synth` sources from `EarconSynth.wavData` via
+//  `AVAudioPlayer(data:)`; bundled ones load as before. Confidence now 0.8 (pool is verify-at-⌘R by contract).
 //
 
 import AVFoundation
@@ -148,12 +150,21 @@ private final class AVAudioEarconPool {
     init(volume: Float) {
         self.volume = volume
         for effect in SoundEffect.allCases {
-            guard let url = SoundEffectAssets.url(for: effect) else {
-                Self.log.error("earcon WAV missing for \(effect.rawValue, privacy: .public)")
-                continue
-            }
             do {
-                let player = try AVAudioPlayer(contentsOf: url)
+                let player: AVAudioPlayer
+                switch effect.source {
+                case .bundled:
+                    guard let url = SoundEffectAssets.url(for: effect) else {
+                        Self.log.error("earcon WAV missing for \(effect.rawValue, privacy: .public)")
+                        continue
+                    }
+                    player = try AVAudioPlayer(contentsOf: url)
+                case .synth:
+                    // Rendered once here (deterministic, a few ms per sound),
+                    // never at play time.
+                    guard let data = EarconSynth.wavData(effect) else { continue }
+                    player = try AVAudioPlayer(data: data)
+                }
                 player.volume = volume
                 player.prepareToPlay()
                 players[effect] = player

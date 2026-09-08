@@ -84,6 +84,53 @@ struct SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish(text) == "First.\n\nSecond.")
     }
 
+    // MARK: - Emoji
+
+    @Test("a trailing emoji is not spoken and leaves no dangling space")
+    func trailingEmojiStripped() {
+        #expect(SpeechTextPolish.polish("Great job \u{1F389}") == "Great job")
+    }
+
+    @Test("an emoji before punctuation leaves the punctuation tight")
+    func emojiBeforePunctuation() {
+        #expect(SpeechTextPolish.polish("Great job \u{1F389}!") == "Great job!")
+    }
+
+    @Test("leading and mid-sentence emoji runs vanish, the words stay")
+    func emojiRunsStripped() {
+        #expect(SpeechTextPolish.polish("\u{1F525}\u{1F525} hot \u{1F60E} take") == "hot take")
+    }
+
+    @Test("ZWJ sequences, skin tones, flags and keycaps strip as one cluster each")
+    func emojiClustersStripped() {
+        let family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}"
+        let wave = "\u{1F44B}\u{1F3FD}"
+        let flag = "\u{1F1EE}\u{1F1EA}"
+        let keycap = "1\u{FE0F}\u{20E3}"
+        #expect(SpeechTextPolish.polish("hi \(family) \(wave) \(flag) \(keycap) done") == "hi done")
+    }
+
+    @Test("text-presentation symbols and digits are not emoji — they still speak")
+    func textSymbolsSurvive() {
+        #expect(SpeechTextPolish.polish("Rooms 1 and 2 \u{00A9} 2026 \u{2192} next") == "Rooms 1 and 2 \u{00A9} 2026 \u{2192} next")
+    }
+
+    @Test("bare text-presentation emoji — ticks, faces, suits, weather — are not spoken either")
+    func bareTextPresentationEmojiStripped() {
+        #expect(SpeechTextPolish.polish("Done \u{2714} sunny \u{2600} \u{263A} \u{2660} ok") == "Done sunny ok")
+    }
+
+    @Test("an emoji-only line collapses, the surrounding paragraphs still break")
+    func emojiOnlyLine() {
+        #expect(SpeechTextPolish.polish("First.\n\u{2728}\n\nSecond.") == "First.\n\nSecond.")
+    }
+
+    @Test("emoji inside a fenced code block stay verbatim")
+    func emojiInFenceSurvives() {
+        let text = "```\nprint(\"\u{1F389}\")\n```"
+        #expect(SpeechTextPolish.polish(text) == text)
+    }
+
     // MARK: - Contracts
 
     @Test("polish is idempotent")

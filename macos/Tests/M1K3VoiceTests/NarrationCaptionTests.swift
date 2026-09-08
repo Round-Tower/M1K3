@@ -35,6 +35,8 @@ struct NarrationCaptionTests {
         // A multi-scalar cluster survives as one grapheme, and counts as one toward the cap.
         let family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}"
         #expect(NarrationCaption.text(for: .visitor("bot \(family)")) == "BOT \(family) · VIA M1K3")
+        // Bidi controls (Cf, like the ZWJ) are stripped: an RLO must not flip the caption.
+        #expect(NarrationCaption.text(for: .visitor("bot\u{202E}evil\u{2066}x")) == "BOT EVIL X · VIA M1K3")
     }
 
     @Test("the narrator is an equatable value the highlight can hold")

@@ -31,6 +31,12 @@
 //  link speaks its LABEL only, bullet markers vanish rather than becoming
 //  "•". Runs first so the link pass sees intact `[label](url)` before
 //  collapseURLs would mangle the parenthesised URL.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — emoji stripped from the
+//  speech lane (Kev heard "party popper" read aloud). Per grapheme cluster,
+//  outside fences, keyed on emoji PRESENTATION so © and → still speak; bare
+//  Misc Symbols / Dingbats (✔ ☺ ♠) go too (review catch on #247).
+//  Confidence now 0.9 (eight pinned cases incl. ZWJ/flag/keycap; the
+//  "strip rather than voice as inflection" choice is taste).
 //
 
 import Foundation
@@ -44,6 +50,7 @@ public enum SpeechTextPolish {
         result = stripWebSourcesBlock(result)
         result = stripCitations(result)
         result = collapseURLs(result)
+        result = stripEmojiOutsideFences(result)
         result = speakOwnName(result)
         result = normalizeCurlyPunctuation(result)
         result = tidyWhitespace(result)
@@ -105,6 +112,45 @@ public enum SpeechTextPolish {
         guard let character else { return true }
         if character == "_" || character == "-" { return false }
         return !character.isLetter && !character.isNumber
+    }
+
+    // MARK: - Emoji
+
+    /// Emoji are visual punctuation; spoken, every engine reads their names
+    /// ("party popper") and Kokoro spells the odd one out letter by letter.
+    /// Stripped per grapheme cluster so ZWJ families, skin tones, flags and
+    /// keycaps go as one unit. A cluster is emoji when its lead scalar has
+    /// default emoji PRESENTATION, or when it carries VS16 (`\u{FE0F}`, the
+    /// "show me as emoji" selector — keycaps and `\u{2764}\u{FE0F}`), or a
+    /// regional indicator. Text-presentation symbols (©, →) and bare digits
+    /// have the Emoji property too but NOT presentation — they still speak.
+    /// Fenced code passes through verbatim (the karaoke contract).
+    private static func stripEmojiOutsideFences(_ text: String) -> String {
+        var result = ""
+        var cursor = text.startIndex
+        for range in fencedCodeRanges(in: text) {
+            result += stripEmoji(String(text[cursor ..< range.lowerBound]))
+            result += String(text[range])
+            cursor = range.upperBound
+        }
+        result += stripEmoji(String(text[cursor...]))
+        return result
+    }
+
+    private static func stripEmoji(_ text: String) -> String {
+        String(text.filter { !isEmojiCluster($0) })
+    }
+
+    private static func isEmojiCluster(_ character: Character) -> Bool {
+        guard let lead = character.unicodeScalars.first else { return false }
+        if lead.properties.isEmojiPresentation { return true }
+        // Text-presentation emoji the models emit bare (✔ ☺ ♠ ☀): Emoji=Yes
+        // but no default emoji face, so the presentation check misses them —
+        // and engines still read them by name. The Misc Symbols + Dingbats
+        // blocks are where they live; © ® ™ and digits sit outside them.
+        if lead.properties.isEmoji, (0x2600 ... 0x27BF).contains(lead.value) { return true }
+        if (0x1F1E6 ... 0x1F1FF).contains(lead.value) { return true } // regional indicator
+        return character.unicodeScalars.contains { $0.value == 0xFE0F }
     }
 
     // MARK: - Markdown flattening

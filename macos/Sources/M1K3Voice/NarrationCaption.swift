@@ -12,6 +12,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-08, Confidence 0.85 (four pinned
 //  cases; the prettifying of client names is taste). Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — bidi controls stripped from an untrusted name (review 4, #248);
+//  Cc-only folding keeps the ZWJ. Confidence now 0.85.
+//
 
 import Foundation
 
@@ -54,7 +57,11 @@ public enum NarrationCaption {
         for scalar in raw.unicodeScalars {
             // Cc only — `CharacterSet.controlCharacters` also covers Cf, which
             // would turn the zero-width joiner inside an emoji into a space.
-            let isControl = scalar.properties.generalCategory == .control || CharacterSet.newlines.contains(scalar)
+            // Bidi controls (also Cf) ARE stripped: an untrusted name must not
+            // reorder the caption around it.
+            let isControl = scalar.properties.generalCategory == .control
+                || scalar.properties.isBidiControl
+                || CharacterSet.newlines.contains(scalar)
             scalars.append(isControl ? " " : scalar)
         }
         let folded = String(scalars)
