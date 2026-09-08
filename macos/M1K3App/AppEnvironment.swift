@@ -40,6 +40,8 @@
 //  resume-most-recent read; memories + documents seed as a launch task (AppEnvironment+Screengrab).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the transcription router takes the harness's open mic on voice plates
 //  (no TCC sheet in the frame; the loop holds `.listening`).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `stopResponding()` — the Send button's Stop face: cuts the
+//  ChatSession turn AND auto-speak (a stopped answer must not keep talking). Confidence now 0.85.
 
 import AppKit
 import Foundation
@@ -1028,6 +1030,18 @@ final class AppEnvironment {
             guard let self, !self.lastIngestFailed, self.lastIngestStatus == status else { return }
             self.lastIngestStatus = nil
         }
+    }
+
+    /// The Send button's Stop face (hit list 2026-09-08): cut the streaming
+    /// answer short, and with it anything auto-speak was about to say — a
+    /// stopped answer that keeps talking is the one thing "stop" must not do.
+    /// ChatSession keeps what streamed (marked `interrupted`); `send` returns
+    /// normally and resets the avatar on its own way out.
+    func stopResponding() {
+        guard chat.isResponding else { return }
+        chat.stopResponding()
+        cancelAutoSpeak()
+        Task { await stopSpeaking() }
     }
 
     /// Send a user message: drives avatar thinking → generating → idle, then

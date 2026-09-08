@@ -37,6 +37,8 @@
 //  before the plain hint. Confidence now 0.8 (unverified on a blocked device).
 //  Review: Kev + claude-fable-5.1, 2026-09-07 — the brain-ready task also fires the screengrab beat (voice mode + the spoken hero
 //  line for the store plates); M1K3_VOICE_AT_LAUNCH keeps precedence. Inert without the harness env.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the send button is Send while idle and Stop while streaming (the
+//  spinner it replaces said "wait"; the stop says you don't have to). Confidence now 0.85 (device-owed).
 
 import M1K3Avatar
 import M1K3Chat
@@ -370,17 +372,23 @@ struct ChatScreen: View {
                     .padding(.vertical, 11)
                     .m1k3Glass(cornerRadius: 22)
                     .onSubmit(send)
-                Button(action: send) {
-                    if core.chat.isResponding {
-                        ProgressView().frame(width: 28, height: 28)
-                    } else {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 30))
-                            .symbolRenderingMode(.hierarchical)
-                    }
+                // Send while idle, Stop while streaming — one control, the
+                // symbol replaced in place (hit list 2026-09-08). The spinner
+                // it replaces told the user to wait; the stop tells them they
+                // don't have to.
+                Button {
+                    if core.chat.isResponding { core.stopResponding() } else { send() }
+                } label: {
+                    Image(systemName: core.chat.isResponding ? "stop.circle.fill" : "arrow.up.circle.fill")
+                        .font(.system(size: 30))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(core.chat.isResponding ? .red : .accentColor)
+                        .contentTransition(.symbolEffect(.replace))
+                        .animation(.default, value: core.chat.isResponding)
                 }
                 .buttonStyle(.plain)
-                .disabled(!canSend)
+                .disabled(!canSend && !core.chat.isResponding)
+                .accessibilityLabel(core.chat.isResponding ? "Stop generating" : "Send")
             }
         }
         .padding(.horizontal, 16)

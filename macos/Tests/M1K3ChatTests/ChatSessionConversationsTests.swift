@@ -163,6 +163,17 @@ private final class GatedResponder: RAGResponding, @unchecked Sendable {
         return ([], stream)
     }
 
+    /// True once the stream exists and is being held open — the honest "turn
+    /// is in flight" signal. `isResponding` flips BEFORE the responder is even
+    /// called (and, since the 2026-09-08 stop seam, the responder runs in the
+    /// turn's own cancellable task), so a test that releases on `isResponding`
+    /// can release a gate that isn't installed yet and hang forever.
+    var isHeld: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return continuation != nil
+    }
+
     func release() {
         lock.lock()
         let held = continuation
@@ -358,8 +369,9 @@ struct ChatSessionConversationsTests {
         store.seed(id: other, title: nil, updatedAt: Date(timeIntervalSince1970: 50),
                    messages: completedMessages([("a", "b")]))
         let sendTask = Task { await session.send("hello") }
-        // Wait until the turn is in flight.
-        while !session.isResponding {
+        // Wait until the turn is in flight — the gate being HELD, not the
+        // isResponding latch (which flips before the responder is reached).
+        while !session.isResponding || !gate.isHeld {
             await Task.yield()
         }
         let liveID = session.activeConversationID

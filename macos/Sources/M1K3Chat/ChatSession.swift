@@ -38,6 +38,14 @@
 //  DatabaseQueue serialises reads with writes, so the unguarded History-drawer read
 //  can still block main behind a write (narrower than the original; full fix is a
 //  DatabasePool/WAL split). switchTo's decode + init restore stay sync (follow-ups).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — stop generation (hit list item 3). `send` splits: the
+//  cancellable half (`streamTurn`, ask + drain) runs in `turnTask`; `stopResponding()`
+//  cancels it, the AsyncStream ends, its onTermination cancels the provider's
+//  generation. Finalisation + persist stay OUTSIDE the cancelled task. What streamed
+//  is kept as `.complete` + `interrupted: Bool?` (Optional — the contextExcluded
+//  decode rule); a stop with nothing streamed removes the empty bubble. Confidence
+//  now 0.85 (five pinned cases on a hanging fake; the MLX cache after a live cancel is
+//  verify-by-launch).
 
 import Foundation
 import M1K3Inference
@@ -203,10 +211,17 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// A non-Optional Bool-with-default would throw keyNotFound and silently
     /// wipe every saved transcript on upgrade (review catch, 2026-08-23).
     public var contextExcluded: Bool?
+    /// The user stopped this answer mid-stream (hit list 2026-09-08). The
+    /// status stays `.complete` — every reader (share, speak, replay history,
+    /// distillation) treats what streamed as a finished, if short, answer; this
+    /// flag only lets the bubble say so. OPTIONAL for the same reason as
+    /// `contextExcluded`: a non-Optional default would keyNotFound every
+    /// pre-flag transcript on upgrade.
+    public var interrupted: Bool?
     public var status: Status
 
     enum CodingKeys: String, CodingKey {
-        case id, role, text, sources, status, reasoning, attachments, toolsUsed, brain, contextExcluded
+        case id, role, text, sources, status, reasoning, attachments, toolsUsed, brain, contextExcluded, interrupted
     }
 
     public init(
@@ -384,9 +399,116 @@ public final class ChatSession {
         isResponding = true
         defer { isResponding = false }
 
+        // The streaming half runs in its own task so `stopResponding()` has
+        // something to cancel: cancellation ends the `for await` (AsyncStream
+        // is cancellation-aware), which terminates the stream, which is the
+        // hook every provider cancels its generation from. Finalisation and
+        // persistence run back here, OUTSIDE the cancelled task — a GRDB write
+        // or a validator must never see `Task.isCancelled`.
+        let turn = Task { await self.streamTurn(trimmed, images: images, history: history, assistantID: assistantID) }
+        turnTask = turn
+        let outcome = await turn.value
+        turnTask = nil
+
+        switch outcome {
+        case let .streamed(raw, sources, stopped):
+            if stopped, raw.isEmpty {
+                // Nothing arrived before the stop: no hollow bubble. The
+                // question stays — it was asked.
+                messages.removeAll { $0.id == assistantID }
+                break
+            }
+            // Now the full text is in hand. Re-split the RAW stream as the
+            // final authority (the live splitters only drive rendering), then
+            // strip invented citations from the ANSWER and record the
+            // validated ones. The allow-list covers BOTH the injected sources
+            // and whatever the model retrieved itself via search_knowledge.
+            let (reasoning, answerWithFollowUps) = ReasoningSplit.split(raw)
+            let (answer, followUps) = FollowUpSplit.split(answerWithFollowUps)
+            let mergedSources = Self.mergeSources(sources, responder.collectedSources())
+            let validation = await CitationValidator.validate(responseText: answer, against: mergedSources)
+            // Prompt-leak guard (#111): the model reproduced its own wiring.
+            // Persona rule 1 forbids it, but a prompt cannot enforce itself and
+            // Mini does it unprompted (2026-08-08 scorecard). Applied to the
+            // FINAL text — streaming already showed tokens, so this is the last
+            // point that can stop it being persisted, spoken, or distilled into
+            // a memory. Sources and citations are dropped with it: a leak cites
+            // nothing real.
+            let leaked = PersonaLeakGuard.leaks(validation.cleanedText)
+            if leaked {
+                Self.leakLog.error("prompt-leak guard: chat answer reproduced the persona")
+            }
+            // Which brain produced this answer — captured now, at finalization,
+            // so the feedback row attributes it correctly even after a later
+            // brain switch (full traceability).
+            let brainName = residentBrainName?()
+            update(assistantID) {
+                $0.brain = brainName
+                $0.sources = leaked ? [] : mergedSources
+                // Tidy whitespace once the full text is in hand. Markdown
+                // markup survives on purpose — ReadingText renders it as real
+                // blocks now; SpeechTextPolish owns the flatten for TTS.
+                $0.text = leaked
+                    ? PersonaLeakGuard.refusal
+                    : MessageTextPolish.polish(validation.cleanedText)
+                $0.citations = leaked ? [] : validation.validated
+                $0.reasoning = leaked ? nil : reasoning
+                $0.followUps = leaked ? [] : followUps
+                // The trace goes with the rest on a leak — provenance chips
+                // under a refusal would dress the leak up as a served answer
+                // (the "Sources footer on a leak" rule, #111).
+                if leaked { $0.toolsUsed = nil }
+                $0.activityLabel = nil
+                $0.interrupted = stopped ? true : nil
+                $0.status = .complete
+            }
+        case let .failed(error):
+            update(assistantID) { msg in
+                msg.status = .failed(String(describing: error))
+                msg.activityLabel = nil
+                if msg.text.isEmpty {
+                    msg.text = ChatFailureMessage.userFacing(for: error)
+                }
+            }
+        }
+        await persistActiveConversation()
+        scheduleTitlingIfNeeded(question: trimmed)
+        // Rolling distillation: a no-op until the backlog outgrows the window,
+        // then it captures the long tail mid-session so it stays recoverable.
+        scheduleRollingDistillationIfNeeded()
+    }
+
+    private enum TurnOutcome {
+        /// The raw stream text (reasoning + answer + trailers, unsplit), the
+        /// injected sources, and whether the user cut it short.
+        case streamed(raw: String, sources: [ChunkHit], stopped: Bool)
+        case failed(any Error)
+    }
+
+    /// The in-flight turn, held only so `stopResponding()` can cancel it.
+    private var turnTask: Task<TurnOutcome, Never>?
+
+    /// Stop the answer that is streaming now. Whatever arrived stays in the
+    /// transcript, marked `interrupted`; nothing arrived → the empty bubble
+    /// goes. Idle → no-op. Safe to call from the Send button's Stop face.
+    public func stopResponding() {
+        turnTask?.cancel()
+    }
+
+    /// The cancellable half of `send`: ask the responder, drain its stream into
+    /// the live bubble. Returns rather than mutating the final state so the
+    /// caller finalises outside the (possibly cancelled) task. A cancellation
+    /// during retrieval surfaces as `CancellationError` from the responder and
+    /// is a stop with nothing streamed, not a failure.
+    private func streamTurn(
+        _ question: String,
+        images: [ImageAttachment],
+        history: [ChatTurn],
+        assistantID: UUID
+    ) async -> TurnOutcome {
         do {
             let (sources, stream) = try await responder.answerStreaming(
-                trimmed,
+                question,
                 images: images,
                 history: history,
                 onActivity: { [weak self] activity in
@@ -450,63 +572,12 @@ public final class ChatSession {
                 }
             }
             splitter.finish()
-            // Now the full text is in hand. Re-split the RAW stream as the
-            // final authority (the live splitters only drive rendering), then
-            // strip invented citations from the ANSWER and record the
-            // validated ones. The allow-list covers BOTH the injected sources
-            // and whatever the model retrieved itself via search_knowledge.
-            let (reasoning, answerWithFollowUps) = ReasoningSplit.split(splitter.raw)
-            let (answer, followUps) = FollowUpSplit.split(answerWithFollowUps)
-            let mergedSources = Self.mergeSources(sources, responder.collectedSources())
-            let validation = await CitationValidator.validate(responseText: answer, against: mergedSources)
-            // Prompt-leak guard (#111): the model reproduced its own wiring.
-            // Persona rule 1 forbids it, but a prompt cannot enforce itself and
-            // Mini does it unprompted (2026-08-08 scorecard). Applied to the
-            // FINAL text — streaming already showed tokens, so this is the last
-            // point that can stop it being persisted, spoken, or distilled into
-            // a memory. Sources and citations are dropped with it: a leak cites
-            // nothing real.
-            let leaked = PersonaLeakGuard.leaks(validation.cleanedText)
-            if leaked {
-                Self.leakLog.error("prompt-leak guard: chat answer reproduced the persona")
-            }
-            // Which brain produced this answer — captured now, at finalization,
-            // so the feedback row attributes it correctly even after a later
-            // brain switch (full traceability).
-            let brainName = residentBrainName?()
-            update(assistantID) {
-                $0.brain = brainName
-                $0.sources = leaked ? [] : mergedSources
-                // Tidy whitespace once the full text is in hand. Markdown
-                // markup survives on purpose — ReadingText renders it as real
-                // blocks now; SpeechTextPolish owns the flatten for TTS.
-                $0.text = leaked
-                    ? PersonaLeakGuard.refusal
-                    : MessageTextPolish.polish(validation.cleanedText)
-                $0.citations = leaked ? [] : validation.validated
-                $0.reasoning = leaked ? nil : reasoning
-                $0.followUps = leaked ? [] : followUps
-                // The trace goes with the rest on a leak — provenance chips
-                // under a refusal would dress the leak up as a served answer
-                // (the "Sources footer on a leak" rule, #111).
-                if leaked { $0.toolsUsed = nil }
-                $0.activityLabel = nil
-                $0.status = .complete
-            }
+            return .streamed(raw: splitter.raw, sources: sources, stopped: Task.isCancelled)
+        } catch is CancellationError {
+            return .streamed(raw: "", sources: [], stopped: true)
         } catch {
-            update(assistantID) { msg in
-                msg.status = .failed(String(describing: error))
-                msg.activityLabel = nil
-                if msg.text.isEmpty {
-                    msg.text = ChatFailureMessage.userFacing(for: error)
-                }
-            }
+            return .failed(error)
         }
-        await persistActiveConversation()
-        scheduleTitlingIfNeeded(question: trimmed)
-        // Rolling distillation: a no-op until the backlog outgrows the window,
-        // then it captures the long tail mid-session so it stays recoverable.
-        scheduleRollingDistillationIfNeeded()
     }
 
     /// Deliver a BACKGROUND answer (delegate_deep's landing pad, 2026-07-25)

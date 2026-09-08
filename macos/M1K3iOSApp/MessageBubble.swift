@@ -13,6 +13,7 @@
 //  gain the LegibilityScrim treatment (the avatar is a live backdrop now), and
 //  the FOLLOWUPS chips the shared ChatSession was already populating are finally
 //  rendered — tap-to-send via `onSendFollowUp`, mirroring MessageView.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — "Stopped" caption for an `interrupted` answer. Confidence now 0.8.
 //
 
 import M1K3Chat
@@ -48,6 +49,11 @@ struct MessageBubble: View {
                     ReadingText(message.text)
                         .foregroundStyle(.primary)
                         .modifier(LegibilityScrim(active: scrimmed))
+                }
+                if message.interrupted == true {
+                    Label("Stopped", systemImage: "stop.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 if case let .failed(reason) = message.status {
                     Text(reason)
