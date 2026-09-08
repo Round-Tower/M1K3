@@ -1083,27 +1083,32 @@ final class AppEnvironment {
         advance.cancel()
         // A failed turn earns the error earcon (the gate mutes it if M1K3 is
         // mid-speech, which a failure here never is).
+        // A stop with nothing streamed removes the assistant bubble, so
+        // `messages.last` can be the user's OWN question (review 2, #249 —
+        // the never-read-messages.last rule from AppEnvironment+AutoSpeak).
+        // Only an assistant row is an answer.
+        let answer = chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil }
         let answerFailed: Bool
-        if case .failed = chat.messages.last?.status {
+        if case .failed? = answer?.status {
             answerFailed = true
             soundEffects.play(.error)
-        } else {
+        } else if let answer {
             answerFailed = false
-            if let responseText = chat.messages.last?.text {
-                surfaceCodeArtifact(from: responseText)
-            }
+            surfaceCodeArtifact(from: answer.text)
             // Successful answer: ping if the user tabbed away during a long think
             // (opt-in, backgrounded-only — the policy decides). Failures don't ping.
             await maybeNotifyTurnFinished(
                 duration: clock.now - started,
                 appActive: NSApplication.shared.isActive
             )
+        } else {
+            answerFailed = false // stopped before a token — nothing to surface, nothing to ping
         }
         // The between-turns beat for the capability ladder: failures and
         // long/capped turns count as felt struggles (which can re-arm a parked
         // offer); a successful answer may raise the offer or complete a
         // consented staged swap at this idle moment.
-        let metrics = chat.messages.last?.metrics
+        let metrics = answer?.metrics
         // Same explicit defaultCap as the provider construction sites — the
         // composition root passes the MLX truth instead of trusting the
         // policy's mirrored literal (review nit on #22; the 116-F1 test
