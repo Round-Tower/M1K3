@@ -84,7 +84,7 @@ extension AppCore {
         let harness = ScreengrabHarness.current
         guard harness.isActive, harness.entersVoiceMode else { return }
         enterVoiceMode()
-        guard harness.speaksHeroAnswer else { return }
+        guard harness.submitsHeroQuestion else { return }
         // Let the mode settle (avatar in, mic armed) before the karaoke line.
         try? await Task.sleep(for: .seconds(1.5))
         // Same sanitiser as the voice loop's speak closure (AppCore+Voice).

@@ -46,18 +46,23 @@ final class ScreengrabUITests: XCTestCase {
     func testVoiceListening() throws {
         // The open mic feeds the hero question word by word; shoot mid-sentence,
         // before the endpointer could ever consider the partial finished.
-        try capture(.voiceListening, settle: 0.5) { app in
+        // The open mic dictates on a loop, so any moment after the surface is up
+        // is a real listen with words arriving; no second (slow) text query.
+        try capture(.voiceListening, settle: 2) { app in
             waitForVoiceSurface(app)
-            waitForText("call with", in: app, timeout: 30)
         }
     }
 
     func testVoiceSpeaking() throws {
         // The beat speaks the hero answer ~1.5 s after voice mode; shoot on the
         // karaoke line, mid-sentence.
-        try capture(.voiceSpeaking, settle: 1) { app in
+        try capture(.voiceSpeaking, settle: 0) { app in
             waitForVoiceSurface(app)
-            waitForText("roofline", in: app, timeout: 60)
+            // A real turn: the open mic submits the hero question, the loop
+            // answers and speaks. The karaoke line carries "M1K3 is speaking".
+            let speaking = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'M1K3 is speaking'"))
+                .firstMatch
+            XCTAssert(speaking.waitForExistence(timeout: 120), "the loop never spoke")
         }
     }
 
@@ -76,12 +81,29 @@ final class ScreengrabUITests: XCTestCase {
 
     func testBrainAtHome() throws {
         try capture(.brainAtHome, settle: 4, window: settingsWindow) { app in
-            // The beat opens Settings (▸ M1K3, whose Brain at Home section runs the ceremony).
+            // The beat opens Settings ▸ Privacy, whose Brain at Home section runs the ceremony.
             waitForBrain(app)
             // The window's existence is the anchor: the harness selects the M1K3
             // pane itself, and any text query over this tree has timed out twice
             // ("Failed to get matching snapshots").
-            XCTAssert(settingsWindow(app).waitForExistence(timeout: 60), "Settings window never appeared")
+            let settings = settingsWindow(app)
+            XCTAssert(settings.waitForExistence(timeout: 60), "Settings window never appeared")
+            // Brain at Home sits low in Settings ▸ Privacy: scroll by coordinate
+            // until its header is in the (small, avatar-free) Settings tree.
+            let header = settings.descendants(matching: .any)
+                .matching(NSPredicate(format: "label CONTAINS[c] 'Brain at Home'")).firstMatch
+            let middle = settings.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+            // `exists` is true for an offscreen row; `isHittable` is "on screen".
+            for _ in 0 ..< 16 where !header.isHittable {
+                middle.scroll(byDeltaX: 0, deltaY: -250)
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            }
+            XCTAssert(header.isHittable, "Brain at Home header never scrolled into view")
+            // Two more notches: the header at the bottom edge shows none of the section.
+            for _ in 0 ..< 2 {
+                middle.scroll(byDeltaX: 0, deltaY: -250)
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+            }
         }
     }
 
@@ -127,11 +149,18 @@ final class ScreengrabUITests: XCTestCase {
     /// Voice mode is up: one of its state captions is on screen. The composer is
     /// hidden the moment the beat enters voice mode, so it is no anchor here.
     private func waitForVoiceSurface(_ app: XCUIApplication, timeout: TimeInterval = 120) {
+        // The captions are not StaticTexts to XCTest (only a whole-tree query
+        // finds them), and that query's snapshot times out now and then over
+        // the avatar surface — so: short waits, retried, until the deadline.
         let caption = app.descendants(matching: .any).matching(NSPredicate(
-            format: "label CONTAINS[c] 'Listening' OR value CONTAINS[c] 'Listening' OR label CONTAINS[c] 'Tap the face'"
-                + " OR value CONTAINS[c] 'Tap the face' OR label CONTAINS[c] 'speaking' OR value CONTAINS[c] 'speaking'"
+            format: "label CONTAINS[c] 'Listening' OR label CONTAINS[c] 'Tap the face' OR label CONTAINS[c] 'speaking'"
+                + " OR value CONTAINS[c] 'Listening' OR value CONTAINS[c] 'Tap the face'"
         )).firstMatch
-        XCTAssert(caption.waitForExistence(timeout: timeout), "voice surface never appeared")
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if caption.waitForExistence(timeout: 10) { return }
+        }
+        XCTFail("voice surface never appeared")
     }
 
     /// Launch under the plate's recipe, drive, settle, shoot the window.
@@ -201,9 +230,15 @@ final class ScreengrabUITests: XCTestCase {
     ) {
         // Any element type: message text renders through custom views whose
         // accessibility role is not always StaticText.
-        let match = (scope ?? app).descendants(matching: .any)
-            .matching(NSPredicate(format: "label CONTAINS[c] %@ OR value CONTAINS[c] %@", fragment, fragment)).firstMatch
-        guard !match.waitForExistence(timeout: timeout) else { return }
+        let format = "label CONTAINS[c] %@ OR value CONTAINS[c] %@"
+        // Short waits, retried to the deadline: the snapshot behind this query
+        // times out now and then over the avatar surface.
+        let root = scope ?? app
+        let match = root.descendants(matching: .any).matching(NSPredicate(format: format, fragment, fragment)).firstMatch
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if match.waitForExistence(timeout: 10) { return }
+        }
         XCTFail("'\(fragment)' never appeared")
         // The element tree (text only — never a screen capture) for the post-mortem.
         let tree = XCTAttachment(string: app.debugDescription)

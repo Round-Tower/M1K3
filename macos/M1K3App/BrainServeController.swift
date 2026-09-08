@@ -24,6 +24,8 @@
 //  layers are package-TDD'd incl. real loopback TLS-PSK round-trips; this
 //  glue is verify-by-launch — pairing UX + LAN reachability on real hardware
 //  are the named verify-owed). Prior: MCPHostController.swift (the shape).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the device registry is not read under the screengrab harness
+//  (the owner's paired devices, by name, would sit in the Brain at Home plate). Confidence now 0.85.
 //
 
 import CoreImage.CIFilterBuiltins
@@ -33,6 +35,7 @@ import M1K3BrainServe
 import M1K3Calls // KeychainKeyStore — PSKs at rest (afterFirstUnlock, device-only)
 import M1K3Inference // RawCompletionProviding — the persona-free /v1/generate seam
 import M1K3MCPKit
+import M1K3Screengrab
 import MCP
 import Observation
 import os
@@ -471,7 +474,9 @@ final class BrainServeController {
     }
 
     private nonisolated static func loadDevices() -> [PairedDevice] {
-        guard let data = UserDefaults.standard.data(forKey: devicesKey) else { return [] }
+        // The registry is the owner's real paired devices, by name — never in a plate.
+        guard !ScreengrabHarness.current.isActive,
+              let data = UserDefaults.standard.data(forKey: devicesKey) else { return [] }
         return (try? JSONDecoder().decode([PairedDevice].self, from: data)) ?? []
     }
 

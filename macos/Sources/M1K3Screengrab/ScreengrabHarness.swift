@@ -59,16 +59,24 @@ public struct ScreengrabHarness: Sendable, Equatable {
         return plate == .voiceListening || plate == .voiceSpeaking || plate.companionID != nil
     }
 
-    public var speaksHeroAnswer: Bool {
+    /// The speaking plate is a REAL turn: the open mic submits the hero question
+    /// (a final segment), the loop answers from the seeded knowledge and speaks
+    /// it with the karaoke line. A direct `speak` never moves the loop into
+    /// `.speaking`, so it never showed the line (runs 3 + 4).
+    public var submitsHeroQuestion: Bool {
         plate == .voiceSpeaking
     }
 
-    /// The listening plate's live partial: the hero question arriving word by
-    /// word through `OpenMicTranscriber`, so the frame shows a real listen
-    /// instead of an empty "Listening…". Nil everywhere else (a companion tile
-    /// is the face, not a bubble).
+    /// The voice plates' live partial: the hero question arriving word by word
+    /// through `OpenMicTranscriber` (listening: the frame shows a real listen;
+    /// speaking: the question that is then submitted). Nil for a companion tile
+    /// — that plate is the face, not a bubble.
     public var livePartial: String? {
-        plate == .voiceListening ? DemoPersona.heroConversation[0].text : nil
+        switch plate {
+        case .voiceSpeaking: DemoPersona.heroConversation[0].text
+        case .voiceListening: DemoPersona.listeningDictation
+        default: nil
+        }
     }
 
     public var showsPairing: Bool {
@@ -84,13 +92,13 @@ public struct ScreengrabHarness: Sendable, Equatable {
         plate == .memories
     }
 
-    /// Mac: the Settings scene is the subject (pairing lives in Settings ▸ M1K3;
-    /// the privacy stand-in is Settings ▸ Privacy).
+    /// Mac: the Settings scene is the subject. Pairing (Brain at Home) AND the
+    /// privacy stand-in both live in Settings ▸ Privacy.
     public var opensSettings: Bool {
         plate == .brainAtHome || plate == .privacyLabel
     }
 
     public var showsPrivacyPane: Bool {
-        plate == .privacyLabel
+        plate == .privacyLabel || plate == .brainAtHome
     }
 }

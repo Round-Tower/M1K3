@@ -11,7 +11,7 @@ import Testing
 
 struct OpenMicTranscriberTests {
     @Test func aSilentMicStaysOpenUntilStopped() async throws {
-        let mic = OpenMicTranscriber(partial: nil)
+        let mic = OpenMicTranscriber(partial: nil, wordDelay: .milliseconds(5))
         let stream = try mic.startListening(finality: .keepsListening)
         var iterator = stream.makeAsyncIterator()
         let race = Task { await iterator.next() }
@@ -33,5 +33,25 @@ struct OpenMicTranscriberTests {
         #expect(seen.allSatisfy { !$0.isFinal })
         #expect(mic.isAvailable)
         #expect(!mic.attemptsEchoCancellation)
+    }
+
+    @Test func aNonSubmittingMicKeepsDictatingAfterTheSentence() async throws {
+        let mic = OpenMicTranscriber(partial: "one two", wordDelay: .milliseconds(5))
+        var seen: [String] = []
+        for await segment in try mic.startListening() {
+            seen.append(segment.text)
+            if seen.count == 3 { break }
+        }
+        #expect(seen == ["one", "one two", "one two one"], "the partial keeps growing — the mic never goes quiet")
+    }
+
+    @Test func aSubmittingMicEndsOnOneFinalSegment() async throws {
+        let mic = OpenMicTranscriber(partial: "summarise the call", wordDelay: .milliseconds(5), submits: true)
+        var finals: [TranscriptSegment] = []
+        for await segment in try mic.startListening() where segment.isFinal {
+            finals.append(segment)
+            break
+        }
+        #expect(finals.map(\.text) == ["summarise the call"])
     }
 }

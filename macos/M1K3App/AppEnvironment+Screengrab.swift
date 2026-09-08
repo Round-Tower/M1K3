@@ -57,7 +57,7 @@ extension AppEnvironment {
     nonisolated static func screengrabTranscriber() -> (any TranscriptionProvider)? {
         let harness = ScreengrabHarness.current
         guard harness.isActive, harness.entersVoiceMode else { return nil }
-        return OpenMicTranscriber(partial: harness.livePartial)
+        return OpenMicTranscriber(partial: harness.livePartial, submits: harness.submitsHeroQuestion)
     }
 
     /// Synchronous, from init, BEFORE `ChatSession` reads the most recent row.
@@ -95,12 +95,9 @@ extension AppEnvironment {
         let harness = ScreengrabHarness.current
         guard harness.isActive else { return }
         if harness.entersVoiceMode {
+            // The speaking plate needs no beat of its own: the open mic submits
+            // the hero question and the loop speaks the answer (karaoke and all).
             enterVoiceMode()
-            if harness.speaksHeroAnswer {
-                // Let the mode settle (avatar in, mic armed) before the karaoke line.
-                try? await Task.sleep(for: .seconds(1.5))
-                await speak(DemoPersona.heroConversation[1].text)
-            }
         }
         // brain-at-home: the suite opens Settings ▸ M1K3 ▸ Brain at Home, whose
         // section starts the pairing ceremony itself — no beat needed here.

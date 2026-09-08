@@ -19,6 +19,12 @@ public enum DemoPersona {
     /// Provenance stamp on every seeded row — Memories shows it, and a human
     /// auditing a plate can tell seed from real at a glance.
     public static let source = "demo:screengrab"
+    /// The listening plate's dictation (dictated on a loop by the open mic);
+    /// never a polite endpoint word — "please" would submit the turn.
+    public static let listeningDictation =
+        "summarise yesterday's call with the architect and pull out the action list for Friday's planning drawings, "
+            + "then check whether the lime plaster quotes have come back and whether the heat pump survey is booked, "
+            + "and remind me what we decided about the sash windows and the roofline before the council meeting"
     public static let heroTitle = "Call with the architect"
 
     public static let heroConversation: [ChatMessage] = [

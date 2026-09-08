@@ -66,6 +66,11 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
             // Brain at Home serving reads the paired-device keys from the Keychain;
             // off for every plate (the pairing plate shows the QR from Settings).
             ["-brainServe.enabled", "NO"],
+            // The notch HUD is a floating panel over the window: it captioned the
+            // spoken line into two voice plates.
+            ["-notchHUD.enabled", "NO"],
+            // Off: beside a live app it fails on :4242 and the Privacy pane prints the error.
+            ["-mcpServer.enabled", "NO"],
             // No auto-distillation of the seeded conversation: the Memories plate
             // shows the persona's dated facts, not "I noticed" rows stamped today.
             ["-memoryAutoCapture", "NO"],
