@@ -8,6 +8,8 @@
 //  tap away — honest RAG, the M1K3 way.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the thinking/reasoning header + activity label wear `.pixel(13)`
+//  (short, app-controlled); the reasoning body stays ReadingText. Confidence now 0.8 (verify-by-launch).
 
 import AppKit
 import M1K3Chat
@@ -187,8 +189,11 @@ struct MessageView: View {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
                     if let activity = message.activityLabel {
-                        Text(activity)
-                            .font(.caption)
+                        // Same rule as the reasoning header: short, app-authored
+                        // (ActivityLabeler), so it wears the pixel face.
+                        Text(activity.uppercased())
+                            .font(.pixel(13))
+                            .kerning(0.5)
                             .foregroundStyle(.secondary)
                             .contentTransition(.opacity)
                     }
@@ -373,8 +378,13 @@ struct MessageView: View {
                 .padding(.top, 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
-            Label(isThinkingLive ? "Thinking…" : "Model reasoning", systemImage: "ellipsis.bubble")
-                .font(.caption.weight(.medium))
+            // App-controlled, short: the one place M1K3's thoughts get the
+            // house pixel face (hit list 2026-09-08, item 4). The reasoning
+            // BODY stays ReadingText — long, model-authored, and the text a
+            // dyslexic reader works hardest on.
+            Label(isThinkingLive ? "THINKING…" : "MODEL REASONING", systemImage: "ellipsis.bubble")
+                .font(.pixel(13))
+                .kerning(0.5)
                 .foregroundStyle(.secondary)
                 .contentTransition(.opacity)
                 // The bubble's dots iterate like a typing indicator while the

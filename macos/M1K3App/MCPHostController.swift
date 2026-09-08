@@ -34,6 +34,8 @@
 //  loopback surface; `ClientIdentityBox` hoisted to a property so a proposal is stamped with its proposer (a
 //  label, never trusted); every proposal goes through AppEnvironment.proposeTodoFromVisitor (toggle + visitor
 //  ceiling).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the speak handler stamps `Narrator.visitor(clientIdentity)` so the
+//  notch HUD captions the visiting agent by name. Confidence now 0.85.
 
 import Foundation
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
@@ -247,7 +249,10 @@ final class MCPHostController {
         VoiceToolHandlers(
             speak: { [weak self] text, emotion, wait in
                 guard let self else { throw MCPVoiceError("M1K3 is shutting down") }
-                try await self.env.intelligenceSpeak(text: text, emotion: emotion, wait: wait)
+                // The HUD names who is talking: the client that initialised
+                // this server, by the name it gave (nil → honest fallback).
+                let narrator = Narrator.visitor(self.clientIdentity.current())
+                try await self.env.intelligenceSpeak(text: text, emotion: emotion, wait: wait, narrator: narrator)
             },
             stopSpeaking: { [weak self] in
                 await self?.env.stopSpeaking()

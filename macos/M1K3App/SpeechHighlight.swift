@@ -11,6 +11,8 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.85 (thin observable
 //  state over the tested timing seam). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `narrator` rides with the utterance so the HUD can name who is
+//  talking (M1K3 vs a visiting MCP client). Confidence now 0.85.
 //
 
 import Foundation
@@ -28,14 +30,18 @@ final class SpeechHighlight {
     private(set) var timeline: SpokenWordTimeline?
     /// UTF-16 range (into `utteranceText`) of the word currently being heard.
     private(set) var currentWordRange: Range<Int>?
+    /// Who authored the utterance — M1K3, or a visiting MCP client by name.
+    /// The notch HUD captions from this (hit list 2026-09-08, item 2).
+    private(set) var narrator: Narrator = .m1k3
 
     var isActive: Bool {
         utteranceText != nil
     }
 
     /// A new utterance is about to be spoken.
-    func beginUtterance(text: String) {
+    func beginUtterance(text: String, narrator: Narrator = .m1k3) {
         utteranceText = text
+        self.narrator = narrator
         timeline = nil
         currentWordRange = nil
     }

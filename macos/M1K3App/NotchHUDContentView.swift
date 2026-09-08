@@ -26,7 +26,7 @@
 //  house rules the jam didn't have in front of it: the narration text is
 //  live spoken prose (dynamic content), so it wears a system font, never
 //  `.pixel(_:)` — the house rule reserves that face for short, app-controlled
-//  strings. And the brain/tier caption needed 10pt to fit; `.pixel` floors at
+//  strings. And the narrator caption needed 10pt to fit; `.pixel` floors at
 //  12pt (below that Silkscreen "turns to mush"), so it's system too. `.pixel`
 //  stays for the single static "M1K3 IS TALKING" fallback header, which is
 //  exactly the short, app-controlled accent the face is for.
@@ -39,6 +39,8 @@
 //  approval, not invented. RealityKit-at-72px legibility per pick and the
 //  felt entrance/exit beats remain verify-by-launch). Prior: the jam
 //  prototype (Kev + claude-fable-5, same session).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the caption names the NARRATOR (M1K3 / the visiting MCP client)
+//  instead of brain · voice tier — the plumbing nobody asked about. Confidence now 0.8 (verify-by-launch).
 //
 
 import M1K3Avatar
@@ -74,9 +76,9 @@ struct NotchHUDContentView: View {
                         .kerning(1)
                         .foregroundStyle(.white)
                 }
-                let brain = env.selectedBrain.displayName.uppercased()
-                let tier = env.selectedVoiceTier.displayName.uppercased()
-                Text("\(brain) · \(tier)")
+                // WHO is talking, not which brain/voice renders it (hit list
+                // 2026-09-08, item 2): "M1K3", or "CLAUDE CODE · VIA M1K3".
+                Text(NarrationCaption.text(for: env.speechHighlight.narrator))
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .tracking(0.5)
                     .foregroundStyle(.white.opacity(0.55))

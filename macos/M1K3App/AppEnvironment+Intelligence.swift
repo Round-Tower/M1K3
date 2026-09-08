@@ -19,6 +19,8 @@
 //  parameter (default 600s backstop; the App Intent passes its own 120s),
 //  and the guard routes through chatGate so interim-Mini serves visiting
 //  agents during a brain download instead of refusing (MCP-async package).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `narrator:` — an MCP speak is voiced AS the visiting client (named in
+//  the notch HUD), never as M1K3. Confidence now 0.85.
 //
 
 import Foundation
@@ -26,6 +28,7 @@ import M1K3Avatar // AvatarEmotion
 import M1K3Chat // HeadlessAsk, RAGResponding, CanaryGuard, MemoryDistillationCoordinator
 import M1K3MCPKit // MCPVoiceError, withTimeout, TimeoutError
 import M1K3Memory // Memory — the temporal memory graph the dual-write seeds
+import M1K3Voice
 import os
 
 extension AppEnvironment {
@@ -180,7 +183,7 @@ extension AppEnvironment {
     /// Deliberately no readiness guard (unlike `intelligenceAsk`): TTS is
     /// model-independent — it needs only the speech pipeline, which is always
     /// available.
-    func intelligenceSpeak(text: String, emotion: String?, wait: Bool) async throws {
+    func intelligenceSpeak(text: String, emotion: String?, wait: Bool, narrator: Narrator = .visitor(nil)) async throws {
         guard voiceLoop == nil, !chat.isResponding else {
             throw MCPVoiceError("M1K3 is in a conversation right now — try again shortly")
         }
@@ -188,9 +191,9 @@ extension AppEnvironment {
             avatar.setEmotion(AvatarEmotion.from(emotion))
         }
         if wait {
-            await speak(text)
+            await speak(text, narrator: narrator)
         } else {
-            Task { @MainActor in await self.speak(text) }
+            Task { @MainActor in await self.speak(text, narrator: narrator) }
         }
     }
 
