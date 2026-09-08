@@ -827,34 +827,27 @@ struct ContentView: View {
                 // control changing its mind, not a second control appearing.
                 // ⌘. is the Mac's stop chord; Return stays Send only while idle
                 // so a stray Return mid-answer can't stop it.
-                if env.chat.isResponding {
-                    Button { env.stopResponding() } label: {
-                        Image(systemName: "stop.fill")
-                            .imageScale(.large)
-                            .fontWeight(.semibold)
-                            .frame(width: 22, height: 22)
-                            .contentTransition(.symbolEffect(.replace))
-                    }
-                    .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.circle)
-                    .tint(.red)
-                    .keyboardShortcut(".", modifiers: .command)
-                    .help("Stop generating (⌘.)")
-                    .accessibilityLabel("Stop generating")
-                } else {
-                    Button(action: send) {
-                        Image(systemName: "arrow.up")
-                            .imageScale(.large)
-                            .fontWeight(.semibold)
-                            .frame(width: 22, height: 22)
-                            .contentTransition(.symbolEffect(.replace))
-                    }
-                    .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.circle)
-                    .disabled(!canSend)
-                    .keyboardShortcut(.return, modifiers: [])
-                    .accessibilityLabel("Send")
+                // ONE Button whose face flips (review 1, #249): an if/else of
+                // two Buttons remounts the subtree and the replace transition
+                // has nothing to morph — the mic button above is the precedent.
+                let responding = env.chat.isResponding
+                Button {
+                    if responding { env.stopResponding() } else { send() }
+                } label: {
+                    Image(systemName: responding ? "stop.fill" : "arrow.up")
+                        .imageScale(.large)
+                        .fontWeight(.semibold)
+                        .frame(width: 22, height: 22)
+                        .contentTransition(.symbolEffect(.replace))
+                        .animation(.default, value: responding)
                 }
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.circle)
+                .tint(responding ? .red : nil)
+                .disabled(!canSend && !responding)
+                .keyboardShortcut(responding ? "." : .return, modifiers: responding ? .command : [])
+                .help(responding ? "Stop generating (⌘.)" : "Send")
+                .accessibilityLabel(responding ? "Stop generating" : "Send")
             }
             .padding(16)
             .frame(maxWidth: Self.chatContentMaxWidth)

@@ -405,6 +405,7 @@ public final class ChatSession {
         // hook every provider cancels its generation from. Finalisation and
         // persistence run back here, OUTSIDE the cancelled task — a GRDB write
         // or a validator must never see `Task.isCancelled`.
+        stopRequested = false
         let turn = Task { await self.streamTurn(trimmed, images: images, history: history, assistantID: assistantID) }
         turnTask = turn
         let outcome = await turn.value
@@ -487,12 +488,16 @@ public final class ChatSession {
 
     /// The in-flight turn, held only so `stopResponding()` can cancel it.
     private var turnTask: Task<TurnOutcome, Never>?
+    /// Set by `stopResponding()`, read at the end of the drain, reset per send.
+    private var stopRequested = false
 
     /// Stop the answer that is streaming now. Whatever arrived stays in the
     /// transcript, marked `interrupted`; nothing arrived → the empty bubble
     /// goes. Idle → no-op. Safe to call from the Send button's Stop face.
     public func stopResponding() {
-        turnTask?.cancel()
+        guard let turnTask else { return }
+        stopRequested = true
+        turnTask.cancel()
     }
 
     /// The cancellable half of `send`: ask the responder, drain its stream into
@@ -572,7 +577,13 @@ public final class ChatSession {
                 }
             }
             splitter.finish()
-            return .streamed(raw: splitter.raw, sources: sources, stopped: Task.isCancelled)
+            // `stopped` means the user ASKED to stop. If the stream finished
+            // naturally in the same instant the tap landed, the answer is whole
+            // but still labelled "Stopped" — the label reports the gesture, the
+            // text is intact either way (review 1, #249: a cosmetic window no
+            // consumer-side check can close; AsyncStream hides why `next()`
+            // returned nil).
+            return .streamed(raw: splitter.raw, sources: sources, stopped: stopRequested)
         } catch is CancellationError {
             return .streamed(raw: "", sources: [], stopped: true)
         } catch {
