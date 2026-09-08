@@ -45,6 +45,8 @@
 //  code artifact and earns no finished-ping. Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `.answerLanded` earcon on a finished turn (gate-muted mid-speech;
 //  silent for a stopped one). Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-09 — earcon volume 0.4 → 0.3 on Kev's first listen through the real
+//  pipeline ("tiny bit too loud"). Confidence now 0.8.
 
 import AppKit
 import Foundation
@@ -351,7 +353,7 @@ final class AppEnvironment {
     /// which @Observable's rewrite would otherwise forbid).
     @ObservationIgnored private(set) lazy var soundEffects: SoundEffectPlayer = .bundled(
         isEnabled: Self.soundEffectsEnabledDefault,
-        volume: 0.4, // gentle — earcons are seasoning, not the meal (was 0.6 default)
+        volume: 0.3, // gentle — earcons are seasoning, not the meal (0.6 → 0.4 → 0.3: Kev, 2026-09-09, "tiny bit too loud")
         isSpeaking: { [weak self] in
             guard let self else { return false }
             if case .speaking = avatar.state.activity { return true }
