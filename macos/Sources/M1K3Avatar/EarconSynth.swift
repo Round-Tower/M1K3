@@ -162,16 +162,7 @@ public enum EarconSynth {
                 case .saw: s = 2 * phase - 1
                 case .noise: s = noise.next()
                 }
-                let env: Double = if t < v.attack {
-                    t / v.attack
-                } else if t < v.attack + v.decay {
-                    1 - (1 - v.sustain) * ((t - v.attack) / v.decay)
-                } else if t < v.duration {
-                    v.sustain
-                } else {
-                    v.sustain * max(0, 1 - (t - v.duration) / v.release)
-                }
-                s *= env * v.gain
+                s *= envelope(v, at: t) * v.gain
                 if let bits = v.crushBits {
                     let steps = pow(2.0, Double(bits))
                     s = (s * steps).rounded() / steps
@@ -180,6 +171,23 @@ public enum EarconSynth {
             }
         }
         return out.map { tanh($0 * 1.2) } // soft clip — nothing here can exceed ±1
+    }
+
+    /// Attack → decay → sustain while the gate is open, then a linear release
+    /// FROM WHATEVER LEVEL THE GATE REACHED — a short note whose gate closes
+    /// mid-attack or mid-decay releases from there, so the envelope is
+    /// continuous for every recipe (review 1 on #251: the old shape released
+    /// from `sustain`, a jump for any voice whose attack+decay outlived its
+    /// duration, and the loop could end before the release branch ran).
+    static func envelope(_ v: Voice, at t: Double) -> Double {
+        func gated(_ t: Double) -> Double {
+            if t < v.attack { return t / v.attack }
+            if t < v.attack + v.decay { return 1 - (1 - v.sustain) * ((t - v.attack) / v.decay) }
+            return v.sustain
+        }
+        guard t >= v.duration else { return gated(t) }
+        guard v.release > 0 else { return 0 }
+        return gated(v.duration) * max(0, 1 - (t - v.duration) / v.release)
     }
 
     /// The render as a 16-bit mono RIFF/WAVE blob — what `AVAudioPlayer(data:)` eats.

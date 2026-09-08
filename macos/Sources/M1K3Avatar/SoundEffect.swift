@@ -4,9 +4,10 @@
 //
 //  M1K3's UI earcons — short, playful sounds for a few key moments (an error,
 //  a memory saved, voice mode coming alive). Deliberately a SMALL set: sound is
-//  delight in small doses and noise in large ones. Each effect maps to one
-//  bundled WAV; "bundled == playable" is pinned by SoundEffectTests, the same
-//  discipline as the companion clips.
+//  delight in small doses and noise in large ones. Since 2026-09-08 every
+//  effect but the dial-up is SYNTHESISED by `EarconSynth` (one instrument, one
+//  timbre); the dial-up stays a bundled WAV. "Every effect is playable" —
+//  bundled resolves, synth renders — is pinned by SoundEffectTests.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-12, Confidence 0.85 (catalogue +
 //  bundling test-pinned; the WAV choices are by-ear, swap a line to retune).
@@ -17,9 +18,9 @@
 
 import Foundation
 
-/// A named UI sound. The raw value is stable identity; `resourceName` is the
-/// bundled WAV that voices it (decoupled so a sound can be re-cast without
-/// touching call sites).
+/// A named UI sound. The raw value is stable identity; `source` says whether
+/// `EarconSynth` renders it or a bundled WAV voices it (decoupled so a sound
+/// can be re-cast without touching call sites).
 ///
 /// Mostly short one-shot earcons — with one deliberate exception: `dialup` is a
 /// SUSTAINED "connecting…" sound played on a loop while a model downloads/loads
@@ -63,7 +64,8 @@ public enum SoundEffect: String, CaseIterable, Sendable {
     public var source: Source {
         switch self {
         case .dialup: .bundled("dialup")
-        default: .synth
+        case .error, .save, .voiceEnter, .voiceExit, .listenStart, .endpointHeard, .thinkingTick,
+             .toolCall, .answerLanded, .stop, .soundMark: .synth
         }
     }
 }

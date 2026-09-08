@@ -24,6 +24,26 @@ struct EarconSynthTests {
         }
     }
 
+    @Test("every voice's envelope is continuous — no jump at the gate, and the release always runs")
+    func envelopeContinuity() throws {
+        let dt = 1.0 / EarconSynth.sampleRate
+        for effect in Self.synthEffects {
+            let recipe = try #require(EarconSynth.recipe(for: effect))
+            for voice in recipe.voices {
+                let total = voice.duration + voice.release
+                var previous = EarconSynth.envelope(voice, at: 0)
+                var t = dt
+                while t <= total {
+                    let now = EarconSynth.envelope(voice, at: t)
+                    #expect(abs(now - previous) < 0.02, "\(effect) jumps at \(t)")
+                    previous = now
+                    t += dt
+                }
+                #expect(EarconSynth.envelope(voice, at: total) < 0.001, "\(effect) never releases")
+            }
+        }
+    }
+
     @Test("renders are deterministic — the noise voice is seeded")
     func deterministic() {
         #expect(EarconSynth.render(.voiceEnter) == EarconSynth.render(.voiceEnter))
