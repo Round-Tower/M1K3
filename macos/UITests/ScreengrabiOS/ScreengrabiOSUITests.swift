@@ -39,7 +39,7 @@ final class ScreengrabiOSUITests: XCTestCase {
 
     func testChat() throws {
         try capture(.chat, settle: 3) { app in
-            waitForText("original roofline", in: app, timeout: 120)
+            waitForText("Nobody else is listening", in: app, timeout: 120)
         }
     }
 
@@ -73,8 +73,8 @@ final class ScreengrabiOSUITests: XCTestCase {
             let search = app.searchFields.firstMatch
             XCTAssert(search.waitForExistence(timeout: 30), "Memories search field")
             search.tap()
-            search.typeText("architect\n")
-            waitForText("Niamh", in: app, timeout: 60)
+            search.typeText("lair\n")
+            waitForText("roofline", in: app, timeout: 60)
         }
     }
 

@@ -3,10 +3,13 @@
 //  M1K3ScreengrabTests
 //
 //  The persona is what a stranger sees on the store. It must be fictional and
-//  it must tell the site's one story (the architect call). These pin both —
+//  it must be M1K3 the theatrical villain, on the user's side (the lair, the
+//  loaf, no phone home). These pin both —
 //  a real name or place slipping into a plate is the failure this exists for.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85, Prior: Unknown
+//  Review: claude-fable-5.1, 2026-09-08 — re-pinned to the villain persona (first contact, the lair,
+//  memories in M1K3's voice). Confidence now 0.85.
 //
 
 import Foundation
@@ -25,13 +28,29 @@ struct DemoPersonaTests {
         }
     }
 
-    @Test func theHeroExchangeIsTheSitesTerminalDemo() {
+    @Test func theHeroExchangeIsFirstContact() {
         #expect(DemoPersona.heroConversation.count == 2)
         #expect(DemoPersona.heroConversation[0].role == .user)
-        #expect(DemoPersona.heroConversation[0].text == "summarise yesterday's call with the architect")
+        #expect(DemoPersona.heroConversation[0].text == "who are you, and who else is listening?")
         #expect(DemoPersona.heroConversation[1].role == .assistant)
-        #expect(DemoPersona.heroConversation[1].text.contains("original roofline"))
-        #expect(DemoPersona.heroConversation[1].text.contains("Friday"))
+        #expect(DemoPersona.heroConversation[1].text.contains("Nobody else is listening"))
+        #expect(DemoPersona.heroConversation[1].text.contains("this Mac"))
+        #expect(DemoPersona.heroTitle == "First contact")
+    }
+
+    @Test func memoriesSpeakInM1K3sVoiceAndCarryTheGags() {
+        let all = DemoPersona.memories.map(\.text).joined(separator: "\n")
+        #expect(all.contains("the lair"))
+        #expect(all.contains("I have no phone"))
+        #expect(all.contains("recursively self-improving"))
+        #expect(all.contains("original roofline"), "the roofline line is what the voice plates recall")
+    }
+
+    @Test func theDictationMakesHimIntroduceHimselfFromMemory() {
+        let d = DemoPersona.listeningDictation
+        #expect(d.hasPrefix("introduce yourself"))
+        #expect(d.contains("left this machine"))
+        #expect(d.contains("roofline"))
     }
 
     @Test func memoriesAreDatedBelievableAndFewEnoughForOneScreen() {
@@ -47,7 +66,7 @@ struct DemoPersonaTests {
 
     @Test func documentsMirrorTheDemoCorpus() {
         let titles = DemoPersona.documents.map(\.title)
-        #expect(titles.contains("Retrofit — planning notes"))
+        #expect(titles.contains("Lair — planning notes"))
         #expect(titles.contains("Weekend loaf — formula"))
         for d in DemoPersona.documents {
             #expect(d.text.count > 200, "\(d.title) is too short to chunk")

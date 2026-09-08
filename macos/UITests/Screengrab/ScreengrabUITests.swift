@@ -39,7 +39,7 @@ final class ScreengrabUITests: XCTestCase {
 
     func testChat() throws {
         try capture(.chat, settle: 3) { app in
-            waitForText("original roofline", in: app, timeout: 90)
+            waitForText("Nobody else is listening", in: app, timeout: 90)
         }
     }
 
