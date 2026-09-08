@@ -121,6 +121,9 @@ targetTemplates:
         product: M1K3MLX
       - package: M1K3
         product: M1K3Avatar
+      # The memory constellation (RealityKit field) — the iPad face (2026-09-08).
+      - package: M1K3
+        product: M1K3MemoryViz
       # Voice-first mode (2026-07-29): the portable voice loop + system-framework
       # providers (SFSpeechRecognizer STT, AVSpeechSynthesizer TTS), and since
       # 2026-09-03 M1K3 Voice — Kokoro on pure MLX (Settings ▸ Voice, downloads

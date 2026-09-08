@@ -15,7 +15,7 @@
 //
 //  The creature list self-extends: a new CompanionSpec with bundled assets appears
 //  here with no picker wiring (the same isInstalled filter the Mac uses). The
-//  constellation option is Mac-only for now, so it isn't offered here.
+//  constellation is offered on the iPad (2026-09-08), where the field has room.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-28, Confidence 0.8 (composition of the
 //  shared AvatarSurface + package CompanionSpec catalogue; the live creature render
@@ -28,6 +28,8 @@
 //  next.
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — the word "Companion" leaves the UI (header, footer, a11y labels):
 //  it is the FACE. Type names keep the old word so the Mac sibling still reads as kin. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — "Constellation" joins the grid on the iPad (hit list item 6),
+//  with its own footer line. Confidence now 0.8 (device-owed).
 //
 
 import M1K3Avatar
@@ -50,7 +52,13 @@ struct CompanionPickerSection: View {
             + CompanionSpec.all.filter(CompanionAssets.isInstalled).map {
                 FaceChoice(id: $0.id, name: $0.displayName)
             }
+            + (AvatarSurface.offersConstellation
+                ? [FaceChoice(id: CompanionDefaults.constellationID, name: "Constellation")] : [])
             + [FaceChoice(id: CompanionDefaults.noneID, name: "None")]
+    }
+
+    private var constellationChosen: Bool {
+        companion == CompanionDefaults.constellationID
     }
 
     private var creatureChosen: Bool {
@@ -64,6 +72,9 @@ struct CompanionPickerSection: View {
     private var footerText: String {
         if noneChosen {
             return "No face — just the conversation."
+        }
+        if constellationChosen {
+            return "Your memories as a star field that grows."
         }
         guard creatureChosen else {
             return "M1K3's face in chat."

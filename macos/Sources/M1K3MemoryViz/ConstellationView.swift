@@ -12,6 +12,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.7 (compiles against
 //  the RealityKit SPM target like M1K3Avatar; on-device look + the growth timing
 //  are the named verify-owed). Prior: M1K3Avatar RealityKit views.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — motes + threads use the palette on every platform (the white /
+//  grey non-AppKit fallbacks retired) — the iPad field is the Mac field. Confidence now 0.8 (device-owed).
 
 import M1K3Memory
 import RealityKit
@@ -161,13 +163,11 @@ public struct ConstellationView: View {
 
     private func makeMote(_ node: ConstellationNode) -> ModelEntity {
         let mesh = MeshResource.generateSphere(radius: node.radius * moteScale)
-        #if canImport(AppKit)
-            let material = UnlitMaterial(
-                color: ConstellationPalette.materialColor(forHue: node.hue, saturation: node.saturation)
-            )
-        #else
-            let material = UnlitMaterial(color: .white)
-        #endif
+        // Material.Color is NSColor / UIColor per platform; the palette hands
+        // back whichever one this build has (both shells get coloured motes).
+        let material = UnlitMaterial(
+            color: ConstellationPalette.materialColor(forHue: node.hue, saturation: node.saturation)
+        )
         let mote = ModelEntity(mesh: mesh, materials: [material])
         mote.position = node.position * spread
         mote.scale = SIMD3<Float>(repeating: 0.001) // collapsed until its turn
@@ -178,12 +178,8 @@ public struct ConstellationView: View {
         let length = ConstellationGeometry.distance(from, to)
         // A thin box used as a line; +Y is its long axis (matches the geometry helper).
         let mesh = MeshResource.generateBox(size: SIMD3<Float>(0.01, max(length, 0.0001), 0.01))
-        #if canImport(AppKit)
-            var material = SimpleMaterial(color: .init(white: 0.6, alpha: 1.0), isMetallic: false)
-            material.roughness = 1.0
-        #else
-            let material = SimpleMaterial(color: .gray, isMetallic: false)
-        #endif
+        var material = SimpleMaterial(color: .init(white: 0.6, alpha: 1.0), isMetallic: false)
+        material.roughness = 1.0
         let thread = ModelEntity(mesh: mesh, materials: [material])
         thread.position = ConstellationGeometry.midpoint(from, to)
         thread.orientation = ConstellationGeometry.orientation(from: from, to: to)
