@@ -13,10 +13,13 @@
 //  Intent launch can reach the warm model with no window. AppDelegate is now
 //  @MainActor + ObservableObject and publishes `environment`/`startupError`; the
 //  Scene reads `appDelegate.environment`. Self-test path unchanged (guarded).
+//  Review: Kev + claude-fable-5.1, 2026-09-07 — the screengrab harness pins the window to 1440×900 pt (content 848 +
+//  the 52 pt toolbar strip) so the Mac plates land at the frame system's native 2880×1800. Confidence now 0.85.
 
 import AppKit
 import M1K3Avatar
 import M1K3Launch
+import M1K3Screengrab
 import os
 import SwiftUI
 
@@ -103,6 +106,14 @@ struct M1K3App: App {
                         .frame(minWidth: 560, minHeight: 480)
                 }
             }
+            // Screengrab harness: pin the WINDOW to the capture plan's 1440×900 pt
+            // (2880×1800 px on Retina — native to the Mac frames). The hidden
+            // title bar's toolbar strip adds 52 pt above this content frame, and
+            // `.windowResizability(.contentSize)` below makes the window follow.
+            .frame(
+                width: ScreengrabHarness.current.isActive ? 1440 : nil,
+                height: ScreengrabHarness.current.isActive ? 848 : nil
+            )
             // No forced colour scheme: M1K3 follows the system appearance. The
             // surface is pure adaptive Liquid Glass (GlassBackground) that refracts
             // the desktop and reads correctly in both light and dark — so the old

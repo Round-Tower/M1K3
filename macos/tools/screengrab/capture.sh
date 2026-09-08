@@ -1,0 +1,121 @@
+#!/bin/zsh
+# M1K3 — App Store plate capture (marketing/app-store/CAPTURE-PLAN.md).
+#
+#   tools/screengrab/capture.sh mac [plate ...]
+#   tools/screengrab/capture.sh ios <device-udid> [plate ...]
+#
+# Runs the screengrab UI test suite (one XCUITest per plate) against the app
+# launched under M1K3_SCREENGRAB=1 — an ISOLATED store root beside the live one
+# plus the fictional demo persona, so nothing of yours is in a frame — then files
+# the attachments into marketing/app-store/plates/<target>/<plate>.png and runs
+# marketing/app-store/verify.py over them. Quit the live M1K3 app first on the
+# Mac (same bundle id: the MCP port and the single-instance guard collide).
+#
+# Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.75 (Mac lane driven
+# end-to-end; the iOS lane needs a physical device — verify-by-launch),
+# Prior: Unknown
+# Review: Kev + claude-fable-5.1, 2026-09-08 — the Mac lane clears the sibling root per run
+# (content-idempotent seed; persona edits land). Confidence now 0.75.
+set -euo pipefail
+
+target=${1:?mac|ios}; shift
+root=${0:A:h:h:h}                       # macos/
+repo=${root:h}
+# marketing/ is gitignored (local-only) — point M1K3_MARKETING_DIR at it from a worktree.
+marketing=${M1K3_MARKETING_DIR:-$repo/marketing/app-store}
+plates=$marketing/plates/$target
+scratch=${TMPDIR:-/tmp}/m1k3-screengrab
+dd=${M1K3_SCREENGRAB_DD:-$scratch/dd-$target}   # reuse a warm DerivedData if you have one
+xcresult=$scratch/$target.xcresult
+[[ -d $marketing ]] || { echo "no marketing/app-store at $marketing — set M1K3_MARKETING_DIR"; exit 2; }
+mkdir -p "$plates" "$scratch"
+# Every run starts from a fresh sibling root (Mac lane): the seed is idempotent
+# by content, so this is what picks up a persona edit. The live M1K3/ root is
+# never touched — the harness only ever opens the sibling.
+if [[ $target == mac ]]; then
+  rm -rf "$HOME/Library/Containers/app.m1k3/Data/Library/Application Support/M1K3-screengrab"
+fi
+rm -rf "$xcresult"
+
+# A window screenshot is a SCREEN-REGION grab: anything in front of the app lands
+# in the plate, and the glass materials sample whatever sits behind it. Run 2
+# on 2026-09-08 filed the owner's mail client into six plates. So: every other
+# app is hidden for the run and shown again at exit, the test refuses to write
+# a frame unless M1K3 is frontmost at the shot — and the Mac is left alone.
+hide_others() {
+  osascript -e 'tell application "System Events" to set visible of every process whose visible is true and name is not "M1K3" and name is not "Finder" to false' >/dev/null 2>&1 || true
+}
+show_others() {
+  osascript -e 'tell application "System Events" to set visible of every process whose visible is false and background only is false to true' >/dev/null 2>&1 || true
+}
+
+case $target in
+  mac)
+    scheme=M1K3; testTarget=M1K3ScreengrabUITests; dest='platform=macOS'
+    echo ">>> hiding every other app for the run — leave the Mac alone until CAPTURE_DONE"
+    hide_others; trap show_others EXIT
+    # Automatic (Apple Development) signing only: a Developer ID + hardened-runtime
+    # build has no get-task-allow, so XCTest cannot drive it ("Running Background").
+    sign=()
+    if pgrep -x M1K3 >/dev/null && [[ ${M1K3_SCREENGRAB_ALLOW_LIVE:-0} != 1 ]]; then
+      echo "quit the live M1K3 app first (pgrep -x M1K3), or M1K3_SCREENGRAB_ALLOW_LIVE=1 to run beside it (ports collide)"; exit 2
+    fi
+    ;;
+  ios)
+    udid=${1:?device udid}; shift
+    scheme=M1K3iOS; testTarget=M1K3iOSScreengrabUITests; dest="id=$udid"
+    sign=()
+    ;;
+  *) echo "target must be mac or ios"; exit 2 ;;
+esac
+
+# Plate names → test methods (kebab → CamelCase: voice-speaking → testVoiceSpeaking).
+className=$([[ $target == mac ]] && echo ScreengrabUITests || echo ScreengrabiOSUITests)
+only=()
+for plate in "$@"; do
+  method=test$(print -r -- "$plate" | perl -pe 's/(^|-)(\w)/\U$2/g')
+  only+=(-only-testing:"$testTarget/$className/$method")
+done
+
+cd "$root"
+xcodegen generate >/dev/null
+set +e
+xcodebuild test -project M1K3.xcodeproj -scheme "$scheme" -destination "$dest" \
+  -derivedDataPath "$dd" -resultBundlePath "$xcresult" \
+  -skipPackagePluginValidation -skipMacroValidation \
+  -only-testing:"$testTarget" "${only[@]}" "${sign[@]}" \
+  TEST_RUNNER_M1K3_SCREENGRAB_OUT="$([[ $target == mac ]] && print -r -- "$plates")" \
+  2>&1 | xcbeautify --quiet
+rc=$pipestatus[1]
+set -e
+
+# Attachments → plates (the Mac lane also wrote them directly; iOS only has these).
+if [[ -d $xcresult ]]; then
+  export_dir=$scratch/attachments-$target
+  rm -rf "$export_dir"; mkdir -p "$export_dir"
+  xcrun xcresulttool export attachments --path "$xcresult" --output-path "$export_dir" >/dev/null 2>&1 || true
+  # manifest.json maps each attachment's suggested name (the plate) to its file.
+  if [[ -f $export_dir/manifest.json ]]; then
+    python3 - "$export_dir" "$plates" <<'PY'
+import json, shutil, sys, os
+export_dir, plates = sys.argv[1:3]
+PLATES = {"onboarding", "chat", "voice-listening", "voice-speaking", "documents", "memories", "brain-at-home",
+          "companion-fox", "companion-gecko", "companion-inkfish", "companion-colobus", "privacy-label"}
+for test in json.load(open(os.path.join(export_dir, "manifest.json"))):
+    for a in test.get("attachments", []):
+        name = a.get("suggestedHumanReadableName") or a.get("exportedFileName", "")
+        stem = name.split("_")[0].removesuffix(".png")
+        src = os.path.join(export_dir, a["exportedFileName"])
+        # Only the plates' own PNGs — XCTest also attaches screen recordings and
+        # element debug descriptions on failure.
+        if stem in PLATES and src.endswith(".png") and os.path.exists(src):
+            shutil.copyfile(src, os.path.join(plates, f"{stem}.png"))
+            print(f"plate {stem}.png")
+PY
+  fi
+fi
+
+echo "xcodebuild test exit=$rc"
+ls -la "$plates"
+python3 "$marketing/verify.py" "$marketing/out/$target/en-US" --target "$target" --plates "$plates" || true
+exit $rc

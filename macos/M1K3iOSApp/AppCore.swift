@@ -43,6 +43,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06 (3) — the restore runs `BrainRestoreConsent` (#237): an eased pick
 //  that would download is offered (`pendingBrainDownloadOffer`), not started; staged-ness via LocalModelInventory.
 //  Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-07 — the store root routes through `ScreengrabHarness.dataRoot` (a sibling root under
+//  M1K3_SCREENGRAB=1) and the demo persona seeds there: history before ChatSession, knowledge as a launch task.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — Brain at Home pairing is harness-aware too (in-memory key store, the
+//  restore skipped): review caught the real paired Mac's name + PSK reaching the iOS brain-at-home plate.
 //
 
 import Foundation
@@ -58,6 +62,7 @@ import M1K3Kokoro
 import M1K3Memory
 import M1K3MemoryChatBridge
 import M1K3MLX
+import M1K3Screengrab
 import M1K3Voice
 import Observation
 import os
@@ -161,7 +166,7 @@ final class AppCore {
     /// local `selectedBrain` is kept untouched as the tier to return to.
     private(set) var homeBrainActive = false
     /// Device-side pairing persistence (defaults metadata + Keychain PSK).
-    let brainLinkStore = PairedBrainStore()
+    let brainLinkStore = AppCore.makeBrainLinkStore()
 
     // MARK: - Persistence keys (shared spelling with the Mac app so a brain
 
@@ -331,6 +336,9 @@ final class AppCore {
         let history = try? GRDBChatHistoryStore(
             path: base.appendingPathComponent("chat-history.sqlite").path
         )
+        // Screengrab harness: the hero conversation must exist BEFORE the
+        // session's resume-most-recent read below (AppCore+Screengrab).
+        Self.seedScreengrabHistory(into: history, root: base)
         // Memory auto-capture: distil durable facts from chat into the corpus AND
         // mirror them into the temporal graph (via the shared M1K3MemoryChatBridge
         // adapter). Reuses the SAME baseEmbedder recall queries with, so dedup +
@@ -353,7 +361,12 @@ final class AppCore {
         refreshCounts()
         // Brain at Home: restore a paired Mac, and re-point the slot at it if
         // Home was fronting when the app last ran.
-        homeBrain = brainLinkStore.load()
+        // Never under the screengrab harness: a real paired Mac's name would
+        // land in the brain-at-home plate and its PSK would route the capture's
+        // turns to that Mac.
+        if !ScreengrabHarness.current.isActive {
+            homeBrain = brainLinkStore.load()
+        }
         // Home fronts when it was chosen — or when nothing local CAN front (#230's
         // Home-only half: a persisted Mini on an AFM-ineligible device would sit
         // unready forever).
@@ -382,6 +395,8 @@ final class AppCore {
         // never on the Simulator, where MLX aborts). Not when Home is fronting —
         // the slot is already pointed at the paired Mac; warming local MLX would
         // swap it away right after activateHomeBrain() above set it.
+        // Screengrab harness: memories + documents (no-op without the env).
+        seedScreengrabKnowledgeIfActive(root: base)
         if brain.mlxModelID != nil, Self.mlxAvailable, !homeBrainActive {
             warmSelectedBrain()
         }
@@ -848,7 +863,10 @@ final class AppCore {
             for: .applicationSupportDirectory, in: .userDomainMask,
             appropriateFor: nil, create: true
         ).appendingPathComponent("M1K3", isDirectory: true)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir
+        // The screengrab harness (M1K3_SCREENGRAB=1) moves every store to a
+        // SIBLING root so a capture run never touches the live one.
+        let root = ScreengrabHarness.current.dataRoot(live: dir)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
     }
 }

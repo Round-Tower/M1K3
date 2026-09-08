@@ -12,9 +12,12 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.9, Prior: Unknown
 //  (makeCallPersistence/storeURL/NullCallPersistence originate in the calls
 //  subsystem work; moved verbatim here, only the logger reference changed).
+//  Review: Kev + claude-fable-5.1, 2026-09-07 — `storeURL()` routes through `ScreengrabHarness.dataRoot`: under M1K3_SCREENGRAB=1
+//  every store opens beside the live root (`M1K3-screengrab`), never in it. Confidence now 0.9.
 
 import Foundation
 import M1K3Calls
+import M1K3Screengrab
 import os
 
 private let callStoreLog = Logger(subsystem: "app.m1k3", category: "calls")
@@ -24,6 +27,10 @@ extension AppEnvironment {
     /// store if the Keychain key can't be obtained, so a key hiccup degrades the
     /// calls feature rather than crashing the app.
     static func makeCallPersistence(at url: URL) -> any CallPersistence {
+        // Screengrab harness: the call-encryption key lives in the Keychain under
+        // the live app's signing identity; a test build reading it gets a password
+        // prompt IN the frame. Calls are not a plate — use the inert store.
+        if ScreengrabHarness.current.isActive { return NullCallPersistence() }
         do {
             // The call-encryption key is gated behind Touch ID (login-password
             // fallback) via a .userPresence Keychain access control, read once here
@@ -58,7 +65,11 @@ extension AppEnvironment {
             appropriateFor: nil,
             create: true
         )
-        let dir = base.appendingPathComponent("M1K3", isDirectory: true)
+        // The screengrab harness (M1K3_SCREENGRAB=1) moves every store to a
+        // SIBLING root so a capture run never reads or writes the live one.
+        let dir = ScreengrabHarness.current.dataRoot(
+            live: base.appendingPathComponent("M1K3", isDirectory: true)
+        )
         try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("knowledge.sqlite")
     }

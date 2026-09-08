@@ -23,11 +23,15 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06 — ModelGateView's `.unavailable` card carries the #237 download
 //  offer ("Download Mini (one-time, ~630 MB)"), the Lil rescue secondary beside it. Confidence 0.75 (verify at ⌘R
 //  on a blocked-AFM Mac).
+//  Review: Kev + claude-fable-5.1, 2026-09-07 — the App Store screengrab beat: once `isReady` flips, ContentView fires
+//  `performScreengrabBeat()` exactly once (no-op without M1K3_SCREENGRAB=1); the attachment store
+//  routes through the harness root too (2026-09-08 fold). Confidence now 0.85.
 
 import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
 import M1K3Preview
+import M1K3Screengrab
 import M1K3Voice
 import SwiftUI
 import UniformTypeIdentifiers
@@ -41,7 +45,16 @@ struct ContentView: View {
     /// picking a past conversation switches to it and snaps back to `.chat`
     /// (see the onChange in `body`). Not persisted: every launch opens on
     /// `.chat`, matching the app's existing "chat is the front door" rule.
-    @State private var sidebarSelection: SidebarSelection? = .chat
+    @State private var sidebarSelection: SidebarSelection? = {
+        // Screengrab harness: open on the plate's room (no-op without the env).
+        let harness = ScreengrabHarness.current
+        if harness.showsDocuments { return .documents }
+        if harness.showsMemories { return .memories }
+        return .chat
+    }()
+
+    @State private var screengrabBeatFired = false
+    @Environment(\.openSettings) private var openSettings
     /// Sidebar column visibility, bridged to NavigationSplitViewVisibility
     /// (not directly UserDefaults-storable) — same persisted-Bool shape as
     /// `avatarDisplay` below.
@@ -141,6 +154,14 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: env.review.isPresented)
+        // Screengrab harness: one launch beat per plate once the brain is ready
+        // (no-op without M1K3_SCREENGRAB=1 — see AppEnvironment+Screengrab).
+        .task(id: env.isReady) {
+            guard env.isReady, !screengrabBeatFired else { return }
+            screengrabBeatFired = true
+            if ScreengrabHarness.current.opensSettings { openSettings() }
+            await env.performScreengrabBeat()
+        }
     }
 
     private var splitRoot: some View {
@@ -936,8 +957,9 @@ struct ContentView: View {
 
     /// Attachments live in the app container beside the other user data.
     private static let attachmentStore = AttachmentStore(
-        directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("attachments")
+        directory: ScreengrabHarness.current.dataRoot(
+            live: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        ).appendingPathComponent("attachments")
     )
 
     /// Keep the newest turn pinned to the bottom as it streams (text or reasoning).

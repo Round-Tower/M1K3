@@ -1,0 +1,14 @@
+{
+  "configurations" : [
+    { "id" : "5C3C6B4E-0F1A-4B2B-9E7C-000000000001", "name" : "Screengrab", "options" : { } }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : { "containerPath" : "container:M1K3.xcodeproj", "identifier" : "M1K3", "name" : "M1K3" },
+    "uiTestingScreenshotsLifetime" : "keepNever",
+    "userAttachmentLifetime" : "keepAlways"
+  },
+  "testTargets" : [
+    { "target" : { "containerPath" : "container:M1K3.xcodeproj", "identifier" : "M1K3ScreengrabUITests", "name" : "M1K3ScreengrabUITests" } }
+  ],
+  "version" : 1
+}

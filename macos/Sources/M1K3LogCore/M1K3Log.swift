@@ -27,6 +27,9 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-30, Confidence 0.9 (pure + TDD-pinned;
 //  the catalogue + guard are the durable drift-prevention layer). Prior: Kev +
 //  claude-fable-5 (the original AgentLog M1K3Log/LogPreview, 2026-06-10).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `screengrab` category for the
+//  App Store plate harness (SubsystemGuard caught the bare literal in CI).
+//  Confidence now 0.9.
 //
 
 import Foundation
@@ -147,6 +150,11 @@ public enum M1K3Log {
         /// completely unattributable. Fixture IDs and timings only, never
         /// prompt or answer text.
         case eval
+        /// The App Store plate harness (`M1K3_SCREENGRAB=1`): store-root
+        /// redirection, demo-persona seeding, and the per-plate beat. Plate
+        /// names, counts and root PATHS only — the harness exists so the
+        /// owner's real data never reaches a frame, and its log keeps the rule.
+        case screengrab
     }
 
     /// Build a `Logger` on the M1K3 subsystem for a catalogued category.

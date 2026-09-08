@@ -10,6 +10,8 @@
 // per-phase as the modules that need them land, to keep early builds quick.
 //
 // Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+// Review: Kev + claude-fable-5.1, 2026-09-07 — M1K3Screengrab target + tests (the App Store screengrab harness).
+// Review: Kev + claude-fable-5.1, 2026-09-08 — M1K3Screengrab links M1K3Voice for the plates' open-mic transcriber.
 // Context: First Mac-native surface for M1K3. Scaffold begins with the pure,
 // dependency-free knowledge primitives (VectorMath, RRFFusion) ported from
 // the prior knowledge-server project so the foundation builds in seconds before MLX/GRDB enter the graph.
@@ -74,6 +76,11 @@ let package = Package(
         // Launch-at-login policy (SMAppService seam) for the always-resident
         // menu-bar companion. Pure controller + thin ServiceManagement adapter.
         .library(name: "M1K3Launch", targets: ["M1K3Launch"]),
+        // The App Store screengrab harness: an isolated data root, a fictional
+        // demo persona seeded into the real stores, and the plate list the UI
+        // test suites capture (marketing/app-store/CAPTURE-PLAN.md). Pure +
+        // test-pinned; both shells wire it behind M1K3_SCREENGRAB=1.
+        .library(name: "M1K3Screengrab", targets: ["M1K3Screengrab"]),
         // The review-panel router: turns a pasted link / dropped file into a
         // routed ReviewTarget. Pure + dependency-free; the QuickLook/WKWebView
         // renderers live in the app target (verify-by-run).
@@ -561,6 +568,18 @@ let package = Package(
         .target(
             name: "M1K3Launch",
             path: "Sources/M1K3Launch"
+        ),
+        // Screengrab harness (see the products list). Depends on the three
+        // stores it seeds; NO app-shell or MLX weight.
+        .target(
+            name: "M1K3Screengrab",
+            dependencies: ["M1K3Chat", "M1K3Memory", "M1K3Knowledge", "M1K3Voice"],
+            path: "Sources/M1K3Screengrab"
+        ),
+        .testTarget(
+            name: "M1K3ScreengrabTests",
+            dependencies: ["M1K3Screengrab", "M1K3Chat", "M1K3Memory", "M1K3Knowledge", "M1K3Voice"],
+            path: "Tests/M1K3ScreengrabTests"
         ),
         .testTarget(
             name: "M1K3LaunchTests",

@@ -29,9 +29,12 @@
 //  Confidence 0.85 (string/identifier contract is plain; the banner's live
 //  look, the replace-in-place behaviour and the passive level are
 //  verify-by-launch — ⌘R with both toggles on).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — no banners under the screengrab
+//  harness (one landed in a voice plate). Confidence now 0.85.
 
 import Foundation
 import M1K3Chat
+import M1K3Screengrab
 import os
 import UserNotifications
 
@@ -124,6 +127,8 @@ enum TurnNotifier {
     /// header already, so a title that names the app burns the one line that
     /// could have carried the news. Say a promise once (doctrine principle 5).
     private static func post(_ kind: Kind, title: String, body: String) async {
+        // A banner over the app is in the frame: nothing posts under the harness.
+        guard !ScreengrabHarness.current.isActive else { return }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body

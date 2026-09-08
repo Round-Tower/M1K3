@@ -16,6 +16,8 @@
 //  Review: claude-fable-5, 2026-07-28 — companion/shading/constellation keys
 //  aliased through CompanionDefaults (M1K3Avatar) so the Mac and iOS shells
 //  read the same UserDefaults slots (same string values — no migration).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the screengrab cadence (maxWait 600 s) under the harness, so a slow
+//  XCTest snapshot cannot flip the listening plate into an answer. Confidence unchanged.
 //
 
 import AppKit
@@ -24,6 +26,7 @@ import Foundation
 import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
+import M1K3Screengrab
 import M1K3Voice
 import os
 import Speech
@@ -260,7 +263,7 @@ extension AppEnvironment {
         // have to be right for the first pause of a session.
         let controller = VoiceLoopController(
             dependencies: makeVoiceLoopDependencies(),
-            cadence: .conversational
+            cadence: ScreengrabHarness.current.isActive ? .screengrab : .conversational
         )
         voiceLoop = controller
         controller.begin()
