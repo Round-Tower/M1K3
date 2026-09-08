@@ -52,7 +52,9 @@ public enum NarrationCaption {
         // grapheme clusters (ZWJ emoji, combining marks) stay intact.
         var scalars = String.UnicodeScalarView()
         for scalar in raw.unicodeScalars {
-            let isControl = CharacterSet.controlCharacters.contains(scalar) || CharacterSet.newlines.contains(scalar)
+            // Cc only — `CharacterSet.controlCharacters` also covers Cf, which
+            // would turn the zero-width joiner inside an emoji into a space.
+            let isControl = scalar.properties.generalCategory == .control || CharacterSet.newlines.contains(scalar)
             scalars.append(isControl ? " " : scalar)
         }
         let folded = String(scalars)
