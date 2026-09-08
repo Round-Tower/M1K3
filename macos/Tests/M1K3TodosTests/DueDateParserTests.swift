@@ -70,6 +70,36 @@ struct DueDateParserTests {
         #expect(parse("Tax return by 1 jan") == ("Tax return", day("2027-01-01")))
     }
 
+    @Test("a month prefix inside an ordinary word is not a date")
+    func monthFalsePositives() {
+        for text in ["Buy 2 novels", "Call John 12 maybe", "Fix the marble 2", "Order 3 augurs", "Sort the 5 octopuses"] {
+            let out = parse(text)
+            #expect(out.due == nil, "\(text)")
+            #expect(out.title == text)
+        }
+        #expect(parse("Tax return by 1 January") == ("Tax return", day("2027-01-01")))
+        #expect(parse("Tax return by 14 Sept") == ("Tax return", day("2026-09-14")))
+        #expect(parse("Book flights by 2026-13-40").due == nil)
+    }
+
+    @Test("end of day is the local 23:59:59 even on a DST transition day")
+    func dstEndOfDay() throws {
+        var dublin = Calendar(identifier: .gregorian)
+        dublin.timeZone = try #require(TimeZone(identifier: "Europe/Dublin"))
+        // 2027-03-28 is Ireland's spring-forward Sunday (23-hour day); 2027-10-31 falls back (25 hours).
+        for iso in ["2027-03-28", "2027-10-31", "2027-06-15"] {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withFullDate, .withDashSeparatorInDate]
+            f.timeZone = dublin.timeZone
+            let noon = f.date(from: iso)!.addingTimeInterval(12 * 3600)
+            let out = DueDateParser.parse("Call Mum today", now: noon, calendar: dublin)
+            let due = try #require(out.due)
+            let comps = dublin.dateComponents([.year, .month, .day, .hour, .minute, .second], from: due)
+            #expect(comps.hour == 23 && comps.minute == 59 && comps.second == 59, Comment(rawValue: iso))
+            #expect(dublin.isDate(due, inSameDayAs: noon), Comment(rawValue: iso))
+        }
+    }
+
     @Test("only a TRAILING phrase counts; a bare 'by' or a mid-sentence day stays in the title")
     func edges() {
         #expect(parse("Buy the Friday paper").due == nil)

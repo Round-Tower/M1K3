@@ -85,12 +85,15 @@ public enum DueDateParser {
             return cal.date(byAdding: .day, value: ahead, to: now)
         },
         rule("(\\d{4})-(\\d{2})-(\\d{2})") { g, _, cal in
-            cal.date(from: DateComponents(year: Int(g[0]), month: Int(g[1]), day: Int(g[2])))
+            guard let y = Int(g[0]), let m = Int(g[1]), let d = Int(g[2]) else { return nil }
+            return validDate(year: y, month: m, day: d, cal)
         },
-        rule("(\\d{1,2})\\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*") { g, now, cal in
+        // Month names are a CLOSED alternation + word boundary (the weekday
+        // rule's shape): "Buy 2 novels" is not November, "maybe" is not May.
+        rule("(\\d{1,2})\\s+\(monthPattern)") { g, now, cal in
             monthDay(day: g[0], month: g[1], now: now, cal)
         },
-        rule("(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\s+(\\d{1,2})") { g, now, cal in
+        rule("\(monthPattern)\\s+(\\d{1,2})") { g, now, cal in
             monthDay(day: g[1], month: g[0], now: now, cal)
         },
         rule("(\\d{1,2})/(\\d{1,2})") { g, now, cal in
@@ -99,25 +102,38 @@ public enum DueDateParser {
         },
     ]).compactMap { $0 }
 
+    private static let monthPattern = "(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?"
+        + "|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\b"
+
     private static func monthDay(day: String, month: String, now: Date, _ cal: Calendar) -> Date? {
-        guard let d = Int(day), let m = months.firstIndex(of: month) else { return nil }
+        guard let d = Int(day), let m = months.firstIndex(of: String(month.prefix(3))) else { return nil }
         return nextOccurrence(day: d, month: m + 1, now: now, cal)
+    }
+
+    /// The date only if the components are real (Gregorian `date(from:)`
+    /// silently normalises month 13 / day 32 — reject those instead).
+    private static func validDate(year: Int, month: Int, day: Int, _ cal: Calendar) -> Date? {
+        guard let date = cal.date(from: DateComponents(year: year, month: month, day: day)),
+              cal.component(.day, from: date) == day, cal.component(.month, from: date) == month
+        else { return nil }
+        return date
     }
 
     /// This year's date, or next year's once it has passed (today counts).
     private static func nextOccurrence(day: Int, month: Int, now: Date, _ cal: Calendar) -> Date? {
         let year = cal.component(.year, from: now)
-        guard (1 ... 12).contains(month), (1 ... 31).contains(day) else { return nil }
         for y in [year, year + 1] {
-            let comps = DateComponents(year: y, month: month, day: day)
-            guard let date = cal.date(from: comps), cal.date(from: comps).map({ cal.component(.day, from: $0) }) == day
-            else { continue }
+            guard let date = validDate(year: y, month: month, day: day, cal) else { continue }
             if cal.startOfDay(for: date) >= cal.startOfDay(for: now) { return date }
         }
         return nil
     }
 
+    /// Calendar arithmetic, not 86 399 raw seconds: a DST day is 23 or 25
+    /// hours long and a fixed interval lands an hour off local 23:59:59
+    /// (review fold; pinned against Europe/Dublin's two transition days).
     private static func endOfDay(_ date: Date, _ cal: Calendar) -> Date {
-        cal.startOfDay(for: date).addingTimeInterval(86399)
+        let start = cal.startOfDay(for: date)
+        return cal.date(byAdding: DateComponents(day: 1, second: -1), to: start) ?? start
     }
 }
