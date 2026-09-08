@@ -41,7 +41,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the transcription router takes the harness's open mic on voice plates
 //  (no TCC sheet in the frame; the loop holds `.listening`).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `stopResponding()` — the Send button's Stop face: cuts the
-//  ChatSession turn AND auto-speak (a stopped answer must not keep talking). Confidence now 0.85.
+//  ChatSession turn AND auto-speak (a stopped answer must not keep talking); a stopped answer surfaces no
+//  code artifact and earns no finished-ping. Confidence now 0.85.
 
 import AppKit
 import Foundation
@@ -1094,13 +1095,18 @@ final class AppEnvironment {
             soundEffects.play(.error)
         } else if let answer {
             answerFailed = false
-            surfaceCodeArtifact(from: answer.text)
-            // Successful answer: ping if the user tabbed away during a long think
-            // (opt-in, backgrounded-only — the policy decides). Failures don't ping.
-            await maybeNotifyTurnFinished(
-                duration: clock.now - started,
-                appActive: NSApplication.shared.isActive
-            )
+            // A stopped answer is finished-if-short for the transcript, but not
+            // for the side effects: a truncated code block is no artifact, and a
+            // turn the user cut short earns no "finished" ping (review 3, #249).
+            if answer.interrupted != true {
+                surfaceCodeArtifact(from: answer.text)
+                // Successful answer: ping if the user tabbed away during a long think
+                // (opt-in, backgrounded-only — the policy decides). Failures don't ping.
+                await maybeNotifyTurnFinished(
+                    duration: clock.now - started,
+                    appActive: NSApplication.shared.isActive
+                )
+            }
         } else {
             answerFailed = false // stopped before a token — nothing to surface, nothing to ping
         }
