@@ -13,6 +13,9 @@
 //  HeartbeatScreen's idioms; the rendered feel is ⌘R verify-owed).
 //  Prior: none (new file).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-08, Confidence 0.85 — first-drive review: Dismiss on open rows is
+//  hover-only (+ a context menu with Done/Dismiss); the Add field parses a trailing due phrase via
+//  DueDateParser ("by Friday", "in 3 days", "3 oct") — package-pinned; the placeholder teaches it.
 
 import M1K3Todos
 import SwiftUI
@@ -25,6 +28,11 @@ struct TodosScreen: View {
     @State private var resolved: [Todo] = []
     @State private var draft = ""
     @State private var showResolved = false
+    /// Hover-only Dismiss on open rows (review of the first drive): the
+    /// destructive verb at content weight on every row was the loudest thing
+    /// on the screen. Done (the circle) is the primary action; Dismiss
+    /// appears under the pointer.
+    @State private var hoveredID: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,7 +55,7 @@ struct TodosScreen: View {
                 Spacer()
             }
             HStack {
-                TextField("Add a todo", text: $draft)
+                TextField("Add a todo — try “by Friday” or “in 3 days”", text: $draft)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { add() }
                 Button("Add") { add() }
@@ -138,12 +146,20 @@ struct TodosScreen: View {
             .help("Done")
             titleBlock(todo)
             Spacer()
-            Button("Dismiss", role: .destructive) { Task { await env?.dismissTodo(todo) } }
-                .buttonStyle(.plain)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+            if hoveredID == todo.id {
+                Button("Dismiss", role: .destructive) { Task { await env?.dismissTodo(todo) } }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(.vertical, 2)
+        .contentShape(Rectangle())
+        .onHover { inside in hoveredID = inside ? todo.id : (hoveredID == todo.id ? nil : hoveredID) }
+        .contextMenu {
+            Button("Done") { Task { await env?.completeTodo(todo) } }
+            Button("Dismiss", role: .destructive) { Task { await env?.dismissTodo(todo) } }
+        }
     }
 
     private func resolvedRow(_ todo: Todo) -> some View {
@@ -187,10 +203,12 @@ struct TodosScreen: View {
 
     // MARK: - Actions
 
+    /// A trailing due phrase ("by Friday", "in 3 days", "3 oct") comes off
+    /// the title and becomes the date — DueDateParser, package-pinned.
     private func add() {
-        let title = draft
+        let parsed = DueDateParser.parse(draft, now: Date(), calendar: .current)
         draft = ""
-        Task { await env?.addTodo(title: title) }
+        Task { await env?.addTodo(title: parsed.title, due: parsed.due) }
     }
 
     private func refresh() async {
