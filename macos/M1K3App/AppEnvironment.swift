@@ -40,6 +40,7 @@
 //  resume-most-recent read; memories + documents seed as a launch task (AppEnvironment+Screengrab).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the transcription router takes the harness's open mic on voice plates
 //  (no TCC sheet in the frame; the loop holds `.listening`).
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `.answerLanded` earcon on a finished turn (gate-muted mid-speech). Confidence now 0.8.
 
 import AppKit
 import Foundation
@@ -1075,6 +1076,10 @@ final class AppEnvironment {
             soundEffects.play(.error)
         } else {
             answerFailed = false
+            // The answer is home — a settled resolve to the tonic. Muted by the
+            // gate while auto-speak is mid-sentence, so it only sounds when the
+            // finish is otherwise silent.
+            soundEffects.play(.answerLanded)
             if let responseText = chat.messages.last?.text {
                 surfaceCodeArtifact(from: responseText)
             }

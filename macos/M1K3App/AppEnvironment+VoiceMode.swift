@@ -18,6 +18,9 @@
 //  read the same UserDefaults slots (same string values — no migration).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the screengrab cadence (maxWait 600 s) under the harness, so a slow
 //  XCTest snapshot cannot flip the listening plate into an answer. Confidence unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the synthesised vocabulary lands on the voice loop: listenStart when the
+//  mic opens, endpointHeard when a turn starts (both turn closures), voiceExit on leaving; enter keeps
+//  its (now synthesised) materialise. Confidence now 0.8 (felt beats are Kev's; the gate mutes over speech).
 //
 
 import AppKit
@@ -286,6 +289,7 @@ extension AppEnvironment {
         UserDefaults.standard.set(false, forKey: Self.voiceModeActiveKey)
         avatar.resetToIdle()
         speechHighlight.clear()
+        soundEffects.play(.voiceExit) // dematerialising — the enter sweep, mirrored
         // An exit mid-turn evaluates on a tally that misses that turn's
         // exchange (recordSpokenExchange fires when the answer lands) — the
         // exchange banks for the NEXT exit. Deliberate: an undercount can
@@ -369,6 +373,7 @@ extension AppEnvironment {
                 // blocked means the user hit notDetermined→deny mid-gesture or
                 // revoked mid-session. Voice mode can't work at all then — exit
                 // it and raise the recovery banner instead of looping silently.
+                soundEffects.play(.listenStart) // the mic is open — an eyebrow going up
                 return AsyncStream { continuation in
                     let forwarder = Task {
                         var sawSegments = false
@@ -403,6 +408,7 @@ extension AppEnvironment {
                 guard let self else {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
+                soundEffects.play(.endpointHeard) // got it — one soft tick down
                 await chat.send(question)
                 guard let last = chat.messages.last, last.role == .assistant else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))
@@ -436,6 +442,7 @@ extension AppEnvironment {
                 guard let self else {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
+                soundEffects.play(.endpointHeard) // got it — one soft tick down
                 // StreamedAnswerFolder carries the fold-forward guard (only
                 // prefix-extending updates — a FOLLOWUPS/polish shrink must
                 // never re-speak the answer, the 2026-07-25 finding) as a
