@@ -8,6 +8,8 @@
 //  tap away — honest RAG, the M1K3 way.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — a "Stopped" caption under an answer the user cut short
+//  (`interrupted`); status stays .complete so share/speak/follow-ups behave. Confidence now 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the thinking/reasoning header wears `.pixel(13)` (a fixed
 //  two-string enum); the activity label stays caption — it carries the search query / page host (dynamic content,
 //  review 1 catch on #248); the reasoning body stays ReadingText. Confidence now 0.8 (verify-by-launch).
@@ -205,6 +207,14 @@ struct MessageView: View {
                 Text("No response.")
                     .italic()
                     .foregroundStyle(.secondary)
+            }
+
+            if message.interrupted == true {
+                Label("Stopped", systemImage: "stop.fill")
+                    .symbolRenderingMode(.hierarchical)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Answer stopped early")
             }
 
             if case let .failed(reason) = message.status {

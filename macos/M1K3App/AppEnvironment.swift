@@ -40,7 +40,11 @@
 //  resume-most-recent read; memories + documents seed as a launch task (AppEnvironment+Screengrab).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the transcription router takes the harness's open mic on voice plates
 //  (no TCC sheet in the frame; the loop holds `.listening`).
-//  Review: Kev + claude-fable-5.1, 2026-09-08 — `.answerLanded` earcon on a finished turn (gate-muted mid-speech). Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `stopResponding()` — the Send button's Stop face: cuts the
+//  ChatSession turn AND auto-speak (a stopped answer must not keep talking); a stopped answer surfaces no
+//  code artifact and earns no finished-ping. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `.answerLanded` earcon on a finished turn (gate-muted mid-speech;
+//  silent for a stopped one). Confidence now 0.8.
 
 import AppKit
 import Foundation
@@ -1031,6 +1035,18 @@ final class AppEnvironment {
         }
     }
 
+    /// The Send button's Stop face (hit list 2026-09-08): cut the streaming
+    /// answer short, and with it anything auto-speak was about to say — a
+    /// stopped answer that keeps talking is the one thing "stop" must not do.
+    /// ChatSession keeps what streamed (marked `interrupted`); `send` returns
+    /// normally and resets the avatar on its own way out.
+    func stopResponding() {
+        guard chat.isResponding else { return }
+        chat.stopResponding()
+        cancelAutoSpeak()
+        Task { await stopSpeaking() }
+    }
+
     /// Send a user message: drives avatar thinking → generating → idle, then
     /// hands off to ChatSession. The speech delegate handles the speaking→idle
     /// transition if the user taps Speak on the response.
@@ -1070,31 +1086,42 @@ final class AppEnvironment {
         advance.cancel()
         // A failed turn earns the error earcon (the gate mutes it if M1K3 is
         // mid-speech, which a failure here never is).
+        // A stop with nothing streamed removes the assistant bubble, so
+        // `messages.last` can be the user's OWN question (review 2, #249 —
+        // the never-read-messages.last rule from AppEnvironment+AutoSpeak).
+        // Only an assistant row is an answer.
+        let answer = chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil }
         let answerFailed: Bool
-        if case .failed = chat.messages.last?.status {
+        if case .failed? = answer?.status {
             answerFailed = true
             soundEffects.play(.error)
-        } else {
+        } else if let answer {
             answerFailed = false
-            // The answer is home — a settled resolve to the tonic. Muted by the
-            // gate while auto-speak is mid-sentence, so it only sounds when the
-            // finish is otherwise silent.
-            soundEffects.play(.answerLanded)
-            if let responseText = chat.messages.last?.text {
-                surfaceCodeArtifact(from: responseText)
+            // A stopped answer is finished-if-short for the transcript, but not
+            // for the side effects: no landing chime, a truncated code block is
+            // no artifact, and a turn the user cut short earns no "finished"
+            // ping (review 3, #249).
+            if answer.interrupted != true {
+                // The answer is home — a settled resolve to the tonic. Muted by the
+                // gate while auto-speak is mid-sentence, so it only sounds when the
+                // finish is otherwise silent.
+                soundEffects.play(.answerLanded)
+                surfaceCodeArtifact(from: answer.text)
+                // Successful answer: ping if the user tabbed away during a long think
+                // (opt-in, backgrounded-only — the policy decides). Failures don't ping.
+                await maybeNotifyTurnFinished(
+                    duration: clock.now - started,
+                    appActive: NSApplication.shared.isActive
+                )
             }
-            // Successful answer: ping if the user tabbed away during a long think
-            // (opt-in, backgrounded-only — the policy decides). Failures don't ping.
-            await maybeNotifyTurnFinished(
-                duration: clock.now - started,
-                appActive: NSApplication.shared.isActive
-            )
+        } else {
+            answerFailed = false // stopped before a token — nothing to surface, nothing to ping
         }
         // The between-turns beat for the capability ladder: failures and
         // long/capped turns count as felt struggles (which can re-arm a parked
         // offer); a successful answer may raise the offer or complete a
         // consented staged swap at this idle moment.
-        let metrics = chat.messages.last?.metrics
+        let metrics = answer?.metrics
         // Same explicit defaultCap as the provider construction sites — the
         // composition root passes the MLX truth instead of trusting the
         // policy's mirrored literal (review nit on #22; the 116-F1 test

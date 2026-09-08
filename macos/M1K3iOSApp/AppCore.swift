@@ -47,6 +47,7 @@
 //  M1K3_SCREENGRAB=1) and the demo persona seeds there: history before ChatSession, knowledge as a launch task.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — Brain at Home pairing is harness-aware too (in-memory key store, the
 //  restore skipped): review caught the real paired Mac's name + PSK reaching the iOS brain-at-home plate.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — `stopResponding()` for the Send button's Stop face. Confidence now 0.85.
 //
 
 import Foundation
@@ -678,11 +679,22 @@ final class AppCore {
 
     // MARK: - Send (drives the avatar around ChatSession's streaming send)
 
+    /// The Send button's Stop face: cut the streaming answer short. `send`
+    /// returns normally afterwards and settles the avatar itself.
+    func stopResponding() {
+        guard chat.isResponding else { return }
+        chat.stopResponding()
+    }
+
     func send(_ text: String) async {
         guard isReady else { return }
         avatar.setActivity(.thinking)
         await chat.send(text)
-        if case .failed? = chat.messages.last?.status {
+        // After a stop with nothing streamed, `messages.last` is the user's own
+        // question (the assistant bubble is removed) — only an assistant row
+        // is an answer.
+        let answer = chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil }
+        if case .failed? = answer?.status {
             avatar.setActivity(.error)
         } else {
             avatar.setEmotion(.happy)

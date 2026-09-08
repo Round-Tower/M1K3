@@ -26,6 +26,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-07 — the App Store screengrab beat: once `isReady` flips, ContentView fires
 //  `performScreengrabBeat()` exactly once (no-op without M1K3_SCREENGRAB=1); the attachment store
 //  routes through the harness root too (2026-09-08 fold). Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-08 — the Send button morphs to Stop (stop.fill, red, ⌘.) while an
+//  answer streams; Return stays Send only while idle. Confidence now 0.85 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Chat
@@ -819,17 +821,33 @@ struct ContentView: View {
                 .accessibilityValue(env.isListening ? "Listening" : "Off")
                 .accessibilityHint("Dictate a message")
 
-                Button(action: send) {
-                    Image(systemName: "arrow.up")
+                // One button, two faces: Send while idle, Stop while an answer
+                // streams (hit list 2026-09-08). The symbol swaps with the
+                // same replace transition the mic uses, so it reads as the
+                // control changing its mind, not a second control appearing.
+                // ⌘. is the Mac's stop chord; Return stays Send only while idle
+                // so a stray Return mid-answer can't stop it.
+                // ONE Button whose face flips (review 1, #249): an if/else of
+                // two Buttons remounts the subtree and the replace transition
+                // has nothing to morph — the mic button above is the precedent.
+                let responding = env.chat.isResponding
+                Button {
+                    if responding { env.stopResponding() } else { send() }
+                } label: {
+                    Image(systemName: responding ? "stop.fill" : "arrow.up")
                         .imageScale(.large)
                         .fontWeight(.semibold)
                         .frame(width: 22, height: 22)
+                        .contentTransition(.symbolEffect(.replace))
+                        .animation(.default, value: responding)
                 }
                 .buttonStyle(.glassProminent)
                 .buttonBorderShape(.circle)
-                .disabled(!canSend)
-                .keyboardShortcut(.return, modifiers: [])
-                .accessibilityLabel("Send")
+                .tint(responding ? .red : nil)
+                .disabled(!canSend && !responding)
+                .keyboardShortcut(responding ? "." : .return, modifiers: responding ? .command : [])
+                .help(responding ? "Stop generating (⌘.)" : "Send")
+                .accessibilityLabel(responding ? "Stop generating" : "Send")
             }
             .padding(16)
             .frame(maxWidth: Self.chatContentMaxWidth)
