@@ -2,6 +2,12 @@
 //  ConstellationSeedingTests.swift
 //  M1K3MemoryVizTests
 //
+//  Pins the one shared recipe both shells draw the sky from: seeds add but
+//  never shadow the graph, the cap keeps the newest motes and runs BEFORE
+//  affinity, related memories thread themselves, empty is empty.
+//
+//  Signed: Kev + claude-fable-5.1, 2026-09-08, Confidence 0.85. Prior: Unknown.
+//
 
 import Foundation
 import M1K3Memory

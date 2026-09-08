@@ -119,13 +119,16 @@ struct CompanionPickerSection: View {
             .frame(maxWidth: .infinity)
             .clipShape(.rect(cornerRadius: 14))
             .overlay(alignment: .bottomTrailing) {
-                Button("Say hi") { sayHi() }
-                    .font(.caption.weight(.semibold))
-                    .buttonStyle(.borderless)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .m1k3Glass(cornerRadius: 20)
-                    .padding(10)
+                // The constellation has no face to poke — no dead button.
+                if !constellationChosen {
+                    Button("Say hi") { sayHi() }
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.borderless)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .m1k3Glass(cornerRadius: 20)
+                        .padding(10)
+                }
             }
             .listRowInsets(EdgeInsets(top: 10, leading: 12, bottom: 6, trailing: 12))
             .accessibilityElement(children: .ignore)
