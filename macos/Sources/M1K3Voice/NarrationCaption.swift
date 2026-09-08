@@ -25,6 +25,10 @@ public enum Narrator: Equatable, Sendable {
 
 public enum NarrationCaption {
     public static let fallbackVisitor = "A VISITING AGENT"
+    /// The client name is UNTRUSTED display data (any process can claim any
+    /// name at initialize) and the HUD line is fixed-width — cap it here, so
+    /// no caller can push a paragraph into the pill.
+    public static let maxNameLength = 24
 
     /// Uppercase, the HUD's house register. `claude-code` → `CLAUDE CODE · VIA M1K3`.
     public static func text(for narrator: Narrator) -> String {
@@ -32,12 +36,27 @@ public enum NarrationCaption {
         case .m1k3:
             return "M1K3"
         case let .visitor(name):
-            let cleaned = name?
-                .replacingOccurrences(of: "[-_]+", with: " ", options: .regularExpression)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .uppercased() ?? ""
-            let shown = cleaned.isEmpty ? fallbackVisitor : cleaned
+            let shown = displayName(name)
             return "\(shown) · VIA M1K3"
         }
+    }
+
+    /// One line, printable, capped: control characters and newlines dropped,
+    /// runs of whitespace/dashes/underscores folded to one space, then cut at
+    /// `maxNameLength` with an ellipsis.
+    static func displayName(_ raw: String?) -> String {
+        guard let raw else { return fallbackVisitor }
+        // Control characters (newlines included) become a space, so a name
+        // split across lines still reads as words on the one HUD line.
+        let printable = raw.unicodeScalars.map {
+            CharacterSet.controlCharacters.contains($0) || CharacterSet.newlines.contains($0) ? " " : Character($0)
+        }
+        let folded = String(printable)
+            .replacingOccurrences(of: "[-_\\s]+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespaces)
+            .uppercased()
+        guard !folded.isEmpty else { return fallbackVisitor }
+        guard folded.count > maxNameLength else { return folded }
+        return String(folded.prefix(maxNameLength - 1)).trimmingCharacters(in: .whitespaces) + "…"
     }
 }

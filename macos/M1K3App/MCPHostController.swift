@@ -246,12 +246,15 @@ final class MCPHostController {
     /// actor) and the MainActor app surfaces. Guards keep MCP from talking
     /// over a live voice conversation or an in-flight chat turn.
     private func makeVoiceHandlers() -> VoiceToolHandlers {
-        VoiceToolHandlers(
+        // Hoisted like start()/makeTodoHandlers(): the closure is a plain
+        // @Sendable, so it captures the Sendable box, never a self.-member.
+        let clientIdentity = clientIdentity
+        return VoiceToolHandlers(
             speak: { [weak self] text, emotion, wait in
                 guard let self else { throw MCPVoiceError("M1K3 is shutting down") }
                 // The HUD names who is talking: the client that initialised
                 // this server, by the name it gave (nil → honest fallback).
-                let narrator = Narrator.visitor(self.clientIdentity.current())
+                let narrator = Narrator.visitor(clientIdentity.current())
                 try await self.env.intelligenceSpeak(text: text, emotion: emotion, wait: wait, narrator: narrator)
             },
             stopSpeaking: { [weak self] in

@@ -24,6 +24,16 @@ struct NarrationCaptionTests {
         #expect(NarrationCaption.text(for: .visitor("  ")) == "A VISITING AGENT · VIA M1K3")
     }
 
+    @Test("an untrusted, unbounded client name is capped and kept to one printable line")
+    func visitorNameCapped() {
+        let long = String(repeating: "x", count: 200)
+        let capped = NarrationCaption.text(for: .visitor(long))
+        #expect(capped.hasSuffix("… · VIA M1K3"))
+        #expect(capped.count <= NarrationCaption.maxNameLength + " · VIA M1K3".count)
+        #expect(NarrationCaption.text(for: .visitor("bad\nactor\u{07}here")) == "BAD ACTOR HERE · VIA M1K3")
+        #expect(NarrationCaption.text(for: .visitor("  spaced   out  ")) == "SPACED OUT · VIA M1K3")
+    }
+
     @Test("the narrator is an equatable value the highlight can hold")
     func narratorEquality() {
         #expect(Narrator.visitor("x") == .visitor("x"))
