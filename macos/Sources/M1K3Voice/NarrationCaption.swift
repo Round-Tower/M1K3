@@ -48,10 +48,14 @@ public enum NarrationCaption {
         guard let raw else { return fallbackVisitor }
         // Control characters (newlines included) become a space, so a name
         // split across lines still reads as words on the one HUD line.
-        let printable = raw.unicodeScalars.map {
-            CharacterSet.controlCharacters.contains($0) || CharacterSet.newlines.contains($0) ? " " : Character($0)
+        // Scalar-level replace, then back to a String so multi-scalar
+        // grapheme clusters (ZWJ emoji, combining marks) stay intact.
+        var scalars = String.UnicodeScalarView()
+        for scalar in raw.unicodeScalars {
+            let isControl = CharacterSet.controlCharacters.contains(scalar) || CharacterSet.newlines.contains(scalar)
+            scalars.append(isControl ? " " : scalar)
         }
-        let folded = String(printable)
+        let folded = String(scalars)
             .replacingOccurrences(of: "[-_\\s]+", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespaces)
             .uppercased()

@@ -32,6 +32,9 @@ struct NarrationCaptionTests {
         #expect(capped.count <= NarrationCaption.maxNameLength + " · VIA M1K3".count)
         #expect(NarrationCaption.text(for: .visitor("bad\nactor\u{07}here")) == "BAD ACTOR HERE · VIA M1K3")
         #expect(NarrationCaption.text(for: .visitor("  spaced   out  ")) == "SPACED OUT · VIA M1K3")
+        // A multi-scalar cluster survives as one grapheme, and counts as one toward the cap.
+        let family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}"
+        #expect(NarrationCaption.text(for: .visitor("bot \(family)")) == "BOT \(family) · VIA M1K3")
     }
 
     @Test("the narrator is an equatable value the highlight can hold")
