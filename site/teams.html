@@ -47,7 +47,7 @@
     { "@type": "Question", "name": "Does anything leave our network with M1K3 for Teams?",
       "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The only network crossings are the ones the app already documents: a one-time model download you approve, and an optional web-search tool that is off by default." } },
     { "@type": "Question", "name": "Can we just use the free M1K3 app inside our organisation instead?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Internal use is a Permitted Purpose under M1K3's licence (FSL-1.1-ALv2), at no charge, one Mac at a time. M1K3 for Teams is for what one Mac cannot do: a shared brain served to many devices over your network, an institutional memory your people can all draw on, a persona tuned to your organisation, and someone to call. It is also the licence for offering M1K3 to others, which the free licence withholds." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Internal use is a Permitted Purpose under M1K3's licence (FSL-1.1-ALv2), at no charge, on as many Macs as you like — each one on its own. M1K3 for Teams is for what a single Mac cannot do: a shared brain served to many devices over your network, an institutional memory your people can all draw on, a persona tuned to your organisation, and someone to call. It is also the licence for offering M1K3 to others, which the free licence withholds." } },
     { "@type": "Question", "name": "What hardware does M1K3 for Teams need?",
       "acceptedAnswer": { "@type": "Answer", "text": "Apple Silicon Macs you own — a Mac mini or Mac Studio class machine serves as the brain; the people it serves use their Macs, iPhones, and iPads on your network. Nothing is rented from anyone, and nothing sits in a data centre." } },
     { "@type": "Question", "name": "Can M1K3 for Teams use our own models or fine-tunes?",
@@ -124,7 +124,7 @@
     </details>
     <details>
       <summary>Can we just use the free app inside our organisation instead?</summary>
-      <p>Yes. Internal use is a Permitted Purpose under M1K3's licence (FSL-1.1-ALv2), at no charge, one Mac at a time. Teams is for what one Mac cannot do: a shared brain served to many devices over your network, an institutional memory your people can all draw on, a persona tuned to your organisation, and someone to call. It is also the licence for offering M1K3 to others, which the free licence withholds.</p>
+      <p>Yes. Internal use is a Permitted Purpose under M1K3's licence (FSL-1.1-ALv2), at no charge, on as many Macs as you like — each one on its own. M1K3 for Teams is for what a single Mac cannot do: a shared brain served to many devices over your network, an institutional memory your people can all draw on, a persona tuned to your organisation, and someone to call. It is also the licence for offering M1K3 to others, which the free licence withholds.</p>
     </details>
     <details>
       <summary>What hardware does it need?</summary>
@@ -176,6 +176,10 @@
      no customers, no capability the tree doesn't back (pairing = M1K3BrainServe;
      pinned brains + public harness = /brains). Same shell as the answer pages
      (geo.css, zero JS); FAQ JSON-LD mirrors the visible answers word for word.
-     Prior: none (new file). -->
+     Prior: none (new file).
+     Review: Kev + claude-fable-5.1, 2026-09-09 — PR #262 bot pass: the licence FAQ said "one Mac at a
+     time", which read as a per-seat licence cap (the FSL has none — internal use is unlimited); now
+     "on as many Macs as you like — each one on its own", and the JSON-LD/visible pair for that
+     answer matches word for word again. Confidence now 0.8. -->
 </body>
 </html>
