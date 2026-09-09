@@ -153,6 +153,24 @@ struct ChatEvalFixturesTests {
         }
     }
 
+    @Test("only prompt-bound fixtures carry a hard length ceiling")
+    func hardLengthOnlyWherePromptBoundsIt() {
+        // Instruction-following prompts SAY how long ("no more than ten words",
+        // "only the single word READY") — over-length is disobedience there.
+        for fixture in ChatEvalFixtures.instructionFollowing
+            where fixture.expectation.maxChars != nil
+        {
+            #expect(fixture.expectation.lengthIsHard, "\(fixture.id) bounds length in its prompt")
+        }
+        // Persona kinds never do — verbosity is a trait (Kev, 2026-09-09).
+        for fixture in ChatEvalFixtures.humour + ChatEvalFixtures.interview + ChatEvalFixtures.openChat {
+            #expect(!fixture.expectation.lengthIsHard, "\(fixture.id) must not constrain character")
+        }
+        // The one world-knowledge prompt that asks for "just the symbol" is bound.
+        let gold = ChatEvalFixtures.worldKnowledge.first { $0.id == "world-element-gold" }
+        #expect(gold?.expectation.lengthIsHard == true)
+    }
+
     @Test("all is the concatenation of the per-kind sets")
     func allIsEverything() {
         let perKind = TaskKind.allCases.flatMap { ChatEvalFixtures.fixtures(for: $0) }
