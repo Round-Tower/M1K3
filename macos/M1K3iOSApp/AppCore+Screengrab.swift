@@ -4,13 +4,16 @@
 //
 //  The mobile half of the App Store screengrab harness (M1K3Screengrab) — the
 //  mirror of AppEnvironment+Screengrab on the Mac: seed the demo persona into
-//  the isolated store root, and fire the plate's launch beat (voice mode, the
-//  spoken hero answer with karaoke) once the brain is ready. Every entry point
+//  the isolated store root, hand the voice plates the open mic, and fire the
+//  plate's launch beat (voice mode) once the brain is ready. Every entry point
 //  is a no-op unless M1K3_SCREENGRAB=1 is in the launch environment.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.8 (seed pinned in
 //  M1K3ScreengrabTests; the beat is verify-by-launch through the
 //  M1K3iOSScreengrabUITests suite on a device), Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-09 — the open mic comes to the phone (`screengrabTranscriber`, the Mac's seam): the
+//  speaking plate is a REAL turn through the loop — a direct `speak` never reached `.speaking`, so the phone's
+//  first run shot "Listening…" for it. Confidence now 0.8.
 //
 
 import Foundation
@@ -43,6 +46,14 @@ final class ScreengrabBrainKeyStore: BrainKeyStoring, @unchecked Sendable {
 
 extension AppCore {
     private nonisolated static let screengrabLog = M1K3Log.logger(.screengrab)
+
+    /// The voice plates' recogniser: an open mic, no TCC, the hero question as a
+    /// live partial (listening) or a submitted turn (speaking). Nil otherwise.
+    nonisolated static func screengrabTranscriber() -> (any TranscriptionProvider)? {
+        let harness = ScreengrabHarness.current
+        guard harness.isActive, harness.entersVoiceMode else { return nil }
+        return OpenMicTranscriber(partial: harness.livePartial, submits: harness.submitsHeroQuestion)
+    }
 
     /// Pairing persistence: the real defaults + Keychain, or — under the harness —
     /// a throwaway defaults suite and an in-memory key store, so neither the
@@ -80,16 +91,11 @@ extension AppCore {
     }
 
     /// The plate's launch beat, fired by ChatScreen once the brain is ready.
-    func performScreengrabBeat() async {
+    /// The speaking plate needs no beat of its own: the open mic submits the
+    /// hero question and the loop answers and speaks it (karaoke and all).
+    func performScreengrabBeat() {
         let harness = ScreengrabHarness.current
         guard harness.isActive, harness.entersVoiceMode else { return }
         enterVoiceMode()
-        guard harness.submitsHeroQuestion else { return }
-        // Let the mode settle (avatar in, mic armed) before the karaoke line.
-        try? await Task.sleep(for: .seconds(1.5))
-        // Same sanitiser as the voice loop's speak closure (AppCore+Voice).
-        let line = SpeechTextPolish.polish(DemoPersona.heroConversation[1].text)
-        speechHighlight.beginUtterance(text: line)
-        await speech.speak(line)
     }
 }

@@ -17,6 +17,7 @@
 //  isolation + plate flags pinned), Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `livePartial`: the listening plate's
 //  hero question through the open mic. Confidence now 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-09 — `hidesViewfinder` for the iOS pairing plate. Confidence now 0.9.
 //
 
 import Foundation
@@ -81,6 +82,14 @@ public struct ScreengrabHarness: Sendable, Equatable {
 
     public var showsPairing: Bool {
         plate == .brainAtHome
+    }
+
+    /// iOS: the pairing screen mounts no viewfinder (and asks no camera
+    /// permission) — the system's TCC alert sat in the plate (2026-09-09,
+    /// phone run 1), and a real camera feed of the desk is no App Store frame.
+    /// The plate shows the instructions and the paste path.
+    public var hidesViewfinder: Bool {
+        showsPairing
     }
 
     /// Mac: the sidebar room ContentView opens on instead of chat.

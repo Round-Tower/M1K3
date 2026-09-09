@@ -190,7 +190,7 @@ extension AppCore {
                             continuation.yield(segment)
                         }
                         if !sawSegments, !Task.isCancelled,
-                           let failure = self?.transcriber.lastFailure
+                           let failure = (self?.transcriber as? AppleSpeechTranscriber)?.lastFailure
                         {
                             self?.voiceLoop?.listenFailed(failure)
                         }

@@ -138,7 +138,7 @@ struct ChatScreen: View {
                 } else if ScreengrabHarness.current.isActive {
                     // The App Store screengrab suite's per-plate beat (AppCore+Screengrab).
                     voiceLaunched = true
-                    await core.performScreengrabBeat()
+                    core.performScreengrabBeat()
                 }
             }
     }

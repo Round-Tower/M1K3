@@ -18,12 +18,14 @@
 //  0.8 (verify-by-launch on the iPad).
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — the done copy follows what actually happened (auto-activated / pair
 //  again on a Home-only device / choose Home). Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-09 — no viewfinder (no camera prompt) under the screengrab harness. Confidence now 0.85.
 //
 
 #if os(iOS)
     import AVFoundation
 #endif
 import M1K3BrainLink
+import M1K3Screengrab
 import SwiftUI
 
 struct BrainPairingScreen: View {
@@ -97,7 +99,8 @@ struct BrainPairingScreen: View {
             .foregroundStyle(.secondary)
         }
         #if os(iOS)
-            if QRScannerView.cameraLikelyAvailable {
+            // Never under the screengrab harness: the TCC alert landed in the plate.
+            if QRScannerView.cameraLikelyAvailable, !ScreengrabHarness.current.hidesViewfinder {
                 Section {
                     switch cameraAccess {
                     case .authorized:

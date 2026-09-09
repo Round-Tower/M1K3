@@ -9,6 +9,7 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.9 (pure), Prior: Unknown
 //  Review: claude-fable-5.1, 2026-09-08 — pins moved to Lil + PhosphorFox with the recipe. Confidence now 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-09 — `hidesViewfinder` pinned for the pairing plate. Confidence now 0.9.
 //
 
 import Foundation
@@ -54,6 +55,8 @@ struct ScreengrabHarnessTests {
         #expect(!h(.voiceListening).submitsHeroQuestion)
         #expect(h(.brainAtHome).showsPairing)
         #expect(!h(.memories).showsPairing)
+        #expect(h(.brainAtHome).hidesViewfinder, "the pairing plate never asks the phone's camera")
+        #expect(!h(.memories).hidesViewfinder)
         #expect(h(.onboarding).showsOnboarding)
         #expect(h(.documents).showsDocuments && !h(.documents).showsMemories)
         #expect(h(.memories).showsMemories)
