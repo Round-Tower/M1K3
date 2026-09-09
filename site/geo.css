@@ -208,6 +208,8 @@ table.cmp { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 
 .page-cta h2 { margin-top: 0; }
 .page-cta p { margin: 18px auto 36px; max-width: 480px; }
 .cta-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: center; }
+/* A pixel Mac above a CTA (teams.html) — the site's own glyph, never the Apple logo (third parties may not use it). */
+.cta-glyph { display: block; margin: 0 auto 18px; opacity: .82; filter: drop-shadow(0 0 8px rgba(255,255,255,.35)); }
 
 .more { border-top: 1px solid var(--line); margin-top: 70px; padding-top: 34px; }
 .more-links { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 16px; }
