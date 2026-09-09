@@ -38,7 +38,7 @@ public enum DemoPersona {
         ChatMessage(role: .user, text: "who are you, and who else is listening?", status: .complete),
         ChatMessage(
             role: .assistant,
-            text: "I am M1K3. I live on this Mac and answer to you alone. Nobody else is listening. "
+            text: "I am M1K3. I live on this machine and answer to you alone. Nobody else is listening. "
                 + "I checked. Twice. Ask me anything.",
             status: .complete
         ),

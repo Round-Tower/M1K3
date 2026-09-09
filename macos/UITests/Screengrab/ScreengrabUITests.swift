@@ -131,7 +131,7 @@ final class ScreengrabUITests: XCTestCase {
         try capture(.privacyLabel, settle: 3, window: settingsWindow) { app in
             // The beat opens Settings on the Privacy pane.
             waitForBrain(app)
-            waitForText("Privacy", in: app, timeout: 60)
+            waitForText("Privacy", in: app, scope: settingsWindow(app), timeout: 60)
         }
     }
 

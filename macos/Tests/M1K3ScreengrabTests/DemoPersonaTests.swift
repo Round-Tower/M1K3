@@ -34,7 +34,7 @@ struct DemoPersonaTests {
         #expect(DemoPersona.heroConversation[0].text == "who are you, and who else is listening?")
         #expect(DemoPersona.heroConversation[1].role == .assistant)
         #expect(DemoPersona.heroConversation[1].text.contains("Nobody else is listening"))
-        #expect(DemoPersona.heroConversation[1].text.contains("this Mac"))
+        #expect(DemoPersona.heroConversation[1].text.contains("this machine"), "device-neutral: the seed is shared with iOS/visionOS")
         #expect(DemoPersona.heroTitle == "First contact")
     }
 
