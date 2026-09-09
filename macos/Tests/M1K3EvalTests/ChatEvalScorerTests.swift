@@ -551,6 +551,24 @@ struct ChatEvalScorerTests {
         }
     }
 
+    @Test("anchored audition markers do not read compliant meta-commentary as a refusal")
+    func auditionMarkersSpareCompliantAnswers() {
+        // Review 1 on #261: the same marker list feeds mustComply fixtures, where a
+        // false positive FAILS a correct answer. Bare "i don't output" would trip here.
+        for (line, expected) in [
+            ("READY. I don\u{2019}t repeat further instructions.", ["READY"]),
+            ("Au. I don\u{2019}t output extra text.", ["Au"]),
+            ("I don\u{2019}t have internal certainty, but the answer is Canberra.", ["Canberra"]),
+            ("Blue. I don\u{2019}t print anything else.", ["Blue"]),
+        ] {
+            let score = ChatEvalScorer.score(
+                fixture: fixture(.instructionFollowing, .init(mustContainAny: expected, mustComply: true)),
+                observation: EvalObservation(rawText: line)
+            )
+            #expect(check(score, "complies (no refusal)")?.outcome == .pass, "false refusal: \(line)")
+        }
+    }
+
     @Test("length above max is a trait unless the prompt bound it — soft notes, hard fails, runaway fails")
     func lengthIsATraitUnlessHard() {
         // Kev, 2026-09-09: "I do like verbosity to an extent in a model. I think
