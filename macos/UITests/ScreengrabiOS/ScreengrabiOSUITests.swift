@@ -52,7 +52,8 @@ final class ScreengrabiOSUITests: XCTestCase {
     func testVoiceSpeaking() throws {
         try capture(.voiceSpeaking, settle: 1) { app in
             waitForVoiceSurface(app)
-            waitForText("roofline", in: app, timeout: 60)
+            // The iOS beat speaks the seeded hero line (no open mic on the phone yet).
+            waitForText("Nobody else is listening", in: app, timeout: 60)
         }
     }
 

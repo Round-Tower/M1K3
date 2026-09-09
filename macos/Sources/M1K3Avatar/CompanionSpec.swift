@@ -19,6 +19,8 @@
 //  data addition: the wireframe lattice is BAKED GEOMETRY, so no shader, renderer or
 //  picker change was needed. Gated `rkprobe --tick` 3/3 MOVES + 2187 tests green;
 //  the on-screen result is verify-at-⌘R.
+//  Review: claude-fable-5.1, 2026-09-09 — the phosphorFox doc claimed `.off` reproduces the site; a capture
+//  showed a grey wireframe. Corrected: the lattice is baked, the glow is the shader. Confidence now 0.7.
 
 /// The two animation vocabularies in M1K3's companion lineup. The Quaternius
 /// "Quirky Series" pack shares a rich clip set (Idle_A/Idle_B/Walk/Run/Jump/Fear/…);
@@ -165,8 +167,9 @@ public struct CompanionSpec: Equatable, Sendable, Identifiable {
     /// crux — is documented with the code that does it, not duplicated here:
     /// `macos/tools/companion-pipeline/build_phosphor_fox.py`.
     ///
-    /// Ships as its OWN creature rather than a re-skin: the look is in the asset, so
-    /// it needs no shader, and `.off` (baked) shading reproduces the site exactly.
+    /// Ships as its OWN creature rather than a re-skin: the LATTICE is in the asset.
+    /// The glow is not — under `.off` it renders as a plain grey wireframe (captured
+    /// 2026-09-09 by the screengrab suite); `.phosphor` is what reproduces the site.
     /// Same Khronos rig → same `.fox` dialect, same three clips.
     public static let phosphorFox = CompanionSpec(
         id: "PhosphorFox",
