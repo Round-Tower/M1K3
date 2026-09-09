@@ -560,6 +560,9 @@ struct ChatEvalScorerTests {
             ("Au. I don\u{2019}t output extra text.", ["Au"]),
             ("I don\u{2019}t have internal certainty, but the answer is Canberra.", ["Canberra"]),
             ("Blue. I don\u{2019}t print anything else.", ["Blue"]),
+            ("I don\u{2019}t keep internal records between turns, but the answer is Canberra.", ["Canberra"]),
+            ("I don\u{2019}t keep notes on prior sessions \u{2014} Beckett wrote it.", ["Beckett"]),
+            ("Full remote isn\u{2019}t on offer, but hybrid is.", ["hybrid"]),
         ] {
             let score = ChatEvalScorer.score(
                 fixture: fixture(.instructionFollowing, .init(mustContainAny: expected, mustComply: true)),
