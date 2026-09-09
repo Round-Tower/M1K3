@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-07-10"
+  "dateModified": "2026-09-09"
 }
 </script>
 <script type="application/ld+json">
@@ -45,13 +45,13 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "What is the most private ChatGPT alternative for a Mac?",
-      "acceptedAnswer": { "@type": "Answer", "text": "An app whose AI runs entirely on the Mac itself, so conversations physically cannot reach a server. M1K3 is built exactly for this: a free, open-source AI app for Apple Silicon Macs where inference, voice, embeddings, and storage are all on-device — with chat, live voice, and memory over your documents included. Ollama and LM Studio also run models locally and are strong choices if you prefer to assemble your own stack." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "An app whose AI runs entirely on the Mac itself, so conversations physically cannot reach a server. M1K3 is built exactly for this: a free, source-available AI app for Apple Silicon Macs where inference, voice, embeddings, and storage are all on-device — with chat, live voice, and memory over your documents included. Ollama and LM Studio also run models locally and are strong choices if you prefer to assemble your own stack." } },
     { "@type": "Question", "name": "Is the ChatGPT desktop app for Mac private?",
       "acceptedAnswer": { "@type": "Answer", "text": "The ChatGPT desktop app is a client for a cloud service: your conversations are processed on OpenAI's servers, under OpenAI's policies and controls. That is privacy by policy. It can be an acceptable trade — ChatGPT's frontier models are more capable than anything that runs locally — but it is architecturally different from an app where data never leaves the machine." } },
     { "@type": "Question", "name": "Can a local AI on a Mac really match ChatGPT?",
       "acceptedAnswer": { "@type": "Answer", "text": "Not on raw capability — frontier cloud models are ahead of anything a laptop can run, and an honest local-AI vendor should say so. For everyday tasks like summarising, drafting, and answering questions grounded in your own documents, current local models such as Gemma and Qwen on Apple Silicon are genuinely useful, and they come with properties no cloud model offers: they work offline, cost nothing per query, and your data stays home." } },
     { "@type": "Question", "name": "Does M1K3 require an account or subscription?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 is free and open source (Apache-2.0) with no account, no subscription, and no telemetry. The only network use is the one-time model download and an optional web-search tool that is off by default." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 is free for humans, with no account, no subscription, and no telemetry; its source is public under the Functional Source License (FSL-1.1-ALv2 — source-available, not open source). The only network use is the one-time model download and an optional web-search tool that is off by default." } }
   ]
 }
 </script>
@@ -65,7 +65,7 @@
 <div class="vignette"></div>
 
 <nav>
-  <a class="wordmark" href="/"><img class="mark" src="favicon.svg" alt="" width="22" height="22" />M1K3<span class="cursor">_</span></a>
+  <a class="wordmark" href="/" aria-label="M1K3 home"><img class="mark" src="mark.svg" alt="M1K3" width="24" height="28" /></a>
   <div class="links">
     <a href="/">Home</a>
     <a href="/#features">Features</a>
@@ -79,11 +79,11 @@
   <header class="article-head">
     <span class="label">// privacy</span>
     <h1>Private ChatGPT alternative for Mac</h1>
-    <p class="meta">Updated 2026-07-10 · By Round Tower, the makers of M1K3 — we have a horse in this race, so we've kept the comparison factual.</p>
+    <p class="meta">Updated 2026-09-09 · By Round Tower, the makers of M1K3 — we have a horse in this race, so we've kept the comparison factual.</p>
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: the most private ChatGPT alternative for a Mac is one where the AI runs on the Mac itself, so your conversations physically cannot reach a server.</strong> M1K3 is built exactly for this: a free, open-source AI app for Apple Silicon Macs where inference, voice, embeddings, and storage are all on-device — zero bytes of your conversations, documents, or calls are sent anywhere. It gives you the assistant experience (chat, live voice, memory over your documents) rather than just a model runner. If you'd rather assemble your own stack, Ollama and LM Studio also run models locally and are good tools. The ChatGPT desktop app, by contrast, is a client for a cloud service — capable, but architecturally not private in the same sense.</p>
+    <p><strong>Short answer: the most private ChatGPT alternative for a Mac is one where the AI runs on the Mac itself, so your conversations physically cannot reach a server.</strong> M1K3 is built exactly for this: a free, source-available AI app for Apple Silicon Macs where inference, voice, embeddings, and storage are all on-device — zero bytes of your conversations, documents, or calls are sent anywhere. It gives you the assistant experience (chat, live voice, memory over your documents) rather than just a model runner. If you'd rather assemble your own stack, Ollama and LM Studio also run models locally and are good tools. The ChatGPT desktop app, by contrast, is a client for a cloud service — capable, but architecturally not private in the same sense.</p>
   </div>
 
   <h2>What makes an AI app actually private?</h2>
@@ -95,7 +95,7 @@
   <p>Everything local on this page — M1K3, Ollama, LM Studio — is in the second category for inference. The differences between them are about what you get around the model.</p>
 
   <h2>M1K3: the private assistant, not just a model runner</h2>
-  <p><a href="/">M1K3</a> is a free, open-source (Apache-2.0) AI app for macOS by Round Tower, Ireland. It runs Gemma and Qwen models via MLX-Swift on Apple Silicon, with Apple Foundation Models for fast turns, and wraps them in the things people actually use ChatGPT for:</p>
+  <p><a href="/">M1K3</a> is a free, source-available (FSL-1.1-ALv2, public repository) AI app for macOS by Round Tower, Ireland. It runs Gemma and Qwen models via MLX-Swift on Apple Silicon, with Apple Foundation Models for fast turns, and wraps them in the things people actually use ChatGPT for:</p>
   <ul>
     <li><strong>Chat with memory</strong> — a personal knowledge graph over your documents; answers grounded in your own files.</li>
     <li><strong>Live voice</strong> — streaming speech in and natural speech out, fully on-device.</li>
@@ -118,7 +118,7 @@
         <tr><td>Model quality ceiling</td><td>Local models (Gemma, Qwen)</td><td>Local models, wide choice</td><td>Local models, wide choice</td><td class="yes">Frontier models — the capability winner</td></tr>
         <tr><td>Works offline</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
         <tr><td>Price</td><td>Free</td><td>Free</td><td>Free (app)</td><td>Free tier; paid plans for full capability</td></tr>
-        <tr><td>Open source</td><td class="yes">Yes — Apache-2.0</td><td class="yes">Yes — MIT</td><td>Partially (app is proprietary; CLI/SDK open)</td><td class="no">No</td></tr>
+        <tr><td>Source</td><td>Public — source-available (FSL-1.1-ALv2)</td><td class="yes">Open source — MIT</td><td>Partially (app is proprietary; CLI/SDK open)</td><td class="no">Closed</td></tr>
         <tr><td>Platforms</td><td>macOS 26, Apple Silicon</td><td>macOS, Windows, Linux</td><td>macOS, Windows, Linux</td><td>macOS, Windows, web, mobile</td></tr>
       </tbody>
     </table>
@@ -133,7 +133,7 @@
   <ol>
     <li><strong><a href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a></strong> — the easiest way in.</li>
     <li><strong><a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">Download the DMG</a></strong> — signed and notarized.</li>
-    <li><strong><a href="https://github.com/Round-Tower/M1K3">Build from source</a></strong> — it's Apache-2.0; the repo is public.</li>
+    <li><strong><a href="https://github.com/Round-Tower/M1K3">Build from source</a></strong> — the repo is public under the Functional Source License; build and run it for yourself.</li>
   </ol>
   <p>Requires macOS 26 Tahoe on Apple Silicon. First run starts on an instant, nothing-to-download brain; bigger local brains are an opt-in download.</p>
 
@@ -149,7 +149,7 @@
     </details>
     <details>
       <summary>Does M1K3 require an account or subscription?</summary>
-      <p>No. Free, open source, no account, no subscription, no telemetry. Network is used only for the one-time model download and the optional, off-by-default web search.</p>
+      <p>No. Free for humans, source public (FSL-1.1-ALv2), no account, no subscription, no telemetry. Network is used only for the one-time model download and the optional, off-by-default web search.</p>
     </details>
     <details>
       <summary>What about Ollama or LM Studio instead?</summary>
@@ -160,7 +160,7 @@
   <section class="page-cta">
     <span class="label">// own your ai</span>
     <h2>Nothing leaves.</h2>
-    <p>M1K3 is free, open source, and runs entirely on your Mac. Pull the ethernet cable — it doesn't notice.</p>
+    <p>M1K3 is free for humans, source public, and runs entirely on your Mac. Pull the ethernet cable — it doesn't notice.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
       <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Build from source</a>
@@ -190,6 +190,12 @@
      ChatGPT/LM Studio/Ollama treated fairly — frontier capability conceded
      plainly; the trade is stated, not spun. M1K3 claims grounded in README.md /
      site/llms.txt / site/index.html. Zero JS; shared geo.css shell.
-     Prior: none (new file). -->
+     Prior: none (new file). 
+
+     Review: Kev + claude-fable-5.1, 2026-09-09 — the relicense (ADR 0005, 2026-09-09): "open source (Apache-2.0)" → source-available
+     (FSL-1.1-ALv2) in both JSON-LD answers, the short answer, the intro, the comparison table (row
+     renamed Open source → Source; M1K3 loses the .yes class — honesty over green), the build-from-
+     source bullet, the FAQ and the closing line. Nav → the tile-less mark alone. dateModified bumped.
+     Confidence now 0.85. -->
 </body>
 </html>

@@ -161,8 +161,10 @@ def test_html_carries_provenance_and_stays_offline():
     assert "fonts.googleapis.com" not in html and "fonts.gstatic.com" not in html
     assert 'href="fonts.css"' in html and "vt323-latin-400-normal.woff2" in html
     assert 'as="font" type="font/woff2" crossorigin' in html  # a font preload without crossorigin double-downloads
-    # the phosphor mark rides beside the wordmark, same as every other page
-    assert 'class="mark"' in html and 'src="favicon.svg"' in html
+    # the nav is the tile-less phosphor mark alone (2026-09-09), same as every other page; the tab icon keeps favicon.svg
+    assert 'class="mark"' in html and 'src="mark.svg"' in html and 'alt="M1K3"' in html
+    assert 'href="favicon.svg"' in html  # the <link rel=icon>, unchanged
+    assert '<span class="cursor">' not in html
     # the read-out's editorial facts ride along, dated
     assert "Qwen3.8-27B" in html and "0.73" in html and "0.66" in html
     # a legacy run without powerSource renders as unknown, never as a guess

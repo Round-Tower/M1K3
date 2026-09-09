@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28">
+  <!-- M1K3 phosphor mark, nav cut: the 5x7 pixel M alone, no tile. The tab icon keeps its tile (favicon.svg). Self-hosted, no CDN. -->
+  <!-- glyph is 20x20; translate(2,4) centres it in the 24x28 box (review 1, PR #259) -->
+  <g fill="#ffffff" transform="translate(2 4)">
+    <rect x="0" y="0" width="4" height="4"/><rect x="16" y="0" width="4" height="4"/>
+    <rect x="0" y="4" width="4" height="4"/><rect x="4" y="4" width="4" height="4"/><rect x="12" y="4" width="4" height="4"/><rect x="16" y="4" width="4" height="4"/>
+    <rect x="0" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/><rect x="16" y="8" width="4" height="4"/>
+    <rect x="0" y="12" width="4" height="4"/><rect x="16" y="12" width="4" height="4"/>
+    <rect x="0" y="16" width="4" height="4"/><rect x="16" y="16" width="4" height="4"/>
+  </g>
+</svg>

@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-07-10"
+  "dateModified": "2026-09-09"
 }
 </script>
 <script type="application/ld+json">
@@ -51,7 +51,7 @@
     { "@type": "Question", "name": "Where is M1K3's data stored?",
       "acceptedAnswer": { "@type": "Answer", "text": "In the app's macOS sandbox container, in a GRDB store encrypted with a key held in your Keychain. Documents enter only when you explicitly open or drop them; call transcription is consent-gated and encrypted at rest; the memory store has a forget primitive so consent stays revocable." } },
     { "@type": "Question", "name": "How can I verify M1K3's privacy claims?",
-      "acceptedAnswer": { "@type": "Answer", "text": "M1K3 is open source (Apache-2.0), so the claims are inspectable rather than takeable on faith: read the sandbox entitlements file in the repo (each entitlement carries a signed comment explaining why it exists), print the shipped app's entitlements with codesign, watch it with a network monitor like Little Snitch, or pull the ethernet cable mid-conversation — M1K3 doesn't notice." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "M1K3's source is public (source-available under the Functional Source License, FSL-1.1-ALv2), so the claims are inspectable rather than takeable on faith: read the sandbox entitlements file in the repo (each entitlement carries a signed comment explaining why it exists), print the shipped app's entitlements with codesign, watch it with a network monitor like Little Snitch, or pull the ethernet cable mid-conversation — M1K3 doesn't notice." } }
   ]
 }
 </script>
@@ -65,7 +65,7 @@
 <div class="vignette"></div>
 
 <nav>
-  <a class="wordmark" href="/"><img class="mark" src="favicon.svg" alt="" width="22" height="22" />M1K3<span class="cursor">_</span></a>
+  <a class="wordmark" href="/" aria-label="M1K3 home"><img class="mark" src="mark.svg" alt="M1K3" width="24" height="28" /></a>
   <div class="links">
     <a href="/">Home</a>
     <a href="/#features">Features</a>
@@ -79,7 +79,7 @@
   <header class="article-head">
     <span class="label">// privacy architecture</span>
     <h1>Is M1K3 really private?</h1>
-    <p class="meta">Updated 2026-07-10 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
+    <p class="meta">Updated 2026-09-09 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
   </header>
 
   <div class="answer">
@@ -130,7 +130,7 @@
   <p>There's no telemetry to store elsewhere. Bug reports are user-initiated: <strong>Settings → Report an issue…</strong> generates a redacted diagnostic that <em>you</em> read and attach to a GitHub issue by hand — nothing is transmitted automatically.</p>
 
   <h2>How can you verify any of this?</h2>
-  <p>M1K3 is open source (Apache-2.0), which turns this page from marketing into a checklist:</p>
+  <p>M1K3's source is public — source-available under the <a href="https://github.com/Round-Tower/M1K3/blob/master/LICENSE">Functional Source License</a> (FSL-1.1-ALv2) — which turns this page from marketing into a checklist:</p>
   <ul>
     <li><strong>Read the entitlements.</strong> The sandbox entitlements file ships in the repo with a signed comment on every grant explaining why it exists — outbound network for model downloads, inbound listening pinned to loopback for the MCP server, mic access for on-device recognition. Or print what the shipped app actually carries:</li>
   </ul>
@@ -171,7 +171,7 @@
   <section class="page-cta">
     <span class="label">// nothing leaves</span>
     <h2>Privacy you can check.</h2>
-    <p>M1K3 is free, open source, and entirely on-device. Don't take this page's word for it — take the source's.</p>
+    <p>M1K3 is free for humans, source public, and entirely on-device. Don't take this page's word for it — take the source's.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
       <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Read the source</a>
@@ -207,6 +207,11 @@
      pull-the-cable framing). Updates verified: no Sparkle/self-updater in the
      app target — stated as channel-based (TestFlight / DMG / source). The
      codesign block shows the real entitlement keys with honest annotations.
-     Prior: none (new file). -->
+     Prior: none (new file). 
+
+     Review: Kev + claude-fable-5.1, 2026-09-09 — the relicense (ADR 0005, 2026-09-09): the checklist framing survives — the source is still
+     public, now source-available (FSL-1.1-ALv2) rather than open source; JSON-LD answer, the
+     checklist intro (links LICENSE) and the closing line say so. Nav → the tile-less mark alone.
+     dateModified bumped. Confidence now 0.85. -->
 </body>
 </html>

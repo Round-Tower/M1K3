@@ -1,6 +1,6 @@
 # M1K3 for Mac
 
-> M1K3 is free, open-source (Apache-2.0), privacy-first AI for
+> M1K3 is free for humans, source-available (FSL-1.1-ALv2), privacy-first AI for
 > macOS that runs entirely on-device. Local LLM inference (Gemma + Qwen via
 > MLX-Swift + Apple Foundation Models), live voice (streaming STT + on-device
 > Kokoro neural TTS), a personal knowledge graph with RAG over your documents,
@@ -39,8 +39,9 @@ Key facts:
 - Install: signed & notarized DMG at
   https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg,
   TestFlight beta, or build from source
-- License/source: Apache-2.0, https://github.com/Round-Tower/M1K3
-- Trademarks: the name M1K3, the M mark, the companion faces, icon and voice are brand assets of Round Tower, all rights reserved and outside the Apache grant; the only official builds are app.m1k3 (App Store/TestFlight) and the DMGs on m1k3.app. Policy: https://github.com/Round-Tower/M1K3/blob/master/TRADEMARKS.md
+- License/source: Functional Source License FSL-1.1-ALv2 (source-available: read, build, modify, use for yourself or inside your organisation; no competing commercial use; Apache-2.0 two years after each release; revisions before 2026-09-09 were Apache-2.0), public repo https://github.com/Round-Tower/M1K3
+- Organisations: M1K3 for Teams — the same on-device brains, institutional memory and a tuned persona on the organisation's own Apple Silicon hardware under its own domain, nothing leaving its network; licensed separately, kevin@round-tower.ie
+- Trademarks: the name M1K3, the M mark, the companion faces, icon and voice are brand assets of Round Tower, all rights reserved and outside the licence grant; the only official builds are app.m1k3 (App Store/TestFlight) and the DMGs on m1k3.app. Policy: https://github.com/Round-Tower/M1K3/blob/master/TRADEMARKS.md
 
 ## Docs
 
