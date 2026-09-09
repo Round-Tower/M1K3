@@ -16,8 +16,16 @@ The following are trademarks and brand assets of Kevin Murphy / Round Tower
 - The names **M1K3**, **M1K3 Voice**, **Lil M1K3**, and **Brain at Home**.
 - The **M mark** (the 5×7 phosphor pixel M — `site/favicon.svg`, its
   tile-less nav cut `site/mark.svg`, the app icon, and the screensaver glyph).
-- The **companion faces** and the CRT look: the pixel face, Phosphor Fox, and
-  the per-companion USDZ meshes and shaders shipped with the app.
+- The **pixel face** and the **CRT look** as M1K3's trade dress: the pixel
+  face itself, the phosphor treatment (the shader that turns a model into a
+  glowing wireframe on a dark tile), and the way the companions are presented
+  as M1K3. **Not the companion models.** The creatures are other people's
+  work, used under their own licences, and no trademark or copyright in them
+  is claimed here: the Fox (also the mesh under Phosphor Fox) is the Khronos
+  glTF sample asset — model by PixelMannen (CC0), rigging and animations by
+  tomkranis (CC-BY 4.0); Colobus, Gecko, Inkfish and Sparrow are from
+  Quaternius's Quirky Series (CC0). Their authors are credited in `NOTICE`,
+  in the app's Third-party licenses screen, and on m1k3.app.
 - The app icons, the `og.png` / `readme-hero.png` artwork, the App Store
   screenshots, and the m1k3.app site design.
 - The M1K3 spoken voice as configured and shipped in the app (a sound mark
@@ -28,9 +36,11 @@ The **names and marks** are outside the licence grant by the LICENSE's own
 Trademarks clause (Section 6 of the Apache License for earlier revisions). The **brand-asset files** (the M mark files, the site artwork, the
 brand plates, the app icon and App Store artwork) are excluded from the grant
 by the notice in [`NOTICE`](./NOTICE), from the commit that added it onward;
-they are all rights reserved. The companion face files are *not* excluded —
-they stay under the repository licence — and only their use as M1K3's trade
-dress is restricted below.
+they are all rights reserved. The companion model files
+(`macos/Sources/M1K3Avatar/Companions/**`) are not ours to license either way:
+they remain under their authors' licences (CC0 / CC-BY 4.0, listed in
+`NOTICE`), and only their *presentation as M1K3* — the phosphor treatment and
+the pixel face beside them — is restricted below.
 
 Most of these marks are unregistered. Unregistered marks are real but narrower
 than a registration: they reach the markets M1K3 has actually reached, and
@@ -54,16 +64,19 @@ carry no presumption of validity. Registration is a separate step.
   Homebrew, Setapp, and direct DMG downloads.
 - Ship the M mark, the app icon, the artwork, or the M1K3 voice in any
   product that is not the official M1K3 build.
-- Use the companion faces, the CRT look, or the M1K3 voice as the
+- Use the pixel face, the CRT look, or the M1K3 voice as the
   source-identifying face of another product — trade dress that makes a fork
-  look like, or pass for, the official M1K3.
+  look like, or pass for, the official M1K3. (Using the same CC0 / CC-BY
+  creatures in your own product, under their authors' terms and with their
+  attribution, is fine — they were never ours.)
 - Present a fork as the official M1K3, or imply endorsement by Kevin Murphy
   or Round Tower.
 
 If you distribute a fork, give it its own name and its own icon, remove the
 M1K3 marks and the brand-asset files excluded in `NOTICE` (the companion
-face files may stay — just don't present them as M1K3), and keep the
-`LICENSE` and `NOTICE` files as the License requires.
+models may stay — they are their authors' work; keep their attribution and
+don't present them as M1K3), and keep the `LICENSE` and `NOTICE` files as the
+License requires.
 
 ## The official builds
 
@@ -97,3 +110,9 @@ earlier revisions; the "what you may do" grant no longer says "commercially"
 — competing commercial use is the one thing the FSL withholds. Marks list
 unchanged; `site/mark.svg` (new, the nav cut of the M) added to the marks list
 and to NOTICE's file exclusion (code-quality review catch). Confidence now 0.85.*
+*Review: Kev + claude-fable-5.1, 2026-09-09 (later) — Kev's catch: the companion USDZ meshes
+were listed as brand assets, but they are third-party work (Khronos Fox: PixelMannen CC0 +
+tomkranis CC-BY 4.0; Quaternius creatures CC0). A trademark covers what identifies US, not
+what we borrowed. Protected now = the pixel face + the phosphor/CRT treatment as trade dress;
+the models are explicitly disclaimed and credited (NOTICE, in-app licences screen, site).
+Confidence now 0.85.*

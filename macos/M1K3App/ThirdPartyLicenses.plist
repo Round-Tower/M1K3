@@ -92,5 +92,25 @@
 		<key>purpose</key>
 		<string>MLX neural-network module definitions for the Kokoro speech model, vendored (Sources/M1K3Kokoro/MLX/Vendored/) and adapted to M1K3's own tokenizer/voice-style pipeline. Replaced ONNX Runtime 2026-07-18.</string>
 	</dict>
+	<dict>
+		<key>name</key>
+		<string>Fox (Khronos glTF Sample Assets)</string>
+		<key>license</key>
+		<string>CC0 1.0 (model) · CC BY 4.0 (rig &amp; animations)</string>
+		<key>url</key>
+		<string>https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox</string>
+		<key>purpose</key>
+		<string>The Fox and Phosphor Fox companions. Model by PixelMannen (CC0); rigging and the Survey/Walk/Run animations by tomkranis (CC BY 4.0). Converted to per-clip USDZ by M1K3; the phosphor treatment is M1K3's own.</string>
+	</dict>
+	<dict>
+		<key>name</key>
+		<string>Quirky Series — FREE Animals (Quaternius)</string>
+		<key>license</key>
+		<string>CC0 1.0</string>
+		<key>url</key>
+		<string>https://quaternius.com</string>
+		<key>purpose</key>
+		<string>The Colobus, Gecko, Inkfish and Sparrow companions, with their animation clips. Public domain; credited with thanks.</string>
+	</dict>
 </array>
 </plist>

@@ -74,7 +74,7 @@ you keep your copyright. Opening a pull request is acceptance; there is no
 form. Unsolicited pull requests are read but may be closed with a pointer to
 this paragraph — the CLA has to be in place before code lands.
 
-The M1K3 name, mark, faces, icon, and voice are trademarks outside that grant
+The M1K3 name, mark, pixel face, icon, and voice are trademarks outside that grant
 (see [`TRADEMARKS.md`](./TRADEMARKS.md)); contributions to the brand assets are
 welcome but do not change who owns them.
 
