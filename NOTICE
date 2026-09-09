@@ -1,5 +1,5 @@
 M1K3
-Copyright 2026 Kevin Murphy
+Copyright 2026 Kevin Murphy (Round Tower)
 
 This product includes software developed by Kevin Murphy and contributors,
 licensed under the Functional Source License, Version 1.1, ALv2 Future
@@ -41,6 +41,8 @@ were published with):
 
   - site/favicon.svg, site/icon-192.png, site/icon-512.png,
     site/apple-touch-icon.png, site/og.png          (the M mark + site artwork)
+  - site/mark.svg (the tile-less nav cut of the M mark; excluded from the
+    commit that added it, 2026-09-09, onward)
   - assets/brand/**                                (README hero, brand plates)
   - the app icon sets and App Store screenshots/previews, wherever committed
 

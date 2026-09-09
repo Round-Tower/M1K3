@@ -14,8 +14,8 @@ The following are trademarks and brand assets of Kevin Murphy / Round Tower
 ("the M1K3 marks"), whether or not registered:
 
 - The names **M1K3**, **M1K3 Voice**, **Lil M1K3**, and **Brain at Home**.
-- The **M mark** (the 5×7 phosphor pixel M — `site/favicon.svg`, the app
-  icon, and the screensaver glyph).
+- The **M mark** (the 5×7 phosphor pixel M — `site/favicon.svg`, its
+  tile-less nav cut `site/mark.svg`, the app icon, and the screensaver glyph).
 - The **companion faces** and the CRT look: the pixel face, Phosphor Fox, and
   the per-companion USDZ meshes and shaders shipped with the app.
 - The app icons, the `og.png` / `readme-hero.png` artwork, the App Store
@@ -95,4 +95,5 @@ code moved from Apache-2.0 to FSL-1.1-ALv2 from this commit on, so the policy
 now leans on the FSL's own Trademarks clause and names Apache §6 only for the
 earlier revisions; the "what you may do" grant no longer says "commercially"
 — competing commercial use is the one thing the FSL withholds. Marks list
-unchanged. Confidence now 0.85.*
+unchanged; `site/mark.svg` (new, the nav cut of the M) added to the marks list
+and to NOTICE's file exclusion (code-quality review catch). Confidence now 0.85.*
