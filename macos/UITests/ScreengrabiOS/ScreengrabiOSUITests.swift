@@ -46,9 +46,12 @@ final class ScreengrabiOSUITests: XCTestCase {
     }
 
     func testVoiceListening() throws {
-        // The phone's mic is real (the harness's open mic is Mac-only so far):
-        // a quiet room shows "Listening…", which is the plate.
-        try capture(.voiceListening, settle: 2) { app in waitForVoiceSurface(app) }
+        // The open mic (AppCore+Screengrab) dictates the hero question word by
+        // word; the plate is "Listening…" with the partial growing under it.
+        try capture(.voiceListening, settle: 2) { app in
+            waitForVoiceSurface(app)
+            waitForText("introduce yourself", in: app, timeout: 60)
+        }
     }
 
     func testVoiceSpeaking() throws {
