@@ -116,6 +116,11 @@ nav .links a:hover { color: var(--ink-bright); text-shadow: var(--glow); }
 .article p strong, .article li strong { color: var(--ink); font-weight: 500; }
 .article a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--ink-faint); transition: color .25s; }
 .article a:hover { color: var(--ink-bright); text-decoration-color: var(--ink); }
+/* Buttons inside an article keep their button colours: `.article a` (0,1,1) outranks `.btn-primary`
+   (0,1,0), which painted the primary CTA white-on-white with an underline on every answer page —
+   caught by Kev on /teams, 2026-09-09. Signed: Kev + claude-fable-5.1, 2026-09-09, Confidence 0.85. Prior: Unknown. */
+.article a.btn, .article a.btn:hover { text-decoration: none; }
+.article a.btn-primary, .article a.btn-primary:hover { color: #000; }
 .article ul, .article ol { margin: 0 0 16px 22px; color: var(--ink-dim); max-width: 700px; }
 .article li { margin-bottom: 8px; }
 .article code {
