@@ -30,5 +30,9 @@ Attribution: the Fox is the glTF sample asset — model by PixelMannen (CC0),
 rigging/animation by tomkranis (CC-BY 4.0). Credited in the site footer.
 https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox
 
-The other companions — Gecko, Inkfish, Colobus — are by Quaternius (CC0, public
-domain; no attribution legally required, credited as courtesy). https://quaternius.com
+Phosphor Fox is the same Fox mesh under M1K3's phosphor shader — same credit.
+
+The other companions — Gecko, Inkfish, Colobus, Sparrow — are by Quaternius (CC0,
+public domain; no attribution legally required, credited as courtesy).
+https://quaternius.com. The canonical list with licences is the repo NOTICE and
+`macos/Sources/M1K3Avatar/Companions/ATTRIBUTION.md` (ships inside the app bundle).

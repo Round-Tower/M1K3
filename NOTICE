@@ -46,10 +46,13 @@ were published with):
   - assets/brand/**                                (README hero, brand plates)
   - the app icon sets and App Store screenshots/previews, wherever committed
 
-The companion face meshes and shaders (macos/Sources/M1K3Avatar/Companions/**)
-are NOT on this list: their files stay under the repository licence, and only
-their use as M1K3's trade dress (presenting a fork as the official app) is
-restricted by TRADEMARKS.md.
+The companion models (macos/Sources/M1K3Avatar/Companions/**) are NOT on
+this list and are NOT part of "the Software" under the LICENSE either: they
+are third-party work that M1K3 uses under its authors' own licences (below),
+converted to per-clip USDZ by M1K3's pipeline. We claim no copyright or
+trademark in the creatures themselves; only their presentation as M1K3 (the
+phosphor treatment, the pixel face beside them) is trade dress under
+TRADEMARKS.md. Keep their attribution if you redistribute them.
 
 ------------------------------------------------------------------------------
 Third-party components
@@ -66,9 +69,18 @@ into macos/M1K3App/ThirdPartyLicenses.plist; notable components include:
   - Model weights (Qwen3, Gemma 4) — Apache License 2.0, retrieved at runtime
   - Model weights (LFM2.5-1.2B, the Mini where Apple Intelligence is blocked)
     — LFM Open License v1.0, retrieved at runtime
-  - 3D avatar assets — Creative Commons / asset-store terms; see the license
-    files within their respective directories (e.g. app/3d/, and per-asset
-    license.txt files such as app/3d/mask/license.txt)
+  - Fox companion (Companions/Fox and Companions/PhosphorFox — the same
+    mesh; PhosphorFox adds M1K3's own phosphor shader) — the Khronos glTF
+    Sample Assets "Fox": model by PixelMannen (CC0 1.0), rigging and
+    animations by tomkranis (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/).
+    https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox
+  - Colobus, Gecko, Inkfish and Sparrow companions (Companions/<Name>) —
+    Quaternius, "Quirky Series — FREE Animals" (CC0 1.0,
+    https://creativecommons.org/publicdomain/zero/1.0/; credited as courtesy).
+    https://quaternius.com
+  - Android (app/) 3D avatar assets — Creative Commons / asset-store terms;
+    see the license files within their respective directories (e.g. app/3d/,
+    and per-asset license.txt files such as app/3d/mask/license.txt)
 
 Nothing in the LICENSE for M1K3's own materials modifies the terms
 of these third-party components. Consult each component's own license for the

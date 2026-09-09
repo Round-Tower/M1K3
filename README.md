@@ -145,10 +145,13 @@ and its reasons are in
 Revisions before 2026-09-09 were published under Apache-2.0 and stay that way;
 the boundary is recorded in `NOTICE`.
 
-The source is public; the name is not. **M1K3**, the M mark, the companion
-faces, the icon, and the voice are trademarks and brand assets, all rights
-reserved and outside the licence grant. See
-[`TRADEMARKS.md`](./TRADEMARKS.md). The only official builds are Round Tower's
+The source is public; the name is not. **M1K3**, the M mark, the pixel face
+and CRT look, the icon, and the voice are trademarks and brand assets, all
+rights reserved and outside the licence grant. See
+[`TRADEMARKS.md`](./TRADEMARKS.md). The companion creatures are not ours: the
+Fox is the Khronos glTF sample by PixelMannen (CC0) and tomkranis (CC-BY 4.0);
+Colobus, Gecko, Inkfish and Sparrow are by [Quaternius](https://quaternius.com)
+(CC0) — credited in `NOTICE` and in the app's Third-party licenses screen. The only official builds are Round Tower's
 (`app.m1k3` on the App Store / TestFlight, and the DMGs on [m1k3.app](https://m1k3.app)).
 
 **Organisations:** M1K3 for Teams — the same on-device brains, institutional
