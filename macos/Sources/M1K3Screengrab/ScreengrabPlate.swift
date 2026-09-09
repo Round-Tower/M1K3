@@ -68,6 +68,9 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
             ["-selectedBrain", "lil"],
             ["-voiceMode.companion", companionID ?? Self.houseFace],
             // Creature tiles read best with the phosphor skin (the site's look).
+            // That includes the PhosphorFox tile: captured with `.off` on
+            // 2026-09-09 it rendered as a plain grey wireframe — the glow is the
+            // shader, not the asset, whatever CompanionSpec's comment says.
             ["-companion.shadingStyle", "phosphor"],
             // Brain at Home serving reads the paired-device keys from the Keychain;
             // off for every plate (the pairing plate shows the QR from Settings).

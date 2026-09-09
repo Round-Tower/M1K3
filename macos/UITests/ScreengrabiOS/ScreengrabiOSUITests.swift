@@ -61,7 +61,7 @@ final class ScreengrabiOSUITests: XCTestCase {
             waitForBrain(app)
             openSettings(app)
             app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Documents'")).firstMatch.tap()
-            waitForText("Retrofit", in: app, timeout: 60)
+            waitForText("Lair", in: app, timeout: 60)
         }
     }
 

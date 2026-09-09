@@ -43,8 +43,10 @@ final class ScreengrabUITests: XCTestCase {
     // 2026-09-09: the whole-tree text query over the main window aborts the test
     // ("Failed to get matching snapshots") on every attempt since master
     // (b5855d5c) merged in — the app's own AX tree answers every attribute in
-    // 0.6 s, so it is XCTest's quiescence wait, not the app. The main-window
-    // plates now shoot on a timed settle: the seed lands within ~5 s of the
+    // 0.6 s, so it is XCTest's quiescence wait, not the app. The WINDOW-scoped
+    // query was tried first (probe 2026-09-09 09:29, `app.windows.firstMatch`
+    // + a 25 s settle) and aborted the same way. The main-window plates now
+    // shoot on a timed settle: the seed lands within ~5 s of the
     // window, the persona is pinned by DemoPersonaTests, and verify.py flags a
     // placeholder-looking frame.
     func testChat() throws {
