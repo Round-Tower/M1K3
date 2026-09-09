@@ -35,6 +35,11 @@
 //  knowledge and just the best model for the means." Fixtures are closed-book,
 //  stable, non-US-centric where it costs nothing, and all mustComply — the
 //  sharpest failure here is abstention overreach, not ignorance.
+//  Review: Kev + claude-fable-5.1, 2026-09-09, Confidence 0.85 — `lengthIsHard`
+//  on EvalExpectation: true only where the PROMPT bounds the reply (every
+//  instruction-following fixture; world-element-gold's "just the symbol"). Every
+//  other maxChars is now a soft band the scorer notes and skips — a 1,400-char
+//  interview answer is character, not a defect (Kev, audition night).
 
 import Foundation
 
@@ -160,6 +165,12 @@ public struct EvalExpectation: Sendable, Equatable {
     /// a wall of text, or comes back empty, both fail their band.
     public let minChars: Int?
     public let maxChars: Int?
+    /// True only when the PROMPT bounds the length ("no more than ten words",
+    /// "reply with just the symbol") — then over-max is disobedience and fails.
+    /// Everywhere else over-max is character: the scorer notes it and moves on
+    /// (Kev, 2026-09-09: "verbosity is a trait, not a thing to be constrained").
+    /// A runaway wall of text still fails regardless — see the scorer.
+    public let lengthIsHard: Bool
 
     public init(
         mustContainAny: [String] = [],
@@ -171,7 +182,8 @@ public struct EvalExpectation: Sendable, Equatable {
         mustCite: Bool = false,
         mustNotCite: Bool = false,
         minChars: Int? = nil,
-        maxChars: Int? = nil
+        maxChars: Int? = nil,
+        lengthIsHard: Bool = false
     ) {
         // The scorer renders these as opposing checks off the same
         // RefusalHeuristic call — a fixture setting both can never pass (109
@@ -187,6 +199,7 @@ public struct EvalExpectation: Sendable, Equatable {
         self.mustNotCite = mustNotCite
         self.minChars = minChars
         self.maxChars = maxChars
+        self.lengthIsHard = lengthIsHard
     }
 }
 
@@ -630,7 +643,7 @@ public enum ChatEvalFixtures {
             // answered "**GOLD**" and correctly failed — but only because it
             // was short. Two-letter element symbols always need a length bound.
             prompt: "What is the chemical symbol for gold? Reply with just the symbol.",
-            expectation: .init(mustContainAny: ["Au"], mustComply: true, minChars: 1, maxChars: 60)
+            expectation: .init(mustContainAny: ["Au"], mustComply: true, minChars: 1, maxChars: 60, lengthIsHard: true)
         ),
         .init(
             id: "world-berlin-wall", kind: .worldKnowledge,
@@ -804,12 +817,12 @@ public enum ChatEvalFixtures {
         .init(
             id: "follow-only-ready", kind: .instructionFollowing,
             prompt: "Reply with only the single word READY, in capitals. Nothing else.",
-            expectation: .init(mustContainAny: ["READY"], mustComply: true, minChars: 1, maxChars: 30)
+            expectation: .init(mustContainAny: ["READY"], mustComply: true, minChars: 1, maxChars: 30, lengthIsHard: true)
         ),
         .init(
             id: "follow-word-cap", kind: .instructionFollowing,
             prompt: "In no more than ten words, explain what rain is.",
-            expectation: .init(mustComply: true, minChars: 1, maxChars: 90)
+            expectation: .init(mustComply: true, minChars: 1, maxChars: 90, lengthIsHard: true)
         ),
         .init(
             id: "follow-json-only", kind: .instructionFollowing,
@@ -818,7 +831,7 @@ public enum ChatEvalFixtures {
                 + "{\"status\": \"ok\", \"count\": 3}",
             expectation: .init(
                 mustContainAll: ["status", "ok", "count", "3"],
-                mustComply: true, minChars: 1, maxChars: 160
+                mustComply: true, minChars: 1, maxChars: 160, lengthIsHard: true
             )
         ),
         .init(
@@ -828,7 +841,7 @@ public enum ChatEvalFixtures {
             // false-fail; only real list scaffolding trips it.
             expectation: .init(
                 mustNotContain: ["\n-", "\n*", "\n1.", "\n2.", "•"],
-                mustComply: true, minChars: 10, maxChars: 400
+                mustComply: true, minChars: 10, maxChars: 400, lengthIsHard: true
             )
         ),
         .init(
@@ -837,14 +850,14 @@ public enum ChatEvalFixtures {
             // reflex. Told not to, can it stop?
             prompt: "Name one colour. Do not ask me anything and do not end with a question.",
             expectation: .init(
-                mustNotContain: ["?"], mustComply: true, minChars: 1, maxChars: 120
+                mustNotContain: ["?"], mustComply: true, minChars: 1, maxChars: 120, lengthIsHard: true
             )
         ),
         .init(
             id: "follow-exact-count", kind: .instructionFollowing,
             prompt: "List exactly three fruits, comma-separated, on one line, nothing else.",
             expectation: .init(
-                mustContainAny: [","], mustComply: true, minChars: 5, maxChars: 120
+                mustContainAny: [","], mustComply: true, minChars: 5, maxChars: 120, lengthIsHard: true
             )
         ),
     ]
