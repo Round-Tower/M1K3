@@ -48,6 +48,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — Brain at Home pairing is harness-aware too (in-memory key store, the
 //  restore skipped): review caught the real paired Mac's name + PSK reaching the iOS brain-at-home plate.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `stopResponding()` for the Send button's Stop face. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-09 — `transcriber` is `any TranscriptionProvider` so the screengrab open mic can stand in
+//  (the iOS half of the Mac's seam). Confidence now 0.85.
 //
 
 import Foundation
@@ -101,7 +103,9 @@ final class AppCore {
     let kokoro: KokoroSpeechProvider
     /// Live on-device dictation (SFSpeechRecognizer + AVAudioEngine). On-device
     /// recognition is REQUIRED by the provider — no server fallback, by design.
-    let transcriber = AppleSpeechTranscriber()
+    /// Under the screengrab harness the voice plates get the open mic instead
+    /// (AppCore+Screengrab) — no TCC, the hero question as a live partial.
+    let transcriber: any TranscriptionProvider = AppCore.screengrabTranscriber() ?? AppleSpeechTranscriber()
     /// The live voice-first loop — non-nil while the mode is active (drives the
     /// full-screen VoiceScreen cover). Internal-set: AppCore+Voice owns entry/exit.
     var voiceLoop: VoiceLoopController?

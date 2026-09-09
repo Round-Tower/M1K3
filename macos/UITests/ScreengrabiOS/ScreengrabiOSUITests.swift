@@ -17,6 +17,8 @@
 //  Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — voice plates wait on the voice surface / the spoken line, not the
 //  composer (the beat hides it: 8 plates "composer never appeared").
+//  Review: Kev + claude-fable-5.1, 2026-09-09 — first phone run (12/12 shot): the speaking plate waits on the karaoke line (open mic
+//  on the phone now), the privacy plate swipes until the Grounding footer is hittable. Confidence now 0.75.
 //
 
 import M1K3Screengrab
@@ -50,10 +52,14 @@ final class ScreengrabiOSUITests: XCTestCase {
     }
 
     func testVoiceSpeaking() throws {
-        try capture(.voiceSpeaking, settle: 1) { app in
+        // Two seconds in: a few words lit, not the first one alone.
+        try capture(.voiceSpeaking, settle: 2) { app in
             waitForVoiceSurface(app)
-            // The iOS beat speaks the seeded hero line (no open mic on the phone yet).
-            waitForText("Nobody else is listening", in: app, timeout: 60)
+            // A real turn: the open mic submits the hero question, the loop
+            // answers and speaks. The karaoke line carries "M1K3 is speaking".
+            let speaking = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'M1K3 is speaking'"))
+                .firstMatch
+            XCTAssert(speaking.waitForExistence(timeout: 120), "the loop never spoke")
         }
     }
 
@@ -110,8 +116,12 @@ final class ScreengrabiOSUITests: XCTestCase {
         try capture(.privacyLabel, settle: 3) { app in
             waitForBrain(app)
             openSettings(app)
+            // The footer sits below the fold of a List: swipe until it is on screen
+            // (`exists` is true for an off-screen row, `isHittable` is not).
             let footer = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'internet'")).firstMatch
-            if footer.waitForExistence(timeout: 20) { app.swipeUp(); app.swipeUp() }
+            for _ in 0 ..< 6 where !(footer.exists && footer.isHittable) {
+                app.swipeUp()
+            }
         }
     }
 
