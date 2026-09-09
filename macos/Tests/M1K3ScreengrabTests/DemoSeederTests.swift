@@ -49,8 +49,8 @@ struct DemoSeederTests {
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
         #expect(try memory.liveCount() == DemoPersona.memories.count)
         #expect(try store.allItems(kind: .document).count == DemoPersona.documents.count)
-        let vector = try await embedder.embed("architect")
-        let hits = try memory.recall(query: "architect", queryVector: vector, limit: 3, threshold: 0)
+        let vector = try await embedder.embed("lair")
+        let hits = try memory.recall(query: "lair", queryVector: vector, limit: 3, threshold: 0)
         #expect(!hits.isEmpty)
     }
 

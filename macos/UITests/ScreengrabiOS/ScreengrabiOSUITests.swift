@@ -39,7 +39,7 @@ final class ScreengrabiOSUITests: XCTestCase {
 
     func testChat() throws {
         try capture(.chat, settle: 3) { app in
-            waitForText("original roofline", in: app, timeout: 120)
+            waitForText("Nobody else is listening", in: app, timeout: 120)
         }
     }
 
@@ -52,7 +52,8 @@ final class ScreengrabiOSUITests: XCTestCase {
     func testVoiceSpeaking() throws {
         try capture(.voiceSpeaking, settle: 1) { app in
             waitForVoiceSurface(app)
-            waitForText("roofline", in: app, timeout: 60)
+            // The iOS beat speaks the seeded hero line (no open mic on the phone yet).
+            waitForText("Nobody else is listening", in: app, timeout: 60)
         }
     }
 
@@ -61,7 +62,7 @@ final class ScreengrabiOSUITests: XCTestCase {
             waitForBrain(app)
             openSettings(app)
             app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Documents'")).firstMatch.tap()
-            waitForText("Retrofit", in: app, timeout: 60)
+            waitForText("Lair", in: app, timeout: 60)
         }
     }
 
@@ -73,8 +74,8 @@ final class ScreengrabiOSUITests: XCTestCase {
             let search = app.searchFields.firstMatch
             XCTAssert(search.waitForExistence(timeout: 30), "Memories search field")
             search.tap()
-            search.typeText("architect\n")
-            waitForText("Niamh", in: app, timeout: 60)
+            search.typeText("lair\n")
+            waitForText("roofline", in: app, timeout: 60)
         }
     }
 

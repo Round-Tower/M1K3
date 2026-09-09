@@ -8,6 +8,7 @@
 //  which defaults — NSArgumentDomain, read-only, nothing persisted).
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.9 (pure), Prior: Unknown
+//  Review: claude-fable-5.1, 2026-09-08 — pins moved to Lil + PhosphorFox with the recipe. Confidence now 0.9.
 //
 
 import Foundation
@@ -72,7 +73,12 @@ struct ScreengrabHarnessTests {
         let recipe = ScreengrabPlate.companionFox.launchRecipe
         #expect(recipe.environment["M1K3_SCREENGRAB"] == "1")
         #expect(recipe.environment["M1K3_SCREENGRAB_PLATE"] == "companion-fox")
-        #expect(recipe.arguments.contains(["-voiceMode.companion", "Fox"]))
+        #expect(recipe.arguments.contains(["-voiceMode.companion", "PhosphorFox"]))
+        // Lil fronts every plate: the speaking plate is a real turn and Lil carries
+        // the persona (Kev, 2026-09-08).
+        #expect(recipe.arguments.contains(["-selectedBrain", "lil"]))
+        // Every tile, the PhosphorFox included, wears the phosphor shader (`.off` = grey wireframe, captured).
+        #expect(recipe.arguments.contains(["-companion.shadingStyle", "phosphor"]))
         #expect(recipe.arguments.contains(["-hasChosenBrain", "YES"]))
         #expect(recipe.arguments.contains(["-brainServe.enabled", "NO"]))
         #expect(recipe.arguments.contains(["-notchHUD.enabled", "NO"]))
@@ -90,7 +96,7 @@ struct ScreengrabHarnessTests {
     }
 
     @Test func companionTilesNameTheVendoredCreatures() {
-        #expect(ScreengrabPlate.companionFox.companionID == "Fox")
+        #expect(ScreengrabPlate.companionFox.companionID == "PhosphorFox")
         #expect(ScreengrabPlate.companionGecko.companionID == "Gecko")
         #expect(ScreengrabPlate.companionInkfish.companionID == "Inkfish")
         #expect(ScreengrabPlate.companionColobus.companionID == "Colobus")

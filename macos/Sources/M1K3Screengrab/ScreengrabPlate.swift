@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 (recipe pinned by
 //  test; the argument-domain shadowing is Foundation's documented search order,
 //  verified by launch on the Mac suite), Prior: Unknown
+//  Review: claude-fable-5.1, 2026-09-08 — `-selectedBrain lil` on every recipe (Lil fronts the plates;
+//  Mini answered flat) and the Fox tile shows the registered PhosphorFox creature, not Fox + phosphor skin (Kev). Confidence now 0.85.
 //
 
 import Foundation
@@ -37,7 +39,7 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
     /// The vendored creature a companion tile shows; nil for every other plate.
     public var companionID: String? {
         switch self {
-        case .companionFox: "Fox"
+        case .companionFox: "PhosphorFox"
         case .companionGecko: "Gecko"
         case .companionInkfish: "Inkfish"
         case .companionColobus: "Colobus"
@@ -60,8 +62,15 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
     public var launchRecipe: LaunchRecipe {
         var arguments: [[String]] = [
             ["-hasChosenBrain", self == .onboarding ? "NO" : "YES"],
+            // Lil fronts every plate (Kev, 2026-09-08): the speaking plate is a REAL
+            // turn and Lil carries the persona; Mini answered flat. Weights come from
+            // the live model store (the harness reroutes data, not brains).
+            ["-selectedBrain", "lil"],
             ["-voiceMode.companion", companionID ?? Self.houseFace],
             // Creature tiles read best with the phosphor skin (the site's look).
+            // That includes the PhosphorFox tile: captured with `.off` on
+            // 2026-09-09 it rendered as a plain grey wireframe — the glow is the
+            // shader, not the asset, whatever CompanionSpec's comment says.
             ["-companion.shadingStyle", "phosphor"],
             // Brain at Home serving reads the paired-device keys from the Keychain;
             // off for every plate (the pairing plate shows the QR from Settings).

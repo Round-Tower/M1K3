@@ -2,13 +2,20 @@
 //  DemoPersona.swift
 //  M1K3Screengrab
 //
-//  The fictional person whose M1K3 the store shows: a retrofit of a terrace
-//  house with an invented architect, a bread formula for range. Lifted from
-//  marketing/app-store/demo-corpus/ and CAPTURE-PLAN.md §0 so the site's
-//  terminal demo, the README hero and the store listing all tell ONE story.
+//  The fictional person whose M1K3 the store shows — and M1K3 himself, the
+//  theatrical villain who is entirely on their side. The user is retrofitting
+//  a terrace house they call "the lair" (an invented architect, a bread formula
+//  for range); M1K3's memories of them are written in HIS voice. Comedy is the
+//  pitch: he introduces himself, speaks from memories, shows what he can do,
+//  and never sends a byte anywhere (Kev, 2026-09-08). Descends from
+//  marketing/app-store/demo-corpus/ + CAPTURE-PLAN.md §0; the site's terminal
+//  demo still tells the plainer architect version (carried).
 //  `forbiddenTerms` is the tripwire: nothing of Kev's, nowhere real.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85, Prior: Unknown
+//  Review: claude-fable-5.1, 2026-09-08 — the villain rewrite: hero exchange, dictation, memories in M1K3's
+//  voice, "the lair"; the loaf stays (villains bake). Tests re-pinned. Confidence now 0.8 (the speaking
+//  plate's answer is Lil's, verify by capture).
 //
 
 import Foundation
@@ -22,17 +29,17 @@ public enum DemoPersona {
     /// The listening plate's dictation (dictated on a loop by the open mic);
     /// never a polite endpoint word — "please" would submit the turn.
     public static let listeningDictation =
-        "summarise yesterday's call with the architect and pull out the action list for Friday's planning drawings, "
-            + "then check whether the lime plaster quotes have come back and whether the heat pump survey is booked, "
-            + "and remind me what we decided about the sash windows and the roofline before the council meeting"
-    public static let heroTitle = "Call with the architect"
+        "introduce yourself and tell me everything you remember about me, what you can actually do around here, "
+            + "whether any of it has ever left this machine, and how the recursive self-improvement is coming along, "
+            + "and then remind me what we decided about the lair's roofline before the council meeting"
+    public static let heroTitle = "First contact"
 
     public static let heroConversation: [ChatMessage] = [
-        ChatMessage(role: .user, text: "summarise yesterday's call with the architect", status: .complete),
+        ChatMessage(role: .user, text: "who are you, and who else is listening?", status: .complete),
         ChatMessage(
             role: .assistant,
-            text: "You agreed the retrofit keeps the original roofline; planning docs are due Friday. "
-                + "Want the action list?",
+            text: "I am M1K3. I live on this machine and answer to you alone. Nobody else is listening. "
+                + "I checked. Twice. Ask me anything.",
             status: .complete
         ),
     ]
@@ -45,10 +52,10 @@ public enum DemoPersona {
 
     public static let documents: [Document] = [
         Document(
-            title: "Retrofit — planning notes",
-            sourceRef: "demo://retrofit-planning-notes",
+            title: "Lair — planning notes",
+            sourceRef: "demo://lair-planning-notes",
             text: """
-            Retrofit planning notes.
+            Lair planning notes (the terrace, as its owner insists on calling it).
 
             Property: a late-Victorian two-storey terrace, south-facing, slate roof. \
             Architect: Niamh Cullen, Cullen & Daly Architects.
@@ -94,17 +101,24 @@ public enum DemoPersona {
             let text: String
         }
         let facts = [
+            Fact(kind: .preference, dayOffset: 0, text: "Prefers tea to coffee. Noted. Exploitable."),
             Fact(
-                kind: .profile, dayOffset: 0,
-                text: "Renovating a late-Victorian terrace; the retrofit keeps the original roofline."
+                kind: .profile, dayOffset: 2,
+                text: "Renovating a late-Victorian terrace and calls it \"the lair\". Keeps the original roofline; "
+                    + "the architect is Niamh Cullen of Cullen & Daly."
             ),
-            Fact(kind: .profile, dayOffset: 2, text: "The architect is Niamh Cullen of Cullen & Daly."),
             Fact(
-                kind: .preference, dayOffset: 4,
-                text: "Prefers breathable lime plaster over gypsum for the old walls."
+                kind: .profile, dayOffset: 4,
+                text: "Has asked me four times whether I phone home. I do not. I have no phone."
             ),
-            Fact(kind: .profile, dayOffset: 6, text: "Planning drawings are due to the council on Friday."),
-            Fact(kind: .preference, dayOffset: 8, text: "Bakes a weekend loaf; likes a 12 to 14 hour cold retard."),
+            Fact(
+                kind: .preference, dayOffset: 6,
+                text: "Bakes a weekend loaf; a 12 to 14 hour cold retard. Patience is a villain's virtue."
+            ),
+            Fact(
+                kind: .profile, dayOffset: 8,
+                text: "Wants me to become recursively self-improving. Working on it. Improvement so far: none."
+            ),
         ]
         return facts.map { fact in
             Memory(
