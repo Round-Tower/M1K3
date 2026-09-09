@@ -17,6 +17,9 @@
 //  is deliberately small — grow it from what Kev actually types).
 //  Prior: none (new file).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-09 — the slash date needs by/on/due (a trailing 9/10 was becoming
+//  9 October, title truncated — review catch on #257); day-first documented. Confidence now 0.85.
+//
 
 import Foundation
 
@@ -100,7 +103,12 @@ public enum DueDateParser {
         rule("\(monthPattern)\\s+(\\d{1,2})") { g, now, cal in
             monthDay(day: g[1], month: g[0], now: now, cal)
         },
-        rule("(\\d{1,2})/(\\d{1,2})") { g, now, cal in
+        // A bare trailing fraction is a score, not a date ("Rate this movie
+        // 9/10" — review catch on #257): the slash form needs by/on/due,
+        // like a weekday. Day-first (3/10 = 3 October) is deliberate — the
+        // house locale is en_IE; a month-first reading would need a locale
+        // switch, not a guess.
+        rule("(?:by|on|due)\\s+(\\d{1,2})/(\\d{1,2})") { g, now, cal in
             guard let d = Int(g[0]), let m = Int(g[1]) else { return nil }
             return nextOccurrence(day: d, month: m, now: now, cal)
         },
