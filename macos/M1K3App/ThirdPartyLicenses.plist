@@ -100,7 +100,7 @@
 		<key>url</key>
 		<string>https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox</string>
 		<key>purpose</key>
-		<string>The Fox and Phosphor Fox companions. Model by PixelMannen (CC0); rigging and the Survey/Walk/Run animations by tomkranis (CC BY 4.0). Converted to per-clip USDZ by M1K3; the phosphor treatment is M1K3's own.</string>
+		<string>The Fox and Phosphor Fox companions. Model by PixelMannen (CC0); rigging and the Survey/Walk/Run animations by tomkranis (CC BY 4.0, creativecommons.org/licenses/by/4.0). Converted to per-clip USDZ by M1K3; the phosphor treatment is M1K3's own.</string>
 	</dict>
 	<dict>
 		<key>name</key>

@@ -7,8 +7,8 @@ redistribute them.
 
 | Directory | Work | Author(s) | Licence | Source |
 |---|---|---|---|---|
-| `Fox/`, `PhosphorFox/` (same mesh; PhosphorFox adds M1K3's phosphor shader) | Fox, Khronos glTF Sample Assets | model: PixelMannen · rig + Survey/Walk/Run animations: tomkranis | model CC0 1.0 · rig/animations CC BY 4.0 | https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox |
-| `Colobus/`, `Gecko/`, `Inkfish/`, `Sparrow/` | Quirky Series — FREE Animals | Quaternius | CC0 1.0 (credited as courtesy) | https://quaternius.com |
+| `Fox/`, `PhosphorFox/` (same mesh; PhosphorFox adds M1K3's phosphor shader) | Fox, Khronos glTF Sample Assets | model: PixelMannen · rig + Survey/Walk/Run animations: tomkranis | model [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) · rig/animations [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox |
+| `Colobus/`, `Gecko/`, `Inkfish/`, `Sparrow/` | Quirky Series — FREE Animals | Quaternius | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (credited as courtesy) | https://quaternius.com |
 
 Conversion: each clip was exported to its own USDZ by
 `macos/tools/companion-pipeline/export_clips.py` (mesh + texture duplicated per

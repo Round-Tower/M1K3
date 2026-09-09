@@ -72,11 +72,12 @@ into macos/M1K3App/ThirdPartyLicenses.plist; notable components include:
   - Fox companion (Companions/Fox and Companions/PhosphorFox — the same
     mesh; PhosphorFox adds M1K3's own phosphor shader) — the Khronos glTF
     Sample Assets "Fox": model by PixelMannen (CC0 1.0), rigging and
-    animations by tomkranis (CC BY 4.0).
+    animations by tomkranis (CC BY 4.0, https://creativecommons.org/licenses/by/4.0/).
     https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox
   - Colobus, Gecko, Inkfish and Sparrow companions (Companions/<Name>) —
-    Quaternius, "Quirky Series — FREE Animals" (CC0 1.0; credited as
-    courtesy). https://quaternius.com
+    Quaternius, "Quirky Series — FREE Animals" (CC0 1.0,
+    https://creativecommons.org/publicdomain/zero/1.0/; credited as courtesy).
+    https://quaternius.com
   - Android (app/) 3D avatar assets — Creative Commons / asset-store terms;
     see the license files within their respective directories (e.g. app/3d/,
     and per-asset license.txt files such as app/3d/mask/license.txt)
