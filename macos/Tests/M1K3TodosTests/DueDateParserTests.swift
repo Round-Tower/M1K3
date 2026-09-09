@@ -66,7 +66,7 @@ struct DueDateParserTests {
         #expect(parse("Book flights by 2026-10-03") == ("Book flights", day("2026-10-03")))
         #expect(parse("Book flights by 3 oct") == ("Book flights", day("2026-10-03")))
         #expect(parse("Book flights on Oct 3") == ("Book flights", day("2026-10-03")))
-        #expect(parse("Book flights 3/10") == ("Book flights", day("2026-10-03")))
+        #expect(parse("Book flights by 3/10") == ("Book flights", day("2026-10-03")))
         #expect(parse("Tax return by 1 jan") == ("Tax return", day("2027-01-01")))
     }
 
@@ -80,6 +80,17 @@ struct DueDateParserTests {
         #expect(parse("Tax return by 1 January") == ("Tax return", day("2027-01-01")))
         #expect(parse("Tax return by 14 Sept") == ("Tax return", day("2026-09-14")))
         #expect(parse("Book flights by 2026-13-40").due == nil)
+    }
+
+    @Test("a trailing score or fraction is not a date — the slash form needs by/on/due")
+    func slashNeedsPreposition() {
+        for text in ["Rate this movie 9/10", "Physics quiz result 3/4", "Split the bill 1/2"] {
+            let out = parse(text)
+            #expect(out.due == nil, "\(text)")
+            #expect(out.title == text)
+        }
+        #expect(parse("Pay the rent in May").due == nil)
+        #expect(parse("Book flights on 9/10") == ("Book flights", day("2026-10-09")))
     }
 
     @Test("end of day is the local 23:59:59 even on a DST transition day")
