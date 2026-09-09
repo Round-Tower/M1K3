@@ -165,6 +165,7 @@ def test_html_carries_provenance_and_stays_offline():
     assert 'class="mark"' in html and 'src="mark.svg"' in html and 'alt="M1K3"' in html
     assert 'href="favicon.svg"' in html  # the <link rel=icon>, unchanged
     assert '<span class="cursor">' not in html
+    assert '<a href="/teams">FOR TEAMS</a>' in html  # the paid line's footer link rides every page
     # the read-out's editorial facts ride along, dated
     assert "Qwen3.8-27B" in html and "0.73" in html and "0.66" in html
     # a legacy run without powerSource renders as unknown, never as a guess

@@ -40,7 +40,7 @@ Key facts:
   https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg,
   TestFlight beta, or build from source
 - License/source: Functional Source License FSL-1.1-ALv2 (source-available: read, build, modify, use for yourself or inside your organisation; no competing commercial use; Apache-2.0 two years after each release; revisions before 2026-09-09 were Apache-2.0), public repo https://github.com/Round-Tower/M1K3
-- Organisations: M1K3 for Teams — the same on-device brains, institutional memory and a tuned persona on the organisation's own Apple Silicon hardware under its own domain, nothing leaving its network; licensed separately, kevin@round-tower.ie
+- Organisations: M1K3 for Teams — the same on-device brains, institutional memory and a tuned persona on the organisation's own Apple Silicon hardware under its own domain, nothing leaving its network; licensed separately — https://m1k3.app/teams — kevin@round-tower.ie
 - Trademarks: the name M1K3, the M mark, the pixel face and CRT look, icon and voice are brand assets of Round Tower, all rights reserved and outside the licence grant; the companion creatures are third-party (Fox: Khronos glTF sample by PixelMannen CC0 + tomkranis CC-BY 4.0; Colobus/Gecko/Inkfish/Sparrow: Quaternius, CC0) and are not claimed; the only official builds are app.m1k3 (App Store/TestFlight) and the DMGs on m1k3.app. Policy: https://github.com/Round-Tower/M1K3/blob/master/TRADEMARKS.md
 
 ## Docs
@@ -54,6 +54,7 @@ Key facts:
 - [Private ChatGPT alternative for Mac](https://m1k3.app/private-chatgpt-alternative-mac): privacy by architecture vs by policy; M1K3 vs Ollama vs LM Studio vs the ChatGPT desktop app
 - [How to run a local LLM on a Mac](https://m1k3.app/local-llm-mac-guide): hardware needs plus the four routes — Ollama, LM Studio, MLX, M1K3
 - [Give Claude a local memory with MCP](https://m1k3.app/mcp-knowledge-server): connect Claude Code/Desktop to M1K3's knowledge at http://127.0.0.1:4242/mcp
+- [M1K3 for Teams](https://m1k3.app/teams): the paid line for organisations — the same on-device brains, an institutional memory and a tuned persona on the organisation's own Apple Silicon under its own domain; on-prem only, design-partner pilots
 - [Is M1K3 really private?](https://m1k3.app/privacy): the privacy architecture — what runs on-device, the three documented network crossings (opt-in model downloads, off-by-default web search, updates), and how to verify
 
 ## Optional

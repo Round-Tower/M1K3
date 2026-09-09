@@ -116,6 +116,11 @@ nav .links a:hover { color: var(--ink-bright); text-shadow: var(--glow); }
 .article p strong, .article li strong { color: var(--ink); font-weight: 500; }
 .article a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--ink-faint); transition: color .25s; }
 .article a:hover { color: var(--ink-bright); text-decoration-color: var(--ink); }
+/* Buttons inside an article keep their button colours: `.article a` (0,1,1) outranks `.btn-primary`
+   (0,1,0), which painted the primary CTA white-on-white with an underline on every answer page —
+   caught by Kev on /teams, 2026-09-09. Signed: Kev + claude-fable-5.1, 2026-09-09, Confidence 0.85. Prior: Unknown. */
+.article a.btn, .article a.btn:hover { text-decoration: none; }
+.article a.btn-primary, .article a.btn-primary:hover { color: #000; }
 .article ul, .article ol { margin: 0 0 16px 22px; color: var(--ink-dim); max-width: 700px; }
 .article li { margin-bottom: 8px; }
 .article code {
@@ -203,6 +208,8 @@ table.cmp { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 
 .page-cta h2 { margin-top: 0; }
 .page-cta p { margin: 18px auto 36px; max-width: 480px; }
 .cta-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: center; }
+/* A pixel Mac above a CTA (teams.html) — the site's own glyph, never the Apple logo (third parties may not use it). */
+.cta-glyph { display: block; margin: 0 auto 18px; opacity: .82; filter: drop-shadow(0 0 8px rgba(255,255,255,.35)); }
 
 .more { border-top: 1px solid var(--line); margin-top: 70px; padding-top: 34px; }
 .more-links { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 16px; }
