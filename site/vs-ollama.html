@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-07-10"
+  "dateModified": "2026-09-09"
 }
 </script>
 <script type="application/ld+json">
@@ -53,7 +53,7 @@
     { "@type": "Question", "name": "Which supports more models, M1K3 or Ollama?",
       "acceptedAnswer": { "@type": "Answer", "text": "Ollama, clearly. Ollama's library spans many model families and sizes, and that breadth is one of its main strengths. M1K3 deliberately ships a small curated set of brains — Gemma and Qwen via MLX plus Apple Foundation Models — tuned for its assistant, voice, and tool-calling features." } },
     { "@type": "Question", "name": "Are M1K3 and Ollama both free and open source?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Ollama is open source under the MIT license. M1K3 is open source under the Apache 2.0 license, free for humans forever, with no account, subscription, or telemetry." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "Both are free. Ollama is open source under the MIT license. M1K3 is free for humans forever with no account, subscription, or telemetry, and it is source-available rather than open source: the full repository is public under the Functional Source License (FSL-1.1-ALv2), which permits reading, building, modifying and personal or internal use but not offering M1K3 to others as a competing commercial product; each version becomes Apache-2.0 two years after release." } }
   ]
 }
 </script>
@@ -67,7 +67,7 @@
 <div class="vignette"></div>
 
 <nav>
-  <a class="wordmark" href="/"><img class="mark" src="favicon.svg" alt="" width="22" height="22" />M1K3<span class="cursor">_</span></a>
+  <a class="wordmark" href="/" aria-label="M1K3 home"><img class="mark" src="mark.svg" alt="M1K3" width="24" height="28" /></a>
   <div class="links">
     <a href="/">Home</a>
     <a href="/#features">Features</a>
@@ -81,7 +81,7 @@
   <header class="article-head">
     <span class="label">// comparison</span>
     <h1>M1K3 vs Ollama</h1>
-    <p class="meta">Updated 2026-07-10 · By Round Tower, the makers of M1K3 — so read us with that in mind. We've kept it factual.</p>
+    <p class="meta">Updated 2026-09-09 · By Round Tower, the makers of M1K3 — so read us with that in mind. We've kept it factual.</p>
   </header>
 
   <div class="answer">
@@ -94,7 +94,7 @@
   <p>What Ollama is <em>not</em> trying to be is a finished assistant. Voice, document memory, retrieval over your own files, and agent tools aren't the model server's job — you assemble those yourself from the ecosystem around it.</p>
 
   <h2>What is M1K3?</h2>
-  <p>M1K3 is a free, open-source (Apache-2.0) AI app for macOS that runs entirely on-device, made by Round Tower in Ireland. It runs Gemma and Qwen models via MLX-Swift on the Metal GPU, with Apple Foundation Models handling fast turns — hot-swappable in Settings. Around the models it ships the assistant layer as one native app:</p>
+  <p>M1K3 is a free, source-available (FSL-1.1-ALv2, public repository) AI app for macOS that runs entirely on-device, made by Round Tower in Ireland. It runs Gemma and Qwen models via MLX-Swift on the Metal GPU, with Apple Foundation Models handling fast turns — hot-swappable in Settings. Around the models it ships the assistant layer as one native app:</p>
   <ul>
     <li><strong>Live voice</strong> — streaming on-device speech recognition and natural speech out.</li>
     <li><strong>Knowledge graph + RAG</strong> — import documents; ask questions grounded in your own files, with semantic search.</li>
@@ -121,7 +121,7 @@
         <tr><td>MCP server</td><td class="yes">Built in — your knowledge, exposed to Claude and other agents</td><td class="no">No first-party MCP knowledge server</td></tr>
         <tr><td>Call transcription</td><td class="yes">Built in — consent-gated, encrypted, on-device</td><td class="no">Not built in</td></tr>
         <tr><td>Developer API</td><td>MCP (loopback HTTP + stdio)</td><td class="yes">Local REST API — the ecosystem standard for local LLM apps</td></tr>
-        <tr><td>License</td><td>Apache-2.0, free, no account or telemetry</td><td>MIT, free</td></tr>
+        <tr><td>License</td><td>FSL-1.1-ALv2 (source-available; free for humans, no account or telemetry)</td><td>MIT (open source), free</td></tr>
         <tr><td>Best for</td><td>A private, working assistant on a modern Mac</td><td>Developers, scripting, building local-AI apps, non-Apple hardware</td></tr>
       </tbody>
     </table>
@@ -152,14 +152,14 @@
     </details>
     <details>
       <summary>Are both free and open source?</summary>
-      <p>Yes. Ollama is MIT-licensed; M1K3 is Apache-2.0, free for humans forever — no account, no subscription, no telemetry.</p>
+      <p>Both are free. Ollama is MIT-licensed open source. M1K3 is free for humans forever — no account, no subscription, no telemetry — and source-available under the Functional Source License (FSL-1.1-ALv2): the whole repo is public to read, build and modify; the one thing withheld is selling M1K3 or a copy of it to others. Each version becomes Apache-2.0 two years after release.</p>
     </details>
   </div>
 
   <section class="page-cta">
     <span class="label">// try it</span>
     <h2>See M1K3 for yourself.</h2>
-    <p>Free and open source. Runs entirely on your Mac — pull the ethernet cable, it doesn't notice.</p>
+    <p>Free for humans, source public. Runs entirely on your Mac — pull the ethernet cable, it doesn't notice.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
       <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Build from source</a>
@@ -188,6 +188,11 @@
      Every M1K3 claim grounded in README.md / site/llms.txt / site/index.html;
      Ollama claims kept general + hedged ("as of mid-2026") and deliberately
      generous — fairness is the strategy. Zero JS; styles shared via geo.css
-     (tokens lifted from index.html). Prior: none (new file). -->
+     (tokens lifted from index.html). Prior: none (new file). 
+
+     Review: Kev + claude-fable-5.1, 2026-09-09 — the relicense (ADR 0005, 2026-09-09): M1K3 is no longer described as open source — FAQ
+     (JSON-LD + visible answer, kept in step), the intro sentence, the License table row (FSL-1.1-ALv2,
+     source-available vs Ollama's MIT open source, stated plainly) and the closing line. Ollama's
+     claims untouched. Nav → the tile-less mark alone (mark.svg). dateModified bumped. Confidence now 0.85. -->
 </body>
 </html>

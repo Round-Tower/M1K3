@@ -40,10 +40,10 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
   "url": "https://m1k3.app/",
   "downloadUrl": "https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg",
-  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "license": "https://fsl.software/",
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie", "sameAs": ["https://github.com/Round-Tower"] },
   "sameAs": ["https://github.com/Round-Tower/M1K3"],
-  "dateModified": "2026-08-22"
+  "dateModified": "2026-09-09"
 }
 </script>
 <script type="application/ld+json">
@@ -65,8 +65,8 @@
       "acceptedAnswer": { "@type": "Answer", "text": "Only if you ask it to. The Heartbeat is an ambient pulse — every two hours, a short narrative about your machine and your day, composed from facts the code gathered, respecting quiet hours. It is off by default, lives on its own screen with a one-tap Clear, and never enters your chat transcript. There is also a native macOS screensaver — the pixel M in ambient rain — installable from Settings." } },
     { "@type": "Question", "name": "Can my other devices use my Mac's brain?",
       "acceptedAnswer": { "@type": "Answer", "text": "That's Brain at Home: your Mac can serve its brain to your own devices over the local network — discovered via Bonjour, paired once by QR code, encrypted with TLS-PSK, with paired devices limited to a scoped read-only tool set. It is off by default and nothing ever crosses the internet; everything stays inside your walls." } },
-    { "@type": "Question", "name": "Is M1K3 free and open source?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 is free for humans, forever, and open source under the Apache-2.0 license, developed by Round Tower in Ireland — no account, no subscription, no telemetry. You can download the signed Mac app directly, join the TestFlight beta, or build it from source on GitHub. An optional GitHub Sponsors page funds development without gating features." } }
+    { "@type": "Question", "name": "Is M1K3 free? Is it open source?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Free for humans, forever — no account, no subscription, no telemetry. It is source-available, not open source: the whole repository is public under the Functional Source License (FSL-1.1-ALv2), so you can read every line, build it, modify it, and run it for yourself or inside your organisation. What the licence withholds is offering M1K3 or a copy of it to others as a competing commercial product; each version becomes Apache-2.0 two years after release. Organisations that want M1K3 on their own hardware, under their own domain, license M1K3 for Teams from Round Tower. Developed by Round Tower in Ireland; download the signed Mac app directly, join the TestFlight beta, or build it from source on GitHub." } }
   ]
 }
 </script>
@@ -130,7 +130,8 @@
     backdrop-filter: blur(2px);
   }
   .wordmark { font-family: var(--pixel); font-size: 28px; color: var(--ink-bright); text-decoration: none; text-shadow: var(--glow); }
-  .wordmark .mark { width: 22px; height: 22px; vertical-align: -3px; margin-right: 8px; filter: drop-shadow(0 0 6px rgba(255,255,255,.55)); }
+  .wordmark .mark { display: block; width: 24px; height: 28px; opacity: .82; filter: drop-shadow(0 0 6px rgba(255,255,255,.45)); transition: opacity .25s; }
+  .wordmark:hover .mark { opacity: 1; }
   .wordmark .cursor { animation: blink 1.1s step-end infinite; }
   nav .links { display: flex; gap: 32px; align-items: center; }
   nav .links a {
@@ -387,7 +388,7 @@
 <div class="vignette"></div>
 
 <nav>
-  <a class="wordmark" href="#"><img class="mark" src="favicon.svg" alt="" width="22" height="22" />M1K3<span class="cursor">_</span></a>
+  <a class="wordmark" href="#" aria-label="M1K3"><img class="mark" src="mark.svg" alt="M1K3" width="24" height="28" /></a>
   <div class="links">
     <a href="#private">Private</a>
     <a href="#features">Features</a>
@@ -569,7 +570,8 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>Is it free?</summary>
-      <p>Free for humans, forever — and open source under Apache-2.0, made by Round Tower in Ireland. No account, no subscription, no telemetry. Download the signed &amp; notarized Mac app, join the TestFlight beta, or build from source today. If M1K3 earns a place on your Mac, there's an optional <a href="https://github.com/sponsors/Round-Tower">GitHub Sponsors</a> page — it funds development, never gates features.</p>
+      <p>Free for humans, forever — made by Round Tower in Ireland. No account, no subscription, no telemetry. The source is public under the <a href="https://github.com/Round-Tower/M1K3/blob/master/LICENSE">Functional Source License</a>: read every line, build it, run it for yourself or inside your organisation; the one thing it withholds is selling M1K3 or a copy of it to others, and each version becomes Apache-2.0 two years on. Download the signed &amp; notarized Mac app, join the TestFlight beta, or build from source today. If M1K3 earns a place on your Mac, there's an optional <a href="https://github.com/sponsors/Round-Tower">GitHub Sponsors</a> page — it funds development, never gates features.</p>
+      <p><strong>Organisations:</strong> M1K3 for Teams puts the same brains, an institutional memory, and a persona tuned to your people on your own Apple Silicon hardware, under your own domain — nothing leaves your network. Licensed separately; write to <a href="mailto:kevin@round-tower.ie">kevin@round-tower.ie</a>.</p>
     </details>
   </div>
 </section>
@@ -616,7 +618,7 @@ the action list?<br />
        "Nothing leaves." stays in the static markup (SEO / no-JS) and leads the
        cycle. Skipped entirely under prefers-reduced-motion. */
     var rotator = document.getElementById('rotator');
-    var phrases = ['Nothing leaves.', 'Free for humans.', 'No data centers.', 'Eco friendly.', 'Open source.'];
+    var phrases = ['Nothing leaves.', 'Free for humans.', 'No data centers.', 'Eco friendly.', 'Source-available.'];
     var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (rotator && !reduceMotion) {
       var pi = 0;
@@ -979,6 +981,14 @@ tick();
      Apache-2.0 named; per-answer local-only feedback noted in the privacy
      answer (AnswerFeedback.swift). JSON-LD downloadUrl now the signed DMG;
      dateModified 2026-08-22. Every claim verified in-repo; nothing added
-     that master doesn't ship. Prior: Kev + claude-opus-4-8 (this file). -->
+     that master doesn't ship. Prior: Kev + claude-opus-4-8 (this file). 
+
+     Review: Kev + claude-fable-5.1, 2026-09-09 — the relicense (ADR 0005, 2026-09-09): "open source under Apache-2.0" → source-available under
+     FSL-1.1-ALv2 on the FAQ (question + answer), the final CTA, the rotator ('Source-available.'),
+     and the JSON-LD license URL (now fsl.software; schema mirrors the visible answer); a new
+     Organisations / M1K3 for Teams paragraph in the CTA (on-prem, own domain, nothing leaves the
+     network — licensed separately). "Free for humans, forever" untouched everywhere. Nav is now the
+     tile-less mark alone (mark.svg, opacity .82, no wordmark text or cursor) per Kev's call; the
+     tab icon keeps favicon.svg. dateModified 2026-09-09. Confidence now 0.85. -->
 </body>
 </html>

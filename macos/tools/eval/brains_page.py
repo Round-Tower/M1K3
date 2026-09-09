@@ -360,7 +360,7 @@ def render_html(doc: dict) -> str:
 <div class="vignette"></div>
 
 <nav>
-  <a class="wordmark" href="/"><img class="mark" src="favicon.svg" alt="" width="22" height="22" />M1K3<span class="cursor">_</span></a>
+  <a class="wordmark" href="/" aria-label="M1K3 home"><img class="mark" src="mark.svg" alt="M1K3" width="24" height="28" /></a>
   <div class="links">
     <a href="/">Home</a>
     <a href="/#features">Features</a>

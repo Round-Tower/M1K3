@@ -1,10 +1,12 @@
 # M1K3 Trademark and Brand Policy
 
-The code in this repository is open source under the
-[Apache License 2.0](./LICENSE). The *identity* of M1K3 is not part of that
-grant. Section 6 of the License says so explicitly: it grants no permission to
-use the trade names, trademarks, service marks, or product names of the
-Licensor.
+The code in this repository is source-available under the
+[Functional Source License, FSL-1.1-ALv2](./LICENSE) (Apache-2.0 for
+revisions before 2026-09-09 — see `NOTICE`). The *identity* of M1K3 is not
+part of either grant. The FSL's Trademarks clause says so explicitly — it
+grants no right to use our trademarks, trade names, service marks, or product
+names beyond identifying us as the origin of the Software — and Section 6 of
+the Apache License said the same for the earlier revisions.
 
 ## What is protected
 
@@ -22,8 +24,8 @@ The following are trademarks and brand assets of Kevin Murphy / Round Tower
   is claimed as intent; it earns protection through use in commerce, and
   this is stated so nobody mistakes it for a settled right today).
 
-The **names and marks** are outside the Apache 2.0 grant by the License's own
-Section 6. The **brand-asset files** (the M mark files, the site artwork, the
+The **names and marks** are outside the licence grant by the LICENSE's own
+Trademarks clause (Section 6 of the Apache License for earlier revisions). The **brand-asset files** (the M mark files, the site artwork, the
 brand plates, the app icon and App Store artwork) are excluded from the grant
 by the notice in [`NOTICE`](./NOTICE), from the commit that added it onward;
 they are all rights reserved. The companion face files are *not* excluded —
@@ -36,8 +38,9 @@ carry no presumption of validity. Registration is a separate step.
 
 ## What you may do without asking
 
-- Build, run, fork, and modify the code for yourself, commercially or not
-  (that is the Apache grant).
+- Build, run, fork, and modify the code for yourself and inside your own
+  organisation (that is the licence grant; offering it to others as a
+  competing commercial product is not — see `LICENSE`).
 - Say truthfully that your work is "based on M1K3" or "built from the M1K3
   source", with a link to this repository.
 - Use the name M1K3 to refer to this project in articles, talks, package
@@ -87,3 +90,9 @@ exclusion now lives in NOTICE (forward from that commit, earlier revisions
 stay granted); companion faces scoped to trade-dress use, not redistribution
 (their provenance is not all first-party); sound-mark and unregistered-scope
 caveats added. Confidence now 0.85.*
+*Review: Kev + claude-fable-5.1, 2026-09-09 — the relicense (ADR 0005): the
+code moved from Apache-2.0 to FSL-1.1-ALv2 from this commit on, so the policy
+now leans on the FSL's own Trademarks clause and names Apache §6 only for the
+earlier revisions; the "what you may do" grant no longer says "commercially"
+— competing commercial use is the one thing the FSL withholds. Marks list
+unchanged. Confidence now 0.85.*

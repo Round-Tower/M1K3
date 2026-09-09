@@ -31,7 +31,8 @@ Build-from-source instructions for the Mac app live in
 
 ## Getting a PR merged
 
-1. Fork, branch, make the change with tests.
+1. Contributions are by invitation (see *Licensing* below) — ask first, then
+   fork, branch, and make the change with tests.
 2. Run the fast loop locally: `cd macos && swift test --parallel`.
 3. If you touched anything under `macos/M1K3App/` (the app shell), also build
    it: `xcodegen generate && xcodebuild -scheme M1K3 -destination
@@ -60,8 +61,18 @@ It's a lightweight convention, not a gate — see [`.murphysig`](./.murphysig).
 
 ## Licensing
 
-M1K3 is [Apache-2.0](./LICENSE). By contributing you agree your contribution
-is licensed the same way (inbound = outbound). No CLA.
+M1K3 is source-available under the [Functional Source License,
+FSL-1.1-ALv2](./LICENSE): free for humans and for internal use, no competing
+commercial use, Apache-2.0 two years after each release. It is not an
+open-source licence in the OSI sense, and we say so plainly.
+
+**Contributions are by invitation.** Write to kevin@round-tower.ie with what
+you'd like to work on (an issue link is ideal) and a pointer to something
+you've built. Invited contributors submit under the short
+[Contributor License Agreement](./CLA.md): Apache-2.0 inbound, FSL outbound,
+you keep your copyright. Opening a pull request is acceptance; there is no
+form. Unsolicited pull requests are read but may be closed with a pointer to
+this paragraph — the CLA has to be in place before code lands.
 
 The M1K3 name, mark, faces, icon, and voice are trademarks outside that grant
 (see [`TRADEMARKS.md`](./TRADEMARKS.md)); contributions to the brand assets are

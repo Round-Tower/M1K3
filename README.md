@@ -26,7 +26,7 @@ Edge AI you actually own: no cloud, no telemetry, no network call it never asks 
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Round-Tower/M1K3?color=0a0a0a&labelColor=0a0a0a" alt="Apache-2.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-FSL--1.1--ALv2-0a0a0a?labelColor=0a0a0a" alt="FSL-1.1-ALv2"></a>
   <a href="https://github.com/Round-Tower/M1K3/releases/latest"><img src="https://img.shields.io/github/v/release/Round-Tower/M1K3?color=0a0a0a&labelColor=0a0a0a&label=release" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/platform-macOS%2026%20·%20Apple%20Silicon-0a0a0a?labelColor=0a0a0a" alt="macOS 26 · Apple Silicon">
   <img src="https://img.shields.io/badge/swift-6.2%20strict-0a0a0a?labelColor=0a0a0a" alt="Swift 6.2">
@@ -131,17 +131,32 @@ on your machine. Network is only used to download models on first run.
 
 ## License
 
-**[Apache License 2.0](./LICENSE).** M1K3 is free and open source — use it, fork
-it, build on it, commercially or otherwise. Attribution and third-party notices
-are in [`NOTICE`](./NOTICE).
+**[Functional Source License, FSL-1.1-ALv2](./LICENSE).** M1K3 is
+source-available and **free for humans, forever**: read every line, build it,
+modify it, run it for yourself, use it inside your organisation, teach with
+it, research with it. What the licence does not permit is a *competing use* —
+offering M1K3, a fork of it, or a substantially similar product to others as a
+commercial product or service. Each version converts to Apache-2.0 two years
+after release. It is not an OSI open-source licence and we don't call it one.
+Attribution and third-party notices are in [`NOTICE`](./NOTICE); the decision
+and its reasons are in
+[ADR 0005](./macos/docs/adr/0005-relicense-to-fsl-organisations-are-the-paid-line.md).
 
-The code is open; the name is not. **M1K3**, the M mark, the companion faces,
-the icon, and the voice are trademarks and brand assets, all rights reserved
-and outside the Apache grant. Ship a fork under your own name and icon — see
+Revisions before 2026-09-09 were published under Apache-2.0 and stay that way;
+the boundary is recorded in `NOTICE`.
+
+The source is public; the name is not. **M1K3**, the M mark, the companion
+faces, the icon, and the voice are trademarks and brand assets, all rights
+reserved and outside the licence grant. See
 [`TRADEMARKS.md`](./TRADEMARKS.md). The only official builds are Round Tower's
 (`app.m1k3` on the App Store / TestFlight, and the DMGs on [m1k3.app](https://m1k3.app)).
 
-Contributions are accepted under the same Apache-2.0 terms (per
-section 5 of the License). M1K3 is built in the open with
+**Organisations:** M1K3 for Teams — the same on-device brains, institutional
+memory, and a tuned persona served on your own Apple Silicon hardware, under
+your own domain, with nothing leaving your network — is licensed separately.
+Write to kevin@round-tower.ie.
+
+Contributions are by invitation under a short [CLA](./CLA.md) (Apache-2.0
+inbound, FSL outbound). M1K3 is built in the open with
 [MurphySig](https://murphysig.dev) provenance — the git history is signed,
 human-and-AI collaboration on the record.
