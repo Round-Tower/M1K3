@@ -157,7 +157,7 @@ Colobus, Gecko, Inkfish and Sparrow are by [Quaternius](https://quaternius.com)
 **Organisations:** M1K3 for Teams — the same on-device brains, institutional
 memory, and a tuned persona served on your own Apple Silicon hardware, under
 your own domain, with nothing leaving your network — is licensed separately.
-Write to kevin@round-tower.ie.
+See [m1k3.app/teams](https://m1k3.app/teams) or write to kevin@round-tower.ie.
 
 Contributions are by invitation under a short [CLA](./CLA.md) (Apache-2.0
 inbound, FSL outbound). M1K3 is built in the open with
