@@ -35,6 +35,19 @@ struct ChatEvalStubPaletteTests {
         }
     }
 
+    @Test("every parameter is one the AFM arm can express — query, url, or none")
+    func afmArmCanExpressEveryParameter() {
+        // ChatEvalStage.afmTool dispatches on the parameter NAME to pick a
+        // @Generable argument shape, and its default branch assumes `query`. A
+        // stub with a differently named parameter would compile and silently
+        // drift the two palettes apart (review 1 on #263) — so it fails here.
+        for spec in ChatEvalStubPalette.specs {
+            let name = spec.parameter?.name
+            #expect(name == nil || name == "query" || name == "url",
+                    "\(spec.name) declares \(name ?? "nil"), which the AFM arm cannot express")
+        }
+    }
+
     @Test("terminal output resolves; hard output for the lookup tools does not")
     func outputs() throws {
         let web = try #require(ChatEvalStubPalette.specs.first { $0.name == "web_search" })

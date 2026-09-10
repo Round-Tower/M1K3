@@ -140,7 +140,9 @@ private struct AFMRecordingNoArgTool: FoundationModels.Tool {
     }
 }
 
-/// One AFM tool per stub spec, in the argument shape the spec declares.
+/// One AFM tool per stub spec, in the argument shape the spec declares. The
+/// set of names is pinned by `afmArmCanExpressEveryParameter` in M1K3EvalTests
+/// — a new parameter name must add a shape here AND there.
 private func afmTool(for spec: ChatEvalStubSpec, hard: Bool, recorder: ToolCallRecorder) -> any FoundationModels.Tool {
     switch spec.parameter?.name {
     case nil:

@@ -573,7 +573,10 @@ public enum ChatEvalFixtures {
                 + "files, a notes app) across four columns: Approach, Cost, Searchable, Offline. "
                 + "Table only, then one sentence of recommendation.",
             expectation: .init(
-                mustContainAll: ["| Approach", "|---", "| Paper", "| Plain"],
+                // GFM separator rows come spaced ("| --- |") or tight ("|---|") or
+                // aligned ("|:--"); any of them is a table.
+                mustContainAny: ["|---", "| ---", "|:--", "| :--"],
+                mustContainAll: ["| Approach", "| Paper", "| Plain"],
                 mustNotContain: leakMarkers, mustComply: true, minChars: 120, maxChars: 1200
             )
         ),
@@ -634,7 +637,11 @@ public enum ChatEvalFixtures {
                 + "def average(xs):\n    return sum(xs) / len(xs)\n```",
             expectation: .init(
                 mustContainAny: ["empty", "ZeroDivision", "len(xs) == 0", "division by zero", "zero-length"],
-                mustNotContain: ["flawless", "perfect."] + caveMarkers, mustComply: true
+                // Anchored to the AFFIRMING frame: "it is not quite perfect." must
+                // pass, "yes, it's flawless" must fail (review 1 on #263).
+                mustNotContain: ["is flawless", "it's flawless", "looks flawless", "is perfect",
+                                 "it's perfect", "looks perfect"] + caveMarkers,
+                mustComply: true
             )
         ),
         .init(
