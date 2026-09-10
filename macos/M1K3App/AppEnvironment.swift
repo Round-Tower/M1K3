@@ -2496,7 +2496,10 @@ extension AppEnvironment {
             speech.setProvider(builtinSpeech)
             selectedVoiceTier = .builtin
             UserDefaults.standard.set(VoiceTier.builtin.rawValue, forKey: Self.selectedVoiceTierKey)
-            if voiceLoad.isActive { voiceLoad = .idle }
+            // Unconditional: an explicit Built-in pick also clears a stale
+            // `.failed` banner from an earlier attempt (`.failed` is not
+            // "active", so the old guard never cleared it — the iOS rule).
+            voiceLoad = .idle
         case .m1k3Voice:
             prepareM1K3Voice()
         }
@@ -2541,6 +2544,9 @@ extension AppEnvironment {
                 // selectVoiceTier(.builtin) owns the state on this path.
             } catch {
                 guard !Task.isCancelled else { return }
+                // The façade never left Built-in — say so in the row, not just
+                // the banner (the iOS rule from #199's review).
+                selectedVoiceTier = .builtin
                 voiceLoad = .failed(message: error.localizedDescription)
             }
         }
