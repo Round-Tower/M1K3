@@ -109,6 +109,22 @@ xcodebuild archive \
   DEVELOPMENT_TEAM="$TEAM" \
   M1K3_APP_ENTITLEMENTS="$MAS_ENTITLEMENTS" | beautify
 
+# ── 1b. The embedded CLI MUST be sandboxed on this channel ───────────────────
+# The App Store rejects an unsandboxed executable inside a sandboxed app. The
+# helper's project DEFAULT is the sandboxed pair and this script deliberately
+# overrides only the APP's — so this check proves the default actually applied
+# rather than trusting that nothing overrode it.
+ARCHIVED_APP="$ARCHIVE/Products/Applications/$APP_NAME.app"
+CLI_BIN="$ARCHIVED_APP/Contents/MacOS/m1k3"
+[ -f "$CLI_BIN" ] || { echo "✗ No m1k3 helper in the archived $APP_NAME.app"; exit 1; }
+if ! codesign -d --entitlements - --xml "$CLI_BIN" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null \
+       | grep -q "com.apple.security.app-sandbox"; then
+  echo "✗ The embedded m1k3 helper is NOT sandboxed — the App Store will reject"
+  echo "  this build. It must use M1K3CLI/m1k3-sandboxed.entitlements (the default)."
+  exit 1
+fi
+echo "✓ m1k3 helper is sandboxed (App-Store-safe entitlements)"
+
 # ── 2. Export the .pkg (App Store Connect) ───────────────────────────────────
 echo "▸ [2/4] Exporting (app-store-connect)…"
 rm -rf "$EXPORT_DIR"

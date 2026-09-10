@@ -10,8 +10,15 @@
 //  Signed: Kev + claude-opus-5, 2026-09-11, Confidence 0.8 (verify-by-run
 //  against the live app — the ask job poll and the `claude` lookup are the
 //  parts a unit test can't see). Prior: Unknown.
+//  Review: Kev + claude-opus-5, 2026-09-11 — code-quality fold: the sandbox is
+//  detected by a REDIRECTED HOME, not only by launchd's env var (the App Store
+//  helper run from a Terminal has no env var and would have written a config
+//  inside its own container while printing "wrote …"); a duplicate
+//  `claude mcp add` now reads as already-connected; every write failure prints
+//  the snippet so the user is never left with nothing. Confidence now 0.85.
 //
 
+import Darwin // getpwuid — the account's REAL home, which the sandbox hides
 import Foundation
 import M1K3CLICore
 
@@ -41,8 +48,26 @@ struct CommandRunner {
     /// ~/.cursor nor the `claude` binary. Rather than fail at the user with a
     /// permissions error, `connect` degrades to printing — which is what a
     /// sandboxed helper can honestly do.
+    ///
+    /// ★ The env var is not enough on its own: launchd injects it, so the
+    /// helper run from a Terminal (the route the README documents) is
+    /// sandboxed WITHOUT it. Unspotted, `~/.cursor/mcp.json` resolves into
+    /// ~/Library/Containers/app.m1k3.cli/Data and we'd report "wrote …" for a
+    /// file Cursor will never read. The redirected home is the real tell.
     var isSandboxed: Bool {
-        environment["APP_SANDBOX_CONTAINER_ID"] != nil
+        SandboxProbe.isSandboxed(
+            home: FileManager.default.homeDirectoryForCurrentUser.path,
+            realHome: Self.passwordDatabaseHome(),
+            environment: environment
+        )
+    }
+
+    /// The account's home as the password database knows it — untouched by
+    /// the sandbox's redirection. nil when it can't be read, which the probe
+    /// treats as "no evidence" rather than as a sandbox.
+    static func passwordDatabaseHome() -> String? {
+        guard let entry = getpwuid(getuid()), let home = entry.pointee.pw_dir else { return nil }
+        return String(cString: home)
     }
 
     func run() async -> Int32 {
@@ -65,7 +90,7 @@ struct CommandRunner {
     // MARK: - Tool calls
 
     private func callTool() async -> Int32 {
-        let transport = MCPTransport(port: command.port, clientVersion: appVersion)
+        let transport = MCPTransport.sequence(port: command.port, clientVersion: appVersion)
         let request: (tool: String, arguments: [String: JSONValue])
         switch command.action {
         case .status:
@@ -108,7 +133,7 @@ struct CommandRunner {
     /// `ask_m1k3` hands back a job id when a turn outruns its ~8s inline grace
     /// (see IntelligenceMCPTools). A person at a terminal wants the answer, not
     /// the receipt — so poll it out.
-    private func finish(_ text: String, transport: MCPTransport) async -> Int32 {
+    private func finish(_ text: String, transport: MCPCallSequence) async -> Int32 {
         guard case .ask = command.action, let job = Self.jobID(in: text) else {
             Output.line(text)
             return ExitCode.ok
@@ -196,7 +221,7 @@ struct CommandRunner {
             ?? FileManager.default.homeDirectoryForCurrentUser
         switch ConnectPlan.plan(client: client, url: url, configDir: home) {
         case let .shell(command):
-            return runShell(command)
+            return runShell(command, client: client, url: url)
         case .jsonMerge:
             return writeConfig(client: client, url: url, configDir: home)
         case let .printOnly(snippet, note):
@@ -234,7 +259,12 @@ struct CommandRunner {
             Output.line(ConnectPlan.snippet(client: client, url: url))
             return ExitCode.toolError
         } catch {
+            // Whatever went wrong, the user should leave with something they
+            // can paste rather than just an error.
             Output.error("m1k3: \(error.localizedDescription)")
+            Output.line("")
+            Output.line(ConnectPlan.snippet(client: client, url: url))
+            Output.line("→ \(ConnectPlan.destination(client: client))")
             return ExitCode.toolError
         }
     }
@@ -242,7 +272,7 @@ struct CommandRunner {
     /// Run the client's own registration command — but only if we can find it.
     /// Printing the line for the user to run is a perfectly good outcome; a
     /// stack trace about a missing binary is not.
-    private func runShell(_ command: [String]) -> Int32 {
+    private func runShell(_ command: [String], client: MCPClient, url: String) -> Int32 {
         guard let tool = command.first else { return ExitCode.usage }
         guard let executable = Self.locate(tool) else {
             Output.line("\(tool) isn't on your PATH. Run this once \(tool) is installed:")
@@ -254,14 +284,41 @@ struct CommandRunner {
         let process = Process()
         process.executableURL = executable
         process.arguments = Array(command.dropFirst())
+        let errors = Pipe()
+        process.standardError = errors
         do {
             try process.run()
+            let stderr = errors.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
-            return process.terminationStatus == 0 ? ExitCode.ok : ExitCode.toolError
+            if process.terminationStatus == 0 {
+                Output.line("Restart \(client.displayName) to pick it up.")
+                return ExitCode.ok
+            }
+            let message = String(data: stderr, encoding: .utf8) ?? ""
+            // Current `claude mcp add` refuses a duplicate NAME. That is the
+            // same state the JSON clients call "already connected", so it must
+            // read the same way here — re-running connect is not an error.
+            if Self.saysAlreadyConnected(message) {
+                Output.line("already connected — nothing to change.")
+                return ExitCode.ok
+            }
+            if !message.isEmpty { Output.error(message.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            Output.error("m1k3: \(tool) exited \(process.terminationStatus). Do it by hand:")
+            Output.line("")
+            Output.line(ConnectPlan.snippet(client: client, url: url))
+            return ExitCode.toolError
         } catch {
             Output.error("m1k3: couldn't run \(tool) — \(error.localizedDescription)")
+            Output.line("")
+            Output.line(ConnectPlan.snippet(client: client, url: url))
             return ExitCode.toolError
         }
+    }
+
+    /// The client already knows about a server called m1k3.
+    static func saysAlreadyConnected(_ stderr: String) -> Bool {
+        let lowered = stderr.lowercased()
+        return lowered.contains("already exists") || lowered.contains("already configured")
     }
 
     /// PATH, plus the two places a coding-agent CLI lands that a GUI-launched
@@ -270,7 +327,10 @@ struct CommandRunner {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let searchPath = (environment["PATH"] ?? "").split(separator: ":").map(String.init)
             + ["\(home)/.local/bin", "/opt/homebrew/bin", "/usr/local/bin"]
-        for directory in searchPath where !directory.isEmpty {
+        // Absolute entries only: a relative PATH entry (or an empty one, which
+        // POSIX reads as ".") would resolve against whatever directory the user
+        // happens to be in — running a `claude` a repo dropped there.
+        for directory in searchPath where directory.hasPrefix("/") {
             let candidate = URL(fileURLWithPath: directory).appendingPathComponent(tool)
             if FileManager.default.isExecutableFile(atPath: candidate.path) { return candidate }
         }

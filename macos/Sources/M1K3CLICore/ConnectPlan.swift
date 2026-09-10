@@ -139,10 +139,16 @@ public enum JSONConfigWriter {
     }
 
     public static func apply(_ plan: ConnectPlan) throws -> Outcome {
-        guard case let .jsonMerge(path, merge) = plan else {
+        guard case let .jsonMerge(declaredPath, merge) = plan else {
             throw WriteError("that client isn't configured by editing a JSON file")
         }
 
+        // ★ Follow symlinks to the real file. A dotfiles-managed config is a
+        // link into ~/dotfiles; `copyItem` would copy the LINK as a link and
+        // the atomic write would REPLACE it with a plain file — the config
+        // silently stops being managed, and the next `stow` diverges. Resolving
+        // first means we back up and write the file the user actually keeps.
+        let path = declaredPath.resolvingSymlinksInPath()
         let manager = FileManager.default
         let existing: [String: Any]
         let alreadyThere = manager.fileExists(atPath: path.path)

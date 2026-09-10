@@ -104,6 +104,13 @@ public enum JSONRPC {
         try encode(Request(id: id, method: "tools/call", params: CallParams(name: name, arguments: arguments)))
     }
 
+    /// The readiness probe used while waiting for a cold app: READ-ONLY, so
+    /// polling with it can never run a tool twice. (Polling with the real body
+    /// would have `remember` store twice and `speak` speak twice.)
+    public static func toolsList(id: Int = 1) throws -> Data {
+        try encode(Request(id: id, method: "tools/list", params: Empty()))
+    }
+
     /// The handshake — only ever sent in recovery. See the file header.
     public static func initialize(
         clientName: String = defaultClientName,
@@ -136,6 +143,25 @@ public enum JSONRPC {
         /// valid result; JSON-RPC has no code for that, so we mint one in the
         /// implementation-defined server-error range.
         public static let toolFailureCode = -32000
+
+        /// Read an HTTP answer.
+        ///
+        /// ★ The ENVELOPE is authoritative whatever the status code. The MCP
+        /// SDK answers protocol errors with a 4xx AND a proper JSON-RPC error
+        /// object, so a status-first reading turns the one RECOVERABLE refusal
+        /// — "Server is not initialized" — into a dead-end "answered HTTP 400"
+        /// and the handshake never fires on a freshly-launched app. The status
+        /// only speaks when there is no envelope to read (a proxy's HTML error
+        /// page, say), which is exactly when it is the whole story.
+        public static func parse(status: Int, body: Data) -> Reply {
+            let hasEnvelope = ((try? JSONSerialization.jsonObject(with: body)) as? [String: Any])
+                .map { $0["result"] != nil || $0["error"] != nil } ?? false
+            guard hasEnvelope || (200 ..< 300).contains(status) else {
+                let preview = String(data: body.prefix(200), encoding: .utf8) ?? "\(body.count) bytes"
+                return .error(code: status, message: "M1K3's MCP server answered HTTP \(status). \(preview)")
+            }
+            return parse(body)
+        }
 
         public static func parse(_ data: Data) -> Reply {
             guard let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {

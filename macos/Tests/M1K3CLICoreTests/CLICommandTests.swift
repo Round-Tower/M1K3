@@ -199,6 +199,16 @@ struct CLICommandTests {
         #expect(try parsed(["speak", "-40", "degrees"]).action == .speak(text: "-40 degrees", emotion: nil))
     }
 
+    @Test("--port is global: it comes out of a text subcommand's words, as the usage text says")
+    func portLeavesTextAlone() throws {
+        let command = try parsed(["speak", "hello", "--port", "9000"])
+        #expect(command.action == .speak(text: "hello", emotion: nil))
+        #expect(command.port == 9000)
+        // Quoted text that merely mentions the flag is still text.
+        #expect(try parsed(["speak", "mind the --port flag"]).action
+            == .speak(text: "mind the --port flag", emotion: nil))
+    }
+
     @Test("the endpoint is loopback, always")
     func endpoint() {
         #expect(MCPEndpoint.url(port: 4242) == "http://127.0.0.1:4242/mcp")

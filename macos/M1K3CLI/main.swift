@@ -23,13 +23,13 @@ import M1K3CLICore
 /// MARKETING_VERSION off the enclosing app bundle — Contents/MacOS/m1k3 →
 /// Contents/Info.plist. "dev" when the binary is run from a build directory
 /// rather than an installed bundle.
+///
+/// ⚠️ NOT argv[0]: invoked through the Homebrew cask's PATH symlink, argv[0] is
+/// just the typed name "m1k3" and every version read would say "dev".
+/// Bundle.main.executableURL is the real path, symlinks resolved.
 func appVersion() -> String {
-    let executable = URL(fileURLWithPath: CommandLine.arguments.first ?? "")
-        .resolvingSymlinksInPath()
-    let plist = executable
-        .deletingLastPathComponent() // …/Contents/MacOS
-        .deletingLastPathComponent() // …/Contents
-        .appendingPathComponent("Info.plist")
+    guard let bundle = MCPTransport.enclosingBundle() else { return "dev" }
+    let plist = bundle.appendingPathComponent("Contents/Info.plist")
     guard let data = try? Data(contentsOf: plist),
           let info = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
           let version = info["CFBundleShortVersionString"] as? String

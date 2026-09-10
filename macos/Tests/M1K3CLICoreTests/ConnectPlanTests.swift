@@ -19,12 +19,20 @@ import Testing
 struct ConnectPlanTests {
     private let url = MCPEndpoint.url(port: 4242)
 
+    /// Resolved (/var → /private/var) so path equality survives the writer's
+    /// own symlink resolution, and registered for teardown — `swift test` here
+    /// is UNSANDBOXED, so tests clean up after themselves.
     private func temporaryDirectory() throws -> URL {
-        let dir = FileManager.default.temporaryDirectory
+        let dir = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
             .appendingPathComponent("m1k3-cli-tests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        temporaries.add(dir)
         return dir
     }
+
+    /// Swift Testing builds a fresh suite instance per test, so this bag —
+    /// and everything it holds — dies with the test that filled it.
+    private let temporaries = TemporaryDirectories()
 
     private func jsonPlan(_ client: MCPClient, in dir: URL) throws -> (URL, ([String: Any]) -> [String: Any]) {
         guard case let .jsonMerge(path, merge) = ConnectPlan.plan(client: client, url: url, configDir: dir) else {
@@ -218,5 +226,87 @@ struct ConnectPlanTests {
         #expect(text.contains("http://127.0.0.1:4242/mcp"))
         #expect(!text.contains("\\/"))
         #expect(text.hasSuffix("\n"))
+    }
+
+    // MARK: - Files the user actually owns
+
+    @Test("★ a symlinked config keeps its link — dotfiles survive being connected")
+    func followsSymlinks() throws {
+        let dir = try temporaryDirectory()
+        let real = dir.appendingPathComponent("dotfiles-cursor.json")
+        try Data(#"{"mcpServers":{"other":{"command":"npx"}}}"#.utf8).write(to: real)
+        let link = dir.appendingPathComponent(".cursor/mcp.json")
+        try FileManager.default.createDirectory(
+            at: link.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
+
+        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, configDir: dir))
+        #expect(outcome == .written(path: real, backup: dir.appendingPathComponent("dotfiles-cursor.json.bak")))
+        // The link is still a link, and the real file behind it gained the entry.
+        let type = try FileManager.default.attributesOfItem(atPath: link.path)[.type] as? FileAttributeType
+        #expect(type == .typeSymbolicLink)
+        let written = try #require(
+            try JSONSerialization.jsonObject(with: Data(contentsOf: real)) as? [String: Any]
+        )
+        let servers = try #require(written["mcpServers"] as? [String: Any])
+        #expect(servers["m1k3"] != nil)
+        #expect(servers["other"] != nil)
+    }
+
+    @Test("★ the backup is the PRISTINE original — a later write never overwrites it")
+    func backupIsPristine() throws {
+        let dir = try temporaryDirectory()
+        let (path, _) = try jsonPlan(.cursor, in: dir)
+        try FileManager.default.createDirectory(
+            at: path.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        try Data(#"{"mcpServers":{"other":{"command":"npx"}}}"#.utf8).write(to: path)
+
+        _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, configDir: dir))
+        // A second, DIFFERENT write (the port moved) must not clobber the backup.
+        _ = try JSONConfigWriter.apply(
+            ConnectPlan.plan(client: .cursor, url: MCPEndpoint.url(port: 5111), configDir: dir)
+        )
+        let backup = try String(contentsOf: URL(fileURLWithPath: path.path + ".bak"), encoding: .utf8)
+        #expect(backup.contains("npx"))
+        #expect(!backup.contains("4242"))
+    }
+
+    @Test("a zero-byte config is a fresh start, not a parse failure")
+    func emptyFile() throws {
+        let dir = try temporaryDirectory()
+        let (path, _) = try jsonPlan(.cursor, in: dir)
+        try FileManager.default.createDirectory(
+            at: path.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        try Data().write(to: path)
+
+        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, configDir: dir))
+        guard case .written = outcome else {
+            Issue.record("expected a write, got \(outcome)")
+            return
+        }
+        let written = try #require(
+            try JSONSerialization.jsonObject(with: Data(contentsOf: path)) as? [String: Any]
+        )
+        #expect(written["mcpServers"] != nil)
+    }
+}
+
+/// Thread-safe bag of directories to delete when a suite finishes.
+private final class TemporaryDirectories: @unchecked Sendable {
+    private let lock = NSLock()
+    private var urls: [URL] = []
+
+    func add(_ url: URL) {
+        lock.lock(); defer { lock.unlock() }
+        urls.append(url)
+    }
+
+    deinit {
+        for url in urls {
+            try? FileManager.default.removeItem(at: url)
+        }
     }
 }

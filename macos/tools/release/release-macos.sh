@@ -135,6 +135,22 @@ xcodebuild -exportArchive \
   -exportOptionsPlist "$EXPORT_OPTS" | beautify
 [ -d "$APP" ] || { echo "✗ Export produced no $APP_NAME.app"; exit 1; }
 
+# ── 2b. The embedded CLI must NOT be sandboxed on this channel ───────────────
+# `m1k3 connect cursor` writes ~/.cursor/mcp.json and `m1k3 connect claude`
+# execs the claude binary; a sandboxed helper can do neither, and would write
+# into its own container while reporting success. This is the one place that
+# mistake is catchable — the entitlements come from a build VARIABLE, so a
+# typo in M1K3_CLI_ENTITLEMENTS fails silently at runtime, months later.
+CLI_BIN="$APP/Contents/MacOS/m1k3"
+[ -f "$CLI_BIN" ] || { echo "✗ No m1k3 helper in $APP_NAME.app"; exit 1; }
+if codesign -d --entitlements - --xml "$CLI_BIN" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null \
+     | grep -q "com.apple.security.app-sandbox"; then
+  echo "✗ The embedded m1k3 helper is SANDBOXED — the DMG build must use"
+  echo "  M1K3CLI/m1k3-direct.entitlements (check M1K3_CLI_ENTITLEMENTS above)."
+  exit 1
+fi
+echo "✓ m1k3 helper is unsandboxed (direct-distribution entitlements)"
+
 # ── 3. Notarize + staple the .app (offline first-launch) ─────────────────────
 if [ "$SKIP_NOTARIZE" -eq 0 ]; then
   echo "▸ [3/6] Notarizing the app…"

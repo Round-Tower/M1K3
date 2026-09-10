@@ -106,6 +106,41 @@ struct JSONRPCTests {
         #expect(!message.isEmpty)
     }
 
+    // MARK: - HTTP-aware reading
+
+    @Test("★ a 4xx that carries an envelope is read as the envelope — the SDK answers protocol errors that way")
+    func statusDoesNotBeatTheEnvelope() {
+        let body = Data(#"{"error":{"code":-32600,"message":"Invalid Request: Server is not initialized"}}"#.utf8)
+        #expect(JSONRPC.Reply.parse(status: 400, body: body) == .notInitialized)
+    }
+
+    @Test("an envelope's own code wins over the HTTP status")
+    func envelopeCodeWins() {
+        let body = Data(#"{"error":{"code":-32601,"message":"Method not found"}}"#.utf8)
+        #expect(JSONRPC.Reply.parse(status: 500, body: body) == .error(code: -32601, message: "Method not found"))
+    }
+
+    @Test("a non-2xx with no envelope reports the status, so an HTML error page isn't read as an answer")
+    func statusWithoutEnvelope() {
+        guard case let .error(code, message) = JSONRPC.Reply.parse(status: 404, body: Data("<html>".utf8)) else {
+            Issue.record("expected an error")
+            return
+        }
+        #expect(code == 404)
+        #expect(message.contains("HTTP 404"))
+    }
+
+    @Test("a 2xx envelope reads exactly as before")
+    func okStatusPassesThrough() {
+        let body = Data(#"{"result":{"content":[{"type":"text","text":"hi"}]}}"#.utf8)
+        #expect(JSONRPC.Reply.parse(status: 200, body: body) == .text("hi"))
+    }
+
+    @Test("tools/list is the readiness probe — read-only, so polling with it changes nothing")
+    func toolsListProbe() throws {
+        #expect(try text(JSONRPC.toolsList(id: 1)) == #"{"id":1,"jsonrpc":"2.0","method":"tools/list","params":{}}"#)
+    }
+
     @Test("a result with no content at all reads as empty text, not as a failure")
     func replyEmptyResult() {
         let data = Data(#"{"result":{"content":[]}}"#.utf8)
