@@ -25,6 +25,9 @@
 //  (#209 review 2: a long meta description could consume the whole cap and leave no page text).
 //  Review: Kev + claude-fable-5.1, 2026-09-04 (late) — the read leads with "Page: <title>" + the meta
 //  description (live: an untitled stats strip read as "the site loads blank").
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — #210: the host is RESOLVED before any fetch (injected
+//  `HostResolving`, system resolver in production); a public name answering with a private address
+//  is refused on both execute() and the search-deepen read. Confidence now 0.85.
 
 import Foundation
 import M1K3Agent
@@ -113,11 +116,23 @@ public struct FetchPageTool: AgentTool {
     ]
 
     private let fetcher: any HTTPFetching
+    private let resolver: any HostResolving
     private let maxCharacters: Int
 
-    public init(fetcher: any HTTPFetching = RetryingHTTPFetcher.production, maxCharacters: Int = 1500) {
+    public init(
+        fetcher: any HTTPFetching = RetryingHTTPFetcher.production,
+        resolver: any HostResolving = SystemHostResolver(),
+        maxCharacters: Int = 1500
+    ) {
         self.fetcher = fetcher
+        self.resolver = resolver
         self.maxCharacters = maxCharacters
+    }
+
+    /// The private-network refusal both reads share once the URL is well-formed:
+    /// a DNS name is resolved and every answer must be public (#210).
+    private func resolvesPrivate(_ url: URL) async -> Bool {
+        await WebURLPolicy.isLocalOrPrivate(url, resolver: resolver)
     }
 
     public func execute(input: [String: String]) async throws -> ToolResult {
@@ -125,6 +140,11 @@ public struct FetchPageTool: AgentTool {
         guard let url = Self.validatedURL(raw) else {
             return ToolResult(output: "Error: fetch_page needs a web address — a full "
                 + "http(s) URL or a domain like example.com.")
+        }
+        guard await !resolvesPrivate(url) else {
+            Self.log.notice("refused \(url.host() ?? "?", privacy: .public): resolves to a private address")
+            return ToolResult(output: "Error: M1K3 won't read local or private-network addresses, "
+                + "or one it couldn't resolve (\(url.host() ?? raw)).")
         }
 
         do {
@@ -219,7 +239,7 @@ public struct FetchPageTool: AgentTool {
     /// Internal on purpose: the only caller is WebSearchTool's deepen in this
     /// module (110 review nit — no protocol witness forces `public`).
     func readablePage(at raw: String) async -> String? {
-        guard let url = Self.validatedURL(raw) else { return nil }
+        guard let url = Self.validatedURL(raw), await !resolvesPrivate(url) else { return nil }
         do {
             let (data, response) = try await fetcher.fetch(Self.pageRequest(for: url))
             guard HTTPStatus.classify(response.statusCode) == .ok else { return nil }

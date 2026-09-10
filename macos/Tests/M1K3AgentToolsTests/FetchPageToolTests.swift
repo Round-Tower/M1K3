@@ -11,8 +11,19 @@
 
 import Foundation
 @testable import M1K3AgentTools
+import M1K3Preview
 import Synchronization
 import Testing
+
+/// The tool tests are hermetic: every name is "public" without a lookup. Only the
+/// resolver-specific tests inject a pinned answer (#210).
+private struct PublicDNS: HostResolving {
+    func addresses(for _: String) async -> [String]? {
+        ["93.184.216.34"]
+    }
+}
+
+private let publicDNS = PublicDNS()
 
 struct HTMLTextExtractorTests {
     @Test("extracts readable text, dropping head/script/style and tags")
@@ -77,7 +88,7 @@ struct FetchPageToolTests {
     @Test("fetches a page with browser headers and returns its readable text")
     func fetchesReadableText() async throws {
         let fetcher = ScriptedFetcher(body: "<body><h1>Forecast</h1><p>Sunny, 25.</p></body>")
-        let tool = FetchPageTool(fetcher: fetcher)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         let result = try await tool.execute(input: ["url": "https://weather.example/boston"])
         #expect(result.output.contains("Forecast"))
         #expect(result.output.contains("Sunny, 25."))
@@ -89,7 +100,7 @@ struct FetchPageToolTests {
     @Test("only http(s) urls are fetched")
     func schemeGuard() async throws {
         let fetcher = ScriptedFetcher(body: "nope")
-        let tool = FetchPageTool(fetcher: fetcher)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         let file = try await tool.execute(input: ["url": "file:///etc/passwd"])
         #expect(file.output.hasPrefix("Error:"))
         let junk = try await tool.execute(input: ["url": "not a url"])
@@ -99,6 +110,25 @@ struct FetchPageToolTests {
         #expect(fetcher.requests.isEmpty)
     }
 
+    private struct PinnedResolver: HostResolving {
+        let address: String
+        func addresses(for _: String) async -> [String]? {
+            [address]
+        }
+    }
+
+    @Test("a name resolving into private space is refused before any fetch (#210)")
+    func resolvedPrivateRefused() async throws {
+        let fetcher = ScriptedFetcher(body: "<html><body><p>secret metadata</p></body></html>")
+        let tool = FetchPageTool(fetcher: fetcher, resolver: PinnedResolver(address: "169.254.169.254"))
+        let result = try await tool.execute(input: ["url": "https://metadata.example.com/latest"])
+        #expect(result.output.hasPrefix("Error:"))
+        #expect(result.output.contains("private"))
+        #expect(fetcher.requests.isEmpty)
+        // The search-deepen read shares the gate.
+        #expect(await tool.readablePage(at: "https://metadata.example.com/") == nil)
+    }
+
     @Test("a read leads with the page's own title and description, then the text")
     func titledRead() async throws {
         let fetcher = ScriptedFetcher(body: """
@@ -106,7 +136,7 @@ struct FetchPageToolTests {
         <meta name="description" content="A fully on-device AI companion for macOS."></head>
         <body><p>0 bytes of your data sent to a server.</p></body></html>
         """)
-        let tool = FetchPageTool(fetcher: fetcher)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         let result = try await tool.execute(input: ["url": "https://m1k3.app"])
         #expect(result.output.hasPrefix("Page: M1K3 for Mac — Nothing leaves."))
         #expect(result.output.contains("A fully on-device AI companion for macOS."))
@@ -122,7 +152,7 @@ struct FetchPageToolTests {
         let fetcher = ScriptedFetcher(body: """
         <html><head><title>M1K3 for Mac</title></head><body><p>0 bytes sent.</p></body></html>
         """)
-        let tool = FetchPageTool(fetcher: fetcher)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         let read = try #require(await tool.readablePage(at: "https://m1k3.app"))
         #expect(read.hasPrefix("Page: M1K3 for Mac"))
         #expect(read.contains("0 bytes sent."))
@@ -131,7 +161,7 @@ struct FetchPageToolTests {
     @Test("an untitled page is still framed — by its host")
     func untitledReadNamesTheHost() async throws {
         let fetcher = ScriptedFetcher(body: "<body><p>Plain words.</p></body>")
-        let tool = FetchPageTool(fetcher: fetcher)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         let result = try await tool.execute(input: ["url": "https://example.org/notes"])
         #expect(result.output.hasPrefix("Page: example.org"))
         #expect(result.output.contains("Plain words."))
@@ -141,7 +171,7 @@ struct FetchPageToolTests {
     func headerIsInsideTheCap() async throws {
         let long = String(repeating: "word ", count: 2000)
         let fetcher = ScriptedFetcher(body: "<html><head><title>Long</title></head><body><p>\(long)</p></body></html>")
-        let tool = FetchPageTool(fetcher: fetcher, maxCharacters: 300)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS, maxCharacters: 300)
         let result = try await tool.execute(input: ["url": "https://example.org"])
         #expect(result.output.hasPrefix("Page: Long"))
         #expect(result.output.count <= 301)
@@ -155,7 +185,7 @@ struct FetchPageToolTests {
             body: "<html><head><title>T</title><meta name=\"description\" content=\"\(description)\">"
                 + "</head><body><p>THE ACTUAL PAGE TEXT</p></body></html>"
         )
-        let tool = FetchPageTool(fetcher: fetcher, maxCharacters: 300)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS, maxCharacters: 300)
         let result = try await tool.execute(input: ["url": "https://example.org"])
         #expect(result.output.hasPrefix("Page: T"))
         #expect(result.output.contains("THE ACTUAL PAGE TEXT"))
@@ -165,7 +195,7 @@ struct FetchPageToolTests {
     @Test("a bare domain — what the routing rule tells the model to pass — is read over https")
     func bareDomainIsCoerced() async throws {
         let fetcher = ScriptedFetcher(body: "<html><body><p>M1K3 for Mac. Nothing leaves.</p></body></html>")
-        let tool = FetchPageTool(fetcher: fetcher)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         let result = try await tool.execute(input: ["url": "m1k3.app"])
         #expect(!result.output.hasPrefix("Error:"))
         #expect(result.output.contains("Nothing leaves"))
@@ -179,7 +209,7 @@ struct FetchPageToolTests {
     @Test("the unusable-address error never points the model back at web_search")
     func errorDoesNotRouteToSearch() async throws {
         let fetcher = ScriptedFetcher(body: "nope")
-        let tool = FetchPageTool(fetcher: fetcher)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         let junk = try await tool.execute(input: ["url": "not a url"])
         #expect(junk.output.hasPrefix("Error:"))
         #expect(!junk.output.contains("web_search"))
@@ -189,7 +219,7 @@ struct FetchPageToolTests {
     @Test("SSRF: loopback / private / obfuscated-local targets are refused, never fetched")
     func refusesLocalTargets() async throws {
         let fetcher = ScriptedFetcher(body: "secret internal content")
-        let tool = FetchPageTool(fetcher: fetcher)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         for target in [
             "http://127.0.0.1:5000/admin",
             "http://169.254.169.254/latest/meta-data/",
@@ -208,7 +238,7 @@ struct FetchPageToolTests {
     func capsOutput() async throws {
         let longBody = "<body><p>" + String(repeating: "forecast words ", count: 500) + "</p></body>"
         let fetcher = ScriptedFetcher(body: longBody)
-        let tool = FetchPageTool(fetcher: fetcher)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         let result = try await tool.execute(input: ["url": "https://a.example"])
         #expect(result.output.count <= 1600)
         #expect(result.output.hasSuffix("…"))
@@ -217,7 +247,7 @@ struct FetchPageToolTests {
     @Test("a page with no readable text is reported honestly")
     func emptyPage() async throws {
         let fetcher = ScriptedFetcher(body: "<script>spa(){}</script>")
-        let tool = FetchPageTool(fetcher: fetcher)
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         let result = try await tool.execute(input: ["url": "https://spa.example"])
         #expect(result.output.contains("no readable text"))
     }
@@ -230,14 +260,14 @@ struct FetchPageToolTests {
                 throw Boom()
             }
         }
-        let tool = FetchPageTool(fetcher: ThrowingFetcher())
+        let tool = FetchPageTool(fetcher: ThrowingFetcher(), resolver: publicDNS)
         let result = try await tool.execute(input: ["url": "https://a.example"])
         #expect(result.output.hasPrefix("Error: could not fetch"))
     }
 
     @Test("declares the agent-facing contract")
     func declaresContract() {
-        let tool = FetchPageTool()
+        let tool = FetchPageTool(resolver: publicDNS)
         #expect(tool.name == "fetch_page")
         #expect(tool.description.contains("web_search"))
         #expect(tool.parameters.first?.name == "url")

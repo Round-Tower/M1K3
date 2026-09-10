@@ -10,7 +10,18 @@
 
 import Foundation
 @testable import M1K3AgentTools
+import M1K3Preview
 import Testing
+
+/// The tool tests are hermetic: every name is "public" without a lookup. Only the
+/// resolver-specific tests inject a pinned answer (#210).
+private struct PublicDNS: HostResolving {
+    func addresses(for _: String) async -> [String]? {
+        ["93.184.216.34"]
+    }
+}
+
+private let publicDNS = PublicDNS()
 
 /// Serves scripted bodies by path; anything else is a host that can't be found.
 private final class RoutedFetcher: HTTPFetching, Sendable {
@@ -78,7 +89,7 @@ struct OpenLinkToolTests {
     @Test("a valid https URL is opened and confirmed")
     func opensHTTPS() async throws {
         let box = Box()
-        let tool = OpenLinkTool(fetcher: offline) { box.set($0) }
+        let tool = OpenLinkTool(fetcher: offline, resolver: publicDNS) { box.set($0) }
         let result = try await tool.execute(input: ["url": "https://example.com/page"])
         #expect(box.url == URL(string: "https://example.com/page"))
         #expect(!result.output.hasPrefix("Error:"))
@@ -87,7 +98,7 @@ struct OpenLinkToolTests {
     @Test("a bare domain is coerced to https and opened")
     func coercesBareDomain() async throws {
         let box = Box()
-        let tool = OpenLinkTool(fetcher: offline) { box.set($0) }
+        let tool = OpenLinkTool(fetcher: offline, resolver: publicDNS) { box.set($0) }
         _ = try await tool.execute(input: ["url": "example.com"])
         #expect(box.url == URL(string: "https://example.com"))
     }
@@ -95,7 +106,7 @@ struct OpenLinkToolTests {
     @Test("an empty argument is a recoverable error, nothing opened")
     func emptyIsError() async throws {
         let box = Box()
-        let tool = OpenLinkTool(fetcher: offline) { box.set($0) }
+        let tool = OpenLinkTool(fetcher: offline, resolver: publicDNS) { box.set($0) }
         let result = try await tool.execute(input: [:])
         #expect(result.output.hasPrefix("Error:"))
         #expect(box.url == nil)
@@ -104,7 +115,7 @@ struct OpenLinkToolTests {
     @Test("a non-web target (a file path) is refused — the tool opens links, not files")
     func refusesNonWeb() async throws {
         let box = Box()
-        let tool = OpenLinkTool(fetcher: offline) { box.set($0) }
+        let tool = OpenLinkTool(fetcher: offline, resolver: publicDNS) { box.set($0) }
         let result = try await tool.execute(input: ["url": "/etc/hosts"])
         #expect(result.output.hasPrefix("Error:"))
         #expect(box.url == nil)
@@ -113,7 +124,7 @@ struct OpenLinkToolTests {
     @Test("a local/private-network address is refused — no SSRF via the panel")
     func refusesLocalNetwork() async throws {
         let box = Box()
-        let tool = OpenLinkTool(fetcher: offline) { box.set($0) }
+        let tool = OpenLinkTool(fetcher: offline, resolver: publicDNS) { box.set($0) }
         for raw in ["http://localhost:3000", "http://127.0.0.1", "http://192.168.1.1", "http://169.254.169.254"] {
             let result = try await tool.execute(input: ["url": raw])
             #expect(result.output.hasPrefix("Error:"))
@@ -121,9 +132,26 @@ struct OpenLinkToolTests {
         #expect(box.url == nil)
     }
 
+    private struct PinnedResolver: HostResolving {
+        let address: String
+        func addresses(for _: String) async -> [String]? {
+            [address]
+        }
+    }
+
+    @Test("a name resolving into private space is refused and nothing opens (#210)")
+    func resolvedPrivateRefused() async throws {
+        let box = Box()
+        let tool = OpenLinkTool(fetcher: offline, resolver: PinnedResolver(address: "10.0.0.5")) { box.set($0) }
+        let result = try await tool.execute(input: ["url": "https://intranet.example.com"])
+        #expect(result.output.hasPrefix("Error:"))
+        #expect(result.output.contains("private"))
+        #expect(box.url == nil)
+    }
+
     @Test("declares the open_link contract the model sees — show AND brief, fetch_page to read")
     func contract() {
-        let tool = OpenLinkTool(fetcher: offline) { _ in }
+        let tool = OpenLinkTool(fetcher: offline, resolver: publicDNS) { _ in }
         #expect(tool.name == "open_link")
         #expect(tool.parameters.first?.name == "url")
         #expect(tool.description.contains("fetch_page"))
@@ -136,7 +164,7 @@ struct OpenLinkToolTests {
             "/": (200, "<html><head><title>Example Site</title></head><body><p>Hello from the example.</p></body></html>"),
             "/llms.txt": (200, "# Example\n> The example site, for agents."),
         ])
-        let tool = OpenLinkTool(fetcher: fetcher) { box.set($0) }
+        let tool = OpenLinkTool(fetcher: fetcher, resolver: publicDNS) { box.set($0) }
         let result = try await tool.execute(input: ["url": "https://example.com/"])
         #expect(box.url == URL(string: "https://example.com/"))
         #expect(result.output.contains("Opened example.com in the review panel."))
@@ -150,7 +178,7 @@ struct OpenLinkToolTests {
         let fetcher = RoutedFetcher([
             "/": (200, "<html><head><title>Plain</title></head><body><p>Just a page.</p></body></html>"),
         ])
-        let tool = OpenLinkTool(fetcher: fetcher) { _ in }
+        let tool = OpenLinkTool(fetcher: fetcher, resolver: publicDNS) { _ in }
         let result = try await tool.execute(input: ["url": "https://example.com/"])
         #expect(result.output.contains("Title: Plain"))
         #expect(!result.output.contains("llms.txt"))
@@ -159,7 +187,7 @@ struct OpenLinkToolTests {
     @Test("the page and llms.txt are fetched concurrently — the model never waits for two timeouts")
     func fetchesConcurrently() async throws {
         let fetcher = TimingFetcher()
-        let tool = OpenLinkTool(fetcher: fetcher) { _ in }
+        let tool = OpenLinkTool(fetcher: fetcher, resolver: publicDNS) { _ in }
         _ = try await tool.execute(input: ["url": "https://example.com/docs"])
         let page = try #require(fetcher.window("/docs"))
         let llms = try #require(fetcher.window("/llms.txt"))
@@ -171,7 +199,7 @@ struct OpenLinkToolTests {
     @Test("the panel opens even when the read fails — and the brief says so, in words the model can't misread")
     func opensBeforeRead() async throws {
         let box = Box()
-        let tool = OpenLinkTool(fetcher: offline) { box.set($0) }
+        let tool = OpenLinkTool(fetcher: offline, resolver: publicDNS) { box.set($0) }
         let result = try await tool.execute(input: ["url": "https://example.com/"])
         #expect(box.url == URL(string: "https://example.com/"))
         #expect(result.output.contains("could not read its content"))
