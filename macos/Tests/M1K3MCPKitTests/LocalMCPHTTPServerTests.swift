@@ -117,6 +117,43 @@ private func startOnFreePort(
     throw lastError ?? MCPVoiceError("no free loopback port after \(attempts) attempts")
 }
 
+/// Hand-built HTTP/1.1 POST over a raw socket, so the test controls the Host
+/// and Origin headers byte-for-byte (URLSession rewrites Host). Reads until
+/// the server closes the connection (`Connection: close` is the wire contract).
+private func rawPost(
+    _ json: String, port: UInt16, host: String, origin: String? = nil,
+    contentType: String = "application/json", path: String = "/mcp"
+) async throws -> (status: Int, body: String) {
+    let connection = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
+    connection.start(queue: .global(qos: .userInitiated))
+    defer { connection.cancel() }
+    var head = "POST \(path) HTTP/1.1\r\nHost: \(host)\r\nContent-Type: \(contentType)\r\n"
+    head += "Accept: application/json\r\nContent-Length: \(json.utf8.count)\r\nConnection: close\r\n"
+    if let origin { head += "Origin: \(origin)\r\n" }
+    head += "\r\n"
+    let payload = Data(head.utf8) + Data(json.utf8)
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        connection.send(content: payload, completion: .contentProcessed { error in
+            if let error { continuation.resume(throwing: error) } else { continuation.resume() }
+        })
+    }
+    var received = Data()
+    while true {
+        let chunk: Data? = try await withCheckedThrowingContinuation { continuation in
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, error in
+                if let error { continuation.resume(throwing: error) } else { continuation.resume(returning: data) }
+            }
+        }
+        guard let chunk, !chunk.isEmpty else { break }
+        received.append(chunk)
+    }
+    let text = String(decoding: received, as: UTF8.self)
+    let statusLine = text.components(separatedBy: "\r\n").first ?? ""
+    let status = Int(statusLine.split(separator: " ").dropFirst().first ?? "") ?? -1
+    let body = text.components(separatedBy: "\r\n\r\n").dropFirst().joined(separator: "\r\n\r\n")
+    return (status, body)
+}
+
 private let initializeBody = #"""
 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"wire-test","version":"0"}}}
 """#
@@ -291,5 +328,99 @@ struct LocalMCPHTTPServerTests {
         #expect(call.body.contains("alpha says hi"))
 
         await server.stop()
+    }
+
+    @Test("a forged Host on an initialize is refused at the door and never rebuilds the live session")
+    func forgedHostInitializeNeverRebuildsSession() async throws {
+        let builds = Counter()
+        let (server, port) = try await startOnFreePort { port in
+            LocalMCPHTTPServer(port: port) {
+                builds.increment()
+                let transport = StatelessHTTPServerTransport()
+                let mcp = await makeM1K3Server(registry: MCPToolRegistry([]))
+                try await mcp.start(transport: transport)
+                return (mcp, transport)
+            }
+        }
+        defer { Task { await server.stop() } }
+        _ = try await post(initializeBody, port: port)
+        let before = builds.value
+
+        let forged = try await rawPost(initializeBody, port: port, host: "attacker.example:\(port)")
+        #expect(forged.status == 403, "status \(forged.status) body \(forged.body)")
+        #expect(builds.value == before, "a refused initialize must not tear down the live session")
+
+        // The session that was live before the forgery still answers.
+        let list = try await post(#"{"jsonrpc":"2.0","id":9,"method":"tools/list"}"#, port: port)
+        #expect(list.status == 200)
+        #expect(builds.value == before)
+    }
+
+    @Test("a no-preflight text/plain POST is refused at the door — the live session survives it")
+    func simpleCrossSitePostNeverRebuildsSession() async throws {
+        let builds = Counter()
+        let (server, port) = try await startOnFreePort { port in
+            LocalMCPHTTPServer(port: port) {
+                builds.increment()
+                let transport = StatelessHTTPServerTransport()
+                let mcp = await makeM1K3Server(registry: MCPToolRegistry([]))
+                try await mcp.start(transport: transport)
+                return (mcp, transport)
+            }
+        }
+        defer { Task { await server.stop() } }
+        _ = try await post(initializeBody, port: port)
+        let before = builds.value
+        let refused = try await rawPost(initializeBody, port: port, host: "127.0.0.1:\(port)", contentType: "text/plain")
+        #expect(refused.status == 415, "status \(refused.status) body \(refused.body)")
+        #expect(builds.value == before)
+    }
+
+    @Test("only /mcp is served; anything else is 404 before the sniff")
+    func otherPathsAreNotFound() async throws {
+        let (server, port) = try await startOnFreePort { makeServer(port: $0) }
+        defer { Task { await server.stop() } }
+        let refused = try await rawPost(initializeBody, port: port, host: "127.0.0.1:\(port)", path: "/")
+        #expect(refused.status == 404, "status \(refused.status) body \(refused.body)")
+    }
+
+    @Test("a socket that never sends a complete request is closed at the read deadline")
+    func idleSocketIsClosed() async throws {
+        let (server, port) = try await startOnFreePort { port in
+            LocalMCPHTTPServer(port: port, readDeadline: 0.5) {
+                let transport = StatelessHTTPServerTransport()
+                let mcp = await makeM1K3Server(registry: MCPToolRegistry([]))
+                try await mcp.start(transport: transport)
+                return (mcp, transport)
+            }
+        }
+        defer { Task { await server.stop() } }
+        let connection = try NWConnection(host: "127.0.0.1", port: #require(NWEndpoint.Port(rawValue: port)), using: .tcp)
+        connection.start(queue: .global(qos: .userInitiated))
+        defer { connection.cancel() }
+        // Half a request, then silence.
+        let started = ContinuousClock.now
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            connection.send(content: Data("POST /mcp HTTP/1.1\r\nHost: 127.0.0.1\r\n".utf8), completion: .contentProcessed { error in
+                if let error { continuation.resume(throwing: error) } else { continuation.resume() }
+            })
+        }
+        let closed: Bool = await withCheckedContinuation { continuation in
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 1024) { data, _, isComplete, error in
+                continuation.resume(returning: isComplete || error != nil || data == nil)
+            }
+        }
+        #expect(closed, "the server should have closed the idle connection")
+        #expect(ContinuousClock.now - started < .seconds(5))
+    }
+
+    @Test("a browser page from a foreign origin is refused even with a correct Host")
+    func forgedOriginRefused() async throws {
+        let (server, port) = try await startOnFreePort { makeServer(port: $0) }
+        defer { Task { await server.stop() } }
+        let refused = try await rawPost(initializeBody, port: port, host: "127.0.0.1:\(port)", origin: "https://evil.example")
+        #expect(refused.status == 403, "status \(refused.status) body \(refused.body)")
+        let admitted = try await rawPost(initializeBody, port: port, host: "localhost:\(port)", origin: "http://localhost:3000")
+        #expect(admitted.status == 200, "status \(admitted.status) body \(admitted.body)")
     }
 }
