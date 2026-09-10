@@ -8,7 +8,7 @@
 //  is the DNS-rebinding defence the MCP spec requires — and the reason the
 //  session-rebuild sniff can no longer be reached by a forged request.
 //
-//  Signed: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.9 (pure table,
+//  Signed: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.9 (pure table,
 //  every row pinned; the listener wiring is pinned in LocalMCPHTTPServerTests).
 //  Prior: Unknown.
 //
@@ -20,13 +20,14 @@ import Testing
 
 private func request(
     host: String? = "127.0.0.1:4242", origin: String? = nil, lowercase: Bool = false,
-    contentType: String? = "application/json", path: String = "/mcp"
+    contentType: String? = "application/json", path: String = "/mcp", method: String = "POST",
+    extraHeaders: [String: String] = [:]
 ) -> HTTPRequest {
-    var headers: [String: String] = [:]
+    var headers: [String: String] = extraHeaders
     if let host { headers[lowercase ? "host" : "Host"] = host }
     if let origin { headers[lowercase ? "origin" : "Origin"] = origin }
     if let contentType { headers[lowercase ? "content-type" : "Content-Type"] = contentType }
-    return HTTPRequest(method: "POST", headers: headers, body: Data("{}".utf8), path: path)
+    return HTTPRequest(method: method, headers: headers, body: Data("{}".utf8), path: path)
 }
 
 struct LoopbackRequestGateTests {
@@ -49,9 +50,41 @@ struct LoopbackRequestGateTests {
         #expect(LoopbackRequestGate.refusal(for: request(host: "127.0.0.1.attacker.example:4242"), boundPort: 4242) == .foreignHost("127.0.0.1.attacker.example:4242"))
     }
 
-    @Test("a loopback Host naming another port is refused")
+    @Test("a loopback Host naming another port — or a port segment that is not a port — is refused")
     func refusesPortMismatch() {
         #expect(LoopbackRequestGate.refusal(for: request(host: "127.0.0.1:9999"), boundPort: 4242) == .portMismatch("127.0.0.1:9999"))
+        #expect(LoopbackRequestGate.refusal(for: request(host: "127.0.0.1:99999"), boundPort: 4242) == .portMismatch("127.0.0.1:99999"))
+        #expect(LoopbackRequestGate.refusal(for: request(host: "127.0.0.1:4242@evil"), boundPort: 4242) == .portMismatch("127.0.0.1:4242@evil"))
+        #expect(LoopbackRequestGate.refusal(for: request(host: "[::1]:"), boundPort: 4242) == .portMismatch("[::1]:"))
+    }
+
+    @Test("two differing Host headers is a request nobody honest sends")
+    func refusesAmbiguousHost() {
+        let two = request(host: "127.0.0.1:4242", extraHeaders: ["host": "attacker.example:4242"])
+        #expect(LoopbackRequestGate.refusal(for: two, boundPort: 4242) == .ambiguousHost)
+        let same = request(host: "127.0.0.1:4242", extraHeaders: ["host": "127.0.0.1:4242"])
+        #expect(LoopbackRequestGate.refusal(for: same, boundPort: 4242) == nil)
+    }
+
+    @Test("the request-target is normalised: query, fragment, one trailing slash, and the absolute form")
+    func normalisesPath() {
+        for path in ["/mcp?x=1", "/mcp/", "/mcp#frag", "http://127.0.0.1:4242/mcp", "http://localhost:4242/mcp?x=1"] {
+            #expect(LoopbackRequestGate.refusal(for: request(path: path), boundPort: 4242) == nil, Comment(rawValue: path))
+        }
+        #expect(LoopbackRequestGate.refusal(for: request(path: "/mcp//"), boundPort: 4242) == .wrongPath("/mcp//"))
+    }
+
+    @Test("the JSON rule is a POST rule — other methods pass the door so the transport can answer 405")
+    func jsonRuleIsPostOnly() {
+        #expect(LoopbackRequestGate.refusal(for: request(contentType: nil, method: "GET"), boundPort: 4242) == nil)
+        #expect(LoopbackRequestGate.refusal(for: request(contentType: nil, method: "DELETE"), boundPort: 4242) == nil)
+        #expect(LoopbackRequestGate.refusal(for: request(contentType: nil, method: "post"), boundPort: 4242) == .unsupportedMediaType(nil))
+    }
+
+    @Test("attacker text is clipped before it reaches the body or the log")
+    func clipsEchoedText() {
+        let long = String(repeating: "a", count: 500) + ".example"
+        #expect(LoopbackRequestGate.Refusal.foreignHost(long).description.count < 120)
     }
 
     @Test("HTTP/1.1 requires Host — a request without one is refused")
@@ -88,10 +121,11 @@ struct LoopbackRequestGateTests {
         #expect(LoopbackRequestGate.refusal(for: request(path: "/mcp/../admin"), boundPort: 4242) == .wrongPath("/mcp/../admin"))
     }
 
-    @Test("each refusal carries the status the SDK would have answered with")
+    @Test("each refusal carries a plain status (404 / 400 / 403 / 415)")
     func statusCodes() {
         #expect(LoopbackRequestGate.Refusal.wrongPath("/").statusCode == 404)
         #expect(LoopbackRequestGate.Refusal.missingHost.statusCode == 400)
+        #expect(LoopbackRequestGate.Refusal.ambiguousHost.statusCode == 400)
         #expect(LoopbackRequestGate.Refusal.foreignHost("x").statusCode == 403)
         #expect(LoopbackRequestGate.Refusal.foreignOrigin("x").statusCode == 403)
         #expect(LoopbackRequestGate.Refusal.unsupportedMediaType(nil).statusCode == 415)

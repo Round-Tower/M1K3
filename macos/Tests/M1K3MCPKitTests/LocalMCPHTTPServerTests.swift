@@ -13,6 +13,11 @@
 //  range and collided with the Xcode Cloud VM's own outbound sockets
 //  (EADDRINUSE killed the deploy gate in runs #270 and #280). Ports now come
 //  from below that range, and a bind collision retries on a fresh port.
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — raw-socket forgeries through
+//  the real listener (URLSession rewrites Host, so `rawPost` builds the bytes):
+//  a forged Host / text/plain / foreign Origin / other path is refused at the
+//  door and the live session survives (its own tool name still listed); the
+//  read deadline closes an idle socket and does NOT clock a slow tool call.
 //
 
 import Foundation
@@ -335,9 +340,18 @@ struct LocalMCPHTTPServerTests {
         let builds = Counter()
         let (server, port) = try await startOnFreePort { port in
             LocalMCPHTTPServer(port: port) {
-                builds.increment()
+                // Each build names its tool after its own number, so the tools/list
+                // below proves the ORIGINAL session answered — a rebuilt one would
+                // list a different name.
+                let build = builds.incrementAndGet()
+                let registry = MCPToolRegistry([
+                    MCPToolDefinition(
+                        tool: Tool(name: "session-\(build)", description: "build \(build)", inputSchema: ["type": "object"]),
+                        handler: { _ in "hi" }
+                    ),
+                ])
                 let transport = StatelessHTTPServerTransport()
-                let mcp = await makeM1K3Server(registry: MCPToolRegistry([]))
+                let mcp = await makeM1K3Server(registry: registry)
                 try await mcp.start(transport: transport)
                 return (mcp, transport)
             }
@@ -350,10 +364,37 @@ struct LocalMCPHTTPServerTests {
         #expect(forged.status == 403, "status \(forged.status) body \(forged.body)")
         #expect(builds.value == before, "a refused initialize must not tear down the live session")
 
-        // The session that was live before the forgery still answers.
+        // The session that was live before the forgery still answers, by name.
         let list = try await post(#"{"jsonrpc":"2.0","id":9,"method":"tools/list"}"#, port: port)
         #expect(list.status == 200)
+        #expect(list.body.contains("session-\(before)"), Comment(rawValue: list.body))
         #expect(builds.value == before)
+    }
+
+    @Test("the read deadline clocks the request bytes only — a slow tool call is not cut off")
+    func readDeadlineExcludesToolTime() async throws {
+        let (server, port) = try await startOnFreePort { port in
+            LocalMCPHTTPServer(port: port, readDeadline: 0.3) {
+                let registry = MCPToolRegistry([
+                    MCPToolDefinition(
+                        tool: Tool(name: "slow", description: "sleeps", inputSchema: ["type": "object"]),
+                        handler: { _ in
+                            try await Task.sleep(for: .milliseconds(800))
+                            return "done"
+                        }
+                    ),
+                ])
+                let transport = StatelessHTTPServerTransport()
+                let mcp = await makeM1K3Server(registry: registry)
+                try await mcp.start(transport: transport)
+                return (mcp, transport)
+            }
+        }
+        defer { Task { await server.stop() } }
+        _ = try await post(initializeBody, port: port)
+        let reply = try await post(#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"slow"}}"#, port: port)
+        #expect(reply.status == 200, "status \(reply.status) body \(reply.body)")
+        #expect(reply.body.contains("done"))
     }
 
     @Test("a no-preflight text/plain POST is refused at the door — the live session survives it")
@@ -405,13 +446,20 @@ struct LocalMCPHTTPServerTests {
                 if let error { continuation.resume(throwing: error) } else { continuation.resume() }
             })
         }
+        // Watchdog: if the server never closes, close it ourselves at 3 s so the
+        // receive below returns and the elapsed-time assertion fails honestly.
+        let watchdog = Task {
+            try await Task.sleep(for: .seconds(3))
+            connection.cancel()
+        }
         let closed: Bool = await withCheckedContinuation { continuation in
             connection.receive(minimumIncompleteLength: 1, maximumLength: 1024) { data, _, isComplete, error in
                 continuation.resume(returning: isComplete || error != nil || data == nil)
             }
         }
+        watchdog.cancel()
         #expect(closed, "the server should have closed the idle connection")
-        #expect(ContinuousClock.now - started < .seconds(5))
+        #expect(ContinuousClock.now - started < .seconds(2), "closed by the watchdog, not the server")
     }
 
     @Test("a browser page from a foreign origin is refused even with a correct Host")

@@ -5,8 +5,9 @@
 //  Loopback-only HTTP/1.1 listener that fronts the in-app MCP server. The MCP
 //  SDK's StatelessHTTPServerTransport is framework-agnostic (it answers
 //  HTTPRequest values; it binds no socket), so this NWListener shell feeds it:
-//  accumulate bytes → HTTPWireCodec.parseRequest → transport.handleRequest →
-//  HTTPWireCodec.encode → write → close. One request per connection.
+//  accumulate bytes (read deadline) → HTTPWireCodec.parseRequest →
+//  LoopbackRequestGate → transport.handleRequest → HTTPWireCodec.encode →
+//  write → close. One request per connection.
 //
 //  Session rebuild: the SDK Server rejects a second `initialize` for its
 //  lifetime, so a fresh client connecting would 400 forever. We sniff
@@ -24,7 +25,7 @@
 //  initialize's self-declared client name for the Agent Log identity stamp;
 //  call-site wiring test-pinned in LocalMCPHTTPServerTests).
 //
-//  Review: Kev + claude-fable-5.1, 2026-09-11 — every request passes
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — every request passes
 //  LoopbackRequestGate BEFORE the initialize sniff (a forged Host / foreign
 //  Origin / non-JSON body used to tear down the live session and stamp an
 //  attacker-chosen visitor name before the SDK's validators ever ran), and a
@@ -186,6 +187,9 @@ public actor LocalMCPHTTPServer {
         // nil, which ends the loop. `receive` itself has no deadline.
         let deadline = Task { [readDeadline] in
             try await Task.sleep(for: .seconds(readDeadline))
+            // The request may have completed while we slept: its cancel() below
+            // is set while the actor is held, so this check is exact.
+            guard !Task.isCancelled else { return }
             Self.log.notice("closed a connection that sent no complete request in \(readDeadline)s")
             connection.cancel()
         }
