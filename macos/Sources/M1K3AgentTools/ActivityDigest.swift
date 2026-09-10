@@ -51,12 +51,16 @@ public enum ActivityDigest {
         for pick in picks {
             body += "\nInsight: " + pick
         }
-        let overdueShown = focus == nil || focus == .todos
-        if snapshot.isQuiet {
+        // The quiet line only when the SECTIONS rendered hold nothing: open
+        // todos are ambient, not activity, but a "Todos: 3 open" line above
+        // "nothing to review" would contradict itself (review 1 on the PR).
+        let todosShown = focus == nil || focus == .todos
+        let nothingRendered = snapshot.isQuiet && (!todosShown || snapshot.todos.openCount == 0)
+        if nothingRendered {
             body += "\n" + quietLine
             // Nothing untrusted rendered → no fence (the calendar tool's
-            // empty-window exception); an overdue title is still a title.
-            guard overdueShown, !snapshot.todos.overdueTitles.isEmpty else { return body }
+            // empty-window exception).
+            return body
         }
         return fence(body)
     }
@@ -115,7 +119,9 @@ public enum ActivityDigest {
         }
         // Quiet streak — the most recent activity is two or more days back.
         let stamps = chats.map(\.updatedAt) + snapshot.memories.map(\.createdAt) + snapshot.pulses.map(\.createdAt)
-        if let latest = stamps.max() {
+        // Visitor calls carry no per-call timestamp here, so a window with any
+        // visitor traffic makes no "nothing since" claim (bot review, pass 1).
+        if snapshot.visitors.callCount == 0, let latest = stamps.max() {
             let gap = calendar.dateComponents(
                 [.day], from: calendar.startOfDay(for: latest), to: calendar.startOfDay(for: now)
             ).day ?? 0
@@ -130,7 +136,9 @@ public enum ActivityDigest {
             return hour >= 22 || hour < 5
         })
         if late >= 2 {
-            candidates.append((.chats, "Late nights: \(late) of \(plural(chats.count, "chat")) were after 22:00."))
+            candidates.append((
+                .chats, "Late nights: \(late) of \(plural(chats.count, "chat")) were between 22:00 and 05:00."
+            ))
         }
         return candidates
     }

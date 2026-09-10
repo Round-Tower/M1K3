@@ -196,7 +196,7 @@ struct ActivityDigestTests {
         // beats today (1 + 1 + 1); zero parts are left out of the line.
         #expect(candidates.contains("Tuesday was the busiest day: 2 chats, 2 memories."))
         #expect(candidates.contains("Claude Code and Cursor visited; speak was the most used tool (14 of 41 calls)."))
-        #expect(candidates.contains("Late nights: 3 of 5 chats were after 22:00."))
+        #expect(candidates.contains("Late nights: 3 of 5 chats were between 22:00 and 05:00."))
         #expect(candidates.contains("5 chats but only 3 memories — most of the week went unremembered."))
         #expect(candidates.contains("\"Book the jazz tickets\" is overdue."))
     }
@@ -212,6 +212,36 @@ struct ActivityDigestTests {
         #expect(text.contains("Todos: none open."))
         #expect(!text.contains("Insight:"))
         #expect(text.hasSuffix("A quiet stretch — nothing to review."))
+    }
+
+    @Test("open todos in an otherwise quiet window: the Todos line stands and the quiet line stays away")
+    func quietButTodos() {
+        var snapshot = emptyWeek
+        snapshot.todos = .init(openCount: 3, overdueTitles: ["Book the jazz tickets"])
+        let whole = render(snapshot)
+        #expect(whole.contains("Todos: 3 open, 1 overdue"))
+        #expect(!whole.contains(ActivityDigest.quietLine))
+        #expect(whole.hasPrefix(ActivityDigest.dataFenceHeader), "an overdue title is untrusted text")
+        // A focus that hides the todos renders nothing → quiet, unfenced.
+        let chats = render(snapshot, focus: .chats)
+        #expect(chats.hasSuffix(ActivityDigest.quietLine))
+        #expect(!chats.contains("Todos:"))
+    }
+
+    @Test("an overnight chat counts as late; a quiet streak is not claimed over unseen visitor traffic")
+    func overnightAndStreak() {
+        var snapshot = emptyWeek
+        snapshot.conversations = [
+            .init(title: "a", updatedAt: at(dayOffset: -4, hour: 2)),
+            .init(title: "b", updatedAt: at(dayOffset: -4, hour: 23)),
+            .init(title: "c", updatedAt: at(dayOffset: -4, hour: 12)),
+        ]
+        var candidates = ActivityDigest.insights(snapshot, window: .week, now: now, calendar: calendar)
+        #expect(candidates.contains("Late nights: 2 of 3 chats were between 22:00 and 05:00."))
+        #expect(candidates.contains("Nothing since Sunday — 4 quiet days."))
+        snapshot.visitors = .init(isEnabled: true, callCount: 5, toolUses: [.init(tool: "speak", uses: 5)], clientNames: [])
+        candidates = ActivityDigest.insights(snapshot, window: .week, now: now, calendar: calendar)
+        #expect(!candidates.contains { $0.hasPrefix("Nothing since") })
     }
 
     @Test("the visitor log on but silent reads as silence, not as off")
