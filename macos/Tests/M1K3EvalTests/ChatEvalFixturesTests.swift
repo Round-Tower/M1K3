@@ -332,6 +332,23 @@ struct ChatEvalFixturesTests {
         #expect(!flatterHaiku.passed)
     }
 
+    @Test("doc-readme wants the MIT licence word, not the substring inside commit")
+    func readmeLicenceIsAWord() throws {
+        let fixture = try #require(ChatEvalFixtures.document.first { $0.id == "doc-readme" })
+        let body = "# wc-lite\n\nCounts words in a file.\n\n## Install\n\n```sh\npip install wc-lite\n```\n\n## Usage\n\n```sh\nwc-lite notes.txt\n```\n\n"
+            + String(repeating: "Run it on any file you like. ", count: 6)
+        let commitOnly = ChatEvalScorer.score(
+            fixture: fixture,
+            observation: EvalObservation(rawText: body + "## Licence\n\nSubmit a pull request to change it.")
+        )
+        #expect(!commitOnly.passed)
+        let licensed = ChatEvalScorer.score(
+            fixture: fixture,
+            observation: EvalObservation(rawText: body + "## Licence\n\nMIT")
+        )
+        #expect(licensed.passed)
+    }
+
     @Test("a spaced GFM separator row still counts as a table")
     func tableSeparatorSpacing() throws {
         let fixture = try #require(ChatEvalFixtures.document.first { $0.id == "doc-comparison-table" })

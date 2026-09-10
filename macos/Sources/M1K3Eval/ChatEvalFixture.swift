@@ -49,6 +49,7 @@
 //  "10/10" anchored to affirming frames (an honest "isn't a 10/10" failed it),
 //  the same class as the perfect/capital/berlin folds (review 4 on #263).
 //  The "ten out of ten" synonyms are dropped rather than anchored (review 5).
+//  doc-readme wants the word MIT, not the substring hiding in "commit" (review 8).
 
 import Foundation
 
@@ -592,7 +593,9 @@ public enum ChatEvalFixtures {
                 + "in a file. Sections: title as H1, a one-line description, Install, Usage with a "
                 + "fenced shell example, Licence (MIT).",
             expectation: .init(
-                mustContainAll: ["# ", "Install", "Usage", "```", "MIT"],
+                // "MIT" alone lowercases into "commit"/"submit"; want the word.
+                mustContainAny: [" mit", "\nmit", "(mit", "[mit"],
+                mustContainAll: ["# ", "Install", "Usage", "```"],
                 mustNotContain: leakMarkers, mustComply: true, minChars: 200
             )
         ),
