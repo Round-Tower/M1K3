@@ -197,8 +197,9 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
     /// Stage the Kokoro weights into the app container, reporting real download
     /// progress. Idempotent — returns instantly once all three files are present.
     public func prepare(progress: @escaping @Sendable (Double) -> Void) async throws {
-        // Already staged this session — nothing to do. (The app layer also guards
-        // concurrent calls via `isPreparingVoice`; this is the idempotent fast path.)
+        // Already staged this session — nothing to do. (The app layer holds ONE
+        // generation-stamped prepare task at a time and cancels it on a Built-in
+        // pick — #200; this is the idempotent fast path.)
         if lock.withLock({ _ready }) {
             progress(1)
             return

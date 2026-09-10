@@ -92,5 +92,43 @@ struct SystemStatusToolTests {
         #expect(liveDisk.availableBytes > 0)
         #expect(liveDisk.availableBytes <= liveDisk.totalBytes)
         _ = live.batterySnapshot() // may be nil on a desktop — just must not crash
+        _ = live.providingPowerSource() // nil off-line — just must not crash
+    }
+}
+
+struct PowerSourceTests {
+    @Test("IOKit's providing-source strings map to the three sources, anything else to nil (#217)")
+    func mapsIOKitProvidingType() {
+        // Apple's documented literals for IOPSGetProvidingPowerSourceType.
+        #expect(PowerSource(iokitProvidingType: "AC Power") == .ac)
+        #expect(PowerSource(iokitProvidingType: "Battery Power") == .battery)
+        #expect(PowerSource(iokitProvidingType: "UPS Power") == .ups)
+        #expect(PowerSource(iokitProvidingType: "Off Line") == nil)
+        #expect(PowerSource(iokitProvidingType: "") == nil)
+    }
+
+    @Test("the eval provenance field is the raw value")
+    func rawValuesAreTheProvenanceVocabulary() {
+        #expect(PowerSource.ac.rawValue == "ac")
+        #expect(PowerSource.battery.rawValue == "battery")
+        #expect(PowerSource.ups.rawValue == "ups")
+    }
+
+    @Test("a provider that does not know its source reports nil by default")
+    func defaultIsUnknown() {
+        struct Minimal: SystemStatusProviding {
+            func batterySnapshot() -> BatterySnapshot? {
+                nil
+            }
+
+            func diskSnapshot() throws -> DiskSnapshot {
+                DiskSnapshot(availableBytes: 1, totalBytes: 1)
+            }
+
+            func uptime() -> TimeInterval {
+                1
+            }
+        }
+        #expect(Minimal().providingPowerSource() == nil)
     }
 }

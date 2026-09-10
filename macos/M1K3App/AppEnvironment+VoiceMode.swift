@@ -331,7 +331,7 @@ extension AppEnvironment {
     func acceptVoiceUpgrade() {
         voiceUpgradeOffered = false
         showBrainUpgradeNotice("Fetching my proper voice — I'll switch over when it's ready.")
-        Task { [weak self] in await self?.prepareM1K3Voice() }
+        prepareM1K3Voice()
     }
 
     func dismissVoiceUpgrade() {

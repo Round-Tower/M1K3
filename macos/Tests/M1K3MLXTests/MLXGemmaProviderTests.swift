@@ -198,6 +198,29 @@ struct MLXGemmaProviderTests {
         ) == .json)
     }
 
+    @Test("dialect resolved after load: config.json fills a nil, never overrides a resolved one (#264)")
+    func lateDialectFromConfigOnDisk() {
+        // The Ornith case: no family word in the repo name, config.json absent
+        // at construction → nil → ReAct floor. Once the loader has the files,
+        // model_type names the dialect.
+        #expect(MLXGemmaProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "qwen3_5") == .xmlFunction)
+        #expect(MLXGemmaProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "lfm2") == .lfm2)
+        // Already resolved at init (by name or explicit config): the late read
+        // must NOT move it — the persona-prefix cache was rendered in that dialect.
+        #expect(MLXGemmaProvider.lateToolCallFormat(initial: .json, modelTypeOnDisk: "qwen3_5") == nil)
+        // Nothing to learn: no config, or an architecture we have not verified.
+        #expect(MLXGemmaProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: nil) == nil)
+        #expect(MLXGemmaProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "qwen3_next") == nil)
+    }
+
+    @Test("dialect source names where the resolution came from")
+    func dialectSourceLabel() {
+        #expect(MLXGemmaProvider.dialectSource(explicit: .json, byType: nil, resolved: .json) == "explicit")
+        #expect(MLXGemmaProvider.dialectSource(explicit: nil, byType: .gemma4, resolved: .gemma4) == "config")
+        #expect(MLXGemmaProvider.dialectSource(explicit: nil, byType: nil, resolved: .json) == "name")
+        #expect(MLXGemmaProvider.dialectSource(explicit: nil, byType: nil, resolved: nil) == "none")
+    }
+
     @Test("tool-turn thinking is decided per-turn, never from construction-time state")
     func toolTurnThinkingIsPerTurn() {
         // A toggle family that ALSO pre-opens (Qwen3.5): thinking ON ⇒ no

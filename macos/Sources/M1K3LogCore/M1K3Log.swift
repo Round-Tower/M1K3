@@ -155,6 +155,9 @@ public enum M1K3Log {
         /// names, counts and root PATHS only — the harness exists so the
         /// owner's real data never reaches a frame, and its log keeps the rule.
         case screengrab
+        /// The iOS/visionOS shell's core (`M1K3iOSApp/AppCore`): brain pick,
+        /// restore, pairing adoption — state names and counts only.
+        case iosCore = "ios-core"
     }
 
     /// Build a `Logger` on the M1K3 subsystem for a catalogued category.

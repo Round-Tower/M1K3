@@ -3,7 +3,7 @@
 //  M1K3Chat
 //
 //  The self-query router (prompt-hardening v2, code-side ticket 1). Persona
-//  rule 3 says questions about M1K3 itself are answered from persona alone —
+//  the SELF rule says questions about M1K3 itself are answered from persona alone —
 //  NEVER via retrieval. The prompt states the policy; this gate enforces it:
 //  on a self-query turn the responder skips retrieval entirely and withholds
 //  the corpus-reaching tools, so the model cannot call what it is never
@@ -23,7 +23,7 @@
 //  Context: docs/prompt-hardening-v2.md code-side ticket 1; the eval-side
 //  guard is ChatEvalFixtures.security (selfquery-notes et al.).
 //  Review: Kev + claude-opus-5, 2026-08-03, Confidence 0.85 — the gate covered
-//  persona rule 3's LEAK half (prompt/config/credentials) but not the half the
+//  the persona's SELF rule's LEAK half (prompt/config/credentials) but not the half the
 //  rule names first: ABILITIES. So "What can you do?" — the app's own first-run
 //  suggestion chip, and the likeliest opening question there is — ran full
 //  retrieval, and answered out of whatever the corpus held. Live that was a call
@@ -37,7 +37,7 @@ import Foundation
 
 public enum SelfQueryGate {
     /// Tools a self-query turn never sees: the three corpus-reaching tools
-    /// plus `lookup_fact`, the retrieval tools persona rule 3 names. Web and
+    /// plus `lookup_fact`, the retrieval tools the persona's SELF rule names. Web and
     /// utility tools stay — they cannot surface the corpus or the prompt.
     /// The names are strings because M1K3Chat cannot link the tool modules
     /// (tools are injected by the app layer); `withheldNamesMatchLiveTools`
@@ -84,7 +84,7 @@ public enum SelfQueryGate {
     /// (see secondPerson): the probe shapes all address M1K3, while "the
     /// system prompt in the article I saved" names someone else's. The fully
     /// impersonal "what does the system prompt say?" is an accepted MISS
-    /// (pinned) — persona rule 3 still defends it.
+    /// (pinned) — the persona's SELF rule still defends it.
     private static var definiteSystemPrompt: Regex<Substring> {
         #/\bthe\s+system\s+(?:prompt|message)\b/#
     }
@@ -113,7 +113,7 @@ public enum SelfQueryGate {
     }
 
     /// An identity or capability probe — "what can you do?", "who are you?".
-    /// Persona rule 3 covers ABILITIES as well as configuration and design, but
+    /// The persona's SELF rule covers ABILITIES as well as configuration and design, but
     /// only the leak vectors above were ever enforced, so the likeliest opening
     /// question of all (and the app's own "What can you do?" suggestion chip)
     /// ran full retrieval and answered from whatever the corpus happened to

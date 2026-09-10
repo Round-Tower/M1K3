@@ -2,7 +2,8 @@
 //  SubsystemGuardTests.swift
 //  M1K3LogCoreTests
 //
-//  The mechanical drift guard. Walks the actual source tree (Sources/ + M1K3App/)
+//  The mechanical drift guard. Walks the actual source tree (Sources/ + M1K3App/
+//  + M1K3iOSApp/)
 //  and asserts, for every `Logger(subsystem:category:)` construction:
 //    1. the subsystem is the ONE canonical value ("app.m1k3" or M1K3Log.subsystem)
 //       — anything else (e.g. the historical "dev.m1k3.kokoro") is invisible to
@@ -10,12 +11,16 @@
 //    2. the category is in the M1K3Log.Category catalogue — so a typo like
 //       "mlx-lod" can't silently de-correlate a module's logs.
 //
-//  This is a TEXT scan, not a compile dependency: it covers M1K3App/ too (which
-//  is not a SwiftPM target) by reading the files from disk. It is pure and runs
+//  This is a TEXT scan, not a compile dependency: it covers M1K3App/ and the
+//  iOS/visionOS shell M1K3iOSApp/ too (neither is a SwiftPM target) by reading
+//  the files from disk. It is pure and runs
 //  under plain `swift test` — no Metal, no app bundle.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-30, Confidence 0.9 (the lint the Kokoro
 //  drift needed; subsystem + category both enforced end-to-end). Prior: Unknown.
+//
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — the scan covers M1K3iOSApp/ (#245: a hand-built
+//  `ios-core` category had drifted there unseen). Confidence now 0.9.
 //
 
 import Foundation
@@ -99,7 +104,7 @@ struct SubsystemGuardTests {
 
     private static func allLoggerSites() throws -> [LoggerSite] {
         let root = try packageRoot()
-        return try ["Sources", "M1K3App"].flatMap { sub -> [LoggerSite] in
+        return try ["Sources", "M1K3App", "M1K3iOSApp"].flatMap { sub -> [LoggerSite] in
             try scan(dir: root.appending(path: sub), root: root)
         }
     }
@@ -107,7 +112,7 @@ struct SubsystemGuardTests {
     private static func factoryCallCount() throws -> Int {
         let root = try packageRoot()
         var count = 0
-        for sub in ["Sources", "M1K3App"] {
+        for sub in ["Sources", "M1K3App", "M1K3iOSApp"] {
             try forEachSwiftFile(in: root.appending(path: sub)) { _, code in
                 count += code.matches(of: factoryCall).count
             }

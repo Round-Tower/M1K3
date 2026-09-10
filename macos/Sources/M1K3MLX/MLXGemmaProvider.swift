@@ -69,6 +69,10 @@
 //  turn (security 0/14). Seeded turns now run `runSeededPlainTurn` (one
 //  [system, user] render, suffix prefill — the tool path's shape); the unseeded
 //  fallback keeps the inline-instructions ChatSession. Byte-replay proven.
+//  Review: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.8 — #264: the dialect is re-read from
+//  config.json after the loader succeeds (`resolveDialectAfterLoad`), filling a nil only; the init
+//  resolution logs its source. `resolvedToolCallFormat` is now computed over the two. Not touched:
+//  the think-template flags are still keyed on the repo NAME (the other half of #264).
 
 import Foundation
 import Hub
@@ -118,17 +122,33 @@ func logGenerationInfo(
 }
 
 /// `@unchecked Sendable`: model loading is coalesced through a `SingleFlightLoader`
-/// actor and the loaded `ModelContainer` is itself an isolation actor; everything
-/// else is immutable.
+/// actor and the loaded `ModelContainer` is itself an isolation actor; the one
+/// piece of mutable state (the post-load dialect, #264) sits behind
+/// `lateDialectLock`; everything else is immutable.
 public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchecked Sendable {
     public let name: String
 
     let generateParameters: GenerateParameters
     private let loader: SingleFlightLoader<ModelContainer>
-    /// The native tool-call dialect for this model, resolved at init from the
-    /// model family (Gemma → .gemma, Qwen/Llama → .json, …). nil means "no known
-    /// dialect" → `supportsToolCalls` is false and the agent uses the ReAct floor.
-    let resolvedToolCallFormat: ToolCallFormat?
+    /// The native tool-call dialect resolved at init from the model family
+    /// (Gemma → .gemma, Qwen/Llama → .json, …) — config.json's model_type when
+    /// the repo is already on disk, else the name heuristic. nil → not yet known.
+    let initialToolCallFormat: ToolCallFormat?
+    /// Filled once by `resolveDialectAfterLoad` when init could not decide (the
+    /// weights were not downloaded yet and the name carried no family word).
+    /// Guarded: `ensureLoaded` runs off the provider's isolation.
+    private let lateDialectLock = NSLock()
+    private var lateToolCallFormat: ToolCallFormat?
+    private var lateDialectChecked = false
+    /// The dialect in force. nil means "no known dialect" → `supportsToolCalls`
+    /// is false and the agent uses the ReAct floor.
+    var resolvedToolCallFormat: ToolCallFormat? {
+        if let initialToolCallFormat { return initialToolCallFormat }
+        lateDialectLock.lock()
+        defer { lateDialectLock.unlock() }
+        return lateToolCallFormat
+    }
+
     /// Whether output needs a synthetic `<think>` opener: the model's chat
     /// template PRE-OPENS `<think>` in the generation prompt (Qwen3.5), so the
     /// model emits only the CLOSING tag — prepending the opener keeps the
@@ -258,7 +278,15 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
         // and never parse — we set the format explicitly per model family.
         let modelType = LocalModelConfig.modelType(forRepoID: configuration.name)
         let resolved = Self.resolveToolCallFormat(for: configuration, modelType: modelType)
-        resolvedToolCallFormat = resolved
+        initialToolCallFormat = resolved
+        let source = Self.dialectSource(
+            explicit: configuration.toolCallFormat,
+            byType: modelType.flatMap(Self.toolCallFormat(forModelType:)),
+            resolved: resolved
+        )
+        mlxLoadLog.notice(
+            "tool dialect for \(configuration.name, privacy: .public): \(String(describing: resolved), privacy: .public) (source: \(source, privacy: .public))"
+        )
         self.thinkingEnabled = thinkingEnabled
         modelIdentifier = configuration.name
         let familyPreOpens = Self.templatePreOpensThink(for: configuration)
@@ -476,7 +504,33 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
         MLXMemoryBudget.applyOnce()
         let container = try await loader.value(progress: progress)
         MLXMemoryBudget.settle(label: "loaded \(modelIdentifier)") // per-tier: the limit follows the resident brain
+        resolveDialectAfterLoad()
         return container
+    }
+
+    /// #264: a repo with no family word in its name and no config.json on disk
+    /// at construction resolved to nil and ran every turn on the ReAct floor —
+    /// even after the loader had fetched the config that names the dialect.
+    /// Now the config is read once more after the first successful load; it
+    /// can only fill a nil (see `lateToolCallFormat`). Logged either way.
+    private func resolveDialectAfterLoad() {
+        guard initialToolCallFormat == nil else { return }
+        lateDialectLock.lock()
+        defer { lateDialectLock.unlock() }
+        guard !lateDialectChecked else { return }
+        lateDialectChecked = true
+        let id = modelIdentifier
+        let modelType = LocalModelConfig.modelType(forRepoID: id)
+        guard let late = Self.lateToolCallFormat(initial: nil, modelTypeOnDisk: modelType) else {
+            mlxLoadLog.notice(
+                "tool dialect for \(id, privacy: .public) still unresolved after load (model_type: \(modelType ?? "none", privacy: .public)) → ReAct floor"
+            )
+            return
+        }
+        lateToolCallFormat = late
+        mlxLoadLog.notice(
+            "tool dialect for \(id, privacy: .public) resolved after load: \(String(describing: late), privacy: .public) (source: config)"
+        )
     }
 
     /// One-shot upstream session for the UNSEEDED plain-chat paths: the persona

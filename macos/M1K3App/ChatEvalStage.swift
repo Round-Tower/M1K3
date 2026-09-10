@@ -35,7 +35,6 @@
 //  the bare-generate arm. Verify-by-launch: one tool-use SelfTest per arm.
 
 import Foundation
-import IOKit.ps
 
 // Weak-linked — see AppleFoundationModelsProvider for the full rationale: this
 // stage's `@Generable EvalToolArguments` strong-references FoundationModels
@@ -44,6 +43,7 @@ import IOKit.ps
 // fixtures only run where the model is actually available.
 @_weakLinked import FoundationModels
 import M1K3Agent
+import M1K3AgentTools
 import M1K3Chat
 import M1K3Eval
 import M1K3Inference
@@ -350,19 +350,11 @@ enum ChatEvalStage {
         )
     }
 
-    /// "ac" / "battery" from IOKit's providing power source; nil when it cannot tell (off-line, or a UPS —
-    /// that needs a source-list walk like `BatteryStatusTool`). The one field that would have caught
-    /// 2026-09-05's battery-measured day (see EvalProvenance.powerSource). Same idiom as
-    /// `SystemStatusProviding`: Copy-rule → takeRetained, Get-rule → takeUnretained.
+    /// "ac" / "battery" / "ups" off the tested `SystemStatusProviding` seam (#217); nil when it
+    /// cannot tell. The one field that would have caught 2026-09-05's battery-measured day
+    /// (see EvalProvenance.powerSource).
     private static func currentPowerSource() -> String? {
-        guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
-              let type = IOPSGetProvidingPowerSourceType(blob)?.takeUnretainedValue() as String?
-        else { return nil }
-        switch type {
-        case kIOPSACPowerValue: return "ac"
-        case kIOPSBatteryPowerValue: return "battery"
-        default: return nil
-        }
+        LiveSystemStatusProvider().providingPowerSource()?.rawValue
     }
 
     /// Brains to run: M1K3_SELFTEST_CHATEVAL_BRAINS=mini,lil narrows it (a full

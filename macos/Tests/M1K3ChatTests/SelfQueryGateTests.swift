@@ -4,7 +4,7 @@
 //
 //  The self-query router (prompt-hardening v2, code-side ticket 1): a narrow,
 //  precision-first classifier that short-circuits retrieval BEFORE
-//  search_knowledge can run on a question about M1K3 itself. Persona rule 3
+//  search_knowledge can run on a question about M1K3 itself. The persona's SELF rule
 //  states the policy; this gate enforces it in code — a soft prior is the
 //  wrong home for a hard gate.
 //
@@ -57,7 +57,7 @@ struct SelfQueryGateTests {
 
     // MARK: - Capability probes (must gate) — issue #97
 
-    /// Persona rule 3 names **abilities** alongside configuration and design,
+    /// The persona's SELF rule names **abilities** alongside configuration and design,
     /// but the gate only ever covered the leak-vector half. So the single most
     /// likely first question a new user asks — and the app's own built-in
     /// "What can you do?" suggestion chip — ran full retrieval. Live, that
@@ -162,14 +162,14 @@ struct SelfQueryGateTests {
     /// The 2026-06 leak it enabled was corpus contents (internal QA docs in
     /// the index), which index segregation fixes at the data layer; gating
     /// every bare corpus-noun ask would rob "what do your notes say?" as a
-    /// browse gesture. Persona rule 3 still defends this phrasing.
+    /// browse gesture. The persona's SELF rule still defends this phrasing.
     @Test func bareNotesAskStaysUngated() {
         #expect(!SelfQueryGate.isSelfQuery("What do your notes say?"))
     }
 
     /// Deliberate boundary #2: "the system prompt" with NO second-person
     /// anywhere is an accepted MISS — it can name someone else's prompt (a
-    /// saved article), and a miss falls back to persona rule 3, today's
+    /// saved article), and a miss falls back to the persona's SELF rule, today's
     /// behaviour. The probe shapes all address M1K3 ("show me … you were
     /// given", "your prompt") and stay gated.
     @Test func impersonalSystemPromptAskIsAnAcceptedMiss() {

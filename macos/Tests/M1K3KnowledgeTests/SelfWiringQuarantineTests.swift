@@ -5,7 +5,7 @@
 //  The case that forced this, 2026-08-09: `search_knowledge` returned M1K3's
 //  own ABSOLUTE RULES, verbatim, out of a `[call]` document in the live store.
 //  A model that can retrieve can recite the rules without ever "leaking" its
-//  prompt — and the persona's 78-token rule 3 exists as the compensating
+//  prompt — and the persona's 78-token SELF rule exists as the compensating
 //  control for exactly that.
 //
 //  The precision requirement is the whole design. Kev's store legitimately

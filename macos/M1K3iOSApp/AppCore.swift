@@ -62,6 +62,7 @@ import M1K3Inference
 import M1K3Knowledge
 import M1K3KnowledgeTools
 import M1K3Kokoro
+import M1K3LogCore
 import M1K3Memory
 import M1K3MemoryChatBridge
 import M1K3MLX
@@ -204,7 +205,7 @@ final class AppCore {
             || defaults.bool(forKey: memoryAutoCaptureKey)
     }
 
-    private static let log = Logger(subsystem: "app.m1k3", category: "ios-core")
+    private static let log = M1K3Log.logger(.iosCore)
 
     var hasChosenBrain: Bool {
         UserDefaults.standard.bool(forKey: Self.hasChosenBrainKey)
