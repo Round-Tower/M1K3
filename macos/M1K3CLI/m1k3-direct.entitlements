@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The `m1k3` helper's DIRECT-DISTRIBUTION entitlements (Developer ID DMG /
+	     Homebrew cask), selected by release-macos.sh via M1K3_CLI_ENTITLEMENTS.
+
+	     Deliberately EMPTY. Unsandboxed is the whole point: `m1k3 connect
+	     cursor` edits ~/.cursor/mcp.json and `m1k3 connect claude` execs the
+	     `claude` binary — a sandboxed helper can do neither, and both are the
+	     reason this tool exists. Hardening is a build setting, not an
+	     entitlement — the tool target sets ENABLE_HARDENED_RUNTIME: YES in
+	     project.yml — so this file staying empty does not weaken the signature
+	     or block notarization.
+
+	     The helper still reaches nothing but 127.0.0.1 — outside the sandbox
+	     that is a matter of code, not of entitlements, which is why the App
+	     Store default (m1k3-sandboxed.entitlements) is the one with the
+	     enforceable promise. -->
+</dict>
+</plist>

@@ -13,6 +13,9 @@
 # Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
 # Review: Kev + claude-fable-5.1, 2026-09-07 — M1K3ScreengrabUITests / M1K3iOSScreengrabUITests (bundle.ui-testing) + the
 # test plans that switch XCTest's automatic screen capture OFF; both shells link M1K3Screengrab.
+# Review: Kev + claude-opus-5, 2026-09-11 — the `m1k3` command-line client: a `tool` target embedded into the app at
+# Contents/MacOS/m1k3, and the entitlements INDIRECTION ($(M1K3_APP_ENTITLEMENTS) / $(M1K3_CLI_ENTITLEMENTS)) that lets a
+# release script pick each one separately instead of stamping the app's set onto the helper with one global override.
 
 name: M1K3
 
@@ -221,6 +224,19 @@ targets:
       # inert without M1K3_SCREENGRAB=1; driven by M1K3ScreengrabUITests.
       - package: M1K3
         product: M1K3Screengrab
+      # The CLI's pure half — Settings' "Connect an agent" renders the very
+      # same ConnectPlan snippets the `m1k3` binary executes.
+      - package: M1K3
+        product: M1K3CLICore
+      # Ship the `m1k3` command-line client INSIDE the bundle, at
+      # Contents/MacOS/m1k3 — the path Settings prints and the Homebrew cask
+      # symlinks onto the user's PATH. Signed as part of the app, so it
+      # inherits the app's identity and notarization.
+      - target: M1K3CLI
+        embed: true
+        codeSign: true
+        copy:
+          destination: executables
       # Embed the .saver so Settings can install it: M1K3 is sandboxed and can't
       # write to ~/Library/Screen Savers directly, so the app ships the bundle
       # and hands it to macOS via NSWorkspace.open (the native install prompt).
@@ -248,8 +264,18 @@ targets:
         # default; the dangerous entitlement can only ship if a script asks for it.
         # (Build 53 was rejected because the old default leaked the exception into a
         # TestFlight archive that never passed through release-mas.sh's override.)
+        #
+        # INDIRECTED (2026-09-11): the app now embeds the `m1k3` helper, and a
+        # global `xcodebuild CODE_SIGN_ENTITLEMENTS=…` override applies to EVERY
+        # target — it would stamp the app's entitlements onto the CLI. Each
+        # target reads its own variable instead, so release-macos.sh opts the
+        # app and the helper into their direct-distribution sets independently
+        # and anything that overrides neither stays App-Store-safe by default.
         # Signed: Kev + claude-opus-4-8, 2026-06-19, Confidence 0.85, Prior: Unknown
-        CODE_SIGN_ENTITLEMENTS: M1K3App/M1K3-MAS.entitlements
+        # Review: Kev + claude-opus-5, 2026-09-11 — variable indirection for the embedded CLI (intent unchanged:
+        # the MAS set is still the default, the exception can still only ship when a script asks for it).
+        M1K3_APP_ENTITLEMENTS: M1K3App/M1K3-MAS.entitlements
+        CODE_SIGN_ENTITLEMENTS: $(M1K3_APP_ENTITLEMENTS)
         ENABLE_HARDENED_RUNTIME: YES
         SWIFT_EMIT_LOC_STRINGS: YES
     info:
@@ -450,6 +476,39 @@ targets:
   # Chosen over an always-on desktop wallpaper (challenger, 2026-08-20): a
   # screensaver runs only when idle, so cost + the screenshot-privacy bind vanish.
   # Install: build, then copy M1K3.saver to ~/Library/Screen Savers/.
+  # The `m1k3` command-line client. A THIN CLIENT of the running app: it POSTs
+  # at the loopback MCP server and never loads a model — there is one MLX slot
+  # on this Mac and it belongs to M1K3.app. Embedded into the app bundle above.
+  #
+  # ⚠️ The TARGET is M1K3CLI, the PRODUCT is `m1k3`. A target literally named
+  # `m1k3` case-collides with the `M1K3` app target's intermediates directory
+  # on this (case-insensitive) filesystem — Xcode then hands the CLI the app's
+  # DerivedSources and the build dies on a missing GeneratedAssetSymbols.swift.
+  # PRODUCT_NAME below is what lands on disk and on the user's PATH.
+  M1K3CLI:
+    type: tool
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: M1K3CLI
+    dependencies:
+      - package: M1K3
+        product: M1K3CLICore
+    settings:
+      base:
+        PRODUCT_NAME: m1k3
+        PRODUCT_BUNDLE_IDENTIFIER: app.m1k3.cli
+        # Same indirection as the app target: the DEFAULT is the App-Store-safe
+        # sandboxed set (network.client only), and release-macos.sh opts the
+        # DMG's copy into the unsandboxed one. A sandboxed helper can't write
+        # another app's config file, which is why `connect` prints there.
+        M1K3_CLI_ENTITLEMENTS: M1K3CLI/m1k3-sandboxed.entitlements
+        CODE_SIGN_ENTITLEMENTS: $(M1K3_CLI_ENTITLEMENTS)
+        # Notarization requires the hardened runtime on every executable in the
+        # bundle, not just the app.
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: YES
+
   M1K3Screensaver:
     type: bundle
     platform: macOS

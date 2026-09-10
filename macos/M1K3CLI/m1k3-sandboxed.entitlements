@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The `m1k3` helper's App-Store-SAFE entitlements — the project default
+	     (M1K3_CLI_ENTITLEMENTS), mirroring the app target's own least-privilege
+	     default at project.yml. Two keys, and no more: the helper is a thin
+	     client of the running app.
+
+	     Consequence, deliberately accepted: a sandboxed helper cannot read
+	     ~/.cursor/mcp.json or exec `claude`, so `m1k3 connect` degrades to
+	     PRINTING the config (it detects APP_SANDBOX_CONTAINER_ID and says so).
+	     Writing another app's config file is exactly what the sandbox exists to
+	     prevent, and a "temporary exception" to get it back would be a hole in
+	     the one promise M1K3 makes. The Developer ID DMG's helper — signed with
+	     m1k3-direct.entitlements by release-macos.sh — does the write. -->
+
+	<!-- Sandboxed like its host app. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Outbound only, and only ever to 127.0.0.1: the app's loopback MCP
+	     server. There is no network.server key here — the CLI listens for
+	     nothing. -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+</plist>

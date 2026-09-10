@@ -5,11 +5,16 @@
 #
 # Differs from the direct build (release-macos.sh) in exactly three ways:
 #   • signs with "Apple Distribution" (not Developer ID)
-#   • CODE_SIGN_ENTITLEMENTS → M1K3-MAS.entitlements (no audioanalyticsd). This
+#   • M1K3_APP_ENTITLEMENTS → M1K3-MAS.entitlements (no audioanalyticsd). This
 #     now MATCHES project.yml's default (the default was inverted to MAS-safe on
 #     2026-06-19 so no archive can leak the exception); the override is kept here
 #     as belt-and-suspenders + self-documentation. release-macos.sh is the one
 #     path that opts back INTO the full M1K3.entitlements.
+#     ⚠️ It is the per-target VARIABLE, not a global CODE_SIGN_ENTITLEMENTS: a
+#     global override would also stamp the app's entitlements onto the embedded
+#     `m1k3` CLI. The CLI is left on its project default — m1k3-sandboxed.entitlements,
+#     which is the App-Store-safe pair (sandbox + network.client) — so this
+#     script stays MAS-safe by doing nothing at all about the helper.
 #   • exports method=app-store-connect → a .pkg for App Store Connect upload
 #
 # Prereqs: a VALID "Apple Distribution: … (76DJH43A4P)" cert in the keychain,
@@ -102,7 +107,7 @@ xcodebuild archive \
   -skipPackagePluginValidation \
   ${BUILD_NUMBER:+CURRENT_PROJECT_VERSION="$BUILD_NUMBER"} \
   DEVELOPMENT_TEAM="$TEAM" \
-  CODE_SIGN_ENTITLEMENTS="$MAS_ENTITLEMENTS" | beautify
+  M1K3_APP_ENTITLEMENTS="$MAS_ENTITLEMENTS" | beautify
 
 # ── 2. Export the .pkg (App Store Connect) ───────────────────────────────────
 echo "▸ [2/4] Exporting (app-store-connect)…"

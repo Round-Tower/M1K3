@@ -84,10 +84,22 @@ echo
 # allowed to ship. Keeps the DMG's runtime behaviour identical to before the
 # default was inverted; only this archive carries the exception.
 DIRECT_ENTITLEMENTS="$MACOS_DIR/M1K3App/M1K3.entitlements"
-# Preflight: fail fast with a clear message if the entitlements file is missing
-# (deleted/renamed), rather than a cryptic xcodebuild error mid-archive. Mirrors
-# release-mas.sh's check on its MAS_ENTITLEMENTS.
+# The embedded `m1k3` CLI has its own pair. Its project DEFAULT is the sandboxed
+# set; the DMG's copy must be unsandboxed or `m1k3 connect cursor` can't write
+# ~/.cursor/mcp.json and `m1k3 connect claude` can't exec the claude binary.
+#
+# ⚠️ These are passed as the two per-target VARIABLES the project indirects
+# through (M1K3_APP_ENTITLEMENTS / M1K3_CLI_ENTITLEMENTS), never as a global
+# CODE_SIGN_ENTITLEMENTS: an xcodebuild setting on the command line applies to
+# EVERY target, so the old global override would now stamp the app's
+# entitlements — sandbox, mic, calendars, the audioanalyticsd exception — onto
+# a command-line helper that needs none of them.
+CLI_ENTITLEMENTS="$MACOS_DIR/M1K3CLI/m1k3-direct.entitlements"
+# Preflight: fail fast with a clear message if either entitlements file is
+# missing (deleted/renamed), rather than a cryptic xcodebuild error mid-archive.
+# Mirrors release-mas.sh's check on its MAS_ENTITLEMENTS.
 [ -f "$DIRECT_ENTITLEMENTS" ] || { echo "✗ Missing $DIRECT_ENTITLEMENTS"; exit 1; }
+[ -f "$CLI_ENTITLEMENTS" ] || { echo "✗ Missing $CLI_ENTITLEMENTS"; exit 1; }
 # ── Signing style ─────────────────────────────────────────────────────────────
 # Local machines carry an Apple Development cert, so the project's Automatic
 # signing archives fine (dev-signs, then re-signs Developer ID at export). CI
@@ -110,7 +122,8 @@ xcodebuild archive \
   -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
   -archivePath "$ARCHIVE" -destination 'generic/platform=macOS' \
   -skipPackagePluginValidation \
-  CODE_SIGN_ENTITLEMENTS="$DIRECT_ENTITLEMENTS" \
+  M1K3_APP_ENTITLEMENTS="$DIRECT_ENTITLEMENTS" \
+  M1K3_CLI_ENTITLEMENTS="$CLI_ENTITLEMENTS" \
   DEVELOPMENT_TEAM="$TEAM" \
   ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"} | beautify
 
