@@ -11,8 +11,18 @@
 
 import Foundation
 @testable import M1K3AgentTools
+import M1K3Preview
 import Synchronization
 import Testing
+
+/// Hermetic: the deepen's fetch_page never does a live lookup here (#210).
+private struct PublicDNS: HostResolving {
+    func addresses(for _: String) async -> [String]? {
+        ["93.184.216.34"]
+    }
+}
+
+private let publicDNS = PublicDNS()
 
 /// Scripted HTTPFetching fake: responds per-host, records every request.
 private final class FakeHTTPFetcher: HTTPFetching, Sendable {
@@ -143,7 +153,7 @@ struct WebSearchToolTests {
             default: return Data(pageHTML.utf8) // the fetched top-result page
             }
         }
-        let tool = WebSearchTool(fetcher: fetcher, deepReader: FetchPageTool(fetcher: fetcher))
+        let tool = WebSearchTool(fetcher: fetcher, deepReader: FetchPageTool(fetcher: fetcher, resolver: publicDNS))
         let result = try await tool.execute(input: ["query": "apple stock"])
         // Search results still present...
         #expect(result.output.contains("Result One — https://example.com/one"))
@@ -164,7 +174,7 @@ struct WebSearchToolTests {
             default: return Data(jsShell.utf8)
             }
         }
-        let tool = WebSearchTool(fetcher: fetcher, deepReader: FetchPageTool(fetcher: fetcher))
+        let tool = WebSearchTool(fetcher: fetcher, deepReader: FetchPageTool(fetcher: fetcher, resolver: publicDNS))
         let result = try await tool.execute(input: ["query": "apple price"])
         #expect(result.output.contains("Result One")) // snippets survive
         #expect(!result.output.contains("Page content from")) // no empty content block
@@ -190,7 +200,7 @@ struct WebSearchToolTests {
             default: return Data("<html><body><p>The summit concluded with a signed accord.</p></body></html>".utf8)
             }
         }
-        let tool = WebSearchTool(fetcher: fetcher, deepReader: FetchPageTool(fetcher: fetcher))
+        let tool = WebSearchTool(fetcher: fetcher, deepReader: FetchPageTool(fetcher: fetcher, resolver: publicDNS))
         let result = try await tool.execute(input: ["query": "summit outcome"])
         #expect(result.output.contains("The summit concluded with a signed accord."))
         #expect(result.output.contains("https://news.example/two"))

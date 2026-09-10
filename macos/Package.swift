@@ -349,7 +349,7 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3AgentToolsTests",
-            dependencies: ["M1K3AgentTools", "M1K3Agent"],
+            dependencies: ["M1K3AgentTools", "M1K3Agent", "M1K3Preview"],
             path: "Tests/M1K3AgentToolsTests",
             resources: [.copy("Fixtures")]
         ),

@@ -170,12 +170,19 @@ struct WebURLPolicyTests {
         #expect(!WebURLPolicy.isPrivateAddress("fec0::1")) // site-local (deprecated), outside /10
     }
 
-    @Test("a slow system lookup is a failed lookup, not a stalled turn")
+    @Test("a slow lookup is a failed lookup at the deadline — the caller is NOT held for it")
     func systemResolverTimesOut() async {
-        // A name under an unroutable TLD is on no hosts file; with a near-zero
-        // budget the race is decided by the sleep, never the lookup.
-        let answers = await SystemHostResolver(timeout: 0.001).addresses(for: "gate-timeout-probe.invalid")
+        // A lookup that blocks for 3 s (getaddrinfo's shape: no cancellation
+        // point) against a 50 ms budget: the call must come back at the budget,
+        // not at the lookup (#266 review: a task group would have joined it).
+        let slow = SystemHostResolver(timeout: 0.05) { _ in
+            Thread.sleep(forTimeInterval: 3)
+            return ["93.184.216.34"]
+        }
+        let started = Date()
+        let answers = await slow.addresses(for: "slow.example.com")
         #expect(answers == nil)
+        #expect(Date().timeIntervalSince(started) < 1.5)
     }
 
     @Test("the system resolver answers for localhost with a loopback literal (live smoke)")

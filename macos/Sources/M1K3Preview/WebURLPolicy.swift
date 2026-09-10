@@ -42,27 +42,53 @@ public protocol HostResolving: Sendable {
 public struct SystemHostResolver: HostResolving {
     public static let defaultTimeout: TimeInterval = 4
     private let timeout: TimeInterval
+    /// The blocking lookup — the system's by default; a test injects a slow one.
+    private let lookup: @Sendable (String) -> [String]?
 
     public init(timeout: TimeInterval = defaultTimeout) {
-        self.timeout = timeout
+        self.init(timeout: timeout, lookup: Self.resolve)
     }
 
+    init(timeout: TimeInterval, lookup: @escaping @Sendable (String) -> [String]?) {
+        self.timeout = timeout
+        self.lookup = lookup
+    }
+
+    /// First past the post: the lookup and a timer each run on their OWN
+    /// unstructured task and race to resume one continuation. A task group
+    /// would not do — it joins every child before returning, and getaddrinfo
+    /// has no cancellation point, so the "loser" would still hold the caller
+    /// (#266 review). The abandoned lookup finishes later and its answer is
+    /// genuinely discarded.
     public func addresses(for host: String) async -> [String]? {
-        #if canImport(Darwin)
-            let seconds = timeout
-            return await withTaskGroup(of: [String]??.self) { group in
-                group.addTask(priority: .utility) { Self.resolve(host) }
-                group.addTask {
-                    try? await Task.sleep(for: .seconds(seconds))
-                    return .some(nil)
-                }
-                let first = await group.next() ?? nil
-                group.cancelAll() // the loser keeps running to completion; its result is dropped
-                return first ?? nil
+        let seconds = timeout
+        let lookup = lookup
+        return await withCheckedContinuation { (continuation: CheckedContinuation<[String]?, Never>) in
+            let gate = FirstResume(continuation)
+            Task.detached(priority: .utility) { gate.resume(with: lookup(host)) }
+            Task.detached {
+                try? await Task.sleep(for: .seconds(seconds))
+                gate.resume(with: nil)
             }
-        #else
-            return nil
-        #endif
+        }
+    }
+
+    /// Resumes a continuation at most once, from whichever racer arrives first.
+    private final class FirstResume: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<[String]?, Never>?
+
+        init(_ continuation: CheckedContinuation<[String]?, Never>) {
+            self.continuation = continuation
+        }
+
+        func resume(with answer: [String]?) {
+            lock.lock()
+            let pending = continuation
+            continuation = nil
+            lock.unlock()
+            pending?.resume(returning: answer)
+        }
     }
 
     #if canImport(Darwin)
@@ -91,6 +117,10 @@ public struct SystemHostResolver: HostResolving {
             }
             return found
         }
+    #else
+        private static func resolve(_: String) -> [String]? {
+            nil
+        }
     #endif
 }
 
@@ -102,7 +132,7 @@ public enum WebURLPolicy {
     /// shape, and the fetch would take whichever came up (#210).
     public static func isLocalOrPrivate(_ url: URL, resolver: any HostResolving) async -> Bool {
         if isLocalOrPrivate(url) { return true }
-        guard let host = url.host?.lowercased(), numericIPv4(host) == nil, !looksLikeIPv6(host) else {
+        guard let host = normalisedHost(url), numericIPv4(host) == nil, !looksLikeIPv6(host) else {
             return false // a literal was judged above; nothing to resolve
         }
         guard let answers = await resolver.addresses(for: host) else { return true } // lookup failed: refuse
@@ -123,6 +153,16 @@ public enum WebURLPolicy {
         return isPrivateIPv6(literal)
     }
 
+    /// Lowercased host with the DNS-root trailing dot(s) stripped — "127.0.0.1."
+    /// and "printer.local." gate exactly like their bare forms. nil = no host.
+    private static func normalisedHost(_ url: URL) -> String? {
+        guard var host = url.host?.lowercased(), !host.isEmpty else { return nil }
+        while host.hasSuffix(".") {
+            host = String(host.dropLast())
+        }
+        return host.isEmpty ? nil : host
+    }
+
     private static func looksLikeIPv6(_ host: String) -> Bool {
         host.contains(":")
     }
@@ -132,13 +172,7 @@ public enum WebURLPolicy {
     /// address — i.e. somewhere an agent-driven open must NOT reach. A missing host
     /// is treated as local (refused) so the default is safe.
     public static func isLocalOrPrivate(_ url: URL) -> Bool {
-        guard var host = url.host?.lowercased(), !host.isEmpty else { return true }
-        // A trailing dot is the DNS root the resolver strips — "127.0.0.1." and
-        // "printer.local." must gate exactly like their bare forms.
-        while host.hasSuffix(".") {
-            host = String(host.dropLast())
-        }
-        guard !host.isEmpty else { return true }
+        guard let host = normalisedHost(url) else { return true }
 
         if host == "localhost" || host.hasSuffix(".localhost") { return true }
         if host.hasSuffix(".local") { return true }
