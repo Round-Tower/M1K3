@@ -77,6 +77,7 @@ client — the running app is the daemon (one MLX slot on the machine, and it
 belongs to M1K3.app).
 
 ```sh
+brew trust round-tower/tap                 # Homebrew 6: trust the tap once
 brew install --cask round-tower/tap/m1k3   # the cask symlinks Contents/MacOS/m1k3
 m1k3 connect claude                        # also: codex · cursor · vscode · zed
 ```
