@@ -17,6 +17,8 @@ Edge AI you actually own: no cloud, no telemetry, no network call it never asks 
   · <a href="https://testflight.apple.com/join/Fxp2F5Je">TestFlight beta</a>
 </p>
 
+<p align="center">Connecting a coding agent → <a href="https://m1k3.app/agents">m1k3.app/agents</a></p>
+
 <p align="center"><em>Requires macOS 26 Tahoe · Apple Silicon · signed & notarized (Developer ID).</em></p>
 
 <p align="center">
