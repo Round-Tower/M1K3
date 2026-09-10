@@ -221,7 +221,7 @@ Never block on it; carry on without it.
   <h2>What it will not do</h2>
   <ul>
     <li><strong>It will not answer another machine.</strong> The listener is pinned to <code>127.0.0.1</code> at the socket, never an interface address, so nothing on your network can reach it.</li>
-    <li><strong>It will not answer a web page.</strong> Requests whose <code>Host</code> header is not a loopback address are refused with 421, and an <code>Origin</code> that is not a loopback page is refused too — the standard defence against a site using your browser to reach a server on your own machine.</li>
+    <li><strong>It will not answer a web page.</strong> Requests whose <code>Host</code> header is not a loopback address are refused, and an <code>Origin</code> that is not a loopback page is refused too — the standard defence against a site using your browser to reach a server on your own machine.</li>
     <li><strong>It will not run while M1K3 is closed.</strong> The server is part of the app. A "disconnected" MCP server almost always means the app is not open — which is why the resident block above tells your agent never to block on it. The <code>m1k3</code> command opens the app itself and waits for the port.</li>
     <li><strong>It will not ask for a password, because it has none.</strong> There is no token on the loopback server today: anything running as you on this Mac can call it while it is switched on. That is the same trust boundary as your shell, and it is the reason the server ships off by default.</li>
     <li><strong>It will not write your config from the App Store build.</strong> That copy of <code>m1k3</code> is sandboxed, so it can neither read <code>~/.cursor/mcp.json</code> nor run <code>claude</code> for you. There, <code>connect</code> prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write.</li>
@@ -299,8 +299,13 @@ Never block on it; carry on without it.
      FAQ JSON-LD answers are byte-identical to the visible ones (no inline markup
      in them, so the strings match verbatim). Prior: Unknown (new file).
 
-     Open: the `brew trust` line is the one claim not verifiable from this repo —
-     the tap lives elsewhere and the CLI branch's README shows the install without
-     it. If Homebrew 6 does not require it, drop that half of the line. -->
+     Review: Kev + claude-fable-5.1, 2026-09-11 — the `brew trust` half of the
+     install line is verified, not assumed: Homebrew 6 refuses to load a cask from
+     an untrusted third-party tap ("invalid syntax in tap!" on the surface,
+     "Refusing to load cask … from untrusted tap" under --verbose), so the trust
+     call has to come first. The Host/Origin refusal now names no status code:
+     PR #272 puts M1K3's own LoopbackRequestGate (path → Host → Origin →
+     Content-Type) ahead of the SDK pipeline and its codes differ from the SDK's
+     421. Confidence now 0.85. -->
 </body>
 </html>
