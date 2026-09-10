@@ -42,7 +42,7 @@
 //  Review: Kev + claude-fable-5, 2026-07-12, Confidence 0.85 — self-query
 //  router (prompt-hardening v2, code-side): SelfQueryGate short-circuits
 //  retrieval and withholds the corpus-reaching tools on questions about M1K3
-//  itself, enforcing persona rule 3 in code. Narrow leak-class classifier,
+//  itself, enforcing the persona's SELF rule in code. Narrow leak-class classifier,
 //  NOT the general pre-generation router rejected 2026-06-12 — a miss falls
 //  back to the prompt rule (today's behaviour); boundaries pinned in tests.
 //  Review: Kev + claude-fable-5, 2026-07-20, Confidence 0.85 — the grounding-
@@ -261,7 +261,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // Self-query router (prompt-hardening v2): a question about M1K3
         // itself never touches retrieval — nothing embedded, nothing injected
         // — and the corpus-reaching tools are withheld from the turn below.
-        // Persona rule 3 states this policy; the gate enforces it in code.
+        // The persona's SELF rule states this policy; the gate enforces it in code.
         let isSelfQuery = SelfQueryGate.isSelfQuery(question)
         var chunks: [ChunkHit]
         var memories: [ChunkHit]

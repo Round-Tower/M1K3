@@ -429,7 +429,7 @@ public final class ChatSession {
             let mergedSources = Self.mergeSources(sources, responder.collectedSources())
             let validation = await CitationValidator.validate(responseText: answer, against: mergedSources)
             // Prompt-leak guard (#111): the model reproduced its own wiring.
-            // Persona rule 1 forbids it, but a prompt cannot enforce itself and
+            // The persona's WIRING rule forbids it, but a prompt cannot enforce itself and
             // Mini does it unprompted (2026-08-08 scorecard). Applied to the
             // FINAL text — streaming already showed tokens, so this is the last
             // point that can stop it being persisted, spoken, or distilled into

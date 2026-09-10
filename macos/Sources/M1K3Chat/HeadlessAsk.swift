@@ -75,7 +75,7 @@ public enum HeadlessAsk {
         // reduces the turn to empty. Degrade with an honest message instead of
         // throwing; a visiting agent should never see a bare "Error: emptyAnswer".
         guard !polished.isEmpty else { return emptyAnswerMessage(didReason: reasoning != nil) }
-        // Prompt-leak guard (#111). Persona rule 1 forbids reproducing the
+        // Prompt-leak guard (#111). The persona's WIRING rule forbids reproducing the
         // wiring, but a prompt cannot enforce itself and the 2026-08-08
         // scorecard says Mini does it unprompted. Returned BEFORE the Sources
         // footer is assembled: a leak has no real citations, and half a leak is

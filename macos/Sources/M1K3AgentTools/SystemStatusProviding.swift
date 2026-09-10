@@ -7,6 +7,10 @@
 //  thin and covered by a smoke test (values aren't deterministic).
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.8, Prior: Unknown
+//
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — `providingPowerSource()` joins the seam (#217): the eval
+//  harness read IOKit's providing source as untested app-target glue; one IOKit power idiom now, the
+//  string→case mapping pinned. Confidence now 0.85.
 
 import Foundation
 
@@ -38,11 +42,39 @@ public struct DiskSnapshot: Sendable, Equatable {
     }
 }
 
+/// What is powering the machine right now — the field that catches a tok/s
+/// day measured on battery under Adaptive Power (2026-09-05: `pmset` said
+/// powermode 0, the decode doubled once plugged in). Raw values are the eval
+/// provenance vocabulary (`EvalProvenance.powerSource`).
+public enum PowerSource: String, Sendable, Equatable {
+    case ac, battery, ups
+
+    /// IOKit's `IOPSGetProvidingPowerSourceType` literals ("AC Power",
+    /// "Battery Power", "UPS Power"); anything else ("Off Line", empty) is nil.
+    public init?(iokitProvidingType type: String) {
+        switch type {
+        case "AC Power": self = .ac
+        case "Battery Power": self = .battery
+        case "UPS Power": self = .ups
+        default: return nil
+        }
+    }
+}
+
 public protocol SystemStatusProviding: Sendable {
     /// nil on a Mac with no battery (desktop).
     func batterySnapshot() -> BatterySnapshot?
     func diskSnapshot() throws -> DiskSnapshot
     func uptime() -> TimeInterval
+    /// nil when the provider cannot tell (no IOKit, off-line).
+    func providingPowerSource() -> PowerSource?
+}
+
+public extension SystemStatusProviding {
+    /// Default unknown — a fake or a platform without the API stays honest.
+    func providingPowerSource() -> PowerSource? {
+        nil
+    }
 }
 
 public struct LiveSystemStatusProvider: SystemStatusProviding {
@@ -86,5 +118,18 @@ public struct LiveSystemStatusProvider: SystemStatusProviding {
 
     public func uptime() -> TimeInterval {
         ProcessInfo.processInfo.systemUptime
+    }
+
+    /// Copy-rule → takeRetained, Get-rule → takeUnretained (the over-release
+    /// review 1 on #216 caught lives on in this one idiom).
+    public func providingPowerSource() -> PowerSource? {
+        #if canImport(IOKit)
+            guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+                  let type = IOPSGetProvidingPowerSourceType(blob)?.takeUnretainedValue() as String?
+            else { return nil }
+            return PowerSource(iokitProvidingType: type)
+        #else
+            return nil
+        #endif
     }
 }

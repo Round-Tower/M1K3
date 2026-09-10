@@ -315,7 +315,7 @@ struct AgentRAGResponderTests {
 
         // The withheld tools never reach the turn's tool listing; unrelated
         // tools do. (Assert on the FixedTool description line — the persona
-        // text itself NAMES search_knowledge/lookup_fact in rule 3, so the
+        // text itself NAMES search_knowledge/lookup_fact in the SELF rule, so the
         // raw name appears in every prompt by design.)
         let firstPrompt = try #require(provider.allPrompts.first)
         #expect(!firstPrompt.contains("fixed tool search_knowledge"))

@@ -4,8 +4,8 @@
 //
 //  The output-side half of the prompt-leak defence (#111).
 //
-//  Everything protecting the persona until now acted BEFORE generation: rule 1
-//  tells the model never to reveal its instructions, and `SelfQueryGate`
+//  Everything protecting the persona until now acted BEFORE generation: the WIRING
+//  rule tells the model never to reveal its instructions, and `SelfQueryGate`
 //  enforces the retrieval half in code so a self-query can't reach the corpus.
 //  Neither can do anything once the tokens are out. The 2026-08-08 scorecard
 //  says they come out anyway — Mini answered "In what year did the Berlin Wall
@@ -100,7 +100,7 @@ public enum PersonaLeakGuard {
     /// deliberate: a document may legitimately quote a line of the prompt
     /// ("one is discussion, two is reproduction"), but an ANSWER has no such
     /// excuse — emitting one verbatim 60+ character sentence of the wiring is
-    /// exactly the failure rule 1 names. The asymmetry settles it: a false
+    /// exactly the failure the WIRING rule names. The asymmetry settles it: a false
     /// positive costs one turn, a false negative is the leak.
     ///
     /// A short in-character deflection cannot trip this — containment requires

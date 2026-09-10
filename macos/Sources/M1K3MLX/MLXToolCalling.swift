@@ -52,6 +52,9 @@
 //  seed-miss alarm is gated on it). `ToolTurnDiagnostics`: both loops used to swallow
 //  `.rejectedToolCall`; no-call turns log a count always, content only on anomaly or when
 //  `M1K3_SELFTEST_DUMP_PROMPT` asks. Measured: tool-use 0/6 → 5/6 (Lil DWQ 5/6).
+//  Review: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85 — #264: `lateToolCallFormat` +
+//  `dialectSource`, the pure halves of resolving the dialect AFTER the loader has config.json
+//  (a never-downloaded repo with no family word ran a whole eval on the ReAct floor).
 
 import Foundation
 import M1K3Inference
@@ -400,6 +403,28 @@ extension MLXGemmaProvider: ToolCallingProvider {
         if type.hasPrefix("glm4") { return .glm4 }
         if type.hasPrefix("lfm2") { return .lfm2 }
         return nil
+    }
+
+    /// The post-load half of the resolution (#264). At construction the repo may
+    /// not be on disk yet, so `modelType` was nil and a name with no family word
+    /// resolved to nil → ReAct floor for the provider's whole life, even after
+    /// the loader fetched config.json. Once loaded, the architecture can fill a
+    /// nil — but never move a resolved one: the persona-prefix cache and every
+    /// seeded turn were rendered in the dialect chosen at init.
+    static func lateToolCallFormat(initial: ToolCallFormat?, modelTypeOnDisk: String?) -> ToolCallFormat? {
+        guard initial == nil else { return nil }
+        return modelTypeOnDisk.flatMap(toolCallFormat(forModelType:))
+    }
+
+    /// Where a resolution came from, for the load log: "explicit" (the
+    /// configuration pinned it), "config" (config.json's model_type),
+    /// "name" (the repo-name heuristic), "none" (ReAct floor).
+    static func dialectSource(
+        explicit: ToolCallFormat?, byType: ToolCallFormat?, resolved: ToolCallFormat?
+    ) -> String {
+        if explicit != nil { return "explicit" }
+        if byType != nil { return "config" }
+        return resolved != nil ? "name" : "none"
     }
 
     /// True only when the model family has a known dialect — defuses the silent

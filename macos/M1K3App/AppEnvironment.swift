@@ -47,6 +47,9 @@
 //  silent for a stopped one). Confidence now 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — earcon volume 0.4 → 0.3 on Kev's first listen through the real
 //  pipeline ("tiny bit too loud"). Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — #200: the M1K3 Voice prepare is a held, generation-stamped task
+//  (the iOS shape from #199); picking Built-in mid-download cancels it, so a finished download can no longer
+//  swap the tier back. Launch restore reads `VoiceTierRestore` (one rule, two shells). Confidence now 0.8.
 
 import AppKit
 import Foundation
@@ -318,7 +321,11 @@ final class AppEnvironment {
     private(set) var voiceLoad: ModelLoadState = .idle
     /// The chosen TTS tier; restored on launch, persisted on change.
     private(set) var selectedVoiceTier: VoiceTier = .builtin
-    private var isPreparingVoice = false
+    /// The in-flight M1K3 Voice download/stage, held so a Built-in pick can
+    /// cancel it (#200); generation-stamped so a stale tick or completion
+    /// never paints over a newer pick.
+    private var voicePrepareTask: Task<Void, Never>?
+    private var voicePrepareGeneration = 0
 
     /// The avatar companion state — driven by this environment at each transition
     /// (listening → thinking → generating → speaking → idle).
@@ -872,8 +879,9 @@ final class AppEnvironment {
         voiceRenderer = renderer
         kokoro = KokoroSpeechProvider(renderer: renderer)
         speech = SwappableSpeechProvider(builtinSpeech)
-        selectedVoiceTier = UserDefaults.standard.string(forKey: Self.selectedVoiceTierKey)
-            .flatMap(VoiceTier.init(rawValue:)) ?? .builtin
+        selectedVoiceTier = VoiceTierRestore.restoredTier(
+            persisted: UserDefaults.standard.string(forKey: Self.selectedVoiceTierKey)
+        )
 
         // Voice input: WhisperKit first (better accuracy, but unavailable until
         // its model loads), Apple Speech as the always-on fallback. So dictation
@@ -967,8 +975,8 @@ final class AppEnvironment {
 
         // Restore M1K3 Voice only if it was chosen AND already staged — never kick
         // a silent ~354 MB re-download on launch.
-        if selectedVoiceTier == .m1k3Voice, kokoro.isModelStaged {
-            Task { await prepareM1K3Voice() }
+        if VoiceTierRestore.shouldRestore(selected: selectedVoiceTier, modelStaged: kokoro.isModelStaged) {
+            prepareM1K3Voice()
         }
 
         // Restore WhisperKit voice input the same way — only if the user upgraded to
@@ -2481,38 +2489,60 @@ extension AppEnvironment {
     func selectVoiceTier(_ tier: VoiceTier) {
         switch tier {
         case .builtin:
+            // Cancel an in-flight download first: its completion used to swap
+            // M1K3 Voice in anyway, overriding the pick just made (#200).
+            voicePrepareTask?.cancel()
+            voicePrepareTask = nil
             speech.setProvider(builtinSpeech)
             selectedVoiceTier = .builtin
             UserDefaults.standard.set(VoiceTier.builtin.rawValue, forKey: Self.selectedVoiceTierKey)
             if voiceLoad.isActive { voiceLoad = .idle }
         case .m1k3Voice:
-            Task { await prepareM1K3Voice() }
+            prepareM1K3Voice()
         }
     }
 
     /// Download + stage the Kokoro model (real progress into `voiceLoad`), then swap
-    /// the speech façade to M1K3 Voice. Mirrors `enableWhisperKit`. Idempotent — the
-    /// provider returns instantly once the weights are on disk.
-    func prepareM1K3Voice() async {
-        guard !isPreparingVoice else { return }
-        isPreparingVoice = true
+    /// the speech façade to M1K3 Voice. Mirrors `enableWhisperKit`. Idempotent — one
+    /// task at a time, and the provider returns instantly once the weights are on
+    /// disk. The iOS shell's shape (`AppCore+VoiceOutput`), ported for #200.
+    func prepareM1K3Voice() {
+        guard voicePrepareTask == nil else { return }
+        voicePrepareGeneration += 1
+        let generation = voicePrepareGeneration
         voiceLoad = .progress(0)
-        do {
-            try await kokoro.prepare { fraction in
-                // Only apply while still downloading — guard the late-hop-over-.ready
-                // race (same fix as preloadGemma / enableWhisperKit).
-                Task { @MainActor in
-                    if case .downloading = self.voiceLoad { self.voiceLoad = .progress(fraction) }
-                }
+        voicePrepareTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                // Only clear our own handle — a cancel-then-repick may already
+                // hold a newer task here.
+                if voicePrepareGeneration == generation { voicePrepareTask = nil }
             }
-            speech.setProvider(kokoro)
-            selectedVoiceTier = .m1k3Voice
-            UserDefaults.standard.set(VoiceTier.m1k3Voice.rawValue, forKey: Self.selectedVoiceTierKey)
-            isPreparingVoice = false
-            voiceLoad = .ready
-        } catch {
-            isPreparingVoice = false
-            voiceLoad = .failed(message: error.localizedDescription)
+            do {
+                try await kokoro.prepare { fraction in
+                    Task { @MainActor [weak self] in
+                        // Only while still downloading (the late-hop-over-.ready
+                        // guard preloadGemma / enableWhisperKit use) and only for
+                        // THIS generation: a cancelled download's last queued tick
+                        // must not paint over a fresh one.
+                        guard let self, voicePrepareGeneration == generation,
+                              case .downloading = voiceLoad else { return }
+                        voiceLoad = .progress(fraction)
+                    }
+                }
+                // A Built-in pick landed while the bytes were still coming: it
+                // already reset the state; the finished download must not win.
+                guard !Task.isCancelled else { return }
+                speech.setProvider(kokoro)
+                selectedVoiceTier = .m1k3Voice
+                UserDefaults.standard.set(VoiceTier.m1k3Voice.rawValue, forKey: Self.selectedVoiceTierKey)
+                voiceLoad = .ready
+            } catch is CancellationError {
+                // selectVoiceTier(.builtin) owns the state on this path.
+            } catch {
+                guard !Task.isCancelled else { return }
+                voiceLoad = .failed(message: error.localizedDescription)
+            }
         }
     }
 
