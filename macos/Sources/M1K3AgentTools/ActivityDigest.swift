@@ -162,7 +162,9 @@ public enum ActivityDigest {
     private static func memoryInsights(_ snapshot: ActivitySnapshot, window: ActivityWindow) -> [Insight] {
         var candidates: [Insight] = []
         let chats = snapshot.conversations
-        let memories = snapshot.memories
+        // Newest first, the order the Memories: line uses — so a tied kind
+        // count leans the same way in both places (review 3 on the PR).
+        let memories = snapshot.memories.sorted { $0.createdAt > $1.createdAt }
         if chats.count >= 3, chats.count > memories.count {
             let memoryPart = memories.isEmpty ? "no memories" : "only \(plural(memories.count, "memory", "memories"))"
             candidates.append((
@@ -181,13 +183,13 @@ public enum ActivityDigest {
         let visitors = snapshot.visitors
         guard visitors.callCount > 0 else { return [] }
         var candidates: [Insight] = []
-        let names = Array(visitors.clientNames.map(sanitized).prefix(3))
+        let names = Array(visitors.clientNames.map(cappedTitle).prefix(3))
         let who = names.isEmpty ? "Visiting agents" : joinedNaturally(names)
         let verb = names.isEmpty ? "made \(plural(visitors.callCount, "call"))" : "visited"
         var line = "\(who) \(verb)"
         if let top = visitors.toolUses.first {
             let share = "\(top.uses) of \(plural(visitors.callCount, "call"))"
-            line += "; \(sanitized(top.tool)) was the most used tool (\(share))"
+            line += "; \(cappedTitle(top.tool)) was the most used tool (\(share))"
         }
         candidates.append((.visitors, line + "."))
         let chats = snapshot.conversations.count
@@ -240,10 +242,10 @@ public enum ActivityDigest {
         guard visitors.callCount > 0 else { return "Visitors: none." }
         var line = "Visitors: \(plural(visitors.callCount, "call"))"
         if !visitors.clientNames.isEmpty {
-            line += " from " + visitors.clientNames.prefix(4).map(sanitized).joined(separator: ", ")
+            line += " from " + visitors.clientNames.prefix(4).map(cappedTitle).joined(separator: ", ")
         }
         if !visitors.toolUses.isEmpty {
-            line += " — " + visitors.toolUses.prefix(toolsShown).map { "\(sanitized($0.tool)) ×\($0.uses)" }
+            line += " — " + visitors.toolUses.prefix(toolsShown).map { "\(cappedTitle($0.tool)) ×\($0.uses)" }
                 .joined(separator: ", ")
         }
         return line + "."
@@ -374,14 +376,17 @@ public enum ActivityDigest {
             .replacingOccurrences(of: dataFenceHeader, with: "[recent activity]")
     }
 
-    private static func cap(_ text: String, to max: Int) -> String {
+    /// Never longer than `max`, ellipsis included (review 1 on the PR: the
+    /// ellipsis used to ride ABOVE the cap, so a fenced digest could be one
+    /// character over the budget it advertised).
+    static func cap(_ text: String, to max: Int) -> String {
         guard text.count > max else { return text }
-        return text.prefix(max).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
+        return text.prefix(max - 1).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
     }
 
     /// Fence the body, holding the whole observation under the cap with the
     /// footer always intact.
-    private static func fence(_ body: String) -> String {
+    static func fence(_ body: String) -> String {
         let room = observationCap - dataFenceHeader.count - dataFenceFooter.count - 2
         return dataFenceHeader + "\n" + cap(body, to: room) + "\n" + dataFenceFooter
     }

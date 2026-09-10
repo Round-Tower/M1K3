@@ -178,6 +178,9 @@ public enum ActivityWindow: Sendable, Equatable {
     public func bounds(now: Date, calendar: Calendar) -> (start: Date, end: Date?) {
         let startOfToday = calendar.startOfDay(for: now)
         func daysBack(_ count: Int) -> Date {
+            // The 86 400-multiple is the unreachable fallback (Calendar's day
+            // add never fails for a day count this small), kept only so the
+            // tool can never trap; the calendar path is the contract.
             calendar.date(byAdding: .day, value: -count, to: startOfToday)
                 ?? startOfToday.addingTimeInterval(-Double(count) * 86400)
         }

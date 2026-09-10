@@ -949,11 +949,12 @@ final class AppEnvironment {
         // self existed). Weak: the tool must never keep the environment alive.
         deepDelegationHook.install { [weak self] task in
             guard let self else { return "Error: M1K3 is shutting down." }
-            return await self.startDeepDelegation(task)
+            return await startDeepDelegation(task)
         }
         // Same late binding for recent_activity: the stores exist now.
         recentActivityHook.install(LiveActivityReader(
-            chat: chat, memoryStore: memoryStore, conversationLog: conversationLog,
+            conversations: { [chat] in chat.conversationSummaries() },
+            memoryStore: memoryStore, conversationLog: conversationLog,
             heartbeatStore: heartbeatStore, todoStore: todoStore
         ))
         Self.resetVoiceModeFlagAtLaunch()
@@ -1050,8 +1051,8 @@ final class AppEnvironment {
     private func scheduleIngestStatusDismissal(of status: String?, after seconds: Double = 8) {
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(seconds))
-            guard let self, !self.lastIngestFailed, self.lastIngestStatus == status else { return }
-            self.lastIngestStatus = nil
+            guard let self, !self.lastIngestFailed, lastIngestStatus == status else { return }
+            lastIngestStatus = nil
         }
     }
 
@@ -1095,8 +1096,8 @@ final class AppEnvironment {
         let advance = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(600))
             guard let self else { return }
-            if case .thinking = self.avatar.state.activity {
-                self.avatar.setActivity(.generating)
+            if case .thinking = avatar.state.activity {
+                avatar.setActivity(.generating)
             }
         }
         // Auto-speak rides the same streaming message this send is about to
@@ -1993,18 +1994,18 @@ extension AppEnvironment {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 // All self-gate on backgroundWorkAllowed; re-arm stays a no-op.
-                await self.reindexIfEmbedderChanged()
-                await self.reindexMemoryGraphIfNeeded()
-                await self.warmEmbedderOnLaunch()
-                await self.syncSpotlightIndex()
+                await reindexIfEmbedderChanged()
+                await reindexMemoryGraphIfNeeded()
+                await warmEmbedderOnLaunch()
+                await syncSpotlightIndex()
                 // The prefix warm's cooldown retry (its hot-skip arms this
                 // observer, same as the reindexes) — only once a brain is
                 // actually warm to seed from. Idempotent: a cache hit no-ops.
-                if case .ready = self.modelLoad {
-                    self.warmPersonaPrefixAfterLoad(self.currentMLXProvider)
+                if case .ready = modelLoad {
+                    warmPersonaPrefixAfterLoad(currentMLXProvider)
                 }
                 // Cooled back down and the work ran → tear the observers down.
-                if Self.backgroundWorkAllowed() { self.disarmThermalRecovery() }
+                if Self.backgroundWorkAllowed() { disarmThermalRecovery() }
             }
         }
         thermalRecoveryObserver = NotificationCenter.default.addObserver(

@@ -54,7 +54,10 @@ final class RecentActivityHook: ActivityReading, Sendable {
 /// stores are) and each read fails soft to empty — a broken heartbeat DB
 /// must not make the chats unreadable.
 struct LiveActivityReader: ActivityReading {
-    let chat: ChatSession
+    /// The drawer's own list, read on the main actor — a closure rather than
+    /// the `@MainActor` ChatSession itself, so this Sendable struct never
+    /// holds a non-Sendable class (review 2 on the PR).
+    let conversations: @MainActor @Sendable () -> [ConversationSummary]
     let memoryStore: MemoryStore?
     let conversationLog: ConversationLogStore?
     let heartbeatStore: HeartbeatStore?
@@ -66,11 +69,9 @@ struct LiveActivityReader: ActivityReading {
         }
         // Cheap main-actor read first (the heartbeat's order): the summaries
         // ARE the sidebar's list, so the tool sees exactly what is on disk now.
-        let conversations = await MainActor.run {
-            chat.conversationSummaries()
-                .filter { inWindow($0.updatedAt) }
-                .map { ActivitySnapshot.Conversation(title: $0.title, updatedAt: $0.updatedAt) }
-        }
+        let conversations = await conversations()
+            .filter { inWindow($0.updatedAt) }
+            .map { ActivitySnapshot.Conversation(title: $0.title, updatedAt: $0.updatedAt) }
         let logOn = UserDefaults.standard.bool(forKey: AppEnvironment.conversationLogEnabledKey)
         let memoryStore = memoryStore
         let conversationLog = conversationLog

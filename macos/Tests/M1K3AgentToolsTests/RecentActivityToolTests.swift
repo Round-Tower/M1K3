@@ -264,6 +264,51 @@ struct ActivityDigestTests {
         #expect(text.hasSuffix("\n" + ActivityDigest.dataFenceFooter), "the footer survives the cap")
     }
 
+    @Test("the cap budgets its own ellipsis and the fence holds the whole observation under the cap")
+    func capAndFence() {
+        #expect(ActivityDigest.cap(String(repeating: "x", count: 50), to: 10).count == 10)
+        #expect(ActivityDigest.cap("short", to: 10) == "short")
+        let fenced = ActivityDigest.fence(String(repeating: "y", count: 5000))
+        #expect(fenced.count == ActivityDigest.observationCap)
+        #expect(fenced.hasPrefix(ActivityDigest.dataFenceHeader + "\n"))
+        #expect(fenced.hasSuffix("\n" + ActivityDigest.dataFenceFooter))
+    }
+
+    @Test("a runaway visitor name is capped like a title")
+    func visitorNamesCapped() {
+        var snapshot = busyWeek
+        snapshot.visitors.clientNames = [String(repeating: "n", count: 500)]
+        let text = render(snapshot)
+        #expect(!text.contains(String(repeating: "n", count: 100)))
+        #expect(text.contains(String(repeating: "n", count: 79) + "…"))
+    }
+
+    @Test("a busiest-day tie breaks toward the more recent day")
+    func busiestDayTie() {
+        let tied = ActivitySnapshot(
+            conversations: [
+                .init(title: "a", updatedAt: at(dayOffset: -3, hour: 10)),
+                .init(title: "b", updatedAt: at(dayOffset: -3, hour: 11)),
+                .init(title: "c", updatedAt: at(dayOffset: -1, hour: 10)),
+                .init(title: "d", updatedAt: at(dayOffset: -1, hour: 11)),
+            ],
+            memories: [], visitors: emptyWeek.visitors, pulses: [], todos: emptyWeek.todos
+        )
+        let candidates = ActivityDigest.insights(tied, window: .week, now: now, calendar: calendar)
+        #expect(candidates.contains("Yesterday was the busiest day: 2 chats."))
+        #expect(!candidates.contains("Monday was the busiest day: 2 chats."))
+    }
+
+    @Test("window labels: N days, and a range that crosses a month")
+    func windowLabels() {
+        #expect(ActivityDigest.windowLabel(.days(3), now: now, calendar: calendar)
+            == "the last 3 days (8–10 September 2026)")
+        #expect(ActivityDigest.windowLabel(.days(14), now: now, calendar: calendar)
+            == "the last 14 days (28 August – 10 September 2026)")
+        #expect(ActivityDigest.windowLabel(.days(90), now: now, calendar: calendar)
+            == "the last 90 days (13 June – 10 September 2026)")
+    }
+
     @Test("relative day labels: today with a clock, yesterday, a weekday inside the week, a date beyond it")
     func dayLabels() {
         let morning = at(dayOffset: 0, hour: 9, minute: 5)
