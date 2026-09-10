@@ -122,8 +122,9 @@ func logGenerationInfo(
 }
 
 /// `@unchecked Sendable`: model loading is coalesced through a `SingleFlightLoader`
-/// actor and the loaded `ModelContainer` is itself an isolation actor; everything
-/// else is immutable.
+/// actor and the loaded `ModelContainer` is itself an isolation actor; the one
+/// piece of mutable state (the post-load dialect, #264) sits behind
+/// `lateDialectLock`; everything else is immutable.
 public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchecked Sendable {
     public let name: String
 

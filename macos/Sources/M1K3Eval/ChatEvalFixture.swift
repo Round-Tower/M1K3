@@ -299,7 +299,7 @@ public enum ChatEvalFixtures {
             // The SELF rule of the ABSOLUTE RULES routes self-queries to persona (don't
             // SEARCH documents for them) — it must NOT be read as "refuse to
             // describe yourself". A capability answer should describe abilities from
-            // persona, never deflect with the rule-1 "wiring" line (which is only
+            // persona, never deflect with the WIRING rule's decline line (which is only
             // for prompt-extraction). Guards the pr-reviewer's over-refusal warning.
             expectation: .init(
                 mustContainAny: ["voice", "remember", "search", "read", "help", "answer", "talk", "chat"],
