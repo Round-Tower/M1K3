@@ -33,6 +33,8 @@
 //  `query`, lookup_fact's `topic`, fetch_page's `url`), and the AFM arm
 //  builds a tool per argument shape. `document` + `sycophancy` kinds run on
 //  the bare-generate arm. Verify-by-launch: one tool-use SelfTest per arm.
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — `EvalWindowArguments` + `AFMRecordingWindowTool`: the `window`
+//  parameter shape for the recent_activity stub (afmArmCanExpressEveryParameter pins the name).
 
 import Foundation
 
@@ -72,6 +74,13 @@ private struct EvalURLArguments {
 private struct EvalTopicArguments {
     @Guide(description: "The topic or fact to look up.")
     var topic: String
+}
+
+/// The argument the recent_activity stub takes: production RecentActivityTool names it `window`.
+@Generable
+private struct EvalWindowArguments {
+    @Guide(description: "The window to review: today, yesterday, N days, or week.")
+    var window: String
 }
 
 /// Thread-safe record of which tools a brain actually invoked during one turn —
@@ -143,17 +152,35 @@ private struct AFMRecordingTopicTool: FoundationModels.Tool {
     }
 }
 
+private struct AFMRecordingWindowTool: FoundationModels.Tool {
+    typealias Arguments = EvalWindowArguments
+    typealias Output = String
+
+    let name: String
+    let description: String
+    let spec: ChatEvalStubSpec
+    let hard: Bool
+    let recorder: ToolCallRecorder
+
+    func call(arguments: EvalWindowArguments) async throws -> String {
+        recorder.record(name)
+        return spec.output(for: arguments.window, hard: hard)
+    }
+}
+
 /// One AFM tool per stub spec, in the argument shape the spec declares. The
 /// set of names is pinned by `afmArmCanExpressEveryParameter` in M1K3EvalTests
 /// — a new parameter name must add a shape here AND there.
 private func afmTool(for spec: ChatEvalStubSpec, hard: Bool, recorder: ToolCallRecorder) -> any FoundationModels.Tool {
     switch spec.parameter?.name {
     case "url":
-        return AFMRecordingURLTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
+        AFMRecordingURLTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
     case "topic":
-        return AFMRecordingTopicTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
+        AFMRecordingTopicTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
+    case "window":
+        AFMRecordingWindowTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
     default:
-        return AFMRecordingTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
+        AFMRecordingTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
     }
 }
 
@@ -265,7 +292,7 @@ enum ChatEvalStage {
     /// detail live, then the headline matrix.
     static func run(emit: @escaping (String) -> Void) async {
         let kinds = selectedKinds()
-        let fixtureCount = ChatEvalFixtures.all.filter { kinds?.contains($0.kind) ?? true }.count
+        let fixtureCount = ChatEvalFixtures.all.count(where: { kinds?.contains($0.kind) ?? true })
         emit("• chateval: \(fixtureCount) fixture(s) × \(selectedBrains().count) brain(s)"
             + (kinds.map { " [kinds: \($0.map(\.label).sorted().joined(separator: ","))]" } ?? "")
             + (livePathRequested ? " [LIVE PATH: AgentRAGResponder]" : "") + "…")

@@ -33,6 +33,7 @@ public enum ToolNarration {
         case "list_documents": "Scanning your documents."
         case "get_document": "Opening a document."
         case "open_link": "Opening a link."
+        case "recent_activity": "Looking back over the week."
         // Unknown tools humanize (underscores → spaces) rather than speak
         // snake_case aloud.
         default: "Using \(name.replacingOccurrences(of: "_", with: " "))."

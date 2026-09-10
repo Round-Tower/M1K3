@@ -60,6 +60,7 @@ struct ActivityLabelerTests {
         #expect(ActivityLabeler.displayName(forTool: "list_documents") == "documents")
         #expect(ActivityLabeler.displayName(forTool: "get_document") == "document")
         #expect(ActivityLabeler.displayName(forTool: "open_link") == "link")
+        #expect(ActivityLabeler.displayName(forTool: "recent_activity") == "recent activity")
         // Unknown tools humanize rather than leak snake_case into the UI.
         #expect(ActivityLabeler.displayName(forTool: "query_graph") == "query graph")
     }

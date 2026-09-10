@@ -36,6 +36,8 @@
 //  Review: claude-fable-5, 2026-08-19 — v2 migration adds nullable `client_name`
 //  (untrusted display data from initialize clientInfo; old rows render as
 //  "an agent"; migration test-pinned).
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — `activity(since:until:)`: per-tool counts (`toolUses`, the SQL
+//  already had them) + an optional exclusive upper bound for a closed window; the heartbeat's open read is unchanged.
 //
 
 import Foundation
@@ -194,44 +196,67 @@ public final class ConversationLogStore: MCPCallLogSink, @unchecked Sendable {
     /// this touches only the tool-name column. Tool names come
     /// most-frequent first.
     public struct WindowedActivity: Sendable, Equatable {
+        /// One tool's use count in the window.
+        public struct ToolUse: Sendable, Equatable {
+            public let tool: String
+            public let uses: Int
+
+            public init(tool: String, uses: Int) {
+                self.tool = tool
+                self.uses = uses
+            }
+        }
+
         public let callCount: Int
         public let toolNames: [String]
         /// Distinct self-reported client identities in the window — identity,
         /// not content; feeds the heartbeat's `agent:<client>` pulse tags.
         public let clientNames: [String]
+        /// The same tools as `toolNames`, in the same most-frequent-first
+        /// order, WITH their counts — recent_activity's "speak ×14"
+        /// (2026-09-10). The SQL always computed them; the digest is the
+        /// first reader that wanted them.
+        public let toolUses: [ToolUse]
 
-        public init(callCount: Int, toolNames: [String], clientNames: [String] = []) {
+        public init(callCount: Int, toolNames: [String], clientNames: [String] = [], toolUses: [ToolUse] = []) {
             self.callCount = callCount
             self.toolNames = toolNames
             self.clientNames = clientNames
+            self.toolUses = toolUses
         }
     }
 
-    public func activity(since: Date) throws -> WindowedActivity {
+    /// `until` is exclusive and optional — a closed window ("yesterday") for
+    /// recent_activity; the heartbeat's open watermark read passes nothing.
+    public func activity(since: Date, until: Date? = nil) throws -> WindowedActivity {
         try dbQueue.read { db in
+            // The upper bound rides as a far-future sentinel when absent so
+            // the two queries keep ONE shape (and the same index use).
+            let upper = until?.timeIntervalSince1970 ?? Date.distantFuture.timeIntervalSince1970
             let rows = try Row.fetchAll(
                 db,
                 sql: """
                 SELECT tool, COUNT(*) AS uses FROM mcp_calls
-                WHERE created_at >= ?
+                WHERE created_at >= ? AND created_at < ?
                 GROUP BY tool ORDER BY uses DESC, tool ASC
                 """,
-                arguments: [since.timeIntervalSince1970]
+                arguments: [since.timeIntervalSince1970, upper]
             )
             let counts = rows.map { (tool: $0["tool"] ?? "", uses: $0["uses"] ?? 0) as (String, Int) }
             let clients = try String.fetchAll(
                 db,
                 sql: """
                 SELECT DISTINCT client_name FROM mcp_calls
-                WHERE created_at >= ? AND client_name IS NOT NULL
+                WHERE created_at >= ? AND created_at < ? AND client_name IS NOT NULL
                 ORDER BY client_name ASC
                 """,
-                arguments: [since.timeIntervalSince1970]
+                arguments: [since.timeIntervalSince1970, upper]
             )
             return WindowedActivity(
                 callCount: counts.reduce(0) { $0 + $1.1 },
                 toolNames: counts.map(\.0),
-                clientNames: clients
+                clientNames: clients,
+                toolUses: counts.map { WindowedActivity.ToolUse(tool: $0.0, uses: $0.1) }
             )
         }
     }
