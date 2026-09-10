@@ -19,6 +19,7 @@
 //  answer lands in private/link-local/loopback space; `isPrivateAddress` judges a resolved literal
 //  (IPv4-mapped IPv6 and zone ids included). The literal-host check is unchanged and still pure.
 //  A failed or slow lookup (4 s) refuses — the gate must SEE the answer. fe80::/10 matched fully.
+//  Redirects are gated at the fetcher (`RedirectGate`, M1K3AgentTools) — this policy judges one URL.
 //  Known remainder: resolve-then-connect is a TOCTOU window (DNS rebinding) — closing it means
 //  pinning the connection to the vetted address, which URLSession does not offer.
 
@@ -65,7 +66,11 @@ public struct SystemHostResolver: HostResolving {
         let lookup = lookup
         return await withCheckedContinuation { (continuation: CheckedContinuation<[String]?, Never>) in
             let gate = FirstResume(continuation)
-            Task.detached(priority: .utility) { gate.resume(with: lookup(host)) }
+            // GCD, not the Swift cooperative pool: getaddrinfo BLOCKS its thread for the
+            // whole lookup (tens of seconds against a blackholed resolver), and the pool
+            // is shared with every Task in the process. Known trade-off: an abandoned
+            // lookup still holds a GCD thread until the OS resolver gives up.
+            DispatchQueue.global(qos: .utility).async { gate.resume(with: lookup(host)) }
             Task.detached {
                 try? await Task.sleep(for: .seconds(seconds))
                 gate.resume(with: nil)
