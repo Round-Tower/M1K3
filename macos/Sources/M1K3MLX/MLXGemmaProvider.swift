@@ -126,9 +126,9 @@ func logGenerationInfo(
 }
 
 /// `@unchecked Sendable`: model loading is coalesced through a `SingleFlightLoader`
-/// actor and the loaded `ModelContainer` is itself an isolation actor; the one
-/// piece of mutable state (the post-load dialect, #264) sits behind
-/// `lateDialectLock`; everything else is immutable.
+/// actor and the loaded `ModelContainer` is itself an isolation actor; the two
+/// post-load fills (the late dialect and the late think traits, #264) sit
+/// behind `lateDialectLock`; everything else is immutable.
 public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchecked Sendable {
     public let name: String
 
@@ -932,14 +932,17 @@ extension MLXGemmaProvider {
     }
 
     /// The think traits by NAME, for exactly the families the two rules above
-    /// pin: the Qwen3 line (every spelling), Bonsai, and gemma (measured — its
-    /// template mentions enable_thinking, the shipped tier stays as tested).
-    /// nil for anything else (llama, lfm2, mistral, an unknown brand), so the
-    /// template on disk answers after the load (#264). NOT the dialect's family
-    /// list: that is broader than what these rules were verified on (review).
+    /// pin: the Qwen3 line (every spelling), Bonsai, and gemma-4 (measured — its
+    /// template mentions enable_thinking, the shipped tier stays as tested;
+    /// scoped to the exact generation like the sibling predicates, so a gemma-3
+    /// class checkpoint reads its own template). nil for anything else (llama,
+    /// lfm2, mistral, an unknown brand), so the template on disk answers after
+    /// the load (#264). NOT the dialect's family list: that is broader than what
+    /// these rules were verified on (review).
     static func thinkTraitsByName(for configuration: ModelConfiguration) -> ChatTemplateTraits? {
         let name = configuration.name.lowercased()
-        guard name.contains("qwen3") || name.contains("ternary-bonsai") || name.contains("gemma") else { return nil }
+        guard name.contains("qwen3") || name.contains("ternary-bonsai")
+            || name.contains("gemma-4") || name.contains("gemma4") else { return nil }
         return ChatTemplateTraits(
             preOpensThink: templatePreOpensThink(for: configuration),
             supportsThinkingToggle: templateSupportsThinkingToggle(for: configuration)

@@ -232,6 +232,9 @@ struct MLXGemmaProviderTests {
         // file decides, not the name.
         #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/LFM2.5-1.2B-Instruct-4bit")) == nil)
         #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")) == nil)
+        // Only gemma-4 was measured; a gemma-3 class checkpoint reads its template (review on #267).
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-3-1b-it-qat-4bit")) == nil)
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-3n-E4B-it-lm-4bit")) == nil)
     }
 
     @Test("late think traits fill a nil from the template, never move a name-decided answer")
