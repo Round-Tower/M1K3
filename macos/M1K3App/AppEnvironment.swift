@@ -50,6 +50,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — #200: the M1K3 Voice prepare is a held, generation-stamped task
 //  (the iOS shape from #199); picking Built-in mid-download cancels it, so a finished download can no longer
 //  swap the tier back. Launch restore reads `VoiceTierRestore` (one rule, two shells). Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — `recentActivityHook`: late-bound like delegate_deep's; the live
+//  reader is installed after the stores exist; the warm passes NullActivityReading (+RecentActivity).
 
 import AppKit
 import Foundation
@@ -185,6 +187,8 @@ final class AppEnvironment {
     /// Late-bound bridge the delegate_deep tool holds (the palette is built in
     /// init before `self` exists); the handler installs at the end of init.
     let deepDelegationHook = DeepDelegationHook()
+    /// recent_activity's late-bound reader (see AppEnvironment+RecentActivity).
+    let recentActivityHook = RecentActivityHook()
     /// Escalated-dive slot bookkeeping (2026-08-15, the DeepDiveTarget wiring):
     /// while a dive runs on Big, the resident brain's provider is parked in
     /// `deepDiveRestoreProvider` and the slot is restored from it on EVERY dive
@@ -861,7 +865,8 @@ final class AppEnvironment {
                     Task { @MainActor in scriptProposals.pending = proposal }
                 }
             ),
-            contextSenses: .live
+            contextSenses: .live,
+            recentActivity: recentActivityHook
         )
 
         // TTS seam: Built-in Apple voice wrapped in a swappable façade so the
@@ -944,8 +949,14 @@ final class AppEnvironment {
         // self existed). Weak: the tool must never keep the environment alive.
         deepDelegationHook.install { [weak self] task in
             guard let self else { return "Error: M1K3 is shutting down." }
-            return await self.startDeepDelegation(task)
+            return await startDeepDelegation(task)
         }
+        // Same late binding for recent_activity: the stores exist now.
+        recentActivityHook.install(LiveActivityReader(
+            conversations: { [chat] in chat.conversationSummaries() },
+            memoryStore: memoryStore, conversationLog: conversationLog,
+            heartbeatStore: heartbeatStore, todoStore: todoStore
+        ))
         Self.resetVoiceModeFlagAtLaunch()
         mcpHost = MCPHostController(environment: self)
         mcpHost.startIfEnabled()
@@ -1040,8 +1051,8 @@ final class AppEnvironment {
     private func scheduleIngestStatusDismissal(of status: String?, after seconds: Double = 8) {
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(seconds))
-            guard let self, !self.lastIngestFailed, self.lastIngestStatus == status else { return }
-            self.lastIngestStatus = nil
+            guard let self, !self.lastIngestFailed, lastIngestStatus == status else { return }
+            lastIngestStatus = nil
         }
     }
 
@@ -1085,8 +1096,8 @@ final class AppEnvironment {
         let advance = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(600))
             guard let self else { return }
-            if case .thinking = self.avatar.state.activity {
-                self.avatar.setActivity(.generating)
+            if case .thinking = avatar.state.activity {
+                avatar.setActivity(.generating)
             }
         }
         // Auto-speak rides the same streaming message this send is about to
@@ -1462,7 +1473,8 @@ final class AppEnvironment {
             let interactiveTools = Self.interactiveAgentTools(
                 store: store, embedder: embedder,
                 onHits: { _ in }, onOpenLink: { _ in }, deepDelegation: deepDelegationHook,
-                scriptExecution: .forWarm, contextSenses: .forWarm, availability: availability
+                scriptExecution: .forWarm, contextSenses: .forWarm, recentActivity: NullActivityReading(),
+                availability: availability
             ).map(\.toolDefinition)
             // Sequentially: one ModelContainer, and the coalescer only dedupes
             // IDENTICAL keys — two concurrent builds of different keys would just
@@ -1982,18 +1994,18 @@ extension AppEnvironment {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 // All self-gate on backgroundWorkAllowed; re-arm stays a no-op.
-                await self.reindexIfEmbedderChanged()
-                await self.reindexMemoryGraphIfNeeded()
-                await self.warmEmbedderOnLaunch()
-                await self.syncSpotlightIndex()
+                await reindexIfEmbedderChanged()
+                await reindexMemoryGraphIfNeeded()
+                await warmEmbedderOnLaunch()
+                await syncSpotlightIndex()
                 // The prefix warm's cooldown retry (its hot-skip arms this
                 // observer, same as the reindexes) — only once a brain is
                 // actually warm to seed from. Idempotent: a cache hit no-ops.
-                if case .ready = self.modelLoad {
-                    self.warmPersonaPrefixAfterLoad(self.currentMLXProvider)
+                if case .ready = modelLoad {
+                    warmPersonaPrefixAfterLoad(currentMLXProvider)
                 }
                 // Cooled back down and the work ran → tear the observers down.
-                if Self.backgroundWorkAllowed() { self.disarmThermalRecovery() }
+                if Self.backgroundWorkAllowed() { disarmThermalRecovery() }
             }
         }
         thermalRecoveryObserver = NotificationCenter.default.addObserver(
