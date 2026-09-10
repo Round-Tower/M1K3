@@ -14,13 +14,119 @@
 //  ReviewTargetResolver without this gate.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-20, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85 — #210: the gate now RESOLVES a
+//  hostname (`HostResolving` seam, `SystemHostResolver` = getaddrinfo) and refuses when ANY
+//  answer lands in private/link-local/loopback space; `isPrivateAddress` judges a resolved literal
+//  (IPv4-mapped IPv6 and zone ids included). The literal-host check is unchanged and still pure.
+//  A failed or slow lookup (4 s) refuses — the gate must SEE the answer. fe80::/10 matched fully.
+//  Known remainder: resolve-then-connect is a TOCTOU window (DNS rebinding) — closing it means
+//  pinning the connection to the vetted address, which URLSession does not offer.
 
 import Foundation
 #if canImport(Darwin)
     import Darwin
 #endif
 
+/// Name → addresses, for the resolved half of the gate. Empty means "no such
+/// host" — the policy leaves that to the fetch's own error. nil means the
+/// lookup itself FAILED (resolver error, timeout): the gate never got to see
+/// what URLSession's own lookup would find, so the policy refuses.
+public protocol HostResolving: Sendable {
+    func addresses(for host: String) async -> [String]?
+}
+
+/// The system resolver (getaddrinfo, any family), numeric answers only. Runs
+/// off the caller's executor — getaddrinfo blocks and has no cancellation, so
+/// the lookup is raced against `timeout`; a name that resolves slower than
+/// that is a failed lookup (nil), never a stalled turn (Stop must keep working).
+public struct SystemHostResolver: HostResolving {
+    public static let defaultTimeout: TimeInterval = 4
+    private let timeout: TimeInterval
+
+    public init(timeout: TimeInterval = defaultTimeout) {
+        self.timeout = timeout
+    }
+
+    public func addresses(for host: String) async -> [String]? {
+        #if canImport(Darwin)
+            let seconds = timeout
+            return await withTaskGroup(of: [String]??.self) { group in
+                group.addTask(priority: .utility) { Self.resolve(host) }
+                group.addTask {
+                    try? await Task.sleep(for: .seconds(seconds))
+                    return .some(nil)
+                }
+                let first = await group.next() ?? nil
+                group.cancelAll() // the loser keeps running to completion; its result is dropped
+                return first ?? nil
+            }
+        #else
+            return nil
+        #endif
+    }
+
+    #if canImport(Darwin)
+        /// `[]` for EAI_NONAME (no such host), nil for any other failure.
+        private static func resolve(_ host: String) -> [String]? {
+            var hints = addrinfo()
+            hints.ai_family = AF_UNSPEC
+            hints.ai_socktype = SOCK_STREAM
+            var list: UnsafeMutablePointer<addrinfo>?
+            let status = getaddrinfo(host, nil, &hints, &list)
+            guard status == 0, let first = list else {
+                return status == EAI_NONAME || status == EAI_NODATA ? [] : nil
+            }
+            defer { freeaddrinfo(first) }
+            var found: [String] = []
+            var node: UnsafeMutablePointer<addrinfo>? = first
+            while let current = node {
+                var buffer = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                if getnameinfo(
+                    current.pointee.ai_addr, current.pointee.ai_addrlen,
+                    &buffer, socklen_t(buffer.count), nil, 0, NI_NUMERICHOST
+                ) == 0 {
+                    found.append(String(cString: buffer))
+                }
+                node = current.pointee.ai_next
+            }
+            return found
+        }
+    #endif
+}
+
 public enum WebURLPolicy {
+    /// The full gate: the literal/host check first (pure, decides on its own for
+    /// an IP literal, localhost, `.local`), then — for a DNS name — every
+    /// address it resolves to must be public. Any private answer refuses: a
+    /// record that rotates a public and a private address is the rebinding
+    /// shape, and the fetch would take whichever came up (#210).
+    public static func isLocalOrPrivate(_ url: URL, resolver: any HostResolving) async -> Bool {
+        if isLocalOrPrivate(url) { return true }
+        guard let host = url.host?.lowercased(), numericIPv4(host) == nil, !looksLikeIPv6(host) else {
+            return false // a literal was judged above; nothing to resolve
+        }
+        guard let answers = await resolver.addresses(for: host) else { return true } // lookup failed: refuse
+        return answers.contains(where: isPrivateAddress)
+    }
+
+    /// Judge one resolved address literal (what getaddrinfo hands back): IPv4,
+    /// IPv6 (zone id `%en0` ignored), and IPv4-mapped IPv6 `::ffff:a.b.c.d`
+    /// judged as the IPv4 it wraps. Empty is not private (nothing to judge).
+    public static func isPrivateAddress(_ address: String) -> Bool {
+        var literal = address.lowercased()
+        if let zone = literal.firstIndex(of: "%") { literal = String(literal[..<zone]) }
+        guard !literal.isEmpty else { return false }
+        if literal.hasPrefix("::ffff:"), let ipv4 = numericIPv4(String(literal.dropFirst(7))) {
+            return isPrivateIPv4(ipv4)
+        }
+        if let ipv4 = numericIPv4(literal) { return isPrivateIPv4(ipv4) }
+        return isPrivateIPv6(literal)
+    }
+
+    private static func looksLikeIPv6(_ host: String) -> Bool {
+        host.contains(":")
+    }
+
     /// True when `url`'s host is loopback, an RFC 1918 private range, link-local
     /// (incl. cloud metadata), an mDNS `.local` name, or an IPv6 link/unique-local
     /// address — i.e. somewhere an agent-driven open must NOT reach. A missing host
@@ -81,7 +187,8 @@ public enum WebURLPolicy {
 
     private static func isPrivateIPv6(_ host: String) -> Bool {
         if host == "::1" || host == "::" { return true } // loopback / unspecified
-        // Link-local fe80::/10 and unique-local fc00::/7 (fc.. / fd..).
-        return host.hasPrefix("fe80:") || host.hasPrefix("fc") || host.hasPrefix("fd")
+        // Link-local fe80::/10 (fe8., fe9., fea., feb.) and unique-local fc00::/7 (fc.. / fd..).
+        return host.hasPrefix("fe8") || host.hasPrefix("fe9") || host.hasPrefix("fea") || host.hasPrefix("feb")
+            || host.hasPrefix("fc") || host.hasPrefix("fd")
     }
 }

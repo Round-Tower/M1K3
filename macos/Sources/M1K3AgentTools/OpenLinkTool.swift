@@ -14,6 +14,8 @@
 //  (tight 8s fetcher, same guards as fetch_page) and returns a PageBrief instead
 //  of a bare "Opened host". The bare line left the model holding nothing and
 //  it narrated a page it never saw (Kev's dislike, 2026-09-04).
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — #210: the host is resolved before the panel opens
+//  (injected `HostResolving`); a public name pointing into private space is refused. Confidence now 0.85.
 
 import Foundation
 import M1K3Agent
@@ -36,6 +38,7 @@ public struct OpenLinkTool: AgentTool {
 
     private let onOpen: @Sendable (URL) -> Void
     private let fetcher: any HTTPFetching
+    private let resolver: any HostResolving
 
     /// The brief's fetch timeout, shared with the MCP `open_link` surface
     /// (MCPHostController) so the two can't drift (#207 review 4).
@@ -45,9 +48,11 @@ public struct OpenLinkTool: AgentTool {
     /// a slow or JS-only page bails fast; the panel has already opened either way.
     public init(
         fetcher: any HTTPFetching = URLSessionHTTPFetcher(timeout: briefFetchTimeout),
+        resolver: any HostResolving = SystemHostResolver(),
         onOpen: @escaping @Sendable (URL) -> Void
     ) {
         self.fetcher = fetcher
+        self.resolver = resolver
         self.onOpen = onOpen
     }
 
@@ -63,8 +68,10 @@ public struct OpenLinkTool: AgentTool {
         }
         // Public web only — the embedded WebView fetches from the user's Mac, so
         // an agent must not aim it at localhost / the LAN / cloud-metadata.
-        guard !WebURLPolicy.isLocalOrPrivate(url) else {
-            return ToolResult(output: "Error: M1K3 won't open local or private-network addresses (\(url.host ?? raw)).")
+        // …including a public-looking name that RESOLVES there (#210).
+        guard await !WebURLPolicy.isLocalOrPrivate(url, resolver: resolver) else {
+            return ToolResult(output: "Error: M1K3 won't open local or private-network addresses, "
+                + "or one it couldn't resolve (\(url.host ?? raw)).")
         }
         // Open FIRST — the user sees the page even if the read below fails.
         onOpen(url)

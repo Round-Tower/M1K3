@@ -334,7 +334,8 @@ final class MCPHostController {
         }
         // A visiting agent must not drive the embedded WebView at the user's local
         // network — the fetch runs on the user's Mac (SSRF-lite). Public web only.
-        guard !WebURLPolicy.isLocalOrPrivate(url) else {
+        // …including a public-looking name that RESOLVES there (#210).
+        guard await !WebURLPolicy.isLocalOrPrivate(url, resolver: SystemHostResolver()) else {
             throw MCPVoiceError("M1K3 won't open local or private-network addresses.")
         }
         env.review.open(url: url)

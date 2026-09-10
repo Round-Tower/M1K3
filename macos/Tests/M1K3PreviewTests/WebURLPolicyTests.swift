@@ -104,6 +104,87 @@ struct WebURLPolicyTests {
 
     // MARK: - Defensive
 
+    // MARK: - Resolved addresses (#210)
+
+    @Test("a resolved address literal is judged like a host: IPv4-mapped, zone-scoped, full IPv6")
+    func resolvedAddressLiterals() {
+        #expect(WebURLPolicy.isPrivateAddress("10.0.0.1"))
+        #expect(WebURLPolicy.isPrivateAddress("169.254.169.254"))
+        #expect(WebURLPolicy.isPrivateAddress("::ffff:127.0.0.1")) // IPv4-mapped loopback
+        #expect(WebURLPolicy.isPrivateAddress("::ffff:192.168.1.1"))
+        #expect(WebURLPolicy.isPrivateAddress("fe80::1%en0")) // zone id stripped
+        #expect(WebURLPolicy.isPrivateAddress("fd12:3456::1"))
+        #expect(!WebURLPolicy.isPrivateAddress("93.184.216.34"))
+        #expect(!WebURLPolicy.isPrivateAddress("::ffff:93.184.216.34"))
+        #expect(!WebURLPolicy.isPrivateAddress("2606:4700:4700::1111"))
+        #expect(!WebURLPolicy.isPrivateAddress("")) // nothing to judge — the fetch fails on its own
+    }
+
+    private struct FakeResolver: HostResolving {
+        let table: [String: [String]]
+        func addresses(for host: String) async -> [String]? {
+            table[host] ?? []
+        }
+    }
+
+    @Test("a public name that resolves into private space is refused — the DNS SSRF hole")
+    func resolvedPrivateRefused() async throws {
+        let resolver = FakeResolver(table: [
+            "metadata.example.com": ["169.254.169.254"],
+            "mixed.example.com": ["93.184.216.34", "10.1.2.3"],
+            "public.example.com": ["93.184.216.34", "2606:4700::1"],
+        ])
+        #expect(try await WebURLPolicy.isLocalOrPrivate(url("https://metadata.example.com/x"), resolver: resolver))
+        // ANY private answer refuses — a rotating record must not slip through on the public one.
+        #expect(try await WebURLPolicy.isLocalOrPrivate(url("https://mixed.example.com"), resolver: resolver))
+        #expect(try await !WebURLPolicy.isLocalOrPrivate(url("https://public.example.com"), resolver: resolver))
+    }
+
+    @Test("a literal host never consults the resolver; an unresolvable name is left to the fetch")
+    func resolverScope() async throws {
+        let resolver = FakeResolver(table: [:])
+        // The literal check already decided; no DNS needed either way.
+        #expect(try await WebURLPolicy.isLocalOrPrivate(url("http://127.0.0.1"), resolver: resolver))
+        #expect(try await !WebURLPolicy.isLocalOrPrivate(url("https://1.1.1.1"), resolver: resolver))
+        // No answer: not our verdict to give — the connection fails with its own error.
+        #expect(try await !WebURLPolicy.isLocalOrPrivate(url("https://nope.example.com"), resolver: resolver))
+    }
+
+    private struct FailingResolver: HostResolving {
+        func addresses(for _: String) async -> [String]? {
+            nil
+        }
+    }
+
+    @Test("a lookup that FAILS (error, timeout) refuses — the gate never saw the answer")
+    func lookupFailureRefuses() async throws {
+        #expect(try await WebURLPolicy.isLocalOrPrivate(url("https://slow.example.com"), resolver: FailingResolver()))
+        // Literals still never ask.
+        #expect(try await !WebURLPolicy.isLocalOrPrivate(url("https://1.1.1.1"), resolver: FailingResolver()))
+    }
+
+    @Test("the whole fe80::/10 block is link-local, not just fe80:")
+    func linkLocalIPv6Block() {
+        #expect(WebURLPolicy.isPrivateAddress("fe90::1"))
+        #expect(WebURLPolicy.isPrivateAddress("febf::1"))
+        #expect(!WebURLPolicy.isPrivateAddress("fec0::1")) // site-local (deprecated), outside /10
+    }
+
+    @Test("a slow system lookup is a failed lookup, not a stalled turn")
+    func systemResolverTimesOut() async {
+        // A name under an unroutable TLD is on no hosts file; with a near-zero
+        // budget the race is decided by the sleep, never the lookup.
+        let answers = await SystemHostResolver(timeout: 0.001).addresses(for: "gate-timeout-probe.invalid")
+        #expect(answers == nil)
+    }
+
+    @Test("the system resolver answers for localhost with a loopback literal (live smoke)")
+    func systemResolverSmoke() async {
+        let answers = await SystemHostResolver().addresses(for: "localhost") ?? []
+        #expect(!answers.isEmpty)
+        #expect(answers.allSatisfy(WebURLPolicy.isPrivateAddress))
+    }
+
     @Test("a URL with no host is treated as local (refused)")
     func noHostIsLocal() throws {
         // file:// has no host; defensively the policy refuses rather than allows.
