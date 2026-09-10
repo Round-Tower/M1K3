@@ -127,7 +127,7 @@ private func startOnFreePort(
 /// the server closes the connection (`Connection: close` is the wire contract).
 private func rawPost(
     _ json: String, port: UInt16, host: String, origin: String? = nil,
-    contentType: String = "application/json", path: String = "/mcp"
+    contentType: String = "application/json", path: String = "/mcp", extraLines: String = ""
 ) async throws -> (status: Int, body: String) {
     let connection = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
     connection.start(queue: .global(qos: .userInitiated))
@@ -135,6 +135,7 @@ private func rawPost(
     var head = "POST \(path) HTTP/1.1\r\nHost: \(host)\r\nContent-Type: \(contentType)\r\n"
     head += "Accept: application/json\r\nContent-Length: \(json.utf8.count)\r\nConnection: close\r\n"
     if let origin { head += "Origin: \(origin)\r\n" }
+    head += extraLines
     head += "\r\n"
     let payload = Data(head.utf8) + Data(json.utf8)
     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
@@ -415,6 +416,19 @@ struct LocalMCPHTTPServerTests {
         let refused = try await rawPost(initializeBody, port: port, host: "127.0.0.1:\(port)", contentType: "text/plain")
         #expect(refused.status == 415, "status \(refused.status) body \(refused.body)")
         #expect(builds.value == before)
+    }
+
+    @Test("two literal Host lines on the wire are refused as ambiguous — not judged on whichever survived")
+    func duplicateHostLinesRefused() async throws {
+        let (server, port) = try await startOnFreePort { makeServer(port: $0) }
+        defer { Task { await server.stop() } }
+        // A loopback Host first, a foreign one second: the dictionary would keep the
+        // second; the codec's duplicate report refuses the pair outright.
+        let refused = try await rawPost(initializeBody, port: port, host: "127.0.0.1:\(port)", extraLines: "Host: attacker.example:\(port)\r\n")
+        #expect(refused.status == 400, "status \(refused.status) body \(refused.body)")
+        // Foreign first, loopback second — the shape a last-wins gate would have admitted.
+        let sneaky = try await rawPost(initializeBody, port: port, host: "attacker.example:\(port)", extraLines: "Host: 127.0.0.1:\(port)\r\n")
+        #expect(sneaky.status == 400, "status \(sneaky.status) body \(sneaky.body)")
     }
 
     @Test("only /mcp is served; anything else is 404 before the sniff")

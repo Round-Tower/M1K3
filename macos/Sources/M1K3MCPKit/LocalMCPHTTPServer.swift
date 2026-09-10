@@ -207,7 +207,7 @@ public actor LocalMCPHTTPServer {
                 continue
             }
             deadline.cancel()
-            let response = await respond(to: parsed.request)
+            let response = await respond(to: parsed.request, duplicateHeaders: parsed.duplicateHeaders)
             await send(HTTPWireCodec.encode(response), over: connection)
             break // Connection: close — one request per connection
         }
@@ -215,11 +215,11 @@ public actor LocalMCPHTTPServer {
         connection.cancel()
     }
 
-    private func respond(to request: HTTPRequest) async -> HTTPResponse {
+    private func respond(to request: HTTPRequest, duplicateHeaders: [String] = []) async -> HTTPResponse {
         // The door first: a refused request never reaches the initialize
         // sniff below, so a forgery can neither evict the live session nor
         // plant a visitor name.
-        if let refusal = LoopbackRequestGate.refusal(for: request, boundPort: port) {
+        if let refusal = LoopbackRequestGate.refusal(for: request, boundPort: port, duplicateHeaders: duplicateHeaders) {
             Self.log.notice("refused MCP request: \(refusal.description, privacy: .public)")
             return .error(statusCode: refusal.statusCode, MCPError.invalidRequest(refusal.description))
         }

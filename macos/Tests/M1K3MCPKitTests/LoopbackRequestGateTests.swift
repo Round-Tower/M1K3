@@ -58,12 +58,19 @@ struct LoopbackRequestGateTests {
         #expect(LoopbackRequestGate.refusal(for: request(host: "[::1]:"), boundPort: 4242) == .portMismatch("[::1]:"))
     }
 
-    @Test("two differing Host headers is a request nobody honest sends")
+    @Test("two Host headers is a request nobody honest sends — by the codec's duplicate report or by differing case")
     func refusesAmbiguousHost() {
+        // Same-cased duplicates collapse in the dictionary; the codec reports them.
+        #expect(LoopbackRequestGate.refusal(for: request(), boundPort: 4242, duplicateHeaders: ["host"]) == .ambiguousHost)
+        // Differently cased duplicates survive as two keys.
         let two = request(host: "127.0.0.1:4242", extraHeaders: ["host": "attacker.example:4242"])
         #expect(LoopbackRequestGate.refusal(for: two, boundPort: 4242) == .ambiguousHost)
         let same = request(host: "127.0.0.1:4242", extraHeaders: ["host": "127.0.0.1:4242"])
         #expect(LoopbackRequestGate.refusal(for: same, boundPort: 4242) == nil)
+        // A duplicate of some other header is not our business.
+        #expect(LoopbackRequestGate.refusal(for: request(), boundPort: 4242, duplicateHeaders: ["accept"]) == nil)
+        // Two Origin lines: refused as a foreign origin (the survivor is not trusted).
+        #expect(LoopbackRequestGate.refusal(for: request(origin: "http://localhost:3000"), boundPort: 4242, duplicateHeaders: ["origin"]) == .foreignOrigin("http://localhost:3000"))
     }
 
     @Test("the request-target is normalised: query, fragment, one trailing slash, and the absolute form")
@@ -72,6 +79,10 @@ struct LoopbackRequestGateTests {
             #expect(LoopbackRequestGate.refusal(for: request(path: path), boundPort: 4242) == nil, Comment(rawValue: path))
         }
         #expect(LoopbackRequestGate.refusal(for: request(path: "/mcp//"), boundPort: 4242) == .wrongPath("/mcp//"))
+        // Only a LEADING scheme is the absolute form; `://` inside a query is just a query.
+        #expect(LoopbackRequestGate.refusal(for: request(path: "/mcp?callback=http://example.com"), boundPort: 4242) == nil)
+        #expect(LoopbackRequestGate.refusal(for: request(path: "/evil?x=http://attacker.example/mcp"), boundPort: 4242) == .wrongPath("/evil?x=http://attacker.example/mcp"))
+        #expect(LoopbackRequestGate.refusal(for: request(path: "HTTP://127.0.0.1:4242/mcp"), boundPort: 4242) == nil)
     }
 
     @Test("the JSON rule is a POST rule — other methods pass the door so the transport can answer 405")

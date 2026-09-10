@@ -75,13 +75,19 @@ public enum LoopbackRequestGate {
     /// Nil admits the request. Judged in order: path, Host, Origin, Content-Type
     /// — so a forged Host is always reported as a Host problem. The JSON rule
     /// applies to POST only; the transport answers other methods with 405.
-    public static func refusal(for request: HTTPRequest, boundPort: UInt16) -> Refusal? {
+    /// `duplicateHeaders` is the codec's report of header names sent more than
+    /// once (lowercased): the dictionary the SDK hands us keeps only the last
+    /// value, so two Host lines are refused on the report, never judged on the
+    /// survivor (RFC 9112 §3.2).
+    public static func refusal(
+        for request: HTTPRequest, boundPort: UInt16, duplicateHeaders: [String] = []
+    ) -> Refusal? {
         let path = normalisedPath(request.path ?? "")
         if path != endpointPath { return .wrongPath(request.path ?? "") }
 
         let hosts = values(of: "Host", in: request)
         guard let host = hosts.first, !host.isEmpty else { return .missingHost }
-        if Set(hosts).count > 1 { return .ambiguousHost }
+        if Set(hosts).count > 1 || duplicateHeaders.contains("host") { return .ambiguousHost }
         let (hostName, hostPort) = splitHostPort(host)
         guard isLoopbackName(hostName) else { return .foreignHost(host) }
         switch hostPort {
@@ -92,7 +98,7 @@ public enum LoopbackRequestGate {
 
         let origins = values(of: "Origin", in: request)
         if let origin = origins.first {
-            guard Set(origins).count == 1,
+            guard Set(origins).count == 1, !duplicateHeaders.contains("origin"),
                   let url = URL(string: origin), let scheme = url.scheme?.lowercased(),
                   scheme == "http" || scheme == "https",
                   let originHost = url.host, isLoopbackName(originHost)
@@ -108,9 +114,9 @@ public enum LoopbackRequestGate {
 
     // MARK: - Pieces
 
-    /// Every value sent under a header name, case-insensitively — the codec
-    /// keeps duplicates as separate keys, and two differing Hosts is a request
-    /// nobody honest sends.
+    /// Every value sent under a header name, case-insensitively. Differently
+    /// cased duplicates survive the codec as separate keys; same-cased ones
+    /// arrive through `duplicateHeaders` instead.
     static func values(of name: String, in request: HTTPRequest) -> [String] {
         let wanted = name.lowercased()
         return request.headers
@@ -121,11 +127,14 @@ public enum LoopbackRequestGate {
 
     /// The request-target without query or fragment, one trailing slash
     /// dropped, and the absolute form (`POST http://127.0.0.1:4242/mcp`) a
-    /// proxy-configured client emits reduced to its path.
+    /// proxy-configured client emits reduced to its path. Only a LEADING
+    /// scheme counts — a `://` inside a query value is part of the query.
     static func normalisedPath(_ target: String) -> String {
         var path = target
-        if let scheme = path.range(of: "://") {
-            let afterAuthority = path[scheme.upperBound...].firstIndex(of: "/")
+        let lowered = path.lowercased()
+        if lowered.hasPrefix("http://") || lowered.hasPrefix("https://") {
+            let authorityStart = path.index(path.startIndex, offsetBy: lowered.hasPrefix("https://") ? 8 : 7)
+            let afterAuthority = path[authorityStart...].firstIndex(of: "/")
             path = afterAuthority.map { String(path[$0...]) } ?? "/"
         }
         if let cut = path.firstIndex(where: { $0 == "?" || $0 == "#" }) { path = String(path[..<cut]) }
