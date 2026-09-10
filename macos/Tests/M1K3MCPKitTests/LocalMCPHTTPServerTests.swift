@@ -143,8 +143,13 @@ private func rawPost(
             if let error { continuation.resume(throwing: error) } else { continuation.resume() }
         })
     }
+    // Read until the response is COMPLETE by its own Content-Length, then stop —
+    // never wait for the peer's close. On the CI image a receive issued after
+    // the server has closed the socket lingers ~5 s and fails with ENODATA
+    // (POSIX 96); this Mac returns an empty read. The response is what the
+    // test asserts on, so the close is not our business.
     var received = Data()
-    while true {
+    while !responseIsComplete(received) {
         let chunk: Data? = try await withCheckedThrowingContinuation { continuation in
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, error in
                 if let error { continuation.resume(throwing: error) } else { continuation.resume(returning: data) }
@@ -158,6 +163,16 @@ private func rawPost(
     let status = Int(statusLine.split(separator: " ").dropFirst().first ?? "") ?? -1
     let body = text.components(separatedBy: "\r\n\r\n").dropFirst().joined(separator: "\r\n\r\n")
     return (status, body)
+}
+
+/// True once the head has arrived and the body is at least Content-Length long.
+private func responseIsComplete(_ data: Data) -> Bool {
+    guard let headEnd = data.range(of: Data("\r\n\r\n".utf8)) else { return false }
+    let head = String(decoding: data[..<headEnd.lowerBound], as: UTF8.self)
+    let length = head.components(separatedBy: "\r\n")
+        .first { $0.lowercased().hasPrefix("content-length:") }
+        .flatMap { Int($0.split(separator: ":", maxSplits: 1).last?.trimmingCharacters(in: .whitespaces) ?? "") } ?? 0
+    return data.count - headEnd.upperBound >= length
 }
 
 private let initializeBody = #"""
