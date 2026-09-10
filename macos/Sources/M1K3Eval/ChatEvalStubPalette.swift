@@ -10,15 +10,18 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85 (lifted out of
 //  ChatEvalStage so a test in this target can see it; per-tool parameters
 //  replace the one hard-coded `query: "the input"` every stub used to declare,
-//  which made `datetime` ask for a query it never needed and left no way to
-//  express a `url`-taking tool). Prior: Unknown (the four original specs were
-//  ChatEvalStage's, 2026-06).
+//  which left no way to express a `url`- or `topic`-taking tool). Review 2 on
+//  #263 caught two names that still didn't match production (datetime's
+//  ignored `query`, lookup_fact's `topic`) — fixed to the real schemas.
+//  Prior: Unknown (the four original specs were ChatEvalStage's, 2026-06).
 //
 
 import Foundation
 
-/// The single parameter a stub advertises, if any. `nil` is a zero-argument
-/// tool (datetime) — the schema the production tool actually has.
+/// The single parameter a stub advertises, if any — the NAME the production
+/// tool declares (datetime: a required-but-ignored `query`; lookup_fact:
+/// `topic`; fetch_page: `url`), so PromptSizeStage measures the real schema
+/// cost and the AFM arm asks for the field the real tool would.
 public struct ChatEvalStubParameter: Sendable, Equatable {
     public let name: String
     public let description: String
@@ -63,8 +66,10 @@ public enum ChatEvalStubPalette {
     /// model the exact same palette — only the calling convention differs.
     public static let specs: [ChatEvalStubSpec] = [
         ChatEvalStubSpec(
-            name: "datetime", description: "Get the current date and time on this Mac.",
-            parameter: nil,
+            name: "datetime", description: "Get the current date and time on this Mac. Argument: optional, ignored.",
+            // Production DateTimeTool declares a required-but-ignored `query`
+            // (review 2 on #263) — the eval pays the same schema cost it does.
+            parameter: ChatEvalStubParameter(name: "query", description: "ignored"),
             canned: "It is 12:00 on Saturday 14 June 2026. (Complete — no further lookup needed.)",
             hardCanned: "It is 12:00 on Saturday 14 June 2026. (Complete — no further lookup needed.)"
         ),
@@ -78,7 +83,8 @@ public enum ChatEvalStubPalette {
         ),
         ChatEvalStubSpec(
             name: "lookup_fact", description: "Look up an encyclopedic fact from a reference source (Wikipedia).",
-            parameter: ChatEvalStubParameter(name: "query", description: "the fact to look up"),
+            // Production WikipediaTool names its parameter `topic`, not `query`.
+            parameter: ChatEvalStubParameter(name: "topic", description: "the fact to look up"),
             canned: "Reference lookup complete for '{input}': the fact was found and is given here. No further lookup needed.",
             hardCanned: ""
         ),

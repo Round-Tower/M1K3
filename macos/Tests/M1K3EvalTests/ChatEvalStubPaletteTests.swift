@@ -21,16 +21,22 @@ struct ChatEvalStubPaletteTests {
         }
     }
 
-    @Test("stub names are unique and fetch_page takes a url, datetime takes nothing")
+    @Test("stub names are unique and each parameter is named as the production tool names it")
     func shapes() {
         let names = ChatEvalStubPalette.names
         #expect(Set(names).count == names.count)
-        let fetch = ChatEvalStubPalette.specs.first { $0.name == "fetch_page" }
-        #expect(fetch?.parameter?.name == "url")
-        let datetime = ChatEvalStubPalette.specs.first { $0.name == "datetime" }
-        #expect(datetime != nil)
-        #expect(datetime?.parameter == nil, "datetime is a zero-argument tool in production; asking for a query cost the 1.2B a call")
-        for spec in ChatEvalStubPalette.specs where spec.parameter != nil {
+        // Mirrors Sources/M1K3AgentTools: DateTimeTool (`query`, ignored),
+        // SearchKnowledgeTool/WebSearchTool (`query`), WikipediaTool (`topic`),
+        // FetchPageTool (`url`). Review 2 on #263: the eval must pay the same
+        // schema cost the app pays, or PromptSizeStage measures a fiction.
+        let expected: [String: String] = [
+            "datetime": "query", "search_knowledge": "query", "lookup_fact": "topic",
+            "web_search": "query", "fetch_page": "url",
+        ]
+        for spec in ChatEvalStubPalette.specs {
+            #expect(spec.parameter?.name == expected[spec.name], "\(spec.name) declares \(spec.parameter?.name ?? "nil")")
+        }
+        for spec in ChatEvalStubPalette.specs where spec.name != "datetime" {
             #expect(spec.canned.contains("{input}"), "\(spec.name)'s terminal output should echo the argument")
         }
     }
@@ -43,7 +49,7 @@ struct ChatEvalStubPaletteTests {
         // drift the two palettes apart (review 1 on #263) — so it fails here.
         for spec in ChatEvalStubPalette.specs {
             let name = spec.parameter?.name
-            #expect(name == nil || name == "query" || name == "url",
+            #expect(name == nil || name == "query" || name == "url" || name == "topic",
                     "\(spec.name) declares \(name ?? "nil"), which the AFM arm cannot express")
         }
     }

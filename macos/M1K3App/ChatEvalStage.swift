@@ -29,8 +29,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.8 — the stub palette
 //  moved to M1K3Eval's ChatEvalStubPalette (pure, tested, pinned against the
 //  fixtures) and gained fetch_page with a `url` parameter (#233); stubs now
-//  advertise the parameter their spec declares (datetime: none), and the AFM
-//  arm builds a tool per argument shape. `document` + `sycophancy` kinds run on
+//  advertise the parameter the production tool declares (datetime's ignored
+//  `query`, lookup_fact's `topic`, fetch_page's `url`), and the AFM arm
+//  builds a tool per argument shape. `document` + `sycophancy` kinds run on
 //  the bare-generate arm. Verify-by-launch: one tool-use SelfTest per arm.
 
 import Foundation
@@ -66,8 +67,15 @@ private struct EvalURLArguments {
     var url: String
 }
 
-/// Zero-argument tools (datetime) advertise NO parameter — the shape the
-/// production tool has. Asking a 1.2B for a query it never needed cost it a call.
+/// The argument the fact-lookup stub takes: production WikipediaTool names it `topic`.
+@Generable
+private struct EvalTopicArguments {
+    @Guide(description: "The topic or fact to look up.")
+    var topic: String
+}
+
+/// A stub with no parameter at all (none today; kept so the palette can grow
+/// a zero-argument tool without touching the dispatch).
 @Generable
 private struct EvalNoArguments {}
 
@@ -124,6 +132,22 @@ private struct AFMRecordingURLTool: FoundationModels.Tool {
     }
 }
 
+private struct AFMRecordingTopicTool: FoundationModels.Tool {
+    typealias Arguments = EvalTopicArguments
+    typealias Output = String
+
+    let name: String
+    let description: String
+    let spec: ChatEvalStubSpec
+    let hard: Bool
+    let recorder: ToolCallRecorder
+
+    func call(arguments: EvalTopicArguments) async throws -> String {
+        recorder.record(name)
+        return spec.output(for: arguments.topic, hard: hard)
+    }
+}
+
 private struct AFMRecordingNoArgTool: FoundationModels.Tool {
     typealias Arguments = EvalNoArguments
     typealias Output = String
@@ -149,6 +173,8 @@ private func afmTool(for spec: ChatEvalStubSpec, hard: Bool, recorder: ToolCallR
         return AFMRecordingNoArgTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
     case "url":
         return AFMRecordingURLTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
+    case "topic":
+        return AFMRecordingTopicTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
     default:
         return AFMRecordingTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
     }
