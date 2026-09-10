@@ -85,6 +85,39 @@ struct HTTPFetchingTests {
     }
 }
 
+struct RefusedRedirectToolTests {
+    private func fetcher() -> URLSessionHTTPFetcher {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubTransport.self]
+        return URLSessionHTTPFetcher(timeout: 5, resolver: PublicOnlyDNS(), configuration: configuration)
+    }
+
+    @Test("3xx is its own class — a refused hop must not read as a page")
+    func classifierKnowsRedirects() {
+        #expect(HTTPStatus.classify(301) == .redirect)
+        #expect(HTTPStatus.classify(302) == .redirect)
+        #expect(HTTPStatus.classify(307) == .redirect)
+        #expect(HTTPStatus.classify(200) == .ok)
+    }
+
+    @Test("fetch_page reports a refused redirect as an HTTP error, never as the stub's text (#266 review 3)")
+    func fetchPageReportsRefusedRedirect() async throws {
+        let tool = FetchPageTool(fetcher: fetcher(), resolver: PublicOnlyDNS())
+        let result = try await tool.execute(input: ["url": "https://public.example/hop"])
+        #expect(result.output.hasPrefix("Error: the page returned HTTP 302"))
+        #expect(!result.output.contains("redirecting"))
+        #expect(await tool.readablePage(at: "https://public.example/hop") == nil)
+    }
+
+    @Test("open_link's brief carries the refused hop as a failure, not as page text")
+    func openLinkBriefReportsRefusedRedirect() async throws {
+        let tool = OpenLinkTool(fetcher: fetcher(), resolver: PublicOnlyDNS()) { _ in }
+        let result = try await tool.execute(input: ["url": "https://public.example/hop"])
+        #expect(result.output.contains("HTTP 302"))
+        #expect(!result.output.contains("redirecting"))
+    }
+}
+
 struct RedirectPolicyTests {
     private struct Table: HostResolving {
         let table: [String: [String]]

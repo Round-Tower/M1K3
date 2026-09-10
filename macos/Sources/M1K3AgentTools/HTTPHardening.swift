@@ -12,6 +12,8 @@
 //     dropped connection, 429/503), so a single blip doesn't end the agent turn.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — `.redirect` for 3xx (#266 review 3): with the fetcher's
+//  RedirectGate able to decline a hop, a 3xx can reach a tool, and "ok" made it read the stub as a page.
 
 import Foundation
 
@@ -20,6 +22,7 @@ import Foundation
 public enum HTTPStatusClass: Sendable, Equatable {
     case ok // 2xx (bar the throttle codes below)
     case transient // retry may help: 202 (DDG throttle), 429, 502/503/504
+    case redirect // 3xx that came back as the FINAL response: the RedirectGate declined the hop (#266)
     case clientError // 4xx — don't retry
     case serverError // other 5xx — don't retry
 }
@@ -30,9 +33,12 @@ public enum HTTPStatus {
         // 202 Accepted is DDG's "anomaly" throttle in this codebase, not success.
         case 202, 429, 502, 503, 504: return .transient
         case 200 ... 299: return .ok
+        // URLSession follows 3xx itself — one that reaches a caller is a hop the
+        // RedirectGate refused (private / unresolvable target). Not a page.
+        case 300 ... 399: return .redirect
         case 400 ... 499: return .clientError
         case 500 ... 599: return .serverError
-        default: return .ok // 3xx is followed by URLSession; anything else: treat as usable
+        default: return .ok // 1xx / unknown: treat as usable
         }
     }
 

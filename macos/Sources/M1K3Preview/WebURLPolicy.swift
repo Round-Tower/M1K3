@@ -88,10 +88,10 @@ public struct SystemHostResolver: HostResolving {
         }
 
         func resume(with answer: [String]?) {
-            lock.lock()
-            let pending = continuation
-            continuation = nil
-            lock.unlock()
+            let pending = lock.withLock {
+                defer { continuation = nil }
+                return continuation
+            }
             pending?.resume(returning: answer)
         }
     }

@@ -68,6 +68,8 @@ public enum RedirectPolicy {
 }
 
 /// The session delegate that applies `RedirectPolicy` on every hop.
+/// `@unchecked Sendable`: no mutable state — one `let` of a `Sendable` resolver;
+/// the annotation only exists because the ObjC delegate dispatch can't be proven.
 final class RedirectGate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     private let resolver: any HostResolving
 
