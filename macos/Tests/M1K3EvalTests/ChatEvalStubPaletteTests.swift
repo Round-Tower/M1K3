@@ -49,7 +49,9 @@ struct ChatEvalStubPaletteTests {
         // drift the two palettes apart (review 1 on #263) — so it fails here.
         for spec in ChatEvalStubPalette.specs {
             let name = spec.parameter?.name
-            #expect(name == nil || name == "query" || name == "url" || name == "topic",
+            // No zero-argument shape exists in the AFM arm (review 3: an
+            // unexercised @Generable path is a compile risk, not a feature).
+            #expect(name == "query" || name == "url" || name == "topic",
                     "\(spec.name) declares \(name ?? "nil"), which the AFM arm cannot express")
         }
     }

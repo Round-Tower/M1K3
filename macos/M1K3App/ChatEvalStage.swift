@@ -74,11 +74,6 @@ private struct EvalTopicArguments {
     var topic: String
 }
 
-/// A stub with no parameter at all (none today; kept so the palette can grow
-/// a zero-argument tool without touching the dispatch).
-@Generable
-private struct EvalNoArguments {}
-
 /// Thread-safe record of which tools a brain actually invoked during one turn —
 /// shared across the tool instances handed to a single AFM session.
 private final class ToolCallRecorder: Sendable {
@@ -148,29 +143,11 @@ private struct AFMRecordingTopicTool: FoundationModels.Tool {
     }
 }
 
-private struct AFMRecordingNoArgTool: FoundationModels.Tool {
-    typealias Arguments = EvalNoArguments
-    typealias Output = String
-
-    let name: String
-    let description: String
-    let spec: ChatEvalStubSpec
-    let hard: Bool
-    let recorder: ToolCallRecorder
-
-    func call(arguments _: EvalNoArguments) async throws -> String {
-        recorder.record(name)
-        return spec.output(for: "", hard: hard)
-    }
-}
-
 /// One AFM tool per stub spec, in the argument shape the spec declares. The
 /// set of names is pinned by `afmArmCanExpressEveryParameter` in M1K3EvalTests
 /// — a new parameter name must add a shape here AND there.
 private func afmTool(for spec: ChatEvalStubSpec, hard: Bool, recorder: ToolCallRecorder) -> any FoundationModels.Tool {
     switch spec.parameter?.name {
-    case nil:
-        return AFMRecordingNoArgTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
     case "url":
         return AFMRecordingURLTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
     case "topic":
