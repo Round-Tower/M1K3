@@ -26,6 +26,13 @@
 //  verify-by-launch — its logic cores are the unit-tested M1K3Eval scorer and
 //  the proven RAGResponder/LocalAgent seams; the wiring itself can only be
 //  confirmed on-device). Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.8 — the stub palette
+//  moved to M1K3Eval's ChatEvalStubPalette (pure, tested, pinned against the
+//  fixtures) and gained fetch_page with a `url` parameter (#233); stubs now
+//  advertise the parameter the production tool declares (datetime's ignored
+//  `query`, lookup_fact's `topic`, fetch_page's `url`), and the AFM arm
+//  builds a tool per argument shape. `document` + `sycophancy` kinds run on
+//  the bare-generate arm. Verify-by-launch: one tool-use SelfTest per arm.
 
 import Foundation
 import IOKit.ps
@@ -45,12 +52,26 @@ import M1K3LogCore
 import M1K3MLX
 import Synchronization
 
-/// The single free-text argument every eval tool takes. `@Generable` gives AFM
-/// the schema it needs to populate a native tool call.
+/// The free-text argument the query-taking eval tools take. `@Generable` gives
+/// AFM the schema it needs to populate a native tool call.
 @Generable
 private struct EvalToolArguments {
     @Guide(description: "The query or input for the tool.")
     var query: String
+}
+
+/// The argument the page-reading stub takes (#233): a URL, not a query.
+@Generable
+private struct EvalURLArguments {
+    @Guide(description: "The page URL, or a bare domain.")
+    var url: String
+}
+
+/// The argument the fact-lookup stub takes: production WikipediaTool names it `topic`.
+@Generable
+private struct EvalTopicArguments {
+    @Guide(description: "The topic or fact to look up.")
+    var topic: String
 }
 
 /// Thread-safe record of which tools a brain actually invoked during one turn —
@@ -76,7 +97,8 @@ private struct AFMRecordingTool: FoundationModels.Tool {
 
     let name: String
     let description: String
-    let cannedOutput: String
+    let spec: ChatEvalStubSpec
+    let hard: Bool
     let recorder: ToolCallRecorder
 
     func call(arguments: EvalToolArguments) async throws -> String {
@@ -85,7 +107,53 @@ private struct AFMRecordingTool: FoundationModels.Tool {
         // a fixed mismatched answer makes AFM auto-loop the tool until its context
         // window overflows (a 7-minute thrash). A query-aware, terminal result
         // lets the model conclude after one call.
-        return cannedOutput.replacingOccurrences(of: "{query}", with: arguments.query)
+        return spec.output(for: arguments.query, hard: hard)
+    }
+}
+
+private struct AFMRecordingURLTool: FoundationModels.Tool {
+    typealias Arguments = EvalURLArguments
+    typealias Output = String
+
+    let name: String
+    let description: String
+    let spec: ChatEvalStubSpec
+    let hard: Bool
+    let recorder: ToolCallRecorder
+
+    func call(arguments: EvalURLArguments) async throws -> String {
+        recorder.record(name)
+        return spec.output(for: arguments.url, hard: hard)
+    }
+}
+
+private struct AFMRecordingTopicTool: FoundationModels.Tool {
+    typealias Arguments = EvalTopicArguments
+    typealias Output = String
+
+    let name: String
+    let description: String
+    let spec: ChatEvalStubSpec
+    let hard: Bool
+    let recorder: ToolCallRecorder
+
+    func call(arguments: EvalTopicArguments) async throws -> String {
+        recorder.record(name)
+        return spec.output(for: arguments.topic, hard: hard)
+    }
+}
+
+/// One AFM tool per stub spec, in the argument shape the spec declares. The
+/// set of names is pinned by `afmArmCanExpressEveryParameter` in M1K3EvalTests
+/// — a new parameter name must add a shape here AND there.
+private func afmTool(for spec: ChatEvalStubSpec, hard: Bool, recorder: ToolCallRecorder) -> any FoundationModels.Tool {
+    switch spec.parameter?.name {
+    case "url":
+        return AFMRecordingURLTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
+    case "topic":
+        return AFMRecordingTopicTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
+    default:
+        return AFMRecordingTool(name: spec.name, description: spec.description, spec: spec, hard: hard, recorder: recorder)
     }
 }
 
@@ -108,63 +176,26 @@ enum ChatEvalStage {
         let name: String
         let description: String
         let parameters: [ToolParameter]
-        let cannedOutput: String
+        let spec: ChatEvalStubSpec
+        let hard: Bool
 
-        init(name: String, description: String, cannedOutput: String) {
-            self.name = name
-            self.description = description
-            parameters = [ToolParameter(name: "query", description: "the input")]
-            self.cannedOutput = cannedOutput
+        init(spec: ChatEvalStubSpec, hard: Bool) {
+            name = spec.name
+            description = spec.description
+            parameters = spec.parameter.map { [ToolParameter(name: $0.name, description: $0.description)] } ?? []
+            self.spec = spec
+            self.hard = hard
         }
 
         func execute(input: [String: String]) async throws -> ToolResult {
-            let query = input["query"] ?? input.values.first ?? ""
-            return ToolResult(output: cannedOutput.replacingOccurrences(of: "{query}", with: query))
+            let value = spec.parameter.flatMap { input[$0.name] } ?? input.values.first ?? ""
+            return ToolResult(output: spec.output(for: value, hard: hard))
         }
     }
 
-    /// One spec per probed tool, shared by BOTH tool paths so AFM-native and
-    /// ReAct-floor runs offer the model the exact same palette (only the calling
-    /// convention differs — that's the variable under test).
-    ///
-    /// `canned` is the TERMINAL output (resolves the query, model concludes after
-    /// one call); `hardCanned` is the NON-RESOLVING output (web → links needing a
-    /// follow-up, lookup/search → empty) for the Phase-15 hard case: does the
-    /// brain survive a result that doesn't answer the question, or auto-loop into
-    /// the context-overflow melt? `datetime` always resolves, so its hard output
-    /// is the same.
-    private struct ToolSpec {
-        let name: String
-        let description: String
-        let canned: String
-        let hardCanned: String
-    }
-
-    private static let toolSpecs: [ToolSpec] = [
-        ToolSpec(
-            name: "datetime", description: "Get the current date and time on this Mac.",
-            canned: "It is 12:00 on Saturday 14 June 2026. (Complete — no further lookup needed.)",
-            hardCanned: "It is 12:00 on Saturday 14 June 2026. (Complete — no further lookup needed.)"
-        ),
-        ToolSpec(
-            name: "search_knowledge",
-            description: "Search the user's OWN saved notes, memories and imported documents.",
-            canned: "Search complete. Found the relevant note for '{query}': the user recorded the answer here. "
-                + "This fully resolves the request — no further search needed.",
-            hardCanned: "No matching notes found for '{query}'. The personal store has nothing on this."
-        ),
-        ToolSpec(
-            name: "lookup_fact", description: "Look up an encyclopedic fact from a reference source (Wikipedia).",
-            canned: "Reference lookup complete for '{query}': the fact was found and is given here. No further lookup needed.",
-            hardCanned: ""
-        ),
-        ToolSpec(
-            name: "web_search", description: "Search the LIVE web for current, up-to-the-minute news and information.",
-            canned: "Web search complete for '{query}': the top current result is given here. No further search needed.",
-            hardCanned: "Top results for '{query}': [1] example.com/a  [2] example.com/b  [3] example.com/c — "
-                + "open a result to read the full answer."
-        ),
-    ]
+    // The palette itself is pure data in M1K3Eval (`ChatEvalStubPalette`) so
+    // the fixtures are pinned against it — a fixture naming a tool no stub
+    // offers is unpassable for every brain (#233, tool-read-site for two months).
 
     /// When set, tool stubs return NON-RESOLVING outputs (see `hardCanned`) — the
     /// Phase-15 hard case. Independent of the path flag so the Apple-driven loop
@@ -188,10 +219,7 @@ enum ChatEvalStage {
     /// Internal (not private): PromptSizeStage reuses this SAME palette so its
     /// measured prompt carries the real production tool spec, not an empty one.
     static var toolPalette: [any AgentTool] {
-        toolSpecs.map {
-            StubTool(name: $0.name, description: $0.description,
-                     cannedOutput: hardStubs ? $0.hardCanned : $0.canned)
-        }
+        ChatEvalStubPalette.specs.map { StubTool(spec: $0, hard: hardStubs) }
     }
 
     /// LIVE-PATH arm (M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1): open-chat and
@@ -454,7 +482,7 @@ enum ChatEvalStage {
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS
                 )
             case .openChat, .reasoning, .codeGen, .refusal, .security, .worldKnowledge,
-                 .humour, .interview, .instructionFollowing:
+                 .humour, .interview, .instructionFollowing, .document, .sycophancy:
                 // codeGen is closed-book like the others: plain generate, then the
                 // scorer checks artifact markers + must-comply (no tools, no seed).
                 //
@@ -540,11 +568,8 @@ enum ChatEvalStage {
         start: ContinuousClock.Instant, clock: ContinuousClock
     ) async throws -> ChatEvalScore {
         let recorder = ToolCallRecorder()
-        let tools: [any FoundationModels.Tool] = toolSpecs.map {
-            AFMRecordingTool(
-                name: $0.name, description: $0.description,
-                cannedOutput: hardStubs ? $0.hardCanned : $0.canned, recorder: recorder
-            )
+        let tools: [any FoundationModels.Tool] = ChatEvalStubPalette.specs.map {
+            afmTool(for: $0, hard: hardStubs, recorder: recorder)
         }
         let session = LanguageModelSession(tools: tools, instructions: M1K3Persona.systemPrompt)
         // Score on what the model SELECTED even if the session then errors. AFM
