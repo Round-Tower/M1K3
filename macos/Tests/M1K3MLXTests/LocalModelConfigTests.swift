@@ -48,6 +48,25 @@ struct LocalModelConfigTests {
         #expect(LocalModelConfig.modelType(forRepoID: "acme/never-downloaded-\(UUID().uuidString)") == nil)
     }
 
+    @Test("chat template: jinja file first, tokenizer_config fallback, nil when absent")
+    func chatTemplateReads() throws {
+        let dir = try tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        // Absent: nil (before the first download).
+        #expect(LocalModelConfig.chatTemplate(inDirectory: dir) == nil)
+        // tokenizer_config.json's chat_template is the fallback…
+        try #"{"chat_template":"{{ bos_token }}{% if add_generation_prompt %}A{% endif %}"}"#
+            .write(to: dir.appendingPathComponent("tokenizer_config.json"), atomically: true, encoding: .utf8)
+        #expect(LocalModelConfig.chatTemplate(inDirectory: dir)?.hasPrefix("{{ bos_token }}") == true)
+        // …an EMPTY chat_template.jinja still falls through to it…
+        try "".write(to: dir.appendingPathComponent("chat_template.jinja"), atomically: true, encoding: .utf8)
+        #expect(LocalModelConfig.chatTemplate(inDirectory: dir)?.hasPrefix("{{ bos_token }}") == true)
+        // …and a real one wins.
+        try "{% if add_generation_prompt %}B{% endif %}"
+            .write(to: dir.appendingPathComponent("chat_template.jinja"), atomically: true, encoding: .utf8)
+        #expect(LocalModelConfig.chatTemplate(inDirectory: dir) == "{% if add_generation_prompt %}B{% endif %}")
+    }
+
     @Test("nil on a missing directory, a missing file, malformed JSON, or a missing key")
     func quietFailures() throws {
         let dir = try tempDir()

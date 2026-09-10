@@ -213,6 +213,50 @@ struct MLXGemmaProviderTests {
         #expect(MLXGemmaProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "qwen3_next") == nil)
     }
 
+    @Test("think traits by name: known families answer, an unknown family defers to its template (#264)")
+    func thinkTraitsByNameGate() {
+        // Pinned tiers keep their name answers (byte-identical behaviour).
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3.5-4B-MLX-4bit"))
+            == ChatTemplateTraits(preOpensThink: true, supportsThinkingToggle: true))
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510"))
+            == ChatTemplateTraits(preOpensThink: false, supportsThinkingToggle: false))
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit"))
+            == ChatTemplateTraits(preOpensThink: false, supportsThinkingToggle: false))
+        // Qwen3.8 pre-opens like 3.5 (on-disk template, 2026-09-10) — the review's catch.
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3.8-27B-4bit"))
+            == ChatTemplateTraits(preOpensThink: true, supportsThinkingToggle: true))
+        // No family word: nil, the template decides after the load.
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "ornith-ai/Ornith-1.5-9B-MLX-4bit")) == nil)
+        // A dialect-known family the think rules were never verified on also
+        // defers — LFM2.5-2.6B's template pre-opens, the 1.2B's does not; the
+        // file decides, not the name.
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/LFM2.5-1.2B-Instruct-4bit")) == nil)
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")) == nil)
+        // Only gemma-4 was measured; a gemma-3 class checkpoint reads its template (review on #267).
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-3-1b-it-qat-4bit")) == nil)
+        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-3n-E4B-it-lm-4bit")) == nil)
+    }
+
+    @Test("late think traits fill a nil from the template, never move a name-decided answer")
+    func lateThinkTraitsFillOnly() {
+        // Raw string: the two-byte `\n` escapes are what the .jinja file holds.
+        let ornithTail = #"""
+        {%- if add_generation_prompt %}
+            {{- '<|im_start|>assistant\n' }}
+            {%- if enable_thinking is defined and enable_thinking is false %}
+                {{- '<think>\n\n</think>\n\n' }}
+            {%- else %}
+                {{- '<think>\n' }}
+            {%- endif %}
+        {%- endif %}
+        """#
+        #expect(MLXGemmaProvider.lateThinkTraits(initial: nil, templateOnDisk: ornithTail)
+            == ChatTemplateTraits(preOpensThink: true, supportsThinkingToggle: true))
+        let pinned = ChatTemplateTraits(preOpensThink: false, supportsThinkingToggle: false)
+        #expect(MLXGemmaProvider.lateThinkTraits(initial: pinned, templateOnDisk: ornithTail) == nil)
+        #expect(MLXGemmaProvider.lateThinkTraits(initial: nil, templateOnDisk: nil) == nil)
+    }
+
     @Test("dialect source names where the resolution came from")
     func dialectSourceLabel() {
         #expect(MLXGemmaProvider.dialectSource(explicit: .json, byType: nil, resolved: .json) == "explicit")

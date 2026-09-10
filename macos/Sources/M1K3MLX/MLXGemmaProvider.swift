@@ -73,6 +73,10 @@
 //  config.json after the loader succeeds (`resolveDialectAfterLoad`), filling a nil only; the init
 //  resolution logs its source. `resolvedToolCallFormat` is now computed over the two. Not touched:
 //  the think-template flags are still keyed on the repo NAME (the other half of #264).
+//  Review: Kev + claude-fable-5.1, 2026-09-10 (later), Confidence 0.8 — #264 second half: the think
+//  traits are `thinkTraitsByName` for a family the dialect heuristic knows (unchanged answers), else nil and
+//  `ChatTemplateTraits` read off the downloaded template after the first load (fill-only, behind the same
+//  lock). `preOpensThinkTemplate` / `supportsThinkingToggle` / `thinkPrefixNeeded` are computed over the two.
 
 import Foundation
 import Hub
@@ -122,9 +126,9 @@ func logGenerationInfo(
 }
 
 /// `@unchecked Sendable`: model loading is coalesced through a `SingleFlightLoader`
-/// actor and the loaded `ModelContainer` is itself an isolation actor; the one
-/// piece of mutable state (the post-load dialect, #264) sits behind
-/// `lateDialectLock`; everything else is immutable.
+/// actor and the loaded `ModelContainer` is itself an isolation actor; the two
+/// post-load fills (the late dialect and the late think traits, #264) sit
+/// behind `lateDialectLock`; everything else is immutable.
 public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchecked Sendable {
     public let name: String
 
@@ -153,8 +157,26 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     /// template PRE-OPENS `<think>` in the generation prompt (Qwen3.5), so the
     /// model emits only the CLOSING tag — prepending the opener keeps the
     /// downstream reasoning split seeing a well-formed pair. Effective flag:
-    /// family AND `thinkingEnabled` (a disabled-thinking prompt emits no tags).
-    let thinkPrefixNeeded: Bool
+    /// template AND `thinkingEnabled` (a disabled-thinking prompt emits no tags).
+    var thinkPrefixNeeded: Bool {
+        thinkingEnabled && preOpensThinkTemplate
+    }
+
+    /// The think traits decided at init from the repo NAME — for a family the
+    /// dialect heuristic knows. nil = unknown family: the template on disk
+    /// answers after the first load (`resolveThinkTraitsAfterLoad`, #264).
+    let initialThinkTraits: ChatTemplateTraits?
+    private var lateThinkTraits: ChatTemplateTraits? // guarded by lateDialectLock
+    private var lateThinkTraitsChecked = false // guarded by lateDialectLock
+    /// The traits in force; an unknown family before its first load has none
+    /// (no synthetic opener, no toggle — the safe floor).
+    private var thinkTraits: ChatTemplateTraits? {
+        if let initialThinkTraits { return initialThinkTraits }
+        lateDialectLock.lock()
+        defer { lateDialectLock.unlock() }
+        return lateThinkTraits
+    }
+
     /// Reasoning on/off for models whose template supports `enable_thinking`
     /// (Qwen3.5). Default on — M1K3 surfaces reasoning, it doesn't hide it.
     /// `false` renders the empty think pair into the prompt (the model skips
@@ -163,10 +185,16 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     let thinkingEnabled: Bool
     /// Whether the family's template understands `enable_thinking` at all.
     /// (Internal: the tool-calling extension reads it for per-turn fast mode.)
-    let supportsThinkingToggle: Bool
-    /// Whether the template pre-opens a `<think>` tag (Qwen3.5 only) — distinct
+    var supportsThinkingToggle: Bool {
+        thinkTraits?.supportsThinkingToggle ?? false
+    }
+
+    /// Whether the template pre-opens a `<think>` tag (Qwen3.5, Ornith) — distinct
     /// from toggle support. Read by the tool path to decide the synthetic opener.
-    let preOpensThinkTemplate: Bool
+    var preOpensThinkTemplate: Bool {
+        thinkTraits?.preOpensThink ?? false
+    }
+
     /// The model id this provider was built for — keys the persona prefix.
     /// Public so the app can skip a redundant `selectBrain` reload when the active
     /// provider already serves this model.
@@ -289,12 +317,11 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
         )
         self.thinkingEnabled = thinkingEnabled
         modelIdentifier = configuration.name
-        let familyPreOpens = Self.templatePreOpensThink(for: configuration)
-        preOpensThinkTemplate = familyPreOpens
         // Toggle support is the WHOLE Qwen3 family — NOT tied to the 3.5-only
         // pre-open check (the conflation that disabled fast mode after #94).
-        supportsThinkingToggle = Self.templateSupportsThinkingToggle(for: configuration)
-        thinkPrefixNeeded = thinkingEnabled && familyPreOpens
+        // Both by NAME for a known family; an unknown family (no family word,
+        // e.g. "Ornith") reads its template after the load (#264).
+        initialThinkTraits = Self.thinkTraitsByName(for: configuration)
         let loadConfiguration: ModelConfiguration = {
             var config = configuration
             if let resolved { config.toolCallFormat = resolved }
@@ -505,7 +532,29 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
         let container = try await loader.value(progress: progress)
         MLXMemoryBudget.settle(label: "loaded \(modelIdentifier)") // per-tier: the limit follows the resident brain
         resolveDialectAfterLoad()
+        resolveThinkTraitsAfterLoad()
         return container
+    }
+
+    /// #264, second half: for a family the name heuristic does not know, the
+    /// think traits come from the downloaded template — read once after the
+    /// first successful load, fill-only (a known family keeps its pinned answer;
+    /// gemma-4's template mentions enable_thinking and must stay as measured).
+    private func resolveThinkTraitsAfterLoad() {
+        guard initialThinkTraits == nil else { return }
+        lateDialectLock.lock()
+        defer { lateDialectLock.unlock() }
+        guard !lateThinkTraitsChecked else { return }
+        lateThinkTraitsChecked = true
+        let id = modelIdentifier
+        guard let traits = Self.lateThinkTraits(initial: nil, templateOnDisk: LocalModelConfig.chatTemplate(forRepoID: id)) else {
+            mlxLoadLog.notice("think traits for \(id, privacy: .public): no readable template after load → no opener, no toggle")
+            return
+        }
+        lateThinkTraits = traits
+        mlxLoadLog.notice(
+            "think traits for \(id, privacy: .public) read from template: preOpens=\(traits.preOpensThink) toggle=\(traits.supportsThinkingToggle)"
+        )
     }
 
     /// #264: a repo with no family word in its name and no config.json on disk
@@ -852,8 +901,11 @@ extension MLXGemmaProvider {
         // template ends the generation prompt with an opened <think> (verified
         // against the HF chat_template.jinja 2026-07-17). Exact size id, per
         // the #41 doctrine: the 8B is dense Qwen3 and must NOT match.
+        // Qwen3.8 (Aug 2026) carries the same generation block — verified on
+        // the on-disk chat_template.jinja 2026-09-10 (#264 review).
         return modelName.contains("qwen3.5") || modelName.contains("qwen3_5")
-            || modelName.contains("qwen3-5") || modelName.contains("ternary-bonsai-27b")
+            || modelName.contains("qwen3-5") || modelName.contains("qwen3.8")
+            || modelName.contains("ternary-bonsai-27b")
     }
 
     /// Whether the family's chat template understands the `enable_thinking` switch
@@ -877,6 +929,31 @@ extension MLXGemmaProvider {
         // template carries no switch, pinned 2026-07-15).
         return (name.contains("qwen3") && !name.contains("2507"))
             || name.contains("ternary-bonsai-27b")
+    }
+
+    /// The think traits by NAME, for exactly the families the two rules above
+    /// pin: the Qwen3 line (every spelling), Bonsai, and gemma-4 (measured — its
+    /// template mentions enable_thinking, the shipped tier stays as tested;
+    /// scoped to the exact generation like the sibling predicates, so a gemma-3
+    /// class checkpoint reads its own template). nil for anything else (llama,
+    /// lfm2, mistral, an unknown brand), so the template on disk answers after
+    /// the load (#264). NOT the dialect's family list: that is broader than what
+    /// these rules were verified on (review).
+    static func thinkTraitsByName(for configuration: ModelConfiguration) -> ChatTemplateTraits? {
+        let name = configuration.name.lowercased()
+        guard name.contains("qwen3") || name.contains("ternary-bonsai")
+            || name.contains("gemma-4") || name.contains("gemma4") else { return nil }
+        return ChatTemplateTraits(
+            preOpensThink: templatePreOpensThink(for: configuration),
+            supportsThinkingToggle: templateSupportsThinkingToggle(for: configuration)
+        )
+    }
+
+    /// The post-load half: fills a nil from the template text, never moves a
+    /// name-decided answer (the same rule as `lateToolCallFormat`).
+    static func lateThinkTraits(initial: ChatTemplateTraits?, templateOnDisk: String?) -> ChatTemplateTraits? {
+        guard initial == nil else { return nil }
+        return templateOnDisk.flatMap(ChatTemplateTraits.init(template:))
     }
 
     /// Whether the model this provider serves can consume attached images —
