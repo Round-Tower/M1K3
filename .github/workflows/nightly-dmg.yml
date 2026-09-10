@@ -173,22 +173,33 @@ jobs:
         env:
           TAP_PUSH_TOKEN: ${{ secrets.TAP_PUSH_TOKEN }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           if [ -z "${TAP_PUSH_TOKEN:-}" ]; then
             echo "::notice::TAP_PUSH_TOKEN not set — the Homebrew cask keeps its current version. Add the secret to bump it nightly."
             exit 0
           fi
-          DATE="$(date -u +%Y.%m.%d)"
-          SHORT="$(git rev-parse --short HEAD)"
-          SHA="$(shasum -a 256 "$RUNNER_TEMP/M1K3.dmg" | cut -d' ' -f1)"
-          git clone --depth 1 "https://x-access-token:${TAP_PUSH_TOKEN}@github.com/Round-Tower/homebrew-tap.git" "$RUNNER_TEMP/tap"
-          CASK="$RUNNER_TEMP/tap/Casks/m1k3.rb"
-          sed -i '' -E "s/^  version \".*\"/  version \"$DATE\"/; s/^  sha256 \".*\"/  sha256 \"$SHA\"/" "$CASK"
-          cd "$RUNNER_TEMP/tap"
-          if git diff --quiet; then echo "cask already at $DATE"; exit 0; fi
-          git -c user.name="m1k3-nightly" -c user.email="nightly@m1k3.app" commit -qam "m1k3 $DATE (master @ $SHORT)"
-          git push -q origin HEAD
-          echo "✅ Cask bumped to $DATE"
+          # The DMG is already published above — that is the nightly's deliverable.
+          # A tap hiccup (revoked token, non-fast-forward, network) must not redden
+          # this run: the bump runs in a subshell and any failure becomes an
+          # ::error:: annotation, still exit 0.
+          (
+            set -euo pipefail
+            DATE="$(date -u +%Y.%m.%d)"
+            SHORT="$(git rev-parse --short HEAD)"
+            SHA="$(shasum -a 256 "$RUNNER_TEMP/M1K3.dmg" | cut -d' ' -f1)"
+            git clone --depth 1 "https://x-access-token:${TAP_PUSH_TOKEN}@github.com/Round-Tower/homebrew-tap.git" "$RUNNER_TEMP/tap"
+            CASK="$RUNNER_TEMP/tap/Casks/m1k3.rb"
+            sed -i '' -E "s/^  version \".*\"/  version \"$DATE\"/; s/^  sha256 \".*\"/  sha256 \"$SHA\"/" "$CASK"
+            # A pattern that no longer matches the cask's layout leaves the file
+            # untouched and sed exits 0 — check the result, never the exit code.
+            grep -q "^  version \"$DATE\"" "$CASK" && grep -q "^  sha256 \"$SHA\"" "$CASK" \
+              || { echo "cask layout drifted: version/sha256 lines not rewritten in $CASK"; exit 1; }
+            cd "$RUNNER_TEMP/tap"
+            if git diff --quiet; then echo "cask already at $DATE / $SHA"; exit 0; fi
+            git -c user.name="m1k3-nightly" -c user.email="nightly@m1k3.app" commit -qam "m1k3 $DATE (master @ $SHORT)"
+            git push -q origin HEAD
+            echo "✅ Cask bumped to $DATE"
+          ) || echo "::error::Homebrew cask bump failed — the DMG is published; bump Casks/m1k3.rb by hand (see #271)"
 
       - name: Clean up the temporary keychain
         if: always() && steps.gate.outputs.configured == 'true'
@@ -197,7 +208,9 @@ jobs:
 # Review: Kev + claude-fable-5.1, 2026-09-10 — added the Homebrew cask bump after
 # publish (version = DateVer tag, sha256 of the published DMG), gated on the
 # TAP_PUSH_TOKEN secret so an unconfigured repo keeps the old cask rather than
-# reddening the nightly. BSD sed (macos-26 runner). Verify-on-first-run.
+# reddening the nightly. BSD sed (macos-26 runner); the rewrite is checked by
+# grep (a no-match sed exits 0) and any tap failure is an ::error:: annotation,
+# never a red run — the DMG above is the deliverable. Verify-on-first-run.
 # Signed: Kev + claude-opus-4-8, 2026-06-18, Confidence 0.72 (wraps the proven
 # release-macos.sh unmodified; the macOS signing-in-CI pattern — temp keychain +
 # notarytool store-credentials — is standard; the secret-gate keeps it from
