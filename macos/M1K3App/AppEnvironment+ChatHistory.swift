@@ -19,6 +19,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: the responder gains
 //  `todoContextProvider` reading the OPEN TODOS snapshot (AppEnvironment+Todos) — per-turn content, never the
 //  persona prefix.
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — recent_activity joins the interactive palette only (a non-nil reader
+//  comes solely from the main responder + its warm), always offered there so the prefix key stays stable.
 
 import Foundation
 import M1K3Agent
@@ -195,6 +197,7 @@ extension AppEnvironment {
         deepDelegation: DeepDelegationHook? = nil,
         scriptExecution: ScriptExecutionHook? = nil,
         contextSenses: ContextSenseHook? = nil,
+        recentActivity: (any ActivityReading)? = nil,
         availability: ToolPalettePolicy.Availability? = nil
     ) -> [any AgentTool] {
         var tools: [any AgentTool] = [
@@ -213,6 +216,15 @@ extension AppEnvironment {
             tools.append(DelegateDeepTool(startDelegation: { task in
                 await deepDelegation.invoke(task)
             }))
+        }
+        // recent_activity (2026-09-10): the resident reviewing his own week —
+        // interactive chat ONLY (the reader comes solely from the main
+        // responder + its warm, NullActivityReading for the warm), because the
+        // digest carries chat titles and visitor names that a visitor's
+        // ask_m1k3 must never read back through the resident. Always offered
+        // there (the stores always exist), so the palette key stays stable.
+        if let recentActivity {
+            tools.append(RecentActivityTool(reader: recentActivity))
         }
         let defaults = UserDefaults.standard
         let webAllowed = Self.webSearchAllowed()
@@ -340,7 +352,8 @@ extension AppEnvironment {
         onOpenLink: (@Sendable (URL) -> Void)? = nil,
         deepDelegation: DeepDelegationHook? = nil,
         scriptExecution: ScriptExecutionHook? = nil,
-        contextSenses: ContextSenseHook? = nil
+        contextSenses: ContextSenseHook? = nil,
+        recentActivity: (any ActivityReading)? = nil
     ) -> any RAGResponding {
         // Hits the model retrieves itself (search_knowledge) flow through the
         // collector into the turn's sources + the citation allow-list.
@@ -357,7 +370,8 @@ extension AppEnvironment {
                     onOpenLink: onOpenLink,
                     deepDelegation: deepDelegation,
                     scriptExecution: scriptExecution,
-                    contextSenses: contextSenses
+                    contextSenses: contextSenses,
+                    recentActivity: recentActivity
                 )
             },
             sourceCollector: sourceCollector,

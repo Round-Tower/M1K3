@@ -50,6 +50,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — #200: the M1K3 Voice prepare is a held, generation-stamped task
 //  (the iOS shape from #199); picking Built-in mid-download cancels it, so a finished download can no longer
 //  swap the tier back. Launch restore reads `VoiceTierRestore` (one rule, two shells). Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — `recentActivityHook`: late-bound like delegate_deep's; the live
+//  reader is installed after the stores exist; the warm passes NullActivityReading (+RecentActivity).
 
 import AppKit
 import Foundation
@@ -185,6 +187,8 @@ final class AppEnvironment {
     /// Late-bound bridge the delegate_deep tool holds (the palette is built in
     /// init before `self` exists); the handler installs at the end of init.
     let deepDelegationHook = DeepDelegationHook()
+    /// recent_activity's late-bound reader (see AppEnvironment+RecentActivity).
+    let recentActivityHook = RecentActivityHook()
     /// Escalated-dive slot bookkeeping (2026-08-15, the DeepDiveTarget wiring):
     /// while a dive runs on Big, the resident brain's provider is parked in
     /// `deepDiveRestoreProvider` and the slot is restored from it on EVERY dive
@@ -861,7 +865,8 @@ final class AppEnvironment {
                     Task { @MainActor in scriptProposals.pending = proposal }
                 }
             ),
-            contextSenses: .live
+            contextSenses: .live,
+            recentActivity: recentActivityHook
         )
 
         // TTS seam: Built-in Apple voice wrapped in a swappable façade so the
@@ -946,6 +951,11 @@ final class AppEnvironment {
             guard let self else { return "Error: M1K3 is shutting down." }
             return await self.startDeepDelegation(task)
         }
+        // Same late binding for recent_activity: the stores exist now.
+        recentActivityHook.install(LiveActivityReader(
+            chat: chat, memoryStore: memoryStore, conversationLog: conversationLog,
+            heartbeatStore: heartbeatStore, todoStore: todoStore
+        ))
         Self.resetVoiceModeFlagAtLaunch()
         mcpHost = MCPHostController(environment: self)
         mcpHost.startIfEnabled()
@@ -1462,7 +1472,8 @@ final class AppEnvironment {
             let interactiveTools = Self.interactiveAgentTools(
                 store: store, embedder: embedder,
                 onHits: { _ in }, onOpenLink: { _ in }, deepDelegation: deepDelegationHook,
-                scriptExecution: .forWarm, contextSenses: .forWarm, availability: availability
+                scriptExecution: .forWarm, contextSenses: .forWarm, recentActivity: NullActivityReading(),
+                availability: availability
             ).map(\.toolDefinition)
             // Sequentially: one ModelContainer, and the coalescer only dedupes
             // IDENTICAL keys — two concurrent builds of different keys would just

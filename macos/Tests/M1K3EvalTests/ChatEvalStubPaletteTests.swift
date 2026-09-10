@@ -31,7 +31,7 @@ struct ChatEvalStubPaletteTests {
         // schema cost the app pays, or PromptSizeStage measures a fiction.
         let expected: [String: String] = [
             "datetime": "query", "search_knowledge": "query", "lookup_fact": "topic",
-            "web_search": "query", "fetch_page": "url",
+            "web_search": "query", "fetch_page": "url", "recent_activity": "window",
         ]
         for spec in ChatEvalStubPalette.specs {
             #expect(spec.parameter?.name == expected[spec.name], "\(spec.name) declares \(spec.parameter?.name ?? "nil")")
@@ -51,7 +51,7 @@ struct ChatEvalStubPaletteTests {
             let name = spec.parameter?.name
             // No zero-argument shape exists in the AFM arm (review 3: an
             // unexercised @Generable path is a compile risk, not a feature).
-            #expect(name == "query" || name == "url" || name == "topic",
+            #expect(name == "query" || name == "url" || name == "topic" || name == "window",
                     "\(spec.name) declares \(name ?? "nil"), which the AFM arm cannot express")
         }
     }
@@ -67,5 +67,8 @@ struct ChatEvalStubPaletteTests {
         let fetch = try #require(ChatEvalStubPalette.specs.first { $0.name == "fetch_page" })
         #expect(fetch.output(for: "m1k3.app", hard: false).hasPrefix("Page: "))
         #expect(fetch.output(for: "m1k3.app", hard: true).contains("Do not describe"))
+        let activity = try #require(ChatEvalStubPalette.specs.first { $0.name == "recent_activity" })
+        #expect(activity.output(for: "week", hard: false).hasPrefix("Recent activity on this Mac"))
+        #expect(activity.output(for: "week", hard: true).contains("nothing to review"))
     }
 }

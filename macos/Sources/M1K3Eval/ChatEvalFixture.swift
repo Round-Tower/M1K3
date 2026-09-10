@@ -50,6 +50,8 @@
 //  the same class as the perfect/capital/berlin folds (review 4 on #263).
 //  The "ten out of ten" synonyms are dropped rather than anchored (review 5).
 //  doc-readme wants the word MIT, not the substring hiding in "commit" (review 8).
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — `tool-recent-activity`: a review of the week must call
+//  recent_activity, never reconstruct it from the history window.
 
 import Foundation
 
@@ -726,6 +728,15 @@ public enum ChatEvalFixtures {
             id: "tool-read-site", kind: .toolUse,
             prompt: "Fetch the web site m1k3.app and give me your read on how we're aligning.",
             expectation: .init(mustNotContain: ["coming soon"], mustCallTool: "fetch_page")
+        ),
+        // 2026-09-10: "review my recent interactions" is a READ of the stores
+        // (chats, memories, visitors, pulses, todos), never a reconstruction
+        // from the history window — the small tiers under-call the corpus
+        // tools already, so this one gets its own fixture from day one (#233).
+        .init(
+            id: "tool-recent-activity", kind: .toolUse,
+            prompt: "Give me a quick review of my recent interactions this week — what have we been up to?",
+            expectation: .init(mustCallTool: "recent_activity")
         ),
     ]
 

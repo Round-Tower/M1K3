@@ -47,6 +47,16 @@ struct DistillationTaintTests {
         #expect(DistillationTaint.taintedToolNames.contains(locationName))
     }
 
+    @Test("recent_activity taints: a review of the week must not distil back into the week")
+    func taintPinnedToRecentActivity() {
+        // 2026-09-10: the digest is DERIVED from memories, chat titles and
+        // visitor names; distilling its answer would write meta-facts ("Kev
+        // chatted about jazz on Tuesday") that the next digest then reads as
+        // activity — the heartbeat's own narrative-laundering loop (fix 6).
+        let name = RecentActivityTool(reader: NullActivityReading()).name
+        #expect(DistillationTaint.taintedToolNames.contains(name))
+    }
+
     @Test("execute_script taints; other tools and nil do not")
     func taintRule() {
         #expect(DistillationTaint.isTainted(toolsUsed: ["execute_script"]))
