@@ -141,7 +141,7 @@ xcodebuild -exportArchive \
 # into its own container while reporting success. This is the one place that
 # mistake is catchable — the entitlements come from a build VARIABLE, so a
 # typo in M1K3_CLI_ENTITLEMENTS fails silently at runtime, months later.
-CLI_BIN="$APP/Contents/MacOS/m1k3"
+CLI_BIN="$APP/Contents/Helpers/m1k3"
 [ -f "$CLI_BIN" ] || { echo "✗ No m1k3 helper in $APP_NAME.app"; exit 1; }
 # FAIL-CLOSED. A bare `… | grep -q app-sandbox` reads an EMPTY pipeline as
 # "not sandboxed" — so the one mistake this check exists to catch would sail

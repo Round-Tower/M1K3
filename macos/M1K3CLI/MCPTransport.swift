@@ -20,6 +20,9 @@
 //  MCPCallSequence after a code-quality pass found a cold start posting the
 //  real body TWICE (poll, then post) and a status-first read that made the
 //  .notInitialized recovery unreachable. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the helper lives at Contents/Helpers/m1k3, not
+//  Contents/MacOS: sign-on-copy there re-signs it as the app itself (identifier + entitlements),
+//  which aborted the developer-id export and would ship it sandboxed. Confidence now 0.85.
 //
 
 import Foundation
@@ -108,7 +111,7 @@ enum MCPTransport {
         }
     }
 
-    /// `…/M1K3.app/Contents/MacOS/m1k3` → `…/M1K3.app`, or nil when this
+    /// `…/M1K3.app/Contents/Helpers/m1k3` → `…/M1K3.app`, or nil when this
     /// binary isn't inside a bundle.
     ///
     /// Bundle.main.executableURL, not argv[0]: invoked through a PATH symlink
@@ -116,7 +119,7 @@ enum MCPTransport {
     static func enclosingBundle() -> URL? {
         guard let executable = Bundle.main.executableURL?.resolvingSymlinksInPath() else { return nil }
         let bundle = executable
-            .deletingLastPathComponent() // …/Contents/MacOS
+            .deletingLastPathComponent() // …/Contents/Helpers
             .deletingLastPathComponent() // …/Contents
             .deletingLastPathComponent() // …/M1K3.app
         return bundle.pathExtension == "app" ? bundle : nil

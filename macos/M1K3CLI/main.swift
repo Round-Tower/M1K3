@@ -6,7 +6,7 @@
 //  no model, opens no store, and holds no state. The app is the daemon — there
 //  is one MLX slot on this machine and it belongs to M1K3.app.
 //
-//  The binary ships inside the bundle at M1K3.app/Contents/MacOS/m1k3, which
+//  The binary ships inside the bundle at M1K3.app/Contents/Helpers/m1k3, which
 //  is where the Homebrew cask symlinks from, and where the app's own Settings
 //  points people. That's also why `version` reads the bundle's Info.plist two
 //  levels up: the CLI and the app it talks to are the same release, by
@@ -15,12 +15,15 @@
 //  Signed: Kev + claude-opus-5, 2026-09-11, Confidence 0.85 (parse/exit
 //  wiring is trivial and driven live; the version lookup is verify-by-run from
 //  inside a built bundle). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the helper lives at Contents/Helpers/m1k3, not
+//  Contents/MacOS: sign-on-copy there re-signs it as the app itself (identifier + entitlements),
+//  which aborted the developer-id export and would ship it sandboxed. Confidence now 0.85.
 //
 
 import Foundation
 import M1K3CLICore
 
-/// MARKETING_VERSION off the enclosing app bundle — Contents/MacOS/m1k3 →
+/// MARKETING_VERSION off the enclosing app bundle — Contents/Helpers/m1k3 →
 /// Contents/Info.plist. "dev" when the binary is run from a build directory
 /// rather than an installed bundle.
 ///

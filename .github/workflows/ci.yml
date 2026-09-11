@@ -231,6 +231,13 @@ jobs:
         run: |
           python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --quiet 'pyyaml>=6,<7'
           python3 tools/ci/check_store_targets.py
+      # An embedded command-line tool must land under Contents/Helpers: at
+      # Contents/MacOS Xcode's sign-on-copy re-signs it as the app itself, the
+      # developer-id export aborts, and the helper ships with the app's
+      # entitlements (found 2026-09-11 with `m1k3`). Seconds, pure Python.
+      - name: Check embedded tools land under Contents/Helpers
+        working-directory: macos
+        run: python3 tools/ci/check_helper_embed.py
       # The guards' pure helpers have unit tests (test_check_*.py) that nothing
       # ran until 2026-09-02 — a helper regression would have passed CI while the
       # guard quietly stopped guarding. Run them.
