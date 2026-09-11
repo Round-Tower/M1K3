@@ -1030,6 +1030,19 @@ struct AgentRAGResponderTests {
         #expect(!AgentRAGResponder.hasGroundedKnowledge(chunks: [], memories: []))
     }
 
+    @Test("a wiring-shaped self note alone grounds NOTHING — no think phase for a block that will not render")
+    func wiringOnlyMemoryDoesNotEarnThinking() {
+        // Review 3 on #288: memoryBlock filters the note out, so the turn is
+        // ungrounded — hasGroundedKnowledge must agree, or the heavy tiers
+        // spend a CoT phase on an empty block.
+        #expect(!AgentRAGResponder.hasGroundedKnowledge(chunks: [], memories: [selfNoteHit()]))
+        let userMemory = ChunkHit(
+            chunkID: UUID(), itemID: UUID(), itemTitle: "Memory", kind: .memory,
+            heading: nil, content: "Kev's sister is called Ada."
+        )
+        #expect(AgentRAGResponder.hasGroundedKnowledge(chunks: [], memories: [selfNoteHit(), userMemory]))
+    }
+
     @Test("native-path rules carry NO ReAct scaffolding (no CONCLUSION:, no call budget)")
     func nativeRulesDropReActScaffold() {
         let rules = AgentRAGResponder.grounding(

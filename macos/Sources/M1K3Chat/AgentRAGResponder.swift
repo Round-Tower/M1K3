@@ -79,7 +79,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #286: `memoryBlock` filters out
 //  SelfNoteClassifier-flagged (wiring-shaped) memory hits before rendering "WHAT I KNOW ABOUT
 //  YOU" — a visitor note describing M1K3's own tooling is knowledge about the app, not the user,
-//  and was tripping the SELF/WIRING decline on unrelated questions.
+//  and was tripping the SELF/WIRING decline on unrelated questions. Review 3 fold: `usableMemories`
+//  is the ONE filter behind both `hasGroundedKnowledge` and `memoryBlock` — a wiring-only hit no
+//  longer reports "grounded" (and buys a think phase) for a block that will not render.
 
 import Foundation
 import M1K3Agent
@@ -388,7 +390,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// turn grounded only by a memory hit (0 doc chunks) is still a grounded
     /// answer and earns CoT on the heavy tiers, same as a document hit.
     static func hasGroundedKnowledge(chunks: [ChunkHit], memories: [ChunkHit]) -> Bool {
-        !chunks.isEmpty || !memories.isEmpty
+        !chunks.isEmpty || !usableMemories(memories).isEmpty
+    }
+
+    /// The memory hits that will actually render in WHAT I KNOW ABOUT YOU —
+    /// #286's wiring-shaped self notes removed. ONE filter for both the
+    /// think-phase decision and the block, so the two cannot disagree (review
+    /// 3 on #288: a wiring-only hit reported "grounded" for an empty block).
+    static func usableMemories(_ memories: [ChunkHit]) -> [ChunkHit] {
+        memories.filter { !SelfNoteClassifier.isWiringNote(title: $0.itemTitle, text: $0.content) }
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail
@@ -745,7 +755,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // happen to echo a phrase from the memory's description of the
         // tool's output. Filtered at retrieval so legacy rows are covered
         // without a migration.
-        let memories = memories.filter { !SelfNoteClassifier.isWiringNote(title: $0.itemTitle, text: $0.content) }
+        let memories = usableMemories(memories)
         guard !memories.isEmpty else { return nil }
         let ordered = memories.sorted {
             ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast)

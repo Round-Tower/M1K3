@@ -88,6 +88,21 @@ struct SelfNoteClassifierTests {
         ))
     }
 
+    @Test("\"tool\" as an ordinary word is not a wiring marker — an opinion about M1K3 stays")
+    func bareToolWordIsNotAMarker() {
+        // Review 3 on #288: M1K3 as subject + the everyday word "tool" is Kev's
+        // opinion, not a code/PR/install fact.
+        #expect(!SelfNoteClassifier.isWiringNote(
+            title: "",
+            text: "M1K3 is such a useful tool for tracking my day."
+        ))
+        // The wiring-shaped phrase still counts.
+        #expect(SelfNoteClassifier.isWiringNote(
+            title: "M1K3 gained an MCP tool",
+            text: "M1K3 now has an MCP tool for todos."
+        ))
+    }
+
     @Test("a wiring marker that lives only in the title still counts")
     func markerInTitleCounts() {
         #expect(SelfNoteClassifier.isWiringNote(

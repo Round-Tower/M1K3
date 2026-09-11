@@ -27,7 +27,8 @@
 //  from WHAT I KNOW ABOUT YOU. Title and text now share one subject-shaped test; markers are
 //  whole words, and scanned in the title as well as the text (a marker that lives only in
 //  the title counted for nothing). Pinned by titleMentionWithoutSubjectIsNotFlagged,
-//  markersAreWholeWords, markerInTitleCounts.
+//  markersAreWholeWords, markerInTitleCounts. Review 3: the bare "tool" marker is gone — it made
+//  "mcp tool" dead code and flagged "M1K3 is a useful tool" (bareToolWordIsNotAMarker).
 //
 
 import Foundation
@@ -50,7 +51,8 @@ public enum SelfNoteClassifier {
     /// words: "committed" and "emerged" are English, not git (review 1).
     private static let wiringPatterns = [
         "\\bpr #", "\\bmerged\\b", "\\bcommits?\\b", "\\binstalled\\b",
-        "\\bpalette\\b", "\\bmcp tools?\\b", "\\btools?\\b",
+        "\\bpalette\\b", "\\bmcp tools?\\b",
+        // NOT bare "tool": "M1K3 is a useful tool" is an opinion, not wiring.
     ]
 
     /// True only when the note is WIRING-SHAPED: M1K3 is the subject of the
@@ -83,11 +85,11 @@ public enum SelfNoteClassifier {
 
     private static func hasWiringMarker(_ text: String) -> Bool {
         if text.contains("`") { return true }
+        let lower = text.lowercased()
         // A snake_case( identifier — e.g. `recent_activity(window, focus)`.
-        if text.range(of: "\\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\\(", options: .regularExpression) != nil {
+        if lower.range(of: "\\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\\(", options: .regularExpression) != nil {
             return true
         }
-        let lower = text.lowercased()
         return wiringPatterns.contains { lower.range(of: $0, options: .regularExpression) != nil }
     }
 }
