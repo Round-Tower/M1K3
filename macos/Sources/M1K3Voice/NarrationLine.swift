@@ -13,7 +13,10 @@
 //
 //  Sentence boundaries: a terminal mark (. ! ? …) followed by whitespace or
 //  the end, or a newline (a paragraph without punctuation still ends). Offsets
-//  are UTF-16, matching `SpeechHighlight.currentWordRange`.
+//  are UTF-16 — the word-range convention the karaoke highlight state uses.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 2 fold) — `currentLine` also carries the
+//  sentence's START offset so the HUD can key its marquee restart on position: keyed on the text,
+//  "Done. Done." never restarted the scroll.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 (pure, pinned in
 //  NarrationLineTests; the HUD wiring is verify-by-launch). Prior: Unknown.
@@ -22,12 +25,25 @@
 import Foundation
 
 public enum NarrationLine {
+    /// One HUD line: the sentence text and where it STARTS in the utterance
+    /// (UTF-16). Two identical sentences at different positions are different
+    /// lines — the view keys its marquee restart on `start`, never the text.
+    public struct Line: Equatable, Sendable {
+        public let text: String
+        public let start: Int
+    }
+
     /// The sentence of `text` containing `wordRange` (UTF-16 offsets), or the
     /// first sentence when `wordRange` is nil; a range past the end resolves
     /// to the last sentence. Whitespace-collapsed and trimmed; "" for empty text.
     public static func current(in text: String, wordRange: Range<Int>?) -> String {
+        currentLine(in: text, wordRange: wordRange).text
+    }
+
+    /// `current` with the picked sentence's start offset (0 for empty text).
+    public static func currentLine(in text: String, wordRange: Range<Int>?) -> Line {
         let sentences = sentenceRanges(in: text)
-        guard let first = sentences.first else { return "" }
+        guard let first = sentences.first else { return Line(text: "", start: 0) }
         let pick: Range<Int>
         if let word = wordRange {
             pick = sentences.first { $0.contains(word.lowerBound) }
@@ -36,7 +52,7 @@ public enum NarrationLine {
         } else {
             pick = first
         }
-        return collapse(substring(of: text, utf16: pick))
+        return Line(text: collapse(substring(of: text, utf16: pick)), start: pick.lowerBound)
     }
 
     /// UTF-16 ranges of the sentences in `text`, empty ones dropped.
@@ -46,8 +62,15 @@ public enum NarrationLine {
         var start = 0
         var i = 0
         func close(_ end: Int, thenSkip skip: Int) {
-            if end > start, !isBlank(units[start ..< end]) {
-                ranges.append(start ..< end)
+            // A range starts at its first non-blank unit, so `start` is the
+            // sentence's real position (the marquee keys its restart on it),
+            // never the space left behind by the previous terminal.
+            var lower = start
+            while lower < end, isWhitespace(units[lower]) {
+                lower += 1
+            }
+            if lower < end {
+                ranges.append(lower ..< end)
             }
             start = end + skip
         }

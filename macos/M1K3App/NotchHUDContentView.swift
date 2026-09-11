@@ -60,10 +60,10 @@ struct NotchHUDContentView: View {
     /// embedded newlines; rendered whole it stacked as full-width lines the
     /// panel clipped on both sides (Kev's screenshot, 2026-09-11). The chat's
     /// own auto-speak speaks a sentence per utterance, so it never showed.
-    private var narration: String? {
+    private var narration: NarrationLine.Line? {
         guard let text = env.speechHighlight.utteranceText, !text.isEmpty else { return nil }
-        let line = NarrationLine.current(in: text, wordRange: env.speechHighlight.currentWordRange)
-        return line.isEmpty ? nil : line
+        let line = NarrationLine.currentLine(in: text, wordRange: env.speechHighlight.currentWordRange)
+        return line.text.isEmpty ? nil : line
     }
 
     var body: some View {
@@ -78,8 +78,11 @@ struct NotchHUDContentView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 if let narration {
-                    NotchHUDMarquee(text: narration, width: NotchHUDLayout.textAreaWidth)
-                        .id(narration) // fresh @State per new sentence — restart the scroll, not continue it
+                    NotchHUDMarquee(text: narration.text, width: NotchHUDLayout.textAreaWidth)
+                        // Fresh @State per new sentence — restart the scroll, not
+                        // continue it. Keyed on the sentence's POSITION: two
+                        // identical sentences in a row are still two sentences.
+                        .id(narration.start)
                 } else {
                     Text("M1K3 IS TALKING")
                         .font(.pixel(18))

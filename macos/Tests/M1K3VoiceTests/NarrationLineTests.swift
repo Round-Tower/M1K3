@@ -49,6 +49,20 @@ struct NarrationLineTests {
         #expect(NarrationLine.current(in: "One. Two.", wordRange: 40 ..< 44) == "Two.")
     }
 
+    @Test("two identical adjacent sentences are different LINES — the marquee must restart on position")
+    func identicalSentencesDifferByPosition() {
+        // Review 2 on #290: keying the view on the text alone reused the
+        // SwiftUI identity across "Done. Done." and the scroll never restarted.
+        let text = "Done. Done. Done."
+        let first = NarrationLine.currentLine(in: text, wordRange: 0 ..< 4)
+        let second = NarrationLine.currentLine(in: text, wordRange: 6 ..< 10)
+        #expect(first.text == "Done.")
+        #expect(second.text == "Done.")
+        #expect(first.start == 0)
+        #expect(second.start == 6)
+        #expect(first != second)
+    }
+
     @Test("empty or whitespace-only text is an empty line")
     func emptyText() {
         #expect(NarrationLine.current(in: "", wordRange: nil) == "")
