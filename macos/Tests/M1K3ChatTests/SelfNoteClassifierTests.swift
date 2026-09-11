@@ -65,6 +65,29 @@ struct SelfNoteClassifierTests {
         ))
     }
 
+    @Test("a title that merely MENTIONS M1K3 is not a self subject — review 1's sleep-schedule memory")
+    func titleMentionWithoutSubjectIsNotFlagged() {
+        // M1K3 is the OBJECT here ("asked M1K3 to…"), and "committed" is not
+        // a git commit. Both factors false-fired in the first cut.
+        #expect(!SelfNoteClassifier.isWiringNote(
+            title: "Kev asked M1K3 to track his sleep schedule",
+            text: "Kev is committed to going to bed by 11pm most nights."
+        ))
+    }
+
+    @Test("wiring markers match whole words — \"committed\" and \"emerged\" are not git")
+    func markersAreWholeWords() {
+        #expect(!SelfNoteClassifier.isWiringNote(
+            title: "M1K3 is committed to the bit",
+            text: "M1K3 is committed to the bit, and a pattern emerged: he likes a pun."
+        ))
+        // …while the real thing still matches on the word.
+        #expect(SelfNoteClassifier.isWiringNote(
+            title: "M1K3 gained a tool",
+            text: "M1K3 gained a tool today; the commit merged at noon."
+        ))
+    }
+
     @Test("title alone can carry the M1K3 subject even when the body doesn't repeat the name")
     func titleAloneCarriesTheSubject() {
         #expect(SelfNoteClassifier.isWiringNote(

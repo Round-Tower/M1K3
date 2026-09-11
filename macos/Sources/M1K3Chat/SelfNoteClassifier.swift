@@ -21,6 +21,11 @@
 //  in SelfNoteClassifierTests, incl. the live note's own text and the
 //  deliberately conservative "subject with no marker" borderline case).
 //  Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 1 fold, pre-merge) — the title check
+//  counted any MENTION of M1K3 as the subject and the markers were substrings ("committed",
+//  "emerged"), so "Kev asked M1K3 to track his sleep" + "committed to bed by 11pm" was dropped
+//  from WHAT I KNOW ABOUT YOU. Title and text now share one subject-shaped test; markers are
+//  whole words. Pinned by titleMentionWithoutSubjectIsNotFlagged + markersAreWholeWords.
 //
 
 import Foundation
@@ -39,9 +44,11 @@ public enum SelfNoteClassifier {
 
     /// Concrete code/wiring markers — the class of evidence a genuine
     /// self-note about a tool, PR, or install carries and a lived-episode
-    /// sentence about M1K3 (an interview, a compliment) does not.
-    private static let wiringPhrases = [
-        "pr #", "merged", "commit", "installed", "palette", "mcp tool", "tool ",
+    /// sentence about M1K3 (an interview, a compliment) does not. Whole
+    /// words: "committed" and "emerged" are English, not git (review 1).
+    private static let wiringPatterns = [
+        "\\bpr #", "\\bmerged\\b", "\\bcommits?\\b", "\\binstalled\\b",
+        "\\bpalette\\b", "\\bmcp tools?\\b", "\\btools?\\b",
     ]
 
     /// True only when the note is WIRING-SHAPED: M1K3 is the subject of the
@@ -51,9 +58,16 @@ public enum SelfNoteClassifier {
         subjectIsSelf(title: title, text: text) && hasWiringMarker(text)
     }
 
+    /// The title and the text are held to the SAME subject test: M1K3 as
+    /// possessor ("M1K3's palette") or as the noun a subject verb follows
+    /// ("M1K3 gained"). A title that merely mentions the name — "Kev asked
+    /// M1K3 to track his sleep" — has Kev as its subject (review 1, #288).
     private static func subjectIsSelf(title: String, text: String) -> Bool {
-        if containsWord(title.lowercased(), "m1k3") { return true }
-        let lower = text.lowercased()
+        isSelfSubject(in: title) || isSelfSubject(in: text)
+    }
+
+    private static func isSelfSubject(in sentence: String) -> Bool {
+        let lower = sentence.lowercased()
         for name in selfNames {
             if lower.contains("\(name)'s") || lower.contains("\(name)\u{2019}s") { return true }
             for verb in subjectVerbs {
@@ -72,10 +86,6 @@ public enum SelfNoteClassifier {
             return true
         }
         let lower = text.lowercased()
-        return wiringPhrases.contains { lower.contains($0) }
-    }
-
-    private static func containsWord(_ haystack: String, _ needle: String) -> Bool {
-        haystack.range(of: "\\b\(NSRegularExpression.escapedPattern(for: needle))\\b", options: .regularExpression) != nil
+        return wiringPatterns.contains { lower.range(of: $0, options: .regularExpression) != nil }
     }
 }

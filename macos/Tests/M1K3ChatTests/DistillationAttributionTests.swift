@@ -29,7 +29,16 @@ struct DistillationAttributionTests {
         ]))
     }
 
-    @Test("several short acknowledgements stay trivial under the character floor")
+    @Test("a three-word self-statement is never trivial, however short — \"I'm a vet\"")
+    func threeShortWordsAreNotTrivial() {
+        // Word count is the only gate: nine characters, three words, one fact.
+        #expect(!DistillationAttribution.userContributionIsTrivial(turns: [
+            ChatTurn(role: .user, text: "I'm a vet"),
+            ChatTurn(role: .assistant, text: "Noted."),
+        ]))
+    }
+
+    @Test("several short acknowledgements stay trivial (every turn two words or fewer)")
     func shortAcknowledgementsAreTrivial() {
         #expect(DistillationAttribution.userContributionIsTrivial(turns: [
             ChatTurn(role: .user, text: "yo"),

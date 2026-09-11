@@ -36,9 +36,10 @@
 //  Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (same day, pre-merge) — the first cut's floors
 //  cost real recall: a 24-character trivial floor skipped "I live in Cork" outright, and a
-//  four-letter token minimum dropped "My dog is Rex" / "I'm 42" as unanchored. Floor is 12
-//  characters now (greetings still trip the ≤2-word rule); tokens count from three letters
-//  with the common three-letter function words stopworded, and any number counts.
+//  four-letter token minimum dropped "My dog is Rex" / "I'm 42" as unanchored. The character
+//  floor is gone (review 1 named "I'm a teacher." too) — ≤2 words per turn is the only trivial
+//  gate; tokens count from three letters with the common three-letter function words
+//  stopworded, and any number counts.
 //
 
 import Foundation
@@ -65,17 +66,13 @@ public enum DistillationAttribution {
     static let userSelfNames: Set<String> = ["kev"]
 
     /// True when the user's real contribution to the slice is too small to
-    /// have anchored anything: a bare greeting/acknowledgement, whichever
-    /// gate catches it first — total trimmed length under 12 characters, or
-    /// every user turn is two words or fewer. The coordinator skips
-    /// distillation entirely on `true` (never even calls the distiller).
-    /// Twelve, not more: "I live in Cork" is fourteen characters and a fact.
+    /// have anchored anything: every user turn is two words or fewer — a
+    /// greeting, an acknowledgement. Word count is the ONLY gate: a character
+    /// floor ate "I live in Cork" and "I'm a vet", and the price of a false
+    /// non-trivial is one background distiller call, while a false trivial
+    /// is a lost fact. The coordinator skips distillation entirely on `true`.
     public static func userContributionIsTrivial(turns: [ChatTurn]) -> Bool {
         let userTurns = turns.filter { $0.role == .user }
-        let totalLength = userTurns.reduce(0) {
-            $0 + $1.text.trimmingCharacters(in: .whitespacesAndNewlines).count
-        }
-        if totalLength < 12 { return true }
         return userTurns.allSatisfy { turn in
             turn.text.split(whereSeparator: \.isWhitespace).count <= 2
         }
