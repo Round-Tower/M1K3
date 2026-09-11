@@ -16,6 +16,11 @@
 //  inside its own container while printing "wrote …"); a duplicate
 //  `claude mcp add` now reads as already-connected; every write failure prints
 //  the snippet so the user is never left with nothing. Confidence now 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-11 — the `claude` lookup moved to
+//  M1K3CLICore.ExecutableLookup and is handed THIS runner's injected
+//  environment. It used to default to ProcessInfo, so the one call site read
+//  the real machine while `isSandboxed` beside it read the injection — a DI
+//  seam with a hole in it, and untestable where it lived. Confidence now 0.85.
 //
 
 import Darwin // getpwuid — the account's REAL home, which the sandbox hides
@@ -265,7 +270,9 @@ struct CommandRunner {
     /// stack trace about a missing binary is not.
     private func runShell(_ command: [String], client: MCPClient, url: String) -> Int32 {
         guard let tool = command.first else { return ExitCode.usage }
-        guard let executable = Self.locate(tool) else {
+        guard let executable = ExecutableLookup.locate(
+            tool, environment: environment, home: FileManager.default.homeDirectoryForCurrentUser.path
+        ) else {
             Output.line("\(tool) isn't on your PATH. Run this once \(tool) is installed:")
             Output.line("")
             Output.line(command.joined(separator: " "))
@@ -310,21 +317,5 @@ struct CommandRunner {
     static func saysAlreadyConnected(_ stderr: String) -> Bool {
         let lowered = stderr.lowercased()
         return lowered.contains("already exists") || lowered.contains("already configured")
-    }
-
-    /// PATH, plus the two places a coding-agent CLI lands that a GUI-launched
-    /// process's PATH usually misses.
-    static func locate(_ tool: String, environment: [String: String] = ProcessInfo.processInfo.environment) -> URL? {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let searchPath = (environment["PATH"] ?? "").split(separator: ":").map(String.init)
-            + ["\(home)/.local/bin", "/opt/homebrew/bin", "/usr/local/bin"]
-        // Absolute entries only: a relative PATH entry (or an empty one, which
-        // POSIX reads as ".") would resolve against whatever directory the user
-        // happens to be in — running a `claude` a repo dropped there.
-        for directory in searchPath where directory.hasPrefix("/") {
-            let candidate = URL(fileURLWithPath: directory).appendingPathComponent(tool)
-            if FileManager.default.isExecutableFile(atPath: candidate.path) { return candidate }
-        }
-        return nil
     }
 }

@@ -10,13 +10,21 @@
 //
 //  Two conventions worth knowing. `--port` is global (flag beats
 //  `M1K3_MCP_PORT` beats the app's own 4242) because every subcommand talks
-//  to the same loopback server. And the text-carrying subcommands — ask,
-//  speak, remember, search — join everything that is not a recognised flag,
-//  so an unquoted question works the way people actually type it.
+//  to the same loopback server — but it is only the flag when its value is a
+//  number, so `m1k3 ask what's my --port forwarding setup` is a question and
+//  not a parse error. And the text-carrying subcommands — ask, speak,
+//  remember, search — join everything that is not a recognised flag, so an
+//  unquoted question works the way people actually type it.
 //
 //  Signed: Kev + claude-opus-5, 2026-09-11, Confidence 0.9 (a pure table,
 //  test-pinned shape by shape; the only judgement calls are which shapes are
 //  errors and which are help). Prior: Unknown.
+//  Review: Kev + claude-opus-5, 2026-09-11 — the global `--port` scan used to
+//  claim every `--port` token on the line before the subcommand was known, so
+//  `m1k3 ask what's my --port forwarding setup` died with "--port takes a
+//  number" instead of asking. It is the flag only when its value is numeric;
+//  otherwise the token stays where it was and the subcommand decides whether
+//  it is a word or an unexpected argument. Confidence now 0.9.
 //
 
 import Foundation
@@ -162,6 +170,18 @@ public struct CLICommand: Equatable, Sendable {
 
     // MARK: - The global port
 
+    /// Lift the global `--port` out of the line, and hand back everything else
+    /// in order for the subcommand to read.
+    ///
+    /// ★ A `--port` token is the flag ONLY when the word after it is a number
+    /// (`--port 5000`, anywhere on the line). This scan runs before the
+    /// subcommand is even known, so anything greedier would eat words out of
+    /// the middle of a question — `m1k3 ask what's my --port forwarding setup`
+    /// died with "--port takes a number" before this rule. A `--port` followed
+    /// by an ordinary word, or standing at the end of the line, is left where
+    /// it was: text subcommands keep it in their sentence, and the ones that
+    /// take no text refuse it themselves as an unexpected argument. A numeric
+    /// value that no server could be listening on is still the user's typo.
     private static func extractPort(
         from arguments: [String],
         environment: [String: String]
@@ -175,11 +195,8 @@ public struct CLICommand: Equatable, Sendable {
         var index = arguments.startIndex
         while index < arguments.endIndex {
             let argument = arguments[index]
-            if argument == "--port" {
-                let next = arguments.index(after: index)
-                guard next < arguments.endIndex else {
-                    return .failure(CLIUsageError("--port needs a port number"))
-                }
+            let next = arguments.index(after: index)
+            if argument == "--port", next < arguments.endIndex, isNumeric(arguments[next]) {
                 guard let parsed = validPort(arguments[next]) else {
                     return .failure(CLIUsageError(
                         "--port takes a number from 1024 to 65535, not \"\(arguments[next])\""
@@ -189,6 +206,9 @@ public struct CLICommand: Equatable, Sendable {
                 index = arguments.index(after: next)
                 continue
             }
+            // `--port=…` is one token that nobody types by accident in a
+            // sentence, so it is always the flag — a bad value there is an
+            // error rather than words.
             if argument.hasPrefix("--port=") {
                 let value = String(argument.dropFirst("--port=".count))
                 guard let parsed = validPort(value) else {
@@ -202,6 +222,13 @@ public struct CLICommand: Equatable, Sendable {
             index = arguments.index(after: index)
         }
         return .success((port, rest))
+    }
+
+    /// Plain ASCII digits only. A leading "-" or a hex-looking word is not a
+    /// port someone meant to type, and treating it as one would take the word
+    /// out of a sentence (see extractPort).
+    private static func isNumeric(_ text: String) -> Bool {
+        !text.isEmpty && text.allSatisfy { $0.isASCII && $0.isNumber }
     }
 
     /// Mirrors MCPHostController.port's own bounds — below 1024 needs root to

@@ -209,6 +209,24 @@ struct CLICommandTests {
             == .speak(text: "mind the --port flag", emotion: nil))
     }
 
+    @Test("★ --port is the flag only when its value is a number — the rest is words")
+    func portOnlyWhenNumeric() throws {
+        // The line that started this rule: a real question that says --port.
+        let asking = try parsed(["ask", "what's", "my", "--port", "forwarding", "setup"])
+        #expect(asking.action == .ask("what's my --port forwarding setup"))
+        #expect(asking.port == MCPEndpoint.defaultPort)
+        // A numeric value IS the port, on either side of the subcommand.
+        #expect(try parsed(["ask", "hi", "--port", "5000"]) == CLICommand(action: .ask("hi"), port: 5000))
+        #expect(try parsed(["--port", "5000", "ask", "hi"]) == CLICommand(action: .ask("hi"), port: 5000))
+        // Numeric but unusable stays the typo the user can see and fix.
+        #expect(try failure(["ask", "--port", "70"]).message.contains("--port"))
+        // `--port=…` is never prose, so a bad value there is always an error.
+        #expect(try failure(["ask", "--port=banana"]).message.contains("--port"))
+        // A subcommand that carries no text has nothing for it to be text OF.
+        #expect(try failure(["status", "--port"]).message.contains("--port"))
+        #expect(try failure(["status", "--port", "forwarding"]).message.contains("--port"))
+    }
+
     @Test("the endpoint is loopback, always")
     func endpoint() {
         #expect(MCPEndpoint.url(port: 4242) == "http://127.0.0.1:4242/mcp")
