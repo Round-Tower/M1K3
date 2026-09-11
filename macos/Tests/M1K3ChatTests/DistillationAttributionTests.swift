@@ -47,6 +47,20 @@ struct DistillationAttributionTests {
         ]))
     }
 
+    @Test("a short real statement is NOT trivial — \"I live in Cork\" is a fact, not a greeting")
+    func shortRealStatementIsNotTrivial() {
+        // The floor guards against greetings ("yo", "sure"), never against a
+        // short sentence that carries a fact. 14 characters, four words.
+        #expect(!DistillationAttribution.userContributionIsTrivial(turns: [
+            ChatTurn(role: .user, text: "I live in Cork"),
+            ChatTurn(role: .assistant, text: "Lovely spot."),
+        ]))
+        #expect(!DistillationAttribution.userContributionIsTrivial(turns: [
+            ChatTurn(role: .user, text: "My dog is Rex"),
+            ChatTurn(role: .assistant, text: "Good name."),
+        ]))
+    }
+
     @Test("a real, multi-word contribution is not trivial")
     func realContributionIsNotTrivial() {
         #expect(!DistillationAttribution.userContributionIsTrivial(turns: [
@@ -62,6 +76,34 @@ struct DistillationAttributionTests {
         #expect(DistillationAttribution.isAnchored(
             fact: "Kev teaches primary school in Ardmore.",
             userTurns: ["I teach primary school in Ardmore"]
+        ))
+    }
+
+    @Test("short words and numbers anchor too — \"dog\", \"Rex\", \"42\" are content, not noise")
+    func shortWordsAndNumbersAnchor() {
+        // Three-letter words are most of what a short fact is made of; a
+        // four-letter minimum dropped every one of these on the floor.
+        #expect(DistillationAttribution.isAnchored(
+            fact: "Kev's dog is called Rex.",
+            userTurns: ["My dog is Rex"]
+        ))
+        #expect(DistillationAttribution.isAnchored(
+            fact: "Kev is 42 years old.",
+            userTurns: ["I'm 42"]
+        ))
+        #expect(DistillationAttribution.isAnchored(
+            fact: "Kev lives in Cork.",
+            userTurns: ["I live in Cork"]
+        ))
+    }
+
+    @Test("common three-letter words never anchor on their own")
+    func threeLetterFunctionWordsDoNotAnchor() {
+        // "the", "and", "you", "was" appear in nearly every sentence — sharing
+        // one proves nothing (the honey witness shares "the" with "yo, the usual").
+        #expect(!DistillationAttribution.isAnchored(
+            fact: #"Kev is nostalgic about the "honey in Egyptian tombs" story."#,
+            userTurns: ["yo, the usual for me and you"]
         ))
     }
 

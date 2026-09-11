@@ -34,6 +34,11 @@
 //  in DistillationAttributionTests, incl. the false-negative case; the
 //  coordinator-level wiring is pinned in MemoryDistillationCoordinatorTests).
 //  Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (same day, pre-merge) — the first cut's floors
+//  cost real recall: a 24-character trivial floor skipped "I live in Cork" outright, and a
+//  four-letter token minimum dropped "My dog is Rex" / "I'm 42" as unanchored. Floor is 12
+//  characters now (greetings still trip the ≤2-word rule); tokens count from three letters
+//  with the common three-letter function words stopworded, and any number counts.
 //
 
 import Foundation
@@ -46,6 +51,11 @@ public enum DistillationAttribution {
         "user", "assistant", "conversation", "when", "what", "where", "which",
         "their", "there", "these", "those", "been", "being", "were", "will",
         "your", "just", "like", "some", "than", "them", "they", "very", "into",
+        // Three-letter function words — in nearly every sentence, so proof of nothing.
+        "the", "and", "for", "you", "are", "was", "but", "not", "has", "had",
+        "his", "her", "its", "can", "all", "any", "one", "out", "how", "who",
+        "why", "now", "get", "got", "did", "yes", "too", "our", "him", "she",
+        "our", "let", "may", "own", "say", "see", "way", "yet", "kev",
     ]
 
     /// The user's own name. Sharing ONLY the name proves nothing — the same
@@ -56,15 +66,16 @@ public enum DistillationAttribution {
 
     /// True when the user's real contribution to the slice is too small to
     /// have anchored anything: a bare greeting/acknowledgement, whichever
-    /// gate catches it first — total trimmed length under 24 characters, or
+    /// gate catches it first — total trimmed length under 12 characters, or
     /// every user turn is two words or fewer. The coordinator skips
     /// distillation entirely on `true` (never even calls the distiller).
+    /// Twelve, not more: "I live in Cork" is fourteen characters and a fact.
     public static func userContributionIsTrivial(turns: [ChatTurn]) -> Bool {
         let userTurns = turns.filter { $0.role == .user }
         let totalLength = userTurns.reduce(0) {
             $0 + $1.text.trimmingCharacters(in: .whitespacesAndNewlines).count
         }
-        if totalLength < 24 { return true }
+        if totalLength < 12 { return true }
         return userTurns.allSatisfy { turn in
             turn.text.split(whereSeparator: \.isWhitespace).count <= 2
         }
@@ -81,14 +92,16 @@ public enum DistillationAttribution {
         return !factTokens.isDisjoint(with: userTokens)
     }
 
-    /// Lowercased alphanumeric runs, length ≥4, minus stopwords and the
-    /// user's own name — short function words and the subject's own name
-    /// are too common to count as evidence of anchoring.
+    /// Lowercased alphanumeric runs of three letters or more, plus any run
+    /// of digits ("42" is content), minus stopwords and the user's own name
+    /// — function words and the subject's own name are too common to count
+    /// as evidence of anchoring. Three, not four: "dog", "Rex", "car", "son"
+    /// are most of what a short fact is made of.
     private static func contentTokens(in text: String) -> Set<String> {
         Set(
             text.lowercased()
                 .components(separatedBy: CharacterSet.alphanumerics.inverted)
-                .filter { $0.count >= 4 }
+                .filter { $0.count >= 3 || ($0.count >= 1 && $0.allSatisfy(\.isNumber)) }
                 .filter { !stopwords.contains($0) }
                 .filter { !userSelfNames.contains($0) }
         )
