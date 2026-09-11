@@ -81,7 +81,10 @@
 //  YOU" — a visitor note describing M1K3's own tooling is knowledge about the app, not the user,
 //  and was tripping the SELF/WIRING decline on unrelated questions. Review 3 fold: `usableMemories`
 //  is the ONE filter behind both `hasGroundedKnowledge` and `memoryBlock` — a wiring-only hit no
-//  longer reports "grounded" (and buys a think phase) for a block that will not render.
+//  longer reports "grounded" (and buys a think phase) for a block that will not render. Review 4
+//  fold: the same filter runs right after `GroundingGate.partition`, BEFORE `GroundingBudget.fit` —
+//  a wiring hit that outranked a real memory was spending the budget's last unit and then rendering
+//  as nothing (pinned end-to-end by `wiringNoteDoesNotSpendTheGroundingBudget`).
 
 import Foundation
 import M1K3Agent
@@ -299,6 +302,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             (chunks, memories) = GroundingGate.partition(
                 retrieved, floors: .forFingerprint(embedder.fingerprint)
             )
+            // #286's wiring-shaped self notes never reach the prompt, so they
+            // must not spend the grounding budget either (review 4 on #288: a
+            // wiring hit outranking a real memory ate the last unit of a tight
+            // budget, then rendered as nothing). Filtered at the source; the
+            // two read sites below re-apply the same filter for their other
+            // callers.
+            memories = Self.usableMemories(memories)
             Self.logGateDecision(retrieved: retrieved, kept: chunks + memories)
             phases.retrieved(at: phaseClock.now)
         }

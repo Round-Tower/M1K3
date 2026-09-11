@@ -1043,6 +1043,46 @@ struct AgentRAGResponderTests {
         #expect(AgentRAGResponder.hasGroundedKnowledge(chunks: [], memories: [selfNoteHit(), userMemory]))
     }
 
+    @Test("a wiring-shaped self note never spends the grounding budget — the real memory behind it still renders")
+    func wiringNoteDoesNotSpendTheGroundingBudget() async throws {
+        // Review 4 on #288: usableMemories ran only at the two READ sites, so
+        // a wiring hit that outranked a real memory still ate the budget in
+        // GroundingBudget.fit, the real memory was dropped for lack of room,
+        // and the wiring note was then filtered at render — an empty block
+        // where a fact would have fit. The filter belongs BEFORE the budget.
+        let store = try KnowledgeStore()
+        let embedder = HashingEmbeddingService()
+        let ingester = DocumentIngester(store: store, embedder: embedder)
+        // Shares more query tokens than the real memory → ranks first.
+        _ = try await ingester.ingest(
+            title: "M1K3's conveyor seal tool shipped (PR #275)",
+            text: "M1K3's chat palette gained a conveyor seal tool on 2026-09-11 (PR #275, merged, installed on the Mac).",
+            kind: .memory
+        )
+        _ = try await ingester.ingest(
+            title: "Kev's conveyor",
+            text: "Kev's conveyor seal on the chat line failed under load.",
+            kind: .memory
+        )
+        // One character = one token; a 60-token budget holds the short real
+        // memory alone, never the wiring note plus anything after it.
+        let provider = CountingProvider(response: "CONCLUSION: ok", costPerCharacter: 1)
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [FixedTool(name: "search_knowledge", response: "hit")] },
+            groundingBudgetProvider: { 60 }
+        )
+
+        let (_, stream) = try await responder.answerStreaming(
+            "What do I know about the conveyor seal tool and the chat palette?"
+        )
+        _ = await collect(stream)
+
+        let firstPrompt = try #require(provider.allPrompts.first)
+        #expect(firstPrompt.contains("Kev's conveyor seal on the chat line failed under load."))
+        #expect(!firstPrompt.contains("PR #275"))
+    }
+
     @Test("native-path rules carry NO ReAct scaffolding (no CONCLUSION:, no call budget)")
     func nativeRulesDropReActScaffold() {
         let rules = AgentRAGResponder.grounding(
