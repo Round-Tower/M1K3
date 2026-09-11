@@ -74,6 +74,20 @@ struct TitleSanitizerTests {
         #expect(TitleSanitizer.sanitize("Weekend hiking plans") == "Weekend hiking plans")
         #expect(TitleSanitizer.sanitize("Onboarding") == "Onboarding")
     }
+
+    @Test("a code-flavoured title keeps its brackets — only a JSON-list opening is the trailer's shape")
+    func codeFlavouredTitleStillPasses() {
+        // Review 13 on #288: rejecting ANY bracket left "Debugging array[0] index"
+        // untitled forever in an app whose chats are full of code.
+        #expect(TitleSanitizer.sanitize("Debugging array[0] index") == "Debugging array[0] index")
+        #expect(TitleSanitizer.sanitize("Fixing the {} JSON parser") == "Fixing the {} JSON parser")
+    }
+
+    @Test("a bare JSON-list trailer is rejected even without the word FOLLOWUPS")
+    func rejectsBareJSONListTrailer() {
+        #expect(TitleSanitizer.sanitize(#"M1K3 and Kev's chat: ["What's new"#) == nil)
+        #expect(TitleSanitizer.sanitize(#"Quiet code chat {"next": "What else"#) == nil)
+    }
 }
 
 struct TitlePromptTests {

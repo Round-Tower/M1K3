@@ -18,6 +18,9 @@
 //  trailer or a long spaceless run (the CamelCase mangle seen live), and
 //  `ProviderConversationTitler.title` runs `FollowUpSplit.split` on the assistant text before
 //  building the prompt as a belt fix, in case the trailer is ever still attached on some path.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — review 13 on #288: the coarse "any bracket" reject
+//  left every code-flavoured title untitled for good; only a JSON list/object opening on a quote
+//  (`["` / `{"`) reads as the trailer's shape now. Pinned both ways in ConversationTitlerTests.
 //
 
 import Foundation
@@ -119,11 +122,14 @@ public enum TitleSanitizer {
     }
 
     /// The trailer, whichever case it survived in — the two live titles carried
-    /// "FOLLOWUPS:" and a CamelCase-mangled "Followups:" respectively.
+    /// "FOLLOWUPS:" and a CamelCase-mangled "Followups:" respectively — or its
+    /// bare JSON shape (a list or object opening on a quote) when the word
+    /// itself was mangled away. A lone bracket is NOT the trailer: chats here
+    /// are full of code, and "Debugging array[0] index" is a fine title
+    /// (review 13 on #288).
     private static func containsFollowUpsTrailer(_ line: String) -> Bool {
         line.range(of: "FOLLOWUPS", options: .caseInsensitive) != nil
-            || line.contains("[") || line.contains("]")
-            || line.contains("{") || line.contains("}")
+            || line.contains("[\"") || line.contains("{\"")
     }
 
     /// A run of 25+ non-whitespace characters: the CamelCase mangle in
