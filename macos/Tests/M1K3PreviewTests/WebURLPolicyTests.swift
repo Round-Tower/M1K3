@@ -11,6 +11,11 @@
 //  guards only the automation paths.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-20, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the resolver-deadline pin no longer
+//  reads a wall clock (#276): the slow lookup blocks on a semaphore the test
+//  releases only after the await returns, so "not held for the lookup" is a
+//  structural fact under any scheduler load; a 30 s safety valve turns a
+//  regression into a failure instead of a hung runner. Confidence now 0.85.
 
 import Foundation
 @testable import M1K3Preview
@@ -170,19 +175,52 @@ struct WebURLPolicyTests {
         #expect(!WebURLPolicy.isPrivateAddress("fec0::1")) // site-local (deprecated), outside /10
     }
 
-    @Test("a slow lookup is a failed lookup at the deadline — the caller is NOT held for it")
+    @Test(
+        "a slow lookup is a failed lookup at the deadline — the caller is NOT held for it",
+        .timeLimit(.minutes(1))
+    )
     func systemResolverTimesOut() async {
-        // A lookup that blocks for 3 s (getaddrinfo's shape: no cancellation
-        // point) against a 50 ms budget: the call must come back at the budget,
-        // not at the lookup (#266 review: a task group would have joined it).
+        // A lookup that blocks UNTIL THIS TEST RELEASES IT (getaddrinfo's shape:
+        // no cancellation point) against a 50 ms budget. The old `< 1.5 s` bound
+        // measured the CI VM's scheduling, not the resolver (#276: 4.8 s, 1.6 s,
+        // 7.4 s across three runs, the timer winning every time). The pin is
+        // structural instead: the test releases the lookup only AFTER the await
+        // returns, so a resolver that joined the lookup (#266 review: a task
+        // group would) can only come back through the safety valve — 30 s, far
+        // past any scheduling stall, and opening it is the failure. A regression
+        // therefore FAILS in 30 s rather than hanging the runner on a semaphore.
+        let release = DispatchSemaphore(value: 0)
+        let valve = ValveState()
         let slow = SystemHostResolver(timeout: 0.05) { _ in
-            Thread.sleep(forTimeInterval: 3)
+            release.wait()
             return ["93.184.216.34"]
         }
-        let started = Date()
+        let safety = Task.detached {
+            // Cancelled (the passing path) → leave without touching the valve;
+            // `try?` would fall through and open it anyway.
+            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            valve.open()
+            release.signal()
+        }
         let answers = await slow.addresses(for: "slow.example.com")
+        let heldForTheLookup = valve.isOpen
+        safety.cancel()
+        release.signal() // the abandoned lookup finishes now, and its answer is discarded
         #expect(answers == nil)
-        #expect(Date().timeIntervalSince(started) < 1.5)
+        #expect(!heldForTheLookup, "the caller came back only when the valve released the lookup")
+    }
+
+    /// Whether the 30 s safety valve had to open (see `systemResolverTimesOut`).
+    private final class ValveState: @unchecked Sendable {
+        private let lock = NSLock()
+        private var opened = false
+        var isOpen: Bool {
+            lock.withLock { opened }
+        }
+
+        func open() {
+            lock.withLock { opened = true }
+        }
     }
 
     @Test("the system resolver answers for localhost with a loopback literal (live smoke)")
