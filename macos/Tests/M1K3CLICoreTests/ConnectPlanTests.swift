@@ -300,8 +300,7 @@ private final class TemporaryDirectories: @unchecked Sendable {
     private var urls: [URL] = []
 
     func add(_ url: URL) {
-        lock.lock(); defer { lock.unlock() }
-        urls.append(url)
+        lock.withLock { urls.append(url) }
     }
 
     deinit {

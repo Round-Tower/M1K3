@@ -134,7 +134,7 @@ struct CommandRunner {
     /// (see IntelligenceMCPTools). A person at a terminal wants the answer, not
     /// the receipt — so poll it out.
     private func finish(_ text: String, transport: MCPCallSequence) async -> Int32 {
-        guard case .ask = command.action, let job = Self.jobID(in: text) else {
+        guard case .ask = command.action, let job = AskJobWire.jobID(in: text) else {
             Output.line(text)
             return ExitCode.ok
         }
@@ -146,7 +146,7 @@ struct CommandRunner {
             try? await Task.sleep(for: .seconds(2))
             switch await transport.call(tool: "get_answer", arguments: ["job_id": .string(job)]) {
             case let .success(answer):
-                if answer.contains("still working on job") { continue }
+                if AskJobWire.isStillWorking(answer) { continue }
                 Output.line(answer)
                 return ExitCode.ok
             case let .failure(.unreachable(message)):
@@ -159,15 +159,6 @@ struct CommandRunner {
         }
         Output.error("m1k3: gave up waiting — redeem it later with: m1k3 call get_answer '{\"job_id\":\"\(job)\"}'")
         return ExitCode.toolError
-    }
-
-    /// The busy line quotes the id: `… with job_id "1A2B" in a few seconds …`
-    static func jobID(in text: String) -> String? {
-        guard let marker = text.range(of: "job_id \"") else { return nil }
-        let rest = text[marker.upperBound...]
-        guard let close = rest.firstIndex(of: "\"") else { return nil }
-        let id = String(rest[..<close])
-        return id.isEmpty ? nil : id
     }
 
     /// A remembered note needs a title; the first line of what you said is a

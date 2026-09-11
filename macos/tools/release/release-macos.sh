@@ -143,12 +143,27 @@ xcodebuild -exportArchive \
 # typo in M1K3_CLI_ENTITLEMENTS fails silently at runtime, months later.
 CLI_BIN="$APP/Contents/MacOS/m1k3"
 [ -f "$CLI_BIN" ] || { echo "✗ No m1k3 helper in $APP_NAME.app"; exit 1; }
-if codesign -d --entitlements - --xml "$CLI_BIN" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null \
-     | grep -q "com.apple.security.app-sandbox"; then
-  echo "✗ The embedded m1k3 helper is SANDBOXED — the DMG build must use"
-  echo "  M1K3CLI/m1k3-direct.entitlements (check M1K3_CLI_ENTITLEMENTS above)."
-  exit 1
-fi
+# FAIL-CLOSED. A bare `… | grep -q app-sandbox` reads an EMPTY pipeline as
+# "not sandboxed" — so the one mistake this check exists to catch would sail
+# through on any Xcode where the flags or the timing differ. Capture first,
+# demand a real plist, then judge. Verified on this Xcode (2026-09-11): a
+# helper signed with the EMPTY direct entitlements still prints
+# `<plist version="1.0"><dict/></plist>`, so `<plist` is a sound liveness
+# token; an unsigned binary prints nothing at all.
+CLI_ENT="$(codesign -d --entitlements - --xml "$CLI_BIN" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null)"
+case "$CLI_ENT" in
+  *"<plist"*) ;;
+  *)
+    echo "✗ Entitlements could not be READ from $CLI_BIN — refusing to guess."
+    echo "  (codesign -d --entitlements - --xml | plutil -convert xml1 produced no plist.)"
+    exit 1 ;;
+esac
+case "$CLI_ENT" in
+  *com.apple.security.app-sandbox*)
+    echo "✗ The embedded m1k3 helper is SANDBOXED — the DMG build must use"
+    echo "  M1K3CLI/m1k3-direct.entitlements (check M1K3_CLI_ENTITLEMENTS above)."
+    exit 1 ;;
+esac
 echo "✓ m1k3 helper is unsandboxed (direct-distribution entitlements)"
 
 # ── 3. Notarize + staple the .app (offline first-launch) ─────────────────────

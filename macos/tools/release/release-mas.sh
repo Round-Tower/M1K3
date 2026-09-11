@@ -117,12 +117,25 @@ xcodebuild archive \
 ARCHIVED_APP="$ARCHIVE/Products/Applications/$APP_NAME.app"
 CLI_BIN="$ARCHIVED_APP/Contents/MacOS/m1k3"
 [ -f "$CLI_BIN" ] || { echo "✗ No m1k3 helper in the archived $APP_NAME.app"; exit 1; }
-if ! codesign -d --entitlements - --xml "$CLI_BIN" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null \
-       | grep -q "com.apple.security.app-sandbox"; then
-  echo "✗ The embedded m1k3 helper is NOT sandboxed — the App Store will reject"
-  echo "  this build. It must use M1K3CLI/m1k3-sandboxed.entitlements (the default)."
-  exit 1
-fi
+# FAIL-CLOSED, same shape as release-macos.sh: an empty pipeline must not read
+# as "no sandbox" there NOR as "not sandboxed, block the build" here. Demand a
+# real plist first; only then judge the key. (An empty entitlements dict still
+# prints `<plist …><dict/></plist>` on this Xcode — verified 2026-09-11.)
+CLI_ENT="$(codesign -d --entitlements - --xml "$CLI_BIN" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null)"
+case "$CLI_ENT" in
+  *"<plist"*) ;;
+  *)
+    echo "✗ Entitlements could not be READ from $CLI_BIN — refusing to guess."
+    echo "  (codesign -d --entitlements - --xml | plutil -convert xml1 produced no plist.)"
+    exit 1 ;;
+esac
+case "$CLI_ENT" in
+  *com.apple.security.app-sandbox*) ;;
+  *)
+    echo "✗ The embedded m1k3 helper is NOT sandboxed — the App Store will reject"
+    echo "  this build. It must use M1K3CLI/m1k3-sandboxed.entitlements (the default)."
+    exit 1 ;;
+esac
 echo "✓ m1k3 helper is sandboxed (App-Store-safe entitlements)"
 
 # ── 2. Export the .pkg (App Store Connect) ───────────────────────────────────

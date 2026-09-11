@@ -89,9 +89,11 @@ let package = Package(
         .library(name: "M1K3Preview", targets: ["M1K3Preview"]),
         // The `m1k3` command-line client's pure half: argument parsing, the
         // JSON-RPC frames it POSTs at the running app's loopback MCP server,
-        // the AGENTS.md "M1K3 is the resident" block, and the per-client
-        // connect plans (which Settings also renders). Foundation-only — the
-        // executable target owns URLSession, Process and the filesystem.
+        // the AGENTS.md "M1K3 is the resident" block, the per-client connect
+        // plans (which Settings also renders), and AskJobWire — the ask/poll
+        // sentences M1K3MCPKit composes and the CLI reads back.
+        // Foundation-only — the executable target owns URLSession, Process
+        // and the filesystem.
         .library(name: "M1K3CLICore", targets: ["M1K3CLICore"]),
         // Diagnostics: privacy scrub + issue-report formatting for the secret-free
         // "Report an issue" flow. Pure + dependency-free so the redaction rules
@@ -464,6 +466,10 @@ let package = Package(
                 "M1K3Knowledge",
                 "M1K3Memory",
                 "M1K3Todos",
+                // AskJobWire — the submit-and-poll SENTENCES shared with the
+                // `m1k3` CLI that reads them back. Foundation-only, so this
+                // costs the server nothing but kills a silent-reword bug.
+                "M1K3CLICore",
                 .product(name: "MCP", package: "swift-sdk"),
             ],
             path: "Sources/M1K3MCPKit"

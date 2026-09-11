@@ -86,6 +86,12 @@ enum MCPTransport {
     /// /Applications wakes ITSELF rather than whichever M1K3 Launch Services
     /// happens to prefer. Falls back to the name when we're not in a bundle
     /// (a build directory, say).
+    ///
+    /// The `waitUntilExit()` blocks, and that is deliberate: `open` returns as
+    /// soon as it has HANDED OFF the launch (it is not waiting for the app),
+    /// this is a single-shot CLI with nothing else to do meanwhile, and the
+    /// caller needs a yes/no before it starts polling. Async here would buy a
+    /// concurrency seam nobody would ever use.
     private static func openM1K3() -> Bool {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")

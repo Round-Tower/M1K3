@@ -298,6 +298,14 @@ public struct CLICommand: Equatable, Sendable {
     /// Pull `--name VALUE` out of a line, leaving everything else in order.
     /// Positional text keeps its own leading dashes ("-40 degrees" is text,
     /// not a flag) — only the names we know are treated as flags.
+    ///
+    /// ⚠️ Deliberately `--name VALUE` ONLY — no `--name=VALUE`. These three
+    /// flags (`--title`, `--emotion`, `--config-dir`) sit inside free text, and
+    /// `m1k3 remember --title=x` would otherwise be ambiguous with a note that
+    /// genuinely begins "--title=x". `--port` accepts `=` because it is global:
+    /// it is lifted out before any subcommand sees the line, so there is no
+    /// free text for it to collide with. The usage text lists `--port N` and
+    /// `[--config-dir DIR]` in exactly this shape.
     private static func pullValue(
         named name: String,
         from arguments: [String]

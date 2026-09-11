@@ -50,6 +50,7 @@
 //
 
 import Foundation
+import M1K3CLICore // AskJobWire — the ask/poll sentences the `m1k3` CLI reads back
 import M1K3Memory
 import MCP
 
@@ -268,10 +269,11 @@ private func askM1K3Handler(
                 try? await Task.sleep(for: .milliseconds(50))
             }
         }
-        return "M1K3 is still working on this one — it's taking longer than usual "
-            + "(a long think or a web search). Call get_answer with job_id \"\(id)\" in a "
-            + "few seconds to fetch the result. (If get_answer isn't in your tool list, "
-            + "call ask_m1k3 again with just that job_id.)"
+        // ★ The WORDING is a contract: `m1k3 ask` reads this sentence to decide
+        // whether it has an answer or a receipt to poll. It lives in
+        // M1K3CLICore.AskJobWire (round-trip pinned in AskJobWireTests) — edit
+        // it there, never here.
+        return AskJobWire.busyLine(id: id)
     }
 }
 
@@ -293,8 +295,8 @@ private func redeemJob(id: String, jobStore: AskJobStore) async throws -> String
     case .none:
         throw MCPVoiceError("No such job \"\(id)\" — it may have expired. Ask again with ask_m1k3.")
     case .running:
-        return "M1K3 is still working on job \"\(id)\" — poll again in a few seconds "
-            + "(get_answer, or ask_m1k3 with just this job_id)."
+        // Same contract as busyLine — see AskJobWire.
+        return AskJobWire.stillWorkingLine(id: id)
     case let .done(answer):
         return answer
     case let .error(message):
