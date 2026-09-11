@@ -153,6 +153,30 @@ struct VisitorSpeechQueueTests {
         await hold.open() // let A/B/C finish so no task is left hanging
     }
 
+    @Test("the cap counts the utterance that is PLAYING — isSpeaking means playback, not the wait line")
+    func capSeesThePlayingUtterance() async throws {
+        // Review 1 on #287: `decide` was fed `!pending.isEmpty`, and the playing
+        // request has already been popped — so with the wait line momentarily
+        // empty, a cap of 0 admitted a second call while the first still spoke.
+        let entered = SpeakGate()
+        let hold = SpeakGate()
+        let queue = VisitorSpeechQueue(
+            cap: 0,
+            speakNow: { _ in
+                await entered.open()
+                await hold.wait()
+            },
+            isSpeaking: { false }
+        )
+        try await queue.enqueue(request("A"), wait: false)
+        await entered.wait() // A is playing; nothing is waiting
+        #expect(await queue.count == 0)
+        await #expect(throws: VisitorSpeechQueue.Full.self) {
+            try await queue.enqueue(request("B"), wait: false)
+        }
+        await hold.open()
+    }
+
     @Test("something already speaking (not ours) makes an otherwise-empty queue wait")
     func waitsBehindExternalSpeech() async throws {
         let log = CallLog()

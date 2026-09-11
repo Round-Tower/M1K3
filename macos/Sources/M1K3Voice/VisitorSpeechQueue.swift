@@ -24,6 +24,12 @@
 //  cap refusal, and clear()-cancellation are pinned with fake speakNow/
 //  isSpeaking closures; the live two-client race and the HUD re-stamp timing
 //  are verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 1 fold) — `decide` was fed
+//  `!pending.isEmpty`, but the playing request has already left `pending`, so the
+//  policy's `isSpeaking` never meant playback and a cap could not see the utterance
+//  in flight. `isPlaying` now brackets the `speakNow` call; pinned by
+//  capSeesThePlayingUtterance. The `.enqueue(position:)` payload stays unconsumed
+//  (carried: nothing surfaces "you're #2" to a caller yet).
 //
 
 import Foundation
@@ -64,6 +70,10 @@ public actor VisitorSpeechQueue {
     private let cap: Int
     private var pending: [PendingJob] = []
     private var isDraining = false
+    /// True from the moment `drain` hands a request to `speakNow` until that
+    /// call returns — the playing request has already left `pending`, so this
+    /// is what makes `decide`'s `isSpeaking` mean playback, not the wait line.
+    private var isPlaying = false
 
     public init(
         cap: Int = SpeakQueuePolicy.defaultCap,
@@ -89,7 +99,7 @@ public actor VisitorSpeechQueue {
     /// returns as soon as the request is admitted; playback continues in the
     /// background — mirroring the non-queued path's `wait` semantics.
     public func enqueue(_ request: SpeechRequest, wait: Bool) async throws {
-        switch SpeakQueuePolicy.decide(isSpeaking: !pending.isEmpty, queued: pending.count, cap: cap) {
+        switch SpeakQueuePolicy.decide(isSpeaking: isPlaying || !pending.isEmpty, queued: pending.count, cap: cap) {
         case let .refuse(queued):
             throw Full(queued: queued)
         case .playNow, .enqueue:
@@ -138,7 +148,9 @@ public actor VisitorSpeechQueue {
                 continue
             }
             let job = pending.removeFirst()
+            isPlaying = true
             await speakNow(request)
+            isPlaying = false
             job.continuation?.resume()
         }
     }
