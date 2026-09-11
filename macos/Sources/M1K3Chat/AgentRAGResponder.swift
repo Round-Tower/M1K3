@@ -89,6 +89,9 @@
 //  fold: the same filter runs right after `GroundingGate.partition`, BEFORE `GroundingBudget.fit` —
 //  a wiring hit that outranked a real memory was spending the budget's last unit and then rendering
 //  as nothing (pinned end-to-end by `wiringNoteDoesNotSpendTheGroundingBudget`).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the gate log speaks BEFORE the wiring filter (review 12 on #288):
+//  `logGateDecision`'s kept/gated verdict is the relevance floor's alone, and a wiring-shaped drop gets its own
+//  count line, so a floor tuned from the unified log never absorbs a #286 drop. Log-only; `usableMemories` stays pinned.
 
 import Foundation
 import M1K3Agent
@@ -306,14 +309,24 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             (chunks, memories) = GroundingGate.partition(
                 retrieved, floors: .forFingerprint(embedder.fingerprint)
             )
+            // The gate log speaks BEFORE the wiring filter below: its kept/gated
+            // verdict is the relevance floor's alone, so a floor tuned from the
+            // log never absorbs a #286 drop (review 12 on #288).
+            Self.logGateDecision(retrieved: retrieved, kept: chunks + memories)
             // #286's wiring-shaped self notes never reach the prompt, so they
             // must not spend the grounding budget either (review 4 on #288: a
             // wiring hit outranking a real memory ate the last unit of a tight
             // budget, then rendered as nothing). Filtered at the source; the
             // two read sites below re-apply the same filter for their other
-            // callers.
-            memories = Self.usableMemories(memories)
-            Self.logGateDecision(retrieved: retrieved, kept: chunks + memories)
+            // callers. Dropped hits get their own count line — ids and titles
+            // stay out of the log for the reason `logGateDecision` gives.
+            let usable = Self.usableMemories(memories)
+            if usable.count < memories.count {
+                Self.log.notice(
+                    "memory hits dropped as wiring-shaped self notes: \(memories.count - usable.count, privacy: .public)"
+                )
+            }
+            memories = usable
             phases.retrieved(at: phaseClock.now)
         }
         // Grounding-size safety cap (2026-07-20): both lanes above are injected
