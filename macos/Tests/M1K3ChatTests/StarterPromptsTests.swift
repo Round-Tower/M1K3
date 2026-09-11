@@ -175,6 +175,18 @@ struct StarterPromptsContextTests {
         #expect(texts.contains("What have we been up to lately?"))
     }
 
+    @Test("blank-only titles earn no activity chip — the gate trims like the candidates do")
+    func blankTitlesAreNotActivity() {
+        var context = StarterPrompts.Context.empty
+        context.memoryTitles = ["  ", "\n"]
+        context.conversationTitles = ["\t", ""]
+        #expect(StarterPrompts.candidates(for: context).isEmpty)
+        // A real title alongside the blanks still counts.
+        context.conversationTitles = ["\t", "Ardmore"]
+        let texts = StarterPrompts.candidates(for: context).map(\.text)
+        #expect(texts.contains("What have we been up to lately?"))
+    }
+
     @Test("a stale pulse and a mid-day hour add nothing")
     func gates() {
         var context = StarterPrompts.Context.empty

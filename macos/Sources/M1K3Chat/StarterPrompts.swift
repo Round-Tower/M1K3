@@ -19,7 +19,8 @@
 //  `pick(memoryTitles:)` rule keeps its shape (three phone chips, the two-memory beat) and draws
 //  from `phonePool` = pool + door, so moving "What do you remember about me?" to the door took
 //  nothing off the phone (review catch). "This week" softened to "lately" — the context carries no
-//  timestamps, so the chip must not promise a window the answer (recent_activity) decides for itself.
+//  timestamps, so the chip must not promise a window the answer (recent_activity) decides for itself;
+//  the activity gate reads the same trimmed titles as the chips (a blank-only title is no activity).
 //
 
 import Foundation
@@ -161,10 +162,12 @@ public enum StarterPrompts {
             guard !out.contains(where: { $0.text == text }) else { return }
             out.append(Candidate(source: source, text: text))
         }
-        for title in context.memoryTitles.map(trimmed) where !title.isEmpty {
+        let memoryTitles = context.memoryTitles.map(trimmed).filter { !$0.isEmpty }
+        let conversationTitles = context.conversationTitles.map(trimmed).filter { !$0.isEmpty }
+        for title in memoryTitles {
             add(.memory, memoryChip(title))
         }
-        for title in context.conversationTitles.map(trimmed) where !title.isEmpty {
+        for title in conversationTitles {
             add(.conversation, fit(lead: "Pick up “", title, tail: "”?"))
         }
         if context.overdueTodoCount > 0 {
@@ -184,7 +187,9 @@ public enum StarterPrompts {
         }
         // "Lately", not "this week": titles carry no dates here, so the chip
         // names no window — recent_activity picks the window when it answers.
-        let hasActivity = !context.conversationTitles.isEmpty || !context.memoryTitles.isEmpty
+        // Gated on the SAME trimmed titles as the chips above, so a blank-only
+        // title can never promise activity with no chip behind it.
+        let hasActivity = !conversationTitles.isEmpty || !memoryTitles.isEmpty
             || context.visitorCallsToday > 0
         if hasActivity {
             add(.activity, "What have we been up to lately?")
