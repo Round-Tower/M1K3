@@ -41,8 +41,9 @@
 //  single-word turns is the only trivial gate; tokens count from three letters with the common
 //  three-letter function words stopworded, and runs of two or more digits count.
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 6 fold) — the self-name guard reads the
-//  account's names (`NSFullUserName` / `NSUserName`, leading fragments count: Kev for Kevin)
-//  instead of a hardcoded "kev" that was a no-op for every other user.
+//  account's names (`NSFullUserName` / `NSUserName`) instead of a hardcoded "kev" that was a no-op
+//  for every other user. Review 7 fold: only the GIVEN name matches by leading fragment (Kev for
+//  Kevin); surnames and the login name match exactly — "fit" for Fitzgerald is a word, not a name.
 //
 
 import Foundation
@@ -62,32 +63,48 @@ public enum DistillationAttribution {
         "our", "let", "may", "own", "say", "see", "way", "yet",
     ]
 
-    /// The user's own names as the account knows them (`NSFullUserName()` +
-    /// `NSUserName()`), tokenised like content. Sharing ONLY a name proves
-    /// nothing — the same conflation MemoryFactValidator guards against on the
-    /// assistant's side ("the user is M1K3"), mirrored here so a fact can't
-    /// anchor itself purely by repeating who it's supposedly about. Derived
-    /// from the account, never hardcoded (review 6 on #288: the developer's
-    /// first name had shipped in the fence, a no-op for every other user).
-    public static let systemUserNames: Set<String> = userNameTokens(
-        fullName: NSFullUserName(), shortName: NSUserName()
-    )
+    /// The user's own names as the account knows them: every letter run of
+    /// three or more from `NSFullUserName()` + `NSUserName()` (matched
+    /// exactly), plus the GIVEN name (the full name's first token), which also
+    /// matches by leading fragment — "Kev" for "Kevin", "Alex" for
+    /// "Alexander" — because that is how people are addressed. Surnames and
+    /// the login name never match by fragment (review 7 on #288: "fit" for
+    /// Fitzgerald, "gran" for Grant would have swallowed ordinary words).
+    /// KNOWN, ACCEPTED COST: an ordinary word that is a fragment of the
+    /// given name ("ale" for Alexandra) is treated as the name — fail-closed,
+    /// like the "yes" case below; pinned in DistillationAttributionTests.
+    public struct UserNames: Equatable, Sendable {
+        public let exact: Set<String>
+        public let given: String?
 
-    /// Lowercased letter runs of three or more from the account's names.
-    static func userNameTokens(fullName: String, shortName: String) -> Set<String> {
-        Set(
-            (fullName + " " + shortName).lowercased()
-                .split(whereSeparator: { !$0.isLetter })
-                .map(String.init)
-                .filter { $0.count >= 3 }
-        )
+        public static let none = UserNames(exact: [], given: nil)
+
+        public init(exact: Set<String>, given: String?) {
+            self.exact = exact
+            self.given = given
+        }
     }
 
-    /// A token is the user's name when it IS one of `selfNames` or a leading
-    /// fragment of one at least three letters long — "Kev" for "Kevin",
-    /// "Alex" for "Alexander" — because that is how people are addressed.
-    static func isSelfName(_ token: String, selfNames: Set<String>) -> Bool {
-        token.count >= 3 && selfNames.contains { $0.hasPrefix(token) }
+    /// Sharing ONLY a name proves nothing — the same conflation
+    /// MemoryFactValidator guards against on the assistant's side ("the user
+    /// is M1K3"), mirrored here so a fact can't anchor itself purely by
+    /// repeating who it's supposedly about. Derived from the account, never
+    /// hardcoded (review 6 on #288: the developer's first name had shipped in
+    /// the fence, a no-op for every other user).
+    public static let systemUserNames = userNames(fullName: NSFullUserName(), shortName: NSUserName())
+
+    static func userNames(fullName: String, shortName: String) -> UserNames {
+        let letters = { (text: String) -> [String] in
+            text.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init).filter { $0.count >= 3 }
+        }
+        let full = letters(fullName)
+        return UserNames(exact: Set(full + letters(shortName)), given: full.first)
+    }
+
+    static func isSelfName(_ token: String, names: UserNames) -> Bool {
+        guard token.count >= 3 else { return false }
+        if names.exact.contains(token) { return true }
+        return names.given?.hasPrefix(token) ?? false
     }
 
     /// True when every user turn in the slice is a single word — "yo",
@@ -110,7 +127,7 @@ public enum DistillationAttribution {
     /// offered by the assistant and echoed back with a different subject.
     /// `selfNames`: the user's own names (`systemUserNames` in the app; tests
     /// pass their own) — they never count as evidence.
-    public static func isAnchored(fact: String, userTurns: [String], selfNames: Set<String> = []) -> Bool {
+    public static func isAnchored(fact: String, userTurns: [String], selfNames: UserNames = .none) -> Bool {
         let factTokens = contentTokens(in: fact, selfNames: selfNames)
         guard !factTokens.isEmpty else { return false }
         let userTokens = Set(userTurns.flatMap { contentTokens(in: $0, selfNames: selfNames) })
@@ -122,13 +139,13 @@ public enum DistillationAttribution {
     /// stopwords and the user's own name — function words and the subject's
     /// own name are too common to count as evidence of anchoring. Three, not
     /// four: "dog", "Rex", "car", "son" are most of what a short fact is made of.
-    private static func contentTokens(in text: String, selfNames: Set<String>) -> Set<String> {
+    private static func contentTokens(in text: String, selfNames: UserNames) -> Set<String> {
         Set(
             text.lowercased()
                 .components(separatedBy: CharacterSet.alphanumerics.inverted)
                 .filter { $0.count >= 3 || ($0.count >= 2 && $0.allSatisfy(\.isNumber)) }
                 .filter { !stopwords.contains($0) }
-                .filter { !isSelfName($0, selfNames: selfNames) }
+                .filter { !isSelfName($0, names: selfNames) }
         )
     }
 }

@@ -147,8 +147,9 @@ struct DistillationAttributionTests {
     func ownNameAloneDoesNotAnchor() {
         // Review 6 on #288: the names come from the ACCOUNT, not a constant —
         // and "Kev" counts for "Kevin" because that is how people are addressed.
-        let names = DistillationAttribution.userNameTokens(fullName: "Kevin Murphy", shortName: "kevinmurphy")
-        #expect(names == ["kevin", "murphy", "kevinmurphy"])
+        let names = DistillationAttribution.userNames(fullName: "Kevin Murphy", shortName: "kevinmurphy")
+        #expect(names.exact == ["kevin", "murphy", "kevinmurphy"])
+        #expect(names.given == "kevin")
         #expect(!DistillationAttribution.isAnchored(
             fact: "Kev is a great guy.",
             userTurns: ["Kev, Kev, Kev"],
@@ -160,7 +161,7 @@ struct DistillationAttributionTests {
             selfNames: names
         ))
         // The same shape for another account: her name is filtered, not Kev's.
-        let alice = DistillationAttribution.userNameTokens(fullName: "Alice Ní Bhriain", shortName: "alice")
+        let alice = DistillationAttribution.userNames(fullName: "Alice Ní Bhriain", shortName: "alice")
         #expect(!DistillationAttribution.isAnchored(
             fact: "Alice is a great guy.",
             userTurns: ["Alice, Alice, Alice"],
@@ -168,8 +169,32 @@ struct DistillationAttributionTests {
         ))
         // With no names supplied, nothing is filtered — the guard is opt-in evidence, never a default.
         #expect(DistillationAttribution.isAnchored(fact: "Alice is a great guy.", userTurns: ["Alice, Alice, Alice"]))
-        // Two-letter fragments and a two-letter word never count as the name ("Ní" → dropped).
-        #expect(!alice.contains("ní"))
+        // Two-letter pieces never count as the name ("Ní" → dropped).
+        #expect(!alice.exact.contains("ní"))
+    }
+
+    @Test("only the given name matches by fragment — a surname's leading letters are a word, not a name")
+    func fragmentRuleIsGivenNameOnly() {
+        // Review 7 on #288: any-prefix-of-any-name swallowed "fit" (Fitzgerald)
+        // and "gran" (Grant) — ordinary words that would have blocked real anchors.
+        let fitz = DistillationAttribution.userNames(fullName: "Alexandra Fitzgerald", shortName: "afitz")
+        #expect(!DistillationAttribution.isSelfName("fit", names: fitz))
+        #expect(DistillationAttribution.isSelfName("fitzgerald", names: fitz))
+        #expect(DistillationAttribution.isSelfName("alex", names: fitz))
+        let grant = DistillationAttribution.userNames(fullName: "Kevin Grant", shortName: "kgrant")
+        #expect(!DistillationAttribution.isSelfName("gran", names: grant))
+        #expect(DistillationAttribution.isSelfName("kev", names: grant))
+        #expect(!DistillationAttribution.isSelfName("kg", names: grant)) // under three letters is never a name
+        // A cat that is very fit still anchors for Alexandra Fitzgerald.
+        #expect(DistillationAttribution.isAnchored(
+            fact: "Alexandra's cat is very fit.",
+            userTurns: ["my cat is very fit these days"],
+            selfNames: fitz
+        ))
+        // KNOWN, ACCEPTED COST: an ordinary word that is a fragment of the
+        // GIVEN name is treated as the name — "ale" for Alexandra. Fail-closed,
+        // like the "yes" case below; named here so the trade-off stays deliberate.
+        #expect(DistillationAttribution.isSelfName("ale", names: fitz))
     }
 
     /// KNOWN FALSE NEGATIVE, documented rather than fixed (#284's proposed
