@@ -11,8 +11,18 @@
 //  — every footer/copy verbatim). Prior: Kev + claude-opus-4-8
 //  (SettingsView.swift lineage, 2026-06-06).
 //
+//  Review: Kev + claude-opus-5, 2026-09-11, Confidence 0.85 — "Connect an
+//  agent": the MCP footer's one hard-coded `claude mcp add` line becomes a
+//  five-client picker over ConnectPlan.snippet (the SAME source the embedded
+//  `m1k3` binary executes, so the screen and the tool cannot drift), each with
+//  its destination and a Copy button, plus the Terminal one-liner pointing at
+//  the CLI inside this very bundle. The footer keeps only the fact and the
+//  guarantee — the picker makes the instructions redundant.
+//
 
+import AppKit // NSPasteboard — the Copy buttons
 import M1K3AgentTools
+import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets
 import SwiftUI
 
 struct PrivacySettingsPane: View {
@@ -27,6 +37,7 @@ struct PrivacySettingsPane: View {
     @State private var calendarDenied = false
     @State private var locationDenied = false
     @State private var scriptRows: [AppEnvironment.ScriptRow] = []
+    @State private var connectClient: MCPClient = .claude
 
     var body: some View {
         Form {
@@ -186,7 +197,7 @@ struct PrivacySettingsPane: View {
         scriptRows = await env.scriptRows()
     }
 
-    /// In-process MCP server controls.
+    /// In-process MCP server controls, plus the per-client wiring.
     private var mcpSection: some View {
         Section {
             Toggle("MCP server (HTTP, localhost)", isOn: Binding(
@@ -196,18 +207,66 @@ struct PrivacySettingsPane: View {
             if let status = env.mcpHost.statusText {
                 LabeledContent("Status", value: status)
             }
+            connectAnAgent
         } header: {
             Text("MCP server")
         } footer: {
             Text("""
-            Lets Claude (or another MCP client) on this Mac use M1K3's \
-            knowledge search, voice, and mic. Loopback-only, one client at \
-            a time. Connect with:
-
-            claude mcp add --transport http m1k3 http://127.0.0.1:\(env.mcpHost.port)/mcp
+            Lets an agent on this Mac use M1K3's knowledge, memory, voice, and \
+            mic. Loopback-only, one client at a time.
             """)
             .font(.caption).foregroundStyle(.secondary)
-            .textSelection(.enabled)
         }
+    }
+
+    /// The snippet is `ConnectPlan.snippet` — the same source the `m1k3`
+    /// binary executes, so what's on screen and what the CLI does can't drift.
+    @ViewBuilder private var connectAnAgent: some View {
+        Picker("Connect an agent", selection: $connectClient) {
+            ForEach(MCPClient.allCases, id: \.self) { client in
+                Text(client.displayName).tag(client)
+            }
+        }
+        VStack(alignment: .leading, spacing: 6) {
+            Text(connectSnippet)
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack {
+                Text(ConnectPlan.destination(client: connectClient))
+                    .font(.caption2).foregroundStyle(.secondary)
+                Spacer()
+                Button("Copy") { copyToPasteboard(connectSnippet) }
+                    .controlSize(.small)
+            }
+        }
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Or from Terminal:").font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Text(terminalCommand)
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                Spacer()
+                Button("Copy") { copyToPasteboard(terminalCommand) }
+                    .controlSize(.small)
+            }
+        }
+    }
+
+    private var connectSnippet: String {
+        ConnectPlan.snippet(client: connectClient, url: MCPEndpoint.url(port: env.mcpHost.port))
+    }
+
+    /// The CLI ships inside the bundle, so the path is always right — even for
+    /// a copy of M1K3 the user dragged somewhere other than /Applications.
+    private var terminalCommand: String {
+        let path = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/m1k3").path
+        let quoted = path.contains(" ") ? "\"\(path)\"" : path
+        return "\(quoted) connect \(connectClient.rawValue)"
+    }
+
+    private func copyToPasteboard(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 }

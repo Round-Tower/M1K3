@@ -70,6 +70,51 @@ one-time model download and an optional, explicitly-enabled web search.
 - **[Download the DMG](https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)** — signed & notarized.
 - **Build from source** — [`macos/README.md`](./macos/README.md): clone → `xcodegen generate` → ⌘R.
 
+## Agents
+
+M1K3 ships a command-line client, `m1k3`, inside the app bundle. It's a thin
+client — the running app is the daemon (one MLX slot on the machine, and it
+belongs to M1K3.app).
+
+```sh
+brew trust round-tower/tap                 # Homebrew 6: trust the tap once
+brew install --cask round-tower/tap/m1k3   # the cask symlinks Contents/MacOS/m1k3
+m1k3 connect claude                        # also: codex · cursor · vscode · zed
+```
+
+Then `m1k3 status`, `m1k3 ask "what did I decide about the pin?"`,
+`m1k3 remember "…"`, `m1k3 search "…"`, `m1k3 speak "build's green"`.
+
+Prefer clicking? **M1K3 ▸ Settings ▸ Privacy ▸ MCP server** has the same thing:
+pick your agent, copy the snippet. Already have M1K3 installed? The binary is
+at `/Applications/M1K3.app/Contents/MacOS/m1k3`.
+
+### Tell your agents about the resident
+
+`m1k3 agent-notes --write` folds this into a project's `AGENTS.md` (or any path
+you name). It's marker-fenced, so re-running it replaces the block rather than
+stacking copies:
+
+```markdown
+<!-- m1k3:begin -->
+## M1K3 is the resident
+
+M1K3 is a local, private assistant running on this Mac, reachable over MCP. It
+holds the user's own documents and memories — so before you search the web, ask
+it: `ask_m1k3` for a grounded answer, `search_knowledge` for the sources behind
+one. Persist a durable fact with `remember` and it is there next session too.
+`speak` narrates aloud, which is often kinder than a wall of text.
+
+M1K3 can be down — a "disconnected" MCP server just means the app is closed.
+Never block on it; carry on without it.
+<!-- m1k3:end -->
+```
+
+One honest caveat: the **Mac App Store build's helper is sandboxed**, so it
+can't write another app's config file or run `claude` for you. There, `m1k3
+connect` prints the config to paste instead — and says so. The Developer ID
+build (the DMG and the Homebrew cask) does the write.
+
 ## MCP integration
 
 The running Mac app serves MCP over HTTP at `http://127.0.0.1:4242/mcp` —

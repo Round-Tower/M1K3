@@ -84,10 +84,22 @@ echo
 # allowed to ship. Keeps the DMG's runtime behaviour identical to before the
 # default was inverted; only this archive carries the exception.
 DIRECT_ENTITLEMENTS="$MACOS_DIR/M1K3App/M1K3.entitlements"
-# Preflight: fail fast with a clear message if the entitlements file is missing
-# (deleted/renamed), rather than a cryptic xcodebuild error mid-archive. Mirrors
-# release-mas.sh's check on its MAS_ENTITLEMENTS.
+# The embedded `m1k3` CLI has its own pair. Its project DEFAULT is the sandboxed
+# set; the DMG's copy must be unsandboxed or `m1k3 connect cursor` can't write
+# ~/.cursor/mcp.json and `m1k3 connect claude` can't exec the claude binary.
+#
+# ⚠️ These are passed as the two per-target VARIABLES the project indirects
+# through (M1K3_APP_ENTITLEMENTS / M1K3_CLI_ENTITLEMENTS), never as a global
+# CODE_SIGN_ENTITLEMENTS: an xcodebuild setting on the command line applies to
+# EVERY target, so the old global override would now stamp the app's
+# entitlements — sandbox, mic, calendars, the audioanalyticsd exception — onto
+# a command-line helper that needs none of them.
+CLI_ENTITLEMENTS="$MACOS_DIR/M1K3CLI/m1k3-direct.entitlements"
+# Preflight: fail fast with a clear message if either entitlements file is
+# missing (deleted/renamed), rather than a cryptic xcodebuild error mid-archive.
+# Mirrors release-mas.sh's check on its MAS_ENTITLEMENTS.
 [ -f "$DIRECT_ENTITLEMENTS" ] || { echo "✗ Missing $DIRECT_ENTITLEMENTS"; exit 1; }
+[ -f "$CLI_ENTITLEMENTS" ] || { echo "✗ Missing $CLI_ENTITLEMENTS"; exit 1; }
 # ── Signing style ─────────────────────────────────────────────────────────────
 # Local machines carry an Apple Development cert, so the project's Automatic
 # signing archives fine (dev-signs, then re-signs Developer ID at export). CI
@@ -110,7 +122,8 @@ xcodebuild archive \
   -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
   -archivePath "$ARCHIVE" -destination 'generic/platform=macOS' \
   -skipPackagePluginValidation \
-  CODE_SIGN_ENTITLEMENTS="$DIRECT_ENTITLEMENTS" \
+  M1K3_APP_ENTITLEMENTS="$DIRECT_ENTITLEMENTS" \
+  M1K3_CLI_ENTITLEMENTS="$CLI_ENTITLEMENTS" \
   DEVELOPMENT_TEAM="$TEAM" \
   ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"} | beautify
 
@@ -121,6 +134,37 @@ xcodebuild -exportArchive \
   -archivePath "$ARCHIVE" -exportPath "$EXPORT_DIR" \
   -exportOptionsPlist "$EXPORT_OPTS" | beautify
 [ -d "$APP" ] || { echo "✗ Export produced no $APP_NAME.app"; exit 1; }
+
+# ── 2b. The embedded CLI must NOT be sandboxed on this channel ───────────────
+# `m1k3 connect cursor` writes ~/.cursor/mcp.json and `m1k3 connect claude`
+# execs the claude binary; a sandboxed helper can do neither, and would write
+# into its own container while reporting success. This is the one place that
+# mistake is catchable — the entitlements come from a build VARIABLE, so a
+# typo in M1K3_CLI_ENTITLEMENTS fails silently at runtime, months later.
+CLI_BIN="$APP/Contents/MacOS/m1k3"
+[ -f "$CLI_BIN" ] || { echo "✗ No m1k3 helper in $APP_NAME.app"; exit 1; }
+# FAIL-CLOSED. A bare `… | grep -q app-sandbox` reads an EMPTY pipeline as
+# "not sandboxed" — so the one mistake this check exists to catch would sail
+# through on any Xcode where the flags or the timing differ. Capture first,
+# demand a real plist, then judge. Verified on this Xcode (2026-09-11): a
+# helper signed with the EMPTY direct entitlements still prints
+# `<plist version="1.0"><dict/></plist>`, so `<plist` is a sound liveness
+# token; an unsigned binary prints nothing at all.
+CLI_ENT="$(codesign -d --entitlements - --xml "$CLI_BIN" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null)"
+case "$CLI_ENT" in
+  *"<plist"*) ;;
+  *)
+    echo "✗ Entitlements could not be READ from $CLI_BIN — refusing to guess."
+    echo "  (codesign -d --entitlements - --xml | plutil -convert xml1 produced no plist.)"
+    exit 1 ;;
+esac
+case "$CLI_ENT" in
+  *com.apple.security.app-sandbox*)
+    echo "✗ The embedded m1k3 helper is SANDBOXED — the DMG build must use"
+    echo "  M1K3CLI/m1k3-direct.entitlements (check M1K3_CLI_ENTITLEMENTS above)."
+    exit 1 ;;
+esac
+echo "✓ m1k3 helper is unsandboxed (direct-distribution entitlements)"
 
 # ── 3. Notarize + staple the .app (offline first-launch) ─────────────────────
 if [ "$SKIP_NOTARIZE" -eq 0 ]; then

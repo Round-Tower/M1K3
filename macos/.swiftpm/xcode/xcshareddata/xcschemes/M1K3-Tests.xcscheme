@@ -80,6 +80,9 @@
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3PreviewTests" BuildableName = "M1K3PreviewTests" BlueprintName = "M1K3PreviewTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
          <TestableReference skipped = "NO">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3CLICoreTests" BuildableName = "M1K3CLICoreTests" BlueprintName = "M1K3CLICoreTests" ReferencedContainer = "container:"></BuildableReference>
+         </TestableReference>
+         <TestableReference skipped = "NO">
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3CallsTests" BuildableName = "M1K3CallsTests" BlueprintName = "M1K3CallsTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
          <TestableReference skipped = "NO">

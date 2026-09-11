@@ -5,11 +5,16 @@
 #
 # Differs from the direct build (release-macos.sh) in exactly three ways:
 #   • signs with "Apple Distribution" (not Developer ID)
-#   • CODE_SIGN_ENTITLEMENTS → M1K3-MAS.entitlements (no audioanalyticsd). This
+#   • M1K3_APP_ENTITLEMENTS → M1K3-MAS.entitlements (no audioanalyticsd). This
 #     now MATCHES project.yml's default (the default was inverted to MAS-safe on
 #     2026-06-19 so no archive can leak the exception); the override is kept here
 #     as belt-and-suspenders + self-documentation. release-macos.sh is the one
 #     path that opts back INTO the full M1K3.entitlements.
+#     ⚠️ It is the per-target VARIABLE, not a global CODE_SIGN_ENTITLEMENTS: a
+#     global override would also stamp the app's entitlements onto the embedded
+#     `m1k3` CLI. The CLI is left on its project default — m1k3-sandboxed.entitlements,
+#     which is the App-Store-safe pair (sandbox + network.client) — so this
+#     script stays MAS-safe by doing nothing at all about the helper.
 #   • exports method=app-store-connect → a .pkg for App Store Connect upload
 #
 # Prereqs: a VALID "Apple Distribution: … (76DJH43A4P)" cert in the keychain,
@@ -102,7 +107,36 @@ xcodebuild archive \
   -skipPackagePluginValidation \
   ${BUILD_NUMBER:+CURRENT_PROJECT_VERSION="$BUILD_NUMBER"} \
   DEVELOPMENT_TEAM="$TEAM" \
-  CODE_SIGN_ENTITLEMENTS="$MAS_ENTITLEMENTS" | beautify
+  M1K3_APP_ENTITLEMENTS="$MAS_ENTITLEMENTS" | beautify
+
+# ── 1b. The embedded CLI MUST be sandboxed on this channel ───────────────────
+# The App Store rejects an unsandboxed executable inside a sandboxed app. The
+# helper's project DEFAULT is the sandboxed pair and this script deliberately
+# overrides only the APP's — so this check proves the default actually applied
+# rather than trusting that nothing overrode it.
+ARCHIVED_APP="$ARCHIVE/Products/Applications/$APP_NAME.app"
+CLI_BIN="$ARCHIVED_APP/Contents/MacOS/m1k3"
+[ -f "$CLI_BIN" ] || { echo "✗ No m1k3 helper in the archived $APP_NAME.app"; exit 1; }
+# FAIL-CLOSED, same shape as release-macos.sh: an empty pipeline must not read
+# as "no sandbox" there NOR as "not sandboxed, block the build" here. Demand a
+# real plist first; only then judge the key. (An empty entitlements dict still
+# prints `<plist …><dict/></plist>` on this Xcode — verified 2026-09-11.)
+CLI_ENT="$(codesign -d --entitlements - --xml "$CLI_BIN" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null)"
+case "$CLI_ENT" in
+  *"<plist"*) ;;
+  *)
+    echo "✗ Entitlements could not be READ from $CLI_BIN — refusing to guess."
+    echo "  (codesign -d --entitlements - --xml | plutil -convert xml1 produced no plist.)"
+    exit 1 ;;
+esac
+case "$CLI_ENT" in
+  *com.apple.security.app-sandbox*) ;;
+  *)
+    echo "✗ The embedded m1k3 helper is NOT sandboxed — the App Store will reject"
+    echo "  this build. It must use M1K3CLI/m1k3-sandboxed.entitlements (the default)."
+    exit 1 ;;
+esac
+echo "✓ m1k3 helper is sandboxed (App-Store-safe entitlements)"
 
 # ── 2. Export the .pkg (App Store Connect) ───────────────────────────────────
 echo "▸ [2/4] Exporting (app-store-connect)…"

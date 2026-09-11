@@ -12,6 +12,8 @@
 // Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
 // Review: Kev + claude-fable-5.1, 2026-09-07 — M1K3Screengrab target + tests (the App Store screengrab harness).
 // Review: Kev + claude-fable-5.1, 2026-09-08 — M1K3Screengrab links M1K3Voice for the plates' open-mic transcriber.
+// Review: Kev + claude-opus-5, 2026-09-11 — M1K3CLICore target + tests (the `m1k3` command-line client's
+// pure half: argument parsing, JSON-RPC framing, the agent-notes block, and the per-client connect plans).
 // Context: First Mac-native surface for M1K3. Scaffold begins with the pure,
 // dependency-free knowledge primitives (VectorMath, RRFFusion) ported from
 // the prior knowledge-server project so the foundation builds in seconds before MLX/GRDB enter the graph.
@@ -85,6 +87,14 @@ let package = Package(
         // routed ReviewTarget. Pure + dependency-free; the QuickLook/WKWebView
         // renderers live in the app target (verify-by-run).
         .library(name: "M1K3Preview", targets: ["M1K3Preview"]),
+        // The `m1k3` command-line client's pure half: argument parsing, the
+        // JSON-RPC frames it POSTs at the running app's loopback MCP server,
+        // the AGENTS.md "M1K3 is the resident" block, the per-client connect
+        // plans (which Settings also renders), and AskJobWire — the ask/poll
+        // sentences M1K3MCPKit composes and the CLI reads back.
+        // Foundation-only — the executable target owns URLSession, Process
+        // and the filesystem.
+        .library(name: "M1K3CLICore", targets: ["M1K3CLICore"]),
         // Diagnostics: privacy scrub + issue-report formatting for the secret-free
         // "Report an issue" flow. Pure + dependency-free so the redaction rules
         // are unit-pinned (a miss leaks PII).
@@ -456,6 +466,10 @@ let package = Package(
                 "M1K3Knowledge",
                 "M1K3Memory",
                 "M1K3Todos",
+                // AskJobWire — the submit-and-poll SENTENCES shared with the
+                // `m1k3` CLI that reads them back. Foundation-only, so this
+                // costs the server nothing but kills a silent-reword bug.
+                "M1K3CLICore",
                 .product(name: "MCP", package: "swift-sdk"),
             ],
             path: "Sources/M1K3MCPKit"
@@ -597,6 +611,19 @@ let package = Package(
             name: "M1K3PreviewTests",
             dependencies: ["M1K3Preview"],
             path: "Tests/M1K3PreviewTests"
+        ),
+        // The CLI's pure half (see the products list). Foundation-only and
+        // dependency-free BY DESIGN: `m1k3` is a thin client of the running
+        // app, so nothing here may drag MLX, GRDB or the MCP SDK into a
+        // command-line binary that has to start in milliseconds.
+        .target(
+            name: "M1K3CLICore",
+            path: "Sources/M1K3CLICore"
+        ),
+        .testTarget(
+            name: "M1K3CLICoreTests",
+            dependencies: ["M1K3CLICore"],
+            path: "Tests/M1K3CLICoreTests"
         ),
         // Call intelligence — the model-AGNOSTIC seam (this is the reusable IP, per
         // the challenger pass): batch-transcription + diarization + summarization
