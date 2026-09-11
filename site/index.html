@@ -36,14 +36,14 @@
   "name": "M1K3 for Mac",
   "operatingSystem": "macOS 26",
   "applicationCategory": "UtilitiesApplication",
-  "description": "Privacy-first AI that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), a native screensaver, and an MCP server with 16 tools.",
+  "description": "Privacy-first AI that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), a native screensaver, and an MCP server with 18 tools.",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
   "url": "https://m1k3.app/",
   "downloadUrl": "https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg",
   "license": "https://fsl.software/",
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie", "sameAs": ["https://github.com/Round-Tower"] },
   "sameAs": ["https://github.com/Round-Tower/M1K3"],
-  "dateModified": "2026-09-09"
+  "dateModified": "2026-09-11"
 }
 </script>
 <script type="application/ld+json">
@@ -60,7 +60,7 @@
     { "@type": "Question", "name": "How is M1K3 different from Ollama or ChatGPT?",
       "acceptedAnswer": { "@type": "Answer", "text": "Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models plus live voice, a personal knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server, in one sandboxed native Mac app." } },
     { "@type": "Question", "name": "Can Claude or other AI agents use my M1K3 knowledge?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an in-app MCP (Model Context Protocol) server with 16 tools — knowledge search, documents, voice, memory, and ask-M1K3 with an async job API for long asks — over local HTTP at 127.0.0.1:4242, so Claude and other MCP clients can query your local knowledge base without a byte leaving the Mac." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an in-app MCP (Model Context Protocol) server with 18 tools — knowledge search, documents, voice, memory, and ask-M1K3 with an async job API for long asks — over local HTTP at 127.0.0.1:4242, so Claude and other MCP clients can query your local knowledge base without a byte leaving the Mac." } },
     { "@type": "Question", "name": "Does M1K3 do anything when I'm not talking to it?",
       "acceptedAnswer": { "@type": "Answer", "text": "Only if you ask it to. The Heartbeat is an ambient pulse — every two hours, a short narrative about your machine and your day, composed from facts the code gathered, respecting quiet hours. It is off by default, lives on its own screen with a one-tap Clear, and never enters your chat transcript. There is also a native macOS screensaver — the pixel M in ambient rain — installable from Settings." } },
     { "@type": "Question", "name": "Can my other devices use my Mac's brain?",
@@ -474,7 +474,7 @@
       <div class="cell-icon">&lt;/&gt;</div>
       <h3>MCP server</h3>
       <p>M1K3 exposes your knowledge, memory, and voice to Claude and other agents over the Model Context Protocol — with an async job API for the slow, deep asks. Your second brain, available to your other AIs — locally.</p>
-      <span class="tag">mcp · 16 tools · 127.0.0.1:4242</span>
+      <span class="tag">mcp · 18 tools · 127.0.0.1:4242</span>
     </div>
     <div class="cell reveal">
       <div class="cell-icon">◇◆◇</div>
@@ -568,7 +568,7 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>Can Claude use my M1K3 knowledge?</summary>
-      <p>Yes. M1K3 ships an MCP server with 16 tools — <code>search_knowledge</code>, <code>ask_m1k3</code>, memory recall, documents, even <code>speak</code> — over local HTTP at <code>127.0.0.1:4242</code>. Long asks get an async job API. Claude and other MCP clients query your local knowledge base, locally.</p>
+      <p>Yes. M1K3 ships an MCP server with 18 tools — <code>search_knowledge</code>, <code>ask_m1k3</code>, memory recall, documents, even <code>speak</code> — over local HTTP at <code>127.0.0.1:4242</code>. Long asks get an async job API. Claude and other MCP clients query your local knowledge base, locally.</p>
     </details>
     <details class="reveal">
       <summary>Is it free? Is it open source?</summary>
@@ -996,6 +996,11 @@ tick();
      Review: Kev + claude-opus-5, 2026-09-11 — the new /agents on-ramp page joins the wayfinding: an
      "Agents" link in the nav beside Teams, and "FOR AGENTS" ahead of "FOR TEAMS" in the footer. Link
      targets only — no copy, JSON-LD or dateModified change on this page, so the visible/JSON-LD FAQ
-     pairing is untouched. Confidence now 0.85. -->
+     pairing is untouched. Confidence now 0.85.
+     Review: Kev + claude-fable-5.1, 2026-09-11 — the MCP tool count: "16 tools" → "18 tools" in the four
+     places that state it (SoftwareApplication description, the FAQ JSON-LD answer, the feature tag, the
+     visible FAQ paragraph), keeping the JSON-LD/visible pair in step — /agents and llms.txt already said
+     18, and tools/list on the installed master build (dca2dd33) returns 18. dateModified 2026-09-11.
+     Confidence now 0.85. -->
 </body>
 </html>
