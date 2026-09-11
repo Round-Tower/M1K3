@@ -147,8 +147,8 @@ struct DistillationAttributionTests {
     func ownNameAloneDoesNotAnchor() {
         // Review 6 on #288: the names come from the ACCOUNT, not a constant —
         // and "Kev" counts for "Kevin" because that is how people are addressed.
-        let names = DistillationAttribution.userNames(fullName: "Kevin Murphy", shortName: "kevinmurphy")
-        #expect(names.exact == ["kevin", "murphy", "kevinmurphy"])
+        let names = DistillationAttribution.userNames(fullName: "Kevin Murphy")
+        #expect(names.exact == ["kevin", "murphy"])
         #expect(names.given == "kevin")
         #expect(!DistillationAttribution.isAnchored(
             fact: "Kev is a great guy.",
@@ -161,7 +161,7 @@ struct DistillationAttributionTests {
             selfNames: names
         ))
         // The same shape for another account: her name is filtered, not Kev's.
-        let alice = DistillationAttribution.userNames(fullName: "Alice Ní Bhriain", shortName: "alice")
+        let alice = DistillationAttribution.userNames(fullName: "Alice Ní Bhriain")
         #expect(!DistillationAttribution.isAnchored(
             fact: "Alice is a great guy.",
             userTurns: ["Alice, Alice, Alice"],
@@ -177,11 +177,11 @@ struct DistillationAttributionTests {
     func fragmentRuleIsGivenNameOnly() {
         // Review 7 on #288: any-prefix-of-any-name swallowed "fit" (Fitzgerald)
         // and "gran" (Grant) — ordinary words that would have blocked real anchors.
-        let fitz = DistillationAttribution.userNames(fullName: "Alexandra Fitzgerald", shortName: "afitz")
+        let fitz = DistillationAttribution.userNames(fullName: "Alexandra Fitzgerald")
         #expect(!DistillationAttribution.isSelfName("fit", names: fitz))
         #expect(DistillationAttribution.isSelfName("fitzgerald", names: fitz))
         #expect(DistillationAttribution.isSelfName("alex", names: fitz))
-        let grant = DistillationAttribution.userNames(fullName: "Kevin Grant", shortName: "kgrant")
+        let grant = DistillationAttribution.userNames(fullName: "Kevin Grant")
         #expect(!DistillationAttribution.isSelfName("gran", names: grant))
         #expect(DistillationAttribution.isSelfName("kev", names: grant))
         #expect(!DistillationAttribution.isSelfName("kg", names: grant)) // under three letters is never a name
@@ -197,14 +197,27 @@ struct DistillationAttributionTests {
         #expect(DistillationAttribution.isSelfName("ale", names: fitz))
     }
 
+    @Test("an empty account name (iOS/visionOS) filters nothing — and the login name is never a self-name")
+    func emptyAccountNameFiltersNothing() {
+        // Review 9 on #288: iOS reports no full name and a generic login name
+        // ("mobile"); only the full name feeds the set, so "mobile" stays a word.
+        let none = DistillationAttribution.userNames(fullName: "")
+        #expect(none == .none)
+        #expect(DistillationAttribution.isAnchored(
+            fact: "Alice prefers the mobile app.",
+            userTurns: ["I prefer the mobile app"],
+            selfNames: none
+        ))
+    }
+
     @Test("a short given name keeps the given slot — the surname never inherits the fragment leniency")
     func shortGivenNameDoesNotPromoteTheSurname() {
         // Review 8 on #288: `given` was the first token to SURVIVE the ≥3
         // filter, so "Ed Grant" made "grant" the given name and "gran" a
         // self-name again. Raw first token now, whatever its length.
-        let ed = DistillationAttribution.userNames(fullName: "Ed Grant", shortName: "edgrant")
+        let ed = DistillationAttribution.userNames(fullName: "Ed Grant")
         #expect(ed.given == "ed")
-        #expect(ed.exact == ["grant", "edgrant"])
+        #expect(ed.exact == ["grant"])
         #expect(!DistillationAttribution.isSelfName("gran", names: ed))
         #expect(DistillationAttribution.isSelfName("grant", names: ed))
         #expect(DistillationAttribution.isAnchored(

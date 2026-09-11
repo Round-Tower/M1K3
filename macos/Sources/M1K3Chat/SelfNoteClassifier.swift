@@ -50,7 +50,7 @@ public enum SelfNoteClassifier {
     /// sentence about M1K3 (an interview, a compliment) does not. Whole
     /// words: "committed" and "emerged" are English, not git (review 1).
     private static let wiringPatterns = [
-        "\\bpr #", "\\bmerged\\b", "\\bcommits?\\b", "\\binstalled\\b",
+        "\\bpr ?#", "\\bmerged\\b", "\\bcommits?\\b", "\\binstalled\\b",
         "\\bpalette\\b", "\\bmcp tools?\\b",
         // NOT bare "tool": "M1K3 is a useful tool" is an opinion, not wiring.
     ]

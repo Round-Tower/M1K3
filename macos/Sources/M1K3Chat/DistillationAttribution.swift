@@ -43,7 +43,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 6 fold) — the self-name guard reads the
 //  account's names (`NSFullUserName` / `NSUserName`) instead of a hardcoded "kev" that was a no-op
 //  for every other user. Review 7 fold: only the GIVEN name matches by leading fragment (Kev for
-//  Kevin); surnames and the login name match exactly — "fit" for Fitzgerald is a word, not a name.
+//  Kevin); surnames match exactly — "fit" for Fitzgerald is a word, not a name. Review 9 fold: the
+//  login name is dropped from the set (on iOS it is the generic "mobile"; nobody is addressed by it).
 //
 
 import Foundation
@@ -64,12 +65,16 @@ public enum DistillationAttribution {
     ]
 
     /// The user's own names as the account knows them: every letter run of
-    /// three or more from `NSFullUserName()` + `NSUserName()` (matched
-    /// exactly), plus the GIVEN name (the full name's first token, whatever its length), which also
+    /// three or more from `NSFullUserName()` (matched exactly), plus the GIVEN
+    /// name (the full name's first token, whatever its length), which also
     /// matches by leading fragment — "Kev" for "Kevin", "Alex" for
-    /// "Alexander" — because that is how people are addressed. Surnames and
-    /// the login name never match by fragment (review 7 on #288: "fit" for
-    /// Fitzgerald, "gran" for Grant would have swallowed ordinary words).
+    /// "Alexander" — because that is how people are addressed. Surnames never
+    /// match by fragment (review 7 on #288: "fit" for Fitzgerald, "gran" for
+    /// Grant would have swallowed ordinary words). The login name is NOT
+    /// used: nobody is addressed as "kevinmurphy" in chat, and on iOS it is a
+    /// generic word ("mobile") that would have been stripped as a self-name
+    /// (review 9). On iOS/visionOS the full name is empty — nothing filtered,
+    /// the documented default.
     /// KNOWN, ACCEPTED COST: an ordinary word that is a fragment of the
     /// given name ("ale" for Alexandra) is treated as the name — fail-closed,
     /// like the "yes" case below; pinned in DistillationAttributionTests.
@@ -91,19 +96,15 @@ public enum DistillationAttribution {
     /// repeating who it's supposedly about. Derived from the account, never
     /// hardcoded (review 6 on #288: the developer's first name had shipped in
     /// the fence, a no-op for every other user).
-    public static let systemUserNames = userNames(fullName: NSFullUserName(), shortName: NSUserName())
+    public static let systemUserNames = userNames(fullName: NSFullUserName())
 
-    static func userNames(fullName: String, shortName: String) -> UserNames {
-        let letters = { (text: String) -> [String] in
-            text.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init)
-        }
-        let long = { (tokens: [String]) in tokens.filter { $0.count >= 3 } }
+    static func userNames(fullName: String) -> UserNames {
+        let tokens = fullName.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init)
         // `given` is the RAW first token, before the length filter: for "Ed
         // Grant" it is "ed" (too short to fragment-match anything, which is
         // fine), never "grant" — a surname must not inherit the fragment
         // leniency by being the first name long enough to survive (review 8).
-        let full = letters(fullName)
-        return UserNames(exact: Set(long(full) + long(letters(shortName))), given: full.first)
+        return UserNames(exact: Set(tokens.filter { $0.count >= 3 }), given: tokens.first)
     }
 
     static func isSelfName(_ token: String, names: UserNames) -> Bool {
