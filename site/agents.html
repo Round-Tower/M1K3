@@ -104,7 +104,7 @@
   <p>Download the signed, notarized <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">M1K3.dmg</a> from GitHub Releases and drag it to Applications. Then either use the picker in <strong>Settings ▸ Privacy ▸ MCP server</strong>, or run the same command from inside the bundle:</p>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
-    <div class="term-body"><pre><span class="p">$</span> /Applications/M1K3.app/Contents/MacOS/m1k3 connect claude</pre></div>
+    <div class="term-body"><pre><span class="p">$</span> /Applications/M1K3.app/Contents/Helpers/m1k3 connect claude</pre></div>
   </div>
   <p>M1K3 needs an Apple Silicon Mac on macOS 26. It does not need an account.</p>
 
@@ -308,6 +308,11 @@ Never block on it; carry on without it.
      call has to come first. The Host/Origin refusal now names no status code:
      PR #272 puts M1K3's own LoopbackRequestGate (path → Host → Origin →
      Content-Type) ahead of the SDK pipeline and its codes differ from the SDK's
-     421. Confidence now 0.85. -->
+     421. Confidence now 0.85.
+     Review: Kev + claude-fable-5.1, 2026-09-11 — the helper lives at
+     Contents/Helpers/m1k3, not Contents/MacOS: Xcode's sign-on-copy re-signs
+     anything in MacOS as the app itself (its identifier and entitlements), which
+     aborted the developer-id export and would have shipped a sandboxed helper.
+     Confidence now 0.85. -->
 </body>
 </html>
