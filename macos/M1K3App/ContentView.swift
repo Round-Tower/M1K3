@@ -31,6 +31,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — `starters` state (seeded from StarterPrompts' door) + a
 //  task on the GreetingCard redraws the chips from `env.starterPrompts()` every time the canvas goes
 //  blank (the card only exists in the empty branch, so a plain task re-runs per blank canvas).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the in-chat karaoke band shows only while the notch HUD
+//  is OFF (Settings ▸ General): with the HUD on, M1K3's words are already captioned above every window
+//  and the band doubled them (Kev: "we probably don't need the in-app HUD over the chat"). Off = the
+//  read-along stays. Confidence now 0.85.
 
 import M1K3Avatar
 import M1K3Chat
@@ -103,6 +107,9 @@ struct ContentView: View {
     @AppStorage(AppEnvironment.hasEnteredVoiceModeKey) private var hasEnteredVoiceMode = false
     /// Chat auto-speak: answers are spoken as they stream, karaoke band follows.
     @AppStorage(VoiceModeDefaults.autoSpeakKey) private var autoSpeakEnabled = false
+    /// When the notch HUD is on it already captions what M1K3 is saying above
+    /// every window; the in-chat band then only doubles it (Kev, 2026-09-11).
+    @AppStorage(AppEnvironment.notchHUDEnabledKey) private var notchHUDEnabled = false
 
     /// Readable measure for the chat column on large windows: transcript and
     /// input bar cap at this width and centre, instead of stretching edge to
@@ -661,7 +668,9 @@ struct ContentView: View {
             // The karaoke follow for auto-speak: the sentence being spoken,
             // word-highlighted, riding above the input bar (the voice-in-chat
             // design's band) — read along while M1K3 talks, keep typing.
-            if autoSpeakEnabled, env.speechHighlight.isActive,
+            // Only when the notch HUD is off: with it on, the same words are
+            // already captioned above the window, and two HUDs is one too many.
+            if autoSpeakEnabled, !notchHUDEnabled, env.speechHighlight.isActive,
                let text = env.speechHighlight.utteranceText
             {
                 KaraokeReadingText(

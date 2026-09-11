@@ -42,6 +42,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the caption names the NARRATOR (M1K3 / the visiting MCP client)
 //  instead of brain · voice tier — the plumbing nobody asked about. Confidence now 0.8 (verify-by-launch).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the marquee shows the SENTENCE being spoken
+//  (`NarrationLine`, from the karaoke's word range), one line, whitespace collapsed: a visiting
+//  agent's multi-paragraph `speak` had rendered as stacked full-width lines clipped both sides
+//  (`fixedSize` honours embedded newlines). Confidence now 0.8 (verify-by-launch: a long `speak`).
 
 import M1K3Avatar
 import M1K3Voice
@@ -51,9 +55,15 @@ struct NotchHUDContentView: View {
     let env: AppEnvironment
     @AppStorage(AppEnvironment.voiceCompanionKey) private var companion = ""
 
+    /// ONE line: the sentence being spoken, not the whole utterance. A
+    /// visiting agent's multi-paragraph `speak` is a single utterance with
+    /// embedded newlines; rendered whole it stacked as full-width lines the
+    /// panel clipped on both sides (Kev's screenshot, 2026-09-11). The chat's
+    /// own auto-speak speaks a sentence per utterance, so it never showed.
     private var narration: String? {
         guard let text = env.speechHighlight.utteranceText, !text.isEmpty else { return nil }
-        return text
+        let line = NarrationLine.current(in: text, wordRange: env.speechHighlight.currentWordRange)
+        return line.isEmpty ? nil : line
     }
 
     var body: some View {
@@ -124,6 +134,7 @@ private struct NotchHUDMarquee: View {
         Text(text)
             .font(.system(size: 13, weight: .medium, design: .rounded))
             .foregroundStyle(.white)
+            .lineLimit(1) // a marquee scrolls ONE line; `fixedSize` alone honours embedded newlines
             .fixedSize()
             .background(GeometryReader { geo in
                 Color.clear.onAppear { restart(textWidth: geo.size.width) }
