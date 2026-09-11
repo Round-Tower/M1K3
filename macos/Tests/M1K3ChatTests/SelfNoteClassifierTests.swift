@@ -88,6 +88,14 @@ struct SelfNoteClassifierTests {
         ))
     }
 
+    @Test("a wiring marker that lives only in the title still counts")
+    func markerInTitleCounts() {
+        #expect(SelfNoteClassifier.isWiringNote(
+            title: "M1K3 gained `recent_activity` (PR #275)",
+            text: "He can look back over the week now."
+        ))
+    }
+
     @Test("title alone can carry the M1K3 subject even when the body doesn't repeat the name")
     func titleAloneCarriesTheSubject() {
         #expect(SelfNoteClassifier.isWiringNote(

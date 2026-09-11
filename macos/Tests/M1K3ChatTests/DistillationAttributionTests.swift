@@ -38,7 +38,7 @@ struct DistillationAttributionTests {
         ]))
     }
 
-    @Test("several short acknowledgements stay trivial (every turn two words or fewer)")
+    @Test("several one-word acknowledgements stay trivial")
     func shortAcknowledgementsAreTrivial() {
         #expect(DistillationAttribution.userContributionIsTrivial(turns: [
             ChatTurn(role: .user, text: "yo"),
@@ -48,12 +48,25 @@ struct DistillationAttributionTests {
         ]))
     }
 
-    @Test("two long words still count as trivial — the word-count floor, not just length")
-    func twoLongWordsAreTrivial() {
-        #expect(DistillationAttribution.userContributionIsTrivial(turns: [
-            ChatTurn(role: .user, text: "Antidisestablishmentarianism absolutely"),
-            ChatTurn(role: .assistant, text: "Noted."),
-        ]))
+    @Test("two words can be a fact — \"I'm diabetic\" is never trivial (review 2 on #288)")
+    func twoWordDisclosureIsNotTrivial() {
+        // The gate exists to skip a distiller call on a bare greeting, nothing
+        // more: the anchor fence below is what keeps offered facts out. So
+        // only a slice of single-word turns is trivial.
+        for text in ["I'm diabetic", "I'm vegetarian", "Antidisestablishmentarianism absolutely"] {
+            #expect(!DistillationAttribution.userContributionIsTrivial(turns: [
+                ChatTurn(role: .user, text: text),
+                ChatTurn(role: .assistant, text: "Noted."),
+            ]), "\(text)")
+        }
+    }
+
+    @Test("a single digit never anchors — \"step 1\" is not \"1 sibling\"")
+    func singleDigitDoesNotAnchor() {
+        #expect(!DistillationAttribution.isAnchored(
+            fact: "Kev has 1 sibling.",
+            userTurns: ["step 1 is done"]
+        ))
     }
 
     @Test("a short real statement is NOT trivial — \"I live in Cork\" is a fact, not a greeting")

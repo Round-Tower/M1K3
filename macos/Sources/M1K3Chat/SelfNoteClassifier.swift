@@ -25,7 +25,9 @@
 //  counted any MENTION of M1K3 as the subject and the markers were substrings ("committed",
 //  "emerged"), so "Kev asked M1K3 to track his sleep" + "committed to bed by 11pm" was dropped
 //  from WHAT I KNOW ABOUT YOU. Title and text now share one subject-shaped test; markers are
-//  whole words. Pinned by titleMentionWithoutSubjectIsNotFlagged + markersAreWholeWords.
+//  whole words, and scanned in the title as well as the text (a marker that lives only in
+//  the title counted for nothing). Pinned by titleMentionWithoutSubjectIsNotFlagged,
+//  markersAreWholeWords, markerInTitleCounts.
 //
 
 import Foundation
@@ -55,7 +57,7 @@ public enum SelfNoteClassifier {
     /// title or text AND at least one code/wiring marker is present. Either
     /// alone is not enough — see the file header.
     public static func isWiringNote(title: String, text: String) -> Bool {
-        subjectIsSelf(title: title, text: text) && hasWiringMarker(text)
+        subjectIsSelf(title: title, text: text) && hasWiringMarker(title + " " + text)
     }
 
     /// The title and the text are held to the SAME subject test: M1K3 as

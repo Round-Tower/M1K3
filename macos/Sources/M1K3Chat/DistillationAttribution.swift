@@ -37,9 +37,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (same day, pre-merge) — the first cut's floors
 //  cost real recall: a 24-character trivial floor skipped "I live in Cork" outright, and a
 //  four-letter token minimum dropped "My dog is Rex" / "I'm 42" as unanchored. The character
-//  floor is gone (review 1 named "I'm a teacher." too) — ≤2 words per turn is the only trivial
-//  gate; tokens count from three letters with the common three-letter function words
-//  stopworded, and any number counts.
+//  floor is gone (review 1 named "I'm a teacher." too, review 2 "I'm diabetic") — a slice of
+//  single-word turns is the only trivial gate; tokens count from three letters with the common
+//  three-letter function words stopworded, and runs of two or more digits count.
 //
 
 import Foundation
@@ -65,16 +65,17 @@ public enum DistillationAttribution {
     /// purely by repeating who it's supposedly about.
     static let userSelfNames: Set<String> = ["kev"]
 
-    /// True when the user's real contribution to the slice is too small to
-    /// have anchored anything: every user turn is two words or fewer — a
-    /// greeting, an acknowledgement. Word count is the ONLY gate: a character
-    /// floor ate "I live in Cork" and "I'm a vet", and the price of a false
-    /// non-trivial is one background distiller call, while a false trivial
-    /// is a lost fact. The coordinator skips distillation entirely on `true`.
+    /// True when every user turn in the slice is a single word — "yo",
+    /// "sure", "thanks" — so a distiller call would have nothing to anchor.
+    /// That is the ONLY gate: a character floor ate "I live in Cork", a
+    /// two-word rule ate "I'm diabetic", and the price of a false non-trivial
+    /// is one background distiller call while a false trivial is a lost fact.
+    /// The anchor fence (`isAnchored`) is what keeps offered facts out; this
+    /// only saves the call. The coordinator skips distillation on `true`.
     public static func userContributionIsTrivial(turns: [ChatTurn]) -> Bool {
         let userTurns = turns.filter { $0.role == .user }
         return userTurns.allSatisfy { turn in
-            turn.text.split(whereSeparator: \.isWhitespace).count <= 2
+            turn.text.split(whereSeparator: \.isWhitespace).count <= 1
         }
     }
 
@@ -90,7 +91,7 @@ public enum DistillationAttribution {
     }
 
     /// Lowercased alphanumeric runs of three letters or more, plus any run
-    /// of digits ("42" is content), minus stopwords and the user's own name
+    /// of two or more digits ("42" is content, "step 1" is not), minus stopwords and the user's own name
     /// — function words and the subject's own name are too common to count
     /// as evidence of anchoring. Three, not four: "dog", "Rex", "car", "son"
     /// are most of what a short fact is made of.
@@ -98,7 +99,7 @@ public enum DistillationAttribution {
         Set(
             text.lowercased()
                 .components(separatedBy: CharacterSet.alphanumerics.inverted)
-                .filter { $0.count >= 3 || ($0.count >= 1 && $0.allSatisfy(\.isNumber)) }
+                .filter { $0.count >= 3 || ($0.count >= 2 && $0.allSatisfy(\.isNumber)) }
                 .filter { !stopwords.contains($0) }
                 .filter { !userSelfNames.contains($0) }
         )
