@@ -30,6 +30,9 @@
 //  in flight. `isPlaying` now brackets the `speakNow` call; pinned by
 //  capSeesThePlayingUtterance. The `.enqueue(position:)` payload stays unconsumed
 //  (carried: nothing surfaces "you're #2" to a caller yet).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 3 fold) — `drain` re-reads the head after the
+//  busy-check await: a `clear()` in that reentrancy window emptied the line and `removeFirst` trapped
+//  (pinned by `clearWhileWaitingOnBusyCheckDoesNotTrap`).
 //
 
 import Foundation
@@ -139,7 +142,7 @@ public actor VisitorSpeechQueue {
     /// utterance (e.g. the Speak App Intent) instead of barging over it.
     private func drain() async {
         while true {
-            guard let request = pending.first?.request else {
+            guard !pending.isEmpty else {
                 isDraining = false
                 return
             }
@@ -147,9 +150,17 @@ public actor VisitorSpeechQueue {
                 try? await Task.sleep(for: .milliseconds(100))
                 continue
             }
+            // Actors are reentrant at suspension points: a `clear()` from
+            // stop_speaking can run during the await above and empty the
+            // line. Re-read the head AFTER it — never the one from before
+            // (review 3 on #287: `removeFirst` on an emptied line trapped).
+            guard !pending.isEmpty else {
+                isDraining = false
+                return
+            }
             let job = pending.removeFirst()
             isPlaying = true
-            await speakNow(request)
+            await speakNow(job.request)
             isPlaying = false
             job.continuation?.resume()
         }

@@ -27,6 +27,9 @@
 //  whichever utterance is already in flight (ours, or something else, via the queue's injected
 //  isSpeaking) rather than cutting it and re-stamping the HUD. `.m1k3` narrators (the Speak App
 //  Intent, and any other direct caller) are unchanged — newer-wins, as before. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 3 fold on #287) — a visitor `speak` arriving
+//  during a typed answer is QUEUED (the queue's busy gate waits the answer and its auto-speak out);
+//  only a live voice conversation still refuses, for everyone. Verify-by-launch: chat, then speak.
 //
 
 import Foundation
@@ -190,12 +193,17 @@ extension AppEnvironment {
     /// model-independent — it needs only the speech pipeline, which is always
     /// available.
     func intelligenceSpeak(text: String, emotion: String?, wait: Bool, narrator: Narrator = .m1k3) async throws {
-        guard voiceLoop == nil, !chat.isResponding else {
+        // A live VOICE conversation refuses everyone: nothing speaks over the mic.
+        guard voiceLoop == nil else {
             throw MCPVoiceError("M1K3 is in a conversation right now — try again shortly")
         }
         guard case .visitor = narrator else {
             // M1K3's own speech (the Speak App Intent, or any other direct
-            // caller): unchanged — newer-wins, same as before #283.
+            // caller): unchanged — newer-wins, same as before #283, and still
+            // refused while a typed answer is in flight.
+            guard !chat.isResponding else {
+                throw MCPVoiceError("M1K3 is in a conversation right now — try again shortly")
+            }
             if let emotion {
                 avatar.setEmotion(AvatarEmotion.from(emotion))
             }
@@ -207,10 +215,13 @@ extension AppEnvironment {
             return
         }
         // A visiting MCP client: queue behind whatever's already in flight
-        // instead of cutting it (#283). Admission (the bounded-cap refusal)
-        // is unconditional — thrown before wait/no-wait branch inside the
+        // instead of cutting it (#283) — a typed answer and its auto-speak
+        // included: the queue's busy gate (`isVoiceBusy`) waits them out, so
+        // the mid-answer arrival the queue exists for is admitted, not
+        // refused (review 3 on #287). Admission (the bounded-cap refusal)
+        // is unconditional — thrown before the wait/no-wait branch inside the
         // queue — so a busy queue reports itself the same way regardless of
-        // `wait`, mirroring the in-conversation guard above.
+        // `wait`, mirroring the voice-conversation guard above.
         let request = VisitorSpeechQueue.SpeechRequest(text: text, emotion: emotion, narrator: narrator)
         do {
             try await visitorSpeechQueue.enqueue(request, wait: wait)

@@ -44,6 +44,47 @@ private func request(_ text: String, narrator: Narrator = .visitor("agent")) -> 
     VisitorSpeechQueue.SpeechRequest(text: text, emotion: nil, narrator: narrator)
 }
 
+/// A latch the busy check parks on, so a test can act while `drain()` is
+/// suspended inside it — the actor-reentrancy window review 3 on #287 named.
+private actor ReentrancyLatch {
+    private var opened = false
+    private var entered = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var arrivalWaiters: [CheckedContinuation<Void, Never>] = []
+
+    /// Called by the busy check: notes the arrival, then parks until `open()`.
+    func wait() async {
+        entered = true
+        for w in arrivalWaiters {
+            w.resume()
+        }
+        arrivalWaiters.removeAll()
+        if opened { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    /// Suspends until the busy check has been ENTERED (drain is parked).
+    func arrived() async {
+        if entered { return }
+        await withCheckedContinuation { arrivalWaiters.append($0) }
+    }
+
+    func open() {
+        opened = true
+        for w in waiters {
+            w.resume()
+        }
+        waiters.removeAll()
+    }
+}
+
+private actor ReentrancyLog {
+    private(set) var entries: [String] = []
+    func record(_ entry: String) {
+        entries.append(entry)
+    }
+}
+
 struct VisitorSpeechQueueTests {
     @Test("an empty queue with nothing speaking plays immediately")
     func playsImmediatelyWhenIdle() async throws {
@@ -194,6 +235,30 @@ struct VisitorSpeechQueueTests {
         await stillSpeaking.set(false)
         try await call
         #expect(await log.entries == ["spoke:hello"])
+    }
+
+    @Test("clear() while drain is parked on the busy check must not trap — the head may be gone when it resumes")
+    func clearWhileWaitingOnBusyCheckDoesNotTrap() async throws {
+        // Review 3 on #287: drain() read the head, awaited the busy check (an
+        // actor suspension point), then removeFirst()'d — a clear() from
+        // stop_speaking in that window emptied `pending` and the resume trapped.
+        let latch = ReentrancyLatch()
+        let log = ReentrancyLog()
+        let queue = VisitorSpeechQueue(
+            speakNow: { req in await log.record("spoke:\(req.text)") },
+            isSpeaking: { await latch.wait(); return false }
+        )
+        try await queue.enqueue(request("doomed"), wait: false)
+        await latch.arrived() // drain is now suspended inside the busy check
+        await queue.clear()
+        await latch.open()
+        try await Task.sleep(for: .milliseconds(50))
+        // drain resumed onto an empty line: it exits, and "doomed" is never spoken
+        #expect(await queue.count == 0)
+        #expect(await log.entries.isEmpty)
+        // and the queue still works afterwards — isDraining was reset on the way out
+        try await queue.enqueue(request("after"), wait: true)
+        #expect(await log.entries == ["spoke:after"])
     }
 }
 
