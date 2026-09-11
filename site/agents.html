@@ -287,12 +287,14 @@ Never block on it; carry on without it.
      AgentNotes.block, so the page and the tool cannot drift silently — but they
      are COPIES, not generated, which is the honest weakness of this file.
      Facts checked at file:line rather than recalled: the loopback pin
-     (LocalMCPHTTPServer requiredLocalEndpoint), the Host/Origin refusal (the MCP
-     SDK's default StandardValidationPipeline → OriginValidator.localhost(), which
-     MCPHostController keeps by constructing StatelessHTTPServerTransport() bare),
+     (LocalMCPHTTPServer requiredLocalEndpoint), the Host/Origin refusal (as of
+     this signing, PRE-#272: the MCP SDK's default StandardValidationPipeline →
+     OriginValidator.localhost(), which MCPHostController keeps by constructing
+     StatelessHTTPServerTransport() bare — the Review below names what replaces it),
      one-client-at-a-time (LocalMCPHTTPServer's documented v1 limit), the
      sandboxed-helper degradation (CommandRunner.isSandboxed +
-     m1k3-sandboxed.entitlements), the 20 s launch wait (MCPTransport), off-by-
+     m1k3-sandboxed.entitlements), the 20 s launch wait (MCPCallSequence.Timing.live,
+     500 ms × 40), off-by-
      default (MCPHostController.enabledKey), and the tool count of 18 counted from
      the M1K3MCPKit registrations. Deliberately NOT claimed: a bearer token — there
      is none, and the page says so plainly instead. Zero JS, shared geo.css shell;
