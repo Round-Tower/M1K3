@@ -33,9 +33,10 @@ Key facts:
   paired devices; off by default, nothing crosses the internet
 - Screensaver: a native macOS screensaver (the pixel M in ambient rain),
   installable from Settings
-- MCP server: 16 tools (knowledge search, documents, voice, memory, ask —
+- MCP server: 18 tools (knowledge search, documents, voice, memory, todos, ask —
   with an async job API for long asks) over local HTTP at
-  http://127.0.0.1:4242/mcp
+  http://127.0.0.1:4242/mcp, off by default; a visiting agent can propose a todo
+  but only the user accepts it. Connecting an agent: https://m1k3.app/agents
 - Install: signed & notarized DMG at
   https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg,
   TestFlight beta, or build from source
@@ -54,6 +55,7 @@ Key facts:
 - [Private ChatGPT alternative for Mac](https://m1k3.app/private-chatgpt-alternative-mac): privacy by architecture vs by policy; M1K3 vs Ollama vs LM Studio vs the ChatGPT desktop app
 - [How to run a local LLM on a Mac](https://m1k3.app/local-llm-mac-guide): hardware needs plus the four routes — Ollama, LM Studio, MLX, M1K3
 - [Give Claude a local memory with MCP](https://m1k3.app/mcp-knowledge-server): connect Claude Code/Desktop to M1K3's knowledge at http://127.0.0.1:4242/mcp
+- [Connect your coding agent to M1K3](https://m1k3.app/agents): the on-ramp for Claude Code, Codex, Cursor, VS Code and Zed — `brew install --cask round-tower/tap/m1k3` then `m1k3 connect <client>`, the per-client snippets, the AGENTS.md resident block, and what the loopback server will not do
 - [M1K3 for Teams](https://m1k3.app/teams): the paid line for organisations — the same on-device brains, an institutional memory and a tuned persona on the organisation's own Apple Silicon under its own domain; on-prem only, design-partner pilots
 - [Is M1K3 really private?](https://m1k3.app/privacy): the privacy architecture — what runs on-device, the three documented network crossings (opt-in model downloads, off-by-default web search, updates), and how to verify
 
