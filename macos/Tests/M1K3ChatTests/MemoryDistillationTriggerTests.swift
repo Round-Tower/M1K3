@@ -9,6 +9,12 @@
 //  distills — deletion is discard intent.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-12, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #284: distillAndStore now runs
+//  the DistillationAttribution fence, so every `f.exchange(...)` text here was widened past the
+//  trivial floor (24 chars / >2 words) and, where a test checks what landed in the store, made
+//  to share a real content token with whatever the fixture's scripted fact says ("lives"/"Cork").
+//  Tests that only check distiller.callCount/calls (never store contents) only needed the
+//  triviality fix.
 
 import Foundation
 @testable import M1K3Chat
@@ -186,7 +192,7 @@ struct MemoryDistillationTriggerTests {
     @Test("exit after a completed exchange distills and advances the watermark")
     func exitDistills() async throws {
         let f = try Fixture()
-        await f.exchange("My sister is called Aoife")
+        await f.exchange("My sister Aoife lives in Cork these days")
         let conversationID = f.session.activeConversationID
         let messageCount = f.session.messages.count
 
@@ -201,7 +207,7 @@ struct MemoryDistillationTriggerTests {
     @Test("re-exiting with no new content never re-distills")
     func noNewContentNoSpawn() async throws {
         let f = try Fixture()
-        await f.exchange("My sister is called Aoife")
+        await f.exchange("My sister Aoife lives in Cork these days")
         let conversationID = f.session.activeConversationID
 
         f.session.startNewConversation()
@@ -218,7 +224,7 @@ struct MemoryDistillationTriggerTests {
     @Test("a throwing distiller leaves the watermark — the next exit retries the slice")
     func throwKeepsWatermark() async throws {
         let f = try Fixture(script: [.failure(Boom()), .success(["Kev lives in Cork."])])
-        await f.exchange("I live in Cork")
+        await f.exchange("I live in Cork these days")
         let conversationID = f.session.activeConversationID
 
         f.session.startNewConversation()
@@ -236,7 +242,7 @@ struct MemoryDistillationTriggerTests {
     @Test("auto-capture off → exit never distills")
     func toggleOffNeverSpawns() async throws {
         let f = try Fixture(autoCapture: false)
-        await f.exchange("My sister is called Aoife")
+        await f.exchange("My sister Aoife lives in Cork these days")
         f.session.startNewConversation()
         #expect(f.session.distillationTask == nil)
         #expect(f.distiller.callCount == 0)
@@ -245,7 +251,7 @@ struct MemoryDistillationTriggerTests {
     @Test("the watermark lands on the conversation captured at spawn, not the new active one")
     func watermarkLandsOnSpawnConversation() async throws {
         let f = try Fixture()
-        await f.exchange("My sister is called Aoife")
+        await f.exchange("My sister Aoife lives in Cork these days")
         let original = f.session.activeConversationID
         let originalCount = f.session.messages.count
 
@@ -260,14 +266,14 @@ struct MemoryDistillationTriggerTests {
     @Test("only the post-watermark slice reaches the distiller")
     func onlyFreshSliceFed() async throws {
         let f = try Fixture()
-        await f.exchange("My sister is called Aoife")
+        await f.exchange("My sister Aoife lives in Cork these days")
         let conversationID = f.session.activeConversationID
         f.session.startNewConversation()
         await f.session.distillationTask?.value
         let firstSlice = f.distiller.calls[0]
 
         f.session.switchTo(conversationID)
-        await f.exchange("My dog is a collie")
+        await f.exchange("My dog is a very friendly collie")
         f.session.startNewConversation()
         await f.session.distillationTask?.value
 
@@ -296,7 +302,7 @@ struct MemoryDistillationTriggerTests {
     @Test("deleting a conversation never distills it — deletion is discard intent")
     func deleteNeverDistills() async throws {
         let f = try Fixture()
-        await f.exchange("My sister is called Aoife")
+        await f.exchange("My sister Aoife lives in Cork these days")
         f.session.deleteConversation(f.session.activeConversationID)
         #expect(f.session.distillationTask == nil)
         #expect(f.distiller.callCount == 0)
@@ -330,7 +336,7 @@ struct MemoryDistillationTriggerTests {
         // ever switching or exiting the conversation.
         let exchanges = ChatSession.rollingDistillBacklog / 2
         for i in 1 ... exchanges {
-            await f.exchange("fact number \(i)")
+            await f.exchange("fact number \(i) about living in Cork")
         }
         await f.session.distillationTask?.value
 
@@ -344,7 +350,7 @@ struct MemoryDistillationTriggerTests {
     func shortSessionNoRollingDistill() async throws {
         let f = try Fixture()
         for i in 1 ... 3 {
-            await f.exchange("fact \(i)")
+            await f.exchange("my fact \(i) noted today")
         } // 6 messages, under the backlog
         #expect(f.session.distillationTask == nil) // nothing fired mid-session
         #expect(f.distiller.callCount == 0)

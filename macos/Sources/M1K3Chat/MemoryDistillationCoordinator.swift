@@ -22,6 +22,11 @@
 //  supersede-at-the-bar, un-supersede-on-reassert, corpus-twin re-kind with
 //  the M2 divergence audit (scratch/dream-cycle/SPEC.md §2, evidence in
 //  MEMSTAT-RESULTS.md).
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #284: distillAndStore now
+//  applies the DistillationAttribution fence AFTER the parser's own validator + durability
+//  filters — a trivial user turn skips the slice before the distiller is even called, and any
+//  surviving fact unanchored in the user's own turns is dropped fail-closed (one `.info` line
+//  per slice counts the drops).
 
 import CryptoKit
 import Foundation
@@ -110,15 +115,31 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// Distill the slice and store what's new. Returns the number of facts
     /// actually written (dedupe skips don't count). Rethrows distiller
     /// failure so the caller withholds the watermark and retries the slice.
+    ///
+    /// #284 attribution fence, applied AFTER MemoryFactParser's own validator +
+    /// durability filters: a trivial user turn (a bare greeting) never even
+    /// reaches the distiller — nothing the user said could anchor anything —
+    /// and any surviving fact that shares no real content with something the
+    /// user actually said is dropped fail-closed.
     @discardableResult
     public func distillAndStore(turns: [ChatTurn]) async throws -> Int {
+        guard !DistillationAttribution.userContributionIsTrivial(turns: turns) else {
+            Self.log.info("distillation skipped: user contribution trivial (\(turns.count) turn(s))")
+            return 0
+        }
         let facts = try await distiller.distill(turns: turns)
         guard !facts.isEmpty else {
             Self.log.info("distilled 0 facts from \(turns.count) turn(s)")
             return 0
         }
+        let userTurns = turns.filter { $0.role == .user }.map(\.text)
+        var droppedUnanchored = 0
         var written = 0
         for fact in facts {
+            guard DistillationAttribution.isAnchored(fact: fact.text, userTurns: userTurns) else {
+                droppedUnanchored += 1
+                continue
+            }
             // Embed ONCE: the same vector finds the semantic twin AND seeds
             // the graph node, so the repair costs no extra embed.
             let vector = await embed(fact.text)
@@ -157,6 +178,9 @@ public struct MemoryDistillationCoordinator: Sendable {
                 Self.log.info("remembered: \(LogPreview.preview(fact.text, max: 80), privacy: .public)")
                 await dualWriteToGraph(fact, vector: vector)
             }
+        }
+        if droppedUnanchored > 0 {
+            Self.log.info("distillation dropped \(droppedUnanchored) unanchored fact(s)")
         }
         Self.log.info("distillation wrote \(written)/\(facts.count) fact(s)")
         return written

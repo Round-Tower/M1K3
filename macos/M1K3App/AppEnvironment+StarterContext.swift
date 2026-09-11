@@ -17,6 +17,9 @@
 //  Prior: none (new file, patterned on the iOS `recentMemoryTitles`).
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — visitor names documented as the log's alphabetical
 //  order (not recency); `Array(prefix)` for the two title lists (review nits, same PR).
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.8 — #286: memoryTitles now filters out
+//  SelfNoteClassifier-flagged wiring notes before drawing chips (this gatherer stays
+//  verify-by-launch; the classifier itself is pinned in SelfNoteClassifierTests).
 //
 
 import Foundation
@@ -38,7 +41,12 @@ extension AppEnvironment {
         var context = StarterPrompts.Context.empty
         // allMemories is newest-first; titled facts only (distilled facts are
         // their own titles → nil, and a raw sentence makes a poor chip).
+        // #286: a wiring-shaped self note (M1K3 describing its own tooling)
+        // makes a poor — and once, a harmful — chip: "Remind me about
+        // recent_activity tool shippe…" seeded the whole SELF/WIRING-decline
+        // failure. Filtered out the same way the grounding block is.
         context.memoryTitles = Array(((try? memoryStore?.allMemories(limit: 40)) ?? [])
+            .filter { !SelfNoteClassifier.isWiringNote(title: $0.title ?? "", text: $0.text) }
             .compactMap(\.title)
             .prefix(4))
         // The drawer's own list: titled, most recent first. The current empty

@@ -10,6 +10,10 @@
 //  prove the mechanism.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-12, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #284: distillAndStore now runs
+//  the DistillationAttribution fence, so `someTurns` carries real anchoring content for every
+//  fact this file's mechanics tests use; two new tests pin the fence itself (the trivial-slice
+//  skip and the selective anchored/unanchored drop) against the live witness turns.
 
 import Foundation
 @testable import M1K3Chat
@@ -86,8 +90,18 @@ private func makeFixture(
     )
 }
 
+// #284: distillAndStore now runs the DistillationAttribution fence, so the
+// shared fixture below carries enough real user content to anchor every
+// fact this file's mechanics tests exercise (sister/Aoife, prefers/metric/
+// units, lives/Cork, and the long memory-architecture fact) — otherwise
+// those facts would be silently dropped as unanchored before this file
+// even gets to test dedupe/graph mechanics.
 private let someTurns = [
-    ChatTurn(role: .user, text: "My sister is called Aoife"),
+    ChatTurn(
+        role: .user,
+        text: "My sister Aoife lives in Cork, prefers metric units, and decided the memory "
+            + "architecture should use the existing knowledge store rather than a separate database."
+    ),
     ChatTurn(role: .assistant, text: "Noted!"),
 ]
 
@@ -244,5 +258,60 @@ struct MemoryDistillationCoordinatorTests {
         let written = try await coordinator.distillAndStore(turns: someTurns)
         #expect(written == 1)
         #expect(try store.allItems(kind: .memory).count == 1)
+    }
+
+    // MARK: - Attribution fence (#284)
+
+    /// The live #284 witness: a one-word "yo" and an assistant paragraph
+    /// that OFFERS three asides. The distiller (faked here — it would return
+    /// these four facts unprompted) must never even be reached: the user's
+    /// contribution is trivial, so the whole slice is skipped.
+    @Test("a greeting-only slice writes nothing, however many facts the distiller would offer")
+    func trivialUserTurnSkipsTheSliceEntirely() async throws {
+        let julySlice = [
+            ChatTurn(role: .user, text: "yo"),
+            ChatTurn(
+                role: .assistant,
+                text: "Ah, Kev. Monday, 6th July 2026 — the Mac's uptime's a bit over a year… "
+                    + "(If you're feeling nostalgic, the old \"honey in Egyptian tombs\" story's "
+                    + "still a hit. Or if you'd rather chat about the latest in AI ethics — I'm listening.)"
+            ),
+        ]
+        let (coordinator, store) = try makeFixture(facts: .success([
+            "Kev is nostalgic about the \"honey in Egyptian tombs\" story.",
+            "Kev is interested in AI ethics.",
+            "Kev's Mac's uptime is over a year.",
+        ]))
+        let written = try await coordinator.distillAndStore(turns: julySlice)
+        #expect(written == 0)
+        #expect(try store.itemCount() == 0)
+    }
+
+    /// A real, non-trivial user turn alongside an assistant aside: the
+    /// anchoring backstop drops only the fact the user never echoed,
+    /// keeping the one the user's own words support.
+    @Test("an unanchored fact is dropped even from a non-trivial slice; an anchored one survives")
+    func unanchoredFactIsDroppedAnchoredFactSurvives() async throws {
+        let slice = [
+            ChatTurn(
+                role: .user,
+                text: "I'm still getting used to the new house in Ardmore, plenty to unpack this week"
+            ),
+            ChatTurn(
+                role: .assistant,
+                text: "Welcome to Ardmore! (If you're feeling nostalgic, the old "
+                    + "\"honey in Egyptian tombs\" story's still a hit.)"
+            ),
+        ]
+        let (coordinator, store) = try makeFixture(facts: .success([
+            "Kev is nostalgic about the honey in Egyptian tombs story.",
+            "Kev is settling into a new house in Ardmore.",
+        ]))
+        let written = try await coordinator.distillAndStore(turns: slice)
+        #expect(written == 1)
+        let memories = try store.allItems(kind: .memory)
+        #expect(memories.count == 1)
+        #expect(memories.first?.title.contains("Ardmore") == true)
+        #expect(try store.searchFTS(query: "honey").isEmpty)
     }
 }

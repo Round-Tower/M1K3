@@ -23,6 +23,11 @@
 //  parsed from a FACT(<kind>): label, closing the "both write paths tag .note"
 //  TODO: on MemoryKind. Bare FACT: lines still parse (kind = .note), so a model
 //  that ignores the new label loses nothing. Kev's product call, 2026-07-08.
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #284: the prompt now tells
+//  the model not to record something the assistant merely offered/suggested/asked, and
+//  MemoryDistillationCoordinator applies a deterministic attribution fence on top
+//  (DistillationAttribution.swift) — a trivial user turn skips the slice, and a surviving fact
+//  must share real content with something the user actually said.
 
 import Foundation
 import M1K3Inference
@@ -108,7 +113,9 @@ public enum MemoryDistillationPrompt {
         questions the user merely asked about, or anything the assistant said \
         about itself. The assistant is called M1K3 — NEVER write that the user \
         is M1K3, is named M1K3, or is an AI/assistant/program; those describe \
-        the assistant, not the user.
+        the assistant, not the user. Only record what the USER stated or clearly \
+        confirmed — never something the assistant offered, suggested, guessed, or \
+        asked about the user ("if you're feeling nostalgic…", "if you'd rather…").
 
         Reply with one line per fact, each starting with exactly \
         "FACT(<kind>): " where <kind> is one of: profile (a stable fact about \

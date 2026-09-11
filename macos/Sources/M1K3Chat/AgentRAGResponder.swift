@@ -76,6 +76,10 @@
 //  is byte-identical (pinned by TodoGroundingTests).
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — `recentActivityRouting`, offered-only: "what happened lately" is a
 //  READ of the stores through recent_activity, never a reconstruction from the history window (pinned).
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #286: `memoryBlock` filters out
+//  SelfNoteClassifier-flagged (wiring-shaped) memory hits before rendering "WHAT I KNOW ABOUT
+//  YOU" — a visitor note describing M1K3's own tooling is knowledge about the app, not the user,
+//  and was tripping the SELF/WIRING decline on unrelated questions.
 
 import Foundation
 import M1K3Agent
@@ -734,6 +738,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// covered by the ~95-token slack between the 1100 cap and the ~1195
     /// measured reserve (07-20 instrument run), so not re-plumbed.
     private static func memoryBlock(_ memories: [ChunkHit], now: Date) -> String? {
+        // #286: a visitor memory describing M1K3's OWN tooling ("M1K3's
+        // interactive chat palette gained `recent_activity(...)`…") is
+        // knowledge about the app, not a fact about the user — left in, it
+        // trips the persona's own SELF/WIRING decline on innocent asks that
+        // happen to echo a phrase from the memory's description of the
+        // tool's output. Filtered at retrieval so legacy rows are covered
+        // without a migration.
+        let memories = memories.filter { !SelfNoteClassifier.isWiringNote(title: $0.itemTitle, text: $0.content) }
         guard !memories.isEmpty else { return nil }
         let ordered = memories.sorted {
             ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast)

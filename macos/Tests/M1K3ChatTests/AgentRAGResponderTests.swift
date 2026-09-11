@@ -14,6 +14,9 @@
 //  CountingProvider (a TokenCounting-conforming scripted provider with an
 //  inflated per-character cost) to prove the cap reaches the REAL rendered
 //  prompt end-to-end, not just the pure GroundingBudgetTests unit tests.
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #286: two new tests pin that a
+//  wiring-shaped memory hit (SelfNoteClassifier) never renders in "WHAT I KNOW ABOUT YOU" while
+//  a genuine user memory alongside it still does, using the live note's own title/text.
 
 import Foundation
 import M1K3Agent
@@ -973,6 +976,44 @@ struct AgentRAGResponderTests {
             chunkID: UUID(), itemID: UUID(), itemTitle: "Plant Notes", kind: .document,
             heading: "3.2 Seals", content: "The hydraulic seal failed under load."
         )
+    }
+
+    /// The live #286 witness: a memory saved over MCP `remember` describing
+    /// M1K3's OWN tool shipping (backtick, "PR #", "merged" — wiring-shaped)
+    /// alongside a genuine fact about the user.
+    private func selfNoteHit() -> ChunkHit {
+        ChunkHit(
+            chunkID: UUID(), itemID: UUID(),
+            itemTitle: "recent_activity tool shipped — M1K3 can review his own week (2026-09-11, PR #275)",
+            kind: .memory, heading: nil,
+            content: "M1K3's interactive chat palette gained `recent_activity(window, focus)` on "
+                + "2026-09-11 (PR #275, merged ca81b1fb, installed on the Mac)."
+        )
+    }
+
+    @Test("a wiring-shaped self note never enters WHAT I KNOW ABOUT YOU; a genuine user memory does")
+    func wiringShapedMemoryExcludedFromBlock() {
+        let userMemory = ChunkHit(
+            chunkID: UUID(), itemID: UUID(), itemTitle: "Memory", kind: .memory,
+            heading: nil, content: "Kev's sister is called Ada."
+        )
+        let prompt = AgentRAGResponder.grounding(
+            chunks: [], memories: [selfNoteHit(), userMemory],
+            toolNames: ["web_search", "search_knowledge"]
+        )
+        #expect(prompt.contains("WHAT I KNOW ABOUT YOU"))
+        #expect(prompt.contains("Kev's sister is called Ada."))
+        #expect(!prompt.contains("recent_activity(window, focus)"))
+        #expect(!prompt.contains("PR #275"))
+    }
+
+    @Test("when every memory hit is wiring-shaped, the WHAT I KNOW ABOUT YOU block is absent entirely")
+    func allWiringShapedMemoriesOmitTheBlock() {
+        let prompt = AgentRAGResponder.grounding(
+            chunks: [], memories: [selfNoteHit()], toolNames: []
+        )
+        #expect(!prompt.contains("WHAT I KNOW ABOUT YOU"))
+        #expect(!prompt.contains("recent_activity(window, focus)"))
     }
 
     @Test("memory-only grounding still counts as grounded for the think-phase decision")
