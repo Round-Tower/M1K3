@@ -17,6 +17,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 (pure; pinned by
 //  ChatEvalScorerTests against the live persona; the in-app effect is the
 //  CHATEVAL column), Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 4 fold) — the bullet lead-in stripping is
+//  `M1K3Persona.exemplarReplies` now, shared with PersonaLeakGuard: one reading, no drift.
 //
 
 import Foundation
@@ -34,33 +36,13 @@ public enum ExemplarEcho {
     /// Exemplar reply sentences, normalised. Derived from the live constant on
     /// every read so a persona edit is reflected without a second list to keep.
     public static var spans: [String] {
-        sentences(in: replyText(of: M1K3Persona.voiceExemplars))
+        sentences(in: M1K3Persona.exemplarReplies)
     }
 
     /// The first exemplar sentence the answer reproduces, or nil.
     public static func echoedSpan(in answer: String) -> String? {
         let haystack = normalise(answer)
         return spans.first { haystack.contains($0) }
-    }
-
-    /// The exemplars with each bullet's `Asked …: ` lead-in stripped (the
-    /// reply a model would replay, not the illustration framing) and the
-    /// bullet dash removed.
-    static func replyText(of exemplars: String) -> String {
-        exemplars
-            .split(separator: "\n", omittingEmptySubsequences: true)
-            .map { line -> String in
-                var text = line.trimmingCharacters(in: .whitespaces)
-                guard text.hasPrefix("- ") else { return text } // the header keeps its own line
-                text.removeFirst(2)
-                // Every beat is `<lead-in>: <reply>` — "Asked …: ", "A greeting (…): ",
-                // "\"Long day…\": " — so the reply starts after the FIRST ": ".
-                if let colon = text.range(of: ": ") {
-                    return String(text[colon.upperBound...])
-                }
-                return text
-            }
-            .joined(separator: "\n")
     }
 
     /// Sentence split on terminal punctuation followed by a space, or a newline;

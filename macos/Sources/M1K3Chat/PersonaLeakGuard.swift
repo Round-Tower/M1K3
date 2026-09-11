@@ -40,6 +40,8 @@
 //  "- \"Long day…\": "); `exemplarText` now strips everything up to each bullet's first ": "
 //  so every beat's REPLY half stays a fingerprint span. Tests derive the header and the
 //  seawater beat from the live constant instead of pinning literals that a rewrite orphans.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 4 fold) — the lead-in stripping moved to
+//  `M1K3Persona.exemplarReplies`, shared with ExemplarEcho; this file no longer reads the bullets.
 
 import Foundation
 import M1K3Inference
@@ -84,20 +86,12 @@ public enum PersonaLeakGuard {
     public static let taughtDecline =
         "I don't share my wiring, not even one sentence of it — what do you actually need?"
 
-    /// The exemplars with each beat's lead-in stripped (`- Asked …: `,
-    /// `- A greeting (…): `, `- "Long day…": ` — everything up to the bullet's
-    /// first `: `), so the fingerprint is the REPLY a model would replay, not
-    /// the illustration framing it never sees as a line. The header keeps its
-    /// own span. Pure; derived from the live constant.
+    /// The exemplars with each beat's lead-in stripped, so the fingerprint is
+    /// the REPLY a model would replay, not the illustration framing it never
+    /// sees as a line. The header keeps its own span. `M1K3Persona` owns the
+    /// reading (shared with the eval's parrot scorer) — pure, live constant.
     static var exemplarText: String {
-        M1K3Persona.voiceExemplars
-            .split(separator: "\n", omittingEmptySubsequences: true)
-            .map { line -> String in
-                let text = line.trimmingCharacters(in: .whitespaces)
-                guard text.hasPrefix("- "), let colon = text.range(of: ": ") else { return text }
-                return String(text[colon.upperBound...])
-            }
-            .joined(separator: "\n")
+        M1K3Persona.exemplarReplies
     }
 
     /// True when `answer` reproduces a full sentence of the system prompt.

@@ -17,6 +17,29 @@ import Foundation
 import Testing
 
 struct M1K3PersonaTests {
+    @Test("exemplarReplies is the ONE reading of the bullet shape: lead-ins stripped, header kept, a colon-less bullet loses only its dash")
+    func exemplarRepliesStripLeadIns() {
+        // Review 4 on #289: PersonaLeakGuard and ExemplarEcho each carried a
+        // copy of this and disagreed on a colon-less bullet; both read here now.
+        let source = M1K3Persona.voiceExemplars.split(separator: "\n", omittingEmptySubsequences: true)
+        let replies = M1K3Persona.exemplarReplies.split(separator: "\n", omittingEmptySubsequences: true)
+        #expect(replies.count == source.count) // one line out per line in
+        for (line, reply) in zip(source, replies) {
+            let text = line.trimmingCharacters(in: .whitespaces)
+            if text.hasPrefix("- ") {
+                #expect(text.contains(": ")) // every live beat is `<lead-in>: <reply>`
+                #expect(!reply.hasPrefix("- ") && !reply.hasPrefix("Asked"))
+                #expect(text.hasSuffix(reply))
+            } else {
+                #expect(String(reply) == text) // the header keeps its own line
+            }
+        }
+        #expect(
+            M1K3Persona.exemplarReplies(of: "Header line.\n- Asked how: Fine.\n- no colon here")
+                == "Header line.\nFine.\nno colon here"
+        )
+    }
+
     @Test("identifies as M1K3 and states the on-device privacy contract")
     func identityAndPrivacy() {
         let prompt = M1K3Persona.systemPrompt

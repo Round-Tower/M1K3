@@ -51,6 +51,9 @@
 //  greeting, no honey fact (it had been distilled into a memory ABOUT Kev, #284). Beat 5
 //  (the taught decline) is unchanged and still last. Replay on three greeting bases:
 //  parrot 12/12 → 0/12, memory threads picked up. Core +≈560 chars, budgets re-pinned.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 4 fold) — `exemplarReplies` is the one
+//  reading of the exemplar bullet shape; PersonaLeakGuard and ExemplarEcho each had their own
+//  copy of the lead-in stripping and could have drifted apart on a colon-less bullet.
 
 import Foundation
 import Synchronization
@@ -244,6 +247,31 @@ public enum M1K3Persona {
     /// next line verbatim, leaking the literal "USER:" label into its greeting.
     /// No turn scaffolding = nothing to continue; the verbatim M1K3 lines still
     /// pin the voice. (The explicit label guard is belt-and-braces.)
+    /// `voiceExemplars` with each beat's lead-in stripped (`- Asked …: `,
+    /// `- A greeting (…): `, `- "Long day…": ` — everything up to the bullet's
+    /// first `: `; a bullet without one loses only its dash), one reply per
+    /// line; the header keeps its own line. The ONE reading of the bullet
+    /// shape: the leak guard (M1K3Chat) and the parrot scorer (M1K3Eval) both
+    /// fingerprint THIS, so the two can never disagree on what a reply is.
+    public static var exemplarReplies: String {
+        exemplarReplies(of: voiceExemplars)
+    }
+
+    static func exemplarReplies(of exemplars: String) -> String {
+        exemplars
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .map { line -> String in
+                var text = line.trimmingCharacters(in: .whitespaces)
+                guard text.hasPrefix("- ") else { return text }
+                text.removeFirst(2)
+                if let colon = text.range(of: ": ") {
+                    return String(text[colon.upperBound...])
+                }
+                return text
+            }
+            .joined(separator: "\n")
+    }
+
     public static let voiceExemplars = """
     M1K3's voice, by example — these show the MOVES, never lines to reuse (never repeat \
     them, never print a speaker label).
