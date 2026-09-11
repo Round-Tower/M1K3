@@ -55,6 +55,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — `visitorSpeechQueue` (#283): a second MCP client's `speak`
 //  now queues behind whichever utterance is in flight instead of cutting it (AppEnvironment+Intelligence.swift
 //  routes narrator:.visitor calls through it; `stopSpeaking()` clears it first). Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 2 fold) — the queue's busy signal is `isVoiceBusy()`
+//  (playing OR voice loop OR a chat turn answering), not `speech.isSpeaking()` alone: a queued visitor
+//  line waits out M1K3's own answer instead of starting under it. Verify-by-launch: queue a line, send a
+//  chat message, hear the order.
 
 import AppKit
 import Foundation
@@ -394,9 +398,23 @@ final class AppEnvironment {
             await self?.speakVisitorRequest(request)
         },
         isSpeaking: { [weak self] in
-            await self?.speech.isSpeaking() ?? false
+            // "Busy" is wider than "audio is playing": a queued visitor line
+            // must also wait out a live conversation. The admission guard in
+            // intelligenceSpeak runs once, at enqueue; without this, a line
+            // admitted while idle could start the moment the previous visitor
+            // finished — under M1K3's own answer, which newer-wins would then
+            // cut (review 2 on #287, the #283 bug relocated visitor-vs-M1K3).
+            await self?.isVoiceBusy() ?? false
         }
     )
+
+    /// M1K3's one mouth is spoken for: audio is playing, a voice-mode loop
+    /// holds it, or a chat turn is answering (and about to auto-speak).
+    func isVoiceBusy() async -> Bool {
+        if voiceLoop != nil || chat.isResponding { return true }
+        return await speech.isSpeaking()
+    }
+
     /// Chat auto-speak session — the poller that speaks a streaming answer
     /// sentence-by-sentence while the transcript renders it. One at a time;
     /// a new send supersedes the old (AppEnvironment+AutoSpeak.swift).
