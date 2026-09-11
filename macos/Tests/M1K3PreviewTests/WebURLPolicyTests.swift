@@ -196,7 +196,9 @@ struct WebURLPolicyTests {
             return ["93.184.216.34"]
         }
         let safety = Task.detached {
-            try? await Task.sleep(for: .seconds(30))
+            // Cancelled (the passing path) → leave without touching the valve;
+            // `try?` would fall through and open it anyway.
+            do { try await Task.sleep(for: .seconds(30)) } catch { return }
             valve.open()
             release.signal()
         }
