@@ -5,8 +5,9 @@
 //  Loopback-only HTTP/1.1 listener that fronts the in-app MCP server. The MCP
 //  SDK's StatelessHTTPServerTransport is framework-agnostic (it answers
 //  HTTPRequest values; it binds no socket), so this NWListener shell feeds it:
-//  accumulate bytes → HTTPWireCodec.parseRequest → transport.handleRequest →
-//  HTTPWireCodec.encode → write → close. One request per connection.
+//  accumulate bytes (read deadline) → HTTPWireCodec.parseRequest →
+//  LoopbackRequestGate → transport.handleRequest → HTTPWireCodec.encode →
+//  write → close. One request per connection.
 //
 //  Session rebuild: the SDK Server rejects a second `initialize` for its
 //  lifetime, so a fresh client connecting would 400 forever. We sniff
@@ -23,6 +24,15 @@
 //  Review: claude-fable-5, 2026-08-19 — added `onClientInitialize` (reports each
 //  initialize's self-declared client name for the Agent Log identity stamp;
 //  call-site wiring test-pinned in LocalMCPHTTPServerTests).
+//
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — every request passes
+//  LoopbackRequestGate BEFORE the initialize sniff (a forged Host / foreign
+//  Origin / non-JSON body used to tear down the live session and stamp an
+//  attacker-chosen visitor name before the SDK's validators ever ran), and a
+//  connection that goes quiet mid-request is closed after `readDeadline`
+//  (no idle socket holds a Task forever). Both pinned in
+//  LocalMCPHTTPServerTests (raw-socket forgeries; the live session survives).
+//  Confidence now 0.85.
 //
 
 import Foundation
@@ -45,6 +55,9 @@ public actor LocalMCPHTTPServer {
     /// EVERY initialize, including a re-initialize with no name, so a stale
     /// identity can't outlive its session.
     private let onClientInitialize: (@Sendable (String?) -> Void)?
+    /// Seconds a connection may take to deliver one complete request. The
+    /// clock covers the READ only — a tool call may legitimately run longer.
+    private let readDeadline: TimeInterval
     private var listener: NWListener?
     private var session: (server: Server, transport: StatelessHTTPServerTransport)?
 
@@ -62,11 +75,13 @@ public actor LocalMCPHTTPServer {
         port: UInt16,
         onAbnormalStop: (@Sendable (String) -> Void)? = nil,
         onClientInitialize: (@Sendable (String?) -> Void)? = nil,
+        readDeadline: TimeInterval = 15,
         makeSession: @escaping SessionFactory
     ) {
         self.port = port
         self.onAbnormalStop = onAbnormalStop
         self.onClientInitialize = onClientInitialize
+        self.readDeadline = readDeadline
         self.makeSession = makeSession
     }
 
@@ -167,6 +182,17 @@ public actor LocalMCPHTTPServer {
 
     private func handle(_ connection: NWConnection) async {
         connection.start(queue: .global(qos: .userInitiated))
+        // A socket that never finishes its request must not hold this Task
+        // forever: cancelling the connection makes the pending receive return
+        // nil, which ends the loop. `receive` itself has no deadline.
+        let deadline = Task { [readDeadline] in
+            try await Task.sleep(for: .seconds(readDeadline))
+            // The request may have completed while we slept: its cancel() below
+            // is set while the actor is held, so this check is exact.
+            guard !Task.isCancelled else { return }
+            Self.log.notice("closed a connection that sent no complete request in \(readDeadline)s")
+            connection.cancel()
+        }
         var buffer = Data()
         while isRunning {
             guard let chunk = await receiveChunk(connection) else { break }
@@ -180,14 +206,23 @@ public actor LocalMCPHTTPServer {
                 }
                 continue
             }
-            let response = await respond(to: parsed.request)
+            deadline.cancel()
+            let response = await respond(to: parsed.request, duplicateHeaders: parsed.duplicateHeaders)
             await send(HTTPWireCodec.encode(response), over: connection)
             break // Connection: close — one request per connection
         }
+        deadline.cancel()
         connection.cancel()
     }
 
-    private func respond(to request: HTTPRequest) async -> HTTPResponse {
+    private func respond(to request: HTTPRequest, duplicateHeaders: [String] = []) async -> HTTPResponse {
+        // The door first: a refused request never reaches the initialize
+        // sniff below, so a forgery can neither evict the live session nor
+        // plant a visitor name.
+        if let refusal = LoopbackRequestGate.refusal(for: request, boundPort: port, duplicateHeaders: duplicateHeaders) {
+            Self.log.notice("refused MCP request: \(refusal.description, privacy: .public)")
+            return .error(statusCode: refusal.statusCode, MCPError.invalidRequest(refusal.description))
+        }
         // A new client's initialize must land on a FRESH SDK server.
         if let body = request.body, HTTPWireCodec.isInitializeRequest(body: body) {
             onClientInitialize?(HTTPWireCodec.clientName(fromInitializeBody: body))

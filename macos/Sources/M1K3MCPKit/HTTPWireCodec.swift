@@ -13,6 +13,11 @@
 //  chunked encoding, no keep-alive). Prior: Unknown.
 //  Review: claude-fable-5, 2026-08-19 — added `clientName(fromInitializeBody:)`
 //  (initialize clientInfo → the Agent Log identity stamp; test-pinned).
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — `parseRequest` now reports the
+//  header NAMES that appeared more than once (case-insensitive). The SDK's
+//  `HTTPRequest.headers` is a plain dictionary, so a repeated line can only
+//  last-wins there; the gate uses the report to refuse two Host lines (RFC 9112
+//  §3.2) instead of judging whichever one survived. Test-pinned.
 //
 
 import Foundation
@@ -21,7 +26,9 @@ import MCP
 public enum HTTPWireCodec {
     /// Parse one complete request from accumulated bytes. Returns nil until
     /// the head AND the full Content-Length body have arrived.
-    public static func parseRequest(_ data: Data) -> (request: HTTPRequest, consumed: Int)? {
+    /// `duplicateHeaders` lists the lowercased names that appeared on more than
+    /// one line — the dictionary keeps only the last value of each.
+    public static func parseRequest(_ data: Data) -> (request: HTTPRequest, consumed: Int, duplicateHeaders: [String])? {
         guard let headEnd = data.range(of: Data("\r\n\r\n".utf8)) else { return nil }
         let headData = data.subdata(in: 0 ..< headEnd.lowerBound)
         guard let head = String(data: headData, encoding: .utf8) else { return nil }
@@ -34,10 +41,14 @@ public enum HTTPWireCodec {
         let path = String(requestLine[1])
 
         var headers: [String: String] = [:]
+        var seen: Set<String> = []
+        var duplicates: [String] = []
         for line in lines {
             guard let colon = line.firstIndex(of: ":") else { continue }
             let name = String(line[..<colon])
             let value = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+            let lowered = name.lowercased()
+            if !seen.insert(lowered).inserted, !duplicates.contains(lowered) { duplicates.append(lowered) }
             headers[name] = value
         }
 
@@ -48,7 +59,7 @@ public enum HTTPWireCodec {
         let body = contentLength > 0 ? data.subdata(in: bodyStart ..< bodyStart + contentLength) : nil
 
         let request = HTTPRequest(method: method, headers: headers, body: body, path: path)
-        return (request, bodyStart + contentLength)
+        return (request, bodyStart + contentLength, duplicates)
     }
 
     /// Encode an SDK response as HTTP/1.1 bytes. `.stream` cannot occur on the

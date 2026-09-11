@@ -126,4 +126,13 @@ struct HTTPWireCodecTests {
         // "initialize" appearing as a VALUE elsewhere must not trip the sniff.
         #expect(!HTTPWireCodec.isInitializeRequest(body: bytes(#"{"method":"x","note":"initialize"}"#)))
     }
+
+    @Test("a header name sent on more than one line is reported (lowercased, once), the dictionary keeps the last value")
+    func reportsDuplicateHeaderNames() {
+        let raw = Data("POST /mcp HTTP/1.1\r\nHost: 127.0.0.1:4242\r\nhost: attacker.example\r\nAccept: a\r\nAccept: b\r\nContent-Length: 0\r\n\r\n".utf8)
+        let parsed = HTTPWireCodec.parseRequest(raw)
+        #expect(parsed?.duplicateHeaders == ["host", "accept"])
+        let clean = HTTPWireCodec.parseRequest(Data("POST /mcp HTTP/1.1\r\nHost: 127.0.0.1:4242\r\nContent-Length: 0\r\n\r\n".utf8))
+        #expect(clean?.duplicateHeaders == [])
+    }
 }
