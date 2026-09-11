@@ -52,6 +52,9 @@
 //  swap the tier back. Launch restore reads `VoiceTierRestore` (one rule, two shells). Confidence now 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — `recentActivityHook`: late-bound like delegate_deep's; the live
 //  reader is installed after the stores exist; the warm passes NullActivityReading (+RecentActivity).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — `visitorSpeechQueue` (#283): a second MCP client's `speak`
+//  now queues behind whichever utterance is in flight instead of cutting it (AppEnvironment+Intelligence.swift
+//  routes narrator:.visitor calls through it; `stopSpeaking()` clears it first). Confidence now 0.8.
 
 import AppKit
 import Foundation
@@ -374,6 +377,26 @@ final class AppEnvironment {
 
     /// Word-highlight state for speech playback (the karaoke reading view).
     let speechHighlight = SpeechHighlight()
+    /// Per-server FIFO for MCP `speak` calls (#283): a second visitor's speak
+    /// while one is already in flight QUEUES behind it instead of cutting it.
+    /// `speakNow` reuses `speak(text:narrator:)` — the HUD is stamped INSIDE
+    /// that call, at utterance start, so a queued visitor's name appears only
+    /// once its turn actually plays. `isSpeaking` covers utterances that
+    /// never route through this queue (e.g. the Speak App Intent). Lazy +
+    /// `[weak self]`: nothing captures AppEnvironment strongly, and the queue
+    /// itself is never touched until the first MCP visitor `speak` arrives.
+    @ObservationIgnored private(set) lazy var visitorSpeechQueue = VisitorSpeechQueue(
+        speakNow: { [weak self] request in
+            // A single `await` call, deliberately — the closure itself is
+            // `@Sendable` (called from the queue actor), so it must not touch
+            // MainActor-isolated members like `avatar` directly; the hop and
+            // the emotion-setting both live inside speakVisitorRequest(_:).
+            await self?.speakVisitorRequest(request)
+        },
+        isSpeaking: { [weak self] in
+            await self?.speech.isSpeaking() ?? false
+        }
+    )
     /// Chat auto-speak session — the poller that speaks a streaming answer
     /// sentence-by-sentence while the transcript renders it. One at a time;
     /// a new send supersedes the old (AppEnvironment+AutoSpeak.swift).

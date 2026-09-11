@@ -22,6 +22,11 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `narrator:` — the MCP handler passes its visiting client; the
 //  default stays M1K3 because the Speak App Intent (Siri/Shortcuts) is M1K3 talking (review 1 catch on #248).
 //  Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — #283: a `.visitor` narrator now routes through
+//  `visitorSpeechQueue` instead of speaking directly — a second MCP client's speak QUEUES behind
+//  whichever utterance is already in flight (ours, or something else, via the queue's injected
+//  isSpeaking) rather than cutting it and re-stamping the HUD. `.m1k3` narrators (the Speak App
+//  Intent, and any other direct caller) are unchanged — newer-wins, as before. Confidence now 0.85.
 //
 
 import Foundation
@@ -188,14 +193,46 @@ extension AppEnvironment {
         guard voiceLoop == nil, !chat.isResponding else {
             throw MCPVoiceError("M1K3 is in a conversation right now — try again shortly")
         }
-        if let emotion {
+        guard case .visitor = narrator else {
+            // M1K3's own speech (the Speak App Intent, or any other direct
+            // caller): unchanged — newer-wins, same as before #283.
+            if let emotion {
+                avatar.setEmotion(AvatarEmotion.from(emotion))
+            }
+            if wait {
+                await speak(text, narrator: narrator)
+            } else {
+                Task { @MainActor in await self.speak(text, narrator: narrator) }
+            }
+            return
+        }
+        // A visiting MCP client: queue behind whatever's already in flight
+        // instead of cutting it (#283). Admission (the bounded-cap refusal)
+        // is unconditional — thrown before wait/no-wait branch inside the
+        // queue — so a busy queue reports itself the same way regardless of
+        // `wait`, mirroring the in-conversation guard above.
+        let request = VisitorSpeechQueue.SpeechRequest(text: text, emotion: emotion, narrator: narrator)
+        do {
+            try await visitorSpeechQueue.enqueue(request, wait: wait)
+        } catch let error as VisitorSpeechQueue.Full {
+            throw MCPVoiceError(
+                "M1K3 is mid-sentence for another visitor — \(error.queued) queued; try again in a moment"
+            )
+        } catch is VisitorSpeechQueue.Cancelled {
+            throw MCPVoiceError("Speech was stopped before this line was spoken.")
+        }
+    }
+
+    /// The `visitorSpeechQueue`'s `speakNow` — called from the queue actor once
+    /// it's this request's turn, so the emotion + the HUD stamp (inside `speak`)
+    /// both land at the moment the utterance actually STARTS, not at enqueue
+    /// time. MainActor so it can touch `avatar` directly; the queue only ever
+    /// holds an `await self?.speakVisitorRequest(request)` call across the hop.
+    func speakVisitorRequest(_ request: VisitorSpeechQueue.SpeechRequest) async {
+        if let emotion = request.emotion {
             avatar.setEmotion(AvatarEmotion.from(emotion))
         }
-        if wait {
-            await speak(text, narrator: narrator)
-        } else {
-            Task { @MainActor in await self.speak(text, narrator: narrator) }
-        }
+        await speak(request.text, narrator: request.narrator)
     }
 
     // MARK: - Remember

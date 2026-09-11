@@ -23,6 +23,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the synthesised vocabulary lands on the voice loop: listenStart when the
 //  mic opens, endpointHeard when a turn starts (both turn closures), voiceExit on leaving; enter keeps
 //  its (now synthesised) materialise. Confidence now 0.8 (felt beats are Kev's; the gate mutes over speech).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — `stopSpeaking()` — #283: clears `visitorSpeechQueue`
+//  FIRST (dropping any visitor requests still waiting; their `wait: true` callers see Cancelled), THEN
+//  stops whatever is actually playing — so a stop never leaves a queued visitor line to speak next.
+//  Confidence now 0.8.
 //
 
 import AppKit
@@ -184,6 +188,7 @@ extension AppEnvironment {
     }
 
     func stopSpeaking() async {
+        await visitorSpeechQueue.clear()
         await speech.stop()
         avatar.resetToIdle()
         speechHighlight.clear()
