@@ -170,7 +170,8 @@ private struct Fixture {
             distiller: distiller,
             ingester: DocumentIngester(store: store, embedder: embedder),
             store: store,
-            embedder: embedder
+            embedder: embedder,
+            selfNames: .none
         )
         session = ChatSession(
             responder: EchoResponder(),

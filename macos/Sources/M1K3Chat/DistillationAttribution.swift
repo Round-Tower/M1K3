@@ -61,7 +61,7 @@ public enum DistillationAttribution {
         "the", "and", "for", "you", "are", "was", "but", "not", "has", "had",
         "his", "her", "its", "can", "all", "any", "one", "out", "how", "who",
         "why", "now", "get", "got", "did", "yes", "too", "our", "him", "she",
-        "our", "let", "may", "own", "say", "see", "way", "yet",
+        "let", "may", "own", "say", "see", "way", "yet",
     ]
 
     /// The user's own names as the account knows them: every letter run of

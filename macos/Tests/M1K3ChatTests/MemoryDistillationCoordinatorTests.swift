@@ -84,7 +84,8 @@ private func makeFixture(
             ingester: DocumentIngester(store: store, embedder: embedder),
             store: store,
             embedder: embedder,
-            graph: graph
+            graph: graph,
+            selfNames: .none
         ),
         store
     )
@@ -153,7 +154,8 @@ struct MemoryDistillationCoordinatorTests {
             distiller: FakeDistiller(result: .success(["kev lives in cork"])),
             ingester: DocumentIngester(store: store, embedder: HashingEmbeddingService()),
             store: store,
-            embedder: HashingEmbeddingService()
+            embedder: HashingEmbeddingService(),
+            selfNames: .none
         )
         let written = try await variantCoordinator.distillAndStore(turns: someTurns)
         #expect(written == 0)
@@ -172,7 +174,8 @@ struct MemoryDistillationCoordinatorTests {
             distiller: FakeDistiller(result: .success(["Kev lives in Cork city Ireland"])),
             ingester: DocumentIngester(store: store, embedder: HashingEmbeddingService()),
             store: store,
-            embedder: HashingEmbeddingService()
+            embedder: HashingEmbeddingService(),
+            selfNames: .none
         )
         _ = try await nearCoordinator.distillAndStore(turns: someTurns)
         let live = try store.allItems(kind: .memory)
@@ -227,7 +230,8 @@ struct MemoryDistillationCoordinatorTests {
             ingester: DocumentIngester(store: store, embedder: embedder),
             store: store,
             embedder: embedder,
-            graph: graph
+            graph: graph,
+            selfNames: .none
         )
         _ = try await coordinator.distillAndStore(turns: someTurns)
         #expect(await graph.kinds() == [.profile, .preference])
@@ -244,7 +248,8 @@ struct MemoryDistillationCoordinatorTests {
             ingester: DocumentIngester(store: store, embedder: HashingEmbeddingService()),
             store: store,
             embedder: HashingEmbeddingService(),
-            graph: graph
+            graph: graph,
+            selfNames: .none
         )
         _ = try await second.distillAndStore(turns: someTurns)
         #expect(await graph.texts() == ["Kev lives in Cork."]) // graphed once, not twice

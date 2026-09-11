@@ -27,6 +27,9 @@
 //  filters — a trivial user turn skips the slice before the distiller is even called, and any
 //  surviving fact unanchored in the user's own turns is dropped fail-closed (one `.info` line
 //  per slice counts the drops).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 10 fold on #288) — `selfNames` is injected
+//  like every other collaborator (default: the account's names); tests pass `.none` and stop
+//  depending on the machine's user name.
 
 import CryptoKit
 import Foundation
@@ -93,6 +96,10 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// never fact text) — the M2 typed-audit hook. The same line always
     /// goes to the security-relevant `.error` log regardless.
     private let auditSink: (@Sendable (String) -> Void)?
+    /// The user's own names for the attribution fence — the account's in the
+    /// app, `.none` in tests, so a suite never depends on who runs it
+    /// (review 10 on #288: a tester surnamed Corkery would have lost "cork").
+    private let selfNames: DistillationAttribution.UserNames
 
     public init(
         distiller: any MemoryDistilling,
@@ -101,7 +108,8 @@ public struct MemoryDistillationCoordinator: Sendable {
         embedder: any EmbeddingService,
         graph: (any DistilledFactGraphWriting)? = nil,
         rekind: (@Sendable (UUID, KnowledgeKind) throws -> Bool)? = nil,
-        auditSink: (@Sendable (String) -> Void)? = nil
+        auditSink: (@Sendable (String) -> Void)? = nil,
+        selfNames: DistillationAttribution.UserNames = DistillationAttribution.systemUserNames
     ) {
         self.distiller = distiller
         self.ingester = ingester
@@ -110,6 +118,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         self.graph = graph
         self.rekind = rekind
         self.auditSink = auditSink
+        self.selfNames = selfNames
     }
 
     /// Distill the slice and store what's new. Returns the number of facts
@@ -136,9 +145,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         var droppedUnanchored = 0
         var written = 0
         for fact in facts {
-            guard DistillationAttribution.isAnchored(
-                fact: fact.text, userTurns: userTurns, selfNames: DistillationAttribution.systemUserNames
-            ) else {
+            guard DistillationAttribution.isAnchored(fact: fact.text, userTurns: userTurns, selfNames: selfNames) else {
                 droppedUnanchored += 1
                 continue
             }

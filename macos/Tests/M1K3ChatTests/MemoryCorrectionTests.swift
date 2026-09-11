@@ -115,7 +115,8 @@ private struct Fixture {
             embedder: embedder,
             graph: graph,
             rekind: rekind,
-            auditSink: auditSink
+            auditSink: auditSink,
+            selfNames: .none
         )
     }
 
