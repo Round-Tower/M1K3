@@ -77,7 +77,9 @@ struct ContentView: View {
     @State private var showImporter = false
     /// The blank canvas's chips — a fresh draw every time the transcript
     /// empties (launch and every New chat), from what the stores hold then.
-    @State private var starters: [String] = []
+    /// Seeded with the door so the first frame carries a chip (the task runs
+    /// after the first layout).
+    @State private var starters: [String] = ["What can you do?"]
     @State private var showAttachmentImporter = false
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var attachmentError: String?

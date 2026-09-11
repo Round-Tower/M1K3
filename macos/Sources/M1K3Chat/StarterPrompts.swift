@@ -186,10 +186,14 @@ public enum StarterPrompts {
     }
 
     /// `count` chips for a fresh canvas: one door (random), up to
-    /// `maxContextChips` drawn at random from the candidates (still capped per
-    /// source), the rest from the pool — so the canvas always carries what the
-    /// stores know AND something it didn't have to. Never duplicates; final
-    /// order shuffled.
+    /// `maxContextChips` drawn at random from the candidates (already capped
+    /// per source by `candidates(for:)`), the rest from the pool — so the
+    /// canvas always carries what the stores know AND something it didn't
+    /// have to. From three chips up, one slot is always the pool's, so at
+    /// count 3 the context gets ONE chip and two only from count 4 (the Mac's
+    /// four). Never duplicates; final order shuffled. The fixed strings (door,
+    /// pool, the context templates) are disjoint by construction — pinned by
+    /// `fixedStringsAreDisjoint`.
     public static func pick(
         context: Context,
         count: Int = 4,
@@ -201,14 +205,11 @@ public enum StarterPrompts {
         // Room for context chips, keeping at least one pool slot when there
         // are three or more chips in total.
         let contextRoom = min(maxContextChips, max(0, count - picks.count - (count >= 3 ? 1 : 0)))
-        var perSource: [Source: Int] = [:]
         for candidate in candidates(for: context).shuffled(using: &rng)
             where picks.count - 1 < contextRoom
         {
-            guard perSource[candidate.source, default: 0] < candidate.source.cap else { continue }
             guard !picks.contains(candidate.text) else { continue }
             picks.append(candidate.text)
-            perSource[candidate.source, default: 0] += 1
         }
         for prompt in pool.shuffled(using: &rng) where picks.count < count {
             if !picks.contains(prompt) { picks.append(prompt) }
@@ -216,8 +217,15 @@ public enum StarterPrompts {
         return picks.shuffled(using: &rng)
     }
 
+    /// One line, trimmed: newlines and control characters fold to a space
+    /// first (visitor names are self-reported, titles can carry anything —
+    /// the ActivityDigest.sanitized precedent), so a chip can never wrap.
     private static func trimmed(_ text: String) -> String {
-        text.trimmingCharacters(in: .whitespacesAndNewlines)
+        String(text.unicodeScalars.map { scalar -> Character in
+            CharacterSet.newlines.contains(scalar) || CharacterSet.controlCharacters.contains(scalar)
+                ? " " : Character(scalar)
+        })
+        .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// `lead + text + tail`, the text trimmed so the whole chip stays one line.

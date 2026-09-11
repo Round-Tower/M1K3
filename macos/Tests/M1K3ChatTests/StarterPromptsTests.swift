@@ -184,6 +184,45 @@ struct StarterPromptsContextTests {
         #expect(texts.contains { $0.hasPrefix("What did nnn") && $0.hasSuffix("… want today?") })
     }
 
+    @Test("smaller counts: one chip is the door alone, two is door + one, three is door + one context + one pool")
+    func smallerCounts() {
+        for seed in UInt64(1) ... 20 {
+            let one = pick(fullContext, count: 1, seed: seed)
+            #expect(one.count == 1)
+            #expect(StarterPrompts.doorPool.contains(one[0]))
+            let two = pick(fullContext, count: 2, seed: seed)
+            #expect(two.count == 2)
+            #expect(two.count(where: { StarterPrompts.doorPool.contains($0) }) == 1)
+            let three = pick(fullContext, count: 3, seed: seed)
+            #expect(three.count == 3)
+            #expect(three.count(where: { StarterPrompts.doorPool.contains($0) }) == 1)
+            #expect(three.count(where: { StarterPrompts.pool.contains($0) }) == 1)
+        }
+        #expect(pick(fullContext, count: 0).isEmpty)
+    }
+
+    @Test("a control character or newline inside a visitor name or title folds to a space")
+    func foldsUntrustedText() {
+        var context = StarterPrompts.Context.empty
+        context.visitorCallsToday = 1
+        context.visitorNames = ["Cur\nsor\u{0000}X"]
+        context.conversationTitles = ["Line\rbreak"]
+        let texts = StarterPrompts.candidates(for: context).map(\.text)
+        #expect(texts.contains("What did Cur sor X want today?"))
+        #expect(texts.contains("Pick up “Line break”?"))
+        #expect(texts.allSatisfy { !$0.contains("\n") && !$0.contains("\r") })
+    }
+
+    @Test("the fixed strings never collide: door, pool and every context template are disjoint")
+    func fixedStringsAreDisjoint() {
+        let fixed = StarterPrompts.doorPool + StarterPrompts.pool
+        #expect(Set(fixed).count == fixed.count)
+        var context = fullContext
+        context.hour = 8
+        let templates = StarterPrompts.candidates(for: context).map(\.text)
+        #expect(Set(templates).isDisjoint(with: fixed))
+    }
+
     @Test("a conversation title that matches a memory chip is not printed twice")
     func dedupes() {
         var context = StarterPrompts.Context.empty
