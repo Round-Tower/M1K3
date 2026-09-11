@@ -12,6 +12,8 @@
 //  in ExecuteScriptToolTests.contract.
 //
 //  Signed: Kev + claude-fable-5, 2026-08-23, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — recent_activity joins the taint set: its digest is DERIVED from
+//  memories / chat titles / visitor names; distilling the answer would feed the next digest (pinned to the tool).
 
 import Foundation
 
@@ -21,8 +23,12 @@ public enum DistillationTaint {
     /// execute_script: an event title or a coordinate must not outlive its
     /// consent toggle as a memory-graph fact. battery_status is exempt by
     /// charter (unclassed, harmless).
+    /// recent_activity (2026-09-10) joins for a different reason: its digest
+    /// is DERIVED from memories, chat titles and visitor names, and distilling
+    /// the answer would write meta-facts the next digest then reads as
+    /// activity — the heartbeat's own narrative-laundering loop (fix 6).
     public static let taintedToolNames: Set<String> = [
-        "execute_script", "calendar_peek", "current_location",
+        "execute_script", "calendar_peek", "current_location", "recent_activity",
     ]
 
     public static func isTainted(toolsUsed: [String]?) -> Bool {

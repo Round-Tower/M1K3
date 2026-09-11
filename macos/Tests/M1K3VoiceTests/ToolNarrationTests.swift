@@ -27,6 +27,7 @@ struct ToolNarrationTests {
         #expect(ToolNarration.phrase(forTool: "list_documents") == "Scanning your documents.")
         #expect(ToolNarration.phrase(forTool: "get_document") == "Opening a document.")
         #expect(ToolNarration.phrase(forTool: "open_link") == "Opening a link.")
+        #expect(ToolNarration.phrase(forTool: "recent_activity") == "Looking back over the week.")
     }
 
     @Test("unknown tools humanize instead of speaking snake_case")

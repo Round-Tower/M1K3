@@ -74,6 +74,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: `todoContextProvider` + `todos:` on
 //  grounding/groundingBody — the OPEN TODOS block sits after the memory block and before the ambient page; nil
 //  is byte-identical (pinned by TodoGroundingTests).
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — `recentActivityRouting`, offered-only: "what happened lately" is a
+//  READ of the stores through recent_activity, never a reconstruction from the history window (pinned).
 
 import Foundation
 import M1K3Agent
@@ -799,6 +801,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         "- When the user gives an address — a URL or a domain like example.com — "
             + "read it directly with fetch_page; do not web_search for it."
 
+    /// "What have we been up to this week?" is a READ of the stores (chats,
+    /// memories, visitors, pulses, todos) through recent_activity — never a
+    /// reconstruction from the history window, which holds one conversation's
+    /// tail and nothing of the visitors or the heartbeat (2026-09-10).
+    /// Offered-only, like every routing line (RecentActivityRoutingTests).
+    static let recentActivityRouting =
+        "- For what happened lately on \(HostPlatform.thisDevice) — recent chats, new memories, "
+            + "visiting agents, heartbeat pulses, todos — call recent_activity (window: today, "
+            + "yesterday, or N days); do not reconstruct it from this conversation."
+
     /// Attached ONCE whenever a page tool is offered (a duplication pin asserts
     /// on the assembled prompt): describe only what actually came back.
     static let describeOnlyRouting =
@@ -861,6 +873,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 + "do not guess."
         }
         routing += Self.pageToolRouting(toolNames: toolNames, hasWebSearch: hasWebSearch)
+        if toolNames.contains("recent_activity") {
+            routing += "\n" + Self.recentActivityRouting
+        }
         if toolNames.contains("lookup_fact") {
             routing += "\n- Stable, well-known facts (who wrote a famous book, a "
                 + "capital city, basic science) you can just answer from what you know "

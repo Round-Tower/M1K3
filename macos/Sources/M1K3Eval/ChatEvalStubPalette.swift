@@ -14,6 +14,8 @@
 //  #263 caught two names that still didn't match production (datetime's
 //  ignored `query`, lookup_fact's `topic`) — fixed to the real schemas.
 //  Prior: Unknown (the four original specs were ChatEvalStage's, 2026-06).
+//  Review: Kev + claude-fable-5.1, 2026-09-10 — recent_activity stub (parameter `window`) so the new tool is scored
+//  from day one; the AFM arm gained a matching @Generable shape (ChatEvalStage).
 //
 
 import Foundation
@@ -109,6 +111,21 @@ public enum ChatEvalStubPalette {
                 + "M1K3 is a fully on-device AI companion for the Mac: three brains, voice in and out, "
                 + "consent-gated memory, and nothing sent to a server. (Complete — describe THIS page.)",
             hardCanned: "Could not fetch {input}: the connection was refused. Do not describe the page."
+        ),
+        // 2026-09-10: recent_activity — the resident reviewing his own week.
+        // Mirrors the production digest's first line + section shape.
+        ChatEvalStubSpec(
+            name: "recent_activity",
+            description: "Review what happened lately on this Mac: recent chats, new memories, visiting "
+                + "agents, heartbeat pulses and todos. Argument: the window — today, yesterday, or N days "
+                + "(default: the last 7 days).",
+            parameter: ChatEvalStubParameter(name: "window", description: "today, yesterday, N days, or week (default)"),
+            canned: "Recent activity on this Mac — {input}. Chats: 3 touched, 3 titled. \"Cork Jazz Festival "
+                + "2026 Lineup\" (yesterday), \"Quiet code night\" (Tuesday), \"Sourdough starter\" (Monday). "
+                + "Memories: 2 new (2 fact). Visitors: 12 calls from Claude Code — speak ×8, remember ×4. "
+                + "Heartbeat: 3 pulses. Todos: 1 open. (Complete — summarise THIS digest.)",
+            hardCanned: "Recent activity on this Mac — {input}. Chats: none. Memories: none. Visitors: none. "
+                + "Heartbeat: no pulses. Todos: none open. A quiet stretch — nothing to review."
         ),
     ]
 

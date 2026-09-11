@@ -65,6 +65,33 @@ struct ConversationLogActivityTests {
         #expect(Set(activity.clientNames) == ["Claude Code", "Cursor"])
     }
 
+    @Test("per-tool use counts ride the window, in the same most-frequent-first order as the names")
+    func toolUseCounts() throws {
+        // recent_activity (2026-09-10) wants "speak ×14, remember ×9" — the
+        // counts the SQL already computes and then threw away.
+        let store = try makeStore()
+        store.record(entry(tool: "speak"))
+        store.record(entry(tool: "speak"))
+        store.record(entry(tool: "remember"))
+
+        let activity = try store.activity(since: Date(timeIntervalSinceNow: -60))
+
+        #expect(activity.toolUses == [.init(tool: "speak", uses: 2), .init(tool: "remember", uses: 1)])
+        #expect(activity.toolUses.map(\.tool) == activity.toolNames)
+    }
+
+    @Test("an upper bound closes the window — yesterday's calls, not today's")
+    func upperBound() throws {
+        let store = try makeStore()
+        store.record(entry(tool: "speak"))
+
+        let closed = try store.activity(since: Date(timeIntervalSinceNow: -60), until: Date(timeIntervalSinceNow: -30))
+        let open = try store.activity(since: Date(timeIntervalSinceNow: -60), until: Date(timeIntervalSinceNow: 60))
+
+        #expect(closed.callCount == 0)
+        #expect(open.callCount == 1)
+    }
+
     @Test("tool names come most-frequent first")
     func frequencyOrder() throws {
         let store = try makeStore()
