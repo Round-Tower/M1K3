@@ -115,7 +115,7 @@ xcodebuild archive \
 # overrides only the APP's — so this check proves the default actually applied
 # rather than trusting that nothing overrode it.
 ARCHIVED_APP="$ARCHIVE/Products/Applications/$APP_NAME.app"
-CLI_BIN="$ARCHIVED_APP/Contents/MacOS/m1k3"
+CLI_BIN="$ARCHIVED_APP/Contents/Helpers/m1k3"
 [ -f "$CLI_BIN" ] || { echo "✗ No m1k3 helper in the archived $APP_NAME.app"; exit 1; }
 # FAIL-CLOSED, same shape as release-macos.sh: an empty pipeline must not read
 # as "no sandbox" there NOR as "not sandboxed, block the build" here. Demand a

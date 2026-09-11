@@ -78,7 +78,7 @@ belongs to M1K3.app).
 
 ```sh
 brew trust round-tower/tap                 # Homebrew 6: trust the tap once
-brew install --cask round-tower/tap/m1k3   # the cask symlinks Contents/MacOS/m1k3
+brew install --cask round-tower/tap/m1k3   # the cask symlinks Contents/Helpers/m1k3
 m1k3 connect claude                        # also: codex · cursor · vscode · zed
 ```
 
@@ -87,7 +87,7 @@ Then `m1k3 status`, `m1k3 ask "what did I decide about the pin?"`,
 
 Prefer clicking? **M1K3 ▸ Settings ▸ Privacy ▸ MCP server** has the same thing:
 pick your agent, copy the snippet. Already have M1K3 installed? The binary is
-at `/Applications/M1K3.app/Contents/MacOS/m1k3`.
+at `/Applications/M1K3.app/Contents/Helpers/m1k3`.
 
 ### Tell your agents about the resident
 

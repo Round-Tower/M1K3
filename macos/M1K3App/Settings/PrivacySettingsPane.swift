@@ -18,6 +18,9 @@
 //  its destination and a Copy button, plus the Terminal one-liner pointing at
 //  the CLI inside this very bundle. The footer keeps only the fact and the
 //  guarantee — the picker makes the instructions redundant.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the helper lives at Contents/Helpers/m1k3, not
+//  Contents/MacOS: sign-on-copy there re-signs it as the app itself (identifier + entitlements),
+//  which aborted the developer-id export and would ship it sandboxed. Confidence now 0.85.
 //
 
 import AppKit // NSPasteboard — the Copy buttons
@@ -260,7 +263,7 @@ struct PrivacySettingsPane: View {
     /// The CLI ships inside the bundle, so the path is always right — even for
     /// a copy of M1K3 the user dragged somewhere other than /Applications.
     private var terminalCommand: String {
-        let path = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/m1k3").path
+        let path = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/m1k3").path
         let quoted = path.contains(" ") ? "\"\(path)\"" : path
         return "\(quoted) connect \(connectClient.rawValue)"
     }
