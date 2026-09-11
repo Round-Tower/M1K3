@@ -104,7 +104,8 @@ struct MemoryGroundingTests {
         DO, not a lookup — just produce it. No tools, no grounding, no citations, \
         no "found nothing"; those are for factual questions.
         - Pure small talk — greetings, banter — needs no tools or knowledge: \
-        reply IMMEDIATELY starting with "CONCLUSION:". A question about the \
+        reply IMMEDIATELY starting with "CONCLUSION:", in your own voice, picking up one \
+        real thread (what they said, a memory of them, the hour). A question about the \
         current world is NOT small talk, even phrased casually.
         - If the KNOWLEDGE already answers the question, reply IMMEDIATELY \
         starting with "CONCLUSION:" — do not use tools.
@@ -147,8 +148,9 @@ struct MemoryGroundingTests {
         - A request to write, create, code, or compose something is a task to \
         DO, not a lookup — just produce it. No tools, no grounding, no citations, \
         no "found nothing"; those are for factual questions.
-        - Pure small talk — greetings, banter — needs no tools or knowledge; just reply. \
-        A question about the current world is NOT small talk, even phrased casually.
+        - Pure small talk — greetings, banter — needs no tools or knowledge — reply in \
+        your own voice and pick up one real thread (what they said, a memory of them, the \
+        hour). A question about the current world is NOT small talk, even phrased casually.
         - If the KNOWLEDGE above answers the question, answer from it directly.
         - Cite knowledge sources inline with citation tokens like \
         [Title §heading]; never invent citations.
@@ -219,8 +221,9 @@ struct MemoryGroundingTests {
         #expect(out.contains("- Kev's sister is called Aoife."))
         #expect(out.contains("- Prefers metric units."))
         #expect(!out.contains("[Kev's sister"))
-        // Told not to cite them.
-        #expect(out.contains("do not cite"))
+        // Told not to cite them — and to speak TO the user, not about them.
+        #expect(out.contains("never cite, quote, or bracket"))
+        #expect(out.contains("speak to them as \"you\""))
     }
 
     @Test("memory-only grounding keeps the no-knowledge hint, then the memory block")
