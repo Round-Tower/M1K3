@@ -20,7 +20,8 @@
 //  from `phonePool` = pool + door, so moving "What do you remember about me?" to the door took
 //  nothing off the phone (review catch). "This week" softened to "lately" — the context carries no
 //  timestamps, so the chip must not promise a window the answer (recent_activity) decides for itself;
-//  the activity gate reads the same trimmed titles as the chips (a blank-only title is no activity).
+//  the activity gate reads the same trimmed titles as the chips (a blank-only title is no activity);
+//  the phone's memory chips fold embedded newlines through the same `trimmed` (was ends-only).
 //
 
 import Foundation
@@ -60,9 +61,9 @@ public enum StarterPrompts {
         // or two long titles that collide once truncated, must not print twice.
         var picks: [String] = []
         for title in memoryTitles where picks.count < min(maxMemoryChips, count) {
-            let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            let chip = memoryChip(trimmed)
+            let oneLine = trimmed(title) // folds embedded newlines too, like the Mac path
+            guard !oneLine.isEmpty else { continue }
+            let chip = memoryChip(oneLine)
             if !picks.contains(chip) { picks.append(chip) }
         }
         for prompt in phonePool.shuffled(using: &rng) where picks.count < count {

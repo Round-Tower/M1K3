@@ -53,6 +53,14 @@ struct StarterPromptsTests {
         #expect(StarterPrompts.phonePool.count == StarterPrompts.pool.count + StarterPrompts.doorPool.count)
     }
 
+    @Test("the phone's memory chips fold an embedded newline too — one line, like the Mac's")
+    func phoneFoldsEmbeddedNewlines() {
+        var rng = FixedRNG(state: 3)
+        let picks = StarterPrompts.pick(memoryTitles: ["Line\nbreak\r\nhere"], using: &rng)
+        #expect(picks.contains("Remind me about Line break here"))
+        #expect(picks.allSatisfy { !$0.contains("\n") && !$0.contains("\r") })
+    }
+
     @Test("recent memories: at most two memory chips, the rest from the pool, still three")
     func weavesMemories() {
         var rng = FixedRNG(state: 7)

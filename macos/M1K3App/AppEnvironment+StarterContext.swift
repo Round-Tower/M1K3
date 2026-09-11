@@ -7,6 +7,10 @@
 //  titles, counts, one date, the hour. Every read fails soft to its zero so a
 //  broken store never blanks the chips; the log-off toggle reads as no visitors.
 //  A fresh draw per blank canvas (ContentView's task on `messages.isEmpty`).
+//  Synchronous on the main actor BY DESIGN: four bounded reads (≤40 memories,
+//  the drawer's summaries, one todo list, one date, two aggregate queries over
+//  ≤500 log rows) — the iOS `recentMemoryTitles` shape, not the heartbeat's
+//  detached gatherer; a detached variant is the follow-up if a canvas ever stutters.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.8 (the rule is pure
 //  and pinned in StarterPromptsTests; this gatherer is verify-by-launch).
