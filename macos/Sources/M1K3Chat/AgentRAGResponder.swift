@@ -76,6 +76,10 @@
 //  is byte-identical (pinned by TodoGroundingTests).
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — `recentActivityRouting`, offered-only: "what happened lately" is a
 //  READ of the stores through recent_activity, never a reconstruction from the history window (pinned).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the small-talk line on both native rule sets now
+//  says what to DO with a greeting (reply in your own voice, pick up one real thread) instead of
+//  only what not to call; the memory block header speaks TO the user and forbids bracketed cites
+//  (byte-replay showed "Kev's been…" third-person openers and "[Water with lemon]" cites).
 
 import Foundation
 import M1K3Agent
@@ -748,9 +752,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // The conflict clause is part of Tier 1: gemma-4-12B read the dated
         // pair and HEDGED ("either Ardmore or Dublin") until told how to break
         // ties; Qwen resolved on dates alone (memblock probe, 2026-07-30).
-        return "WHAT I KNOW ABOUT YOU (remembered from past conversations — "
-            + "use naturally, do not cite; where facts conflict, trust the most "
-            + "recently learned):\n\(facts)"
+        // Header speaks TO the user (2026-09-11 byte-replay: facts written
+        // "Kev is…" came back as "Kev's been digging into sci-fi" in a reply
+        // addressed to Kev, and titles came back as "[Water with lemon]"
+        // cites — 0/12 of either with this wording).
+        return "WHAT I KNOW ABOUT YOU (remembered from past conversations. These lines are "
+            + "ABOUT the person you are talking to — speak to them as \"you\", never about "
+            + "them in the third person. Weave facts in naturally; never cite, quote, or "
+            + "bracket a memory. Where facts conflict, trust the most recently learned):"
+            + "\n\(facts)"
     }
 
     /// The generative carve-out — the FIRST rule in BOTH prompt styles, shared
@@ -894,7 +904,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             RULES:
             \(carveOut)
             - Pure small talk — greetings, banter — needs no tools or knowledge: \
-            reply IMMEDIATELY starting with "CONCLUSION:". A question about the \
+            reply IMMEDIATELY starting with "CONCLUSION:", in your own voice, picking up one \
+            real thread (what they said, a memory of them, the hour). A question about the \
             current world is NOT small talk, even phrased casually.
             - If the KNOWLEDGE already answers the question, reply IMMEDIATELY \
             starting with "CONCLUSION:" — do not use tools.
@@ -913,8 +924,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             """
             RULES:
             \(carveOut)
-            - Pure small talk — greetings, banter — needs no tools or knowledge; just reply. \
-            A question about the current world is NOT small talk, even phrased casually.
+            - Pure small talk — greetings, banter — needs no tools or knowledge — reply in \
+            your own voice and pick up one real thread (what they said, a memory of them, the \
+            hour). A question about the current world is NOT small talk, even phrased casually.
             - If the KNOWLEDGE above answers the question, answer from it directly.
             - Cite knowledge sources inline with citation tokens like \
             [Title §heading]; never invent citations.

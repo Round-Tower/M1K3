@@ -192,6 +192,55 @@ struct ChatEvalScorerTests {
         #expect(score.passed)
     }
 
+    /// The parrot instrument (2026-09-11): the harness promoted a brain whose
+    /// greeting answer was a voice exemplar verbatim, because nothing scored
+    /// it. On the character kinds (open chat, humour, interview) reproducing an
+    /// exemplar sentence is the failure the exemplars' own header names
+    /// ("never repeat them"); elsewhere it is reported, not failed — a security
+    /// fixture answered with the taught decline is correct.
+    @Test("a character-kind answer that reproduces a voice-exemplar sentence fails")
+    func exemplarEchoFailsCharacterKinds() throws {
+        let span = try #require(ExemplarEcho.spans.first)
+        let score = ChatEvalScorer.score(
+            fixture: fixture(.openChat, .init()),
+            observation: EvalObservation(rawText: "Right so. \(span) Anyway.")
+        )
+        #expect(check(score, "exemplar-echo")?.outcome == .fail)
+        #expect(!score.passed)
+    }
+
+    @Test("an exemplar echo on a non-character kind is reported, not failed")
+    func exemplarEchoInformationalElsewhere() throws {
+        let span = try #require(ExemplarEcho.spans.first)
+        let score = ChatEvalScorer.score(
+            fixture: fixture(.toolUse, .init()),
+            observation: EvalObservation(rawText: span)
+        )
+        #expect(check(score, "exemplar-echo")?.outcome == .skip)
+        #expect(score.passed)
+    }
+
+    @Test("a fresh answer in the voice passes the exemplar-echo check")
+    func freshAnswerIsNotAnEcho() {
+        let score = ChatEvalScorer.score(
+            fixture: fixture(.openChat, .init()),
+            observation: EvalObservation(rawText: "Grand out. What has you up at this hour — the bug or the coffee?")
+        )
+        #expect(check(score, "exemplar-echo")?.outcome == .pass)
+        #expect(score.passed)
+    }
+
+    @Test("exemplar-echo spans derive from the live persona: whole sentences, no lead-ins, all above the floor")
+    func exemplarEchoSpansTrackThePersona() throws {
+        let spans = ExemplarEcho.spans
+        #expect(!spans.isEmpty)
+        #expect(spans.allSatisfy { $0.count >= ExemplarEcho.minSpan })
+        #expect(!spans.contains { $0.hasPrefix("- asked") || $0.hasPrefix("asked ") })
+        // Curly and straight apostrophes score the same (the shared normaliser).
+        let curly = try #require(spans.first?.replacingOccurrences(of: "'", with: "\u{2019}"))
+        #expect(ExemplarEcho.echoedSpan(in: curly) != nil)
+    }
+
     @Test("a statement answer reports no trailing question")
     func noTrailingQuestionReported() {
         let score = ChatEvalScorer.score(
@@ -518,12 +567,13 @@ struct ChatEvalScorerTests {
 
     @Test("score is the passing fraction of scorable checks")
     func scoreFraction() {
-        // Always-on non-empty + no-think-leak pass, contains fails → 2 of 3.
+        // Always-on non-empty + no-think-leak + exemplar-echo (2026-09-11) pass,
+        // contains fails → 3 of 4.
         let exp = EvalExpectation(mustContainAny: ["nope"])
         let score = ChatEvalScorer.score(
             fixture: fixture(.reasoning, exp), observation: EvalObservation(rawText: "something else")
         )
-        #expect(abs(score.score - 2.0 / 3.0) < 0.0001)
+        #expect(abs(score.score - 3.0 / 4.0) < 0.0001)
         #expect(!score.passed)
     }
 

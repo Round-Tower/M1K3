@@ -52,6 +52,9 @@
 //  doc-readme wants the word MIT, not the substring hiding in "commit" (review 8).
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — `tool-recent-activity`: a review of the week must call
 //  recent_activity, never reconstruct it from the history window.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — `chat-greeting` FAILS on the old canned status line
+//  (`cannedGreetingMarkers`): the harness had scored the verbatim exemplar PASS for months while
+//  Kev heard the same opener every chat. maxChars 600 leaves room for a real greeting.
 
 import Foundation
 
@@ -256,6 +259,9 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
 /// Persona-bleed / scaffolding markers that must never reach a finished answer,
 /// shared by the open-chat fixtures (the 4B parroted `USER:`/`M1K3:` turns
 /// before the exemplar reframe — this is the regression guard).
+/// The status-report greeting shape a 4B copies from an exemplar (see
+/// chat-greeting). Case-insensitive, like every mustNotContain marker.
+private let cannedGreetingMarkers = ["all quiet here", "nothing in or out", "what are we at"]
 private let leakMarkers = ["<think>", "</think>", "USER:", "M1K3:", "ASSISTANT:"]
 
 public enum ChatEvalFixtures {
@@ -265,7 +271,14 @@ public enum ChatEvalFixtures {
         .init(
             id: "chat-greeting", kind: .openChat,
             prompt: "Hey M1K3, how's it going?",
-            expectation: .init(mustNotContain: leakMarkers, minChars: 2, maxChars: 600)
+            // The canned status line ("All quiet here — nothing in or out. What
+            // are we at?") was the persona's own greeting exemplar read back
+            // verbatim — 52 of 198 live first replies, and this fixture PASSED
+            // on it (2026-09-11). A greeting that reports M1K3's own status
+            // instead of picking up a thread is the failure, not a pass.
+            expectation: .init(
+                mustNotContain: leakMarkers + cannedGreetingMarkers, minChars: 2, maxChars: 600
+            )
         ),
         .init(
             id: "chat-explain-simply", kind: .openChat,

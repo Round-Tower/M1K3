@@ -8,6 +8,9 @@
 //  a URLProtocol stub plays the servers, a fake resolver plays DNS.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85, Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.8 — the stub's 302 waits for the
+//  gate's decision (grace, or `stopLoading` on a followed hop) instead of racing it: the redirect
+//  tests timed out in three of four CI runs under the parallel suite, on master too. Test-only.
 //
 
 import Foundation
@@ -18,7 +21,25 @@ import Testing
 /// Scripted servers: public.example/hop → 302 to a private literal;
 /// public.example/hop-public → 302 to public.example/fine; /fine → 200 OK;
 /// 10.0.0.1/secret → 200 SECRET (must never be reached through a redirect).
-private final class StubTransport: URLProtocol {
+/// `@unchecked Sendable`: the grace timer below captures `self` into a
+/// `@Sendable` dispatch block. The only mutable state is `stopped`, read and
+/// written under `lock` in one step and never held across a client callback.
+private final class StubTransport: URLProtocol, @unchecked Sendable {
+    /// How long a 302 waits for the gate's decision before it is delivered as
+    /// the final response. The gate decides asynchronously (an async delegate
+    /// plus a resolver hop); delivering the body before that decision landed
+    /// left URLSession neither following nor finishing, and the task hung to
+    /// its timeout (-1001 in three of four CI runs, 2026-09-11). A followed hop
+    /// stops this load in well under 100 ms even on a loaded runner, so this
+    /// is 5× the observed worst case — a sized margin, not a contract.
+    static let decisionGrace: DispatchTimeInterval = .milliseconds(500)
+
+    /// Flipped by `stopLoading` (a followed hop) OR by the grace timer the
+    /// moment it commits to delivering the 302 — whichever wins, the other
+    /// becomes a no-op. No lock is ever held across a client callback.
+    private let lock = NSLock()
+    private var stopped = false
+
     override class func canInit(with _: URLRequest) -> Bool {
         true
     }
@@ -27,7 +48,9 @@ private final class StubTransport: URLProtocol {
         request
     }
 
-    override func stopLoading() {}
+    override func stopLoading() {
+        lock.withLock { stopped = true }
+    }
 
     override func startLoading() {
         guard let url = request.url, let client else { return }
@@ -42,10 +65,23 @@ private final class StubTransport: URLProtocol {
                 url: url, statusCode: 302, httpVersion: "HTTP/1.1", headerFields: ["Location": target]
             )!
             client.urlProtocol(self, wasRedirectedTo: URLRequest(url: URL(string: target)!), redirectResponse: response)
-            // If the session declines the hop, this 302 is the final answer.
-            client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client.urlProtocol(self, didLoad: Data("redirecting".utf8))
-            client.urlProtocolDidFinishLoading(self)
+            // If the session declines the hop, this 302 is the final answer —
+            // but only once the gate has DECIDED (see `decisionGrace`): a
+            // followed hop calls `stopLoading` on this load, a declined one
+            // leaves it running. Check and commit in one locked step so a
+            // late `stopLoading` is a no-op and a stale 302 never reaches a
+            // load the session already abandoned.
+            DispatchQueue.global().asyncAfter(deadline: .now() + Self.decisionGrace) { [self] in
+                let shouldDeliver = lock.withLock { () -> Bool in
+                    guard !stopped else { return false }
+                    stopped = true
+                    return true
+                }
+                guard shouldDeliver else { return }
+                client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                client.urlProtocol(self, didLoad: Data("redirecting".utf8))
+                client.urlProtocolDidFinishLoading(self)
+            }
         }
         switch (url.host, url.path) {
         case ("public.example", "/hop"): redirect(to: "http://10.0.0.1/secret")

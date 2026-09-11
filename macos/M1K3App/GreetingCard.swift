@@ -29,6 +29,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — the one hardcoded chip becomes `starters`, drawn by
 //  StarterPrompts' context rule (a door chip, up to two from what the stores hold, the rest random),
 //  laid out two per row; ContentView redraws them every time the canvas goes blank.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the memory chip's send drops " Keep it short.":
+//  a chip that pre-shortens the answer contradicts the character pass (length is a trait, not a
+//  constraint — Kev, 2026-09-09).
 
 import M1K3Chat
 import SwiftUI
@@ -147,8 +150,9 @@ struct GreetingCard: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// One tap to the first whoa. "Keep it short" is deliberate — Mini's best
-    /// register, and it guards the moment against a wall of text.
+    /// One tap to the first whoa. The ask used to end "Keep it short." — a standing
+    /// brevity instruction on the very first exchange, which the distiller then read
+    /// as a preference (2026-09-11). The persona already keeps facts brief.
     private func askState(title: String) -> some View {
         VStack(spacing: 12) {
             Label {
@@ -161,7 +165,7 @@ struct GreetingCard: View {
             }
             HStack(spacing: 12) {
                 Button {
-                    onSend("What should I know from “\(title)”? Keep it short.")
+                    onSend("What should I know from “\(title)”?")
                 } label: {
                     Text("Ask me about it")
                         .font(.headline)

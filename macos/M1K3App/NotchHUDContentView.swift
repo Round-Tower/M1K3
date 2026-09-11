@@ -42,18 +42,37 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the caption names the NARRATOR (M1K3 / the visiting MCP client)
 //  instead of brain · voice tier — the plumbing nobody asked about. Confidence now 0.8 (verify-by-launch).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the marquee shows the SENTENCE being spoken
+//  (`NarrationLine`, from the karaoke's word range), one line, whitespace collapsed: a visiting
+//  agent's multi-paragraph `speak` had rendered as stacked full-width lines clipped both sides
+//  (`fixedSize` honours embedded newlines). Confidence now 0.8 (verify-by-launch: a long `speak`).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 4 fold) — the marquee identity is
+//  (utterance sequence, sentence start), not the start alone: consecutive one-sentence
+//  utterances all start at 0 and relied on an intervening `clear()` render to restart.
 
 import M1K3Avatar
 import M1K3Voice
 import SwiftUI
 
+/// The marquee's SwiftUI identity: one per (utterance, sentence position).
+private struct MarqueeKey: Hashable {
+    let utterance: Int
+    let start: Int
+}
+
 struct NotchHUDContentView: View {
     let env: AppEnvironment
     @AppStorage(AppEnvironment.voiceCompanionKey) private var companion = ""
 
-    private var narration: String? {
+    /// ONE line: the sentence being spoken, not the whole utterance. A
+    /// visiting agent's multi-paragraph `speak` is a single utterance with
+    /// embedded newlines; rendered whole it stacked as full-width lines the
+    /// panel clipped on both sides (Kev's screenshot, 2026-09-11). The chat's
+    /// own auto-speak speaks a sentence per utterance, so it never showed.
+    private var narration: NarrationLine.Line? {
         guard let text = env.speechHighlight.utteranceText, !text.isEmpty else { return nil }
-        return text
+        let line = NarrationLine.currentLine(in: text, wordRange: env.speechHighlight.currentWordRange)
+        return line.text.isEmpty ? nil : line
     }
 
     var body: some View {
@@ -68,8 +87,14 @@ struct NotchHUDContentView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 if let narration {
-                    NotchHUDMarquee(text: narration, width: NotchHUDLayout.textAreaWidth)
-                        .id(narration) // fresh @State per new sentence — restart the scroll, not continue it
+                    NotchHUDMarquee(text: narration.text, width: NotchHUDLayout.textAreaWidth)
+                        // Fresh @State per new sentence — restart the scroll, not
+                        // continue it. Keyed on the UTTERANCE and the sentence's
+                        // position in it: two identical sentences in a row are
+                        // still two sentences, and two one-sentence utterances
+                        // (both at offset 0) are still two utterances — whether
+                        // or not the `clear()` between them ever rendered.
+                        .id(MarqueeKey(utterance: env.speechHighlight.utteranceSequence, start: narration.start))
                 } else {
                     Text("M1K3 IS TALKING")
                         .font(.pixel(18))
@@ -124,6 +149,7 @@ private struct NotchHUDMarquee: View {
         Text(text)
             .font(.system(size: 13, weight: .medium, design: .rounded))
             .foregroundStyle(.white)
+            .lineLimit(1) // a marquee scrolls ONE line; `fixedSize` alone honours embedded newlines
             .fixedSize()
             .background(GeometryReader { geo in
                 Color.clear.onAppear { restart(textWidth: geo.size.width) }

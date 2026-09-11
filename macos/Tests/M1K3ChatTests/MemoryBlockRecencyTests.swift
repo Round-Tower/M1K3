@@ -35,7 +35,7 @@ struct MemoryBlockRecencyTests {
             chunks: [], memories: [memoryHit("Kev lives in Ardmore.", daysAgo: 3)],
             toolNames: tools, style: .native, now: now
         )
-        #expect(out.contains("where facts conflict, trust the most recently learned"))
+        #expect(out.contains("Where facts conflict, trust the most recently learned"))
     }
 
     @Test("a dated memory renders its learned-recency prefix")
