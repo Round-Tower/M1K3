@@ -26,7 +26,11 @@
 //  Signed: Kev + claude-fable-5, 2026-07-03, Confidence 0.85 (state logic is
 //  plain; look/feel + the ask-state beat are verify-by-launch). Prior: none
 //  (new file; supersedes ContentView's EmptyChatView).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the one hardcoded chip becomes `starters`, drawn by
+//  StarterPrompts' context rule (a door chip, up to two from what the stores hold, the rest random),
+//  laid out two per row; ContentView redraws them every time the canvas goes blank.
 
+import M1K3Chat
 import SwiftUI
 
 struct GreetingCard: View {
@@ -39,6 +43,9 @@ struct GreetingCard: View {
     /// Ingest seam (drives the landing → busy → ask morphs).
     let isIngesting: Bool
     let lastIngestedTitle: String?
+    /// The chips for this blank canvas (StarterPrompts.pick(context:)); each
+    /// carries its own prompt. Empty → no chip row.
+    var starters: [String] = Array(StarterPrompts.doorPool.prefix(1))
 
     let onImport: () -> Void
     let onSend: (String) -> Void
@@ -61,10 +68,8 @@ struct GreetingCard: View {
             heroZone
                 .frame(maxWidth: 440)
 
-            if lastIngestedTitle == nil, !isIngesting {
-                HStack(spacing: 10) {
-                    chip("What can you do?") { onSend("What can you do?") }
-                }
+            if lastIngestedTitle == nil, !isIngesting, !starters.isEmpty {
+                chipRows
             }
         }
         .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: isIngesting)
@@ -173,6 +178,21 @@ struct GreetingCard: View {
         }
         .padding(.vertical, 24)
         .frame(maxWidth: .infinity)
+    }
+
+    /// Two chips per row — four long chips in one HStack overflow the 440pt
+    /// hero width; a wrapping layout keeps every chip on one line.
+    private var chipRows: some View {
+        let rows = stride(from: 0, to: starters.count, by: 2).map { Array(starters[$0 ..< min($0 + 2, starters.count)]) }
+        return VStack(spacing: 10) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                HStack(spacing: 10) {
+                    ForEach(row, id: \.self) { prompt in
+                        chip(prompt) { onSend(prompt) }
+                    }
+                }
+            }
+        }
     }
 
     private func chip(_ title: String, action: @escaping () -> Void) -> some View {
