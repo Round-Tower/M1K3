@@ -17,6 +17,15 @@ import Foundation
 import Testing
 
 struct ConnectPlanTests {
+    @Test("`claude mcp add` refusing a duplicate NAME reads as already connected — anchored on the name")
+    func claudeDuplicateIsAlreadyConnected() {
+        #expect(ConnectPlan.shellSaysAlreadyConnected("MCP server m1k3 already exists in user config"))
+        #expect(ConnectPlan.shellSaysAlreadyConnected("Error: m1k3 is already configured\n"))
+        // Some other resource that "already exists" is a real failure, not our duplicate.
+        #expect(!ConnectPlan.shellSaysAlreadyConnected("project config already exists at ~/.claude.json"))
+        #expect(!ConnectPlan.shellSaysAlreadyConnected(""))
+    }
+
     private let url = MCPEndpoint.url(port: 4242)
 
     /// Resolved (/var → /private/var) so path equality survives the writer's

@@ -25,6 +25,10 @@
 //  number" instead of asking. It is the flag only when its value is numeric;
 //  otherwise the token stays where it was and the subcommand decides whether
 //  it is a word or an unexpected argument. Confidence now 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the scan now stops at `call`
+//  (scanLimit): its tool name and JSON reach the handler verbatim, so a
+//  `--port 8080` inside a note's text is the note's words, not the CLI's port
+//  (PR #279 review). Confidence now 0.9.
 //
 
 import Foundation
@@ -125,7 +129,8 @@ public struct CLICommand: Equatable, Sendable {
       m1k3 version | help
 
     OPTIONS
-      --port N        the app's MCP port (default \(MCPEndpoint.defaultPort), or $\(portEnvironmentKey))
+      --port N        the app's MCP port (default \(MCPEndpoint.defaultPort), or $\(portEnvironmentKey));
+                      anywhere on the line, except inside call's JSON
 
     M1K3 must be running — m1k3 opens it for you if it isn't.
     """
@@ -140,12 +145,18 @@ public struct CLICommand: Equatable, Sendable {
         _ arguments: [String],
         environment: [String: String] = [:]
     ) -> Result<CLICommand, CLIUsageError> {
+        // `call` hands its tail to JSONSerialization verbatim, so the global
+        // scan stops at that subcommand: a `--port 8080` inside the JSON is
+        // data (the note's own words), never the CLI's port. Every other
+        // subcommand is scanned end to end, as the usage text says.
+        let scanEnd = scanLimit(for: arguments)
         let port: UInt16
         var rest: [String]
-        switch extractPort(from: arguments, environment: environment) {
+        switch extractPort(from: Array(arguments[..<scanEnd]), environment: environment) {
         case let .failure(error): return .failure(error)
         case let .success(extracted): (port, rest) = extracted
         }
+        rest.append(contentsOf: arguments[scanEnd...])
 
         guard let head = rest.first else { return .success(CLICommand(action: .help, port: port)) }
         rest.removeFirst()
@@ -182,6 +193,25 @@ public struct CLICommand: Equatable, Sendable {
     /// it was: text subcommands keep it in their sentence, and the ones that
     /// take no text refuse it themselves as an unexpected argument. A numeric
     /// value that no server could be listening on is still the user's typo.
+    /// How far the global `--port` scan may run: to the end of the line, or —
+    /// when the subcommand is `call` — just past the word `call` itself, so its
+    /// tool name and JSON reach `call(_:)` untouched.
+    private static func scanLimit(for arguments: [String]) -> Int {
+        var index = arguments.startIndex
+        while index < arguments.endIndex {
+            let argument = arguments[index]
+            if argument.hasPrefix("--port=") { index = arguments.index(after: index); continue }
+            let next = arguments.index(after: index)
+            if argument == "--port", next < arguments.endIndex, isNumeric(arguments[next]) {
+                index = arguments.index(after: next)
+                continue
+            }
+            // The first word that is not a leading port flag is the subcommand.
+            return argument == "call" ? next : arguments.endIndex
+        }
+        return arguments.endIndex
+    }
+
     private static func extractPort(
         from arguments: [String],
         environment: [String: String]

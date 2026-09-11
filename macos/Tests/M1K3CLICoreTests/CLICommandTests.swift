@@ -209,6 +209,24 @@ struct CLICommandTests {
             == .speak(text: "mind the --port flag", emotion: nil))
     }
 
+    @Test("★ call's tail is never scanned for --port — a port inside the JSON is data, not the flag")
+    func callTailIsVerbatim() throws {
+        // Unquoted JSON is rejoined from the shell's words; a `--port 8080` in a
+        // note's text must land in the note, not redirect the CLI's own port.
+        let command = try parsed([
+            "call", "remember", "{\"title\":\"Router\",\"text\":\"forward", "--port", "8080", "to", "the", "NAS\"}",
+        ])
+        #expect(command.port == MCPEndpoint.defaultPort)
+        #expect(command.action == .call(
+            tool: "remember",
+            argumentsJSON: "{\"title\":\"Router\",\"text\":\"forward --port 8080 to the NAS\"}"
+        ))
+        // The global flag still works where it belongs: in front of the subcommand.
+        #expect(try parsed(["--port", "5000", "call", "get_status"])
+            == CLICommand(action: .call(tool: "get_status", argumentsJSON: nil), port: 5000))
+        #expect(try parsed(["--port=5000", "call", "get_status"]).port == 5000)
+    }
+
     @Test("★ --port is the flag only when its value is a number — the rest is words")
     func portOnlyWhenNumeric() throws {
         // The line that started this rule: a real question that says --port.

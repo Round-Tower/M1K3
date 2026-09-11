@@ -15,6 +15,10 @@
 //  Signed: Kev + claude-opus-5, 2026-09-11, Confidence 0.85 (each shape is
 //  the client's documented one and test-pinned; Zed's is the least stable,
 //  which is exactly why its plan prints and its note says so). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — `shellSaysAlreadyConnected`
+//  moved here from the executable so it can be pinned, and anchored on the
+//  server NAME: a duplicate `m1k3` reads as already connected, any other thing
+//  that "already exists" stays a real failure (PR #279 review). Confidence now 0.85.
 //
 
 import Foundation
@@ -96,6 +100,17 @@ public enum ConnectPlan {
 
     /// Where that snippet belongs, in the form a person recognises. Shown as
     /// the caption under the snippet in Settings.
+    /// Did a client's own registration command refuse because a server called
+    /// `serverName` is ALREADY registered? Current `claude mcp add` exits
+    /// non-zero on a duplicate name; that is the state the JSON clients call
+    /// "already connected", so it must read the same way. Anchored on the name:
+    /// some other thing that "already exists" is a real failure, not ours.
+    public static func shellSaysAlreadyConnected(_ stderr: String, serverName: String = Self.serverName) -> Bool {
+        let lowered = stderr.lowercased()
+        guard lowered.contains(serverName.lowercased()) else { return false }
+        return lowered.contains("already exists") || lowered.contains("already configured")
+    }
+
     public static func destination(client: MCPClient) -> String {
         switch client {
         case .claude: "Run it in Terminal"

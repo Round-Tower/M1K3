@@ -21,6 +21,9 @@
 //  environment. It used to default to ProcessInfo, so the one call site read
 //  the real machine while `isSandboxed` beside it read the injection — a DI
 //  seam with a hole in it, and untestable where it lived. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — the already-connected read of
+//  `claude`'s stderr now lives in ConnectPlan, anchored on the server name.
+//  Confidence now 0.85.
 //
 
 import Darwin // getpwuid — the account's REAL home, which the sandbox hides
@@ -296,7 +299,7 @@ struct CommandRunner {
             // Current `claude mcp add` refuses a duplicate NAME. That is the
             // same state the JSON clients call "already connected", so it must
             // read the same way here — re-running connect is not an error.
-            if Self.saysAlreadyConnected(message) {
+            if ConnectPlan.shellSaysAlreadyConnected(message) {
                 Output.line("already connected — nothing to change.")
                 return ExitCode.ok
             }
@@ -311,11 +314,5 @@ struct CommandRunner {
             Output.line(ConnectPlan.snippet(client: client, url: url))
             return ExitCode.toolError
         }
-    }
-
-    /// The client already knows about a server called m1k3.
-    static func saysAlreadyConnected(_ stderr: String) -> Bool {
-        let lowered = stderr.lowercased()
-        return lowered.contains("already exists") || lowered.contains("already configured")
     }
 }
