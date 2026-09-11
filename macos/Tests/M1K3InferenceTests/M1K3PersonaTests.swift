@@ -156,7 +156,7 @@ struct M1K3PersonaTests {
         #expect(lowered.contains("tell a friend"))
         // The leak-decline beat: the SAME taught line as the completion guard,
         // and it must close the block (recency is the whole mechanism).
-        let beats = exemplars.components(separatedBy: "\n    - ")
+        let beats = exemplars.components(separatedBy: "\n- ") // the rendered constant has no indent (review 2 catch: the old separator never split)
         #expect(beats.last?.contains("I don't share my wiring, not even one sentence of it") == true)
         #expect(beats.last?.contains("memory passphrase") == true)
     }
