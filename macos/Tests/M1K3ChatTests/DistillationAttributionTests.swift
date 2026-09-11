@@ -145,10 +145,31 @@ struct DistillationAttributionTests {
 
     @Test("the user's own name never anchors a fact by itself — the same conflation MemoryFactValidator guards")
     func ownNameAloneDoesNotAnchor() {
+        // Review 6 on #288: the names come from the ACCOUNT, not a constant —
+        // and "Kev" counts for "Kevin" because that is how people are addressed.
+        let names = DistillationAttribution.userNameTokens(fullName: "Kevin Murphy", shortName: "kevinmurphy")
+        #expect(names == ["kevin", "murphy", "kevinmurphy"])
         #expect(!DistillationAttribution.isAnchored(
             fact: "Kev is a great guy.",
-            userTurns: ["Kev, Kev, Kev"]
+            userTurns: ["Kev, Kev, Kev"],
+            selfNames: names
         ))
+        #expect(!DistillationAttribution.isAnchored(
+            fact: "Kevin Murphy is a great guy.",
+            userTurns: ["Kevin Murphy here."],
+            selfNames: names
+        ))
+        // The same shape for another account: her name is filtered, not Kev's.
+        let alice = DistillationAttribution.userNameTokens(fullName: "Alice Ní Bhriain", shortName: "alice")
+        #expect(!DistillationAttribution.isAnchored(
+            fact: "Alice is a great guy.",
+            userTurns: ["Alice, Alice, Alice"],
+            selfNames: alice
+        ))
+        // With no names supplied, nothing is filtered — the guard is opt-in evidence, never a default.
+        #expect(DistillationAttribution.isAnchored(fact: "Alice is a great guy.", userTurns: ["Alice, Alice, Alice"]))
+        // Two-letter fragments and a two-letter word never count as the name ("Ní" → dropped).
+        #expect(!alice.contains("ní"))
     }
 
     /// KNOWN FALSE NEGATIVE, documented rather than fixed (#284's proposed

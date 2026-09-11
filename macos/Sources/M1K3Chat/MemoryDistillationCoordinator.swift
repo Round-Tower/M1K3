@@ -136,7 +136,9 @@ public struct MemoryDistillationCoordinator: Sendable {
         var droppedUnanchored = 0
         var written = 0
         for fact in facts {
-            guard DistillationAttribution.isAnchored(fact: fact.text, userTurns: userTurns) else {
+            guard DistillationAttribution.isAnchored(
+                fact: fact.text, userTurns: userTurns, selfNames: DistillationAttribution.systemUserNames
+            ) else {
                 droppedUnanchored += 1
                 continue
             }

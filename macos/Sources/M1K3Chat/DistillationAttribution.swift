@@ -40,6 +40,9 @@
 //  floor is gone (review 1 named "I'm a teacher." too, review 2 "I'm diabetic") — a slice of
 //  single-word turns is the only trivial gate; tokens count from three letters with the common
 //  three-letter function words stopworded, and runs of two or more digits count.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 6 fold) — the self-name guard reads the
+//  account's names (`NSFullUserName` / `NSUserName`, leading fragments count: Kev for Kevin)
+//  instead of a hardcoded "kev" that was a no-op for every other user.
 //
 
 import Foundation
@@ -59,11 +62,33 @@ public enum DistillationAttribution {
         "our", "let", "may", "own", "say", "see", "way", "yet",
     ]
 
-    /// The user's own name. Sharing ONLY the name proves nothing — the same
-    /// conflation MemoryFactValidator guards against on the assistant's side
-    /// ("the user is M1K3"), mirrored here so a fact can't anchor itself
-    /// purely by repeating who it's supposedly about.
-    static let userSelfNames: Set<String> = ["kev"]
+    /// The user's own names as the account knows them (`NSFullUserName()` +
+    /// `NSUserName()`), tokenised like content. Sharing ONLY a name proves
+    /// nothing — the same conflation MemoryFactValidator guards against on the
+    /// assistant's side ("the user is M1K3"), mirrored here so a fact can't
+    /// anchor itself purely by repeating who it's supposedly about. Derived
+    /// from the account, never hardcoded (review 6 on #288: the developer's
+    /// first name had shipped in the fence, a no-op for every other user).
+    public static let systemUserNames: Set<String> = userNameTokens(
+        fullName: NSFullUserName(), shortName: NSUserName()
+    )
+
+    /// Lowercased letter runs of three or more from the account's names.
+    static func userNameTokens(fullName: String, shortName: String) -> Set<String> {
+        Set(
+            (fullName + " " + shortName).lowercased()
+                .split(whereSeparator: { !$0.isLetter })
+                .map(String.init)
+                .filter { $0.count >= 3 }
+        )
+    }
+
+    /// A token is the user's name when it IS one of `selfNames` or a leading
+    /// fragment of one at least three letters long — "Kev" for "Kevin",
+    /// "Alex" for "Alexander" — because that is how people are addressed.
+    static func isSelfName(_ token: String, selfNames: Set<String>) -> Bool {
+        token.count >= 3 && selfNames.contains { $0.hasPrefix(token) }
+    }
 
     /// True when every user turn in the slice is a single word — "yo",
     /// "sure", "thanks" — so a distiller call would have nothing to anchor.
@@ -83,25 +108,27 @@ public enum DistillationAttribution {
     /// union of `userTurns` — the deterministic backstop that a candidate
     /// fact was actually SAID (or clearly confirmed) by the user, not merely
     /// offered by the assistant and echoed back with a different subject.
-    public static func isAnchored(fact: String, userTurns: [String]) -> Bool {
-        let factTokens = contentTokens(in: fact)
+    /// `selfNames`: the user's own names (`systemUserNames` in the app; tests
+    /// pass their own) — they never count as evidence.
+    public static func isAnchored(fact: String, userTurns: [String], selfNames: Set<String> = []) -> Bool {
+        let factTokens = contentTokens(in: fact, selfNames: selfNames)
         guard !factTokens.isEmpty else { return false }
-        let userTokens = Set(userTurns.flatMap(contentTokens(in:)))
+        let userTokens = Set(userTurns.flatMap { contentTokens(in: $0, selfNames: selfNames) })
         return !factTokens.isDisjoint(with: userTokens)
     }
 
     /// Lowercased alphanumeric runs of three letters or more, plus any run
-    /// of two or more digits ("42" is content, "step 1" is not), minus stopwords and the user's own name
-    /// — function words and the subject's own name are too common to count
-    /// as evidence of anchoring. Three, not four: "dog", "Rex", "car", "son"
-    /// are most of what a short fact is made of.
-    private static func contentTokens(in text: String) -> Set<String> {
+    /// of two or more digits ("42" is content, "step 1" is not), minus
+    /// stopwords and the user's own name — function words and the subject's
+    /// own name are too common to count as evidence of anchoring. Three, not
+    /// four: "dog", "Rex", "car", "son" are most of what a short fact is made of.
+    private static func contentTokens(in text: String, selfNames: Set<String>) -> Set<String> {
         Set(
             text.lowercased()
                 .components(separatedBy: CharacterSet.alphanumerics.inverted)
                 .filter { $0.count >= 3 || ($0.count >= 2 && $0.allSatisfy(\.isNumber)) }
                 .filter { !stopwords.contains($0) }
-                .filter { !userSelfNames.contains($0) }
+                .filter { !isSelfName($0, selfNames: selfNames) }
         )
     }
 }
