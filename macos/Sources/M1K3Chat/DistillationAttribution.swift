@@ -65,7 +65,7 @@ public enum DistillationAttribution {
 
     /// The user's own names as the account knows them: every letter run of
     /// three or more from `NSFullUserName()` + `NSUserName()` (matched
-    /// exactly), plus the GIVEN name (the full name's first token), which also
+    /// exactly), plus the GIVEN name (the full name's first token, whatever its length), which also
     /// matches by leading fragment — "Kev" for "Kevin", "Alex" for
     /// "Alexander" — because that is how people are addressed. Surnames and
     /// the login name never match by fragment (review 7 on #288: "fit" for
@@ -95,10 +95,15 @@ public enum DistillationAttribution {
 
     static func userNames(fullName: String, shortName: String) -> UserNames {
         let letters = { (text: String) -> [String] in
-            text.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init).filter { $0.count >= 3 }
+            text.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init)
         }
+        let long = { (tokens: [String]) in tokens.filter { $0.count >= 3 } }
+        // `given` is the RAW first token, before the length filter: for "Ed
+        // Grant" it is "ed" (too short to fragment-match anything, which is
+        // fine), never "grant" — a surname must not inherit the fragment
+        // leniency by being the first name long enough to survive (review 8).
         let full = letters(fullName)
-        return UserNames(exact: Set(full + letters(shortName)), given: full.first)
+        return UserNames(exact: Set(long(full) + long(letters(shortName))), given: full.first)
     }
 
     static func isSelfName(_ token: String, names: UserNames) -> Bool {

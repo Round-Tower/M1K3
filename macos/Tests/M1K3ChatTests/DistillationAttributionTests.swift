@@ -197,6 +197,23 @@ struct DistillationAttributionTests {
         #expect(DistillationAttribution.isSelfName("ale", names: fitz))
     }
 
+    @Test("a short given name keeps the given slot — the surname never inherits the fragment leniency")
+    func shortGivenNameDoesNotPromoteTheSurname() {
+        // Review 8 on #288: `given` was the first token to SURVIVE the ≥3
+        // filter, so "Ed Grant" made "grant" the given name and "gran" a
+        // self-name again. Raw first token now, whatever its length.
+        let ed = DistillationAttribution.userNames(fullName: "Ed Grant", shortName: "edgrant")
+        #expect(ed.given == "ed")
+        #expect(ed.exact == ["grant", "edgrant"])
+        #expect(!DistillationAttribution.isSelfName("gran", names: ed))
+        #expect(DistillationAttribution.isSelfName("grant", names: ed))
+        #expect(DistillationAttribution.isAnchored(
+            fact: "Ed's gran visits every Sunday.",
+            userTurns: ["my gran visits every Sunday"],
+            selfNames: ed
+        ))
+    }
+
     /// KNOWN FALSE NEGATIVE, documented rather than fixed (#284's proposed
     /// shape names this explicitly): a bare "yes" confirming an assistant's
     /// question carries no content tokens of its own, so a fact built from
