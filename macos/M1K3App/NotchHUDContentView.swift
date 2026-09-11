@@ -46,10 +46,19 @@
 //  (`NarrationLine`, from the karaoke's word range), one line, whitespace collapsed: a visiting
 //  agent's multi-paragraph `speak` had rendered as stacked full-width lines clipped both sides
 //  (`fixedSize` honours embedded newlines). Confidence now 0.8 (verify-by-launch: a long `speak`).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 4 fold) — the marquee identity is
+//  (utterance sequence, sentence start), not the start alone: consecutive one-sentence
+//  utterances all start at 0 and relied on an intervening `clear()` render to restart.
 
 import M1K3Avatar
 import M1K3Voice
 import SwiftUI
+
+/// The marquee's SwiftUI identity: one per (utterance, sentence position).
+private struct MarqueeKey: Hashable {
+    let utterance: Int
+    let start: Int
+}
 
 struct NotchHUDContentView: View {
     let env: AppEnvironment
@@ -80,9 +89,12 @@ struct NotchHUDContentView: View {
                 if let narration {
                     NotchHUDMarquee(text: narration.text, width: NotchHUDLayout.textAreaWidth)
                         // Fresh @State per new sentence — restart the scroll, not
-                        // continue it. Keyed on the sentence's POSITION: two
-                        // identical sentences in a row are still two sentences.
-                        .id(narration.start)
+                        // continue it. Keyed on the UTTERANCE and the sentence's
+                        // position in it: two identical sentences in a row are
+                        // still two sentences, and two one-sentence utterances
+                        // (both at offset 0) are still two utterances — whether
+                        // or not the `clear()` between them ever rendered.
+                        .id(MarqueeKey(utterance: env.speechHighlight.utteranceSequence, start: narration.start))
                 } else {
                     Text("M1K3 IS TALKING")
                         .font(.pixel(18))

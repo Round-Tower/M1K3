@@ -105,10 +105,6 @@ public enum NarrationLine {
         s.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 
-    private static func isBlank(_ slice: ArraySlice<UInt16>) -> Bool {
-        slice.allSatisfy(isWhitespace)
-    }
-
     private static func isNewline(_ u: UInt16) -> Bool {
         u == 0x0A || u == 0x0D || u == 0x2028 || u == 0x2029
     }

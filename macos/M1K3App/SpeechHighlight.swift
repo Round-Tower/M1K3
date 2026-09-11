@@ -13,6 +13,8 @@
 //  state over the tested timing seam). Prior: Unknown.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `narrator` rides with the utterance so the HUD can name who is
 //  talking (M1K3 vs a visiting MCP client). Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — `utteranceSequence` gives the HUD an identity per
+//  utterance; keying on the sentence offset alone made every one-sentence utterance `.id(0)`.
 //
 
 import Foundation
@@ -34,12 +36,19 @@ final class SpeechHighlight {
     /// The notch HUD captions from this (hit list 2026-09-08, item 2).
     private(set) var narrator: Narrator = .m1k3
 
+    /// Bumped by every `beginUtterance`. The notch HUD keys its marquee on
+    /// (this, sentence start): two consecutive one-sentence utterances both
+    /// start at offset 0, and whether the `clear()` between them ever
+    /// rendered is a timing accident (#290 review 4) — this is not.
+    private(set) var utteranceSequence = 0
+
     var isActive: Bool {
         utteranceText != nil
     }
 
     /// A new utterance is about to be spoken.
     func beginUtterance(text: String, narrator: Narrator = .m1k3) {
+        utteranceSequence &+= 1
         utteranceText = text
         self.narrator = narrator
         timeline = nil
