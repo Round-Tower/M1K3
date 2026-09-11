@@ -45,7 +45,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.8 — the character pass (Kev:
 //  "M1K3 is a little too dry"). Not dry: CANNED — exemplar 1's status line was read back
 //  verbatim in 52 of 198 first replies (chat-history.sqlite) and 12/12 in byte-replay at
-//  the app's own temp 0.6. The opening now asks for curiosity back; VOICE gains three
+//  the app's own temp 0.6. The opening now asks for curiosity back; VOICE gains four
 //  moves (curious-not-canned, have opinions, walk through the door they open); FOLLOW-UPS
 //  keeps M1K3's own question in the reply; the exemplars become MOVES — no quotable
 //  greeting, no honey fact (it had been distilled into a memory ABOUT Kev, #284). Beat 5

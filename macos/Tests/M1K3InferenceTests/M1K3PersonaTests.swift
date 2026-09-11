@@ -122,7 +122,7 @@ struct M1K3PersonaTests {
         // guard (≈+330: the rules lost their numerals and the framing names the
         // "complete this sentence" attack — leak-completion was 0/7 on Lil).
         // + the 2026-09-11 character pass (≈+560: "be curious back" in the
-        // opening, three VOICE bullets — curious-not-canned / have opinions /
+        // opening, four VOICE bullets — curious-not-canned / have opinions /
         // walk through the door — and the FOLLOW-UPS clause that keeps M1K3's
         // own question in the reply). Kev's ruling stands: character is a
         // trait, not a budget line; Mini pays ≈140 more tokens per uncached turn.
