@@ -28,6 +28,9 @@ private final class StubTransport: URLProtocol {
     /// 100 ms even on a loaded CI runner, so this is 5× the observed worst case.
     static let decisionGrace: DispatchTimeInterval = .milliseconds(500)
 
+    /// Flipped by `stopLoading` (a followed hop) OR by the grace timer the
+    /// moment it commits to delivering the 302 — whichever wins, the other
+    /// becomes a no-op. No lock is ever held across a client callback.
     private let lock = NSLock()
     private var stopped = false
 
@@ -65,7 +68,15 @@ private final class StubTransport: URLProtocol {
             // leaves it running, so the body is delivered after the grace only
             // if the session is still listening.
             DispatchQueue.global().asyncAfter(deadline: .now() + Self.decisionGrace) { [self] in
-                guard !lock.withLock({ stopped }) else { return }
+                // Check and commit in one locked step: a `stopLoading` landing
+                // after this is a no-op, so a stale 302 can never reach a load
+                // the session already abandoned (both passes on #291).
+                let shouldDeliver = lock.withLock { () -> Bool in
+                    guard !stopped else { return false }
+                    stopped = true
+                    return true
+                }
+                guard shouldDeliver else { return }
                 client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
                 client.urlProtocol(self, didLoad: Data("redirecting".utf8))
                 client.urlProtocolDidFinishLoading(self)
