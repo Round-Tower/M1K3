@@ -114,9 +114,14 @@ struct SelfNoteClassifierTests {
     @Test("the PR marker matches with or without the space — PR #275 and PR#275 are the same wiring")
     func prMarkerToleratesNoSpace() {
         // Review 9 on #288: `\bpr #` needed a literal space; a model can emit the tighter form.
+        // No other marker word in the fixture (review 11: "palette" alone had satisfied it).
         #expect(SelfNoteClassifier.isWiringNote(
-            title: "M1K3 gained a tool",
-            text: "M1K3's palette gained recent_activity in PR#275."
+            title: "M1K3 gained a way to look back",
+            text: "M1K3's week-in-review landed as PR#275."
+        ))
+        #expect(!SelfNoteClassifier.isWiringNote(
+            title: "M1K3 gained a way to look back",
+            text: "M1K3's week-in-review landed as a surprise."
         ))
     }
 
