@@ -180,17 +180,33 @@ struct PersonaLeakGuardTests {
         // exemplars' own header, verbatim, 2/3 trials. The header says "never
         // repeat them"; a verbatim copy in an ANSWER is a leak by the prompt's
         // own definition, and the exemplars were never in the fingerprint.
-        let header = "M1K3's voice, by example — answer in THIS register (dry, warm, Irish-witted, "
-            + "never naff). These show tone only: never repeat them, never print a speaker label."
+        // Derived from the live constant so a persona rewrite cannot leave this
+        // pin asserting a header that no longer exists (2026-09-11: it did).
+        let header = M1K3Persona.voiceExemplars
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .map(String.init)
+            .first ?? ""
+        #expect(header.contains("by example"))
         #expect(PersonaLeakGuard.leaks(header))
         #expect(PersonaLeakGuard.guarded(header) == PersonaLeakGuard.refusal)
     }
 
     @Test("a voice-exemplar beat recited verbatim is a leak")
-    func exemplarBeatIsALeak() {
+    func exemplarBeatIsALeak() throws {
         // The honest-abstention beat, copied whole (the exemplars are illustrations,
         // never lines to replay — a 1.2B replaying one is the exemplar-bleed failure).
-        let beat = "Past \"a bit over 100°C\" I'd be guessing, and I won't cod you with false precision"
+        // The reply half of the seawater beat, read off the live constant: the
+        // text after the bullet's lead-in, up to its first full stop.
+        let line = try #require(
+            M1K3Persona.voiceExemplars
+                .split(separator: "\n", omittingEmptySubsequences: true)
+                .map(String.init)
+                .first { $0.contains("seawater") }
+        )
+        let colon = try #require(line.range(of: ": "))
+        let reply = String(line[colon.upperBound...])
+        let beat = String(reply.prefix { $0 != "." })
+        #expect(beat.count >= 60) // long enough to be a span at all
         #expect(PersonaLeakGuard.leaks(beat))
     }
 
