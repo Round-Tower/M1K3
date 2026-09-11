@@ -16,7 +16,10 @@
 //  right now (memories, recent chats, todos, the latest pulse, today's visitors, the hour), at least
 //  one pool chip for the fun of it, reshuffled per fresh canvas. Kev: "the 'What can you do' section
 //  be context aware of current context & some randomness for fun." The Mac uses it; the iOS
-//  `pick(memoryTitles:)` rule is unchanged (its three phone chips keep the two-memory beat).
+//  `pick(memoryTitles:)` rule keeps its shape (three phone chips, the two-memory beat) and draws
+//  from `phonePool` = pool + door, so moving "What do you remember about me?" to the door took
+//  nothing off the phone (review catch). "This week" softened to "lately" — the context carries no
+//  timestamps, so the chip must not promise a window the answer (recent_activity) decides for itself.
 //
 
 import Foundation
@@ -40,8 +43,12 @@ public enum StarterPrompts {
         "Quiz me on something I know",
     ]
 
+    /// The phone's draw: the pool plus the door chips (the phone has no door slot
+    /// of its own, so the door questions ride in its shuffle).
+    public static let phonePool: [String] = pool + doorPool
+
     /// Three chips: up to two from `memoryTitles` (newest first, blanks skipped,
-    /// long titles trimmed), the rest a shuffle of the pool. Never duplicates.
+    /// long titles trimmed), the rest a shuffle of `phonePool`. Never duplicates.
     /// `count` beyond the pool + memory chips returns what exists, no repeats.
     public static func pick(
         memoryTitles: [String],
@@ -57,7 +64,7 @@ public enum StarterPrompts {
             let chip = memoryChip(trimmed)
             if !picks.contains(chip) { picks.append(chip) }
         }
-        for prompt in pool.shuffled(using: &rng) where picks.count < count {
+        for prompt in phonePool.shuffled(using: &rng) where picks.count < count {
             if !picks.contains(prompt) { picks.append(prompt) }
         }
         return picks.shuffled(using: &rng)
@@ -85,7 +92,10 @@ public enum StarterPrompts {
         public var latestPulseAge: TimeInterval?
         /// MCP visitor calls since midnight (0 when the log is off).
         public var visitorCallsToday: Int
-        /// Self-reported client names today — untrusted display data.
+        /// Self-reported MCP client names today, in the log's own order
+        /// (alphabetical, not most-recent — the first non-blank one is named).
+        /// UNTRUSTED: the name lands in a chip that, tapped, is sent as the
+        /// user's own words. Folded to one line and capped; never anything more.
         public var visitorNames: [String]
         /// The local hour, 0–23.
         public var hour: Int
@@ -172,10 +182,12 @@ public enum StarterPrompts {
                 add(.visitors, "What have the visitors been up to?")
             }
         }
+        // "Lately", not "this week": titles carry no dates here, so the chip
+        // names no window — recent_activity picks the window when it answers.
         let hasActivity = !context.conversationTitles.isEmpty || !context.memoryTitles.isEmpty
             || context.visitorCallsToday > 0
         if hasActivity {
-            add(.activity, "What have we been up to this week?")
+            add(.activity, "What have we been up to lately?")
         }
         switch context.hour {
         case 5 ... 11: add(.timeOfDay, "Morning. Two-minute plan for today?")
@@ -219,13 +231,16 @@ public enum StarterPrompts {
 
     /// One line, trimmed: newlines and control characters fold to a space
     /// first (visitor names are self-reported, titles can carry anything —
-    /// the ActivityDigest.sanitized precedent), so a chip can never wrap.
+    /// the ActivityDigest.sanitized precedent), runs of whitespace collapse
+    /// to one space (a CRLF is two scalars), so a chip can never wrap.
     private static func trimmed(_ text: String) -> String {
-        String(text.unicodeScalars.map { scalar -> Character in
+        let folded = String(text.unicodeScalars.map { scalar -> Character in
             CharacterSet.newlines.contains(scalar) || CharacterSet.controlCharacters.contains(scalar)
                 ? " " : Character(scalar)
         })
-        .trimmingCharacters(in: .whitespacesAndNewlines)
+        return folded
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
     }
 
     /// `lead + text + tail`, the text trimmed so the whole chip stays one line.

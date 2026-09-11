@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.8 (the rule is pure
 //  and pinned in StarterPromptsTests; this gatherer is verify-by-launch).
 //  Prior: none (new file, patterned on the iOS `recentMemoryTitles`).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — visitor names documented as the log's alphabetical
+//  order (not recency); `Array(prefix)` for the two title lists (review nits, same PR).
 //
 
 import Foundation
@@ -32,16 +34,14 @@ extension AppEnvironment {
         var context = StarterPrompts.Context.empty
         // allMemories is newest-first; titled facts only (distilled facts are
         // their own titles → nil, and a raw sentence makes a poor chip).
-        context.memoryTitles = ((try? memoryStore?.allMemories(limit: 40)) ?? [])
+        context.memoryTitles = Array(((try? memoryStore?.allMemories(limit: 40)) ?? [])
             .compactMap(\.title)
-            .prefix(4)
-            .map(\.self)
+            .prefix(4))
         // The drawer's own list: titled, most recent first. The current empty
         // conversation has no row yet (rows write on send), so it never lists.
-        context.conversationTitles = chat.conversationSummaries()
+        context.conversationTitles = Array(chat.conversationSummaries()
             .compactMap(\.title)
-            .prefix(4)
-            .map(\.self)
+            .prefix(4))
         let open = (try? todoStore?.list(states: [.open])) ?? []
         context.openTodoCount = open.count
         context.overdueTodoCount = open.count(where: { $0.isOverdue(now: now) })
@@ -52,6 +52,8 @@ extension AppEnvironment {
            let activity = try? conversationLog?.activity(since: calendar.startOfDay(for: now))
         {
             context.visitorCallsToday = activity.callCount
+            // The log returns names alphabetically, not by recency (documented
+            // on Context.visitorNames); the rule names the first non-blank one.
             context.visitorNames = activity.clientNames
         }
         context.hour = calendar.component(.hour, from: now)

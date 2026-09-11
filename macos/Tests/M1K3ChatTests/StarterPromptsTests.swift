@@ -26,7 +26,7 @@ struct StarterPromptsTests {
         let picks = StarterPrompts.pick(memoryTitles: [], using: &rng)
         #expect(picks.count == 3)
         #expect(Set(picks).count == 3)
-        #expect(picks.allSatisfy { StarterPrompts.pool.contains($0) })
+        #expect(picks.allSatisfy { StarterPrompts.phonePool.contains($0) })
     }
 
     @Test("two different seeds give different orders — the chips are not fixed")
@@ -42,6 +42,17 @@ struct StarterPromptsTests {
         #expect(seen.count > 1)
     }
 
+    @Test("the phone's pool still carries the door chips — moving one to the Mac's door took nothing off the phone")
+    func phoneKeepsTheDoorChips() {
+        var seen = Set<String>()
+        for seed in UInt64(1) ... 60 {
+            var rng = FixedRNG(state: seed)
+            seen.formUnion(StarterPrompts.pick(memoryTitles: [], using: &rng))
+        }
+        #expect(seen.contains("What do you remember about me?"))
+        #expect(StarterPrompts.phonePool.count == StarterPrompts.pool.count + StarterPrompts.doorPool.count)
+    }
+
     @Test("recent memories: at most two memory chips, the rest from the pool, still three")
     func weavesMemories() {
         var rng = FixedRNG(state: 7)
@@ -49,7 +60,7 @@ struct StarterPromptsTests {
             memoryTitles: ["Ardmore cliff walk", "The Round Tower", "Kev's coffee order"], using: &rng
         )
         #expect(picks.count == 3)
-        let memoryChips = picks.filter { !StarterPrompts.pool.contains($0) }
+        let memoryChips = picks.filter { !StarterPrompts.phonePool.contains($0) }
         #expect(memoryChips.count == 2)
         #expect(memoryChips.allSatisfy { $0.contains("Ardmore") || $0.contains("Round Tower") })
     }
@@ -58,7 +69,7 @@ struct StarterPromptsTests {
     func skipsBlankTitles() {
         var rng = FixedRNG(state: 3)
         let picks = StarterPrompts.pick(memoryTitles: ["  ", ""], using: &rng)
-        #expect(picks.allSatisfy { StarterPrompts.pool.contains($0) })
+        #expect(picks.allSatisfy { StarterPrompts.phonePool.contains($0) })
     }
 
     @Test("duplicate titles — and long titles that collide once trimmed — yield one chip each")
@@ -75,7 +86,7 @@ struct StarterPromptsTests {
         var rng = FixedRNG(state: 3)
         let long = String(repeating: "word ", count: 30)
         let picks = StarterPrompts.pick(memoryTitles: [long], using: &rng)
-        let chip = picks.first { !StarterPrompts.pool.contains($0) }
+        let chip = picks.first { !StarterPrompts.phonePool.contains($0) }
         #expect(chip != nil)
         #expect((chip?.count ?? 0) <= StarterPrompts.maxChipLength)
     }
@@ -138,7 +149,7 @@ struct StarterPromptsContextTests {
         #expect(texts.contains("What's overdue?"))
         #expect(texts.contains("What did you notice while I was away?"))
         #expect(texts.contains("What did Claude Code want today?"))
-        #expect(texts.contains("What have we been up to this week?"))
+        #expect(texts.contains("What have we been up to lately?"))
         #expect(texts.contains("It's late. One calm thought?"))
         #expect(all.allSatisfy { $0.text.count <= StarterPrompts.maxChipLength })
         // At most two per source (memories, conversations), one for the rest.
@@ -161,7 +172,7 @@ struct StarterPromptsContextTests {
         #expect(texts.contains("Morning. Two-minute plan for today?"))
         #expect(!texts.contains("What's overdue?"))
         // Visitor traffic alone is activity worth reviewing.
-        #expect(texts.contains("What have we been up to this week?"))
+        #expect(texts.contains("What have we been up to lately?"))
     }
 
     @Test("a stale pulse and a mid-day hour add nothing")
@@ -206,10 +217,12 @@ struct StarterPromptsContextTests {
         var context = StarterPrompts.Context.empty
         context.visitorCallsToday = 1
         context.visitorNames = ["Cur\nsor\u{0000}X"]
-        context.conversationTitles = ["Line\rbreak"]
+        context.conversationTitles = ["Line\rbreak", "Crlf\r\nbreak"]
         let texts = StarterPrompts.candidates(for: context).map(\.text)
         #expect(texts.contains("What did Cur sor X want today?"))
         #expect(texts.contains("Pick up “Line break”?"))
+        // A CRLF (two scalars) folds to ONE space, not two.
+        #expect(texts.contains("Pick up “Crlf break”?"))
         #expect(texts.allSatisfy { !$0.contains("\n") && !$0.contains("\r") })
     }
 

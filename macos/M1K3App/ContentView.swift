@@ -28,8 +28,9 @@
 //  routes through the harness root too (2026-09-08 fold). Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the Send button morphs to Stop (stop.fill, red, ⌘.) while an
 //  answer streams; Return stays Send only while idle. Confidence now 0.85 (verify-by-launch).
-//  Review: Kev + claude-fable-5.1, 2026-09-11 — `starters` state + a task on `messages.isEmpty` redraws the
-//  GreetingCard's chips from `env.starterPrompts()` every time the canvas goes blank (the iOS beat).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — `starters` state (seeded from StarterPrompts' door) + a
+//  task on the GreetingCard redraws the chips from `env.starterPrompts()` every time the canvas goes
+//  blank (the card only exists in the empty branch, so a plain task re-runs per blank canvas).
 
 import M1K3Avatar
 import M1K3Chat
@@ -78,8 +79,8 @@ struct ContentView: View {
     /// The blank canvas's chips — a fresh draw every time the transcript
     /// empties (launch and every New chat), from what the stores hold then.
     /// Seeded with the door so the first frame carries a chip (the task runs
-    /// after the first layout).
-    @State private var starters: [String] = ["What can you do?"]
+    /// after the first layout); the copy lives in one place, StarterPrompts.
+    @State private var starters: [String] = Array(StarterPrompts.doorPool.prefix(1))
     @State private var showAttachmentImporter = false
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var attachmentError: String?
@@ -534,7 +535,10 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // Blank canvas (first appearance and every New chat) → new chips,
                 // from the stores as they stand at that moment (the iOS beat).
-                .task(id: env.chat.messages.isEmpty) {
+                // A plain task is enough: this card only exists inside the
+                // `messages.isEmpty` branch, so SwiftUI rebuilds it (and re-runs
+                // the task) each time the transcript empties.
+                .task {
                     if env.chat.messages.isEmpty { starters = env.starterPrompts() }
                 }
                 // The idle main screen IS the heartbeat surface — "what's

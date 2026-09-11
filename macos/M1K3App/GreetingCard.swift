@@ -30,6 +30,7 @@
 //  StarterPrompts' context rule (a door chip, up to two from what the stores hold, the rest random),
 //  laid out two per row; ContentView redraws them every time the canvas goes blank.
 
+import M1K3Chat
 import SwiftUI
 
 struct GreetingCard: View {
@@ -44,7 +45,7 @@ struct GreetingCard: View {
     let lastIngestedTitle: String?
     /// The chips for this blank canvas (StarterPrompts.pick(context:)); each
     /// carries its own prompt. Empty → no chip row.
-    var starters: [String] = ["What can you do?"]
+    var starters: [String] = Array(StarterPrompts.doorPool.prefix(1))
 
     let onImport: () -> Void
     let onSend: (String) -> Void
