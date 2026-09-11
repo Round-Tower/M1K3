@@ -21,11 +21,17 @@ import Testing
 /// Scripted servers: public.example/hop → 302 to a private literal;
 /// public.example/hop-public → 302 to public.example/fine; /fine → 200 OK;
 /// 10.0.0.1/secret → 200 SECRET (must never be reached through a redirect).
-private final class StubTransport: URLProtocol {
+/// `@unchecked Sendable`: the grace timer below captures `self` into a
+/// `@Sendable` dispatch block. The only mutable state is `stopped`, read and
+/// written under `lock` in one step and never held across a client callback.
+private final class StubTransport: URLProtocol, @unchecked Sendable {
     /// How long a 302 waits for the gate's decision before it is delivered as
     /// the final response. The gate decides asynchronously (an async delegate
-    /// plus a resolver hop); a followed hop stops this load in well under
-    /// 100 ms even on a loaded CI runner, so this is 5× the observed worst case.
+    /// plus a resolver hop); delivering the body before that decision landed
+    /// left URLSession neither following nor finishing, and the task hung to
+    /// its timeout (-1001 in three of four CI runs, 2026-09-11). A followed hop
+    /// stops this load in well under 100 ms even on a loaded runner, so this
+    /// is 5× the observed worst case — a sized margin, not a contract.
     static let decisionGrace: DispatchTimeInterval = .milliseconds(500)
 
     /// Flipped by `stopLoading` (a followed hop) OR by the grace timer the
@@ -60,17 +66,12 @@ private final class StubTransport: URLProtocol {
             )!
             client.urlProtocol(self, wasRedirectedTo: URLRequest(url: URL(string: target)!), redirectResponse: response)
             // If the session declines the hop, this 302 is the final answer —
-            // but only once the gate has DECIDED. Delivering it straight away
-            // raced the async decision: when the decision landed after the
-            // body, URLSession neither followed nor finished, and the task hung
-            // to its timeout (-1001 in three of four CI runs, 2026-09-11). A
-            // followed hop calls `stopLoading` on this load; a declined one
-            // leaves it running, so the body is delivered after the grace only
-            // if the session is still listening.
+            // but only once the gate has DECIDED (see `decisionGrace`): a
+            // followed hop calls `stopLoading` on this load, a declined one
+            // leaves it running. Check and commit in one locked step so a
+            // late `stopLoading` is a no-op and a stale 302 never reaches a
+            // load the session already abandoned.
             DispatchQueue.global().asyncAfter(deadline: .now() + Self.decisionGrace) { [self] in
-                // Check and commit in one locked step: a `stopLoading` landing
-                // after this is a no-op, so a stale 302 can never reach a load
-                // the session already abandoned (both passes on #291).
                 let shouldDeliver = lock.withLock { () -> Bool in
                     guard !stopped else { return false }
                     stopped = true
