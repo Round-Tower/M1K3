@@ -36,6 +36,9 @@
 //  ceiling).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the speak handler stamps `Narrator.visitor(clientIdentity)` so the
 //  notch HUD captions the visiting agent by name. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — `voiceStatus()` reports `queued` from
+//  `env.visitorSpeechQueue.count` (#283), so a polling client can wait its turn instead of colliding
+//  with another visitor's in-flight speak. Confidence now 0.85.
 
 import Foundation
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
@@ -282,7 +285,8 @@ final class MCPHostController {
             inConversation: env.voiceLoop != nil || env.chat.isResponding,
             micInUse: env.voiceLoop != nil || env.isListening || env.isRecording,
             answering: env.intelligenceAskInFlight,
-            currentText: env.speechHighlight.utteranceText
+            currentText: env.speechHighlight.utteranceText,
+            queued: await env.visitorSpeechQueue.count
         )
     }
 

@@ -52,6 +52,13 @@
 //  swap the tier back. Launch restore reads `VoiceTierRestore` (one rule, two shells). Confidence now 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — `recentActivityHook`: late-bound like delegate_deep's; the live
 //  reader is installed after the stores exist; the warm passes NullActivityReading (+RecentActivity).
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — `visitorSpeechQueue` (#283): a second MCP client's `speak`
+//  now queues behind whichever utterance is in flight instead of cutting it (AppEnvironment+Intelligence.swift
+//  routes narrator:.visitor calls through it; `stopSpeaking()` clears it first). Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 (review 2 fold) — the queue's busy signal is `isVoiceBusy()`
+//  (playing OR voice loop OR a chat turn answering), not `speech.isSpeaking()` alone: a queued visitor
+//  line waits out M1K3's own answer instead of starting under it. Verify-by-launch: queue a line, send a
+//  chat message, hear the order.
 
 import AppKit
 import Foundation
@@ -374,6 +381,40 @@ final class AppEnvironment {
 
     /// Word-highlight state for speech playback (the karaoke reading view).
     let speechHighlight = SpeechHighlight()
+    /// Per-server FIFO for MCP `speak` calls (#283): a second visitor's speak
+    /// while one is already in flight QUEUES behind it instead of cutting it.
+    /// `speakNow` reuses `speak(text:narrator:)` — the HUD is stamped INSIDE
+    /// that call, at utterance start, so a queued visitor's name appears only
+    /// once its turn actually plays. `isSpeaking` covers utterances that
+    /// never route through this queue (e.g. the Speak App Intent). Lazy +
+    /// `[weak self]`: nothing captures AppEnvironment strongly, and the queue
+    /// itself is never touched until the first MCP visitor `speak` arrives.
+    @ObservationIgnored private(set) lazy var visitorSpeechQueue = VisitorSpeechQueue(
+        speakNow: { [weak self] request in
+            // A single `await` call, deliberately — the closure itself is
+            // `@Sendable` (called from the queue actor), so it must not touch
+            // MainActor-isolated members like `avatar` directly; the hop and
+            // the emotion-setting both live inside speakVisitorRequest(_:).
+            await self?.speakVisitorRequest(request)
+        },
+        isSpeaking: { [weak self] in
+            // "Busy" is wider than "audio is playing": a queued visitor line
+            // must also wait out a live conversation. The admission guard in
+            // intelligenceSpeak runs once, at enqueue; without this, a line
+            // admitted while idle could start the moment the previous visitor
+            // finished — under M1K3's own answer, which newer-wins would then
+            // cut (review 2 on #287, the #283 bug relocated visitor-vs-M1K3).
+            await self?.isVoiceBusy() ?? false
+        }
+    )
+
+    /// M1K3's one mouth is spoken for: audio is playing, a voice-mode loop
+    /// holds it, or a chat turn is answering (and about to auto-speak).
+    func isVoiceBusy() async -> Bool {
+        if voiceLoop != nil || chat.isResponding { return true }
+        return await speech.isSpeaking()
+    }
+
     /// Chat auto-speak session — the poller that speaks a streaming answer
     /// sentence-by-sentence while the transcript renders it. One at a time;
     /// a new send supersedes the old (AppEnvironment+AutoSpeak.swift).

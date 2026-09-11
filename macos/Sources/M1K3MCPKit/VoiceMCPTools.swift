@@ -53,6 +53,10 @@ public struct VoiceStatus: Sendable, Equatable {
     /// highlights), nil when nothing's playing. Lets a visiting agent narrate
     /// what M1K3 is saying without another round-trip.
     public let currentText: String?
+    /// Visitor `speak` calls waiting behind the one in flight (#283) — never
+    /// counts whatever is currently playing. A caller can poll this instead
+    /// of colliding with another agent sharing M1K3's one voice.
+    public let queued: Int
 
     public init(
         providerName: String,
@@ -62,7 +66,8 @@ public struct VoiceStatus: Sendable, Equatable {
         inConversation: Bool = false,
         micInUse: Bool = false,
         answering: Bool = false,
-        currentText: String? = nil
+        currentText: String? = nil,
+        queued: Int = 0
     ) {
         self.providerName = providerName
         self.tier = tier
@@ -72,6 +77,7 @@ public struct VoiceStatus: Sendable, Equatable {
         self.micInUse = micInUse
         self.answering = answering
         self.currentText = currentText
+        self.queued = queued
     }
 }
 
@@ -162,7 +168,9 @@ private func speakDefinition(
                 + "emotion: happy, sad, angry, surprised, love, thinking, excited, sleepy, neutral. "
                 + "Pass wait:true to return once playback finishes, or after ~25s with a "
                 + "still-speaking note for a long read (poll get_status); default returns as "
-                + "speech starts.",
+                + "speech starts. If another visitor is already speaking, this call queues behind "
+                + "it (bounded — beyond that it's refused) rather than cutting the utterance in "
+                + "flight; poll get_status.queued to see how many are waiting.",
             inputSchema: [
                 "type": "object",
                 "properties": [
@@ -253,7 +261,8 @@ public func makeVoiceToolDefinitions(
                 "brain":"\(status.brain)","speaking":\(status.isSpeaking),\
                 "in_conversation":\(status.inConversation),"mic_in_use":\(status.micInUse),\
                 "answering":\(status.answering),\
-                "current_text":\(status.currentText.map(jsonStringLiteral) ?? "null")}
+                "current_text":\(status.currentText.map(jsonStringLiteral) ?? "null"),\
+                "queued":\(status.queued)}
                 """
             }
         ),

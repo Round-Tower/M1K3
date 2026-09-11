@@ -33,7 +33,8 @@ private final class HandlerLog: @unchecked Sendable {
 private func makeHandlers(
     log: HandlerLog,
     speakThrows: Bool = false,
-    listenResult: String = "hello from the mic"
+    listenResult: String = "hello from the mic",
+    queued: Int = 0
 ) -> VoiceToolHandlers {
     VoiceToolHandlers(
         speak: { text, emotion, wait in
@@ -50,7 +51,8 @@ private func makeHandlers(
                 inConversation: true,
                 micInUse: false,
                 answering: true,
-                currentText: "she said \"grand\" — a real quote, to prove escaping"
+                currentText: "she said \"grand\" — a real quote, to prove escaping",
+                queued: queued
             )
         },
         listen: { timeout in
@@ -70,6 +72,13 @@ struct VoiceMCPToolsTests {
     func surface() {
         let registry = MCPToolRegistry(makeVoiceToolDefinitions(handlers: makeHandlers(log: HandlerLog())))
         #expect(registry.tools.map(\.name) == ["speak", "stop_speaking", "get_status", "listen"])
+    }
+
+    @Test("the speak tool description tells a caller that a call made while M1K3 is speaking queues (#283)")
+    func speakDescriptionMentionsQueueing() {
+        let registry = MCPToolRegistry(makeVoiceToolDefinitions(handlers: makeHandlers(log: HandlerLog())))
+        let speak = registry.tools.first { $0.name == "speak" }
+        #expect(speak?.description?.localizedCaseInsensitiveContains("queue") == true)
     }
 
     @Test("speak passes text and emotion through, defaulting wait to false")
@@ -181,6 +190,18 @@ struct VoiceMCPToolsTests {
         #expect(decoded["mic_in_use"] as? Bool == false)
         #expect(decoded["answering"] as? Bool == true)
         #expect(decoded["current_text"] as? String == "she said \"grand\" — a real quote, to prove escaping")
+        #expect(decoded["queued"] as? Int == 0)
+    }
+
+    @Test("get_status reports how many visitor speak calls are queued behind the one in flight (#283)")
+    func statusReportsQueued() async throws {
+        let registry = MCPToolRegistry(
+            makeVoiceToolDefinitions(handlers: makeHandlers(log: HandlerLog(), queued: 2))
+        )
+        let result = await registry.call(name: "get_status", arguments: nil)
+        let payload = try #require(text(result)?.data(using: .utf8))
+        let decoded = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(decoded["queued"] as? Int == 2)
     }
 
     @Test("get_status renders current_text as null when nothing's being said")
