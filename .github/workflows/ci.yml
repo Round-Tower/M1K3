@@ -47,6 +47,7 @@ jobs:
               - 'macos/**'
               - '!macos/docs/**'
               - '!macos/tools/release/**'
+              - '!macos/fastlane/**'
               - '!macos/**/*.md'
 
   swift-mac:
