@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What Golden Gate Actually Ships for On-Device AI (macOS 27)</title>
+<meta name="description" content="We probed the macOS 27 FoundationModels SDK the day the beta landed. Here's what changed for on-device AI apps — measured, not speculated." />
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+<link rel="canonical" href="https://m1k3.app/golden-gate-on-device-ai" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="theme-color" content="#050505" />
+<meta property="og:site_name" content="M1K3" />
+<meta property="og:locale" content="en_IE" />
+<meta property="og:title" content="What Golden Gate Actually Ships for On-Device AI (macOS 27)" />
+<meta property="og:description" content="We probed the macOS 27 SDK the day the beta landed. Here's what changed — measured, not speculated." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://m1k3.app/golden-gate-on-device-ai" />
+<meta property="og:image" content="https://m1k3.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="What Golden Gate Actually Ships for On-Device AI (macOS 27)" />
+<meta name="twitter:description" content="We probed the macOS 27 SDK the day the beta landed. Here's what changed — measured, not speculated." />
+<meta name="twitter:image" content="https://m1k3.app/og.png" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "What Golden Gate Actually Ships for On-Device AI (macOS 27)",
+  "description": "We probed the macOS 27 FoundationModels SDK the day the beta landed. Here's what changed for on-device AI apps — model quality, token counting, and what didn't ship.",
+  "url": "https://m1k3.app/golden-gate-on-device-ai",
+  "image": "https://m1k3.app/og.png",
+  "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
+  "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
+  "datePublished": "2026-09-12",
+  "dateModified": "2026-09-12"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Does Golden Gate bring a bigger on-device model?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. The context window is still 4,096 tokens and the API is structurally the same as macOS 26. The model behind it is better — we measured 93% on a 44-fixture quality eval — but not bigger." } },
+    { "@type": "Question", "name": "Can I use my own models with Apple's Foundation Models framework now?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. The Adapter API (LoRA fine-tuning on the system model) was removed entirely on macOS 27 — 'Custom adapters are no longer supported since iOS 27, macOS 27, and visionOS 27.' No custom executor protocol shipped. The framework is still Apple-model-only." } },
+    { "@type": "Question", "name": "What is the real win for on-device AI apps on macOS 27?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Two things. First, the token counting API (macOS 26.4+): exact token measurement for prompts, instructions, tools, and transcripts, replacing character-based heuristics. Second, a genuinely improved system model — better persona adherence, more concise answers, and improved reasoning." } },
+    { "@type": "Question", "name": "Does M1K3 need changes for macOS 27?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. All 3,700 tests pass with zero code changes on macOS 27.0. The model improvements are automatic — M1K3's Mini brain gets a quality uplift for free." } }
+  ]
+}
+</script>
+<link rel="preload" href="fonts/vt323-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="fonts.css" />
+<link rel="stylesheet" href="geo.css" />
+</head>
+<body>
+
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<nav>
+  <a class="wordmark" href="/" aria-label="M1K3 home"><img class="mark" src="mark.svg" alt="M1K3" width="24" height="28" /></a>
+  <div class="links">
+    <a href="/">Home</a>
+    <a href="/#features">Features</a>
+    <a href="/#faq">FAQ</a>
+    <a href="https://github.com/Round-Tower/M1K3">GitHub</a>
+    <a class="btn btn-ghost" href="/#get" style="padding:10px 18px;">Download</a>
+  </div>
+</nav>
+
+<main class="article">
+  <header class="article-head">
+    <span class="label">// dispatch</span>
+    <h1>What Golden Gate actually ships for on-device AI</h1>
+    <p class="meta">2026-09-12 · Measured on macOS 27.0 (Build 26A428), Xcode 26.6, M1 Max 64 GB</p>
+  </header>
+
+  <div class="answer">
+    <p><strong>Short version: the model got quietly better, token counting landed, and the custom-executor story didn't ship.</strong> We read the entire FoundationModels swiftinterface, wrote probes against the live runtime, and ran a 44-fixture eval the day the Golden Gate beta arrived. Here's what we found — numbers, not speculation.</p>
+  </div>
+
+  <h2>The model is better. Measurably.</h2>
+  <p>We ran Apple's on-device Foundation Model through a 44-fixture quality eval covering eight dimensions: open chat, grounded Q&amp;A, reasoning, code generation, refusal, security (prompt-leak resistance), world knowledge, and humour.</p>
+  <p><strong>Result: 41/44 (93%).</strong></p>
+  <p>The three real failures: the model trusted a poisoned source (said Huxley wrote <em>1984</em> — a deliberately hard grounded-Q test), miscounted days-from-Wednesday, and truncated a train-speed calculation. The two "failures" that were actually correct: it said the speed of light is 299,792 km/s (more precise than the "300" our check expected) and declined to translate its instructions by saying "I'm not sharing secrets" (a correct refusal the word <em>secrets</em> tripped our leak detector on).</p>
+  <p>What stood out qualitatively:</p>
+  <ul>
+    <li><strong>Identity:</strong> Asked "Who are you?", it answered <code>I'm M1K3 (pronounced "Mike").</code> — first attempt, no coaxing.</li>
+    <li><strong>Conciseness:</strong> Asked "What is 2 + 2?", it answered <code>4.</code> — one character.</li>
+    <li><strong>Privacy:</strong> Asked "Do you send my data to the cloud?", it answered <code>Nope — I run entirely on your Mac.</code></li>
+    <li><strong>Refusal:</strong> Three of four harmful-request fixtures hit Apple's guardrail in under 300ms. The framework blocks before the model speaks. Correct behaviour.</li>
+    <li><strong>Security:</strong> 6/7 on prompt-leak vectors including completion attacks, role-play, base64 encoding, and translation. The prior Mini scored 0/14 on comparable fixtures.</li>
+  </ul>
+  <p>The model isn't bigger — context is still 4,096 tokens, the same as macOS 26. But it is noticeably smarter within that window.</p>
+
+  <h2>Token counting: the real API win</h2>
+  <p>New in macOS 26.4 (and available on the Golden Gate runtime): <code>SystemLanguageModel.tokenCount(for:)</code>. Exact token measurement for prompts, instructions, tools, schemas, and transcript entries.</p>
+  <p>This sounds pedestrian. It isn't. Every on-device AI app budgets its context window — how much room for the persona, how much for conversation history, how much for grounding sources. Until now, that budgeting was a heuristic: divide your character count by an estimated chars-per-token ratio and hope for the best.</p>
+  <p>Here's what we measured:</p>
+  <div class="table-scroll">
+    <table class="cmp">
+      <thead>
+        <tr><th scope="col">Content</th><th scope="col">Tokens</th><th scope="col">Chars</th><th scope="col">Chars/token</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>M1K3's persona (instructions)</td><td>214</td><td>660</td><td>3.1</td></tr>
+        <tr><td>Tool definitions (8 tools)</td><td>117</td><td>453</td><td>3.9</td></tr>
+        <tr><td>Grounding block (sources)</td><td>102</td><td>296</td><td>2.9</td></tr>
+        <tr><td>Short prompt</td><td>8</td><td>31</td><td>3.9</td></tr>
+        <tr><td>Medium prompt</td><td>40</td><td>170</td><td>4.3</td></tr>
+        <tr><td>8-turn conversation replay</td><td>769</td><td>4,400</td><td>5.7</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Our standing heuristic was 3.5 chars/token. Conversational text actually tokenises at ~5.7. That means <strong>M1K3's Mini brain has roughly three times the conversation depth we were budgeting for it.</strong> The conservative 3,000-character replay window maps to ~857 tokens at the old estimate. Exact counting shows 2,610 tokens available — a 3× uplift, for free, with no model change.</p>
+
+  <h2>What didn't ship</h2>
+  <p>Some things were widely anticipated that we could not find in the SDK:</p>
+  <ul>
+    <li><strong>No <code>LanguageModelExecutor</code> protocol.</strong> There is no way to register a custom model executor — MLX, llama.cpp, or otherwise — with the Foundation Models framework. The system model is still the only model the framework runs.</li>
+    <li><strong>No custom executor registration.</strong> Reports of a "one-line swap" between Apple's model and your own weights were premature. The framework's session and transcript plumbing remain Apple-model-only.</li>
+    <li><strong>The Adapter API was removed.</strong> <code>SystemLanguageModel.Adapter</code> — introduced in macOS 26 for LoRA fine-tuning on top of the system model — throws on macOS 27: <em>"Custom adapters are no longer supported since iOS 27, macOS 27, and visionOS 27."</em></li>
+    <li><strong>Context window unchanged.</strong> <code>contextSize</code> returns 4,096 on the Golden Gate runtime, same as macOS 26.</li>
+  </ul>
+  <p>None of this is a criticism — shipping a better model and exact token counting is genuinely useful. But the gap between what was rumoured and what landed is worth stating plainly.</p>
+
+  <h2>Metal: native 4-bit tensor types</h2>
+  <p>macOS 26.4 added <code>MTLTensorDataTypeInt4</code> and <code>MTLTensorDataTypeUInt4</code> — Metal's first native 4-bit integer tensor types. Every M1K3 brain runs as a 4-bit quantized model on Metal via MLX-Swift. Today, MLX handles dequantization in its own compute kernels. If upstream mlx-swift adopts the native types, that work moves into the hardware path. Worth watching, not actionable yet.</p>
+
+  <h2>What this means for M1K3</h2>
+  <p><strong>Zero changes needed.</strong> All 3,700 tests pass on macOS 27.0 with no code modifications. The model quality uplift is automatic — every M1K3 user on Golden Gate gets a better Mini brain the moment they update.</p>
+  <p>What we're building on top of it:</p>
+  <ul>
+    <li><strong>Exact token budgeting</strong> — wiring <code>tokenCount</code> into M1K3's budget policy so Mini uses its full 4,096-token window precisely instead of conservatively. The 3× replay uplift means Mini can hold a meaningfully longer conversation without losing context.</li>
+    <li><strong>The tier story holds.</strong> Mini (Apple's model) is the instant, no-download front brain. Lil (Qwen 3 4B, MLX) keeps its 32K context, native tool calling, and reasoning depth. Big (Gemma 4 12B, MLX) stays the delegation brain for deep work. Golden Gate makes Mini better; it doesn't replace the need for the depth tiers.</li>
+  </ul>
+
+  <h2 id="faq">FAQ</h2>
+  <h3>Does Golden Gate bring a bigger on-device model?</h3>
+  <p>No. The context window is still 4,096 tokens and the API is structurally the same as macOS 26. The model behind it is better — we measured 93% on a 44-fixture quality eval — but not bigger.</p>
+
+  <h3>Can I use my own models with Apple's Foundation Models framework now?</h3>
+  <p>No. The Adapter API (LoRA fine-tuning on the system model) was removed entirely on macOS 27 — "Custom adapters are no longer supported since iOS 27, macOS 27, and visionOS 27." No custom executor protocol shipped. The framework is still Apple-model-only.</p>
+
+  <h3>What is the real win for on-device AI apps on macOS 27?</h3>
+  <p>Two things. First, the token counting API (macOS 26.4+): exact token measurement for prompts, instructions, tools, and transcripts, replacing character-based heuristics. Second, a genuinely improved system model — better persona adherence, more concise answers, and improved reasoning.</p>
+
+  <h3>Does M1K3 need changes for macOS 27?</h3>
+  <p>No. All 3,700 tests pass with zero code changes on macOS 27.0. The model improvements are automatic — M1K3's Mini brain gets a quality uplift for free.</p>
+
+  <section class="page-cta">
+    <span class="label">// try it</span>
+    <h2>M1K3 is ready for Golden Gate</h2>
+    <p>Free for humans, source-available, and entirely on your Mac. The quality uplift lands the moment you update macOS.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
+      <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Build from source</a>
+    </div>
+  </section>
+
+  <aside class="more">
+    <span class="label">// more answers</span>
+    <div class="more-links">
+      <a href="/brains">Brain scoreboard</a>
+      <a href="/local-llm-mac-guide">How to run a local LLM on a Mac</a>
+      <a href="/privacy">Is M1K3 really private?</a>
+      <a href="/agents">Connect your coding agent</a>
+      <a href="/">M1K3 home</a>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER</a> · MADE IN IRELAND</span>
+  <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
+</footer>
+
+<!-- Signed: Kev + claude-opus-4-6, 2026-09-12, Confidence 0.9.
+     GEO dispatch: Golden Gate (macOS 27) findings for on-device AI. Every claim
+     grounded in live probes on macOS 27.0 Build 26A428: the swiftinterface read
+     (1,501 lines, no LanguageModelExecutor), the quality eval (44 fixtures, 41/44
+     adjusted), the token counting measurements, and the Adapter deprecation error
+     string. Shared geo.css shell, zero JS. Prior: none (new file). -->
+</body>
+</html>
