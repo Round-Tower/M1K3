@@ -338,11 +338,15 @@ struct BrainServeListenerTests {
 
         let clock = ContinuousClock()
         let start = clock.now
-        // Plain TCP, nothing sent: the server's deadline (0.3s) must close it
-        // long before the CLIENT's 6s fallback — elapsed time is the assert.
-        let response = await exchange(port: port, parameters: .tcp, request: Data())
+        // Plain TCP, nothing sent: the server's deadline (0.3 s) must close it
+        // long before the CLIENT's fallback — elapsed time is the assert. The
+        // fallback sits at 60 s and the bound at 30 s: under the parallel suite a
+        // test's wall time is mostly the pool's backlog (7-8 s on the CI runner,
+        // #296 — a `< 4 s` bound measured 6.3 s), so the bound has to separate
+        // 0.3 s from 60 s, not from 6 s.
+        let response = await exchange(port: port, parameters: .tcp, request: Data(), timeout: 60)
         #expect(response.isEmpty || [0x15, 0x16].contains(response[0]))
-        #expect(clock.now - start < .seconds(4))
+        #expect(clock.now - start < .seconds(30))
         await listener.stop()
     }
 }

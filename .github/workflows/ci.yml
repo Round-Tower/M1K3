@@ -112,7 +112,9 @@ jobs:
           retention-days: 14
 
       - name: Save SwiftPM build (master only)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        # !cancelled(): a failing TEST still leaves a good .build — the first
+        # master run after the split (73929882) failed one test and saved nothing.
+        if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
         uses: actions/cache/save@v4
         with:
           path: macos/.build
@@ -265,6 +267,12 @@ jobs:
       - name: Check embedded tools land under Contents/Helpers
         working-directory: macos
         run: python3 tools/ci/check_helper_embed.py
+      # Swift Testing starts every test at once; on this 3-core runner a test's
+      # wall time is mostly the pool's backlog (7-8 s for 90% of tests on
+      # 2026-09-12). A bound under 30 s measures that, not the code — #296.
+      - name: No test bets on a short wall-clock bound
+        working-directory: macos
+        run: python3 tools/ci/check_wall_clock_bounds.py
       # The guards' pure helpers have unit tests (test_check_*.py) that nothing
       # ran until 2026-09-02 — a helper regression would have passed CI while the
       # guard quietly stopped guarding. Run them.
