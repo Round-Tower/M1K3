@@ -17,6 +17,8 @@
 //  RealityView (the render loop stops) and the store poll backs off to `ConstellationPollCadence.hidden`
 //  (test-pinned); paused → the field's 30 fps clock stops; a re-shown field pops in without replaying the
 //  accretion stagger. The windowed wrapper reads `\.windowVisible` for its own presence. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 2) — the windowed wrapper resolves its presence
+//  through `AvatarPresence.resolve` (Low Power now parks the field) instead of a visible/unmounted ternary.
 
 import M1K3Avatar
 import M1K3Knowledge
@@ -170,9 +172,15 @@ struct ConstellationWindowContent: View {
     @Environment(\.windowVisible) private var windowVisible
 
     var body: some View {
-        MemoryConstellationCanvas(env: env, presence: windowVisible ? .animating : .unmounted)
-            .frame(minWidth: 640, minHeight: 480)
-            .navigationTitle("Memory Constellation")
+        MemoryConstellationCanvas(
+            env: env,
+            presence: AvatarPresence.resolve(
+                windowVisible: windowVisible, animatesMotion: true,
+                lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled
+            )
+        )
+        .frame(minWidth: 640, minHeight: 480)
+        .navigationTitle("Memory Constellation")
     }
 }
 

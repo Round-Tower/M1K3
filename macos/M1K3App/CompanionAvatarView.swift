@@ -32,6 +32,9 @@
 //  AvatarPresence contract for a creature that is on screen but shouldn't move (recede/still/Low
 //  Power). A creature nobody can see is UNMOUNTED by AvatarSurface instead — pausing a clip does
 //  not stop RealityKit's render loop. Confidence now 0.85 (park/resume verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 1) — `reload(to:)` syncs `scene.parked` from the
+//  view's `paused` before it plays the idle clip, so a creature mounted already-paused starts parked
+//  (the first `update` hadn't run yet; one live frame slipped through). Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `framing: CompanionFraming`: `.window` (default, the fixed
 //  z 2.4 shot, byte-identical) or `.fit(headroom:)`, which places the camera at `CameraFit.distance` for the
 //  view's aspect and the creature's posed extents in RealityView's update tick (a GeometryReader carries the
@@ -436,6 +439,10 @@ struct CompanionAvatarView: View {
         // Play the resting clip if we have it; otherwise render the STATIC mesh rather
         // than nothing. A frozen creature reads as quiet/loading; a black panel reads
         // as broken — and the mesh appearing at all is the whole point.
+        // A creature mounted straight into `.paused` (Low Power at launch, a
+        // still treatment on first appear) must start parked — `applyPause`
+        // only runs from `update`, which hasn't happened yet (#293 review 1).
+        scene.parked = paused
         if let idle = clips[companion.idleClip] {
             scene.playback = host.playAnimation(idle.repeat(), transitionDuration: 0.3)
             if scene.parked { scene.playback?.pause() }

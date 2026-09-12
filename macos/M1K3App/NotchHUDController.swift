@@ -41,6 +41,9 @@
 //  signal (withObservationTracking) and ticks on a clock ONLY while the hide
 //  grace is pending (`NotchHUDVisibility.awaitsGrace`, test-pinned). At idle
 //  this task holds no timer. Confidence now 0.85 (wake-on-speech verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 2) — the 30 s valve Task is registered on the
+//  `ResumeOnce` and cancelled the instant the wait resolves (or, if it resolved first, on attach), so
+//  a wake-up leaves no sleeping task behind it. Confidence now 0.85.
 //
 
 import AppKit
@@ -87,7 +90,9 @@ final class NotchHUDController {
     }
 
     /// Suspend until `env.speechHighlight.isActive` changes (or the task is
-    /// cancelled). A 30 s safety valve bounds any missed observation.
+    /// cancelled). A 30 s safety valve bounds any missed observation; it is
+    /// cancelled the moment the wait resolves, so a quiet HUD holds no timer
+    /// beyond it and none at all between wake-ups (#293 review 2).
     private func awaitSpeechChange() async {
         let signal = env.speechHighlight
         await withTaskCancellationHandler(operation: {
@@ -98,10 +103,10 @@ final class NotchHUDController {
                 } onChange: {
                     once.resume()
                 }
-                Task {
+                once.attach(valve: Task {
                     try? await Task.sleep(for: .seconds(30))
                     once.resume()
-                }
+                })
                 cancelHook.withLock { $0 = once }
             }
         }, onCancel: {
@@ -210,19 +215,37 @@ final class NotchHUDController {
     }
 
     /// A continuation that resumes at most once, from whichever of the
-    /// observation callback / valve / cancellation gets there first.
+    /// observation callback / valve / cancellation gets there first — and
+    /// cancels the valve on the way out so nothing keeps sleeping for it.
     private final class ResumeOnce: Sendable {
-        private let slot: OSAllocatedUnfairLock<CheckedContinuation<Void, Never>?>
+        private struct State {
+            var continuation: CheckedContinuation<Void, Never>?
+            var valve: Task<Void, Never>?
+        }
+
+        private let slot: OSAllocatedUnfairLock<State>
 
         init(_ continuation: CheckedContinuation<Void, Never>) {
-            slot = OSAllocatedUnfairLock(initialState: continuation)
+            slot = OSAllocatedUnfairLock(initialState: State(continuation: continuation))
+        }
+
+        /// Register the safety valve; if the wait already resolved, cancel it now.
+        func attach(valve: Task<Void, Never>) {
+            let resolved = slot.withLock { state -> Bool in
+                guard state.continuation != nil else { return true }
+                state.valve = valve
+                return false
+            }
+            if resolved { valve.cancel() }
         }
 
         func resume() {
-            slot.withLock { held -> CheckedContinuation<Void, Never>? in
-                defer { held = nil }
-                return held
-            }?.resume()
+            let taken = slot.withLock { state -> (CheckedContinuation<Void, Never>?, Task<Void, Never>?) in
+                defer { state.continuation = nil; state.valve = nil }
+                return (state.continuation, state.valve)
+            }
+            taken.1?.cancel()
+            taken.0?.resume()
         }
     }
 
