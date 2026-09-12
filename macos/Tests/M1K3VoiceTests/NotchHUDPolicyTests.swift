@@ -190,4 +190,17 @@ struct NotchHUDVisibilityCadenceTests {
         _ = visibility.update(speaking: true, atSeconds: 0.3)
         #expect(!visibility.awaitsGrace)
     }
+
+    /// The Settings toggle is NOT an observed input of the drive loop (it is
+    /// `@AppStorage`), so while speech is live the loop re-reads it on a short
+    /// valve; idle, the valve is only a safety net (#293 review 7).
+    @Test("while speech is live the wake valve is 1 s — a toggle flip mid-utterance shows or hides within a second")
+    func speakingValveIsShort() {
+        #expect(NotchHUDVisibility.wakeValve(speaking: true) == .seconds(1))
+    }
+
+    @Test("idle, the wake valve is the 30 s safety net — the next speech change wakes the loop by observation")
+    func idleValveIsTheSafetyNet() {
+        #expect(NotchHUDVisibility.wakeValve(speaking: false) == .seconds(30))
+    }
 }

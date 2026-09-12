@@ -50,6 +50,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 6) — the wait itself is now
 //  `ObservedSignal.waitForChange` (M1K3Voice, five tests: change / valve / cancel / cancel-before-arm /
 //  resume-once); this file keeps only the call. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 7) — the wait's valve is `NotchHUDVisibility.wakeValve`
+//  (1 s while speaking): the Settings toggle is not an observed input, and a flip mid-utterance used to wait
+//  for the speech to end (up to 30 s) before the HUD followed it. Confidence now 0.85.
 //
 
 import AppKit
@@ -72,8 +75,11 @@ final class NotchHUDController {
     /// Start the drive loop. Safe to call once at launch — the Settings toggle
     /// (`AppEnvironment.notchHUDEnabledKey`, read every tick) gates whether
     /// the HUD can ever actually show, so this runs for the app's whole
-    /// lifetime with no separate wiring needed when the toggle flips (it is
-    /// re-read on the next speech change, which is the only moment it matters).
+    /// lifetime with no separate wiring needed when the toggle flips: it is
+    /// re-read on every wake, and while speech is live the loop wakes at least
+    /// once a second (`NotchHUDVisibility.wakeValve`), so a flip mid-utterance
+    /// shows or hides the HUD within a second; idle, a flip changes nothing
+    /// until the next speech change wakes the loop anyway.
     ///
     /// The loop is event-driven: it suspends on the observable speech signal
     /// and only ticks on a clock while a hide grace is pending — the one
@@ -93,13 +99,16 @@ final class NotchHUDController {
         }
     }
 
-    /// Suspend until `env.speechHighlight.isActive` changes, the 30 s safety
-    /// valve elapses, or the drive task is cancelled — `ObservedSignal`
-    /// (M1K3Voice, test-pinned) owns the one-shot resume and the valve's
-    /// cancellation, so a quiet HUD holds no timer between wake-ups.
+    /// Suspend until `env.speechHighlight.isActive` changes, the wake valve
+    /// elapses (`NotchHUDVisibility.wakeValve`: 1 s while speech is live so a
+    /// Settings toggle flip lands within a second, 30 s idle as a safety net),
+    /// or the drive task is cancelled — `ObservedSignal` (M1K3Voice,
+    /// test-pinned) owns the one-shot resume and the valve's cancellation.
     private func awaitSpeechChange() async {
         let signal = env.speechHighlight
-        await ObservedSignal.waitForChange(valve: .seconds(30)) { _ = signal.isActive }
+        await ObservedSignal.waitForChange(valve: NotchHUDVisibility.wakeValve(speaking: signal.isActive)) {
+            _ = signal.isActive
+        }
     }
 
     func stop() {

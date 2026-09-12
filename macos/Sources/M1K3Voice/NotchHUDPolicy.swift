@@ -16,6 +16,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `awaitsGrace` exposes the one
 //  window the driver must poll through; the controller now sleeps on the
 //  observable speech signal otherwise. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 7) — `wakeValve(speaking:)`: the drive loop's
+//  signal valve is 1 s while speech is live (the un-observed Settings toggle is re-read then) and 30 s idle.
+//  Confidence now 0.85.
 //
 
 import Foundation
@@ -46,6 +49,18 @@ public struct NotchHUDVisibility: Equatable, Sendable {
     /// (2026-09-12 thermal audit: this replaces a lifetime 10 Hz poll.)
     public var awaitsGrace: Bool {
         isShown && falseSinceSeconds != nil
+    }
+
+    /// How long the drive loop may sleep on the speech signal before it
+    /// re-reads its inputs anyway. Speech itself wakes the loop by
+    /// observation; the Settings toggle does not (it is an `@AppStorage`
+    /// value, not an observed one), so while speech is live the valve is
+    /// short enough that a flip shows or hides the HUD within a second — a
+    /// 1 Hz tick beside a 14 fps creature costs nothing. Idle, nothing can
+    /// change what the loop would do until speech starts, so the valve is
+    /// only a safety net against a missed observation.
+    public static func wakeValve(speaking: Bool) -> Duration {
+        speaking ? .seconds(1) : .seconds(30)
     }
 
     public init(hideGraceSeconds: Double = 0.7) {
