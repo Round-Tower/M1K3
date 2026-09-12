@@ -11,6 +11,8 @@
 //  bundle's metallib — so these mappers carry the regression coverage.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-10, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `pocketPersonaIsLFM2Only` pins the
+//  dialect → persona-variant mapping (lfm2 only).
 
 import Foundation
 import M1K3Inference
@@ -510,5 +512,17 @@ struct LFM2ToolBlockTests {
         let out = MLXToolMapping.templateInputs(chat: chat, specs: nil, format: .lfm2)
         #expect(out.specs == nil)
         #expect(out.chat[0].content == "PERSONA")
+    }
+
+    @Test("only the lfm2 dialect (the pocket tier) gets the pocket persona (2026-09-12)")
+    func pocketPersonaIsLFM2Only() {
+        // Its frozen core and the leak-decline beat were measured on LFM2.5-1.2B;
+        // the 4B Lil recited the beat to innocent tool requests. Extend only with a
+        // same-session A/B.
+        #expect(MLXGemmaProvider.personaVariant(forDialect: .lfm2) == .pocket)
+        for dialect in [ToolCallFormat.json, .xmlFunction, .gemma, .gemma4] {
+            #expect(MLXGemmaProvider.personaVariant(forDialect: dialect) == .standard)
+        }
+        #expect(MLXGemmaProvider.personaVariant(forDialect: nil) == .standard)
     }
 }

@@ -26,6 +26,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 — the exemplars join the
 //  fingerprint (header + each beat's reply, lead-ins stripped) and the taught decline is
 //  allow-listed; three new pins, the #219 pin re-proven red→green when beat 5 landed.
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `pocketOnlySentenceIsALeak`: pocket keeps
+//  the pre-2026-09-12 core, so `wiringText` carries both cores and a sentence only pocket's core holds is a leak.
 //
 
 @testable import M1K3Chat
@@ -63,6 +65,17 @@ struct PersonaLeakGuardTests {
         #expect(!PersonaLeakGuard.leaks("The Berlin Wall fell in 1989."))
         #expect(!PersonaLeakGuard.leaks(""))
         #expect(!PersonaLeakGuard.leaks("Story? All quiet here — nothing in or out, as ever."))
+    }
+
+    @Test("pocket's frozen core is wiring too — a sentence only it carries is a leak (2026-09-12)")
+    func pocketOnlySentenceIsALeak() {
+        // Pocket keeps the pre-2026-09-12 core; the standard core no longer says
+        // "nothing in or out". A tier can only leak what it was shown, and pocket
+        // was shown this, so the guard watches both cores.
+        let recital = "Sure. What's said here stays private — nothing in or out, that's the whole \"scheme\". "
+            + "That's all."
+        #expect(!M1K3Persona.systemPrompt.contains("nothing in or out"))
+        #expect(PersonaLeakGuard.leaks(recital))
     }
 
     @Test("★ the guard never eats its own replacement")

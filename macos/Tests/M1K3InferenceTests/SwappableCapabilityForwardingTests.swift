@@ -12,6 +12,8 @@
 //  each conformance by hand (compile-checked, verify-by-launch).
 //
 //  Signed: Kev + claude-fable-5, 2026-08-16, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `promptLayoutFollowsSwap`: prompt shape and the
+//  persona variant are forwarded through the façade and follow a swap (the app façade had dropped `nativePromptShape`).
 //
 
 import M1K3Inference
@@ -58,6 +60,25 @@ private struct CarryingProvider: InferenceProvider, PersonaCarrying {
     }
 }
 
+private struct LayoutProvider: ToolCallingProvider {
+    let name = "layout"
+    let isAvailable = true
+    let supportsToolCalls = true
+    let nativePromptShape: NativePromptShape
+    let personaVariant: PersonaVariant
+    func generate(prompt _: String) async throws -> String {
+        "layout"
+    }
+
+    func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        AsyncStream { $0.finish() }
+    }
+
+    func continueToolTurn(messages _: [ToolMessage], tools _: [ToolDefinition]) async throws -> ToolTurn {
+        .text("layout")
+    }
+}
+
 private struct RawProvider: InferenceProvider, RawCompletionProviding {
     let name = "raw"
     let isAvailable = true
@@ -96,6 +117,19 @@ struct SwappableCapabilityForwardingTests {
         #expect(await facade.tokenCount("hi") == nil)
         facade.setProvider(CountingProvider())
         #expect(await facade.tokenCount("hi") == 2)
+    }
+
+    @Test("prompt shape and persona variant follow the active backend through the façade (2026-09-12)")
+    func promptLayoutFollowsSwap() {
+        // The agent reads both off the provider it HOLDS; a façade that drops
+        // them hands every model the defaults (the #133/#134 lesson).
+        let pocket = LayoutProvider(nativePromptShape: .groundingInSystem, personaVariant: .pocket)
+        let facade = SwappableInferenceProvider(pocket)
+        #expect(facade.nativePromptShape == .groundingInSystem)
+        #expect(facade.personaVariant == .pocket)
+        facade.setProvider(PlainProvider())
+        #expect(facade.nativePromptShape == .groundingInUser)
+        #expect(facade.personaVariant == .standard)
     }
 
     @Test("persona carriage follows the active backend through the façade")

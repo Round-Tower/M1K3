@@ -55,6 +55,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85 — #264: `lateToolCallFormat` +
 //  `dialectSource`, the pure halves of resolving the dialect AFTER the loader has config.json
 //  (a never-downloaded repo with no family word ran a whole eval on the ReAct floor).
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `personaVariant`: lfm2 (pocket) keeps its frozen
+//  core and the leak-decline beat, every other dialect the standard persona; Lil had recited the beat at making requests.
 
 import Foundation
 import M1K3Inference
@@ -441,6 +443,19 @@ extension MLXGemmaProvider: ToolCallingProvider {
     /// table only with a same-session A/B behind it.
     public var nativePromptShape: NativePromptShape {
         resolvedToolCallFormat == .lfm2 ? .groundingInSystem : .groundingInUser
+    }
+
+    /// Which persona this model gets (see `PersonaVariant`). LFM2 (pocket)
+    /// keeps its frozen core and the leak-decline beat, both measured on the
+    /// 1.2B; the 4B Lil recited the beat to innocent tool requests and gained
+    /// every tool fix from the new core. Extend this table only with a
+    /// same-session A/B behind it.
+    public var personaVariant: PersonaVariant {
+        Self.personaVariant(forDialect: resolvedToolCallFormat)
+    }
+
+    static func personaVariant(forDialect dialect: ToolCallFormat?) -> PersonaVariant {
+        dialect == .lfm2 ? .pocket : .standard
     }
 
     /// Run one model turn over the transcript + tools, returning structure. The

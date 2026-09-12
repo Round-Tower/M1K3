@@ -18,6 +18,8 @@
 //  unchanged; members made `public`.
 //  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.9 — PR #232: forwards
 //  `nativePromptShape` to the active provider (the façade-forwarding rule, #133/#134).
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.9 — forwards `personaVariant` too, so a
+//  swap to pocket (lfm2) renders pocket's frozen core. Pinned by `promptLayoutFollowsSwap`.
 
 import Foundation
 import Synchronization
@@ -66,6 +68,10 @@ extension SwappableInferenceProvider: ToolCallingProvider {
     /// Forwarded like every capability (the façade-forwarding rule, #133/#134).
     public var nativePromptShape: NativePromptShape {
         (active as? ToolCallingProvider)?.nativePromptShape ?? .groundingInUser
+    }
+
+    public var personaVariant: PersonaVariant {
+        (active as? ToolCallingProvider)?.personaVariant ?? .standard
     }
 
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {

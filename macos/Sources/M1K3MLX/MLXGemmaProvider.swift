@@ -591,7 +591,7 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     private func makeUpstreamSession(_ container: ModelContainer) -> ChatSession {
         let session = ChatSession(
             container,
-            instructions: M1K3Persona.systemPrompt,
+            instructions: M1K3Persona.compactPrompt(for: personaVariant),
             generateParameters: generateParameters
         )
         if let context = thinkingAdditionalContext {
@@ -629,7 +629,7 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             toolNames: toolNames,
             // Exemplars ride the CACHED render — they cost once per launch,
             // not per turn. The fallback (inline instructions) stays compact.
-            personaText: M1K3Persona.systemPrompt(includeExemplars: true)
+            personaText: M1K3Persona.systemPrompt(variant: personaVariant)
         )
     }
 

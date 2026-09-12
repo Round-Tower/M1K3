@@ -18,6 +18,8 @@
 //  cannot fit Mini fails here rather than in a user's chat.
 //
 //  Signed: Kev + claude-opus-5, 2026-08-03, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `includeExemplars:` became `variant: nil / .standard`.
+//  After the tools-and-making pass the compact persona sits ≈20 tokens under this suite's one-third line.
 //
 
 import Foundation
@@ -42,7 +44,7 @@ struct MiniPromptBudgetTests {
         // Mini gets the COMPACT core (no voiceExemplars — those ride only where
         // a KV-cached prefix makes them free). Whatever else changes, the
         // always-on part of the prompt must not eat the window on its own.
-        let persona = M1K3Persona.systemPrompt(includeExemplars: false)
+        let persona = M1K3Persona.systemPrompt(variant: nil)
         let tokens = Self.estimatedTokens(persona)
         #expect(
             tokens < Self.miniContextWindow / 3,
@@ -62,8 +64,8 @@ struct MiniPromptBudgetTests {
         // M1K3 has. This does not argue they should ship there — that is a
         // measured A/B call — but it pins the cost so the decision is made on
         // numbers rather than on an assumption about affordability.
-        let compact = Self.estimatedTokens(M1K3Persona.systemPrompt(includeExemplars: false))
-        let full = Self.estimatedTokens(M1K3Persona.systemPrompt(includeExemplars: true))
+        let compact = Self.estimatedTokens(M1K3Persona.systemPrompt(variant: nil))
+        let full = Self.estimatedTokens(M1K3Persona.systemPrompt(variant: .standard))
         let exemplarCost = full - compact
         #expect(
             exemplarCost < 300,

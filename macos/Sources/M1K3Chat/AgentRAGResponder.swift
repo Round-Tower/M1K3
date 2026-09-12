@@ -92,6 +92,12 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the gate log speaks BEFORE the wiring filter (review 12 on #288):
 //  `logGateDecision`'s kept/gated verdict is the relevance floor's alone, and a wiring-shaped drop gets its own
 //  count line, so a floor tuned from the unified log never absorbs a #286 drop. Log-only; `usableMemories` stays pinned.
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — Kev: "isn't searching the internet much … coding /
+//  document generation is not being invoked." `currentWorldRouting` (the newest, this year's results, unrecognised
+//  names, even with notes injected), `generativeCarveHead` (build/make/a whole web page; a CAN-you question is
+//  answered by doing it), the scripts carve's "a web page or a document is not a script", and "how busy it's been"
+//  on the recent_activity line. Wording byte-replayed on Lil before landing (see each constant); pinned by
+//  WebAndMakingRoutingTests. Residual: an unfamiliar name Lil is sure it knows ("OpenAI's Astra") still isn't searched.
 
 import Foundation
 import M1K3Agent
@@ -812,9 +818,18 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// verbatim so the wording can't drift between them (109 review nit; a
     /// pin test asserts both rendered prompts carry this exact text).
     static let generativeCarveOut =
-        "- A request to write, create, code, or compose something is a task to "
-            + "DO, not a lookup — just produce it. No tools, no grounding, no citations, "
-            + "no \"found nothing\"; those are for factual questions."
+        generativeCarveHead
+            + "No tools, no grounding, no citations, no \"found nothing\"; those are for factual questions."
+
+    /// The head both carve-outs share (2026-09-12): "build" and "make" named, a
+    /// whole web page named, and the CAN-you question answered by doing it. Byte-
+    /// replayed on Lil, n=4: "Pal, build me a website about this conversation"
+    /// drew the wiring decline 4/4 on master and came back as the page 4/4 with
+    /// this head plus the persona's making line.
+    static let generativeCarveHead =
+        "- A request to write, build, make, create, code, or compose something — a poem, "
+            + "a script, a whole web page — is a task to DO, not a lookup: produce it, complete. "
+            + "Asked whether you CAN make it, make it. "
 
     /// The carve-out when the "hands" (propose_script) are in the palette: still
     /// "just produce it", but a runnable SCRIPT routes to propose_script — a
@@ -825,12 +840,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// even with the toggle on). Selected in `groundingBody`; a pin asserts
     /// both styles carry it verbatim when propose_script is offered.
     static let generativeCarveOutWithScripts =
-        "- A request to write, create, code, or compose something is a task to "
-            + "DO, not a lookup — just produce it. No grounding, no citations, no "
+        generativeCarveHead
+            + "No grounding, no citations, no "
             + "\"found nothing\", and no tools — with ONE exception: when the user asks "
             + "you to write, create, or make a SCRIPT you could run on "
             + "\(HostPlatform.thisDevice), call propose_script with the full source "
             + "(a one-click review-and-install) instead of pasting it in a code block. "
+            + "A web page or a document is not a script: write it as one complete "
+            + "```html or ```markdown block. "
             + "Everything else generative — poems, stories, code snippets — is still "
             + "produced directly, no web_search, no lookup_fact."
 
@@ -863,8 +880,21 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// Offered-only, like every routing line (RecentActivityRoutingTests).
     static let recentActivityRouting =
         "- For what happened lately on \(HostPlatform.thisDevice) — recent chats, new memories, "
-            + "visiting agents, heartbeat pulses, todos — call recent_activity (window: today, "
+            + "visiting agents, heartbeat pulses, todos, how busy it's been — call recent_activity (window: today, "
             + "yesterday, or N days); do not reconstruct it from this conversation."
+
+    /// The web route (2026-09-12). Byte-replayed on Lil, n=4 per probe, master →
+    /// this line plus the persona's matching bullet: "What's the newest Claude
+    /// model?" 0/4 → 4/4 web_search; "Who won the All-Ireland hurling final this
+    /// year?" 0/4 → 4/4 (it answered from memory that the final "hasn't occurred
+    /// yet"). Injected notes had been suppressing the search, hence "even when
+    /// notes were injected above". Residual: "How about OpenAI's Astra model?"
+    /// stays 0/4 — Lil is sure it knows, and no wording moved it.
+    static let currentWorldRouting =
+        "- For current or external information — weather, news, prices, results, anything "
+            + "happening now or this year, the newest or latest of anything, or a name you don't "
+            + "recognise — use web_search, even when notes were injected above: your notes hold the "
+            + "past, not what's on now. Before saying something doesn't exist or hasn't happened, search."
 
     /// Attached ONCE whenever a page tool is offered (a duplication pin asserts
     /// on the assembled prompt): describe only what actually came back.
@@ -913,12 +943,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let hasSearchKnowledge = toolNames.contains("search_knowledge")
         var routing = switch (hasWebSearch, hasSearchKnowledge) {
         case (true, true):
-            "- For current or external information — weather, news, prices, "
-                + "anything happening now — use web_search. search_knowledge only "
+            Self.currentWorldRouting + " search_knowledge only "
                 + "finds documents already stored on \(HostPlatform.thisDevice)."
         case (true, false):
-            "- For current or external information — weather, news, prices, "
-                + "anything happening now — use web_search."
+            Self.currentWorldRouting
         case (false, true):
             "- search_knowledge only finds documents already stored on "
                 + "\(HostPlatform.thisDevice). You have no web access — if the stored knowledge can't "
@@ -933,7 +961,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         if toolNames.contains("lookup_fact") {
             routing += "\n- Stable, well-known facts (who wrote a famous book, a "
-                + "capital city, basic science) you can just answer from what you know "
+                + "capital city, basic science — never the newest of anything) you can just "
+                + "answer from what you know "
                 + "— you're reliable there. Use lookup_fact only when you're genuinely "
                 + "unsure, the detail is obscure or easy to mix up, or it could have "
                 + "changed over time; then cite its Source."

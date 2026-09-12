@@ -6,6 +6,8 @@
 //  the user's review — nothing is written, nothing runs, until they install it.
 //
 //  Signed: Kev + claude-fable-5, 2026-08-23, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — pins the description line that keeps
+//  web pages and documents out of the script tool (Kev: "coding / document generation is not being invoked").
 
 import Foundation
 @testable import M1K3AgentTools
@@ -30,6 +32,18 @@ struct ProposeScriptToolTests {
         #expect(tool.name == "propose_script")
         #expect(tool.parameters.map(\.name) == ["name", "content", "purpose"])
         #expect(tool.exclusionClass == nil) // inert: the human review is the gate
+    }
+
+    @Test("the description keeps web pages and documents out of the script tool (2026-09-12)")
+    func notForWebPages() {
+        // Byte-replayed on Lil: "code me a tiny HTML page" went to propose_script 3/4 on
+        // master as a bash heredoc writing counter.html; with this line and the carve's
+        // matching sentence, 1/12 across the page probes — and a real disk-space script
+        // still reached the tool 6/6.
+        let description = ProposeScriptTool { _ in }.description
+        #expect(description.contains("Never for a web page or a document"))
+        #expect(description.contains("```html or ```markdown block"))
+        #expect(description.contains("runnable script (shell/bash/zsh)"))
     }
 
     @Test("a valid proposal reaches the app and the observation says review is owed")

@@ -15,6 +15,8 @@
 //  speaks structure instead of text.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-10, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — the fake declares `personaVariant`, and
+//  `systemTurnFollowsProviderVariant` pins that the system turn carries the provider's persona variant.
 
 import Foundation
 @testable import M1K3Agent
@@ -32,6 +34,7 @@ final class FakeToolCallingProvider: ToolCallingProvider, @unchecked Sendable {
     let name = "fake-tool"
     let isAvailable = true
     let supportsToolCalls: Bool
+    let personaVariant: PersonaVariant
 
     private let handler: @Sendable (Int, [ToolMessage], [ToolDefinition]) -> ToolTurn
     private let lock = NSLock()
@@ -42,9 +45,11 @@ final class FakeToolCallingProvider: ToolCallingProvider, @unchecked Sendable {
 
     init(
         supportsToolCalls: Bool = true,
+        personaVariant: PersonaVariant = .standard,
         handler: @escaping @Sendable (Int, [ToolMessage], [ToolDefinition]) -> ToolTurn
     ) {
         self.supportsToolCalls = supportsToolCalls
+        self.personaVariant = personaVariant
         self.handler = handler
     }
 
@@ -149,6 +154,26 @@ private func call(_ name: String, _ args: [String: JSONValue]) -> ToolTurn {
 // MARK: - Tests
 
 struct NativeToolCallingTests {
+    @Test("the system turn carries the persona the PROVIDER declares: pocket's frozen core and beat 5 for pocket only")
+    func systemTurnFollowsProviderVariant() async throws {
+        // The persona text must match the provider's cached prefix byte for byte,
+        // so the agent asks the provider rather than hard-coding one (2026-09-12).
+        for variant in [PersonaVariant.standard, .pocket] {
+            let provider = FakeToolCallingProvider(personaVariant: variant) { _, _, _ in .text("done") }
+            let agent = LocalAgent(inferenceProvider: provider, tools: [RecordingTool()])
+            _ = try await agent.run(goal: "x")
+            let opening = try #require(provider.receivedTranscripts.first?.first)
+            guard case let .system(persona) = opening else {
+                Issue.record("the native transcript must open with the persona")
+                continue
+            }
+            #expect(persona == M1K3Persona.systemPrompt(variant: variant))
+            #expect(persona.contains(M1K3Persona.leakDeclineBeat) == (variant == .pocket))
+            #expect(persona.contains("nothing in or out") == (variant == .pocket))
+            #expect(persona.contains("by example"))
+        }
+    }
+
     @Test("executes a structured tool call, then concludes on .text")
     func executeThenConclude() async throws {
         let provider = FakeToolCallingProvider { index, _, _ in

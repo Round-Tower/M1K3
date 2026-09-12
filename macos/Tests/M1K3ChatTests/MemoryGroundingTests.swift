@@ -14,6 +14,9 @@
 //  "answer directly" licence with honest abstention, killing the off-store
 //  confabulation (live sourdough/honey). The intent is also pinned by content
 //  tests below so the wording can evolve without losing the guard.
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — verbatim pins moved DELIBERATELY
+//  again: the carve names build/make and a whole web page, and the web route covers the newest,
+//  this year's results and unrecognised names (Kev: "isn't searching the internet much").
 
 import Foundation
 import M1K3Agent
@@ -100,8 +103,9 @@ struct MemoryGroundingTests {
         The hydraulic seal failed.
 
         RULES:
-        - A request to write, create, code, or compose something is a task to \
-        DO, not a lookup — just produce it. No tools, no grounding, no citations, \
+        - A request to write, build, make, create, code, or compose something — a poem, \
+        a script, a whole web page — is a task to DO, not a lookup: produce it, complete. \
+        Asked whether you CAN make it, make it. No tools, no grounding, no citations, \
         no "found nothing"; those are for factual questions.
         - Pure small talk — greetings, banter — needs no tools or knowledge: \
         reply IMMEDIATELY starting with "CONCLUSION:", in your own voice, picking up one \
@@ -118,9 +122,11 @@ struct MemoryGroundingTests {
         - Use at most two tool calls, never repeating one with the same argument.
         - Questions about yourself — your configuration, design, or abilities — \
         are answered from your persona; never search stored documents for them.
-        - For current or external information — weather, news, prices, \
-        anything happening now — use web_search. search_knowledge only \
-        finds documents already stored on this machine.
+        - For current or external information — weather, news, prices, results, anything \
+        happening now or this year, the newest or latest of anything, or a name you don't \
+        recognise — use web_search, even when notes were injected above: your notes hold the \
+        past, not what's on now. Before saying something doesn't exist or hasn't happened, search. \
+        search_knowledge only finds documents already stored on this machine.
         - web_search returns snippets AND automatically reads the \
         top result's page for you; after a search, use fetch_page only to read a \
         DIFFERENT result in full, then conclude from the page text.
@@ -145,8 +151,9 @@ struct MemoryGroundingTests {
         don't, say so plainly rather than guessing.
 
         RULES:
-        - A request to write, create, code, or compose something is a task to \
-        DO, not a lookup — just produce it. No tools, no grounding, no citations, \
+        - A request to write, build, make, create, code, or compose something — a poem, \
+        a script, a whole web page — is a task to DO, not a lookup: produce it, complete. \
+        Asked whether you CAN make it, make it. No tools, no grounding, no citations, \
         no "found nothing"; those are for factual questions.
         - Pure small talk — greetings, banter — needs no tools or knowledge — reply in \
         your own voice and pick up one real thread (what they said, a memory of them, the \
@@ -161,9 +168,11 @@ struct MemoryGroundingTests {
         - Never repeat a tool call with the same argument.
         - Questions about yourself — your configuration, design, or abilities — \
         are answered from your persona; never search stored documents for them.
-        - For current or external information — weather, news, prices, \
-        anything happening now — use web_search. search_knowledge only \
-        finds documents already stored on this machine.
+        - For current or external information — weather, news, prices, results, anything \
+        happening now or this year, the newest or latest of anything, or a name you don't \
+        recognise — use web_search, even when notes were injected above: your notes hold the \
+        past, not what's on now. Before saying something doesn't exist or hasn't happened, search. \
+        search_knowledge only finds documents already stored on this machine.
         - web_search returns snippets AND automatically reads the \
         top result's page for you; after a search, use fetch_page only to read a \
         DIFFERENT result in full, then conclude from the page text.

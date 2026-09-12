@@ -90,6 +90,10 @@
 //  tanking it to ~1.1 — a scary-looking artifact, not a real under-
 //  reservation signal — fixed in `PromptSizeReport` (TDD'd; see that file's
 //  own Review line).
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.9 — `RecordingProvider` now forwards
+//  `nativePromptShape` and `personaVariant`. It had forwarded neither, so on a pocket (lfm2) brain
+//  the instrument measured the standard persona in the grounding-in-user layout (the #232 gap and
+//  this PR's new seam). Found by the pre-push review of the PersonaVariant PR.
 //
 
 import Foundation
@@ -168,6 +172,17 @@ private struct RecordingProvider: InferenceProvider {
 extension RecordingProvider: ToolCallingProvider {
     var supportsToolCalls: Bool {
         (wrapped as? ToolCallingProvider)?.supportsToolCalls ?? false
+    }
+
+    /// Forwarded like every other seam (#134): without these two the wrapper fell
+    /// back to the protocol defaults, so a pocket measurement rendered the
+    /// standard persona in the grounding-in-user layout — not what the app sends.
+    var nativePromptShape: NativePromptShape {
+        (wrapped as? ToolCallingProvider)?.nativePromptShape ?? .groundingInUser
+    }
+
+    var personaVariant: PersonaVariant {
+        (wrapped as? ToolCallingProvider)?.personaVariant ?? .standard
     }
 
     func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {

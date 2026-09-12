@@ -18,6 +18,8 @@
 //  (the Swappable*-family house shape): the box holds its slot in a Mutex, and
 //  with that the provider's stored properties are all immutable Sendables, so
 //  the compiler proves what the escape hatch used to assert.
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — forwards `nativePromptShape` (missing since #232:
+//  the live app never gave pocket its grounding-in-system layout) and the new `personaVariant`.
 
 import Foundation
 import M1K3Inference
@@ -99,6 +101,18 @@ final class RuntimeInferenceProvider: InferenceProvider, Sendable {
 extension RuntimeInferenceProvider: ToolCallingProvider {
     var supportsToolCalls: Bool {
         (active as? ToolCallingProvider)?.supportsToolCalls ?? false
+    }
+
+    /// Forwarded like every capability (the façade-forwarding rule, #133/#134).
+    /// Missing until 2026-09-12: the agent holds THIS façade, so pocket's
+    /// measured grounding-in-system layout (#232) fell back to the default in
+    /// the shipped app while the eval, holding the bare provider, measured it.
+    var nativePromptShape: NativePromptShape {
+        (active as? ToolCallingProvider)?.nativePromptShape ?? .groundingInUser
+    }
+
+    var personaVariant: PersonaVariant {
+        (active as? ToolCallingProvider)?.personaVariant ?? .standard
     }
 
     func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
