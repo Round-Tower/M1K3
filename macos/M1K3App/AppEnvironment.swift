@@ -1887,10 +1887,38 @@ extension AppEnvironment {
             // fronting-edge arm in refreshInterimBridge).
             let afm = afmProvider
             Task.detached(priority: .utility) { afm.prewarm() }
+            // Measure the real token budget (macOS 26.4+) — the [SPIKE] resolved.
+            // Detached so it never blocks the launch path; the budget policy falls
+            // back to the conservative replay until this lands.
+            if #available(macOS 26.4, iOS 26.4, visionOS 26.4, *) {
+                Task.detached(priority: .utility) {
+                    await Self.measureMiniTokenBudget(provider: afm)
+                }
+            }
             return
         }
         guard selectedBrain.mlxModelID != nil else { return }
         await preloadGemma()
+    }
+
+    /// Measure the real fixed-prompt token cost for Mini via the macOS 26.4+
+    /// token counting API. Called once at launch; the result is cached in
+    /// `measuredMiniReserve` and read by every subsequent `historyBudgetProvider`
+    /// call. If the measurement fails (daemon busy, model not ready), the policy
+    /// stays on the conservative fallback — no harm.
+    @available(macOS 26.4, iOS 26.4, visionOS 26.4, *)
+    nonisolated static func measureMiniTokenBudget(
+        provider: AppleFoundationModelsProvider
+    ) async {
+        do {
+            let instrTokens = try await provider.tokenCount(forInstructions: M1K3Persona.systemPrompt)
+            measuredMiniReserve.withLock { $0 = instrTokens }
+            let log = Logger(subsystem: "app.m1k3", category: "afm")
+            log.notice("afm token budget: persona=\(instrTokens, privacy: .public) tokens (measured)")
+        } catch {
+            let log = Logger(subsystem: "app.m1k3", category: "afm")
+            log.notice("afm token budget: measurement failed, using conservative fallback")
+        }
     }
 
     /// Launch-time housekeeping off the init path: restore the user profile

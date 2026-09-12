@@ -73,6 +73,7 @@ import M1K3Voice
 import Observation
 import os
 import SwiftUI
+import Synchronization
 
 @MainActor
 @Observable
@@ -187,6 +188,9 @@ final class AppCore {
     /// Mac shell so the two cannot drift.
     nonisolated static let historyReserveTokens = HistoryBudgetPolicy.liveReserveTokens
     nonisolated static let historyGenerationReserveTokens = HistoryBudgetPolicy.liveGenerationReserveTokens
+    /// Exact Mini reserve — measured on the Mac, shared via the policy's
+    /// `measuredMiniReserveTokens` parameter. Nil on iOS until/unless Mini runs.
+    nonisolated static let measuredMiniReserve = Mutex<Int?>(nil)
     nonisolated static let hasChosenBrainKey = "hasChosenBrain"
     /// Whether the Home (paired Mac) brain fronts the slot — device-local,
     /// deliberately NOT shared spelling with the Mac (it has no Home tier).
@@ -825,11 +829,13 @@ final class AppCore {
                 // tier-blind default (8000 chars) plus an uncapped decode could
                 // ask its unbounded KV cache for more than the window the 3.5 GB
                 // floor was measured against. Read fresh each turn (hot-swap).
+                // Mini uses exact token counts when measured (the [SPIKE] resolved).
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return HistoryBudgetPolicy.budget(
                     for: BrainTier(persisted: raw),
                     reservedTokens: Self.historyReserveTokens,
-                    generationTokens: Self.historyGenerationReserveTokens
+                    generationTokens: Self.historyGenerationReserveTokens,
+                    measuredMiniReserveTokens: Self.measuredMiniReserve.withLock { $0 }
                 )
             },
             groundingBudgetProvider: {

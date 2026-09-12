@@ -406,16 +406,15 @@ extension AppEnvironment {
                 // dense-Qwen lil (~32K window), a hard clamp on gemma-4
                 // (big, whose RotatingKVCache silently rotates the persona/grounding
                 // head out past 8192). Read fresh each turn so a hot-swap re-sizes
-                // the window immediately. Mini (Apple Foundation Models) manages its
-                // own window — keep the conservative shipped default there (its real
-                // budget is the named [SPIKE]; don't risk an AFM overflow error).
+                // the window immediately. Mini uses exact token counts when measured
+                // (the [SPIKE] resolved — 3× replay uplift); falls back to the
+                // conservative budget before the measurement lands.
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
-                // The mini/unknown → conservative-replay guard lives in the
-                // policy's optional-tier overload, not here (unit-pinned there).
                 return HistoryBudgetPolicy.budget(
                     for: BrainTier(persisted: raw),
                     reservedTokens: Self.historyReserveTokens,
-                    generationTokens: Self.historyGenerationReserveTokens
+                    generationTokens: Self.historyGenerationReserveTokens,
+                    measuredMiniReserveTokens: Self.measuredMiniReserve.withLock { $0 }
                 )
             },
             maxIterationsProvider: {
@@ -517,7 +516,14 @@ extension AppEnvironment {
     /// conversation replay gets what's left. Bigger = safer (less history, less
     /// chance of crossing gemma's 8192). Tune from the `ttft` token-count log
     /// (the [SPIKE]) — this is a verify-by-launch estimate, not a measured fact.
+    /// MLX tiers still use this; Mini uses `measuredMiniReserve` when available.
     nonisolated static let historyReserveTokens = HistoryBudgetPolicy.liveReserveTokens
+
+    /// Exact Mini reserve measured via `SystemLanguageModel.tokenCount(for:)` at
+    /// launch (macOS 26.4+). Nil until measured; the budget policy falls back to
+    /// `conservativeMiniBudget` when nil. Written once by `measureMiniTokenBudget`,
+    /// read on every Mini turn by the `historyBudgetProvider` closure.
+    nonisolated static let measuredMiniReserve = Mutex<Int?>(nil)
 
     /// Generation headroom (tokens) kept clear of a rotating-KV window so a normal
     /// answer can't rotate gemma's persona/grounding head out mid-decode. 2048 is
