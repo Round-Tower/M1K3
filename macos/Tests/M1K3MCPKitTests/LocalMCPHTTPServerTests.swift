@@ -475,10 +475,13 @@ struct LocalMCPHTTPServerTests {
                 if let error { continuation.resume(throwing: error) } else { continuation.resume() }
             })
         }
-        // Watchdog: if the server never closes, close it ourselves at 3 s so the
+        // Watchdog: if the server never closes, close it ourselves at 60 s so the
         // receive below returns and the elapsed-time assertion fails honestly.
+        // 60 s / 30 s, not 3 s / 2 s: under the parallel suite a test's wall time
+        // is mostly the pool's backlog (7-8 s on the CI runner, #296); the bound
+        // must separate the 0.5 s read deadline from the watchdog, not from 2 s.
         let watchdog = Task {
-            try await Task.sleep(for: .seconds(3))
+            try await Task.sleep(for: .seconds(60))
             connection.cancel()
         }
         let closed: Bool = await withCheckedContinuation { continuation in
@@ -488,7 +491,7 @@ struct LocalMCPHTTPServerTests {
         }
         watchdog.cancel()
         #expect(closed, "the server should have closed the idle connection")
-        #expect(ContinuousClock.now - started < .seconds(2), "closed by the watchdog, not the server")
+        #expect(ContinuousClock.now - started < .seconds(30), "closed by the watchdog, not the server")
     }
 
     @Test("a browser page from a foreign origin is refused even with a correct Host")

@@ -59,6 +59,12 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' build | xcbeautify   # alw
   privacy-manifest / Info.plist invariants the lane depends on.
 - Tests use the **swift-testing** framework (`import Testing`, `@Test`), not
   XCTest.
+- **No short wall-clock bounds in tests.** Swift Testing starts every test at
+  once; on the 3-core CI runner a test's wall time is mostly the wait for the
+  shared pool (2026-09-12: 3,318 of 3,699 tests reported 7–8 s in a 13.4 s
+  run). A bound must separate its two outcomes by a wide margin — ≥ 30 s, with
+  the fallback moved past it — or assert which side acted.
+  `tools/ci/check_wall_clock_bounds.py` enforces it in Project guards (#296).
 - **Landing a PR** (`tools/ci/pr_watch.py <PR>` then `tools/ci/land.sh <PR>`;
   rules pinned in `test_pr_watch.py`): review LOCALLY before the first push
   (swiftformat, `swift test --filter` on the touched suites, a code-quality

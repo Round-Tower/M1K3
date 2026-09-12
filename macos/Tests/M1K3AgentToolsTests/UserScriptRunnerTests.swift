@@ -8,6 +8,9 @@
 //  ~/Library/Application Scripts/app.m1k3 (the sandbox-sanctioned folder).
 //
 //  Signed: Kev + claude-fable-5, 2026-08-23, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-12 — the abandon test's elapsed bound 10 s → 30 s: it
+//  measured 8.8 s of pool backlog on CI (#296); 30 s still sits under the test's 1-minute
+//  .timeLimit, so a regression fails on the bound itself. Confidence now 0.85.
 
 import CryptoKit
 import Foundation
@@ -118,8 +121,11 @@ struct UserScriptRunnerTests {
         let elapsed = Date().timeIntervalSince(start)
         #expect(outcome.timedOut)
         #expect(outcome.succeeded == false)
-        // Returned near the 1s timeout, NOT after the child's 3600s exit.
-        #expect(elapsed < 10)
+        // Returned near the 1s timeout, NOT after the child's 3600s exit. The
+        // bound is 30 s, not 10: under the parallel suite this test measured
+        // 8.8 s of pool backlog (#296). It stays under the 1-minute .timeLimit
+        // above, so a regression fails HERE with the elapsed time in hand.
+        #expect(elapsed < 30)
     }
 
     @Test("a missing script throws launchFailed")
