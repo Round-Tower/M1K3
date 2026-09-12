@@ -26,9 +26,26 @@ struct VoiceProcessingPolicyTests {
         #expect(VoiceProcessingPolicy.shouldEnable(platform: .mobile, inputIsBluetooth: true))
     }
 
-    @Test("an unknown transport reads as not Bluetooth — the common case stays echo-cancelled")
-    func unknownTransportEnables() {
-        #expect(VoiceProcessingPolicy.shouldEnable(platform: .mac, inputIsBluetooth: nil))
+    @Test("an unknown transport fails SAFE to voice processing OFF — a wrongly-on headset parks voice mode; a wrongly-off built-in only loses echo cancellation")
+    func unknownTransportFailsSafeToOff() {
+        #expect(!VoiceProcessingPolicy.shouldEnable(platform: .mac, inputIsBluetooth: nil))
+    }
+
+    @Test("Mac: a >2-channel VPIO format backs voice processing out (the aggregate/BT route starves the recogniser)")
+    func macBacksOutOnMultichannelVPIO() {
+        #expect(VoiceProcessingPolicy.shouldBackOutVoiceProcessing(platform: .mac, channelCount: 3))
+        #expect(VoiceProcessingPolicy.shouldBackOutVoiceProcessing(platform: .mac, channelCount: 9))
+    }
+
+    @Test("Mac: a clean 1- or 2-channel VPIO format keeps voice processing (echo cancellation earns its keep)")
+    func macKeepsVPIOOnCleanFormat() {
+        #expect(!VoiceProcessingPolicy.shouldBackOutVoiceProcessing(platform: .mac, channelCount: 1))
+        #expect(!VoiceProcessingPolicy.shouldBackOutVoiceProcessing(platform: .mac, channelCount: 2))
+    }
+
+    @Test("iOS never backs VPIO out on channel count — its path is device-verified")
+    func mobileNeverBacksOut() {
+        #expect(!VoiceProcessingPolicy.shouldBackOutVoiceProcessing(platform: .mobile, channelCount: 9))
     }
 
     @Test("the VPIO output bus is fed a silent source on mobile only — on the Mac it engages the output device")

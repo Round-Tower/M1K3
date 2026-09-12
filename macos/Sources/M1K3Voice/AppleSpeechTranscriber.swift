@@ -80,6 +80,9 @@
 //  input device between engagements so a headset drops back out of its call profile.
 //  Confidence 0.85 (each branch reproduced with a standalone engine probe; verify-by-launch
 //  on the headset and the built-in mic).
+//  Review: Kev + claude-opus-4-8, 2026-09-12 — the per-listen transport line
+//  now logs only on a decision CHANGE (a storm buried it under os_log's rate
+//  limiter) and the policy fails safe to VP off on an unknown transport.
 
 import AVFoundation
 import Foundation
@@ -155,6 +158,10 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// `engineOwner`. The configuration-change handler compares it with the
     /// format read back to decide keep / restart / reinstall.
     private var installedTapFormat: MicTapFormat?
+    /// The last voice-processing decision we logged, so the per-listen line
+    /// only fires when it CHANGES — a re-arm storm otherwise buries it under
+    /// the os_log rate limiter (2026-09-12).
+    private var lastLoggedVPDecision: String?
     /// Why the current/most recent session ended without a word, when the
     /// recogniser (not the caller) ended it — see `lastFailure`. Guarded by `lock`.
     private var lastFailureMessage: String?
@@ -617,10 +624,14 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             platform: VoiceProcessingPolicy.current, inputIsBluetooth: inputIsBluetooth
         )
         // The one line that says which way the policy went — a mute listen
-        // with no engine error is otherwise unreadable from the log.
-        Self.log.notice(
-            "stt input transport bluetooth=\(inputIsBluetooth.map { String($0) } ?? "unknown", privacy: .public) → voice processing \(wantsVoiceProcessing ? "on" : "off", privacy: .public)"
-        )
+        // with no engine error is otherwise unreadable from the log. Logged
+        // only when the decision CHANGES: a re-arm storm re-enters this ~12×/s
+        // and the os_log rate limiter would drop the line entirely.
+        let vpDecision = "bluetooth=\(inputIsBluetooth.map { String($0) } ?? "unknown") vp=\(wantsVoiceProcessing ? "on" : "off")"
+        if vpDecision != lastLoggedVPDecision {
+            lastLoggedVPDecision = vpDecision
+            Self.log.notice("stt input transport \(vpDecision, privacy: .public)")
+        }
         if wantsVoiceProcessing {
             enableVoiceProcessing(on: inputNode)
         } else {
@@ -641,7 +652,26 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         if VoiceProcessingPolicy.feedsSilentOutputSource(platform: VoiceProcessingPolicy.current) {
             audioEngine.mainMixerNode.outputVolume = 0
         }
-        let format = inputNode.outputFormat(forBus: 0)
+        var format = inputNode.outputFormat(forBus: 0)
+        // Ground truth beats the transport read: if VPIO handed back a
+        // >2-channel format (a Bluetooth headset or an aggregate-routed
+        // input), the recogniser will STARVE on it — back voice processing
+        // out and re-read the raw device (2026-09-12, the launch snag: the
+        // sandboxed transport read misidentifies the aggregate as non-BT, so
+        // `VoiceProcessingPolicy.shouldEnable` kept VPIO on and voice mode
+        // parked mutely on a fresh launch). A clean built-in mic renders 1
+        // channel and never trips this.
+        if wantsVoiceProcessing,
+           VoiceProcessingPolicy.shouldBackOutVoiceProcessing(
+               platform: VoiceProcessingPolicy.current, channelCount: format.channelCount
+           )
+        {
+            Self.log.notice(
+                "stt voice processing backed out — VPIO format was \(format.channelCount, privacy: .public)ch (route starves the recogniser)"
+            )
+            disableVoiceProcessingIfOn(inputNode, reason: "VPIO format \(format.channelCount)ch")
+            format = inputNode.outputFormat(forBus: 0)
+        }
         Self.log.notice(
             "stt mic input format \(format.sampleRate, privacy: .public)Hz ch=\(format.channelCount, privacy: .public)"
         )

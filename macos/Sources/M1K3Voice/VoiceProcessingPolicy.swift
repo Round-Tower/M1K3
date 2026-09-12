@@ -22,6 +22,15 @@
 //  measured on this Mac with a standalone AVAudioEngine probe; the phone side
 //  is unchanged by construction). Prior: Unknown.
 //
+//  Review: Kev + claude-opus-4-8, 2026-09-12 — fail SAFE. A fresh-launch drive
+//  on the reconnected headset STILL turned VPIO on and starved the recogniser:
+//  `defaultInputIsBluetooth()` came back not-true inside the sandbox (the HAL
+//  transport read is unreliable there / on a just-reconnected route), and the
+//  old `!(inputIsBluetooth ?? false)` treated unknown as "enable". Now the Mac
+//  enables VP only on POSITIVE not-Bluetooth (`== false`); unknown → off. A
+//  wrongly-off built-in only loses echo cancellation; a wrongly-on headset
+//  parks voice mode. Confidence 0.85 (verify-by-launch on the rebuild).
+//
 
 public enum VoiceProcessingPolicy {
     public enum Platform: Sendable, Equatable {
@@ -40,13 +49,35 @@ public enum VoiceProcessingPolicy {
 
     /// Turn voice processing on for this listen? On the Mac a Bluetooth input
     /// (HFP) starves the tap under VPIO and needs no echo cancellation — the
-    /// speaker sits on the user's head. `nil` transport (couldn't read it) keeps
-    /// the common built-in case echo-cancelled.
+    /// speaker sits on the user's head. So the Mac enables VP ONLY when it can
+    /// POSITIVELY confirm the input is not Bluetooth (`inputIsBluetooth ==
+    /// false`, the common built-in mic). An UNKNOWN transport (`nil` — the
+    /// sandbox refused the CoreAudio read, or a just-reconnected headset hasn't
+    /// settled) fails SAFE to VP off: a wrongly-off built-in mic merely loses
+    /// echo cancellation, but a wrongly-ON headset starves the recogniser and
+    /// parks voice mode mutely (the launch snag). Positive knowledge, not
+    /// optimism.
     public static func shouldEnable(platform: Platform, inputIsBluetooth: Bool?) -> Bool {
         switch platform {
         case .mobile: true
-        case .mac: !(inputIsBluetooth ?? false)
+        case .mac: inputIsBluetooth == false
         }
+    }
+
+    /// After voice processing is enabled, the mic format the engine hands back
+    /// is the ground truth the transport read could not give us. On the Mac,
+    /// VPIO over a Bluetooth headset — or over ANY route that resolves through
+    /// a system aggregate device (`~:AMS2_Aggregate`, which a prior VPIO
+    /// session leaves behind) — renders a >2-channel format the recogniser is
+    /// then STARVED on (zero buffers, `audioDuration 0`, the instant-endpoint
+    /// storm). A clean built-in mic under VPIO renders 1 channel. So a
+    /// post-enable format with more than two channels is the reliable, in-app
+    /// signal to back voice processing OUT and relisten on the raw device —
+    /// self-healing where `defaultInputIsBluetooth()` (which reads the
+    /// aggregate's non-Bluetooth transport in-sandbox) silently lies. Mobile
+    /// keeps VPIO regardless (its path is device-verified). 2026-09-12.
+    public static func shouldBackOutVoiceProcessing(platform: Platform, channelCount: UInt32) -> Bool {
+        platform == .mac && channelCount > 2
     }
 
     /// Feed the VPIO output bus a silent source (mobile: ~330 render errors a
