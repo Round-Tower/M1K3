@@ -8,6 +8,9 @@
 //  pattern used everywhere in M1K3 — isolate the OS dependency behind a seam.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — every query targets the data-protection
+//  keychain (team + bundle id access, no per-binary login-password prompt); a miss
+//  lifts the legacy login-keychain item across once. Confidence now 0.85.
 
 import Foundation
 import Security
@@ -52,13 +55,17 @@ public struct KeychainKeyStore: KeyStore {
     }
 
     public func data(forAccount account: String) throws -> Data? {
-        var query = baseQuery(account)
-        query[kSecReturnData] = kCFBooleanTrue
-        query[kSecMatchLimit] = kSecMatchLimitOne
         // For a `.userPresence` item this read is what surfaces the Touch ID sheet
         // (the item's access control drives it) — no LAContext needed for the
         // once-per-launch read the call store performs.
+        if let data = try read(baseQuery(account)) { return data }
+        return try migrateLegacyItem(account)
+    }
 
+    private func read(_ base: [CFString: Any]) throws -> Data? {
+        var query = base
+        query[kSecReturnData] = kCFBooleanTrue
+        query[kSecMatchLimit] = kSecMatchLimitOne
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         switch status {
@@ -67,6 +74,16 @@ public struct KeychainKeyStore: KeyStore {
         case errSecUserCanceled: throw KeyStoreError.userCancelled
         default: throw KeyStoreError.unexpectedStatus(status)
         }
+    }
+
+    /// Items written before 2026-09-12 live in the login keychain. On the first
+    /// miss in the data-protection keychain, lift the legacy item across (its
+    /// last login-password prompt) and delete the old row so it never asks again.
+    private func migrateLegacyItem(_ account: String) throws -> Data? {
+        guard let data = try read(Self.legacyQuery(service: service, account: account)) else { return nil }
+        try setData(data, forAccount: account)
+        _ = SecItemDelete(Self.legacyQuery(service: service, account: account) as CFDictionary)
+        return data
     }
 
     public func setData(_ data: Data, forAccount account: String) throws {
@@ -135,6 +152,8 @@ public struct KeychainKeyStore: KeyStore {
     }
 
     public func removeData(forAccount account: String) throws {
+        // A legacy row that was never lifted must not outlive a forget.
+        _ = SecItemDelete(Self.legacyQuery(service: service, account: account) as CFDictionary)
         let status = SecItemDelete(baseQuery(account) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeyStoreError.unexpectedStatus(status)
@@ -142,6 +161,23 @@ public struct KeychainKeyStore: KeyStore {
     }
 
     private func baseQuery(_ account: String) -> [CFString: Any] {
+        Self.query(service: service, account: account)
+    }
+
+    /// The data-protection keychain (iOS-style; on macOS opt-in since 10.15):
+    /// access is decided by the app's team + bundle identifier, so every build
+    /// we sign — the shipping app, a test host, SelfTest, a debug ⌘R — reads
+    /// the same items silently. The login keychain's per-binary ACL asked for
+    /// the login PASSWORD on each new signature (2026-09-12). It is also the
+    /// only keychain that honours `kSecAttrAccessible*ThisDeviceOnly`.
+    static func query(service: String, account: String) -> [CFString: Any] {
+        var query = legacyQuery(service: service, account: account)
+        query[kSecUseDataProtectionKeychain] = true
+        return query
+    }
+
+    /// The same item as it was addressed before 2026-09-12 (login keychain).
+    static func legacyQuery(service: String, account: String) -> [CFString: Any] {
         [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
