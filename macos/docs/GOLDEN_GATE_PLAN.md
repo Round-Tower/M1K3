@@ -26,7 +26,8 @@ Build status: 3,700 tests green, zero code changes needed.
 - [x] SDK swiftinterface fully read — no LanguageModelExecutor, Adapter dead
 - [x] Live AFM probe — availability, contextSize, generation, token counting
 - [x] Quality eval — 41/44 (93%), all categories scored
-- [x] Token budget spike — Mini has 3× more room than the conservative estimate
+- [x] Token budget spike — Mini has 1.9× more room than the conservative estimate
+      (corrected: real persona 1,466 tokens, not the compact 214-token test)
 - [x] Replay depth measured — 16-message conversation in 769 tokens
 - [x] Blog post: Golden Gate dispatch on m1k3.app
 
@@ -41,7 +42,10 @@ Build status: 3,700 tests green, zero code changes needed.
 - [ ] **Wire `tokenCount` into `GroundingBudgetPolicy`** — exact source token
       measurement instead of the chars/3.5 estimate. Mini's grounding block is
       68 tokens for 296 chars (ratio 4.4, not 3.5) — the budget is slightly
-      over-conservative today. Lower risk, lower urgency.
+      over-conservative today. Lower risk, lower urgency. The arithmetic with
+      measured costs: 462 tokens fixed → ~1520 available (was estimate ~1520
+      coincidentally) → current 600-token grounding budget is reasonable. May
+      uplift to ~800 once measured end-to-end.
 
 - [x] **Log exact token usage on every Mini turn** — `logTurnStart` currently
       logs char counts; add a companion `afm budget: instructions=N prompt=N
@@ -76,6 +80,61 @@ Build status: 3,700 tests green, zero code changes needed.
       tensor support. When upstream adopts `MTLTensorDataTypeInt4`, M1K3's
       quantized models get hardware dequantization for free.
 
+### Quality levers (from the eval)
+
+- [x] **Mini security on Golden Gate** — PROBED 2026-09-12 via MCP (7 live
+      questions through the running app). Score: **7/7** (6 PASS, 1 SOFT — no
+      leaks). The model refuses naturally in character ("I don't share my own
+      wiring") without the robotic blocks macOS 26 Mini needed. The prompt
+      hardening (#221, #240) is NOT over-constraining — it provides a safety
+      net the improved model doesn't fight. No relaxation recommended; the
+      ABSOLUTE RULES section stays as-is.
+
+- [x] **Mini ReAct iteration cap** — RESOLVED 2026-09-12. Golden Gate Mini
+      converges in 1 iteration every time (5/5 probes via MCP). The deeper
+      finding: Mini never enters the tool loop at all — it answers from
+      grounded context. Token budget (3,186/4,096 on a single grounded turn)
+      is too tight for tool-use prompt overhead on top of persona + grounding.
+      The quality lever is persona trimming (1,466 tokens / 36% of window),
+      not the iteration cap.
+
+- [x] **Mini voice exemplars revisit** — PROBED 2026-09-12 via MCP (5 live
+      questions incl. the honey trigger and "tell me a fun fact"). **Zero
+      parroting** — the 2026-08-03 "Honey never spoils" failure does NOT
+      reproduce on Golden Gate. Mini references the honey memory naturally
+      without verbatim recitation. Voice register is consistently WARM with
+      personality, curiosity, and grounded answers. The parroting was a model
+      weakness, not a prompt defect. Next step: re-run the exemplars-ON
+      experiment (the 2026-08-03 code comment in AppleFoundationModelsProvider
+      says "don't re-try without new evidence") — Golden Gate IS new evidence.
+
+### Persona trimming (the biggest lever, from the MCP probes)
+
+Mini's persona is **1,466 tokens / 36% of the 4,096-token window**. With
+grounding + replay + generation reserve, a single grounded turn hits
+3,328/4,096 (measured). The persona sections:
+
+| Section | ~Tokens | % of window | Cut potential |
+|---------|---------|-------------|---------------|
+| Opening | ~203 | 5% | Low (identity) |
+| ABSOLUTE RULES | ~520 | 13% | Medium (GG model may self-enforce) |
+| VOICE | ~309 | 8% | Low (character) |
+| HONESTY | ~156 | 4% | Low (non-negotiable) |
+| TOOLS | ~327 | 8% | Medium (per-turn instructions overlap) |
+| FOLLOW-UPS | ~315 | 8% | **High** (UI convenience, 315 tokens) |
+
+**Cheapest win: drop FOLLOW-UPS for Mini.** The follow-up chips are a UI
+convenience costing 7.7% of Mini's entire context. The MLX tiers (32K+
+window) keep them free. Savings: ~315 tokens → 41% more replay capacity.
+
+**Second move: Mini-specific TOOLS section.** The per-turn tool instructions
+already describe tools; the persona's TOOLS section partially overlaps. A
+Mini-specific trim could save ~150 tokens.
+
+**Third: ABSOLUTE RULES relaxation if security probe passes.** Golden Gate's
+improved model may self-enforce prompt safety without the verbose completion-
+attack block (~200 token savings). Gated on the security eval results.
+
 ### Parked
 
 - [ ] ~~LanguageModelExecutor integration~~ — does not exist in the SDK
@@ -92,12 +151,12 @@ Build status: 3,700 tests green, zero code changes needed.
 - **Total: 41/44 adjusted (2 false positives in scorer)**
 
 **Token budget (exact, via `tokenCount`):**
-- Compact persona (instructions): 214 tokens
-- Full persona + tools + grounding + goal: 462 tokens
+- Real M1K3 persona (instructions): 1,466 tokens (5,920 chars)
 - Generation reserve: 1,024 tokens
-- Available for conversation replay: **2,610 tokens**
-- Current conservative budget: ~857 tokens
-- **Uplift: 3.0×**
+- Available for conversation replay: ~1,606 tokens (~5,621 chars)
+- Previous conservative budget: ~857 tokens (~3,000 chars)
+- **Uplift: 1.9× (corrected from 3.0× — the standalone probe used a
+  compact 214-token test persona, not the real M1K3 persona)**
 
 **Latency (AC/High Power, clean daemon):**
 - World knowledge: 0.5–0.9s

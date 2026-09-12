@@ -108,11 +108,12 @@ public enum HistoryBudgetPolicy {
     /// is SAFE: a conservative ratio means we budget FEWER chars than really fit,
     /// so the window is never crossed.
     ///
-    /// Measured on macOS 27.0: the real fixed prompt is ~462 tokens (persona 214 +
-    /// tools 117 + grounding 102 + goal 16 + overhead 13) vs the old
-    /// `liveReserveTokens` of 3000. With a 1024-token generation reserve, Mini
-    /// goes from ~857 tokens of replay (the conservative heuristic) to ~2610 —
-    /// a 3× uplift.
+    /// Measured on macOS 27.0: the real M1K3 persona alone is 1,466 tokens
+    /// (5,920 chars) — 36% of Mini's 4,096-token window. With a 1,024-token
+    /// generation reserve, Mini goes from ~857 tokens of replay (the conservative
+    /// heuristic) to ~1,606 tokens (~5,621 chars) — a 1.9× uplift. The early
+    /// standalone probe used a compact 214-token test persona and claimed 3×;
+    /// the live launch log corrected it.
     public static func measuredMiniBudget(
         reservedTokens: Int,
         generationTokens: Int = 1024
