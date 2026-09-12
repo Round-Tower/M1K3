@@ -31,8 +31,13 @@ import Testing
 /// nonce (`private-7.example`, `public-9.example`) so the gate's lookup of
 /// THAT host can be routed back to THIS load while other tests run alongside.
 /// `@unchecked Sendable`: the delivery timers below capture `self` into
-/// `@Sendable` dispatch blocks. The only mutable state is `stopped`, read and
-/// written under `lock` in one step and never held across a client callback.
+/// `@Sendable` dispatch blocks. Two pieces of mutable state: `stopped`, read
+/// and written under `lock` in one step and never held across a client
+/// callback; and `pendingRedirect`, written ONCE in `redirect(toHost:path:)`
+/// strictly before `self` is published into `registry` (under its lock) and
+/// read only from deliveries dispatched after a `registry` lock — the
+/// unlock → lock → GCD enqueue chain is the happens-before edge. Keep that
+/// order: registering first, or delivering outside a registry pass, breaks it.
 private final class StubTransport: URLProtocol, @unchecked Sendable {
     /// How long a 302 waits after the gate has CONSULTED THE RESOLVER for its
     /// target before it is delivered as the final response. The resolver stub
@@ -129,7 +134,7 @@ private final class StubTransport: URLProtocol, @unchecked Sendable {
             // delivered once the gate has decided (`gateConsulted`), or by the
             // valve. A followed hop calls `stopLoading` on this load first.
             DispatchQueue.global().asyncAfter(deadline: .now() + Self.unsignalledValve) { [self] in
-                Self.registry.withLock { $0.waiting[host]?.removeAll { $0 === self } }
+                Self.registry.withLock { $0.waiting.removeValue(forKey: host) }
                 deliverPendingRedirect()
             }
         }
