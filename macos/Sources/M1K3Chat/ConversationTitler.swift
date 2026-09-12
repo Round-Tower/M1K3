@@ -18,9 +18,11 @@
 //  trailer or a long spaceless run (the CamelCase mangle seen live), and
 //  `ProviderConversationTitler.title` runs `FollowUpSplit.split` on the assistant text before
 //  building the prompt as a belt fix, in case the trailer is ever still attached on some path.
-//  Review: Kev + claude-fable-5.1, 2026-09-12 — review 13 on #288: the coarse "any bracket" reject
-//  left every code-flavoured title untitled for good; only a JSON list/object opening on a quote
-//  (`["` / `{"`) reads as the trailer's shape now. Pinned both ways in ConversationTitlerTests.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — reviews 13/14 on #288: the shape guards (any bracket,
+//  then a JSON opening, and the 25+ character run) each left a real code title untitled for good —
+//  358 identifiers in the app sources are 25+ characters, so no length separates a mangled sentence
+//  from a class name. `TitleSanitizer` now rejects the trailer WORD only (both live witnesses carry
+//  it, mangled or not); `longIdentifierTitleStillPasses` / `jsonFlavouredTitleStillPasses` pin it.
 //
 
 import Foundation
@@ -100,9 +102,13 @@ public enum TitleSanitizer {
         // #285: the model's own "FOLLOWUPS: [...]" trailer habit walking into
         // a title — sometimes intact ("… FOLLOWUPS: [\"What's new with"),
         // sometimes with every space stripped first (a CamelCase mangle that
-        // reads as one unbroken run). Untitled beats mangled, so both shapes
-        // are a hard reject rather than a further scrub.
-        guard !containsFollowUpsTrailer(line), !hasOverlongRun(line) else {
+        // still spells "Followups"). Untitled beats a trailer, so the word is
+        // a hard reject rather than a further scrub. The word is the ONLY
+        // test: every shape guard tried (any bracket, a JSON opening, a 25+
+        // character run) ate a real code title — "Debugging array[0] index",
+        // "Fixing MemoryDistillationCoordinator" — for good, since a rejected
+        // title retries into the same rejection (reviews 13/14 on #288).
+        guard !containsFollowUpsTrailer(line) else {
             return nil
         }
 
@@ -122,20 +128,9 @@ public enum TitleSanitizer {
     }
 
     /// The trailer, whichever case it survived in — the two live titles carried
-    /// "FOLLOWUPS:" and a CamelCase-mangled "Followups:" respectively — or its
-    /// bare JSON shape (a list or object opening on a quote) when the word
-    /// itself was mangled away. A lone bracket is NOT the trailer: chats here
-    /// are full of code, and "Debugging array[0] index" is a fine title
-    /// (review 13 on #288).
+    /// "FOLLOWUPS:" and a CamelCase-mangled "Followups:" respectively. The
+    /// mangle keeps the letters, so the word survives it.
     private static func containsFollowUpsTrailer(_ line: String) -> Bool {
         line.range(of: "FOLLOWUPS", options: .caseInsensitive) != nil
-            || line.contains("[\"") || line.contains("{\"")
-    }
-
-    /// A run of 25+ non-whitespace characters: the CamelCase mangle in
-    /// isolation, where every space between words was dropped and the words
-    /// themselves don't happen to spell "Followups".
-    private static func hasOverlongRun(_ line: String) -> Bool {
-        line.split(whereSeparator: \.isWhitespace).contains { $0.count > 24 }
     }
 }

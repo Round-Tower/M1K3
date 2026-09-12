@@ -61,12 +61,19 @@ struct TitleSanitizerTests {
         #expect(TitleSanitizer.sanitize(#"CorkEngineerWithHoneyTombMemoryFactsFollowups: ["What else"#) == nil)
     }
 
-    @Test("rejects a run of 25+ non-whitespace characters even without the word FOLLOWUPS")
-    func rejectsLongCamelCaseRun() {
-        // The second live title's shape in isolation: a model that drops all
-        // spacing produces one long unreadable run — the same CamelCase mangle,
-        // caught by length rather than by the word "Followups".
-        #expect(TitleSanitizer.sanitize("ThisIsAnExtremelyLongIdentifierWithNoSpacesAtAll") == nil)
+    @Test("a title carrying a long identifier is a title — chats here are about this codebase")
+    func longIdentifierTitleStillPasses() {
+        // Review 14 on #288: a 25-char run guard rejected any title naming a
+        // class or a test (358 identifiers in the app sources are 25+ chars),
+        // and a rejected title retries into the same rejection every exchange.
+        #expect(
+            TitleSanitizer.sanitize("Fixing MemoryDistillationCoordinator")
+                == "Fixing MemoryDistillationCoordinator"
+        )
+        #expect(
+            TitleSanitizer.sanitize("Debugging wiringNoteDoesNotSpendTheGroundingBudget")
+                == "Debugging wiringNoteDoesNotSpendTheGroundingBudget"
+        )
     }
 
     @Test("a normal multi-word title is unaffected by the FOLLOWUPS/run guards")
@@ -83,10 +90,12 @@ struct TitleSanitizerTests {
         #expect(TitleSanitizer.sanitize("Fixing the {} JSON parser") == "Fixing the {} JSON parser")
     }
 
-    @Test("a bare JSON-list trailer is rejected even without the word FOLLOWUPS")
-    func rejectsBareJSONListTrailer() {
-        #expect(TitleSanitizer.sanitize(#"M1K3 and Kev's chat: ["What's new"#) == nil)
-        #expect(TitleSanitizer.sanitize(#"Quiet code chat {"next": "What else"#) == nil)
+    @Test("a JSON-flavoured title keeps its quotes and braces")
+    func jsonFlavouredTitleStillPasses() {
+        // Review 14 on #288: the trailer is the WORD; neither live witness needed
+        // a shape guard, and every shape guard tried ate a real code title.
+        #expect(TitleSanitizer.sanitize(#"Parsing {"key": "value"} bug"#) == #"Parsing {"key": "value"} bug"#)
+        #expect(TitleSanitizer.sanitize(#"Debugging data["user_id"] lookup"#) == #"Debugging data["user_id"] lookup"#)
     }
 }
 
