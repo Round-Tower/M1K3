@@ -629,7 +629,7 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
             toolNames: toolNames,
             // Exemplars ride the CACHED render — they cost once per launch,
             // not per turn. The fallback (inline instructions) stays compact.
-            personaText: M1K3Persona.systemPrompt(includeExemplars: true)
+            personaText: M1K3Persona.systemPrompt(exemplars: personaExemplars)
         )
     }
 

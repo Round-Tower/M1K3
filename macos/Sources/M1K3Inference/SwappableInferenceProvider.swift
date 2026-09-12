@@ -68,6 +68,10 @@ extension SwappableInferenceProvider: ToolCallingProvider {
         (active as? ToolCallingProvider)?.nativePromptShape ?? .groundingInUser
     }
 
+    public var personaExemplars: PersonaExemplars {
+        (active as? ToolCallingProvider)?.personaExemplars ?? .voice
+    }
+
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
         guard let toolProvider = active as? ToolCallingProvider else {
             // Defensive against the swap RACE, not against logic: `active` may

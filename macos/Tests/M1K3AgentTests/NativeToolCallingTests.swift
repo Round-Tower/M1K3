@@ -15,6 +15,8 @@
 //  speaks structure instead of text.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-10, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — the fake declares `personaExemplars`, and
+//  `systemTurnFollowsProviderExemplars` pins that the system turn carries the provider's exemplar set.
 
 import Foundation
 @testable import M1K3Agent
@@ -32,6 +34,7 @@ final class FakeToolCallingProvider: ToolCallingProvider, @unchecked Sendable {
     let name = "fake-tool"
     let isAvailable = true
     let supportsToolCalls: Bool
+    let personaExemplars: PersonaExemplars
 
     private let handler: @Sendable (Int, [ToolMessage], [ToolDefinition]) -> ToolTurn
     private let lock = NSLock()
@@ -42,9 +45,11 @@ final class FakeToolCallingProvider: ToolCallingProvider, @unchecked Sendable {
 
     init(
         supportsToolCalls: Bool = true,
+        personaExemplars: PersonaExemplars = .voice,
         handler: @escaping @Sendable (Int, [ToolMessage], [ToolDefinition]) -> ToolTurn
     ) {
         self.supportsToolCalls = supportsToolCalls
+        self.personaExemplars = personaExemplars
         self.handler = handler
     }
 
@@ -149,6 +154,24 @@ private func call(_ name: String, _ args: [String: JSONValue]) -> ToolTurn {
 // MARK: - Tests
 
 struct NativeToolCallingTests {
+    @Test("the system turn carries the exemplar set the PROVIDER declares: the leak-decline beat for pocket only")
+    func systemTurnFollowsProviderExemplars() async throws {
+        // The persona text must match the provider's cached prefix byte for byte,
+        // so the agent asks the provider rather than hard-coding a set (2026-09-12).
+        for set in [PersonaExemplars.voice, .voiceAndLeakDecline] {
+            let provider = FakeToolCallingProvider(personaExemplars: set) { _, _, _ in .text("done") }
+            let agent = LocalAgent(inferenceProvider: provider, tools: [RecordingTool()])
+            _ = try await agent.run(goal: "x")
+            let opening = try #require(provider.receivedTranscripts.first?.first)
+            guard case let .system(persona) = opening else {
+                Issue.record("the native transcript must open with the persona")
+                continue
+            }
+            #expect(persona.contains(M1K3Persona.leakDeclineBeat) == (set == .voiceAndLeakDecline))
+            #expect(persona.contains("by example"))
+        }
+    }
+
     @Test("executes a structured tool call, then concludes on .text")
     func executeThenConclude() async throws {
         let provider = FakeToolCallingProvider { index, _, _ in

@@ -11,6 +11,8 @@
 //  a web-influenced proposal still has to get past the human.
 //
 //  Signed: Kev + claude-fable-5, 2026-08-23, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — the description says "never for a web page or a
+//  document": Lil sent "code me a tiny HTML page" here 3/4 as a bash heredoc; 1/12 with this line (replay, Lil).
 
 import Foundation
 import M1K3Agent
@@ -35,7 +37,8 @@ public struct ProposeScriptTool: AgentTool {
             + "one-click install-and-run. Use this WHENEVER the user asks you to write, create, or "
             + "make a runnable script (shell/bash/zsh) — call it with the full source instead of "
             + "pasting the script in a code block, so they get a real tool in their kit, not text "
-            + "to copy. Nothing runs until they approve it. Keep scripts short, readable, single-purpose."
+            + "to copy. Nothing runs until they approve it. Keep scripts short, readable, single-purpose. "
+            + "Never for a web page or a document — write those as a ```html or ```markdown block in your reply."
     public let parameters = [
         ToolParameter(name: "name", description: "file name for the script, e.g. disk_report.sh"),
         ToolParameter(name: "content", description: "the full script source, starting with a shebang"),

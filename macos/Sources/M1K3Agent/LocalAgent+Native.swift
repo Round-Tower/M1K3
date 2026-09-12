@@ -24,6 +24,8 @@
 //  `nativePromptShape`. `.groundingInUser` is the historical pair byte-for-byte;
 //  `.groundingInSystem` (lfm2) appends the grounding to the system turn. Persona stays the
 //  token prefix in both. Tested in NativeGoalOrderTests.
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — the system turn renders the provider's exemplar
+//  set, so the native loop's persona matches the cached prefix byte for byte on every tier.
 
 import Foundation
 import M1K3Inference
@@ -66,6 +68,7 @@ extension LocalAgent {
                 images: images,
                 grounding: grounding,
                 shape: provider.nativePromptShape,
+                exemplars: provider.personaExemplars,
                 onEvent: onEvent,
                 onConclusionToken: onConclusionToken,
                 onReasoningToken: onReasoningToken
@@ -84,6 +87,7 @@ extension LocalAgent {
         images: [ImageAttachment] = [],
         grounding: String?,
         shape: NativePromptShape,
+        exemplars: PersonaExemplars,
         onEvent: (@Sendable (AgentLoopEvent) -> Void)?,
         onConclusionToken: (@Sendable (String) -> Void)?,
         onReasoningToken: (@Sendable (String) -> Void)?
@@ -99,9 +103,11 @@ extension LocalAgent {
         // that exact match is what lets the cache reuse the persona block at
         // iteration 0 (MLXToolTurnSession's cross-turn reuse).
         // Where the grounding goes is the provider's call (`nativePromptShape`):
-        // small models stop calling tools when it rides in the user turn.
+        // small models stop calling tools when it rides in the user turn. So is
+        // WHICH exemplars ride (`personaExemplars`) — it must match the cached
+        // prefix the provider built, or iteration 0 re-prefills the persona.
         var pendingMessages = Self.buildNativeMessages(
-            persona: M1K3Persona.systemPrompt(includeExemplars: true),
+            persona: M1K3Persona.systemPrompt(exemplars: exemplars),
             goal: goal,
             grounding: grounding,
             images: images,

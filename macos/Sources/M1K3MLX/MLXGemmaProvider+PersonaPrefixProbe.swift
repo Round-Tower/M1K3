@@ -42,7 +42,7 @@ extension MLXGemmaProvider {
         } catch {
             return "persona-prefix invariant: load failed — \(error)"
         }
-        let persona = M1K3Persona.systemPrompt(includeExemplars: true)
+        let persona = M1K3Persona.systemPrompt(exemplars: personaExemplars)
         let tools = [
             ToolDefinition(
                 name: "web_search",

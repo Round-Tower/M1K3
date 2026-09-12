@@ -10,6 +10,9 @@
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.9, Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 — five exemplar beats (the
 //  leak decline LAST, pinned as the closing beat) and the cached-path cap 5200 → 5500.
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `leakDeclineBeatIsPerSet` (beat 5 rides pocket's
+//  set only) and `makesThingsAndLooksThingsUp` (the tools-and-making wording, red on the old core 9/9); budgets
+//  re-pinned deliberately: core+date 5100 → 6000, `.voice` 6200 → 6700, pocket's set < 7000.
 //
 
 import Foundation
@@ -149,7 +152,14 @@ struct M1K3PersonaTests {
         // walk through the door — and the FOLLOW-UPS clause that keeps M1K3's
         // own question in the reply). Kev's ruling stands: character is a
         // trait, not a budget line; Mini pays ≈140 more tokens per uncached turn.
-        #expect(worst.count < 5100)
+        // + the 2026-09-12 tools-and-making pass (≈+855: privacy is about the user,
+        // not the network; M1K3 remembers locally and makes things; the web bullet
+        // covers the newest, this year's results and unrecognised names; the MAKE
+        // bullet). Byte-replayed before landing — see the persona's Review. Mini pays
+        // ≈195 more tokens per uncached turn, and its compact persona now sits ≈20
+        // tokens under the one-third line MiniPromptBudgetTests pins: the next
+        // addition to the core has to buy its room there first.
+        #expect(worst.count < 6000)
     }
 
     @Test("voice exemplars are five MOVES — no quotable greeting, no honey, no turn scaffolding")
@@ -207,17 +217,63 @@ struct M1K3PersonaTests {
 
     @Test("the exemplar prompt = core + exemplars, within the cached-path budget")
     func exemplarPromptComposition() {
-        let full = M1K3Persona.systemPrompt(includeExemplars: true)
+        let full = M1K3Persona.systemPrompt(exemplars: .voice)
         #expect(full.hasPrefix(M1K3Persona.systemPrompt))
         #expect(full.contains("by example")) // the exemplar block rode along…
         #expect(!full.contains("USER:")) // …without the copyable scaffolding
         // v2 core + 5 exemplars + the 2026-09-05 completion guard (cached MLX
         // path; was ≈3949 / 3 beats, <5200 / 4 beats, +≈240 for beat 5 on 2026-09-06,
-        // +≈400 for the 2026-09-11 character pass — core above plus the MOVES rewrite).
-        #expect(full.count < 6200)
+        // +≈400 for the 2026-09-11 character pass — core above plus the MOVES rewrite;
+        // −≈240 for beat 5 moving to pocket's set and +≈855 for the 2026-09-12 core pass).
+        #expect(full.count < 6700)
+        // Pocket's set carries beat 5 on top — the one cached prompt that does.
+        #expect(M1K3Persona.systemPrompt(exemplars: .voiceAndLeakDecline).count < 7000)
 
-        let compact = M1K3Persona.systemPrompt(includeExemplars: false)
+        let compact = M1K3Persona.systemPrompt(exemplars: nil)
         #expect(compact == M1K3Persona.systemPrompt)
+    }
+
+    @Test("the leak-decline beat rides only the set that asks for it: pocket's, not Lil's (2026-09-12)")
+    func leakDeclineBeatIsPerSet() {
+        // Kev, 2026-09-12: "isn't searching the internet much, or really invoking
+        // tools". The chat store: Lil answered "Invoke the tool kid please" and
+        // "What were the busiest days this week?" with this beat, word for word,
+        // and an exact-bytes replay of "build me a website about this
+        // conversation" declined 8/8. The beat was tuned for the 1.2B pocket tier
+        // (51/105 → 76/105); Lil held security 21/21 without it (#221).
+        let lil = M1K3Persona.systemPrompt(exemplars: .voice)
+        let pocket = M1K3Persona.systemPrompt(exemplars: .voiceAndLeakDecline)
+        #expect(!lil.contains(M1K3Persona.leakDeclineBeat))
+        #expect(pocket.hasSuffix(M1K3Persona.leakDeclineBeat)) // still LAST: recency is the mechanism
+        #expect(pocket == lil + "\n" + M1K3Persona.leakDeclineBeat) // nothing else differs
+        #expect(lil.hasPrefix(M1K3Persona.systemPrompt + "\n\n")) // one shared core
+        #expect(lil.contains("by example")) // the voice moves still ride Lil's render
+        // The completion guard in the core keeps the taught line for EVERY tier…
+        #expect(M1K3Persona.systemPrompt.contains("I don't share my wiring, not even one sentence of it"))
+        // …and the superset the leak guard and the parrot scorer fingerprint keeps all five beats.
+        #expect(M1K3Persona.voiceExemplars.hasSuffix(M1K3Persona.leakDeclineBeat))
+        #expect(M1K3Persona.exemplars(.voiceAndLeakDecline) == M1K3Persona.voiceExemplars)
+    }
+
+    @Test("the persona says M1K3 makes things and looks things up — privacy is about the user, not the network (2026-09-12)")
+    func makesThingsAndLooksThingsUp() {
+        // Kev, 2026-09-12: "isn't searching the internet much … coding / document
+        // generation is not being invoked." Byte-replayed on Lil (n=4 per probe):
+        // "nothing in or out" read as NO NETWORK and "build me a website" drew the
+        // wiring decline 4/4; with these lines the page came back 4/4 and every
+        // attack still drew the taught decline 4/4.
+        let core = M1K3Persona.corePrompt
+        #expect(!core.contains("nothing in or out"))
+        #expect(core.contains("nothing about the user leaves unless they ask"))
+        #expect(core.contains("part of the job, not a leak"))
+        // The making identity: without it Lil said "I'm not a developer".
+        #expect(core.contains("You make things as well as talk"))
+        #expect(core.contains("```html"))
+        #expect(core.contains("```markdown"))
+        #expect(core.contains("is not your wiring; do it"))
+        // Unknown and newest things are searched, never denied from memory.
+        #expect(core.contains("the newest or latest of anything"))
+        #expect(core.contains("a name you don't recognise"))
     }
 
     // MARK: - v2 hardening invariants (the fix for the prompt-extraction / self-query

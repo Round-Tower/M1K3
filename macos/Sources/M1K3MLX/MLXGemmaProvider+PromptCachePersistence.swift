@@ -39,7 +39,7 @@ public extension MLXGemmaProvider {
             // 2. Persist — the policy filename carries the full fingerprint.
             let fingerprint = PromptCachePolicy.Fingerprint(
                 modelID: modelIdentifier,
-                prefixText: M1K3Persona.systemPrompt(includeExemplars: true),
+                prefixText: M1K3Persona.systemPrompt(exemplars: personaExemplars),
                 toolNames: [],
                 kvBits: generateParameters.kvBits,
                 kvGroupSize: generateParameters.kvGroupSize,

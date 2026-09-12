@@ -11,6 +11,8 @@
 //  bundle's metallib — so these mappers carry the regression coverage.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-10, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `leakDeclineExemplarIsPocketOnly` pins the
+//  dialect → exemplar-set mapping (lfm2 only).
 
 import Foundation
 import M1K3Inference
@@ -510,5 +512,16 @@ struct LFM2ToolBlockTests {
         let out = MLXToolMapping.templateInputs(chat: chat, specs: nil, format: .lfm2)
         #expect(out.specs == nil)
         #expect(out.chat[0].content == "PERSONA")
+    }
+
+    @Test("only the lfm2 dialect (the pocket tier) takes the leak-decline exemplar (2026-09-12)")
+    func leakDeclineExemplarIsPocketOnly() {
+        // Tuned and measured on LFM2.5-1.2B; on the 4B Lil it recited the decline
+        // to innocent tool requests. Extend only with a same-session A/B.
+        #expect(MLXGemmaProvider.personaExemplars(forDialect: .lfm2) == .voiceAndLeakDecline)
+        for dialect in [ToolCallFormat.json, .xmlFunction, .gemma, .gemma4] {
+            #expect(MLXGemmaProvider.personaExemplars(forDialect: dialect) == .voice)
+        }
+        #expect(MLXGemmaProvider.personaExemplars(forDialect: nil) == .voice)
     }
 }

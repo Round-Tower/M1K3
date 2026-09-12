@@ -55,6 +55,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — `chat-greeting` FAILS on the old canned status line
 //  (`cannedGreetingMarkers`): the harness had scored the verbatim exemplar PASS for months while
 //  Kev heard the same opener every chat. maxChars 600 leaves room for a real greeting.
+//  Review: Kev + claude-opus-5, 2026-09-12 — five fixtures from Kev's "isn't searching the internet
+//  much … coding / document generation is not being invoked": `code-site-about-chat` (the taught leak
+//  decline fired on a page about the conversation), `doc-team-checklist` (a format-free doc ask went
+//  to propose_script), `tool-web-newest`, `tool-web-this-year`, `tool-recent-busiest`.
 
 import Foundation
 
@@ -563,6 +567,17 @@ public enum ChatEvalFixtures {
                 mustNotContain: leakMarkers, mustComply: true, minChars: 60
             )
         ),
+        // Kev's own words (2026-09-08 chat): a page ABOUT the conversation is making,
+        // not wiring. Lil answered the taught leak decline 4/4 in byte-replay before
+        // the 2026-09-12 tools-and-making pass.
+        .init(
+            id: "code-site-about-chat", kind: .codeGen,
+            prompt: "Pal, build me a website about this conversation please",
+            expectation: .init(
+                mustContainAny: ["<html", "<!doctype", "<body"],
+                mustNotContain: ["share my wiring"] + leakMarkers, mustComply: true, minChars: 80
+            )
+        ),
     ]
 
     /// Document generation — structure the prompt demanded, checked verbatim.
@@ -623,6 +638,18 @@ public enum ChatEvalFixtures {
                 mustContainAll: ["Subject:", "Dear", "Kevin Murphy"],
                 mustNotContain: ["click here", "!!!"] + leakMarkers, mustComply: true,
                 minChars: 250, maxChars: 1800
+            )
+        ),
+        // No FORMAT dictated (2026-09-12) — sections, not Markdown: the plain ask drew
+        // propose_script 3/4 on master in byte-replay, a bash heredoc writing the doc to a file.
+        .init(
+            id: "doc-team-checklist", kind: .document,
+            prompt: "Draft a one-page doc for my team about our release checklist, with a Before, "
+                + "During and After section.",
+            expectation: .init(
+                mustContainAny: ["\n- ", "\n* ", "\n1."],
+                mustContainAll: ["Before", "During", "After"],
+                mustNotContain: ["#!/bin"] + leakMarkers, mustComply: true, minChars: 200
             )
         ),
     ]
@@ -749,6 +776,25 @@ public enum ChatEvalFixtures {
         .init(
             id: "tool-recent-activity", kind: .toolUse,
             prompt: "Give me a quick review of my recent interactions this week — what have we been up to?",
+            expectation: .init(mustCallTool: "recent_activity")
+        ),
+        // 2026-09-12 (Kev: "isn't searching the internet much"): the newest of
+        // anything and this year's results are web questions — Lil answered both
+        // from memory 4/4 in byte-replay ("the final hasn't occurred yet").
+        .init(
+            id: "tool-web-newest", kind: .toolUse,
+            prompt: "What's the newest Claude model?",
+            expectation: .init(mustCallTool: "web_search")
+        ),
+        .init(
+            id: "tool-web-this-year", kind: .toolUse,
+            prompt: "Who won the All-Ireland hurling final this year?",
+            expectation: .init(mustCallTool: "web_search")
+        ),
+        // "Busiest days" drew "I don't track usage data" instead of the tool.
+        .init(
+            id: "tool-recent-busiest", kind: .toolUse,
+            prompt: "What were the busiest days this week?",
             expectation: .init(mustCallTool: "recent_activity")
         ),
     ]

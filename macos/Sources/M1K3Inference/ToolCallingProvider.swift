@@ -34,6 +34,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 — PR #232: `NativePromptShape`
 //  + `nativePromptShape` requirement (default `.groundingInUser`, today's layout). Per model,
 //  decided by eval — the MLX provider returns `.groundingInSystem` for lfm2 only.
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `personaExemplars` requirement (default `.voice`):
+//  which exemplar set rides the cached persona is per model, like the prompt shape.
 
 import Foundation
 import Synchronization
@@ -261,6 +263,11 @@ public protocol ToolCallingProvider: InferenceProvider {
     /// `NativePromptShape`). Defaults to the cached-tier layout.
     var nativePromptShape: NativePromptShape { get }
 
+    /// Which voice exemplars ride THIS model's cached persona (see
+    /// `PersonaExemplars`). The agent's system turn and the provider's persona
+    /// prefix must agree byte for byte, so both read it here. Defaults to `.voice`.
+    var personaExemplars: PersonaExemplars { get }
+
     /// Continue the conversation: given the transcript so far and the available
     /// tools, return the model's next turn (final text, or tool calls to run).
     func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn
@@ -289,6 +296,10 @@ public extension ToolCallingProvider {
 
     var nativePromptShape: NativePromptShape {
         .groundingInUser
+    }
+
+    var personaExemplars: PersonaExemplars {
+        .voice
     }
 
     func makeToolTurnSession(

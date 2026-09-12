@@ -55,6 +55,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85 — #264: `lateToolCallFormat` +
 //  `dialectSource`, the pure halves of resolving the dialect AFTER the loader has config.json
 //  (a never-downloaded repo with no family word ran a whole eval on the ReAct floor).
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `personaExemplars`: lfm2 (pocket) takes the
+//  leak-decline exemplar, every other dialect the voice set; Lil had been reciting the decline at making requests.
 
 import Foundation
 import M1K3Inference
@@ -441,6 +443,18 @@ extension MLXGemmaProvider: ToolCallingProvider {
     /// table only with a same-session A/B behind it.
     public var nativePromptShape: NativePromptShape {
         resolvedToolCallFormat == .lfm2 ? .groundingInSystem : .groundingInUser
+    }
+
+    /// Which voice exemplars ride this model's cached persona (see
+    /// `PersonaExemplars`). The leak-decline beat is LFM2's — measured on the
+    /// pocket tier's 1.2B; the 4B Lil recited it to innocent tool requests.
+    /// Extend this table only with a same-session A/B behind it.
+    public var personaExemplars: PersonaExemplars {
+        Self.personaExemplars(forDialect: resolvedToolCallFormat)
+    }
+
+    static func personaExemplars(forDialect dialect: ToolCallFormat?) -> PersonaExemplars {
+        dialect == .lfm2 ? .voiceAndLeakDecline : .voice
     }
 
     /// Run one model turn over the transcript + tools, returning structure. The
