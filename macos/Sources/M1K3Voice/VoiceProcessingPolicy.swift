@@ -22,6 +22,14 @@
 //  measured on this Mac with a standalone AVAudioEngine probe; the phone side
 //  is unchanged by construction). Prior: Unknown.
 //
+//  Review: Kev + claude-opus-4-8, 2026-09-12 (later) — VOICE PROCESSING OFF ON
+//  THE MAC. CoreAudio's own log named it: enabling VPIO builds an
+//  `AUVPAggregate` (input+output) the engine binds to and the recogniser
+//  starves on (ch=9), on the built-in mic AND a headset — not a Bluetooth-only
+//  bug. The transport read and the format back-out both chased a symptom; the
+//  cause is VPIO itself on 27.0. The only config that held all night was off.
+//  Mute-while-speaking covers echo. Confidence 0.85 (verify-by-launch).
+//
 //  Review: Kev + claude-opus-4-8, 2026-09-12 — fail SAFE. A fresh-launch drive
 //  on the reconnected headset STILL turned VPIO on and starved the recogniser:
 //  `defaultInputIsBluetooth()` came back not-true inside the sandbox (the HAL
@@ -47,20 +55,22 @@ public enum VoiceProcessingPolicy {
         #endif
     }
 
-    /// Turn voice processing on for this listen? On the Mac a Bluetooth input
-    /// (HFP) starves the tap under VPIO and needs no echo cancellation — the
-    /// speaker sits on the user's head. So the Mac enables VP ONLY when it can
-    /// POSITIVELY confirm the input is not Bluetooth (`inputIsBluetooth ==
-    /// false`, the common built-in mic). An UNKNOWN transport (`nil` — the
-    /// sandbox refused the CoreAudio read, or a just-reconnected headset hasn't
-    /// settled) fails SAFE to VP off: a wrongly-off built-in mic merely loses
-    /// echo cancellation, but a wrongly-ON headset starves the recogniser and
-    /// parks voice mode mutely (the launch snag). Positive knowledge, not
-    /// optimism.
-    public static func shouldEnable(platform: Platform, inputIsBluetooth: Bool?) -> Bool {
+    /// Turn voice processing on for this listen? NEVER on the Mac (2026-09-12,
+    /// macOS 27.0). Enabling Apple's voice-processing I/O builds a system
+    /// AGGREGATE device (`AUVPAggregate`: input + output for echo cancellation)
+    /// that the engine's input node then binds to and the recogniser STARVES on
+    /// — a 9-channel format, `audioDuration 0`, twelve empty listens in 400 ms,
+    /// voice mode parked mutely. It reproduced on the built-in mic AND a
+    /// Bluetooth headset; the one configuration that held all night was VP off.
+    /// The `inputIsBluetooth` hint is retained for the caller's log but no
+    /// longer gates the Mac (it read the aggregate's transport in-sandbox, not
+    /// the device's, so it could not be trusted). Echo is handled by muting the
+    /// mic while M1K3 speaks, not by VPIO. iOS keeps VPIO — its path is
+    /// device-verified and does not exhibit the aggregate starve.
+    public static func shouldEnable(platform: Platform, inputIsBluetooth _: Bool?) -> Bool {
         switch platform {
         case .mobile: true
-        case .mac: inputIsBluetooth == false
+        case .mac: false
         }
     }
 

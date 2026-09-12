@@ -17,6 +17,50 @@ import Foundation
 #endif
 
 public enum InputDeviceTransport {
+    /// The system's current default INPUT device id, or nil off-macOS / on a
+    /// failed read. `AVAudioEngine` binds its input node to whatever device is
+    /// resolved at engine-init and does NOT follow a later default change — on
+    /// this Mac it inherited a multi-channel system aggregate that STARVES the
+    /// recogniser (ch=7/9, `audioDuration 0`), while the headset the user
+    /// actually selected sits unused. Re-pinning the input node to this id per
+    /// listen keeps the engine on the real device (2026-09-12).
+    public static func defaultInputDeviceID() -> AudioDeviceID? {
+        #if os(macOS)
+            var address = AudioObjectPropertyAddress(
+                mSelector: kAudioHardwarePropertyDefaultInputDevice,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var device = AudioDeviceID(0)
+            var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+            guard AudioObjectGetPropertyData(
+                AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &device
+            ) == noErr, device != 0 else { return nil }
+            return device
+        #else
+            return nil
+        #endif
+    }
+
+    /// A device's human name (for the diagnostic log), or nil.
+    public static func deviceName(_ device: AudioDeviceID) -> String? {
+        #if os(macOS)
+            var address = AudioObjectPropertyAddress(
+                mSelector: kAudioObjectPropertyName,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var name: CFString = "" as CFString
+            var size = UInt32(MemoryLayout<CFString>.size)
+            let status = withUnsafeMutablePointer(to: &name) {
+                AudioObjectGetPropertyData(device, &address, 0, nil, &size, $0)
+            }
+            return status == noErr ? (name as String) : nil
+        #else
+            return nil
+        #endif
+    }
+
     /// `true` for a Bluetooth (HFP/LE) default input, `false` for anything else
     /// readable, `nil` when the transport can't be read (no input device, a
     /// property failure) — the policy treats nil as "not Bluetooth".

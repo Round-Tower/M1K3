@@ -162,6 +162,9 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// only fires when it CHANGES — a re-arm storm otherwise buries it under
     /// the os_log rate limiter (2026-09-12).
     private var lastLoggedVPDecision: String?
+    /// The last input-device census we logged (dedup, same reason as
+    /// `lastLoggedVPDecision`).
+    private var lastLoggedInputDevice: String?
     /// Why the current/most recent session ended without a word, when the
     /// recogniser (not the caller) ended it — see `lastFailure`. Guarded by `lock`.
     private var lastFailureMessage: String?
@@ -613,6 +616,15 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     @discardableResult
     private func installInputTap() -> Bool {
         let inputNode = audioEngine.inputNode
+        // Keep the engine on the device the USER selected. `AVAudioEngine`
+        // resolves its input device once and does not follow a later default
+        // change; on this Mac (macOS 27.0) the input node inherited a
+        // multi-channel system aggregate (`~:AMS2_Aggregate`, ch=7/9) that
+        // STARVES the recogniser — `audioDuration 0`, the instant-endpoint
+        // storm — while the selected headset sat unused. Re-pinning per listen
+        // (engine stopped here) is the fix `VoiceProcessingPolicy` alone could
+        // not be: no VP toggle unbinds a wrongly-chosen device. 2026-09-12.
+        pinInputToDefaultDevice(inputNode)
         // BEFORE reading the format: voice processing CHANGES it (VPIO renders
         // mono at the device rate), so a format read first would install a tap
         // that no longer matches the node. Whether to have it on at all is
@@ -746,6 +758,36 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// devices, and a plain mic tap is strictly better than no mic. Idempotent —
     /// the route-change handler reinstalls taps and must not re-toggle a live
     /// setting (toggling requires a stopped engine).
+    /// Force the engine's input AudioUnit onto the current system default
+    /// input device, and log what it was vs is (deduped, so a re-arm storm
+    /// can't bury the line under the os_log rate limiter). Best-effort: a
+    /// failed read/set leaves the engine as-is (the pre-2026-09-12 behaviour).
+    private func pinInputToDefaultDevice(_ inputNode: AVAudioInputNode) {
+        #if os(macOS)
+            guard let wanted = InputDeviceTransport.defaultInputDeviceID() else { return }
+            guard let unit = inputNode.audioUnit else { return }
+            var current = AudioDeviceID(0)
+            var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+            let readStatus = AudioUnitGetProperty(
+                unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &current, &size
+            )
+            let census = "wanted=\(wanted)(\(InputDeviceTransport.deviceName(wanted) ?? "?")) engine=\(readStatus == noErr ? String(current) : "err\(readStatus)")"
+            if census != lastLoggedInputDevice {
+                lastLoggedInputDevice = census
+                Self.log.notice("stt input device \(census, privacy: .public)")
+            }
+            guard readStatus != noErr || current != wanted else { return }
+            var target = wanted
+            let setStatus = AudioUnitSetProperty(
+                unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &target,
+                UInt32(MemoryLayout<AudioDeviceID>.size)
+            )
+            if setStatus != noErr {
+                Self.log.error("stt could not pin input device \(wanted, privacy: .public): \(setStatus, privacy: .public)")
+            }
+        #endif
+    }
+
     private func enableVoiceProcessing(on inputNode: AVAudioInputNode) {
         guard !inputNode.isVoiceProcessingEnabled else { return }
         do {
