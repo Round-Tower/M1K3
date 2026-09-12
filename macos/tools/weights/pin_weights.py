@@ -222,7 +222,7 @@ def swift_int(value: int) -> str:
     return "".join(reversed(digits))
 
 
-def swift_literal(pins: dict[str, tuple[str, dict[str, dict]]]) -> str:
+def swift_literal(pins: dict[str, tuple[str, dict[str, dict], str]]) -> str:
     lines = [
         "//",
         "//  PinnedWeights.swift",
@@ -294,7 +294,7 @@ def swift_literal(pins: dict[str, tuple[str, dict[str, dict]]]) -> str:
     return "\n".join(lines)
 
 
-def json_manifest(pins: dict[str, tuple[str, dict[str, dict]]]) -> str:
+def json_manifest(pins: dict[str, tuple[str, dict[str, dict], str]]) -> str:
     """The machine-readable twin of PinnedWeights.swift.
 
     Kept byte-derived from the same `pins` structure as the Swift output so the
@@ -324,6 +324,16 @@ def json_manifest(pins: dict[str, tuple[str, dict[str, dict]]]) -> str:
     return json.dumps(document, indent=2, sort_keys=False) + "\n"
 
 
+def orphan_file_notes(
+    pins: dict[str, tuple[str, dict[str, dict], str]],
+    notes: dict[tuple[str, str], str],
+) -> list[tuple[str, str]]:
+    """FILE_NOTES keys that name no pinned (repo, file). A renamed file or a
+    re-pinned repo would otherwise drop its note silently — the exact loss
+    FILE_NOTES exists to prevent (#223)."""
+    return sorted(key for key in notes if key[1] not in pins.get(key[0], ("", {}, ""))[1])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -338,6 +348,8 @@ def main() -> None:
         repo: (*collect(repo, cache), BASE_NAMES[cache])
         for repo, cache in SHIPPED_REPOS.items()
     }
+    if orphans := orphan_file_notes(pins, FILE_NOTES):
+        sys.exit(f"FILE_NOTES name files that are no longer pinned: {orphans} — move or drop the note")
     outputs = {OUT: swift_literal(pins), JSON_OUT: json_manifest(pins)}
 
     if args.check:

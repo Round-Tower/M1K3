@@ -16,6 +16,8 @@
 //  releases only after the await returns, so "not held for the lookup" is a
 //  structural fact under any scheduler load; a 30 s safety valve turns a
 //  regression into a failure instead of a hung runner. Confidence now 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-12 — #269: CGNAT / multicast / reserved IPv4 pinned
+//  both sides of each boundary, as a literal, a URL host and an IPv4-mapped answer.
 
 import Foundation
 @testable import M1K3Preview
@@ -123,6 +125,27 @@ struct WebURLPolicyTests {
         #expect(!WebURLPolicy.isPrivateAddress("::ffff:93.184.216.34"))
         #expect(!WebURLPolicy.isPrivateAddress("2606:4700:4700::1111"))
         #expect(!WebURLPolicy.isPrivateAddress("")) // nothing to judge — the fetch fails on its own
+    }
+
+    @Test("CGNAT, multicast, reserved and broadcast IPv4 are never public — as a host or as a DNS answer (#269)")
+    func nonPublicIPv4Blocks() throws {
+        // 100.64.0.0/10, carrier-grade NAT (RFC 6598): Tailscale-style overlays live here
+        // (100.100.100.100 is Tailscale's own resolver).
+        #expect(WebURLPolicy.isPrivateAddress("100.64.0.1"))
+        #expect(WebURLPolicy.isPrivateAddress("100.100.100.100"))
+        #expect(WebURLPolicy.isPrivateAddress("100.127.255.255"))
+        #expect(!WebURLPolicy.isPrivateAddress("100.63.255.255")) // just below the block
+        #expect(!WebURLPolicy.isPrivateAddress("100.128.0.1")) // just above it
+        // 224.0.0.0/4 multicast (239.255.255.250 is SSDP — every smart TV answers it).
+        #expect(WebURLPolicy.isPrivateAddress("224.0.0.1"))
+        #expect(WebURLPolicy.isPrivateAddress("239.255.255.250"))
+        #expect(!WebURLPolicy.isPrivateAddress("223.255.255.255"))
+        // 240.0.0.0/4 reserved, including the limited broadcast address.
+        #expect(WebURLPolicy.isPrivateAddress("240.0.0.1"))
+        #expect(WebURLPolicy.isPrivateAddress("255.255.255.255"))
+        // The same table gates hosts and mapped answers.
+        #expect(try WebURLPolicy.isLocalOrPrivate(url("http://100.100.100.100")))
+        #expect(WebURLPolicy.isPrivateAddress("::ffff:100.64.0.1"))
     }
 
     private struct FakeResolver: HostResolving {
