@@ -239,7 +239,13 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         // So: reverted, and the real lesson is that Mini's flat register is not
         // an exemplar-starvation problem. Don't re-try this without new
         // evidence — try shorter/abstract voice guidance in the CORE instead.
-        instructions: @escaping @Sendable () -> String = { M1K3Persona.systemPrompt },
+        //
+        // Golden Gate (2026-09-12): Mini uses the TRIMMED prompt — the standard
+        // core WITHOUT the FOLLOW-UPS section. On a 4,096-token window, that
+        // section costs ~315 tokens (7.7%) for tap-to-send chips the MLX tiers
+        // (32K+) can afford and Mini cannot. Every token saved goes directly to
+        // conversation replay depth (+41% measured).
+        instructions: @escaping @Sendable () -> String = { M1K3Persona.miniSystemPrompt },
         nativeToolCalling: Bool = false,
         prewarmsBetweenTurns: Bool = false
     ) {

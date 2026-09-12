@@ -1911,7 +1911,7 @@ extension AppEnvironment {
         provider: AppleFoundationModelsProvider
     ) async {
         do {
-            let instrTokens = try await provider.tokenCount(forInstructions: M1K3Persona.systemPrompt)
+            let instrTokens = try await provider.tokenCount(forInstructions: M1K3Persona.miniSystemPrompt)
             measuredMiniReserve.withLock { $0 = instrTokens }
             let log = Logger(subsystem: "app.m1k3", category: "afm")
             log.notice("afm token budget: persona=\(instrTokens, privacy: .public) tokens (measured)")

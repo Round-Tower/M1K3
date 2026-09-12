@@ -124,6 +124,23 @@ public enum M1K3Persona {
         compactPrompt(for: .standard)
     }
 
+    /// Mini's system prompt: the standard core WITHOUT the FOLLOW-UPS section.
+    /// On Mini's 4,096-token window, the FOLLOW-UPS instructions cost ~315
+    /// tokens (7.7% of the entire context) for tap-to-send chips — a UI
+    /// convenience the MLX tiers (32K+ windows) can afford and Mini cannot.
+    /// Every token saved here goes directly to conversation replay depth.
+    public static var miniSystemPrompt: String {
+        compose(core: miniCorePrompt + "\n" + currentDateLine(Date()), profile: userProfile)
+    }
+
+    /// The standard core with the FOLLOW-UPS section removed. Derived, not
+    /// duplicated — `corePrompt` stays the single source of truth.
+    static let miniCorePrompt: String = {
+        let marker = "\n\n# FOLLOW-UPS"
+        guard let range = corePrompt.range(of: marker) else { return corePrompt }
+        return String(corePrompt[..<range.lowerBound])
+    }()
+
     /// Core + date line + the About-the-user block, for a variant — no exemplars.
     /// The compact prompt a path gets when nothing is cached (AFM every turn; an
     /// MLX turn whose persona seed could not be built).

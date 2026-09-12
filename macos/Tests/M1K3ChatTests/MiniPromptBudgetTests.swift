@@ -73,4 +73,31 @@ struct MiniPromptBudgetTests {
         )
         #expect(full < Self.miniContextWindow / 2)
     }
+
+    @Test("Mini's compact prompt omits FOLLOW-UPS — the 315-token UI convenience Mini can't afford")
+    func miniCompactOmitsFollowUps() {
+        let miniPrompt = M1K3Persona.miniSystemPrompt
+        let standardPrompt = M1K3Persona.systemPrompt
+        // Mini's prompt is strictly shorter — the FOLLOW-UPS section is dropped.
+        #expect(miniPrompt.count < standardPrompt.count)
+        #expect(!miniPrompt.contains("FOLLOWUPS"))
+        #expect(!miniPrompt.contains("# FOLLOW-UPS"))
+        // Everything else is preserved: identity, rules, voice, honesty, tools.
+        #expect(miniPrompt.contains("M1K3"))
+        #expect(miniPrompt.contains("ABSOLUTE RULES"))
+        #expect(miniPrompt.contains("# VOICE"))
+        #expect(miniPrompt.contains("# HONESTY"))
+        #expect(miniPrompt.contains("# TOOLS"))
+    }
+
+    @Test("Mini's trimmed persona sits well under the one-third line")
+    func miniTrimmedFitsComfortably() {
+        let tokens = Self.estimatedTokens(M1K3Persona.miniSystemPrompt)
+        // With FOLLOW-UPS dropped, Mini should have ~315 tokens more headroom.
+        // That's ~41% more room for conversation replay.
+        #expect(
+            tokens < Self.miniContextWindow / 3 - 50,
+            "Mini's trimmed persona is ~\(tokens) tokens — should sit well under 1365."
+        )
+    }
 }
