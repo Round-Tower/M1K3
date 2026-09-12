@@ -65,7 +65,7 @@ private struct LayoutProvider: ToolCallingProvider {
     let isAvailable = true
     let supportsToolCalls = true
     let nativePromptShape: NativePromptShape
-    let personaExemplars: PersonaExemplars
+    let personaVariant: PersonaVariant
     func generate(prompt _: String) async throws -> String {
         "layout"
     }
@@ -119,17 +119,17 @@ struct SwappableCapabilityForwardingTests {
         #expect(await facade.tokenCount("hi") == 2)
     }
 
-    @Test("prompt shape and exemplar set follow the active backend through the façade (2026-09-12)")
+    @Test("prompt shape and persona variant follow the active backend through the façade (2026-09-12)")
     func promptLayoutFollowsSwap() {
         // The agent reads both off the provider it HOLDS; a façade that drops
         // them hands every model the defaults (the #133/#134 lesson).
-        let pocket = LayoutProvider(nativePromptShape: .groundingInSystem, personaExemplars: .voiceAndLeakDecline)
+        let pocket = LayoutProvider(nativePromptShape: .groundingInSystem, personaVariant: .pocket)
         let facade = SwappableInferenceProvider(pocket)
         #expect(facade.nativePromptShape == .groundingInSystem)
-        #expect(facade.personaExemplars == .voiceAndLeakDecline)
+        #expect(facade.personaVariant == .pocket)
         facade.setProvider(PlainProvider())
         #expect(facade.nativePromptShape == .groundingInUser)
-        #expect(facade.personaExemplars == .voice)
+        #expect(facade.personaVariant == .standard)
     }
 
     @Test("persona carriage follows the active backend through the façade")

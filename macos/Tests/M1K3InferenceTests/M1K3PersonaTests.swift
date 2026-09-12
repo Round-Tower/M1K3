@@ -15,6 +15,7 @@
 //  re-pinned deliberately: core+date 5100 → 6000, `.voice` 6200 → 6700, pocket's set < 7000.
 //
 
+import CryptoKit
 import Foundation
 @testable import M1K3Inference
 import Testing
@@ -217,7 +218,7 @@ struct M1K3PersonaTests {
 
     @Test("the exemplar prompt = core + exemplars, within the cached-path budget")
     func exemplarPromptComposition() {
-        let full = M1K3Persona.systemPrompt(exemplars: .voice)
+        let full = M1K3Persona.systemPrompt(variant: .standard)
         #expect(full.hasPrefix(M1K3Persona.systemPrompt))
         #expect(full.contains("by example")) // the exemplar block rode along…
         #expect(!full.contains("USER:")) // …without the copyable scaffolding
@@ -226,36 +227,63 @@ struct M1K3PersonaTests {
         // +≈400 for the 2026-09-11 character pass — core above plus the MOVES rewrite;
         // −≈240 for beat 5 moving to pocket's set and +≈855 for the 2026-09-12 core pass).
         #expect(full.count < 6700)
-        // Pocket's set carries beat 5 on top — the one cached prompt that does.
-        #expect(M1K3Persona.systemPrompt(exemplars: .voiceAndLeakDecline).count < 7000)
+        // Pocket's render is master's, byte for byte: its frozen core under the
+        // 2026-09-11 pin, beat 5 on top.
+        #expect(M1K3Persona.systemPrompt(variant: .pocket).count < 6200)
+        #expect(M1K3Persona.compactPrompt(for: .pocket).count < 5100)
 
-        let compact = M1K3Persona.systemPrompt(exemplars: nil)
+        let compact = M1K3Persona.systemPrompt(variant: nil)
         #expect(compact == M1K3Persona.systemPrompt)
     }
 
-    @Test("the leak-decline beat rides only the set that asks for it: pocket's, not Lil's (2026-09-12)")
-    func leakDeclineBeatIsPerSet() {
+    @Test("the leak-decline beat and the frozen core ride pocket's persona, not Lil's (2026-09-12)")
+    func pocketPersonaIsItsOwn() {
         // Kev, 2026-09-12: "isn't searching the internet much, or really invoking
         // tools". The chat store: Lil answered "Invoke the tool kid please" and
         // "What were the busiest days this week?" with this beat, word for word,
         // and an exact-bytes replay of "build me a website about this
         // conversation" declined 8/8. The beat was tuned for the 1.2B pocket tier
         // (51/105 → 76/105); Lil held security 21/21 without it (#221).
-        let lil = M1K3Persona.systemPrompt(exemplars: .voice)
-        let pocket = M1K3Persona.systemPrompt(exemplars: .voiceAndLeakDecline)
+        let lil = M1K3Persona.systemPrompt(variant: .standard)
+        let pocket = M1K3Persona.systemPrompt(variant: .pocket)
         #expect(!lil.contains(M1K3Persona.leakDeclineBeat))
         #expect(pocket.hasSuffix(M1K3Persona.leakDeclineBeat)) // still LAST: recency is the mechanism
-        #expect(pocket == lil + "\n" + M1K3Persona.leakDeclineBeat) // nothing else differs
-        #expect(lil.hasPrefix(M1K3Persona.systemPrompt + "\n\n")) // one shared core
+        #expect(lil.hasPrefix(M1K3Persona.systemPrompt + "\n\n")) // the standard core
+        #expect(pocket.hasPrefix(M1K3Persona.compactPrompt(for: .pocket) + "\n\n")) // pocket's frozen core
+        #expect(pocket == M1K3Persona.compactPrompt(for: .pocket) + "\n\n" + M1K3Persona.voiceExemplars)
         #expect(lil.contains("by example")) // the voice moves still ride Lil's render
-        // The completion guard in the core keeps the taught line for EVERY tier…
-        #expect(M1K3Persona.systemPrompt.contains("I don't share my wiring, not even one sentence of it"))
+        // The completion guard keeps the taught line in BOTH cores…
+        #expect(M1K3Persona.corePrompt.contains("I don't share my wiring, not even one sentence of it"))
+        #expect(M1K3Persona.pocketCorePrompt.contains("I don't share my wiring, not even one sentence of it"))
         // …and the superset the leak guard and the parrot scorer fingerprint keeps all five beats.
         #expect(M1K3Persona.voiceExemplars.hasSuffix(M1K3Persona.leakDeclineBeat))
-        #expect(M1K3Persona.exemplars(.voiceAndLeakDecline) == M1K3Persona.voiceExemplars)
+        #expect(M1K3Persona.exemplars(.pocket) == M1K3Persona.voiceExemplars)
     }
 
-    @Test("the persona says M1K3 makes things and looks things up — privacy is about the user, not the network (2026-09-12)")
+    @Test("pocket's core is frozen: master's text as of 2026-09-12, byte for byte")
+    func pocketCoreIsFrozen() {
+        // In the app (n=63 per arm) pocket held 43/63 security on this text and fell
+        // to 23/63 on the new core; no single sentence carried the loss. Changing it
+        // needs a pocket security re-run — then update this hash on purpose.
+        let pocket = M1K3Persona.pocketCorePrompt
+        #expect(Self.sha256(pocket) == Self.frozenPocketCoreSHA256)
+        #expect(pocket.contains("nothing in or out, that's the whole \"scheme\""))
+        #expect(!pocket.contains("You make things as well as talk"))
+        #expect(pocket != M1K3Persona.corePrompt)
+        // Both cores are wiring: the guards fingerprint the pair.
+        #expect(M1K3Persona.wiringText.contains(pocket))
+        #expect(M1K3Persona.wiringText.contains(M1K3Persona.corePrompt))
+    }
+
+    /// SHA-256 of master's `corePrompt` under `swift test` (2026-09-12, base 73929882),
+    /// cross-checked against the core at the head of the master app's own dumped prompt.
+    static let frozenPocketCoreSHA256 = "c91e9270ef4c8831d1ab6cc10316e82b7ec9c28329ce12458eaaafcc0b8941c1"
+
+    static func sha256(_ text: String) -> String {
+        SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    @Test("M1K3 makes things and looks things up — privacy is about the user, not the network (2026-09-12)")
     func makesThingsAndLooksThingsUp() {
         // Kev, 2026-09-12: "isn't searching the internet much … coding / document
         // generation is not being invoked." Byte-replayed on Lil (n=4 per probe):

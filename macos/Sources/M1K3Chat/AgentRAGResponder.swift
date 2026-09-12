@@ -961,7 +961,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         if toolNames.contains("lookup_fact") {
             routing += "\n- Stable, well-known facts (who wrote a famous book, a "
-                + "capital city, basic science — never the newest of anything) you can just answer from what you know "
+                + "capital city, basic science — never the newest of anything) you can just "
+                + "answer from what you know "
                 + "— you're reliable there. Use lookup_fact only when you're genuinely "
                 + "unsure, the detail is obscure or easy to mix up, or it could have "
                 + "changed over time; then cite its Source."

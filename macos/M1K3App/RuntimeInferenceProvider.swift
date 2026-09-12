@@ -19,7 +19,7 @@
 //  with that the provider's stored properties are all immutable Sendables, so
 //  the compiler proves what the escape hatch used to assert.
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — forwards `nativePromptShape` (missing since #232:
-//  the live app never gave pocket its grounding-in-system layout) and the new `personaExemplars`.
+//  the live app never gave pocket its grounding-in-system layout) and the new `personaVariant`.
 
 import Foundation
 import M1K3Inference
@@ -111,8 +111,8 @@ extension RuntimeInferenceProvider: ToolCallingProvider {
         (active as? ToolCallingProvider)?.nativePromptShape ?? .groundingInUser
     }
 
-    var personaExemplars: PersonaExemplars {
-        (active as? ToolCallingProvider)?.personaExemplars ?? .voice
+    var personaVariant: PersonaVariant {
+        (active as? ToolCallingProvider)?.personaVariant ?? .standard
     }
 
     func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
