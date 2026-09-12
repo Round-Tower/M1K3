@@ -21,6 +21,11 @@ def test_unchecked_checklist_is_still_in_progress():
     assert m.classify(body) is m.Kind.PLACEHOLDER
 
 
+def test_review_in_progress_header_is_a_placeholder():
+    # third wording, seen 2026-09-12 on #297 while the summon was running
+    assert m.classify('### Review in progress <img src="https://github.com/x.gif" width="14px">') is m.Kind.PLACEHOLDER
+
+
 def test_older_placeholder_wording_is_a_placeholder():
     assert m.classify("Claude Code is working… I'll analyze this and get back to you.") is m.Kind.PLACEHOLDER
 
@@ -29,12 +34,6 @@ def test_finished_pass_with_a_trailing_optional_checklist_is_still_finished():
     body = ("**Claude finished @kev's task in 51s** —— [View job](x)\n\n---\n### Final pass — review of head `abc1234`\n"
             "- [x] Fetch branch\n- [x] Post findings\n\nNothing blocking. Optional cleanup for later:\n- [ ] rename `x` to `y`")
     assert m.classify(body) is m.Kind.SUMMON
-
-
-def test_named_head_takes_the_last_review_of_head_phrase():
-    body = "### Final pass — review of head `aaaa111`\n(no changes since review of head `bbbb222`… wait, reversed)"
-    assert m.named_head(body) == "bbbb222"
-    assert m.named_head("mentions head `cccc333` without the phrase") is None
 
 
 def test_finished_summon_with_all_boxes_ticked_is_a_summon_pass():
@@ -50,13 +49,24 @@ def test_auto_review_headers_are_reviews():
 
 # --- which head a summon pass reviewed -------------------------------------
 
-def test_named_head_reads_the_backticked_sha():
-    assert m.named_head("### Final pass — review of head `64daf36d`") == "64daf36d"
-    assert m.named_head("### Second pass — review of final head `d1e3ac71`\n") == "d1e3ac71"
+def test_named_heads_reads_every_backticked_sha_after_the_word_head():
+    assert m.named_heads("### Final pass — review of head `64daf36d`") == ["64daf36d"]
+    assert m.named_heads("### Second pass — review of final head `d1e3ac71`\n") == ["d1e3ac71"]
+    # the wording seen on #297: no "review of" at all
+    body = "### Review — head `77702b02`\n\n- [x] Checked out head `77702b02a1dd3a16a3efe790de5de26a24f11ae4`"
+    assert m.named_heads(body) == ["77702b02", "77702b02a1dd3a16a3efe790de5de26a24f11ae4"]
 
 
-def test_named_head_is_none_when_no_sha_named():
-    assert m.named_head("## Review: something\nno sha here") is None
+def test_named_heads_is_empty_when_no_sha_named():
+    assert m.named_heads("## Review: something\nno sha here") == []
+    assert m.named_heads("mentions `cccc333` without the word head") == []
+
+
+def test_a_pass_naming_an_old_head_and_this_one_counts_for_this_one():
+    head = "bbbb2220000000000000000000000000000000000"
+    body = "**Claude finished @kev's task** ---\n### Review — head `bbbb222`\n- [x] no changes since head `aaaa111`"
+    assert m.summon_passes(head, [bot(body)]) == 1
+    assert m.summon_passes("aaaa1110000000000000000000000000000000000", [bot(body)]) == 1  # it mentions both; counting is per head asked
 
 
 def test_summon_passes_count_only_finished_passes_naming_this_head():

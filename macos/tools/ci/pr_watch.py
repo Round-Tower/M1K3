@@ -75,7 +75,7 @@ class Kind(Enum):
 
 _CHECKBOX = re.compile(r"^\s*- \[( |x)\] ")
 _PASS_HEADER = re.compile(r"^#{2,4} .*\bpass\b", re.IGNORECASE)
-_HEAD = re.compile(r"review of (?:final )?head `([0-9a-f]{7,40})`")
+_HEAD = re.compile(r"\bhead `([0-9a-f]{7,40})`")
 
 
 def _progress_unchecked(text: str) -> bool:
@@ -101,7 +101,12 @@ def _progress_unchecked(text: str) -> bool:
 def classify(body: str) -> Kind:
     """One of the three shapes claude[bot] posts on a PR thread."""
     text = body.strip()
-    if text.startswith("**Claude working") or "Claude Code is working" in text or "I'll analyze this" in text:
+    if (
+        text.startswith("**Claude working")
+        or text.startswith("### Review in progress")
+        or "Claude Code is working" in text
+        or "I'll analyze this" in text
+    ):
         return Kind.PLACEHOLDER
     if _progress_unchecked(text):
         return Kind.PLACEHOLDER
@@ -110,15 +115,16 @@ def classify(body: str) -> Kind:
     return Kind.REVIEW
 
 
-def named_head(body: str) -> str | None:
-    """The sha a summon pass says it reviewed ("review of head `sha`"), the
-    LAST such phrase if several; None for auto passes, which name none."""
-    matches = _HEAD.findall(body)
-    return matches[-1] if matches else None
+def named_heads(body: str) -> list[str]:
+    """Every sha a summon pass names as a head. The header wording drifts
+    ("review of final head `x`", "Final pass — review of head `x`",
+    "Review — head `x`" all seen on 2026-09-12), so anchor on the word "head"
+    and the backticks only. Auto passes name none."""
+    return _HEAD.findall(body)
 
 
-def _names(head: str, sha: str | None) -> bool:
-    return bool(sha) and (head.startswith(sha) or sha.startswith(head))
+def _names(head: str, shas: list[str]) -> bool:
+    return any(head.startswith(sha) or sha.startswith(head) for sha in shas)
 
 
 def summon_passes(head: str, comments: list[dict]) -> int:
@@ -128,7 +134,7 @@ def summon_passes(head: str, comments: list[dict]) -> int:
         for c in comments
         if c.get("user", {}).get("login") == BOT_LOGIN
         and classify(c.get("body", "")) is Kind.SUMMON
-        and _names(head, named_head(c.get("body", "")))
+        and _names(head, named_heads(c.get("body", "")))
     )
 
 
