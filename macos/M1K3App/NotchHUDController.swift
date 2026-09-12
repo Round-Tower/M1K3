@@ -47,13 +47,14 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 3) — the cancel hook is published before the
 //  wait arms and `Task.isCancelled` is re-checked after, closing the window where a `stop()` racing the
 //  setup found no hook and the loop slept on to the valve. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 6) — the wait itself is now
+//  `ObservedSignal.waitForChange` (M1K3Voice, five tests: change / valve / cancel / cancel-before-arm /
+//  resume-once); this file keeps only the call. Confidence now 0.85.
 //
 
 import AppKit
 import Foundation
 import M1K3Voice
-import Observation
-import os
 
 @MainActor
 final class NotchHUDController {
@@ -92,40 +93,14 @@ final class NotchHUDController {
         }
     }
 
-    /// Suspend until `env.speechHighlight.isActive` changes (or the task is
-    /// cancelled). A 30 s safety valve bounds any missed observation; it is
-    /// cancelled the moment the wait resolves, so a quiet HUD holds no timer
-    /// beyond it and none at all between wake-ups (#293 review 2).
+    /// Suspend until `env.speechHighlight.isActive` changes, the 30 s safety
+    /// valve elapses, or the drive task is cancelled — `ObservedSignal`
+    /// (M1K3Voice, test-pinned) owns the one-shot resume and the valve's
+    /// cancellation, so a quiet HUD holds no timer between wake-ups.
     private func awaitSpeechChange() async {
         let signal = env.speechHighlight
-        await withTaskCancellationHandler(operation: {
-            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-                let once = ResumeOnce(continuation)
-                // Publish the hook FIRST, then re-check the flag: a `stop()`
-                // that raced this setup has already set `isCancelled` before
-                // its `onCancel` ran (and found no hook), so it resumes here.
-                cancelHook.withLock { $0 = once }
-                if Task.isCancelled {
-                    once.resume()
-                    return
-                }
-                withObservationTracking {
-                    _ = signal.isActive
-                } onChange: {
-                    once.resume()
-                }
-                once.attach(valve: Task {
-                    try? await Task.sleep(for: .seconds(30))
-                    once.resume()
-                })
-            }
-        }, onCancel: {
-            cancelHook.withLock { $0 }?.resume()
-        })
+        await ObservedSignal.waitForChange(valve: .seconds(30)) { _ = signal.isActive }
     }
-
-    /// The pending wait's resume handle, so `stop()` can release it.
-    private let cancelHook = OSAllocatedUnfairLock<ResumeOnce?>(initialState: nil)
 
     func stop() {
         driveTask?.cancel()
@@ -221,41 +196,6 @@ final class NotchHUDController {
             window?.setFrameOrigin(to.origin)
             window?.alphaValue = to.alpha
             completion?()
-        }
-    }
-
-    /// A continuation that resumes at most once, from whichever of the
-    /// observation callback / valve / cancellation gets there first — and
-    /// cancels the valve on the way out so nothing keeps sleeping for it.
-    private final class ResumeOnce: Sendable {
-        private struct State {
-            var continuation: CheckedContinuation<Void, Never>?
-            var valve: Task<Void, Never>?
-        }
-
-        private let slot: OSAllocatedUnfairLock<State>
-
-        init(_ continuation: CheckedContinuation<Void, Never>) {
-            slot = OSAllocatedUnfairLock(initialState: State(continuation: continuation))
-        }
-
-        /// Register the safety valve; if the wait already resolved, cancel it now.
-        func attach(valve: Task<Void, Never>) {
-            let resolved = slot.withLock { state -> Bool in
-                guard state.continuation != nil else { return true }
-                state.valve = valve
-                return false
-            }
-            if resolved { valve.cancel() }
-        }
-
-        func resume() {
-            let taken = slot.withLock { state -> (CheckedContinuation<Void, Never>?, Task<Void, Never>?) in
-                defer { state.continuation = nil; state.valve = nil }
-                return (state.continuation, state.valve)
-            }
-            taken.1?.cancel()
-            taken.0?.resume()
         }
     }
 
