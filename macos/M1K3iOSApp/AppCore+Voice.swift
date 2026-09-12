@@ -44,6 +44,10 @@
 //  a word reports the transcriber's `lastFailure` through `listenFailed` — the
 //  loop parks with the reason on screen instead of re-arming into the wall.
 //
+//  Review: Kev + claude-opus-5, 2026-09-12 — #195: `activateVoiceAudioSession()` returns
+//  whether the session came up; `armOrPark` arms the loop only on true and otherwise
+//  parks with "Couldn't open the microphone — tap the face to try again." Both
+//  entry points (enter, tap-to-resume) share it. Confidence 0.8: verify-by-launch glue.
 
 import AVFoundation
 import Foundation
@@ -118,9 +122,9 @@ extension AppCore {
         // The mic engine needs the record-capable session first; activate it off
         // the main actor and only then arm the loop. A leave in between wins.
         Task { [weak self] in
-            await Self.activateVoiceAudioSession()
+            let active = await Self.activateVoiceAudioSession()
             guard let self, voiceLoop === controller else { return }
-            controller.begin()
+            armOrPark(controller, sessionActive: active)
         }
     }
 
@@ -158,10 +162,24 @@ extension AppCore {
         // engine against a session that isn't record-capable yet. Re-activating
         // an active session is cheap (code-quality review, 2026-09-03).
         Task { [weak self] in
-            await Self.activateVoiceAudioSession()
+            let active = await Self.activateVoiceAudioSession()
             guard let self, voiceLoop === controller else { return }
-            controller.begin()
+            armOrPark(controller, sessionActive: active)
         }
+    }
+
+    /// Arm the mic only on a record-capable session (#195). A failed
+    /// activation used to be logged and then ignored: `begin()` armed the engine
+    /// against a session that might not record, and the only safety net was the
+    /// tap refusing a dead route downstream. Now the loop stays parked with a
+    /// calm line, and tapping the face retries the activation.
+    private func armOrPark(_ controller: VoiceLoopController, sessionActive: Bool) {
+        guard sessionActive else {
+            avatar.resetToIdle()
+            voicePauseNote = "Couldn't open the microphone — tap the face to try again."
+            return
+        }
+        controller.begin()
     }
 
     // MARK: - Loop dependencies
@@ -345,7 +363,9 @@ extension AppCore {
     /// can tap the mic. `.voiceChat` mode brings echo cancellation — M1K3 speaks
     /// out of the same device it listens on, and the loop's echoGrace alone
     /// can't unhear a speakerphone. Runs off the main actor (see file header).
-    private nonisolated static func activateVoiceAudioSession() async {
+    /// True when the session is active and record-capable; false after logging
+    /// why not — the callers park instead of arming the mic (#195).
+    private nonisolated static func activateVoiceAudioSession() async -> Bool {
         await Task.detached(priority: .userInitiated) {
             let session = AVAudioSession.sharedInstance()
             do {
@@ -358,10 +378,12 @@ extension AppCore {
                     try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.duckOthers])
                 #endif
                 try session.setActive(true)
+                return true
             } catch {
                 voiceLog.error(
                     "voice audio session activation failed: \(error.localizedDescription, privacy: .public)"
                 )
+                return false
             }
         }.value
     }

@@ -22,6 +22,9 @@
 //  Redirects are gated at the fetcher (`RedirectGate`, M1K3AgentTools) — this policy judges one URL.
 //  Known remainder: resolve-then-connect is a TOCTOU window (DNS rebinding) — closing it means
 //  pinning the connection to the vetted address, which URLSession does not offer.
+//  Review: Kev + claude-opus-5, 2026-09-12 — #269 part 1: CGNAT 100.64/10, multicast 224/4 and
+//  reserved 240/4 (incl. broadcast) join the private IPv4 table, so a host literal AND a DNS
+//  answer in them refuse. Confidence now 0.9 (boundaries pinned both sides).
 
 import Foundation
 #if canImport(Darwin)
@@ -173,7 +176,7 @@ public enum WebURLPolicy {
     }
 
     /// True when `url`'s host is loopback, an RFC 1918 private range, link-local
-    /// (incl. cloud metadata), an mDNS `.local` name, or an IPv6 link/unique-local
+    /// (incl. cloud metadata), CGNAT, multicast or reserved IPv4, an mDNS `.local` name, or an IPv6 link/unique-local
     /// address — i.e. somewhere an agent-driven open must NOT reach. A missing host
     /// is treated as local (refused) so the default is safe.
     public static func isLocalOrPrivate(_ url: URL) -> Bool {
@@ -218,6 +221,9 @@ public enum WebURLPolicy {
         case (169, 254): return true // link-local 169.254.0.0/16 (cloud metadata)
         case (172, 16 ... 31): return true // 172.16.0.0/12
         case (192, 168): return true // 192.168.0.0/16
+        case (100, 64 ... 127): return true // 100.64.0.0/10 carrier-grade NAT (RFC 6598) — overlays like Tailscale
+        case (224 ... 239, _): return true // 224.0.0.0/4 multicast (SSDP, mDNS)
+        case (240 ... 255, _): return true // 240.0.0.0/4 reserved, incl. 255.255.255.255 broadcast
         default: return false
         }
     }
