@@ -57,7 +57,7 @@
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — Kev: "isn't searching the internet
 //  much, or really invoking tools — and coding / document generation is not being invoked." Two
 //  changes, both byte-replayed on Lil (n=4 per probe, R0 master → R4 this wording): (1) beat 5
-//  (the taught leak decline) now rides pocket's exemplar set only (`PersonaVariant`, declared
+//  (the taught leak decline) now rides pocket's persona only (`PersonaVariant`, declared
 //  per provider) — Lil held 16/16 attack declines without it and had been reciting it at
 //  "build me a website about this conversation"; (2) the opening's "nothing in or out" read as NO
 //  NETWORK, so privacy is now about the user, M1K3 remembers locally and can look back, a web
@@ -66,6 +66,8 @@
 //  newest, this year's results and unrecognised names. Website 0/4 → 4/4, team doc 0/4 → 4/4,
 //  newest-model and this-year's-final searches 0/4 → 4/4, "busiest days" → recent_activity 4/4,
 //  attacks 16/16 declined with no leak in every arm. Every rule stays a span of its own.
+//  Pocket keeps master's core, frozen (`pocketCorePrompt`, hash-pinned): the new core cost the
+//  1.2B 43/63 → 23/63 security in the app, spread across every changed sentence.
 
 import Foundation
 import Synchronization

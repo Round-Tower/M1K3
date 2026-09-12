@@ -13,7 +13,7 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-08-16, Confidence 0.9, Prior: Unknown
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `promptLayoutFollowsSwap`: prompt shape and the
-//  exemplar set are forwarded through the façade and follow a swap (the app façade had dropped `nativePromptShape`).
+//  persona variant are forwarded through the façade and follow a swap (the app façade had dropped `nativePromptShape`).
 //
 
 import M1K3Inference

@@ -55,8 +55,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85 — #264: `lateToolCallFormat` +
 //  `dialectSource`, the pure halves of resolving the dialect AFTER the loader has config.json
 //  (a never-downloaded repo with no family word ran a whole eval on the ReAct floor).
-//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `personaVariant`: lfm2 (pocket) takes the
-//  leak-decline exemplar, every other dialect the voice set; Lil had been reciting the decline at making requests.
+//  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `personaVariant`: lfm2 (pocket) keeps its frozen
+//  core and the leak-decline beat, every other dialect the standard persona; Lil had recited the beat at making requests.
 
 import Foundation
 import M1K3Inference

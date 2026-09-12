@@ -35,7 +35,7 @@
 //  + `nativePromptShape` requirement (default `.groundingInUser`, today's layout). Per model,
 //  decided by eval — the MLX provider returns `.groundingInSystem` for lfm2 only.
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `personaVariant` requirement (default `.standard`):
-//  which exemplar set rides the cached persona is per model, like the prompt shape.
+//  which persona (core and exemplars) a model gets is per model, like the prompt shape.
 
 import Foundation
 import Synchronization
