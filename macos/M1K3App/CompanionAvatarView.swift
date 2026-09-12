@@ -35,6 +35,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 1) — `reload(to:)` syncs `scene.parked` from the
 //  view's `paused` before it plays the idle clip, so a creature mounted already-paused starts parked
 //  (the first `update` hadn't run yet; one live frame slipped through). Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 3) — `update`'s switch `Task` is held on
+//  `scene.loadTask`, cancelled by the next switch and on disappear, so the mesh-failed log's
+//  `!Task.isCancelled` guard can actually observe an unmount mid-load (it was dead code on that path).
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `framing: CompanionFraming`: `.window` (default, the fixed
 //  z 2.4 shot, byte-identical) or `.fit(headroom:)`, which places the camera at `CameraFit.distance` for the
 //  view's aspect and the creature's posed extents in RealityView's update tick (a GeometryReader carries the
@@ -103,6 +106,10 @@ final class CompanionScene {
     /// Monotonic reload token: a load that finishes after a newer one started is
     /// dropped, so rapid switches never leave an older creature winning the swap.
     var loadToken = 0
+    /// The in-flight selection switch started by `update` — cancelled by the
+    /// next switch and on disappear, so an unmount mid-load reads as a cancel
+    /// (see the mesh-failed log in `reload(to:)`), not as a broken asset.
+    var loadTask: Task<Void, Never>?
     var host: Entity?
     /// The loaded creature's own local-space visual bounds (host-local —
     /// captured before parenting, so no parent transform is baked in),
@@ -315,13 +322,15 @@ struct CompanionAvatarView: View {
                 // happens in the SAME RealityView (no recreation → no black).
                 scene.loadedCompanionID = companion.id
                 let target = companion
-                Task { await reload(to: target) }
+                scene.loadTask?.cancel()
+                scene.loadTask = Task { await reload(to: target) }
             } else if scene.built {
                 sync(to: controller.state)
             }
             if scene.built { applyPause(paused) }
         }
         .overlay(CRTOverlay(paused: paused))
+        .onDisappear { scene.loadTask?.cancel() }
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
@@ -397,7 +406,11 @@ struct CompanionAvatarView: View {
             // And not when the view was UNMOUNTED mid-load (2026-09-12: a
             // sub-second HUD show/hide tears the RealityView down while
             // `Entity(contentsOf:)` is still in flight — that is a cancel,
-            // not a broken asset).
+            // not a broken asset). `update`'s switch task is cancelled on
+            // disappear / the next switch (`scene.loadTask`); `make`'s load
+            // rides RealityView's own closure lifetime. Cancellation only
+            // silences this log — the load itself runs to completion so a
+            // re-shown view never finds a half-built scene.
             if token == scene.loadToken, !Task.isCancelled {
                 Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
             }

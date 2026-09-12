@@ -44,6 +44,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 2) — the 30 s valve Task is registered on the
 //  `ResumeOnce` and cancelled the instant the wait resolves (or, if it resolved first, on attach), so
 //  a wake-up leaves no sleeping task behind it. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 3) — the cancel hook is published before the
+//  wait arms and `Task.isCancelled` is re-checked after, closing the window where a `stop()` racing the
+//  setup found no hook and the loop slept on to the valve. Confidence now 0.85.
 //
 
 import AppKit
@@ -98,6 +101,14 @@ final class NotchHUDController {
         await withTaskCancellationHandler(operation: {
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
                 let once = ResumeOnce(continuation)
+                // Publish the hook FIRST, then re-check the flag: a `stop()`
+                // that raced this setup has already set `isCancelled` before
+                // its `onCancel` ran (and found no hook), so it resumes here.
+                cancelHook.withLock { $0 = once }
+                if Task.isCancelled {
+                    once.resume()
+                    return
+                }
                 withObservationTracking {
                     _ = signal.isActive
                 } onChange: {
@@ -107,7 +118,6 @@ final class NotchHUDController {
                     try? await Task.sleep(for: .seconds(30))
                     once.resume()
                 })
-                cancelHook.withLock { $0 = once }
             }
         }, onCancel: {
             cancelHook.withLock { $0 }?.resume()
