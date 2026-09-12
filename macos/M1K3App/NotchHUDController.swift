@@ -36,6 +36,23 @@
 //  idiom instead of Timer; the on-screen feel — entrance/exit beats, the
 //  72px avatar's legibility — is verify-by-launch, unheard/unseen by me).
 //  Prior: the jam prototype (Kev + claude-fable-5, same session).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the drive loop no longer polls
+//  at 10 Hz for the app's lifetime: it sleeps on the `@Observable` speech
+//  signal (withObservationTracking) and ticks on a clock ONLY while the hide
+//  grace is pending (`NotchHUDVisibility.awaitsGrace`, test-pinned). At idle
+//  this task holds no timer. Confidence now 0.85 (wake-on-speech verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 2) — the 30 s valve Task is registered on the
+//  `ResumeOnce` and cancelled the instant the wait resolves (or, if it resolved first, on attach), so
+//  a wake-up leaves no sleeping task behind it. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 3) — the cancel hook is published before the
+//  wait arms and `Task.isCancelled` is re-checked after, closing the window where a `stop()` racing the
+//  setup found no hook and the loop slept on to the valve. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 6) — the wait itself is now
+//  `ObservedSignal.waitForChange` (M1K3Voice, five tests: change / valve / cancel / cancel-before-arm /
+//  resume-once); this file keeps only the call. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 7) — the wait's valve is `NotchHUDVisibility.wakeValve`
+//  (1 s while speaking): the Settings toggle is not an observed input, and a flip mid-utterance used to wait
+//  for the speech to end (up to 30 s) before the HUD followed it. Confidence now 0.85.
 //
 
 import AppKit
@@ -55,17 +72,42 @@ final class NotchHUDController {
         self.env = env
     }
 
-    /// Start polling. Safe to call once at launch — the Settings toggle
+    /// Start the drive loop. Safe to call once at launch — the Settings toggle
     /// (`AppEnvironment.notchHUDEnabledKey`, read every tick) gates whether
     /// the HUD can ever actually show, so this runs for the app's whole
-    /// lifetime with no separate wiring needed when the toggle flips.
+    /// lifetime with no separate wiring needed when the toggle flips: it is
+    /// re-read on every wake, and while speech is live the loop wakes at least
+    /// once a second (`NotchHUDVisibility.wakeValve`), so a flip mid-utterance
+    /// shows or hides the HUD within a second; idle, a flip changes nothing
+    /// until the next speech change wakes the loop anyway.
+    ///
+    /// The loop is event-driven: it suspends on the observable speech signal
+    /// and only ticks on a clock while a hide grace is pending — the one
+    /// interval no signal change will arrive for. No lifetime 10 Hz poll.
     func start() {
         guard driveTask == nil else { return }
         driveTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                self?.tick()
-                try? await Task.sleep(for: .milliseconds(100))
+                guard let self else { return }
+                tick()
+                if visibility.awaitsGrace {
+                    try? await Task.sleep(for: .milliseconds(100))
+                } else {
+                    await awaitSpeechChange()
+                }
             }
+        }
+    }
+
+    /// Suspend until `env.speechHighlight.isActive` changes, the wake valve
+    /// elapses (`NotchHUDVisibility.wakeValve`: 1 s while speech is live so a
+    /// Settings toggle flip lands within a second, 30 s idle as a safety net),
+    /// or the drive task is cancelled — `ObservedSignal` (M1K3Voice,
+    /// test-pinned) owns the one-shot resume and the valve's cancellation.
+    private func awaitSpeechChange() async {
+        let signal = env.speechHighlight
+        await ObservedSignal.waitForChange(valve: NotchHUDVisibility.wakeValve(speaking: signal.isActive)) {
+            _ = signal.isActive
         }
     }
 

@@ -121,6 +121,10 @@ struct M1K3App: App {
             // Signed: Kev + claude-opus-4-8, 2026-06-08, Confidence 0.75, Prior: Unknown
             // (AppEnvironment is built at launch by AppDelegate — window-independent,
             // so a background App Intent launch can reach it.)
+            // Occlusion-derived visibility for every avatar surface in this window
+            // (2026-09-12 thermal audit): a minimised / covered / closed window
+            // mounts no RealityView. One probe per window root — see WindowVisibility.
+            .trackWindowVisibility()
         }
         .windowResizability(.contentSize)
         // Hidden title bar: drop the "M1K3" window title so the glass runs
@@ -145,6 +149,7 @@ struct M1K3App: App {
         // from the Window menu; rebuilds its snapshot from the live store each open.
         Window("Memory Constellation", id: Self.constellationWindowID) {
             ConstellationWindowContent(env: appDelegate.environment)
+                .trackWindowVisibility()
         }
         .windowResizability(.contentSize)
 
@@ -172,6 +177,8 @@ struct M1K3App: App {
                     SettingsView()
                         .environment(env)
                         .environment(launchAtLogin)
+                        // The Companion pane previews the live face.
+                        .trackWindowVisibility()
                 } else {
                     Text("M1K3 is still waking up…")
                         .foregroundStyle(.secondary)
@@ -186,8 +193,15 @@ struct M1K3App: App {
         // glyph (calm idle, pulsing while thinking, red while recording, glow while
         // speaking).
         // Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.7, Prior: Unknown
+        // Review: Kev + claude-fable-5.1, 2026-09-12 — every scene root tracks
+        // window visibility (`.trackWindowVisibility()`) so avatar surfaces can
+        // unmount their RealityView when the window is off screen. Confidence now 0.8.
         MenuBarExtra {
+            // The popover's NSWindow outlives a close (kept ordered-out by
+            // SwiftUI); tracking lets its full-bleed pet unmount meanwhile —
+            // measured as a second hidden RealityKit render loop (~+12% CPU).
             MenuBarPopover(env: appDelegate.environment)
+                .trackWindowVisibility()
         } label: {
             MenuBarLabel(env: appDelegate.environment, glyphStyle: .pixelM)
         }

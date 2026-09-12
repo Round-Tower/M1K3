@@ -14,6 +14,8 @@
 //  are the named verify-owed). Prior: M1K3Avatar RealityKit views.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — motes + threads use the palette on every platform (the white /
 //  grey non-AppKit fallbacks retired) — the iPad field is the Mac field. Confidence now 0.8 (device-owed).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `paused:` stops the 30 fps clock + the idle drift (the thermal
+//  audit's AvatarPresence contract); a hidden field is unmounted by the host, not paused. Confidence now 0.8.
 
 import M1K3Memory
 import RealityKit
@@ -24,6 +26,12 @@ public struct ConstellationView: View {
     private let model: ConstellationModel
     /// Seconds between each mote popping in — the accretion cadence.
     private let growthStep: TimeInterval
+    /// Freeze the idle breath/float/rotation and stop the 30 fps clock (the
+    /// AvatarPresence `.paused` contract — recede/still/Low Power). The field
+    /// still draws and still grows on a store change; it just doesn't drift.
+    /// NOTE: this does not stop RealityKit's own render loop — a surface that
+    /// nobody can see must be UNMOUNTED by its host (AvatarSurface does).
+    private let paused: Bool
     /// World scale applied to the unit-ish layout positions.
     private let spread: Float
     /// Star size is decoupled from `spread` so tightening the cluster doesn't
@@ -54,17 +62,18 @@ public struct ConstellationView: View {
     /// NOT trigger SwiftUI invalidation (unlike a @State value would).
     @State private var syncTracker = SyncTracker()
 
-    public init(model: ConstellationModel, growthStep: TimeInterval = 0.08, spread: Float = 1.6) {
+    public init(model: ConstellationModel, growthStep: TimeInterval = 0.08, spread: Float = 1.6, paused: Bool = false) {
         self.model = model
         self.growthStep = growthStep
         self.spread = spread
+        self.paused = paused
     }
 
     public var body: some View {
         // 30fps is plenty for a gentle breath/float/rotation — uncapped `.animation`
         // ran at the display's native rate (120Hz on ProMotion), burning 4× the work
         // for motion the eye can't resolve at this amplitude.
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: paused)) { timeline in
             RealityView { content in
                 root.addChild(field)
                 content.add(root)
@@ -84,7 +93,7 @@ public struct ConstellationView: View {
                     frameToFit()
                     syncTracker.note(model)
                 }
-                if !reduceMotion {
+                if !reduceMotion, !paused {
                     idle(at: timeline.date.timeIntervalSince(start))
                 }
             }

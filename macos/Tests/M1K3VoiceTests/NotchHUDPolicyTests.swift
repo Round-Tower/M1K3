@@ -146,3 +146,61 @@ struct MarqueeMetricsTests {
         #expect(MarqueeMetrics.followOffset(wordEnd: -3, lineLength: 100, textWidth: 600, viewportWidth: 300) == 0)
     }
 }
+
+/// The drive loop's cadence (2026-09-12 thermal audit): the controller used to
+/// poll the speech signal at 10 Hz for the app's whole lifetime. The signal is
+/// `@Observable`, so the loop now WAITS on it and polls only while a hide
+/// grace is pending — the one interval the state machine can't be woken for.
+struct NotchHUDVisibilityCadenceTests {
+    @Test("hidden and silent: nothing pending — the driver should sleep on the signal")
+    func hiddenSilentIsNotPending() {
+        let visibility = NotchHUDVisibility()
+        #expect(!visibility.awaitsGrace)
+    }
+
+    @Test("shown and speaking: nothing pending — a change in the signal wakes the driver")
+    func shownSpeakingIsNotPending() {
+        var visibility = NotchHUDVisibility()
+        _ = visibility.update(speaking: true, atSeconds: 0)
+        #expect(!visibility.awaitsGrace)
+    }
+
+    @Test("shown and gone quiet: the hide grace is pending — the driver must tick on a clock")
+    func shownQuietAwaitsGrace() {
+        var visibility = NotchHUDVisibility(hideGraceSeconds: 0.7)
+        _ = visibility.update(speaking: true, atSeconds: 0)
+        _ = visibility.update(speaking: false, atSeconds: 0.1)
+        #expect(visibility.awaitsGrace)
+    }
+
+    @Test("once the grace elapses and the HUD hides, nothing is pending again")
+    func hiddenAfterGraceIsNotPending() {
+        var visibility = NotchHUDVisibility(hideGraceSeconds: 0.7)
+        _ = visibility.update(speaking: true, atSeconds: 0)
+        _ = visibility.update(speaking: false, atSeconds: 0.1)
+        _ = visibility.update(speaking: false, atSeconds: 0.9)
+        #expect(!visibility.awaitsGrace)
+    }
+
+    @Test("speech resuming inside the grace clears the pending clock")
+    func resumedSpeechClearsGrace() {
+        var visibility = NotchHUDVisibility(hideGraceSeconds: 0.7)
+        _ = visibility.update(speaking: true, atSeconds: 0)
+        _ = visibility.update(speaking: false, atSeconds: 0.1)
+        _ = visibility.update(speaking: true, atSeconds: 0.3)
+        #expect(!visibility.awaitsGrace)
+    }
+
+    /// The Settings toggle is NOT an observed input of the drive loop (it is
+    /// `@AppStorage`), so while speech is live the loop re-reads it on a short
+    /// valve; idle, the valve is only a safety net (#293 review 7).
+    @Test("while speech is live the wake valve is 1 s — a toggle flip mid-utterance shows or hides within a second")
+    func speakingValveIsShort() {
+        #expect(NotchHUDVisibility.wakeValve(speaking: true) == .seconds(1))
+    }
+
+    @Test("idle, the wake valve is the 30 s safety net — the next speech change wakes the loop by observation")
+    func idleValveIsTheSafetyNet() {
+        #expect(NotchHUDVisibility.wakeValve(speaking: false) == .seconds(30))
+    }
+}

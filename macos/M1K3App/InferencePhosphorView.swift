@@ -22,6 +22,10 @@
 //  Signed: Kev + claude-fable-5, 2026-08-19, Confidence 0.8 (the fold is
 //  TDD'd; this view is verify-by-launch — the rain's FEEL over a live thinking
 //  turn is Kev's eye). Prior: the data-rain seed (project-memory 2026-08-06).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `paused:` from the host (the
+//  backdrop treatment + window visibility) joins Low Power as a clock stop;
+//  the rain no longer ticks at 30 fps behind a receded or hidden avatar.
+//  Confidence now 0.8.
 //
 
 import M1K3Avatar
@@ -45,6 +49,9 @@ extension PhosphorSource {
 }
 
 struct InferencePhosphorView: View {
+    /// Stop the 30 fps clock (the host's verdict: recede/still/hidden window).
+    var paused = false
+
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -91,7 +98,7 @@ struct InferencePhosphorView: View {
         // "stay cheap" invariant AvatarSurface honours via `paused:` in this
         // ZStack. A paused timeline still renders one frame, so lingering lines
         // fade on the next real change rather than freezing mid-air forever.
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: lowPower)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: lowPower || paused)) { context in
             let now = context.date
             Canvas { canvas, size in
                 draw(canvas, size: size, now: now)

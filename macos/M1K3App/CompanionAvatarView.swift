@@ -27,6 +27,17 @@
 //  since (unlike AvatarView) this view has no continuous TimelineView clock to carry the
 //  fit forward on its own. macOS/iOS PerspectiveCamera path is byte-for-byte unchanged.
 //  Prior: Kev + claude-opus-4-8 (this file).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `paused:` parks the running clip in place
+//  (`AnimationPlaybackController.pause()`/`resume()` — no snap) and freezes the CRT pass; the
+//  AvatarPresence contract for a creature that is on screen but shouldn't move (recede/still/Low
+//  Power). A creature nobody can see is UNMOUNTED by AvatarSurface instead — pausing a clip does
+//  not stop RealityKit's render loop. Confidence now 0.85 (park/resume verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 1) — `reload(to:)` syncs `scene.parked` from the
+//  view's `paused` before it plays the idle clip, so a creature mounted already-paused starts parked
+//  (the first `update` hadn't run yet; one live frame slipped through). Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 3) — `update`'s switch `Task` is held on
+//  `scene.loadTask`, cancelled by the next switch and on disappear, so the mesh-failed log's
+//  `!Task.isCancelled` guard can actually observe an unmount mid-load (it was dead code on that path).
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `framing: CompanionFraming`: `.window` (default, the fixed
 //  z 2.4 shot, byte-identical) or `.fit(headroom:)`, which places the camera at `CameraFit.distance` for the
 //  view's aspect and the creature's posed extents in RealityView's update tick (a GeometryReader carries the
@@ -95,6 +106,10 @@ final class CompanionScene {
     /// Monotonic reload token: a load that finishes after a newer one started is
     /// dropped, so rapid switches never leave an older creature winning the swap.
     var loadToken = 0
+    /// The in-flight selection switch started by `update` — cancelled by the
+    /// next switch and on disappear, so an unmount mid-load reads as a cancel
+    /// (see the mesh-failed log in `reload(to:)`), not as a broken asset.
+    var loadTask: Task<Void, Never>?
     var host: Entity?
     /// The loaded creature's own local-space visual bounds (host-local —
     /// captured before parenting, so no parent transform is baked in),
@@ -119,6 +134,12 @@ final class CompanionScene {
     var lastActivity: AvatarActivity = .idle
     /// Last shading style painted — so switching the style picker repaints live.
     var lastShadingStyle: CompanionShadingStyle = .off
+    /// The clip currently playing on `host` — kept so a pause can park it in
+    /// place and a resume can pick it back up mid-cycle.
+    var playback: AnimationPlaybackController?
+    /// Whether `playback` is parked (mirrors the view's `paused`, applied once
+    /// per change rather than on every update).
+    var parked = false
     /// The creature's baked materials, snapshotted before any shader is applied —
     /// cel rebuilds FROM these (keeping the fur texture) and Off restores them.
     var bakedMaterials: [ObjectIdentifier: [any RealityKit.Material]] = [:]
@@ -174,6 +195,8 @@ struct CompanionAvatarView: View {
     /// Optional mirror of the mesh load for a host that wants a spinner (the
     /// iOS onboarding face step). Set on the main actor around `reload(to:)`.
     var loading: Binding<Bool>? = nil
+    /// Park the idle clip + CRT pass in place (AvatarPresence `.paused`).
+    var paused = false
 
     @State private var scene = CompanionScene()
     /// Bumped once at the end of every successful `reload(to:)` — a plain
@@ -299,12 +322,15 @@ struct CompanionAvatarView: View {
                 // happens in the SAME RealityView (no recreation → no black).
                 scene.loadedCompanionID = companion.id
                 let target = companion
-                Task { await reload(to: target) }
+                scene.loadTask?.cancel()
+                scene.loadTask = Task { await reload(to: target) }
             } else if scene.built {
                 sync(to: controller.state)
             }
+            if scene.built { applyPause(paused) }
         }
-        .overlay(CRTOverlay())
+        .overlay(CRTOverlay(paused: paused))
+        .onDisappear { scene.loadTask?.cancel() }
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
@@ -377,7 +403,15 @@ struct CompanionAvatarView: View {
             // Staleness-check BEFORE logging: a superseded load's failure is
             // not an error the user can still see — logging it would plant a
             // red herring beside any real load failure (PR #82 review).
-            if token == scene.loadToken {
+            // And not when the view was UNMOUNTED mid-load (2026-09-12: a
+            // sub-second HUD show/hide tears the RealityView down while
+            // `Entity(contentsOf:)` is still in flight — that is a cancel,
+            // not a broken asset). `update`'s switch task is cancelled on
+            // disappear / the next switch (`scene.loadTask`); `make`'s load
+            // rides RealityView's own closure lifetime. Cancellation only
+            // silences this log — the load itself runs to completion so a
+            // re-shown view never finds a half-built scene.
+            if token == scene.loadToken, !Task.isCancelled {
                 Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
             }
             return
@@ -418,8 +452,13 @@ struct CompanionAvatarView: View {
         // Play the resting clip if we have it; otherwise render the STATIC mesh rather
         // than nothing. A frozen creature reads as quiet/loading; a black panel reads
         // as broken — and the mesh appearing at all is the whole point.
+        // A creature mounted straight into `.paused` (Low Power at launch, a
+        // still treatment on first appear) must start parked — `applyPause`
+        // only runs from `update`, which hasn't happened yet (#293 review 1).
+        scene.parked = paused
         if let idle = clips[companion.idleClip] {
-            host.playAnimation(idle.repeat(), transitionDuration: 0.3)
+            scene.playback = host.playAnimation(idle.repeat(), transitionDuration: 0.3)
+            if scene.parked { scene.playback?.pause() }
         } else {
             Self.log.warning("companion \(companion.id, privacy: .public): no idle clip harvested — static mesh")
         }
@@ -550,8 +589,21 @@ struct CompanionAvatarView: View {
         guard desired != scene.currentClip, let resource = scene.clips[desired], let host = scene.host
         else { return }
         let gait = ClipMapper.gait(for: state)
-        host.playAnimation(resource.repeat(), transitionDuration: ClipMapper.crossfadeDuration(to: gait))
+        scene.playback = host.playAnimation(
+            resource.repeat(), transitionDuration: ClipMapper.crossfadeDuration(to: gait)
+        )
         scene.currentClip = desired
+        if scene.parked { scene.playback?.pause() }
+    }
+
+    /// Park or resume the running clip IN PLACE — the creature freezes mid-cycle
+    /// and picks up from the same frame, no snap to the clip's start. Applied
+    /// only on an actual change; `update` runs on every SwiftUI pass.
+    private func applyPause(_ paused: Bool) {
+        guard paused != scene.parked else { return }
+        scene.parked = paused
+        guard let playback = scene.playback else { return }
+        if paused { playback.pause() } else { playback.resume() }
     }
 
     /// Accent colour for the fill light. Neutral gets a soft warm white rather than

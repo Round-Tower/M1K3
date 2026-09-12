@@ -31,6 +31,10 @@
 //  creatures can share the identical camera-less window-fit maths on visionOS
 //  rather than re-deriving it. No behaviour change here — same 0.9 headroom,
 //  same guard shape.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the per-tick material write
+//  (`cube.model?.materials = [...]`, a GPU resource update per cube per frame)
+//  is now gated on the cell's intensity or the accent actually changing; the
+//  position/scale jitter still writes every tick. Confidence now 0.85.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the avatar is brand-default and now
 // cross-platform (the pixel face is pure RealityKit + SwiftUI; only the accent
@@ -74,6 +78,11 @@ final class AvatarScene {
     var materials: [UnlitMaterial] = []
     /// The matrix cells, parallel to `cubes`/`materials` (build + animate order).
     var cells: [(col: Int, row: Int)] = []
+    /// Last intensity painted per cube, so an unchanged cell skips the
+    /// material reassign (a GPU resource update). -1 = never painted.
+    var lastIntensity: [Float] = []
+    /// Accent the intensities were painted with; a change repaints every cell.
+    var lastAccent: (r: CGFloat, g: CGFloat, b: CGFloat)?
     var built = false
     /// Animation clock origin, captured at build time. Animation time is measured
     /// elapsed-since-build so `sin/cos` arguments stay small — mirrors the
@@ -172,6 +181,7 @@ struct AvatarView: View {
                 scene.cubes = cubes
                 scene.materials = materials
                 scene.cells = cells
+                scene.lastIntensity = Array(repeating: -1, count: cubes.count)
                 scene.startDate = context.date
                 scene.built = true
             } update: { content in
@@ -222,6 +232,11 @@ struct AvatarView: View {
     private func animate(at time: Double) {
         let state = controller.state
         let accent = Self.rgb(of: state.emotion.accentColor)
+        if let last = scene.lastAccent, last != accent {
+            // New accent: every cell repaints once, whatever its intensity.
+            scene.lastIntensity = Array(repeating: -1, count: scene.cubes.count)
+        }
+        scene.lastAccent = accent
 
         for index in scene.cubes.indices {
             let cell = scene.cells[index]
@@ -237,8 +252,12 @@ struct AvatarView: View {
             // Brightness → emission. Mutate the cached material's colour in place
             // rather than allocating a new UnlitMaterial every frame.
             let intensity = FaceExpression.intensity(col: cell.col, row: cell.row, state: state, time: time)
-            scene.materials[index].color = .init(tint: Self.scaled(accent, by: intensity))
-            cube.model?.materials = [scene.materials[index]]
+            // Below one 8-bit step the write is invisible — skip it.
+            if abs(intensity - scene.lastIntensity[index]) > 1.0 / 255.0 {
+                scene.materials[index].color = .init(tint: Self.scaled(accent, by: intensity))
+                cube.model?.materials = [scene.materials[index]]
+                scene.lastIntensity[index] = intensity
+            }
 
             // Lit cells swell with brightness — a geometric stand-in for LED
             // bloom. Background cells (~0.06) barely move; full-lit gets the

@@ -12,6 +12,9 @@
 //  is byte-for-byte the jam's proven config; the SwiftUI content underneath
 //  is new — verify-by-launch per this repo's convention for RealityKit/AppKit
 //  glue). Prior: the jam prototype, same session.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the root tracks window
+//  visibility so the content can drop its RealityView while ordered out.
+//  Confidence now 0.85.
 //
 
 import AppKit
@@ -54,6 +57,7 @@ final class NotchHUDWindow: NSWindow {
         let hosting = NSHostingView(
             rootView: NotchHUDContentView(env: env)
                 .frame(width: NotchHUDLayout.size.width, height: NotchHUDLayout.size.height)
+                .trackWindowVisibility()
         )
         contentView = hosting
         setContentSize(NotchHUDLayout.size)

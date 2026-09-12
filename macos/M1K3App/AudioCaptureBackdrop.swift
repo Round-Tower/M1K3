@@ -9,6 +9,8 @@
 //  by rendering the orbs static.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-08, Confidence 0.75, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the timeline is capped at 30 fps
+//  (was the display's native 120 Hz). Confidence now 0.8 (verify-by-launch).
 
 import SwiftUI
 
@@ -21,7 +23,11 @@ struct AudioCaptureBackdrop: View {
         if reduceMotion {
             orbs(phase: 0)
         } else {
-            TimelineView(.animation) { timeline in
+            // 30 fps cap (2026-09-12 thermal audit): `.animation` alone runs at
+            // the display's native rate — 120 Hz on ProMotion — for two orbs
+            // under a 56 pt blur the eye can't resolve past ~30. Only mounted
+            // while capturing, so this is an ACTIVE cost, but 4× less of one.
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
                 // Elapsed-since-start, NOT timeIntervalSinceReferenceDate (~8e8):
                 // a Double can't resolve the ~0.006 rad/frame delta at that
                 // magnitude, so cos/sin returned a near-constant and the orbs sat
