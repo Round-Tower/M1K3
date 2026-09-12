@@ -49,6 +49,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 4 fold) — the marquee identity is
 //  (utterance sequence, sentence start), not the start alone: consecutive one-sentence
 //  utterances all start at 0 and relied on an intervening `clear()` render to restart.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the avatar slot mounts only while the HUD window is on
+//  screen (`\.windowVisible`, tracked by NotchHUDWindow). The window is built on first show and lives
+//  ordered-out forever after; its 72 px Fox kept RealityKit rendering at display rate — measured as the
+//  single biggest idle cost in the app (~33% CPU, fan on). Confidence now 0.8 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Voice
@@ -63,6 +67,9 @@ private struct MarqueeKey: Hashable {
 struct NotchHUDContentView: View {
     let env: AppEnvironment
     @AppStorage(AppEnvironment.voiceCompanionKey) private var companion = ""
+    /// Ordered-out HUD → no creature at all (the fallback path below bypasses
+    /// AvatarSurface's own gate, so it is gated here).
+    @Environment(\.windowVisible) private var windowVisible
 
     /// ONE line: the sentence being spoken, not the whole utterance. A
     /// visiting agent's multi-paragraph `speak` is a single utterance with
@@ -122,7 +129,9 @@ struct NotchHUDContentView: View {
     /// both live-confirmed illegible at 72px — see header for the full story.
     @ViewBuilder
     private var avatarSlot: some View {
-        if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
+        if !windowVisible {
+            EmptyView()
+        } else if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
             AvatarSurface(env: env)
         } else {
             CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion)

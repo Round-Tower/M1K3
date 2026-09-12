@@ -21,19 +21,46 @@
 //  (recede/still/Reduce Motion freeze the pixel face; constellation + companion
 //  surfaces don't take a pause yet — logged follow-up, they receive it as a
 //  no-op param when they do).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the thermal audit's seam: the
+//  surface resolves an `AvatarPresence` (M1K3Avatar, test-pinned) from the
+//  window's occlusion-derived visibility (`\.windowVisible`), the caller's
+//  `paused`, and Low Power Mode. A window nobody can see mounts NO RealityView
+//  (the only thing that stops RealityKit's render loop — one hidden Fox cost
+//  ~33% CPU at idle); a visible-but-still surface is paused; and the pause
+//  finally reaches the creature + constellation too (the 07-18 follow-up
+//  closed). Confidence now 0.85 (mount/pause verify-by-launch).
 
 import M1K3Avatar
 import SwiftUI
 
 struct AvatarSurface: View {
     let env: AppEnvironment
-    /// Freeze idle motion (pixel-face surface only today — see header Review).
+    /// Freeze idle motion (all three surfaces since 2026-09-12 — see header Review).
     var paused = false
     @AppStorage(AppEnvironment.voiceCompanionKey) private var companion = ""
+    /// Published by `.trackWindowVisibility()` at the window root; `true` where
+    /// no root tracks it (today's behaviour for untracked windows).
+    @Environment(\.windowVisible) private var windowVisible
+
+    private var presence: AvatarPresence {
+        AvatarPresence.resolve(
+            windowVisible: windowVisible,
+            animatesMotion: !paused,
+            // Not observable; read at render like ChatBackdropTreatment does.
+            lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled
+        )
+    }
 
     var body: some View {
+        // The constellation canvas stays mounted through an unmount (it owns
+        // the polled model — dropping it would relayout + regrow on every
+        // reveal); it drops its own RealityView on `.unmounted`. The creature
+        // and the pixel face rebuild cheaply, so they simply go away.
         if companion == AppEnvironment.voiceCompanionConstellation {
-            MemoryConstellationCanvas(env: env)
+            MemoryConstellationCanvas(env: env, presence: presence)
+        } else if !presence.isMounted {
+            // No surface at all: nothing to see, nothing to render.
+            EmptyView()
         } else if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
             // .id(spec.id): a creature→creature switch must REBUILD the RealityView
             // (fresh identity → fresh CompanionScene + make closure). Without it,
@@ -42,10 +69,10 @@ struct AvatarSurface: View {
             // constellation switches change the view TYPE, so only same-type
             // swaps hit this; it fires only on an actual different companion
             // (the onboarding per-step-rebuild trap is the opposite failure).
-            CompanionAvatarView(controller: env.avatar, companion: spec)
+            CompanionAvatarView(controller: env.avatar, companion: spec, paused: presence.isPaused)
                 .id(spec.id)
         } else {
-            AvatarView(controller: env.avatar, paused: paused)
+            AvatarView(controller: env.avatar, paused: presence.isPaused)
         }
     }
 }

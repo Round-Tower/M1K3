@@ -10,6 +10,9 @@
 //  implicit repeating animations); the steady colour is correct even if it doesn't.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.7, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the pulsing dot's timeline is
+//  capped at 30 fps on an elapsed clock (was the display's native 120 Hz).
+//  Confidence now 0.8 (verify-by-launch).
 
 import Foundation
 import M1K3Avatar
@@ -68,12 +71,18 @@ extension Color {
 private struct IndicatorDot: View {
     let color: Color
     let pulses: Bool
+    /// Elapsed-since-mount clock origin (the AudioCaptureBackdrop precision
+    /// lesson, applied for consistency — small sin() arguments).
+    @State private var start = Date()
 
     var body: some View {
         Group {
             if pulses {
-                TimelineView(.animation) { context in
-                    let phase = context.date.timeIntervalSinceReferenceDate
+                // 30 fps cap (2026-09-12 thermal audit): a 4.5 pt dot breathing
+                // at 3 rad/s does not need the display's native 120 Hz. Only
+                // mounted while thinking/recording — an ACTIVE cost, made 4× smaller.
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+                    let phase = context.date.timeIntervalSince(start)
                     Circle()
                         .fill(color)
                         .opacity(0.5 + 0.5 * (0.5 + 0.5 * sin(phase * 3)))

@@ -27,6 +27,11 @@
 //  since (unlike AvatarView) this view has no continuous TimelineView clock to carry the
 //  fit forward on its own. macOS/iOS PerspectiveCamera path is byte-for-byte unchanged.
 //  Prior: Kev + claude-opus-4-8 (this file).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `paused:` parks the running clip in place
+//  (`AnimationPlaybackController.pause()`/`resume()` — no snap) and freezes the CRT pass; the
+//  AvatarPresence contract for a creature that is on screen but shouldn't move (recede/still/Low
+//  Power). A creature nobody can see is UNMOUNTED by AvatarSurface instead — pausing a clip does
+//  not stop RealityKit's render loop. Confidence now 0.85 (park/resume verify-by-launch).
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -107,6 +112,12 @@ final class CompanionScene {
     var lastActivity: AvatarActivity = .idle
     /// Last shading style painted — so switching the style picker repaints live.
     var lastShadingStyle: CompanionShadingStyle = .off
+    /// The clip currently playing on `host` — kept so a pause can park it in
+    /// place and a resume can pick it back up mid-cycle.
+    var playback: AnimationPlaybackController?
+    /// Whether `playback` is parked (mirrors the view's `paused`, applied once
+    /// per change rather than on every update).
+    var parked = false
     /// The creature's baked materials, snapshotted before any shader is applied —
     /// cel rebuilds FROM these (keeping the fur texture) and Off restores them.
     var bakedMaterials: [ObjectIdentifier: [any RealityKit.Material]] = [:]
@@ -142,6 +153,8 @@ struct CompanionAvatarView: View {
     /// Optional mirror of the mesh load for a host that wants a spinner (the
     /// iOS onboarding face step). Set on the main actor around `reload(to:)`.
     var loading: Binding<Bool>? = nil
+    /// Park the idle clip + CRT pass in place (AvatarPresence `.paused`).
+    var paused = false
 
     @State private var scene = CompanionScene()
     /// Bumped once at the end of every successful `reload(to:)` — a plain
@@ -242,8 +255,9 @@ struct CompanionAvatarView: View {
             } else if scene.built {
                 sync(to: controller.state)
             }
+            if scene.built { applyPause(paused) }
         }
-        .overlay(CRTOverlay())
+        .overlay(CRTOverlay(paused: paused))
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
@@ -358,7 +372,8 @@ struct CompanionAvatarView: View {
         // than nothing. A frozen creature reads as quiet/loading; a black panel reads
         // as broken — and the mesh appearing at all is the whole point.
         if let idle = clips[companion.idleClip] {
-            host.playAnimation(idle.repeat(), transitionDuration: 0.3)
+            scene.playback = host.playAnimation(idle.repeat(), transitionDuration: 0.3)
+            if scene.parked { scene.playback?.pause() }
         } else {
             Self.log.warning("companion \(companion.id, privacy: .public): no idle clip harvested — static mesh")
         }
@@ -485,8 +500,19 @@ struct CompanionAvatarView: View {
         guard desired != scene.currentClip, let resource = scene.clips[desired], let host = scene.host
         else { return }
         let gait = ClipMapper.gait(for: state)
-        host.playAnimation(resource.repeat(), transitionDuration: ClipMapper.crossfadeDuration(to: gait))
+        scene.playback = host.playAnimation(resource.repeat(), transitionDuration: ClipMapper.crossfadeDuration(to: gait))
         scene.currentClip = desired
+        if scene.parked { scene.playback?.pause() }
+    }
+
+    /// Park or resume the running clip IN PLACE — the creature freezes mid-cycle
+    /// and picks up from the same frame, no snap to the clip's start. Applied
+    /// only on an actual change; `update` runs on every SwiftUI pass.
+    private func applyPause(_ paused: Bool) {
+        guard paused != scene.parked else { return }
+        scene.parked = paused
+        guard let playback = scene.playback else { return }
+        if paused { playback.pause() } else { playback.resume() }
     }
 
     /// Accent colour for the fill light. Neutral gets a soft warm white rather than

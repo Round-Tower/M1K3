@@ -36,11 +36,18 @@
 //  idiom instead of Timer; the on-screen feel — entrance/exit beats, the
 //  72px avatar's legibility — is verify-by-launch, unheard/unseen by me).
 //  Prior: the jam prototype (Kev + claude-fable-5, same session).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the drive loop no longer polls
+//  at 10 Hz for the app's lifetime: it sleeps on the `@Observable` speech
+//  signal (withObservationTracking) and ticks on a clock ONLY while the hide
+//  grace is pending (`NotchHUDVisibility.awaitsGrace`, test-pinned). At idle
+//  this task holds no timer. Confidence now 0.85 (wake-on-speech verify-by-launch).
 //
 
 import AppKit
 import Foundation
 import M1K3Voice
+import Observation
+import os
 
 @MainActor
 final class NotchHUDController {
@@ -55,19 +62,55 @@ final class NotchHUDController {
         self.env = env
     }
 
-    /// Start polling. Safe to call once at launch — the Settings toggle
+    /// Start the drive loop. Safe to call once at launch — the Settings toggle
     /// (`AppEnvironment.notchHUDEnabledKey`, read every tick) gates whether
     /// the HUD can ever actually show, so this runs for the app's whole
-    /// lifetime with no separate wiring needed when the toggle flips.
+    /// lifetime with no separate wiring needed when the toggle flips (it is
+    /// re-read on the next speech change, which is the only moment it matters).
+    ///
+    /// The loop is event-driven: it suspends on the observable speech signal
+    /// and only ticks on a clock while a hide grace is pending — the one
+    /// interval no signal change will arrive for. No lifetime 10 Hz poll.
     func start() {
         guard driveTask == nil else { return }
         driveTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                self?.tick()
-                try? await Task.sleep(for: .milliseconds(100))
+                guard let self else { return }
+                tick()
+                if visibility.awaitsGrace {
+                    try? await Task.sleep(for: .milliseconds(100))
+                } else {
+                    await awaitSpeechChange()
+                }
             }
         }
     }
+
+    /// Suspend until `env.speechHighlight.isActive` changes (or the task is
+    /// cancelled). A 30 s safety valve bounds any missed observation.
+    private func awaitSpeechChange() async {
+        let signal = env.speechHighlight
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                let once = ResumeOnce(continuation)
+                withObservationTracking {
+                    _ = signal.isActive
+                } onChange: {
+                    once.resume()
+                }
+                Task {
+                    try? await Task.sleep(for: .seconds(30))
+                    once.resume()
+                }
+                cancelHook.withLock { $0 = once }
+            }
+        } onCancel: {
+            cancelHook.withLock { $0 }?.resume()
+        }
+    }
+
+    /// The pending wait's resume handle, so `stop()` can release it.
+    private let cancelHook = OSAllocatedUnfairLock<ResumeOnce?>(initialState: nil)
 
     func stop() {
         driveTask?.cancel()
@@ -163,6 +206,23 @@ final class NotchHUDController {
             window?.setFrameOrigin(to.origin)
             window?.alphaValue = to.alpha
             completion?()
+        }
+    }
+
+    /// A continuation that resumes at most once, from whichever of the
+    /// observation callback / valve / cancellation gets there first.
+    private final class ResumeOnce: Sendable {
+        private let slot: OSAllocatedUnfairLock<CheckedContinuation<Void, Never>?>
+
+        init(_ continuation: CheckedContinuation<Void, Never>) {
+            slot = OSAllocatedUnfairLock(initialState: continuation)
+        }
+
+        func resume() {
+            slot.withLock { held -> CheckedContinuation<Void, Never>? in
+                defer { held = nil }
+                return held
+            }?.resume()
         }
     }
 

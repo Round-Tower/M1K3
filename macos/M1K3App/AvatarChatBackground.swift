@@ -14,6 +14,10 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.75 (treatment TDD'd;
 //  the full-bleed look, legibility over the glass bubbles, and the bloom/recede
 //  feel are verify-by-eye at ⌘R). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the thinking rain now pauses
+//  with the same treatment the avatar honours (recede/still/Reduce Motion)
+//  and whenever the window is off screen; before, only Low Power paused it.
+//  Confidence now 0.8.
 
 import Foundation
 import M1K3Avatar
@@ -30,6 +34,7 @@ struct AvatarChatBackground: View {
     var showsInferenceRain = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.windowVisible) private var windowVisible
 
     private var treatment: ChatBackdropTreatment {
         ChatBackdropTreatment.resolve(
@@ -51,7 +56,7 @@ struct AvatarChatBackground: View {
             // tool pings here; the answer's already in the bubble. The layer is
             // non-interactive + a11y-hidden.
             if showsInferenceRain {
-                InferencePhosphorView()
+                InferencePhosphorView(paused: !resolved.animatesMotion || !windowVisible)
                     .ignoresSafeArea()
             }
             AvatarSurface(env: env, paused: !resolved.animatesMotion)

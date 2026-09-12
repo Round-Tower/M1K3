@@ -13,7 +13,12 @@
 //  Prior: Unknown.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `buildSeeded` delegates to the lifted `ConstellationSeeding`
 //  (M1K3MemoryViz) that the iPad canvas shares; behaviour byte-identical, pinned there. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the canvas takes an `AvatarPresence`: unmounted → no
+//  RealityView (the render loop stops) and the store poll backs off to `ConstellationPollCadence.hidden`
+//  (test-pinned); paused → the field's 30 fps clock stops; a re-shown field pops in without replaying the
+//  accretion stagger. The windowed wrapper reads `\.windowVisible` for its own presence. Confidence now 0.85.
 
+import M1K3Avatar
 import M1K3Knowledge
 import M1K3Memory
 import M1K3MemoryViz
@@ -30,20 +35,27 @@ extension M1K3App {
 /// for the windowed wrapper.)
 struct MemoryConstellationCanvas: View {
     let env: AppEnvironment?
+    /// Mount / pause / animate (AvatarPresence, M1K3Avatar). The host resolves
+    /// it from window visibility + treatment + Low Power; `.unmounted` keeps
+    /// this canvas (and its polled model) alive but drops the RealityView.
+    var presence: AvatarPresence = .animating
     @State private var model: ConstellationModel?
+    /// The field has been on screen at least once this mount — a later re-show
+    /// (window un-occluded) pops the motes in rather than replaying the
+    /// accretion stagger from the opening beat.
+    @State private var hasPresented = false
     /// Last seen store revision — the cheap change signal that gates a relayout.
     /// `revision` (not a bare count) so a SUPERSESSION (net-zero count) still
     /// redraws the field on a correction.
     @State private var lastRevision: MemoryRevision?
 
     /// Cap the field so a big store stays legible and the O(n²) layout stays cheap;
-    /// the view shows the newest motes. Poll cadence for "grows over time".
+    /// the view shows the newest motes.
     private let maxNodes = 300
-    private let refresh: Duration = .seconds(2)
-    /// Backed-off cadence when the Mac is under thermal/low-power pressure — the
-    /// O(n²) relayout is speculative background work, so it runs less often when
-    /// hot (Cool Head knob 1). Re-checked each tick, so it recovers automatically.
-    private let throttledRefresh: Duration = .seconds(10)
+    /// Poll cadence for "grows over time": 2 s on screen, 10 s under thermal /
+    /// low-power pressure (the O(n²) relayout is speculative — Cool Head knob 1),
+    /// 30 s while nobody can see the field. Re-checked each tick.
+    private let cadence = ConstellationPollCadence()
 
     var body: some View {
         Group {
@@ -54,14 +66,20 @@ struct MemoryConstellationCanvas: View {
                         systemImage: "sparkles",
                         description: Text("As M1K3 remembers things, they appear here as a constellation that grows over time.")
                     )
+                } else if presence.isMounted {
+                    ConstellationView(model: model, growthStep: hasPresented ? 0 : 0.08, paused: presence.isPaused)
+                        .onAppear { hasPresented = true }
                 } else {
-                    ConstellationView(model: model)
+                    // Unmounted: the model stays, the RealityView goes.
+                    Color.clear
                 }
             } else {
                 ProgressView("Mapping memory…")
             }
         }
-        .task { await watch() }
+        // Keyed on mount state so the poll loop restarts at the new cadence
+        // the moment the window hides or returns (the closure captures `presence`).
+        .task(id: presence.isMounted) { await watch() }
     }
 
     /// Poll the store while the window is open, relaying out only when the live
@@ -70,7 +88,9 @@ struct MemoryConstellationCanvas: View {
     private func watch() async {
         await rebuildIfChanged()
         while !Task.isCancelled {
-            let interval = AppEnvironment.backgroundWorkAllowed() ? refresh : throttledRefresh
+            let interval = cadence.interval(
+                hidden: !presence.isMounted, throttled: !AppEnvironment.backgroundWorkAllowed()
+            )
             try? await Task.sleep(for: interval)
             await rebuildIfChanged()
         }
@@ -145,9 +165,10 @@ struct MemoryConstellationCanvas: View {
 /// The windowed wrapper — the canvas at a window's size, opened from the menu.
 struct ConstellationWindowContent: View {
     let env: AppEnvironment?
+    @Environment(\.windowVisible) private var windowVisible
 
     var body: some View {
-        MemoryConstellationCanvas(env: env)
+        MemoryConstellationCanvas(env: env, presence: windowVisible ? .animating : .unmounted)
             .frame(minWidth: 640, minHeight: 480)
             .navigationTitle("Memory Constellation")
     }
