@@ -16,6 +16,14 @@ and never covered the Swift Mac MVP — the active surface. It was removed.
 | **`claude-code-review.yml`** | Auto Claude review of **Android/Kotlin** changes. | PRs touching `app/**/*.kt` |
 | **`claude-code-review-mac.yml`** | Auto Claude review of **Swift/Mac** changes. | PRs touching `macos/**` |
 
+## Landing tooling
+
+`macos/tools/ci/pr_watch.py <PR>` watches a PR by HEAD SHA: required CI jobs
+green (the mobile job is advisory for package-only diffs) and enough review
+passes that name that head (`--passes 0` for a trivial head). `land.sh <PR>`
+gates on it, squash-merges by sha, verifies the merge landed, deletes the
+branch. Rules are tests in `test_pr_watch.py`.
+
 ## Notes & gotchas
 
 - **`swift-mac` needs a runner with Xcode 26+** (the package targets

@@ -59,6 +59,20 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' build | xcbeautify   # alw
   privacy-manifest / Info.plist invariants the lane depends on.
 - Tests use the **swift-testing** framework (`import Testing`, `@Test`), not
   XCTest.
+- **Landing a PR** (`tools/ci/pr_watch.py <PR>` then `tools/ci/land.sh <PR>`;
+  rules pinned in `test_pr_watch.py`): review LOCALLY before the first push
+  (swiftformat, `swift test --filter` on the touched suites, a code-quality
+  pass on the diff), push once, then two passes on that head — the auto pass
+  plus one `@claude` summon. A comment-only fold or a clean master merge on an
+  already-reviewed head is a *trivial head*: `--passes 0`, merge on green CI.
+  Master has no required status checks (2026-09-12) — the gate is this rule.
+  The mobile job (~19 min) is advisory unless the diff touches
+  `M1K3iOSApp/`, `M1K3visionOS/`, `UITests/`, `project.yml` or `ci.yml`.
+  Do NOT merge master into a PR branch unless git reports a conflict or the
+  PR needs a fix from master to go green — each merge is a full CI + review
+  cycle. A one-file, test-only fix that unblocks a PR rides in that PR, named
+  in the body. Land with the head sha; verify state + mergedAt, never the
+  exit code alone.
 
 ## The metallib wall & on-device verification
 

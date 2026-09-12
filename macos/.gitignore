@@ -33,3 +33,6 @@ M1K3visionOS/Info.generated.plist
 !.swiftpm/xcode/xcshareddata/
 .swiftpm/xcode/xcshareddata/*
 !.swiftpm/xcode/xcshareddata/xcschemes/
+
+# swift test --xunit-output (CI uploads it as an artifact)
+test-results/

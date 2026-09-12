@@ -68,20 +68,28 @@ jobs:
         with:
           xcode-version: "26" # pinned: Xcode 27 GA must be a deliberate bump, never a silent one
 
-      - name: Cache SwiftPM
-        uses: actions/cache@v4
+      # Restore/save are split on purpose. actions/cache SKIPS the save on an
+      # exact key hit, so one snapshot (saved 2026-09-05, 1.1 GB) served every run
+      # for a week while the job still recompiled all ~1,000 MLX files (222 s).
+      # Now: every run restores the NEWEST snapshot by prefix; only pushes to
+      # master save a fresh one (run_id in the key makes each save unique). PR
+      # runs never upload — a ~1 GB upload per run would churn the 10 GB cap.
+      #
+      # github.repository is IN the key deliberately: the runner's workspace path
+      # is /Users/runner/work/<repo>/<repo>, and Clang's module cache bakes
+      # absolute paths into its .pcm files. The 2026-08-31 repo rename
+      # (m1k3 -> M1K3) left a stale cache with the OLD path baked in, which
+      # collided with the NEW path mid-build ("module '_DarwinFoundation1' is
+      # defined in both ...", clang segfault). Keying on the repo name means any
+      # future rename busts the cache instead of poisoning it.
+      - name: Restore SwiftPM build
+        uses: actions/cache/restore@v4
         with:
           path: macos/.build
-          # github.repository is IN the key deliberately: the self-hosted runner's
-          # workspace path is /Users/runner/work/<repo>/<repo>, and Clang's module
-          # cache bakes absolute paths into its .pcm files. The 2026-08-31 repo
-          # rename (m1k3 -> M1K3) left a stale cache with the OLD path baked in,
-          # which collided with the NEW path mid-build ("module '_DarwinFoundation1'
-          # is defined in both ... m1k3/m1k3 ... and ... M1K3/M1K3 ...", clang
-          # segfault). Keying on the repo name means any future rename busts the
-          # cache instead of poisoning it.
-          key: spm-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('macos/Package.resolved') }}
-          restore-keys: spm-${{ runner.os }}-${{ github.repository }}-
+          key: spm-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('macos/Package.resolved') }}-${{ github.run_id }}
+          restore-keys: |
+            spm-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('macos/Package.resolved') }}-
+            spm-${{ runner.os }}-${{ github.repository }}-
 
       - name: swift test
         working-directory: macos
@@ -89,7 +97,25 @@ jobs:
         # run from a bundled .app (see project-memory "metallib wall"), never CLI.
         env:
           M1K3_MLX_INTEGRATION: "0"
-        run: swift test --parallel
+        # --xunit-output keeps per-test wall times on every run (issue #296: the
+        # parallel suite stalls the runner and short watchdogs fire; the stall is
+        # visible as a block of trivial tests all reporting the same N s).
+        run: swift test --parallel --xunit-output test-results/xunit.xml
+
+      - name: Upload test timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift-test-timings
+          path: macos/test-results/
+          retention-days: 14
+
+      - name: Save SwiftPM build (master only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/cache/save@v4
+        with:
+          path: macos/.build
+          key: spm-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('macos/Package.resolved') }}-${{ github.run_id }}
 
   app-build:
     name: Swift · App shell (xcodebuild)
@@ -302,3 +328,10 @@ jobs:
 # Confidence 0.75 not higher: the swift-mac job is verify-by-CI — it depends on
 # the hosted runner image shipping Xcode 26 (macOS 26 SDK), which I could not
 # confirm from here. The python-smoke set IS verified green locally.
+# Review: Kev + claude-fable-5.1, 2026-09-12 — swift-mac cache split into
+# restore (every run, newest by prefix) + save (master pushes only, run_id key):
+# the exact-hit snapshot from 09-05 never re-saved, so every run recompiled MLX
+# (222 s). The job also writes --xunit-output timings, uploaded as an artifact
+# for the #296 stall hunt. Confidence now 0.8: the mechanism is actions/cache's
+# documented behaviour; the saving is verify-by-run (compare a PR run AFTER the
+# first master save: "Compiling MLX" count and build time vs 1013 / 222 s).
