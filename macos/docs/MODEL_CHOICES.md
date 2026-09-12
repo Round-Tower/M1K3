@@ -583,6 +583,35 @@ paying a per-turn tax the incumbent does not pay is not like-for-like. Full
 reasoning and the do-not-do warning in
 `scratch/model-refresh-2026-08-08/LIL-BAKEOFF-RESULTS.md`.
 
+## 2026-09-12 — Golden Gate (macOS 27): Mini's quality uplift + token counting
+
+Mini (Apple Foundation Models) was out of scope for this doc's MLX model
+decisions, but the Golden Gate findings belong here because they change the
+tier picture:
+
+**Model quality:** 41/44 (93%) on a 44-fixture standalone eval through the real
+persona. Security 6/7 (was 0/14 on comparable fixtures pre-Golden-Gate). Identity
+adherence, conciseness, and natural tone all measurably improved. The model is
+better; the API is the same.
+
+**Token counting API** (macOS 26.4+): `SystemLanguageModel.tokenCount(for:)` —
+exact token measurement for prompts, instructions, tools, and transcripts.
+Measured the real fixed prompt at 462 tokens vs the standing `liveReserveTokens`
+estimate of 3000. Mini goes from ~857 tokens of conversation replay to ~2610 —
+a 3× uplift. `measuredMiniBudget` in `HistoryBudgetPolicy` resolves the [SPIKE].
+
+**Adapter API killed:** `SystemLanguageModel.Adapter` (LoRA fine-tuning on the
+system model) removed on macOS 27. "Custom adapters are no longer supported
+since iOS 27, macOS 27, and visionOS 27." No `LanguageModelExecutor` protocol
+shipped. The framework is still Apple-model-only.
+
+**Metal Int4/UInt4:** native 4-bit tensor types at macOS 26.4. Upstream
+mlx-swift concern; not actionable by us.
+
+**Tier story unchanged:** Mini is better but still 4096-token context. Lil keeps
+32K + native tool calling + reasoning. Big stays the delegation brain. The gap
+narrowed on quality; it didn't close on capability.
+
 <!-- Signed: Kev + claude-opus-5, 2026-08-12, Confidence 0.9 (the ruling is Kev's,
 quoted; the latency figures are the 2026-08-11 eval plus two live MCP turns timed
 this session; the "nothing downloads Big" consequence was found by a challenger

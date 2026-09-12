@@ -81,11 +81,11 @@ public enum HistoryBudgetPolicy {
     public static let liveReserveTokens = 3000
     public static let liveGenerationReserveTokens = 2048
 
-    /// Apple Foundation Models (mini) has its own ~4K window, and its real
-    /// effective budget is unmeasured (the [SPIKE]). So mini gets a fixed
-    /// CONSERVATIVE replay — wider per-turn than the legacy 6×400 (less answer
-    /// mangling) but well under the window — NOT the wide MLX default and NOT
-    /// the tier policy (whose MLX-sized reserves would zero it out).
+    /// Apple Foundation Models (mini) has its own ~4K window. Before macOS 26.4
+    /// the real effective budget was unmeasured (the [SPIKE]). `conservativeMiniBudget`
+    /// is the old fixed replay — wider per-turn than the legacy 6×400 (less answer
+    /// mangling) but well under the window. Still the fallback when no measured
+    /// token count is available.
     ///
     /// ⚠️ This comment used to add "and fails LOUDLY on overflow". It does NOT,
     /// and that belief has now caused two bugs. AFM throws on overflow from
@@ -98,6 +98,34 @@ public enum HistoryBudgetPolicy {
     public static let conservativeMiniBudget = HistoryWindow.Budget(
         totalChars: 3000, perTurnChars: 750, maxTurns: 8
     )
+
+    /// The [SPIKE] RESOLVED (Golden Gate, 2026-09-12): a budget for Mini computed
+    /// from EXACT token counts via `SystemLanguageModel.tokenCount(for:)`. The
+    /// caller measures the real persona + tools + grounding cost in tokens at
+    /// launch (or brain switch) and passes it here — no `charsPerToken` heuristic
+    /// on the reserve side. The result-to-chars conversion still uses
+    /// `charsPerToken` (the history window is char-addressed), but that direction
+    /// is SAFE: a conservative ratio means we budget FEWER chars than really fit,
+    /// so the window is never crossed.
+    ///
+    /// Measured on macOS 27.0: the real fixed prompt is ~462 tokens (persona 214 +
+    /// tools 117 + grounding 102 + goal 16 + overhead 13) vs the old
+    /// `liveReserveTokens` of 3000. With a 1024-token generation reserve, Mini
+    /// goes from ~857 tokens of replay (the conservative heuristic) to ~2610 —
+    /// a 3× uplift.
+    public static func measuredMiniBudget(
+        reservedTokens: Int,
+        generationTokens: Int = 1024
+    ) -> HistoryWindow.Budget {
+        let available = max(
+            0, BrainTier.mini.approximateContextTokens - reservedTokens - generationTokens
+        )
+        let totalChars = Int(Double(available) * charsPerToken)
+        let perTurnChars = min(HistoryWindow.maxCharsPerTurn, totalChars)
+        return HistoryWindow.Budget(
+            totalChars: totalChars, perTurnChars: perTurnChars, maxTurns: HistoryWindow.maxTurns
+        )
+    }
 
     /// Replay chars surrendered per attached image: an image's vision soft
     /// tokens ride the SAME window as everything else, and the only tier
@@ -139,13 +167,24 @@ public enum HistoryBudgetPolicy {
     /// it out — everything else delegates to `budget(for:reservedTokens:...)`.
     /// Composition roots call this one-liner instead of re-implementing the
     /// guard (112 review nit: brain routing belongs in the package, not app glue).
+    ///
+    /// `measuredMiniReserveTokens`: when the caller has measured the real fixed-
+    /// prompt cost via `SystemLanguageModel.tokenCount(for:)` (macOS 26.4+),
+    /// pass it here and Mini gets the measured budget instead of the conservative
+    /// fallback — the [SPIKE] resolved. Nil = the old conservative path.
     public static func budget(
         for tier: BrainTier?,
         reservedTokens: Int,
         generationTokens: Int,
-        latencyCeilingTokens: Int = defaultLatencyCeilingTokens
+        latencyCeilingTokens: Int = defaultLatencyCeilingTokens,
+        measuredMiniReserveTokens: Int? = nil
     ) -> HistoryWindow.Budget {
-        guard let tier, tier != .mini else { return conservativeMiniBudget }
+        guard let tier, tier != .mini else {
+            if let measured = measuredMiniReserveTokens {
+                return measuredMiniBudget(reservedTokens: measured, generationTokens: generationTokens)
+            }
+            return conservativeMiniBudget
+        }
         return budget(
             for: tier,
             reservedTokens: reservedTokens,

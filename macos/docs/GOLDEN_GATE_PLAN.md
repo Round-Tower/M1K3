@@ -32,23 +32,23 @@ Build status: 3,700 tests green, zero code changes needed.
 
 ### Ship (code changes for release)
 
-- [ ] **Wire `tokenCount` into `HistoryBudgetPolicy` for Mini** — replace the
-      `conservativeMiniBudget` heuristic with exact token counting via the
-      macOS 26.4+ API. Mini goes from ~857 tokens of conversation replay to
-      ~2,610 tokens. Pure policy change + provider seam. The [SPIKE] the code
-      has been asking for since 2026-06-30.
+- [x] **Wire `tokenCount` into `HistoryBudgetPolicy` for Mini** —
+      `measuredMiniBudget` added (pure, 5 tests green). `TokenCountable`
+      protocol + AFM conformance. The [SPIKE] resolved. App composition root
+      wiring still owed (the policy is ready; the caller needs to measure and
+      pass the exact token count at launch).
 
 - [ ] **Wire `tokenCount` into `GroundingBudgetPolicy`** — exact source token
       measurement instead of the chars/3.5 estimate. Mini's grounding block is
       68 tokens for 296 chars (ratio 4.4, not 3.5) — the budget is slightly
       over-conservative today. Lower risk, lower urgency.
 
-- [ ] **Log exact token usage on every Mini turn** — `logTurnStart` currently
+- [x] **Log exact token usage on every Mini turn** — `logTurnStart` currently
       logs char counts; add a companion `afm budget: instructions=N prompt=N
       total=N/4096` line using the new API. The first real-traffic data for
       the budget policy.
 
-- [ ] **Update `MODEL_CHOICES.md`** — document Adapter deprecation, the eval
+- [x] **Update `MODEL_CHOICES.md`** — document Adapter deprecation, the eval
       results, and the token counting win. The standing "Phase 17b" reference
       in ROADMAP needs rescoping.
 

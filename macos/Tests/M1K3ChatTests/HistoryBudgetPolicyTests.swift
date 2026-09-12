@@ -188,4 +188,62 @@ struct HistoryBudgetPolicyTests {
         #expect(HistoryBudgetPolicy.liveReserveTokens == 3000)
         #expect(HistoryBudgetPolicy.liveGenerationReserveTokens == HistoryBudgetPolicy.rotatingGenerationTokenCap)
     }
+
+    // MARK: - Measured Mini budget (the [SPIKE] resolved, Golden Gate)
+
+    @Test("measured mini budget: real token count yields a wider window than the conservative fallback")
+    func measuredMiniBudgetIsWiderThanConservative() {
+        // 462 tokens is the measured fixed prompt on Golden Gate (persona 214 +
+        // tools 117 + grounding 102 + goal 16 + overhead 13).
+        let measured = HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: 462)
+        let conservative = HistoryBudgetPolicy.conservativeMiniBudget
+        #expect(measured.totalChars > conservative.totalChars,
+                "measured \(measured.totalChars) should beat conservative \(conservative.totalChars)")
+    }
+
+    @Test("measured mini budget: the total still fits inside AFM's 4096-token window")
+    func measuredMiniBudgetFitsWindow() {
+        let measured = HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: 462)
+        let historyTokens = Int(Double(measured.totalChars) / HistoryBudgetPolicy.charsPerToken)
+        #expect(historyTokens + 462 + 1024 <= BrainTier.mini.approximateContextTokens)
+    }
+
+    @Test("measured mini budget: swamped reserves clamp to zero, not negative")
+    func measuredMiniBudgetClampsToZero() {
+        let budget = HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: 5000)
+        #expect(budget.totalChars == 0)
+        #expect(budget.perTurnChars == 0)
+    }
+
+    @Test("optional-tier overload: measuredMiniReserveTokens routes to the measured path")
+    func optionalTierOverloadUsesMeasuredWhenProvided() {
+        let withMeasured = HistoryBudgetPolicy.budget(
+            for: BrainTier?.some(.mini),
+            reservedTokens: 3000,
+            generationTokens: 2048,
+            measuredMiniReserveTokens: 462
+        )
+        let withoutMeasured = HistoryBudgetPolicy.budget(
+            for: BrainTier?.some(.mini),
+            reservedTokens: 3000,
+            generationTokens: 2048
+        )
+        #expect(withMeasured.totalChars > withoutMeasured.totalChars,
+                "measured path should yield a wider budget than conservative")
+        #expect(withoutMeasured == HistoryBudgetPolicy.conservativeMiniBudget)
+    }
+
+    @Test("optional-tier overload: measuredMiniReserveTokens is ignored for non-Mini tiers")
+    func measuredMiniReserveIgnoredForOtherTiers() {
+        let big = HistoryBudgetPolicy.budget(
+            for: BrainTier?.some(.big),
+            reservedTokens: 3000,
+            generationTokens: 2048,
+            measuredMiniReserveTokens: 462
+        )
+        let bigWithout = HistoryBudgetPolicy.budget(
+            for: .big, reservedTokens: 3000, generationTokens: 2048
+        )
+        #expect(big == bigWithout)
+    }
 }

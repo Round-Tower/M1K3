@@ -83,7 +83,8 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// body and instructions ever both carry the persona again, `total` jumps
     /// by ~3.8k chars and the line says so on every turn.
     ///
-    /// Window is 4096 tokens ≈ 18k chars at the measured ~4.4 chars/token.
+    /// Window is 4096 tokens. Since macOS 26.4 we can log exact token counts
+    /// via `SystemLanguageModel.tokenCount(for:)`.
     private func logTurnStart(promptChars: Int, streaming: Bool, prewarmed: Bool) {
         let instructionChars = instructions().count
         Self.log.notice(
@@ -95,6 +96,32 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
             prewarmed=\(prewarmed, privacy: .public)
             """
         )
+    }
+
+    /// Exact token budget line — the [SPIKE] data the HistoryBudgetPolicy
+    /// comments asked for. Logs instructions and prompt token counts via the
+    /// macOS 26.4+ API so the real budget utilisation is visible in the
+    /// unified log on every Mini turn.
+    private func logTokenBudget(instructionText: String, promptText: String) {
+        if #available(macOS 26.4, iOS 26.4, visionOS 26.4, *) {
+            Task.detached(priority: .utility) {
+                do {
+                    let model = SystemLanguageModel.default
+                    let instrTokens = try await model.tokenCount(for: Instructions(instructionText))
+                    let promptTokens = try await model.tokenCount(for: Prompt(promptText))
+                    let total = instrTokens + promptTokens
+                    Self.log.notice(
+                        """
+                        afm budget: instructions=\(instrTokens, privacy: .public) \
+                        prompt=\(promptTokens, privacy: .public) \
+                        total=\(total, privacy: .public)/\(model.contextSize, privacy: .public) tokens
+                        """
+                    )
+                } catch {
+                    // Token counting failed — not worth blocking the turn for.
+                }
+            }
+        }
     }
 
     // MARK: - Prewarm
@@ -255,8 +282,10 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     }
 
     public func generate(prompt: String) async throws -> String {
-        let (session, prewarmed) = takeSession(instructions: instructions())
+        let instrText = instructions()
+        let (session, prewarmed) = takeSession(instructions: instrText)
         logTurnStart(promptChars: prompt.count, streaming: false, prewarmed: prewarmed)
+        logTokenBudget(instructionText: instrText, promptText: prompt)
         do {
             let response = try await session.respond(to: prompt)
             return response.content
@@ -278,8 +307,10 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
 
     public func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
-            let (session, prewarmed) = takeSession(instructions: instructions())
+            let instrText = instructions()
+            let (session, prewarmed) = takeSession(instructions: instrText)
             logTurnStart(promptChars: prompt.count, streaming: true, prewarmed: prewarmed)
+            logTokenBudget(instructionText: instrText, promptText: prompt)
             let task = Task { [self] in
                 do {
                     let stream = session.streamResponse(to: prompt)
@@ -471,5 +502,18 @@ extension AppleFoundationModelsProvider: RawCompletionProviding {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+}
+
+// MARK: - Token counting (macOS 26.4+ — the [SPIKE] resolved)
+
+@available(macOS 26.4, iOS 26.4, visionOS 26.4, *)
+extension AppleFoundationModelsProvider: TokenCountable {
+    public func tokenCount(forInstructions text: String) async throws -> Int {
+        try await SystemLanguageModel.default.tokenCount(for: Instructions(text))
+    }
+
+    public func tokenCount(forPrompt text: String) async throws -> Int {
+        try await SystemLanguageModel.default.tokenCount(for: Prompt(text))
     }
 }
