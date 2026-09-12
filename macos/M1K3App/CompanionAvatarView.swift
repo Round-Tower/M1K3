@@ -27,6 +27,9 @@
 //  since (unlike AvatarView) this view has no continuous TimelineView clock to carry the
 //  fit forward on its own. macOS/iOS PerspectiveCamera path is byte-for-byte unchanged.
 //  Prior: Kev + claude-opus-4-8 (this file).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `framing: CompanionFraming` (`.window` default, byte-identical
+//  camera; `.badge` brings the camera to z 1.45) so the 72px notch HUD shows a face instead of a distant
+//  full-body wireframe on a tile. visionOS ignores it (window-fit path). Verify-by-launch.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -127,9 +130,29 @@ final class CompanionScene {
 ///
 /// Signed: Kev + claude-opus-4-8, 2026-06-11, Confidence 0.6 (render quality is the
 /// gate this view exists to answer; lighting + framing constants are by-eye), Prior: Unknown
+/// How the fixed macOS/iOS camera frames the creature: the full-body window
+/// shot, or the close `.badge` shot a 72px slot needs (the notch HUD, where the
+/// window framing rendered the fox as a distant wireframe on a tile).
+enum CompanionFraming {
+    case window
+    case badge
+
+    /// Camera position for `look(at:from:)` — the creature is normalised to
+    /// `targetSize` world units, so these are stable across creatures.
+    var cameraPosition: SIMD3<Float> {
+        switch self {
+        case .window: [0, 0.15, 2.4]
+        case .badge: [0, 0.10, 1.45]
+        }
+    }
+}
+
 struct CompanionAvatarView: View {
     let controller: AvatarController
     let companion: CompanionSpec
+    /// Camera distance for the macOS/iOS path; ignored on visionOS (no in-scene
+    /// camera there — the window-fit scales instead).
+    var framing: CompanionFraming = .window
 
     /// Opt-in shading style (phosphor glow / cel toon) over the companion's baked
     /// textures. Applies on build and switches live when the picker changes.
@@ -446,7 +469,7 @@ struct CompanionAvatarView: View {
     #if !os(visionOS)
         private func addCamera(to content: inout some RealityViewContentProtocol) {
             let camera = PerspectiveCamera()
-            camera.look(at: [0, 0, 0], from: [0, 0.15, 2.4], relativeTo: nil)
+            camera.look(at: [0, 0, 0], from: framing.cameraPosition, relativeTo: nil)
             content.add(camera)
         }
     #endif

@@ -109,4 +109,40 @@ struct MarqueeMetricsTests {
         #expect(MarqueeMetrics.plan(textWidth: 500, viewportWidth: 300, pointsPerSecond: 0) == nil)
         #expect(MarqueeMetrics.plan(textWidth: 500, viewportWidth: 300, pointsPerSecond: -10) == nil)
     }
+
+    // The follow marquee (2026-09-12): the caption keeps the word being spoken
+    // inside a reading zone instead of bouncing at a fixed rate — Kev's
+    // screenshot showed mid-word hard clips on both edges of a bouncing line.
+
+    @Test("text that fits never scrolls, wherever the spoken word is")
+    func followFittingTextStaysPut() {
+        #expect(MarqueeMetrics.followOffset(wordEnd: 30, lineLength: 40, textWidth: 200, viewportWidth: 300) == 0)
+        #expect(MarqueeMetrics.followOffset(wordEnd: 40, lineLength: 40, textWidth: 300, viewportWidth: 300) == 0)
+    }
+
+    @Test("the line holds at its start until the spoken word passes the reading zone")
+    func followHoldsUntilTheWordCrossesTheZone() {
+        // Word ends at 20% of a 600pt line = 120pt, inside a 300pt viewport's 72% zone (216pt).
+        #expect(MarqueeMetrics.followOffset(wordEnd: 20, lineLength: 100, textWidth: 600, viewportWidth: 300) == 0)
+    }
+
+    @Test("past the zone the line scrolls so the word sits at the zone's edge")
+    func followKeepsTheWordAtTheZoneEdge() {
+        // Word ends at 50% of 600pt = 300pt; zone edge 216pt → scroll by 84pt.
+        #expect(MarqueeMetrics.followOffset(wordEnd: 50, lineLength: 100, textWidth: 600, viewportWidth: 300) == -84)
+    }
+
+    @Test("the scroll never runs past the end of the text plus the trailing pad")
+    func followClampsAtTheEnd() {
+        // Word ends at 100%: 600pt against a 216pt zone would be -384; the
+        // travel cap (600 - 300 + 16) is -316.
+        #expect(MarqueeMetrics.followOffset(wordEnd: 100, lineLength: 100, textWidth: 600, viewportWidth: 300) == -316)
+    }
+
+    @Test("a degenerate line length or a word past the line is treated as the line's end")
+    func followDegenerateInputs() {
+        #expect(MarqueeMetrics.followOffset(wordEnd: 5, lineLength: 0, textWidth: 600, viewportWidth: 300) == -316)
+        #expect(MarqueeMetrics.followOffset(wordEnd: 250, lineLength: 100, textWidth: 600, viewportWidth: 300) == -316)
+        #expect(MarqueeMetrics.followOffset(wordEnd: -3, lineLength: 100, textWidth: 600, viewportWidth: 300) == 0)
+    }
 }
