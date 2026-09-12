@@ -52,8 +52,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the marquee FOLLOWS the voice (hold at the start, scroll
 //  only to keep the spoken word inside `MarqueeMetrics.readingZone`, never backwards, edges faded where text
 //  continues) instead of bouncing at 45 pt/s — Kev's screenshot showed mid-word hard clips on both sides.
-//  The creature drops its tile and takes `CompanionAvatarView`'s `.badge` framing (camera in close) so a
-//  72px slot shows a face, not a boxed thumbnail. Confidence 0.75 (verify-by-launch: a long `speak`).
+//  The creature drops its tile and takes `CompanionAvatarView`'s `.fit` framing (camera placed for the slot's
+//  aspect) so a 72px slot shows the whole fox, not a boxed distant thumbnail — a closer fixed shot clipped the
+//  head. Confidence 0.75 (verify-by-launch: a long `speak`).
 
 import M1K3Avatar
 import M1K3Voice
@@ -83,8 +84,8 @@ struct NotchHUDContentView: View {
     var body: some View {
         HStack(spacing: NotchHUDLayout.interItemSpacing) {
             // No tile behind the creature: on the glass it read as a boxed
-            // thumbnail (Kev's screenshot, 2026-09-12); the badge framing
-            // brings the camera in so the face fills the slot instead.
+            // thumbnail (Kev's screenshot, 2026-09-12); `.fit` framing places
+            // the camera so the whole creature fills this square slot.
             avatarSlot
                 .frame(width: NotchHUDLayout.avatarSize, height: NotchHUDLayout.avatarSize)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -137,14 +138,14 @@ struct NotchHUDContentView: View {
     /// to the house default creature rather than the constellation or the
     /// pixel face, both live-confirmed illegible at 72px — see header for the
     /// full story. Both go through `CompanionAvatarView` directly (not
-    /// `AvatarSurface`) so the HUD can ask for the close `.badge` framing.
+    /// `AvatarSurface`) so the HUD can ask for the aspect-aware `.fit` framing.
     @ViewBuilder
     private var avatarSlot: some View {
         if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
-            CompanionAvatarView(controller: env.avatar, companion: spec, framing: .badge)
+            CompanionAvatarView(controller: env.avatar, companion: spec, framing: .fit)
                 .id(spec.id)
         } else {
-            CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion, framing: .badge)
+            CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion, framing: .fit)
                 .id(houseFallbackCompanion.id)
         }
     }

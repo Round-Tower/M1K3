@@ -27,9 +27,13 @@
 //  since (unlike AvatarView) this view has no continuous TimelineView clock to carry the
 //  fit forward on its own. macOS/iOS PerspectiveCamera path is byte-for-byte unchanged.
 //  Prior: Kev + claude-opus-4-8 (this file).
-//  Review: Kev + claude-fable-5.1, 2026-09-12 — `framing: CompanionFraming` (`.window` default, byte-identical
-//  camera; `.badge` brings the camera to z 1.45) so the 72px notch HUD shows a face instead of a distant
-//  full-body wireframe on a tile. visionOS ignores it (window-fit path). Verify-by-launch.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `framing: CompanionFraming`: `.window` (default, the fixed
+//  z 2.4 shot, byte-identical) or `.fit(headroom:)`, which places the camera at `CameraFit.distance` for the
+//  view's aspect and the creature's posed extents in RealityView's update tick (a GeometryReader carries the
+//  size; the write is guarded on the distance changing). A perspective field of view is vertical, so the
+//  fixed shot clipped a broadside fox's head in the 72px notch slot and on a portrait phone — a first pass
+//  at a closer fixed `.badge` shot (z 1.45) clipped it worse. visionOS ignores framing (window-fit path).
+//  Confidence 0.8 (trig pinned in CameraFitTests; the felt framing per surface is verify-by-launch).
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -99,6 +103,11 @@ final class CompanionScene {
     /// size" to scale against instead of re-measuring RealityKit bounds every
     /// tick. `nil` until the first successful load.
     var hostExtents: SIMD3<Float>?
+    /// The macOS/iOS PerspectiveCamera (nil on visionOS), kept so `.fit`
+    /// framing can move it once the view's size and the creature's extents
+    /// are both known. `cameraDistance` guards the per-frame write.
+    var camera: Entity?
+    var cameraDistance: Float?
     var fillLight: DirectionalLight?
     /// Clip name → harvested animation resource (cross-bound onto `host`'s rig).
     var clips: [String: AnimationResource] = [:]
@@ -130,29 +139,29 @@ final class CompanionScene {
 ///
 /// Signed: Kev + claude-opus-4-8, 2026-06-11, Confidence 0.6 (render quality is the
 /// gate this view exists to answer; lighting + framing constants are by-eye), Prior: Unknown
-/// How the fixed macOS/iOS camera frames the creature: the full-body window
-/// shot, or the close `.badge` shot a 72px slot needs (the notch HUD, where the
-/// window framing rendered the fox as a distant wireframe on a tile).
-enum CompanionFraming {
+/// How the macOS/iOS camera frames the creature. `.window` is the main Mac
+/// window's fixed shot (z 2.4, byte-identical to before). `.fit` places the
+/// camera per the VIEW'S ASPECT so the creature's whole posed silhouette is in
+/// frame — a perspective field of view is vertical, so the fixed shot clipped
+/// a broadside fox's head in the 72px notch slot and on a portrait phone
+/// (Kev, 2026-09-12). The maths is `CameraFit.distance` (M1K3Avatar, pinned).
+enum CompanionFraming: Equatable {
     case window
-    case badge
+    case fit(headroom: Float)
 
-    /// Camera position for `look(at:from:)` — the creature is normalised to
-    /// `targetSize` world units, so these are stable across creatures.
-    var cameraPosition: SIMD3<Float> {
-        switch self {
-        case .window: [0, 0.15, 2.4]
-        case .badge: [0, 0.10, 1.45]
-        }
-    }
+    static let fit = CompanionFraming.fit(headroom: 1.25)
 }
 
 struct CompanionAvatarView: View {
     let controller: AvatarController
     let companion: CompanionSpec
-    /// Camera distance for the macOS/iOS path; ignored on visionOS (no in-scene
+    /// Camera framing for the macOS/iOS path; ignored on visionOS (no in-scene
     /// camera there — the window-fit scales instead).
     var framing: CompanionFraming = .window
+
+    /// The vertical field of view the camera is built with; `CameraFit` needs
+    /// the same number, so it lives once.
+    private static let verticalFOVDegrees: Float = 60
 
     /// Opt-in shading style (phosphor glow / cel toon) over the companion's baked
     /// textures. Applies on build and switches live when the picker changes.
@@ -219,9 +228,38 @@ struct CompanionAvatarView: View {
                 })
             }
         #else
-            companionCore(fit: nil)
+            if case let .fit(headroom) = framing {
+                // The camera moves with the view's aspect: the closure runs in
+                // RealityView's update, once the creature's posed extents exist.
+                GeometryReader { geometry in
+                    companionCore(fit: { _, _ in
+                        Self.fitCamera(scene: scene, to: geometry.size, headroom: headroom)
+                    })
+                }
+            } else {
+                companionCore(fit: nil)
+            }
         #endif
     }
+
+    #if !os(visionOS)
+        /// Place the camera at the `CameraFit` distance for this view size and
+        /// the creature's posed extents (width = the posed silhouette's x,
+        /// height = y; `targetSize` for both before the first load lands).
+        /// Writes only when the distance actually changes — this runs every
+        /// update tick.
+        private static func fitCamera(scene: CompanionScene, to size: CGSize, headroom: Float) {
+            guard let camera = scene.camera else { return }
+            let extents = scene.hostExtents ?? SIMD3(repeating: targetSize)
+            guard let distance = CameraFit.distance(
+                contentWidth: extents.x, contentHeight: extents.y,
+                viewWidth: Float(size.width), viewHeight: Float(size.height),
+                verticalFOVDegrees: verticalFOVDegrees, headroom: headroom
+            ), distance != scene.cameraDistance else { return }
+            scene.cameraDistance = distance
+            camera.look(at: [0, 0, 0], from: [0, 0.15 * distance / 2.4, distance], relativeTo: nil)
+        }
+    #endif
 
     /// The shared RealityView core. `fit` is the visionOS window-fit strategy
     /// (scale-to-view-bounds, applied to the OUTER frame node — same split as
@@ -469,8 +507,12 @@ struct CompanionAvatarView: View {
     #if !os(visionOS)
         private func addCamera(to content: inout some RealityViewContentProtocol) {
             let camera = PerspectiveCamera()
-            camera.look(at: [0, 0, 0], from: framing.cameraPosition, relativeTo: nil)
+            camera.camera.fieldOfViewInDegrees = Self.verticalFOVDegrees
+            // `.window`'s shot, byte-identical; `.fit` moves it in `fitCamera`
+            // once the view size and the creature's extents are known.
+            camera.look(at: [0, 0, 0], from: [0, 0.15, 2.4], relativeTo: nil)
             content.add(camera)
+            scene.camera = camera
         }
     #endif
 

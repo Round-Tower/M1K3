@@ -18,6 +18,9 @@
 //  patterned on the Mac's AvatarSurface.swift).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the memory constellation renders here on the iPad (hit list
 //  item 6); phones keep the pixel-face fallback. Confidence now 0.75 (device-owed).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the creature takes `CompanionAvatarView`'s `.fit` framing:
+//  the camera is placed for the view's aspect (`CameraFit.distance`), so a portrait phone shows the whole
+//  fox instead of clipping its head at both sides under the Mac window's fixed shot. Verify-by-launch (device).
 //
 
 import M1K3Avatar
@@ -56,7 +59,10 @@ struct AvatarSurface: View {
             // in its update closure (a persistent root, one RealityView), so we keep
             // the same view identity and let it swap the mesh itself. (The Mac's
             // AvatarSurface keeps .id — recreation renders fine there.)
-            CompanionAvatarView(controller: controller, companion: spec, loading: loading)
+            // `.fit`: a phone is portrait and the perspective field of view is
+            // vertical, so the fixed Mac-window shot clipped a broadside fox's
+            // head at both sides (Kev, 2026-09-12).
+            CompanionAvatarView(controller: controller, companion: spec, framing: .fit, loading: loading)
         } else {
             AvatarView(controller: controller, paused: paused)
         }
