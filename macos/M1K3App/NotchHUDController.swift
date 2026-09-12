@@ -90,7 +90,7 @@ final class NotchHUDController {
     /// cancelled). A 30 s safety valve bounds any missed observation.
     private func awaitSpeechChange() async {
         let signal = env.speechHighlight
-        await withTaskCancellationHandler {
+        await withTaskCancellationHandler(operation: {
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
                 let once = ResumeOnce(continuation)
                 withObservationTracking {
@@ -104,9 +104,9 @@ final class NotchHUDController {
                 }
                 cancelHook.withLock { $0 = once }
             }
-        } onCancel: {
+        }, onCancel: {
             cancelHook.withLock { $0 }?.resume()
-        }
+        })
     }
 
     /// The pending wait's resume handle, so `stop()` can release it.

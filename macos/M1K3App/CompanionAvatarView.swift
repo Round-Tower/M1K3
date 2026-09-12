@@ -330,7 +330,11 @@ struct CompanionAvatarView: View {
             // Staleness-check BEFORE logging: a superseded load's failure is
             // not an error the user can still see — logging it would plant a
             // red herring beside any real load failure (PR #82 review).
-            if token == scene.loadToken {
+            // And not when the view was UNMOUNTED mid-load (2026-09-12: a
+            // sub-second HUD show/hide tears the RealityView down while
+            // `Entity(contentsOf:)` is still in flight — that is a cancel,
+            // not a broken asset).
+            if token == scene.loadToken, !Task.isCancelled {
                 Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
             }
             return
@@ -500,7 +504,9 @@ struct CompanionAvatarView: View {
         guard desired != scene.currentClip, let resource = scene.clips[desired], let host = scene.host
         else { return }
         let gait = ClipMapper.gait(for: state)
-        scene.playback = host.playAnimation(resource.repeat(), transitionDuration: ClipMapper.crossfadeDuration(to: gait))
+        scene.playback = host.playAnimation(
+            resource.repeat(), transitionDuration: ClipMapper.crossfadeDuration(to: gait)
+        )
         scene.currentClip = desired
         if scene.parked { scene.playback?.pause() }
     }

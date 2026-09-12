@@ -67,8 +67,10 @@ struct MemoryConstellationCanvas: View {
                         description: Text("As M1K3 remembers things, they appear here as a constellation that grows over time.")
                     )
                 } else if presence.isMounted {
-                    ConstellationView(model: model, growthStep: hasPresented ? 0 : 0.08, paused: presence.isPaused)
-                        .onAppear { hasPresented = true }
+                    ConstellationView(
+                        model: model, growthStep: hasPresented ? 0 : 0.08, paused: presence.isPaused
+                    )
+                    .onAppear { hasPresented = true }
                 } else {
                     // Unmounted: the model stays, the RealityView goes.
                     Color.clear
