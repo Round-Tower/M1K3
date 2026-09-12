@@ -16,6 +16,10 @@
 //  #291's own master run); now the resolver stub SIGNALS the load whose target it was asked about,
 //  and the 302 is delivered after that signal (inline decision + a bridge grace), never on a clock
 //  from the hop. Per-load nonce target hosts key the signal under the parallel suite. Test-only.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 (later), Confidence 0.85 — the fetchers' URLSession timeout
+//  5 s → 60 s (`sessionTimeout`): with the signal in, the refused-redirect tests still hit -1001 on a
+//  starved CI runner where trivial sync tests reported 24 s — the timeout must outlast a process stall,
+//  since the valve already bounds a genuine hang. Test-only.
 //
 
 import Foundation
@@ -53,6 +57,14 @@ private final class StubTransport: URLProtocol, @unchecked Sendable {
     /// literal) never signals; deliver the 302 anyway rather than hang to the
     /// session timeout. None of the scripted hops take this path.
     static let unsignalledValve: DispatchTimeInterval = .seconds(3)
+    /// The URLSession timeout the test fetchers run under. It bounds nothing
+    /// the tests assert — a real hang is already bounded by `unsignalledValve`
+    /// — so it only has to outlast a STALL of the whole test process: in the
+    /// parallel suite on the CI runner, trivial synchronous tests have
+    /// reported 24 s (run 34681566400, 2026-09-12) while CFNetwork's own
+    /// timer kept counting and fired -1001 at the old 5 s. Sized well past
+    /// the worst stall seen, not to any behaviour under test.
+    static let sessionTimeout: TimeInterval = 60
 
     /// Flipped by `stopLoading` (a followed hop) OR by the delivery the
     /// moment it commits to the 302 — whichever wins, the other becomes a
@@ -165,7 +177,7 @@ struct HTTPFetchingTests {
     private func fetcher() -> URLSessionHTTPFetcher {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubTransport.self]
-        return URLSessionHTTPFetcher(timeout: 5, resolver: SignallingDNS(), configuration: configuration)
+        return URLSessionHTTPFetcher(timeout: StubTransport.sessionTimeout, resolver: SignallingDNS(), configuration: configuration)
     }
 
     @Test("a redirect into private space is NOT followed — the 302 is the final response")
@@ -187,7 +199,7 @@ struct RefusedRedirectToolTests {
     private func fetcher() -> URLSessionHTTPFetcher {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubTransport.self]
-        return URLSessionHTTPFetcher(timeout: 5, resolver: SignallingDNS(), configuration: configuration)
+        return URLSessionHTTPFetcher(timeout: StubTransport.sessionTimeout, resolver: SignallingDNS(), configuration: configuration)
     }
 
     @Test("3xx is its own class — a refused hop must not read as a page")
