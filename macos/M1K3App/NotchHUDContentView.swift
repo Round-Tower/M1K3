@@ -49,6 +49,12 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 4 fold) — the marquee identity is
 //  (utterance sequence, sentence start), not the start alone: consecutive one-sentence
 //  utterances all start at 0 and relied on an intervening `clear()` render to restart.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the marquee FOLLOWS the voice (hold at the start, scroll
+//  only to keep the spoken word inside `MarqueeMetrics.readingZone`, never backwards, edges faded where text
+//  continues) instead of bouncing at 45 pt/s — Kev's screenshot showed mid-word hard clips on both sides.
+//  The creature drops its tile and takes `CompanionAvatarView`'s `.fit` framing (camera placed for the slot's
+//  aspect) so a 72px slot shows the whole fox, not a boxed distant thumbnail — a closer fixed shot clipped the
+//  head. Confidence 0.75 (verify-by-launch: a long `speak`).
 
 import M1K3Avatar
 import M1K3Voice
@@ -77,24 +83,28 @@ struct NotchHUDContentView: View {
 
     var body: some View {
         HStack(spacing: NotchHUDLayout.interItemSpacing) {
+            // No tile behind the creature: on the glass it read as a boxed
+            // thumbnail (Kev's screenshot, 2026-09-12); `.fit` framing places
+            // the camera so the whole creature fills this square slot.
             avatarSlot
                 .frame(width: NotchHUDLayout.avatarSize, height: NotchHUDLayout.avatarSize)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.white.opacity(0.05))
-                )
 
             VStack(alignment: .leading, spacing: 3) {
                 if let narration {
-                    NotchHUDMarquee(text: narration.text, width: NotchHUDLayout.textAreaWidth)
-                        // Fresh @State per new sentence — restart the scroll, not
-                        // continue it. Keyed on the UTTERANCE and the sentence's
-                        // position in it: two identical sentences in a row are
-                        // still two sentences, and two one-sentence utterances
-                        // (both at offset 0) are still two utterances — whether
-                        // or not the `clear()` between them ever rendered.
-                        .id(MarqueeKey(utterance: env.speechHighlight.utteranceSequence, start: narration.start))
+                    NotchHUDMarquee(
+                        text: narration.text,
+                        width: NotchHUDLayout.textAreaWidth,
+                        wordEnd: wordEnd(in: narration),
+                        lineLength: narration.length
+                    )
+                    // Fresh @State per new sentence — restart the scroll, not
+                    // continue it. Keyed on the UTTERANCE and the sentence's
+                    // position in it: two identical sentences in a row are
+                    // still two sentences, and two one-sentence utterances
+                    // (both at offset 0) are still two utterances — whether
+                    // or not the `clear()` between them ever rendered.
+                    .id(MarqueeKey(utterance: env.speechHighlight.utteranceSequence, start: narration.start))
                 } else {
                     Text("M1K3 IS TALKING")
                         .font(.pixel(18))
@@ -116,16 +126,26 @@ struct NotchHUDContentView: View {
         .glassEffect(.regular, in: .capsule)
     }
 
-    /// A real installed creature pick renders as-is (via `AvatarSurface`,
-    /// proven legible at this size); anything else falls back to the house
-    /// default creature rather than the constellation or the pixel face,
-    /// both live-confirmed illegible at 72px — see header for the full story.
+    /// Where the word being spoken ENDS, in UTF-16 units from the line's
+    /// start — the follow marquee keeps that point inside its reading zone.
+    /// nil word (the utterance just began) reads as 0: hold at the start.
+    private func wordEnd(in line: NarrationLine.Line) -> Int {
+        guard let word = env.speechHighlight.currentWordRange else { return 0 }
+        return word.upperBound - line.start
+    }
+
+    /// A real installed creature pick renders as-is; anything else falls back
+    /// to the house default creature rather than the constellation or the
+    /// pixel face, both live-confirmed illegible at 72px — see header for the
+    /// full story. Both go through `CompanionAvatarView` directly (not
+    /// `AvatarSurface`) so the HUD can ask for the aspect-aware `.fit` framing.
     @ViewBuilder
     private var avatarSlot: some View {
         if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
-            AvatarSurface(env: env)
+            CompanionAvatarView(controller: env.avatar, companion: spec, framing: .fit)
+                .id(spec.id)
         } else {
-            CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion)
+            CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion, framing: .fit)
                 .id(houseFallbackCompanion.id)
         }
     }
@@ -135,15 +155,23 @@ struct NotchHUDContentView: View {
     }
 }
 
-/// A scrolling marquee for narration text too wide for its viewport. Pure
-/// travel/duration math lives in `MarqueeMetrics` (M1K3Voice, unit-pinned) —
-/// this view is just the SwiftUI wiring around it.
+/// A marquee that FOLLOWS the voice: the line holds at its start and scrolls
+/// only as far as it takes to keep the word being spoken inside a reading
+/// zone, never backwards, with soft edges where text continues past the
+/// viewport. The offset math lives in `MarqueeMetrics.followOffset` (M1K3Voice,
+/// unit-pinned) — this view is the SwiftUI wiring around it. Replaces the
+/// fixed-rate bounce, which clipped mid-word on both edges and could be a
+/// sentence ahead of or behind the voice (Kev's screenshot, 2026-09-12).
 private struct NotchHUDMarquee: View {
     let text: String
     let width: CGFloat
-    var pointsPerSecond: Double = 45
+    let wordEnd: Int
+    let lineLength: Int
 
     @State private var offset: CGFloat = 0
+    @State private var textWidth: CGFloat = 0
+
+    private static let fade: CGFloat = 14
 
     var body: some View {
         Text(text)
@@ -152,20 +180,38 @@ private struct NotchHUDMarquee: View {
             .lineLimit(1) // a marquee scrolls ONE line; `fixedSize` alone honours embedded newlines
             .fixedSize()
             .background(GeometryReader { geo in
-                Color.clear.onAppear { restart(textWidth: geo.size.width) }
+                Color.clear.onAppear { textWidth = geo.size.width }
             })
             .offset(x: offset)
             .frame(width: width, alignment: .leading)
             .clipped()
+            .mask(edgeMask)
+            .onChange(of: wordEnd, initial: true) { _, _ in follow() }
+            .onChange(of: textWidth) { _, _ in follow() }
     }
 
-    private func restart(textWidth: CGFloat) {
-        offset = 0
-        guard let plan = MarqueeMetrics.plan(
-            textWidth: Double(textWidth), viewportWidth: Double(width), pointsPerSecond: pointsPerSecond
-        ) else { return }
-        withAnimation(.linear(duration: plan.duration).repeatForever(autoreverses: true)) {
-            offset = -CGFloat(plan.travel)
+    /// Fade only the edge text actually runs past: the leading edge once the
+    /// line has scrolled, the trailing edge while text is still to come. A
+    /// hard cut mid-glyph is what read as "clipping" in the screenshot.
+    private var edgeMask: some View {
+        let leading: CGFloat = offset < 0 ? Self.fade : 0
+        let trailing: CGFloat = textWidth + offset > width ? Self.fade : 0
+        return HStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: leading)
+            Color.black
+            LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                .frame(width: trailing)
         }
+    }
+
+    private func follow() {
+        guard textWidth > 0 else { return }
+        let target = CGFloat(MarqueeMetrics.followOffset(
+            wordEnd: wordEnd, lineLength: lineLength, textWidth: Double(textWidth), viewportWidth: Double(width)
+        ))
+        // Monotone: a caption never scrolls back toward words already heard.
+        guard target < offset else { return }
+        withAnimation(.easeOut(duration: 0.35)) { offset = target }
     }
 }

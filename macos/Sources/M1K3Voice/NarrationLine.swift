@@ -31,6 +31,10 @@ public enum NarrationLine {
     public struct Line: Equatable, Sendable {
         public let text: String
         public let start: Int
+        /// UTF-16 length of the sentence in the utterance (before whitespace
+        /// collapse), so a spoken word's offset from `start` can be placed
+        /// proportionally along the rendered line (the follow marquee).
+        public let length: Int
     }
 
     /// The sentence of `text` containing `wordRange` (UTF-16 offsets), or the
@@ -43,7 +47,7 @@ public enum NarrationLine {
     /// `current` with the picked sentence's start offset (0 for empty text).
     public static func currentLine(in text: String, wordRange: Range<Int>?) -> Line {
         let sentences = sentenceRanges(in: text)
-        guard let first = sentences.first else { return Line(text: "", start: 0) }
+        guard let first = sentences.first else { return Line(text: "", start: 0, length: 0) }
         let pick: Range<Int>
         if let word = wordRange {
             pick = sentences.first { $0.contains(word.lowerBound) }
@@ -52,7 +56,7 @@ public enum NarrationLine {
         } else {
             pick = first
         }
-        return Line(text: collapse(substring(of: text, utf16: pick)), start: pick.lowerBound)
+        return Line(text: collapse(substring(of: text, utf16: pick)), start: pick.lowerBound, length: pick.count)
     }
 
     /// UTF-16 ranges of the sentences in `text`, empty ones dropped.
