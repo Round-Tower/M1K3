@@ -14,6 +14,9 @@
 //  CountingProvider (a TokenCounting-conforming scripted provider with an
 //  inflated per-character cost) to prove the cap reaches the REAL rendered
 //  prompt end-to-end, not just the pure GroundingBudgetTests unit tests.
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #286: two new tests pin that a
+//  wiring-shaped memory hit (SelfNoteClassifier) never renders in "WHAT I KNOW ABOUT YOU" while
+//  a genuine user memory alongside it still does, using the live note's own title/text.
 
 import Foundation
 import M1K3Agent
@@ -975,6 +978,44 @@ struct AgentRAGResponderTests {
         )
     }
 
+    /// The live #286 witness: a memory saved over MCP `remember` describing
+    /// M1K3's OWN tool shipping (backtick, "PR #", "merged" — wiring-shaped)
+    /// alongside a genuine fact about the user.
+    private func selfNoteHit() -> ChunkHit {
+        ChunkHit(
+            chunkID: UUID(), itemID: UUID(),
+            itemTitle: "recent_activity tool shipped — M1K3 can review his own week (2026-09-11, PR #275)",
+            kind: .memory, heading: nil,
+            content: "M1K3's interactive chat palette gained `recent_activity(window, focus)` on "
+                + "2026-09-11 (PR #275, merged ca81b1fb, installed on the Mac)."
+        )
+    }
+
+    @Test("a wiring-shaped self note never enters WHAT I KNOW ABOUT YOU; a genuine user memory does")
+    func wiringShapedMemoryExcludedFromBlock() {
+        let userMemory = ChunkHit(
+            chunkID: UUID(), itemID: UUID(), itemTitle: "Memory", kind: .memory,
+            heading: nil, content: "Kev's sister is called Ada."
+        )
+        let prompt = AgentRAGResponder.grounding(
+            chunks: [], memories: [selfNoteHit(), userMemory],
+            toolNames: ["web_search", "search_knowledge"]
+        )
+        #expect(prompt.contains("WHAT I KNOW ABOUT YOU"))
+        #expect(prompt.contains("Kev's sister is called Ada."))
+        #expect(!prompt.contains("recent_activity(window, focus)"))
+        #expect(!prompt.contains("PR #275"))
+    }
+
+    @Test("when every memory hit is wiring-shaped, the WHAT I KNOW ABOUT YOU block is absent entirely")
+    func allWiringShapedMemoriesOmitTheBlock() {
+        let prompt = AgentRAGResponder.grounding(
+            chunks: [], memories: [selfNoteHit()], toolNames: []
+        )
+        #expect(!prompt.contains("WHAT I KNOW ABOUT YOU"))
+        #expect(!prompt.contains("recent_activity(window, focus)"))
+    }
+
     @Test("memory-only grounding still counts as grounded for the think-phase decision")
     func memoryOnlyGroundingEarnsThinking() {
         // Memory hits ride a separate retrieval lane from doc chunks; a turn
@@ -987,6 +1028,59 @@ struct AgentRAGResponderTests {
         #expect(AgentRAGResponder.hasGroundedKnowledge(chunks: [], memories: [memory]))
         #expect(AgentRAGResponder.hasGroundedKnowledge(chunks: [groundingChunk()], memories: []))
         #expect(!AgentRAGResponder.hasGroundedKnowledge(chunks: [], memories: []))
+    }
+
+    @Test("a wiring-shaped self note alone grounds NOTHING — no think phase for a block that will not render")
+    func wiringOnlyMemoryDoesNotEarnThinking() {
+        // Review 3 on #288: memoryBlock filters the note out, so the turn is
+        // ungrounded — hasGroundedKnowledge must agree, or the heavy tiers
+        // spend a CoT phase on an empty block.
+        #expect(!AgentRAGResponder.hasGroundedKnowledge(chunks: [], memories: [selfNoteHit()]))
+        let userMemory = ChunkHit(
+            chunkID: UUID(), itemID: UUID(), itemTitle: "Memory", kind: .memory,
+            heading: nil, content: "Kev's sister is called Ada."
+        )
+        #expect(AgentRAGResponder.hasGroundedKnowledge(chunks: [], memories: [selfNoteHit(), userMemory]))
+    }
+
+    @Test("a wiring-shaped self note never spends the grounding budget — the real memory behind it still renders")
+    func wiringNoteDoesNotSpendTheGroundingBudget() async throws {
+        // Review 4 on #288: usableMemories ran only at the two READ sites, so
+        // a wiring hit that outranked a real memory still ate the budget in
+        // GroundingBudget.fit, the real memory was dropped for lack of room,
+        // and the wiring note was then filtered at render — an empty block
+        // where a fact would have fit. The filter belongs BEFORE the budget.
+        let store = try KnowledgeStore()
+        let embedder = HashingEmbeddingService()
+        let ingester = DocumentIngester(store: store, embedder: embedder)
+        // Shares more query tokens than the real memory → ranks first.
+        _ = try await ingester.ingest(
+            title: "M1K3's conveyor seal tool shipped (PR #275)",
+            text: "M1K3's chat palette gained a conveyor seal tool on 2026-09-11 (PR #275, merged, installed on the Mac).",
+            kind: .memory
+        )
+        _ = try await ingester.ingest(
+            title: "Kev's conveyor",
+            text: "Kev's conveyor seal on the chat line failed under load.",
+            kind: .memory
+        )
+        // One character = one token; a 60-token budget holds the short real
+        // memory alone, never the wiring note plus anything after it.
+        let provider = CountingProvider(response: "CONCLUSION: ok", costPerCharacter: 1)
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [FixedTool(name: "search_knowledge", response: "hit")] },
+            groundingBudgetProvider: { 60 }
+        )
+
+        let (_, stream) = try await responder.answerStreaming(
+            "What do I know about the conveyor seal tool and the chat palette?"
+        )
+        _ = await collect(stream)
+
+        let firstPrompt = try #require(provider.allPrompts.first)
+        #expect(firstPrompt.contains("Kev's conveyor seal on the chat line failed under load."))
+        #expect(!firstPrompt.contains("PR #275"))
     }
 
     @Test("native-path rules carry NO ReAct scaffolding (no CONCLUSION:, no call budget)")

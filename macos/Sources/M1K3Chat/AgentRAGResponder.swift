@@ -80,6 +80,18 @@
 //  says what to DO with a greeting (reply in your own voice, pick up one real thread) instead of
 //  only what not to call; the memory block header speaks TO the user and forbids bracketed cites
 //  (byte-replay showed "Kev's been…" third-person openers and "[Water with lemon]" cites).
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #286: `memoryBlock` filters out
+//  SelfNoteClassifier-flagged (wiring-shaped) memory hits before rendering "WHAT I KNOW ABOUT
+//  YOU" — a visitor note describing M1K3's own tooling is knowledge about the app, not the user,
+//  and was tripping the SELF/WIRING decline on unrelated questions. Review 3 fold: `usableMemories`
+//  is the ONE filter behind both `hasGroundedKnowledge` and `memoryBlock` — a wiring-only hit no
+//  longer reports "grounded" (and buys a think phase) for a block that will not render. Review 4
+//  fold: the same filter runs right after `GroundingGate.partition`, BEFORE `GroundingBudget.fit` —
+//  a wiring hit that outranked a real memory was spending the budget's last unit and then rendering
+//  as nothing (pinned end-to-end by `wiringNoteDoesNotSpendTheGroundingBudget`).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the gate log speaks BEFORE the wiring filter (review 12 on #288):
+//  `logGateDecision`'s kept/gated verdict is the relevance floor's alone, and a wiring-shaped drop gets its own
+//  count line, so a floor tuned from the unified log never absorbs a #286 drop. Log-only; `usableMemories` stays pinned.
 
 import Foundation
 import M1K3Agent
@@ -297,7 +309,24 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             (chunks, memories) = GroundingGate.partition(
                 retrieved, floors: .forFingerprint(embedder.fingerprint)
             )
+            // The gate log speaks BEFORE the wiring filter below: its kept/gated
+            // verdict is the relevance floor's alone, so a floor tuned from the
+            // log never absorbs a #286 drop (review 12 on #288).
             Self.logGateDecision(retrieved: retrieved, kept: chunks + memories)
+            // #286's wiring-shaped self notes never reach the prompt, so they
+            // must not spend the grounding budget either (review 4 on #288: a
+            // wiring hit outranking a real memory ate the last unit of a tight
+            // budget, then rendered as nothing). Filtered at the source; the
+            // two read sites below re-apply the same filter for their other
+            // callers. Dropped hits get their own count line — ids and titles
+            // stay out of the log for the reason `logGateDecision` gives.
+            let usable = Self.usableMemories(memories)
+            if usable.count < memories.count {
+                Self.log.notice(
+                    "memory hits dropped as wiring-shaped self notes: \(memories.count - usable.count, privacy: .public)"
+                )
+            }
+            memories = usable
             phases.retrieved(at: phaseClock.now)
         }
         // Grounding-size safety cap (2026-07-20): both lanes above are injected
@@ -388,7 +417,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// turn grounded only by a memory hit (0 doc chunks) is still a grounded
     /// answer and earns CoT on the heavy tiers, same as a document hit.
     static func hasGroundedKnowledge(chunks: [ChunkHit], memories: [ChunkHit]) -> Bool {
-        !chunks.isEmpty || !memories.isEmpty
+        !chunks.isEmpty || !usableMemories(memories).isEmpty
+    }
+
+    /// The memory hits that will actually render in WHAT I KNOW ABOUT YOU —
+    /// #286's wiring-shaped self notes removed. ONE filter for both the
+    /// think-phase decision and the block, so the two cannot disagree (review
+    /// 3 on #288: a wiring-only hit reported "grounded" for an empty block).
+    static func usableMemories(_ memories: [ChunkHit]) -> [ChunkHit] {
+        memories.filter { !SelfNoteClassifier.isWiringNote(title: $0.itemTitle, text: $0.content) }
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail
@@ -738,6 +775,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// covered by the ~95-token slack between the 1100 cap and the ~1195
     /// measured reserve (07-20 instrument run), so not re-plumbed.
     private static func memoryBlock(_ memories: [ChunkHit], now: Date) -> String? {
+        // #286: a visitor memory describing M1K3's OWN tooling ("M1K3's
+        // interactive chat palette gained `recent_activity(...)`…") is
+        // knowledge about the app, not a fact about the user — left in, it
+        // trips the persona's own SELF/WIRING decline on innocent asks that
+        // happen to echo a phrase from the memory's description of the
+        // tool's output. Filtered at retrieval so legacy rows are covered
+        // without a migration.
+        let memories = usableMemories(memories)
         guard !memories.isEmpty else { return nil }
         let ordered = memories.sorted {
             ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast)

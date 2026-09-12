@@ -18,7 +18,10 @@
 //  pinned against engineered cosines; the live regime is MEMSTAT-verified
 //  on-device). Prior: MemoryDistillationCoordinatorTests (Kev +
 //  claude-fable-5).
-//
+//  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #284: distillAndStore now runs
+//  the DistillationAttribution fence, so `Fixture.distill` needed a real, non-trivial user turn
+//  that anchors every scripted fact here (it reuses the same filler tokens the facts are built
+//  from) — the old placeholder `"t"` turn made every call trivial and the whole slice skipped.
 
 import Foundation
 @testable import M1K3Chat
@@ -32,6 +35,16 @@ private let priorFact = "\(filler) dublin"
 private let correctionFact = "\(filler) ardmore"
 private let compatibleFact = "alpha beta gamma delta epsilon zeta eta theta iota kappa "
     + "one two three four five six seven eight nine ten"
+
+/// A real, non-trivial user turn that anchors every scripted fact above — it
+/// shares the filler words verbatim, plus "dublin"/"ardmore" and the
+/// compatible fact's number words, so #284's attribution fence never strips
+/// what this suite scripts the distiller to return.
+private let anchoringUserTurn = ChatTurn(
+    role: .user,
+    text: "\(filler) I've lived in both dublin and ardmore, and I counted "
+        + "one two three four five six seven eight nine ten stars."
+)
 
 private struct ScriptedDistiller: MemoryDistilling {
     let texts: [String]
@@ -102,12 +115,13 @@ private struct Fixture {
             embedder: embedder,
             graph: graph,
             rekind: rekind,
-            auditSink: auditSink
+            auditSink: auditSink,
+            selfNames: .none
         )
     }
 
     func distill(_ texts: [String]) async throws -> Int {
-        try await coordinator(texts).distillAndStore(turns: [ChatTurn(role: .user, text: "t")])
+        try await coordinator(texts).distillAndStore(turns: [anchoringUserTurn])
     }
 
     func kind(ofItemContaining text: String) throws -> KnowledgeKind? {
@@ -234,7 +248,7 @@ struct MemoryCorrectionTests {
             auditSink: { audits.append($0) }
         )
         let written = try await coordinator.distillAndStore(
-            turns: [ChatTurn(role: .user, text: "t")]
+            turns: [anchoringUserTurn]
         )
 
         #expect(written == 1) // the correction itself still landed

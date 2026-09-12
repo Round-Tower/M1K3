@@ -50,6 +50,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `stopResponding()` for the Send button's Stop face. Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — `transcriber` is `any TranscriptionProvider` so the screengrab open mic can stand in
 //  (the iOS half of the Mac's seam). Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-11 — `recentMemoryTitles` drops wiring-shaped self notes
+//  (#286) like the Mac chip gatherer; the mobile twin had been missed (review 5 on #288).
 //
 
 import Foundation
@@ -672,11 +674,13 @@ final class AppCore {
     }
 
     /// Titles of the newest live memories, for the blank-canvas chips. Empty when
-    /// the store is absent or nothing has a title yet.
+    /// the store is absent or nothing has a title yet. Wiring-shaped self notes
+    /// (#286) never become chips — same filter as the Mac's gatherer.
     func recentMemoryTitles(limit: Int = 4) -> [String] {
         guard let memoryStore, let memories = try? memoryStore.allMemories(limit: 40) else { return [] }
         // allMemories is already newest-first.
         return memories
+            .filter { !SelfNoteClassifier.isWiringNote(title: $0.title ?? "", text: $0.text) }
             .compactMap(\.title)
             .prefix(limit)
             .map { $0 }

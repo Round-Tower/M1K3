@@ -64,6 +64,13 @@ struct MemoryDistillationPromptTests {
         }
     }
 
+    @Test("#284: the instructions forbid recording something the assistant merely offered")
+    func promptForbidsAssistantOffers() {
+        let prompt = MemoryDistillationPrompt.build(turns: [])
+        #expect(prompt.contains("USER stated or clearly confirmed"))
+        #expect(prompt.contains("never something the assistant offered"))
+    }
+
     @Test("per-turn text is capped")
     func perTurnCap() {
         let long = String(repeating: "x", count: 2000)
