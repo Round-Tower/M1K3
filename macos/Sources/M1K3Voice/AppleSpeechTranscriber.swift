@@ -72,6 +72,14 @@
 //  format read back (keep / restart / reinstall), so the iPhone's same-format
 //  notification ~0.5 s after the first arm stops bouncing the engine. Real route
 //  changes (a new sample rate or channel count) reinstall exactly as before.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — THE BLUETOOTH LISTEN (launch snag list): voice
+//  processing is now `VoiceProcessingPolicy`'s call (off on the Mac for a Bluetooth input — VPIO
+//  delivered zero buffers there, measured), the #205 mixer touch is mobile-only (on the Mac it
+//  engaged the output device: `start()` threw -10875 on a headset, silently — now logged and
+//  recorded as the listen's failure), and `releaseAudioHardware()` lets the shell close the
+//  input device between engagements so a headset drops back out of its call profile.
+//  Confidence 0.85 (each branch reproduced with a standalone engine probe; verify-by-launch
+//  on the headset and the built-in mic).
 
 import AVFoundation
 import Foundation
@@ -372,6 +380,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             continuation.finish()
             return
         case .failed:
+            recordFailure("The microphone couldn't start.", ifGeneration: generation)
             stopListening(ifGeneration: generation)
             continuation.finish()
             return
@@ -574,6 +583,12 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 try audioEngine.start()
                 return .started
             } catch {
+                // Say so: this branch was silent, and a Bluetooth headset under
+                // VPIO + the mixer touch hit it on EVERY listen (-10875) — the
+                // loop read twelve empty listens in 400 ms and parked mutely.
+                Self.log.error(
+                    "audio engine failed to start — listen ends: \(error.localizedDescription, privacy: .public)"
+                )
                 audioEngine.inputNode.removeTap(onBus: 0)
                 engineOwner = nil
                 installedTapFormat = nil
@@ -593,8 +608,24 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         let inputNode = audioEngine.inputNode
         // BEFORE reading the format: voice processing CHANGES it (VPIO renders
         // mono at the device rate), so a format read first would install a tap
-        // that no longer matches the node.
-        enableVoiceProcessing(on: inputNode)
+        // that no longer matches the node. Whether to have it on at all is
+        // `VoiceProcessingPolicy`'s call (2026-09-12): on the Mac a Bluetooth
+        // input under VPIO delivered NO buffers at all, so a headset listens
+        // plain — it needs no echo cancellation, the speaker is on the ear.
+        let inputIsBluetooth = InputDeviceTransport.defaultInputIsBluetooth()
+        let wantsVoiceProcessing = VoiceProcessingPolicy.shouldEnable(
+            platform: VoiceProcessingPolicy.current, inputIsBluetooth: inputIsBluetooth
+        )
+        // The one line that says which way the policy went — a mute listen
+        // with no engine error is otherwise unreadable from the log.
+        Self.log.notice(
+            "stt input transport bluetooth=\(inputIsBluetooth.map { String($0) } ?? "unknown", privacy: .public) → voice processing \(wantsVoiceProcessing ? "on" : "off", privacy: .public)"
+        )
+        if wantsVoiceProcessing {
+            enableVoiceProcessing(on: inputNode)
+        } else {
+            disableVoiceProcessingIfOn(inputNode, reason: "Bluetooth input")
+        }
         // Give the I/O unit's OUTPUT element a render source. With voice
         // processing on, the engine's I/O unit is a VPIO whose output bus
         // renders every cycle regardless; with nothing attached to
@@ -603,8 +634,13 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // and speak phase (2026-09-03, iPhone 17 Pro; the Mac's log shows
         // none). Touching `mainMixerNode` implicitly connects mixer → output;
         // an input-less mixer renders silence, so the bus is satisfied and
-        // nothing audible changes. Volume 0 is belt-and-braces.
-        audioEngine.mainMixerNode.outputVolume = 0
+        // nothing audible changes. Volume 0 is belt-and-braces. MOBILE ONLY:
+        // on the Mac the same connection engages the OUTPUT device for a
+        // mic-only engine — `start()` threw -10875 on a Bluetooth headset and
+        // the headset stayed in its call profile after the listen (2026-09-12).
+        if VoiceProcessingPolicy.feedsSilentOutputSource(platform: VoiceProcessingPolicy.current) {
+            audioEngine.mainMixerNode.outputVolume = 0
+        }
         let format = inputNode.outputFormat(forBus: 0)
         Self.log.notice(
             "stt mic input format \(format.sampleRate, privacy: .public)Hz ch=\(format.channelCount, privacy: .public)"
@@ -696,6 +732,39 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 "stt voice processing unavailable — no echo cancellation or ducking on this input: \(error.localizedDescription, privacy: .public)"
             )
         }
+    }
+
+    /// Turn voice processing OFF (engine must be stopped — every caller is
+    /// under `engineLock` between a stop and a start). Idempotent.
+    private func disableVoiceProcessingIfOn(_ inputNode: AVAudioInputNode, reason: String) {
+        guard inputNode.isVoiceProcessingEnabled else { return }
+        do {
+            try inputNode.setVoiceProcessingEnabled(false)
+            Self.log.notice("stt voice processing off (\(reason, privacy: .public))")
+        } catch {
+            Self.log.error(
+                "stt voice processing could not be turned off: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    /// Let go of the audio hardware between engagements: no live session →
+    /// stop the engine, drop the tap, turn voice processing off and reset the
+    /// graph so the HAL closes the input device. Left prepared, the I/O unit
+    /// kept the input open — a Bluetooth headset stayed in its 16 kHz call
+    /// profile ("reduced speaker & microphone output even after M1K3's
+    /// engagement", 2026-09-12). Called by the shell when voice mode or a
+    /// dictation ends; a listen still running keeps its hardware.
+    public func releaseAudioHardware() {
+        engineLock.withLock {
+            guard engineOwner == nil else { return }
+            if audioEngine.isRunning { audioEngine.stop() }
+            audioEngine.inputNode.removeTap(onBus: 0)
+            disableVoiceProcessingIfOn(audioEngine.inputNode, reason: "session over")
+            audioEngine.reset()
+            installedTapFormat = nil
+        }
+        Self.log.notice("stt audio hardware released")
     }
 
     private func observeConfigurationChanges(ifGeneration generation: UInt64) {

@@ -21,6 +21,8 @@
 //  • Cumulative input that shrinks/diverges resets the stream defensively.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-25, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `init(stopMatcher:)`: a predicate beside the
+//  literal marker, so speech cuts on every trailer variant the chat splitter knows.
 //
 
 import Foundation
@@ -30,6 +32,10 @@ public struct SentenceStreamFolder: Sendable {
     private static let terminators: Set<Character> = [".", "!", "?", "…"]
 
     private let stopMarker: String?
+    /// Alternative to the literal marker: any predicate over the cumulative
+    /// text returning where the trailer starts (the app passes the chat
+    /// splitter's variant-tolerant `FollowUpSplit.trailerStart`).
+    private let stopMatcher: (@Sendable (String) -> String.Index?)?
     /// Offset into the cumulative text up to which everything was consumed.
     private var consumed: String.Index?
     /// Prefix of the cumulative text we've already seen (divergence guard).
@@ -41,6 +47,12 @@ public struct SentenceStreamFolder: Sendable {
 
     public init(stopMarker: String? = nil) {
         self.stopMarker = stopMarker
+        stopMatcher = nil
+    }
+
+    public init(stopMatcher: @escaping @Sendable (String) -> String.Index?) {
+        stopMarker = nil
+        self.stopMatcher = stopMatcher
     }
 
     /// Feed the latest cumulative text; returns newly completed sentences.
@@ -59,6 +71,9 @@ public struct SentenceStreamFolder: Sendable {
         // Cut at the stop marker (even a partial trailer never emits past it).
         if let stopMarker, let range = working.range(of: stopMarker) {
             working = String(working[..<range.lowerBound])
+            stopped = true
+        } else if let stopMatcher, let start = stopMatcher(working) {
+            working = String(working[..<start])
             stopped = true
         }
 

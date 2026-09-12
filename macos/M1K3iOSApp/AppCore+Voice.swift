@@ -272,7 +272,7 @@ extension AppCore {
                 avatar.setActivity(.thinking)
                 // The fold-forward guard (only prefix-extending updates — a
                 // FOLLOWUPS/polish shrink must never re-speak the answer).
-                var folder = StreamedAnswerFolder(stopMarker: FollowUpSplit.sentinel)
+                var folder = StreamedAnswerFolder(stopMatcher: { FollowUpSplit.trailerStart(in: $0) })
                 // Spoken tool transparency: each dispatch is announced once as
                 // a short interstitial through the SAME onChunk lane, so it
                 // inherits the serial speak queue and the turn-generation guard.

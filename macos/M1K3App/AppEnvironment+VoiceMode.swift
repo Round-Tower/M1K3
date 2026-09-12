@@ -28,6 +28,10 @@
 //  stops whatever is actually playing — so a stop never leaves a queued visitor line to speak next.
 //  Confidence now 0.8.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `exitVoiceMode` releases the transcriber's audio
+//  hardware so a headset leaves its call profile when the conversation ends. Confidence 0.85.
+//  Same pass: a wordless listen the transcriber FAILED reports `lastFailure` through
+//  `listenFailed` (the phone's rule) instead of counting as silence.
 
 import AppKit
 import AVFoundation
@@ -293,6 +297,12 @@ extension AppEnvironment {
         guard let controller = voiceLoop else { return }
         controller.exit()
         voiceLoop = nil
+        // Close the input device: the exit above stops the LISTEN, but the
+        // engine stayed prepared with voice processing on, which held a
+        // Bluetooth headset in its 16 kHz call profile until the app quit
+        // (launch snag list, 2026-09-12). Any listen still winding down keeps
+        // its hardware — the transcriber checks ownership.
+        transcription.releaseAudioHardware()
         UserDefaults.standard.set(false, forKey: Self.voiceModeActiveKey)
         avatar.resetToIdle()
         speechHighlight.clear()
@@ -388,6 +398,18 @@ extension AppEnvironment {
                             sawSegments = true
                             continuation.yield(segment)
                         }
+                        // A listen that ended without a word because the
+                        // TRANSCRIBER failed (engine start, route, recogniser)
+                        // parks the loop ONCE with the reason on screen — the
+                        // phone's 2026-09-03 rule, now on the Mac too: reported
+                        // BEFORE finish(), so the machine never counts it as an
+                        // empty listen and re-arms into the same wall (twelve
+                        // 30 ms listens on a Bluetooth headset, 2026-09-12).
+                        if !sawSegments, !Task.isCancelled,
+                           let failure = (provider as? AppleSpeechTranscriber)?.lastFailure
+                        {
+                            await MainActor.run { self.voiceLoop?.listenFailed(failure) }
+                        }
                         continuation.finish()
                         // finish() fires onTermination → forwarder.cancel() on
                         // THIS task — safe because there's deliberately no
@@ -454,7 +476,7 @@ extension AppEnvironment {
                 // prefix-extending updates — a FOLLOWUPS/polish shrink must
                 // never re-speak the answer, the 2026-07-25 finding) as a
                 // tested M1K3Voice seam shared with chat auto-speak.
-                var folder = StreamedAnswerFolder(stopMarker: FollowUpSplit.sentinel)
+                var folder = StreamedAnswerFolder(stopMatcher: { FollowUpSplit.trailerStart(in: $0) })
                 // Spoken tool transparency (2026-08-16): tool dispatches used to
                 // be dead air in voice mode — the visual activity label lives on
                 // a screen a hands-free user isn't watching. Announce each

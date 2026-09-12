@@ -59,6 +59,11 @@
 //  The creature drops its tile and takes `CompanionAvatarView`'s `.fit` framing (camera placed for the slot's
 //  aspect) so a 72px slot shows the whole fox, not a boxed distant thumbnail — a closer fixed shot clipped the
 //  head. Confidence 0.75 (verify-by-launch: a long `speak`).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the panel is the WINDOW's fixed size (it sized to
+//  each sentence and pulsed) and hugs the notch: flat top, rounded bottom corners (Kev's pick). A
+//  material, not `glassEffect(in:)` — on macOS 27.0 the glass ignored the uneven shape and drew
+//  short of the frame (window-rect capture on the first release build). Confidence 0.8
+//  (verify-by-launch on the second).
 
 import M1K3Avatar
 import M1K3Voice
@@ -130,7 +135,17 @@ struct NotchHUDContentView: View {
         }
         .padding(.horizontal, NotchHUDLayout.horizontalPadding)
         .padding(.vertical, 14)
-        .glassEffect(.regular, in: .capsule)
+        // FIXED size — the glass fills the window every frame. Sized to its
+        // content it grew and shrank with each sentence (Kev: "expanding when
+        // talking", 2026-09-12); the window is fixed, so the glass is too.
+        .frame(width: NotchHUDLayout.size.width, height: NotchHUDLayout.size.height)
+        // Hugs the notch: a flat top edge that meets the menu bar, rounded
+        // bottom corners only — not a capsule floating below it. A material,
+        // NOT `glassEffect(in:)`: on macOS 27.0 the glass ignored the uneven
+        // shape (all four corners rounded) and drew ~15 pt short of the frame
+        // (window-rect capture, 2026-09-12) — the material honours the shape.
+        .background(.regularMaterial, in: NotchHUDLayout.shape)
+        .overlay(NotchHUDLayout.shape.strokeBorder(.white.opacity(0.14), lineWidth: 1))
     }
 
     /// Where the word being spoken ENDS, in UTF-16 units from the line's

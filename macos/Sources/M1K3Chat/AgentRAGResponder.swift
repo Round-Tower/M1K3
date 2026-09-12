@@ -98,6 +98,9 @@
 //  answered by doing it), the scripts carve's "a web page or a document is not a script", and "how busy it's been"
 //  on the recent_activity line. Wording byte-replayed on Lil before landing (see each constant); pinned by
 //  WebAndMakingRoutingTests. Residual: an unfamiliar name Lil is sure it knows ("OpenAI's Astra") still isn't searched.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `replayFraming` under the history block: Mini on
+//  Golden Gate replayed its previous answer (and chips) as the next turn (launch snag list).
+//  Confidence 0.7 (verify-by-launch on a two-turn Mini chat).
 
 import Foundation
 import M1K3Agent
@@ -766,8 +769,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             ambient: ambient, todos: todos
         )
         guard let replay = HistoryWindow.render(history, budget: historyBudget) else { return body }
-        return "\(replay)\n\n\(body)"
+        return "\(replay)\n\(Self.replayFraming)\n\n\(body)"
     }
+
+    /// Sits between the replay block and the grounding body. With Mini's replay
+    /// deepened 1.9× on Golden Gate (2026-09-12) the model began re-emitting its
+    /// previous M1K3 line as the new answer — and its follow-up chips with it.
+    /// The header names the block; this line says what to DO with it. Outside
+    /// `HistoryWindow`'s byte accounting on purpose (a fixed ~30 tokens).
+    static let replayFraming =
+        "(Earlier turns above are context only. Answer the NEW question below in fresh words — never repeat an earlier M1K3 line.)"
 
     /// The uncited personal-facts block: memories aren't sources to cite,
     /// they're things M1K3 simply knows about the user. Sits between

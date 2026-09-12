@@ -80,8 +80,13 @@ struct ScreengrabHarnessTests {
         // Lil fronts every plate: the speaking plate is a real turn and Lil carries
         // the persona (Kev, 2026-09-08).
         #expect(recipe.arguments.contains(["-selectedBrain", "lil"]))
-        // Every tile, the PhosphorFox included, wears the phosphor shader (`.off` = grey wireframe, captured).
-        #expect(recipe.arguments.contains(["-companion.shadingStyle", "phosphor"]))
+        // The PhosphorFox tile shows its BAKED lattice (Kev, 2026-09-12: "proper Phosphor Fox
+        // wireframe") — shader off; the app tints the lattice phosphor green itself.
+        #expect(recipe.arguments.contains(["-companion.shadingStyle", "off"]))
+        // Other creatures keep the phosphor skin (their baked textures are cartoon fur).
+        #expect(ScreengrabPlate.companionGecko.launchRecipe.arguments.contains(["-companion.shadingStyle", "phosphor"]))
+        // The voice plates ride the house face → the lattice look too.
+        #expect(ScreengrabPlate.voiceSpeaking.launchRecipe.arguments.contains(["-companion.shadingStyle", "off"]))
         #expect(recipe.arguments.contains(["-hasChosenBrain", "YES"]))
         #expect(recipe.arguments.contains(["-brainServe.enabled", "NO"]))
         #expect(recipe.arguments.contains(["-notchHUD.enabled", "NO"]))

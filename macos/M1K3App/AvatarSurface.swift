@@ -29,6 +29,8 @@
 //  ~33% CPU at idle); a visible-but-still surface is paused; and the pause
 //  finally reaches the creature + constellation too (the 07-18 follow-up
 //  closed). Confidence now 0.85 (mount/pause verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `framing` pass-through so the voice-mode
+//  hero can take `.fit` (whole creature, head included). Confidence now 0.85.
 
 import M1K3Avatar
 import SwiftUI
@@ -37,6 +39,11 @@ struct AvatarSurface: View {
     let env: AppEnvironment
     /// Freeze idle motion (all three surfaces since 2026-09-12 — see header Review).
     var paused = false
+    /// Camera framing for a creature pick (ignored by the pixel face and the
+    /// constellation). `.window` is the main panel's fixed shot; the voice-mode
+    /// hero asks for `.fit` so the whole creature sits in the window at any
+    /// aspect (the fixed shot clipped the fox's head in every voice screenshot).
+    var framing: CompanionFraming = .window
     @AppStorage(AppEnvironment.voiceCompanionKey) private var companion = ""
     /// Published by `.trackWindowVisibility()` at the window root; `true` where
     /// no root tracks it (today's behaviour for untracked windows).
@@ -69,7 +76,7 @@ struct AvatarSurface: View {
             // constellation switches change the view TYPE, so only same-type
             // swaps hit this; it fires only on an actual different companion
             // (the onboarding per-step-rebuild trap is the opposite failure).
-            CompanionAvatarView(controller: env.avatar, companion: spec, paused: presence.isPaused)
+            CompanionAvatarView(controller: env.avatar, companion: spec, framing: framing, paused: presence.isPaused)
                 .id(spec.id)
         } else {
             AvatarView(controller: env.avatar, paused: presence.isPaused)

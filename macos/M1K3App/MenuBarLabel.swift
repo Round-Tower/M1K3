@@ -13,6 +13,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the pulsing dot's timeline is
 //  capped at 30 fps on an elapsed clock (was the display's native 120 Hz).
 //  Confidence now 0.8 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the glyph breathes while a brain / voice /
+//  recogniser model loads (`GlyphTreatment.breathes`, test-pinned). Confidence 0.8 (verify-by-launch).
 
 import Foundation
 import M1K3Avatar
@@ -24,7 +26,15 @@ struct MenuBarLabel: View {
 
     private var treatment: GlyphTreatment {
         guard let env else { return .calm }
-        return env.avatar.state.activity.glyphTreatment(isRecording: env.isRecording)
+        return env.avatar.state.activity.glyphTreatment(isRecording: env.isRecording, isLoading: isLoading)
+    }
+
+    /// Any model warming: the selected brain's weights, M1K3 Voice, or the
+    /// WhisperKit recogniser. The three load states the Settings panes already
+    /// render — the glyph breathes for the same reason those show a bar.
+    private var isLoading: Bool {
+        guard let env else { return false }
+        return env.modelLoad.isActive || env.voiceLoad.isActive || env.whisperLoad.isActive
     }
 
     /// The pixel glyph carries no VoiceOver name of its own; speak the same signal
@@ -38,7 +48,7 @@ struct MenuBarLabel: View {
 
     var body: some View {
         let treatment = treatment
-        Image(nsImage: glyphStyle.image())
+        BreathingGlyph(image: glyphStyle.image(), breathes: treatment.breathes)
             .shadow(
                 color: treatment.dot == .glow ? .glyphDot(treatment.dotColorName) : .clear,
                 radius: treatment.dot == .glow ? 2.5 : 0
@@ -62,6 +72,27 @@ extension Color {
         case "accent": .accentColor
         case "red": .red
         default: .secondary
+        }
+    }
+}
+
+/// The pixel mark, breathing while a model loads: opacity swings 0.35…1 on a
+/// 30 fps elapsed clock (the IndicatorDot's own cadence), mounted only while
+/// `breathes` — a still `Image` otherwise, so idle costs nothing.
+private struct BreathingGlyph: View {
+    let image: NSImage
+    let breathes: Bool
+    @State private var start = Date()
+
+    var body: some View {
+        if breathes {
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+                let phase = context.date.timeIntervalSince(start)
+                Image(nsImage: image)
+                    .opacity(0.35 + 0.65 * (0.5 + 0.5 * sin(phase * 2.2)))
+            }
+        } else {
+            Image(nsImage: image)
         }
     }
 }
