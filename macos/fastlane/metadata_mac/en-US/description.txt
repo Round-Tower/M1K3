@@ -1,20 +1,22 @@
-M1K3 is a private AI assistant that runs entirely on your Mac. No account, no cloud, no telemetry — your conversations, notes, and documents never leave the device.
+My friends call me Mike. I'm a local AI agent that runs entirely on your Mac — no account, no cloud, no telemetry. Your conversations, notes, and documents never leave the device.
 
-WHAT IT DOES
+WHAT I DO
 • Chat with a capable on-device language model — fast on Apple Silicon.
-• Talk to it: on-device speech recognition and a natural neural voice.
-• Bring your own knowledge: drop in notes and PDFs and M1K3 answers from them (on-device retrieval).
-• It remembers what matters to you — and you can see and delete every memory.
+• Talk to me: on-device speech recognition and a natural neural voice (Kokoro TTS).
+• Bring your own knowledge: drop in notes and PDFs and I'll answer from them (on-device retrieval).
+• I remember what matters to you — a temporal knowledge graph you can see, search, and delete at any time.
+• Three brain tiers — Mini (instant, no download), Lil (4B), and Big (12B) — pick the one that fits your machine.
 • A friendly 3D companion and a pixel face, if you want them.
+• Brain at Home: pair your iPhone or iPad over LAN and use your Mac's big brain from the couch.
 
-PRIVATE BY DESIGN
+PUNK BY DESIGN
 • Everything runs locally. Inference, search, and voice are all on-device.
-• The only time M1K3 uses the network is to download a model when you ask, or to run a web search you explicitly turn on.
-• No analytics. No tracking. No data collection. You can verify it.
+• The only time I use the network is to download a model when you ask, or to run a web search you explicitly turn on.
+• No analytics. No tracking. No data collection. You can verify it — the source code is published under a source-available licence.
 
 BUILT FOR YOUR MACHINE
 • Optimized for Apple Silicon (Metal/MLX).
-• Multiple model tiers so it runs well from laptops to studios.
-• Connects as a local tool server, so other AI apps can use M1K3's knowledge and voice.
+• Multiple model tiers so I run well from MacBook Air to Mac Studio.
+• A command-line client (m1k3) and a local tool server with 18 tools, so your coding agents — Claude, Cursor, VS Code, Codex, Zed — can use my knowledge and voice.
 
-M1K3 is for people who want the usefulness of an AI assistant without handing their life to a server.
+Punk intelligence: yours, private, on your terms.

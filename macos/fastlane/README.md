@@ -24,9 +24,16 @@ ASO copy is version-controlled in `metadata_mac/en-US/`. **The keyword field
 (`keywords.txt`) is the real ASO lever** — edit it freely; it's invisible to
 users and re-uploadable any time (unlike the bundle ID, which is neither).
 
-Auth: `apple_id` (Appfile) → interactive/session login. For CI, set an App Store
-Connect API key (`APP_STORE_CONNECT_API_KEY_PATH/_KEY_ID/_ISSUER_ID`) and
-Fastlane uses it automatically — no 2FA prompts.
+Auth: an App Store Connect API key when one is present — the fastlane JSON
+format (`key_id`, `issuer_id`, `key`) at `APP_STORE_CONNECT_API_KEY_PATH`, or at
+`~/.appstoreconnect/private_keys/asc_api_key.json`. Otherwise `apple_id`
+(Appfile) → interactive session login with 2FA. `deliver`'s precheck skips
+in-app purchases (`precheck_include_in_app_purchases: false`): precheck cannot
+read IAPs under an API key and aborts the upload.
+
+This README is hand-written. The Fastfile sets `FASTLANE_SKIP_DOCS` so a lane
+run no longer overwrites it with fastlane's generated lane list (which it did,
+2026-09-12).
 
 ## Xcode Cloud
 
