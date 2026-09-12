@@ -93,4 +93,29 @@ public enum MarqueeMetrics {
         let travel = textWidth - viewportWidth + 16
         return (travel, travel / pointsPerSecond)
     }
+
+    /// Where the reading zone ends, as a fraction of the viewport: the line
+    /// scrolls only once the spoken word would pass this point, so a listener
+    /// sees the word with the words after it still coming.
+    public static let readingZone = 0.72
+
+    /// The horizontal offset (≤ 0) that keeps the word ending at UTF-16 unit
+    /// `wordEnd` of a `lineLength`-unit line inside the reading zone, with the
+    /// word's x estimated proportionally along `textWidth`. 0 while the text
+    /// fits or the word is still inside the zone; never further than the
+    /// overflow plus the trailing pad (`plan`'s travel). The view is expected
+    /// to hold the offset monotone — a caption never scrolls backwards.
+    public static func followOffset(
+        wordEnd: Int,
+        lineLength: Int,
+        textWidth: Double,
+        viewportWidth: Double
+    ) -> Double {
+        guard textWidth > viewportWidth else { return 0 }
+        let fraction = lineLength > 0 ? min(max(Double(wordEnd) / Double(lineLength), 0), 1) : 1
+        let wordEndX = textWidth * fraction
+        let zoneEdge = viewportWidth * readingZone
+        let travel = textWidth - viewportWidth + 16
+        return max(min(0, zoneEdge - wordEndX), -travel)
+    }
 }

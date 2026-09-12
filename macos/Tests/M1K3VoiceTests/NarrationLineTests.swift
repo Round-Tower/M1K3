@@ -75,4 +75,15 @@ struct NarrationLineTests {
         #expect(NarrationLine.current(in: text, wordRange: 6 ..< 12) == "really?")
         #expect(NarrationLine.current(in: text, wordRange: 14 ..< 17) == "Yes!")
     }
+
+    @Test("a line knows its own length in the utterance, so a word offset can be placed along it")
+    func lineCarriesItsLength() {
+        let text = "Hello there.  Second sentence here."
+        let first = NarrationLine.currentLine(in: text, wordRange: 0 ..< 5)
+        let second = NarrationLine.currentLine(in: text, wordRange: 14 ..< 20)
+        #expect(first.length == 12) // "Hello there." — the trailing blanks belong to nobody
+        #expect(second.start == 14)
+        #expect(second.length == 21) // "Second sentence here."
+        #expect(NarrationLine.currentLine(in: "", wordRange: nil).length == 0)
+    }
 }
