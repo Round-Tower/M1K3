@@ -13,6 +13,9 @@
 //  test-pinned over an isolated suite + in-memory keys; the real Keychain
 //  arm is verify-by-launch on device — same convention as the Mac's).
 //  Prior: BrainServeController.swift (the persistence split).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the PSK row targets the data-protection
+//  keychain (no per-binary login-password prompt on the Mac); a legacy row is lifted
+//  across on first read. Confidence now 0.85.
 //
 
 import Foundation
@@ -39,6 +42,7 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
             kSecAttrAccount as String: identity,
             kSecValueData as String: key,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            kSecUseDataProtectionKeychain as String: true,
         ]
         let status = SecItemAdd(add as CFDictionary, nil)
         guard status == errSecSuccess else {
@@ -47,25 +51,45 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
     }
 
     public func key(identity: String) -> Data? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: Self.service,
-            kSecAttrAccount as String: identity,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
+        if let data = read(Self.query(identity: identity)) { return data }
+        // A PSK written before 2026-09-12 sits in the Mac's login keychain
+        // (a no-op distinction on iOS): lift it across once, then drop the old row.
+        guard let legacy = read(Self.legacyQuery(identity: identity)) else { return nil }
+        if (try? setKey(legacy, identity: identity)) != nil {
+            _ = SecItemDelete(Self.legacyQuery(identity: identity) as CFDictionary)
+        }
+        return legacy
+    }
+
+    public func removeKey(identity: String) {
+        _ = SecItemDelete(Self.query(identity: identity) as CFDictionary)
+        _ = SecItemDelete(Self.legacyQuery(identity: identity) as CFDictionary)
+    }
+
+    private func read(_ base: [String: Any]) -> Data? {
+        var query = base
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess else { return nil }
         return result as? Data
     }
 
-    public func removeKey(identity: String) {
-        let query: [String: Any] = [
+    /// Data-protection keychain: access by team + bundle id, so every build we
+    /// sign reads the item silently (the Mac's login keychain asked for the
+    /// login password per new signature). See M1K3Calls.KeychainKeyStore.
+    static func query(identity: String) -> [String: Any] {
+        var query = legacyQuery(identity: identity)
+        query[kSecUseDataProtectionKeychain as String] = true
+        return query
+    }
+
+    static func legacyQuery(identity: String) -> [String: Any] {
+        [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: Self.service,
+            kSecAttrService as String: service,
             kSecAttrAccount as String: identity,
         ]
-        SecItemDelete(query as CFDictionary)
     }
 }
 
