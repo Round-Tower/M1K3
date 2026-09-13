@@ -20,6 +20,8 @@
 //  Review: claude-fable-5.1, 2026-09-09 — the four main-window plates (chat/documents/memories/listening) shoot
 //  on timed settles: the whole-tree `Any` query aborted every attempt post-merge while the app answered every AX
 //  attribute in 0.6 s (XCTest quiescence, not the app). Queries scoped to the window. Confidence now 0.7.
+//  Review: Kev + claude-opus-5, 2026-09-13 — the pointer is parked outside the window before each shot
+//  (a leftover hover tooltip floated mid-frame in four plates). Confidence now 0.75.
 //
 
 import M1K3Screengrab
@@ -195,7 +197,12 @@ final class ScreengrabUITests: XCTestCase {
         // it is not the foreground app — a missing plate beats a stranger's
         // window filed under a plate name (it happened: mail, contracts).
         app.activate()
-        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        // Park the pointer just outside the window: wherever a previous plate
+        // left it, a hover tooltip ("Good answer", the chat's thumbs-up) floated
+        // mid-frame in four voice/companion plates (2026-09-13). Every other app
+        // is hidden for the run, so this lands on bare desktop — no focus change.
+        target.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: -40, dy: -40)).hover()
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
         guard app.state == .runningForeground else {
             XCTFail("\(plate.rawValue): M1K3 is not the foreground app — plate NOT captured")
             app.terminate()
