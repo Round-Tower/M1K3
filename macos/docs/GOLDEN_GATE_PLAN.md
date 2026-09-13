@@ -37,7 +37,8 @@ not release approval.
 ### Done
 
 - [x] Build green on Golden Gate (3,700 tests, Release compiles)
-- [x] SDK swiftinterface fully read — no LanguageModelExecutor, Adapter dead
+- [x] SDK swiftinterface fully read — Adapter dead. (The 09-12 read was the
+      26.5 SDK. On the 27 SDK LanguageModelExecutor DOES exist; see the 09-13 section.)
 - [x] Live AFM probe — availability, contextSize, generation, token counting
 - [x] Quality eval — 41/44 (93%), all categories scored
 - [x] Token budget spike — Mini has 1.9× more room than the conservative estimate
