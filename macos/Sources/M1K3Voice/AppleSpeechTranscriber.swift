@@ -89,6 +89,8 @@
 //  the settled device and `installTap` threw an UNCAUGHT avfaudio exception
 //  (format mismatch) that terminated the app. `installedTapFormat` now records
 //  the settled format so MicTapReinstallPolicy stays accurate. Confidence 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-13 — releaseAudioHardware logs "released" only when it
+//  released; a listen still owning the engine now logs that it kept it (#306 review). Confidence 0.85.
 
 import AVFoundation
 import Foundation
@@ -853,15 +855,23 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// engagement", 2026-09-12). Called by the shell when voice mode or a
     /// dictation ends; a listen still running keeps its hardware.
     public func releaseAudioHardware() {
-        engineLock.withLock {
-            guard engineOwner == nil else { return }
+        // The guard exits the closure, not the function: report whether the
+        // hardware was actually released so a listen still winding down (which
+        // keeps its hardware) doesn't log "released" (#306 review).
+        let released = engineLock.withLock { () -> Bool in
+            guard engineOwner == nil else { return false }
             if audioEngine.isRunning { audioEngine.stop() }
             audioEngine.inputNode.removeTap(onBus: 0)
             disableVoiceProcessingIfOn(audioEngine.inputNode, reason: "session over")
             audioEngine.reset()
             installedTapFormat = nil
+            return true
         }
-        Self.log.notice("stt audio hardware released")
+        if released {
+            Self.log.notice("stt audio hardware released")
+        } else {
+            Self.log.notice("stt audio hardware kept — a listen still owns the engine")
+        }
     }
 
     private func observeConfigurationChanges(ifGeneration generation: UInt64) {

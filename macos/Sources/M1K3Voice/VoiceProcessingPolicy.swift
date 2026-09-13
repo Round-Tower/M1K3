@@ -38,6 +38,8 @@
 //  enables VP only on POSITIVE not-Bluetooth (`== false`); unknown → off. A
 //  wrongly-off built-in only loses echo cancellation; a wrongly-on headset
 //  parks voice mode. Confidence 0.85 (verify-by-launch on the rebuild).
+//  Review: Kev + claude-opus-5, 2026-09-13 — shouldBackOutVoiceProcessing documented as DORMANT
+//  (unreachable while shouldEnable is false on the Mac), kept as the re-enable safety net. Confidence 0.85.
 //
 
 public enum VoiceProcessingPolicy {
@@ -86,6 +88,11 @@ public enum VoiceProcessingPolicy {
     /// self-healing where `defaultInputIsBluetooth()` (which reads the
     /// aggregate's non-Bluetooth transport in-sandbox) silently lies. Mobile
     /// keeps VPIO regardless (its path is device-verified). 2026-09-12.
+    ///
+    /// DORMANT today: `shouldEnable` returns false on the Mac, so the one call
+    /// site (`AppleSpeechTranscriber.installInputTap`) never reaches this. It is
+    /// kept, test-pinned, as the safety net for the day Mac voice processing is
+    /// re-enabled — not as a live guard (#306 review).
     public static func shouldBackOutVoiceProcessing(platform: Platform, channelCount: UInt32) -> Bool {
         platform == .mac && channelCount > 2
     }
