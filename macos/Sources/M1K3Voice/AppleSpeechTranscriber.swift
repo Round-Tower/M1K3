@@ -83,6 +83,12 @@
 //  Review: Kev + claude-opus-4-8, 2026-09-12 — the per-listen transport line
 //  now logs only on a decision CHANGE (a storm buried it under os_log's rate
 //  limiter) and the policy fails safe to VP off on an unknown transport.
+//  Review: Kev + claude-opus-4-8, 2026-09-13 — install the mic tap with
+//  format: nil, not the pre-pin `format` read: `pinInputToDefaultDevice`
+//  changes the input device asynchronously, so the explicit format could lag
+//  the settled device and `installTap` threw an UNCAUGHT avfaudio exception
+//  (format mismatch) that terminated the app. `installedTapFormat` now records
+//  the settled format so MicTapReinstallPolicy stays accurate. Confidence 0.85.
 
 import AVFoundation
 import Foundation
@@ -704,7 +710,20 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // trailing buffer from a just-removed tap could theoretically append a
         // few stray samples into a successor session's request; not observed in
         // practice.
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+        // ★ 2026-09-13: install with format: nil, NOT the `format` read above.
+        // `pinInputToDefaultDevice` changes the input AudioUnit's current device
+        // ASYNCHRONOUSLY; `inputNode.outputFormat(forBus:0)` lags the change, so a
+        // format read right after the pin can hold the pre-pin device's shape (an
+        // inherited aggregate, e.g. multi-channel) while the node settles to the
+        // real device (`1 ch 48000 Float32` for the built-in mic). `installTap`
+        // validates the explicit format against the node's SETTLED format and
+        // throws an UNCAUGHT `com.apple.coreaudio.avfaudio` exception on a
+        // mismatch — it terminated the app on launch (2026-09-13). Passing nil
+        // makes AVFoundation use its own single current read for both the tap
+        // format and the validation, so a mismatch is impossible by construction.
+        // `format` above is still the gate + log signal; the buffer arrives in the
+        // node's live format and `MonoMixdown` downmixes whatever channel count.
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: nil) { [weak self] buffer, _ in
             // Multi-channel devices go MONO before the recognizer: SFSpeech
             // accepts >2-channel buffers and silently never produces a partial
             // (the 2026-08-14 nine-channel aggregate — VPIO above doesn't
@@ -734,7 +753,13 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 self.request?.append(audible)
             }
         }
-        installedTapFormat = MicTapFormat(sampleRate: format.sampleRate, channelCount: format.channelCount)
+        // Record what was ACTUALLY installed, not the pre-pin `format` read:
+        // installTap(nil) resolves the node's settled format, so re-read it here
+        // (post-install it no longer lags) — otherwise MicTapReinstallPolicy
+        // would compare a stale installed-format against the live one on the
+        // next configuration change and reinstall the tap needlessly.
+        let installed = inputNode.outputFormat(forBus: 0)
+        installedTapFormat = MicTapFormat(sampleRate: installed.sampleRate, channelCount: installed.channelCount)
         return true
     }
 
