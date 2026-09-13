@@ -28,6 +28,11 @@ public struct StreamedAnswerFolder: Sendable {
         folder = SentenceStreamFolder(stopMarker: stopMarker)
     }
 
+    /// See `SentenceStreamFolder.init(stopMatcher:)`.
+    public init(stopMatcher: @escaping @Sendable (String) -> String.Index?) {
+        folder = SentenceStreamFolder(stopMatcher: stopMatcher)
+    }
+
     /// Fold a cumulative snapshot of the streaming answer, returning any newly
     /// completed sentences. Non-prefix updates (shrinks/rewrites) are skipped.
     public mutating func ingest(_ text: String) -> [String] {

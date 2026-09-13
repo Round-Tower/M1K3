@@ -10,6 +10,8 @@
 //  capturing audio" dot must never be masked by whatever the avatar is doing.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `breathes`: the glyph itself animates while a
+//  model loads (launch snag list). Loading is its own signal, like recording. Confidence now 0.85.
 
 /// A semantic styling for the status-bar glyph's overlay indicator. Colour is a
 /// name (not a SwiftUI Color) so this type stays dependency-free and testable.
@@ -30,11 +32,16 @@ public struct GlyphTreatment: Equatable, Sendable {
     public var dotColorName: String?
     /// Whether the view should animate the indicator (best-effort in the menu bar).
     public var pulses: Bool
+    /// Whether the GLYPH itself breathes — a model (brain, voice, recogniser) is
+    /// loading. Independent of the dot: loading is a machine state, the dot is
+    /// what M1K3 is doing, and both can be true at once.
+    public var breathes: Bool
 
-    public init(dot: Dot, dotColorName: String?, pulses: Bool) {
+    public init(dot: Dot, dotColorName: String?, pulses: Bool, breathes: Bool = false) {
         self.dot = dot
         self.dotColorName = dotColorName
         self.pulses = pulses
+        self.breathes = breathes
     }
 
     public static let calm = GlyphTreatment(dot: .none, dotColorName: nil, pulses: false)
@@ -44,7 +51,15 @@ public extension AvatarActivity {
     /// The glyph styling for this activity. `isRecording` (a separate signal from
     /// `env.isRecording`) wins over everything else — capture status is the most
     /// important thing to surface.
-    func glyphTreatment(isRecording: Bool = false) -> GlyphTreatment {
+    /// `isLoading` (a brain / voice / recogniser model warming) makes the glyph
+    /// itself breathe on top of whatever dot the activity earns.
+    func glyphTreatment(isRecording: Bool = false, isLoading: Bool = false) -> GlyphTreatment {
+        var treatment = baseGlyphTreatment(isRecording: isRecording)
+        treatment.breathes = isLoading
+        return treatment
+    }
+
+    private func baseGlyphTreatment(isRecording: Bool) -> GlyphTreatment {
         if isRecording {
             return GlyphTreatment(dot: .recording, dotColorName: "red", pulses: true)
         }

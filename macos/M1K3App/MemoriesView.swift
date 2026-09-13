@@ -29,6 +29,9 @@
 //  own supersededMemories query (TDD'd in M1K3Memory). The count chip reads
 //  the live fetch only, so toggling the lens structurally cannot change how
 //  many facts M1K3 claims to hold.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the title drops its brain icon and each
+//  row wears its KIND's symbol (`MemoryKind.symbolName`) instead of one brain for every
+//  memory (launch snag list). Confidence now 0.85.
 
 import M1K3Memory
 import SwiftUI
@@ -84,7 +87,7 @@ struct MemoriesView: View {
 
     private var header: some View {
         HStack {
-            Label("Memories", systemImage: "brain")
+            Text("Memories")
                 .font(.pixelTitle)
             Spacer()
             Button {
@@ -256,7 +259,9 @@ private struct MemoryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: corrected ? "clock.arrow.circlepath" : "brain")
+            // Per-kind glyph (M1K3Memory, test-pinned): a preference, a decision
+            // and an episode read as what they are; corrected rows keep history's.
+            Image(systemName: corrected ? "clock.arrow.circlepath" : memory.kind.symbolName)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tint)
                 .accessibilityHidden(true)

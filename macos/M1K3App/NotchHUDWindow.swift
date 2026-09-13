@@ -15,6 +15,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the root tracks window
 //  visibility so the content can drop its RealityView while ordered out.
 //  Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `NotchHUDLayout.shape` (flat top, rounded bottom),
+//  a zero gap under the menu bar and no hosting safe-area inset, so the panel hugs the notch.
+//  Confidence 0.8.
 //
 
 import AppKit
@@ -31,6 +34,11 @@ enum NotchHUDLayout {
     static let horizontalPadding: CGFloat = 28
     static let interItemSpacing: CGFloat = 16
     static let textAreaWidth: CGFloat = size.width - horizontalPadding * 2 - avatarSize - interItemSpacing
+    /// Flat top (meets the menu bar / notch), rounded bottom corners.
+    static let shape = UnevenRoundedRectangle(
+        topLeadingRadius: 0, bottomLeadingRadius: 28, bottomTrailingRadius: 28, topTrailingRadius: 0,
+        style: .continuous
+    )
 }
 
 @MainActor
@@ -59,6 +67,9 @@ final class NotchHUDWindow: NSWindow {
                 .frame(width: NotchHUDLayout.size.width, height: NotchHUDLayout.size.height)
                 .trackWindowVisibility()
         )
+        // No safe-area inset: the hosting view must lay the panel out over
+        // the WHOLE window or the flat top never meets the menu bar.
+        hosting.safeAreaRegions = []
         contentView = hosting
         setContentSize(NotchHUDLayout.size)
         alphaValue = 0
@@ -69,7 +80,8 @@ final class NotchHUDWindow: NSWindow {
     /// OS paints over any ordinary window there (jam finding).
     func targetOrigin(on screen: NSScreen) -> NSPoint {
         let x = screen.frame.midX - NotchHUDLayout.size.width / 2
-        let y = screen.visibleFrame.maxY - NotchHUDLayout.size.height - 4
+        // No gap: the flat top edge meets the menu bar the notch sits in.
+        let y = screen.visibleFrame.maxY - NotchHUDLayout.size.height
         return NSPoint(x: x, y: y)
     }
 

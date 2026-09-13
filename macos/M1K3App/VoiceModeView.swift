@@ -32,6 +32,8 @@
 //  a control that cannot change anything is a dead control. VoiceThinkingPolicy
 //  itself stays for a future thinking brain.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the hero creature takes `.fit` framing so
+//  the whole fox is in shot (voice plates clipped its head). Confidence 0.8 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Voice
@@ -59,7 +61,10 @@ struct VoiceModeView: View {
 
             // The avatar IS the window — full-bleed hero, and the primary
             // tap / Space barge-in surface.
-            AvatarSurface(env: env)
+            // `.fit`: the camera sits where the creature's POSED extents fill
+            // the window's aspect with headroom — the fixed shot cut the fox's
+            // head off in every voice plate (launch snag list, 2026-09-12).
+            AvatarSurface(env: env, framing: .fit)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())

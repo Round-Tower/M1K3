@@ -120,3 +120,17 @@ struct SentenceStreamFolderTests {
         #expect(out.isEmpty || out == ["Different."])
     }
 }
+
+// Review: Kev + claude-fable-5.1, 2026-09-12 — a stop MATCHER (any predicate over the
+// cumulative text) beside the literal marker, so the speech lane cuts on the same
+// trailer variants the chat splitter recognises.
+extension SentenceStreamFolderTests {
+    @Test("a stop matcher drops everything from its match on, like the literal marker")
+    func stopMatcherDropsTrailer() {
+        var folder = SentenceStreamFolder(stopMatcher: { text in text.range(of: "Follow-ups:")?.lowerBound })
+        let out = folder.ingest("Sunny today. Follow-ups: - What about tomorrow? - And Sunday?")
+        #expect(out == ["Sunny today."])
+        #expect(folder.ingest("Sunny today. Follow-ups: - What about tomorrow? - And Sunday? More.") == [])
+        #expect(folder.flush() == nil)
+    }
+}

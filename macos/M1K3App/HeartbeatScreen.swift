@@ -25,6 +25,8 @@
 //  client via the new client_name capture). The fold is package-TDD'd;
 //  this view is verify-at-⌘R.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the title drops its ECG icon (launch snag
+//  list: titles are text; the empty states keep theirs). Confidence unchanged.
 
 import M1K3Heartbeat
 import M1K3MCPLog
@@ -62,8 +64,7 @@ struct HeartbeatScreen: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Label("Heartbeat", systemImage: "waveform.path.ecg")
-                    .symbolRenderingMode(.hierarchical)
+                Text("Heartbeat")
                     .font(.pixelTitle)
                 Text("\(pulseCount)")
                     .font(.caption.monospacedDigit())

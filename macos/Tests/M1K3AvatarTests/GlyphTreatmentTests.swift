@@ -58,3 +58,25 @@ struct GlyphTreatmentTests {
         }
     }
 }
+
+// Review: Kev + claude-fable-5.1, 2026-09-12 — the glyph itself BREATHES while a
+// model loads (launch snag list: "make the pixel icon animate on loading");
+// loading is a separate signal like recording, never masked by activity.
+extension GlyphTreatmentTests {
+    @Test("a model loading makes the glyph breathe, whatever the activity")
+    func loadingBreathes() {
+        #expect(AvatarActivity.idle.glyphTreatment(isLoading: true).breathes)
+        #expect(AvatarActivity.thinking.glyphTreatment(isLoading: true).breathes)
+        #expect(!AvatarActivity.idle.glyphTreatment(isLoading: false).breathes)
+        #expect(!AvatarActivity.thinking.glyphTreatment().breathes)
+    }
+
+    @Test("loading keeps the activity's dot — recording still wins")
+    func loadingKeepsDot() {
+        let thinking = AvatarActivity.thinking.glyphTreatment(isLoading: true)
+        #expect(thinking.dot == .pulsing)
+        let recording = AvatarActivity.idle.glyphTreatment(isRecording: true, isLoading: true)
+        #expect(recording.dot == .recording)
+        #expect(recording.breathes)
+    }
+}

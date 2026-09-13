@@ -232,3 +232,29 @@ struct SpeechTextPolishTests {
         #expect(!polished.contains("`"))
     }
 }
+
+// Review: Kev + claude-fable-5.1, 2026-09-12 — narration read a "Sources:" list and a
+// "Follow-ups:" list verbatim (launch snag list); both trailers now go the way the
+// Web-sources block already did. Belt and braces under the stream folders' cut.
+extension SpeechTextPolishTests {
+    @Test("a trailing Sources block (bulleted or bracketed) is stripped")
+    func sourcesBlockStripped() {
+        let bulleted = "Tea is ready.\n\nSources:\n- Kitchen notes §brewing\n• Tea §steeping"
+        #expect(SpeechTextPolish.polish(bulleted) == "Tea is ready.")
+        let inline = "Tea is ready.\nSources: [Kitchen notes §brewing], [Tea §steeping]"
+        #expect(SpeechTextPolish.polish(inline) == "Tea is ready.")
+    }
+
+    @Test("a trailing follow-ups list in any spelling is never spoken")
+    func followUpTrailerStripped() {
+        for trailer in ["FOLLOWUPS: [\"More?\"]", "Follow-ups:\n- More?\n- Again?", "**Follow-ups:** More? Again?"] {
+            #expect(SpeechTextPolish.polish("Done.\n\n\(trailer)") == "Done.", Comment(rawValue: trailer))
+        }
+    }
+
+    @Test("a mid-prose 'sources' or 'follow up' survives")
+    func midProseSurvives() {
+        let text = "Two sources: the river and the well. I'll follow up: tomorrow."
+        #expect(SpeechTextPolish.polish(text) == text)
+    }
+}

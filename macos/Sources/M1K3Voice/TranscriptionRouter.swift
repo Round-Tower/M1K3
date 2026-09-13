@@ -17,6 +17,7 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85,
 //  Prior: internal call-pipeline project, TranscriptionRouter (Kev) — simplified to a plain
 //  availability-ordered selector (no PerformanceMonitor, no buffer fallback chain).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `releaseAudioHardware()` fan-out.
 
 import Foundation
 
@@ -52,5 +53,13 @@ public struct TranscriptionRouter: Sendable {
 
     public var activeProviderName: String? {
         activeProvider?.name
+    }
+
+    /// Every provider lets go of its audio hardware — the shell calls this when
+    /// voice mode or a dictation ends, so no engine keeps the mic open.
+    public func releaseAudioHardware() {
+        for provider in providers {
+            provider.releaseAudioHardware()
+        }
     }
 }

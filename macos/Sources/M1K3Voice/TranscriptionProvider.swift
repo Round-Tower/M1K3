@@ -16,6 +16,8 @@
 //  Prior: internal call-pipeline project, TranscriptionProvider (Kev) — generalised to a live
 //  session API (the prior call-pipeline's is buffer-pump + call-domain), PerformanceMonitor and
 //  PowerEfficiency dropped as MVP-irrelevant.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `releaseAudioHardware()` requirement with a
+//  no-op default (the Apple transcriber closes its input device between engagements).
 
 import Foundation
 
@@ -56,9 +58,19 @@ public protocol TranscriptionProvider: Sendable {
     /// A conversation held over speakers with music playing therefore has to pick:
     /// the sharper transcriber, or the one that can keep the room out of the mic.
     var attemptsEchoCancellation: Bool { get }
+
+    /// Let go of the audio hardware between engagements (voice mode or a
+    /// dictation ending). A requirement with a no-op default, for the same
+    /// dispatch reason as `startListening(finality:)`: the concrete Apple
+    /// transcriber's release must be reached through `any TranscriptionProvider`.
+    func releaseAudioHardware()
 }
 
 public extension TranscriptionProvider {
+    /// Default: nothing to release — a provider that owns no engine of ours
+    /// (WhisperKit builds its own inside the package) has nothing to let go.
+    func releaseAudioHardware() {}
+
     /// Default: the finality policy is ignored and the plain session starts —
     /// correct for providers that only ever finalize on a consumer stop
     /// (WhisperKit), where the two policies are indistinguishable.

@@ -64,7 +64,7 @@ extension AppEnvironment {
             // utterance BEFORE this one speaks, sequenced inside this task so
             // the stop can't race past and kill the new answer's first line.
             if superseding { await self?.stopSpeaking() }
-            var folder = StreamedAnswerFolder(stopMarker: FollowUpSplit.sentinel)
+            var folder = StreamedAnswerFolder(stopMatcher: { FollowUpSplit.trailerStart(in: $0) })
             var pinnedID: UUID?
             // Poll ticks before the first assistant message appears; ~10s at
             // 150ms. Generous — a message normally appears within one tick.
