@@ -72,6 +72,23 @@
 //  format read back (keep / restart / reinstall), so the iPhone's same-format
 //  notification ~0.5 s after the first arm stops bouncing the engine. Real route
 //  changes (a new sample rate or channel count) reinstall exactly as before.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — THE BLUETOOTH LISTEN (launch snag list): voice
+//  processing is now `VoiceProcessingPolicy`'s call (off on the Mac for a Bluetooth input — VPIO
+//  delivered zero buffers there, measured), the #205 mixer touch is mobile-only (on the Mac it
+//  engaged the output device: `start()` threw -10875 on a headset, silently — now logged and
+//  recorded as the listen's failure), and `releaseAudioHardware()` lets the shell close the
+//  input device between engagements so a headset drops back out of its call profile.
+//  Confidence 0.85 (each branch reproduced with a standalone engine probe; verify-by-launch
+//  on the headset and the built-in mic).
+//  Review: Kev + claude-opus-4-8, 2026-09-12 — the per-listen transport line
+//  now logs only on a decision CHANGE (a storm buried it under os_log's rate
+//  limiter) and the policy fails safe to VP off on an unknown transport.
+//  Review: Kev + claude-opus-4-8, 2026-09-13 — install the mic tap with
+//  format: nil, not the pre-pin `format` read: `pinInputToDefaultDevice`
+//  changes the input device asynchronously, so the explicit format could lag
+//  the settled device and `installTap` threw an UNCAUGHT avfaudio exception
+//  (format mismatch) that terminated the app. `installedTapFormat` now records
+//  the settled format so MicTapReinstallPolicy stays accurate. Confidence 0.85.
 
 import AVFoundation
 import Foundation
@@ -147,6 +164,13 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// `engineOwner`. The configuration-change handler compares it with the
     /// format read back to decide keep / restart / reinstall.
     private var installedTapFormat: MicTapFormat?
+    /// The last voice-processing decision we logged, so the per-listen line
+    /// only fires when it CHANGES — a re-arm storm otherwise buries it under
+    /// the os_log rate limiter (2026-09-12).
+    private var lastLoggedVPDecision: String?
+    /// The last input-device census we logged (dedup, same reason as
+    /// `lastLoggedVPDecision`).
+    private var lastLoggedInputDevice: String?
     /// Why the current/most recent session ended without a word, when the
     /// recogniser (not the caller) ended it — see `lastFailure`. Guarded by `lock`.
     private var lastFailureMessage: String?
@@ -372,6 +396,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             continuation.finish()
             return
         case .failed:
+            recordFailure("The microphone couldn't start.", ifGeneration: generation)
             stopListening(ifGeneration: generation)
             continuation.finish()
             return
@@ -574,6 +599,12 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 try audioEngine.start()
                 return .started
             } catch {
+                // Say so: this branch was silent, and a Bluetooth headset under
+                // VPIO + the mixer touch hit it on EVERY listen (-10875) — the
+                // loop read twelve empty listens in 400 ms and parked mutely.
+                Self.log.error(
+                    "audio engine failed to start — listen ends: \(error.localizedDescription, privacy: .public)"
+                )
                 audioEngine.inputNode.removeTap(onBus: 0)
                 engineOwner = nil
                 installedTapFormat = nil
@@ -591,10 +622,39 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     @discardableResult
     private func installInputTap() -> Bool {
         let inputNode = audioEngine.inputNode
+        // Keep the engine on the device the USER selected. `AVAudioEngine`
+        // resolves its input device once and does not follow a later default
+        // change; on this Mac (macOS 27.0) the input node inherited a
+        // multi-channel system aggregate (`~:AMS2_Aggregate`, ch=7/9) that
+        // STARVES the recogniser — `audioDuration 0`, the instant-endpoint
+        // storm — while the selected headset sat unused. Re-pinning per listen
+        // (engine stopped here) is the fix `VoiceProcessingPolicy` alone could
+        // not be: no VP toggle unbinds a wrongly-chosen device. 2026-09-12.
+        pinInputToDefaultDevice(inputNode)
         // BEFORE reading the format: voice processing CHANGES it (VPIO renders
         // mono at the device rate), so a format read first would install a tap
-        // that no longer matches the node.
-        enableVoiceProcessing(on: inputNode)
+        // that no longer matches the node. Whether to have it on at all is
+        // `VoiceProcessingPolicy`'s call (2026-09-12): on the Mac a Bluetooth
+        // input under VPIO delivered NO buffers at all, so a headset listens
+        // plain — it needs no echo cancellation, the speaker is on the ear.
+        let inputIsBluetooth = InputDeviceTransport.defaultInputIsBluetooth()
+        let wantsVoiceProcessing = VoiceProcessingPolicy.shouldEnable(
+            platform: VoiceProcessingPolicy.current, inputIsBluetooth: inputIsBluetooth
+        )
+        // The one line that says which way the policy went — a mute listen
+        // with no engine error is otherwise unreadable from the log. Logged
+        // only when the decision CHANGES: a re-arm storm re-enters this ~12×/s
+        // and the os_log rate limiter would drop the line entirely.
+        let vpDecision = "bluetooth=\(inputIsBluetooth.map { String($0) } ?? "unknown") vp=\(wantsVoiceProcessing ? "on" : "off")"
+        if vpDecision != lastLoggedVPDecision {
+            lastLoggedVPDecision = vpDecision
+            Self.log.notice("stt input transport \(vpDecision, privacy: .public)")
+        }
+        if wantsVoiceProcessing {
+            enableVoiceProcessing(on: inputNode)
+        } else {
+            disableVoiceProcessingIfOn(inputNode, reason: "Bluetooth input")
+        }
         // Give the I/O unit's OUTPUT element a render source. With voice
         // processing on, the engine's I/O unit is a VPIO whose output bus
         // renders every cycle regardless; with nothing attached to
@@ -603,9 +663,33 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // and speak phase (2026-09-03, iPhone 17 Pro; the Mac's log shows
         // none). Touching `mainMixerNode` implicitly connects mixer → output;
         // an input-less mixer renders silence, so the bus is satisfied and
-        // nothing audible changes. Volume 0 is belt-and-braces.
-        audioEngine.mainMixerNode.outputVolume = 0
-        let format = inputNode.outputFormat(forBus: 0)
+        // nothing audible changes. Volume 0 is belt-and-braces. MOBILE ONLY:
+        // on the Mac the same connection engages the OUTPUT device for a
+        // mic-only engine — `start()` threw -10875 on a Bluetooth headset and
+        // the headset stayed in its call profile after the listen (2026-09-12).
+        if VoiceProcessingPolicy.feedsSilentOutputSource(platform: VoiceProcessingPolicy.current) {
+            audioEngine.mainMixerNode.outputVolume = 0
+        }
+        var format = inputNode.outputFormat(forBus: 0)
+        // Ground truth beats the transport read: if VPIO handed back a
+        // >2-channel format (a Bluetooth headset or an aggregate-routed
+        // input), the recogniser will STARVE on it — back voice processing
+        // out and re-read the raw device (2026-09-12, the launch snag: the
+        // sandboxed transport read misidentifies the aggregate as non-BT, so
+        // `VoiceProcessingPolicy.shouldEnable` kept VPIO on and voice mode
+        // parked mutely on a fresh launch). A clean built-in mic renders 1
+        // channel and never trips this.
+        if wantsVoiceProcessing,
+           VoiceProcessingPolicy.shouldBackOutVoiceProcessing(
+               platform: VoiceProcessingPolicy.current, channelCount: format.channelCount
+           )
+        {
+            Self.log.notice(
+                "stt voice processing backed out — VPIO format was \(format.channelCount, privacy: .public)ch (route starves the recogniser)"
+            )
+            disableVoiceProcessingIfOn(inputNode, reason: "VPIO format \(format.channelCount)ch")
+            format = inputNode.outputFormat(forBus: 0)
+        }
         Self.log.notice(
             "stt mic input format \(format.sampleRate, privacy: .public)Hz ch=\(format.channelCount, privacy: .public)"
         )
@@ -626,7 +710,20 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // trailing buffer from a just-removed tap could theoretically append a
         // few stray samples into a successor session's request; not observed in
         // practice.
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+        // ★ 2026-09-13: install with format: nil, NOT the `format` read above.
+        // `pinInputToDefaultDevice` changes the input AudioUnit's current device
+        // ASYNCHRONOUSLY; `inputNode.outputFormat(forBus:0)` lags the change, so a
+        // format read right after the pin can hold the pre-pin device's shape (an
+        // inherited aggregate, e.g. multi-channel) while the node settles to the
+        // real device (`1 ch 48000 Float32` for the built-in mic). `installTap`
+        // validates the explicit format against the node's SETTLED format and
+        // throws an UNCAUGHT `com.apple.coreaudio.avfaudio` exception on a
+        // mismatch — it terminated the app on launch (2026-09-13). Passing nil
+        // makes AVFoundation use its own single current read for both the tap
+        // format and the validation, so a mismatch is impossible by construction.
+        // `format` above is still the gate + log signal; the buffer arrives in the
+        // node's live format and `MonoMixdown` downmixes whatever channel count.
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: nil) { [weak self] buffer, _ in
             // Multi-channel devices go MONO before the recognizer: SFSpeech
             // accepts >2-channel buffers and silently never produces a partial
             // (the 2026-08-14 nine-channel aggregate — VPIO above doesn't
@@ -656,7 +753,13 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 self.request?.append(audible)
             }
         }
-        installedTapFormat = MicTapFormat(sampleRate: format.sampleRate, channelCount: format.channelCount)
+        // Record what was ACTUALLY installed, not the pre-pin `format` read:
+        // installTap(nil) resolves the node's settled format, so re-read it here
+        // (post-install it no longer lags) — otherwise MicTapReinstallPolicy
+        // would compare a stale installed-format against the live one on the
+        // next configuration change and reinstall the tap needlessly.
+        let installed = inputNode.outputFormat(forBus: 0)
+        installedTapFormat = MicTapFormat(sampleRate: installed.sampleRate, channelCount: installed.channelCount)
         return true
     }
 
@@ -680,6 +783,36 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// devices, and a plain mic tap is strictly better than no mic. Idempotent —
     /// the route-change handler reinstalls taps and must not re-toggle a live
     /// setting (toggling requires a stopped engine).
+    /// Force the engine's input AudioUnit onto the current system default
+    /// input device, and log what it was vs is (deduped, so a re-arm storm
+    /// can't bury the line under the os_log rate limiter). Best-effort: a
+    /// failed read/set leaves the engine as-is (the pre-2026-09-12 behaviour).
+    private func pinInputToDefaultDevice(_ inputNode: AVAudioInputNode) {
+        #if os(macOS)
+            guard let wanted = InputDeviceTransport.defaultInputDeviceID() else { return }
+            guard let unit = inputNode.audioUnit else { return }
+            var current = AudioDeviceID(0)
+            var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+            let readStatus = AudioUnitGetProperty(
+                unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &current, &size
+            )
+            let census = "wanted=\(wanted)(\(InputDeviceTransport.deviceName(wanted) ?? "?")) engine=\(readStatus == noErr ? String(current) : "err\(readStatus)")"
+            if census != lastLoggedInputDevice {
+                lastLoggedInputDevice = census
+                Self.log.notice("stt input device \(census, privacy: .public)")
+            }
+            guard readStatus != noErr || current != wanted else { return }
+            var target = wanted
+            let setStatus = AudioUnitSetProperty(
+                unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &target,
+                UInt32(MemoryLayout<AudioDeviceID>.size)
+            )
+            if setStatus != noErr {
+                Self.log.error("stt could not pin input device \(wanted, privacy: .public): \(setStatus, privacy: .public)")
+            }
+        #endif
+    }
+
     private func enableVoiceProcessing(on inputNode: AVAudioInputNode) {
         guard !inputNode.isVoiceProcessingEnabled else { return }
         do {
@@ -696,6 +829,39 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 "stt voice processing unavailable — no echo cancellation or ducking on this input: \(error.localizedDescription, privacy: .public)"
             )
         }
+    }
+
+    /// Turn voice processing OFF (engine must be stopped — every caller is
+    /// under `engineLock` between a stop and a start). Idempotent.
+    private func disableVoiceProcessingIfOn(_ inputNode: AVAudioInputNode, reason: String) {
+        guard inputNode.isVoiceProcessingEnabled else { return }
+        do {
+            try inputNode.setVoiceProcessingEnabled(false)
+            Self.log.notice("stt voice processing off (\(reason, privacy: .public))")
+        } catch {
+            Self.log.error(
+                "stt voice processing could not be turned off: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    /// Let go of the audio hardware between engagements: no live session →
+    /// stop the engine, drop the tap, turn voice processing off and reset the
+    /// graph so the HAL closes the input device. Left prepared, the I/O unit
+    /// kept the input open — a Bluetooth headset stayed in its 16 kHz call
+    /// profile ("reduced speaker & microphone output even after M1K3's
+    /// engagement", 2026-09-12). Called by the shell when voice mode or a
+    /// dictation ends; a listen still running keeps its hardware.
+    public func releaseAudioHardware() {
+        engineLock.withLock {
+            guard engineOwner == nil else { return }
+            if audioEngine.isRunning { audioEngine.stop() }
+            audioEngine.inputNode.removeTap(onBus: 0)
+            disableVoiceProcessingIfOn(audioEngine.inputNode, reason: "session over")
+            audioEngine.reset()
+            installedTapFormat = nil
+        }
+        Self.log.notice("stt audio hardware released")
     }
 
     private func observeConfigurationChanges(ifGeneration generation: UInt64) {

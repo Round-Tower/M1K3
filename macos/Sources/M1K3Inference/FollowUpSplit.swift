@@ -27,6 +27,10 @@
 //  counterpart is StreamingFollowUpSplitter.
 //
 //  Signed: Kev + claude-sonnet-5, 2026-07-14, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — `trailerStart(in:)`: the trailer's shape is
+//  tolerated ("Follow-ups:", "**FOLLOW-UPS:**", a heading), not just the sentinel's spelling —
+//  Golden Gate Mini's variants stayed in the bubble, were read aloud and replayed into the
+//  next turn's history (launch snag list). Test-pinned incl. the mid-sentence non-match.
 
 import Foundation
 
@@ -41,14 +45,33 @@ public enum FollowUpSplit {
     /// whitespace-trimmed. No sentinel present → the whole text is the answer,
     /// no follow-ups.
     public static func split(_ text: String) -> (answer: String, followUps: [String]) {
-        guard let range = text.range(of: sentinel) else {
+        guard let label = trailerLabelRange(in: text) else {
             return (text.trimmingCharacters(in: .whitespacesAndNewlines), [])
         }
-        let answer = String(text[..<range.lowerBound])
+        let answer = String(text[..<label.lowerBound])
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let payload = String(text[range.upperBound...])
+        // The payload begins after the whole label (sentinel or variant,
+        // bold markers and colon included).
+        let payload = String(text[label.upperBound...])
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return (answer, parseFollowUps(payload))
+    }
+
+    /// Where the follow-ups trailer begins, if the text carries one: the exact
+    /// sentinel anywhere (the taught shape), or a line-start VARIANT — the
+    /// label hyphenated / spaced / bold / as a heading, any case, plural,
+    /// colon (Golden Gate Mini's "Follow-ups:", 2026-09-12). A mid-sentence
+    /// "follow up:" is prose and never matches: line start, plural, colon.
+    public static func trailerStart(in text: String) -> String.Index? {
+        trailerLabelRange(in: text)?.lowerBound
+    }
+
+    /// The whole trailer LABEL (through its colon and any closing bold marker),
+    /// so the payload can be read from right after it.
+    static func trailerLabelRange(in text: String) -> Range<String.Index>? {
+        if let exact = text.range(of: sentinel) { return exact }
+        let variant = /(?im)^[ \t]*(?:\*\*|#{1,6}[ \t]*)?FOLLOW[ \-]?UPS(?:\*\*)?[ \t]*:(?:\*\*)?/
+        return text.firstMatch(of: variant)?.range
     }
 
     /// Garbage in → [] out, never a throw — this is the defence against

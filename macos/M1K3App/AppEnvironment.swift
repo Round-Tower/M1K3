@@ -2521,6 +2521,7 @@ extension AppEnvironment {
         dictationTask = nil
         dictationProvider?.stopListening()
         dictationProvider = nil
+        transcription.releaseAudioHardware() // a cancelled dictation lets the mic go too
         isListening = false
         liveTranscript = ""
         avatar.resetToIdle()
@@ -2531,6 +2532,9 @@ extension AppEnvironment {
         liveTranscript = ""
         dictationProvider = nil
         dictationTask = nil
+        // The listen is over: close the input device (a Bluetooth headset
+        // otherwise stays in its call profile — launch snag list, 2026-09-12).
+        transcription.releaseAudioHardware()
         // Hygiene-clean the final transcript (repetition / silence hallucinations /
         // whitespace) before it reaches the model — an all-noise dictation becomes "".
         let cleaned = TranscriptSanitizer.clean(text, confidence: confidence)

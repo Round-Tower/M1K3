@@ -99,3 +99,41 @@ struct FollowUpSplitTests {
         #expect(result.followUps == ["Same?", "Different?"])
     }
 }
+
+// Review: Kev + claude-fable-5.1, 2026-09-12 — the trailer's SHAPE is tolerated, not just
+// its spelling: Golden Gate Mini wrote "Follow-ups:" / "**FOLLOW-UPS:**" lines that the
+// exact sentinel missed, so they stayed in the bubble, were read aloud, and were replayed
+// into the next turn's history (launch snag list). Line-start, plural, colon — never a
+// mid-sentence "follow up".
+extension FollowUpSplitTests {
+    @Test("a hyphenated / spaced / markdown-bold variant at a line start is a trailer")
+    func variantsAreTrailers() {
+        for trailer in ["Follow-ups:", "FOLLOW-UPS:", "Follow ups:", "**Follow-ups:**", "## Follow-ups:"] {
+            let result = FollowUpSplit.split("Answer.\n\(trailer) [\"Q?\"]")
+            #expect(result.answer == "Answer.", Comment(rawValue: trailer))
+            #expect(result.followUps == ["Q?"], Comment(rawValue: trailer))
+        }
+    }
+
+    @Test("a prose trailer under a variant is stripped even though it parses to no chips")
+    func proseTrailerStripped() {
+        let result = FollowUpSplit.split("Answer.\nFollow-ups:\n- What next?\n- And then?")
+        #expect(result.answer == "Answer.")
+        #expect(result.followUps.isEmpty)
+    }
+
+    @Test("a mid-sentence 'follow up' is prose, not a trailer")
+    func midSentenceIsProse() {
+        let text = "I'll follow up: the dentist on Monday, then the follow-ups list."
+        #expect(FollowUpSplit.split(text).answer == text)
+        #expect(FollowUpSplit.trailerStart(in: text) == nil)
+    }
+
+    @Test("trailerStart finds the exact sentinel mid-line and the variants at a line start")
+    func trailerStartLocations() {
+        let exact = "Answer. FOLLOWUPS: []"
+        #expect(FollowUpSplit.trailerStart(in: exact) == exact.range(of: "FOLLOWUPS:")?.lowerBound)
+        let variant = "Answer.\n  Follow-ups: []"
+        #expect(FollowUpSplit.trailerStart(in: variant) == variant.range(of: "  Follow-ups:")?.lowerBound)
+    }
+}

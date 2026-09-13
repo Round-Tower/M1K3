@@ -13,6 +13,14 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the pulsing dot's timeline is
 //  capped at 30 fps on an elapsed clock (was the display's native 120 Hz).
 //  Confidence now 0.8 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the glyph breathes while a brain / voice /
+//  recogniser model loads (`GlyphTreatment.breathes`, test-pinned). Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-4-8, 2026-09-13 — ★ the breathing glyph LIVELOCKED launch.
+//  A MenuBarExtra label rasterises into the NSStatusItem button; a per-frame TimelineView
+//  re-ran _adjustLength + full menu-bar Auto Layout every frame, monopolising the main thread
+//  for the whole model-warm window so the :4242 MCP bind never ran and warm never finished
+//  (one process pegged at 20 GB / 100 % CPU, proven by `sample`). Loading cue is now a static
+//  dim; motion belongs on the button CALayer, not the label. Confidence 0.85 (verify-by-launch).
 
 import Foundation
 import M1K3Avatar
@@ -24,7 +32,15 @@ struct MenuBarLabel: View {
 
     private var treatment: GlyphTreatment {
         guard let env else { return .calm }
-        return env.avatar.state.activity.glyphTreatment(isRecording: env.isRecording)
+        return env.avatar.state.activity.glyphTreatment(isRecording: env.isRecording, isLoading: isLoading)
+    }
+
+    /// Any model warming: the selected brain's weights, M1K3 Voice, or the
+    /// WhisperKit recogniser. The three load states the Settings panes already
+    /// render — the glyph breathes for the same reason those show a bar.
+    private var isLoading: Bool {
+        guard let env else { return false }
+        return env.modelLoad.isActive || env.voiceLoad.isActive || env.whisperLoad.isActive
     }
 
     /// The pixel glyph carries no VoiceOver name of its own; speak the same signal
@@ -38,7 +54,7 @@ struct MenuBarLabel: View {
 
     var body: some View {
         let treatment = treatment
-        Image(nsImage: glyphStyle.image())
+        BreathingGlyph(image: glyphStyle.image(), breathes: treatment.breathes)
             .shadow(
                 color: treatment.dot == .glow ? .glyphDot(treatment.dotColorName) : .clear,
                 radius: treatment.dot == .glow ? 2.5 : 0
@@ -63,6 +79,27 @@ extension Color {
         case "red": .red
         default: .secondary
         }
+    }
+}
+
+/// The pixel mark, dimmed while a model loads. ★ 2026-09-13: this MUST NOT be a
+/// per-frame `TimelineView`. A `MenuBarExtra` label is rasterised into the
+/// `NSStatusItem` button image, and every frame re-runs `NSStatusItem
+/// _adjustLength` → a full Auto Layout pass on the menu bar (proven by `sample`).
+/// `breathes` is true for the whole launch/model-warm window, so a per-frame
+/// animation here MONOPOLISES the main thread → the main-actor launch work
+/// (incl. the :4242 MCP bind) is starved → warm never finishes → `breathes`
+/// stays true: a self-sustaining livelock that pegged one 20 GB / 100 % CPU
+/// process and never launched. The loading cue is now a single, static dim
+/// (one re-raster on entry, one on exit). Motion, if wanted, belongs on the
+/// status button's CALayer opacity (GPU, no re-layout), never on the label body.
+private struct BreathingGlyph: View {
+    let image: NSImage
+    let breathes: Bool
+
+    var body: some View {
+        Image(nsImage: image)
+            .opacity(breathes ? 0.6 : 1.0)
     }
 }
 

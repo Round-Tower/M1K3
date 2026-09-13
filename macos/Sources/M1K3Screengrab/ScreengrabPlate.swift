@@ -13,6 +13,8 @@
 //  verified by launch on the Mac suite), Prior: Unknown
 //  Review: claude-fable-5.1, 2026-09-08 — `-selectedBrain lil` on every recipe (Lil fronts the plates;
 //  Mini answered flat) and the Fox tile shows the registered PhosphorFox creature, not Fox + phosphor skin (Kev). Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — shading per plate: the house face's lattice under
+//  `off`, other creatures under `phosphor`. Confidence 0.85 (pinned).
 //
 
 import Foundation
@@ -67,11 +69,11 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
             // the live model store (the harness reroutes data, not brains).
             ["-selectedBrain", "lil"],
             ["-voiceMode.companion", companionID ?? Self.houseFace],
-            // Creature tiles read best with the phosphor skin (the site's look).
-            // That includes the PhosphorFox tile: captured with `.off` on
-            // 2026-09-09 it rendered as a plain grey wireframe — the glow is the
-            // shader, not the asset, whatever CompanionSpec's comment says.
-            ["-companion.shadingStyle", "phosphor"],
+            // The house face (and its own tile) shows the BAKED lattice, tinted
+            // phosphor green by the app under `.off` (Kev, 2026-09-12: "proper
+            // Phosphor Fox wireframe" — the Fresnel glow filled it in). The other
+            // creatures keep the phosphor skin: their baked textures are cartoon fur.
+            ["-companion.shadingStyle", (companionID ?? Self.houseFace) == Self.houseFace ? "off" : "phosphor"],
             // Brain at Home serving reads the paired-device keys from the Keychain;
             // off for every plate (the pairing plate shows the QR from Settings).
             ["-brainServe.enabled", "NO"],

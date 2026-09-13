@@ -37,6 +37,9 @@
 //  Misc Symbols / Dingbats (✔ ☺ ♠) go too (review catch on #247).
 //  Confidence now 0.9 (eight pinned cases incl. ZWJ/flag/keycap; the
 //  "strip rather than voice as inflection" choice is taste).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — two more trailers never speak: a model-written
+//  "Sources:" list and the follow-ups trailer in any spelling (narration read both verbatim —
+//  launch snag list). Confidence now 0.9 (pinned incl. the mid-prose non-matches).
 //
 
 import Foundation
@@ -46,8 +49,10 @@ public enum SpeechTextPolish {
     /// never produces new strippable material.
     public static func polish(_ text: String) -> String {
         var result = text
+        result = stripFollowUpTrailer(result)
         result = flattenMarkdownOutsideFences(result)
         result = stripWebSourcesBlock(result)
+        result = stripSourcesBlock(result)
         result = stripCitations(result)
         result = collapseURLs(result)
         result = stripEmojiOutsideFences(result)
@@ -254,6 +259,34 @@ public enum SpeechTextPolish {
     /// by bullet lines. Mid-prose mentions of "web sources" are untouched.
     private static func stripWebSourcesBlock(_ text: String) -> String {
         text.replacing(/(?:^|\n+)Web sources:\n(?:•[^\n]*\n?)*$/, with: "")
+    }
+
+    /// A model-written "Sources:" tail — a label on its own line followed by
+    /// bullet / dash / bracket lines, or inline citation tokens — is chip UI,
+    /// not speech (narration read one verbatim, 2026-09-12). Anchored to the
+    /// end; "Two sources: the river…" mid-prose survives (line start + colon
+    /// + only list/citation lines to the end).
+    private static func stripSourcesBlock(_ text: String) -> String {
+        text.replacing(
+            /(?i)(?:^|\n+)[ \t]*Sources:[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*\n?)*$/,
+            with: ""
+        )
+    }
+
+    /// The follow-ups trailer in ANY spelling ("FOLLOWUPS:", "Follow-ups:",
+    /// "**Follow-ups:**") and everything after it: the chat lane strips it for
+    /// the bubble; the speech lane must never voice it. Mirrors
+    /// `FollowUpSplit.trailerStart` (M1K3Inference — not importable here by
+    /// the module's dependency-free rule): exact sentinel anywhere, variants
+    /// at a line start only, plural, colon.
+    private static func stripFollowUpTrailer(_ text: String) -> String {
+        if let exact = text.range(of: "FOLLOWUPS:") {
+            return String(text[..<exact.lowerBound])
+        }
+        if let variant = text.firstMatch(of: /(?im)^[ \t]*(?:\*\*|#{1,6}[ \t]*)?FOLLOW[ \-]?UPS(?:\*\*)?[ \t]*:/) {
+            return String(text[..<variant.range.lowerBound])
+        }
+        return text
     }
 
     /// Citation tokens carry a `§` between the source title and heading —

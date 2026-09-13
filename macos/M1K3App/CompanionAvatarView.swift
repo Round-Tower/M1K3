@@ -45,6 +45,9 @@
 //  fixed shot clipped a broadside fox's head in the 72px notch slot and on a portrait phone — a first pass
 //  at a closer fixed `.badge` shot (z 1.45) clipped it worse. visionOS ignores framing (window-fit path).
 //  Confidence 0.8 (trig pinned in CameraFitTests; the felt framing per surface is verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-12 — the Phosphor Fox's baked lattice is tinted
+//  phosphor green before the material snapshot, so shader-off shows the proper wireframe.
+//  Confidence 0.75 (verify-by-launch on the tile and the voice plates).
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -468,6 +471,11 @@ struct CompanionAvatarView: View {
         // materials. CustomMaterial surface shaders are macOS/iOS only — on visionOS
         // the creature simply shows its baked textures (see PhosphorMaterial note).
         #if !os(visionOS)
+            // The Phosphor Fox's baked lattice ships neutral (0xe8e8e8 — a grey
+            // wire under `.off`); tint it phosphor green BEFORE the snapshot so
+            // "Off" IS the proper lattice look (Kev, 2026-09-12: "proper Phosphor
+            // Fox wireframe"), and a live Off↔Phosphor switch restores green.
+            PhosphorMaterial.tintBakedLattice(of: host, companion: companion, glow: PhosphorTreatment.calm)
             // Snapshot the baked materials BEFORE any shader, so cel can adapt the
             // fur texture and Off can restore it on a live switch.
             scene.bakedMaterials = PhosphorMaterial.snapshotMaterials(of: host)
