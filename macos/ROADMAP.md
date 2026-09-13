@@ -503,24 +503,31 @@ or nothing, on purpose.
   unblocked. Re-verify the Declared Age Range API specifics against current
   Apple docs before building (named low-confidence in PLAN.md item 19 — macOS
   availability / band granularity / decline semantics all need a fresh check).
-- **Phase 17b — PCC network rung.** Prerequisite (Phase 17a, the dedicated
-  chat-egress consent key, separate from the web-search toggle) is confirmed
-  **shipped** (`ChatEgressConsent.networkAllowed`, default-OFF, its own key,
-  tested). What's left — the `PrivateCloudComputeLanguageModel` executor lane +
-  the calm opt-in consent UX + the escalation control — is genuinely gated on
-  a **macOS 27 runtime**, not just the SDK, so it can't start until that beta
-  lands (~autumn, per the WWDC26 wave). Nothing to do here yet but watch for it.
+- **Phase 17b — PCC network rung. RUNTIME-UNBLOCKED 2026-09-13.** Prerequisite
+  (Phase 17a, `ChatEgressConsent.networkAllowed`, default-OFF) is shipped. On
+  the macOS 27 runtime, `PrivateCloudComputeLanguageModel` reports `available`
+  with a 32,768-token window, reasoning, vision and tools, but a generation
+  from an unentitled process fails (`ModelManagerError 1046`). The new gate is
+  the **`com.apple.developer.private-cloud-compute` entitlement**, which Kev
+  requests from Apple, plus a `challenger` pass on the "nothing leaves"
+  positioning. Scoped as 1.2 in `docs/GOLDEN_GATE_PLAN.md` § Roadmap.
 - **Memory distiller-quality eval.** Narrowed again by the dream-cycle work
   (Tiers 0/1 shipped 2026-07-30; MEMSTAT now measures the ingest path
   end-to-end). Still genuinely open: an AFM-judge eval scoring whether
   `MemoryDistillationCoordinator` extracts good facts from chat (no fixtures
   in `M1K3Eval` yet), and the `user.profile` vs `.memory`-graph collision
   check.
-- **Golden Gate wave (macOS 27, ~Sept GA).** The standing play: ship the
-  LanguageModel/PCC capability at GA (Phase 17b below is the runtime-gated
-  half); Xcode 27 beta can be installed beside stable NOW (host req is
-  macOS 26.4+, already met) to start on the SDK surface without touching the
-  daily-driver OS. Demo/screenshot content shoots while the beta bakes.
+- **Golden Gate wave (macOS 27, GA Sep 14) — the plan lives in
+  `docs/GOLDEN_GATE_PLAN.md` § Roadmap.** 1.0 ships from the Xcode 26
+  toolchain on the 27 runtime, with no new features. 1.0.x lands the
+  26.5-SDK wins (`prewarm(promptPrefix:)`, grounding `tokenCount`, the Mini
+  persona trim). 1.1 is gated on Xcode 27 GA, the CI pin bump and App Store Connect
+  accepting 27-SDK builds, and brings
+  typed Mini errors and `toolCallingMode` (#102), on-device Mini vision,
+  Apple's `SpotlightSearchTool` / `OCRTool` behind a palette A/B, and ADR
+  0001 going live (the bridge already compiles against the 27 SDK). 1.2 is
+  the PCC rung above. The 09-12 "no LanguageModelExecutor" finding was a
+  26.5-SDK read, corrected 2026-09-13.
 
 ---
 
@@ -631,6 +638,13 @@ or nothing, on purpose.
 
 ---
 
+<!-- Review: Kev + claude-opus-5, 2026-09-13: Golden Gate prep. Phase 17b
+     re-gated from "no macOS 27 runtime" to the PCC entitlement (runtime
+     probe: available, 32k context, generation refused with error 1046), and
+     the Golden Gate wave bullet now points at GOLDEN_GATE_PLAN.md's 1.0 →
+     1.2 roadmap. Confidence 0.85 (SDK surface read from the Xcode-beta
+     27A5194q swiftinterfaces; the runtime numbers come from one probe on
+     one M1 Max; the 1.x ordering is judgment for Kev to overrule). -->
 <!-- Review: Kev + claude-fable-5, 2026-08-03 — the project dream cycle:
      header truth-up, the reduction wave added to Now (6 staged cuts off the
      measured duplication table), dream-cycle brand calls gathered under

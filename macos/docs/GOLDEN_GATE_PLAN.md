@@ -4,6 +4,14 @@ Spike date: 2026-09-12. Public release: Sep 14.
 Probed on: macOS 27.0 (Build 26A428), Xcode 26.6, SDK 26.5.
 Build status: 3,700 tests green, zero code changes needed.
 
+> **Correction, 2026-09-13.** The 09-12 spike read the **macOS 26.5 SDK**
+> (Xcode 26.6). The macOS 27 SDK (Xcode-beta 27.0, build 27A5194q) has a
+> different surface: `LanguageModelExecutor`, a public `LanguageModel`
+> protocol and `PrivateCloudComputeLanguageModel` all exist there. Each one
+> appears zero times in the 26.5 SDK, which explains the miss. See
+> [The macOS 27 SDK, verified](#the-macos-27-sdk-verified-2026-09-13) and the
+> [Roadmap](#roadmap-10--11--12) below. The table's executor row is corrected.
+
 Release execution is tracked separately in
 [Golden Gate release gate](./GOLDEN_GATE_RELEASE.md). Its candidate-SHA,
 physical Mac, physical iOS, archive-MLX-smoke, and full in-app CHATEVAL evidence
@@ -18,8 +26,8 @@ not release approval.
 |-------|--------|----------|
 | Model quality uplift | **CONFIRMED** | 41/44 eval (93%), 6/7 security (was 0/14), persona adherence crisp |
 | Token counting API | **CONFIRMED** | `tokenCount(for:)` on prompts, instructions, tools, schemas — exact |
-| Context window expanded | **NOT TRUE** | Still 4096 tokens (back-deployed getter, runtime-confirmed) |
-| LanguageModelExecutor protocol | **DOES NOT EXIST** | Full swiftinterface read — no custom executor surface |
+| Context window expanded | **NOT TRUE** (on-device) | AFM still 4096 tokens (runtime-confirmed again 09-13). PCC reports **32,768** |
+| LanguageModelExecutor protocol | **EXISTS** (27 SDK) | ~~Does not exist~~ was a 26.5-SDK read. The 27 SDK has it, and M1K3's `M1K3FoundationModel` conformance compiles against it unchanged (09-13) |
 | Adapter API (LoRA) | **KILLED** | "Custom adapters are no longer supported since iOS 27, macOS 27, visionOS 27" |
 | AFM 3 Core Advanced (20B sparse) | **NO EVIDENCE** | Asset names still reference `instruct_3b`; no API change |
 | Metal Int4/UInt4 tensors | **CONFIRMED** | `MTLTensorDataTypeInt4/UInt4` at macOS 26.4 — upstream mlx-swift concern |
@@ -29,7 +37,8 @@ not release approval.
 ### Done
 
 - [x] Build green on Golden Gate (3,700 tests, Release compiles)
-- [x] SDK swiftinterface fully read — no LanguageModelExecutor, Adapter dead
+- [x] SDK swiftinterface fully read — Adapter dead. (The 09-12 read was the
+      26.5 SDK. On the 27 SDK LanguageModelExecutor DOES exist; see the 09-13 section.)
 - [x] Live AFM probe — availability, contextSize, generation, token counting
 - [x] Quality eval — 41/44 (93%), all categories scored
 - [x] Token budget spike — Mini has 1.9× more room than the conservative estimate
@@ -143,9 +152,138 @@ attack block (~200 token savings). Gated on the security eval results.
 
 ### Parked
 
-- [ ] ~~LanguageModelExecutor integration~~ — does not exist in the SDK
-- [ ] ~~Adapter/LoRA fine-tuning~~ — API removed on macOS 27
-- [ ] ~~AFM 3 Core Advanced as Big Brain~~ — no evidence of this model
+- [ ] ~~LanguageModelExecutor integration~~: UN-PARKED 2026-09-13. It exists
+      in the 27 SDK. See the roadmap's 1.1 section.
+- [ ] ~~Adapter/LoRA fine-tuning~~: `Adapter` is `obsoleted: 27.0` in the 27 SDK
+      (deprecated 26.4). It stays dead.
+- [ ] ~~AFM 3 Core Advanced as Big Brain~~: no evidence of this model
+
+---
+
+## The macOS 27 SDK, verified (2026-09-13)
+
+Every row below was read from the Xcode-beta 27.0 (27A5194q) swiftinterfaces or
+measured by a probe binary running on this Mac (macOS 27.0, 26A428, M1 Max).
+Nothing here comes from blog posts.
+
+**FoundationModels, new in 27** (`@available(macOS 27.0, *)`):
+
+| API | What it is | Runtime evidence |
+|-----|------------|------------------|
+| `protocol LanguageModel` + `LanguageModelExecutor` | Any model can drive a `LanguageModelSession`. `respond(to:model:streamingInto:)` streams `Response` / `Reasoning` / `ToolCalls` events with `Usage` (input, cached, output and reasoning token counts) | `M1K3FoundationModel.swift` (ADR 0001) builds unchanged: `M1K3_FM27=1 DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift build --target M1K3Agent --scratch-path .build-fm27` exits 0, and the object carries the executor witness symbols |
+| `PrivateCloudComputeLanguageModel` | Apple's cloud model behind the same protocol. Exposes `availability`, `quotaUsage` (below or at the limit, with a reset date) and `contextSize` | `availability = available`, quota `belowLimit`, **`contextSize = 32768`**, capabilities vision + reasoning + tools. **A generation from an unentitled process fails** with `ModelManagerError 1046`. The shared cache names `com.apple.developer.private-cloud-compute` |
+| `LanguageModelCapabilities` | `.vision`, `.guidedGeneration`, `.reasoning`, `.toolCalling` | **On-device AFM reports `.vision = true`** and `.reasoning = false` |
+| `Transcript.ImageAttachment` / `Attachment` | Images in the prompt (CGImage, CIImage, CVPixelBuffer, URL) | Capability flag only. An image generation has not been probed yet |
+| `ContextOptions.reasoningLevel` | `.light` / `.moderate` / `.deep` / `.custom` | Only meaningful where `.reasoning` holds, which means PCC |
+| `GenerationOptions.toolCallingMode` | `.allowed` / `.required` / `.disallowed` | none yet |
+| `LanguageModelError` | `.contextSizeExceeded`, `.rateLimited`, `.guardrailViolation`, `.refusal`, `.unsupportedCapability`, `.unsupportedTranscriptContent` | none yet |
+| `LanguageModelSession.transcriptErrorHandlingPolicy`, `Transcript: MutableCollection`, `DynamicInstructions` / `DynamicProfile`, `CustomSegment` | Transcript editing and composable instructions | none yet |
+| `contextSize` | Read the window at runtime | AFM **4096** |
+
+**Already in 26.5 (shippable on today's Xcode 26 toolchain):** `tokenCount(for:)`
+(26.4, wired) and `prewarm(promptPrefix:)`.
+
+**New system frameworks in the 27 SDK:**
+
+- **`_CoreSpotlight_FoundationModels`**: `SpotlightSearchTool`, a ready-made
+  FoundationModels `Tool` over the user's Spotlight index (sources, content
+  domains such as calendar and audio, guidance levels). This is the "Spotlight
+  local-RAG tool" from the 2026-06-10 seeds, and Apple wrote it.
+- **`_Vision_FoundationModels`**: `OCRTool` and `BarcodeReaderTool`, both
+  `Tool`s.
+- **`CoreAI`** (re-exports `CoreAIDelegates` + `CoreAIRuntime`):
+  `AIModel(contentsOf:options:)`, `AIModelCache` (app-group, purge policy),
+  `SpecializationOptions(preferredComputeUnitKind:)` and `InferenceFunction`
+  over `NDArray`. It is a tensor runtime for compiled `.aimodel` files that can
+  target the Neural Engine. It is **not** a chat model and not a
+  `LanguageModel`, so it would be a fourth brain *runtime*, not a new brain.
+- **`MediaIntelligence`**: face grouping plus video highlight and key-frame
+  analysis. Not relevant to M1K3 today.
+- The shared cache also names **`com.apple.developer.model-delegation`**. What
+  it grants is unknown. Find out before assuming it has anything to do with
+  executors.
+
+**Unchanged:** AFM's window (4096), and the Adapter API (obsoleted).
+
+**Toolchain gate:** `ci.yml` pins Xcode 26 on purpose ("Xcode 27 GA must be a
+deliberate bump"), and the installed Xcode 27 is beta 27A5194q. Nothing 27-only
+can ship until Xcode 27 GA arrives, CI's pin is bumped, and App Store Connect
+accepts 27-SDK builds. Tomorrow's 1.0 is an Xcode 26 build running on the
+macOS 27 runtime, which is the combination the release gate tests.
+
+---
+
+## Roadmap (1.0 → 1.1 → 1.2)
+
+### 1.0 — Sep 14 (no new features)
+
+Run [GOLDEN_GATE_RELEASE.md](./GOLDEN_GATE_RELEASE.md) as written. The only
+code this plan lets in before 1.0 is what the release gate itself turns up.
+
+### 1.0.x — current toolchain, small, evidence-first
+
+1. **`prewarm(promptPrefix:)` for Mini.** It's in the 26.5 SDK. Pass the
+   recurring prompt head (grounding header + tool block). Exit: the
+   `afm prewarm` / TTFT log lines show a lower first token on turn 1 than
+   instructions-only prewarm, A/B on AC power.
+2. **`tokenCount` into `GroundingBudgetPolicy`** (open item above).
+3. **Mini persona trim.** Drop FOLLOW-UPS for Mini (~315 tokens, 7.7% of the
+   window), with security ×3 on the live path as the gate (#221's rule: every
+   rule stays its own span).
+
+### 1.1 — "Golden Gate native" (gate: Xcode 27 GA + the CI pin bump + ASC accepting 27-SDK builds)
+
+1. **Toolchain bump PR.** CI and Xcode Cloud move to Xcode 27. The
+   `M1K3_FM27` compile gate becomes `#available(macOS 27, *)` so the bridge
+   ships in the normal build. The full suite runs, plus the gemma-4 native
+   tool-call smoke (the dep-bump rule) and one archive through
+   `release-macos.sh`. Swift 6.4 language-mode warnings get triaged, not
+   ignored.
+2. **Mini hygiene with typed APIs** (Mini is the brain most users hit first):
+   - `toolCallingMode(.disallowed)` on small-talk turns kills #102 (small
+     talk running an 8-tool loop and confabulating) at the source.
+     `.required` applies when the user names a tool.
+   - `LanguageModelError.rateLimited` replaces the "empty answer means the
+     daemon collapsed" heuristic (memory: `pkill-poisons-afm-daemon`), and
+     `.contextSizeExceeded` becomes a trim-and-retry in `HistoryBudgetPolicy`.
+   - `contextSize` is read at launch instead of hardcoding
+     `approximateContextTokens`.
+3. **Mini sees.** On-device AFM declares `.vision`. Route dropped images and
+   screenshots to Mini as `ImageAttachment`s, on-device and within the privacy
+   charter. Exit: a probe answers a question about a test image. The
+   capability flag alone doesn't count.
+4. **Apple's tools in the palette, eval-gated.** Compare `SpotlightSearchTool`
+   (the user's whole Mac, not just M1K3's corpus) with `search_knowledge`, and
+   add `OCRTool`. Each one goes through `ToolPalettePolicy` and a CHATEVAL
+   tool-use A/B on Mini and Lil. The palette is a prefix-cache key (#121), so
+   add tools once and keep them stable.
+5. **ADR 0001 goes live.** Register Lil and Big as `LanguageModel`s. The first
+   payoff is Apple's `@Generable` guided generation over MLX brains, where
+   `guidedGeneration` is declared only once it's real. `M1K3FoundationExecutor.userPrompt`
+   drops prior turns today, so it needs multi-turn transcript handling first.
+
+### 1.2 — The PCC rung (Phase 17b, now runtime-unblocked)
+
+- **Gate:** the `com.apple.developer.private-cloud-compute` entitlement. Kev
+  requests it from Apple (the probe shows generation is refused without it),
+  and M1K3 qualifies for the Small Business Program (memory:
+  `anthropic-on-golden-gate`).
+- **Shape:** a third lane on `EscalationLadder` behind
+  `ChatEgressConsent.networkAllowed` (already shipped, default OFF). Every
+  answer that went to PCC is labelled as such. `quotaUsage` shows up in the
+  UI, and `rateLimited` / `quotaLimitReached` fall back to local with a sentence
+  saying why. What PCC buys: 32k context, reasoning levels, vision.
+- **Positioning risk, needs a `challenger` pass before building:** "Nothing
+  leaves" is the product. PCC is Apple's attested cloud, not M1K3's, so it is
+  per-turn opt-in, never a default, and the site copy must say so plainly.
+
+### Later / watch
+
+- **Core AI spike:** an `.aimodel` on the Neural Engine, e.g. the embedder or
+  a tiny classifier (the small-talk gate?), not a chat brain. Worth doing once
+  1.1 has shipped.
+- **`model-delegation` entitlement:** find out what it grants.
+- **Metal Int4 watch** (unchanged).
 
 ---
 
@@ -176,3 +314,11 @@ attack block (~200 token savings). Gated on the security eval results.
 - Prose prompts: 4.1–4.7
 - Conversational replay: ~5.7
 - Standing heuristic (code): 3.5 ← reasonable for code, conservative for prose
+
+<!-- Signed: Kev + claude-opus-5, 2026-09-13. The 27-SDK correction +
+     the 1.0 → 1.2 roadmap. Confidence 0.85: every API row comes from the
+     27A5194q swiftinterfaces or a probe binary run on macOS 27.0 (26A428),
+     and the FM27 bridge build was checked by object symbols, not exit code.
+     Open: Mini vision and PCC-with-entitlement are unprobed, and what
+     model-delegation grants is unknown. Prior: Unknown (the 09-12 sections
+     are unsigned). -->
