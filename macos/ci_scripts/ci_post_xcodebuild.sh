@@ -52,10 +52,13 @@ if [ "${CI_XCODEBUILD_ACTION:-}" = "archive" ] \
     # The archived app is SANDBOXED: its SelfTest can only write inside its own
     # container, which a shell may not read back (app-data privacy). Run 349
     # exited 0 with "wrote no report" for exactly this reason. So the smoke runs
-    # a COPY of the archived bundle, ad-hoc re-signed with network access only
-    # (no sandbox) — same binary, same metallib, same weights path — and the
-    # archive itself is never touched. Proven on run 349's own binary: every
-    # stage passed in 13 s once unsandboxed (2026-09-13).
+    # a COPY of the archived bundle, ad-hoc re-signed with no sandbox — same
+    # binary, same metallib — and the archive itself is never touched. NOT the
+    # same weights path: unsandboxed, Application Support resolves outside the
+    # container, so a fresh Xcode Cloud VM downloads the SelfTest models on the
+    # first run (a sandboxed run on a fresh VM would have downloaded too). Proven
+    # on run 349's own binary: every stage passed in 13 s — on a dev Mac whose
+    # unsandboxed model cache was already warm, so expect a slower cloud run.
     SMOKE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/m1k3-smoke.XXXXXX")"
     cp -R "$APP" "$SMOKE_DIR/M1K3.app"
     cat > "$SMOKE_DIR/smoke.entitlements" <<'PLIST'
