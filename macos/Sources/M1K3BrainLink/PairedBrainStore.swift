@@ -16,6 +16,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the PSK row targets the data-protection
 //  keychain (no per-binary login-password prompt on the Mac); a legacy row is lifted
 //  across on first read. Confidence now 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-13 — the lift is write-before-delete: it inserts
+//  through the bare `add` and drops the legacy row only after that lands (review catch: the
+//  lift ran through setKey, whose removeKey deleted the legacy row first). Confidence 0.85.
 //
 
 import Foundation
@@ -36,6 +39,12 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
 
     public func setKey(_ key: Data, identity: String) throws {
         removeKey(identity: identity)
+        try add(key, identity: identity)
+    }
+
+    /// The bare insert. `setKey` clears both rows first; the migration lift
+    /// calls this directly so the legacy row survives a failed insert.
+    private func add(_ key: Data, identity: String) throws {
         let add: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Self.service,
@@ -54,8 +63,11 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
         if let data = read(Self.query(identity: identity)) { return data }
         // A PSK written before 2026-09-12 sits in the Mac's login keychain
         // (a no-op distinction on iOS): lift it across once, then drop the old row.
+        // Write-before-delete: the legacy row goes only after the new row lands,
+        // so a failed insert (a racing caller, an entitlement hiccup) leaves the
+        // PSK where it was instead of in neither place (#305 review).
         guard let legacy = read(Self.legacyQuery(identity: identity)) else { return nil }
-        if (try? setKey(legacy, identity: identity)) != nil {
+        if (try? add(legacy, identity: identity)) != nil {
             _ = SecItemDelete(Self.legacyQuery(identity: identity) as CFDictionary)
         }
         return legacy
