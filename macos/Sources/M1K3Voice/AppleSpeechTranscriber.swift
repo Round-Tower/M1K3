@@ -72,6 +72,10 @@
 //  format read back (keep / restart / reinstall), so the iPhone's same-format
 //  notification ~0.5 s after the first arm stops bouncing the engine. Real route
 //  changes (a new sample rate or channel count) reinstall exactly as before.
+//  Review: Kev + claude-opus-5, 2026-09-13 — the tap installs at the input HARDWARE rate
+//  (MicTapFormatGate.tapSampleRate): a stale 44.1 kHz node read-back against a 48 kHz mic
+//  raised AVAudioEngine's uncaught format-mismatch exception and aborted voice mode on the
+//  Mac. Verify-by-launch owed: voice mode entered right after a spoken reply. Confidence 0.8.
 
 import AVFoundation
 import Foundation
@@ -605,11 +609,24 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // an input-less mixer renders silence, so the bus is satisfied and
         // nothing audible changes. Volume 0 is belt-and-braces.
         audioEngine.mainMixerNode.outputVolume = 0
-        let format = inputNode.outputFormat(forBus: 0)
+        let nodeFormat = inputNode.outputFormat(forBus: 0)
+        // The tap's rate must equal the input HARDWARE rate or AVAudioEngine
+        // raises an uncaught NSException and the app aborts (2026-09-13: node
+        // 44.1 kHz vs mic 48 kHz after a TTS queue, entering voice mode).
+        let hardwareRate = inputNode.inputFormat(forBus: 0).sampleRate
+        let tapRate = MicTapFormatGate.tapSampleRate(nodeRate: nodeFormat.sampleRate, hardwareRate: hardwareRate)
+        let format = tapRate.flatMap { rate -> AVAudioFormat? in
+            rate == nodeFormat.sampleRate
+                ? nodeFormat
+                : AVAudioFormat(standardFormatWithSampleRate: rate, channels: nodeFormat.channelCount)
+        } ?? nodeFormat
         Self.log.notice(
-            "stt mic input format \(format.sampleRate, privacy: .public)Hz ch=\(format.channelCount, privacy: .public)"
+            """
+            stt mic input format \(format.sampleRate, privacy: .public)Hz ch=\(format.channelCount, privacy: .public) \
+            (node \(nodeFormat.sampleRate, privacy: .public)Hz, hw \(hardwareRate, privacy: .public)Hz)
+            """
         )
-        guard MicTapFormatGate.isUsable(
+        guard tapRate != nil, MicTapFormatGate.isUsable(
             sampleRate: format.sampleRate, channelCount: format.channelCount
         ) else {
             Self.log.error("degenerate mic format — not installing tap (route not ready)")
@@ -734,10 +751,17 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             // Only OUR session, still current, still the engine owner.
             guard engineOwner == generation,
                   lock.withLock({ generation == self.generation }) else { return }
-            let readBack = audioEngine.inputNode.outputFormat(forBus: 0)
+            // Judge the read-back the way installInputTap does — at the rate a
+            // tap would actually be installed (the hardware's), or a stale node
+            // rate would read as a route change on every notice.
+            let node = audioEngine.inputNode
+            let readBack = node.outputFormat(forBus: 0)
+            let currentRate = MicTapFormatGate.tapSampleRate(
+                nodeRate: readBack.sampleRate, hardwareRate: node.inputFormat(forBus: 0).sampleRate
+            ) ?? 0
             let action = MicTapReinstallPolicy.action(
                 installed: installedTapFormat,
-                current: MicTapFormat(sampleRate: readBack.sampleRate, channelCount: readBack.channelCount),
+                current: MicTapFormat(sampleRate: currentRate, channelCount: readBack.channelCount),
                 engineRunning: audioEngine.isRunning
             )
             switch action {
