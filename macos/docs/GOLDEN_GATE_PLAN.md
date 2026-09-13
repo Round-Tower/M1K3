@@ -231,7 +231,7 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
    window), with security ×3 on the live path as the gate (#221's rule: every
    rule stays its own span).
 
-### 1.1 — "Golden Gate native" (gate: Xcode 27 GA + the CI pin bump)
+### 1.1 — "Golden Gate native" (gate: Xcode 27 GA + the CI pin bump + ASC accepting 27-SDK builds)
 
 1. **Toolchain bump PR.** CI and Xcode Cloud move to Xcode 27. The
    `M1K3_FM27` compile gate becomes `#available(macOS 27, *)` so the bridge

@@ -521,12 +521,14 @@ or nothing, on purpose.
   `docs/GOLDEN_GATE_PLAN.md` § Roadmap.** 1.0 ships from the Xcode 26
   toolchain on the 27 runtime, with no new features. 1.0.x lands the
   26.5-SDK wins (`prewarm(promptPrefix:)`, grounding `tokenCount`, the Mini
-  persona trim). 1.1 is gated on Xcode 27 GA and the CI pin bump, and brings
+  persona trim). 1.1 is gated on Xcode 27 GA, the CI pin bump and App Store Connect
+  accepting 27-SDK builds, and brings
   typed Mini errors and `toolCallingMode` (#102), on-device Mini vision,
   Apple's `SpotlightSearchTool` / `OCRTool` behind a palette A/B, and ADR
   0001 going live (the bridge already compiles against the 27 SDK). 1.2 is
   the PCC rung above. The 09-12 "no LanguageModelExecutor" finding was a
   26.5-SDK read, corrected 2026-09-13.
+
 ---
 
 ## Backlog (smaller, pick off anytime)
