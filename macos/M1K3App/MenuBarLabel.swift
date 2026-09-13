@@ -15,6 +15,12 @@
 //  Confidence now 0.8 (verify-by-launch).
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the glyph breathes while a brain / voice /
 //  recogniser model loads (`GlyphTreatment.breathes`, test-pinned). Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-4-8, 2026-09-13 — ★ the breathing glyph LIVELOCKED launch.
+//  A MenuBarExtra label rasterises into the NSStatusItem button; a per-frame TimelineView
+//  re-ran _adjustLength + full menu-bar Auto Layout every frame, monopolising the main thread
+//  for the whole model-warm window so the :4242 MCP bind never ran and warm never finished
+//  (one process pegged at 20 GB / 100 % CPU, proven by `sample`). Loading cue is now a static
+//  dim; motion belongs on the button CALayer, not the label. Confidence 0.85 (verify-by-launch).
 
 import Foundation
 import M1K3Avatar
@@ -76,24 +82,24 @@ extension Color {
     }
 }
 
-/// The pixel mark, breathing while a model loads: opacity swings 0.35…1 on a
-/// 30 fps elapsed clock (the IndicatorDot's own cadence), mounted only while
-/// `breathes` — a still `Image` otherwise, so idle costs nothing.
+/// The pixel mark, dimmed while a model loads. ★ 2026-09-13: this MUST NOT be a
+/// per-frame `TimelineView`. A `MenuBarExtra` label is rasterised into the
+/// `NSStatusItem` button image, and every frame re-runs `NSStatusItem
+/// _adjustLength` → a full Auto Layout pass on the menu bar (proven by `sample`).
+/// `breathes` is true for the whole launch/model-warm window, so a per-frame
+/// animation here MONOPOLISES the main thread → the main-actor launch work
+/// (incl. the :4242 MCP bind) is starved → warm never finishes → `breathes`
+/// stays true: a self-sustaining livelock that pegged one 20 GB / 100 % CPU
+/// process and never launched. The loading cue is now a single, static dim
+/// (one re-raster on entry, one on exit). Motion, if wanted, belongs on the
+/// status button's CALayer opacity (GPU, no re-layout), never on the label body.
 private struct BreathingGlyph: View {
     let image: NSImage
     let breathes: Bool
-    @State private var start = Date()
 
     var body: some View {
-        if breathes {
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
-                let phase = context.date.timeIntervalSince(start)
-                Image(nsImage: image)
-                    .opacity(0.35 + 0.65 * (0.5 + 0.5 * sin(phase * 2.2)))
-            }
-        } else {
-            Image(nsImage: image)
-        }
+        Image(nsImage: image)
+            .opacity(breathes ? 0.6 : 1.0)
     }
 }
 
