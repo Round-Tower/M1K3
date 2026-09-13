@@ -12,6 +12,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: the description shows only while empty and lost its
 //  privacy clause (Settings carries the guarantee; the search prompt carries the instruction).
 //
+//  Review: Kev + claude-opus-5, 2026-09-13 — the row caption is the Mac's provenance label + date, not the raw
+//  `source` tag (the App Store plate showed "demo:screengrab"; real rows read "distilled"). Confidence now 0.8.
 
 import M1K3Knowledge
 import M1K3Memory
@@ -49,7 +51,10 @@ struct MemoriesScreen: View {
                 List(hits) { hit in
                     VStack(alignment: .leading, spacing: 3) {
                         Text(hit.memory.text).font(.body)
-                        Text(hit.memory.source)
+                        // The Mac's row caption: provenance in words + the date,
+                        // never the raw `source` tag ("distilled", or a harness
+                        // stamp like "demo:screengrab" in a store screenshot).
+                        Text(Self.caption(for: hit.memory))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
@@ -61,6 +66,17 @@ struct MemoriesScreen: View {
         .onSubmit(of: .search) { Task { await search() } }
         .onChange(of: query) { _, new in if new.isEmpty { hits = [] } }
         .onAppear { liveCount = (try? core.memoryStore?.liveCount()) ?? 0 }
+    }
+
+    /// Mirrors the Mac's `MemoryProvenance.label` (MemoriesView) — the iOS
+    /// shell doesn't compile the Mac target, so the three strings live here too.
+    static func caption(for memory: Memory) -> String {
+        let label = switch MemoryProvenance(source: memory.source) {
+        case .youToldMe: String(localized: "you told me")
+        case .iNoticed: String(localized: "I noticed")
+        case .remembered: String(localized: "remembered")
+        }
+        return "\(label) · \(memory.createdAt.formatted(date: .abbreviated, time: .omitted))"
     }
 
     private func search() async {

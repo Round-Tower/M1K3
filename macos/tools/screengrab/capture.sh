@@ -16,6 +16,8 @@
 # Prior: Unknown
 # Review: Kev + claude-fable-5.1, 2026-09-08 — the Mac lane clears the sibling root per run
 # (content-idempotent seed; persona edits land). Confidence now 0.75.
+# Review: Kev + claude-fable-5.1, 2026-09-12 — the sibling-root clear is best-effort (TCC blocks
+# it from a shell without container access); the run no longer dies on it. Confidence now 0.8.
 set -euo pipefail
 
 target=${1:?mac|ios}; shift
@@ -32,8 +34,12 @@ mkdir -p "$plates" "$scratch"
 # Every run starts from a fresh sibling root (Mac lane): the seed is idempotent
 # by content, so this is what picks up a persona edit. The live M1K3/ root is
 # never touched — the harness only ever opens the sibling.
+# macOS guards other apps' containers behind TCC: a shell without that grant
+# (an agent's, 2026-09-12) gets EPERM here. Warn and go on — a stale sibling
+# root only matters when DemoPersona.swift changed since the last run.
 if [[ $target == mac ]]; then
-  rm -rf "$HOME/Library/Containers/app.m1k3/Data/Library/Application Support/M1K3-screengrab"
+  rm -rf "$HOME/Library/Containers/app.m1k3/Data/Library/Application Support/M1K3-screengrab" 2>/dev/null \
+    || echo "warn: could not clear the M1K3-screengrab sibling root (TCC) — a persona edit since the last run will NOT land"
 fi
 rm -rf "$xcresult"
 

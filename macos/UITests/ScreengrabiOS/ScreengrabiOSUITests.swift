@@ -20,6 +20,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — first phone run (12/12 shot): the speaking plate waits on the karaoke line (open mic
 //  on the phone now), the privacy plate swipes until the Grounding footer is hittable. Confidence now 0.75.
 //
+//  Review: Kev + claude-opus-5, 2026-09-13 — memories plate searches broadly (one row was a thin plate); the privacy
+//  scroll anchors on the Grounding footer's own words (Brain at Home's "internet" stopped it early). Confidence 0.8.
 
 import M1K3Screengrab
 import XCTest
@@ -83,7 +85,8 @@ final class ScreengrabiOSUITests: XCTestCase {
             let search = app.searchFields.firstMatch
             XCTAssert(search.waitForExistence(timeout: 30), "Memories search field")
             search.tap()
-            search.typeText("lair\n")
+            // A broad query so the plate shows the persona, not one row.
+            search.typeText("what do you know about me\n")
             waitForText("roofline", in: app, timeout: 60)
         }
     }
@@ -121,10 +124,17 @@ final class ScreengrabiOSUITests: XCTestCase {
             openSettings(app)
             // The footer sits below the fold of a List: swipe until it is on screen
             // (`exists` is true for an off-screen row, `isHittable` is not).
-            let footer = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'internet'")).firstMatch
+            // Anchor on the Grounding footer's own words: Brain at Home's footer
+            // also says "internet" and sits higher, which stopped the scroll there
+            // (2026-09-13: the plate showed the face picker).
+            let footer = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'sends your conversation'"))
+                .firstMatch
             for _ in 0 ..< 6 where !(footer.exists && footer.isHittable) {
                 app.swipeUp()
             }
+            // The footer lands at the bottom edge; the plate's frame crops from the
+            // top, so one more swipe brings the Grounding section up the screen.
+            app.swipeUp()
         }
     }
 
