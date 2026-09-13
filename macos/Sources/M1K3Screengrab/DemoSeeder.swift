@@ -14,6 +14,9 @@
 //  well as marker-based (review: a kill between row and marker seeded twice);
 //  persona edits reset by clearing the sibling root (capture.sh does it per run).
 //  Confidence now 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-13 — the hero conversation is RESTORED every launch
+//  (and strays dropped, only inside the screengrab root): capture.sh can no longer clear the
+//  container under macOS app-data privacy, so a voice turn grew it run over run. Confidence 0.9.
 //
 
 import Foundation
@@ -25,21 +28,29 @@ public enum DemoSeeder {
     private static let historyMarker = ".demo-history-seeded"
     private static let knowledgeMarker = ".demo-knowledge-seeded"
 
-    /// The hero conversation as the newest row, titled, complete.
+    /// The hero conversation as the newest row, titled, complete — restored on
+    /// EVERY launch, not seeded once. A capture run's voice-speaking plate is a
+    /// real turn that appends its question and answer to the hero conversation,
+    /// and the next run's chat plate showed the exchange three times over
+    /// (2026-09-13). The demo root is disposable by design, so a stray
+    /// conversation is dropped too: the chat plate resumes the most recent row.
+    /// Pruning runs only when `root` IS the screengrab sibling root — a
+    /// belt-and-braces guard on top of the shells' `isActive` check, so this
+    /// can never touch a live store.
     public static func seedHistory(into history: any ChatHistoryPersisting, root: URL) throws {
-        let marker = root.appendingPathComponent(historyMarker)
-        guard !FileManager.default.fileExists(atPath: marker.path) else { return }
-        // Content guard: a kill between the row and the marker must not seed twice.
-        if try history.list().contains(where: { $0.title == DemoPersona.heroTitle }) {
-            try Data().write(to: marker)
-            return
+        let existing = try history.list()
+        let hero = existing.first { $0.title == DemoPersona.heroTitle }
+        if root.lastPathComponent == ScreengrabHarness.dataRootName {
+            for conversation in existing where conversation.id != hero?.id {
+                try history.delete(id: conversation.id)
+            }
         }
-        let id = UUID()
+        let id = hero?.id ?? UUID()
         try history.save(id: id, messages: DemoPersona.heroConversation, updatedAt: Date())
         try history.setTitle(id: id, title: DemoPersona.heroTitle)
         // Already "distilled": the launch catch-up must not mine the seed for memories.
         try history.setDistilledWatermark(id: id, count: DemoPersona.heroConversation.count)
-        try Data().write(to: marker)
+        try Data().write(to: root.appendingPathComponent(historyMarker))
     }
 
     /// Memories into the graph, documents into the corpus.
