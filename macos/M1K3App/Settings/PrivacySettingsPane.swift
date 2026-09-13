@@ -22,10 +22,13 @@
 //  Contents/MacOS: sign-on-copy there re-signs it as the app itself (identifier + entitlements),
 //  which aborted the developer-id export and would ship it sandboxed. Confidence now 0.85.
 //
+//  Review: Kev + claude-opus-5, 2026-09-13 — under the screengrab harness the Terminal line shows the shipped
+//  /Applications path, not the scratch DerivedData build's (it landed in the Brain at Home plate). Confidence 0.85.
 
 import AppKit // NSPasteboard — the Copy buttons
 import M1K3AgentTools
 import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets
+import M1K3Screengrab // the harness shows the shipped helper path, not the build's
 import SwiftUI
 
 struct PrivacySettingsPane: View {
@@ -263,7 +266,12 @@ struct PrivacySettingsPane: View {
     /// The CLI ships inside the bundle, so the path is always right — even for
     /// a copy of M1K3 the user dragged somewhere other than /Applications.
     private var terminalCommand: String {
-        let path = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/m1k3").path
+        // Under the App Store screengrab harness the app runs from a scratch
+        // DerivedData build, whose path would land in the frame — show the
+        // path a real install has instead.
+        let bundle = ScreengrabHarness.current.isActive
+            ? URL(fileURLWithPath: "/Applications/M1K3.app") : Bundle.main.bundleURL
+        let path = bundle.appendingPathComponent("Contents/Helpers/m1k3").path
         let quoted = path.contains(" ") ? "\"\(path)\"" : path
         return "\(quoted) connect \(connectClient.rawValue)"
     }
