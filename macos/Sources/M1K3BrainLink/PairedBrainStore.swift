@@ -45,7 +45,7 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
     /// The bare insert. `setKey` clears both rows first; the migration lift
     /// calls this directly so the legacy row survives a failed insert.
     private func add(_ key: Data, identity: String) throws {
-        let add: [String: Any] = [
+        let item: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: Self.service,
             kSecAttrAccount as String: identity,
@@ -53,7 +53,7 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
             kSecUseDataProtectionKeychain as String: true,
         ]
-        let status = SecItemAdd(add as CFDictionary, nil)
+        let status = SecItemAdd(item as CFDictionary, nil)
         guard status == errSecSuccess else {
             throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
         }

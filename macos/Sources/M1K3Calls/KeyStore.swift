@@ -11,6 +11,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — every query targets the data-protection
 //  keychain (team + bundle id access, no per-binary login-password prompt); a miss
 //  lifts the legacy login-keychain item across once. Confidence now 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-13 — the lift is write-before-delete for the
+//  .userPresence call key too: setData's replace deletes only the data-protection row
+//  (deleteBaseRow); removeData stays the forget path that wipes both (#305 review: two
+//  failed inserts used to orphan every recorded call). Confidence 0.85.
 
 import Foundation
 import Security
@@ -79,6 +83,9 @@ public struct KeychainKeyStore: KeyStore {
     /// Items written before 2026-09-12 live in the login keychain. On the first
     /// miss in the data-protection keychain, lift the legacy item across (its
     /// last login-password prompt) and delete the old row so it never asks again.
+    /// Write-before-delete: `setData` never touches the legacy row, and the
+    /// delete below runs only once the write returned — a throw leaves the
+    /// legacy row for the next launch to lift again.
     private func migrateLegacyItem(_ account: String) throws -> Data? {
         guard let data = try read(Self.legacyQuery(service: service, account: account)) else { return nil }
         try setData(data, forAccount: account)
@@ -114,7 +121,12 @@ public struct KeychainKeyStore: KeyStore {
             // re-storing under the unprotected policy. Better an unprotected key
             // than an unrecoverable one; the next launch re-attempts the upgrade.
             let control = try userPresenceAccessControl()
-            try removeData(forAccount: account)
+            // Delete ONLY the data-protection row. `removeData` is the forget path
+            // and also wipes the legacy row; reusing it here meant the migration
+            // lift lost the legacy row before its insert — two failed inserts and
+            // the next launch minted a fresh key, orphaning every recorded call
+            // (#305 review). The lift deletes the legacy row itself, on success.
+            try deleteBaseRow(account)
             var item = baseQuery(account)
             item[kSecValueData] = data
             item[kSecAttrAccessControl] = control
@@ -154,6 +166,12 @@ public struct KeychainKeyStore: KeyStore {
     public func removeData(forAccount account: String) throws {
         // A legacy row that was never lifted must not outlive a forget.
         _ = SecItemDelete(Self.legacyQuery(service: service, account: account) as CFDictionary)
+        try deleteBaseRow(account)
+    }
+
+    /// The data-protection row alone — the replace step inside `setData`. Never
+    /// touches the legacy row, so a lift that fails mid-write keeps its source.
+    private func deleteBaseRow(_ account: String) throws {
         let status = SecItemDelete(baseQuery(account) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeyStoreError.unexpectedStatus(status)
