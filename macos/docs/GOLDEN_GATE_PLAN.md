@@ -4,6 +4,12 @@ Spike date: 2026-09-12. Public release: Sep 14.
 Probed on: macOS 27.0 (Build 26A428), Xcode 26.6, SDK 26.5.
 Build status: 3,700 tests green, zero code changes needed.
 
+Release execution is tracked separately in
+[Golden Gate release gate](./GOLDEN_GATE_RELEASE.md). Its candidate-SHA,
+physical Mac, physical iOS, archive-MLX-smoke, and full in-app CHATEVAL evidence
+are required before promotion; this document records the product investigation,
+not release approval.
+
 ---
 
 ## What shipped (verified)

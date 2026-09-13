@@ -13,6 +13,8 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.85, Prior: Unknown
 //  (mirrors the StereoCallRecorder.startMic 0-Hz guard, 2026-06-12).
+//  Review: Kev + claude-opus-5, 2026-09-13 — tapSampleRate: the tap takes the HARDWARE
+//  rate (a stale 44.1k node read-back against a 48k mic aborted voice mode). Confidence now 0.85.
 
 import Foundation
 
@@ -22,5 +24,17 @@ import Foundation
 public enum MicTapFormatGate {
     public static func isUsable(sampleRate: Double, channelCount: UInt32) -> Bool {
         sampleRate > 0 && channelCount > 0
+    }
+
+    /// The sample rate a mic tap must be installed at. AVAudioEngine insists the
+    /// tap's rate equals the input HARDWARE rate and raises an uncaught
+    /// NSException (an abort Swift cannot catch) when they differ. The node's
+    /// `outputFormat(forBus:)` can lag the hardware — 2026-09-13 it read 44.1 kHz
+    /// against a 48 kHz mic right after a 44.1 kHz TTS queue, and the app
+    /// aborted entering voice mode. So the hardware rate wins; the node's rate
+    /// only fills in when the hardware reports nothing. Nil = no usable rate.
+    public static func tapSampleRate(nodeRate: Double, hardwareRate: Double) -> Double? {
+        if hardwareRate > 0 { return hardwareRate }
+        return nodeRate > 0 ? nodeRate : nil
     }
 }

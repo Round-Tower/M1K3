@@ -55,6 +55,29 @@ if [ "$XCODE_MAJOR" != "26" ] || echo "$XCODE_PATH" | grep -qi "beta"; then
   exit 1
 fi
 
+# A release must name an immutable source revision. Archiving a tree with local
+# edits makes the DMG impossible to reproduce from its advertised commit and is
+# particularly easy to do while iterating on App Store screenshots. The nightly
+# workflow checks out a clean SHA by construction; this protects the manual
+# Developer-ID lane. Incident recovery may opt out explicitly, leaving a loud
+# breadcrumb in the terminal and CI log.
+REPO_ROOT="$(cd "$MACOS_DIR/.." && pwd)"
+GIT_BIN="/usr/bin/git"
+[ -x "$GIT_BIN" ] || { echo "✗ System git not available at $GIT_BIN"; exit 1; }
+if ! GIT_STATUS="$("$GIT_BIN" -C "$REPO_ROOT" status --porcelain --untracked-files=no)"; then
+  echo "✗ Could not determine worktree status — refusing to archive."
+  exit 1
+fi
+if [ "${M1K3_ALLOW_DIRTY_RELEASE:-0}" != "1" ] && [ -n "$GIT_STATUS" ]; then
+  echo "✗ Refusing to archive a dirty worktree. Commit or stash the tracked changes first."
+  echo "  Emergency override only: M1K3_ALLOW_DIRTY_RELEASE=1 $0"
+  "$GIT_BIN" -C "$REPO_ROOT" status --short
+  exit 1
+fi
+if [ "${M1K3_ALLOW_DIRTY_RELEASE:-0}" = "1" ]; then
+  echo "⚠️ M1K3_ALLOW_DIRTY_RELEASE=1 — archive is NOT reproducible from HEAD"
+fi
+
 # ── Preflight ────────────────────────────────────────────────────────────────
 if ! security find-identity -p codesigning -v 2>/dev/null \
      | grep -q "Developer ID Application.*$TEAM"; then

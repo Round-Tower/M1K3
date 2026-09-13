@@ -91,6 +91,13 @@
 //  the settled format so MicTapReinstallPolicy stays accurate. Confidence 0.85.
 //  Review: Kev + claude-opus-5, 2026-09-13 — releaseAudioHardware logs "released" only when it
 //  released; a listen still owning the engine now logs that it kept it (#306 review). Confidence 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-13 — the tap installs at the input HARDWARE rate
+//  (MicTapFormatGate.tapSampleRate): a stale 44.1 kHz node read-back against a 48 kHz mic
+//  raised AVAudioEngine's uncaught format-mismatch exception and aborted voice mode on the
+//  Mac. Verify-by-launch owed: voice mode entered right after a spoken reply. Confidence 0.8.
+//  Review: Kev + claude-opus-5, 2026-09-13 (merge of #306 + #307) — both fixes for the same abort
+//  stack: the hardware-rate gate (#307) decides whether the route is ready and logs node vs hw;
+//  the tap itself installs with format: nil (#306), so a mismatch is impossible by construction.
 
 import AVFoundation
 import Foundation
@@ -672,30 +679,41 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         if VoiceProcessingPolicy.feedsSilentOutputSource(platform: VoiceProcessingPolicy.current) {
             audioEngine.mainMixerNode.outputVolume = 0
         }
-        var format = inputNode.outputFormat(forBus: 0)
+        var nodeFormat = inputNode.outputFormat(forBus: 0)
         // Ground truth beats the transport read: if VPIO handed back a
         // >2-channel format (a Bluetooth headset or an aggregate-routed
         // input), the recogniser will STARVE on it — back voice processing
-        // out and re-read the raw device (2026-09-12, the launch snag: the
-        // sandboxed transport read misidentifies the aggregate as non-BT, so
-        // `VoiceProcessingPolicy.shouldEnable` kept VPIO on and voice mode
-        // parked mutely on a fresh launch). A clean built-in mic renders 1
-        // channel and never trips this.
+        // out and re-read the raw device (2026-09-12). DORMANT while
+        // `shouldEnable` is false on the Mac (see VoiceProcessingPolicy).
         if wantsVoiceProcessing,
            VoiceProcessingPolicy.shouldBackOutVoiceProcessing(
-               platform: VoiceProcessingPolicy.current, channelCount: format.channelCount
+               platform: VoiceProcessingPolicy.current, channelCount: nodeFormat.channelCount
            )
         {
             Self.log.notice(
-                "stt voice processing backed out — VPIO format was \(format.channelCount, privacy: .public)ch (route starves the recogniser)"
+                "stt voice processing backed out — VPIO format was \(nodeFormat.channelCount, privacy: .public)ch (route starves the recogniser)"
             )
-            disableVoiceProcessingIfOn(inputNode, reason: "VPIO format \(format.channelCount)ch")
-            format = inputNode.outputFormat(forBus: 0)
+            disableVoiceProcessingIfOn(inputNode, reason: "VPIO format \(nodeFormat.channelCount)ch")
+            nodeFormat = inputNode.outputFormat(forBus: 0)
         }
+        // The tap's rate must equal the input HARDWARE rate or AVAudioEngine
+        // raises an uncaught NSException and the app aborts (2026-09-13: node
+        // 44.1 kHz vs mic 48 kHz after a TTS queue, entering voice mode). The
+        // tap below installs with format: nil; this is the readiness gate + log.
+        let hardwareRate = inputNode.inputFormat(forBus: 0).sampleRate
+        let tapRate = MicTapFormatGate.tapSampleRate(nodeRate: nodeFormat.sampleRate, hardwareRate: hardwareRate)
+        let format = tapRate.flatMap { rate -> AVAudioFormat? in
+            rate == nodeFormat.sampleRate
+                ? nodeFormat
+                : AVAudioFormat(standardFormatWithSampleRate: rate, channels: nodeFormat.channelCount)
+        } ?? nodeFormat
         Self.log.notice(
-            "stt mic input format \(format.sampleRate, privacy: .public)Hz ch=\(format.channelCount, privacy: .public)"
+            """
+            stt mic input format \(format.sampleRate, privacy: .public)Hz ch=\(format.channelCount, privacy: .public) \
+            (node \(nodeFormat.sampleRate, privacy: .public)Hz, hw \(hardwareRate, privacy: .public)Hz)
+            """
         )
-        guard MicTapFormatGate.isUsable(
+        guard tapRate != nil, MicTapFormatGate.isUsable(
             sampleRate: format.sampleRate, channelCount: format.channelCount
         ) else {
             Self.log.error("degenerate mic format — not installing tap (route not ready)")
@@ -910,10 +928,17 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             // Only OUR session, still current, still the engine owner.
             guard engineOwner == generation,
                   lock.withLock({ generation == self.generation }) else { return }
-            let readBack = audioEngine.inputNode.outputFormat(forBus: 0)
+            // Judge the read-back the way installInputTap does — at the rate a
+            // tap would actually be installed (the hardware's), or a stale node
+            // rate would read as a route change on every notice.
+            let node = audioEngine.inputNode
+            let readBack = node.outputFormat(forBus: 0)
+            let currentRate = MicTapFormatGate.tapSampleRate(
+                nodeRate: readBack.sampleRate, hardwareRate: node.inputFormat(forBus: 0).sampleRate
+            ) ?? 0
             let action = MicTapReinstallPolicy.action(
                 installed: installedTapFormat,
-                current: MicTapFormat(sampleRate: readBack.sampleRate, channelCount: readBack.channelCount),
+                current: MicTapFormat(sampleRate: currentRate, channelCount: readBack.channelCount),
                 engineRunning: audioEngine.isRunning
             )
             switch action {
