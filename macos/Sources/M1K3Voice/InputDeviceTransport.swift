@@ -9,6 +9,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-12, Confidence 0.85 (a two-property
 //  CoreAudio read, checked against `system_profiler SPAudioDataType` on this
 //  Mac with a Sony headset: "blue"). Prior: Unknown.
+//  Review: Kev + claude-opus-5, 2026-09-13 — the two AudioDeviceID functions are macOS-only in
+//  their SIGNATURES, not just their bodies: the iOS device SDK has no AudioDeviceID, so every
+//  iPhone build of master failed while CI's simulator build passed. Confidence 0.9.
 //
 
 import Foundation
@@ -17,15 +20,18 @@ import Foundation
 #endif
 
 public enum InputDeviceTransport {
-    /// The system's current default INPUT device id, or nil off-macOS / on a
-    /// failed read. `AVAudioEngine` binds its input node to whatever device is
-    /// resolved at engine-init and does NOT follow a later default change — on
-    /// this Mac it inherited a multi-channel system aggregate that STARVES the
-    /// recogniser (ch=7/9, `audioDuration 0`), while the headset the user
-    /// actually selected sits unused. Re-pinning the input node to this id per
-    /// listen keeps the engine on the real device (2026-09-12).
-    public static func defaultInputDeviceID() -> AudioDeviceID? {
-        #if os(macOS)
+    // CoreAudio's device tree (`AudioDeviceID`) exists only on macOS — the iOS
+    // DEVICE SDK has no such type (the Simulator SDK does, which is why CI's
+    // simulator build passed while every iPhone archive failed, 2026-09-13).
+    #if os(macOS)
+        /// The system's current default INPUT device id, or nil off-macOS / on a
+        /// failed read. `AVAudioEngine` binds its input node to whatever device is
+        /// resolved at engine-init and does NOT follow a later default change — on
+        /// this Mac it inherited a multi-channel system aggregate that STARVES the
+        /// recogniser (ch=7/9, `audioDuration 0`), while the headset the user
+        /// actually selected sits unused. Re-pinning the input node to this id per
+        /// listen keeps the engine on the real device (2026-09-12).
+        public static func defaultInputDeviceID() -> AudioDeviceID? {
             var address = AudioObjectPropertyAddress(
                 mSelector: kAudioHardwarePropertyDefaultInputDevice,
                 mScope: kAudioObjectPropertyScopeGlobal,
@@ -37,14 +43,10 @@ public enum InputDeviceTransport {
                 AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &device
             ) == noErr, device != 0 else { return nil }
             return device
-        #else
-            return nil
-        #endif
-    }
+        }
 
-    /// A device's human name (for the diagnostic log), or nil.
-    public static func deviceName(_ device: AudioDeviceID) -> String? {
-        #if os(macOS)
+        /// A device's human name (for the diagnostic log), or nil.
+        public static func deviceName(_ device: AudioDeviceID) -> String? {
             var address = AudioObjectPropertyAddress(
                 mSelector: kAudioObjectPropertyName,
                 mScope: kAudioObjectPropertyScopeGlobal,
@@ -56,10 +58,8 @@ public enum InputDeviceTransport {
                 AudioObjectGetPropertyData(device, &address, 0, nil, &size, $0)
             }
             return status == noErr ? (name as String) : nil
-        #else
-            return nil
-        #endif
-    }
+        }
+    #endif
 
     /// `true` for a Bluetooth (HFP/LE) default input, `false` for anything else
     /// readable, `nil` when the transport can't be read (no input device, a
