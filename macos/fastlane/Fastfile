@@ -10,6 +10,10 @@
 #   or drop it at ~/.appstoreconnect/private_keys/asc_api_key.json.
 #   Apple ID: falls back to the Appfile apple_id (interactive 2FA).
 #
+# Review: Kev + claude-opus-5, 2026-09-13 — the metadata/screenshot paths are
+# absolute (they resolved against macos/, not this folder, so the lanes pushed
+# nothing and reported success); a `platform :ios` screenshots lane joins.
+# Confidence HIGH (verified by checksum against App Store Connect).
 # MurphySig: Metadata-only Fastlane mirroring the prior knowledge-server's proven split. Confidence: HIGH.
 # Review: Kev + claude-opus-5, 2026-09-12 — API-key auth (fastlane JSON key at
 # APP_STORE_CONNECT_API_KEY_PATH or ~/.appstoreconnect/private_keys/) with the
@@ -23,8 +27,13 @@ default_platform(:mac)
 APP_ID      = "app.m1k3"
 TEAM_ID     = "76DJH43A4P"
 APPLE_LOGIN = ENV["APPLE_ID"] || "kevin@round-tower.ie"
-META_PATH   = "./metadata_mac"
-SHOTS_PATH  = "./screenshots_mac"
+# Absolute, anchored to THIS file: fastlane runs lanes from the project root
+# (macos/), so "./screenshots_mac" resolved to an empty macos/screenshots_mac that
+# fastlane created on the fly — the screenshots lane "Successfully uploaded all
+# screenshots" while uploading none (2026-09-13, caught by checksum against ASC).
+META_PATH       = File.expand_path("metadata_mac", __dir__)
+SHOTS_PATH      = File.expand_path("screenshots_mac", __dir__)
+IOS_SHOTS_PATH  = File.expand_path("screenshots_ios", __dir__)
 # README.md in this folder is hand-written; without this fastlane regenerates
 # it after every lane and the tool-split / Xcode Cloud notes are lost.
 ENV["FASTLANE_SKIP_DOCS"] = "1"
@@ -102,5 +111,19 @@ platform :mac do
   desc "Update TestFlight 'What to Test' on the latest build"
   lane :beta_metadata do
     update_what_to_test(APP_ID, "#{META_PATH}/en-US/what_to_test.txt")
+  end
+end
+
+platform :ios do
+  desc "Upload App Store screenshots (iPhone + iPad sizes, detected by pixel size)"
+  lane :screenshots do
+    deliver(
+      app_identifier: APP_ID, team_id: TEAM_ID, platform: "ios",
+      api_key: asc_api_key,
+      skip_binary_upload: true, skip_metadata: true,
+      overwrite_screenshots: true, force: true,
+      precheck_include_in_app_purchases: false,
+      screenshots_path: IOS_SHOTS_PATH
+    )
   end
 end
