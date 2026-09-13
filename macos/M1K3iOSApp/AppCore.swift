@@ -411,6 +411,8 @@ final class AppCore {
         seedScreengrabKnowledgeIfActive(root: base)
         if brain.mlxModelID != nil, Self.mlxAvailable, !homeBrainActive {
             warmSelectedBrain()
+        } else if brain.backing == .appleFoundationModels, !homeBrainActive {
+            measureMiniTokenBudgetIfSupported()
         }
     }
 
@@ -494,6 +496,7 @@ final class AppCore {
             currentMLX = nil
             activeProvider.setProvider(afm)
             brainLoad = .idle
+            measureMiniTokenBudgetIfSupported()
         } else {
             warmSelectedBrain()
         }
@@ -615,6 +618,37 @@ final class AppCore {
                 brainLoad = .failed(message: error.localizedDescription)
                 Self.log.error("brain warm failed: \(error.localizedDescription, privacy: .public)")
             }
+        }
+    }
+
+    /// Measure Mini's fixed instructions using the platform tokenizer. This is
+    /// intentionally detached: prompt accounting must not delay launch or a
+    /// brain switch, and HistoryBudgetPolicy safely uses its conservative
+    /// fallback until the value arrives.
+    private func measureMiniTokenBudgetIfSupported() {
+        guard #available(macOS 26.4, iOS 26.4, visionOS 26.4, *) else { return }
+        let provider = afm
+        Task.detached(priority: .utility) {
+            await Self.measureMiniTokenBudget(provider: provider)
+        }
+    }
+
+    /// The iOS/visionOS counterpart to AppEnvironment's Mini accounting probe.
+    /// The shared history policy reads this on the next turn. A transient AFM
+    /// failure deliberately leaves the conservative fallback in force.
+    @available(macOS 26.4, iOS 26.4, visionOS 26.4, *)
+    nonisolated static func measureMiniTokenBudget(
+        provider: AppleFoundationModelsProvider
+    ) async {
+        let log = Logger(subsystem: "app.m1k3", category: "afm")
+        do {
+            let instructionTokens = try await provider.tokenCount(
+                forInstructions: M1K3Persona.miniSystemPrompt
+            )
+            measuredMiniReserve.withLock { $0 = instructionTokens }
+            log.notice("afm token budget: persona=\(instructionTokens, privacy: .public) tokens (measured)")
+        } catch {
+            log.notice("afm token budget: measurement failed, using conservative fallback")
         }
     }
 
