@@ -34,6 +34,9 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the hero creature takes `.fit` framing so
 //  the whole fox is in shot (voice plates clipped its head). Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5, 2026-09-13 — REVERTED to the fixed shot: under `.fit` the
+//  2026-09-13 capture showed every creature overflowing the voice window, head cut off.
+//  Confidence 0.85 (the morning's plates show the fixed shot framing the whole creature).
 
 import M1K3Avatar
 import M1K3Voice
@@ -61,10 +64,12 @@ struct VoiceModeView: View {
 
             // The avatar IS the window — full-bleed hero, and the primary
             // tap / Space barge-in surface.
-            // `.fit`: the camera sits where the creature's POSED extents fill
-            // the window's aspect with headroom — the fixed shot cut the fox's
-            // head off in every voice plate (launch snag list, 2026-09-12).
-            AvatarSurface(env: env, framing: .fit)
+            // The fixed `.window` shot. `.fit` (2026-09-12) put the camera so
+            // close in this wide window that every creature overflowed it, head
+            // cut off (the 2026-09-13 plate capture from master); the fixed shot
+            // framed the whole creature in the morning's plates. Back to it until
+            // `.fit` is diagnosed for wide views (issue filed with this PR).
+            AvatarSurface(env: env)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
