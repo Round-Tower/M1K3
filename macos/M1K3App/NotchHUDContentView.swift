@@ -254,8 +254,8 @@ struct NotchHUDContentView: View {
     /// Wider than `.fit`'s 1.25: that frames the creature's POSED extents, and
     /// the walk cycle's raised head and stride ran past them and clipped flat
     /// in the bigger HUD slot (Kev's screenshot, 2026-09-14). 1.7 fixed that but
-    /// shrank him; a wide slot (the fox is long, not tall) at 1.4 does both.
-    private static let hudFraming = CompanionFraming.fit(headroom: 1.4)
+    /// shrank him; a wide slot (the fox is long, not tall) at 1.8 does both (1.4 clipped his head).
+    private static let hudFraming = CompanionFraming.fit(headroom: 1.8)
 
     /// A real installed creature pick renders as-is; anything else falls back
     /// to the house default creature rather than the constellation or the
