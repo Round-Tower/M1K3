@@ -32,6 +32,11 @@ merges, never comments. tools/ci/land.sh wraps it.
 Signed: Kev + claude-fable-5.1, 2026-09-12, Confidence 0.85 (every comment
 shape is pinned from bodies read off PR #293; the job names are the ci.yml
 strings; the gh wiring is verify-by-run against a live PR). Prior: Unknown
+
+Review: Kev + claude-opus-5, 2026-09-14 — `named_heads` also reads a backticked
+sha in a markdown header line: #318's summon wrote "### Review of `75c23b64`"
+with no word "head", and the watch read 0/2 on a reviewed head. Dedup keeps
+document order. Confidence now 0.85.
 """
 from __future__ import annotations
 
@@ -76,6 +81,8 @@ class Kind(Enum):
 _CHECKBOX = re.compile(r"^\s*- \[( |x)\] ")
 _PASS_HEADER = re.compile(r"^#{2,4} .*\bpass\b", re.IGNORECASE)
 _HEAD = re.compile(r"\bhead `([0-9a-f]{7,40})`")
+_HEADER_LINE = re.compile(r"^#{2,4} ")
+_SHA = re.compile(r"`([0-9a-f]{7,40})`")
 
 
 def _progress_unchecked(text: str) -> bool:
@@ -116,11 +123,21 @@ def classify(body: str) -> Kind:
 
 
 def named_heads(body: str) -> list[str]:
-    """Every sha a summon pass names as a head. The header wording drifts
-    ("review of final head `x`", "Final pass — review of head `x`",
-    "Review — head `x`" all seen on 2026-09-12), so anchor on the word "head"
-    and the backticks only. Auto passes name none."""
-    return _HEAD.findall(body)
+    """Every sha a summon pass names as a head, in document order. The header
+    wording drifts ("review of final head `x`", "Final pass — review of head
+    `x`", "Review — head `x`" all seen on 2026-09-12; "Review of `x`" with no
+    word "head" on #318, 2026-09-14), so a sha counts when it follows the word
+    "head" anywhere, or sits backticked in a markdown header line. A sha in the
+    body prose names nothing. Auto passes name none."""
+    shas: list[str] = []
+    for line in body.splitlines():
+        found = _HEAD.findall(line)
+        if _HEADER_LINE.match(line):
+            found += _SHA.findall(line)
+        for sha in found:
+            if sha not in shas:
+                shas.append(sha)
+    return shas
 
 
 def _names(head: str, shas: list[str]) -> bool:

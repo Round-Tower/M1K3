@@ -69,7 +69,8 @@ first push and two review passes on the final head):
    toolchain bump PR. ci.yml pins Xcode 26 at lines ~70/142/200 on purpose,
    so this is the deliberate bump. M1K3_FM27 becomes #available(macOS 27, *).
    Run the full suite, the gemma-4 native tool-call smoke
-   (M1K3_SELFTEST_CHATEVAL=1 _BRAINS=big _KINDS=tool-use), and one
+   (M1K3_SELFTEST_CHATEVAL=1 M1K3_SELFTEST_CHATEVAL_BRAINS=big
+   M1K3_SELFTEST_CHATEVAL_KINDS=tool-use), and one
    release-macos.sh --skip-notarize archive, plus a `generic/platform=iOS`
    build (#313: CI is simulator-only). Then, as separate PRs:
    toolCallingMode(.disallowed) for Mini small talk (#102), and typed
@@ -87,6 +88,9 @@ report a merge without state+mergedAt; blocked twice on the same step → stop
 and report. End with /debrief.
 ```
 
+<!-- Review: Kev + claude-opus-5, 2026-09-14: the smoke's env vars spelled
+     out in full (review 1 on #318: the `_BRAINS`/`_KINDS` shorthand was inert
+     if pasted). Confidence now 0.8. -->
 <!-- Signed: Kev + claude-opus-5, 2026-09-14. Written to be run cold; every
      command and path was checked against master 69508f88. Confidence 0.8 (item
      4 depends on Apple's GA timing; the ci.yml line numbers will drift).
