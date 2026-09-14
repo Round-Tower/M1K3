@@ -20,6 +20,16 @@
 //  every input combination pinned; the PCC generation itself is verify-owed
 //  until the entitlement). Prior: Unknown
 //
+//  Review: Kev + claude-opus-5, 2026-09-14 (later) — `presentsConsent`, lifted
+//  from a three-clause `if` in ContentView (local review): images never ride a
+//  PCC turn and an armed send needs a ready control, and both are now pinned
+//  here rather than trusted to view code. `controlHelp` likewise: the control's
+//  tooltip moved here, and an exhausted limit says when it resets (seen by
+//  launch: it said only "for now"). `statusRecheckDelay` (review on 7b36869e):
+//  an exhausted or unavailable control now re-reads the status until it can
+//  be used; it used to recover only on relaunch. `resetPhrase` no longer
+//  rounds minutes up to "about an hour" (seen by launch). Confidence now 0.85.
+//
 
 import Foundation
 
@@ -92,6 +102,48 @@ public enum PrivateCloudRung {
         return .ready
     }
 
+    /// Whether an armed send goes to the consent sheet: only while the control is
+    /// ready and no image is staged. Images never ride a PCC turn (ADR 0006).
+    public static func presentsConsent(armed: Bool, control: Control, hasAttachments: Bool) -> Bool {
+        armed && control == .ready && !hasAttachments
+    }
+
+    /// The control's tooltip: what a click does, or why it can't, and when an
+    /// exhausted limit resets (the same reset words as the fallback notice).
+    public static func controlHelp(_ control: Control, armed: Bool, now: Date) -> String {
+        switch control {
+        case .ready:
+            armed
+                ? "Your next message goes to Private Cloud Compute. You'll see it first."
+                : "Send the next message to Apple's Private Cloud Compute"
+        case .unavailable:
+            "Private Cloud Compute isn't available right now"
+        case let .exhausted(resetsAt):
+            resetsAt.map {
+                "You've reached your Private Cloud Compute limit. It resets "
+                    + "\(PrivateCloudFallback.resetPhrase(until: $0, now: now))."
+            } ?? "You've reached your Private Cloud Compute limit for now"
+        case .hidden:
+            ""
+        }
+    }
+
+    /// How long to wait before re-reading PCC's status while the control can't be
+    /// used, or nil when there's nothing to wait for. An exhausted limit is
+    /// re-read at its reset, never more than 5 minutes apart (Apple's reset date
+    /// is a promise, not a push) and never in a tight loop; unavailable, every
+    /// minute. Without this, the control only recovered on relaunch.
+    public static func statusRecheckDelay(for control: Control, now: Date) -> TimeInterval? {
+        switch control {
+        case .ready, .hidden:
+            nil
+        case .unavailable:
+            60
+        case let .exhausted(resetsAt):
+            min(max(resetsAt.map { $0.timeIntervalSince(now) } ?? 300, 30), 300)
+        }
+    }
+
     /// The escalation for ONE request: PCC only when the user armed this send
     /// and the control is ready. Never automatic — a full Mini window is not a
     /// reason to leave the Mac (ADR 0006).
@@ -151,10 +203,12 @@ public enum PrivateCloudFallback {
             + "answer here."
     }
 
-    /// Coarse and honest: hours up to a day, then "tomorrow", then days.
+    /// Coarse and honest: "shortly", "within the hour", hours up to a day, then
+    /// "tomorrow", then days. Never rounds minutes up to an hour.
     static func resetPhrase(until reset: Date, now: Date) -> String {
         let seconds = reset.timeIntervalSince(now)
-        guard seconds > 0 else { return "shortly" }
+        guard seconds > 120 else { return "shortly" }
+        guard seconds > 45 * 60 else { return "within the hour" }
         let hours = Int((seconds / 3600).rounded(.up))
         switch hours {
         case ...1: return "in about an hour"

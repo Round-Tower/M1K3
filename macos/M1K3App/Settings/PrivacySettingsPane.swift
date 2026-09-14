@@ -24,10 +24,15 @@
 //
 //  Review: Kev + claude-opus-5, 2026-09-13 — under the screengrab harness the Terminal line shows the shipped
 //  /Applications path, not the scratch DerivedData build's (it landed in the Brain at Home plate). Confidence 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-14 — the Private Cloud Compute switch (ADR 0006): hidden without a PCC
+//  backend, a fact under the org switch, default OFF. The web footer drops "the one capability" only when it exists.
+//  Verified by launch in all four states (no backend, off, on, org switch). Confidence 0.85.
 
 import AppKit // NSPasteboard — the Copy buttons
 import M1K3AgentTools
+import M1K3Chat // PrivateCloudTurn — the guarantee's source link
 import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets
+import M1K3LanguageModel // PrivateCloudRung / ChatEgressConsent
 import M1K3Screengrab // the harness shows the shipped helper path, not the build's
 import SwiftUI
 
@@ -44,6 +49,8 @@ struct PrivacySettingsPane: View {
     @State private var locationDenied = false
     @State private var scriptRows: [AppEnvironment.ScriptRow] = []
     @State private var connectClient: MCPClient = .claude
+    /// ADR 0006: the chat-egress consent, default OFF (absent reads as off).
+    @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
 
     var body: some View {
         Form {
@@ -52,13 +59,23 @@ struct PrivacySettingsPane: View {
             } header: {
                 Text("Tools")
             } footer: {
-                Text("""
-                The one capability that sends anything off this Mac — every search \
-                and page read shows in the reply as it happens. Date, time, and \
-                system tools stay local either way.
-                """)
-                .font(.caption).foregroundStyle(.secondary)
+                // The "one capability" sentence is true only while no Private
+                // Cloud Compute rung exists in this build (ADR 0006: the copy
+                // changes with the rung, never before it).
+                Text(privateCloudSetting == .hidden
+                    ? """
+                    The one capability that sends anything off this Mac — every search \
+                    and page read shows in the reply as it happens. Date, time, and \
+                    system tools stay local either way.
+                    """
+                    : """
+                    Every search and page read shows in the reply as it happens. Date, \
+                    time, and system tools stay local either way.
+                    """)
+                    .font(.caption).foregroundStyle(.secondary)
             }
+
+            privateCloudSection
 
             Section {
                 Toggle("Show documents & calls in Spotlight", isOn: $spotlightIndexing)
@@ -86,6 +103,45 @@ struct PrivacySettingsPane: View {
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
+    }
+
+    private var privateCloudSetting: PrivateCloudRung.Setting {
+        PrivateCloudRung.setting(env.privateCloudState(consent: privateCloudConsent))
+    }
+
+    /// ADR 0006: the Private Cloud Compute switch. Absent unless this build has
+    /// a PCC backend (none does today — the rung is behind an entitlement), a
+    /// fact rather than a control when the organisation turned it off, and OFF
+    /// until the user turns it on.
+    @ViewBuilder
+    private var privateCloudSection: some View {
+        switch privateCloudSetting {
+        case .hidden:
+            EmptyView()
+        case .managedOff:
+            Section {
+                Label("Turned off by your organisation", systemImage: "building.2")
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Private Cloud Compute")
+            }
+        case .shown:
+            Section {
+                Toggle("Private Cloud Compute", isOn: $privateCloudConsent)
+            } header: {
+                Text("Private Cloud Compute")
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("""
+                    Off unless you turn it on. Then a cloud button beside the message field \
+                    sends one message at a time to Apple's Private Cloud Compute. You see \
+                    your words before they go, and each answer it gives is labelled.
+                    """)
+                    Link("How Apple protects it", destination: PrivateCloudTurn.appleGuaranteeURL)
+                }
+                .font(.caption).foregroundStyle(.secondary)
+            }
+        }
     }
 
     /// The context senses (context-tools charter): per-sense consent, all

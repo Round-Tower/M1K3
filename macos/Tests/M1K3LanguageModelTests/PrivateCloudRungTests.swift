@@ -111,6 +111,55 @@ struct PrivateCloudRungTests {
         }
     }
 
+    /// ADR 0006: images never ride a PCC turn, and an armed send is only honoured
+    /// while the control is ready. This used to live as a three-clause `if` in
+    /// ContentView, where a dropped clause would ship untested.
+    @Test("an armed send opens the consent sheet only when ready and no image is staged")
+    func presentsConsentOnlyWhenHonourable() {
+        #expect(PrivateCloudRung.presentsConsent(armed: true, control: .ready, hasAttachments: false))
+        #expect(!PrivateCloudRung.presentsConsent(armed: false, control: .ready, hasAttachments: false))
+        #expect(!PrivateCloudRung.presentsConsent(armed: true, control: .ready, hasAttachments: true))
+        for control: PrivateCloudRung.Control in [.hidden, .unavailable, .exhausted(resetsAt: nil)] {
+            #expect(!PrivateCloudRung.presentsConsent(armed: true, control: control, hasAttachments: false))
+        }
+    }
+
+    @Test("the control's tooltip says what the click does, and when an exhausted limit resets")
+    func controlHelpNamesTheReset() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        #expect(PrivateCloudRung.controlHelp(.ready, armed: false, now: now)
+            == "Send the next message to Apple's Private Cloud Compute")
+        #expect(PrivateCloudRung.controlHelp(.ready, armed: true, now: now)
+            == "Your next message goes to Private Cloud Compute. You'll see it first.")
+        #expect(PrivateCloudRung.controlHelp(.unavailable, armed: false, now: now)
+            == "Private Cloud Compute isn't available right now")
+        let inThreeHours = now.addingTimeInterval(3 * 3600)
+        #expect(PrivateCloudRung.controlHelp(.exhausted(resetsAt: inThreeHours), armed: false, now: now)
+            == "You've reached your Private Cloud Compute limit. It resets in about 3 hours.")
+        #expect(PrivateCloudRung.controlHelp(.exhausted(resetsAt: nil), armed: false, now: now)
+            == "You've reached your Private Cloud Compute limit for now")
+        #expect(PrivateCloudRung.controlHelp(.hidden, armed: false, now: now).isEmpty)
+    }
+
+    /// Review on 7b36869e: an exhausted or unavailable control had no way back to
+    /// ready without a relaunch (the status was read at launch and after a send,
+    /// and a disabled control can't send). It now re-reads on this schedule.
+    @Test("a control that can't be used re-reads PCC's status: at the reset, capped at 5 minutes")
+    func statusRecheckDelay() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        #expect(PrivateCloudRung.statusRecheckDelay(for: .ready, now: now) == nil)
+        #expect(PrivateCloudRung.statusRecheckDelay(for: .hidden, now: now) == nil)
+        #expect(PrivateCloudRung.statusRecheckDelay(for: .unavailable, now: now) == 60)
+        let inThreeHours = now.addingTimeInterval(3 * 3600)
+        #expect(PrivateCloudRung.statusRecheckDelay(for: .exhausted(resetsAt: inThreeHours), now: now) == 300)
+        #expect(PrivateCloudRung.statusRecheckDelay(for: .exhausted(resetsAt: now.addingTimeInterval(90)), now: now)
+            == 90)
+        // Past the reset but still exhausted: re-read soon, never in a tight loop.
+        #expect(PrivateCloudRung.statusRecheckDelay(for: .exhausted(resetsAt: now.addingTimeInterval(-10)), now: now)
+            == 30)
+        #expect(PrivateCloudRung.statusRecheckDelay(for: .exhausted(resetsAt: nil), now: now) == 300)
+    }
+
     @Test("the ladder's egress gate: consent AND not managed off AND a backend")
     func networkAllowed() {
         #expect(PrivateCloudRung.networkAllowed(state()))
@@ -180,6 +229,16 @@ struct PrivateCloudRungTests {
             #expect(line.contains("Mini"), "\(failure)")
             #expect(!line.contains("answered here instead"), "\(failure)")
         }
+    }
+
+    /// Seen by launch: a 45-second reset read "in about an hour" (everything
+    /// under an hour rounded up to one). Coarse is fine; untrue is not.
+    @Test("a reset minutes away never reads as an hour away")
+    func subHourResetPhrases() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        #expect(PrivateCloudFallback.resetPhrase(until: now.addingTimeInterval(45), now: now) == "shortly")
+        #expect(PrivateCloudFallback.resetPhrase(until: now.addingTimeInterval(20 * 60), now: now) == "within the hour")
+        #expect(PrivateCloudFallback.resetPhrase(until: now.addingTimeInterval(50 * 60), now: now) == "in about an hour")
     }
 
     @Test("a reset time already past reads as 'shortly', not a negative duration")

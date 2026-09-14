@@ -12,10 +12,69 @@
 //  Prior: Unknown
 //
 
+import Foundation
 @testable import M1K3LanguageModel
+import SwiftUI // AppStorage: the views' own reading of the key
 import Testing
 
 struct ChatEgressConsentTests {
+    /// A private defaults domain per test — the suite runs in parallel, and the
+    /// real standard domain must never be touched by a test.
+    private static func scratchDefaults() -> (UserDefaults, String) {
+        let suite = "m1k3.test.egress.\(UUID().uuidString)"
+        return (UserDefaults(suiteName: suite)!, suite)
+    }
+
+    @Test("persisted: an absent key is 'never answered', not false")
+    func persistedAbsentIsNil() {
+        let (defaults, suite) = Self.scratchDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(ChatEgressConsent.persisted(in: defaults) == nil)
+    }
+
+    @Test("persisted: a stored Bool reads back as itself")
+    func persistedBool() {
+        let (defaults, suite) = Self.scratchDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(true, forKey: ChatEgressConsent.defaultsKey)
+        #expect(ChatEgressConsent.persisted(in: defaults) == true)
+        defaults.set(false, forKey: ChatEgressConsent.defaultsKey)
+        #expect(ChatEgressConsent.persisted(in: defaults) == false)
+    }
+
+    /// A launch argument (`-chatEgressAllowed YES`), `defaults write -string` or a
+    /// profile can store a string. The views read the key through @AppStorage;
+    /// a send-time `as? Bool` read got nil where the view read true, and refused
+    /// a send the UI had offered (seen live 2026-09-14). So the gate's reading is
+    /// pinned against SwiftUI's own, not against another UserDefaults call: if
+    /// @AppStorage's coercion ever changes, this goes red, not the consent gate.
+    enum Stored: CaseIterable {
+        case absent, boolTrue, boolFalse, yes, no, trueWord, one, zero
+
+        func write(to defaults: UserDefaults, key: String) {
+            switch self {
+            case .absent: break
+            case .boolTrue: defaults.set(true, forKey: key)
+            case .boolFalse: defaults.set(false, forKey: key)
+            case .yes: defaults.set("YES", forKey: key)
+            case .no: defaults.set("NO", forKey: key)
+            case .trueWord: defaults.set("true", forKey: key)
+            case .one: defaults.set("1", forKey: key)
+            case .zero: defaults.set("0", forKey: key)
+            }
+        }
+    }
+
+    @Test("persisted agrees with the views' @AppStorage for every stored shape", arguments: Stored.allCases)
+    func persistedMatchesAppStorage(stored: Stored) {
+        let (defaults, suite) = Self.scratchDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        stored.write(to: defaults, key: ChatEgressConsent.defaultsKey)
+        let view = AppStorage(wrappedValue: false, ChatEgressConsent.defaultsKey, store: defaults)
+        #expect(ChatEgressConsent.networkAllowed(persisted: ChatEgressConsent.persisted(in: defaults))
+            == view.wrappedValue)
+    }
+
     @Test("no stored value means NO — consent is never assumed")
     func absentIsDenied() {
         #expect(ChatEgressConsent.networkAllowed(persisted: nil) == false)

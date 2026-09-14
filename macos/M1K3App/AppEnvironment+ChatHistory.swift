@@ -87,7 +87,7 @@ extension AppEnvironment {
         // No UI writes this yet by design; the consent surface ships WITH the PCC
         // rung (17b) so no dead control reaches macOS 26 builds.
         let egressAllowed = ChatEgressConsent.networkAllowed(
-            persisted: defaults.object(forKey: ChatEgressConsent.defaultsKey) as? Bool
+            persisted: ChatEgressConsent.persisted(in: defaults)
         )
         // "Prefer Apple on-device" was cut from Settings (2026-07-13, Kev-approved):
         // auto-route always prefers M1K3's own tuned model — stronger at open chat —

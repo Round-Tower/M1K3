@@ -13,10 +13,14 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the thinking/reasoning header wears `.pixel(13)` (a fixed
 //  two-string enum); the activity label stays caption — it carries the search query / page host (dynamic content,
 //  review 1 catch on #248); the reasoning body stays ReadingText. Confidence now 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5, 2026-09-14 — a "Private Cloud Compute" label under every answer PCC produced
+//  (`answerOrigin`, ADR 0006). Confidence 0.85 (verified by launch with the Debug echo backend: a PCC answer,
+//  a stopped PCC partial, and no label on the local answer after a fallback).
 
 import AppKit
 import M1K3Chat
 import M1K3Knowledge
+import M1K3LanguageModel
 import M1K3Preview
 import SwiftUI
 
@@ -215,6 +219,16 @@ struct MessageView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .accessibilityLabel("Answer stopped early")
+            }
+
+            // ADR 0006: every answer Private Cloud Compute produced says so, on
+            // every render, including after a reload (`answerOrigin` persists).
+            if message.answerOrigin == .privateCloudCompute {
+                Label(PrivateCloudLabel.text, systemImage: PrivateCloudLabel.symbolName)
+                    .symbolRenderingMode(.hierarchical)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(PrivateCloudLabel.accessibilityLabel)
             }
 
             if case let .failed(reason) = message.status {

@@ -312,6 +312,19 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
 - **Does NOT need Xcode 27 GA to start:** the policy, consent and UI halves
   are toolchain-free. Only the `PrivateCloudComputeLanguageModel` adapter sits
   behind `M1K3_FM27` until the 1.1 toolchain bump.
+- **Status 2026-09-14: the toolchain-free half is built.** The pieces:
+  - the policy and send path (#321);
+  - the Mac shell: the switch, the per-message cloud button, the consent
+    sheet, the label and the org switch;
+  - the FM27 adapter, compiled and its SDK-error mapping tested on the macOS 27
+    toolchain.
+
+  The shell was verified by launch against a Debug stand-in backend
+  (`M1K3_PCC_ECHO`) in every state: answer, conversation opt-in, network and
+  mid-answer failure, quota, consent off, no backend, org switch. No release
+  build can reach any of it: there's no backend without the entitlement.
+  Still owed: the entitlement, a real PCC generation, and the copy sweep
+  (#322, staged to ship with the rung).
 
 ### Later / watch
 
@@ -351,6 +364,9 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
 - Conversational replay: ~5.7
 - Standing heuristic (code): 3.5 ← reasonable for code, conservative for prose
 
+<!-- Review: Kev + claude-opus-5, 2026-09-14 (evening): 1.2's toolchain-free half
+     built and verified by launch against the Debug stand-in; the real path
+     waits on the entitlement. Confidence 0.85. -->
 <!-- Review: Kev + claude-opus-5, 2026-09-14: 1.2 marked DECIDED (ADR 0006,
      Kev's call); the policy, consent and UI halves are noted as toolchain-free.
      Confidence now 0.85. -->
