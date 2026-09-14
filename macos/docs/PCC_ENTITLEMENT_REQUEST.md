@@ -12,13 +12,21 @@ found in the macOS 27 dyld shared cache on 2026-09-13. Without it, a
 
 - **App:** M1K3, bundle ID `app.m1k3`, one universal App Store record
   (macOS + iOS + visionOS, ASC app id 6780230835), team `76DJH43A4P`.
-- **Where to file:** Apple Developer → Certificates, Identifiers & Profiles →
-  Identifiers → `app.m1k3` → the **Capability Requests** tab, if the
-  capability is listed there. If it isn't, use Apple Developer → Contact →
-  the capability or entitlement request route. The exact route wasn't
-  verified when this was written. Record which one worked below.
+- **Where to file (verified 2026-09-14):** the dedicated form at
+  <https://developer.apple.com/contact/request/private-cloud-compute/>, linked as
+  "Get the entitlement" from <https://developer.apple.com/private-cloud-compute/>.
+  It is **not** in an identifier's Capability Requests tab (checked: the tab lists
+  "Foundation Model Adapter", which is a different capability, and no PCC).
+- **What the form asks for:** name, email and Team ID (account details), and
+  one acknowledgment: every app must stay under 2 million first-time App Store
+  downloads, and if any app goes over, PCC access is disabled within 6 months.
+  There is no free-text field. The pitch below is kept for any follow-up from
+  Apple, and for App Review notes.
+- **Eligibility:** enrolled in the App Store Small Business Program, and under
+  2 million first-time downloads per app. The grant is assigned to the
+  *account* and shows up as a capability.
 
-## Draft request text (paste and edit)
+## Draft request text (for follow-up or App Review notes)
 
 > **App:** M1K3 (`app.m1k3`), a private AI companion for Mac, iPhone and iPad
 > that runs on device by default: Apple Foundation Models plus its own MLX
@@ -53,7 +61,8 @@ found in the macOS 27 dyld shared cache on 2026-09-13. Without it, a
 | Date | Event |
 |------|-------|
 | 2026-09-14 | Pack drafted |
-| | Filed (route: …) |
+| 2026-09-14 | Route verified: the contact/request/private-cloud-compute form |
+| | Filed |
 | | Granted / declined |
 
 When it's granted: add the key to both entitlement files through `project.yml`,
@@ -63,4 +72,7 @@ where the unentitled probe got 1046.
 
 <!-- Signed: Kev + claude-opus-5, 2026-09-14. Confidence 0.7 (the key name is
      read from the shared cache; the filing route and Apple's review criteria
-     are unverified). Prior: Unknown -->
+     are unverified). Prior: Unknown
+     Review: Kev + claude-opus-5, 2026-09-14 (later): the filing route was verified in
+     the portal (a dedicated form with one acknowledgment, not a Capability Requests
+     row). Confidence now 0.85. -->
