@@ -248,7 +248,7 @@ struct NotchHUDContentView: View {
     @ViewBuilder private var panelBackground: some View {
         if geometry.growsFromNotch {
             ZStack {
-                Rectangle().fill(.black.opacity(0.72))
+                Rectangle().fill(.black.opacity(0.86))
                 // Glass sheen: a faint light from the top that fades out.
                 LinearGradient(
                     colors: [.white.opacity(0.07), .clear],
