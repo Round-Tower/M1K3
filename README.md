@@ -8,7 +8,7 @@
 Local AI that runs <strong>entirely on your Apple-Silicon Mac</strong> —
 on-device LLM inference, live voice, a personal knowledge graph with RAG,
 encrypted call transcription, a local agent, and an MCP server.<br>
-Edge AI you actually own: no cloud, no telemetry, no network call it never asks for.
+Private by design: on your Mac by default, no telemetry, and every network call shows itself and can be switched off.
 </p>
 
 <p align="center">
@@ -56,8 +56,10 @@ Edge AI you actually own: no cloud, no telemetry, no network call it never asks 
 - **MCP server** — 16 tools over local HTTP; give Claude and other agents a
   resident with a voice, a memory, and your knowledge.
 
-Everything above runs without leaving the device. The only network use is the
-one-time model download and an optional, explicitly-enabled web search.
+Everything above runs without leaving the device by default. The only network
+use is the one-time model download, an optional, explicitly-enabled web
+search, and — if you turn it on — sending one message at a time to Apple's
+Private Cloud Compute.
 
 | Surface | Where | Stack | Status |
 |---|---|---|---|
@@ -173,8 +175,11 @@ state: [`CLAUDE.md`](./CLAUDE.md). Security reports: [`SECURITY.md`](./SECURITY.
 
 ## Privacy
 
-Inference, retrieval, and voice run on-device. No telemetry; conversations stay
-on your machine. Network is only used to download models on first run.
+Inference, retrieval, and voice run on-device by default; M1K3 itself has no
+servers and never sees or stores your conversations. Turn on Private Cloud
+Compute (opt-in, off by default) and the one message you choose to send goes
+to Apple's Private Cloud Compute — see [SECURITY.md](./SECURITY.md) for the
+detail and Apple's own guarantees, quoted and linked.
 
 ## License
 
@@ -203,7 +208,8 @@ Colobus, Gecko, Inkfish and Sparrow are by [Quaternius](https://quaternius.com)
 
 **Organisations:** M1K3 for Teams — the same on-device brains, institutional
 memory, and a tuned persona served on your own Apple Silicon hardware, under
-your own domain, with nothing leaving your network — is licensed separately.
+your own domain — is licensed separately. An administrator can lock the
+Private Cloud Compute switch off fleet-wide, so nothing leaves your network.
 See [m1k3.app/teams](https://m1k3.app/teams) or write to kevin@round-tower.ie.
 
 Contributions are by invitation under a short [CLA](./CLA.md) (Apache-2.0

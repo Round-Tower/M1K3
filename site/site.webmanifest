@@ -1,7 +1,7 @@
 {
   "name": "M1K3 for Mac",
   "short_name": "M1K3",
-  "description": "A privacy-first AI companion that runs entirely on your Mac. Nothing leaves.",
+  "description": "A privacy-first AI companion that runs on your Mac. Private by design.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

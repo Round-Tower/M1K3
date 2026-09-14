@@ -159,8 +159,8 @@
 
   <section class="page-cta">
     <span class="label">// own your ai</span>
-    <h2>Nothing leaves.</h2>
-    <p>M1K3 is free for humans, source-available, and runs entirely on your Mac. Pull the ethernet cable — it doesn't notice.</p>
+    <h2>Private by design.</h2>
+    <p>M1K3 is free for humans, source-available, and runs on your Mac by default. Pull the ethernet cable — it doesn't notice, unless you've turned on Private Cloud Compute.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
       <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Build from source</a>
@@ -197,6 +197,15 @@
      renamed Open source → Source; M1K3 loses the .yes class — honesty over green), the build-from-
      source bullet, the FAQ and the closing line. Nav → the tile-less mark alone. dateModified bumped.
      Confidence now 0.85. 
-     Review: Kev + claude-fable-5.1, 2026-09-09 (site alignment pass: "source public" → "source-available" in the FAQ and closing line.) Confidence now 0.85. -->
+     Review: Kev + claude-fable-5.1, 2026-09-09 (site alignment pass: "source public" → "source-available" in the FAQ and closing line.) Confidence now 0.85.
+     Review: Kev + claude-sonnet-5, 2026-09-14 — STAGED for ADR 0006, merges only with the PCC
+     release. Touched only the named section: the "Nothing leaves." CTA → "Private by design.",
+     the pull-the-cable line gets the PCC caveat. Left untouched, flagged in the sweep report: three
+     other absolute claims in the article body ("zero bytes... sent anywhere", "the data never
+     leaves" architecture definition, the comparison table's "What leaves the machine: Nothing" row,
+     and one FAQ answer) — all still true of inference/voice/RAG, but read as unconditional; not in
+     this file's explicit sweep scope, worth a fuller pass before ship. og:image:alt untouched (the
+     image itself still renders "Nothing leaves."). Confidence 0.7 (narrow, deliberately incomplete
+     scope — see report). -->
 </body>
 </html>

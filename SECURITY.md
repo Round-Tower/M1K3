@@ -1,7 +1,9 @@
 # Security Policy
 
-M1K3's whole promise is **"Your AI. Your Mac. Nothing leaves."** — so privacy and
-security reports are the most valuable contributions this project can receive.
+M1K3's whole promise is **"Your AI. Your Mac. Private by design."** — on-device
+by default, and when you choose more power, it goes only to Apple's Private
+Cloud Compute — so privacy and security reports are the most valuable
+contributions this project can receive.
 
 ## Reporting a vulnerability
 
@@ -21,13 +23,39 @@ Anything that breaks the local-only promise ranks above a classic RCE for this
 project:
 
 - Data leaving the machine without explicit user consent (network calls beyond
-  the opt-in web search / model downloads).
+  the opt-in web search / model downloads / a user-initiated Private Cloud
+  Compute turn).
 - Prompt-injection paths that exfiltrate knowledge-base or memory content
   through the MCP server or web tools.
 - Sandbox or entitlement escapes in the Mac app.
 - The local MCP server (`127.0.0.1:4242`) being reachable off-host or abusable
   by other local processes beyond its design.
 - PII surviving the diagnostic redaction in issue reports.
+
+## Private Cloud Compute (opt-in)
+
+With the Private Cloud Compute switch off — the default — nothing leaves the
+device. Turning it on in Settings adds one control next to the message field:
+sending a single message at a time to Apple's Private Cloud Compute, after a
+consent sheet shows exactly what goes — the message, plus the conversation so
+far only if you tick it. Never memories, documents, tools, calendar, location,
+or your profile. Every PCC answer is labelled in the chat. If PCC fails or the
+quota runs out, the on-device brain answers and says why.
+
+Apple's own guarantee, not ours:
+
+> "PCC uses that data only to perform the operations requested by the user"
+> and "no user data is retained in any form after the response is returned."
+>
+> — Apple, [Private Cloud Compute](https://security.apple.com/blog/private-cloud-compute/)
+
+What M1K3 logs about a PCC turn: request/response sizes and error classes
+(rate-limited, quota reached, network failure) only — never the message, the
+conversation, or the answer. M1K3 itself has no servers and never sees or
+stores your conversations, on-device or via PCC.
+
+**M1K3 for Teams:** organisations can force the Private Cloud Compute switch
+off by policy, so on those installs nothing leaves the network at all.
 
 ## Supported versions
 
