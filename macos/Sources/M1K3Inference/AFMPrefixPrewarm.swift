@@ -27,8 +27,17 @@ public enum AFMPrefixPrewarm {
         defaults.object(forKey: defaultsKey) == nil || defaults.bool(forKey: defaultsKey)
     }
 
-    /// How warm a turn's session was, for the `afm turn` log line — the only
-    /// place a live trace can say whether the warmed prefix was the one sent.
+    /// Whether a prewarmed session may serve this prompt. One warmed on a prefix
+    /// serves only a prompt that begins with it: any other call — the
+    /// conversation titler, a synthesis — runs on a fresh session and leaves the
+    /// warm one for the turn it was built for. Warm on the instructions alone,
+    /// any call may have it (as before).
+    public static func accepts(prefix: String?, prompt: String) -> Bool {
+        guard let prefix, !prefix.isEmpty else { return true }
+        return prompt.hasPrefix(prefix)
+    }
+
+    /// How warm a call's session was, for the `afm turn` log line.
     public enum Warmth: String, Sendable, Equatable {
         /// No prewarmed session was waiting.
         case cold
@@ -36,14 +45,13 @@ public enum AFMPrefixPrewarm {
         case instructions
         /// Prewarmed on a prefix this prompt begins with.
         case prefixHit = "prefix-hit"
-        /// Prewarmed on a prefix this prompt does NOT begin with — the
-        /// instructions were still warm; the prefix work was wasted.
-        case prefixMiss = "prefix-miss"
+        /// A prefix-warm session was waiting for a different prompt; this call
+        /// ran on a fresh session and left it there.
+        case held
 
-        public static func of(prewarmed: Bool, prefix: String?, prompt: String) -> Warmth {
-            guard prewarmed else { return .cold }
-            guard let prefix, !prefix.isEmpty else { return .instructions }
-            return prompt.hasPrefix(prefix) ? .prefixHit : .prefixMiss
+        /// The warmth of a session this call took.
+        public static func taken(prefix: String?) -> Warmth {
+            prefix?.isEmpty == false ? .prefixHit : .instructions
         }
     }
 }

@@ -3,9 +3,9 @@
 //  M1K3InferenceTests
 //
 //  Mini's prompt-prefix prewarm (2026-09-14): the switch that turns it off (one
-//  reader, argument-domain strings included — the #324 lesson) and the
-//  per-turn classification the `afm turn` log line carries, so a live trace
-//  says whether the warmed prefix was the one the turn actually sent.
+//  reader, argument-domain strings included — the #324 lesson), which calls a
+//  prefix-warm session may serve, and the per-turn classification the `afm turn`
+//  log line carries.
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.9, Prior: Unknown
 //
@@ -39,13 +39,18 @@ struct AFMPrefixPrewarmTests {
         #expect(AFMPrefixPrewarm.isEnabled(in: Self.defaults("1")))
     }
 
-    @Test("a turn is cold, warm on instructions only, or warm on a prefix it did or didn't send")
-    func classification() {
-        #expect(AFMPrefixPrewarm.Warmth.of(prewarmed: false, prefix: "HEAD", prompt: "HEAD tail") == .cold)
-        #expect(AFMPrefixPrewarm.Warmth.of(prewarmed: true, prefix: nil, prompt: "HEAD tail") == .instructions)
-        #expect(AFMPrefixPrewarm.Warmth.of(prewarmed: true, prefix: "HEAD", prompt: "HEAD tail") == .prefixHit)
-        #expect(AFMPrefixPrewarm.Warmth.of(prewarmed: true, prefix: "HEAD", prompt: "OTHER tail") == .prefixMiss)
-        #expect(AFMPrefixPrewarm.Warmth.of(prewarmed: true, prefix: "", prompt: "tail") == .instructions)
+    @Test("a prefix-warm session serves only a prompt that begins with its prefix")
+    func acceptance() {
+        #expect(AFMPrefixPrewarm.accepts(prefix: "HEAD", prompt: "HEAD tail"))
+        #expect(!AFMPrefixPrewarm.accepts(prefix: "HEAD", prompt: "Title this chat: HEAD"))
+        // Warm on the instructions alone: any call may have it, as before.
+        #expect(AFMPrefixPrewarm.accepts(prefix: nil, prompt: "anything"))
+    }
+
+    @Test("a taken session is warm on its prefix or on the instructions alone")
+    func takenWarmth() {
+        #expect(AFMPrefixPrewarm.Warmth.taken(prefix: "HEAD") == .prefixHit)
+        #expect(AFMPrefixPrewarm.Warmth.taken(prefix: nil) == .instructions)
     }
 
     @Test("the log words are stable — traces are grepped for them")
@@ -53,6 +58,6 @@ struct AFMPrefixPrewarmTests {
         #expect(AFMPrefixPrewarm.Warmth.cold.rawValue == "cold")
         #expect(AFMPrefixPrewarm.Warmth.instructions.rawValue == "instructions")
         #expect(AFMPrefixPrewarm.Warmth.prefixHit.rawValue == "prefix-hit")
-        #expect(AFMPrefixPrewarm.Warmth.prefixMiss.rawValue == "prefix-miss")
+        #expect(AFMPrefixPrewarm.Warmth.held.rawValue == "held")
     }
 }

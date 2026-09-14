@@ -38,7 +38,9 @@
 //  The ReAct floor now opens every prompt with a stable head (ReActPrompt: tools,
 //  rules, format), and the prewarm processes that head too, not only the
 //  instructions: the launch warm computes it from the palette, the end-of-turn warm
-//  takes the head the turn just sent. `afm turn` logs `warm=prefix-hit|miss|…`.
+//  takes the head the turn just sent. `afm turn` logs `warm=prefix-hit|held|…`;
+//  a prefix-warm session serves only a prompt that begins with its prefix, so the
+//  conversation titler no longer takes the session prewarmed for the next turn.
 //  Plain-process probe (AC): turn-1 first token 6.7 s instructions-only → 2.1 s.
 //  Off with `-afm.prefixPrewarm NO` (AFMPrefixPrewarm).
 //
@@ -113,6 +115,16 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         )
     }
 
+    /// The model's own first token, separate from the chat's `turn first chunk`
+    /// (the ReAct floor streams only after its CONCLUSION: marker, so the chat
+    /// line also counts the words before it). Read beside `warm=`, this is how
+    /// much a prewarm actually bought.
+    private static func logFirstToken(after elapsed: Duration, warmth: AFMPrefixPrewarm.Warmth) {
+        let parts = elapsed.components
+        let ms = Int(parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000)
+        log.notice("afm first token: \(ms, privacy: .public)ms warm=\(warmth.rawValue, privacy: .public)")
+    }
+
     /// Exact token budget line — the [SPIKE] data the HistoryBudgetPolicy
     /// comments asked for. Logs instructions and prompt token counts via the
     /// macOS 26.4+ API so the real budget utilisation is visible in the
@@ -183,15 +195,18 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     }
 
     /// The session for this generation: the prewarmed one when its instructions
-    /// still match, else a cold one — and how warm it was for THIS prompt.
-    /// Optionally re-arms afterwards (see `prewarmsBetweenTurns`).
+    /// still match and it may serve this prompt (`AFMPrefixPrewarm.accepts` —
+    /// a prefix-warm session waits for the turn it was built for), else a fresh
+    /// one. Optionally re-arms afterwards (see `prewarmsBetweenTurns`).
     private func takeSession(
         instructions text: String, prompt: String
     ) -> (session: LanguageModelSession, warmth: AFMPrefixPrewarm.Warmth) {
-        if let warm = prewarmSlot.take(matching: text) {
-            return (warm.session, .of(prewarmed: true, prefix: warm.prefix, prompt: prompt))
+        if let warm = prewarmSlot.take(
+            matching: text, accepting: { AFMPrefixPrewarm.accepts(prefix: $0.prefix, prompt: prompt) }
+        ) {
+            return (warm.session, .taken(prefix: warm.prefix))
         }
-        return (LanguageModelSession(instructions: text), .cold)
+        return (LanguageModelSession(instructions: text), prewarmSlot.isArmed ? .held : .cold)
     }
 
     /// Re-arm for the next turn once this one has settled. Gated on the opt-in
@@ -364,8 +379,15 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
             logTokenBudget(instructionText: instrText, promptText: prompt)
             let task = Task { [self] in
                 do {
+                    let clock = ContinuousClock()
+                    let start = clock.now
+                    var firstLogged = false
                     let stream = session.streamResponse(to: prompt)
                     for try await snapshot in stream {
+                        if !firstLogged, !snapshot.content.isEmpty {
+                            firstLogged = true
+                            Self.logFirstToken(after: clock.now - start, warmth: warmth)
+                        }
                         continuation.yield(snapshot.content)
                     }
                     continuation.finish()

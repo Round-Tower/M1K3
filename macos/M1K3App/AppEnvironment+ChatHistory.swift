@@ -294,9 +294,10 @@ extension AppEnvironment {
     /// How Mini's next interactive turn will begin: the ReAct floor's stable
     /// head over the interactive palette, for `prewarm(promptPrefix:)`. The
     /// same builder and hooks as the persona-prefix warm, so it matches the
-    /// palette the live responder renders (a self-query turn, which withholds
-    /// retrieval tools, logs `warm=prefix-miss` and still gets warm
-    /// instructions). Real I/O — call it off the main actor.
+    /// palette the live responder renders. A self-query turn withholds the
+    /// retrieval tools, so its head differs: it runs on a fresh session, logs
+    /// `warm=held`, and leaves the warm one for the next turn. Real I/O — call
+    /// it off the main actor.
     nonisolated static func miniPromptPrefix(
         store: KnowledgeStore, embedder: any EmbeddingService, deepDelegation: DeepDelegationHook
     ) -> String {

@@ -13,6 +13,11 @@
 //  the provider wiring is verify-by-launch via the `prewarmed=` log field).
 //  Prior: Unknown.
 //
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 — `take(matching:accepting:)`:
+//  a caller the value wasn't built for leaves it in the slot. Found live: Mini's
+//  conversation titler ran between turn 1 and turn 2 and took the session prewarmed
+//  for turn 2, so turn 2 always ran cold.
+//
 
 import M1K3Inference
 import Testing
@@ -46,6 +51,26 @@ struct PrewarmSlotTests {
         let slot = PrewarmSlot<String>()
         #expect(!slot.isArmed)
         #expect(slot.take(matching: "anything") == nil)
+    }
+
+    @Test("a caller the value wasn't built for leaves it for the one it was")
+    func declinedTakeLeavesTheValue() {
+        let slot = PrewarmSlot<String>()
+        slot.store("session for the chat turn", key: "persona")
+        // The titler's prompt doesn't begin with the chat head — it passes.
+        #expect(slot.take(matching: "persona", accepting: { _ in false }) == nil)
+        #expect(slot.isArmed)
+        // The chat turn it was built for still gets it, once.
+        #expect(slot.take(matching: "persona", accepting: { _ in true }) == "session for the chat turn")
+        #expect(!slot.isArmed)
+    }
+
+    @Test("a stale key still drops the value, whoever is asking")
+    func staleKeyDropsEvenWhenDeclined() {
+        let slot = PrewarmSlot<String>()
+        slot.store("stale", key: "persona-v1")
+        #expect(slot.take(matching: "persona-v2", accepting: { _ in false }) == nil)
+        #expect(!slot.isArmed)
     }
 
     @Test("a re-store replaces the previous value, old key forgotten")
