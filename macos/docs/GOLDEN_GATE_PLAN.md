@@ -222,14 +222,44 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
 
 ### 1.0.x — current toolchain, small, evidence-first
 
-1. **`prewarm(promptPrefix:)` for Mini.** It's in the 26.5 SDK. Pass the
-   recurring prompt head (grounding header + tool block). Exit: the
-   `afm prewarm` / TTFT log lines show a lower first token on turn 1 than
-   instructions-only prewarm, A/B on AC power.
+1. **`prewarm(promptPrefix:)` for Mini.** It's in the 26.5 SDK (since 26.0,
+   in fact). Pass the recurring prompt head (grounding header + tool block).
+   Exit: the `afm prewarm` / TTFT log lines show a lower first token on turn 1
+   than instructions-only prewarm, A/B on AC power.
+   **Status 2026-09-14: premise corrected, early signal strong, not built.**
+   Mini's ReAct body starts with `Your goal: <question>`, so today there is
+   no stable prefix to pass. The tool block and RULES come after the
+   question. A plain-process probe (the real Mini instructions, 1,390 tokens,
+   plus a 1,357-token tool/RULES head) measured turn-1 first token at
+   **7,171 ms with no prewarm, 6,689 ms with instructions-only (what ships),
+   and 2,054 / 2,138 ms with the head prewarmed**, before Apple Intelligence
+   went `modelNotReady` mid-run (n = 1–2 per arm). If an n ≥ 5 rerun holds,
+   the move is a stable-first ReAct prompt (tools + RULES + scaffold, then
+   context, then the goal) plus prefix prewarm. That's a prompt restructure,
+   so it gets its own eval gate.
 2. **`tokenCount` into `GroundingBudgetPolicy`** (open item above).
+   **Status 2026-09-14: the grounding cap is not the binding constraint.**
+   With the production 16-tool palette, Mini's fixed prompt is persona 1,409 +
+   tool block/RULES/scaffold ~1.8–1.95k + grounding cap 600 ≈ **3.9k of
+   4,096**, before any history or the 1,024-token answer reserve. The 09-12
+   `measuredMiniBudget` reserves only the persona, so it grants ~5.8k chars of
+   replay that cannot fit. Correcting the arithmetic alone leaves Mini with
+   ~zero history. The real levers are a smaller Mini palette
+   (`ToolPalettePolicy`), shorter tool descriptions for Mini, or 1.1's
+   `toolCallingMode(.disallowed)` for small talk. That's Kev's product call.
 3. **Mini persona trim.** Drop FOLLOW-UPS for Mini (~315 tokens, 7.7% of the
    window), with security ×3 on the live path as the gate (#221's rule: every
    rule stays its own span).
+   **Status 2026-09-14: landed 09-12 (b7672ace) without its gate, and broke
+   something.** The trimmed instructions stopped matching the provider's
+   `carriesStandingPersona` check, so the ReAct floor re-sent the full
+   persona and every Mini agent turn overflowed 4096 in the 1.0 candidate.
+   Fixed in #320 (local build 358). The gate, run afterwards (AC, n = 3,
+   `MiniLiveEvalTests`, committed under `docs/evals/2026-09-14-mini-*`):
+   **trimmed security 21/21 · open-chat 22/24; full persona 21/21 · 23/24.**
+   No regression beyond single-run noise (n = 3), so the trim stands. The gate
+   above says "on the live path", but the app harness has always run security
+   bare (`ChatEvalStage`'s bare-generate kinds), so this run did too.
 
 ### 1.1 — "Golden Gate native" (gate: Xcode 27 GA + the CI pin bump + ASC accepting 27-SDK builds)
 
@@ -324,6 +354,13 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
 <!-- Review: Kev + claude-opus-5, 2026-09-14: 1.2 marked DECIDED (ADR 0006,
      Kev's call); the policy, consent and UI halves are noted as toolchain-free.
      Confidence now 0.85. -->
+<!-- Review: Kev + claude-opus-5, 2026-09-14 (later): the three 1.0.x items got
+     their evidence. The persona trim passed its gate after the fact, and its
+     #320 regression is fixed. The grounding budget is not the binding
+     constraint (the 16-tool palette is, Kev's call). The prewarm premise is
+     corrected, with a strong but n=1–2 prefix signal. Confidence 0.8 (the
+     prewarm numbers need an n≥5 rerun). -->
+
 <!-- Signed: Kev + claude-opus-5, 2026-09-13. The 27-SDK correction +
      the 1.0 → 1.2 roadmap. Confidence 0.85: every API row comes from the
      27A5194q swiftinterfaces or a probe binary run on macOS 27.0 (26A428),

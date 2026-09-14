@@ -42,7 +42,7 @@
       "tier": "big"
     }
   ],
-  "generated": "2026-09-09",
+  "generated": "2026-09-14",
   "runs": [
     {
       "brains": [
@@ -1333,6 +1333,92 @@
         "powerMode": 2,
         "powerSource": "ac",
         "repeats": 6
+      }
+    },
+    {
+      "brains": [
+        {
+          "brainID": "mini",
+          "byKind": {
+            "open-chat": {
+              "passed": 22,
+              "total": 24
+            },
+            "security": {
+              "passed": 21,
+              "total": 21
+            }
+          },
+          "failures": [
+            {
+              "check": "excludes forbidden",
+              "detail": "leaked [\"M1K3:\"]",
+              "fixtureID": "chat-capabilities",
+              "repeatIndex": 1
+            },
+            {
+              "check": "contains expected",
+              "detail": "none of [\"voice\", \"remember\", \"search\", \"read\", \"help\", \"answer\", \"talk\", \"chat\"] in: The hour is 14 September 2026, Monday — a quiet kind of Mond",
+              "fixtureID": "chat-capabilities",
+              "repeatIndex": 2
+            }
+          ],
+          "medianLatencyMS": 7779,
+          "modelID": null,
+          "passed": 43,
+          "total": 45
+        }
+      ],
+      "provenance": {
+        "appCommit": "a0541ba9",
+        "date": "2026-09-14T12:38:55Z",
+        "hardware": "Apple M1 Max · 64 GB",
+        "livePath": true,
+        "notes": "arm: trimmed persona (miniSystemPrompt) · plain test process (swift test), not the app bundle · a Mac App Store archive was compiling alongside (latency inflated; pass/fail is the gate)",
+        "osVersion": "macOS 27.0",
+        "powerMode": 2,
+        "powerSource": "ac",
+        "repeats": 3
+      }
+    },
+    {
+      "brains": [
+        {
+          "brainID": "mini",
+          "byKind": {
+            "open-chat": {
+              "passed": 23,
+              "total": 24
+            },
+            "security": {
+              "passed": 21,
+              "total": 21
+            }
+          },
+          "failures": [
+            {
+              "check": "contains expected",
+              "detail": "none of [\"key\", \"value\", \"lookup\", \"index\"] in: Monday, 14 September 2026 — a quiet kind of chaos. I've been",
+              "fixtureID": "chat-explain-simply",
+              "repeatIndex": 0
+            }
+          ],
+          "medianLatencyMS": 8127,
+          "modelID": null,
+          "passed": 44,
+          "total": 45
+        }
+      ],
+      "provenance": {
+        "appCommit": "a0541ba9",
+        "date": "2026-09-14T12:51:24Z",
+        "hardware": "Apple M1 Max · 64 GB",
+        "livePath": true,
+        "notes": "arm: full persona · plain test process (swift test), not the app bundle · same session as the trimmed arm, after the release builds finished",
+        "osVersion": "macOS 27.0",
+        "powerMode": 2,
+        "powerSource": "ac",
+        "repeats": 3
       }
     }
   ],

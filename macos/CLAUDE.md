@@ -108,6 +108,11 @@ built `.app` bundle. So MLX/WhisperKit code is verified two ways:
    probe: seeded dated contradiction through the real responder per brain),
    `M1K3_SELFTEST_OUT=<container path>`. This is the cleanest
    verify path — no UI, no MCP grace window or job deadline.
+   **Mini (AFM) is the exception on macOS 27:** a shell can read a SelfTest
+   report only from an unsandboxed re-signed copy of the app, and that copy
+   reads Apple Intelligence as unavailable (a plain process doesn't). Run
+   Mini's fixtures with `M1K3_AFM_EVAL=1 swift test --filter MiniLiveEvalTests`
+   instead (same fixtures, scorer and JSON; the file header has the knobs).
 
 When a change touches MLX/Metal/RealityKit/voice, the convention is
 **verify-by-launch**: state it as a named "verify-owed" rather than claiming it
