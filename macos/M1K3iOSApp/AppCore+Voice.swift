@@ -48,6 +48,11 @@
 //  whether the session came up; `armOrPark` arms the loop only on true and otherwise
 //  parks with "Couldn't open the microphone — tap the face to try again." Both
 //  entry points (enter, tap-to-resume) share it. Confidence 0.8: verify-by-launch glue.
+//  Review: Kev + claude-opus-5, 2026-09-14 — #301: `armOrPark` asks VoiceActivationPolicy;
+//  a result landing after the loop left idle (the other tap's activation) is ignored, so a
+//  late failure no longer captions a listening mic. Confidence 0.85 (policy pinned; the
+//  double tap itself is verify-on-device). Review fold: a per-activation generation joins the
+//  idle check (a stalled activation landing at a re-settled idle), and an ignored result logs.
 
 import AVFoundation
 import Foundation
@@ -121,10 +126,12 @@ extension AppCore {
         installAudioSessionObservers()
         // The mic engine needs the record-capable session first; activate it off
         // the main actor and only then arm the loop. A leave in between wins.
+        voiceActivationGeneration += 1
+        let generation = voiceActivationGeneration
         Task { [weak self] in
             let active = await Self.activateVoiceAudioSession()
             guard let self, voiceLoop === controller else { return }
-            armOrPark(controller, sessionActive: active)
+            armOrPark(controller, sessionActive: active, generation: generation)
         }
     }
 
@@ -161,10 +168,12 @@ extension AppCore {
         // after a pause left the session in an unknown state) must not arm the
         // engine against a session that isn't record-capable yet. Re-activating
         // an active session is cheap (code-quality review, 2026-09-03).
+        voiceActivationGeneration += 1
+        let generation = voiceActivationGeneration
         Task { [weak self] in
             let active = await Self.activateVoiceAudioSession()
             guard let self, voiceLoop === controller else { return }
-            armOrPark(controller, sessionActive: active)
+            armOrPark(controller, sessionActive: active, generation: generation)
         }
     }
 
@@ -173,13 +182,25 @@ extension AppCore {
     /// against a session that might not record, and the only safety net was the
     /// tap refusing a dead route downstream. Now the loop stays parked with a
     /// calm line, and tapping the face retries the activation.
-    private func armOrPark(_ controller: VoiceLoopController, sessionActive: Bool) {
-        guard sessionActive else {
+    private func armOrPark(_ controller: VoiceLoopController, sessionActive: Bool, generation: Int) {
+        // Two quick taps race two activations (#301): a result from a superseded
+        // activation, or landing after the loop left idle, is ignored, so a late
+        // failure can't caption a live mic.
+        let isLatest = generation == voiceActivationGeneration
+        switch VoiceActivationPolicy.outcome(sessionActive: sessionActive, loop: controller.state, isLatest: isLatest) {
+        case .arm:
+            // A losing tap's failure may have parked first; don't let its
+            // note resurface at the next unrelated park.
+            voicePauseNote = nil
+            controller.begin()
+        case .park:
             avatar.resetToIdle()
             voicePauseNote = "Couldn't open the microphone — tap the face to try again."
-            return
+        case .ignore:
+            Self.voiceLog.notice(
+                "voice activation result ignored: active=\(sessionActive, privacy: .public) latest=\(isLatest, privacy: .public)"
+            )
         }
-        controller.begin()
     }
 
     // MARK: - Loop dependencies
