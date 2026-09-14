@@ -200,6 +200,8 @@ final class NotchHUDController {
             window.orderFrontRegardless()
         }
         // Next runloop turn, so the folded state renders once before the spring.
+        // GCD, not a MainActor Task: a Task can run before the run loop commits
+        // the folded frame, and the spring would start from the wrong state.
         DispatchQueue.main.async { [weak window] in
             withAnimation(.spring(response: 0.42, dampingFraction: 0.74)) {
                 window?.geometry.expanded = true

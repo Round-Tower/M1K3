@@ -305,16 +305,22 @@ struct NotchHUDContentView: View {
     /// pixel face, both live-confirmed illegible at 72px — see header for the
     /// full story. Both go through `CompanionAvatarView` directly (not
     /// `AvatarSurface`) so the HUD can ask for the aspect-aware `.fit` framing.
+    /// The docked 72 pt slot keeps the `.fit` (1.25) it was live-tuned with;
+    /// only the notch HUD's wide slot needs the extra headroom (#326 review).
+    private var slotFraming: CompanionFraming {
+        geometry.growsFromNotch ? Self.hudFraming : .fit
+    }
+
     @ViewBuilder
     private var avatarSlot: some View {
         if !windowVisible {
             // Ordered-out HUD → no RealityView at all (2026-09-12 thermal audit).
             EmptyView()
         } else if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
-            CompanionAvatarView(controller: env.avatar, companion: spec, framing: Self.hudFraming, tile: !geometry.growsFromNotch)
+            CompanionAvatarView(controller: env.avatar, companion: spec, framing: slotFraming, tile: !geometry.growsFromNotch)
                 .id(spec.id)
         } else {
-            CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion, framing: Self.hudFraming, tile: !geometry.growsFromNotch)
+            CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion, framing: slotFraming, tile: !geometry.growsFromNotch)
                 .id(houseFallbackCompanion.id)
         }
     }
