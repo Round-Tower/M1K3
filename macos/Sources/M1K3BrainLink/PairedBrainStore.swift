@@ -62,6 +62,8 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
 
     public func key(identity: String) -> Data? {
         if let data = read(Self.query(identity: identity, lane: lane)) { return data }
+        // On the login lane the base query IS the legacy one: nothing to lift.
+        guard lane == .dataProtection else { return nil }
         // A PSK written before 2026-09-12 sits in the Mac's login keychain
         // (a no-op distinction on iOS): lift it across once, then drop the old row.
         // Write-before-delete: the legacy row goes only after the new row lands,

@@ -33,7 +33,9 @@ public enum KeychainLane: Sendable, Equatable {
         probeStatus == errSecMissingEntitlement ? .login : .dataProtection
     }
 
-    /// This process's lane, probed once on first use.
+    /// This process's lane, probed once on first use. The first touch is the
+    /// call store's setup on the main actor, beside the key reads it already
+    /// makes there; the probe reads a never-written item and returns at once.
     public static let current: KeychainLane = resolve(probeStatus: probe())
 
     /// Marks a query for the data-protection keychain; the login lane leaves it bare.

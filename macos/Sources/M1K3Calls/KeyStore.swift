@@ -74,6 +74,8 @@ public struct KeychainKeyStore: KeyStore {
         // (the item's access control drives it) — no LAContext needed for the
         // once-per-launch read the call store performs.
         if let data = try read(baseQuery(account)) { return data }
+        // On the login lane the base query IS the legacy one: nothing to lift.
+        guard lane == .dataProtection else { return nil }
         return try migrateLegacyItem(account)
     }
 
