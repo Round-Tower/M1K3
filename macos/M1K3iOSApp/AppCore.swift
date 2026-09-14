@@ -120,6 +120,8 @@ final class AppCore {
     /// Why the loop is parked after an audio interruption (a call, headphones
     /// pulled) — shown in place of the idle caption; cleared on tap-to-talk.
     var voicePauseNote: String?
+    /// Bumped per audio-session activation; a result from an older one is stale (#301).
+    var voiceActivationGeneration = 0
     /// The chosen TTS tier — restored on launch only when its weights are already
     /// staged (VoiceTierRestore), persisted on pick.
     /// Set only by AppCore+VoiceOutput (cross-file, so not `private(set)`).

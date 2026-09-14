@@ -23,31 +23,39 @@ struct VoiceActivationPolicyTests {
 
     @Test("a session that came up arms a parked loop")
     func activeArmsIdle() {
-        #expect(VoiceActivationPolicy.outcome(sessionActive: true, loop: .idle) == .arm)
+        #expect(VoiceActivationPolicy.outcome(sessionActive: true, loop: .idle, isLatest: true) == .arm)
     }
 
     @Test("a session that failed parks an idle loop with the reason")
     func failureParksIdle() {
-        #expect(VoiceActivationPolicy.outcome(sessionActive: false, loop: .idle) == .park)
+        #expect(VoiceActivationPolicy.outcome(sessionActive: false, loop: .idle, isLatest: true) == .park)
     }
 
     @Test("a late failure never misreports a loop the other tap already armed")
     func lateFailureIgnoredWhileRunning() {
         for state in Self.running {
-            #expect(VoiceActivationPolicy.outcome(sessionActive: false, loop: state) == .ignore)
+            #expect(VoiceActivationPolicy.outcome(sessionActive: false, loop: state, isLatest: true) == .ignore)
         }
     }
 
     @Test("a late success leaves a running loop alone")
     func lateSuccessIgnoredWhileRunning() {
         for state in Self.running {
-            #expect(VoiceActivationPolicy.outcome(sessionActive: true, loop: state) == .ignore)
+            #expect(VoiceActivationPolicy.outcome(sessionActive: true, loop: state, isLatest: true) == .ignore)
         }
     }
 
     @Test("an ended loop takes nothing from a late activation")
     func endedIgnores() {
-        #expect(VoiceActivationPolicy.outcome(sessionActive: true, loop: .ended) == .ignore)
-        #expect(VoiceActivationPolicy.outcome(sessionActive: false, loop: .ended) == .ignore)
+        #expect(VoiceActivationPolicy.outcome(sessionActive: true, loop: .ended, isLatest: true) == .ignore)
+        #expect(VoiceActivationPolicy.outcome(sessionActive: false, loop: .ended, isLatest: true) == .ignore)
+    }
+
+    @Test("a superseded activation is ignored even when the loop has settled back to idle")
+    func supersededIgnoredAtIdle() {
+        // A stalled setActive can resolve after the other tap's turn ran and the
+        // loop parked again: idle, but not this request's idle (review of #331).
+        #expect(VoiceActivationPolicy.outcome(sessionActive: false, loop: .idle, isLatest: false) == .ignore)
+        #expect(VoiceActivationPolicy.outcome(sessionActive: true, loop: .idle, isLatest: false) == .ignore)
     }
 }
