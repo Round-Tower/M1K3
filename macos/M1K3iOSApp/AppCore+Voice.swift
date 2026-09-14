@@ -48,6 +48,10 @@
 //  whether the session came up; `armOrPark` arms the loop only on true and otherwise
 //  parks with "Couldn't open the microphone — tap the face to try again." Both
 //  entry points (enter, tap-to-resume) share it. Confidence 0.8: verify-by-launch glue.
+//  Review: Kev + claude-opus-5, 2026-09-14 — #301: `armOrPark` asks VoiceActivationPolicy;
+//  a result landing after the loop left idle (the other tap's activation) is ignored, so a
+//  late failure no longer captions a listening mic. Confidence 0.85 (policy pinned; the
+//  double tap itself is verify-on-device).
 
 import AVFoundation
 import Foundation
@@ -174,12 +178,17 @@ extension AppCore {
     /// tap refusing a dead route downstream. Now the loop stays parked with a
     /// calm line, and tapping the face retries the activation.
     private func armOrPark(_ controller: VoiceLoopController, sessionActive: Bool) {
-        guard sessionActive else {
+        // Two quick taps race two activations (#301): a result landing after the
+        // loop left idle is ignored, so a late failure can't caption a live mic.
+        switch VoiceActivationPolicy.outcome(sessionActive: sessionActive, loop: controller.state) {
+        case .arm:
+            controller.begin()
+        case .park:
             avatar.resetToIdle()
             voicePauseNote = "Couldn't open the microphone — tap the face to try again."
-            return
+        case .ignore:
+            break
         }
-        controller.begin()
     }
 
     // MARK: - Loop dependencies
