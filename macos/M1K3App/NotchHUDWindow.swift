@@ -40,6 +40,11 @@ import SwiftUI
 final class NotchHUDGeometry {
     var contentTopInset: CGFloat = 0
     var contentHeight: CGFloat = NotchHUDLayout.size.height
+    /// The notch's width, so the panel can grow in from exactly the notch.
+    var notchWidth: CGFloat = 0
+    /// False while the panel is folded into the notch (before the grow-in,
+    /// after the fold-out). Docked panels slide instead and stay true.
+    var expanded = true
     var growsFromNotch: Bool {
         contentTopInset > 0
     }
@@ -111,6 +116,8 @@ final class NotchHUDWindow: NSWindow {
         )
         geometry.contentTopInset = placement.contentTopInset
         geometry.contentHeight = placement.contentHeight
+        let sides = (screen.auxiliaryTopLeftArea?.width ?? 0) + (screen.auxiliaryTopRightArea?.width ?? 0)
+        geometry.notchWidth = placement.growsFromNotch ? max(0, screen.frame.width - sides) : 0
         setContentSize(placement.frame.size)
         return placement.frame.origin
     }

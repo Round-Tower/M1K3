@@ -53,11 +53,15 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 7) — the wait's valve is `NotchHUDVisibility.wakeValve`
 //  (1 s while speaking): the Settings toggle is not an observed input, and a flip mid-utterance used to wait
 //  for the speech to end (up to 30 s) before the HUD followed it. Confidence now 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-14 — under a notch the HUD grows in: the window sits in place
+//  and SwiftUI springs the panel out of the notch's rectangle, then folds it back before `orderOut`.
+//  Docked panels keep the slide. Confidence 0.75 (verify-by-launch).
 //
 
 import AppKit
 import Foundation
 import M1K3Voice
+import SwiftUI
 
 @MainActor
 final class NotchHUDController {
@@ -137,6 +141,11 @@ final class NotchHUDController {
         guard let screen = NSScreen.main else { return }
         let window = resolveWindow()
         let shown = window.targetOrigin(on: screen)
+        if window.geometry.growsFromNotch {
+            growIn(window, at: shown)
+            return
+        }
+        window.geometry.expanded = true
         let hidden = window.hiddenOrigin(shownAt: shown)
         window.setFrameOrigin(hidden)
         window.alphaValue = 0
@@ -150,6 +159,10 @@ final class NotchHUDController {
 
     private func hideWindow() {
         guard let window, let screen = NSScreen.main else { return }
+        if window.geometry.growsFromNotch {
+            foldOut(window)
+            return
+        }
         let shown = window.targetOrigin(on: screen)
         let hidden = window.hiddenOrigin(shownAt: shown)
         animate(
@@ -158,6 +171,39 @@ final class NotchHUDController {
             duration: 0.3, ease: { $0 * $0 }
         ) { [weak self] in
             self?.window?.orderOut(nil)
+        }
+    }
+
+    /// Under a notch the panel swells out of it: the window sits in place at
+    /// full size and SwiftUI scales the panel up from the notch's own
+    /// rectangle (`NotchHUDGeometry.expanded`).
+    private func growIn(_ window: NotchHUDWindow, at shown: NSPoint) {
+        animTask?.cancel()
+        animTask = nil
+        if !window.isVisible {
+            window.geometry.expanded = false
+            window.setFrameOrigin(shown)
+            window.alphaValue = 1
+            window.orderFrontRegardless()
+        }
+        // Next runloop turn, so the folded state renders once before the spring.
+        DispatchQueue.main.async {
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.74)) {
+                window.geometry.expanded = true
+            }
+        }
+    }
+
+    private func foldOut(_ window: NotchHUDWindow) {
+        animTask?.cancel()
+        withAnimation(.easeIn(duration: 0.22)) {
+            window.geometry.expanded = false
+        }
+        animTask = Task { @MainActor [weak window] in
+            try? await Task.sleep(for: .milliseconds(260))
+            // A show that landed during the fold owns the window now.
+            guard !Task.isCancelled, let window, !window.geometry.expanded else { return }
+            window.orderOut(nil)
         }
     }
 

@@ -70,6 +70,9 @@
 //  Review: Kev + claude-opus-5, 2026-09-14 — grown from the notch it is a HUD (Kev: "avatar centred?
 //  and bigger?"): a 110 pt creature centred, the spoken line centred under it (scrolls when it runs
 //  past), the caption below. The docked row is unchanged. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5, 2026-09-14 — "clipping on the avatar… grow in? CRT it? Liquid glass": fit
+//  headroom 1.7 (the walk cycle overran 1.25), the panel scales in from the notch's rectangle, Liquid Glass
+//  under a black band that melts out of the notch, and the house CRTOverlay over it. Confidence 0.7.
 
 import M1K3Avatar
 import M1K3Voice
@@ -101,21 +104,41 @@ struct NotchHUDContentView: View {
     }
 
     var body: some View {
+        panel
+            // Under a notch the panel grows in from the notch's own rectangle and
+            // folds back into it (the controller drives `expanded`).
+            .scaleEffect(x: foldedScale.width, y: foldedScale.height, anchor: .top)
+            .frame(width: NotchHUDLayout.size.width, height: totalHeight, alignment: .top)
+    }
+
+    private var totalHeight: CGFloat {
+        geometry.contentHeight + geometry.contentTopInset
+    }
+
+    /// 1×1 when expanded; the notch's size relative to the panel when folded.
+    private var foldedScale: CGSize {
+        guard geometry.growsFromNotch, !geometry.expanded else { return CGSize(width: 1, height: 1) }
+        let width = geometry.notchWidth > 0 ? geometry.notchWidth : 200
+        return CGSize(
+            width: min(1, width / NotchHUDLayout.size.width),
+            height: min(1, geometry.contentTopInset / totalHeight)
+        )
+    }
+
+    private var panel: some View {
         content
+            .opacity(geometry.growsFromNotch && !geometry.expanded ? 0 : 1)
             // FIXED size — the panel fills the window every frame. Sized to its
             // content it grew and shrank with each sentence (Kev: "expanding when
             // talking", 2026-09-12); the window is fixed, so the panel is too.
             .frame(width: NotchHUDLayout.size.width, height: geometry.contentHeight)
             // On a notched screen the content sits below the notch strip.
             .padding(.top, geometry.contentTopInset)
-            .frame(width: NotchHUDLayout.size.width, height: geometry.contentHeight + geometry.contentTopInset)
-            // Flat top edge, rounded bottom corners only. A fill, NOT
-            // `glassEffect(in:)`: on macOS 27.0 the glass ignored the uneven
-            // shape and drew ~15 pt short of the frame (2026-09-12).
+            .frame(width: NotchHUDLayout.size.width, height: totalHeight)
             .background { panelBackground }
             .overlay {
                 // No hairline on the notched panel: a border would draw the seam
-                // between the notch and the panel that the black fill hides.
+                // between the notch and the panel that the black band hides.
                 if !geometry.growsFromNotch {
                     NotchHUDLayout.shape.strokeBorder(.white.opacity(0.14), lineWidth: 1)
                 }
@@ -187,14 +210,37 @@ struct NotchHUDContentView: View {
             .foregroundStyle(.white.opacity(0.55))
     }
 
-    /// Black on a notched screen, so the panel and the notch read as one
-    /// shape growing down; the material where it docks under a menu bar.
+    /// Under a notch: Liquid Glass with a black band that is solid through
+    /// the notch's height and melts into the glass below it, so notch and
+    /// panel still read as one shape, and a CRT pass over the lot (Kev,
+    /// 2026-09-14). The glass is drawn on a plain rectangle and CLIPPED to the
+    /// panel shape: `glassEffect(in:)` with the uneven shape ignored it on
+    /// macOS 27.0 (2026-09-12). Docked panels keep the material.
     @ViewBuilder private var panelBackground: some View {
         if geometry.growsFromNotch {
-            NotchHUDLayout.shape.fill(.black)
+            ZStack {
+                Rectangle()
+                    .fill(.black.opacity(0.25))
+                    .glassEffect(.regular.tint(.black.opacity(0.35)), in: .rect)
+                LinearGradient(stops: notchBandStops, startPoint: .top, endPoint: .bottom)
+                CRTOverlay()
+                    .opacity(0.8)
+            }
+            .clipShape(NotchHUDLayout.shape)
         } else {
             NotchHUDLayout.shape.fill(.regularMaterial)
         }
+    }
+
+    /// Solid black through the notch, fading to clear ~40 pt below it.
+    private var notchBandStops: [Gradient.Stop] {
+        let notch = geometry.contentTopInset / max(1, totalHeight)
+        let fade = min(1, notch + 40 / max(1, totalHeight))
+        return [
+            .init(color: .black, location: 0),
+            .init(color: .black, location: notch),
+            .init(color: .clear, location: fade),
+        ]
     }
 
     /// Where the word being spoken ENDS, in UTF-16 units from the line's
@@ -204,6 +250,11 @@ struct NotchHUDContentView: View {
         guard let word = env.speechHighlight.currentWordRange else { return 0 }
         return word.upperBound - line.start
     }
+
+    /// Wider than `.fit`'s 1.25: that frames the creature's POSED extents, and
+    /// the walk cycle's raised head and stride ran past them and clipped flat
+    /// in the bigger HUD slot (Kev's screenshot, 2026-09-14).
+    private static let hudFraming = CompanionFraming.fit(headroom: 1.7)
 
     /// A real installed creature pick renders as-is; anything else falls back
     /// to the house default creature rather than the constellation or the
@@ -216,10 +267,10 @@ struct NotchHUDContentView: View {
             // Ordered-out HUD → no RealityView at all (2026-09-12 thermal audit).
             EmptyView()
         } else if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
-            CompanionAvatarView(controller: env.avatar, companion: spec, framing: .fit)
+            CompanionAvatarView(controller: env.avatar, companion: spec, framing: Self.hudFraming)
                 .id(spec.id)
         } else {
-            CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion, framing: .fit)
+            CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion, framing: Self.hudFraming)
                 .id(houseFallbackCompanion.id)
         }
     }
