@@ -1,6 +1,6 @@
 # Private Cloud Compute entitlement — request pack
 
-**Owner:** Kev. Only the account holder can file this. **Status:** not filed.
+**Owner:** Kev. Only the account holder can file this. **Status:** GRANTED 2026-09-14 (filed and assigned the same evening).
 
 ## What we need
 
@@ -12,13 +12,21 @@ found in the macOS 27 dyld shared cache on 2026-09-13. Without it, a
 
 - **App:** M1K3, bundle ID `app.m1k3`, one universal App Store record
   (macOS + iOS + visionOS, ASC app id 6780230835), team `76DJH43A4P`.
-- **Where to file:** Apple Developer → Certificates, Identifiers & Profiles →
-  Identifiers → `app.m1k3` → the **Capability Requests** tab, if the
-  capability is listed there. If it isn't, use Apple Developer → Contact →
-  the capability or entitlement request route. The exact route wasn't
-  verified when this was written. Record which one worked below.
+- **Where to file (verified 2026-09-14):** the dedicated form at
+  <https://developer.apple.com/contact/request/private-cloud-compute/>, linked as
+  "Get the entitlement" from <https://developer.apple.com/private-cloud-compute/>.
+  It is **not** in an identifier's Capability Requests tab (checked: the tab lists
+  "Foundation Model Adapter", which is a different capability, and no PCC).
+- **What the form asks for:** name, email and Team ID (account details), and
+  one acknowledgment: every app must stay under 2 million first-time App Store
+  downloads, and if any app goes over, PCC access is disabled within 6 months.
+  There is no free-text field. The pitch below is kept for any follow-up from
+  Apple, and for App Review notes.
+- **Eligibility:** enrolled in the App Store Small Business Program, and under
+  2 million first-time downloads per app. The grant is assigned to the
+  *account* and shows up as a capability.
 
-## Draft request text (paste and edit)
+## Draft request text (for follow-up or App Review notes)
 
 > **App:** M1K3 (`app.m1k3`), a private AI companion for Mac, iPhone and iPad
 > that runs on device by default: Apple Foundation Models plus its own MLX
@@ -53,14 +61,26 @@ found in the macOS 27 dyld shared cache on 2026-09-13. Without it, a
 | Date | Event |
 |------|-------|
 | 2026-09-14 | Pack drafted |
-| | Filed (route: …) |
-| | Granted / declined |
+| 2026-09-14 | Route verified: the contact/request/private-cloud-compute form |
+| 2026-09-14 | Filed via the form |
+| 2026-09-14 20:48 | Granted: "Access to models on Private Cloud Compute" assigned to the account |
+| 2026-09-14 | Capability enabled on the `app.m1k3` identifier; profile carries the key = `true`; entitlements change rides #333 |
 
-When it's granted: add the key to both entitlement files through `project.yml`,
-regenerate the profiles, and run `tools/ci/check_store_targets.py`. The first
-probe is one content-free generation on the signed build. It should succeed
-where the unentitled probe got 1046.
+Now that it's granted (#333): the key goes in **`M1K3-MAS.entitlements` only**, the
+store lane (App Store, TestFlight, ⌘R), whose profile carries it. **Never**
+`M1K3.entitlements`: the Developer ID lane has no profile, and AMFI refuses to launch
+an app claiming a profile-only entitlement, so every DMG and cask install would die.
+`tools/ci/check_store_targets.py` fails CI if the key leaks there. iOS/visionOS wait
+until the entitlement read is probed on a device. The first probe is one content-free
+generation on the signed build; it should succeed where the unentitled probe got 1046.
 
 <!-- Signed: Kev + claude-opus-5, 2026-09-14. Confidence 0.7 (the key name is
      read from the shared cache; the filing route and Apple's review criteria
-     are unverified). Prior: Unknown -->
+     are unverified). Prior: Unknown
+     Review: Kev + claude-opus-5, 2026-09-14 (later): the filing route was verified in
+     the portal (a dedicated form with one acknowledgment, not a Capability Requests
+     row). Confidence now 0.85.
+     Review: Kev + claude-opus-5, 2026-09-14 (night): granted the same evening; the
+     capability is on app.m1k3 and the profile carries the key (#333). Confidence 0.9.
+     Review: Kev + claude-opus-5, 2026-09-14 (night, later): next steps name the store lane only, matching
+     #333's guard (review of #330). Confidence 0.9. -->
