@@ -13,6 +13,10 @@
 //  Signed: Kev + claude-fable-5, 2026-08-16, Confidence 0.9 (red-first against
 //  a counting fake driven through a real multi-call ReAct turn). Prior: Unknown.
 //
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — the warm now carries
+//  the ReAct head as a prompt prefix (nil on the native path), so AFM can prewarm
+//  the next turn's stable part, not only its instructions.
+//
 
 import M1K3Agent
 import M1K3Inference
@@ -42,8 +46,34 @@ private final class CountingWarmableProvider: InferenceProvider, TurnWarmable, @
         AsyncStream { $0.finish() }
     }
 
-    func prepareForNextTurn() {
+    private(set) var warmPrefixes: [String?] = []
+    func prepareForNextTurn(promptPrefix: String?) {
         warmCalls += 1
+        warmPrefixes.append(promptPrefix)
+    }
+}
+
+/// A native tool-calling backend that also wants the warm signal.
+private final class NativeWarmableProvider: ToolCallingProvider, TurnWarmable, @unchecked Sendable {
+    let name = "native-warmable"
+    let isAvailable = true
+    let supportsToolCalls = true
+    private(set) var warmPrefixes: [String?] = []
+
+    func generate(prompt _: String) async throws -> String {
+        "done"
+    }
+
+    func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        AsyncStream { $0.finish() }
+    }
+
+    func continueToolTurn(messages _: [ToolMessage], tools _: [ToolDefinition]) async throws -> ToolTurn {
+        .text("done")
+    }
+
+    func prepareForNextTurn(promptPrefix: String?) {
+        warmPrefixes.append(promptPrefix)
     }
 }
 
@@ -87,7 +117,7 @@ struct TurnWarmingTests {
                 AsyncStream { $0.finish() }
             }
 
-            func prepareForNextTurn() {
+            func prepareForNextTurn(promptPrefix _: String?) {
                 warmCalls += 1
             }
         }
@@ -98,6 +128,23 @@ struct TurnWarmingTests {
         turn.cancel()
         _ = try? await turn.value
         #expect(provider.warmCalls == 0)
+    }
+
+    @Test("a native turn warms with no prompt prefix — only the ReAct floor has a stable head")
+    func nativeTurnWarmsWithoutPrefix() async throws {
+        let provider = NativeWarmableProvider()
+        let agent = LocalAgent(inferenceProvider: provider, tools: [], maxIterations: 3)
+        _ = try await agent.run(goal: "q", context: nil)
+        #expect(provider.warmPrefixes == [nil])
+    }
+
+    @Test("a ReAct turn warms with the prefix it sent — the persona too, when the backend doesn't carry it")
+    func reactTurnWarmsWithHead() async throws {
+        let provider = CountingWarmableProvider(replies: [])
+        let agent = LocalAgent(inferenceProvider: provider, tools: [], maxIterations: 3)
+        _ = try await agent.run(goal: "easy one", context: nil)
+        let sent = M1K3Persona.systemPrompt + "\n\n" + ReActPrompt.head(tools: [], standing: nil)
+        #expect(provider.warmPrefixes == [sent])
     }
 
     @Test("a non-conforming provider is untouched — the seam is opt-in")

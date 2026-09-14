@@ -127,8 +127,8 @@ extension SwappableInferenceProvider: TokenCounting {
 /// Forwards the end-of-turn warm signal (the AFM prewarm re-arm) — same
 /// every-façade-forwards rule as its siblings above.
 extension SwappableInferenceProvider: TurnWarmable {
-    public func prepareForNextTurn() {
-        (active as? TurnWarmable)?.prepareForNextTurn()
+    public func prepareForNextTurn(promptPrefix: String?) {
+        (active as? TurnWarmable)?.prepareForNextTurn(promptPrefix: promptPrefix)
     }
 }
 

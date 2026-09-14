@@ -54,6 +54,8 @@
 //  `runLocalTurn` unchanged, so the PCC fallback (failure before any text) reuses it.
 //  It enforces the rung's gate itself (a `PrivateCloudState` every caller passes), so the org switch
 //  and consent hold whoever calls — review 1 on #321.
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 — `turn first chunk: Nms` at .notice on every
+//  local turn (send → first streamed chunk): the user's wait, per brain, readable off an installed build.
 
 import Foundation
 import M1K3Inference
@@ -525,6 +527,16 @@ public final class ChatSession {
     /// Set by `stopResponding()`, read at the end of the drain, reset per send.
     private var stopRequested = false
 
+    /// The user's wait on every turn and every brain: send → the first streamed
+    /// chunk (reasoning included — the model has started). `.notice` because
+    /// `.info` doesn't persist, and this is the number a prewarm is judged by
+    /// (2026-09-14, the Mini prefix prewarm's A/B read it off the installed app).
+    private static func logFirstChunk(after elapsed: Duration) {
+        let parts = elapsed.components
+        let ms = Int(parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000)
+        log.notice("turn first chunk: \(ms, privacy: .public)ms")
+    }
+
     /// Stop the answer that is streaming now. Whatever arrived stays in the
     /// transcript, marked `interrupted`; nothing arrived → the empty bubble
     /// goes. Idle → no-op. Safe to call from the Send button's Stop face.
@@ -549,6 +561,8 @@ public final class ChatSession {
         history: [ChatTurn],
         assistantID: UUID
     ) async -> TurnOutcome {
+        let turnClock = ContinuousClock()
+        let turnStart = turnClock.now
         do {
             let (sources, stream) = try await responder.answerStreaming(
                 question,
@@ -601,7 +615,12 @@ public final class ChatSession {
             // jank. The settled state is always flushed by the authoritative
             // update after the loop, so a coalesced-out tail loses nothing.
             var flushGate = StreamFlushGate()
+            var firstChunkLogged = false
             for await chunk in stream {
+                if !firstChunkLogged, !chunk.isEmpty {
+                    firstChunkLogged = true
+                    Self.logFirstChunk(after: turnClock.now - turnStart)
+                }
                 splitter.feed(chunk)
                 followUpSplitter.feed(splitter.answer)
                 guard flushGate.shouldFlush(at: .now) else { continue }

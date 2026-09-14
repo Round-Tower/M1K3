@@ -16,6 +16,20 @@
 //  verbatim from LocalAgent.run() when the native tool-calling path landed
 //  (Phase 12a). Behaviour unchanged; the loop is now one of two strategies the
 //  run() dispatcher selects between.
+//
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — the initial context is
+//  stable-first (ReActPrompt): tools, the caller's standing rules, the format,
+//  THEN the turn's context and the goal. The head it sends is kept for the
+//  end-of-turn warm, so AFM can prewarm the next turn's prefix, not only its
+//  instructions. Quality gated by the live-path Mini eval, not assumed.
+//
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — a conclusion that ENDS in
+//  a call to an offered tool runs the tool (`conclusionStep`). Mini opens every reply
+//  with "CONCLUSION:" and, in 8 of 10 live tool turns, ended it with the ACTION it
+//  decided it needed; the loop concluded and stripped the call, so tool-use was 0/30
+//  on the live path. Whatever streamed before the call is now followed, a paragraph
+//  apart, by the real answer — however the loop reaches it (ReActTrailingActionTests).
+//  `observationCharLimit` caps what one observation carries into the next prompt.
 
 import Foundation
 import M1K3Inference
@@ -29,12 +43,16 @@ extension LocalAgent {
     func runReAct(
         goal: String,
         grounding: String?,
+        standing: String? = nil,
         onEvent: (@Sendable (AgentLoopEvent) -> Void)?,
         onConclusionToken: (@Sendable (String) -> Void)?
     ) async throws -> AgentResult {
         var usedTools = Set<String>()
         var executedActions = Set<String>()
-        var currentContext = buildInitialContext(goal: goal, grounding: grounding)
+        streamedLive = false
+        let prefix = promptPrefix(standing: standing)
+        warmPrefix = prefix
+        var currentContext = prefix + ReActPrompt.tail(goal: goal, context: grounding)
 
         logRunStart(goal: goal, grounding: grounding)
 
@@ -47,11 +65,15 @@ extension LocalAgent {
                 onConclusionToken: onConclusionToken
             )
 
-            if let result = markerConclusion(from: thought, iteration: iteration, usedTools: usedTools) {
+            let step = conclusionStep(
+                from: thought, iteration: iteration, usedTools: usedTools, executedActions: executedActions
+            )
+            if case let .conclude(result) = step {
                 return result
             }
+            let chosen: Action? = if case let .act(action) = step { action } else { parseAction(from: thought) }
 
-            guard let action = parseAction(from: thought) else {
+            guard let action = chosen else {
                 reasoningTrace.append(ReasoningStep(iteration: iteration, thought: thought))
                 // Small models often just answer in prose instead of emitting the
                 // CONCLUSION marker. After they've had one structured chance,
@@ -59,7 +81,9 @@ extension LocalAgent {
                 // burning the remaining iterations re-prompting.
                 if concludesOnUnstructuredThought, iteration >= 1, !thought.isEmpty {
                     M1K3Log.agentLoop.info("iteration \(iteration): implicit conclusion (prose, no markers)")
-                    return concluded(thought, usedTools, iteration + 1)
+                    let result = concluded(thought, usedTools, iteration + 1)
+                    carryToStream(result.conclusion, onConclusionToken: onConclusionToken)
+                    return result
                 }
                 // No action — keep reasoning, with a format reminder (models
                 // announce tools in prose without the marker; seen on Gemma).
@@ -87,45 +111,94 @@ extension LocalAgent {
 
             Thought: \(thought)
             Action: \(action.description)
-            Observation: \(observation)
+            Observation: \(promptObservation(observation))
             """
         }
 
         // Iteration cap reached — synthesise from the accumulated context.
         logCapReached()
         let finalConclusion = try await synthesizeConclusion(context: currentContext)
-        return concluded(finalConclusion, usedTools, maxIterations)
+        let result = concluded(finalConclusion, usedTools, maxIterations)
+        carryToStream(result.conclusion, onConclusionToken: onConclusionToken)
+        return result
     }
 
-    /// Conclude from a CONCLUSION-marker thought — unless the "conclusion" is
-    /// an action in a trench coat ("CONCLUSION: ACTION: …", seen live): when
-    /// nothing survives the scaffolding strip but the thought parses as an
-    /// action, return nil so the loop falls through to the action path.
-    private func markerConclusion(
-        from thought: String, iteration: Int, usedTools: Set<String>
-    ) -> AgentResult? {
-        guard thought.contains("CONCLUSION:") else { return nil }
+    /// A conclusion reached WITHOUT streaming (implicit prose, the cap's
+    /// synthesis) after an earlier iteration already streamed live text — a
+    /// preamble before a tool call. The caller treats "something streamed" as
+    /// "the answer streamed" and adds nothing after the loop, so the answer must
+    /// ride the stream here, a paragraph after what came before. With nothing
+    /// streamed yet this does nothing: the caller shows the conclusion itself, as
+    /// it always has.
+    private func carryToStream(_ conclusion: String, onConclusionToken: (@Sendable (String) -> Void)?) {
+        guard streamedLive, let onConclusionToken, !conclusion.isEmpty else { return }
+        onConclusionToken("\n\n" + conclusion)
+    }
+
+    /// What a thought asks the loop to do: conclude, run a tool, or neither
+    /// (no CONCLUSION marker — the ordinary action / prose path decides).
+    enum ConclusionStep {
+        case conclude(AgentResult)
+        case act(Action)
+        case none
+    }
+
+    /// Conclude from a CONCLUSION-marker thought — unless it is really a call:
+    /// - an action in a trench coat ("CONCLUSION: ACTION: …", seen live) —
+    ///   nothing survives the scaffolding strip but the thought parses as one;
+    /// - a conclusion that ENDS by calling an offered tool it hasn't already
+    ///   called — Mini's shape ("…so I'll use lookup_fact to confirm.\nACTION:
+    ///   lookup_fact(Cork)"), 8 of 10 live tool turns on 2026-09-14. The call is
+    ///   the intent; the prose before it is its thought. A call to a tool that
+    ///   wasn't offered, or one it already made, concludes on the prose as before.
+    private func conclusionStep(
+        from thought: String, iteration: Int, usedTools: Set<String>, executedActions: Set<String>
+    ) -> ConclusionStep {
+        guard thought.contains("CONCLUSION:") else { return .none }
         let conclusion = extractConclusion(from: thought)
-        if Self.stripScaffolding(conclusion).isEmpty, parseAction(from: thought) != nil {
+        if Self.stripScaffolding(conclusion).isEmpty, let action = parseAction(from: thought) {
             M1K3Log.agentLoop.notice(
                 "iteration \(iteration): conclusion was only scaffolding — treating as action"
             )
-            return nil
+            return .act(action)
+        }
+        if let action = trailingAction(in: conclusion), tools[action.toolName] != nil,
+           !executedActions.contains(action.description)
+        {
+            M1K3Log.agentLoop.notice(
+                "iteration \(iteration): conclusion ends by calling \(action.toolName, privacy: .public) — running it"
+            )
+            return .act(action)
         }
         reasoningTrace.append(ReasoningStep(iteration: iteration, thought: thought))
-        return concluded(conclusion, usedTools, iteration + 1)
+        return .conclude(concluded(conclusion, usedTools, iteration + 1))
+    }
+
+    /// The part of an observation the next prompt carries: all of it, or the
+    /// first `observationCharLimit` characters and an ellipsis. On Mini a real
+    /// web page (2,879 chars) took the next iteration to 4,209 of 4,096 tokens —
+    /// three failed calls, then a fallback that never saw the page (installed
+    /// app, 2026-09-14). The reasoning trace, which the fallback reads, keeps it whole.
+    func promptObservation(_ observation: String) -> String {
+        guard let limit = observationCharLimit, observation.count > limit else { return observation }
+        return String(observation.prefix(limit)) + "…"
+    }
+
+    /// The call a text ENDS with: its last non-empty line, when that line is an
+    /// ACTION. An ACTION mentioned mid-sentence is prose, not a call.
+    func trailingAction(in text: String) -> Action? {
+        let lines = text.components(separatedBy: "\n").map { $0.trimmingCharacters(in: Self.decoration) }
+        guard let last = lines.last(where: { !$0.isEmpty }), last.hasPrefix("ACTION:") else { return nil }
+        return parseAction(from: last)
     }
 
     // MARK: - Prompt construction
 
-    private func buildInitialContext(goal: String, grounding: String?) -> String {
-        let toolDescriptions = tools.values
-            .map { "\($0.name): \($0.description)" }
-            .sorted()
-            .joined(separator: "\n")
-
-        let groundingBlock = grounding.map { "\n\nContext:\n\($0)" } ?? ""
-
+    /// Everything the prompt holds before the turn: the persona when the
+    /// backend doesn't carry it, then the stable head (ReActPrompt). Every
+    /// iteration's prompt begins with it, and it is what the end-of-turn warm
+    /// hands a backend that can prewarm a prefix.
+    private func promptPrefix(standing: String?) -> String {
         // Only send the persona when the backend isn't already carrying it.
         // A bare completion model has nowhere else to learn who it is; AFM
         // opens every session with the same persona as standing instructions,
@@ -134,20 +207,7 @@ extension LocalAgent {
         // Not conforming to PersonaCarrying keeps the old behaviour exactly.
         let carriesPersona = (inferenceProvider as? PersonaCarrying)?.carriesStandingPersona == true
         let personaBlock = carriesPersona ? "" : "\(M1K3Persona.systemPrompt)\n\n"
-
-        return """
-        \(personaBlock)Your goal: \(goal)\(groundingBlock)
-
-        Available Tools:
-        \(toolDescriptions)
-
-        Use ReAct reasoning:
-        - Think step-by-step about what information you need.
-        - To use a tool, write: "ACTION: ToolName(argument)"
-        - When you have enough information, reply starting with "CONCLUSION:"
-
-        Begin your analysis:
-        """
+        return personaBlock + ReActPrompt.head(tools: Array(tools.values), standing: standing)
     }
 
     /// Generate one thought. With `onConclusionToken` set, the thought streams
@@ -177,17 +237,23 @@ extension LocalAgent {
             return response.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         var splitter = ConclusionStreamSplitter()
-        for await chunk in inferenceProvider.generateStreaming(prompt: prompt) {
-            let live = splitter.feed(chunk)
-            if !live.isEmpty {
-                onConclusionToken(live)
+        // A later iteration's first live text follows what an earlier one
+        // streamed (a preamble before a tool call) a paragraph apart.
+        var needsBreak = streamedLive
+        func emit(_ text: String) {
+            guard !text.isEmpty else { return }
+            if needsBreak {
+                onConclusionToken("\n\n")
+                needsBreak = false
             }
+            onConclusionToken(text)
+            streamedLive = true
+        }
+        for await chunk in inferenceProvider.generateStreaming(prompt: prompt) {
+            emit(splitter.feed(chunk))
         }
         // Release the splitter's guard window now the stream is over.
-        let guarded = splitter.flush()
-        if !guarded.isEmpty {
-            onConclusionToken(guarded)
-        }
+        emit(splitter.flush())
         return splitter.thought.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

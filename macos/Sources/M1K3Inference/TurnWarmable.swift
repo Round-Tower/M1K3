@@ -19,6 +19,10 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-08-16, Confidence 0.9, Prior: Unknown
 //
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — the signal carries
+//  the turn's stable prompt head (the ReAct floor's; nil from the native loop),
+//  so AFM can prewarm the next turn's prefix as well as its instructions.
+//
 
 import Foundation
 
@@ -26,5 +30,8 @@ import Foundation
 /// today, the AFM provider re-arming its prewarmed session. Must be cheap and
 /// non-blocking; it runs on the turn's tail.
 public protocol TurnWarmable: Sendable {
-    func prepareForNextTurn()
+    /// `promptPrefix`: how the turn's prompt began — the next turn with the same
+    /// palette begins the same way, so a backend that can prewarm a prefix
+    /// may. nil when the turn had no stable head (the native loop).
+    func prepareForNextTurn(promptPrefix: String?)
 }

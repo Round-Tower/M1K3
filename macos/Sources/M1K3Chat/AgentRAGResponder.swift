@@ -101,6 +101,16 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `replayFraming` under the history block: Mini on
 //  Golden Gate replayed its previous answer (and chips) as the next turn (launch snag list).
 //  Confidence 0.7 (verify-by-launch on a two-turn Mini chat).
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — on a ReAct turn (Mini) the RULES
+//  leave the per-turn grounding and ride the loop's stable head (`reactParts`), so AFM can
+//  prewarm them; `reactPromptPrefix(tools:)` is that head for the launch warm, pinned byte-equal
+//  to the live prompt (ReActStableFirstResponderTests). The ReAct rules say notes appear BELOW
+//  them; the native layout and its wording are untouched. Gated by the live-path Mini eval.
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — a ReAct turn can now stream a
+//  preamble before the tool call it ends with (LocalAgent's trailing-action rule), so "streamed"
+//  no longer means "answered": an empty conclusion after a streamed preamble falls back too, a
+//  paragraph on, with the fallback's snapshots turned into deltas so they read once after the
+//  preamble (ReActPreambleFallbackTests). The agent-threw fallback gets the same care.
 
 import Foundation
 import M1K3Agent
@@ -458,14 +468,30 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // Prepended here (not inside `grounding`, which stays pure/testable) so it
         // rides the variable grounding, never the cached persona prefix.
         let contextLine = PromptContext.line(now: Date(), brainName: brainNameProvider())
-        let grounding = contextLine + "\n\n" + Self.grounding(
-            chunks: chunks, memories: memories, toolNames: Set(tools.map(\.name)),
-            history: history,
-            historyBudget: historyBudgetProvider().reservingImages(images.count),
-            style: style,
-            ambient: browserContextProvider?()?.render(),
-            todos: todoContextProvider?()
-        )
+        let toolNames = Set(tools.map(\.name))
+        let historyBudget = historyBudgetProvider().reservingImages(images.count)
+        let ambient = browserContextProvider?()?.render()
+        let todos = todoContextProvider?()
+        // The ReAct floor takes its RULES apart from the turn and puts them in its
+        // stable head (the prefix AFM prewarms); the native loop keeps them where
+        // they have always been, after the grounding.
+        let grounding: String
+        let standing: String?
+        switch style {
+        case .react:
+            let parts = Self.reactParts(
+                chunks: chunks, memories: memories, toolNames: toolNames, history: history,
+                historyBudget: historyBudget, ambient: ambient, todos: todos
+            )
+            grounding = contextLine + "\n\n" + parts.context
+            standing = parts.standing
+        case .native:
+            grounding = contextLine + "\n\n" + Self.grounding(
+                chunks: chunks, memories: memories, toolNames: toolNames, history: history,
+                historyBudget: historyBudget, style: style, ambient: ambient, todos: todos
+            )
+            standing = nil
+        }
         Self.logTurnStart(chunks: chunks, tools: tools, grounding: grounding)
         // Fresh agent per turn — its reasoning trace must not bleed across
         // turns, and the tool list reflects current settings. The iteration cap is
@@ -476,7 +502,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             inferenceProvider: provider,
             tools: tools,
             maxIterations: iterations,
-            concludesOnUnstructuredThought: true
+            concludesOnUnstructuredThought: true,
+            observationCharLimit: style == .react ? Self.reactObservationCharLimit : nil
         )
         // Per-turn reasoning budget: casual asks skip the think phase
         // entirely (instant answers); grounded/analytic asks keep it.
@@ -499,6 +526,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 goal: question,
                 images: images,
                 context: grounding,
+                standing: standing,
                 thinkingEnabled: thinkingEnabled,
                 onEvent: { event in
                     if case .actionStarted = event { toolUsed.withLock { $0 = true } }
@@ -533,10 +561,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // ReAct path keeps its reliable CONCLUSION:. Both still use the
             // empty-conclusion fallback for the no-tool case.
             let synthesiseOverEvidence = style == .native && !result.toolsUsed.isEmpty
-            if synthesiseOverEvidence || (!streamed && conclusion.isEmpty) {
+            // A ReAct turn can stream a preamble ("Let me check.") before the tool
+            // call it ends with, then conclude empty: something streamed, but not
+            // the answer. It falls back like a silent turn, after the preamble.
+            let danglingPreamble = style == .react && streamed && conclusion.isEmpty
+            if synthesiseOverEvidence || (!streamed && conclusion.isEmpty) || danglingPreamble {
                 await fallBack(
                     question: question, chunks: chunks, contextLine: contextLine,
-                    result: result, synthesising: synthesiseOverEvidence, into: continuation
+                    result: result, synthesising: synthesiseOverEvidence,
+                    afterPreamble: danglingPreamble, into: continuation
                 )
             } else {
                 var tail = streamed ? "" : conclusion
@@ -555,7 +588,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             continuation.finish()
         } catch {
             Self.log.error("agent threw — falling back to plain RAG: \(error, privacy: .public)")
-            await streamFallback(question: question, chunks: chunks, contextLine: contextLine, into: continuation)
+            await streamFallback(
+                question: question, chunks: chunks, contextLine: contextLine,
+                afterPreamble: style == .react && emittedLive.withLock { $0 }, into: continuation
+            )
             continuation.finish()
         }
     }
@@ -647,6 +683,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         contextLine: String,
         result: AgentResult,
         synthesising: Bool = false,
+        afterPreamble: Bool = false,
         into continuation: AsyncStream<String>.Continuation
     ) async {
         let steps = result.reasoningTrace.count
@@ -659,7 +696,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         await streamFallback(
             question: question, chunks: chunks, contextLine: contextLine,
-            gathered: result.reasoningTrace, into: continuation
+            gathered: result.reasoningTrace, afterPreamble: afterPreamble, into: continuation
         )
         let provenance = Self.webSourcesBlock(for: result) + Self.factSourcesBlock(for: result)
         if !provenance.isEmpty {
@@ -670,22 +707,39 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// Grounded generation — the safety net when the agent loop fails. Uses
     /// the tool observations the loop already gathered when there are any
     /// (don't throw away a good web search because the model fumbled the
-    /// CONCLUSION format), else the plain RAG prompt. Only ever runs when
-    /// nothing has been yielded, so the raw provider chunks (cumulative or
-    /// delta) fold correctly downstream.
+    /// CONCLUSION format), else the plain RAG prompt.
+    ///
+    /// With nothing yielded yet, the raw provider chunks (cumulative or delta)
+    /// fold correctly downstream and pass through untouched. `afterPreamble`: a
+    /// ReAct preamble already streamed, so the answer starts a paragraph on and
+    /// every chunk goes out as a DELTA — the consumer's fold compares against
+    /// text that now includes the preamble, and would read each cumulative
+    /// snapshot (Apple Foundation Models streams those) as new text.
     private func streamFallback(
         question: String,
         chunks: [ChunkHit],
         contextLine: String,
         gathered: [ReasoningStep] = [],
+        afterPreamble: Bool = false,
         into continuation: AsyncStream<String>.Continuation
     ) async {
         let body = Self.fallbackPrompt(question: question, chunks: chunks, gathered: gathered)
         // Carry the same per-turn context (precise date + active brain) the agent
         // path got, so a "what day is it?" that collapses to the fallback still answers.
         let prompt = contextLine.isEmpty ? body : contextLine + "\n\n" + body
+        guard afterPreamble else {
+            for await chunk in provider.generateStreaming(prompt: prompt) {
+                continuation.yield(chunk)
+            }
+            return
+        }
+        var sent = ""
         for await chunk in provider.generateStreaming(prompt: prompt) {
-            continuation.yield(chunk)
+            let delta = StreamFold.delta(current: sent, chunk: chunk)
+            guard !delta.isEmpty else { continue }
+            if sent.isEmpty { continuation.yield("\n\n") }
+            sent += delta
+            continuation.yield(delta)
         }
     }
 
@@ -743,6 +797,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             + "words — its title, what it says, what it offers — not from what you already "
             + "believe about it."
 
+    /// The most of one tool result a ReAct iteration carries forward. The ReAct
+    /// floor is Mini: its ~3.2k-token fixed prompt (persona, tools, rules) left a
+    /// 2,879-char web page no room — 4,209 of 4,096 tokens on the installed app,
+    /// 2026-09-14. 1,200 chars (~300 tokens) keeps the iteration and its answer
+    /// inside the window; the fallback still reads the whole observation.
+    static let reactObservationCharLimit = 1200
+
     /// Which loop the prompt is feeding. The ReAct floor NEEDS its format
     /// scaffold (CONCLUSION:/call budget); the native loop speaks structured
     /// calls, and feeding it the ReAct scaffold makes reasoning models burn
@@ -758,6 +819,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// tuned for small models. The tool-routing lines match what's actually
     /// callable — never advertise a disabled web_search (and never imply
     /// search_knowledge can reach the live world; the ⌘R weather bug).
+    ///
+    /// This is the native loop's layout verbatim. The ReAct floor gets the same
+    /// words through `reactParts`, with the rules moved into its stable head.
     static func grounding(
         chunks: [ChunkHit], memories: [ChunkHit] = [], toolNames: Set<String>,
         history: [ChatTurn] = [], historyBudget: HistoryWindow.Budget = .default,
@@ -770,6 +834,32 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         )
         guard let replay = HistoryWindow.render(history, budget: historyBudget) else { return body }
         return "\(replay)\n\(Self.replayFraming)\n\n\(body)"
+    }
+
+    /// The ReAct turn's grounding, split: `context` is what this turn brings
+    /// (history, knowledge, memories, todos, what's open beside the chat) and
+    /// `standing` is the RULES, which depend only on the palette and ride the
+    /// loop's stable head. `context + "\n\n" + standing` is `grounding(style:
+    /// .react)` byte for byte — the same words, only placed differently.
+    static func reactParts(
+        chunks: [ChunkHit], memories: [ChunkHit] = [], toolNames: Set<String>,
+        history: [ChatTurn] = [], historyBudget: HistoryWindow.Budget = .default,
+        now: Date = Date(), ambient: String? = nil, todos: String? = nil
+    ) -> (context: String, standing: String) {
+        let sections = groundingSections(
+            chunks: chunks, memories: memories, toolNames: toolNames, now: now, ambient: ambient, todos: todos
+        ).joined(separator: "\n\n")
+        let context = HistoryWindow.render(history, budget: historyBudget)
+            .map { "\($0)\n\(Self.replayFraming)\n\n\(sections)" } ?? sections
+        return (context, rules(toolNames: toolNames, style: .react))
+    }
+
+    /// How a ReAct turn over this palette begins — the stable head the Mini
+    /// launch warm hands `prewarm(promptPrefix:)`. For a backend that carries
+    /// the persona (AFM); built by the same function the loop uses, so a live
+    /// turn over the same palette begins with exactly these bytes.
+    public static func reactPromptPrefix(tools: [any AgentTool]) -> String {
+        ReActPrompt.head(tools: tools, standing: rules(toolNames: Set(tools.map(\.name)), style: .react))
     }
 
     /// Sits between the replay block and the grounding body. With Mini's replay
@@ -901,11 +991,28 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// yet"). Injected notes had been suppressing the search, hence "even when
     /// notes were injected above". Residual: "How about OpenAI's Astra model?"
     /// stays 0/4 — Lil is sure it knows, and no wording moved it.
-    static let currentWorldRouting =
-        "- For current or external information — weather, news, prices, results, anything "
+    static let currentWorldRouting = currentWorldRouting(notes: .above)
+
+    /// Where the turn's notes sit relative to the rules: after them in the
+    /// native layout, before them in the ReAct floor's stable-first one.
+    enum NotesPlacement {
+        case above
+        case below
+    }
+
+    /// The web route, worded for where the notes are (the native wording is the
+    /// byte-replayed one; the ReAct floor's only swaps "were injected above" for
+    /// "appear below", because there the rules come first).
+    static func currentWorldRouting(notes: NotesPlacement) -> String {
+        let notesClause = switch notes {
+        case .above: "even when notes were injected above"
+        case .below: "even when notes appear below"
+        }
+        return "- For current or external information — weather, news, prices, results, anything "
             + "happening now or this year, the newest or latest of anything, or a name you don't "
-            + "recognise — use web_search, even when notes were injected above: your notes hold the "
+            + "recognise — use web_search, \(notesClause): your notes hold the "
             + "past, not what's on now. Before saying something doesn't exist or hasn't happened, search."
+    }
 
     /// Attached ONCE whenever a page tool is offered (a duplication pin asserts
     /// on the assembled prompt): describe only what actually came back.
@@ -947,17 +1054,28 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         chunks: [ChunkHit], memories: [ChunkHit], toolNames: Set<String>, style: PromptStyle,
         now: Date, ambient: String? = nil, todos: String? = nil
     ) -> String {
+        let sections = groundingSections(
+            chunks: chunks, memories: memories, toolNames: toolNames, now: now, ambient: ambient, todos: todos
+        )
+        return (sections + [rules(toolNames: toolNames, style: style)]).joined(separator: "\n\n")
+    }
+
+    /// The RULES block for a palette — offered-only routing lines, the carve,
+    /// the loop-specific format lines. Depends on nothing but the palette and
+    /// the style, which is what lets the ReAct floor prewarm it.
+    static func rules(toolNames: Set<String>, style: PromptStyle) -> String {
         let hasWebSearch = toolNames.contains("web_search")
         // Every routing line names only tools actually offered THIS turn —
         // the self-query gate withholds search_knowledge, and a rule that
         // advertises an uncallable tool invites a doomed dispatch attempt.
         let hasSearchKnowledge = toolNames.contains("search_knowledge")
+        let webRoute = Self.currentWorldRouting(notes: style == .react ? .below : .above)
         var routing = switch (hasWebSearch, hasSearchKnowledge) {
         case (true, true):
-            Self.currentWorldRouting + " search_knowledge only "
+            webRoute + " search_knowledge only "
                 + "finds documents already stored on \(HostPlatform.thisDevice)."
         case (true, false):
-            Self.currentWorldRouting
+            webRoute
         case (false, true):
             "- search_knowledge only finds documents already stored on "
                 + "\(HostPlatform.thisDevice). You have no web access — if the stored knowledge can't "
@@ -983,7 +1101,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let carveOut = toolNames.contains("propose_script")
             ? Self.generativeCarveOutWithScripts
             : Self.generativeCarveOut
-        let rules = switch style {
+        return switch style {
         case .react:
             """
             RULES:
@@ -1025,6 +1143,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             \(routing)
             """
         }
+    }
+
+    /// The turn's own sections, in order: the knowledge head, what M1K3 knows
+    /// about the user, open todos, what's open beside the chat. nil sections
+    /// are dropped, so an absent block is byte-identical to no block.
+    private static func groundingSections(
+        chunks: [ChunkHit], memories: [ChunkHit], toolNames: Set<String>,
+        now: Date, ambient: String?, todos: String?
+    ) -> [String] {
         let head: String
         if chunks.isEmpty {
             head = toolNames.contains("search_knowledge")
@@ -1052,8 +1179,6 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 + "question; use only what genuinely answers it, and ignore the "
                 + "rest rather than working it into the answer):\n\(knowledge)"
         }
-        return [head, memoryBlock(memories, now: now), todos, ambient, rules]
-            .compactMap { $0 }
-            .joined(separator: "\n\n")
+        return [head, memoryBlock(memories, now: now), todos, ambient].compactMap { $0 }
     }
 }

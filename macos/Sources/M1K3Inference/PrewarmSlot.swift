@@ -17,6 +17,11 @@
 //  PrewarmSlotTests; the AFM wiring is verify-by-launch via the `prewarmed=`
 //  log field). Prior: Unknown.
 //
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 — `take(matching:accepting:)`:
+//  a caller the value wasn't built for passes, and the value waits for the one it
+//  was. Mini's conversation titler had been taking the session prewarmed for the
+//  chat's next turn (read off the installed app's log), so turn 2 always ran cold.
+//
 
 import Foundation
 
@@ -40,11 +45,24 @@ public final class PrewarmSlot<Value>: @unchecked Sendable {
     /// Take the value if the key still matches. ALWAYS empties the slot — a
     /// matched value is consumed, a mismatched one is stale and dropped.
     public func take(matching key: String) -> Value? {
+        take(matching: key, accepting: { _ in true })
+    }
+
+    /// Take the value if the key still matches AND this caller is one it was
+    /// built for. A declined value stays armed for its intended caller; a stale
+    /// key still drops it, whoever asks. `accept` runs under the slot's lock
+    /// (NSLock is not reentrant): it must not touch this slot.
+    public func take(matching key: String, accepting accept: (Value) -> Bool) -> Value? {
         lock.lock()
         defer { lock.unlock() }
         guard let stored else { return nil }
+        guard stored.key == key else {
+            self.stored = nil
+            return nil
+        }
+        guard accept(stored.value) else { return nil }
         self.stored = nil
-        return stored.key == key ? stored.value : nil
+        return stored.value
     }
 
     /// Whether a value is waiting (diagnostics/tests only — armed now can be

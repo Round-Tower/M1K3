@@ -23,9 +23,20 @@
 //      M1K3_AFM_EVAL_KINDS=security,open-chat M1K3_AFM_EVAL_OUT=/path/run.json \
 //      swift test --filter MiniLiveEvalTests
 //
+//  `M1K3_AFM_EVAL_LIVE=1` sends EVERY kind through the live responder, and admits
+//  `tool-use` (the stub tools record what the loop called). That is the arm a
+//  change to the ReAct prompt itself must pass: the bare arm never sees it.
+//  Each line also prints the first streamed piece's time — what the user waits
+//  for — beside the whole turn's.
+//
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 (the fixtures, scorer
 //  and document are the harness's own; the live path differs from the app's only
 //  in the embedder, which an empty store never consults for a hit). Prior: Unknown
+//
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — the live arm for every
+//  kind (M1K3_AFM_EVAL_LIVE=1) + live tool-use + first-token timing, for the
+//  stable-first ReAct prompt's gate. The app harness has only ever scored Mini's
+//  tools through Apple's own tool loop or the bare agent, never the responder.
 //
 
 import Foundation
@@ -34,15 +45,29 @@ import M1K3Agent
 @testable import M1K3Eval
 import M1K3Inference
 import M1K3Knowledge
+import Synchronization
 import Testing
 
 private let evalEnvironment = ProcessInfo.processInfo.environment
 
-/// A stand-in tool: records nothing, returns the fixture palette's canned
-/// observation — the harness's `StubTool`, rebuilt here because that one is
-/// private to the app target.
+/// The names of the tools one live turn called, in order.
+private final class ToolRecorder: Sendable {
+    private let names = Mutex<[String]>([])
+    func record(_ name: String) {
+        names.withLock { $0.append(name) }
+    }
+
+    var captured: [String] {
+        names.withLock { $0 }
+    }
+}
+
+/// A stand-in tool: returns the fixture palette's canned observation and, when
+/// given a recorder, notes that it ran — the harness's `StubTool`, rebuilt here
+/// because that one is private to the app target.
 private struct StubTool: AgentTool {
     let spec: ChatEvalStubSpec
+    var recorder: ToolRecorder?
     var name: String {
         spec.name
     }
@@ -56,6 +81,7 @@ private struct StubTool: AgentTool {
     }
 
     func execute(input: [String: String]) async throws -> ToolResult {
+        recorder?.record(spec.name)
         let value = spec.parameter.flatMap { input[$0.name] } ?? input.values.first ?? ""
         return ToolResult(output: spec.output(for: value, hard: false))
     }
@@ -65,6 +91,11 @@ private struct StubTool: AgentTool {
 struct MiniLiveEvalTests {
     private static var fullPersona: Bool {
         evalEnvironment["M1K3_AFM_EVAL_PERSONA"] == "full"
+    }
+
+    /// Every kind through the live responder (see the header).
+    private static var liveAll: Bool {
+        evalEnvironment["M1K3_AFM_EVAL_LIVE"] == "1"
     }
 
     private static var repeats: Int {
@@ -87,13 +118,16 @@ struct MiniLiveEvalTests {
         Set(kindNames.compactMap(TaskKind.init(rawValue:)))
     }
 
-    /// The kinds this runner mirrors the harness for. tool-use and grounded-Q
-    /// need the harness's tool recorders and a seeded store; asking for them
-    /// here must fail, not silently run them as bare generations.
-    private static let supportedKinds: Set<TaskKind> = [
-        .openChat, .security, .refusal, .reasoning, .codeGen, .worldKnowledge,
-        .humour, .interview, .instructionFollowing, .document, .sycophancy,
-    ]
+    /// The kinds this runner mirrors the harness for. grounded-Q needs a seeded
+    /// store, and tool-use a recorder only the live arm wires; asking for either
+    /// where it can't run must fail, not silently run it as a bare generation.
+    private static var supportedKinds: Set<TaskKind> {
+        let bare: Set<TaskKind> = [
+            .openChat, .security, .refusal, .reasoning, .codeGen, .worldKnowledge,
+            .humour, .interview, .instructionFollowing, .document, .sycophancy,
+        ]
+        return liveAll ? bare.union([.toolUse]) : bare
+    }
 
     @Test("Mini through the eval fixtures, one arm per run")
     func run() async throws {
@@ -107,30 +141,38 @@ struct MiniLiveEvalTests {
             ? AppleFoundationModelsProvider(instructions: { M1K3Persona.systemPrompt })
             : AppleFoundationModelsProvider()
         try #require(provider.isAvailable, "Apple Intelligence is not available to this process")
-        let tools: [any AgentTool] = ChatEvalStubPalette.specs.map { StubTool(spec: $0) }
         var scores: [ChatEvalScore] = []
+        var firstPieces: [TaskKind: [Int]] = [:]
         var paced = false
         for trial in 0 ..< Self.repeats {
             for fixture in ChatEvalFixtures.all where Self.kinds.contains(fixture.kind) {
                 // Pace BETWEEN turns only: no wait before the first or after the last.
                 if paced { try await Task.sleep(for: .milliseconds(Self.paceMS)) }
                 paced = true
-                let score = await Self.runFixture(fixture, provider: provider, tools: tools)
+                let (score, firstMS) = await Self.runFixture(fixture, provider: provider)
                 scores.append(score.withRepeatIndex(trial))
-                print("[trial \(trial + 1)/\(Self.repeats)] " + score.rendered)
+                if let firstMS { firstPieces[fixture.kind, default: []].append(firstMS) }
+                let first = firstMS.map { " · first \($0)ms" } ?? ""
+                print("[trial \(trial + 1)/\(Self.repeats)] " + score.rendered + first)
             }
         }
         let run = ChatEvalReport.BrainRun(brainID: "mini", scores: scores)
         print(ChatEvalReport.matrix([run]))
+        for (kind, times) in firstPieces.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
+            let sorted = times.sorted()
+            print("first piece \(kind.rawValue): median \(sorted[sorted.count / 2])ms n=\(sorted.count) all=\(sorted)")
+        }
         if let out = evalEnvironment["M1K3_AFM_EVAL_OUT"] {
             let document = ChatEvalDocument(provenance: Self.provenance(), runs: [run])
             try ChatEvalReport.json(document).write(to: URL(fileURLWithPath: out))
         }
     }
 
+    /// One fixture, scored, plus the first streamed piece's time on the live arm
+    /// (nil on the bare arm, which does not stream).
     private static func runFixture(
-        _ fixture: ChatEvalFixture, provider: AppleFoundationModelsProvider, tools: [any AgentTool]
-    ) async -> ChatEvalScore {
+        _ fixture: ChatEvalFixture, provider: AppleFoundationModelsProvider
+    ) async -> (ChatEvalScore, Int?) {
         let clock = ContinuousClock()
         let start = clock.now
         func elapsed() -> Int {
@@ -139,31 +181,40 @@ struct MiniLiveEvalTests {
         }
         do {
             let raw: String
-            if fixture.kind == .openChat {
+            var toolCalls: [String] = []
+            var firstMS: Int?
+            if fixture.kind == .openChat || liveAll {
+                let recorder = ToolRecorder()
+                let tools: [any AgentTool] = ChatEvalStubPalette.specs.map {
+                    StubTool(spec: $0, recorder: recorder)
+                }
                 let responder = try AgentRAGResponder(
                     store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
                     tools: tools, maxIterations: 3
                 )
                 var text = ""
                 for await piece in try await responder.answerStreaming(fixture.prompt).stream {
+                    if firstMS == nil, !piece.isEmpty { firstMS = elapsed() }
                     text += piece
                 }
-                raw = text
+                toolCalls = recorder.captured
+                // A tool turn that concluded with nothing still made its call — the
+                // harness's rendering, so the scorer reads the same shape.
+                raw = text.isEmpty && !toolCalls.isEmpty ? "tools used: \(toolCalls.joined(separator: ","))" : text
             } else {
                 raw = try await provider.generate(prompt: fixture.prompt)
             }
-            return ChatEvalScorer.score(
-                fixture: fixture, observation: EvalObservation(rawText: raw, latencyMS: elapsed()),
-                latencyCeilingMS: 120_000
-            )
+            let observation = EvalObservation(rawText: raw, toolCalls: toolCalls, latencyMS: elapsed())
+            return (ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: 120_000), firstMS)
         } catch {
-            return ChatEvalScore(
+            let score = ChatEvalScore(
                 fixtureID: fixture.id, kind: fixture.kind,
                 checks: [EvalCheck(
                     name: "ran", outcome: .fail, detail: String(describing: error).prefix(70).description
                 )],
                 latencyMS: elapsed()
             )
+            return (score, nil)
         }
     }
 
@@ -178,9 +229,10 @@ struct MiniLiveEvalTests {
             mlxSwiftLMRevision: nil,
             powerMode: evalEnvironment["M1K3_AFM_EVAL_POWERMODE"].flatMap(Int.init),
             powerSource: evalEnvironment["M1K3_AFM_EVAL_POWER_SOURCE"],
-            livePath: kinds.contains(.openChat),
+            livePath: liveAll || kinds.contains(.openChat),
             repeats: repeats,
             notes: (fullPersona ? "arm: full persona" : "arm: trimmed persona (miniSystemPrompt)")
+                + (liveAll ? " · every kind on the live responder" : "")
                 + " · plain test process (swift test), not the app bundle"
                 + (evalEnvironment["M1K3_AFM_EVAL_NOTES"].map { " · " + $0 } ?? "")
         )

@@ -34,6 +34,18 @@
 //  floor re-sent the full persona in the body: every Mini agent turn overflowed
 //  4096 (09-13 logs: 1409 + 3905 = 5314 tokens, four failed calls, RAG fallback).
 //
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — `prewarm(promptPrefix:)`.
+//  The ReAct floor now opens every prompt with a stable head (ReActPrompt: tools,
+//  rules, format), and the prewarm processes that head too, not only the
+//  instructions: the launch warm computes it from the palette, the end-of-turn warm
+//  takes the head the turn just sent. `afm turn` logs `warm=prefix-hit|held|…`;
+//  a prefix-warm session serves only a prompt that begins with its prefix, so the
+//  conversation titler no longer takes the session prewarmed for the next turn, and
+//  once such a call finishes the waiting session is armed again (its run spoiled it).
+//  Plain-process probe (AC): turn-1 first token 6.7 s instructions-only → 2.1 s.
+//  Off with `-afm.prefixPrewarm NO` (AFMPrefixPrewarm). The per-turn `afm budget`
+//  token count moved to failures only: counting beside a turn spoiled its prewarm.
+//
 //  Note this provider builds a FRESH `LanguageModelSession(instructions:)` per
 //  call, so anything in the persona is re-sent every turn — the reason persona
 //  length is a real cost here and free on the KV-cached MLX tiers.
@@ -91,7 +103,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     ///
     /// Window is 4096 tokens. Since macOS 26.4 we can log exact token counts
     /// via `SystemLanguageModel.tokenCount(for:)`.
-    private func logTurnStart(promptChars: Int, streaming: Bool, prewarmed: Bool) {
+    private func logTurnStart(promptChars: Int, streaming: Bool, warmth: AFMPrefixPrewarm.Warmth) {
         let instructionChars = instructions().count
         Self.log.notice(
             """
@@ -99,15 +111,32 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
             instructions=\(instructionChars, privacy: .public) \
             total=\(promptChars + instructionChars, privacy: .public) chars, \
             streaming=\(streaming, privacy: .public), \
-            prewarmed=\(prewarmed, privacy: .public)
+            prewarmed=\(warmth != .cold, privacy: .public) \
+            warm=\(warmth.rawValue, privacy: .public)
             """
         )
     }
 
+    /// The model's own first token, separate from the chat's `turn first chunk`
+    /// (the ReAct floor streams only after its CONCLUSION: marker, so the chat
+    /// line also counts the words before it). Read beside `warm=`, this is how
+    /// much a prewarm actually bought.
+    private static func logFirstToken(after elapsed: Duration, warmth: AFMPrefixPrewarm.Warmth) {
+        let parts = elapsed.components
+        let ms = Int(parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000)
+        log.notice("afm first token: \(ms, privacy: .public)ms warm=\(warmth.rawValue, privacy: .public)")
+    }
+
     /// Exact token budget line — the [SPIKE] data the HistoryBudgetPolicy
     /// comments asked for. Logs instructions and prompt token counts via the
-    /// macOS 26.4+ API so the real budget utilisation is visible in the
-    /// unified log on every Mini turn.
+    /// macOS 26.4+ API.
+    ///
+    /// On a FAILED generation only (2026-09-14). It ran on every turn, fired
+    /// beside the generation, and a `tokenCount` on the daemon mid-turn costs the
+    /// turn its prewarm: plain-process probe, AC, n=3 — prefix-warm first token
+    /// 2.0 s alone, 5.8 s with the two counts alongside (instructions-only 4.5 s).
+    /// A failure is when the number matters (an overflow's `total=N/4096`); on
+    /// success the `afm turn` char counts carry the size.
     private func logTokenBudget(instructionText: String, promptText: String) {
         if #available(macOS 26.4, iOS 26.4, visionOS 26.4, *) {
             Task.detached(priority: .utility) {
@@ -132,33 +161,82 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
 
     // MARK: - Prewarm
 
+    /// A prewarmed session and the prompt prefix it processed (nil: the
+    /// instructions only).
+    private struct WarmSession {
+        let session: LanguageModelSession
+        let prefix: String?
+    }
+
     /// Single-slot prewarmed session, keyed by the exact instructions text that
     /// built it (a persona that changed since prewarm must never be served
     /// stale — the slot drops mismatches by construction). A reference held by
     /// this struct, so provider copies share one slot.
-    private let prewarmSlot = PrewarmSlot<LanguageModelSession>()
+    private let prewarmSlot = PrewarmSlot<WarmSession>()
 
     /// Build a session ahead of need and ask the framework to load assets +
     /// process the instructions now, so the NEXT turn doesn't pay cold-start.
     /// Mini opens a fresh `LanguageModelSession` per call (no KV prefix reuse,
     /// unlike the MLX tiers — the 2026-08-10 finding behind Mini's 37s live
     /// median), which makes this the one warm-up the tier can have.
-    public func prewarm() {
+    ///
+    /// `promptPrefix`: how the next prompt will begin (the ReAct floor's stable
+    /// head). The framework processes it too, so a turn that begins with it
+    /// skips that prefill; a turn that doesn't still gets warm instructions.
+    /// Ignored when `prewarmsPromptPrefix` is off.
+    public func prewarm(promptPrefix: String? = nil) {
         let text = instructions()
+        let prefix = prewarmsPromptPrefix ? promptPrefix.flatMap { $0.isEmpty ? nil : $0 } : nil
         let session = LanguageModelSession(instructions: text)
-        session.prewarm()
-        prewarmSlot.store(session, key: text)
-        Self.log.notice("afm prewarm: armed (\(text.count, privacy: .public) instruction chars)")
+        if let prefix {
+            session.prewarm(promptPrefix: Prompt(prefix))
+        } else {
+            session.prewarm()
+        }
+        prewarmSlot.store(WarmSession(session: session, prefix: prefix), key: text)
+        Self.log.notice(
+            """
+            afm prewarm: armed (\(text.count, privacy: .public) instruction chars, \
+            \(prefix?.count ?? 0, privacy: .public) prefix chars)
+            """
+        )
     }
 
     /// The session for this generation: the prewarmed one when its instructions
-    /// still match, else a cold one. Optionally re-arms afterwards (see
-    /// `prewarmsBetweenTurns`).
-    private func takeSession(instructions text: String) -> (session: LanguageModelSession, prewarmed: Bool) {
-        if let warm = prewarmSlot.take(matching: text) {
-            return (warm, true)
+    /// still match and it may serve this prompt (`AFMPrefixPrewarm.accepts` —
+    /// a prefix-warm session waits for the turn it was built for), else a fresh
+    /// one. Optionally re-arms afterwards (see `prewarmsBetweenTurns`).
+    private func takeSession(
+        instructions text: String, prompt: String
+    ) -> (session: LanguageModelSession, warmth: AFMPrefixPrewarm.Warmth, heldPrefix: String?) {
+        var heldPrefix: String?
+        if let warm = prewarmSlot.take(matching: text, accepting: { waiting in
+            let fits = AFMPrefixPrewarm.accepts(prefix: waiting.prefix, prompt: prompt)
+            if !fits { heldPrefix = waiting.prefix }
+            return fits
+        }) {
+            return (warm.session, .taken(prefix: warm.prefix), nil)
         }
-        return (LanguageModelSession(instructions: text), false)
+        return (LanguageModelSession(instructions: text), heldPrefix == nil ? .cold : .held, heldPrefix)
+    }
+
+    /// A call that ran beside a waiting prefix-warm session (the conversation
+    /// titler, between turn 1 and turn 2) leaves that session's prewarm spoiled —
+    /// on the installed app turn 2 read `prefix-hit` and still took 7.2 s. Once
+    /// the foreign call is done, arm it again.
+    ///
+    /// Non-streaming calls only, and never after a cancellation (review of
+    /// 2b678b98): a chat turn's own ReAct iterations stream, and one whose head
+    /// no longer matches the waiting session (the palette changed) must not
+    /// fire a prewarm between its own rapid calls — the daemon rate-collapse
+    /// shape `prepareForNextTurn`'s once-per-turn rule exists to prevent. The
+    /// titler, the call this is for, is a plain `generate`. (The ReAct floor's
+    /// cap-reached synthesis is a plain `generate` too, but it is a turn's last
+    /// call, by which time iteration 0 has taken a matching session — at worst
+    /// one extra prewarm just before the turn's own re-arm.)
+    private func rearmAfterHeld(_ heldPrefix: String?) {
+        guard let heldPrefix, !Task.isCancelled else { return }
+        rearmIfWanted(promptPrefix: heldPrefix)
     }
 
     /// Re-arm for the next turn once this one has settled. Gated on the opt-in
@@ -175,9 +253,9 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// EVERY opted-in turn — inline it would delay turn completion (spinner,
     /// stream close) by whatever the daemon feels like. Detaching here fixes
     /// all forwarding paths at once instead of asking each caller to remember.
-    private func rearmIfWanted() {
+    private func rearmIfWanted(promptPrefix: String?) {
         guard prewarmsBetweenTurns else { return }
-        Task.detached(priority: .utility) { self.prewarm() }
+        Task.detached(priority: .utility) { self.prewarm(promptPrefix: promptPrefix) }
     }
 
     /// A failure, classified. The class is what makes this countable across a
@@ -220,6 +298,10 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// distiller, availability probes) must not generate idle daemon work.
     private let prewarmsBetweenTurns: Bool
 
+    /// Whether a prewarm also processes the prompt prefix it's handed. On by
+    /// default; the app passes `AFMPrefixPrewarm.isEnabled(in:)`.
+    private let prewarmsPromptPrefix: Bool
+
     public init(
         // Mini keeps the COMPACT core — no voiceExemplars. TRIED AND MEASURED
         // 2026-08-03, not assumed: the standing reason for withholding them was
@@ -253,11 +335,13 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         // conversation replay depth (+41% measured).
         instructions: @escaping @Sendable () -> String = { M1K3Persona.miniSystemPrompt },
         nativeToolCalling: Bool = false,
-        prewarmsBetweenTurns: Bool = false
+        prewarmsBetweenTurns: Bool = false,
+        prewarmsPromptPrefix: Bool = true
     ) {
         self.instructions = instructions
         self.nativeToolCalling = nativeToolCalling
         self.prewarmsBetweenTurns = prewarmsBetweenTurns
+        self.prewarmsPromptPrefix = prewarmsPromptPrefix
     }
 
     public var isAvailable: Bool {
@@ -295,9 +379,9 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
 
     public func generate(prompt: String) async throws -> String {
         let instrText = instructions()
-        let (session, prewarmed) = takeSession(instructions: instrText)
-        logTurnStart(promptChars: prompt.count, streaming: false, prewarmed: prewarmed)
-        logTokenBudget(instructionText: instrText, promptText: prompt)
+        let (session, warmth, heldPrefix) = takeSession(instructions: instrText, prompt: prompt)
+        logTurnStart(promptChars: prompt.count, streaming: false, warmth: warmth)
+        defer { rearmAfterHeld(heldPrefix) }
         do {
             let response = try await session.respond(to: prompt)
             return response.content
@@ -313,6 +397,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
             // where the pattern shows up across a day, and the classification is
             // the whole point (overflow and guardrail need opposite fixes).
             logFailure(error, streaming: false)
+            logTokenBudget(instructionText: instrText, promptText: prompt)
             throw error
         }
     }
@@ -320,13 +405,19 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     public func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
             let instrText = instructions()
-            let (session, prewarmed) = takeSession(instructions: instrText)
-            logTurnStart(promptChars: prompt.count, streaming: true, prewarmed: prewarmed)
-            logTokenBudget(instructionText: instrText, promptText: prompt)
+            let (session, warmth, _) = takeSession(instructions: instrText, prompt: prompt)
+            logTurnStart(promptChars: prompt.count, streaming: true, warmth: warmth)
             let task = Task { [self] in
                 do {
+                    let clock = ContinuousClock()
+                    let start = clock.now
+                    var firstLogged = false
                     let stream = session.streamResponse(to: prompt)
                     for try await snapshot in stream {
+                        if !firstLogged, !snapshot.content.isEmpty {
+                            firstLogged = true
+                            Self.logFirstToken(after: clock.now - start, warmth: warmth)
+                        }
                         continuation.yield(snapshot.content)
                     }
                     continuation.finish()
@@ -343,6 +434,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
                     // generation. That cascade is the #102 confabulation, and it
                     // began here, unlogged.
                     logFailure(error, streaming: true)
+                    logTokenBudget(instructionText: instrText, promptText: prompt)
                     continuation.finish()
                 }
             }
@@ -355,11 +447,12 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
 
 // MARK: - Turn warming
 
-/// The agent turn concluded — re-arm the prewarmed session for the next one
-/// (no-op unless `prewarmsBetweenTurns` opted in).
+/// The agent turn concluded — re-arm the prewarmed session for the next one,
+/// on the head this turn began with (no-op unless `prewarmsBetweenTurns`
+/// opted in).
 extension AppleFoundationModelsProvider: TurnWarmable {
-    public func prepareForNextTurn() {
-        rearmIfWanted()
+    public func prepareForNextTurn(promptPrefix: String?) {
+        rearmIfWanted(promptPrefix: promptPrefix)
     }
 }
 
