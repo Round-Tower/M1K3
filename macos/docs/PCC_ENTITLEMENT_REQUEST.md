@@ -64,12 +64,15 @@ found in the macOS 27 dyld shared cache on 2026-09-13. Without it, a
 | 2026-09-14 | Route verified: the contact/request/private-cloud-compute form |
 | 2026-09-14 | Filed via the form |
 | 2026-09-14 20:48 | Granted: "Access to models on Private Cloud Compute" assigned to the account |
-| 2026-09-14 | Capability enabled on the `app.m1k3` identifier; profile carries the key = `true` (#333) |
+| 2026-09-14 | Capability enabled on the `app.m1k3` identifier; profile carries the key = `true`; entitlements change rides #333 |
 
-When it's granted: add the key to both entitlement files through `project.yml`,
-regenerate the profiles, and run `tools/ci/check_store_targets.py`. The first
-probe is one content-free generation on the signed build. It should succeed
-where the unentitled probe got 1046.
+Now that it's granted (#333): the key goes in **`M1K3-MAS.entitlements` only**, the
+store lane (App Store, TestFlight, ⌘R), whose profile carries it. **Never**
+`M1K3.entitlements`: the Developer ID lane has no profile, and AMFI refuses to launch
+an app claiming a profile-only entitlement, so every DMG and cask install would die.
+`tools/ci/check_store_targets.py` fails CI if the key leaks there. iOS/visionOS wait
+until the entitlement read is probed on a device. The first probe is one content-free
+generation on the signed build; it should succeed where the unentitled probe got 1046.
 
 <!-- Signed: Kev + claude-opus-5, 2026-09-14. Confidence 0.7 (the key name is
      read from the shared cache; the filing route and Apple's review criteria
@@ -78,4 +81,6 @@ where the unentitled probe got 1046.
      the portal (a dedicated form with one acknowledgment, not a Capability Requests
      row). Confidence now 0.85.
      Review: Kev + claude-opus-5, 2026-09-14 (night): granted the same evening; the
-     capability is on app.m1k3 and the profile carries the key (#333). Confidence 0.9. -->
+     capability is on app.m1k3 and the profile carries the key (#333). Confidence 0.9.
+     Review: Kev + claude-opus-5, 2026-09-14 (night, later): next steps name the store lane only, matching
+     #333's guard (review of #330). Confidence 0.9. -->
