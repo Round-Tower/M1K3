@@ -46,10 +46,17 @@
 //  decode rule); a stop with nothing streamed removes the empty bubble. Confidence
 //  now 0.85 (five pinned cases on a hanging fake; the MLX cache after a live cancel is
 //  verify-by-launch).
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — `ChatMessage.answerOrigin`
+//  (Optional, in CodingKeys): an answer produced off-device, today only Private Cloud
+//  Compute (ADR 0006), so the label survives a reload. Pre-field transcripts decode to nil.
+//  `sendPrivateCloud` sends one turn to a PCC backend from the consent the user confirmed:
+//  exactly `PrivateCloudTurn.request`, never the responder. `send`'s local body moved into
+//  `runLocalTurn` unchanged, so the PCC fallback (failure before any text) reuses it.
 
 import Foundation
 import M1K3Inference
 import M1K3Knowledge
+import M1K3LanguageModel
 import Observation
 import os
 
@@ -218,10 +225,22 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// `contextExcluded`: a non-Optional default would keyNotFound every
     /// pre-flag transcript on upgrade.
     public var interrupted: Bool?
+    /// Where this answer was produced when it was NOT on this device — today
+    /// only Apple's Private Cloud Compute (ADR 0006: every PCC answer carries a
+    /// label, including after a reload). nil means local, the only value any
+    /// transcript before 2026-09-14 has. OPTIONAL for the keyNotFound reason above.
+    public var answerOrigin: AnswerOrigin?
     public var status: Status
+
+    /// An off-device producer of an answer. One case, deliberately: a new rung
+    /// is a new case and a new label, never a silent reuse of this one.
+    public enum AnswerOrigin: String, Sendable, Equatable, Codable {
+        case privateCloudCompute
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, role, text, sources, status, reasoning, attachments, toolsUsed, brain, contextExcluded, interrupted
+        case answerOrigin
     }
 
     public init(
@@ -399,6 +418,24 @@ public final class ChatSession {
         isResponding = true
         defer { isResponding = false }
 
+        await runLocalTurn(trimmed, images: images, history: history, assistantID: assistantID)
+        await persistActiveConversation()
+        scheduleTitlingIfNeeded(question: trimmed)
+        // Rolling distillation: a no-op until the backlog outgrows the window,
+        // then it captures the long tail mid-session so it stays recoverable.
+        scheduleRollingDistillationIfNeeded()
+    }
+
+    /// One local turn into the streaming bubble `assistantID`: ask the
+    /// responder, drain, finalise. Shared by `send` and the Private Cloud
+    /// Compute fallback (a PCC failure before any text → the local brain
+    /// answers). The caller owns `isResponding` and the persist.
+    private func runLocalTurn(
+        _ question: String,
+        images: [ImageAttachment],
+        history: [ChatTurn],
+        assistantID: UUID
+    ) async {
         // The streaming half runs in its own task so `stopResponding()` has
         // something to cancel: cancellation ends the `for await` (AsyncStream
         // is cancellation-aware), which terminates the stream, which is the
@@ -406,7 +443,7 @@ public final class ChatSession {
         // persistence run back here, OUTSIDE the cancelled task — a GRDB write
         // or a validator must never see `Task.isCancelled`.
         stopRequested = false
-        let turn = Task { await self.streamTurn(trimmed, images: images, history: history, assistantID: assistantID) }
+        let turn = Task { await self.streamTurn(question, images: images, history: history, assistantID: assistantID) }
         turnTask = turn
         let outcome = await turn.value
         turnTask = nil
@@ -472,11 +509,6 @@ public final class ChatSession {
                 }
             }
         }
-        await persistActiveConversation()
-        scheduleTitlingIfNeeded(question: trimmed)
-        // Rolling distillation: a no-op until the backlog outgrows the window,
-        // then it captures the long tail mid-session so it stays recoverable.
-        scheduleRollingDistillationIfNeeded()
     }
 
     private enum TurnOutcome {
@@ -495,9 +527,13 @@ public final class ChatSession {
     /// transcript, marked `interrupted`; nothing arrived → the empty bubble
     /// goes. Idle → no-op. Safe to call from the Send button's Stop face.
     public func stopResponding() {
-        guard let turnTask else { return }
-        stopRequested = true
-        turnTask.cancel()
+        if let turnTask {
+            stopRequested = true
+            turnTask.cancel()
+        } else if let cloudTask {
+            stopRequested = true
+            cloudTask.cancel()
+        }
     }
 
     /// The cancellable half of `send`: ask the responder, drain its stream into
@@ -588,6 +624,140 @@ public final class ChatSession {
             return .streamed(raw: "", sources: [], stopped: true)
         } catch {
             return .failed(error)
+        }
+    }
+
+    // MARK: - Private Cloud Compute (ADR 0006)
+
+    /// The consent sheet's content for `question`: the question, and the exact
+    /// conversation text that goes only if the user ticks it. Built from the
+    /// same replayable history local turns use, so display-only messages
+    /// (script output, PCC notices) never appear in it.
+    public func privateCloudConsent(for question: String) -> PrivateCloudTurn.Consent {
+        PrivateCloudTurn.consent(
+            question: question.trimmingCharacters(in: .whitespacesAndNewlines),
+            history: Self.replayableHistory(messages)
+        )
+    }
+
+    private enum CloudOutcome {
+        case answered(text: String, stopped: Bool)
+        case failed(PrivateCloudFailure, partial: String)
+    }
+
+    /// The in-flight PCC stream, held only so `stopResponding()` can cancel it.
+    private var cloudTask: Task<CloudOutcome, Never>?
+
+    /// Send ONE turn to Private Cloud Compute, after the user confirmed the
+    /// consent sheet. The local responder is never asked — its prompt carries
+    /// memories, documents, todos and the page open beside the chat — and
+    /// `backend` gets exactly `PrivateCloudTurn.request(consent, …)`. Every
+    /// answer is stamped `.privateCloudCompute`. A failure before any text is
+    /// explained in one display-only line and the local brain answers; a
+    /// failure mid-answer keeps what came, marked, with the reason. Blank
+    /// questions and re-entrant sends are no-ops, as for `send`.
+    public func sendPrivateCloud(
+        _ consent: PrivateCloudTurn.Consent,
+        includeConversation: Bool,
+        backend: any PrivateCloudAnswering,
+        localBrainName: String,
+        now: Date = Date()
+    ) async {
+        let question = consent.question
+        guard !question.isEmpty, !isResponding else { return }
+        // Captured before the question joins the transcript. Only the local
+        // fallback uses it: the PCC request was fixed by the consent.
+        let history = Self.replayableHistory(messages)
+        let request = PrivateCloudTurn.request(consent, includeConversation: includeConversation, now: now)
+
+        messages.append(ChatMessage(role: .user, text: question, status: .complete))
+        let assistantID = UUID()
+        var placeholder = ChatMessage(id: assistantID, role: .assistant, text: "", status: .streaming)
+        placeholder.answerOrigin = .privateCloudCompute
+        messages.append(placeholder)
+
+        isResponding = true
+        defer { isResponding = false }
+
+        stopRequested = false
+        let turn = Task { await self.streamCloud(request, backend: backend, assistantID: assistantID) }
+        cloudTask = turn
+        let outcome = await turn.value
+        cloudTask = nil
+
+        switch outcome {
+        case let .answered(text, stopped):
+            if stopped, text.isEmpty {
+                messages.removeAll { $0.id == assistantID }
+                break
+            }
+            finishCloudAnswer(assistantID, text: text, interrupted: stopped)
+        case let .failed(failure, partial) where partial.isEmpty:
+            // Nothing came: say why, once, then the local brain answers.
+            update(assistantID) {
+                $0.text = PrivateCloudFallback.notice(for: failure, localBrain: localBrainName, now: now)
+                $0.answerOrigin = nil
+                $0.contextExcluded = true
+                $0.status = .complete
+            }
+            let localID = UUID()
+            messages.append(ChatMessage(id: localID, role: .assistant, text: "", status: .streaming))
+            await runLocalTurn(question, images: [], history: history, assistantID: localID)
+        case let .failed(failure, partial):
+            // Something came: keep it, marked, and say why it stopped.
+            finishCloudAnswer(assistantID, text: partial, interrupted: true)
+            var notice = ChatMessage(
+                role: .assistant,
+                text: PrivateCloudFallback.midAnswerNotice(for: failure, localBrain: localBrainName),
+                status: .complete
+            )
+            notice.contextExcluded = true
+            messages.append(notice)
+        }
+        await persistActiveConversation()
+        scheduleTitlingIfNeeded(question: question)
+        scheduleRollingDistillationIfNeeded()
+    }
+
+    /// Drain the backend's cumulative snapshots into the live bubble.
+    private func streamCloud(
+        _ request: PrivateCloudTurn.Request,
+        backend: any PrivateCloudAnswering,
+        assistantID: UUID
+    ) async -> CloudOutcome {
+        var latest = ""
+        var flushGate = StreamFlushGate()
+        do {
+            for try await snapshot in backend.answer(instructions: request.instructions, prompt: request.prompt) {
+                latest = snapshot
+                guard flushGate.shouldFlush(at: .now) else { continue }
+                let live = latest
+                update(assistantID) { $0.text = live }
+            }
+            return .answered(text: latest, stopped: stopRequested)
+        } catch is CancellationError {
+            return .answered(text: latest, stopped: true)
+        } catch {
+            if stopRequested { return .answered(text: latest, stopped: true) }
+            return .failed(PrivateCloudError.failure(for: error), partial: latest)
+        }
+    }
+
+    /// Finalise a PCC answer with the same leak guard and polish a local
+    /// answer gets. No sources, citations or follow-ups: none were sent, and
+    /// the PCC persona asks for none.
+    private func finishCloudAnswer(_ id: UUID, text: String, interrupted: Bool) {
+        let leaked = PersonaLeakGuard.leaks(text)
+        if leaked {
+            Self.leakLog.error("prompt-leak guard: Private Cloud Compute answer reproduced the persona")
+        }
+        update(id) {
+            $0.text = leaked ? PersonaLeakGuard.refusal : MessageTextPolish.polish(text)
+            $0.brain = PrivateCloudLabel.text
+            $0.answerOrigin = .privateCloudCompute
+            $0.activityLabel = nil
+            $0.interrupted = interrupted ? true : nil
+            $0.status = .complete
         }
     }
 

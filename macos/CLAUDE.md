@@ -132,7 +132,7 @@ shell that wires concrete backends to the seams; `AppEnvironment` (+ its
 | `M1K3MemoryViz` | 3D memory constellation (RealityKit over a pure layout model). |
 | `M1K3Inference` | The `InferenceProvider` seam + `BrainTier`. Backends are thin adapters. No external deps. |
 | `M1K3Agent` | Local agent: ReAct + native tool-calling loop over the inference seam; tools injected. |
-| `M1K3LanguageModel` | WWDC26 LanguageModel bridge (ADR 0001) — local mirror of Apple's FoundationModels surface + escalation-ladder policy. |
+| `M1K3LanguageModel` | WWDC26 LanguageModel bridge (ADR 0001) — local mirror of Apple's FoundationModels surface + escalation-ladder policy. Also the Private Cloud Compute rung's pure policy (ADR 0006): `PrivateCloudRung` (when the switch and the per-request control exist, hidden without a backend or under the org switch), the failure → local-fallback sentences, the answer label, and the `PrivateCloudAnswering` backend seam (question + instructions in, no tools). Dependency-free. |
 | `M1K3Eval` | Model-evals enclave: fixtures + deterministic heuristic scorer + cross-brain report (pure; the model-running half rides SelfTest). |
 | `M1K3KnowledgeTools` / `M1K3AgentTools` | Knowledge-backed agent tools (search/list/get document). |
 | `M1K3Chat` | RAG chat brain: embed → hybrid search → documents-first prompt → generate; multi-conversation history. Also the `MemoryDistillationCoordinator` (distils durable facts from chat). |

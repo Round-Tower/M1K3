@@ -19,6 +19,8 @@
 // the prior knowledge-server project so the foundation builds in seconds before MLX/GRDB enter the graph.
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: new M1K3Todos target (GRDB only) +
 //  tests; M1K3MCPKit depends on it for the todo value types.
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — M1K3Chat (and its tests) depend on the
+//  dependency-free M1K3LanguageModel: the PCC rung's policy + backend seam, used by ChatSession's PCC send path.
 
 import Foundation
 import PackageDescription
@@ -370,6 +372,9 @@ let package = Package(
             name: "M1K3Chat",
             dependencies: [
                 "M1K3Knowledge", "M1K3Inference", "M1K3Agent",
+                // The PCC rung's pure policy + backend seam (ADR 0006): the
+                // PCC send path lives in ChatSession. Dependency-free module.
+                "M1K3LanguageModel",
                 // Multi-conversation chat history (GRDBChatHistoryStore) —
                 // M1K3Knowledge already links GRDB, so zero new build weight.
                 .product(name: "GRDB", package: "GRDB.swift"),
@@ -389,7 +394,7 @@ let package = Package(
             // not depend on M1K3Chat. A pin test here renders the REAL prompt
             // and asserts every marker still matches, so a wording pass fails
             // loudly instead of silently zeroing a section in the report.
-            dependencies: ["M1K3Chat", "M1K3KnowledgeTools", "M1K3AgentTools", "M1K3Eval"],
+            dependencies: ["M1K3Chat", "M1K3KnowledgeTools", "M1K3AgentTools", "M1K3Eval", "M1K3LanguageModel"],
             path: "Tests/M1K3ChatTests"
         ),
         // Leaf bridge (Chat + Memory only): DistilledFactGraphAdapter, the
