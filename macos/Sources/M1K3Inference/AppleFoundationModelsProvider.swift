@@ -28,6 +28,12 @@
 //  exemplar-starvation problem; try shorter/abstract voice guidance in the CORE
 //  instead. The turn-by-turn detail sits on the `instructions` default below.
 //
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 — `carriesStandingPersona`
+//  reads `miniCorePrompt`. The 09-12 trim made Mini's instructions a strict prefix
+//  of `corePrompt`, the old `contains(corePrompt)` check went false, and the ReAct
+//  floor re-sent the full persona in the body: every Mini agent turn overflowed
+//  4096 (09-13 logs: 1409 + 3905 = 5314 tokens, four failed calls, RAG fallback).
+//
 //  Note this provider builds a FRESH `LanguageModelSession(instructions:)` per
 //  call, so anything in the persona is re-sent every turn — the reason persona
 //  length is a real cost here and free on the KV-cached MLX tiers.
@@ -370,8 +376,14 @@ extension AppleFoundationModelsProvider: PersonaCarrying {
     /// ReAct run that needed it. Asking the live closure can't drift from what
     /// is actually sent; the cost is one substring check against a ~4KB string,
     /// set beside a multi-second inference call.
+    ///
+    /// The check reads `miniCorePrompt`, the part every standing persona shares
+    /// (the core up to FOLLOW-UPS). Mini's own instructions are that trimmed
+    /// core, and a `contains(corePrompt)` check can never match a strict prefix:
+    /// from 2026-09-12 to this fix it read false, the ReAct floor re-sent the full
+    /// persona in the body, and every Mini agent turn overflowed 4096.
     public var carriesStandingPersona: Bool {
-        instructions().contains(M1K3Persona.corePrompt)
+        instructions().contains(M1K3Persona.miniCorePrompt)
     }
 }
 

@@ -35,6 +35,8 @@
 //  the bare-generate arm. Verify-by-launch: one tool-use SelfTest per arm.
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — `EvalWindowArguments` + `AFMRecordingWindowTool`: the `window`
 //  parameter shape for the recent_activity stub (afmArmCanExpressEveryParameter pins the name).
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — M1K3_SELFTEST_CHATEVAL_MINI_PERSONA=full runs
+//  Mini on the untrimmed prompt, so the 09-12 trim's gate (security x3, open-chat) is an A/B on one build.
 
 import Foundation
 
@@ -242,6 +244,15 @@ enum ChatEvalStage {
         SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_AFM_REACT") == "1"
     }
 
+    /// The Mini persona A/B (M1K3_SELFTEST_CHATEVAL_MINI_PERSONA=full): Mini
+    /// runs on the untrimmed standard prompt, FOLLOW-UPS included, the shape it
+    /// shipped before the 2026-09-12 trim. Unset runs the provider's default,
+    /// the trimmed `miniSystemPrompt`. One build measures both arms, so the
+    /// trim's gate is same-session and same-power.
+    private static var miniFullPersona: Bool {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_MINI_PERSONA") == "full"
+    }
+
     /// ReAct-floor / native-dialect palette (LocalAgent path — AFM ReAct + MLX).
     /// Internal (not private): PromptSizeStage reuses this SAME palette so its
     /// measured prompt carries the real production tool spec, not an empty one.
@@ -428,8 +439,13 @@ enum ChatEvalStage {
             // LocalAgent routes AFM through runNative + our structured @Generable
             // continueToolTurn (third path), not the prompt-ReAct floor. Off ⇒
             // supportsToolCalls stays false ⇒ ReAct floor / Apple-driven, unchanged.
-            let afm = AppleFoundationModelsProvider(nativeToolCalling: afmNativeTools)
+            let afm = miniFullPersona
+                ? AppleFoundationModelsProvider(
+                    instructions: { M1K3Persona.systemPrompt }, nativeToolCalling: afmNativeTools
+                )
+                : AppleFoundationModelsProvider(nativeToolCalling: afmNativeTools)
             guard afm.isAvailable else { return nil }
+            emit("  mini persona: " + (miniFullPersona ? "full (with FOLLOW-UPS)" : "trimmed (miniSystemPrompt)"))
             provider = afm
         case let .mlx(stockID):
             // 2048 like the per-model eval: a reasoning brain can spend hundreds

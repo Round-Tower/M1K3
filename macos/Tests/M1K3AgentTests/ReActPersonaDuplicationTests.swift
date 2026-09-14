@@ -22,6 +22,10 @@
 //  Signed: Kev + claude-opus-5, 2026-08-09, Confidence 0.9, Prior: Unknown
 //  Context: macos/docs/NEXT_SESSION.md #102; found by `challenger` while
 //  pressure-testing the small-talk-gate proposal, and verified against source.
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 — the fakes here hardcode
+//  `carriesStandingPersona`, so they missed the 09-12 regression in the REAL provider's
+//  derivation. `shippingMiniDerivationReachesTheLoop` asks the default Mini provider
+//  itself (red on master's provider, green with the fix).
 //
 
 import M1K3Agent
@@ -140,6 +144,43 @@ struct ReActPersonaDuplicationTests {
         #expect(prompt.contains("CONCLUSION:"))
         #expect(prompt.contains("ACTION:"))
         #expect(prompt.contains("Your goal: what's up?"))
+    }
+
+    @Test("the shipping Mini provider's own derivation keeps the persona out of the ReAct body")
+    func shippingMiniDerivationReachesTheLoop() async throws {
+        // The fakes above hardcode `carriesStandingPersona`, so they could not
+        // see 2026-09-12: the real AFM provider's DERIVATION broke (its trimmed
+        // instructions stopped matching), the loop re-sent the persona, and
+        // every Mini agent turn overflowed. This drives the loop through the
+        // real provider's answer, recording prompts without calling the model.
+        let recorder = PromptRecorder()
+        let agent = LocalAgent(
+            inferenceProvider: ShippingMiniShim(recorder: recorder), tools: [], maxIterations: 1
+        )
+        _ = try await agent.run(goal: "what's up?", context: nil)
+        let prompt = try #require(await recorder.prompts.first)
+        #expect(!prompt.contains(M1K3Persona.systemPrompt))
+        #expect(!prompt.contains("# ABSOLUTE RULES"), "no persona section may ride the body")
+    }
+
+    /// Records prompts, but answers `carriesStandingPersona` with the real,
+    /// default-constructed Mini provider — the value production hands the loop.
+    private struct ShippingMiniShim: InferenceProvider, PersonaCarrying {
+        let name = "shipping-mini-shim"
+        let isAvailable = true
+        let recorder: PromptRecorder
+        var carriesStandingPersona: Bool {
+            AppleFoundationModelsProvider().carriesStandingPersona
+        }
+
+        func generate(prompt: String) async throws -> String {
+            await recorder.record(prompt)
+            return "CONCLUSION: done"
+        }
+
+        func generateStreaming(prompt _: String) -> AsyncStream<String> {
+            AsyncStream { $0.finish() }
+        }
     }
 
     @Test("a backend that doesn't opt in keeps today's behaviour")
