@@ -70,25 +70,35 @@ extension AppEnvironment {
         privateCloudStatus = await backend.status()
     }
 
-    /// Send one turn to PCC after the user confirmed the consent sheet. The
-    /// gate is re-checked here, at send time: consent or the org switch can
-    /// change while the sheet is open, and the sheet's own view of them is not
-    /// the authority. Returns false when it refused — nothing left this Mac,
-    /// and the caller hands the words back instead of eating them.
-    @discardableResult
-    func sendPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) async -> Bool {
-        guard isReady, let backend = Self.privateCloudBackend else {
-            Self.privateCloudLog.notice("pcc send refused: no brain ready or no backend")
-            return false
-        }
-        // Read at send time from the persisted consent, not the sheet's copy;
-        // ChatSession refuses the send itself unless this gate is open.
+    /// Whether a PCC send may go right now: a brain ready, a backend, and the
+    /// rung's gate open on the PERSISTED consent. Consent, the org switch or the
+    /// quota can change while the sheet is open, and the sheet's own copy is not
+    /// the authority. Synchronous, so the view can ask before it clears the draft;
+    /// logs the reason when the answer is no.
+    func privateCloudSendAllowed() -> Bool {
+        guard let refusal = privateCloudRefusal() else { return true }
+        Self.privateCloudLog.notice("pcc send refused at send time: \(refusal, privacy: .public)")
+        return false
+    }
+
+    private func privateCloudRefusal() -> String? {
+        guard isReady else { return "no brain ready" }
+        guard Self.privateCloudBackend != nil else { return "no backend" }
         let gate = privateCloudState(consent: privateCloudConsentPersisted)
         guard PrivateCloudRung.escalation(armed: true, gate) == .privateCloud else {
-            let control = String(describing: PrivateCloudRung.control(gate))
-            Self.privateCloudLog.notice("pcc send refused at send time: control=\(control, privacy: .public)")
-            return false
+            return "control=\(PrivateCloudRung.control(gate))"
         }
+        return nil
+    }
+
+    /// Send one turn to PCC after the user confirmed the consent sheet. The gate
+    /// is re-checked here too (`privateCloudSendAllowed`). Returns false when it
+    /// refused: nothing left this Mac, and the caller gives the words back.
+    @discardableResult
+    func sendPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) async -> Bool {
+        guard privateCloudSendAllowed(), let backend = Self.privateCloudBackend else { return false }
+        // ChatSession refuses the send itself unless this same gate is open.
+        let gate = privateCloudState(consent: privateCloudConsentPersisted)
         brainServe?.preemptForLocalTurn()
         avatar.setActivity(.thinking)
         beginAutoSpeakSession()

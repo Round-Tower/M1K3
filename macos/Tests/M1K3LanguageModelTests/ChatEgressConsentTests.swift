@@ -14,6 +14,7 @@
 
 import Foundation
 @testable import M1K3LanguageModel
+import SwiftUI // AppStorage: the views' own reading of the key
 import Testing
 
 struct ChatEgressConsentTests {
@@ -42,18 +43,36 @@ struct ChatEgressConsentTests {
     }
 
     /// A launch argument (`-chatEgressAllowed YES`), `defaults write -string` or a
-    /// profile can store a string. The views read the key through @AppStorage,
-    /// which coerces it; a send-time `as? Bool` read got nil and refused a send
-    /// the UI had offered (seen live 2026-09-14). The two reads must agree.
-    @Test("persisted: a string reads the way the views' @AppStorage reads it")
-    func persistedStringMatchesTheViews() {
+    /// profile can store a string. The views read the key through @AppStorage;
+    /// a send-time `as? Bool` read got nil where the view read true, and refused
+    /// a send the UI had offered (seen live 2026-09-14). So the gate's reading is
+    /// pinned against SwiftUI's own, not against another UserDefaults call: if
+    /// @AppStorage's coercion ever changes, this goes red, not the consent gate.
+    enum Stored: CaseIterable {
+        case absent, boolTrue, boolFalse, yes, no, trueWord, one, zero
+
+        func write(to defaults: UserDefaults, key: String) {
+            switch self {
+            case .absent: break
+            case .boolTrue: defaults.set(true, forKey: key)
+            case .boolFalse: defaults.set(false, forKey: key)
+            case .yes: defaults.set("YES", forKey: key)
+            case .no: defaults.set("NO", forKey: key)
+            case .trueWord: defaults.set("true", forKey: key)
+            case .one: defaults.set("1", forKey: key)
+            case .zero: defaults.set("0", forKey: key)
+            }
+        }
+    }
+
+    @Test("persisted agrees with the views' @AppStorage for every stored shape", arguments: Stored.allCases)
+    func persistedMatchesAppStorage(stored: Stored) {
         let (defaults, suite) = Self.scratchDefaults()
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set("YES", forKey: ChatEgressConsent.defaultsKey)
-        #expect(ChatEgressConsent.persisted(in: defaults) == defaults.bool(forKey: ChatEgressConsent.defaultsKey))
-        #expect(ChatEgressConsent.persisted(in: defaults) == true)
-        defaults.set("NO", forKey: ChatEgressConsent.defaultsKey)
-        #expect(ChatEgressConsent.persisted(in: defaults) == false)
+        stored.write(to: defaults, key: ChatEgressConsent.defaultsKey)
+        let view = AppStorage(wrappedValue: false, ChatEgressConsent.defaultsKey, store: defaults)
+        #expect(ChatEgressConsent.networkAllowed(persisted: ChatEgressConsent.persisted(in: defaults))
+            == view.wrappedValue)
     }
 
     @Test("no stored value means NO — consent is never assumed")

@@ -295,7 +295,8 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3AgentTests",
-            dependencies: ["M1K3Agent"],
+            // M1K3LanguageModel: the FM27 mapping tests name its failure words.
+            dependencies: ["M1K3Agent", "M1K3LanguageModel"],
             path: "Tests/M1K3AgentTests",
             // The PCC adapter's SDK-error mapping is pinned under M1K3_FM27.
             swiftSettings: fm27Settings

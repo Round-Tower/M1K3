@@ -38,8 +38,9 @@
 //  Review: Kev + claude-opus-5, 2026-09-14 — the Private Cloud Compute control (ADR 0006): a cloud button
 //  that arms the NEXT message, shown only with a PCC backend and the switch on; an armed send opens the
 //  consent sheet and the draft stays until it's confirmed. Disarms when it can't be honoured. The sheet
-//  condition is `PrivateCloudRung.presentsConsent` (tested), and a send refused at send time hands the
-//  words back (seen live: a refusal used to empty the field with nothing sent and nothing said).
+//  condition is `PrivateCloudRung.presentsConsent` (tested). The gate is re-read before the draft is
+//  cleared, so a send refused at send time leaves the words in the field (seen live: a refusal used to
+//  empty the field with nothing sent and nothing said).
 //  Confidence 0.8 (verified by launch with the Debug echo backend).
 
 import M1K3Avatar
@@ -459,12 +460,16 @@ struct ContentView: View {
                 onSend: { includeConversation in
                     privateCloudPending = nil
                     privateCloudArmed = false
+                    // Re-read the gate BEFORE touching the draft: if the switch, the org
+                    // policy or the quota changed while the sheet was open, nothing is
+                    // sent and the words stay where they are.
+                    guard env.privateCloudSendAllowed() else { return }
                     let text = draft
                     draft = ""
                     Task {
                         let sent = await env.sendPrivateCloud(pending.consent, includeConversation: includeConversation)
-                        // Refused at send time (the switch changed while the sheet was
-                        // open): nothing left this Mac, so give the words back.
+                        // The async re-check can still refuse (a change inside one hop);
+                        // hand the words back unless something new was typed.
                         if !sent, draft.isEmpty { draft = text }
                     }
                 },
