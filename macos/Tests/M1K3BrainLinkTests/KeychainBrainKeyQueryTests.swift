@@ -12,13 +12,14 @@
 
 import Foundation
 @testable import M1K3BrainLink
+import M1K3Inference
 import Security
 import Testing
 
 struct KeychainBrainKeyQueryTests {
     @Test("the PSK row lives in the data-protection keychain")
     func dataProtection() {
-        let query = KeychainBrainKeyStore.query(identity: "abc")
+        let query = KeychainBrainKeyStore.query(identity: "abc", lane: .dataProtection)
         #expect(query[kSecUseDataProtectionKeychain as String] as? Bool == true)
         #expect(query[kSecAttrService as String] as? String == "app.m1k3.brainlink")
         #expect(query[kSecAttrAccount as String] as? String == "abc")
@@ -29,5 +30,12 @@ struct KeychainBrainKeyQueryTests {
         let legacy = KeychainBrainKeyStore.legacyQuery(identity: "abc")
         #expect(legacy[kSecUseDataProtectionKeychain as String] == nil)
         #expect(legacy[kSecAttrAccount as String] as? String == "abc")
+    }
+
+    @Test("a Developer ID build addresses the PSK in the login keychain (#319)")
+    func loginLane() {
+        let query = KeychainBrainKeyStore.query(identity: "abc", lane: .login)
+        #expect(query[kSecUseDataProtectionKeychain as String] == nil)
+        #expect(query[kSecAttrAccount as String] as? String == "abc")
     }
 }

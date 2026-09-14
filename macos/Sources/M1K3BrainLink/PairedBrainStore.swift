@@ -19,9 +19,12 @@
 //  Review: Kev + claude-opus-5, 2026-09-13 — the lift is write-before-delete: it inserts
 //  through the bare `add` and drops the legacy row only after that lands (review catch: the
 //  lift ran through setKey, whose removeKey deleted the legacy row first). Confidence 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-14 — #319: the PSK row follows KeychainLane, so a
+//  Developer ID build uses the login keychain instead of failing with -34018. Confidence 0.85.
 //
 
 import Foundation
+import M1K3Inference
 import Security
 
 public protocol BrainKeyStoring: Sendable {
@@ -34,8 +37,11 @@ public protocol BrainKeyStoring: Sendable {
 /// afterFirstUnlock + this-device-only — the same posture as the Mac side.
 public struct KeychainBrainKeyStore: BrainKeyStoring {
     static let service = "app.m1k3.brainlink"
+    private let lane: KeychainLane
 
-    public init() {}
+    public init(lane: KeychainLane = .current) {
+        self.lane = lane
+    }
 
     public func setKey(_ key: Data, identity: String) throws {
         removeKey(identity: identity)
@@ -45,14 +51,9 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
     /// The bare insert. `setKey` clears both rows first; the migration lift
     /// calls this directly so the legacy row survives a failed insert.
     private func add(_ key: Data, identity: String) throws {
-        let item: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: Self.service,
-            kSecAttrAccount as String: identity,
-            kSecValueData as String: key,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            kSecUseDataProtectionKeychain as String: true,
-        ]
+        var item = Self.query(identity: identity, lane: lane)
+        item[kSecValueData as String] = key
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         let status = SecItemAdd(item as CFDictionary, nil)
         guard status == errSecSuccess else {
             throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
@@ -60,7 +61,9 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
     }
 
     public func key(identity: String) -> Data? {
-        if let data = read(Self.query(identity: identity)) { return data }
+        if let data = read(Self.query(identity: identity, lane: lane)) { return data }
+        // On the login lane the base query IS the legacy one: nothing to lift.
+        guard lane == .dataProtection else { return nil }
         // A PSK written before 2026-09-12 sits in the Mac's login keychain
         // (a no-op distinction on iOS): lift it across once, then drop the old row.
         // Write-before-delete: the legacy row goes only after the new row lands,
@@ -74,7 +77,7 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
     }
 
     public func removeKey(identity: String) {
-        _ = SecItemDelete(Self.query(identity: identity) as CFDictionary)
+        _ = SecItemDelete(Self.query(identity: identity, lane: lane) as CFDictionary)
         _ = SecItemDelete(Self.legacyQuery(identity: identity) as CFDictionary)
     }
 
@@ -90,10 +93,10 @@ public struct KeychainBrainKeyStore: BrainKeyStoring {
     /// Data-protection keychain: access by team + bundle id, so every build we
     /// sign reads the item silently (the Mac's login keychain asked for the
     /// login password per new signature). See M1K3Calls.KeychainKeyStore.
-    static func query(identity: String) -> [String: Any] {
-        var query = legacyQuery(identity: identity)
-        query[kSecUseDataProtectionKeychain as String] = true
-        return query
+    /// A Developer ID build has no entitlement for it (#319) and uses the
+    /// login keychain: the lane leaves the query bare.
+    static func query(identity: String, lane: KeychainLane) -> [String: Any] {
+        lane.applying(to: legacyQuery(identity: identity))
     }
 
     static func legacyQuery(identity: String) -> [String: Any] {

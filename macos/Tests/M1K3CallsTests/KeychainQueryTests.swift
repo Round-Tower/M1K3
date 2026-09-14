@@ -11,16 +11,19 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-12, Confidence 0.85 (the flag is
 //  pinned here; that it stops the prompt is verify-by-launch), Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-14 — #319: queries take the process's KeychainLane;
+//  the login lane (Developer ID, no entitlement) drops the data-protection flag. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Calls
+import M1K3Inference
 import Security
 import Testing
 
 struct KeychainQueryTests {
     @Test("every query targets the data-protection keychain")
     func dataProtectionKeychain() {
-        let query = KeychainKeyStore.query(service: "app.m1k3", account: "k")
+        let query = KeychainKeyStore.query(service: "app.m1k3", account: "k", lane: .dataProtection)
         #expect(query[kSecUseDataProtectionKeychain] as? Bool == true)
         #expect(query[kSecAttrService] as? String == "app.m1k3")
         #expect(query[kSecAttrAccount] as? String == "k")
@@ -32,5 +35,12 @@ struct KeychainQueryTests {
         #expect(legacy[kSecUseDataProtectionKeychain] == nil)
         #expect(legacy[kSecAttrService] as? String == "app.m1k3")
         #expect(legacy[kSecAttrAccount] as? String == "k")
+    }
+
+    @Test("a Developer ID build (no data-protection entitlement) addresses the login keychain (#319)")
+    func loginLaneQuery() {
+        let query = KeychainKeyStore.query(service: "app.m1k3", account: "k", lane: .login)
+        #expect(query[kSecUseDataProtectionKeychain] == nil)
+        #expect(query[kSecAttrAccount] as? String == "k")
     }
 }
