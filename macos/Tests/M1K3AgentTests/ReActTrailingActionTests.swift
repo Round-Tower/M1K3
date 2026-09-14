@@ -13,7 +13,10 @@
 //  and stripped the ACTION line as scaffolding, so the user got "I'll use
 //  lookup_fact to confirm" and nothing after it: tool-use 0/30. These pin the
 //  fix: a conclusion that ENDS in a call to an offered tool runs the tool, and
-//  whatever streamed live before the call is followed by the real answer.
+//  whatever streamed live before the call is followed by the real answer. Once
+//  tools ran, a real web page overflowed Mini's 4,096-token window on the next
+//  iteration (read off the installed app: 4,209 tokens), so the ReAct floor can
+//  cap how much of an observation rides the next prompt.
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.85, Prior: Unknown
 //
@@ -173,6 +176,29 @@ struct ReActTrailingActionTests {
         let result = try await agent.run(goal: "When was Cork founded?", onConclusionToken: { live.append($0) })
         #expect(result.conclusion == "Cork was founded in the 6th century.")
         #expect(live.text == "Let me check.\n\nCork was founded in the 6th century.")
+    }
+
+    @Test("an observation longer than the limit reaches the next prompt cut; the trace keeps it whole")
+    func observationCappedInPrompt() async throws {
+        let long = String(repeating: "lima ", count: 100) // 500 chars
+        let provider = ScriptedProvider(["ACTION: search(Peru)", "CONCLUSION: Lima."])
+        let agent = LocalAgent(
+            inferenceProvider: provider, tools: [EchoTool(response: long)], observationCharLimit: 60
+        )
+        let result = try await agent.run(goal: "Capital of Peru?")
+        let second = try #require(provider.prompts.last)
+        #expect(second.contains("Observation: " + String(long.prefix(60)) + "…"))
+        #expect(!second.contains(long))
+        #expect(result.reasoningTrace.first?.observation == long)
+    }
+
+    @Test("with no limit, the observation reaches the next prompt whole, as always")
+    func observationUncappedByDefault() async throws {
+        let long = String(repeating: "lima ", count: 100)
+        let provider = ScriptedProvider(["ACTION: search(Peru)", "CONCLUSION: Lima."])
+        let agent = LocalAgent(inferenceProvider: provider, tools: [EchoTool(response: long)])
+        _ = try await agent.run(goal: "Capital of Peru?")
+        #expect(provider.prompts.last?.contains("Observation: " + long) == true)
     }
 
     @Test("nothing streamed before: a conclusion streams exactly as it always did")

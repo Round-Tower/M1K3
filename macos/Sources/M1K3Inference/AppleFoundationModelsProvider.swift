@@ -40,7 +40,8 @@
 //  instructions: the launch warm computes it from the palette, the end-of-turn warm
 //  takes the head the turn just sent. `afm turn` logs `warm=prefix-hit|held|…`;
 //  a prefix-warm session serves only a prompt that begins with its prefix, so the
-//  conversation titler no longer takes the session prewarmed for the next turn.
+//  conversation titler no longer takes the session prewarmed for the next turn, and
+//  once such a call finishes the waiting session is armed again (its run spoiled it).
 //  Plain-process probe (AC): turn-1 first token 6.7 s instructions-only → 2.1 s.
 //  Off with `-afm.prefixPrewarm NO` (AFMPrefixPrewarm). The per-turn `afm budget`
 //  token count moved to failures only: counting beside a turn spoiled its prewarm.
@@ -207,13 +208,25 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// one. Optionally re-arms afterwards (see `prewarmsBetweenTurns`).
     private func takeSession(
         instructions text: String, prompt: String
-    ) -> (session: LanguageModelSession, warmth: AFMPrefixPrewarm.Warmth) {
-        if let warm = prewarmSlot.take(
-            matching: text, accepting: { AFMPrefixPrewarm.accepts(prefix: $0.prefix, prompt: prompt) }
-        ) {
-            return (warm.session, .taken(prefix: warm.prefix))
+    ) -> (session: LanguageModelSession, warmth: AFMPrefixPrewarm.Warmth, heldPrefix: String?) {
+        var heldPrefix: String?
+        if let warm = prewarmSlot.take(matching: text, accepting: { waiting in
+            let fits = AFMPrefixPrewarm.accepts(prefix: waiting.prefix, prompt: prompt)
+            if !fits { heldPrefix = waiting.prefix }
+            return fits
+        }) {
+            return (warm.session, .taken(prefix: warm.prefix), nil)
         }
-        return (LanguageModelSession(instructions: text), prewarmSlot.isArmed ? .held : .cold)
+        return (LanguageModelSession(instructions: text), heldPrefix == nil ? .cold : .held, heldPrefix)
+    }
+
+    /// A call that ran beside a waiting prefix-warm session (the conversation
+    /// titler, between turn 1 and turn 2) leaves that session's prewarm spoiled —
+    /// on the installed app turn 2 read `prefix-hit` and still took 7.2 s. Once
+    /// the foreign call is done, arm it again.
+    private func rearmAfterHeld(_ heldPrefix: String?) {
+        guard let heldPrefix else { return }
+        rearmIfWanted(promptPrefix: heldPrefix)
     }
 
     /// Re-arm for the next turn once this one has settled. Gated on the opt-in
@@ -356,8 +369,9 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
 
     public func generate(prompt: String) async throws -> String {
         let instrText = instructions()
-        let (session, warmth) = takeSession(instructions: instrText, prompt: prompt)
+        let (session, warmth, heldPrefix) = takeSession(instructions: instrText, prompt: prompt)
         logTurnStart(promptChars: prompt.count, streaming: false, warmth: warmth)
+        defer { rearmAfterHeld(heldPrefix) }
         do {
             let response = try await session.respond(to: prompt)
             return response.content
@@ -381,9 +395,10 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     public func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
             let instrText = instructions()
-            let (session, warmth) = takeSession(instructions: instrText, prompt: prompt)
+            let (session, warmth, heldPrefix) = takeSession(instructions: instrText, prompt: prompt)
             logTurnStart(promptChars: prompt.count, streaming: true, warmth: warmth)
             let task = Task { [self] in
+                defer { rearmAfterHeld(heldPrefix) }
                 do {
                     let clock = ContinuousClock()
                     let start = clock.now

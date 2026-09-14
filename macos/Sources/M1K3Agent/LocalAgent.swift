@@ -84,6 +84,10 @@ public actor LocalAgent {
     let tools: [String: AgentTool]
     let maxIterations: Int
     let concludesOnUnstructuredThought: Bool
+    /// The most of one observation the ReAct floor carries into its next prompt
+    /// (nil: all of it). The trace keeps it whole. Set by the responder for the
+    /// ReAct floor — Mini, whose 4,096-token window a web page overflowed.
+    let observationCharLimit: Int?
 
     public internal(set) var reasoningTrace: [ReasoningStep] = []
 
@@ -105,12 +109,14 @@ public actor LocalAgent {
         inferenceProvider: any InferenceProvider,
         tools: [any AgentTool],
         maxIterations: Int = 5,
-        concludesOnUnstructuredThought: Bool = false
+        concludesOnUnstructuredThought: Bool = false,
+        observationCharLimit: Int? = nil
     ) {
         self.inferenceProvider = inferenceProvider
         self.tools = Dictionary(tools.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         self.maxIterations = maxIterations
         self.concludesOnUnstructuredThought = concludesOnUnstructuredThought
+        self.observationCharLimit = observationCharLimit
     }
 
     /// Run the agent toward `goal`, optionally grounded in `context` (e.g.

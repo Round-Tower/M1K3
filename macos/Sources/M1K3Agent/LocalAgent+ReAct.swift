@@ -29,6 +29,7 @@
 //  decided it needed; the loop concluded and stripped the call, so tool-use was 0/30
 //  on the live path. Whatever streamed before the call is now followed, a paragraph
 //  apart, by the real answer — however the loop reaches it (ReActTrailingActionTests).
+//  `observationCharLimit` caps what one observation carries into the next prompt.
 
 import Foundation
 import M1K3Inference
@@ -110,7 +111,7 @@ extension LocalAgent {
 
             Thought: \(thought)
             Action: \(action.description)
-            Observation: \(observation)
+            Observation: \(promptObservation(observation))
             """
         }
 
@@ -171,6 +172,16 @@ extension LocalAgent {
         }
         reasoningTrace.append(ReasoningStep(iteration: iteration, thought: thought))
         return .conclude(concluded(conclusion, usedTools, iteration + 1))
+    }
+
+    /// The part of an observation the next prompt carries: all of it, or the
+    /// first `observationCharLimit` characters and an ellipsis. On Mini a real
+    /// web page (2,879 chars) took the next iteration to 4,209 of 4,096 tokens —
+    /// three failed calls, then a fallback that never saw the page (installed
+    /// app, 2026-09-14). The reasoning trace, which the fallback reads, keeps it whole.
+    func promptObservation(_ observation: String) -> String {
+        guard let limit = observationCharLimit, observation.count > limit else { return observation }
+        return String(observation.prefix(limit)) + "…"
     }
 
     /// The call a text ENDS with: its last non-empty line, when that line is an

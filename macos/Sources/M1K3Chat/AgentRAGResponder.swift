@@ -106,6 +106,11 @@
 //  prewarm them; `reactPromptPrefix(tools:)` is that head for the launch warm, pinned byte-equal
 //  to the live prompt (ReActStableFirstResponderTests). The ReAct rules say notes appear BELOW
 //  them; the native layout and its wording are untouched. Gated by the live-path Mini eval.
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — a ReAct turn can now stream a
+//  preamble before the tool call it ends with (LocalAgent's trailing-action rule), so "streamed"
+//  no longer means "answered": an empty conclusion after a streamed preamble falls back too, a
+//  paragraph on, with the fallback's snapshots turned into deltas so they read once after the
+//  preamble (ReActPreambleFallbackTests). The agent-threw fallback gets the same care.
 
 import Foundation
 import M1K3Agent
@@ -497,7 +502,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             inferenceProvider: provider,
             tools: tools,
             maxIterations: iterations,
-            concludesOnUnstructuredThought: true
+            concludesOnUnstructuredThought: true,
+            observationCharLimit: style == .react ? Self.reactObservationCharLimit : nil
         )
         // Per-turn reasoning budget: casual asks skip the think phase
         // entirely (instant answers); grounded/analytic asks keep it.
@@ -555,10 +561,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // ReAct path keeps its reliable CONCLUSION:. Both still use the
             // empty-conclusion fallback for the no-tool case.
             let synthesiseOverEvidence = style == .native && !result.toolsUsed.isEmpty
-            if synthesiseOverEvidence || (!streamed && conclusion.isEmpty) {
+            // A ReAct turn can stream a preamble ("Let me check.") before the tool
+            // call it ends with, then conclude empty: something streamed, but not
+            // the answer. It falls back like a silent turn, after the preamble.
+            let danglingPreamble = style == .react && streamed && conclusion.isEmpty
+            if synthesiseOverEvidence || (!streamed && conclusion.isEmpty) || danglingPreamble {
                 await fallBack(
                     question: question, chunks: chunks, contextLine: contextLine,
-                    result: result, synthesising: synthesiseOverEvidence, into: continuation
+                    result: result, synthesising: synthesiseOverEvidence,
+                    afterPreamble: danglingPreamble, into: continuation
                 )
             } else {
                 var tail = streamed ? "" : conclusion
@@ -577,7 +588,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             continuation.finish()
         } catch {
             Self.log.error("agent threw — falling back to plain RAG: \(error, privacy: .public)")
-            await streamFallback(question: question, chunks: chunks, contextLine: contextLine, into: continuation)
+            await streamFallback(
+                question: question, chunks: chunks, contextLine: contextLine,
+                afterPreamble: style == .react && emittedLive.withLock { $0 }, into: continuation
+            )
             continuation.finish()
         }
     }
@@ -669,6 +683,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         contextLine: String,
         result: AgentResult,
         synthesising: Bool = false,
+        afterPreamble: Bool = false,
         into continuation: AsyncStream<String>.Continuation
     ) async {
         let steps = result.reasoningTrace.count
@@ -681,7 +696,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         await streamFallback(
             question: question, chunks: chunks, contextLine: contextLine,
-            gathered: result.reasoningTrace, into: continuation
+            gathered: result.reasoningTrace, afterPreamble: afterPreamble, into: continuation
         )
         let provenance = Self.webSourcesBlock(for: result) + Self.factSourcesBlock(for: result)
         if !provenance.isEmpty {
@@ -692,22 +707,39 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// Grounded generation — the safety net when the agent loop fails. Uses
     /// the tool observations the loop already gathered when there are any
     /// (don't throw away a good web search because the model fumbled the
-    /// CONCLUSION format), else the plain RAG prompt. Only ever runs when
-    /// nothing has been yielded, so the raw provider chunks (cumulative or
-    /// delta) fold correctly downstream.
+    /// CONCLUSION format), else the plain RAG prompt.
+    ///
+    /// With nothing yielded yet, the raw provider chunks (cumulative or delta)
+    /// fold correctly downstream and pass through untouched. `afterPreamble`: a
+    /// ReAct preamble already streamed, so the answer starts a paragraph on and
+    /// every chunk goes out as a DELTA — the consumer's fold compares against
+    /// text that now includes the preamble, and would read each cumulative
+    /// snapshot (Apple Foundation Models streams those) as new text.
     private func streamFallback(
         question: String,
         chunks: [ChunkHit],
         contextLine: String,
         gathered: [ReasoningStep] = [],
+        afterPreamble: Bool = false,
         into continuation: AsyncStream<String>.Continuation
     ) async {
         let body = Self.fallbackPrompt(question: question, chunks: chunks, gathered: gathered)
         // Carry the same per-turn context (precise date + active brain) the agent
         // path got, so a "what day is it?" that collapses to the fallback still answers.
         let prompt = contextLine.isEmpty ? body : contextLine + "\n\n" + body
+        guard afterPreamble else {
+            for await chunk in provider.generateStreaming(prompt: prompt) {
+                continuation.yield(chunk)
+            }
+            return
+        }
+        var sent = ""
         for await chunk in provider.generateStreaming(prompt: prompt) {
-            continuation.yield(chunk)
+            let delta = StreamFold.delta(current: sent, chunk: chunk)
+            guard !delta.isEmpty else { continue }
+            if sent.isEmpty { continuation.yield("\n\n") }
+            sent += delta
+            continuation.yield(delta)
         }
     }
 
@@ -764,6 +796,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         "A page that was read below IS the thing asked about: describe it from its own "
             + "words — its title, what it says, what it offers — not from what you already "
             + "believe about it."
+
+    /// The most of one tool result a ReAct iteration carries forward. The ReAct
+    /// floor is Mini: its ~3.2k-token fixed prompt (persona, tools, rules) left a
+    /// 2,879-char web page no room — 4,209 of 4,096 tokens on the installed app,
+    /// 2026-09-14. 1,200 chars (~300 tokens) keeps the iteration and its answer
+    /// inside the window; the fallback still reads the whole observation.
+    static let reactObservationCharLimit = 1200
 
     /// Which loop the prompt is feeding. The ReAct floor NEEDS its format
     /// scaffold (CONCLUSION:/call budget); the native loop speaks structured
