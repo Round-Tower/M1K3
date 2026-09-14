@@ -20,9 +20,29 @@ bundle exec fastlane mac deliver_all    # both
 bundle exec fastlane mac beta_metadata  # update TestFlight "What to Test"
 ```
 
-ASO copy is version-controlled in `metadata_mac/en-US/`. **The keyword field
+ASO copy is version-controlled in `metadata_mac/<locale>/` — eight languages:
+en-US, de-DE, es-ES, fr-FR, ja, ko, pt-BR, zh-Hans. **The keyword field
 (`keywords.txt`) is the real ASO lever** — edit it freely; it's invisible to
 users and re-uploadable any time (unlike the bundle ID, which is neither).
+
+### Riffing on the copy
+
+1. Edit any `.txt` under `metadata_mac/<locale>/` (one field per file).
+2. `python3 tools/ci/check_store_metadata.py` — Apple counts **characters**, not
+   bytes: name/subtitle 30, keywords 100, promo text 170, description 4000.
+   CI runs the same check on every PR.
+3. `bundle exec fastlane mac metadata` pushes every locale in one go. Promo text
+   goes live without a new build; everything else rides the next version.
+
+What each file sets, and where:
+
+- **Shared across Mac, iPhone and Vision Pro (app info):** `name.txt`,
+  `subtitle.txt` and `privacy_url.txt`. A subtitle that says "on Mac" therefore
+  shows on the iPhone store as well.
+- **Mac storefront only:** `description.txt`, `keywords.txt`,
+  `promotional_text.txt`, `support_url.txt` and `marketing_url.txt`. The iOS and
+  visionOS versions keep their own copies in App Store Connect, and the en-US
+  promo text is written differently for each platform on purpose.
 
 Auth: an App Store Connect API key when one is present — the fastlane JSON
 format (`key_id`, `issuer_id`, `key`) at `APP_STORE_CONNECT_API_KEY_PATH`, or at

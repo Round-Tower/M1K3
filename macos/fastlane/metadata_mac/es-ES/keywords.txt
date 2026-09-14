@@ -1,0 +1,1 @@
+asistente,LLM,GPT,AGI,chatbot,seguro,privado,PDF,transcribir,dictado,resumen,memoria,modelo,Silicon
