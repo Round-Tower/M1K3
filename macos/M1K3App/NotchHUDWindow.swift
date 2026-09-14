@@ -39,6 +39,7 @@ import SwiftUI
 @MainActor @Observable
 final class NotchHUDGeometry {
     var contentTopInset: CGFloat = 0
+    var contentHeight: CGFloat = NotchHUDLayout.size.height
     var growsFromNotch: Bool {
         contentTopInset > 0
     }
@@ -50,6 +51,11 @@ enum NotchHUDLayout {
     static let horizontalPadding: CGFloat = 28
     static let interItemSpacing: CGFloat = 16
     static let textAreaWidth: CGFloat = size.width - horizontalPadding * 2 - avatarSize - interItemSpacing
+    /// The HUD layout under a notch: a bigger creature centred over the line.
+    static let hudAvatarSize: CGFloat = 110
+    static let hudTextWidth: CGFloat = size.width - horizontalPadding * 2
+    /// 4 top + 110 creature + 6 + ~17 line + 6 + ~13 caption + 14 bottom, rounded up.
+    static let hudContentHeight: CGFloat = 172
     /// Flat top (meets the menu bar / notch), rounded bottom corners.
     static let shape = UnevenRoundedRectangle(
         topLeadingRadius: 0, bottomLeadingRadius: 28, bottomTrailingRadius: 28, topTrailingRadius: 0,
@@ -100,9 +106,11 @@ final class NotchHUDWindow: NSWindow {
             panel: NotchHUDLayout.size,
             screenFrame: screen.frame,
             visibleFrame: screen.visibleFrame,
-            notchHeight: screen.safeAreaInsets.top
+            notchHeight: screen.safeAreaInsets.top,
+            notchedContentHeight: NotchHUDLayout.hudContentHeight
         )
         geometry.contentTopInset = placement.contentTopInset
+        geometry.contentHeight = placement.contentHeight
         setContentSize(placement.frame.size)
         return placement.frame.origin
     }

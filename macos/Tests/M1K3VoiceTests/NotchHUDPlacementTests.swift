@@ -59,4 +59,23 @@ struct NotchHUDPlacementTests {
         #expect(p.contentTopInset == 37)
         #expect(p.frame.height == 147)
     }
+
+    @Test("growing from the notch, the content band takes its own height")
+    func notchedCompactContent() {
+        let p = NotchHUDPlacement.place(
+            panel: panel, screenFrame: screen, visibleFrame: visible, notchHeight: 37, notchedContentHeight: 84
+        )
+        #expect(p.contentHeight == 84)
+        #expect(p.frame.height == 121)
+        #expect(p.frame.maxY == screen.maxY)
+    }
+
+    @Test("the compact height only applies under a notch")
+    func compactIgnoredWithoutNotch() {
+        let p = NotchHUDPlacement.place(
+            panel: panel, screenFrame: screen, visibleFrame: visible, notchHeight: 0, notchedContentHeight: 84
+        )
+        #expect(p.contentHeight == panel.height)
+        #expect(p.frame.size == panel)
+    }
 }

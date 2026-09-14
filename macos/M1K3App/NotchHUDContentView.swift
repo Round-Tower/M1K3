@@ -67,6 +67,9 @@
 //  Review: Kev + claude-opus-5, 2026-09-14 — on a notched screen the panel grows out of the notch
 //  (`NotchHUDGeometry.contentTopInset`): black fill, no hairline, content below the notch strip.
 //  Docked panels keep the material. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5, 2026-09-14 — grown from the notch it is a HUD (Kev: "avatar centred?
+//  and bigger?"): a 110 pt creature centred, the spoken line centred under it (scrolls when it runs
+//  past), the caption below. The docked row is unchanged. Confidence 0.75 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Voice
@@ -98,68 +101,90 @@ struct NotchHUDContentView: View {
     }
 
     var body: some View {
-        HStack(spacing: NotchHUDLayout.interItemSpacing) {
-            // No tile behind the creature: on the glass it read as a boxed
-            // thumbnail (Kev's screenshot, 2026-09-12); `.fit` framing places
-            // the camera so the whole creature fills this square slot.
-            avatarSlot
-                .frame(width: NotchHUDLayout.avatarSize, height: NotchHUDLayout.avatarSize)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 3) {
-                if let narration {
-                    NotchHUDMarquee(
-                        text: narration.text,
-                        width: NotchHUDLayout.textAreaWidth,
-                        wordEnd: wordEnd(in: narration),
-                        lineLength: narration.length
-                    )
-                    // Fresh @State per new sentence — restart the scroll, not
-                    // continue it. Keyed on the UTTERANCE and the sentence's
-                    // position in it: two identical sentences in a row are
-                    // still two sentences, and two one-sentence utterances
-                    // (both at offset 0) are still two utterances — whether
-                    // or not the `clear()` between them ever rendered.
-                    .id(MarqueeKey(utterance: env.speechHighlight.utteranceSequence, start: narration.start))
-                } else {
-                    Text("M1K3 IS TALKING")
-                        .font(.pixel(18))
-                        .kerning(1)
-                        .foregroundStyle(.white)
+        content
+            // FIXED size — the panel fills the window every frame. Sized to its
+            // content it grew and shrank with each sentence (Kev: "expanding when
+            // talking", 2026-09-12); the window is fixed, so the panel is too.
+            .frame(width: NotchHUDLayout.size.width, height: geometry.contentHeight)
+            // On a notched screen the content sits below the notch strip.
+            .padding(.top, geometry.contentTopInset)
+            .frame(width: NotchHUDLayout.size.width, height: geometry.contentHeight + geometry.contentTopInset)
+            // Flat top edge, rounded bottom corners only. A fill, NOT
+            // `glassEffect(in:)`: on macOS 27.0 the glass ignored the uneven
+            // shape and drew ~15 pt short of the frame (2026-09-12).
+            .background { panelBackground }
+            .overlay {
+                // No hairline on the notched panel: a border would draw the seam
+                // between the notch and the panel that the black fill hides.
+                if !geometry.growsFromNotch {
+                    NotchHUDLayout.shape.strokeBorder(.white.opacity(0.14), lineWidth: 1)
                 }
-                // WHO is talking, not which brain/voice renders it (hit list
-                // 2026-09-08, item 2): "M1K3", or "CLAUDE CODE · VIA M1K3".
-                Text(NarrationCaption.text(for: env.speechHighlight.narrator))
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .tracking(0.5)
-                    .foregroundStyle(.white.opacity(0.55))
             }
+    }
 
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, NotchHUDLayout.horizontalPadding)
-        .padding(.vertical, 14)
-        // The content keeps its fixed panel size; on a notched screen it sits
-        // below the notch strip at the top of the window.
-        .frame(width: NotchHUDLayout.size.width, height: NotchHUDLayout.size.height)
-        .padding(.top, geometry.contentTopInset)
-        // FIXED size — the glass fills the window every frame. Sized to its
-        // content it grew and shrank with each sentence (Kev: "expanding when
-        // talking", 2026-09-12); the window is fixed, so the glass is too.
-        .frame(width: NotchHUDLayout.size.width, height: NotchHUDLayout.size.height + geometry.contentTopInset)
-        // Hugs the notch: a flat top edge that meets the menu bar, rounded
-        // bottom corners only — not a capsule floating below it. A material,
-        // NOT `glassEffect(in:)`: on macOS 27.0 the glass ignored the uneven
-        // shape (all four corners rounded) and drew ~15 pt short of the frame
-        // (window-rect capture, 2026-09-12) — the material honours the shape.
-        .background { panelBackground }
-        .overlay {
-            // No hairline on the notched panel: a border would draw the seam
-            // between the notch and the panel that the black fill hides.
-            if !geometry.growsFromNotch {
-                NotchHUDLayout.shape.strokeBorder(.white.opacity(0.14), lineWidth: 1)
+    /// Grown from the notch it is a HUD: a big creature centred under the
+    /// notch, the spoken line and who is speaking below it (Kev, 2026-09-14).
+    /// Docked under a plain menu bar it stays the compact row.
+    @ViewBuilder private var content: some View {
+        if geometry.growsFromNotch {
+            VStack(spacing: 6) {
+                avatarSlot
+                    .frame(width: NotchHUDLayout.hudAvatarSize, height: NotchHUDLayout.hudAvatarSize)
+                narrationText(width: NotchHUDLayout.hudTextWidth, centred: true)
+                captionText
             }
+            .padding(.top, 4)
+            .padding(.bottom, 14)
+        } else {
+            HStack(spacing: NotchHUDLayout.interItemSpacing) {
+                // No tile behind the creature: on the glass it read as a boxed
+                // thumbnail (Kev's screenshot, 2026-09-12); `.fit` framing places
+                // the camera so the whole creature fills this square slot.
+                avatarSlot
+                    .frame(width: NotchHUDLayout.avatarSize, height: NotchHUDLayout.avatarSize)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    narrationText(width: NotchHUDLayout.textAreaWidth, centred: false)
+                    captionText
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, NotchHUDLayout.horizontalPadding)
+            .padding(.vertical, 14)
         }
+    }
+
+    @ViewBuilder private func narrationText(width: CGFloat, centred: Bool) -> some View {
+        if let narration {
+            NotchHUDMarquee(
+                text: narration.text,
+                width: width,
+                wordEnd: wordEnd(in: narration),
+                lineLength: narration.length,
+                centred: centred
+            )
+            // Fresh @State per new sentence — restart the scroll, not
+            // continue it. Keyed on the UTTERANCE and the sentence's
+            // position in it: two identical sentences in a row are
+            // still two sentences, and two one-sentence utterances
+            // (both at offset 0) are still two utterances — whether
+            // or not the `clear()` between them ever rendered.
+            .id(MarqueeKey(utterance: env.speechHighlight.utteranceSequence, start: narration.start))
+        } else {
+            Text("M1K3 IS TALKING")
+                .font(.pixel(18))
+                .kerning(1)
+                .foregroundStyle(.white)
+        }
+    }
+
+    /// WHO is talking, not which brain/voice renders it (hit list
+    /// 2026-09-08, item 2): "M1K3", or "CLAUDE CODE · VIA M1K3".
+    private var captionText: some View {
+        Text(NarrationCaption.text(for: env.speechHighlight.narrator))
+            .font(.system(size: 10, weight: .medium, design: .rounded))
+            .tracking(0.5)
+            .foregroundStyle(.white.opacity(0.55))
     }
 
     /// Black on a notched screen, so the panel and the notch read as one
@@ -216,6 +241,9 @@ private struct NotchHUDMarquee: View {
     let width: CGFloat
     let wordEnd: Int
     let lineLength: Int
+    /// Centre a line that fits (the HUD layout); a line that runs past the
+    /// viewport scrolls from the leading edge either way.
+    var centred = false
 
     @State private var offset: CGFloat = 0
     @State private var textWidth: CGFloat = 0
@@ -232,7 +260,7 @@ private struct NotchHUDMarquee: View {
                 Color.clear.onAppear { textWidth = geo.size.width }
             })
             .offset(x: offset)
-            .frame(width: width, alignment: .leading)
+            .frame(width: width, alignment: centred && textWidth <= width ? .center : .leading)
             .clipped()
             .mask(edgeMask)
             .onChange(of: wordEnd, initial: true) { _, _ in follow() }
