@@ -36,5 +36,12 @@
 	<true/>
 	<key>com.apple.security.personal-information.location</key>
 	<true/>
+	<!-- Private Cloud Compute (ADR 0006): Apple assigned the managed capability
+	     to team 76DJH43A4P on 2026-09-14. STORE LANE ONLY: it is a restricted
+	     entitlement and needs a provisioning profile, so M1K3.entitlements (the
+	     Developer ID lane, no profile) must never carry it — AMFI would refuse to
+	     launch the app. Without it the PCC backend reads absent, by design. -->
+	<key>com.apple.developer.private-cloud-compute</key>
+	<true/>
 </dict>
 </plist>

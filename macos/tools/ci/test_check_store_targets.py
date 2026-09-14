@@ -166,3 +166,16 @@ def test_ios_target_opting_out_of_multitasking_with_full_screen_passes():
         "INFOPLIST_KEY_UIRequiresFullScreen": "YES",
     })
     assert m.audit(project) == []
+
+
+# The Developer ID lane (M1K3.entitlements) ships with no provisioning profile.
+# A profile-only entitlement there makes AMFI refuse to launch the app — every
+# nightly DMG and Homebrew install would die at launch.
+def test_developer_id_entitlements_without_profile_only_keys_pass():
+    assert m.profile_only_leaks({"com.apple.security.app-sandbox": True}) == []
+
+
+def test_pcc_in_developer_id_entitlements_is_flagged():
+    leaks = m.profile_only_leaks({"com.apple.developer.private-cloud-compute": True})
+    assert len(leaks) == 1
+    assert "private-cloud-compute" in leaks[0]

@@ -27,6 +27,7 @@ project.yml's target/template shape is the one xcodegen documents). Prior: none.
 from __future__ import annotations
 
 import os
+import plistlib
 import sys
 
 EXPECTED_BUNDLE_ID = "app.m1k3"
@@ -179,6 +180,20 @@ def audit(project: dict) -> list[str]:
 # --------------------------------------------------------------------------- #
 
 
+# Entitlements that only a provisioning profile can grant. The Developer ID
+# lane (M1K3App/M1K3.entitlements) ships without a profile, so AMFI refuses to
+# launch an app that claims one of these there: every DMG and cask install dies.
+PROFILE_ONLY_ENTITLEMENTS = ("com.apple.developer.private-cloud-compute",)
+
+
+def profile_only_leaks(developer_id_entitlements: dict) -> list[str]:
+    return [
+        f"M1K3.entitlements (Developer ID, no profile) claims {key} — store lane only (M1K3-MAS.entitlements)"
+        for key in PROFILE_ONLY_ENTITLEMENTS
+        if key in developer_id_entitlements
+    ]
+
+
 def main(argv: list[str]) -> int:
     try:
         import yaml  # type: ignore
@@ -191,6 +206,8 @@ def main(argv: list[str]) -> int:
     with open(path) as f:
         project = yaml.safe_load(f)
     problems = audit(project)
+    with open(os.path.join(macos, "M1K3App", "M1K3.entitlements"), "rb") as f:
+        problems += profile_only_leaks(plistlib.load(f))
     names = sorted(store_targets(project))
     if not problems:
         print(f"✓ {len(names)} store targets ({', '.join(names)}) all upload into {EXPECTED_BUNDLE_ID!r} "
