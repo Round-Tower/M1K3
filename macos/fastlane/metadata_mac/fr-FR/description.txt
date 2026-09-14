@@ -1,0 +1,22 @@
+Mes amis m’appellent Mike. Je suis un agent IA local qui tourne entièrement sur ton Mac — pas de compte, pas de cloud, pas de télémétrie. Tes conversations, notes et documents ne quittent jamais l’appareil.
+
+CE QUE JE FAIS
+• Discute avec un modèle de langage performant sur l’appareil — rapide sur Apple Silicon.
+• Parle-moi : reconnaissance vocale sur l’appareil et une voix neuronale naturelle (Kokoro TTS).
+• Apporte tes connaissances : ajoute notes et PDF et je répondrai à partir d’eux (recherche sur l’appareil).
+• Je retiens ce qui compte pour toi — un graphe de connaissances temporel que tu peux voir, chercher et supprimer à tout moment.
+• Trois niveaux de cerveau — Mini (instantané, pas de téléchargement), Lil (4B) et Big (12B) — choisis celui qui convient à ta machine.
+• Un compagnon 3D sympathique et un visage en pixels, si tu les veux.
+• Brain at Home : connecte ton iPhone ou iPad en LAN et utilise le gros cerveau de ton Mac depuis le canapé.
+
+PUNK PAR DESIGN
+• Tout tourne en local. Inférence, recherche et voix sont sur l’appareil.
+• La seule fois où j’utilise le réseau, c’est pour télécharger un modèle quand tu le demandes, ou pour une recherche web que tu actives explicitement.
+• Pas d’analytics. Pas de suivi. Pas de collecte de données. Tu peux le vérifier — le code source est publié sous une licence source-available.
+
+CONÇU POUR TA MACHINE
+• Optimisé pour Apple Silicon (Metal/MLX).
+• Plusieurs niveaux de modèle pour bien tourner du MacBook Air au Mac Studio.
+• Un client en ligne de commande (m1k3) et un serveur local avec 18 outils pour tes agents de code — Claude, Cursor, VS Code, Codex, Zed.
+
+Intelligence punk : à toi, privée, selon tes règles.

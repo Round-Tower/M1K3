@@ -1,0 +1,22 @@
+Meine Freunde nennen mich Mike. Ich bin ein lokaler KI-Agent, der vollständig auf deinem Mac läuft — kein Konto, keine Cloud, keine Telemetrie. Deine Gespräche, Notizen und Dokumente verlassen niemals das Gerät.
+
+WAS ICH KANN
+• Chatte mit einem leistungsstarken On-Device-Sprachmodell — schnell auf Apple Silicon.
+• Sprich mit mir: On-Device-Spracherkennung und eine natürliche neuronale Stimme (Kokoro TTS).
+• Bring dein eigenes Wissen mit: Lade Notizen und PDFs und ich beantworte Fragen daraus (On-Device-Retrieval).
+• Ich merke mir, was dir wichtig ist — ein temporaler Wissensgraph, den du jederzeit durchsuchen und löschen kannst.
+• Drei Hirnstufen — Mini (sofort, kein Download), Lil (4B) und Big (12B) — wähle die passende für deinen Mac.
+• Ein freundlicher 3D-Begleiter und ein Pixel-Gesicht, wenn du magst.
+• Brain at Home: Koppele dein iPhone oder iPad über LAN und nutze das große Hirn deines Macs vom Sofa aus.
+
+PUNK BY DESIGN
+• Alles läuft lokal. Inferenz, Suche und Stimme sind alle On-Device.
+• Ich nutze das Netzwerk nur, wenn du ein Modell herunterladen willst oder eine Websuche explizit aktivierst.
+• Keine Analytik. Kein Tracking. Keine Datensammlung. Du kannst es überprüfen — der Quellcode ist unter einer Source-Available-Lizenz veröffentlicht.
+
+FÜR DEINEN MAC GEBAUT
+• Optimiert für Apple Silicon (Metal/MLX).
+• Mehrere Modellstufen, damit ich vom MacBook Air bis zum Mac Studio gut laufe.
+• Ein Kommandozeilen-Client (m1k3) und ein lokaler Tool-Server mit 18 Werkzeugen für deine Coding-Agenten — Claude, Cursor, VS Code, Codex, Zed.
+
+Punk-Intelligenz: deine, privat, zu deinen Bedingungen.

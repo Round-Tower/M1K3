@@ -1,0 +1,1 @@
+assistant,LLM,GPT,AGI,chatbot,sécurisé,hors-ligne,PDF,transcription,dictée,compagnon,résumé

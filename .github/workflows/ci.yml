@@ -273,6 +273,12 @@ jobs:
       - name: No test bets on a short wall-clock bound
         working-directory: macos
         run: python3 tools/ci/check_wall_clock_bounds.py
+      # The App Store copy in every language lives in fastlane/metadata_mac so it
+      # can be riffed on; Apple rejects the whole upload when one field runs over
+      # its CHARACTER limit, and a locale without a support URL blocks App Review.
+      - name: Store copy fits Apple's limits in every locale
+        working-directory: macos
+        run: python3 tools/ci/check_store_metadata.py
       # The guards' pure helpers have unit tests (test_check_*.py) that nothing
       # ran until 2026-09-02 — a helper regression would have passed CI while the
       # guard quietly stopped guarding. Run them.
