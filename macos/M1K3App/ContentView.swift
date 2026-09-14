@@ -473,7 +473,12 @@ struct ContentView: View {
                         if !sent, draft.isEmpty { draft = text }
                     }
                 },
-                onCancel: { privateCloudPending = nil }
+                // "Keep it on this Mac" disarms: the words stay in the field, and the
+                // next Return sends them here instead of reopening the sheet.
+                onCancel: {
+                    privateCloudPending = nil
+                    privateCloudArmed = false
+                }
             )
         }
         .task { await env.refreshPrivateCloudStatus() }

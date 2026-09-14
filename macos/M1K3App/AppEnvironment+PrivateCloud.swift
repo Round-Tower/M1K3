@@ -93,7 +93,9 @@ extension AppEnvironment {
 
     /// Send one turn to PCC after the user confirmed the consent sheet. The gate
     /// is re-checked here too (`privateCloudSendAllowed`). Returns false when it
-    /// refused: nothing left this Mac, and the caller gives the words back.
+    /// refused: nothing left this Mac, and the caller gives the words back. True
+    /// means the send went ahead, not that PCC answered: the outcome (an answer
+    /// or a fallback) lands in the transcript.
     @discardableResult
     func sendPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) async -> Bool {
         guard privateCloudSendAllowed(), let backend = Self.privateCloudBackend else { return false }
