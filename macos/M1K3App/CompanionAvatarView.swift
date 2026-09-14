@@ -45,6 +45,9 @@
 //  fixed shot clipped a broadside fox's head in the 72px notch slot and on a portrait phone — a first pass
 //  at a closer fixed `.badge` shot (z 1.45) clipped it worse. visionOS ignores framing (window-fit path).
 //  Confidence 0.8 (trig pinned in CameraFitTests; the felt framing per surface is verify-by-launch).
+//  Review: Kev + claude-opus-5, 2026-09-14 — `tile: Bool` (default true, every surface unchanged): the notch
+//  HUD draws one CRT over its whole Liquid Glass panel, so it turns off the creature's own CRT + clip, whose
+//  vignette read as a dark box on glass. Confidence 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the Phosphor Fox's baked lattice is tinted
 //  phosphor green before the material snapshot, so shader-off shows the proper wireframe.
 //  Confidence 0.75 (verify-by-launch on the tile and the voice plates).
@@ -182,6 +185,10 @@ struct CompanionAvatarView: View {
     /// Camera framing for the macOS/iOS path; ignored on visionOS (no in-scene
     /// camera there — the window-fit scales instead).
     var framing: CompanionFraming = .window
+    /// The creature's own CRT pass (scanlines + vignette) and tile clip. A host
+    /// that draws its own CRT over a larger surface (the notch HUD) turns it
+    /// off, or the vignette reads as a dark box behind the creature.
+    var tile = true
 
     /// The vertical field of view the camera is built with; `CameraFit` needs
     /// the same number, so it lives once.
@@ -332,10 +339,10 @@ struct CompanionAvatarView: View {
             }
             if scene.built { applyPause(paused) }
         }
-        .overlay(CRTOverlay(paused: paused))
+        .overlay { if tile { CRTOverlay(paused: paused) } }
         .onDisappear { scene.loadTask?.cancel() }
         .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: tile ? 16 : 0))
     }
 
     #if os(visionOS)

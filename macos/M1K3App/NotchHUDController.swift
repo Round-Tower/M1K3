@@ -53,11 +53,18 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 7) — the wait's valve is `NotchHUDVisibility.wakeValve`
 //  (1 s while speaking): the Settings toggle is not an observed input, and a flip mid-utterance used to wait
 //  for the speech to end (up to 30 s) before the HUD followed it. Confidence now 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-14 — under a notch the HUD grows in: the window sits in place
+//  and SwiftUI springs the panel out of the notch's rectangle, then folds it back before `orderOut`.
+//  Docked panels keep the slide. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5, 2026-09-14 — a stop button: while shown, a 20 Hz pointer poll flips
+//  `ignoresMouseEvents` so the panel is clickable only under the pointer (and click-through otherwise);
+//  hiding restores click-through. Confidence 0.75 (verify-by-launch).
 //
 
 import AppKit
 import Foundation
 import M1K3Voice
+import SwiftUI
 
 @MainActor
 final class NotchHUDController {
@@ -66,6 +73,10 @@ final class NotchHUDController {
     private var visibility = NotchHUDVisibility()
     private var driveTask: Task<Void, Never>?
     private var animTask: Task<Void, Never>?
+    /// Polls the pointer while the HUD is up (~20 Hz): the panel takes clicks
+    /// only while the pointer is over it, so it never blocks the menu bar or
+    /// the app underneath otherwise.
+    private var hoverTask: Task<Void, Never>?
     private let clockStart = Date()
 
     init(env: AppEnvironment) {
@@ -116,6 +127,8 @@ final class NotchHUDController {
         driveTask = nil
         animTask?.cancel()
         animTask = nil
+        hoverTask?.cancel()
+        hoverTask = nil
         window?.orderOut(nil)
         window = nil
     }
@@ -137,6 +150,14 @@ final class NotchHUDController {
         guard let screen = NSScreen.main else { return }
         let window = resolveWindow()
         let shown = window.targetOrigin(on: screen)
+        if window.geometry.growsFromNotch {
+            // Only the notched HUD has a stop button; the docked pill stays
+            // click-through for its whole life (review, #326 pass 4).
+            startHoverTracking(window)
+            growIn(window, at: shown)
+            return
+        }
+        window.geometry.expanded = true
         let hidden = window.hiddenOrigin(shownAt: shown)
         window.setFrameOrigin(hidden)
         window.alphaValue = 0
@@ -150,6 +171,11 @@ final class NotchHUDController {
 
     private func hideWindow() {
         guard let window, let screen = NSScreen.main else { return }
+        stopHoverTracking(window)
+        if window.geometry.growsFromNotch {
+            foldOut(window)
+            return
+        }
         let shown = window.targetOrigin(on: screen)
         let hidden = window.hiddenOrigin(shownAt: shown)
         animate(
@@ -159,6 +185,62 @@ final class NotchHUDController {
         ) { [weak self] in
             self?.window?.orderOut(nil)
         }
+    }
+
+    /// Under a notch the panel swells out of it: the window sits in place at
+    /// full size and SwiftUI scales the panel up from the notch's own
+    /// rectangle (`NotchHUDGeometry.expanded`).
+    private func growIn(_ window: NotchHUDWindow, at shown: NSPoint) {
+        animTask?.cancel()
+        animTask = nil
+        if !window.isVisible {
+            window.geometry.expanded = false
+            window.setFrameOrigin(shown)
+            window.alphaValue = 1
+            window.orderFrontRegardless()
+        }
+        // Next runloop turn, so the folded state renders once before the spring.
+        // GCD, not a MainActor Task: a Task can run before the run loop commits
+        // the folded frame, and the spring would start from the wrong state.
+        DispatchQueue.main.async { [weak window] in
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.74)) {
+                window?.geometry.expanded = true
+            }
+        }
+    }
+
+    private func foldOut(_ window: NotchHUDWindow) {
+        animTask?.cancel()
+        withAnimation(.easeIn(duration: 0.22)) {
+            window.geometry.expanded = false
+        }
+        animTask = Task { @MainActor [weak window] in
+            try? await Task.sleep(for: .milliseconds(260))
+            // A show that landed during the fold owns the window now.
+            guard !Task.isCancelled, let window, !window.geometry.expanded else { return }
+            window.orderOut(nil)
+        }
+    }
+
+    private func startHoverTracking(_ window: NotchHUDWindow) {
+        hoverTask?.cancel()
+        hoverTask = Task { @MainActor [weak window] in
+            while !Task.isCancelled, let window {
+                let inside = window.panelHitRect.contains(NSEvent.mouseLocation)
+                if window.ignoresMouseEvents == inside { window.ignoresMouseEvents = !inside }
+                if window.geometry.hovered != inside {
+                    withAnimation(.easeOut(duration: 0.15)) { window.geometry.hovered = inside }
+                }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        }
+    }
+
+    private func stopHoverTracking(_ window: NotchHUDWindow) {
+        hoverTask?.cancel()
+        hoverTask = nil
+        window.ignoresMouseEvents = true
+        window.geometry.hovered = false
     }
 
     private func resolveWindow() -> NotchHUDWindow {
