@@ -8,6 +8,9 @@
 //  `isAvailable` is read but not asserted (it depends on the host machine).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 — pins that the default
+//  (trimmed) Mini provider still reports carrying the persona, and neutral
+//  instructions still don't. Red on master: the 09-12 trim broke the first.
 
 @testable import M1K3Inference
 import Testing
@@ -57,5 +60,25 @@ struct AppleFoundationModelsProviderTests {
         #expect(AppleFoundationModelsProvider.clampedRawResponseTokens(64) == 64)
         #expect(AppleFoundationModelsProvider.clampedRawResponseTokens(0) == 1)
         #expect(AppleFoundationModelsProvider.clampedRawResponseTokens(-5) == 1)
+    }
+
+    @Test("the default Mini provider carries the standing persona — the trimmed prompt still counts")
+    func defaultMiniCarriesPersona() {
+        // b7672ace (2026-09-12) trimmed Mini's instructions to the core minus
+        // FOLLOW-UPS. The check read `contains(corePrompt)`, which a strict
+        // prefix never does, so it went false and the ReAct floor re-sent the
+        // FULL persona in the prompt body. Every Mini agent turn then overflowed
+        // the 4096 window (09-13 log: instructions 1409 + prompt 3905 = 5314
+        // tokens, four failed calls, then the plain-RAG fallback).
+        #expect(AppleFoundationModelsProvider().carriesStandingPersona)
+        // The untrimmed persona is still the persona.
+        #expect(AppleFoundationModelsProvider(instructions: { M1K3Persona.systemPrompt }).carriesStandingPersona)
+    }
+
+    @Test("neutral instructions still don't count as carrying the persona")
+    func neutralInstructionsDontCarryPersona() {
+        // The distiller and judges pass their own instructions and must keep
+        // getting the persona from the ReAct body if they ever run the loop.
+        #expect(!AppleFoundationModelsProvider(instructions: { "Summarise the facts." }).carriesStandingPersona)
     }
 }
