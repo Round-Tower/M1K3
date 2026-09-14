@@ -57,10 +57,12 @@ enum NotchHUDLayout {
     static let interItemSpacing: CGFloat = 16
     static let textAreaWidth: CGFloat = size.width - horizontalPadding * 2 - avatarSize - interItemSpacing
     /// The HUD layout under a notch: a bigger creature centred over the line.
-    static let hudAvatarSize: CGFloat = 110
+    /// Wide, because the creatures are long, not tall: the aspect-aware fit
+    /// makes them bigger in a wide slot without clipping the walk cycle.
+    static let hudAvatarSlot = CGSize(width: 200, height: 116)
     static let hudTextWidth: CGFloat = size.width - horizontalPadding * 2
-    /// 4 top + 110 creature + 6 + ~17 line + 6 + ~13 caption + 14 bottom, rounded up.
-    static let hudContentHeight: CGFloat = 172
+    /// 4 top + 116 creature + 6 + ~17 line + 6 + ~13 caption + 14 bottom, rounded up.
+    static let hudContentHeight: CGFloat = 178
     /// Flat top (meets the menu bar / notch), rounded bottom corners.
     static let shape = UnevenRoundedRectangle(
         topLeadingRadius: 0, bottomLeadingRadius: 28, bottomTrailingRadius: 28, topTrailingRadius: 0,

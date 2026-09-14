@@ -152,7 +152,7 @@ struct NotchHUDContentView: View {
         if geometry.growsFromNotch {
             VStack(spacing: 6) {
                 avatarSlot
-                    .frame(width: NotchHUDLayout.hudAvatarSize, height: NotchHUDLayout.hudAvatarSize)
+                    .frame(width: NotchHUDLayout.hudAvatarSlot.width, height: NotchHUDLayout.hudAvatarSlot.height)
                 narrationText(width: NotchHUDLayout.hudTextWidth, centred: true)
                 captionText
             }
@@ -253,8 +253,9 @@ struct NotchHUDContentView: View {
 
     /// Wider than `.fit`'s 1.25: that frames the creature's POSED extents, and
     /// the walk cycle's raised head and stride ran past them and clipped flat
-    /// in the bigger HUD slot (Kev's screenshot, 2026-09-14).
-    private static let hudFraming = CompanionFraming.fit(headroom: 1.7)
+    /// in the bigger HUD slot (Kev's screenshot, 2026-09-14). 1.7 fixed that but
+    /// shrank him; a wide slot (the fox is long, not tall) at 1.4 does both.
+    private static let hudFraming = CompanionFraming.fit(headroom: 1.4)
 
     /// A real installed creature pick renders as-is; anything else falls back
     /// to the house default creature rather than the constellation or the
@@ -267,10 +268,10 @@ struct NotchHUDContentView: View {
             // Ordered-out HUD → no RealityView at all (2026-09-12 thermal audit).
             EmptyView()
         } else if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
-            CompanionAvatarView(controller: env.avatar, companion: spec, framing: Self.hudFraming)
+            CompanionAvatarView(controller: env.avatar, companion: spec, framing: Self.hudFraming, tile: !geometry.growsFromNotch)
                 .id(spec.id)
         } else {
-            CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion, framing: Self.hudFraming)
+            CompanionAvatarView(controller: env.avatar, companion: houseFallbackCompanion, framing: Self.hudFraming, tile: !geometry.growsFromNotch)
                 .id(houseFallbackCompanion.id)
         }
     }
