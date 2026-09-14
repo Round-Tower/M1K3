@@ -15,8 +15,13 @@
 //  .userPresence call key too: setData's replace deletes only the data-protection row
 //  (deleteBaseRow); removeData stays the forget path that wipes both (#305 review: two
 //  failed inserts used to orphan every recorded call). Confidence 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-14 — #319: queries go through KeychainLane. A
+//  Developer ID build (no application identifier) uses the login keychain, as before
+//  #305, instead of failing every call with -34018 and dropping the call key to memory.
+//  Confidence 0.85 (lane pinned; the launch log is the proof).
 
 import Foundation
+import M1K3Inference
 import Security
 
 public protocol KeyStore: Sendable {
@@ -52,10 +57,16 @@ public struct KeychainKeyStore: KeyStore {
 
     private let service: String
     private let protection: Protection
+    private let lane: KeychainLane
 
-    public init(service: String = "app.m1k3", protection: Protection = .afterFirstUnlock) {
+    public init(
+        service: String = "app.m1k3",
+        protection: Protection = .afterFirstUnlock,
+        lane: KeychainLane = .current
+    ) {
         self.service = service
         self.protection = protection
+        self.lane = lane
     }
 
     public func data(forAccount account: String) throws -> Data? {
@@ -179,7 +190,7 @@ public struct KeychainKeyStore: KeyStore {
     }
 
     private func baseQuery(_ account: String) -> [CFString: Any] {
-        Self.query(service: service, account: account)
+        Self.query(service: service, account: account, lane: lane)
     }
 
     /// The data-protection keychain (iOS-style; on macOS opt-in since 10.15):
@@ -188,9 +199,12 @@ public struct KeychainKeyStore: KeyStore {
     /// the same items silently. The login keychain's per-binary ACL asked for
     /// the login PASSWORD on each new signature (2026-09-12). It is also the
     /// only keychain that honours `kSecAttrAccessible*ThisDeviceOnly`.
-    static func query(service: String, account: String) -> [CFString: Any] {
+    /// A Developer ID build has no entitlement for it (#319): its lane is
+    /// `.login`, the query stays the legacy one, and the legacy lift finds
+    /// nothing new to lift (the base read already looked there).
+    static func query(service: String, account: String, lane: KeychainLane) -> [CFString: Any] {
         var query = legacyQuery(service: service, account: account)
-        query[kSecUseDataProtectionKeychain] = true
+        if lane == .dataProtection { query[kSecUseDataProtectionKeychain] = true }
         return query
     }
 
