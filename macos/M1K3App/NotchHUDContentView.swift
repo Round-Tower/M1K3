@@ -73,6 +73,10 @@
 //  Review: Kev + claude-opus-5, 2026-09-14 — "clipping on the avatar… grow in? CRT it? Liquid glass": fit
 //  headroom 1.7 (the walk cycle overran 1.25), the panel scales in from the notch's rectangle, Liquid Glass
 //  under a black band that melts out of the notch, and the house CRTOverlay over it. Confidence 0.7.
+//  Review: Kev + claude-opus-5, 2026-09-14 — "no background to the avatar… reduce the black fade… a close /
+//  stop button": smoked glass (translucent fill + sheen + rim), because backdrop blurs can't sample through
+//  the RealityView and drew a box on bright desktops; the band fades in 12 pt; a hover-only stop button calls
+//  `stopSpeaking()`. Confidence 0.75 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Voice
@@ -158,6 +162,10 @@ struct NotchHUDContentView: View {
             }
             .padding(.top, 4)
             .padding(.bottom, 14)
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .topTrailing) {
+                if geometry.hovered { stopButton.transition(.opacity) }
+            }
         } else {
             HStack(spacing: NotchHUDLayout.interItemSpacing) {
                 // No tile behind the creature: on the glass it read as a boxed
@@ -201,6 +209,26 @@ struct NotchHUDContentView: View {
         }
     }
 
+    /// Stops the speech (and the visitor queue behind it), same as the MCP
+    /// `stop_speaking` tool; the HUD then folds away on its own. Shown while
+    /// the pointer is over the panel.
+    private var stopButton: some View {
+        Button {
+            Task { await env.stopSpeaking() }
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white.opacity(0.85))
+                .frame(width: 24, height: 24)
+                .background(.white.opacity(0.14), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 8)
+        .padding(.trailing, 14)
+        .help("Stop talking")
+        .accessibilityLabel("Stop talking")
+    }
+
     /// WHO is talking, not which brain/voice renders it (hit list
     /// 2026-09-08, item 2): "M1K3", or "CLAUDE CODE · VIA M1K3".
     private var captionText: some View {
@@ -210,32 +238,47 @@ struct NotchHUDContentView: View {
             .foregroundStyle(.white.opacity(0.55))
     }
 
-    /// Under a notch: Liquid Glass with a black band that is solid through
-    /// the notch's height and melts into the glass below it, so notch and
-    /// panel still read as one shape, and a CRT pass over the lot (Kev,
-    /// 2026-09-14). The glass is drawn on a plain rectangle and CLIPPED to the
-    /// panel shape: `glassEffect(in:)` with the uneven shape ignored it on
-    /// macOS 27.0 (2026-09-12). Docked panels keep the material.
+    /// Under a notch: smoked glass. A translucent dark fill with a glass
+    /// highlight, not a backdrop blur: Liquid Glass (and any material) cannot
+    /// sample through the creature's Metal layer, so the region behind the
+    /// RealityView rendered as a visible box on a bright desktop (Kev's
+    /// screenshot, 2026-09-14; the same box was hit with the material on
+    /// 2026-09-12). A short black band joins it to the notch, and the house
+    /// CRT sits over it. Docked panels keep the material.
     @ViewBuilder private var panelBackground: some View {
         if geometry.growsFromNotch {
             ZStack {
-                Rectangle()
-                    .fill(.black.opacity(0.25))
-                    .glassEffect(.regular.tint(.black.opacity(0.35)), in: .rect)
+                Rectangle().fill(.black.opacity(0.72))
+                // Glass sheen: a faint light from the top that fades out.
+                LinearGradient(
+                    colors: [.white.opacity(0.07), .clear],
+                    startPoint: .top, endPoint: .center
+                )
                 LinearGradient(stops: notchBandStops, startPoint: .top, endPoint: .bottom)
                 CRTOverlay()
                     .opacity(0.8)
             }
             .clipShape(NotchHUDLayout.shape)
+            // The glass edge: a thin highlight on the rounded bottom rim.
+            .overlay {
+                NotchHUDLayout.shape
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [.clear, .white.opacity(0.22)],
+                            startPoint: .top, endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+            }
         } else {
             NotchHUDLayout.shape.fill(.regularMaterial)
         }
     }
 
-    /// Solid black through the notch, fading to clear ~40 pt below it.
+    /// Solid black through the notch, blending into the glass ~12 pt below it.
     private var notchBandStops: [Gradient.Stop] {
         let notch = geometry.contentTopInset / max(1, totalHeight)
-        let fade = min(1, notch + 40 / max(1, totalHeight))
+        let fade = min(1, notch + 12 / max(1, totalHeight))
         return [
             .init(color: .black, location: 0),
             .init(color: .black, location: notch),

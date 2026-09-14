@@ -23,6 +23,9 @@
 //  at the screen's top on a notched display, taller by the notch, content below it; the frame is
 //  sized per screen and `constrainFrameRect` is a pass-through so AppKit can't push it under the
 //  menu bar. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5, 2026-09-14 — "needs a close / stop button": a non-activating NSPanel whose
+//  hosting view accepts the first mouse; `panelHitRect` is what the controller's hover poll tests, so the
+//  panel takes clicks only while the pointer is over it. Confidence 0.75 (verify-by-launch).
 //
 
 import AppKit
@@ -45,6 +48,8 @@ final class NotchHUDGeometry {
     /// False while the panel is folded into the notch (before the grow-in,
     /// after the fold-out). Docked panels slide instead and stay true.
     var expanded = true
+    /// The pointer is over the panel: the window takes clicks and shows the stop button.
+    var hovered = false
     var growsFromNotch: Bool {
         contentTopInset > 0
     }
@@ -71,13 +76,15 @@ enum NotchHUDLayout {
 }
 
 @MainActor
-final class NotchHUDWindow: NSWindow {
+final class NotchHUDWindow: NSPanel {
     let geometry = NotchHUDGeometry()
 
     init(env: AppEnvironment) {
         super.init(
             contentRect: NSRect(origin: .zero, size: NotchHUDLayout.size),
-            styleMask: [.borderless],
+            // A non-activating panel: clicking the stop button must not pull
+            // M1K3's windows to the front.
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -93,7 +100,8 @@ final class NotchHUDWindow: NSWindow {
         ignoresMouseEvents = true
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         isReleasedWhenClosed = false
-        let hosting = NSHostingView(
+        becomesKeyOnlyIfNeeded = true
+        let hosting = FirstMouseHostingView(
             rootView: NotchHUDContentView(env: env, geometry: geometry)
                 .trackWindowVisibility()
         )
@@ -130,8 +138,24 @@ final class NotchHUDWindow: NSWindow {
         frameRect
     }
 
+    /// The panel's clickable area in screen coordinates: everything below the
+    /// notch strip (the strip itself stays click-through to the menu bar).
+    var panelHitRect: NSRect {
+        var rect = frame
+        rect.size.height -= geometry.contentTopInset
+        return rect
+    }
+
     /// Parked just above the shown position — the entrance slides down into place.
     func hiddenOrigin(shownAt shown: NSPoint) -> NSPoint {
         NSPoint(x: shown.x, y: shown.y + frame.height + 24)
+    }
+}
+
+/// The HUD's first click must land on the stop button, not merely focus the
+/// (never-key) panel.
+private final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for _: NSEvent?) -> Bool {
+        true
     }
 }
