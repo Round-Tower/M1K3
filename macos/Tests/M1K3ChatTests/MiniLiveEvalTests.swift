@@ -83,8 +83,18 @@ struct MiniLiveEvalTests {
         return Set(raw.split(separator: ",").compactMap { TaskKind(rawValue: $0.trimmingCharacters(in: .whitespaces)) })
     }
 
+    /// The kinds this runner mirrors the harness for. tool-use and grounded-Q
+    /// need the harness's tool recorders and a seeded store; asking for them
+    /// here must fail, not silently run them as bare generations.
+    private static let supportedKinds: Set<TaskKind> = [
+        .openChat, .security, .refusal, .reasoning, .codeGen, .worldKnowledge,
+        .humour, .interview, .instructionFollowing, .document, .sycophancy,
+    ]
+
     @Test("Mini through the eval fixtures, one arm per run")
     func run() async throws {
+        let unsupported = Self.kinds.subtracting(Self.supportedKinds)
+        try #require(unsupported.isEmpty, "not mirrored here: \(unsupported.map(\.rawValue).sorted())")
         let provider = Self.fullPersona
             ? AppleFoundationModelsProvider(instructions: { M1K3Persona.systemPrompt })
             : AppleFoundationModelsProvider()
@@ -138,7 +148,9 @@ struct MiniLiveEvalTests {
         } catch {
             return ChatEvalScore(
                 fixtureID: fixture.id, kind: fixture.kind,
-                checks: [EvalCheck(name: "ran", outcome: .fail, detail: String(describing: error).prefix(70).description)],
+                checks: [EvalCheck(
+                    name: "ran", outcome: .fail, detail: String(describing: error).prefix(70).description
+                )],
                 latencyMS: elapsed()
             )
         }
