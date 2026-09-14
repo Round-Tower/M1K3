@@ -71,10 +71,12 @@ not release approval.
       results, and the token counting win. The standing "Phase 17b" reference
       in ROADMAP needs rescoping.
 
-- [ ] **Use `prewarm(promptPrefix:)` for Mini** — the SDK now accepts an
+- [x] **Use `prewarm(promptPrefix:)` for Mini** — the SDK now accepts an
       optional prompt prefix when prewarming. Today we prewarm with instructions
       only; passing a prefix of the recurring prompt shape (grounding header,
-      tool block) could cut Mini's first-token latency further.
+      tool block) could cut Mini's first-token latency further. Done
+      2026-09-14 (see Roadmap 1.0.x item 1): stable-first ReAct prompt + the
+      head prewarmed; the per-turn token counts that spoiled it are gone.
 
 ### Explore (evaluation-gated)
 
@@ -237,6 +239,29 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
    the move is a stable-first ReAct prompt (tools + RULES + scaffold, then
    context, then the goal) plus prefix prewarm. That's a prompt restructure,
    so it gets its own eval gate.
+   **Status 2026-09-14 (evening): built — PR feat/mini-prefix-prewarm.**
+   - Stable-first ReAct prompt (`ReActPrompt`), gated on the live responder
+     (`MiniLiveEvalTests`, `M1K3_AFM_EVAL_LIVE=1`, AC): security 49/84 → 76/84
+     (×12, same word-for-word leak count), open-chat 23/24 → 22/24, tool-use
+     0/30 on both — see `docs/evals/2026-09-14-mini-livepath-*`.
+   - Prefix prewarm did NOTHING in the app at first (first token ~7 s in every
+     arm, even `prefix-hit`). Cause: the per-turn `afm budget` line fired two
+     `tokenCount` calls beside every generation, which spoils a waiting
+     prewarm (probe: 2.0 s alone, 5.8 s with the counts). Counting now happens
+     on failures only, and the launch measurement runs before the prewarm.
+     Signed Release build (screengrab harness, fresh launch per trial, AC),
+     turn-1 first chunk: **prefix 2,710 / 3,294 ms vs instructions-only
+     5,805 / 6,177 ms** (n = 2 per arm — the console switched accounts, which
+     takes Apple Intelligence away from this one, before n = 5); turn 2 after
+     the titler: 2,881 ms prefix-hit (was 7,213 ms before the held re-arm).
+     Plain-process probe, n = 3 per arm at 8 s and 30 s settle: 2.0 s vs 4.5 s.
+     **Exit met in direction and size, not yet at n ≥ 5 in the app.**
+   - Found on the way: Mini's tool calls were thrown away (it opens with
+     `CONCLUSION:` then ends with the `ACTION:`; the loop concluded and stripped
+     the call) → a conclusion that ends in a call to an offered tool runs it:
+     tool-use 0/30 → 15/30. Tool results capped at 1,200 chars on the ReAct
+     floor (a web page overflowed Mini's 4,096 window); the titler no longer
+     takes or spoils the session prewarmed for the next turn.
 2. **`tokenCount` into `GroundingBudgetPolicy`** (open item above).
    **Status 2026-09-14: the grounding cap is not the binding constraint.**
    With the production 16-tool palette, Mini's fixed prompt is persona 1,409 +

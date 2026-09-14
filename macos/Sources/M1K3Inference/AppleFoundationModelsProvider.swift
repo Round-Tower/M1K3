@@ -224,8 +224,15 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// titler, between turn 1 and turn 2) leaves that session's prewarm spoiled —
     /// on the installed app turn 2 read `prefix-hit` and still took 7.2 s. Once
     /// the foreign call is done, arm it again.
+    ///
+    /// Non-streaming calls only, and never after a cancellation (review of
+    /// 2b678b98): a chat turn's own ReAct iterations stream, and one whose head
+    /// no longer matches the waiting session (the palette changed) must not
+    /// fire a prewarm between its own rapid calls — the daemon rate-collapse
+    /// shape `prepareForNextTurn`'s once-per-turn rule exists to prevent. The
+    /// titler, the call this is for, is a plain `generate`.
     private func rearmAfterHeld(_ heldPrefix: String?) {
-        guard let heldPrefix else { return }
+        guard let heldPrefix, !Task.isCancelled else { return }
         rearmIfWanted(promptPrefix: heldPrefix)
     }
 
@@ -395,10 +402,9 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     public func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
             let instrText = instructions()
-            let (session, warmth, heldPrefix) = takeSession(instructions: instrText, prompt: prompt)
+            let (session, warmth, _) = takeSession(instructions: instrText, prompt: prompt)
             logTurnStart(promptChars: prompt.count, streaming: true, warmth: warmth)
             let task = Task { [self] in
-                defer { rearmAfterHeld(heldPrefix) }
                 do {
                     let clock = ContinuousClock()
                     let start = clock.now
