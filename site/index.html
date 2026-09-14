@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>M1K3 for Mac — Your AI. Your Mac. Nothing leaves.</title>
-<meta name="description" content="M1K3 is fully on-device AI for macOS. Local inference, live voice, a knowledge graph, encrypted call memory, and an MCP server. Zero bytes leave your Mac." />
+<title>M1K3 for Mac — Your AI. Your Mac. Private by design.</title>
+<meta name="description" content="M1K3 is on-device AI for macOS. Local inference, live voice, a knowledge graph, encrypted call memory, and an MCP server — on your Mac by default, private by design." />
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 <!-- NOTE: canonical domain: m1k3.app (m1k3.ai + m1k3.bot 301-redirect here) (also in sitemap.xml, robots.txt, llms.txt) -->
 <link rel="canonical" href="https://m1k3.app/" />
@@ -16,8 +16,8 @@
 <meta name="theme-color" content="#050505" />
 <meta property="og:site_name" content="M1K3" />
 <meta property="og:locale" content="en_IE" />
-<meta property="og:title" content="M1K3 for Mac — Your AI. Your Mac. Nothing leaves." />
-<meta property="og:description" content="Privacy-first local AI. On-device inference, voice, knowledge graph, MCP. Nothing leaves your Mac." />
+<meta property="og:title" content="M1K3 for Mac — Your AI. Your Mac. Private by design." />
+<meta property="og:description" content="Privacy-first local AI. On-device inference, voice, knowledge graph, MCP. Private by design — on your Mac by default." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://m1k3.app/" />
 <meta property="og:image" content="https://m1k3.app/og.png" />
@@ -25,8 +25,8 @@
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="M1K3 for Mac — Your AI. Your Mac. Nothing leaves." />
-<meta name="twitter:description" content="Privacy-first local AI for macOS. Zero bytes leave your Mac." />
+<meta name="twitter:title" content="M1K3 for Mac — Your AI. Your Mac. Private by design." />
+<meta name="twitter:description" content="Privacy-first local AI for macOS. Private by design, on your Mac by default." />
 <meta name="twitter:image" content="https://m1k3.app/og.png" />
 <meta name="twitter:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid." />
 <script type="application/ld+json">
@@ -52,7 +52,7 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Does M1K3 send my data to a server?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 runs entirely on your Mac: inference, voice, embeddings, and storage are all on-device. Zero bytes of your conversations, documents, or calls are sent to any server. Even the thumbs-up/down feedback you leave on answers stays local. The optional web-search tool is off by default and clearly toggled." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Not by default. M1K3 runs on your Mac: inference, voice, embeddings, and storage are all on-device. Turn on Private Cloud Compute in Settings and a message you choose to send — nothing else — goes to Apple's Private Cloud Compute; every PCC reply is labelled in the chat, and Apple's own guarantees for that service are quoted on the M1K3 privacy page. Even the thumbs-up/down feedback you leave on answers stays local. The optional web-search tool is off by default and clearly toggled." } },
     { "@type": "Question", "name": "What AI models does M1K3 run?",
       "acceptedAnswer": { "@type": "Answer", "text": "Three brains, all local: Mini for instant answers, Lil — the fast brain that fronts the conversation — and Big, delegated the deep work. Switch in Settings any time; the models behind each name, and their scores, live on /brains." } },
     { "@type": "Question", "name": "Which Macs does M1K3 support?",
@@ -405,7 +405,7 @@
 <header class="hero">
   <div class="hero-copy">
     <div class="boot" id="boot"></div>
-    <h1 class="headline reveal in">Your AI.<br />Your Mac.<br /><span class="dim" id="rotator">Nothing leaves.</span></h1>
+    <h1 class="headline reveal in">Your AI.<br />Your Mac.<br /><span class="dim" id="rotator">Private by design.</span></h1>
     <p class="sub reveal in">M1K3 is local AI that runs <strong>entirely on your Mac</strong>. Local models, live voice, a knowledge graph that remembers everything — and a network call it never asks for.</p>
     <div class="cta-row reveal in">
       <a class="btn btn-primary" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">Download for Mac</a>
@@ -544,7 +544,7 @@ the action list?<br />
   <div class="faq-list">
     <details class="reveal">
       <summary>Does M1K3 send my data to a server?</summary>
-      <p>No. M1K3 runs entirely on your Mac — inference, voice, embeddings, and storage are all on-device. Zero bytes of your conversations, documents, or calls go to any server. Even the thumbs-up/down feedback you leave on answers stays local — it's yours, for tuning, and no visiting agent can read or write it. The optional web-search tool is off by default and clearly toggled.</p>
+      <p>Not by default. M1K3 runs on your Mac — inference, voice, embeddings, and storage are all on-device. Turn on Private Cloud Compute in Settings and a message you choose to send — nothing else — goes to Apple's Private Cloud Compute; every PCC reply is labelled in the chat, and Apple's own guarantees for that service are quoted on our <a href="/privacy">privacy page</a>. Even the thumbs-up/down feedback you leave on answers stays local — it's yours, for tuning, and no visiting agent can read or write it. The optional web-search tool is off by default and clearly toggled.</p>
     </details>
     <details class="reveal">
       <summary>What AI models does it run?</summary>
@@ -573,7 +573,7 @@ the action list?<br />
     <details class="reveal">
       <summary>Is it free? Is it open source?</summary>
       <p>Free for humans, forever — made by Round Tower in Ireland. No account, no subscription, no telemetry. It is source-available, not open source: the whole repository is public under the <a href="https://github.com/Round-Tower/M1K3/blob/master/LICENSE">Functional Source License</a>: read every line, build it, run it for yourself or inside your organisation; the one thing it withholds is selling M1K3 or a copy of it to others, and each version becomes Apache-2.0 two years on. Download the signed &amp; notarized Mac app, join the TestFlight beta, or build from source today. If M1K3 earns a place on your Mac, there's an optional <a href="https://github.com/sponsors/Round-Tower">GitHub Sponsors</a> page — it funds development, never gates features.</p>
-      <p><strong>Organisations:</strong> <a href="/teams">M1K3 for Teams</a> puts the same brains, an institutional memory, and a persona tuned to your people on your own Apple Silicon hardware, under your own domain — nothing leaves your network. Licensed separately; write to <a href="mailto:kevin@round-tower.ie">kevin@round-tower.ie</a>.</p>
+      <p><strong>Organisations:</strong> <a href="/teams">M1K3 for Teams</a> puts the same brains, an institutional memory, and a persona tuned to your people on your own Apple Silicon hardware, under your own domain. An administrator can lock the Private Cloud Compute switch off fleet-wide, so nothing leaves your network. Licensed separately; write to <a href="mailto:kevin@round-tower.ie">kevin@round-tower.ie</a>.</p>
     </details>
   </div>
 </section>
@@ -617,10 +617,10 @@ the action list?<br />
     })();
 
     /* Headline carousel: the third line types-erases through the promises.
-       "Nothing leaves." stays in the static markup (SEO / no-JS) and leads the
-       cycle. Skipped entirely under prefers-reduced-motion. */
+       "Private by design." stays in the static markup (SEO / no-JS) and leads
+       the cycle. Skipped entirely under prefers-reduced-motion. */
     var rotator = document.getElementById('rotator');
-    var phrases = ['Nothing leaves.', 'Free for humans.', 'No data centers.', 'Eco friendly.', 'Source-available.'];
+    var phrases = ['Private by design.', 'Free for humans.', 'You choose what leaves.', 'Eco friendly.', 'Source-available.'];
     var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (rotator && !reduceMotion) {
       var pi = 0;
@@ -714,13 +714,13 @@ the action list?<br />
 
     /* Share: native Web Share API where available (mobile/Safari), otherwise
        copy the canonical link to the clipboard. Zero third parties — fitting
-       for a "nothing leaves" product. */
+       for a product that's private by design. */
     var shareBtn = document.getElementById('shareBtn');
     if (shareBtn) {
       var canonical = document.querySelector('link[rel=canonical]');
       var shareData = {
         title: 'M1K3 for Mac',
-        text: 'M1K3 — private AI that runs entirely on your Mac. Nothing leaves.',
+        text: 'M1K3 — private AI that runs on your Mac. Private by design.',
         url: (canonical && canonical.href) || location.href
       };
       shareBtn.addEventListener('click', function () {
@@ -1001,6 +1001,17 @@ tick();
      places that state it (SoftwareApplication description, the FAQ JSON-LD answer, the feature tag, the
      visible FAQ paragraph), keeping the JSON-LD/visible pair in step — /agents and llms.txt already said
      18, and tools/list on the installed master build (dca2dd33) returns 18. dateModified 2026-09-11.
-     Confidence now 0.85. -->
+     Confidence now 0.85.
+     Review: Kev + claude-sonnet-5, 2026-09-14 — STAGED for ADR 0006 (Private Cloud Compute rung),
+     merges only in the release that ships it, not now. Tagline/title/og/twitter/rotator/phrases →
+     "Private by design." ('No data centers.' → 'You choose what leaves.'); the "send my data to a
+     server" FAQ (JSON-LD + visible) and the Organisations paragraph now describe the opt-in PCC path
+     instead of an unconditional zero; the share-sheet text updated (public copy, not just meta). Left
+     untouched, flagged in the sweep report: the receipts stat band, "No cloud attached" headline,
+     "pull the ethernet cable" line, and the terminal demo's "0 network calls" — still true of the
+     nine feature cells, but worth a fuller pass before ship. og:image:alt / twitter:image:alt
+     untouched — the image itself still renders "Nothing leaves." dateModified NOT bumped (this
+     content isn't live). Confidence 0.75 (every claim checked against ADR 0006; the atmospheric
+     copy left alone is a judgment call, not a verified-safe one). -->
 </body>
 </html>

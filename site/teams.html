@@ -45,7 +45,7 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Does anything leave our network with M1K3 for Teams?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The only network crossings are the ones the app already documents: a one-time model download you approve, and an optional web-search tool that is off by default." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The only network crossings are the ones the app already documents: a one-time model download you approve, and a web-search tool an administrator can switch off too." } },
     { "@type": "Question", "name": "Can we just use the free M1K3 app inside our organisation instead?",
       "acceptedAnswer": { "@type": "Answer", "text": "Yes. Internal use is a Permitted Purpose under M1K3's licence (FSL-1.1-ALv2), at no charge, on as many Macs as you like — each one on its own. M1K3 for Teams is for what a single Mac cannot do: a shared brain served to many devices over your network, an institutional memory your people can all draw on, a persona tuned to your organisation, and someone to call. It is also the licence for offering M1K3 to others, which the free licence withholds." } },
     { "@type": "Question", "name": "What hardware does M1K3 for Teams need?",
@@ -85,7 +85,7 @@
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: M1K3 for Teams is M1K3 for an organisation — the same on-device brains, an institutional memory, and a persona tuned to your people, running on Apple Silicon hardware you own, on your own network, under your own domain.</strong> Nothing leaves your building. Round Tower does not host it, cannot see it, and receives no telemetry from it. It is for the places where the data cannot leave — schools, clinics, firms, public bodies — and it is sold as a small number of fixed-scope design-partner pilots, not as a cloud subscription.</p>
+    <p><strong>Short answer: M1K3 for Teams is M1K3 for an organisation — the same on-device brains, an institutional memory, and a persona tuned to your people, running on Apple Silicon hardware you own, on your own network, under your own domain.</strong> An administrator locks the personal app's opt-in Private Cloud Compute switch off fleet-wide, so nothing leaves your building. Round Tower does not host it, cannot see it, and receives no telemetry from it. It is for the places where the data cannot leave — schools, clinics, firms, public bodies — and it is sold as a small number of fixed-scope design-partner pilots, not as a cloud subscription.</p>
   </div>
 
   <h2>What you get</h2>
@@ -99,7 +99,7 @@
 
   <h2>What it is not</h2>
   <ul>
-    <li><strong>Not a hosted service.</strong> There is no m1k3.app tenant, no data centre, no "private cloud" that is someone else's computer. If it is not on your hardware, it is not M1K3 for Teams.</li>
+    <li><strong>Not a hosted service.</strong> There is no m1k3.app tenant, no data centre Round Tower runs for you. If it is not on your hardware, it is not M1K3 for Teams — and by policy, it can stay that way: administrators lock the personal app's opt-in Private Cloud Compute switch off fleet-wide.</li>
     <li><strong>Not a way to get your data.</strong> No telemetry, no usage analytics, no phone-home. The personal app's <a href="/privacy">privacy page</a> is a checklist you can run; the Teams deployment passes the same checklist on your network.</li>
     <li><strong>Not a replacement for the free app.</strong> M1K3 stays free for humans, forever, and internal use inside an organisation is a permitted purpose of its <a href="https://github.com/Round-Tower/M1K3/blob/master/LICENSE">licence</a>. Teams is for what one Mac cannot do on its own — many devices, one shared memory, one tuned persona — and for organisations that want a contract behind it.</li>
   </ul>
@@ -120,7 +120,7 @@
   <div class="faq-list">
     <details>
       <summary>Does anything leave our network?</summary>
-      <p>No. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The only network crossings are the ones the app already documents: a one-time model download you approve, and an optional web-search tool that is off by default.</p>
+      <p>No. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The personal app's opt-in Private Cloud Compute switch — the one control that can send a single message to Apple's cloud — can be locked off by policy for your whole deployment, so the only network crossings left are the ones the app already documents: a one-time model download you approve, and a web-search tool an administrator can switch off too.</p>
     </details>
     <details>
       <summary>Can we just use the free app inside our organisation instead?</summary>
@@ -184,6 +184,14 @@
      answer matches word for word again. Confidence now 0.8.
      Review: Kev + claude-fable-5.1, 2026-09-09 — Kev: "add a mac icon here" → an inline pixel Mac (monitor +
      prompt line, the site's own phosphor style) above the closing CTA; deliberately NOT the Apple logo, which
-     third parties may not use outside Apple's badges. aria-hidden; zero external assets. Confidence now 0.8. -->
+     third parties may not use outside Apple's badges. aria-hidden; zero external assets. Confidence now 0.8.
+     Review: Kev + claude-sonnet-5, 2026-09-14 — STAGED for ADR 0006, merges only with the PCC release, not
+     now. Kept "nothing leaves your building/network" everywhere on the page per the brief, and made it true:
+     the short answer, the "not a hosted service" bullet (softened the "no 'private cloud' that is someone
+     else's computer" line so it doesn't jab at the consumer app's own opt-in Apple PCC), and the "Does
+     anything leave our network?" FAQ now all say the claim holds because an administrator locks the
+     Private Cloud Compute switch off by policy. Meta/OG/twitter descriptions and the page-cta label
+     ("// nothing leaves your network") left untouched — still true given the policy lock. dateModified NOT
+     bumped (not live). Confidence 0.8. -->
 </body>
 </html>
