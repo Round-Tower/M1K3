@@ -60,6 +60,8 @@ private final class StreamingScriptedProvider: InferenceProvider, @unchecked Sen
 }
 
 /// Counts executions, so a repeated call can be told apart from a new one.
+/// `@unchecked Sendable`: the ReAct loop runs one tool at a time (one awaited
+/// observe per iteration), so `runs` is never touched concurrently.
 private final class CountedTool: AgentTool, @unchecked Sendable {
     let name = "search"
     let description = "searches"

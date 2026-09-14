@@ -50,7 +50,8 @@ public final class PrewarmSlot<Value>: @unchecked Sendable {
 
     /// Take the value if the key still matches AND this caller is one it was
     /// built for. A declined value stays armed for its intended caller; a stale
-    /// key still drops it, whoever asks.
+    /// key still drops it, whoever asks. `accept` runs under the slot's lock
+    /// (NSLock is not reentrant): it must not touch this slot.
     public func take(matching key: String, accepting accept: (Value) -> Bool) -> Value? {
         lock.lock()
         defer { lock.unlock() }

@@ -230,7 +230,10 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// no longer matches the waiting session (the palette changed) must not
     /// fire a prewarm between its own rapid calls — the daemon rate-collapse
     /// shape `prepareForNextTurn`'s once-per-turn rule exists to prevent. The
-    /// titler, the call this is for, is a plain `generate`.
+    /// titler, the call this is for, is a plain `generate`. (The ReAct floor's
+    /// cap-reached synthesis is a plain `generate` too, but it is a turn's last
+    /// call, by which time iteration 0 has taken a matching session — at worst
+    /// one extra prewarm just before the turn's own re-arm.)
     private func rearmAfterHeld(_ heldPrefix: String?) {
         guard let heldPrefix, !Task.isCancelled else { return }
         rearmIfWanted(promptPrefix: heldPrefix)
