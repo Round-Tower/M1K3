@@ -182,6 +182,9 @@ extension AppCore {
         // loop left idle is ignored, so a late failure can't caption a live mic.
         switch VoiceActivationPolicy.outcome(sessionActive: sessionActive, loop: controller.state) {
         case .arm:
+            // A losing tap's failure may have parked first; don't let its
+            // note resurface at the next unrelated park.
+            voicePauseNote = nil
             controller.begin()
         case .park:
             avatar.resetToIdle()
