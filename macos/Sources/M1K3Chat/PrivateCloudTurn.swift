@@ -39,7 +39,9 @@ public enum PrivateCloudTurn {
     /// The shared conversation is capped so the sheet stays readable; the most
     /// recent turns win.
     static let conversationCharacterCap = 12000
-    static let earlierTurnsOmitted = "(earlier turns not shared)\n\n"
+    /// Neutral on purpose: it heads both a cut to the oldest turns and a single
+    /// turn too long to show whole, whose start is what was cut.
+    static let earlierTurnsOmitted = "(earlier text not shared)\n\n"
 
     /// What the sheet offers for one send.
     public struct Consent: Sendable, Equatable {

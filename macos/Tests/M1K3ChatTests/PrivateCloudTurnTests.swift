@@ -88,6 +88,10 @@ struct PrivateCloudTurnTests {
         #expect(shown.count <= PrivateCloudTurn.conversationCharacterCap)
         #expect(shown.hasSuffix(" END"))
         #expect(!shown.contains("START"))
+        // The marker must fit this case too — here it's the start of ONE turn
+        // that was cut, not earlier turns (review 1 on #321).
+        #expect(shown.hasPrefix(PrivateCloudTurn.earlierTurnsOmitted))
+        #expect(!PrivateCloudTurn.earlierTurnsOmitted.contains("turns"))
     }
 
     @Test("a conversation under the cap is shown whole, with no omission marker")

@@ -52,6 +52,8 @@
 //  `sendPrivateCloud` sends one turn to a PCC backend from the consent the user confirmed:
 //  exactly `PrivateCloudTurn.request`, never the responder. `send`'s local body moved into
 //  `runLocalTurn` unchanged, so the PCC fallback (failure before any text) reuses it.
+//  It enforces the rung's gate itself (a `PrivateCloudState` every caller passes), so the org switch
+//  and consent hold whoever calls — review 1 on #321.
 
 import Foundation
 import M1K3Inference
@@ -656,15 +658,28 @@ public final class ChatSession {
     /// explained in one display-only line and the local brain answers; a
     /// failure mid-answer keeps what came, marked, with the reason. Blank
     /// questions and re-entrant sends are no-ops, as for `send`.
+    ///
+    /// `gate` is the rung's state as the caller read it, and the send enforces
+    /// it: unless `PrivateCloudRung` would escalate an armed request, this is a
+    /// no-op. The org switch and the user's consent hold here, whoever calls —
+    /// not only where a button happens to be hidden (review 1, #321).
     public func sendPrivateCloud(
         _ consent: PrivateCloudTurn.Consent,
         includeConversation: Bool,
         backend: any PrivateCloudAnswering,
+        gate: PrivateCloudState,
         localBrainName: String,
         now: Date = Date()
     ) async {
-        let question = consent.question
+        guard PrivateCloudRung.escalation(armed: true, gate) == .privateCloud else {
+            Self.log.notice("private cloud: send refused by the rung's gate")
+            return
+        }
+        // Trimmed here as well as in `privateCloudConsent(for:)`: a consent can
+        // reach this method by another road, and a blank turn must never leave.
+        let question = consent.question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty, !isResponding else { return }
+        let consent = PrivateCloudTurn.Consent(question: question, conversation: consent.conversation)
         // Captured before the question joins the transcript. Only the local
         // fallback uses it: the PCC request was fixed by the consent.
         let history = Self.replayableHistory(messages)
