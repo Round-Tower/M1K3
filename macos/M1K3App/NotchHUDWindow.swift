@@ -18,9 +18,15 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `NotchHUDLayout.shape` (flat top, rounded bottom),
 //  a zero gap under the menu bar and no hosting safe-area inset, so the panel hugs the notch.
 //  Confidence 0.8.
+//  Review: Kev + claude-opus-5, 2026-09-14 — the panel grew out of nothing: docked at
+//  `visibleFrame.maxY` it hung BELOW the notch (Kev's screenshot). `NotchHUDPlacement` now puts the top
+//  at the screen's top on a notched display, taller by the notch, content below it; the frame is
+//  sized per screen and `constrainFrameRect` is a pass-through so AppKit can't push it under the
+//  menu bar. Confidence 0.8 (verify-by-launch).
 //
 
 import AppKit
+import M1K3Voice
 import SwiftUI
 
 /// Fixed layout — the SwiftUI root pins to this exact size (see
@@ -28,6 +34,16 @@ import SwiftUI
 /// window TO. Deriving from `contentView?.fittingSize` instead collapsed the
 /// window to 0×0 in the jam: RealityKit/glassEffect content can report a
 /// `.zero`-but-non-nil fitting size before it ever mounts on-screen.
+/// Per-screen geometry the SwiftUI root reads: how tall the notch strip at
+/// the top of the window is (0 when docked under a plain menu bar).
+@MainActor @Observable
+final class NotchHUDGeometry {
+    var contentTopInset: CGFloat = 0
+    var growsFromNotch: Bool {
+        contentTopInset > 0
+    }
+}
+
 enum NotchHUDLayout {
     static let size = NSSize(width: 460, height: 110)
     static let avatarSize: CGFloat = 72
@@ -43,6 +59,8 @@ enum NotchHUDLayout {
 
 @MainActor
 final class NotchHUDWindow: NSWindow {
+    let geometry = NotchHUDGeometry()
+
     init(env: AppEnvironment) {
         super.init(
             contentRect: NSRect(origin: .zero, size: NotchHUDLayout.size),
@@ -63,8 +81,7 @@ final class NotchHUDWindow: NSWindow {
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         isReleasedWhenClosed = false
         let hosting = NSHostingView(
-            rootView: NotchHUDContentView(env: env)
-                .frame(width: NotchHUDLayout.size.width, height: NotchHUDLayout.size.height)
+            rootView: NotchHUDContentView(env: env, geometry: geometry)
                 .trackWindowVisibility()
         )
         // No safe-area inset: the hosting view must lay the panel out over
@@ -75,18 +92,29 @@ final class NotchHUDWindow: NSWindow {
         alphaValue = 0
     }
 
-    /// Docked centred under the menu bar. `visibleFrame` (not `frame`) —
-    /// `frame.maxY` overlaps the real menu bar's screen real estate and the
-    /// OS paints over any ordinary window there (jam finding).
+    /// Sizes the window for `screen` and returns where it shows: grown out of
+    /// the notch on a notched display, docked under the menu bar otherwise
+    /// (`NotchHUDPlacement`, unit-pinned).
     func targetOrigin(on screen: NSScreen) -> NSPoint {
-        let x = screen.frame.midX - NotchHUDLayout.size.width / 2
-        // No gap: the flat top edge meets the menu bar the notch sits in.
-        let y = screen.visibleFrame.maxY - NotchHUDLayout.size.height
-        return NSPoint(x: x, y: y)
+        let placement = NotchHUDPlacement.place(
+            panel: NotchHUDLayout.size,
+            screenFrame: screen.frame,
+            visibleFrame: screen.visibleFrame,
+            notchHeight: screen.safeAreaInsets.top
+        )
+        geometry.contentTopInset = placement.contentTopInset
+        setContentSize(placement.frame.size)
+        return placement.frame.origin
+    }
+
+    /// AppKit nudges a window that overlaps the menu bar back under it; the
+    /// panel's top is meant to sit in the notch, so take the frame as given.
+    override func constrainFrameRect(_ frameRect: NSRect, to _: NSScreen?) -> NSRect {
+        frameRect
     }
 
     /// Parked just above the shown position — the entrance slides down into place.
     func hiddenOrigin(shownAt shown: NSPoint) -> NSPoint {
-        NSPoint(x: shown.x, y: shown.y + NotchHUDLayout.size.height + 24)
+        NSPoint(x: shown.x, y: shown.y + frame.height + 24)
     }
 }

@@ -64,6 +64,9 @@
 //  material, not `glassEffect(in:)` — on macOS 27.0 the glass ignored the uneven shape and drew
 //  short of the frame (window-rect capture on the first release build). Confidence 0.8
 //  (verify-by-launch on the second).
+//  Review: Kev + claude-opus-5, 2026-09-14 — on a notched screen the panel grows out of the notch
+//  (`NotchHUDGeometry.contentTopInset`): black fill, no hairline, content below the notch strip.
+//  Docked panels keep the material. Confidence 0.8 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Voice
@@ -77,6 +80,7 @@ private struct MarqueeKey: Hashable {
 
 struct NotchHUDContentView: View {
     let env: AppEnvironment
+    let geometry: NotchHUDGeometry
     @AppStorage(AppEnvironment.voiceCompanionKey) private var companion = ""
     /// Ordered-out HUD → no creature at all (the fallback path below bypasses
     /// AvatarSurface's own gate, so it is gated here).
@@ -135,17 +139,37 @@ struct NotchHUDContentView: View {
         }
         .padding(.horizontal, NotchHUDLayout.horizontalPadding)
         .padding(.vertical, 14)
+        // The content keeps its fixed panel size; on a notched screen it sits
+        // below the notch strip at the top of the window.
+        .frame(width: NotchHUDLayout.size.width, height: NotchHUDLayout.size.height)
+        .padding(.top, geometry.contentTopInset)
         // FIXED size — the glass fills the window every frame. Sized to its
         // content it grew and shrank with each sentence (Kev: "expanding when
         // talking", 2026-09-12); the window is fixed, so the glass is too.
-        .frame(width: NotchHUDLayout.size.width, height: NotchHUDLayout.size.height)
+        .frame(width: NotchHUDLayout.size.width, height: NotchHUDLayout.size.height + geometry.contentTopInset)
         // Hugs the notch: a flat top edge that meets the menu bar, rounded
         // bottom corners only — not a capsule floating below it. A material,
         // NOT `glassEffect(in:)`: on macOS 27.0 the glass ignored the uneven
         // shape (all four corners rounded) and drew ~15 pt short of the frame
         // (window-rect capture, 2026-09-12) — the material honours the shape.
-        .background(.regularMaterial, in: NotchHUDLayout.shape)
-        .overlay(NotchHUDLayout.shape.strokeBorder(.white.opacity(0.14), lineWidth: 1))
+        .background { panelBackground }
+        .overlay {
+            // No hairline on the notched panel: a border would draw the seam
+            // between the notch and the panel that the black fill hides.
+            if !geometry.growsFromNotch {
+                NotchHUDLayout.shape.strokeBorder(.white.opacity(0.14), lineWidth: 1)
+            }
+        }
+    }
+
+    /// Black on a notched screen, so the panel and the notch read as one
+    /// shape growing down; the material where it docks under a menu bar.
+    @ViewBuilder private var panelBackground: some View {
+        if geometry.growsFromNotch {
+            NotchHUDLayout.shape.fill(.black)
+        } else {
+            NotchHUDLayout.shape.fill(.regularMaterial)
+        }
     }
 
     /// Where the word being spoken ENDS, in UTF-16 units from the line's
