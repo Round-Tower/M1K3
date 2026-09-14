@@ -77,6 +77,32 @@
             }
         }
 
+        /// The limit lifts at a fixed moment, so the control's recovery can be
+        /// watched by launch (`M1K3_PCC_ECHO_QUOTA_SECONDS=45`).
+        @Test("quota mode's limit lifts at its reset; after it, the stand-in answers")
+        func quotaLifts() async {
+            let resets = Date(timeIntervalSince1970: 1_800_000_000)
+            let backend = PrivateCloudEchoBackend(mode: .quota, quotaResetsAt: resets)
+            #expect(backend.quota(now: resets.addingTimeInterval(-1)) == .limitReached(resetsAt: resets))
+            #expect(backend.quota(now: resets) == .belowLimit)
+            let lifted = PrivateCloudEchoBackend(mode: .quota, quotaResetsAt: .distantPast)
+            #expect(await lifted.status().quota == .belowLimit)
+            let (last, error) = await collect(lifted.answer(instructions: "", prompt: "after the reset"))
+            #expect(error == nil)
+            #expect(last.contains("after the reset"))
+        }
+
+        @Test("M1K3_PCC_ECHO_QUOTA_SECONDS sets when quota mode's limit lifts")
+        func quotaSecondsFromEnvironment() {
+            let now = Date(timeIntervalSince1970: 1_800_000_000)
+            let backend = PrivateCloudEchoBackend.fromEnvironment(
+                ["M1K3_PCC_ECHO": "quota", "M1K3_PCC_ECHO_QUOTA_SECONDS": "45"], now: now
+            )
+            #expect(backend?.quotaResetsAt == now.addingTimeInterval(45))
+            #expect(PrivateCloudEchoBackend.fromEnvironment(["M1K3_PCC_ECHO": "quota"], now: now)?.quotaResetsAt
+                == now.addingTimeInterval(3 * 3600))
+        }
+
         @Test("the mode comes from M1K3_PCC_ECHO; unset or unknown means no backend")
         func modeFromEnvironment() {
             #expect(PrivateCloudEchoBackend.fromEnvironment([:]) == nil)

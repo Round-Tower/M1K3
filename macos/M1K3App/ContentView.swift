@@ -40,7 +40,8 @@
 //  consent sheet and the draft stays until it's confirmed. Disarms when it can't be honoured. The sheet
 //  condition is `PrivateCloudRung.presentsConsent` (tested). The gate is re-read before the draft is
 //  cleared, so a send refused at send time leaves the words in the field (seen live: a refusal used to
-//  empty the field with nothing sent and nothing said).
+//  empty the field with nothing sent and nothing said). "Keep it on this Mac" disarms, and an exhausted or
+//  unavailable control re-reads the status until it can be used (it used to recover only on relaunch).
 //  Confidence 0.8 (verified by launch with the Debug echo backend).
 
 import M1K3Avatar
@@ -974,6 +975,15 @@ struct ContentView: View {
         }
         .onChange(of: pendingAttachments.isEmpty) { _, isEmpty in
             if !isEmpty { privateCloudArmed = false }
+        }
+        // A control that can't be used re-reads PCC's status until it can (the
+        // quota resets, the service comes back). Restarts whenever the control changes.
+        .task(id: control) {
+            while let delay = PrivateCloudRung.statusRecheckDelay(for: privateCloudControl, now: Date()) {
+                try? await Task.sleep(for: .seconds(delay))
+                if Task.isCancelled { return }
+                await env.refreshPrivateCloudStatus()
+            }
         }
     }
 
