@@ -34,9 +34,10 @@ shape is pinned from bodies read off PR #293; the job names are the ci.yml
 strings; the gh wiring is verify-by-run against a live PR). Prior: Unknown
 
 Review: Kev + claude-opus-5, 2026-09-14 — `named_heads` also reads a backticked
-sha in a markdown header line: #318's summon wrote "### Review of `75c23b64`"
-with no word "head", and the watch read 0/2 on a reviewed head. Dedup keeps
-document order. Confidence now 0.85.
+sha in the pass's own title (the first markdown header line): #318's summon
+wrote "### Review of `75c23b64`" with no word "head", and the watch read 0/2 on
+a reviewed head. Title only, so a finding header quoting an older commit is not
+credited (review 2 on #318). Dedup keeps document order. Confidence now 0.85.
 """
 from __future__ import annotations
 
@@ -127,12 +128,15 @@ def named_heads(body: str) -> list[str]:
     wording drifts ("review of final head `x`", "Final pass — review of head
     `x`", "Review — head `x`" all seen on 2026-09-12; "Review of `x`" with no
     word "head" on #318, 2026-09-14), so a sha counts when it follows the word
-    "head" anywhere, or sits backticked in a markdown header line. A sha in the
-    body prose names nothing. Auto passes name none."""
+    "head" anywhere, or sits backticked in the pass's own title — the FIRST
+    markdown header line. A later "####" finding header quoting an older commit,
+    and a sha in body prose, name nothing. Auto passes name none."""
     shas: list[str] = []
+    title_read = False
     for line in body.splitlines():
         found = _HEAD.findall(line)
-        if _HEADER_LINE.match(line):
+        if not title_read and _HEADER_LINE.match(line):
+            title_read = True
             found += _SHA.findall(line)
         for sha in found:
             if sha not in shas:

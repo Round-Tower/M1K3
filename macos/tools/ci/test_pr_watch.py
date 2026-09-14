@@ -71,6 +71,15 @@ def test_named_heads_is_empty_when_no_sha_named():
     assert m.named_heads("### Review of the docs\n\nsee `cccc333` for the old shape") == []
 
 
+def test_a_sha_in_a_later_finding_header_names_nothing():
+    # review 2 on #318: only the pass's own title header names a head; a finding's
+    # "####" subheader quoting an older commit must not be credited as reviewed
+    body = ("**Claude finished @kev's task** ---\n### Review of `78fcaeb1` (docs only)\n\n- [x] Gather context\n\n"
+            "#### Bug: regression since `e4e2cd6d`\n\nsome text")
+    assert m.named_heads(body) == ["78fcaeb1"]
+    assert m.summon_passes("e4e2cd6d" + "0" * 32, [bot(body)]) == 0
+
+
 def test_a_pass_naming_an_old_head_and_this_one_counts_for_this_one():
     head = "bbbb2220000000000000000000000000000000000"
     body = "**Claude finished @kev's task** ---\n### Review — head `bbbb222`\n- [x] no changes since head `aaaa111`"
