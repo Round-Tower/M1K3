@@ -171,8 +171,8 @@ extension RuntimeInferenceProvider: TokenCounting {
 /// Forwards the end-of-turn warm signal (the AFM prewarm re-arm) — same
 /// every-façade-forwards rule as its siblings above.
 extension RuntimeInferenceProvider: TurnWarmable {
-    func prepareForNextTurn() {
-        (active as? TurnWarmable)?.prepareForNextTurn()
+    func prepareForNextTurn(promptPrefix: String?) {
+        (active as? TurnWarmable)?.prepareForNextTurn(promptPrefix: promptPrefix)
     }
 }
 

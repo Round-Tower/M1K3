@@ -59,6 +59,9 @@
 //  (playing OR voice loop OR a chat turn answering), not `speech.isSpeaking()` alone: a queued visitor
 //  line waits out M1K3's own answer instead of starting under it. Verify-by-launch: queue a line, send a
 //  chat message, hear the order.
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — Mini's launch and fronting warms go through
+//  `prewarmMini()`: the prewarm now processes the ReAct head over the interactive palette too (off with
+//  `-afm.prefixPrewarm NO`). Timing measured on the installed Release build — see the PR.
 
 import AppKit
 import Foundation
@@ -865,7 +868,12 @@ final class AppEnvironment {
         // fresh prewarmed session, so a conversation's turns 2+ never pay
         // cold-start. The INITIAL arm rides warmUpSelectedBrainOnLaunch /
         // refreshInterimBridge — the points where Mini becomes likely to serve.
-        let afm = AppleFoundationModelsProvider(prewarmsBetweenTurns: true)
+        // prewarmsPromptPrefix: the prewarm also processes the ReAct head the next
+        // turn begins with (AFMPrefixPrewarm; `-afm.prefixPrewarm NO` turns it off).
+        let afm = AppleFoundationModelsProvider(
+            prewarmsBetweenTurns: true,
+            prewarmsPromptPrefix: AFMPrefixPrewarm.isEnabled(in: .standard)
+        )
         afmProvider = afm
         let initialMLXModelID = brain.mlxModelID ?? BrainTier.big.mlxModelID ?? ""
         // Generation cap follows the tier whose MODEL fills the slot (Big's when
@@ -1866,12 +1874,24 @@ extension AppEnvironment {
         // a frame hitch. Verify-owed: the "afm prewarm: armed" log line should
         // land near-instantly after the fronting flip on a real launch.
         if posture.frontsOnMini, !wasFronting {
-            let afm = afmProvider
-            Task.detached(priority: .utility) { afm.prewarm() }
+            prewarmMini()
         }
         if gate != lastBridgedGate {
             Self.brainLog.notice("chatGate → \(String(describing: gate), privacy: .public)")
             lastBridgedGate = gate
+        }
+    }
+
+    /// Arm Mini's prewarm slot on the head her next interactive turn will send
+    /// (`miniPromptPrefix`). Detached off the MainActor: the palette read is
+    /// real I/O, and `session.prewarm(promptPrefix:)` is a closed-SDK call with
+    /// no latency contract — a stall here would be a frame hitch (it is
+    /// reachable from UI didSets through refreshInterimBridge).
+    func prewarmMini() {
+        let afm = afmProvider
+        Task.detached(priority: .utility) { [store, embedder, deepDelegationHook] in
+            let prefix = Self.miniPromptPrefix(store: store, embedder: embedder, deepDelegation: deepDelegationHook)
+            afm.prewarm(promptPrefix: prefix)
         }
     }
 
@@ -1888,11 +1908,8 @@ extension AppEnvironment {
     /// cost off the user's first turn.
     func warmUpSelectedBrainOnLaunch() async {
         if selectedBrain.backing == .appleFoundationModels {
-            // Detached off the MainActor — `session.prewarm()` is a closed-SDK
-            // call with no latency contract (verify-owed at ⌘R, same as the
-            // fronting-edge arm in refreshInterimBridge).
+            prewarmMini()
             let afm = afmProvider
-            Task.detached(priority: .utility) { afm.prewarm() }
             // Measure the real token budget (macOS 26.4+) — the [SPIKE] resolved.
             // Detached so it never blocks the launch path; the budget policy falls
             // back to the conservative replay until this lands.

@@ -11,6 +11,9 @@
 //  a later edit from quietly undoing it.
 //
 //  Signed: Kev + claude-opus-5, 2026-09-12, Confidence 0.85, Prior: none (new file).
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — the web route's notes clause follows
+//  the layout: "appear below" on the ReAct floor (rules first, stable-first), "were injected above"
+//  on the native loop (the byte-replayed wording, unchanged).
 //
 
 import Foundation
@@ -26,10 +29,16 @@ struct WebAndMakingRoutingTests {
     func webRouteCoversTheNewAndTheUnknown() {
         for style in [AgentRAGResponder.PromptStyle.react, .native] {
             let prompt = AgentRAGResponder.grounding(chunks: [], toolNames: Self.palette, style: style)
-            #expect(prompt.contains(AgentRAGResponder.currentWorldRouting), "\(style)")
+            // The ReAct floor puts its rules ABOVE the notes (stable-first, 2026-09-14),
+            // so its wording points down; the native wording is the byte-replayed one.
+            let notes: AgentRAGResponder.NotesPlacement = style == .react ? .below : .above
+            #expect(prompt.contains(AgentRAGResponder.currentWorldRouting(notes: notes)), "\(style)")
             #expect(prompt.contains("the newest or latest of anything"), "\(style)")
             #expect(prompt.contains("a name you don't recognise"), "\(style)")
-            #expect(prompt.contains("even when notes were injected above"), "\(style)")
+            #expect(
+                prompt.contains(style == .react ? "even when notes appear below" : "even when notes were injected above"),
+                "\(style)"
+            )
             #expect(prompt.contains("Before saying something doesn't exist or hasn't happened, search."))
             // Stable facts are answered from memory — never the newest of anything.
             #expect(prompt.contains("basic science — never the newest of anything"), "\(style)")

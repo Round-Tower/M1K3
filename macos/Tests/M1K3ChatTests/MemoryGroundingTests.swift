@@ -17,6 +17,8 @@
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — verbatim pins moved DELIBERATELY
 //  again: the carve names build/make and a whole web page, and the web route covers the newest,
 //  this year's results and unrecognised names (Kev: "isn't searching the internet much").
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — the ReAct pin's web route reads "even
+//  when notes appear below": the floor's rules now ride its stable head, above the turn's notes.
 
 import Foundation
 import M1K3Agent
@@ -124,7 +126,7 @@ struct MemoryGroundingTests {
         are answered from your persona; never search stored documents for them.
         - For current or external information — weather, news, prices, results, anything \
         happening now or this year, the newest or latest of anything, or a name you don't \
-        recognise — use web_search, even when notes were injected above: your notes hold the \
+        recognise — use web_search, even when notes appear below: your notes hold the \
         past, not what's on now. Before saying something doesn't exist or hasn't happened, search. \
         search_knowledge only finds documents already stored on this machine.
         - web_search returns snippets AND automatically reads the \
@@ -135,6 +137,9 @@ struct MemoryGroundingTests {
         - Describe a page only from what a tool returned — if it could not be read, \
         say so instead of describing it.
         """
+        // "appear below" (2026-09-14): the ReAct floor's rules ride its stable head,
+        // ABOVE the turn's notes; this composition keeps the rules after them only
+        // because `grounding` is the native layout (ReActStableFirstResponderTests).
         let actual = AgentRAGResponder.grounding(
             chunks: [docHit()], toolNames: allTools, style: .react
         )

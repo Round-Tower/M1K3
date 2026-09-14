@@ -21,6 +21,8 @@
 //  persona prefix.
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — recent_activity joins the interactive palette only (a non-nil reader
 //  comes solely from the main responder + its warm), always offered there so the prefix key stays stable.
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — `miniPromptPrefix`: the ReAct head over the interactive
+//  palette (same builder + hooks as the MLX persona warm) for Mini's `prewarm(promptPrefix:)`.
 
 import Foundation
 import M1K3Agent
@@ -287,6 +289,23 @@ extension AppEnvironment {
         // off the main actor (the warm — review fold, #201).
         let availability = availability ?? Self.paletteAvailability(store: store)
         return ToolPalettePolicy.filter(tools, availability: availability)
+    }
+
+    /// How Mini's next interactive turn will begin: the ReAct floor's stable
+    /// head over the interactive palette, for `prewarm(promptPrefix:)`. The
+    /// same builder and hooks as the persona-prefix warm, so it matches the
+    /// palette the live responder renders (a self-query turn, which withholds
+    /// retrieval tools, logs `warm=prefix-miss` and still gets warm
+    /// instructions). Real I/O — call it off the main actor.
+    nonisolated static func miniPromptPrefix(
+        store: KnowledgeStore, embedder: any EmbeddingService, deepDelegation: DeepDelegationHook
+    ) -> String {
+        let tools = interactiveAgentTools(
+            store: store, embedder: embedder,
+            onHits: { _ in }, onOpenLink: { _ in }, deepDelegation: deepDelegation,
+            scriptExecution: .forWarm, contextSenses: .forWarm, recentActivity: NullActivityReading()
+        )
+        return AgentRAGResponder.reactPromptPrefix(tools: tools)
     }
 
     /// The Settings web toggle — absent means allowed (the shipped default).

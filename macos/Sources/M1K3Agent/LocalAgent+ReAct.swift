@@ -16,6 +16,12 @@
 //  verbatim from LocalAgent.run() when the native tool-calling path landed
 //  (Phase 12a). Behaviour unchanged; the loop is now one of two strategies the
 //  run() dispatcher selects between.
+//
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — the initial context is
+//  stable-first (ReActPrompt): tools, the caller's standing rules, the format,
+//  THEN the turn's context and the goal. The head it sends is kept for the
+//  end-of-turn warm, so AFM can prewarm the next turn's prefix, not only its
+//  instructions. Quality gated by the live-path Mini eval, not assumed.
 
 import Foundation
 import M1K3Inference
@@ -29,12 +35,15 @@ extension LocalAgent {
     func runReAct(
         goal: String,
         grounding: String?,
+        standing: String? = nil,
         onEvent: (@Sendable (AgentLoopEvent) -> Void)?,
         onConclusionToken: (@Sendable (String) -> Void)?
     ) async throws -> AgentResult {
         var usedTools = Set<String>()
         var executedActions = Set<String>()
-        var currentContext = buildInitialContext(goal: goal, grounding: grounding)
+        let prefix = promptPrefix(standing: standing)
+        warmPrefix = prefix
+        var currentContext = prefix + ReActPrompt.tail(goal: goal, context: grounding)
 
         logRunStart(goal: goal, grounding: grounding)
 
@@ -118,14 +127,11 @@ extension LocalAgent {
 
     // MARK: - Prompt construction
 
-    private func buildInitialContext(goal: String, grounding: String?) -> String {
-        let toolDescriptions = tools.values
-            .map { "\($0.name): \($0.description)" }
-            .sorted()
-            .joined(separator: "\n")
-
-        let groundingBlock = grounding.map { "\n\nContext:\n\($0)" } ?? ""
-
+    /// Everything the prompt holds before the turn: the persona when the
+    /// backend doesn't carry it, then the stable head (ReActPrompt). Every
+    /// iteration's prompt begins with it, and it is what the end-of-turn warm
+    /// hands a backend that can prewarm a prefix.
+    private func promptPrefix(standing: String?) -> String {
         // Only send the persona when the backend isn't already carrying it.
         // A bare completion model has nowhere else to learn who it is; AFM
         // opens every session with the same persona as standing instructions,
@@ -134,20 +140,7 @@ extension LocalAgent {
         // Not conforming to PersonaCarrying keeps the old behaviour exactly.
         let carriesPersona = (inferenceProvider as? PersonaCarrying)?.carriesStandingPersona == true
         let personaBlock = carriesPersona ? "" : "\(M1K3Persona.systemPrompt)\n\n"
-
-        return """
-        \(personaBlock)Your goal: \(goal)\(groundingBlock)
-
-        Available Tools:
-        \(toolDescriptions)
-
-        Use ReAct reasoning:
-        - Think step-by-step about what information you need.
-        - To use a tool, write: "ACTION: ToolName(argument)"
-        - When you have enough information, reply starting with "CONCLUSION:"
-
-        Begin your analysis:
-        """
+        return personaBlock + ReActPrompt.head(tools: Array(tools.values), standing: standing)
     }
 
     /// Generate one thought. With `onConclusionToken` set, the thought streams

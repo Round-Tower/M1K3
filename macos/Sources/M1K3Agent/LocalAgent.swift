@@ -26,6 +26,12 @@
 //  The ReAct loop moved to LocalAgent+ReAct.swift unchanged; run() now selects
 //  between the two strategies, and the shared dispatch core was generalised so
 //  both feed the same repeat-guard / event / bookkeeping path.
+//
+//  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — `run` takes the
+//  caller's STANDING rules apart from the per-turn context: the ReAct floor puts
+//  them in its stable head (so AFM can prewarm them), the native loop appends them
+//  to the grounding exactly where they always sat. The end-of-turn warm now hands
+//  the backend the ReAct head as a prompt prefix (nil on the native path).
 
 import Foundation
 import M1K3Inference
@@ -86,6 +92,11 @@ public actor LocalAgent {
     /// rest of the turn. Reset per run alongside the reasoning trace.
     var firedExclusionClasses: Set<ToolExclusionClass> = []
 
+    /// The ReAct head this turn sent (persona included when the backend doesn't
+    /// carry it), handed to the backend's end-of-turn warm as the next turn's
+    /// likely prompt prefix. nil on the native path. Reset per run.
+    var warmPrefix: String?
+
     public init(
         inferenceProvider: any InferenceProvider,
         tools: [any AgentTool],
@@ -103,10 +114,16 @@ public actor LocalAgent {
     /// active provider speaks its model's own dialect AND its current model can
     /// emit parseable calls; otherwise the prompt-ReAct floor — the universal
     /// baseline that works on any model.
+    ///
+    /// `standing`: rules that hold for every turn with this tool palette (the
+    /// responder's RULES). The ReAct floor puts them in its stable head, ahead of
+    /// the turn; the native loop appends them to `context`, where they have
+    /// always sat. nil leaves both prompts as they were.
     public func run(
         goal: String,
         images: [ImageAttachment] = [],
         context groundingContext: String? = nil,
+        standing: String? = nil,
         thinkingEnabled: Bool = true,
         onEvent: (@Sendable (AgentLoopEvent) -> Void)? = nil,
         onConclusionToken: (@Sendable (String) -> Void)? = nil,
@@ -114,6 +131,7 @@ public actor LocalAgent {
     ) async throws -> AgentResult {
         reasoningTrace.removeAll()
         firedExclusionClasses.removeAll()
+        warmPrefix = nil
         // One re-arm per TURN, whatever path or exit: a per-generate re-arm
         // would interleave prewarm daemon calls between the ReAct floor's rapid
         // provider calls (the logged AFM rate-collapse shape). Cancellation
@@ -121,7 +139,7 @@ public actor LocalAgent {
         // now would compete with the successor turn's own generation.
         defer {
             if !Task.isCancelled {
-                (inferenceProvider as? TurnWarmable)?.prepareForNextTurn()
+                (inferenceProvider as? TurnWarmable)?.prepareForNextTurn(promptPrefix: warmPrefix)
             }
         }
 
@@ -134,11 +152,15 @@ public actor LocalAgent {
             usingNative: supportsToolCalls
         )
         if let toolProvider, supportsToolCalls {
+            // The rules follow the grounding, exactly as when they rode inside it.
+            let nativeGrounding = standing.map { rules in
+                groundingContext.map { "\($0)\n\n\(rules)" } ?? rules
+            } ?? groundingContext
             return try await runNative(
                 provider: toolProvider,
                 goal: goal,
                 images: images,
-                grounding: groundingContext,
+                grounding: nativeGrounding,
                 thinkingEnabled: thinkingEnabled,
                 onEvent: onEvent,
                 onConclusionToken: onConclusionToken,
@@ -155,6 +177,7 @@ public actor LocalAgent {
         return try await runReAct(
             goal: goal,
             grounding: groundingContext,
+            standing: standing,
             onEvent: onEvent,
             onConclusionToken: onConclusionToken
         )
