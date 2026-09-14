@@ -1887,9 +1887,20 @@ extension AppEnvironment {
     /// real I/O, and `session.prewarm(promptPrefix:)` is a closed-SDK call with
     /// no latency contract — a stall here would be a frame hitch (it is
     /// reachable from UI didSets through refreshInterimBridge).
-    func prewarmMini() {
+    ///
+    /// `measuringBudgetFirst`: the launch's one token-budget measurement runs
+    /// BEFORE the prewarm, never beside it — a `tokenCount` on the daemon while
+    /// a prewarmed session is waiting spoils the prewarm (plain-process probe,
+    /// 2026-09-14, AC: prefix-warm first token 2.0 s alone, 5.8 s with a count
+    /// alongside, worse than no prefix at all). Measured once per process.
+    func prewarmMini(measuringBudgetFirst: Bool = false) {
         let afm = afmProvider
         Task.detached(priority: .utility) { [store, embedder, deepDelegationHook] in
+            if measuringBudgetFirst, Self.measuredMiniReserve.withLock({ $0 }) == nil,
+               #available(macOS 26.4, iOS 26.4, visionOS 26.4, *)
+            {
+                await Self.measureMiniTokenBudget(provider: afm)
+            }
             let prefix = Self.miniPromptPrefix(store: store, embedder: embedder, deepDelegation: deepDelegationHook)
             afm.prewarm(promptPrefix: prefix)
         }
@@ -1908,16 +1919,11 @@ extension AppEnvironment {
     /// cost off the user's first turn.
     func warmUpSelectedBrainOnLaunch() async {
         if selectedBrain.backing == .appleFoundationModels {
-            prewarmMini()
-            let afm = afmProvider
-            // Measure the real token budget (macOS 26.4+) — the [SPIKE] resolved.
-            // Detached so it never blocks the launch path; the budget policy falls
-            // back to the conservative replay until this lands.
-            if #available(macOS 26.4, iOS 26.4, visionOS 26.4, *) {
-                Task.detached(priority: .utility) {
-                    await Self.measureMiniTokenBudget(provider: afm)
-                }
-            }
+            // Measure the real token budget (macOS 26.4+) — the [SPIKE] resolved —
+            // then prewarm, in that order (see prewarmMini). Detached, so it never
+            // blocks the launch path; the budget policy falls back to the
+            // conservative replay until the measurement lands.
+            prewarmMini(measuringBudgetFirst: true)
             return
         }
         guard selectedBrain.mlxModelID != nil else { return }

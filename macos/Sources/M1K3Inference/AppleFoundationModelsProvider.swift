@@ -42,7 +42,8 @@
 //  a prefix-warm session serves only a prompt that begins with its prefix, so the
 //  conversation titler no longer takes the session prewarmed for the next turn.
 //  Plain-process probe (AC): turn-1 first token 6.7 s instructions-only → 2.1 s.
-//  Off with `-afm.prefixPrewarm NO` (AFMPrefixPrewarm).
+//  Off with `-afm.prefixPrewarm NO` (AFMPrefixPrewarm). The per-turn `afm budget`
+//  token count moved to failures only: counting beside a turn spoiled its prewarm.
 //
 //  Note this provider builds a FRESH `LanguageModelSession(instructions:)` per
 //  call, so anything in the persona is re-sent every turn — the reason persona
@@ -127,8 +128,14 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
 
     /// Exact token budget line — the [SPIKE] data the HistoryBudgetPolicy
     /// comments asked for. Logs instructions and prompt token counts via the
-    /// macOS 26.4+ API so the real budget utilisation is visible in the
-    /// unified log on every Mini turn.
+    /// macOS 26.4+ API.
+    ///
+    /// On a FAILED generation only (2026-09-14). It ran on every turn, fired
+    /// beside the generation, and a `tokenCount` on the daemon mid-turn costs the
+    /// turn its prewarm: plain-process probe, AC, n=3 — prefix-warm first token
+    /// 2.0 s alone, 5.8 s with the two counts alongside (instructions-only 4.5 s).
+    /// A failure is when the number matters (an overflow's `total=N/4096`); on
+    /// success the `afm turn` char counts carry the size.
     private func logTokenBudget(instructionText: String, promptText: String) {
         if #available(macOS 26.4, iOS 26.4, visionOS 26.4, *) {
             Task.detached(priority: .utility) {
@@ -351,7 +358,6 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         let instrText = instructions()
         let (session, warmth) = takeSession(instructions: instrText, prompt: prompt)
         logTurnStart(promptChars: prompt.count, streaming: false, warmth: warmth)
-        logTokenBudget(instructionText: instrText, promptText: prompt)
         do {
             let response = try await session.respond(to: prompt)
             return response.content
@@ -367,6 +373,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
             // where the pattern shows up across a day, and the classification is
             // the whole point (overflow and guardrail need opposite fixes).
             logFailure(error, streaming: false)
+            logTokenBudget(instructionText: instrText, promptText: prompt)
             throw error
         }
     }
@@ -376,7 +383,6 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
             let instrText = instructions()
             let (session, warmth) = takeSession(instructions: instrText, prompt: prompt)
             logTurnStart(promptChars: prompt.count, streaming: true, warmth: warmth)
-            logTokenBudget(instructionText: instrText, promptText: prompt)
             let task = Task { [self] in
                 do {
                     let clock = ContinuousClock()
@@ -404,6 +410,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
                     // generation. That cascade is the #102 confabulation, and it
                     // began here, unlogged.
                     logFailure(error, streaming: true)
+                    logTokenBudget(instructionText: instrText, promptText: prompt)
                     continuation.finish()
                 }
             }

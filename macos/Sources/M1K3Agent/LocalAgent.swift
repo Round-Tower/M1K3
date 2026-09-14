@@ -97,6 +97,10 @@ public actor LocalAgent {
     /// likely prompt prefix. nil on the native path. Reset per run.
     var warmPrefix: String?
 
+    /// Whether the ReAct floor has streamed any live text this turn — the
+    /// preamble before a tool call, say — so a later answer knows to follow it.
+    var streamedLive = false
+
     public init(
         inferenceProvider: any InferenceProvider,
         tools: [any AgentTool],
