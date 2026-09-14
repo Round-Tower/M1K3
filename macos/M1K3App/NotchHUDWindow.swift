@@ -66,7 +66,7 @@ enum NotchHUDLayout {
     /// makes them bigger in a wide slot without clipping the walk cycle.
     static let hudAvatarSlot = CGSize(width: 200, height: 116)
     static let hudTextWidth: CGFloat = size.width - horizontalPadding * 2
-    /// 4 top + 116 creature + 6 + ~17 line + 6 + ~13 caption + 14 bottom, rounded up.
+    /// 4 top + 116 creature + 6 + ~17 line + 6 + ~13 caption + 14 bottom = 176, plus 2 pt slack.
     static let hudContentHeight: CGFloat = 178
     /// Flat top (meets the menu bar / notch), rounded bottom corners.
     static let shape = UnevenRoundedRectangle(
@@ -92,10 +92,9 @@ final class NotchHUDWindow: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         // Ordinary `.statusBar` level reads as BELOW the real system menu bar
-        // when the window's y-origin overlaps its screen rect — the OS paints
-        // the menu bar over it regardless of level value (jam finding). The
-        // margin here is deliberate, not load-bearing for the overlap itself
-        // (targetOrigin already docks below visibleFrame).
+        // when the window overlaps its screen rect — the OS paints the menu
+        // bar over it (jam finding). Under a notch the panel's top DOES sit in
+        // the menu bar's rect, so `.screenSaver` is what keeps it on top there.
         level = .screenSaver
         ignoresMouseEvents = true
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
@@ -134,6 +133,8 @@ final class NotchHUDWindow: NSPanel {
 
     /// AppKit nudges a window that overlaps the menu bar back under it; the
     /// panel's top is meant to sit in the notch, so take the frame as given.
+    /// The trade-off: no AppKit clamp at all, so every frame this window gets
+    /// must come from `targetOrigin`/`hiddenOrigin` (which read the live screen).
     override func constrainFrameRect(_ frameRect: NSRect, to _: NSScreen?) -> NSRect {
         frameRect
     }

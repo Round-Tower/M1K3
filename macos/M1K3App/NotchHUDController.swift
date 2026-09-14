@@ -150,8 +150,10 @@ final class NotchHUDController {
         guard let screen = NSScreen.main else { return }
         let window = resolveWindow()
         let shown = window.targetOrigin(on: screen)
-        startHoverTracking(window)
         if window.geometry.growsFromNotch {
+            // Only the notched HUD has a stop button; the docked pill stays
+            // click-through for its whole life (review, #326 pass 4).
+            startHoverTracking(window)
             growIn(window, at: shown)
             return
         }
@@ -198,9 +200,9 @@ final class NotchHUDController {
             window.orderFrontRegardless()
         }
         // Next runloop turn, so the folded state renders once before the spring.
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak window] in
             withAnimation(.spring(response: 0.42, dampingFraction: 0.74)) {
-                window.geometry.expanded = true
+                window?.geometry.expanded = true
             }
         }
     }
