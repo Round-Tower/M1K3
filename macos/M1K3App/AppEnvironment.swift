@@ -72,6 +72,7 @@ import M1K3Inference
 import M1K3Knowledge
 import M1K3KnowledgeTools
 import M1K3Kokoro
+import M1K3LanguageModel
 import M1K3MCPLog
 import M1K3Memory
 import M1K3MemoryChatBridge
@@ -219,6 +220,11 @@ final class AppEnvironment {
     /// comms had no observable invalidator and the Agent Log needed a manual
     /// Refresh button.
     var mcpLogRevision = 0
+    /// The Private Cloud Compute backend's last-read availability and quota
+    /// (ADR 0006), refreshed when the chat appears and after each PCC send. nil
+    /// until read — the rung treats that as available with an unknown quota.
+    /// See AppEnvironment+PrivateCloud.swift.
+    var privateCloudStatus: PrivateCloudStatus?
     /// A cross-scene ask to show a sidebar destination (Settings' "Show the
     /// Heartbeat", the menu bar). ContentView consumes it and resets to nil —
     /// the SELECTION stays ContentView-local (AppEnvironment+Sidebar.swift's

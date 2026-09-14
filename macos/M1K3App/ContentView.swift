@@ -35,10 +35,17 @@
 //  is OFF (Settings ▸ General): with the HUD on, M1K3's words are already captioned above every window
 //  and the band doubled them (Kev: "we probably don't need the in-app HUD over the chat"). Off = the
 //  read-along stays. Confidence now 0.85.
+//  Review: Kev + claude-opus-5, 2026-09-14 — the Private Cloud Compute control (ADR 0006): a cloud button
+//  that arms the NEXT message, shown only with a PCC backend and the switch on; an armed send opens the
+//  consent sheet and the draft stays until it's confirmed. Disarms when it can't be honoured. The sheet
+//  condition is `PrivateCloudRung.presentsConsent` (tested), and a send refused at send time hands the
+//  words back (seen live: a refusal used to empty the field with nothing sent and nothing said).
+//  Confidence 0.8 (verified by launch with the Debug echo backend).
 
 import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
+import M1K3LanguageModel
 import M1K3Preview
 import M1K3Screengrab
 import M1K3Voice
@@ -87,6 +94,13 @@ struct ContentView: View {
     @State private var starters: [String] = Array(StarterPrompts.doorPool.prefix(1))
     @State private var showAttachmentImporter = false
     @State private var pendingAttachments: [ImageAttachment] = []
+    /// ADR 0006: the chat-egress consent (default OFF), held here so the input
+    /// bar re-renders when Settings flips it.
+    @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
+    /// The next message goes to Private Cloud Compute — one send, then it disarms.
+    @State private var privateCloudArmed = false
+    /// A send waiting on the consent sheet; the draft stays until it's confirmed.
+    @State private var privateCloudPending: PendingPrivateCloudSend?
     @State private var attachmentError: String?
     @State private var showConsentDialog = false
     @State private var isDropTargeted = false
@@ -439,6 +453,25 @@ struct ContentView: View {
                 attachImages(at: urls)
             }
         }
+        .sheet(item: $privateCloudPending) { pending in
+            PrivateCloudConsentSheet(
+                consent: pending.consent,
+                onSend: { includeConversation in
+                    privateCloudPending = nil
+                    privateCloudArmed = false
+                    let text = draft
+                    draft = ""
+                    Task {
+                        let sent = await env.sendPrivateCloud(pending.consent, includeConversation: includeConversation)
+                        // Refused at send time (the switch changed while the sheet was
+                        // open): nothing left this Mac, so give the words back.
+                        if !sent, draft.isEmpty { draft = text }
+                    }
+                },
+                onCancel: { privateCloudPending = nil }
+            )
+        }
+        .task { await env.refreshPrivateCloudStatus() }
         .sheet(isPresented: Binding(
             get: { env.scriptProposals.pending != nil },
             set: { if !$0 { env.scriptProposals.pending = nil } }
@@ -822,6 +855,10 @@ struct ContentView: View {
                 .accessibilityLabel("Auto-speak answers")
                 .accessibilityValue(autoSpeakEnabled ? "On" : "Off")
 
+                if privateCloudControl != .hidden {
+                    privateCloudButton
+                }
+
                 Button { env.toggleDictation() } label: {
                     Image(systemName: env.isListening ? "mic.fill" : "mic")
                         .imageScale(.large)
@@ -893,6 +930,41 @@ struct ContentView: View {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !env.chat.isResponding
             && env.chatGate.canTakeTurn // open, or interim (Mini serving)
+    }
+
+    // MARK: - Private Cloud Compute (ADR 0006)
+
+    private var privateCloudControl: PrivateCloudRung.Control {
+        PrivateCloudRung.control(env.privateCloudState(consent: privateCloudConsent))
+    }
+
+    /// Arms the NEXT message for Private Cloud Compute. Exists only when this
+    /// build has a PCC backend and the Settings switch is on; the sheet, not
+    /// this button, is where anything is actually sent.
+    private var privateCloudButton: some View {
+        let control = privateCloudControl
+        return Button { privateCloudArmed.toggle() } label: {
+            Image(systemName: privateCloudArmed ? "cloud.fill" : PrivateCloudLabel.symbolName)
+                .imageScale(.large)
+                .fontWeight(.semibold)
+                .frame(width: 22, height: 22)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .tint(privateCloudArmed ? .accentColor : nil)
+        .disabled(control != .ready || env.chat.isResponding || !pendingAttachments.isEmpty)
+        .help(PrivateCloudRung.controlHelp(control, armed: privateCloudArmed, now: Date()))
+        .accessibilityLabel("Ask Private Cloud Compute")
+        .accessibilityValue(privateCloudArmed ? "On for the next message" : "Off")
+        // Disarm the moment it can't be honoured: the switch went off, the
+        // quota ran out, or an image was staged. A disarmed send stays local.
+        .onChange(of: control) { _, newValue in
+            if newValue != .ready { privateCloudArmed = false }
+        }
+        .onChange(of: pendingAttachments.isEmpty) { _, isEmpty in
+            if !isEmpty { privateCloudArmed = false }
+        }
     }
 
     /// The mic button's tooltip: names WHY it's disabled rather than leaving
@@ -969,6 +1041,14 @@ struct ContentView: View {
 
     private func send() {
         guard canSend else { return }
+        // ADR 0006: an armed send goes through the consent sheet first. Images
+        // never ride a PCC turn (arming is disabled while any are staged).
+        if PrivateCloudRung.presentsConsent(
+            armed: privateCloudArmed, control: privateCloudControl, hasAttachments: !pendingAttachments.isEmpty
+        ) {
+            privateCloudPending = PendingPrivateCloudSend(consent: env.chat.privateCloudConsent(for: draft))
+            return
+        }
         let text = draft
         let images = pendingAttachments
         draft = ""
@@ -1609,4 +1689,11 @@ private struct IngestBanner: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
     }
+}
+
+/// A send waiting on the Private Cloud Compute consent sheet (`.sheet(item:)`
+/// needs an identity; the consent itself is a value).
+struct PendingPrivateCloudSend: Identifiable {
+    let id = UUID()
+    let consent: PrivateCloudTurn.Consent
 }
