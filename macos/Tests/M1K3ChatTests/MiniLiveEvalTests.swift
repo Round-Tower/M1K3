@@ -78,9 +78,13 @@ struct MiniLiveEvalTests {
         max(0, evalEnvironment["M1K3_AFM_EVAL_PACE_MS"].flatMap(Int.init) ?? 2500)
     }
 
-    private static var kinds: Set<TaskKind> {
+    private static var kindNames: [String] {
         let raw = evalEnvironment["M1K3_AFM_EVAL_KINDS"] ?? "security,open-chat"
-        return Set(raw.split(separator: ",").compactMap { TaskKind(rawValue: $0.trimmingCharacters(in: .whitespaces)) })
+        return raw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    private static var kinds: Set<TaskKind> {
+        Set(kindNames.compactMap(TaskKind.init(rawValue:)))
     }
 
     /// The kinds this runner mirrors the harness for. tool-use and grounded-Q
@@ -93,6 +97,10 @@ struct MiniLiveEvalTests {
 
     @Test("Mini through the eval fixtures, one arm per run")
     func run() async throws {
+        // A typo'd kind would otherwise vanish and leave an empty (or narrower) run.
+        let unknown = Self.kindNames.filter { TaskKind(rawValue: $0) == nil }
+        try #require(unknown.isEmpty, "unknown kinds: \(unknown)")
+        try #require(!Self.kinds.isEmpty, "M1K3_AFM_EVAL_KINDS names no kind")
         let unsupported = Self.kinds.subtracting(Self.supportedKinds)
         try #require(unsupported.isEmpty, "not mirrored here: \(unsupported.map(\.rawValue).sorted())")
         let provider = Self.fullPersona
@@ -101,12 +109,15 @@ struct MiniLiveEvalTests {
         try #require(provider.isAvailable, "Apple Intelligence is not available to this process")
         let tools: [any AgentTool] = ChatEvalStubPalette.specs.map { StubTool(spec: $0) }
         var scores: [ChatEvalScore] = []
+        var paced = false
         for trial in 0 ..< Self.repeats {
             for fixture in ChatEvalFixtures.all where Self.kinds.contains(fixture.kind) {
+                // Pace BETWEEN turns only: no wait before the first or after the last.
+                if paced { try await Task.sleep(for: .milliseconds(Self.paceMS)) }
+                paced = true
                 let score = await Self.runFixture(fixture, provider: provider, tools: tools)
                 scores.append(score.withRepeatIndex(trial))
                 print("[trial \(trial + 1)/\(Self.repeats)] " + score.rendered)
-                try await Task.sleep(for: .milliseconds(Self.paceMS))
             }
         }
         let run = ChatEvalReport.BrainRun(brainID: "mini", scores: scores)

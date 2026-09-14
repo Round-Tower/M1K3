@@ -257,8 +257,9 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
    Fixed in #320 (local build 358). The gate, run afterwards (AC, n = 3,
    `MiniLiveEvalTests`, committed under `docs/evals/2026-09-14-mini-*`):
    **trimmed security 21/21 · open-chat 22/24; full persona 21/21 · 23/24.**
-   No regression beyond single-run noise (n = 3), so the trim stands. Security
-   runs bare, as in the app harness.
+   No regression beyond single-run noise (n = 3), so the trim stands. The gate
+   above says "on the live path", but the app harness has always run security
+   bare (`ChatEvalStage`'s bare-generate kinds), so this run did too.
 
 ### 1.1 — "Golden Gate native" (gate: Xcode 27 GA + the CI pin bump + ASC accepting 27-SDK builds)
 
