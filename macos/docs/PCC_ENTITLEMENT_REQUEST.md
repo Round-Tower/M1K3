@@ -1,6 +1,6 @@
 # Private Cloud Compute entitlement — request pack
 
-**Owner:** Kev. Only the account holder can file this. **Status:** not filed.
+**Owner:** Kev. Only the account holder can file this. **Status:** GRANTED 2026-09-14 (filed and assigned the same evening).
 
 ## What we need
 
@@ -62,8 +62,9 @@ found in the macOS 27 dyld shared cache on 2026-09-13. Without it, a
 |------|-------|
 | 2026-09-14 | Pack drafted |
 | 2026-09-14 | Route verified: the contact/request/private-cloud-compute form |
-| | Filed |
-| | Granted / declined |
+| 2026-09-14 | Filed via the form |
+| 2026-09-14 20:48 | Granted: "Access to models on Private Cloud Compute" assigned to the account |
+| 2026-09-14 | Capability enabled on the `app.m1k3` identifier; profile carries the key = `true` (#333) |
 
 When it's granted: add the key to both entitlement files through `project.yml`,
 regenerate the profiles, and run `tools/ci/check_store_targets.py`. The first
@@ -75,4 +76,6 @@ where the unentitled probe got 1046.
      are unverified). Prior: Unknown
      Review: Kev + claude-opus-5, 2026-09-14 (later): the filing route was verified in
      the portal (a dedicated form with one acknowledgment, not a Capability Requests
-     row). Confidence now 0.85. -->
+     row). Confidence now 0.85.
+     Review: Kev + claude-opus-5, 2026-09-14 (night): granted the same evening; the
+     capability is on app.m1k3 and the profile carries the key (#333). Confidence 0.9. -->
