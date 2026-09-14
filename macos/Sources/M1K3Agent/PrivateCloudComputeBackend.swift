@@ -186,6 +186,9 @@ public enum PrivateCloudBackends {
         #if os(macOS)
             guard let task = SecTaskCreateFromSelf(nil) else { return false }
             var error: Unmanaged<CFError>?
+            // A CFError out-parameter comes back +1 (Create rule); release it on
+            // every path, including the nil return every unentitled process takes.
+            defer { error?.release() }
             guard let value = SecTaskCopyValueForEntitlement(task, entitlementKey as CFString, &error) else {
                 return false
             }

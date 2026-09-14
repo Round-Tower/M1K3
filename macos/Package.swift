@@ -296,7 +296,9 @@ let package = Package(
         .testTarget(
             name: "M1K3AgentTests",
             dependencies: ["M1K3Agent"],
-            path: "Tests/M1K3AgentTests"
+            path: "Tests/M1K3AgentTests",
+            // The PCC adapter's SDK-error mapping is pinned under M1K3_FM27.
+            swiftSettings: fm27Settings
         ),
         // The WWDC26 LanguageModel bridge (ADR 0001). Pure, dependency-free:
         // a local MIRROR of Apple's FoundationModels surface (retargets to the

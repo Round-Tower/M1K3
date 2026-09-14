@@ -111,6 +111,36 @@ struct PrivateCloudRungTests {
         }
     }
 
+    /// ADR 0006: images never ride a PCC turn, and an armed send is only honoured
+    /// while the control is ready. This used to live as a three-clause `if` in
+    /// ContentView, where a dropped clause would ship untested.
+    @Test("an armed send opens the consent sheet only when ready and no image is staged")
+    func presentsConsentOnlyWhenHonourable() {
+        #expect(PrivateCloudRung.presentsConsent(armed: true, control: .ready, hasAttachments: false))
+        #expect(!PrivateCloudRung.presentsConsent(armed: false, control: .ready, hasAttachments: false))
+        #expect(!PrivateCloudRung.presentsConsent(armed: true, control: .ready, hasAttachments: true))
+        for control: PrivateCloudRung.Control in [.hidden, .unavailable, .exhausted(resetsAt: nil)] {
+            #expect(!PrivateCloudRung.presentsConsent(armed: true, control: control, hasAttachments: false))
+        }
+    }
+
+    @Test("the control's tooltip says what the click does, and when an exhausted limit resets")
+    func controlHelpNamesTheReset() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        #expect(PrivateCloudRung.controlHelp(.ready, armed: false, now: now)
+            == "Send the next message to Apple's Private Cloud Compute")
+        #expect(PrivateCloudRung.controlHelp(.ready, armed: true, now: now)
+            == "Your next message goes to Private Cloud Compute. You'll see it first.")
+        #expect(PrivateCloudRung.controlHelp(.unavailable, armed: false, now: now)
+            == "Private Cloud Compute isn't available right now")
+        let inThreeHours = now.addingTimeInterval(3 * 3600)
+        #expect(PrivateCloudRung.controlHelp(.exhausted(resetsAt: inThreeHours), armed: false, now: now)
+            == "You've reached your Private Cloud Compute limit. It resets in about 3 hours.")
+        #expect(PrivateCloudRung.controlHelp(.exhausted(resetsAt: nil), armed: false, now: now)
+            == "You've reached your Private Cloud Compute limit for now")
+        #expect(PrivateCloudRung.controlHelp(.hidden, armed: false, now: now).isEmpty)
+    }
+
     @Test("the ladder's egress gate: consent AND not managed off AND a backend")
     func networkAllowed() {
         #expect(PrivateCloudRung.networkAllowed(state()))

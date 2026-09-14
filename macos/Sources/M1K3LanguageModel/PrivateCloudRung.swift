@@ -20,6 +20,13 @@
 //  every input combination pinned; the PCC generation itself is verify-owed
 //  until the entitlement). Prior: Unknown
 //
+//  Review: Kev + claude-opus-5, 2026-09-14 (later) — `presentsConsent`, lifted
+//  from a three-clause `if` in ContentView (local review): images never ride a
+//  PCC turn and an armed send needs a ready control, and both are now pinned
+//  here rather than trusted to view code. `controlHelp` likewise: the control's
+//  tooltip moved here, and an exhausted limit says when it resets (seen by
+//  launch: it said only "for now"). Confidence now 0.85.
+//
 
 import Foundation
 
@@ -90,6 +97,32 @@ public enum PrivateCloudRung {
             return .exhausted(resetsAt: resetsAt)
         }
         return .ready
+    }
+
+    /// Whether an armed send goes to the consent sheet: only while the control is
+    /// ready and no image is staged. Images never ride a PCC turn (ADR 0006).
+    public static func presentsConsent(armed: Bool, control: Control, hasAttachments: Bool) -> Bool {
+        armed && control == .ready && !hasAttachments
+    }
+
+    /// The control's tooltip: what a click does, or why it can't, and when an
+    /// exhausted limit resets (the same reset words as the fallback notice).
+    public static func controlHelp(_ control: Control, armed: Bool, now: Date) -> String {
+        switch control {
+        case .ready:
+            armed
+                ? "Your next message goes to Private Cloud Compute. You'll see it first."
+                : "Send the next message to Apple's Private Cloud Compute"
+        case .unavailable:
+            "Private Cloud Compute isn't available right now"
+        case let .exhausted(resetsAt):
+            resetsAt.map {
+                "You've reached your Private Cloud Compute limit. It resets "
+                    + "\(PrivateCloudFallback.resetPhrase(until: $0, now: now))."
+            } ?? "You've reached your Private Cloud Compute limit for now"
+        case .hidden:
+            ""
+        }
     }
 
     /// The escalation for ONE request: PCC only when the user armed this send

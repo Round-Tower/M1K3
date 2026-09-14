@@ -21,6 +21,12 @@
 //  test-pinned; the default-OFF semantics are the point — challenger finding
 //  on the default-ON proxy folded, PLAN.md Phase 17). Prior: Unknown
 //
+//  Review: Kev + claude-opus-5, 2026-09-14 — `persisted(in:)`, the one reader
+//  of the key: the PCC shell's views (@AppStorage) and its send-time gate
+//  (`object as? Bool`) disagreed on a string value and refused a send the UI
+//  had offered, silently. The consent surface now ships with the PCC rung, as
+//  the header planned. Confidence now 0.9.
+//
 
 import Foundation
 
@@ -36,5 +42,15 @@ public enum ChatEgressConsent {
     /// opens the gate.
     public static func networkAllowed(persisted: Bool?) -> Bool {
         persisted ?? false
+    }
+
+    /// The persisted answer, read the way the views' @AppStorage reads it: nil
+    /// when the key is absent (never answered), else `bool(forKey:)`, which also
+    /// coerces the string a launch argument, `defaults write -string` or a
+    /// profile can store. A send-time `as? Bool` read got nil for a string the
+    /// view had read as true, and refused a send the UI had offered (seen live
+    /// 2026-09-14). One reader for every caller keeps them in step.
+    public static func persisted(in defaults: UserDefaults) -> Bool? {
+        defaults.object(forKey: defaultsKey) == nil ? nil : defaults.bool(forKey: defaultsKey)
     }
 }
