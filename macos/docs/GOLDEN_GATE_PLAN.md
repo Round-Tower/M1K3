@@ -262,20 +262,26 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
    `guidedGeneration` is declared only once it's real. `M1K3FoundationExecutor.userPrompt`
    drops prior turns today, so it needs multi-turn transcript handling first.
 
-### 1.2 — The PCC rung (Phase 17b, now runtime-unblocked)
+### 1.2 — The PCC rung (Phase 17b): DECIDED 2026-09-14, see ADR 0006
 
-- **Gate:** the `com.apple.developer.private-cloud-compute` entitlement. Kev
-  requests it from Apple (the probe shows generation is refused without it),
-  and M1K3 qualifies for the Small Business Program (memory:
-  `anthropic-on-golden-gate`).
-- **Shape:** a third lane on `EscalationLadder` behind
-  `ChatEgressConsent.networkAllowed` (already shipped, default OFF). Every
-  answer that went to PCC is labelled as such. `quotaUsage` shows up in the
-  UI, and `rateLimited` / `quotaLimitReached` fall back to local with a sentence
-  saying why. What PCC buys: 32k context, reasoning levels, vision.
-- **Positioning risk, needs a `challenger` pass before building:** "Nothing
-  leaves" is the product. PCC is Apple's attested cloud, not M1K3's, so it is
-  per-turn opt-in, never a default, and the site copy must say so plainly.
+- **Kev's call:** PCC ships as an opt-in third rung, and the posture moves from
+  "Nothing leaves" to private by design
+  ([ADR 0006](./adr/0006-private-cloud-compute-rung-and-the-private-by-design-posture.md)).
+  The copy sweep (32 files) ships **in the same release** as the rung, never
+  before it.
+- **Gate:** the `com.apple.developer.private-cloud-compute` entitlement. The
+  request pack is [PCC_ENTITLEMENT_REQUEST.md](./PCC_ENTITLEMENT_REQUEST.md);
+  Kev files it. The 1.2 code can be built and unit-tested before the grant,
+  but the PCC generation path is verify-owed until then (1046 without it).
+- **Shape:** `Escalation.privateCloud` on the existing `EscalationLadder`,
+  behind `ChatEgressConsent` (default OFF). An explicit per-request escalation
+  control, a label on every PCC answer, a consent sheet listing exactly what
+  is sent (grounding opt-in, none by default), `quotaUsage` shown, and a local
+  fallback with a sentence on `rateLimited` / `quotaLimitReached` / network
+  failure. The full constraint list is in ADR 0006.
+- **Does NOT need Xcode 27 GA to start:** the policy, consent and UI halves
+  are toolchain-free. Only the `PrivateCloudComputeLanguageModel` adapter sits
+  behind `M1K3_FM27` until the 1.1 toolchain bump.
 
 ### Later / watch
 
@@ -315,6 +321,9 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
 - Conversational replay: ~5.7
 - Standing heuristic (code): 3.5 ← reasonable for code, conservative for prose
 
+<!-- Review: Kev + claude-opus-5, 2026-09-14: 1.2 marked DECIDED (ADR 0006,
+     Kev's call); the policy, consent and UI halves are noted as toolchain-free.
+     Confidence now 0.85. -->
 <!-- Signed: Kev + claude-opus-5, 2026-09-13. The 27-SDK correction +
      the 1.0 → 1.2 roadmap. Confidence 0.85: every API row comes from the
      27A5194q swiftinterfaces or a probe binary run on macOS 27.0 (26A428),

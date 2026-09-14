@@ -10,3 +10,4 @@ never edit, accepted ones.
 | [0003](0003-okf-as-an-export-format-not-the-memory-model.md) | OKF is an export format, not the memory model | Accepted | 2026-08-30 |
 | [0004](0004-brain-catalogue-ships-in-the-binary.md) | The brain catalogue ships in the binary; the site publishes evals the app never reads | Accepted | 2026-09-05 |
 | [0005](0005-relicense-to-fsl-organisations-are-the-paid-line.md) | Relicense forward to FSL-1.1-ALv2; humans stay free, organisations are the paid line | Accepted | 2026-09-09 |
+| [0006](0006-private-cloud-compute-rung-and-the-private-by-design-posture.md) | Add Private Cloud Compute as an opt-in rung; move the posture from "Nothing leaves" to private by design | Accepted | 2026-09-14 |

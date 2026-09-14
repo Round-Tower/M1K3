@@ -503,14 +503,14 @@ or nothing, on purpose.
   unblocked. Re-verify the Declared Age Range API specifics against current
   Apple docs before building (named low-confidence in PLAN.md item 19 — macOS
   availability / band granularity / decline semantics all need a fresh check).
-- **Phase 17b — PCC network rung. RUNTIME-UNBLOCKED 2026-09-13.** Prerequisite
-  (Phase 17a, `ChatEgressConsent.networkAllowed`, default-OFF) is shipped. On
-  the macOS 27 runtime, `PrivateCloudComputeLanguageModel` reports `available`
-  with a 32,768-token window, reasoning, vision and tools, but a generation
-  from an unentitled process fails (`ModelManagerError 1046`). The new gate is
-  the **`com.apple.developer.private-cloud-compute` entitlement**, which Kev
-  requests from Apple, plus a `challenger` pass on the "nothing leaves"
-  positioning. Scoped as 1.2 in `docs/GOLDEN_GATE_PLAN.md` § Roadmap.
+- **Phase 17b — PCC network rung. DECIDED 2026-09-14 (ADR 0006).** Kev: ship
+  PCC as an opt-in rung and move the posture from "Nothing leaves" to
+  private by design, with the copy changing in the same release as the rung.
+  Gate: the `com.apple.developer.private-cloud-compute` entitlement (request
+  pack: `docs/PCC_ENTITLEMENT_REQUEST.md`, Kev files it). The runtime probe
+  shows `available`, a 32,768-token window, reasoning and vision, and 1046
+  without the entitlement. Scope and constraints: `docs/GOLDEN_GATE_PLAN.md`
+  § 1.2 and ADR 0006.
 - **Memory distiller-quality eval.** Narrowed again by the dream-cycle work
   (Tiers 0/1 shipped 2026-07-30; MEMSTAT now measures the ingest path
   end-to-end). Still genuinely open: an AFM-judge eval scoring whether
@@ -638,6 +638,10 @@ or nothing, on purpose.
 
 ---
 
+<!-- Review: Kev + claude-opus-5, 2026-09-14: Phase 17b decided (ADR 0006,
+     Kev's call: PCC in, posture "private by design", copy swap ships with the
+     rung). Confidence 0.85 (the decision is Kev's; the filing route for the
+     entitlement is unverified). -->
 <!-- Review: Kev + claude-opus-5, 2026-09-13: Golden Gate prep. Phase 17b
      re-gated from "no macOS 27 runtime" to the PCC entitlement (runtime
      probe: available, 32k context, generation refused with error 1046), and

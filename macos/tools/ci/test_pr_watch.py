@@ -57,9 +57,27 @@ def test_named_heads_reads_every_backticked_sha_after_the_word_head():
     assert m.named_heads(body) == ["77702b02", "77702b02a1dd3a16a3efe790de5de26a24f11ae4"]
 
 
+def test_named_heads_reads_a_backticked_sha_in_the_pass_header():
+    # the wording seen on #318 (2026-09-14): "Review of `sha`", no word "head"
+    body = "**Claude finished @kev's task in 2m 20s** ---\n### Review of `75c23b64` (docs only)\n\n- [x] Gather context"
+    assert m.named_heads(body) == ["75c23b64"]
+    assert m.summon_passes("75c23b646c682af0c592f59698f6dee0d0ae7034", [bot(body)]) == 1
+
+
 def test_named_heads_is_empty_when_no_sha_named():
     assert m.named_heads("## Review: something\nno sha here") == []
     assert m.named_heads("mentions `cccc333` without the word head") == []
+    # a sha in the body prose, not the header, names nothing
+    assert m.named_heads("### Review of the docs\n\nsee `cccc333` for the old shape") == []
+
+
+def test_a_sha_in_a_later_finding_header_names_nothing():
+    # review 2 on #318: only the pass's own title header names a head; a finding's
+    # "####" subheader quoting an older commit must not be credited as reviewed
+    body = ("**Claude finished @kev's task** ---\n### Review of `78fcaeb1` (docs only)\n\n- [x] Gather context\n\n"
+            "#### Bug: regression since `e4e2cd6d`\n\nsome text")
+    assert m.named_heads(body) == ["78fcaeb1"]
+    assert m.summon_passes("e4e2cd6d" + "0" * 32, [bot(body)]) == 0
 
 
 def test_a_pass_naming_an_old_head_and_this_one_counts_for_this_one():
