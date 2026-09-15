@@ -79,10 +79,15 @@ def test_receipt_charges_only_the_energy_above_idle_inside_the_turn():
     assert round(t["joules_above_idle"], 2) == 28.91
     assert round(t["wh_above_idle"], 5) == 0.00803
     assert round(t["mean_watts"], 1) == 30.0
+    # package power is the billing figure; the CPU / GPU split rides beside it so prose
+    # about "the GPU did the work" is backed by a field (review catch on #357)
+    assert t["mean_cpu_watts"] == 9.0 and t["mean_gpu_watts"] == 21.0
     assert t["answer_chars"] == 200
     assert r["summary"]["idle_watts"] == 1.1
     assert r["summary"]["sample_interval_seconds"] == 0.50012
     assert round(r["summary"]["median_wh_per_answer"], 5) == 0.00803
+    assert r["summary"]["median_mean_watts"] == 30.0
+    assert r["summary"]["median_mean_gpu_watts"] == 21.0 and r["summary"]["median_mean_cpu_watts"] == 9.0
 
 
 def test_receipt_summary_takes_the_median_across_turns_and_names_the_power_source():
