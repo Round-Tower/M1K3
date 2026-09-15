@@ -32,6 +32,10 @@
 //  hardware so a headset leaves its call profile when the conversation ends. Confidence 0.85.
 //  Same pass: a wordless listen the transcriber FAILED reports `lastFailure` through
 //  `listenFailed` (the phone's rule) instead of counting as silence.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — #311: `lastFailure` is read through
+//  `any TranscriptionProvider` (the protocol requirement), not an `as? AppleSpeechTranscriber`
+//  downcast, so a WhisperKit start failure parks the loop with its reason instead of counting
+//  as an empty listen. Confidence 0.8 (verify-on-device: a real start failure on a real route).
 
 import AppKit
 import AVFoundation
