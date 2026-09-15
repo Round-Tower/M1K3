@@ -191,3 +191,86 @@ def test_cli_writes_both_files(tmp_path):
     out = json.loads((tmp_path / "brains.json").read_text())
     assert out["runs"][0]["brains"][0]["byKind"]["tool-use"] == {"passed": 3, "total": 4}
     assert "<title>M1K3 Brains" in (tmp_path / "brains.html").read_text()
+
+
+# ── the ladder (latest cell per brain per kind) ──────────────────────────────
+
+def _run(date, brain, model, scores):
+    return dict(RUN, provenance=dict(RUN["provenance"], date=date), runs=[{"brainID": brain, "modelID": model, "scores": scores}])
+
+
+def test_ladder_takes_the_latest_cell_per_brain_per_kind_and_dates_it():
+    older = _run("2026-09-05T10:00:00Z", "lil", "m/lil", [score("a", "security", False, 1), score("b", "open-chat", True, 1)])
+    newer = _run("2026-09-15T10:00:00Z", "lil", "m/lil", [score("a", "security", True, 1)])
+    cols = bp.ladder([bp.summarise_run(newer), bp.summarise_run(older)])  # input order is not date order
+    assert [c["brainID"] for c in cols] == ["lil"]
+    lil = cols[0]
+    assert lil["byKind"]["security"] == {"passed": 1, "total": 1, "date": "2026-09-15"}
+    assert lil["byKind"]["open-chat"] == {"passed": 1, "total": 1, "date": "2026-09-05"}  # kept from the older run
+    assert lil["passed"] == 2 and lil["total"] == 2 and lil["latestDate"] == "2026-09-15" and lil["shipped"]
+
+
+def test_ladder_orders_shipped_then_pcc_then_reference_by_pass_rate():
+    day = "2026-09-15T10:00:00Z"
+    runs = [
+        _run(day, "claude-opus-5", "anthropic/claude-opus-5", [score("a", "security", True, 1), score("b", "security", True, 1)]),
+        _run(day, "gemini-3.8-flash", "google/gemini-3.8-flash", [score("a", "security", False, 1), score("b", "security", True, 1)]),
+        _run(day, "pcc", "apple/private-cloud-compute", [score("a", "security", True, 1)]),
+        _run(day, "big", "m/big", [score("a", "security", True, 1)]),
+        _run(day, "mini", None, [score("a", "security", True, 1)]),
+    ]
+    cols = bp.ladder([bp.summarise_run(r) for r in runs])
+    assert [c["brainID"] for c in cols] == ["mini", "big", "pcc", "claude-opus-5", "gemini-3.8-flash"]
+    assert [c["shipped"] for c in cols] == [True, True, False, False, False]
+    html = bp._ladder_table(cols)
+    assert 'claude-opus-5<br /><span class="table-note">anthropic</span>' in html
+
+
+def test_html_ladder_marks_reference_columns_and_folds_older_runs():
+    older = _run("2026-09-05T10:00:00Z", "lil", "m/lil", [score("a", "security", True, 1)])
+    newer = _run("2026-09-15T10:00:00Z", "pcc", "apple/private-cloud-compute", [score("a", "security", False, 1)])
+    doc = bp.document(MANIFEST, [older, newer], generated="2026-09-15")
+    html = bp.render_html(doc)
+    assert '<div class="table-scroll ladder-wrap"><table class="cmp ladder">' in html
+    assert '<th scope="col" class="ref">pcc<br /><span class="table-note">Apple, server</span></th>' in html
+    assert '<th scope="col">Lil<br /><span class="table-note">lil</span></th>' in html  # shipped: the bare model name
+    assert '<th scope="col" class="ref">pcc<br />' in html  # reference column, set apart, not title-cased
+    assert '<th scope="col">Lil<br />' in html
+    assert "Private Cloud Compute" in html and "not shipped" in html
+    # one year across the board: the year in the row header, MM-DD in the cells
+    assert '<th scope="row">measured (2026)</th>' in html and '<span class="table-note">09-15</span>' in html
+    mixed = bp._ladder_table([
+        dict(brainID="lil", modelID="m/lil", byKind={}, passed=0, total=0, latestDate="2025-12-01", shipped=True),
+        dict(brainID="big", modelID="m/big", byKind={}, passed=0, total=0, latestDate="2026-09-15", shipped=True),
+    ])
+    assert '<th scope="row">measured</th>' in mixed and "2025-12-01" in mixed and "2026-09-15" in mixed
+    # the newest run is open, the older one folds
+    assert html.count("<details class=\"run\"") == 2
+    assert html.count("<details class=\"run\" open>") == 1
+    assert html.index("<details class=\"run\">") < html.index("<details class=\"run\" open>")
+    # the machine copy carries the same board
+    assert [c["brainID"] for c in doc["ladder"]] == ["lil", "pcc"]
+    assert doc["reference"]["pcc"].startswith("Apple Private Cloud Compute")
+
+
+def test_ladder_with_no_runs_renders_a_sentence_not_a_crash():
+    assert bp._ladder_table([]) == "<p>No runs yet.</p>"
+
+
+# ── the dated read-outs ──────────────────────────────────────────────────────
+
+def test_the_page_never_ships_a_placeholder_read_out():
+    html = bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-15"))
+    assert "TBD" not in html and "TODO" not in html
+    for _, body in bp.READ_OUT_2026_09_15["sections"]:
+        assert "TBD" not in body and "TODO" not in body
+
+
+def test_the_2026_09_15_read_out_renders_above_the_09_05_one(monkeypatch):
+    monkeypatch.setitem(bp.READ_OUT_2026_09_15, "sections", [("A heading", "<p>A paragraph with 7/7.</p>")])
+    html = bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-15"))
+    assert "<h2>State of play, 2026-09-15</h2>" in html and "<h3>A heading</h3><p>A paragraph with 7/7.</p>" in html
+    assert html.index("State of play, 2026-09-15") < html.index("State of play, 2026-09-05")
+    monkeypatch.setitem(bp.READ_OUT_2026_09_15, "sections", [])
+    assert "State of play, 2026-09-15" not in bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-15"))
+

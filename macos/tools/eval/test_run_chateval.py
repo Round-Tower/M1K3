@@ -164,3 +164,30 @@ def test_plan_refuses_another_sessions_build():
 def test_plan_with_nothing_running():
     plan = rc.plan_instances([], live_app=LIVE, target_app=LIVE)
     assert (plan.to_quit, plan.blockers, plan.live_was_running) == ([], [], False)
+
+
+# ── direct mode (macOS 27) ───────────────────────────────────────────────────
+
+def test_extract_fenced_json_takes_the_last_complete_block():
+    stale = rc.FENCE_OPEN + '\n{"runs": []}\n' + rc.FENCE_CLOSE
+    real = rc.FENCE_OPEN + '\n{"runs": [{"brainID": "pcc"}]}\n' + rc.FENCE_CLOSE
+    text = "• chateval: 1 fixture\n" + stale + "\nnoise\n" + real + "\n• chateval json → stdout (fenced)\n"
+    assert rc.extract_fenced_json(text) == {"runs": [{"brainID": "pcc"}]}
+
+
+def test_extract_fenced_json_refuses_partials_and_junk():
+    assert rc.extract_fenced_json("plain transcript\n{}\n") is None
+    assert rc.extract_fenced_json(rc.FENCE_OPEN + '\n{"a": 1}\n') is None
+    assert rc.extract_fenced_json('{"a": 1}\n' + rc.FENCE_CLOSE + "\n") is None
+    assert rc.extract_fenced_json(rc.FENCE_OPEN + "\nnot json\n" + rc.FENCE_CLOSE) is None
+
+
+def test_direct_env_routes_the_report_to_stdout_and_keeps_the_caller_env():
+    trig = {"M1K3_SELFTEST": "1", "M1K3_SELFTEST_OUT": "/container/path/run", "M1K3_SELFTEST_CHATEVAL_PCC": "1"}
+    env = rc.direct_env(trig, {"PATH": "/usr/bin", "M1K3_SELFTEST_OUT": "/stale"})
+    assert env["M1K3_SELFTEST_OUT"] == "-"
+    assert env["M1K3_SELFTEST"] == "1"
+    assert env["M1K3_SELFTEST_CHATEVAL_PCC"] == "1"
+    assert env["PATH"] == "/usr/bin"
+    assert trig["M1K3_SELFTEST_OUT"] == "/container/path/run", "the trigger map itself is not mutated"
+

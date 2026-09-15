@@ -33,6 +33,8 @@ Signed: Kev + claude-fable-5.1, 2026-09-12, Confidence 0.85 (every comment
 shape is pinned from bodies read off PR #293; the job names are the ci.yml
 strings; the gh wiring is verify-by-run against a live PR). Prior: Unknown
 
+Review: Kev + claude-fable-5.1, 2026-09-15 — `named_heads` also reads "head (sha)"
+unbackticked (#347's second and third passes read 0/2 on a twice-reviewed head).
 Review: Kev + claude-opus-5, 2026-09-14 — `named_heads` also reads a backticked
 sha in the pass's own title (the first markdown header line): #318's summon
 wrote "### Review of `75c23b64`" with no word "head", and the watch read 0/2 on
@@ -82,6 +84,8 @@ class Kind(Enum):
 _CHECKBOX = re.compile(r"^\s*- \[( |x)\] ")
 _PASS_HEADER = re.compile(r"^#{2,4} .*\bpass\b", re.IGNORECASE)
 _HEAD = re.compile(r"\bhead `([0-9a-f]{7,40})`")
+# "…pass on final head (3922a21d)" — the sha in parentheses, unbackticked (#347, 2026-09-15).
+_HEAD_PAREN = re.compile(r"\bhead \(([0-9a-f]{7,40})\)")
 _HEADER_LINE = re.compile(r"^#{2,4} ")
 _SHA = re.compile(r"`([0-9a-f]{7,40})`")
 
@@ -128,13 +132,14 @@ def named_heads(body: str) -> list[str]:
     wording drifts ("review of final head `x`", "Final pass — review of head
     `x`", "Review — head `x`" all seen on 2026-09-12; "Review of `x`" with no
     word "head" on #318, 2026-09-14), so a sha counts when it follows the word
-    "head" anywhere, or sits backticked in the pass's own title — the FIRST
-    markdown header line. A later "####" finding header quoting an older commit,
+    "head" anywhere — backticked, or in parentheses as on #347 (2026-09-15:
+    "second full pass on final head (3922a21d)") — or sits backticked in the
+    pass's own title — the FIRST markdown header line. A later "####" finding header quoting an older commit,
     and a sha in body prose, name nothing. Auto passes name none."""
     shas: list[str] = []
     title_read = False
     for line in body.splitlines():
-        found = _HEAD.findall(line)
+        found = _HEAD.findall(line) + _HEAD_PAREN.findall(line)
         if not title_read and _HEADER_LINE.match(line):
             title_read = True
             found += _SHA.findall(line)

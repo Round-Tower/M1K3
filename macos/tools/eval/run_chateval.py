@@ -27,10 +27,21 @@ Provenance: power source + powermode are read from pmset and stamped; a
 battery run is marked "battery" in the notes — pass counts stand on battery,
 tok/s and latency do not (the 2026-09-05 power correction).
 
+`--direct` (macOS 27): app-data privacy closed the container to shells, so the
+trigger file can't be written and the report can't be read back. Direct mode
+execs the bundle's binary itself with the trigger map as its ENVIRONMENT and
+`M1K3_SELFTEST_OUT=-`, so the sandboxed app streams the transcript to the
+inherited stdout and the JSON rides the same stream fenced
+(ChatEvalReport.fenced); the driver cuts the last fenced block out. The
+quit/blocker/cool-down rules are the same; only the launch and the read differ.
+
 Signed: Kev + claude-opus-5, 2026-09-12, Confidence 0.8 (pure decisions pinned
 in test_run_chateval.py; the quit/launch/wait glue driven by hand on the
 installed app). Prior: none (new file; replaces the scratchpad run-selftest
 helpers that died with two session restarts).
+Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.8 — `--direct`: exec the
+binary with the trigger as env + stdout reporting (the only route on macOS 27);
+`extract_fenced_json` + `direct_env` pinned. Confidence now 0.8.
 """
 
 from __future__ import annotations
@@ -105,6 +116,37 @@ def out_path(container: Path, name: str) -> Path:
 
 def json_path(report: Path) -> Path:
     return Path(str(report) + ".json")
+
+
+FENCE_OPEN = "-----BEGIN CHATEVAL JSON-----"
+FENCE_CLOSE = "-----END CHATEVAL JSON-----"
+
+
+def extract_fenced_json(text: str) -> dict | None:
+    """The LAST complete fenced document in a stdout transcript, parsed; None
+    when there is no open+close pair (a half-written block is not a scorecard).
+    Mirrors ChatEvalReport.unfenced in M1K3Eval — keep the two in step."""
+    close = text.rfind(FENCE_CLOSE)
+    if close < 0:
+        return None
+    open_at = text.rfind(FENCE_OPEN, 0, close)
+    if open_at < 0:
+        return None
+    body = text[open_at + len(FENCE_OPEN):close].strip()
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError:
+        return None
+
+
+def direct_env(trig: dict[str, str], base: dict[str, str]) -> dict[str, str]:
+    """The environment for a direct exec: the caller's env plus the trigger map,
+    with the report routed to stdout. Direct mode never leaves a container path
+    in M1K3_SELFTEST_OUT — the sandbox would write it where no shell can read."""
+    env = dict(base)
+    env.update(trig)
+    env["M1K3_SELFTEST_OUT"] = "-"
+    return env
 
 
 def dump_dir(container: Path, name: str) -> Path:
@@ -245,6 +287,47 @@ def summarise(doc_path: Path) -> str:
     return "\n".join(lines)
 
 
+def run_direct(args, app: Path, trig: dict[str, str], plan: "InstancePlan") -> int:
+    """Direct mode: the binary, the env, stdout. Returns like main()."""
+    binary = app / "Contents/MacOS/M1K3"
+    if not binary.exists():
+        print(f"✗ no binary at {binary}", file=sys.stderr)
+        return 2
+    log_path = Path(args.log) if args.log else (
+        Path(args.save_to).with_suffix(".log") if args.save_to else Path(tempfile.gettempdir()) / f"m1k3-chateval-{args.name}.log")
+    STAMP.write_text(str(time.time()))
+    print(f"▸ SelfTest (direct) → stdout → {log_path}")
+    started = time.monotonic()
+    with open(log_path, "w") as log:
+        proc = subprocess.Popen([str(binary)], env=direct_env(trig, os.environ), stdout=log, stderr=subprocess.STDOUT,
+                                cwd=tempfile.gettempdir())
+        lines = 0
+        while proc.poll() is None:
+            if time.monotonic() - started > args.timeout_min * 60:
+                print("✗ timed out — the SelfTest is still running; leaving it alone", file=sys.stderr)
+                return 6
+            time.sleep(10)
+            now_lines = log_path.read_text(errors="replace").count("\n")
+            if now_lines != lines:
+                lines = now_lines
+                print(f"  … {lines} report lines · {int((time.monotonic() - started) / 60)} min")
+    doc = extract_fenced_json(log_path.read_text(errors="replace"))
+    if doc is None:
+        print(f"✗ no fenced JSON on stdout (exit {proc.returncode}) — read the transcript: {log_path}", file=sys.stderr)
+        rc = 7
+    else:
+        if args.save_to:
+            Path(args.save_to).write_text(json.dumps(doc, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+            print(summarise(Path(args.save_to)))
+            print(f"  saved → {args.save_to}")
+        else:
+            print(json.dumps(doc, indent=2, sort_keys=True)[:2000])
+        rc = 0
+    if plan.live_was_running and not args.no_relaunch:
+        subprocess.run(["open", "-a", LIVE_APP])
+    return rc
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--name", required=True, help="run name → selftest-out/<name>(.json)")
@@ -261,6 +344,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--timeout-min", type=int, default=240)
     ap.add_argument("--no-relaunch", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="print the trigger and plan, touch nothing")
+    ap.add_argument("--direct", action="store_true",
+                    help="exec the bundle's binary with the trigger as env and read the report off stdout "
+                         "(macOS 27: the container is closed to shells)")
+    ap.add_argument("--log", help="direct mode: where to keep the raw stdout transcript (default: beside --save-to, or temp)")
     args = ap.parse_args(argv)
 
     container = default_container()
@@ -303,6 +390,9 @@ def main(argv: list[str] | None = None) -> int:
     if wait:
         print(f"… AFM cool-down {int(wait)} s")
         time.sleep(wait)
+
+    if args.direct:
+        return run_direct(args, app, trig, plan)
 
     for stale in (report, json_path(report)):
         stale.unlink(missing_ok=True)

@@ -54,7 +54,8 @@ HF = "https://huggingface.co"
 # manifest supplies revision + size so a re-pin PR moves this page by itself.
 TIERS = (
     {"tier": "mini", "name": "Mini", "backing": "apple-foundation-models", "modelID": None,
-     "role": "Apple Foundation Models — instant, on the Neural Engine; fronts the quickest turns."},
+     "role": "Apple Foundation Models — instant, on the Neural Engine; fronts the quickest turns. "
+             "macOS 27 reports the variant it runs (this Mac: AFM 3 Core)."},
     {"tier": "pocket", "name": "Mini", "backing": "mlx", "modelID": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
      "role": "The Mini for devices without Apple Intelligence — LFM2.5 1.2B (4-bit), ~630 MB; "
              "shown only where Apple's model is blocked. LFM Open License v1.0, not Apache."},
@@ -63,6 +64,17 @@ TIERS = (
     {"tier": "big", "name": "Big", "backing": "mlx", "modelID": "mlx-community/gemma-4-12B-it-4bit",
      "role": "Reached by delegation for deep work — Gemma 4 12B, 8-bit quantized KV."},
 )
+
+
+# Columns that are measured but NOT shipped: Apple's server model (the 1.2 rung, behind an
+# entitlement) and hosted frontier models through the same fixtures. They sit to the right of
+# the ladder as a distance to compare against, never in the brains table (ADR 0004: the table
+# is what the binary pins).
+REFERENCE = {
+    "pcc": "Apple Private Cloud Compute — Apple's server model, the escalation rung of a later release; "
+           "measured through the same persona and floor, no tools of M1K3's.",
+}
+SHIPPED_ORDER = tuple(t["tier"] for t in TIERS)
 
 
 class UnsupportedSchema(ValueError):
@@ -160,7 +172,44 @@ STATE_OF_PLAY = {
 }
 
 
+def _column_rank(column: dict) -> tuple:
+    """Shipped tiers in ladder order, then PCC, then the reference columns by pass rate (desc), then name."""
+    bid = column["brainID"]
+    if bid in SHIPPED_ORDER:
+        return (0, SHIPPED_ORDER.index(bid), "")
+    if bid == "pcc":
+        return (1, 0, "")
+    rate = column["passed"] / column["total"] if column["total"] else 0.0
+    return (2, -rate, bid)
+
+
+def ladder(summaries: list[dict]) -> list[dict]:
+    """The headline board: for every brain that ever ran, its LATEST cell per kind — the newest run
+    (by provenance date; input order breaks ties) that measured that kind for that brain — with the
+    run's date beside each cell, so a stale column says so. `passed`/`total` sum those latest cells,
+    never every run ever. Columns: shipped tiers, PCC, then the reference columns by pass rate."""
+    ordered = sorted(enumerate(summaries), key=lambda item: ((item[1]["provenance"].get("date") or ""), item[0]))
+    columns: dict[str, dict] = {}
+    for _, run in ordered:
+        date = (run["provenance"].get("date") or "")[:10]
+        for brain in run["brains"]:
+            col = columns.setdefault(brain["brainID"], {"brainID": brain["brainID"], "modelID": brain["modelID"], "byKind": {}})
+            col["modelID"] = brain["modelID"] or col["modelID"]
+            for kind, cell in brain["byKind"].items():
+                col["byKind"][kind] = {"passed": cell["passed"], "total": cell["total"], "date": date}
+    out = []
+    for col in columns.values():
+        col["byKind"] = dict(sorted(col["byKind"].items()))
+        col["passed"] = sum(c["passed"] for c in col["byKind"].values())
+        col["total"] = sum(c["total"] for c in col["byKind"].values())
+        col["latestDate"] = max((c["date"] for c in col["byKind"].values()), default="")
+        col["shipped"] = col["brainID"] in SHIPPED_ORDER
+        out.append(col)
+    return sorted(out, key=_column_rank)
+
+
 def document(manifest: dict, runs: list[dict], generated: str) -> dict:
+    summaries = [summarise_run(r) for r in runs]
     return {
         "schemaVersion": SCHEMA_VERSION,
         "generated": generated,
@@ -168,7 +217,10 @@ def document(manifest: dict, runs: list[dict], generated: str) -> dict:
                  "app never reads this file (macos/docs/adr/0004-brain-catalogue-ships-in-the-binary.md).",
         "brains": brains(manifest),
         # Chronological, whatever the filenames say.
-        "runs": sorted((summarise_run(r) for r in runs), key=lambda r: r["provenance"].get("date") or ""),
+        "runs": sorted(summaries, key=lambda r: r["provenance"].get("date") or ""),
+        # The headline board, derived from the same summaries (latest cell per brain per kind).
+        "ladder": ladder(summaries),
+        "reference": REFERENCE,
         # The dated editorial block, so brains.json really is the machine copy of the page.
         "stateOfPlay": {
             "date": STATE_OF_PLAY["date"],
@@ -208,6 +260,92 @@ def _brains_table(rows: list[dict]) -> str:
     )
 
 
+KIND_ORDER = ("open-chat", "grounded-Q", "reasoning", "code-gen", "tool-use", "refusal", "security",
+              "world-knowledge", "humour", "interview", "instruction-following", "document", "sycophancy")
+
+
+def _kind_sort(kinds) -> list[str]:
+    known = [k for k in KIND_ORDER if k in kinds]
+    return known + sorted(k for k in kinds if k not in KIND_ORDER)
+
+
+def _column_label(brain_id: str) -> str:
+    """Shipped tiers read as names (Mini, Lil, Big); a reference column keeps its model id as-is."""
+    return brain_id.title() if brain_id in SHIPPED_ORDER else brain_id
+
+
+def _ladder_table(columns: list[dict]) -> str:
+    """The headline board. Shipped tiers, then PCC, then the reference columns; every cell is the
+    brain's latest reading for that kind, and the date row under the totals says how old each
+    column is. Emphasis only for a clean sweep, same rule as the run matrices."""
+    if not columns:
+        return "<p>No runs yet.</p>"
+    kinds = _kind_sort({k for c in columns for k in c["byKind"]})
+    head = []
+    for c in columns:
+        cls = "" if c["shipped"] else ' class="ref"'
+        label = _column_label(c["brainID"])
+        # Shipped: the bare model name (the full hub route is in the brains table and brains.json).
+        # Reference: the label IS the model, so the sub-label names who serves it instead.
+        route = c["modelID"] or "Apple FM"
+        if c["shipped"]:
+            sub = route.split("/")[-1]
+        elif c["brainID"] == "pcc":
+            sub = "Apple, server"
+        else:
+            sub = route.split("/")[0] if "/" in route else route  # the provider; "via OpenRouter" is in the notes
+        head.append(f'<th scope="col"{cls}>{_e(label)}<br /><span class="table-note">{_e(sub)}</span></th>')
+    rows = []
+    for k in kinds:
+        cells = []
+        for c in columns:
+            cell = c["byKind"].get(k)
+            if cell is None:
+                cells.append('<td class="no">—</td>')
+            else:
+                cls = "yes" if cell["passed"] == cell["total"] else ""
+                cells.append(f'<td class="{cls}">{cell["passed"]}/{cell["total"]}</td>')
+        rows.append(f'<tr><th scope="row">{_e(k)}</th>{"".join(cells)}</tr>')
+    totals = "".join(
+        f'<td class="{"yes" if c["passed"] == c["total"] else ""}"><strong>{c["passed"]}/{c["total"]}</strong></td>' for c in columns
+    )
+    # One year across the board → the year rides in the row header and the cells are MM-DD (fourteen
+    # full ISO dates were the widest row on the page); mixed years keep the full date in every cell.
+    years = {(c["latestDate"] or "")[:4] for c in columns if c["latestDate"]}
+    one_year = years.pop() if len(years) == 1 else None
+    def when(c):
+        d = c["latestDate"]
+        if not d:
+            return "—"
+        return d[5:] if one_year else d
+    dates = "".join(f'<td><span class="table-note">{_e(when(c))}</span></td>' for c in columns)
+    measured = f"measured ({one_year})" if one_year else "measured"
+    rows.append(f'<tr><th scope="row">all kinds, latest</th>{totals}</tr>')
+    rows.append(f'<tr><th scope="row">{measured}</th>{dates}</tr>')
+    return (
+        '<div class="table-scroll ladder-wrap"><table class="cmp ladder"><thead><tr><th scope="col">Kind</th>' + "".join(head) +
+        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>"
+        '<p class="table-note">each cell is that brain\'s newest run for the kind (passed/total, every trial counted); '
+        'a column whose kinds were measured on different days shows its newest date. Shipped tiers left, '
+        'reference columns right: measured, not shipped.</p>'
+    )
+
+
+def _reference_notes(columns: list[dict]) -> str:
+    refs = [c for c in columns if not c["shipped"]]
+    if not refs:
+        return ""
+    items = []
+    for c in refs:
+        note = REFERENCE.get(c["brainID"])
+        if note is None:
+            note = f"hosted model, reached through OpenRouter for the comparison; the route is <code>{_e(c['modelID'])}</code>."
+        items.append(f"<li><strong>{_e(c['brainID'])}</strong> — {note}</li>")
+    return ('<h3>The reference columns</h3><p>Measured through the same persona, the same ReAct floor and the same '
+            'stub tool palette as the local tiers, on the same synthetic fixtures. None of them ships in M1K3; they are '
+            'the distance the ladder is measured against.</p><ul>' + "".join(items) + "</ul>")
+
+
 def _provenance(p: dict) -> str:
     live = "yes" if p.get("livePath") else "no"
     n = p.get("repeats") or 1
@@ -230,7 +368,7 @@ def _provenance(p: dict) -> str:
 def _matrix(run: dict) -> str:
     kinds = sorted({k for b in run["brains"] for k in b["byKind"]})
     head = "".join(
-        f'<th scope="col">{_e(b["brainID"].title())}<br /><span class="table-note">{_e(b["modelID"] or "Apple FM")}</span></th>'
+        f'<th scope="col">{_e(_column_label(b["brainID"]))}<br /><span class="table-note">{_e(b["modelID"] or "Apple FM")}</span></th>'
         for b in run["brains"]
     )
     rows = []
@@ -266,7 +404,7 @@ def _failures(run: dict) -> str:
     for b in run["brains"]:
         for f in b["failures"]:
             items.append(
-                f"<li><strong>{_e(b['brainID'].title())}</strong> · <code>{_e(f['fixtureID'])}</code>"
+                f"<li><strong>{_e(_column_label(b['brainID']))}</strong> · <code>{_e(f['fixtureID'])}</code>"
                 f" (trial {f['repeatIndex'] + 1}) — {_e(f['check'])}"
                 + (f": {_e(f['detail'])}" if f["detail"] else "") + "</li>"
             )
@@ -287,9 +425,31 @@ def _mtp_table(rows) -> str:
             '<th scope="col">MTP</th><th scope="col">Ratio</th><th scope="col">Accept</th></tr></thead><tbody>' + _mtp_rows(rows) + "</tbody></table></div>")
 
 
+# The 2026-09-15 read-out (Bench-Max day). Written from the committed runs of that date; every
+# number here is re-derivable from docs/evals. `READ_OUT_2026_09_15` is rendered above the 09-05
+# block; a "TBD" left in it fails test_brains_page (the page never ships a placeholder).
+READ_OUT_2026_09_15 = {
+    "date": "2026-09-15",
+    "machine": "Apple M1 Max · 64 GB · macOS 27.0 (26A428) · Xcode 27.0 · mains, High Power",
+    "sections": [],  # filled below, after the runs — see _read_out_2026_09_15()
+}
+
+
+def _read_out_2026_09_15() -> str:
+    r = READ_OUT_2026_09_15
+    if not r["sections"]:
+        return ""
+    body = "".join(f"<h3>{h}</h3>{p}" for h, p in r["sections"])
+    return f"""
+  <h2>State of play, {r['date']}</h2>
+  <p>What we measured on {_e(r['machine'])}. Dated on purpose: this block ages.</p>
+{body}
+"""
+
+
 def _state_of_play() -> str:
     s = STATE_OF_PLAY
-    return f"""
+    return _read_out_2026_09_15() + f"""
   <h2>State of play, {s['date']}</h2>
   <p>What we measured on {_e(s['machine'])}, through the real app bundle. Dated on purpose: this block ages.</p>
   <h3>Power source moved every number by 2×. The ratios survived; the absolutes did not.</h3>
@@ -314,11 +474,15 @@ def _state_of_play() -> str:
 def render_html(doc: dict) -> str:
     gen = _e(doc["generated"])
     runs_html = []
+    newest = len(doc["runs"])
     for i, run in enumerate(doc["runs"], 1):
         p = run["provenance"]
+        brains_in_run = ", ".join(b["brainID"] for b in run["brains"])
+        open_attr = " open" if i == newest else ""
         runs_html.append(
-            f'<h3>Run {i} · {_e((p.get("date") or "")[:10])} · app <code>{_e(p.get("appCommit") or "unknown")}</code></h3>'
-            + _provenance(p) + _matrix(run) + f"<h4>Failed checks — run {i}</h4>" + _failures(run)
+            f'<details class="run"{open_attr}><summary>Run {i} · {_e((p.get("date") or "")[:10])} · {_e(brains_in_run)}'
+            f' · app <code>{_e(p.get("appCommit") or "unknown")}</code></summary>'
+            + _provenance(p) + _matrix(run) + f"<h4>Failed checks — run {i}</h4>" + _failures(run) + "</details>"
         )
     head_desc = ("Which local models M1K3 ships, pinned to exact revisions, and how they score on M1K3's own "
                  "on-device eval harness — with the hardware, power mode, app commit and runtime revision beside every number.")
@@ -353,6 +517,26 @@ def render_html(doc: dict) -> str:
 <link rel="preload" href="fonts/vt323-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="fonts.css" />
 <link rel="stylesheet" href="geo.css" />
+<style>
+  /* The ladder: fourteen columns will not fit the article measure, so its wrapper bleeds out to the page
+     width (no wider than 1240px, never wider than the viewport minus the gutters) and the type steps down;
+     reference columns are set apart by a dashed rule and a dimmer head; the runs below fold. */
+  .ladder-wrap {{ width: min(1240px, calc(100vw - 80px)); margin-left: calc((100% - min(1240px, calc(100vw - 80px))) / 2); }}
+  .ladder {{ font-size: 12px; }}
+  .ladder th, .ladder td {{ padding: 8px 8px; }}
+  .ladder th.ref {{ border-left: 1px dashed rgba(232,232,232,0.28); color: var(--ink-dim); }}
+  .ladder td .table-note {{ white-space: nowrap; }}
+  .ladder td strong {{ color: var(--ink-bright); font-weight: 500; }}
+  details.run {{ border: 1px solid var(--line); background: rgba(10,10,10,0.55); margin: 14px 0; padding: 0 18px; }}
+  details.run > summary {{ cursor: pointer; font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em;
+    color: var(--ink); padding: 14px 0; list-style: none; }}
+  details.run > summary::-webkit-details-marker {{ display: none; }}
+  details.run > summary::before {{ content: '+'; font-family: var(--pixel); font-size: 22px; color: var(--ink-faint);
+    margin-right: 12px; }}
+  details.run[open] > summary::before {{ content: '–'; color: var(--ink-bright); }}
+  details.run[open] > summary {{ border-bottom: 1px solid var(--line); margin-bottom: 18px; }}
+  details.run > :last-child {{ padding-bottom: 18px; }}
+</style>
 </head>
 <body>
 
@@ -378,15 +562,20 @@ def render_html(doc: dict) -> str:
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: M1K3 ships four brains, pinned to exact model revisions, and this page is the evidence for those picks.</strong> Every number below was measured on a real Mac through the shipping app, and each run carries the hardware, OS, power mode, app commit and inference-runtime revision it was measured with. The app never reads this page: models are chosen in a reviewed pull request, not by a server. Read it the way you would read a lab notebook, failures included.</p>
+    <p><strong>Short answer: M1K3 ships four brains, pinned to exact model revisions, and this page is the evidence for those picks — with Apple's server model and the hosted frontier beside them for scale.</strong> Every number below was measured on a real Mac through the shipping app, and each run carries the hardware, OS, power mode, app commit and inference-runtime revision it was measured with. The app never reads this page: models are chosen in a reviewed pull request, not by a server. Read it the way you would read a lab notebook, failures included.</p>
   </div>
 
   <h2>What ships today</h2>
   <p>Four tiers, three shown per device. Mini answers the quickest turns (Apple's model where it can run, LFM2.5 1.2B where it can't), Lil fronts the conversation, Big is reached by delegation for deep work. Each MLX model is pinned to one Hugging Face revision and every downloaded file is checked against a SHA-256 digest before it loads, so any mirror can serve the bytes.</p>
   {_brains_table(doc["brains"])}
 
+  <h2>The ladder, latest reading</h2>
+  <p>One board, every brain that has ever run through the harness: each cell is that brain's newest measurement for the kind, so a re-run moves exactly one column. The shipped tiers are on the left. To the right, set apart, the reference columns: Apple's server model and hosted frontier models through the very same fixtures, persona and floor. They are not in the app. They are the distance.</p>
+  {_ladder_table(doc["ladder"])}
+  {_reference_notes(doc["ladder"])}
+
   <h2>Eval runs</h2>
-  <p>The harness runs the same fixtures against each brain through the live path (retrieval, grounding, tools, the agent loop), scores each answer with named checks, and writes this JSON. A repeat is a separate trial. Failures are listed with the scorer's own reason. The source documents for every run on this page are committed under <code>macos/docs/evals/</code>.</p>
+  <p>The harness runs the same fixtures against each brain through the live path (retrieval, grounding, tools, the agent loop), scores each answer with named checks, and writes this JSON. A repeat is a separate trial. Failures are listed with the scorer's own reason. The source documents for every run on this page are committed under <code>macos/docs/evals/</code>. The newest run is open; the rest fold.</p>
   {"".join(runs_html)}
 {_state_of_play()}
   <h2>How to read this honestly</h2>

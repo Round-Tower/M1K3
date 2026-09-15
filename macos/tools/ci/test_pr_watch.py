@@ -64,6 +64,17 @@ def test_named_heads_reads_a_backticked_sha_in_the_pass_header():
     assert m.summon_passes("75c23b646c682af0c592f59698f6dee0d0ae7034", [bot(body)]) == 1
 
 
+def test_named_heads_reads_a_parenthesised_sha_after_the_word_head():
+    # the wording seen on #347 (2026-09-15): the sha in parentheses, no backticks
+    body = ("**Claude finished @kev's task in 1m 37s** ---\n"
+            "### Review: link colour, second full pass on final head (3922a21d)\n"
+            "**Re-confirmed, both review-1 fixes hold on this head, nothing regressed:**")
+    assert m.named_heads(body) == ["3922a21d"]
+    assert m.summon_passes("3922a21d80bcf227111348ef6407d20386a8b6d4", [bot(body)]) == 1
+    # a parenthesised word that is not a sha names nothing
+    assert m.named_heads("### pass on final head (docs only)") == []
+
+
 def test_named_heads_is_empty_when_no_sha_named():
     assert m.named_heads("## Review: something\nno sha here") == []
     assert m.named_heads("mentions `cccc333` without the word head") == []

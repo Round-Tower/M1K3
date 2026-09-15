@@ -37,6 +37,9 @@
 //  parameter shape for the recent_activity stub (afmArmCanExpressEveryParameter pins the name).
 //  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — M1K3_SELFTEST_CHATEVAL_MINI_PERSONA=full runs
 //  Mini on the untrimmed prompt, so the 09-12 trim's gate (security x3, open-chat) is an A/B on one build.
+//  Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.8 — the fixture loop is `evalProvider` (one loop for
+//  every column); `M1K3_SELFTEST_CHATEVAL_PCC=1` adds Apple's Private Cloud Compute as a column behind the
+//  entitlement; the document rides stdout fenced when `M1K3_SELFTEST_OUT=-`. Verify-by-launch: one PCC run.
 
 import Foundation
 
@@ -52,6 +55,7 @@ import M1K3Chat
 import M1K3Eval
 import M1K3Inference
 import M1K3Knowledge
+import M1K3LanguageModel
 import M1K3LogCore
 import M1K3MLX
 import Synchronization
@@ -335,21 +339,57 @@ enum ChatEvalStage {
             }
             runs.append(ChatEvalReport.BrainRun(brainID: tier.rawValue, modelID: modelID, scores: scores))
         }
+        if pccRequested, let scores = await evalPrivateCloud(emit: emit) {
+            runs.append(ChatEvalReport.BrainRun(
+                brainID: PrivateCloudEvalProvider.brainID, modelID: PrivateCloudEvalProvider.modelID, scores: scores
+            ))
+        }
         emit("")
         let provenance = currentProvenance()
         emit(provenance.rendered)
         emit("")
         emit(ChatEvalReport.matrix(runs))
         // The machine-readable primary artifact, beside the text transcript
-        // (<OUT>.json). Sorted keys, so two runs diff line by line.
+        // (<OUT>.json) — or fenced on the same stream in stdout mode, where there
+        // is no file a shell could open. Sorted keys, so two runs diff line by line.
         let document = ChatEvalDocument(provenance: provenance, runs: runs)
-        let jsonURL = URL(fileURLWithPath: SelfTest.outputPath + ".json")
         do {
-            try ChatEvalReport.json(document).write(to: jsonURL)
-            emit("• chateval json → \(jsonURL.lastPathComponent)")
+            let json = try ChatEvalReport.json(document)
+            if SelfTest.writesToStandardOutput {
+                emit(ChatEvalReport.fenced(json))
+                emit("• chateval json → stdout (fenced)")
+            } else {
+                let jsonURL = URL(fileURLWithPath: SelfTest.outputPath + ".json")
+                try json.write(to: jsonURL)
+                emit("• chateval json → \(jsonURL.lastPathComponent)")
+            }
         } catch {
             emit("  – chateval json NOT written: \(String(describing: error).prefix(80))")
         }
+    }
+
+    /// `M1K3_SELFTEST_CHATEVAL_PCC=1` — Apple's server model (Private Cloud
+    /// Compute) through the same fixtures, as a fifth column. Only a process that
+    /// holds the entitlement, on macOS 27, in an `M1K3_FM27` build, has a backend;
+    /// every other build skips with the reason on the transcript.
+    private static var pccRequested: Bool {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_PCC") == "1"
+    }
+
+    private static func evalPrivateCloud(emit: @escaping (String) -> Void) async -> [ChatEvalScore]? {
+        emit("• chateval brain pcc (Private Cloud Compute) → \(PrivateCloudEvalProvider.modelID)…")
+        guard let backend = PrivateCloudBackends.live() else {
+            emit("  – pcc: no backend in this process — needs M1K3_FM27 compiled in, macOS 27+, and the "
+                + "private-cloud-compute entitlement (skipped)")
+            return nil
+        }
+        let status = await backend.status()
+        guard status.available else {
+            emit("  – pcc: backend reports unavailable (skipped)")
+            return nil
+        }
+        emit("  pcc quota: \(status.quota)")
+        return await evalProvider(PrivateCloudEvalProvider(backend: backend), emit: emit)
     }
 
     /// Trials per fixture (M1K3_SELFTEST_CHATEVAL_REPEATS=N, default 1). A
@@ -452,7 +492,15 @@ enum ChatEvalStage {
             // of tokens inside <think> before a one-word answer.
             provider = MLXGemmaProvider(modelID: modelID ?? stockID, maxTokens: 2048)
         }
+        return await evalProvider(provider, emit: emit)
+    }
 
+    /// Every selected fixture, `repeats` times, through ONE provider — the loop
+    /// the tiers and the PCC arm share, so a new column can never run a
+    /// different loop from the columns beside it.
+    private static func evalProvider(
+        _ provider: any InferenceProvider, emit: @escaping (String) -> Void
+    ) async -> [ChatEvalScore] {
         let kinds = selectedKinds()
         var scores: [ChatEvalScore] = []
         let trials = repeats
@@ -635,5 +683,63 @@ enum ChatEvalStage {
     private static func milliseconds(_ duration: Duration) -> Int {
         let parts = duration.components
         return Int(parts.seconds * 1000) + Int(parts.attoseconds / 1_000_000_000_000_000)
+    }
+}
+
+// MARK: - Private Cloud Compute as an eval column
+
+/// The eval's view of a PCC backend as a plain `InferenceProvider`. The persona
+/// rides as `instructions` on every call and the provider says so
+/// (`PersonaCarrying`), so the ReAct floor doesn't send it a second time in the
+/// body — the same pairing Mini ships with. Eval-only: the product's PCC turn is
+/// `PrivateCloudTurn`, which never attaches tools; what this column measures is
+/// Apple's server model under M1K3's own scaffolding, on synthetic fixtures,
+/// beside the local tiers — the question the brains page asks of every column.
+///
+/// `answer` streams CUMULATIVE snapshots (PrivateCloudAnswering's contract), so
+/// `generate` keeps the last one and `generateStreaming` re-yields them as-is:
+/// InferenceProvider leaves cumulative-vs-delta to the backend, and every
+/// consumer on the eval path reads the finished text.
+struct PrivateCloudEvalProvider: InferenceProvider, PersonaCarrying {
+    static let brainID = "pcc"
+    static let modelID = "apple/private-cloud-compute"
+
+    let backend: any PrivateCloudAnswering
+
+    var name: String {
+        Self.brainID
+    }
+
+    var isAvailable: Bool {
+        true
+    }
+
+    var carriesStandingPersona: Bool {
+        true
+    }
+
+    func generate(prompt: String) async throws -> String {
+        var latest = ""
+        for try await snapshot in backend.answer(instructions: M1K3Persona.systemPrompt, prompt: prompt) {
+            latest = snapshot
+        }
+        return latest
+    }
+
+    func generateStreaming(prompt: String) -> AsyncStream<String> {
+        let backend = backend
+        return AsyncStream { continuation in
+            let task = Task {
+                do {
+                    for try await snapshot in backend.answer(instructions: M1K3Persona.systemPrompt, prompt: prompt) {
+                        continuation.yield(snapshot)
+                    }
+                } catch {
+                    // InferenceProvider's contract: errors end the stream, they don't throw.
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 }

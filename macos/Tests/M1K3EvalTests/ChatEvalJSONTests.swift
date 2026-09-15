@@ -103,4 +103,37 @@ struct ChatEvalJSONTests {
         #expect(header.contains("repeats 2"))
         #expect(header.contains("mlx-swift-lm c97539da"))
     }
+
+    // MARK: - fenced on a text stream (M1K3_SELFTEST_OUT=-)
+
+    @Test("a fenced document round-trips through a transcript, and the LAST fence wins")
+    func fencedRoundTrip() throws {
+        let doc = ChatEvalDocument(provenance: provenance, runs: [
+            ChatEvalReport.BrainRun(brainID: "pcc", modelID: "apple/private-cloud-compute", scores: [
+                score("s1", .security, passed: true, latency: 900),
+            ]),
+        ])
+        let json = try ChatEvalReport.json(doc)
+        let stale = try ChatEvalReport.json(ChatEvalDocument(provenance: provenance, runs: []))
+        let transcript = "• chateval: 1 fixture(s)\n" + ChatEvalReport.fenced(stale) + "\nnoise\n"
+            + ChatEvalReport.fenced(json) + "\n• chateval json → stdout (fenced)\n"
+        let recovered = try #require(ChatEvalReport.unfenced(transcript))
+        #expect(try JSONDecoder().decode(ChatEvalDocument.self, from: recovered) == doc)
+    }
+
+    @Test("a transcript with no fence, or a half fence, yields nothing rather than a guess")
+    func unfencedRefusesPartials() {
+        #expect(ChatEvalReport.unfenced("plain transcript\n{}\n") == nil)
+        #expect(ChatEvalReport.unfenced(ChatEvalReport.fenceOpen + "\n{\"schemaVersion\": 1}\n") == nil)
+        #expect(ChatEvalReport.unfenced("{}\n" + ChatEvalReport.fenceClose + "\n") == nil)
+    }
+
+    @Test("the fence markers sit on their own lines so a line-oriented reader can find them")
+    func fenceMarkersAreLines() {
+        let fenced = ChatEvalReport.fenced(Data("{}".utf8))
+        let lines = fenced.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        #expect(lines.first == ChatEvalReport.fenceOpen)
+        #expect(lines.last == ChatEvalReport.fenceClose)
+        #expect(lines.count == 3)
+    }
 }
