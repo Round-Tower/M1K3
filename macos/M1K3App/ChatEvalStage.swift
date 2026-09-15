@@ -37,6 +37,11 @@
 //  parameter shape for the recent_activity stub (afmArmCanExpressEveryParameter pins the name).
 //  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — M1K3_SELFTEST_CHATEVAL_MINI_PERSONA=full runs
 //  Mini on the untrimmed prompt, so the 09-12 trim's gate (security x3, open-chat) is an A/B on one build.
+//  Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.8 — the fixture loop is `evalProvider` (one loop for
+//  every column); `M1K3_SELFTEST_CHATEVAL_PCC=1` adds Apple's Private Cloud Compute as a column behind the
+//  entitlement (the adapter lives in M1K3Agent, `PrivateCloudInferenceAdapter`, where `swift test` reaches it);
+//  the document rides stdout fenced when `M1K3_SELFTEST_OUT=-`; an empty live stream from a provider that
+//  can name its failure scores as "ran — <reason>". Verify-by-launch: one PCC run (233/273, the same day).
 
 import Foundation
 
@@ -52,6 +57,7 @@ import M1K3Chat
 import M1K3Eval
 import M1K3Inference
 import M1K3Knowledge
+import M1K3LanguageModel
 import M1K3LogCore
 import M1K3MLX
 import Synchronization
@@ -291,7 +297,15 @@ enum ChatEvalStage {
         let (_, stream) = try await responder.answerStreaming(fixture.prompt)
         var raw = ""
         for await piece in stream {
-            raw += piece
+            // The responder's fallback passes provider chunks through raw, and a
+            // cumulative provider (AFM, PCC) yields snapshots — `+=` would score
+            // "HHeHel…". Same fold the app's consumer applies (ChatSession).
+            raw = StreamFold.fold(current: raw, chunk: piece)
+        }
+        // An empty stream from a provider that can name its failure is a failed
+        // call, scored as "ran — <reason>", never as "0 chars".
+        if raw.isEmpty, let reason = (provider as? StreamFailureReporting)?.takeStreamFailure() {
+            throw InferenceError.generationFailed(reason)
         }
         return EvalObservation(
             rawText: raw,
@@ -304,7 +318,7 @@ enum ChatEvalStage {
     static func run(emit: @escaping (String) -> Void) async {
         let kinds = selectedKinds()
         let fixtureCount = ChatEvalFixtures.all.count(where: { kinds?.contains($0.kind) ?? true })
-        emit("• chateval: \(fixtureCount) fixture(s) × \(selectedBrains().count) brain(s)"
+        emit("• chateval: \(fixtureCount) fixture(s) × \(selectedBrains().count + (pccRequested ? 1 : 0)) brain(s)"
             + (kinds.map { " [kinds: \($0.map(\.label).sorted().joined(separator: ","))]" } ?? "")
             + (livePathRequested ? " [LIVE PATH: AgentRAGResponder]" : "") + "…")
         var runs: [ChatEvalReport.BrainRun] = []
@@ -335,21 +349,73 @@ enum ChatEvalStage {
             }
             runs.append(ChatEvalReport.BrainRun(brainID: tier.rawValue, modelID: modelID, scores: scores))
         }
+        if pccRequested, let scores = await evalPrivateCloud(emit: emit) {
+            runs.append(ChatEvalReport.BrainRun(
+                brainID: PrivateCloudInferenceAdapter.brainID, modelID: PrivateCloudInferenceAdapter.modelID, scores: scores
+            ))
+        }
         emit("")
         let provenance = currentProvenance()
         emit(provenance.rendered)
         emit("")
         emit(ChatEvalReport.matrix(runs))
         // The machine-readable primary artifact, beside the text transcript
-        // (<OUT>.json). Sorted keys, so two runs diff line by line.
+        // (<OUT>.json) — or fenced on the same stream in stdout mode, where there
+        // is no file a shell could open. Sorted keys, so two runs diff line by line.
         let document = ChatEvalDocument(provenance: provenance, runs: runs)
-        let jsonURL = URL(fileURLWithPath: SelfTest.outputPath + ".json")
         do {
-            try ChatEvalReport.json(document).write(to: jsonURL)
-            emit("• chateval json → \(jsonURL.lastPathComponent)")
+            let json = try ChatEvalReport.json(document)
+            if SelfTest.writesToStandardOutput {
+                emit(ChatEvalReport.fenced(json))
+                emit("• chateval json → stdout (fenced)")
+            } else {
+                let jsonURL = URL(fileURLWithPath: SelfTest.outputPath + ".json")
+                try json.write(to: jsonURL)
+                emit("• chateval json → \(jsonURL.lastPathComponent)")
+            }
         } catch {
             emit("  – chateval json NOT written: \(String(describing: error).prefix(80))")
         }
+    }
+
+    /// `M1K3_SELFTEST_CHATEVAL_PCC=1` — Apple's server model (Private Cloud
+    /// Compute) through the same fixtures, as a fifth column. Only a process that
+    /// holds the entitlement, on macOS 27, in an `M1K3_FM27` build, has a backend;
+    /// every other build skips with the reason on the transcript.
+    private static var pccRequested: Bool {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_PCC") == "1"
+    }
+
+    private static func evalPrivateCloud(emit: @escaping (String) -> Void) async -> [ChatEvalScore]? {
+        emit("• chateval brain pcc (Private Cloud Compute) → \(PrivateCloudInferenceAdapter.modelID)…")
+        guard let backend = PrivateCloudBackends.live() else {
+            emit("  – pcc: no backend in this process — needs M1K3_FM27 compiled in, macOS 27+, and the "
+                + "private-cloud-compute entitlement (skipped)")
+            return nil
+        }
+        let status = await backend.status()
+        guard status.available else {
+            emit("  – pcc: backend reports unavailable (skipped)")
+            return nil
+        }
+        // The column sends the STANDARD persona (the arm the local tiers get), and that
+        // composition is the one door a user profile has (M1K3Persona.compose). A SelfTest
+        // launch never builds AppEnvironment, so the profile is nil here by construction —
+        // this guard makes that a promise rather than a coincidence: nothing about the
+        // user reaches Apple's server from an eval.
+        guard M1K3Persona.userProfile == nil else {
+            emit("  – pcc: a user profile is set in this process; the standard persona would carry it (skipped)")
+            return nil
+        }
+        emit("  pcc quota: \(status.quota)")
+        return await evalProvider(PrivateCloudInferenceAdapter(backend: backend), emit: emit)
+    }
+
+    /// Pause between fixtures (ms), `M1K3_SELFTEST_CHATEVAL_PACE_MS`; default 0 so the local
+    /// tiers measure exactly as before. Apple's daemons rate-collapse under rapid turns
+    /// (memory: pkill-poisons-afm-daemon) — set it for the Mini and PCC columns.
+    private static var paceMS: Int {
+        max(0, SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_PACE_MS").flatMap(Int.init) ?? 0)
     }
 
     /// Trials per fixture (M1K3_SELFTEST_CHATEVAL_REPEATS=N, default 1). A
@@ -452,12 +518,24 @@ enum ChatEvalStage {
             // of tokens inside <think> before a one-word answer.
             provider = MLXGemmaProvider(modelID: modelID ?? stockID, maxTokens: 2048)
         }
+        return await evalProvider(provider, emit: emit)
+    }
 
+    /// Every selected fixture, `repeats` times, through ONE provider — the loop
+    /// the tiers and the PCC arm share, so a new column can never run a
+    /// different loop from the columns beside it.
+    private static func evalProvider(
+        _ provider: any InferenceProvider, emit: @escaping (String) -> Void
+    ) async -> [ChatEvalScore] {
         let kinds = selectedKinds()
         var scores: [ChatEvalScore] = []
         let trials = repeats
+        var paced = false
         for trial in 0 ..< trials {
             for fixture in ChatEvalFixtures.all where kinds?.contains(fixture.kind) ?? true {
+                // Between turns only — never before the first or after the last.
+                if paced, paceMS > 0 { try? await Task.sleep(for: .milliseconds(paceMS)) }
+                paced = true
                 // Bracket every fixture. The gap between one `fixture done` and the
                 // next `fixture start` is time the harness spends OUTSIDE the turn,
                 // and on 2026-08-10 that gap was 177s before `chat-capabilities`

@@ -14,6 +14,9 @@
 //  shape (BENCHMARKS.md); a single-run cell has no error bars.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.9. Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.9 — `fenced`/`unfenced`: the document
+//  can ride a text stream (stdout mode) between two whole-line markers; the LAST complete block is
+//  the scorecard.
 
 import Foundation
 
@@ -98,5 +101,35 @@ public extension ChatEvalReport {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         return try encoder.encode(document)
+    }
+
+    // MARK: - fenced on a text stream
+
+    /// The markers that bracket a document when the report has no file to go to
+    /// (`M1K3_SELFTEST_OUT=-`: a SANDBOXED build on macOS 27 can't hand a shell a
+    /// file — app-data privacy closed the container to `cat` — but a directly
+    /// exec'd binary still inherits the caller's stdout). Each marker is a whole
+    /// line, so `awk`/`sed`/`run_chateval.py` can cut the block without a parser.
+    static let fenceOpen = "-----BEGIN CHATEVAL JSON-----"
+    static let fenceClose = "-----END CHATEVAL JSON-----"
+
+    /// The document between the markers, on its own lines.
+    static func fenced(_ json: Data) -> String {
+        fenceOpen + "\n" + (String(bytes: json, encoding: .utf8) ?? "") + "\n" + fenceClose
+    }
+
+    /// The LAST fenced block in a transcript (a run that emitted twice — a stale
+    /// document, then the real one — reads as the real one), or nil when there is
+    /// no complete open+close pair. Never a partial: a half-written block is not
+    /// a scorecard. Both markers must sit on their own lines: a marker quoted
+    /// INSIDE the document lives in a JSON string, where a real newline can never
+    /// precede it, so it can neither open nor close the block.
+    static func unfenced(_ text: String) -> Data? {
+        let padded = "\n" + text // a marker on the very first line still sits at a line start
+        guard let closeRange = padded.range(of: "\n" + fenceClose, options: .backwards) else { return nil }
+        let head = padded[..<closeRange.lowerBound]
+        guard let openRange = head.range(of: "\n" + fenceOpen + "\n", options: .backwards) else { return nil }
+        let body = head[openRange.upperBound...]
+        return Data(body.utf8)
     }
 }

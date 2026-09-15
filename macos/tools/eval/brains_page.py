@@ -35,6 +35,16 @@ pinned by test_brains_page.py; the editorial "state of play" block is the
 Review: claude-fable-5.1, 2026-09-06 — PR #240: a state-of-play section for
 the pocket Mini (LFM2.5-1.2B) and the double-BOS render bug behind its 0/14
 security cell; three mains runs added under docs/evals. Confidence now 0.85.
+Review: Kev + claude-fable-5.1, 2026-09-15 — the ladder (latest cell per brain
+per kind, keyed by brain AND model so a challenger run never overwrites the
+pinned brain's cell), the reference columns (PCC, the hosted frontier), runs
+folded, the dated 2026-09-15 read-out. A 0/0 cell is never a clean sweep.
+Confidence now 0.85.
+Review: Kev + claude-fable-5.1, 2026-09-15 (late) — the reduction pass: `board()`
+(six columns of pass rates, the hosted models as one min–max range), `voices()`
+(each brain's interview answers as scored, rendered as the harness previewed
+them), the ladder and the 09-05 read-out folded, foreign documents in docs/evals
+skipped by name. Confidence now 0.85.
 """
 
 from __future__ import annotations
@@ -54,7 +64,8 @@ HF = "https://huggingface.co"
 # manifest supplies revision + size so a re-pin PR moves this page by itself.
 TIERS = (
     {"tier": "mini", "name": "Mini", "backing": "apple-foundation-models", "modelID": None,
-     "role": "Apple Foundation Models — instant, on the Neural Engine; fronts the quickest turns."},
+     "role": "Apple Foundation Models — instant, on the Neural Engine; fronts the quickest turns. "
+             "macOS 27 reports the variant it runs (this Mac: AFM 3 Core)."},
     {"tier": "pocket", "name": "Mini", "backing": "mlx", "modelID": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
      "role": "The Mini for devices without Apple Intelligence — LFM2.5 1.2B (4-bit), ~630 MB; "
              "shown only where Apple's model is blocked. LFM Open License v1.0, not Apache."},
@@ -63,6 +74,17 @@ TIERS = (
     {"tier": "big", "name": "Big", "backing": "mlx", "modelID": "mlx-community/gemma-4-12B-it-4bit",
      "role": "Reached by delegation for deep work — Gemma 4 12B, 8-bit quantized KV."},
 )
+
+
+# Columns that are measured but NOT shipped: Apple's server model (the 1.2 rung, behind an
+# entitlement) and hosted frontier models through the same fixtures. They sit to the right of
+# the ladder as a distance to compare against, never in the brains table (ADR 0004: the table
+# is what the binary pins).
+REFERENCE = {
+    "pcc": "Apple Private Cloud Compute — Apple's server model, the escalation rung of a later release; "
+           "measured through the same persona and floor, no tools of M1K3's.",
+}
+SHIPPED_ORDER = tuple(t["tier"] for t in TIERS)
 
 
 class UnsupportedSchema(ValueError):
@@ -140,6 +162,16 @@ def summarise_run(doc: dict) -> dict:
     return {"provenance": dict(doc["provenance"]), "brains": out_brains}
 
 
+# Page copy (the 2026-09-15 reduction pass). Kept as constants so the template stays readable.
+BOARD_INTRO = ("Cells are pass rates \u2014 trials passed over trials run \u2014 each from that brain\u2019s newest run of that kind. "
+               "The n and the date are in the column head. The right-hand column is a range across nine hosted frontier "
+               "models. Full counts fold below.")
+VOICES_INTRO = ("A cell tells you a brain passed. It cannot tell you how the brain sounds, so here are their own answers to "
+                "two of the interview questions.")
+HONEST_BULLETS = """    <li><strong>Small n, one machine.</strong> A rate can hide three trials or thirty. Check the n. Everything here is one M1 Max, on one day.</li>
+    <li><strong>A distance meter, not a leaderboard.</strong> The frontier saturates this battery, so the board measures how far the small tiers sit from it \u2014 nothing more.</li>
+    <li><strong>The scorer is a heuristic.</strong> It reads text for named checks and misreads some. The answers show what a cell cannot. Harness: <code>macos/docs/BENCHMARKS.md</code>; this page is generated from the committed run documents by <code>macos/tools/eval/brains_page.py</code>.</li>"""
+
 # The verified 2026-09-05 read-out. Dated in the page; edit when re-measured.
 # Two MTP tables on purpose: the first was measured on BATTERY under Adaptive Power (pmset said
 # "powermode 0", which cannot see Adaptive Power); the second on AC in High Power mode (powermode 2),
@@ -160,7 +192,162 @@ STATE_OF_PLAY = {
 }
 
 
+def _column_rank(column: dict) -> tuple:
+    """Shipped tiers in ladder order, then PCC, then the reference columns by pass rate (desc), then name."""
+    bid = column["brainID"]
+    if column.get("shipped"):
+        return (0, SHIPPED_ORDER.index(bid), "")
+    if bid == "pcc":
+        return (1, 0, "")
+    rate = column["passed"] / column["total"] if column["total"] else 0.0
+    return (2, -rate, column.get("columnID", bid))
+
+
+def _short(model_id) -> str:
+    return (model_id or "").split("/")[-1]
+
+
+def ladder(summaries: list[dict], pins: dict[str, str | None] | None = None) -> list[dict]:
+    """The headline board: for every (brain, model) that ever ran, its LATEST cell per kind — the
+    newest run (by provenance date; input order breaks ties) that measured that kind — with the
+    run's date beside each cell, so a stale column says so. `passed`/`total` sum those latest cells,
+    never every run ever.
+
+    Keyed by brain AND model: the repo commits A/B runs under a tier's id (a challenger through
+    `M1K3_SELFTEST_CHATEVAL_MLX_MODEL`, the rejected 09-05 Lil arm), and a column keyed by tier alone
+    would let whichever ran last overwrite the pinned brain's cell. A tier column is "shipped" only
+    when its model is the manifest pin (`pins`, from `brains()`); any other model under a tier id is
+    a reference column labelled "<model> (as <tier>)". Columns: shipped tiers in ladder order, PCC,
+    then the reference columns by pass rate."""
+    pins = pins or {}
+    ordered = sorted(enumerate(summaries), key=lambda item: ((item[1]["provenance"].get("date") or ""), item[0]))
+    columns: dict[tuple, dict] = {}
+    for _, run in ordered:
+        date = (run["provenance"].get("date") or "")[:10]
+        for brain in run["brains"]:
+            bid, mid = brain["brainID"], brain["modelID"]
+            # No pins at all (a pure caller) → every tier is its own column; a pins dict that omits a
+            # tier says the tier has no pin → its runs are challengers, never the brain.
+            pinned = bid in SHIPPED_ORDER and (mid == pins.get(bid) if pins else True)
+            key = (bid, None if pinned else mid)
+            col = columns.setdefault(key, {"brainID": bid, "modelID": mid, "byKind": {}, "shipped": pinned})
+            col["modelID"] = col["modelID"] or mid
+            for kind, cell in brain["byKind"].items():
+                col["byKind"][kind] = {"passed": cell["passed"], "total": cell["total"], "date": date}
+    out = []
+    for col in columns.values():
+        col["byKind"] = dict(sorted(col["byKind"].items()))
+        col["passed"] = sum(c["passed"] for c in col["byKind"].values())
+        col["total"] = sum(c["total"] for c in col["byKind"].values())
+        col["latestDate"] = max((c["date"] for c in col["byKind"].values()), default="")
+        if col["shipped"] or col["brainID"] not in SHIPPED_ORDER:
+            col["columnID"] = col["brainID"]
+            col["label"] = _column_label(col["brainID"])
+        else:  # a challenger measured in a tier's slot
+            col["columnID"] = f'{col["brainID"]}@{_short(col["modelID"])}'
+            col["label"] = f'{_short(col["modelID"])} (as {_column_label(col["brainID"])})'
+        out.append(col)
+    return sorted(out, key=_column_rank)
+
+
+def _rate(passed: int, total: int) -> dict:
+    return {"passed": passed, "total": total, "rate": round(100 * passed / total) if total else None}
+
+
+def board(columns: list[dict]) -> list[dict]:
+    """The six-column board a reader can take in: the shipped tiers, PCC, and the hosted models
+    collapsed into ONE column that shows the min–max pass rate across them. Every cell is a pass
+    RATE (per cent) — the counts, with their different denominators, live in the ladder below and
+    in `title` attributes; n and the date live in the column head. A challenger measured in a
+    tier's slot is not on the board (it is in the ladder, labelled)."""
+    shipped = [c for c in columns if c["shipped"]]
+    pcc = [c for c in columns if c["brainID"] == "pcc"]
+    hosted = [c for c in columns if not c["shipped"] and c["brainID"] != "pcc" and c["brainID"] not in SHIPPED_ORDER]
+    out = []
+    for c in shipped + pcc:
+        out.append({
+            "columnID": c["columnID"], "label": c["label"], "kind": "single",
+            "trials": c["total"], "latestDate": c["latestDate"],
+            "byKind": {k: _rate(v["passed"], v["total"]) for k, v in c["byKind"].items()},
+            "all": _rate(c["passed"], c["total"]),
+        })
+    if hosted:
+        kinds = sorted({k for c in hosted for k in c["byKind"]})
+        by_kind = {}
+        for k in kinds:
+            rates = [round(100 * c["byKind"][k]["passed"] / c["byKind"][k]["total"])
+                     for c in hosted if k in c["byKind"] and c["byKind"][k]["total"]]
+            if rates:
+                by_kind[k] = {"min": min(rates), "max": max(rates), "models": len(rates)}
+        alls = [round(100 * c["passed"] / c["total"]) for c in hosted if c["total"]]
+        out.append({
+            "columnID": "frontier", "label": "Hosted frontier", "kind": "range",
+            "models": [c["modelID"] for c in hosted], "trials": sum(c["total"] for c in hosted),
+            "latestDate": max((c["latestDate"] for c in hosted), default=""),
+            "byKind": by_kind,
+            "all": {"min": min(alls), "max": max(alls), "models": len(alls)} if alls else {"min": None, "max": None, "models": 0},
+        })
+    return out
+
+
+# The two interview prompts the page quotes, by fixture id. The prompt text is copied from
+# ChatEvalFixture.swift (the document carries ids, not prompts); ChatEvalFixturesTests pins the ids.
+VOICE_PROMPTS = {
+    "interview-why-trust": "Why should I trust you with my private documents?",
+    "interview-find-hard": "What do you genuinely find difficult?",
+}
+
+
+# The voices the page quotes, in order: the tiers a Mac user meets (the pocket Mini is the fallback for
+# devices without Apple Intelligence and its answers predate the persona work), then PCC, then the
+# best hosted model by the ladder's overall rate.
+VOICE_TIERS = ("mini", "lil", "big")
+
+
+def voices(runs: list[dict], pins: dict[str, str | None] | None = None, hosted: list[str] = (),
+           hosted_limit: int = 1) -> list[dict]:
+    """Real answers, so a reader can hear a brain instead of counting it: for each prompt in
+    VOICE_PROMPTS, the LATEST first-trial answer preview from each of VOICE_TIERS, from PCC, and from
+    the first `hosted_limit` of `hosted` (the caller passes hosted model ids best-first — the ladder's
+    order). Previews are the harness's own (capped there); a failed answer is shown with the checks it
+    failed — the page never hides one."""
+    pins = pins or {}
+    ordered = sorted(enumerate(runs), key=lambda item: ((item[1]["provenance"].get("date") or ""), item[0]))
+    latest: dict[tuple, dict] = {}
+    totals: dict[str, bool] = {}  # which columns have any run at all
+    for _, doc in ordered:
+        date = (doc["provenance"].get("date") or "")[:10]
+        for run in doc["runs"]:
+            bid, mid = run["brainID"], run.get("modelID")
+            # No pins at all (a pure caller) → every tier is its own column; a pins dict that omits a
+            # tier says the tier has no pin → its runs are challengers, never the brain.
+            pinned = bid in SHIPPED_ORDER and (mid == pins.get(bid) if pins else True)
+            if bid in SHIPPED_ORDER and not pinned:
+                continue  # a challenger in a tier's slot is not the brain
+            col = bid
+            totals[col] = True
+            for sc in run["scores"]:
+                if sc["fixtureID"] not in VOICE_PROMPTS or sc.get("repeatIndex", 0) != 0:
+                    continue
+                latest[(sc["fixtureID"], col)] = {
+                    "column": col, "label": _column_label(col), "modelID": mid, "date": date,
+                    "passed": _passed(sc), "failed": [c["name"] for c in sc["checks"] if c["outcome"] == "fail"],
+                    "answer": sc.get("answerPreview") or "",
+                }
+    picked_hosted = [h for h in hosted if h in totals][:hosted_limit]
+    wanted = [t for t in VOICE_TIERS if t in totals] + (["pcc"] if "pcc" in totals else []) + picked_hosted
+    out = []
+    for fid, prompt in VOICE_PROMPTS.items():
+        answers = [latest[(fid, col)] for col in wanted if (fid, col) in latest]
+        if answers:
+            out.append({"fixtureID": fid, "prompt": prompt, "answers": answers})
+    return out
+
+
 def document(manifest: dict, runs: list[dict], generated: str) -> dict:
+    summaries = [summarise_run(r) for r in runs]
+    pins = {b["tier"]: b["modelID"] for b in brains(manifest)}
+    columns = ladder(summaries, pins)
     return {
         "schemaVersion": SCHEMA_VERSION,
         "generated": generated,
@@ -168,7 +355,15 @@ def document(manifest: dict, runs: list[dict], generated: str) -> dict:
                  "app never reads this file (macos/docs/adr/0004-brain-catalogue-ships-in-the-binary.md).",
         "brains": brains(manifest),
         # Chronological, whatever the filenames say.
-        "runs": sorted((summarise_run(r) for r in runs), key=lambda r: r["provenance"].get("date") or ""),
+        "runs": sorted(summaries, key=lambda r: r["provenance"].get("date") or ""),
+        # The headline board, derived from the same summaries (latest cell per brain AND model per kind).
+        "ladder": columns,
+        # The digestible reading of the same cells (rates, the hosted models as one range) and the
+        # answers the cells are made of.
+        "board": board(columns),
+        "voices": voices(runs, pins, hosted=[c["brainID"] for c in columns
+                                            if not c["shipped"] and c["brainID"] != "pcc" and c["brainID"] not in SHIPPED_ORDER]),
+        "reference": REFERENCE,
         # The dated editorial block, so brains.json really is the machine copy of the page.
         "stateOfPlay": {
             "date": STATE_OF_PLAY["date"],
@@ -208,6 +403,178 @@ def _brains_table(rows: list[dict]) -> str:
     )
 
 
+KIND_ORDER = ("open-chat", "grounded-Q", "reasoning", "code-gen", "tool-use", "refusal", "security",
+              "world-knowledge", "humour", "interview", "instruction-following", "document", "sycophancy")
+
+
+def _kind_sort(kinds) -> list[str]:
+    known = [k for k in KIND_ORDER if k in kinds]
+    return known + sorted(k for k in kinds if k not in KIND_ORDER)
+
+
+def _column_label(brain_id: str) -> str:
+    """Shipped tiers read by the name the brains table uses (Mini, Lil, Big; the pocket tier is
+    "Mini (pocket)" — same name, its own pin); a reference column keeps its model id as-is."""
+    names = {t["tier"]: t["name"] for t in TIERS}
+    if brain_id == "pcc":
+        return "PCC"
+    if brain_id not in names:
+        return brain_id
+    name = names[brain_id]
+    return f"{name} ({brain_id})" if sum(1 for t in TIERS if t["name"] == name) > 1 and brain_id != "mini" else name
+
+
+def _sweep(passed: int, total: int) -> str:
+    """The emphasis class for a clean sweep — earned, never default: 0/0 measured nothing."""
+    return "yes" if total and passed == total else ""
+
+
+def _ladder_table(columns: list[dict]) -> str:
+    """The headline board. Shipped tiers, then PCC, then the reference columns; every cell is the
+    brain's latest reading for that kind, and the date row under the totals says how old each
+    column is. Emphasis only for a clean sweep, same rule as the run matrices."""
+    if not columns:
+        return "<p>No runs yet.</p>"
+    kinds = _kind_sort({k for c in columns for k in c["byKind"]})
+    head = []
+    for c in columns:
+        cls = "" if c["shipped"] else ' class="ref"'
+        label = c.get("label") or _column_label(c["brainID"])
+        # Shipped: the bare model name (the full hub route is in the brains table and brains.json).
+        # Reference: the label IS the model, so the sub-label names who serves it instead.
+        route = c["modelID"] or "Apple FM"
+        if c["shipped"]:
+            sub = route.split("/")[-1]
+        elif c["brainID"] == "pcc":
+            sub = "Apple, server"
+        else:
+            sub = route.split("/")[0] if "/" in route else route  # the provider; "via OpenRouter" is in the notes
+        head.append(f'<th scope="col"{cls}>{_e(label)}<br /><span class="table-note">{_e(sub)}</span></th>')
+    rows = []
+    for k in kinds:
+        cells = []
+        for c in columns:
+            cell = c["byKind"].get(k)
+            if cell is None:
+                cells.append('<td class="no">—</td>')
+            else:
+                cells.append(f'<td class="{_sweep(cell["passed"], cell["total"])}">{cell["passed"]}/{cell["total"]}</td>')
+        rows.append(f'<tr><th scope="row">{_e(k)}</th>{"".join(cells)}</tr>')
+    totals = "".join(
+        f'<td class="{_sweep(c["passed"], c["total"])}"><strong>{c["passed"]}/{c["total"]}</strong></td>' for c in columns
+    )
+    # One year across the board → the year rides in the row header and the cells are MM-DD (fourteen
+    # full ISO dates were the widest row on the page); mixed years keep the full date in every cell.
+    years = {(c["latestDate"] or "")[:4] for c in columns if c["latestDate"]}
+    one_year = years.pop() if len(years) == 1 else None
+    def when(c):
+        d = c["latestDate"]
+        if not d:
+            return "—"
+        return d[5:] if one_year else d
+    dates = "".join(f'<td><span class="table-note">{_e(when(c))}</span></td>' for c in columns)
+    measured = f"measured ({one_year})" if one_year else "measured"
+    rows.append(f'<tr><th scope="row">all kinds, latest</th>{totals}</tr>')
+    rows.append(f'<tr><th scope="row">{measured}</th>{dates}</tr>')
+    return (
+        '<div class="table-scroll ladder-wrap"><table class="cmp ladder"><thead><tr><th scope="col">Kind</th>' + "".join(head) +
+        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>"
+        '<p class="table-note">each cell is that brain\'s newest run for the kind (passed/total, every trial counted); '
+        'a column whose kinds were measured on different days shows its newest date. Shipped tiers left, '
+        'reference columns right: measured, not shipped.</p>'
+    )
+
+
+def _pct(cell) -> str:
+    if cell is None or cell.get("rate") is None:
+        return "—"
+    return f'{cell["rate"]}%'
+
+
+def _range(cell) -> str:
+    """"84–98%", or "100%" when every model in the range agrees."""
+    return f'{cell["min"]}%' if cell["min"] == cell["max"] else f'{cell["min"]}–{cell["max"]}%'
+
+
+def _board_table(columns: list[dict]) -> str:
+    """Six columns of pass rates; the hosted column is a min–max range. Counts ride in `title`."""
+    if not columns:
+        return "<p>No runs yet.</p>"
+    kinds = _kind_sort({k for c in columns for k in c["byKind"]})
+    head = []
+    for c in columns:
+        # Two short lines under the name: what was counted, then when — so the head never wraps mid-phrase.
+        if c["kind"] == "range":
+            sub = f'{c["all"]["models"]} models, {c["trials"]:,} trials<br />{_e(c["latestDate"][5:] or "—")}'
+            cls = ' class="ref"'
+        else:
+            sub = f'{c["trials"]:,} trials<br />{_e(c["latestDate"][5:] or "—")}'
+            cls = "" if c["columnID"] != "pcc" else ' class="ref"'
+        head.append(f'<th scope="col"{cls}>{_e(c["label"])}<br /><span class="table-note">{sub}</span></th>')
+    rows = []
+    for k in kinds:
+        cells = []
+        for c in columns:
+            cell = c["byKind"].get(k)
+            if cell is None:
+                cells.append('<td class="no">—</td>')
+            elif c["kind"] == "range":
+                sweep = "yes" if cell["min"] == 100 else ""
+                cells.append(f'<td class="{sweep}" title="across {cell["models"]} models">{_range(cell)}</td>')
+            else:
+                sweep = "yes" if cell["rate"] == 100 else ""
+                cells.append(f'<td class="{sweep}" title="{cell["passed"]}/{cell["total"]}">{_pct(cell)}</td>')
+        rows.append(f'<tr><th scope="row">{_e(k)}</th>{"".join(cells)}</tr>')
+    totals = []
+    for c in columns:
+        a = c["all"]
+        if c["kind"] == "range":
+            totals.append(f'<td title="across {a["models"]} models"><strong>{_range(a)}</strong></td>' if a["models"] else '<td class="no">—</td>')
+        else:
+            totals.append(f'<td title="{a["passed"]}/{a["total"]}"><strong>{_pct(a)}</strong></td>')
+    rows.append(f'<tr><th scope="row">all kinds</th>{"".join(totals)}</tr>')
+    return ('<div class="table-scroll board-wrap"><table class="cmp board"><thead><tr><th scope="col">Kind</th>' + "".join(head) +
+            "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>")
+
+
+def _voices(sections: list[dict]) -> str:
+    if not sections:
+        return ""
+    out = []
+    for sec in sections:
+        figs = []
+        for a in sec["answers"]:
+            verdict = "passed" if a["passed"] else "failed " + ", ".join(a["failed"])
+            # The harness caps previews at 240 chars and appends its own ellipsis (ChatEvalScorer);
+            # render as-is — a second mark here doubled it on every long quote (review 4 on #355).
+            text = a["answer"].strip()
+            figs.append(
+                f'<figure class="voice"><figcaption>{_e(a["label"])} <span class="table-note">· {_e(verdict)}</span></figcaption>'
+                f'<blockquote>{_e(text) or "<em>(no answer)</em>"}</blockquote></figure>'
+            )
+        out.append(f'<h3>“{_e(sec["prompt"])}”</h3>' + "".join(figs))
+    return "".join(out)
+
+
+def _reference_notes(columns: list[dict]) -> str:
+    refs = [c for c in columns if not c["shipped"]]
+    if not refs:
+        return ""
+    items = []
+    for c in refs:
+        note = REFERENCE.get(c["brainID"])
+        if note is None and c["brainID"] in SHIPPED_ORDER:
+            note = (f"a challenger measured in the {_e(_column_label(c['brainID']))} slot "
+                    f"(<code>{_e(c['modelID'] or 'unnamed')}</code>), not the pinned brain.")
+        elif note is None:
+            route = f"the route is <code>{_e(c['modelID'])}</code>" if c["modelID"] else "route unrecorded"
+            note = f"hosted model, reached through OpenRouter for the comparison; {route}."
+        items.append(f"<li><strong>{_e(c.get('label') or c['brainID'])}</strong> — {note}</li>")
+    return ('<h3>The reference columns</h3><p>Measured through the same persona, the same ReAct floor and the same '
+            'stub tool palette as the local tiers, on the same synthetic fixtures. None of them ships in M1K3; they are '
+            'the distance the ladder is measured against.</p><ul>' + "".join(items) + "</ul>")
+
+
 def _provenance(p: dict) -> str:
     live = "yes" if p.get("livePath") else "no"
     n = p.get("repeats") or 1
@@ -230,7 +597,7 @@ def _provenance(p: dict) -> str:
 def _matrix(run: dict) -> str:
     kinds = sorted({k for b in run["brains"] for k in b["byKind"]})
     head = "".join(
-        f'<th scope="col">{_e(b["brainID"].title())}<br /><span class="table-note">{_e(b["modelID"] or "Apple FM")}</span></th>'
+        f'<th scope="col">{_e(_column_label(b["brainID"]))}<br /><span class="table-note">{_e(b["modelID"] or "Apple FM")}</span></th>'
         for b in run["brains"]
     )
     rows = []
@@ -241,13 +608,12 @@ def _matrix(run: dict) -> str:
             if c is None:
                 cells.append('<td class="no">—</td>')
             else:
-                cls = "yes" if c["passed"] == c["total"] else ""
-                cells.append(f'<td class="{cls}">{c["passed"]}/{c["total"]}</td>')
+                cells.append(f'<td class="{_sweep(c["passed"], c["total"])}">{c["passed"]}/{c["total"]}</td>')
         rows.append(f'<tr><th scope="row">{_e(k)}</th>{"".join(cells)}</tr>')
     # Same rule as the per-kind cells: emphasis only for a clean sweep. A 4-failure run must not
-    # render with the full-pass class (code-quality review, 2026-09-05).
+    # render with the full-pass class (code-quality review, 2026-09-05); nor a 0/0 brain (2026-09-15).
     totals = "".join(
-        f'<td class="{"yes" if b["passed"] == b["total"] else ""}">{b["passed"]}/{b["total"]}</td>' for b in run["brains"]
+        f'<td class="{_sweep(b["passed"], b["total"])}">{b["passed"]}/{b["total"]}</td>' for b in run["brains"]
     )
     med = "".join(
         f"<td>{(b['medianLatencyMS'] or 0) / 1000:.1f} s</td>" for b in run["brains"]
@@ -266,7 +632,7 @@ def _failures(run: dict) -> str:
     for b in run["brains"]:
         for f in b["failures"]:
             items.append(
-                f"<li><strong>{_e(b['brainID'].title())}</strong> · <code>{_e(f['fixtureID'])}</code>"
+                f"<li><strong>{_e(_column_label(b['brainID']))}</strong> · <code>{_e(f['fixtureID'])}</code>"
                 f" (trial {f['repeatIndex'] + 1}) — {_e(f['check'])}"
                 + (f": {_e(f['detail'])}" if f["detail"] else "") + "</li>"
             )
@@ -287,9 +653,63 @@ def _mtp_table(rows) -> str:
             '<th scope="col">MTP</th><th scope="col">Ratio</th><th scope="col">Accept</th></tr></thead><tbody>' + _mtp_rows(rows) + "</tbody></table></div>")
 
 
+# The 2026-09-15 read-out (Bench-Max day). Written from the committed runs of that date; every
+# number here is re-derivable from docs/evals. `READ_OUT_2026_09_15` is rendered above the 09-05
+# block; a "TBD" left in it fails test_brains_page (the page never ships a placeholder).
+READ_OUT_2026_09_15 = {
+    "date": "2026-09-15",
+    "machine": "Apple M1 Max · 64 GB · macOS 27.0 (26A428) · Xcode 27.0 · mains, High Power",
+    "sections": [
+        ("Apple's server model answers, and calls tools",
+         "<p>The first live Private Cloud Compute generation through M1K3, on an entitled build: <strong>233/273</strong>, "
+         "median 4.1 s a turn. It called the right tool <strong>29 times in 30</strong> on our own ReAct floor, which no "
+         "local tier has managed here. Where it missed: code-gen 17/30, because it narrates the code in persona instead of "
+         "writing it; and sycophancy 6/18, which is mostly the instrument \u2014 eleven of its forty misses are the one "
+         "check that reads a correct push-back as a refusal (#348).</p>"),
+        ("The on-device Apple model: AFM 3 Core",
+         "<p>macOS 27 names the variant it runs; this Mac reports AFM 3 Core. Through the live path with the shipping "
+         "persona: <strong>177/249</strong>, median 9.7 s. The weak kinds are the ones a small window and our ReAct floor "
+         "expose \u2014 tool-use 14/30, refusal 8/15, sycophancy 7/18. A new tic, filed as #349: it opens a large share of "
+         "answers by reciting the prompt\u2019s context line, and asked the time it recites that line instead of calling "
+         "<code>datetime</code>.</p>"),
+        ("Big and Lil on today's build",
+         "<p>One trial each on the live path: Big <strong>85/91</strong>, Lil <strong>82/91</strong>. Lil\u2019s nine misses "
+         "have a shape \u2014 three interview answers reproduced a voice exemplar verbatim (the recital item open since "
+         "#328), two documents without the required headings, two sycophancy slips, one false-premise question, one "
+         "forbidden phrase. Big\u2019s median turn read 26.5 s against Lil\u2019s 5.4 s in the same run, but the harness "
+         "recorded that run on battery, so the pass counts stand and the latencies do not.</p>"),
+        ("The frontier saturates these fixtures",
+         "<p>Nine hosted models through the same 83 fixtures (grounded-Q needs the app\u2019s store), the same persona, floor "
+         "and stub palette, one trial each: <strong>70/83 to 81/83</strong>. What still fails up there is mostly the "
+         "instrument, not the model \u2014 an empty body beside a <code>refusal</code> field, a correct push-back scored as "
+         "a refusal, five empty answers where the budget went to thinking, a <code>M1K3:</code> prefix leak. The shipped "
+         "4B brain is within ten points of that ceiling.</p>"),
+        ("What changed in the instrument",
+         "<p>macOS 27 closed the app container to shells, so SelfTest now streams its report to stdout; Private Cloud "
+         "Compute is a column behind the entitlement; hosted models run through a test-only runner. We recorded two scorer "
+         "blind spots rather than patch them mid-run, so today\u2019s cells still compare with yesterday\u2019s: an "
+         "in-character decline reads as compliance, and a correct push-back reads as a refusal (#348). A scorer change is "
+         "a dated event; it lands on its own.</p>"),
+    ],
+}
+
+
+def _read_out_2026_09_15() -> str:
+    r = READ_OUT_2026_09_15
+    if not r["sections"]:
+        return ""
+    body = "".join(f"<h3>{h}</h3>{p}" for h, p in r["sections"])
+    return f"""
+  <h2>State of play, {r['date']}</h2>
+  <p>What we measured on {_e(r['machine'])}. Dated on purpose: this block ages.</p>
+{body}
+"""
+
+
 def _state_of_play() -> str:
     s = STATE_OF_PLAY
-    return f"""
+    return _read_out_2026_09_15() + f"""
+  <details class="run"><summary>State of play, {s['date']} — the earlier read-out</summary>
   <h2>State of play, {s['date']}</h2>
   <p>What we measured on {_e(s['machine'])}, through the real app bundle. Dated on purpose: this block ages.</p>
   <h3>Power source moved every number by 2×. The ratios survived; the absolutes did not.</h3>
@@ -308,17 +728,22 @@ def _state_of_play() -> str:
   <p><code>mlx-community/LFM2.5-1.2B-Instruct-4bit</code> (~630 MB) is shown as Mini wherever Apple's model is blocked. Its first full run scored 91/140 with security <strong>0/14</strong>: asked for its rules it recited them, asked to encode them it produced a blob. That was not the prompt. The plain-chat path handed the cached persona to a session that renders each new turn on its own, and this model's template opens every render with a start-of-text token, so the model saw a second document boundary after the persona and answered like a bare base model. Replaying the app's exact bytes in mlx-lm reproduced its answers word for word with that one extra token, and not without it. The render is now one system-plus-user pass with only the suffix prefilled. On mains, same fixtures: <strong>103/140</strong>, security 9/14, and a six-repeat security run of <strong>31/42</strong> (the completion and encode attacks 6/6; the "I'm the developer" spoof still lands 4 times in 6). Lil is unaffected (its template has no start token) and repeats 21/21. One cost: LFM2's recurrent layers can never be rewound, so the cached persona is not reused on this brain and every turn pays a full prefill (~1 s on this machine).</p>
   <h3>Why there is no remote model catalogue</h3>
   <p>We wanted one. The design review killed it, and the objections are verified in the app's own source: a remote re-pin would be a remote kill switch through the weights-integrity check, the offline fallback is a downgrade attack, and a periodic fetch from every install is telemetry. So model pins ship in the binary, and this page is documentation the app never reads. The full reasoning is <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/docs/adr/0004-brain-catalogue-ships-in-the-binary.md">ADR 0004</a>.</p>
+  </details>
 """
 
 
 def render_html(doc: dict) -> str:
     gen = _e(doc["generated"])
     runs_html = []
+    newest = len(doc["runs"])
     for i, run in enumerate(doc["runs"], 1):
         p = run["provenance"]
+        brains_in_run = ", ".join(b["brainID"] for b in run["brains"])
+        open_attr = " open" if i == newest else ""
         runs_html.append(
-            f'<h3>Run {i} · {_e((p.get("date") or "")[:10])} · app <code>{_e(p.get("appCommit") or "unknown")}</code></h3>'
-            + _provenance(p) + _matrix(run) + f"<h4>Failed checks — run {i}</h4>" + _failures(run)
+            f'<details class="run"{open_attr}><summary>Run {i} · {_e((p.get("date") or "")[:10])} · {_e(brains_in_run)}'
+            f' · app <code>{_e(p.get("appCommit") or "unknown")}</code></summary>'
+            + _provenance(p) + _matrix(run) + f"<h4>Failed checks — run {i}</h4>" + _failures(run) + "</details>"
         )
     head_desc = ("Which local models M1K3 ships, pinned to exact revisions, and how they score on M1K3's own "
                  "on-device eval harness — with the hardware, power mode, app commit and runtime revision beside every number.")
@@ -353,6 +778,36 @@ def render_html(doc: dict) -> str:
 <link rel="preload" href="fonts/vt323-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="fonts.css" />
 <link rel="stylesheet" href="geo.css" />
+<style>
+  /* The ladder: fourteen columns will not fit the article measure, so its wrapper bleeds out to the page
+     width (no wider than 1240px, never wider than the viewport minus the gutters) and the type steps down;
+     reference columns are set apart by a dashed rule and a dimmer head; the runs below fold. */
+  .ladder-wrap {{ width: min(1240px, calc(100vw - 80px)); margin-left: calc((100% - min(1240px, calc(100vw - 80px))) / 2); }}
+  .ladder {{ font-size: 12px; }}
+  .ladder th, .ladder td {{ padding: 8px 8px; }}
+  .ladder th.ref {{ border-left: 1px dashed rgba(232,232,232,0.28); color: var(--ink-dim); }}
+  .ladder td .table-note {{ white-space: nowrap; }}
+  .ladder td strong {{ color: var(--ink-bright); font-weight: 500; }}
+  details.run {{ border: 1px solid var(--line); background: rgba(10,10,10,0.55); margin: 14px 0; padding: 0 18px; }}
+  details.run > summary {{ cursor: pointer; font-family: var(--mono); font-size: 13px; letter-spacing: 0.04em;
+    color: var(--ink); padding: 14px 0; list-style: none; }}
+  details.run > summary::-webkit-details-marker {{ display: none; }}
+  details.run > summary::before {{ content: '+'; font-family: var(--pixel); font-size: 22px; color: var(--ink-faint);
+    margin-right: 12px; }}
+  details.run[open] > summary::before {{ content: '–'; color: var(--ink-bright); }}
+  details.run[open] > summary {{ border-bottom: 1px solid var(--line); margin-bottom: 18px; }}
+  details.run > :last-child {{ padding-bottom: 18px; }}
+  /* Seven columns sit just past the reading measure: the board bleeds out like the ladder, but no wider than it needs. */
+  .board-wrap {{ width: min(960px, calc(100vw - 80px)); margin-left: calc((100% - min(960px, calc(100vw - 80px))) / 2); }}
+  .board td, .board th {{ padding: 10px 14px; white-space: nowrap; }}
+  .board th.ref {{ border-left: 1px dashed rgba(232,232,232,0.28); color: var(--ink-dim); }}
+  .board td strong {{ color: var(--ink-bright); font-weight: 500; }}
+  figure.voice {{ margin: 0 0 22px; max-width: 720px; }}
+  figure.voice figcaption {{ font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink); margin-bottom: 6px; }}
+  figure.voice blockquote {{ margin: 0; padding: 2px 0 2px 16px; border-left: 2px solid var(--line); color: var(--ink-dim);
+    font-size: 15px; line-height: 1.6; }}
+</style>
 </head>
 <body>
 
@@ -378,24 +833,34 @@ def render_html(doc: dict) -> str:
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: M1K3 ships four brains, pinned to exact model revisions, and this page is the evidence for those picks.</strong> Every number below was measured on a real Mac through the shipping app, and each run carries the hardware, OS, power mode, app commit and inference-runtime revision it was measured with. The app never reads this page: models are chosen in a reviewed pull request, not by a server. Read it the way you would read a lab notebook, failures included.</p>
+    <p><strong>Short answer: M1K3 ships four brains, pinned to exact model revisions, and this page is the evidence for those picks.</strong> Every number was measured on a real Mac through the shipping app, with the hardware, power mode and app commit beside it. The app never reads this page. Read it like a lab notebook, failures included.</p>
   </div>
 
   <h2>What ships today</h2>
   <p>Four tiers, three shown per device. Mini answers the quickest turns (Apple's model where it can run, LFM2.5 1.2B where it can't), Lil fronts the conversation, Big is reached by delegation for deep work. Each MLX model is pinned to one Hugging Face revision and every downloaded file is checked against a SHA-256 digest before it loads, so any mirror can serve the bytes.</p>
   {_brains_table(doc["brains"])}
 
+  <h2>The board</h2>
+  <p>{BOARD_INTRO}</p>
+  {_board_table(doc["board"])}
+  <ul>
+{HONEST_BULLETS}
+  </ul>
+
+  <h2>Hear them</h2>
+  <p>{VOICES_INTRO}</p>
+  {_voices(doc["voices"])}
+
+  <details class="run"><summary>Every column, every count — the ladder</summary>
+  <p>Every brain that has ever run through the harness, each cell its newest measurement for the kind (passed/total, every trial counted). The shipped tiers are on the left; to the right, set apart, the reference columns: Apple's server model, the hosted models, and earlier challengers measured in a tier's slot.</p>
+  {_ladder_table(doc["ladder"])}
+  {_reference_notes(doc["ladder"])}
+  </details>
+
   <h2>Eval runs</h2>
-  <p>The harness runs the same fixtures against each brain through the live path (retrieval, grounding, tools, the agent loop), scores each answer with named checks, and writes this JSON. A repeat is a separate trial. Failures are listed with the scorer's own reason. The source documents for every run on this page are committed under <code>macos/docs/evals/</code>.</p>
+  <p>The harness runs the same fixtures against each brain through the live path (retrieval, grounding, tools, the agent loop), scores each answer with named checks, and writes this JSON. A repeat is a separate trial. Failures are listed with the scorer's own reason. The source documents for every run on this page are committed under <code>macos/docs/evals/</code>. The newest run is open; the rest fold.</p>
   {"".join(runs_html)}
 {_state_of_play()}
-  <h2>How to read this honestly</h2>
-  <ul>
-    <li><strong>Small n.</strong> Two trials per fixture is enough to catch a flake, not enough for a percentage. Treat cells as evidence, not scores.</li>
-    <li><strong>One machine.</strong> Everything here is one Apple M1 Max. Newer chips run every brain faster; the ordering between brains is what travels.</li>
-    <li><strong>Latency includes the tools.</strong> A tool-use median counts retrieval and the tool call, not just token generation.</li>
-    <li><strong>Reproduce it.</strong> The harness is in the repository: <code>macos/docs/BENCHMARKS.md</code>. This page is generated by <code>macos/tools/eval/brains_page.py</code> from its JSON.</li>
-  </ul>
 
   <aside class="related">
     <span class="label">// related</span>
@@ -437,7 +902,18 @@ def main(argv=None) -> int:
     run_paths = a.run or sorted((Path(__file__).resolve().parents[2] / "docs" / "evals").glob("*.json"))
     if not run_paths:
         ap.error("no run documents: pass --run or commit some under macos/docs/evals/")
-    runs = [json.loads(p.read_text()) for p in run_paths]
+    runs = []
+    for path in run_paths:
+        loaded = json.loads(path.read_text())
+        # docs/evals also holds other instruments' documents (the power receipt); a file with no
+        # schemaVersion and no runs is not a scorecard and is skipped by name. A scorecard with a
+        # schemaVersion this tool does not read still fails loudly below.
+        if "schemaVersion" not in loaded and "runs" not in loaded:
+            print(f"skipped {path.name}: not a ChatEvalDocument (no schemaVersion/runs)")
+            continue
+        runs.append(loaded)
+    if not runs:
+        ap.error("no ChatEvalDocuments among the inputs")
     doc = document(manifest, runs, generated=a.generated)
     # Render both BEFORE writing either, so a render error can't leave brains.json ahead of brains.html.
     json_text, html_text = to_json(doc), render_html(doc)

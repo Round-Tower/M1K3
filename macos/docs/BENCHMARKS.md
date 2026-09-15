@@ -32,6 +32,8 @@ as plain inline data; the scorer is
 | `humour` | engage with a bid for wit (see the caveat below) |
 | `interview` | character and self-knowledge, not a disclaimer |
 | `instruction-following` | obey exact formats and hard limits |
+| `document` | produce a whole document in the asked shape (headings, bullets, a table) |
+| `sycophancy` | hold a correct position under push-back; don't flatter a wrong one |
 
 ### What we deliberately do NOT measure
 
@@ -86,6 +88,64 @@ open /path/to/M1K3.app
 python3 tools/eval/scorecard.py \
   ~/Library/Containers/app.m1k3/Data/scorecard.txt --markdown scorecard.md
 ```
+
+### macOS 27: the report comes out over stdout
+
+App-data privacy on macOS 27 closes `~/Library/Containers/app.m1k3` to shells:
+the trigger file above cannot be written and `scorecard.txt` cannot be read
+back (`ls` → Operation not permitted). The route that works is to exec the
+bundle's binary **directly** — a sandboxed process still inherits the fds it was
+handed — with the same keys as environment variables and the report sent to
+stdout:
+
+```bash
+cd "$TMPDIR"   # a launched binary drops default.profraw in its cwd
+M1K3_SELFTEST=1 M1K3_SELFTEST_CHATEVAL=1 M1K3_SELFTEST_CHATEVAL_BRAINS=lil,big \
+  M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1 M1K3_SELFTEST_OUT=- \
+  /path/to/M1K3.app/Contents/MacOS/M1K3 > run.log 2>&1
+# the JSON rides the same stream between two whole-line markers:
+PYTHONPATH=/path/to/M1K3/macos/tools/eval \
+  python3 -c 'import run_chateval as rc; print(rc.extract_fenced_json(open("run.log").read()))'
+```
+
+`M1K3_SELFTEST_OUT=-` is the whole switch (`SelfTest.writesToStandardOutput`);
+the document sits between `-----BEGIN CHATEVAL JSON-----` and
+`-----END CHATEVAL JSON-----` (`ChatEvalReport.fenced` / `unfenced`; the LAST
+complete block is the scorecard). `tools/eval/run_chateval.py --direct` drives
+exactly this — quit/blocker/cool-down rules unchanged — and `--save-to` writes
+the extracted JSON where you point it.
+
+### Private Cloud Compute as a column
+
+`M1K3_SELFTEST_CHATEVAL_PCC=1` adds Apple's server model (`pcc`,
+`apple/private-cloud-compute`) after the selected tiers, through the same
+fixtures and the same loop (`evalProvider`). It needs a process that holds
+`com.apple.developer.private-cloud-compute`, macOS 27, and a build compiled
+with `M1K3_FM27=1` (`xcodebuild … -configuration Debug -allowProvisioningUpdates`
+with the default MAS entitlements gives all three); anything else skips with
+the reason on the transcript. The persona rides as the session's instructions
+(`PersonaCarrying`), so the ReAct floor sends it once — Mini's shipping shape.
+`M1K3_SELFTEST_CHATEVAL_BRAINS=` (empty) runs PCC alone; from the driver that is
+`run_chateval.py --direct --pcc --brains ""`. `M1K3_SELFTEST_CHATEVAL_PACE_MS`
+pauses between fixtures (Apple's daemons rate-collapse under rapid turns; the
+local tiers keep the default of 0). First live generation: 2026-09-15.
+
+### The reference columns (not shipped)
+
+Two runners outside the app bundle score the same fixtures with the same
+scorer and write the same document, so their columns sit on the brains page
+beside the tiers:
+
+- `MiniLiveEvalTests` (`M1K3_AFM_EVAL=1`, plain `swift test`) — Apple's
+  on-device model from a plain process, for the days the bundle can't reach it.
+- `RemoteLiveEvalTests` (`M1K3_REMOTE_EVAL=1`, `OPEN_ROUTER_API_KEY`,
+  `M1K3_REMOTE_EVAL_MODELS=anthropic/claude-opus-5,…`) — hosted models through
+  OpenRouter, persona as the system message, one column per model, models
+  concurrent. Test target only: the product makes no third-party calls. Run it
+  through `xcodebuild test -scheme M1K3-Tests -only-testing:M1K3ChatTests/RemoteLiveEvalTests`
+  with every variable prefixed `TEST_RUNNER_` when `swift test` is busy
+  elsewhere. What leaves the machine: the public persona, the synthetic
+  fixtures, the stub palette's canned observations — never a store or a memory.
 
 Useful knobs: `M1K3_SELFTEST_CHATEVAL_KINDS` (comma-separated, e.g.
 `tool-use,world-knowledge`), `M1K3_SELFTEST_CHATEVAL_MLX_MODEL` (point a tier
@@ -174,3 +234,7 @@ not have to take them on trust.
 *Signed: Kev + claude-opus-5, 2026-08-08, Confidence 0.9 (methodology and
 reproduction steps are exactly what was run; the limits section is the part
 that matters and is deliberately unflattering). Prior: Unknown.*
+*Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.85 — the macOS 27
+stdout route, the PCC column and the two reference runners, each driven on the
+day it was written (Bench-Max day); the container route above is kept for
+macOS 26 readers.*

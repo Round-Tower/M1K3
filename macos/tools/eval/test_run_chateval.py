@@ -121,6 +121,19 @@ def test_dump_prompt_goes_inside_the_container():
         CONTAINER / "Library/Application Support/M1K3/selftest-dump/lil-e2b")
 
 
+def test_pcc_column_rides_the_trigger_and_may_run_alone():
+    alone = rc.build_trigger(base_opts(brains=[], pcc=True), container=CONTAINER, power_source="ac",
+                             powermode=2, commit=None, mlx_rev=None)
+    assert alone["M1K3_SELFTEST_CHATEVAL_PCC"] == "1"
+    assert alone["M1K3_SELFTEST_CHATEVAL_BRAINS"] == ""  # no tiers: the PCC column alone
+    both = rc.build_trigger(base_opts(brains=["lil"], pcc=True), container=CONTAINER, power_source="ac",
+                            powermode=2, commit=None, mlx_rev=None)
+    assert both["M1K3_SELFTEST_CHATEVAL_BRAINS"] == "lil" and both["M1K3_SELFTEST_CHATEVAL_PCC"] == "1"
+    with pytest.raises(ValueError, match="no brains"):
+        rc.build_trigger(base_opts(brains=[]), container=CONTAINER, power_source="ac",
+                         powermode=2, commit=None, mlx_rev=None)
+
+
 @pytest.mark.parametrize("brains", [[], ["lil", "huge"], ["LIL"]])
 def test_unknown_brains_are_refused(brains):
     with pytest.raises(ValueError):
@@ -164,3 +177,49 @@ def test_plan_refuses_another_sessions_build():
 def test_plan_with_nothing_running():
     plan = rc.plan_instances([], live_app=LIVE, target_app=LIVE)
     assert (plan.to_quit, plan.blockers, plan.live_was_running) == ([], [], False)
+
+
+# ── direct mode (macOS 27) ───────────────────────────────────────────────────
+
+def test_extract_fenced_json_takes_the_last_complete_block():
+    stale = rc.FENCE_OPEN + '\n{"runs": []}\n' + rc.FENCE_CLOSE
+    real = rc.FENCE_OPEN + '\n{"runs": [{"brainID": "pcc"}]}\n' + rc.FENCE_CLOSE
+    text = "• chateval: 1 fixture\n" + stale + "\nnoise\n" + real + "\n• chateval json → stdout (fenced)\n"
+    assert rc.extract_fenced_json(text) == {"runs": [{"brainID": "pcc"}]}
+    # a transcript that opens with the marker itself still parses (the line start counts as a boundary)
+    assert rc.extract_fenced_json(rc.FENCE_OPEN + '\n{"a": 1}\n' + rc.FENCE_CLOSE) == {"a": 1}
+
+
+def test_extract_fenced_json_refuses_partials_and_names_bad_json():
+    assert rc.extract_fenced_json("plain transcript\n{}\n") is None
+    assert rc.extract_fenced_json(rc.FENCE_OPEN + '\n{"a": 1}\n') is None
+    assert rc.extract_fenced_json('{"a": 1}\n' + rc.FENCE_CLOSE + "\n") is None
+    with pytest.raises(ValueError, match="not JSON"):
+        rc.extract_fenced_json(rc.FENCE_OPEN + "\nnot json\n" + rc.FENCE_CLOSE)
+
+
+def test_extract_fenced_json_ignores_markers_echoed_inside_the_document():
+    # an answer preview quoting EITHER marker sits inside a JSON string, never at a line start
+    body = '{"runs": [{"answerPreview": "it printed ' + rc.FENCE_OPEN + ' then ' + rc.FENCE_CLOSE + ' and stopped"}]}'
+    text = "• chateval: 1 fixture\n" + rc.FENCE_OPEN + "\n" + body + "\n" + rc.FENCE_CLOSE + "\n"
+    assert rc.extract_fenced_json(text) == {"runs": [{"answerPreview": "it printed " + rc.FENCE_OPEN + " then " + rc.FENCE_CLOSE + " and stopped"}]}
+
+
+def test_direct_outcome_reads_the_exit_code_beside_the_document():
+    log = Path("/tmp/run.log")
+    assert rc.direct_outcome({"runs": []}, 0, log) == (0, "")
+    code, note = rc.direct_outcome({"runs": []}, 139, log)
+    assert code == 8 and "exited 139" in note
+    code, note = rc.direct_outcome(None, 0, log)
+    assert code == 7 and "no fenced JSON" in note
+
+
+def test_direct_env_routes_the_report_to_stdout_and_keeps_the_caller_env():
+    trig = {"M1K3_SELFTEST": "1", "M1K3_SELFTEST_OUT": "/container/path/run", "M1K3_SELFTEST_CHATEVAL_PCC": "1"}
+    env = rc.direct_env(trig, {"PATH": "/usr/bin", "M1K3_SELFTEST_OUT": "/stale"})
+    assert env["M1K3_SELFTEST_OUT"] == "-"
+    assert env["M1K3_SELFTEST"] == "1"
+    assert env["M1K3_SELFTEST_CHATEVAL_PCC"] == "1"
+    assert env["PATH"] == "/usr/bin"
+    assert trig["M1K3_SELFTEST_OUT"] == "/container/path/run", "the trigger map itself is not mutated"
+

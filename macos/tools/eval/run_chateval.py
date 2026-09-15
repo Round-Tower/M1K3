@@ -27,10 +27,21 @@ Provenance: power source + powermode are read from pmset and stamped; a
 battery run is marked "battery" in the notes — pass counts stand on battery,
 tok/s and latency do not (the 2026-09-05 power correction).
 
+`--direct` (macOS 27): app-data privacy closed the container to shells, so the
+trigger file can't be written and the report can't be read back. Direct mode
+execs the bundle's binary itself with the trigger map as its ENVIRONMENT and
+`M1K3_SELFTEST_OUT=-`, so the sandboxed app streams the transcript to the
+inherited stdout and the JSON rides the same stream fenced
+(ChatEvalReport.fenced); the driver cuts the last fenced block out. The
+quit/blocker/cool-down rules are the same; only the launch and the read differ.
+
 Signed: Kev + claude-opus-5, 2026-09-12, Confidence 0.8 (pure decisions pinned
 in test_run_chateval.py; the quit/launch/wait glue driven by hand on the
 installed app). Prior: none (new file; replaces the scratchpad run-selftest
 helpers that died with two session restarts).
+Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.8 — `--direct`: exec the
+binary with the trigger as env + stdout reporting (the only route on macOS 27);
+`extract_fenced_json` + `direct_env` pinned. Confidence now 0.8.
 """
 
 from __future__ import annotations
@@ -107,6 +118,56 @@ def json_path(report: Path) -> Path:
     return Path(str(report) + ".json")
 
 
+FENCE_OPEN = "-----BEGIN CHATEVAL JSON-----"
+FENCE_CLOSE = "-----END CHATEVAL JSON-----"
+
+
+def extract_fenced_json(text: str) -> dict | None:
+    """The LAST complete fenced document in a stdout transcript, parsed; None
+    when there is no open+close pair (a half-written block is not a scorecard);
+    ValueError when a complete block is not JSON (a different problem from "no
+    block", and named as such). Mirrors ChatEvalReport.unfenced in M1K3Eval —
+    keep the two in step."""
+    # Both markers as WHOLE lines (a newline before and after), like the Swift side: a marker
+    # echoed INSIDE the document sits in a JSON string, where a real newline can never precede
+    # it, so it can neither open nor close the block. The transcript's first line is never a
+    # marker, so a leading newline is always there.
+    padded = "\n" + text  # so a marker on the very first line still sits at a line start
+    close = padded.rfind("\n" + FENCE_CLOSE)
+    if close < 0:
+        return None
+    open_at = padded.rfind("\n" + FENCE_OPEN + "\n", 0, close)
+    if open_at < 0:
+        return None
+    body = padded[open_at + len(FENCE_OPEN) + 2:close].strip()
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"a fenced block was there but is not JSON: {e}") from e
+
+
+def direct_outcome(doc: dict | None, returncode: int | None, log_path: "Path") -> tuple[int, str]:
+    """The exit code and the one line that explains it, for a direct run. A fenced document with a
+    clean exit is 0; a document beside a non-zero exit is 8 (the scorecard is complete — a SelfTest
+    writes it as its last act — but the process then died, and that is worth a look); no document
+    is 7."""
+    if doc is None:
+        return 7, f"✗ no fenced JSON on stdout (exit {returncode}) — read the transcript: {log_path}"
+    if returncode not in (0, None):
+        return 8, f"! scorecard saved, but the app exited {returncode} after writing it — read the transcript: {log_path}"
+    return 0, ""
+
+
+def direct_env(trig: dict[str, str], base: dict[str, str]) -> dict[str, str]:
+    """The environment for a direct exec: the caller's env plus the trigger map,
+    with the report routed to stdout. Direct mode never leaves a container path
+    in M1K3_SELFTEST_OUT — the sandbox would write it where no shell can read."""
+    env = dict(base)
+    env.update(trig)
+    env["M1K3_SELFTEST_OUT"] = "-"
+    return env
+
+
 def dump_dir(container: Path, name: str) -> Path:
     return container / "Library/Application Support/M1K3/selftest-dump" / validate_name(name)
 
@@ -121,6 +182,7 @@ class RunOptions:
     live_path: bool = True
     notes: str | None = None
     dump_prompt: bool = False
+    pcc: bool = False
 
 
 def build_trigger(opts: RunOptions, *, container: Path, power_source: str, powermode: int | None,
@@ -128,8 +190,10 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
     """The trigger map SelfTestEnv reads. Absent options stay absent so the
     app's own defaults decide — never a guessed value (an unknown powermode is
     omitted, not written as 0)."""
-    if not opts.brains or any(b not in KNOWN_BRAINS for b in opts.brains):
+    if any(b not in KNOWN_BRAINS for b in opts.brains):
         raise ValueError(f"brains {opts.brains!r}: choose from {', '.join(KNOWN_BRAINS)}")
+    if not opts.brains and not opts.pcc:
+        raise ValueError("no brains selected: name at least one, or pass --pcc for the Private Cloud column alone")
     if opts.repeats < 1:
         raise ValueError("repeats must be ≥ 1")
     report = out_path(container, opts.name)
@@ -141,6 +205,8 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
     }
     if opts.live_path:
         trig["M1K3_SELFTEST_CHATEVAL_LIVE_PATH"] = "1"
+    if opts.pcc:
+        trig["M1K3_SELFTEST_CHATEVAL_PCC"] = "1"
     if opts.model:
         trig["M1K3_SELFTEST_CHATEVAL_MLX_MODEL"] = opts.model
     if opts.kinds:
@@ -245,10 +311,59 @@ def summarise(doc_path: Path) -> str:
     return "\n".join(lines)
 
 
+def run_direct(args, app: Path, trig: dict[str, str], plan: "InstancePlan") -> int:
+    """Direct mode: the binary, the env, stdout. Returns like main()."""
+    binary = app / "Contents/MacOS/M1K3"
+    if not binary.exists():
+        print(f"✗ no binary at {binary}", file=sys.stderr)
+        return 2
+    log_path = Path(args.log) if args.log else (
+        Path(args.save_to).with_suffix(".log") if args.save_to else Path(tempfile.gettempdir()) / f"m1k3-chateval-{args.name}.log")
+    STAMP.write_text(str(time.time()))
+    print(f"▸ SelfTest (direct) → stdout → {log_path}")
+    started = time.monotonic()
+    with open(log_path, "w") as log:
+        proc = subprocess.Popen([str(binary)], env=direct_env(trig, os.environ), stdout=log, stderr=subprocess.STDOUT,
+                                cwd=tempfile.gettempdir())
+        lines = 0
+        while proc.poll() is None:
+            if time.monotonic() - started > args.timeout_min * 60:
+                print("✗ timed out — the SelfTest is still running; leaving it alone", file=sys.stderr)
+                if plan.live_was_running and not args.no_relaunch:
+                    subprocess.run(["open", "-a", LIVE_APP])  # a timeout must not leave the live app quit
+                return 6
+            time.sleep(10)
+            now_lines = log_path.read_text(errors="replace").count("\n")
+            if now_lines != lines:
+                lines = now_lines
+                print(f"  … {lines} report lines · {int((time.monotonic() - started) / 60)} min")
+    try:
+        doc = extract_fenced_json(log_path.read_text(errors="replace"))
+    except ValueError as e:  # a block was there but is not JSON — one message, not two
+        print(f"✗ {e} (exit {proc.returncode}) — read the transcript: {log_path}", file=sys.stderr)
+        doc, rc = None, 7
+    else:
+        rc, note = direct_outcome(doc, proc.returncode, log_path)
+        if note:
+            print(note, file=sys.stderr)
+    if doc is not None:
+        if args.save_to:
+            Path(args.save_to).write_text(json.dumps(doc, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+            print(summarise(Path(args.save_to)))
+            print(f"  saved → {args.save_to}")
+        else:
+            print(json.dumps(doc, indent=2, sort_keys=True)[:2000])
+    if plan.live_was_running and not args.no_relaunch:
+        subprocess.run(["open", "-a", LIVE_APP])
+    return rc
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--name", required=True, help="run name → selftest-out/<name>(.json)")
-    ap.add_argument("--brains", required=True, help="comma list: mini,pocket,lil,big")
+    ap.add_argument("--brains", default="", help="comma list: mini,pocket,lil,big (may be empty with --pcc)")
+    ap.add_argument("--pcc", action="store_true",
+                    help="add Apple's Private Cloud Compute as a column (needs an entitled M1K3_FM27 build)")
     ap.add_argument("--model", help="override: a bare id (one MLX brain) or lil=<id>,big=<id>")
     ap.add_argument("--kinds", default="", help="comma list of task kinds (default: all)")
     ap.add_argument("--repeats", type=int, default=1)
@@ -261,6 +376,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--timeout-min", type=int, default=240)
     ap.add_argument("--no-relaunch", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="print the trigger and plan, touch nothing")
+    ap.add_argument("--direct", action="store_true",
+                    help="exec the bundle's binary with the trigger as env and read the report off stdout "
+                         "(macOS 27: the container is closed to shells)")
+    ap.add_argument("--log", help="direct mode: where to keep the raw stdout transcript (default: beside --save-to, or temp)")
     args = ap.parse_args(argv)
 
     container = default_container()
@@ -271,8 +390,11 @@ def main(argv: list[str] | None = None) -> int:
     opts = RunOptions(
         name=args.name, brains=[b for b in args.brains.split(",") if b], model=args.model,
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
-        live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt,
+        live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
     )
+    if args.direct and args.dump_prompt:
+        print("✗ --dump-prompt writes into the container, which --direct exists to avoid reading", file=sys.stderr)
+        return 2
     resolved = REPO_MACOS / "Package.resolved"
     mlx_rev = mlx_revision(json.loads(resolved.read_text())) if resolved.exists() else None
     power = parse_power_source(sh("pmset", "-g", "batt"))
@@ -303,6 +425,9 @@ def main(argv: list[str] | None = None) -> int:
     if wait:
         print(f"… AFM cool-down {int(wait)} s")
         time.sleep(wait)
+
+    if args.direct:
+        return run_direct(args, app, trig, plan)
 
     for stale in (report, json_path(report)):
         stale.unlink(missing_ok=True)

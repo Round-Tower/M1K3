@@ -19,6 +19,8 @@
 //  design: measuring the live graph is its whole point (MemStatStage.swift).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.85 — `M1K3_SELFTEST_OUT=-` streams the report to
+//  the inherited stdout (the sandboxed route on macOS 27; verified by a direct exec of the signed Debug build).
 
 import Foundation
 import M1K3Chat
@@ -77,13 +79,25 @@ enum SelfTest {
         SelfTestEnv.value("M1K3_SELFTEST") == "1"
     }
 
-    /// Where the streamed report goes. A bundled GUI .app sends stdio to the
-    /// unified log, not an inherited fd — so we write to a file we can read back.
+    /// Where the streamed report goes. A bundled GUI .app launched by
+    /// LaunchServices sends stdio to the unified log, not an inherited fd — so
+    /// the default is a file we can read back.
     static var outputPath: String {
         SelfTestEnv.value("M1K3_SELFTEST_OUT") ?? "/tmp/m1k3_selftest.log"
     }
 
+    /// `M1K3_SELFTEST_OUT=-` streams the report to the inherited stdout instead.
+    /// The route a SANDBOXED build has to a shell on macOS 27: app-data privacy
+    /// closed the container to `cat`, but a binary exec'd straight from the shell
+    /// (`M1K3.app/Contents/MacOS/M1K3`, env inherited) still writes to the fd it
+    /// was handed. The CHATEVAL document rides the same stream, fenced
+    /// (`ChatEvalReport.fenced`), so nothing needs a file the shell can't open.
+    static var writesToStandardOutput: Bool {
+        outputPath == "-"
+    }
+
     private static func truncateOutput() {
+        guard !writesToStandardOutput else { return }
         try? Data().write(to: URL(fileURLWithPath: outputPath))
     }
 
@@ -108,6 +122,12 @@ enum SelfTest {
     /// interrupted run.
     private static func emit(_ line: String) {
         let data = Data((line + "\n").utf8)
+        if writesToStandardOutput {
+            // The throwing variant: a closed pipe (EPIPE) must not raise an uncatchable
+            // ObjC exception mid-run — the transcript is best-effort once the reader is gone.
+            try? FileHandle.standardOutput.write(contentsOf: data)
+            return
+        }
         if let handle = FileHandle(forWritingAtPath: outputPath) {
             handle.seekToEndOfFile()
             handle.write(data)

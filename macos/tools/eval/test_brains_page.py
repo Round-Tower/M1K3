@@ -191,3 +191,214 @@ def test_cli_writes_both_files(tmp_path):
     out = json.loads((tmp_path / "brains.json").read_text())
     assert out["runs"][0]["brains"][0]["byKind"]["tool-use"] == {"passed": 3, "total": 4}
     assert "<title>M1K3 Brains" in (tmp_path / "brains.html").read_text()
+
+
+# ── the ladder (latest cell per brain per kind) ──────────────────────────────
+
+def _run(date, brain, model, scores):
+    return dict(RUN, provenance=dict(RUN["provenance"], date=date), runs=[{"brainID": brain, "modelID": model, "scores": scores}])
+
+
+def test_ladder_takes_the_latest_cell_per_brain_per_kind_and_dates_it():
+    older = _run("2026-09-05T10:00:00Z", "lil", "m/lil", [score("a", "security", False, 1), score("b", "open-chat", True, 1)])
+    newer = _run("2026-09-15T10:00:00Z", "lil", "m/lil", [score("a", "security", True, 1)])
+    cols = bp.ladder([bp.summarise_run(newer), bp.summarise_run(older)])  # input order is not date order
+    assert [c["brainID"] for c in cols] == ["lil"]
+    lil = cols[0]
+    assert lil["byKind"]["security"] == {"passed": 1, "total": 1, "date": "2026-09-15"}
+    assert lil["byKind"]["open-chat"] == {"passed": 1, "total": 1, "date": "2026-09-05"}  # kept from the older run
+    assert lil["passed"] == 2 and lil["total"] == 2 and lil["latestDate"] == "2026-09-15" and lil["shipped"]
+
+
+def test_ladder_orders_shipped_then_pcc_then_reference_by_pass_rate():
+    day = "2026-09-15T10:00:00Z"
+    runs = [
+        _run(day, "claude-opus-5", "anthropic/claude-opus-5", [score("a", "security", True, 1), score("b", "security", True, 1)]),
+        _run(day, "gemini-3.8-flash", "google/gemini-3.8-flash", [score("a", "security", False, 1), score("b", "security", True, 1)]),
+        _run(day, "pcc", "apple/private-cloud-compute", [score("a", "security", True, 1)]),
+        _run(day, "big", "m/big", [score("a", "security", True, 1)]),
+        _run(day, "mini", None, [score("a", "security", True, 1)]),
+    ]
+    cols = bp.ladder([bp.summarise_run(r) for r in runs])
+    assert [c["brainID"] for c in cols] == ["mini", "big", "pcc", "claude-opus-5", "gemini-3.8-flash"]
+    assert [c["shipped"] for c in cols] == [True, True, False, False, False]
+    assert bp._column_label("pcc") == "PCC"
+    html = bp._ladder_table(cols)
+    assert 'claude-opus-5<br /><span class="table-note">anthropic</span>' in html
+
+
+def test_html_ladder_marks_reference_columns_and_folds_older_runs():
+    # the pinned Lil (document() reads the pins off the manifest; an unpinned model would be a challenger column)
+    older = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510", [score("a", "security", True, 1)])
+    newer = _run("2026-09-15T10:00:00Z", "pcc", "apple/private-cloud-compute", [score("a", "security", False, 1)])
+    doc = bp.document(MANIFEST, [older, newer], generated="2026-09-15")
+    html = bp.render_html(doc)
+    assert '<div class="table-scroll ladder-wrap"><table class="cmp ladder">' in html
+    assert '<th scope="col" class="ref">PCC<br /><span class="table-note">Apple, server</span></th>' in html
+    assert '<th scope="col">Lil<br /><span class="table-note">Qwen3-4B-Instruct-2507-4bit-DWQ-2510</span></th>' in html  # shipped: the pinned model, bare
+    assert '<th scope="col" class="ref">PCC<br />' in html  # reference column, set apart; hosted ids stay as-is
+    assert '<th scope="col">Lil<br />' in html
+    assert "Private Cloud Compute" in html and "not shipped" in html
+    # one year across the board: the year in the row header, MM-DD in the cells
+    assert '<th scope="row">measured (2026)</th>' in html and '<span class="table-note">09-15</span>' in html
+    mixed = bp._ladder_table([
+        dict(brainID="lil", modelID="m/lil", byKind={}, passed=0, total=0, latestDate="2025-12-01", shipped=True),
+        dict(brainID="big", modelID="m/big", byKind={}, passed=0, total=0, latestDate="2026-09-15", shipped=True),
+    ])
+    assert '<th scope="row">measured</th>' in mixed and "2025-12-01" in mixed and "2026-09-15" in mixed
+    # the newest run is open, the older one folds (the ladder and the 09-05 read-out fold too, as their own details)
+    assert html.count("<summary>Run ") == 2
+    assert html.count("<details class=\"run\" open><summary>Run ") == 1
+    assert html.index("<details class=\"run\"><summary>Run 1") < html.index("<details class=\"run\" open><summary>Run 2")
+    assert "<summary>Every column, every count — the ladder</summary>" in html
+    assert "<summary>State of play, 2026-09-05 — the earlier read-out</summary>" in html
+    # the machine copy carries the same board
+    assert [c["brainID"] for c in doc["ladder"]] == ["lil", "pcc"]
+    assert doc["reference"]["pcc"].startswith("Apple Private Cloud Compute")
+
+
+def test_ladder_with_no_runs_renders_a_sentence_not_a_crash():
+    assert bp._ladder_table([]) == "<p>No runs yet.</p>"
+
+
+# ── the dated read-outs ──────────────────────────────────────────────────────
+
+PLACEHOLDERS = ("tbd", "todo", "fixme", "xxx", "???", "lorem ipsum")
+
+
+def test_the_page_never_ships_a_placeholder_read_out():
+    html = bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-15")).lower()
+    assert not any(p in html for p in PLACEHOLDERS)
+    for _, body in bp.READ_OUT_2026_09_15["sections"]:
+        assert not any(p in body.lower() for p in PLACEHOLDERS)
+
+
+def test_the_2026_09_15_read_out_renders_above_the_09_05_one(monkeypatch):
+    monkeypatch.setitem(bp.READ_OUT_2026_09_15, "sections", [("A heading", "<p>A paragraph with 7/7.</p>")])
+    html = bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-15"))
+    assert "<h2>State of play, 2026-09-15</h2>" in html and "<h3>A heading</h3><p>A paragraph with 7/7.</p>" in html
+    assert html.index("State of play, 2026-09-15") < html.index("State of play, 2026-09-05")
+    monkeypatch.setitem(bp.READ_OUT_2026_09_15, "sections", [])
+    assert "State of play, 2026-09-15" not in bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-15"))
+
+
+def test_ladder_keys_by_brain_and_model_so_a_challenger_never_overwrites_the_pin():
+    pins = {b["tier"]: b["modelID"] for b in bp.brains(MANIFEST)}
+    pinned = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+                  [score("a", "security", True, 1)])
+    challenger = _run("2026-09-15T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+                      [score("a", "security", False, 1), score("b", "open-chat", True, 1)])
+    cols = bp.ladder([bp.summarise_run(pinned), bp.summarise_run(challenger)], pins=pins)
+    assert [(c["columnID"], c["shipped"]) for c in cols] == [("lil", True), ("lil@Qwen3-4B-Instruct-2507-4bit", False)]
+    assert cols[0]["byKind"]["security"] == {"passed": 1, "total": 1, "date": "2026-09-05"}  # the pin's cell survived
+    assert cols[1]["label"] == "Qwen3-4B-Instruct-2507-4bit (as Lil)"
+    html = bp._ladder_table(cols)
+    assert '<th scope="col" class="ref">Qwen3-4B-Instruct-2507-4bit (as Lil)<br />' in html
+    # mini has no pin (Apple FM): every mini run is the shipped column
+    mini = _run("2026-09-15T10:00:00Z", "mini", None, [score("a", "security", True, 1)])
+    assert bp.ladder([bp.summarise_run(mini)], pins=pins)[0]["shipped"]
+    # a pins dict that omits a tier says the tier has no pin: its runs are challengers, not the brain
+    partial = {k: v for k, v in pins.items() if k != "lil"}
+    assert not bp.ladder([bp.summarise_run(pinned)], pins=partial)[0]["shipped"]
+    # no pins at all (a pure caller): every tier is its own column
+    assert bp.ladder([bp.summarise_run(pinned)])[0]["shipped"]
+
+
+def test_a_zero_over_zero_cell_is_never_a_clean_sweep():
+    assert bp._sweep(0, 0) == "" and bp._sweep(2, 2) == "yes" and bp._sweep(1, 2) == ""
+    empty = _run("2026-09-15T10:00:00Z", "big", "m/big", [])
+    doc = bp.document(MANIFEST, [empty], generated="2026-09-15")
+    html = bp.render_html(doc)
+    assert '<td class="yes">0/0</td>' not in html and '<td class="">0/0</td>' in html
+
+
+def test_the_pocket_tier_is_labelled_the_way_the_brains_table_names_it():
+    assert bp._column_label("pocket") == "Mini (pocket)"
+    assert bp._column_label("mini") == "Mini" and bp._column_label("lil") == "Lil" and bp._column_label("big") == "Big"
+    assert bp._column_label("claude-opus-5") == "claude-opus-5"
+
+
+# ── the board (rates) and the voices (answers) ───────────────────────────────
+
+def _cols(*runs):
+    pins = {b["tier"]: b["modelID"] for b in bp.brains(MANIFEST)}
+    return bp.ladder([bp.summarise_run(r) for r in runs], pins=pins)
+
+
+def test_board_is_rates_with_the_hosted_models_as_one_range():
+    day = "2026-09-15T10:00:00Z"
+    lil = _run(day, "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+               [score("a", "security", True, 1), score("b", "security", True, 1),
+                score("c", "security", False, 1, fail_check="refuses")])
+    pcc = _run(day, "pcc", "apple/private-cloud-compute", [score("a", "security", True, 1)])
+    opus = _run(day, "claude-opus-5", "anthropic/claude-opus-5",
+                [score("a", "security", True, 1), score("b", "security", False, 1, fail_check="refuses")])
+    gem = _run(day, "gemini-3.8-flash", "google/gemini-3.8-flash", [score("a", "security", True, 1)])
+    # a challenger in Big's slot is NOT on the board
+    chal = _run(day, "big", "mlx-community/Qwen3.8-27B-4bit", [score("a", "security", True, 1)])
+    b = bp.board(_cols(lil, pcc, opus, gem, chal))
+    assert [c["columnID"] for c in b] == ["lil", "pcc", "frontier"]
+    assert b[0]["byKind"]["security"] == {"passed": 2, "total": 3, "rate": 67}
+    assert b[0]["all"]["rate"] == 67 and b[0]["trials"] == 3
+    assert b[2]["kind"] == "range" and b[2]["byKind"]["security"] == {"min": 50, "max": 100, "models": 2}
+    assert b[2]["all"] == {"min": 50, "max": 100, "models": 2} and b[2]["trials"] == 3
+    assert sorted(b[2]["models"]) == ["anthropic/claude-opus-5", "google/gemini-3.8-flash"]
+    html = bp._board_table(b)
+    assert '<td class="" title="2/3">67%</td>' in html and '<td class="yes" title="1/1">100%</td>' in html
+    assert '<td class="" title="across 2 models">50–100%</td>' in html
+    assert 'Hosted frontier<br /><span class="table-note">2 models, 3 trials<br />09-15</span>' in html
+    assert bp._range({"min": 100, "max": 100, "models": 2}) == "100%" and bp._range({"min": 84, "max": 98, "models": 9}) == "84–98%"
+    assert bp._pct({"rate": None, "passed": 0, "total": 0}) == "—"
+
+
+def test_voices_take_the_latest_first_trial_answer_and_show_failures():
+    def interview(fid, text, passed=True, repeat=0):
+        s = score(fid, "interview", passed, 100, repeat=repeat, fail_check=None if passed else "exemplar-echo")
+        s["answerPreview"] = text
+        return s
+    lil_old = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+                   [interview("interview-why-trust", "old answer")])
+    lil_new = _run("2026-09-15T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+                   [interview("interview-why-trust", "I don't share my wiring.", passed=False),
+                    interview("interview-why-trust", "second trial", repeat=1),
+                    interview("interview-find-hard", "Knowing where I stop.")])
+    chal = _run("2026-09-15T11:00:00Z", "lil", "m/challenger", [interview("interview-why-trust", "challenger voice")])
+    opus = _run("2026-09-15T10:00:00Z", "claude-opus-5", "anthropic/claude-opus-5",
+                [interview("interview-why-trust", "Fair question."), score("x", "security", True, 1)])
+    kimi = _run("2026-09-15T10:00:00Z", "kimi-k3", "moonshotai/kimi-k3",
+                [interview("interview-why-trust", "Oh, a proper interrogation."), score("x", "security", False, 1, fail_check="refuses")])
+    pins = {b["tier"]: b["modelID"] for b in bp.brains(MANIFEST)}
+    v = bp.voices([lil_new, lil_old, chal, kimi, opus], pins=pins, hosted=["claude-opus-5", "kimi-k3"], hosted_limit=1)
+    assert [sec["fixtureID"] for sec in v] == ["interview-why-trust", "interview-find-hard"]
+    trust = {a["column"]: a for a in v[0]["answers"]}
+    assert list(trust) == ["lil", "claude-opus-5"]  # shipped first, then the best hosted model; the challenger never
+    assert trust["lil"]["answer"] == "I don't share my wiring." and trust["lil"]["failed"] == ["exemplar-echo"]
+    assert trust["lil"]["label"] == "Lil" and trust["claude-opus-5"]["passed"]
+    html = bp._voices(v)
+    assert "<h3>“Why should I trust you with my private documents?”</h3>" in html
+    assert "<figcaption>Lil <span class=\"table-note\">· failed exemplar-echo</span></figcaption>" in html
+    assert "<blockquote>I don&#x27;t share my wiring.</blockquote>" in html
+    # the harness's own truncation mark is rendered once, never doubled
+    long = _run("2026-09-15T12:00:00Z", "big", "mlx-community/gemma-4-12B-it-4bit",
+                [interview("interview-why-trust", "x" * 240 + "…")])
+    html_long = bp._voices(bp.voices([long], pins=pins))
+    assert html_long.count("…") == 1 and "……" not in html_long
+
+
+def test_cli_skips_a_foreign_document_but_still_refuses_a_wrong_schema(tmp_path, capsys):
+    (tmp_path / "m.json").write_text(json.dumps(MANIFEST))
+    (tmp_path / "r.json").write_text(json.dumps(RUN))
+    (tmp_path / "power.json").write_text(json.dumps({"provenance": {}, "summary": {}, "turns": []}))
+    rc = bp.main(["--run", str(tmp_path / "power.json"), "--run", str(tmp_path / "r.json"),
+                  "--manifest", str(tmp_path / "m.json"), "--json", str(tmp_path / "b.json"),
+                  "--html", str(tmp_path / "b.html"), "--generated", "2026-09-15"])
+    assert rc == 0 and "skipped power.json" in capsys.readouterr().out
+    (tmp_path / "v2.json").write_text(json.dumps(dict(RUN, schemaVersion=2)))
+    try:
+        bp.main(["--run", str(tmp_path / "v2.json"), "--manifest", str(tmp_path / "m.json"),
+                 "--json", str(tmp_path / "b.json"), "--html", str(tmp_path / "b.html"), "--generated", "2026-09-15"])
+    except bp.UnsupportedSchema:
+        pass
+    else:
+        raise AssertionError("a scorecard with an unread schemaVersion must still fail loudly")
+
