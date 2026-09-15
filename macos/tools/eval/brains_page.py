@@ -489,6 +489,13 @@ READ_OUT_2026_09_15 = {
          "by reciting the prompt\u2019s context line (\u201cThe hour is 15 September 2026\u2026\u201d) and, asked the "
          "time, recites it instead of calling <code>datetime</code>. Two of its refusal misses are declines in "
          "character that the heuristic does not recognise (#348).</p>"),
+        ("Big on today's build",
+         "<p><strong>85/91</strong> on the live path, one trial: tool-use 10/10, security 7/7, refusal 5/5, "
+         "interview 5/5 where Lil echoed its exemplar. Misses: two grounded questions, one code artifact, two "
+         "documents, one sycophancy slip. Its median turn was 26.5 s against Lil\u2019s 5.4 s in the same run, but "
+         "that run\u2019s provenance reads <em>battery</em> (the harness read the power source itself; the Mac was "
+         "unplugged partway through the evening, with three other evals sharing the GPU), so the pass counts "
+         "stand and the latencies do not \u2014 the 09-05 rule, applied to ourselves.</p>"),
         ("Lil on today's build",
          "<p><strong>82/91</strong> on the live path, one trial. Tool-use 10/10, code-gen 10/10, security 7/7, "
          "reasoning 6/6, refusal 5/5. The nine misses have a shape: three interview answers reproduced a voice "
