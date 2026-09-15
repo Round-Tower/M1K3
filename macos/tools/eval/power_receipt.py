@@ -200,11 +200,11 @@ def drive(questions: list[str], out: Path, brain: str, idle_seconds: int, m1k3: 
 def report(log: Path, turns_path: Path, out: Path | None, provenance: dict) -> dict:
     doc = json.loads(turns_path.read_text())
     samples = parse_powermetrics(log.read_text())
-    stats = idle_stats(samples, datetime.fromisoformat(doc["idle_window"]["start"]), datetime.fromisoformat(doc["idle_window"]["end"]))
+    i0, i1 = datetime.fromisoformat(doc["idle_window"]["start"]), datetime.fromisoformat(doc["idle_window"]["end"])
     turns = [Turn.from_json(t) for t in doc["turns"]]
     prov = {"brain": doc.get("brain"), "samples": len(samples), "log": log.name, **provenance}
-    r = receipt(turns, samples, stats["idle_watts"], prov)
-    r["summary"].update(stats)   # the was-it-quiet call, machine-checkable
+    r = receipt(turns, samples, idle_watts(samples, i0, i1), prov)   # bill against the unrounded median
+    r["summary"].update(idle_stats(samples, i0, i1))                  # round for display only
     if out:
         out.write_text(json.dumps(r, indent=2, ensure_ascii=False) + "\n")
     s = r["summary"]

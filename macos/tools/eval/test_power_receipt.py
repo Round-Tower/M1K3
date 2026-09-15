@@ -96,6 +96,19 @@ def test_receipt_summary_takes_the_median_across_turns_and_names_the_power_sourc
     json.dumps(r)  # serialisable as written
 
 
+def test_report_bills_against_the_unrounded_idle_median(tmp_path):
+    # idle samples at 1.1044 / 1.1056 W → median 1.105; the display rounds to 1.1, the billing must not
+    log = (_sample("Tue Sep 15 21:00:00 2026 +0100", 1000, 104, 1104)
+           + _sample("Tue Sep 15 21:00:01 2026 +0100", 1000, 106, 1106)
+           + _sample("Tue Sep 15 21:00:02 2026 +0100", 9000, 21000, 30000))
+    (tmp_path / "p.log").write_text(log)
+    turn = pr.Turn("q", "a", datetime(2026, 9, 15, 21, 0, 2, tzinfo=TZ), datetime(2026, 9, 15, 21, 0, 3, tzinfo=TZ))
+    (tmp_path / "t.json").write_text(json.dumps({"brain": "lil", "idle_window": {"start": "2026-09-15T21:00:00+01:00", "end": "2026-09-15T21:00:02+01:00"}, "turns": [turn.to_json()]}))
+    r = pr.report(tmp_path / "p.log", tmp_path / "t.json", None, {})
+    assert r["summary"]["idle_watts"] == 1.1                       # display
+    assert r["turns"][0]["joules_above_idle"] == round((30.0 - 1.105) * 0.50012, 2)   # billing at full precision
+
+
 def test_turn_json_round_trips():
     t = pr.Turn("q", "a", datetime(2026, 9, 15, 21, 0, 2, tzinfo=TZ), datetime(2026, 9, 15, 21, 0, 4, tzinfo=TZ))
     assert pr.Turn.from_json(json.loads(json.dumps(t.to_json()))) == t
