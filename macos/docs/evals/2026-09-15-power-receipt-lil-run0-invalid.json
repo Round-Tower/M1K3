@@ -1,0 +1,128 @@
+{
+  "provenance": {
+    "brain": "lil",
+    "samples": 580,
+    "log": "lil-2026-09-15.log",
+    "valid": false,
+    "why_invalid": "the Mac was not idle: another Claude session ran xcodebuild test (M1K3-Tests, a nine-model remote eval) throughout, M1K3 itself sat at ~49% CPU beside WindowServer at ~51%, and the GPU drew a steady ~28 W in and out of answers; the idle window read median 42.8 W (min 18.1, max 76.4) where a quiet M1 Max reads single digits, so the answers never rose clearly above the floor",
+    "machine": "Apple M1 Max, 64 GB",
+    "os": "macOS 27.0",
+    "power_source": "ac",
+    "powermode": 2,
+    "app": "M1K3 1.0.0 (build 362 tree, installed)",
+    "brain_model": "Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+    "sampler": "powermetrics cpu_power,gpu_power -i 500",
+    "questions": "the tool's built-in ten"
+  },
+  "summary": {
+    "turns": 10,
+    "idle_watts": 42.78,
+    "sample_interval_seconds": 1.0,
+    "median_wh_per_answer": 0.0544,
+    "mean_wh_per_answer": 0.05295,
+    "median_seconds_per_answer": 13.34,
+    "total_wh_above_idle": 0.52948
+  },
+  "turns": [
+    {
+      "question": "In one sentence, what is a knowledge graph?",
+      "answer_chars": 253,
+      "seconds": 14.54,
+      "samples": 28,
+      "mean_watts": 48.67,
+      "peak_watts": 110.89,
+      "joules_above_idle": 249.76,
+      "wh_above_idle": 0.06938
+    },
+    {
+      "question": "Give me three tips for focusing on a long task.",
+      "answer_chars": 810,
+      "seconds": 25.03,
+      "samples": 49,
+      "mean_watts": 45.69,
+      "peak_watts": 75.81,
+      "joules_above_idle": 178.0,
+      "wh_above_idle": 0.04945
+    },
+    {
+      "question": "Explain what a hash function is, briefly.",
+      "answer_chars": 758,
+      "seconds": 12.34,
+      "samples": 24,
+      "mean_watts": 42.88,
+      "peak_watts": 72.47,
+      "joules_above_idle": 55.57,
+      "wh_above_idle": 0.01544
+    },
+    {
+      "question": "What's a good name for a fox who fixes computers? One or two suggestions.",
+      "answer_chars": 260,
+      "seconds": 6.98,
+      "samples": 13,
+      "mean_watts": 59.88,
+      "peak_watts": 70.71,
+      "joules_above_idle": 222.29,
+      "wh_above_idle": 0.06175
+    },
+    {
+      "question": "Summarise the plot of Frankenstein in two sentences.",
+      "answer_chars": 432,
+      "seconds": 18.4,
+      "samples": 37,
+      "mean_watts": 49.54,
+      "peak_watts": 72.78,
+      "joules_above_idle": 252.74,
+      "wh_above_idle": 0.07021
+    },
+    {
+      "question": "How do I boil an egg so the yolk is jammy?",
+      "answer_chars": 735,
+      "seconds": 14.34,
+      "samples": 28,
+      "mean_watts": 44.16,
+      "peak_watts": 66.34,
+      "joules_above_idle": 99.02,
+      "wh_above_idle": 0.02751
+    },
+    {
+      "question": "What's the difference between weather and climate?",
+      "answer_chars": 369,
+      "seconds": 10.32,
+      "samples": 22,
+      "mean_watts": 55.63,
+      "peak_watts": 86.87,
+      "joules_above_idle": 357.8,
+      "wh_above_idle": 0.09939
+    },
+    {
+      "question": "Write a haiku about a quiet machine.",
+      "answer_chars": 79,
+      "seconds": 16.52,
+      "samples": 31,
+      "mean_watts": 49.67,
+      "peak_watts": 55.76,
+      "joules_above_idle": 213.64,
+      "wh_above_idle": 0.05935
+    },
+    {
+      "question": "Why is the sky blue? Keep it short.",
+      "answer_chars": 284,
+      "seconds": 10.24,
+      "samples": 20,
+      "mean_watts": 47.82,
+      "peak_watts": 72.2,
+      "joules_above_idle": 154.69,
+      "wh_above_idle": 0.04297
+    },
+    {
+      "question": "List four uses for a Raspberry Pi.",
+      "answer_chars": 1249,
+      "seconds": 12.29,
+      "samples": 26,
+      "mean_watts": 45.17,
+      "peak_watts": 81.03,
+      "joules_above_idle": 122.5,
+      "wh_above_idle": 0.03403
+    }
+  ]
+}
