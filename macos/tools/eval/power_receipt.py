@@ -65,10 +65,11 @@ _MW = re.compile(r"^(CPU Power|GPU Power|ANE Power|Combined Power \(CPU \+ GPU \
 
 @dataclass(frozen=True)
 class Sample:
-    at: datetime
+    at: datetime          # whole-second stamp — two `-i 500` samples share one
     watts: float
     cpu_watts: float
     gpu_watts: float
+    elapsed_s: float      # this sample's own duration, from its header's "(NNNms elapsed)"
 
 
 @dataclass(frozen=True)
@@ -104,33 +105,45 @@ def parse_powermetrics(text: str) -> list[Sample]:
             continue
         at = datetime.strptime(h.group(1), "%a %b %d %H:%M:%S %Y %z")
         combined = vals.get("Combined Power (CPU + GPU + ANE)", vals["CPU Power"] + vals["GPU Power"] + vals.get("ANE Power", 0))
-        out.append(Sample(at, combined / 1000.0, vals["CPU Power"] / 1000.0, vals["GPU Power"] / 1000.0))
+        out.append(Sample(at, combined / 1000.0, vals["CPU Power"] / 1000.0, vals["GPU Power"] / 1000.0, float(h.group(2)) / 1000.0))
     return out
+
+
+def _window(samples: list[Sample], start: datetime, end: datetime) -> list[Sample]:
+    window = [s for s in samples if start <= s.at < end]
+    if not window:
+        raise SystemExit(f"no powermetrics samples in the idle window {start.isoformat()} → {end.isoformat()}")
+    return window
 
 
 def idle_watts(samples: list[Sample], start: datetime, end: datetime) -> float:
     """Median package watts over [start, end) — the machine's cost of existing."""
-    window = [s.watts for s in samples if start <= s.at < end]
-    if not window:
-        raise SystemExit(f"no powermetrics samples in the idle window {start.isoformat()} → {end.isoformat()}")
-    return statistics.median(window)
+    return statistics.median(s.watts for s in _window(samples, start, end))
+
+
+def idle_stats(samples: list[Sample], start: datetime, end: datetime) -> dict:
+    """The idle window as numbers a reader can judge without the raw log: median, min, max, count.
+    A max more than a few watts above the median means the Mac was not quiet."""
+    w = [s.watts for s in _window(samples, start, end)]
+    return {"idle_watts": round(statistics.median(w), 2), "idle_min_watts": round(min(w), 2), "idle_max_watts": round(max(w), 2), "idle_samples": len(w)}
 
 
 def _interval(samples: list[Sample]) -> float:
-    if len(samples) < 2:
-        return 1.0
-    gaps = sorted((b.at - a.at).total_seconds() for a, b in zip(samples, samples[1:]))
-    return gaps[len(gaps) // 2]
+    """Median sample duration by the samples' own headers. Timestamps are whole seconds and
+    cannot give this; and under contention powermetrics' loop slips, so a run captured at
+    -i 500 that reports well above 0.5 s here was fighting for the cores."""
+    return statistics.median(s.elapsed_s for s in samples) if samples else 1.0
 
 
 def receipt(turns: list[Turn], samples: list[Sample], idle_watts: float, provenance: dict | None = None) -> dict:
-    """Per-turn energy above idle, integrated over each turn's [start, end) window."""
+    """Per-turn energy above idle, integrated over each turn's [start, end) window — each sample
+    weighted by its own duration, never by an assumed interval."""
     dt = _interval(samples)
     rows = []
     for t in turns:
         inside = [s for s in samples if t.start <= s.at < t.end]
         seconds = (t.end - t.start).total_seconds()
-        joules = sum(max(s.watts - idle_watts, 0.0) * dt for s in inside)
+        joules = sum(max(s.watts - idle_watts, 0.0) * s.elapsed_s for s in inside)
         mean_w = statistics.fmean(s.watts for s in inside) if inside else 0.0
         peak_w = max((s.watts for s in inside), default=0.0)
         rows.append({
@@ -187,10 +200,11 @@ def drive(questions: list[str], out: Path, brain: str, idle_seconds: int, m1k3: 
 def report(log: Path, turns_path: Path, out: Path | None, provenance: dict) -> dict:
     doc = json.loads(turns_path.read_text())
     samples = parse_powermetrics(log.read_text())
-    idle = idle_watts(samples, datetime.fromisoformat(doc["idle_window"]["start"]), datetime.fromisoformat(doc["idle_window"]["end"]))
+    stats = idle_stats(samples, datetime.fromisoformat(doc["idle_window"]["start"]), datetime.fromisoformat(doc["idle_window"]["end"]))
     turns = [Turn.from_json(t) for t in doc["turns"]]
     prov = {"brain": doc.get("brain"), "samples": len(samples), "log": log.name, **provenance}
-    r = receipt(turns, samples, idle, prov)
+    r = receipt(turns, samples, stats["idle_watts"], prov)
+    r["summary"].update(stats)   # the was-it-quiet call, machine-checkable
     if out:
         out.write_text(json.dumps(r, indent=2, ensure_ascii=False) + "\n")
     s = r["summary"]

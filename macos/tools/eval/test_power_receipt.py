@@ -30,13 +30,16 @@ LOG = (
 )
 
 
-def test_parse_reads_one_combined_watts_per_sample_with_its_timestamp():
+def test_parse_reads_one_combined_watts_per_sample_with_its_timestamp_and_elapsed():
     samples = pr.parse_powermetrics(LOG)
     assert len(samples) == 5
     assert samples[0].at == datetime(2026, 9, 15, 21, 0, 0, tzinfo=TZ)
     assert samples[0].watts == 1.1
     assert samples[2].watts == 30.0
     assert samples[2].cpu_watts == 9.0 and samples[2].gpu_watts == 21.0
+    # the header's own "(500.12ms elapsed)" is the sample's duration — timestamps are
+    # whole seconds, so two -i 500 samples share one; the header is the only truth
+    assert samples[0].elapsed_s == 0.50012
 
 
 def test_parse_falls_back_to_cpu_plus_gpu_when_no_combined_line():
@@ -56,6 +59,12 @@ def test_idle_baseline_is_the_median_of_the_idle_window():
     assert idle == 1.1
 
 
+def test_idle_stats_make_the_was_it_quiet_call_machine_checkable():
+    samples = pr.parse_powermetrics(LOG)
+    stats = pr.idle_stats(samples, start=datetime(2026, 9, 15, 21, 0, 0, tzinfo=TZ), end=datetime(2026, 9, 15, 21, 0, 3, tzinfo=TZ))
+    assert stats == {"idle_watts": 1.1, "idle_min_watts": 1.1, "idle_max_watts": 30.0, "idle_samples": 3}
+
+
 def test_receipt_charges_only_the_energy_above_idle_inside_the_turn():
     samples = pr.parse_powermetrics(LOG)
     turn = pr.Turn(
@@ -64,14 +73,16 @@ def test_receipt_charges_only_the_energy_above_idle_inside_the_turn():
     )
     r = pr.receipt([turn], samples, idle_watts=1.1)
     (t,) = r["turns"]
-    # two 1-second samples at 30.0 W above an idle of 1.1 W → 57.8 J = 0.01606 Wh; the 21:00:04 sample is outside [start, end)
+    # two samples at 30.0 W, each 0.50012 s long by its own header, above an idle of 1.1 W
+    # → 2 × 28.9 × 0.50012 = 28.907 J = 0.00803 Wh; the 21:00:04 sample is outside [start, end)
     assert t["seconds"] == 2.0
-    assert round(t["joules_above_idle"], 1) == 57.8
-    assert round(t["wh_above_idle"], 5) == 0.01606
+    assert round(t["joules_above_idle"], 2) == 28.91
+    assert round(t["wh_above_idle"], 5) == 0.00803
     assert round(t["mean_watts"], 1) == 30.0
     assert t["answer_chars"] == 200
     assert r["summary"]["idle_watts"] == 1.1
-    assert round(r["summary"]["median_wh_per_answer"], 5) == 0.01606
+    assert r["summary"]["sample_interval_seconds"] == 0.50012
+    assert round(r["summary"]["median_wh_per_answer"], 5) == 0.00803
 
 
 def test_receipt_summary_takes_the_median_across_turns_and_names_the_power_source():
@@ -80,7 +91,7 @@ def test_receipt_summary_takes_the_median_across_turns_and_names_the_power_sourc
     b = pr.Turn("q2", "y", datetime(2026, 9, 15, 21, 0, 2, tzinfo=TZ), datetime(2026, 9, 15, 21, 0, 4, tzinfo=TZ))
     r = pr.receipt([a, b], samples, idle_watts=1.1, provenance={"brain": "lil", "power_source": "ac"})
     assert r["summary"]["turns"] == 2
-    assert round(r["summary"]["median_wh_per_answer"], 5) == round((0.00803 + 0.01606) / 2, 5)
+    assert round(r["summary"]["median_wh_per_answer"], 5) == round((0.00401 + 0.00803) / 2, 5)
     assert r["provenance"]["brain"] == "lil" and r["provenance"]["power_source"] == "ac"
     json.dumps(r)  # serialisable as written
 

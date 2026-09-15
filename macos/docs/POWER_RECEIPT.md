@@ -40,14 +40,22 @@ spirit and wrong in number. This document is the number.
 
 **A run is valid only on a quiet Mac.** No builds or test runs, no other session working, the M1K3
 window minimised or the avatar off (a mounted RealityView renders at display rate), nothing else
-animating. The idle window should read single-digit watts on an M1 Max; if its max is more than a
-few watts above its median, stop and note why.
+animating. The idle window should read single-digit watts on an M1 Max; the receipt's summary
+carries `idle_min_watts` / `idle_max_watts` / `idle_samples` so the call is machine-checkable — if
+the max is more than a few watts above the median, stop and note why.
+
+**Two things about time.** powermetrics stamps each sample to the whole second, so at `-i 500`
+two samples share one timestamp; the sample's duration is taken from its own header
+(`(510.76ms elapsed)`), never from the gap between timestamps, and that is what the energy is
+integrated over. `summary.sample_interval_seconds` is the median of those durations. Under
+contention powermetrics' own loop slips, so a run captured at `-i 500` that reports an interval
+well above 0.5 s was fighting for the cores — one more signal the run was not quiet.
 
 ## Runs
 
 | Run | Date | Brain | Valid | Idle W | Median Wh / answer | Note |
 |---|---|---|---|---|---|---|
-| 0 | 2026-09-15 | Lil (Qwen3-4B DWQ) | **no** | 42.8 (min 18.1, max 76.4) | 0.054 (not to be quoted) | Another session ran `xcodebuild test` + a nine-model remote eval throughout; M1K3 at ~49 % CPU beside WindowServer; GPU a steady ~28 W in and out of answers. The answers never rose clearly above the floor. Method proven, number not. |
+| 0 | 2026-09-15 | Lil (Qwen3-4B DWQ) | **no** | 42.8 (min 18.1, max 76.4) | 0.028 (not to be quoted) | Another session ran `xcodebuild test` + a nine-model remote eval throughout; M1K3 at ~49 % CPU beside WindowServer; GPU a steady ~28 W in and out of answers. The answers never rose clearly above the floor. Method proven, number not. (The first cut of the tool billed each sample a whole second and read 0.054; the per-header duration fold halved it — the #353 review's interval catch.) |
 
 The first valid run publishes to `/brains` beside tokens per second, and only then does the word
 "eco" go back on the site and into the store copy. Until then the honest line is the one 1.0
