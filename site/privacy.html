@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Is M1K3 Really Private? — The Privacy Architecture</title>
-<meta name="description" content="What runs on your Mac, what ever touches the network, and how to verify it. M1K3's privacy is architectural: inference, voice, embeddings, and storage are on-device by default; the exceptions, including opt-in Private Cloud Compute, are documented here." />
+<meta name="description" content="What runs on your Mac, what ever touches the network, and how to verify it. M1K3's privacy is architectural: inference, voice, embeddings, and storage are on-device; the three exceptions are documented here, and so is Private Cloud Compute — an opt-in rung for a later release, not in 1.0." />
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 <link rel="canonical" href="https://m1k3.app/privacy" />
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-09-09"
+  "dateModified": "2026-09-15"
 }
 </script>
 <script type="application/ld+json">
@@ -45,15 +45,15 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Is M1K3 really private?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes — by architecture, not by policy. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the store encrypted under a Keychain-held key. The network is used in exactly four documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, an optional web-search tool that is off by default, app updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes — by architecture, not by policy. M1K3 runs the whole AI stack on your Mac: LLM inference (Gemma and Qwen via MLX, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the store encrypted under a Keychain-held key. The network is used in exactly three documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, an optional web-search tool that is off by default, and app updates via the channel you installed from. No telemetry, no account, no analytics. A fourth, Private Cloud Compute, is built and arrives opt-in in a later release; it is not in the 1.0 build, so today there is no cloud path at all." } },
     { "@type": "Question", "name": "Does M1K3 ever connect to the internet?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Four documented cases, all user-initiated: (1) downloading model weights from Hugging Face, once, only when you opt into the Lil or Big brain — the default Mini brain is Apple's built-in on-device model, nothing to download; (2) the optional web-search and page-reading agent tools, off by default behind a privacy toggle; (3) updates, via TestFlight or by downloading a new DMG from GitHub — the app has no self-updater; (4) Private Cloud Compute, opt-in and off by default — one message at a time, only when you turn it on. With Private Cloud Compute off, conversations, documents, voice, and calls never leave the Mac." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Three documented cases, all user-initiated: (1) downloading model weights from Hugging Face, once, only when you opt into the Lil or Big brain — the default Mini brain is Apple's built-in on-device model, nothing to download; (2) the optional web-search and page-reading agent tools, off by default behind a privacy toggle; (3) updates, via TestFlight or by downloading a new DMG from GitHub — the app has no self-updater. Conversations, documents, voice, and calls never leave the Mac. A fourth, Private Cloud Compute, is built and arrives opt-in in a later release — off by default, one message at a time, only when you turn it on. It is not in the 1.0 build." } },
     { "@type": "Question", "name": "Where is M1K3's data stored?",
       "acceptedAnswer": { "@type": "Answer", "text": "In the app's macOS sandbox container, in a GRDB store encrypted with a key held in your Keychain. Documents enter only when you explicitly open or drop them; call transcription is consent-gated and encrypted at rest; the memory store has a forget primitive so consent stays revocable." } },
     { "@type": "Question", "name": "How can I verify M1K3's privacy claims?",
-      "acceptedAnswer": { "@type": "Answer", "text": "M1K3's source is public (source-available under the Functional Source License, FSL-1.1-ALv2), so the claims are inspectable rather than takeable on faith: read the sandbox entitlements file in the repo (each entitlement carries a signed comment explaining why it exists), print the shipped app's entitlements with codesign, watch it with a network monitor like Little Snitch, or pull the ethernet cable mid-conversation — with Private Cloud Compute off, the default, M1K3 doesn't notice." } },
-    { "@type": "Question", "name": "What happens if I turn on Private Cloud Compute?",
-      "acceptedAnswer": { "@type": "Answer", "text": "A cloud button appears next to the message field. Tap it and M1K3 shows exactly what's about to leave — the message, plus the conversation so far only if you tick it, never memories, documents, tools, calendar, location, or your profile — before it sends to Apple's Private Cloud Compute. Apple's own guarantee is that PCC uses that data only to perform the operations requested by the user and retains no user data after the response is returned; every PCC answer is labelled in the chat. Leave the switch off, the default, and none of this applies." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "M1K3's source is public (source-available under the Functional Source License, FSL-1.1-ALv2), so the claims are inspectable rather than takeable on faith: read the sandbox entitlements file in the repo (each entitlement carries a signed comment explaining why it exists), print the shipped app's entitlements with codesign, watch it with a network monitor like Little Snitch, or pull the ethernet cable mid-conversation — M1K3 doesn't notice." } },
+    { "@type": "Question", "name": "Does M1K3 use Apple's Private Cloud Compute?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Not in 1.0 — the shipping build has no cloud path at all. A Private Cloud Compute rung is built and arrives opt-in in a later release. When it arrives it will be off by default; turning it on in Settings adds a cloud button next to the message field, and tapping that will show exactly what is about to leave — the message, plus the conversation so far only if you tick it, never memories, documents, tools, calendar, location, or your profile — before it sends one message at a time to Apple's Private Cloud Compute. Apple's own guarantee is that PCC uses that data only to perform the operations requested by the user and that no user data is retained in any form after the response is returned; every PCC answer will be labelled in the chat. Left off, the app behaves exactly as 1.0 does." } }
   ]
 }
 </script>
@@ -81,11 +81,11 @@
   <header class="article-head">
     <span class="label">// privacy architecture</span>
     <h1>Is M1K3 really private?</h1>
-    <p class="meta">Updated 2026-09-09 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
+    <p class="meta">Updated 2026-09-15 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: yes — by architecture, not by promise.</strong> M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to <code>127.0.0.1</code> and is off by default. The network is used in <strong>exactly four documented cases</strong>: a one-time model-weights download from Hugging Face when you opt into a bigger brain, an optional web-search tool that is off by default, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.</p>
+    <p><strong>Short answer: yes — by architecture, not by promise.</strong> M1K3 runs the whole AI stack on your Mac: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to <code>127.0.0.1</code> and is off by default. The network is used in <strong>exactly three documented cases</strong>: a one-time model-weights download from Hugging Face when you opt into a bigger brain, an optional web-search tool that is off by default, and updates via the channel you installed from. No telemetry, no account, no analytics. Pull the ethernet cable mid-conversation and M1K3 doesn't notice. <em>A fourth, Private Cloud Compute, is built and arrives opt-in in a later release; it is not in the 1.0 build, so today there is no cloud path at all.</em></p>
   </div>
 
   <h2>What runs where?</h2>
@@ -112,8 +112,8 @@
         <li class="crossing"><strong>Model weights, once</strong> Downloaded from Hugging Face only when you opt into the Lil or Big brain. The default Mini brain is Apple's built-in model — nothing to download.</li>
         <li class="crossing"><strong>Web search &amp; page reading (optional)</strong> Agent tools behind a privacy toggle, off by default. Web off means web off.</li>
         <li class="crossing"><strong>Updates</strong> Via TestFlight or a new DMG from GitHub Releases. The app has no self-updater phoning home.</li>
-        <li class="crossing"><strong>Private Cloud Compute (optional, off by default)</strong> A cloud button next to the message field, visible only once you turn it on in Settings. Sends one message at a time to Apple's Private Cloud Compute, after a consent sheet; every PCC answer is labelled.</li>
-        <li><strong>And that's it.</strong> No telemetry, no analytics, no account, no crash reporting. With Private Cloud Compute off — the default — your prompts, documents, voice, and calls are not on this list, by construction. Turn it on and only the one message you send (plus the conversation so far, if you tick it) ever crosses — never memories, documents, tools, calendar, location, or your profile.</li>
+        <li><strong>And that's it.</strong> No telemetry, no analytics, no account, no crash reporting. Your prompts, documents, voice, and calls are not on this list — by construction.</li>
+        <li><strong>Later: Private Cloud Compute (opt-in, off by default)</strong> Built, and not in the 1.0 build — today there is no cloud path at all. When it arrives, a cloud button next to the message field, visible only once you turn it on in Settings, will send one message at a time to Apple's Private Cloud Compute after a consent sheet; every PCC answer labelled.</li>
       </ul>
       <p class="wrw-note">every crossing above is documented in the repo</p>
     </section>
@@ -125,14 +125,14 @@
     <li><strong>Model downloads (one-time, opt-in).</strong> M1K3 starts on Mini — Apple's on-device Foundation Model, instant, nothing to download. If you choose a bigger local brain (Lil or Big) or on-device Whisper speech models, the weights download once from <code>huggingface.co</code>; after that, inference runs fully offline. The app's outbound-network entitlement exists for this — the <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements">entitlements file</a> says so in a signed comment.</li>
     <li><strong>The web tools (opt-in, off by default).</strong> The local agent has web-search and page-reading tools behind a privacy toggle. When the toggle is off, the agent has no web tools at all — it can't quietly decide to search. When you turn it on, your search queries go to the web, as searches do.</li>
     <li><strong>Updates (via the channel you chose).</strong> There is no Sparkle-style self-updater inside the app. TestFlight builds update through Apple's infrastructure; the DMG updates when you download a new one from <a href="https://github.com/Round-Tower/M1K3/releases">GitHub Releases</a>; a source build updates when you pull and rebuild.</li>
-    <li><strong>Private Cloud Compute (opt-in, off by default).</strong> Turn it on in Settings and a cloud button appears next to the message field. Tap it and a consent sheet shows exactly what's about to go — the message, plus the conversation so far only if you tick that too — before it sends one message at a time to Apple's Private Cloud Compute. Never your memories, documents, tools, calendar, location, or profile. Every PCC answer is labelled in the chat; if PCC fails or the quota runs out, the on-device brain answers and says why. Detail below.</li>
   </ol>
+  <p><strong>A fourth, in a later release: Private Cloud Compute (opt-in, off by default).</strong> It is built, and it is not in the 1.0 build — today there is no cloud path at all. When it arrives: turn it on in Settings and a cloud button appears next to the message field; tap it and a consent sheet shows exactly what is about to go — the message, plus the conversation so far only if you tick that too — before it sends one message at a time to Apple's Private Cloud Compute. Never your memories, documents, tools, calendar, location, or profile. Every PCC answer will be labelled in the chat; if PCC fails or the quota runs out, the on-device brain answers and says why. Detail below.</p>
   <p>One adjacent honesty, not a network call M1K3 makes: if you connect a <em>cloud-hosted</em> MCP client to M1K3's loopback server, whatever that client retrieves becomes part of the client's own context and travels wherever its conversations go. Local server, client's rules — the full caveat is on the <a href="/mcp-knowledge-server">MCP page</a>.</p>
 
   <h3>What Apple guarantees about Private Cloud Compute</h3>
-  <p>This is Apple's claim, not ours — read it yourself:</p>
+  <p>For when the rung ships — this is Apple's claim, not ours; read it yourself:</p>
   <blockquote><p>&ldquo;PCC uses that data only to perform the operations requested by the user&rdquo; and &ldquo;no user data is retained in any form after the response is returned.&rdquo;<br><cite>— Apple, <a href="https://security.apple.com/blog/private-cloud-compute/">Private Cloud Compute</a></cite></p></blockquote>
-  <p>M1K3 itself has no servers and never sees or stores your conversations, whether they stay on your Mac or make the one-time trip to PCC. With the switch off — the default — none of this applies.</p>
+  <p>M1K3 itself has no servers and never sees or stores your conversations — true today, when everything stays on your Mac, and still true once the rung ships and a message you choose makes the one-time trip to PCC. Until that release, this section describes a switch the app does not yet have.</p>
 
   <h2>How is data stored on the Mac?</h2>
   <p>Everything lives inside the app's macOS sandbox container. The knowledge and memory stores are GRDB databases encrypted with a key held in your Keychain — one place your knowledge lives, on hardware you own. Documents enter only when you explicitly open or drop them (the sandbox grants read access to user-selected files, nothing broader). Call transcription is consent-gated and encrypted at rest. Memory has a consent primitive going the other way too: <code>forget_memory</code> permanently deletes a fact, so what M1K3 knows stays revocable.</p>
@@ -141,7 +141,7 @@
   <h2>How can you verify any of this?</h2>
   <p>M1K3's source is public — source-available under the <a href="https://github.com/Round-Tower/M1K3/blob/master/LICENSE">Functional Source License</a> (FSL-1.1-ALv2) — which turns this page from marketing into a checklist:</p>
   <ul>
-    <li><strong>Read the entitlements.</strong> The sandbox entitlements file ships in the repo with a signed comment on every grant explaining why it exists — outbound network for model downloads, inbound listening pinned to loopback for the MCP server, mic access for on-device recognition, and Private Cloud Compute gated behind its own developer entitlement. Or print what the shipped app actually carries:</li>
+    <li><strong>Read the entitlements.</strong> The sandbox entitlements file ships in the repo with a signed comment on every grant explaining why it exists — outbound network for model downloads, inbound listening pinned to loopback for the MCP server, mic access for on-device recognition. The App Store build also carries the Private Cloud Compute entitlement Apple granted for the later release; it is inert in 1.0, because no cloud path is compiled in, and the DMG build does not carry it at all. Or print what the shipped app actually carries:</li>
   </ul>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
@@ -150,7 +150,7 @@
 <span class="c">com.apple.security.network.client         → true  # model downloads + opt-in web tools</span>
 <span class="c">com.apple.security.network.server         → true  # the 127.0.0.1 MCP server, off by default</span>
 <span class="c">com.apple.security.device.audio-input     → true  # mic, for on-device speech recognition</span>
-<span class="c">com.apple.developer.private-cloud-compute → true  # the opt-in cloud button, off by default</span></pre></div>
+<span class="c">com.apple.developer.private-cloud-compute → true  # App Store build only; a later release — inert in 1.0</span></pre></div>
   </div>
   <ul>
     <li><strong>Watch the wire.</strong> Run a network monitor (Little Snitch, LuLu) while you chat, ingest documents, and talk to it. After any model download you've opted into, there's nothing to see.</li>
@@ -162,7 +162,7 @@
   <div class="faq-list">
     <details>
       <summary>Does M1K3 send my conversations to a server?</summary>
-      <p>Not by default, and never to a server M1K3 runs — it doesn't have one. Inference, voice, embeddings, and storage are all on-device. If you turn on Private Cloud Compute in Settings, the one message you choose to send — and only that message — goes to Apple's Private Cloud Compute; your documents, memories, and calls are never included.</p>
+      <p>No — and never to a server M1K3 runs, because it doesn't have one. Inference, voice, embeddings, and storage are all on-device, and the 1.0 build has no cloud path at all. When the opt-in Private Cloud Compute rung arrives in a later release, the one message you choose to send — and only that message — will go to Apple's Private Cloud Compute; your documents, memories, and calls will never be included.</p>
     </details>
     <details>
       <summary>Can M1K3 work fully offline?</summary>
@@ -177,8 +177,8 @@
       <p>It binds to <code>127.0.0.1</code> — loopback, unreachable from other machines — and it's off by default in Settings. The honest caveat: what a connected client retrieves enters that client's context, so <a href="/mcp-knowledge-server">connect clients you trust</a>.</p>
     </details>
     <details>
-      <summary>What happens if I turn on Private Cloud Compute?</summary>
-      <p>A cloud button appears next to the message field. Tap it and M1K3 shows you exactly what's about to leave — the message, plus the conversation so far only if you tick it, never your memories, documents, tools, calendar, or location — before it sends to Apple's Private Cloud Compute. Apple's own guarantee: <a href="https://security.apple.com/blog/private-cloud-compute/">&ldquo;no user data is retained in any form after the response is returned.&rdquo;</a> Every PCC answer is labelled; leave the switch off and none of this applies.</p>
+      <summary>Does M1K3 use Apple's Private Cloud Compute?</summary>
+      <p>Not in 1.0 — the shipping build has no cloud path at all. A Private Cloud Compute rung is built and arrives opt-in in a later release. When it arrives it will be off by default; turning it on in Settings adds a cloud button next to the message field, and tapping that will show you exactly what is about to leave — the message, plus the conversation so far only if you tick it, never your memories, documents, tools, calendar, location, or profile — before it sends one message at a time to Apple's Private Cloud Compute. Apple's own guarantee: <a href="https://security.apple.com/blog/private-cloud-compute/">&ldquo;PCC uses that data only to perform the operations requested by the user&rdquo;</a> and &ldquo;no user data is retained in any form after the response is returned.&rdquo; Every PCC answer will be labelled; left off, the app behaves exactly as 1.0 does.</p>
     </details>
   </div>
 
@@ -239,6 +239,18 @@
      page-cta label "// nothing leaves" → "// private by design". dateModified NOT bumped (not
      live). Confidence 0.75 (every claim checked against ADR 0006 and the task's given fact list;
      the Apple quote is copied from the brief, not fetched fresh from Apple's site this session —
-     re-verify at implementation time per the ADR's own instruction). -->
+     re-verify at implementation time per the ADR's own instruction).
+     Review: Kev + claude-fable-5.1, 2026-09-15 — the staged PCC copy above reached master and the live
+     site before the rung: the 1.0 build (361, in App Review today) compiles no cloud path (M1K3_FM27 is
+     unset in every release build; the Settings switch hides without a backend), so "four documented
+     cases" and a present-tense switch were untrue. Back to THREE crossings everywhere it is counted
+     (JSON-LD ×2, the short answer, the diagram, the numbered list); PCC kept as a clearly later-release
+     story — a "Later:" row in the diagram (plain ▪, no longer a → crossing), a forward-looking
+     paragraph after the list, the FAQ pair reworded to "Does M1K3 use Apple's Private Cloud Compute?"
+     → "Not in 1.0…", the Apple-guarantees section framed for when the rung ships, the codesign row
+     annotated App Store build only / inert (the Developer ID lane must never carry the restricted
+     key — M1K3-MAS.entitlements says why). Apple's two quoted sentences verified verbatim on
+     security.apple.com/blog/private-cloud-compute this session (closes the open above). dateModified
+     + Updated 2026-09-15. Confidence now 0.85. -->
 </body>
 </html>
