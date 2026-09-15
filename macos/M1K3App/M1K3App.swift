@@ -152,6 +152,10 @@ struct M1K3App: App {
                 .trackWindowVisibility()
         }
         .windowResizability(.contentSize)
+        // A 3D field deserves room: 16:10 at 1280×800 on first open (the content's
+        // 640×480 minimum was the old default and read as a peephole). A saved
+        // window frame still wins after that (2026-09-15).
+        .defaultSize(width: 1280, height: 800)
 
         // The Agent Interaction Log — a scrollable review of every MCP tool
         // call captured while the opt-in Settings toggle is on (off by

@@ -80,13 +80,18 @@ struct ScreengrabHarnessTests {
         // Lil fronts every plate: the speaking plate is a real turn and Lil carries
         // the persona (Kev, 2026-09-08).
         #expect(recipe.arguments.contains(["-selectedBrain", "lil"]))
-        // The PhosphorFox tile shows its BAKED lattice (Kev, 2026-09-12: "proper Phosphor Fox
-        // wireframe") — shader off; the app tints the lattice phosphor green itself.
+        // The PhosphorFox tile shows its BAKED white lattice (Kev, 2026-09-12 / 09-15) — shader off.
         #expect(recipe.arguments.contains(["-companion.shadingStyle", "off"]))
-        // Other creatures keep the phosphor skin (their baked textures are cartoon fur).
-        #expect(ScreengrabPlate.companionGecko.launchRecipe.arguments.contains(["-companion.shadingStyle", "phosphor"]))
+        // The other creatures show their own baked colour too (Kev, 2026-09-15: "more colour
+        // in the screenshots") — no phosphor skin on any tile.
+        for plate in [ScreengrabPlate.companionGecko, .companionInkfish, .companionColobus] {
+            #expect(plate.launchRecipe.arguments.contains(["-companion.shadingStyle", "off"]))
+        }
         // The voice plates ride the house face → the lattice look too.
         #expect(ScreengrabPlate.voiceSpeaking.launchRecipe.arguments.contains(["-companion.shadingStyle", "off"]))
+        // The constellation plate is the memories recipe under another name.
+        #expect(ScreengrabPlate.constellation.companionID == nil)
+        #expect(ScreengrabPlate.constellation.launchRecipe.environment["M1K3_SCREENGRAB_PLATE"] == "constellation")
         #expect(recipe.arguments.contains(["-hasChosenBrain", "YES"]))
         #expect(recipe.arguments.contains(["-brainServe.enabled", "NO"]))
         #expect(recipe.arguments.contains(["-notchHUD.enabled", "NO"]))
@@ -112,11 +117,12 @@ struct ScreengrabHarnessTests {
     }
 
     @Test func everyPlateInTheCapturePlanHasARawValueMatchingItsFilename() {
-        // CAPTURE-PLAN.md §1 / §2 — the twelve plate files per target.
+        // CAPTURE-PLAN.md §1 / §2 — the twelve plate files per target, plus the
+        // Mac lane's constellation (2026-09-15).
         let plan = [
             "onboarding", "chat", "voice-listening", "voice-speaking", "documents", "memories",
             "brain-at-home", "companion-fox", "companion-gecko", "companion-inkfish",
-            "companion-colobus", "privacy-label",
+            "companion-colobus", "privacy-label", "constellation",
         ]
         #expect(ScreengrabPlate.allCases.map(\.rawValue) == plan)
     }

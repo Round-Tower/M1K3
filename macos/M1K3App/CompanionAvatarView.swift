@@ -54,6 +54,9 @@
 //  Review: Kev + claude-opus-5, 2026-09-15 — `.fit(headroom:includesDepth:)` + `.fitWhole` (#312): the camera
 //  can frame the posed box's near face (`CameraFit` contentDepth). Only the iOS surface opts in; the
 //  notch HUD and `.window` are byte-identical. Confidence 0.8 (verify-by-launch on the phone plates).
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (later) — the lattice tint call is GONE: the green wire,
+//  once it finally landed, was too distracting on the plates (Kev: "the white / original was better"). The
+//  Phosphor Fox shows its baked neutral lattice under every style's baseline again. Confidence 0.9.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -492,11 +495,9 @@ struct CompanionAvatarView: View {
         // materials. CustomMaterial surface shaders are macOS/iOS only — on visionOS
         // the creature simply shows its baked textures (see PhosphorMaterial note).
         #if !os(visionOS)
-            // The Phosphor Fox's baked lattice ships neutral (0xe8e8e8 — a grey
-            // wire under `.off`); tint it phosphor green BEFORE the snapshot so
-            // "Off" IS the proper lattice look (Kev, 2026-09-12: "proper Phosphor
-            // Fox wireframe"), and a live Off↔Phosphor switch restores green.
-            PhosphorMaterial.tintBakedLattice(of: host, companion: companion, glow: PhosphorTreatment.calm)
+            // The Phosphor Fox's baked lattice ships neutral (0xe8e8e8) and stays
+            // that way: the phosphor-green tint was built, seen on screen and
+            // rejected (Kev, 2026-09-15: "too distracting — the white was better").
             // Snapshot the baked materials BEFORE any shader, so cel can adapt the
             // fur texture and Off can restore it on a live switch.
             scene.bakedMaterials = PhosphorMaterial.snapshotMaterials(of: host)
