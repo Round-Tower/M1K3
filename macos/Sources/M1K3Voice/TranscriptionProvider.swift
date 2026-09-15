@@ -18,6 +18,8 @@
 //  PowerEfficiency dropped as MVP-irrelevant.
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `releaseAudioHardware()` requirement with a
 //  no-op default (the Apple transcriber closes its input device between engagements).
+//  Review: Kev + claude-opus-5, 2026-09-15 — `lastFailure` joins the protocol with a nil default
+//  (#311), so a WhisperKit start failure reaches `listenFailed` like the Apple one. Confidence 0.85.
 
 import Foundation
 
@@ -64,9 +66,23 @@ public protocol TranscriptionProvider: Sendable {
     /// dispatch reason as `startListening(finality:)`: the concrete Apple
     /// transcriber's release must be reached through `any TranscriptionProvider`.
     func releaseAudioHardware()
+
+    /// Why the last listen ended without a word, when the RECOGNISER ended it
+    /// (engine start, route, recogniser init) rather than the user or the caller.
+    /// nil means nothing went wrong: silence is not a failure. A requirement with
+    /// a nil default, so both shells read it through `any TranscriptionProvider`
+    /// — the old downcast to `AppleSpeechTranscriber` hid every WhisperKit start
+    /// failure, and the voice loop counted it as an empty listen and parked
+    /// mutely (#311).
+    var lastFailure: String? { get }
 }
 
 public extension TranscriptionProvider {
+    /// Default: nothing to report.
+    var lastFailure: String? {
+        nil
+    }
+
     /// Default: nothing to release — a provider that owns no engine of ours
     /// (WhisperKit builds its own inside the package) has nothing to let go.
     func releaseAudioHardware() {}

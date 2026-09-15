@@ -51,6 +51,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the Phosphor Fox's baked lattice is tinted
 //  phosphor green before the material snapshot, so shader-off shows the proper wireframe.
 //  Confidence 0.75 (verify-by-launch on the tile and the voice plates).
+//  Review: Kev + claude-opus-5, 2026-09-15 — `.fit(headroom:includesDepth:)` + `.fitWhole` (#312): the camera
+//  can frame the posed box's near face (`CameraFit` contentDepth). Only the iOS surface opts in; the
+//  notch HUD and `.window` are byte-identical. Confidence 0.8 (verify-by-launch on the phone plates).
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -174,9 +177,15 @@ final class CompanionScene {
 /// (Kev, 2026-09-12). The maths is `CameraFit.distance` (M1K3Avatar, pinned).
 enum CompanionFraming: Equatable {
     case window
-    case fit(headroom: Float)
+    /// `includesDepth` (#312): frame the posed box's NEAR face, so a turned
+    /// creature's nose — half its depth nearer the camera — can't clip a wide
+    /// view. Off by default: the notch HUD keeps the headroom it was tuned with.
+    case fit(headroom: Float, includesDepth: Bool = false)
 
     static let fit = CompanionFraming.fit(headroom: 1.25)
+    /// The whole creature, near face included — the iOS surfaces, where the
+    /// fox's head ran off the chat hero and the companion tiles (#312).
+    static let fitWhole = CompanionFraming.fit(headroom: 1.25, includesDepth: true)
 }
 
 struct CompanionAvatarView: View {
@@ -261,12 +270,14 @@ struct CompanionAvatarView: View {
                 })
             }
         #else
-            if case let .fit(headroom) = framing {
+            if case let .fit(headroom, includesDepth) = framing {
                 // The camera moves with the view's aspect: the closure runs in
                 // RealityView's update, once the creature's posed extents exist.
                 GeometryReader { geometry in
                     companionCore(fit: { _, _ in
-                        Self.fitCamera(scene: scene, to: geometry.size, headroom: headroom)
+                        Self.fitCamera(
+                            scene: scene, to: geometry.size, headroom: headroom, includesDepth: includesDepth
+                        )
                     })
                 }
             } else {
@@ -281,11 +292,14 @@ struct CompanionAvatarView: View {
         /// height = y; `targetSize` for both before the first load lands).
         /// Writes only when the distance actually changes — this runs every
         /// update tick.
-        private static func fitCamera(scene: CompanionScene, to size: CGSize, headroom: Float) {
+        private static func fitCamera(
+            scene: CompanionScene, to size: CGSize, headroom: Float, includesDepth: Bool
+        ) {
             guard let camera = scene.camera else { return }
             let extents = scene.hostExtents ?? SIMD3(repeating: targetSize)
             guard let distance = CameraFit.distance(
                 contentWidth: extents.x, contentHeight: extents.y,
+                contentDepth: includesDepth ? extents.z : 0,
                 viewWidth: Float(size.width), viewHeight: Float(size.height),
                 verticalFOVDegrees: verticalFOVDegrees, headroom: headroom
             ), distance != scene.cameraDistance else { return }

@@ -50,13 +50,15 @@ echo "▸ M1K3 Mac App Store build — v$VERSION build ${BUILD_NUMBER:-<project 
 echo
 
 # ── Toolchain guard ──────────────────────────────────────────────────────────
-# MAS artifacts come off STABLE Xcode 26.x only — never a beta toolchain
-# (ADR 0001; App Store submission additionally REQUIRES a GA SDK). Bump the
-# "26" deliberately when moving to Xcode 27 GA.
+# MAS artifacts come off STABLE Xcode 27.x only — never a beta toolchain
+# (ADR 0001; App Store submission additionally REQUIRES a GA SDK). Bumped
+# 26 → 27 on 2026-09-15: Xcode 27.0 GA (27A266a) is the installed toolchain
+# and the Golden Gate 1.0 builds come off it. Bump again deliberately at the
+# next GA, never for a beta.
 XCODE_PATH="$(xcode-select -p)"
 XCODE_MAJOR="$(xcodebuild -version | sed -nE 's/^Xcode ([0-9]+).*/\1/p')"
-if [ "$XCODE_MAJOR" != "26" ] || echo "$XCODE_PATH" | grep -qi "beta"; then
-  echo "✗ MAS builds require stable Xcode 26.x — found Xcode ${XCODE_MAJOR:-?} at $XCODE_PATH"
+if [ "$XCODE_MAJOR" != "27" ] || echo "$XCODE_PATH" | grep -qi "beta"; then
+  echo "✗ MAS builds require stable Xcode 27.x — found Xcode ${XCODE_MAJOR:-?} at $XCODE_PATH"
   echo "  Fix: sudo xcode-select -s /Applications/Xcode.app"
   exit 1
 fi

@@ -21,14 +21,28 @@
 //  for the whole model-warm window so the :4242 MCP bind never ran and warm never finished
 //  (one process pegged at 20 GB / 100 % CPU, proven by `sample`). Loading cue is now a static
 //  dim; motion belongs on the button CALayer, not the label. Confidence 0.85 (verify-by-launch).
+//  Review: Kev + claude-opus-5, 2026-09-15 — the breath is back, where the 09-13 note said it belongs:
+//  `StatusItemBreath` animates the NSStatusBarButton's CALayer opacity (a render-server animation, no
+//  per-frame main-thread work, no re-raster, no _adjustLength). The label only asks once per transition
+//  (`.task(id:)`); the static dim stays as the fallback for Reduce Motion or a button it can't find.
+//  Confidence 0.75 (verify-by-launch: sampled main thread during a warm, the glyph captured breathing).
 
+import AppKit
 import Foundation
 import M1K3Avatar
+import os
+import QuartzCore
 import SwiftUI
 
 struct MenuBarLabel: View {
     let env: AppEnvironment?
     let glyphStyle: MenuBarGlyphStyle
+    /// True while the status button's own layer carries the breath, so the
+    /// label drops its static dim (the two together would dim twice).
+    @State private var breathesOnLayer = false
+    /// Read live so a Reduce Motion switch mid-load stops the breath at once,
+    /// not at the next loading transition (review fold, 2026-09-15).
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var treatment: GlyphTreatment {
         guard let env else { return .calm }
@@ -54,7 +68,7 @@ struct MenuBarLabel: View {
 
     var body: some View {
         let treatment = treatment
-        BreathingGlyph(image: glyphStyle.image(), breathes: treatment.breathes)
+        BreathingGlyph(image: glyphStyle.image(), breathes: treatment.breathes && !breathesOnLayer)
             .shadow(
                 color: treatment.dot == .glow ? .glyphDot(treatment.dotColorName) : .clear,
                 radius: treatment.dot == .glow ? 2.5 : 0
@@ -67,6 +81,69 @@ struct MenuBarLabel: View {
                 }
             }
             .accessibilityLabel(accessibilityLabel)
+            // Once per transition, never per frame: the breath itself runs on the
+            // status button's layer in the render server (see StatusItemBreath).
+            .task(id: [treatment.breathes, reduceMotion]) {
+                breathesOnLayer = StatusItemBreath.set(treatment.breathes, reduceMotion: reduceMotion)
+            }
+    }
+}
+
+/// The loading breath on the status-bar glyph, done where motion is cheap: the
+/// NSStatusBarButton's CALayer opacity. A Core Animation animation runs in the
+/// render server — no main-thread work per frame, no re-raster of the label, no
+/// `NSStatusItem _adjustLength`. ★ 2026-09-13: the SwiftUI-label version (a
+/// per-frame TimelineView) livelocked launch; this is the shape that note asked for.
+@MainActor
+enum StatusItemBreath {
+    private static let key = "app.m1k3.statusItem.breath"
+    private static let log = Logger(subsystem: "app.m1k3", category: "launch")
+
+    /// Start or stop the breath. Returns whether it now runs on the button's
+    /// layer — false when stopped, when Reduce Motion is on, or when no status
+    /// button can be found, and the label then keeps its static dim.
+    @discardableResult
+    static func set(_ breathing: Bool, reduceMotion: Bool) -> Bool {
+        let layers = statusButtonLayers()
+        let animate = breathing && !reduceMotion && !layers.isEmpty
+        for layer in layers {
+            if animate {
+                guard layer.animation(forKey: key) == nil else { continue }
+                let breath = CABasicAnimation(keyPath: "opacity")
+                breath.fromValue = 1.0
+                breath.toValue = 0.35
+                breath.duration = 0.9
+                breath.autoreverses = true
+                breath.repeatCount = .infinity
+                breath.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                layer.add(breath, forKey: key)
+            } else {
+                layer.removeAnimation(forKey: key)
+            }
+        }
+        log.notice("status glyph breath \(animate ? "on" : "off", privacy: .public) (buttons: \(layers.count, privacy: .public))")
+        return animate
+    }
+
+    /// MenuBarExtra keeps its NSStatusItem private, but the item's button lives
+    /// in an in-process `NSStatusBarWindow`. Every such window's button, in case
+    /// the system hosts one per display.
+    private static func statusButtonLayers() -> [CALayer] {
+        var layers: [CALayer] = []
+        for window in NSApp.windows where window.className == "NSStatusBarWindow" {
+            guard let content = window.contentView, let button = firstStatusButton(in: content) else { continue }
+            button.wantsLayer = true
+            if let layer = button.layer { layers.append(layer) }
+        }
+        return layers
+    }
+
+    private static func firstStatusButton(in view: NSView) -> NSStatusBarButton? {
+        if let button = view as? NSStatusBarButton { return button }
+        for subview in view.subviews {
+            if let button = firstStatusButton(in: subview) { return button }
+        }
+        return nil
     }
 }
 
@@ -92,7 +169,8 @@ extension Color {
 /// stays true: a self-sustaining livelock that pegged one 20 GB / 100 % CPU
 /// process and never launched. The loading cue is now a single, static dim
 /// (one re-raster on entry, one on exit). Motion, if wanted, belongs on the
-/// status button's CALayer opacity (GPU, no re-layout), never on the label body.
+/// status button's CALayer opacity (GPU, no re-layout), never on the label body —
+/// `StatusItemBreath` does that since 2026-09-15; this dim is its fallback.
 private struct BreathingGlyph: View {
     let image: NSImage
     let breathes: Bool

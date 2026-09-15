@@ -406,7 +406,7 @@ extension AppEnvironment {
                         // empty listen and re-arms into the same wall (twelve
                         // 30 ms listens on a Bluetooth headset, 2026-09-12).
                         if !sawSegments, !Task.isCancelled,
-                           let failure = (provider as? AppleSpeechTranscriber)?.lastFailure
+                           let failure = provider.lastFailure
                         {
                             await MainActor.run { self.voiceLoop?.listenFailed(failure) }
                         }

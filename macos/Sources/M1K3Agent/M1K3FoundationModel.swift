@@ -17,6 +17,9 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.8 (type-checked against
 //  the real macOS 27 SDK; live behaviour is verify-on-device under Xcode 27).
 //  Prior: Kev + claude-opus-4-8
+//  Review: Kev + claude-opus-5, 2026-09-15 — the GA SDK (Xcode 27A266a) renamed two call shapes
+//  the beta (27A5194q) took: `LanguageModelCapabilities(_:)` and `updateUsage(input:output:)`.
+//  Both fixed; the bridge compiles again under M1K3_FM27 on GA. Confidence 0.8.
 //
 
 #if M1K3_FM27
@@ -66,7 +69,7 @@
             if declared.contains(.reasoning) { caps.append(.reasoning) }
             if declared.contains(.vision) { caps.append(.vision) }
             if declared.contains(.guidedGeneration) { caps.append(.guidedGeneration) }
-            return FoundationModels.LanguageModelCapabilities(capabilities: caps)
+            return FoundationModels.LanguageModelCapabilities(caps)
         }
 
         public var executorConfiguration: M1K3FoundationExecutor.Configuration {
@@ -112,11 +115,11 @@
             // Rough output estimate (~4 chars/token) — the collect-then-emit path
             // doesn't tokenise; an estimate beats a misleading zero for debugging.
             let outputEstimate = (collected.answer.count + collected.reasoning.count) / 4
-            let usage = FoundationModels.LanguageModelExecutorGenerationChannel.Usage(
+            // GA (27A266a) takes the two counts directly; the beta took a built `Usage`.
+            await channel.send(.response(action: .updateUsage(
                 input: .init(totalTokenCount: collected.inputTokenCount, cachedTokenCount: 0),
                 output: .init(totalTokenCount: outputEstimate, reasoningTokenCount: collected.reasoning.count / 4)
-            )
-            await channel.send(.response(action: .updateUsage(usage)))
+            )))
         }
 
         /// Pull the user-authored text out of the request's `Transcript`.

@@ -99,6 +99,37 @@ struct TranscriptionRouterTests {
     }
 }
 
+/// A recogniser whose last listen ended wordless because IT failed.
+private struct FailingTranscriber: TranscriptionProvider {
+    let name = "failing"
+    let isAvailable = true
+    let lastFailure: String?
+    func startListening() -> AsyncStream<TranscriptSegment> {
+        AsyncStream { $0.finish() }
+    }
+
+    func stopListening() {}
+}
+
+struct TranscriptionFailureReportingTests {
+    @Test("a listen's failure reason reaches the shell through the protocol, whatever the engine (#311)")
+    func failureReasonIsAProtocolRead() {
+        // The Mac and iOS shells read it by downcasting to AppleSpeechTranscriber,
+        // so a WhisperKit listen that failed to start parked the loop with no
+        // reason on screen — twelve "empty" listens, then silence.
+        let provider: any TranscriptionProvider = FailingTranscriber(
+            lastFailure: "Failed to initialize recognizer"
+        )
+        #expect(provider.lastFailure == "Failed to initialize recognizer")
+    }
+
+    @Test("a recogniser with nothing to report reads nil — silence is not a failure")
+    func noFailureByDefault() {
+        let provider: any TranscriptionProvider = FakeTranscriber(name: "quiet", isAvailable: true)
+        #expect(provider.lastFailure == nil)
+    }
+}
+
 struct TranscriptAccumulatorTests {
     @Test("cumulative partials replace the working text")
     func cumulativePartials() {
