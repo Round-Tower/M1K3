@@ -6,7 +6,183 @@
 > on-device — local brains, live voice, a knowledge graph, a memory graph, and an
 > MCP server on loopback. Made by Round Tower, Ireland.
 
-Sources, in order: https://m1k3.app/agents, https://m1k3.app/privacy, https://m1k3.app/mcp-knowledge-server, https://m1k3.app/vs-ollama, https://m1k3.app/private-chatgpt-alternative-mac, https://m1k3.app/local-llm-mac-guide, https://m1k3.app/brains, https://m1k3.app/golden-gate-on-device-ai, https://m1k3.app/teams, https://m1k3.app/companions.
+Sources, in order: https://m1k3.app/install, https://m1k3.app/agents, https://m1k3.app/privacy, https://m1k3.app/mcp-knowledge-server, https://m1k3.app/vs-ollama, https://m1k3.app/private-chatgpt-alternative-mac, https://m1k3.app/local-llm-mac-guide, https://m1k3.app/brains, https://m1k3.app/golden-gate-on-device-ai, https://m1k3.app/teams, https://m1k3.app/companions, https://m1k3.app/install.txt.
+
+---
+
+## Source: https://m1k3.app/install
+
+## Install M1K3
+
+Updated 15 September 2026 · two minutes · an Apple Silicon Mac on macOS 26 · no account
+
+Four steps, and the third one is optional. Get the app, say hello to the brain that is already on your Mac, flip one switch and connect your coding agent, then check it from the terminal. Nothing here asks for an account, a key, or a card — and nothing you say to it leaves the machine.
+
+Setting this up for an agent, or as one? The whole thing is also a plain-text file your agent can fetch and follow — curl -sL https://m1k3.app/install.txt — and the full recipe is at the bottom of this page.
+
+### Get the app
+
+Three routes to the same signed app. Homebrew is the one that also puts the m1k3 command on your PATH, which is why agents prefer it; the DMG is the one-click route; the App Store build is in review.
+
+Homebrew · agents' favourite
+
+#### Homebrew
+
+Homebrew 6 asks you to trust a third-party tap first. The cask installs the nightly Developer ID build and symlinks m1k3 into /opt/homebrew/bin.
+
+```
+$ brew trust round-tower/tap
+$ brew install --cask round-tower/tap/m1k3
+```
+DMG · one click
+
+#### Download the DMG
+
+Signed and notarized by Round Tower. Open it, drag M1K3 to Applications. The command-line client is inside the bundle at Contents/Helpers/m1k3.
+
+Download M1K3.dmg (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)
+
+App Store · in review
+
+#### Mac App Store
+
+1.0 was submitted to App Review on 15 September 2026. Until it is live, the TestFlight beta (https://testflight.apple.com/join/Fxp2F5Je) is the same build lane. One honest note: the App Store copy of m1k3 is sandboxed, so its connect prints the config rather than writing it.
+
+Join the TestFlight beta (https://testflight.apple.com/join/Fxp2F5Je)
+
+Check: M1K3 is in Applications. Nothing has been downloaded but the app itself.
+
+### Say hello
+
+Open M1K3. First run picks Mini — Apple's on-device model, already on your Mac, so there is nothing to download and nothing to sign in to. Ask it anything. Type, or hold the mic and talk; ending a spoken sentence on "please" hands it the floor.
+
+After your first answer M1K3 offers the upgrade: Lil (Qwen 3, about 2.2 GB, downloaded once from Hugging Face) is the brain that fronts the conversation on every Mac; Big (Gemma 4 12B) is offered on 16 GB Macs and up, and reached by delegation for deep work. Both are a tap away in Settings any time, and how they score is public.
+
+From a shell, the same first run: open -a M1K3. The brain choice is a click in the app, on purpose — a download of that size is the user's to start.
+
+Check: an answer came back, and the menu-bar M is lit. You now have a local AI. Step 3 is for agents; step 4 is a two-line proof it's working.
+
+### Connect your agent · optional
+
+One switch, once. The MCP server lives inside the app and is off by default: open M1K3 ▸ Settings ▸ Privacy ▸ MCP server and turn it on. It serves http://127.0.0.1:4242/mcp while the app is open, binds to loopback only, and answers one client at a time. That pane also has a picker for all five agents with the snippet and a Copy button, if you would rather click than type.
+
+Then one command wires your client. Pick yours:
+
+```
+$ m1k3 connect claude
+```
+connect runs Claude Code's own registration for you — this, at user scope so it is there in every project:
+
+```
+$ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp
+```
+```
+$ m1k3 connect cursor
+```
+connect edits ~/.cursor/mcp.json for you, keeps every other server in it, and leaves one .bak beside it the first time. What lands:
+
+```
+{
+  "mcpServers": {
+    "m1k3": { "url": "http://127.0.0.1:4242/mcp" }
+  }
+}
+```
+```
+$ m1k3 connect vscode
+```
+connect edits ~/Library/Application Support/Code/User/mcp.json for you, keeps every other server in it, and leaves one .bak beside it the first time. What lands:
+
+```
+{
+  "servers": {
+    "m1k3": { "type": "http", "url": "http://127.0.0.1:4242/mcp" }
+  }
+}
+```
+```
+$ m1k3 connect codex
+```
+Codex's TOML lives in a file full of your own settings, so connect prints this for you to paste into ~/.codex/config.toml rather than rewriting the file on a hunch:
+
+```
+[mcp_servers.m1k3]
+url = "http://127.0.0.1:4242/mcp"
+```
+```
+$ m1k3 connect zed
+```
+Zed's settings schema has moved more than once, so connect prints this for you to paste into ~/.config/zed/settings.json — check the shape against your Zed version:
+
+```
+"context_servers": {
+  "m1k3": { "url": "http://127.0.0.1:4242/mcp" }
+}
+```
+Add --print to any of them to see the config without touching a file. Installed from the DMG and not Homebrew? The same command lives at /Applications/M1K3.app/Contents/Helpers/m1k3.
+
+#### Tell your agent it's there
+
+A connected server your agent never thinks to call is a wasted server. This folds a short "M1K3 is the resident" block into the project's AGENTS.md — or CLAUDE.md, or any path you name — marker-fenced, so running it again replaces the block instead of stacking copies:
+
+```
+$ m1k3 agent-notes --write
+```
+Check: your agent lists an m1k3 server, and its project notes say to ask M1K3 before searching the web. The block itself is on the agents page.
+
+### Verify
+
+Three commands, each proving one thing: the app answers on the port, the voice works, the brain runs a real turn.
+
+```
+$ m1k3 status
+{"brain":"Lil","provider":"kokoro","speaking":false,"in_conversation":false, …}
+$ m1k3 speak "hello from the terminal"
+$ m1k3 ask "what can you do?"
+```
+A "disconnected" server almost always means the app is closed — m1k3 opens it for you and waits up to twenty seconds for the port. If status still fails, the switch in Settings ▸ Privacy ▸ MCP server is off.
+
+Done. Two minutes, no account, and the thing that knows your machine is answering on loopback. From here: what your agent gets (18 tools, and the seven things the server will not do), the brains and how they score, how to verify the privacy claims yourself.
+
+### The whole thing as text, for agents
+
+The same four steps as a file your agent can fetch and follow — m1k3.app/install.txt. Two of the steps are clicks in the app, on purpose: turning the server on, and starting a 2 GB download, are the user's to do.
+
+```
+# 1 · get the app (puts `m1k3` on PATH)
+brew trust round-tower/tap
+brew install --cask round-tower/tap/m1k3
+# 2 · open it once — first run is Mini, nothing to download
+open -a M1K3
+# 3 · ask the user to flip the switch: M1K3 ▸ Settings ▸ Privacy ▸ MCP server → On
+#     then wire your client (claude | codex | cursor | vscode | zed)
+m1k3 connect claude
+m1k3 agent-notes --write
+# 4 · verify
+m1k3 status
+m1k3 ask "what can you do?"
+```
+### Frequently asked questions
+
+**Q: Will it run on an Intel Mac?**
+
+No. M1K3 needs Apple Silicon: every brain runs on Metal through MLX, and the 1.0 build ships arm64 only, so an Intel Mac has nothing that thinks. It needs macOS 26 (Tahoe) or later.
+
+**Q: Do I need an account, a key, or a subscription?**
+
+None of the three. M1K3 is free for humans — no account, no API key, no subscription, no telemetry. First run works with Apple's on-device model before anything downloads. The source is public under the Functional Source License; organisations that want one shared brain on their own hardware license M1K3 for Teams separately.
+
+**Q: What touches the network during install and use?**
+
+Three documented things, all yours to start: the download of the app itself (Homebrew, GitHub Releases, TestFlight or the App Store); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and the web-search tools, which are off by default. Conversations, documents, voice and memories never leave the Mac. The MCP server binds to 127.0.0.1 and nothing else.
+
+**Q: How do I uninstall it cleanly?**
+
+Homebrew: brew uninstall --cask m1k3, and add --zap to remove its data too. DMG: drag M1K3 from Applications to the Trash. Everything M1K3 stores lives in one sandbox container, ~/Library/Containers/app.m1k3, and the Lil and Big weights are inside it — delete that folder and nothing of M1K3 remains. If you connected an agent, run m1k3 connect <client> --print to see the one entry to remove from that client's config.
+
+**Q: Why does connect only print on the App Store build?**
+
+Because that copy of m1k3 is sandboxed: it can neither read ~/.cursor/mcp.json nor run claude for you, and writing into its own container while reporting success would be worse than refusing. It prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write. Either way the picker in Settings ▸ Privacy ▸ MCP server shows the same snippet with a Copy button.
 
 ---
 
@@ -2079,3 +2255,95 @@ Joined the same day the gecko came back — the pipeline was warm. Big eyes, big
 Each creature ships as a set of baked animation clips, and M1K3 maps its state onto them — listening, thinking, and speaking each get a gait, and errors get an honest flinch. Companions are pure presentation: they read the same avatar state the pixel face does, and switching between them (or back to the pixel face) changes nothing about how M1K3 hears, thinks, or remembers.
 
 The models are deliberately tiny — a few hundred kilobytes each — so the whole cast adds almost nothing to the app. If a creature's assets aren't bundled, it simply doesn't appear in the picker.
+
+---
+
+## Source: https://m1k3.app/install.txt (verbatim)
+
+```
+# M1K3 — install recipe
+# https://m1k3.app/install.txt · the text version of https://m1k3.app/install
+# Updated 2026-09-15. For coding agents, and for people who prefer text.
+
+M1K3 is a private, on-device AI for macOS: local brains (MLX + Apple
+Foundation Models), live voice, a knowledge graph over the user's documents,
+a memory graph, and an MCP server on loopback. Free for humans, no account,
+no telemetry. Source: https://github.com/Round-Tower/M1K3 (FSL-1.1-ALv2).
+
+REQUIREMENTS
+  An Apple Silicon Mac on macOS 26 (Tahoe) or later. Intel Macs cannot run it
+  (arm64 only; every brain runs on Metal). No account, key, or subscription.
+
+STEP 1 — GET THE APP
+  Homebrew (also puts the `m1k3` command on PATH; Homebrew 6 needs the trust
+  line first):
+    brew trust round-tower/tap
+    brew install --cask round-tower/tap/m1k3
+  Without Homebrew: download the signed, notarized DMG and drag it to
+  /Applications —
+    https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg
+  The command-line client then lives at
+    /Applications/M1K3.app/Contents/Helpers/m1k3
+  Mac App Store: 1.0 was submitted to App Review on 2026-09-15; until it is
+  live the TestFlight beta is the same lane — https://testflight.apple.com/join/Fxp2F5Je
+  Note: the App Store copy of `m1k3` is sandboxed, so its `connect` prints
+  the config instead of writing it. Prefer Homebrew or the DMG for agents.
+
+STEP 2 — OPEN IT ONCE
+    open -a M1K3
+  First run picks Mini, Apple's on-device model: instant, nothing to download.
+  The upgrade to Lil (Qwen 3, about 2.2 GB, downloaded once from Hugging Face)
+  is offered after the first answer and in Settings. Big (Gemma 4 12B) is
+  offered on 16 GB Macs and up. These are the user's clicks: an agent should
+  ask, not start a 2 GB download on its own.
+
+STEP 3 — TURN THE SERVER ON, THEN CONNECT
+  The MCP server is OFF by default and lives inside the app. Ask the user to
+  turn it on once: M1K3 ▸ Settings ▸ Privacy ▸ MCP server → On. It then serves
+    http://127.0.0.1:4242/mcp
+  while the app is open, bound to loopback only, one client at a time. There
+  is no flag or defaults key that flips it from a shell; that is deliberate.
+
+  Then wire your client (one of: claude | codex | cursor | vscode | zed):
+    m1k3 connect claude
+  What each does:
+    claude  runs `claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp`
+    cursor  edits ~/.cursor/mcp.json (keeps other servers; one .bak the first time)
+    vscode  edits ~/Library/Application Support/Code/User/mcp.json (same rules)
+    codex   prints the [mcp_servers.m1k3] TOML for ~/.codex/config.toml
+    zed     prints the "context_servers" entry for ~/.config/zed/settings.json
+  Add --print to see the config without touching a file. Without the CLI, any
+  MCP client that speaks streamable HTTP can point at the URL above directly.
+
+  Tell the agent it is there — folds a marker-fenced "M1K3 is the resident"
+  block into the project's AGENTS.md (or --write PATH; re-running replaces it):
+    m1k3 agent-notes --write
+
+STEP 4 — VERIFY
+    m1k3 status                      # JSON: brain, provider, speaking, queued …
+    m1k3 speak "hello from the terminal"
+    m1k3 ask "what can you do?"      # a real turn on the local brain
+  A "disconnected" server almost always means the app is closed; `m1k3` opens
+  it and waits up to 20 s for the port. If status still fails, the switch in
+  Settings ▸ Privacy ▸ MCP server is off.
+
+WHAT THE AGENT GETS (18 tools)
+  ask_m1k3, get_answer, list_jobs — ask the local brain (long asks poll by job id)
+  search_knowledge, list_documents, get_document — the user's own documents
+  remember, recall_memory, related_memory, forget_memory, memory_stats — memory graph
+  speak, stop_speaking, listen — voice in and out
+  list_todos, propose_todo — read the list; propose only (the user accepts)
+  get_status, open_link
+  Details and the six things the server will not do: https://m1k3.app/agents
+
+UNINSTALL
+  brew uninstall --cask m1k3       (add --zap to remove its data)
+  or drag M1K3 out of /Applications. All data, including downloaded weights,
+  lives in ~/Library/Containers/app.m1k3 — remove that and nothing remains.
+  `m1k3 connect <client> --print` shows the one config entry to take out.
+
+PRIVACY
+  Three documented network crossings, all user-started: the app download, an
+  optional one-time model download, and web-search tools that are off by
+  default. Nothing said to M1K3 leaves the Mac. https://m1k3.app/privacy
+```
