@@ -33,6 +33,17 @@ settings:
     # nightly DMG's name). Build numbers are Xcode Cloud's (auto-managed).
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
+    # Apple Silicon only (2026-09-15). Every brain needs it — MLX (Lil, Big, pocket)
+    # and Apple Intelligence (Mini) are both arm64-only — yet the Mac archive was
+    # universal by default, so build 361 shipped an x86_64 slice that could not
+    # think: an Intel Mac on macOS 26 could install 1.0 and find no brain at all.
+    # arm64 alone makes the App Store list "Apple M1 chip or later" and refuse
+    # Intel installs; the DMG and the embedded `m1k3` helper inherit it. iOS and
+    # visionOS were arm64-only already, and the Apple-Silicon simulators are too.
+    # Review: Kev + claude-fable-5.1, 2026-09-15 — ARCHS arm64 project-wide. Confidence 0.9 (the
+    # 361 archive's slices read off `lipo -archs`; the store-page consequence is Apple's documented
+    # behaviour for arm64-only Mac apps — verify on the listing once 362 is attached).
+    ARCHS: arm64
     # A STABLE signing identity is load-bearing, not cosmetic: macOS keys both the
     # Keychain ACL and TCC (microphone / Speech) grants to the app's code-signing
     # identity. An empty team here makes every `xcodegen generate` fall back to bare
