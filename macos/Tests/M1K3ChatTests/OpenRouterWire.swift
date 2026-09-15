@@ -24,6 +24,7 @@
 
 import Foundation
 import M1K3Inference
+import Synchronization
 
 enum OpenRouterWire {
     static let endpoint = URL(string: "https://openrouter.ai/api/v1/chat/completions")!
@@ -118,6 +119,24 @@ enum OpenRouterWire {
     }
 }
 
+/// The last failure `generateStreaming` swallowed, so a runner can tell "the
+/// model said nothing" from "the call failed" (InferenceProvider's streaming
+/// contract ends the stream on error rather than throwing). A class, not a
+/// `Mutex` field: `Mutex` is non-copyable and the provider is passed by value.
+final class StreamFailureBox: Sendable {
+    private let value = Mutex<String?>(nil)
+    func record(_ description: String) {
+        value.withLock { $0 = description }
+    }
+
+    func take() -> String? {
+        value.withLock { v in
+            defer { v = nil }
+            return v
+        }
+    }
+}
+
 /// OpenRouter as an `InferenceProvider`, for the eval runner only. Carries the
 /// persona as the system message on every call (`PersonaCarrying`), so the
 /// ReAct floor sends the prompt body without it — the same pairing Mini ships
@@ -127,9 +146,12 @@ struct OpenRouterProvider: InferenceProvider, PersonaCarrying {
     let key: String
     let system: String
     let session: URLSession
-    /// Transient failures (429, 5xx, a dropped connection) are retried with a
-    /// growing pause; anything else is the model's answer to score.
+    /// Transient failures — HTTP 429/5xx, the API's own 429/5xx error envelope
+    /// (OpenRouter returns those on a 200 too), a dropped connection — are
+    /// retried with a growing pause; anything else is the model's answer to score.
     let retries: Int
+    /// What `generateStreaming` last swallowed (see StreamFailureBox).
+    let streamFailure = StreamFailureBox()
 
     init(model: String, key: String, system: String, session: URLSession = .shared, retries: Int = 3) {
         self.model = model
@@ -137,6 +159,12 @@ struct OpenRouterProvider: InferenceProvider, PersonaCarrying {
         self.system = system
         self.session = session
         self.retries = retries
+    }
+
+    /// Whether an API error envelope is worth another attempt.
+    static func isTransient(_ failure: OpenRouterWire.Failure) -> Bool {
+        if case let .api(code?, _) = failure { return code == 429 || code >= 500 }
+        return false
     }
 
     var name: String {
@@ -171,7 +199,13 @@ struct OpenRouterProvider: InferenceProvider, PersonaCarrying {
                 }
                 return try OpenRouterWire.text(fromResponse: data)
             } catch let failure as OpenRouterWire.Failure {
+                if Self.isTransient(failure), attempt <= retries {
+                    try await Task.sleep(for: .seconds(Double(attempt * attempt) * 2))
+                    continue
+                }
                 throw failure
+            } catch is CancellationError {
+                throw CancellationError() // never retried: the caller is leaving
             } catch {
                 if attempt <= retries {
                     try await Task.sleep(for: .seconds(Double(attempt * attempt) * 2))
@@ -187,8 +221,12 @@ struct OpenRouterProvider: InferenceProvider, PersonaCarrying {
     func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
             let task = Task {
-                if let text = try? await generate(prompt: prompt) {
-                    continuation.yield(text)
+                do {
+                    try continuation.yield(await generate(prompt: prompt))
+                } catch {
+                    // The contract ends the stream on error; the box keeps the reason
+                    // so the runner scores "ran — <error>" instead of "0 chars".
+                    streamFailure.record(String(describing: error))
                 }
                 continuation.finish()
             }

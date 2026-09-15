@@ -295,7 +295,10 @@ enum ChatEvalStage {
         let (_, stream) = try await responder.answerStreaming(fixture.prompt)
         var raw = ""
         for await piece in stream {
-            raw += piece
+            // The responder's fallback passes provider chunks through raw, and a
+            // cumulative provider (AFM, PCC) yields snapshots — `+=` would score
+            // "HHeHel…". Same fold the app's consumer applies (ChatSession).
+            raw = StreamFold.fold(current: raw, chunk: piece)
         }
         return EvalObservation(
             rawText: raw,
@@ -388,8 +391,24 @@ enum ChatEvalStage {
             emit("  – pcc: backend reports unavailable (skipped)")
             return nil
         }
+        // The column sends the STANDARD persona (the arm the local tiers get), and that
+        // composition is the one door a user profile has (M1K3Persona.compose). A SelfTest
+        // launch never builds AppEnvironment, so the profile is nil here by construction —
+        // this guard makes that a promise rather than a coincidence: nothing about the
+        // user reaches Apple's server from an eval.
+        guard M1K3Persona.userProfile == nil else {
+            emit("  – pcc: a user profile is set in this process; the standard persona would carry it (skipped)")
+            return nil
+        }
         emit("  pcc quota: \(status.quota)")
         return await evalProvider(PrivateCloudEvalProvider(backend: backend), emit: emit)
+    }
+
+    /// Pause between fixtures (ms), `M1K3_SELFTEST_CHATEVAL_PACE_MS`; default 0 so the local
+    /// tiers measure exactly as before. Apple's daemons rate-collapse under rapid turns
+    /// (memory: pkill-poisons-afm-daemon) — set it for the Mini and PCC columns.
+    private static var paceMS: Int {
+        max(0, SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_PACE_MS").flatMap(Int.init) ?? 0)
     }
 
     /// Trials per fixture (M1K3_SELFTEST_CHATEVAL_REPEATS=N, default 1). A
@@ -504,8 +523,12 @@ enum ChatEvalStage {
         let kinds = selectedKinds()
         var scores: [ChatEvalScore] = []
         let trials = repeats
+        var paced = false
         for trial in 0 ..< trials {
             for fixture in ChatEvalFixtures.all where kinds?.contains(fixture.kind) ?? true {
+                // Between turns only — never before the first or after the last.
+                if paced, paceMS > 0 { try? await Task.sleep(for: .milliseconds(paceMS)) }
+                paced = true
                 // Bracket every fixture. The gap between one `fixture done` and the
                 // next `fixture start` is time the harness spends OUTSIDE the turn,
                 // and on 2026-08-10 that gap was 177s before `chat-capabilities`

@@ -124,19 +124,24 @@ FENCE_CLOSE = "-----END CHATEVAL JSON-----"
 
 def extract_fenced_json(text: str) -> dict | None:
     """The LAST complete fenced document in a stdout transcript, parsed; None
-    when there is no open+close pair (a half-written block is not a scorecard).
-    Mirrors ChatEvalReport.unfenced in M1K3Eval — keep the two in step."""
+    when there is no open+close pair (a half-written block is not a scorecard);
+    ValueError when a complete block is not JSON (a different problem from "no
+    block", and named as such). Mirrors ChatEvalReport.unfenced in M1K3Eval —
+    keep the two in step."""
     close = text.rfind(FENCE_CLOSE)
     if close < 0:
         return None
-    open_at = text.rfind(FENCE_OPEN, 0, close)
+    # The open marker as a whole line (marker + newline), like the Swift side: a marker echoed
+    # INSIDE the document (an answer preview quoting it) has no newline after it and must not
+    # cut the block short.
+    open_at = text.rfind(FENCE_OPEN + "\n", 0, close)
     if open_at < 0:
         return None
-    body = text[open_at + len(FENCE_OPEN):close].strip()
+    body = text[open_at + len(FENCE_OPEN) + 1:close].strip()
     try:
         return json.loads(body)
-    except json.JSONDecodeError:
-        return None
+    except json.JSONDecodeError as e:
+        raise ValueError(f"a fenced block was there but is not JSON: {e}") from e
 
 
 def direct_env(trig: dict[str, str], base: dict[str, str]) -> dict[str, str]:
@@ -163,6 +168,7 @@ class RunOptions:
     live_path: bool = True
     notes: str | None = None
     dump_prompt: bool = False
+    pcc: bool = False
 
 
 def build_trigger(opts: RunOptions, *, container: Path, power_source: str, powermode: int | None,
@@ -170,8 +176,10 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
     """The trigger map SelfTestEnv reads. Absent options stay absent so the
     app's own defaults decide — never a guessed value (an unknown powermode is
     omitted, not written as 0)."""
-    if not opts.brains or any(b not in KNOWN_BRAINS for b in opts.brains):
+    if any(b not in KNOWN_BRAINS for b in opts.brains):
         raise ValueError(f"brains {opts.brains!r}: choose from {', '.join(KNOWN_BRAINS)}")
+    if not opts.brains and not opts.pcc:
+        raise ValueError("no brains selected: name at least one, or pass --pcc for the Private Cloud column alone")
     if opts.repeats < 1:
         raise ValueError("repeats must be ≥ 1")
     report = out_path(container, opts.name)
@@ -183,6 +191,8 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
     }
     if opts.live_path:
         trig["M1K3_SELFTEST_CHATEVAL_LIVE_PATH"] = "1"
+    if opts.pcc:
+        trig["M1K3_SELFTEST_CHATEVAL_PCC"] = "1"
     if opts.model:
         trig["M1K3_SELFTEST_CHATEVAL_MLX_MODEL"] = opts.model
     if opts.kinds:
@@ -305,13 +315,19 @@ def run_direct(args, app: Path, trig: dict[str, str], plan: "InstancePlan") -> i
         while proc.poll() is None:
             if time.monotonic() - started > args.timeout_min * 60:
                 print("✗ timed out — the SelfTest is still running; leaving it alone", file=sys.stderr)
+                if plan.live_was_running and not args.no_relaunch:
+                    subprocess.run(["open", "-a", LIVE_APP])  # a timeout must not leave the live app quit
                 return 6
             time.sleep(10)
             now_lines = log_path.read_text(errors="replace").count("\n")
             if now_lines != lines:
                 lines = now_lines
                 print(f"  … {lines} report lines · {int((time.monotonic() - started) / 60)} min")
-    doc = extract_fenced_json(log_path.read_text(errors="replace"))
+    try:
+        doc = extract_fenced_json(log_path.read_text(errors="replace"))
+    except ValueError as e:
+        print(f"✗ {e} (exit {proc.returncode}) — read the transcript: {log_path}", file=sys.stderr)
+        doc = None
     if doc is None:
         print(f"✗ no fenced JSON on stdout (exit {proc.returncode}) — read the transcript: {log_path}", file=sys.stderr)
         rc = 7
@@ -331,7 +347,9 @@ def run_direct(args, app: Path, trig: dict[str, str], plan: "InstancePlan") -> i
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--name", required=True, help="run name → selftest-out/<name>(.json)")
-    ap.add_argument("--brains", required=True, help="comma list: mini,pocket,lil,big")
+    ap.add_argument("--brains", default="", help="comma list: mini,pocket,lil,big (may be empty with --pcc)")
+    ap.add_argument("--pcc", action="store_true",
+                    help="add Apple's Private Cloud Compute as a column (needs an entitled M1K3_FM27 build)")
     ap.add_argument("--model", help="override: a bare id (one MLX brain) or lil=<id>,big=<id>")
     ap.add_argument("--kinds", default="", help="comma list of task kinds (default: all)")
     ap.add_argument("--repeats", type=int, default=1)
@@ -358,8 +376,11 @@ def main(argv: list[str] | None = None) -> int:
     opts = RunOptions(
         name=args.name, brains=[b for b in args.brains.split(",") if b], model=args.model,
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
-        live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt,
+        live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
     )
+    if args.direct and args.dump_prompt:
+        print("✗ --dump-prompt writes into the container, which --direct exists to avoid reading", file=sys.stderr)
+        return 2
     resolved = REPO_MACOS / "Package.resolved"
     mlx_rev = mlx_revision(json.loads(resolved.read_text())) if resolved.exists() else None
     power = parse_power_source(sh("pmset", "-g", "batt"))

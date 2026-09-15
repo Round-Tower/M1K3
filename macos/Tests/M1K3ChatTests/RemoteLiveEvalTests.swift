@@ -46,6 +46,11 @@ import Testing
 
 private let evalEnvironment = ProcessInfo.processInfo.environment
 
+/// A live-path call that failed before any text — surfaced as the score's reason.
+private struct RemoteCallFailed: Error, CustomStringConvertible {
+    let description: String
+}
+
 /// The names of the tools one live turn called, in order.
 private final class ToolRecorder: Sendable {
     private let names = Mutex<[String]>([])
@@ -123,6 +128,10 @@ struct RemoteLiveEvalTests {
     @Test("hosted models through the eval fixtures, one column per model")
     func run() async throws {
         let key = try #require(evalEnvironment["OPEN_ROUTER_API_KEY"], "OPEN_ROUTER_API_KEY is not set")
+        try #require(!key.isEmpty, "OPEN_ROUTER_API_KEY is empty — nine columns of 401s is not a run")
+        // The persona goes to third parties: the standard composition is the one door a user
+        // profile has, and a plain test process never sets one. Make that a promise.
+        try #require(M1K3Persona.userProfile == nil, "a user profile is set in this process; nothing about the user leaves")
         try #require(!Self.models.isEmpty, "M1K3_REMOTE_EVAL_MODELS names no model")
         let unknown = Self.kindNames.filter { TaskKind(rawValue: $0) == nil }
         try #require(unknown.isEmpty, "unknown kinds: \(unknown)")
@@ -146,8 +155,11 @@ struct RemoteLiveEvalTests {
         }
         print(ChatEvalReport.matrix(runs))
         if let out = evalEnvironment["M1K3_REMOTE_EVAL_OUT"] {
+            let url = URL(fileURLWithPath: out)
+            // Nine paid columns must not die on a missing folder at the last line.
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             let document = ChatEvalDocument(provenance: Self.provenance(), runs: runs)
-            try ChatEvalReport.json(document).write(to: URL(fileURLWithPath: out))
+            try ChatEvalReport.json(document).write(to: url)
         }
     }
 
@@ -189,9 +201,12 @@ struct RemoteLiveEvalTests {
                 )
                 var text = ""
                 for await piece in try await responder.answerStreaming(fixture.prompt).stream {
-                    text += piece
+                    text = StreamFold.fold(current: text, chunk: piece) // snapshot or delta, folded the same
                 }
                 toolCalls = recorder.captured
+                if text.isEmpty, toolCalls.isEmpty, let failure = provider.streamFailure.take() {
+                    throw RemoteCallFailed(description: failure) // "ran — …", not "0 chars"
+                }
                 raw = text.isEmpty && !toolCalls.isEmpty ? "tools used: \(toolCalls.joined(separator: ","))" : text
             } else {
                 raw = try await provider.generate(prompt: fixture.prompt)
@@ -220,9 +235,12 @@ struct RemoteLiveEvalTests {
             mlxSwiftLMRevision: nil,
             powerMode: nil,
             powerSource: nil,
-            livePath: liveAll || kinds.contains(.openChat),
+            // The stamp names the ARM, not one kind: without LIVE=1 only open-chat runs the
+            // responder, and a run stamped live over bare cells would mislead the page.
+            livePath: liveAll,
             repeats: repeats,
-            notes: "arm: full persona as the system message" + (liveAll ? " · every kind on the live responder" : "")
+            notes: "arm: full persona as the system message"
+                + (liveAll ? " · every kind on the live responder" : " · bare generate; open-chat alone on the live responder")
                 + " · remote models, latency is a network round-trip not a decode · models: "
                 + models.joined(separator: ", ")
                 + (evalEnvironment["M1K3_REMOTE_EVAL_NOTES"].map { " · " + $0 } ?? "")

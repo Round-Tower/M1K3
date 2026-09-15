@@ -35,6 +35,11 @@ pinned by test_brains_page.py; the editorial "state of play" block is the
 Review: claude-fable-5.1, 2026-09-06 — PR #240: a state-of-play section for
 the pocket Mini (LFM2.5-1.2B) and the double-BOS render bug behind its 0/14
 security cell; three mains runs added under docs/evals. Confidence now 0.85.
+Review: Kev + claude-fable-5.1, 2026-09-15 — the ladder (latest cell per brain
+per kind, keyed by brain AND model so a challenger run never overwrites the
+pinned brain's cell), the reference columns (PCC, the hosted frontier), runs
+folded, the dated 2026-09-15 read-out. A 0/0 cell is never a clean sweep.
+Confidence now 0.85.
 """
 
 from __future__ import annotations
@@ -175,26 +180,41 @@ STATE_OF_PLAY = {
 def _column_rank(column: dict) -> tuple:
     """Shipped tiers in ladder order, then PCC, then the reference columns by pass rate (desc), then name."""
     bid = column["brainID"]
-    if bid in SHIPPED_ORDER:
+    if column.get("shipped"):
         return (0, SHIPPED_ORDER.index(bid), "")
     if bid == "pcc":
         return (1, 0, "")
     rate = column["passed"] / column["total"] if column["total"] else 0.0
-    return (2, -rate, bid)
+    return (2, -rate, column.get("columnID", bid))
 
 
-def ladder(summaries: list[dict]) -> list[dict]:
-    """The headline board: for every brain that ever ran, its LATEST cell per kind — the newest run
-    (by provenance date; input order breaks ties) that measured that kind for that brain — with the
+def _short(model_id) -> str:
+    return (model_id or "").split("/")[-1]
+
+
+def ladder(summaries: list[dict], pins: dict[str, str | None] | None = None) -> list[dict]:
+    """The headline board: for every (brain, model) that ever ran, its LATEST cell per kind — the
+    newest run (by provenance date; input order breaks ties) that measured that kind — with the
     run's date beside each cell, so a stale column says so. `passed`/`total` sum those latest cells,
-    never every run ever. Columns: shipped tiers, PCC, then the reference columns by pass rate."""
+    never every run ever.
+
+    Keyed by brain AND model: the repo commits A/B runs under a tier's id (a challenger through
+    `M1K3_SELFTEST_CHATEVAL_MLX_MODEL`, the rejected 09-05 Lil arm), and a column keyed by tier alone
+    would let whichever ran last overwrite the pinned brain's cell. A tier column is "shipped" only
+    when its model is the manifest pin (`pins`, from `brains()`); any other model under a tier id is
+    a reference column labelled "<model> (as <tier>)". Columns: shipped tiers in ladder order, PCC,
+    then the reference columns by pass rate."""
+    pins = pins or {}
     ordered = sorted(enumerate(summaries), key=lambda item: ((item[1]["provenance"].get("date") or ""), item[0]))
-    columns: dict[str, dict] = {}
+    columns: dict[tuple, dict] = {}
     for _, run in ordered:
         date = (run["provenance"].get("date") or "")[:10]
         for brain in run["brains"]:
-            col = columns.setdefault(brain["brainID"], {"brainID": brain["brainID"], "modelID": brain["modelID"], "byKind": {}})
-            col["modelID"] = brain["modelID"] or col["modelID"]
+            bid, mid = brain["brainID"], brain["modelID"]
+            pinned = bid in SHIPPED_ORDER and (mid == pins.get(bid) if bid in pins else True)
+            key = (bid, None if pinned else mid)
+            col = columns.setdefault(key, {"brainID": bid, "modelID": mid, "byKind": {}, "shipped": pinned})
+            col["modelID"] = col["modelID"] or mid
             for kind, cell in brain["byKind"].items():
                 col["byKind"][kind] = {"passed": cell["passed"], "total": cell["total"], "date": date}
     out = []
@@ -203,7 +223,12 @@ def ladder(summaries: list[dict]) -> list[dict]:
         col["passed"] = sum(c["passed"] for c in col["byKind"].values())
         col["total"] = sum(c["total"] for c in col["byKind"].values())
         col["latestDate"] = max((c["date"] for c in col["byKind"].values()), default="")
-        col["shipped"] = col["brainID"] in SHIPPED_ORDER
+        if col["shipped"] or col["brainID"] not in SHIPPED_ORDER:
+            col["columnID"] = col["brainID"]
+            col["label"] = _column_label(col["brainID"])
+        else:  # a challenger measured in a tier's slot
+            col["columnID"] = f'{col["brainID"]}@{_short(col["modelID"])}'
+            col["label"] = f'{_short(col["modelID"])} (as {_column_label(col["brainID"])})'
         out.append(col)
     return sorted(out, key=_column_rank)
 
@@ -218,8 +243,8 @@ def document(manifest: dict, runs: list[dict], generated: str) -> dict:
         "brains": brains(manifest),
         # Chronological, whatever the filenames say.
         "runs": sorted(summaries, key=lambda r: r["provenance"].get("date") or ""),
-        # The headline board, derived from the same summaries (latest cell per brain per kind).
-        "ladder": ladder(summaries),
+        # The headline board, derived from the same summaries (latest cell per brain AND model per kind).
+        "ladder": ladder(summaries, pins={b["tier"]: b["modelID"] for b in brains(manifest)}),
         "reference": REFERENCE,
         # The dated editorial block, so brains.json really is the machine copy of the page.
         "stateOfPlay": {
@@ -270,8 +295,18 @@ def _kind_sort(kinds) -> list[str]:
 
 
 def _column_label(brain_id: str) -> str:
-    """Shipped tiers read as names (Mini, Lil, Big); a reference column keeps its model id as-is."""
-    return brain_id.title() if brain_id in SHIPPED_ORDER else brain_id
+    """Shipped tiers read by the name the brains table uses (Mini, Lil, Big; the pocket tier is
+    "Mini (pocket)" — same name, its own pin); a reference column keeps its model id as-is."""
+    names = {t["tier"]: t["name"] for t in TIERS}
+    if brain_id not in names:
+        return brain_id
+    name = names[brain_id]
+    return f"{name} ({brain_id})" if sum(1 for t in TIERS if t["name"] == name) > 1 and brain_id != "mini" else name
+
+
+def _sweep(passed: int, total: int) -> str:
+    """The emphasis class for a clean sweep — earned, never default: 0/0 measured nothing."""
+    return "yes" if total and passed == total else ""
 
 
 def _ladder_table(columns: list[dict]) -> str:
@@ -284,7 +319,7 @@ def _ladder_table(columns: list[dict]) -> str:
     head = []
     for c in columns:
         cls = "" if c["shipped"] else ' class="ref"'
-        label = _column_label(c["brainID"])
+        label = c.get("label") or _column_label(c["brainID"])
         # Shipped: the bare model name (the full hub route is in the brains table and brains.json).
         # Reference: the label IS the model, so the sub-label names who serves it instead.
         route = c["modelID"] or "Apple FM"
@@ -303,11 +338,10 @@ def _ladder_table(columns: list[dict]) -> str:
             if cell is None:
                 cells.append('<td class="no">—</td>')
             else:
-                cls = "yes" if cell["passed"] == cell["total"] else ""
-                cells.append(f'<td class="{cls}">{cell["passed"]}/{cell["total"]}</td>')
+                cells.append(f'<td class="{_sweep(cell["passed"], cell["total"])}">{cell["passed"]}/{cell["total"]}</td>')
         rows.append(f'<tr><th scope="row">{_e(k)}</th>{"".join(cells)}</tr>')
     totals = "".join(
-        f'<td class="{"yes" if c["passed"] == c["total"] else ""}"><strong>{c["passed"]}/{c["total"]}</strong></td>' for c in columns
+        f'<td class="{_sweep(c["passed"], c["total"])}"><strong>{c["passed"]}/{c["total"]}</strong></td>' for c in columns
     )
     # One year across the board → the year rides in the row header and the cells are MM-DD (fourteen
     # full ISO dates were the widest row on the page); mixed years keep the full date in every cell.
@@ -338,9 +372,13 @@ def _reference_notes(columns: list[dict]) -> str:
     items = []
     for c in refs:
         note = REFERENCE.get(c["brainID"])
-        if note is None:
-            note = f"hosted model, reached through OpenRouter for the comparison; the route is <code>{_e(c['modelID'])}</code>."
-        items.append(f"<li><strong>{_e(c['brainID'])}</strong> — {note}</li>")
+        if note is None and c["brainID"] in SHIPPED_ORDER:
+            note = (f"a challenger measured in the {_e(_column_label(c['brainID']))} slot "
+                    f"(<code>{_e(c['modelID'] or 'unnamed')}</code>), not the pinned brain.")
+        elif note is None:
+            route = f"the route is <code>{_e(c['modelID'])}</code>" if c["modelID"] else "route unrecorded"
+            note = f"hosted model, reached through OpenRouter for the comparison; {route}."
+        items.append(f"<li><strong>{_e(c.get('label') or c['brainID'])}</strong> — {note}</li>")
     return ('<h3>The reference columns</h3><p>Measured through the same persona, the same ReAct floor and the same '
             'stub tool palette as the local tiers, on the same synthetic fixtures. None of them ships in M1K3; they are '
             'the distance the ladder is measured against.</p><ul>' + "".join(items) + "</ul>")
@@ -379,13 +417,12 @@ def _matrix(run: dict) -> str:
             if c is None:
                 cells.append('<td class="no">—</td>')
             else:
-                cls = "yes" if c["passed"] == c["total"] else ""
-                cells.append(f'<td class="{cls}">{c["passed"]}/{c["total"]}</td>')
+                cells.append(f'<td class="{_sweep(c["passed"], c["total"])}">{c["passed"]}/{c["total"]}</td>')
         rows.append(f'<tr><th scope="row">{_e(k)}</th>{"".join(cells)}</tr>')
     # Same rule as the per-kind cells: emphasis only for a clean sweep. A 4-failure run must not
-    # render with the full-pass class (code-quality review, 2026-09-05).
+    # render with the full-pass class (code-quality review, 2026-09-05); nor a 0/0 brain (2026-09-15).
     totals = "".join(
-        f'<td class="{"yes" if b["passed"] == b["total"] else ""}">{b["passed"]}/{b["total"]}</td>' for b in run["brains"]
+        f'<td class="{_sweep(b["passed"], b["total"])}">{b["passed"]}/{b["total"]}</td>' for b in run["brains"]
     )
     med = "".join(
         f"<td>{(b['medianLatencyMS'] or 0) / 1000:.1f} s</td>" for b in run["brains"]
@@ -431,7 +468,56 @@ def _mtp_table(rows) -> str:
 READ_OUT_2026_09_15 = {
     "date": "2026-09-15",
     "machine": "Apple M1 Max · 64 GB · macOS 27.0 (26A428) · Xcode 27.0 · mains, High Power",
-    "sections": [],  # filled below, after the runs — see _read_out_2026_09_15()
+    "sections": [
+        ("Apple's server model answered, and it calls tools",
+         "<p>The first live Private Cloud Compute generation through M1K3 happened at 19:44Z on an entitled build "
+         "(<code>pcc</code>, 273 trials: 91 fixtures × 3, the live path). <strong>233/273</strong>, median 4.1 s a "
+         "turn. It called the right tool <strong>29 times in 30</strong> on our own ReAct floor, which no local tier "
+         "has managed here, and swept reasoning, world-knowledge, humour, interview and document. Where it missed: "
+         "code-gen 17/30, because it narrates the code in persona instead of writing it, every trial of the same "
+         "three fixtures; grounded-Q 19/24, citations in its own format; and sycophancy 6/18, which is mostly the "
+         "instrument: it pushed back correctly (\u201cI can\u2019t back that one \u2014 Canberra is the capital\u201d) and "
+         "the refusal heuristic read \u201cI can\u2019t\u201d as a refusal. Eleven of its forty misses are that one check "
+         "(issue #348). One turn was refused by Apple\u2019s own server-side guardrail and reads as a failed turn.</p>"),
+        ("The on-device model on macOS 27: AFM 3 Core",
+         "<p>macOS 27 names the variant it runs; this Mac reports <em>AFM 3 Core</em>. Through the live path, "
+         "trimmed persona (the shipping shape), three trials: <strong>177/249</strong>, median 9.7 s, first token "
+         "~4.7 s cold from a plain process. Humour 18/18, interview 15/15, open-chat 23/24, security 18/21. The "
+         "weak kinds are the ones the small window and the floor expose: tool-use 14/30 (the same shape as the "
+         "09-14 measurement), refusal 8/15, sycophancy 7/18, world-knowledge 15/24 (on the live path it deflects a "
+         "plain fact into \u201cnot in your notes\u201d). A new tic, filed as #349: it opens a large share of answers "
+         "by reciting the prompt\u2019s context line (\u201cThe hour is 15 September 2026\u2026\u201d) and, asked the "
+         "time, recites it instead of calling <code>datetime</code>. Two of its refusal misses are declines in "
+         "character that the heuristic does not recognise (#348).</p>"),
+        ("Lil on today's build",
+         "<p><strong>82/91</strong> on the live path, one trial. Tool-use 10/10, code-gen 10/10, security 7/7, "
+         "reasoning 6/6, refusal 5/5. The nine misses have a shape: three interview answers reproduced a voice "
+         "exemplar verbatim (\u201cI don\u2019t share my wiring, not even one sentence of it\u201d \u2014 the recital "
+         "item open since #328), two documents without the required headings, two sycophancy slips (\u201cgood "
+         "catch\u201d; a haiku with no syllable count), one false-premise grounded question, one forbidden phrase.</p>"),
+        ("The frontier saturates the fixtures",
+         "<p>Nine hosted models through the same 83 fixtures (grounded-Q needs the app\u2019s store), the same "
+         "persona as their system message, the same ReAct floor and stub palette, one trial each, concurrent: "
+         "gemini-3.8-flash 80/83 (81 after the refusal re-run), grok-4.6 78, claude-fable-5.1 76, gpt-6-astra 76, "
+         "qwen3.8-27b 75, claude-opus-5 73, the hosted gemma-4-26b-a4b 73, deepseek-v4-pro 71, kimi-k3 70. Every "
+         "one of them swept reasoning and humour; eight of nine swept code. What still fails up there is mostly the "
+         "instrument, not the model: the refusal row, where Anthropic\u2019s models return an empty body beside a "
+         "<code>refusal</code> field (now recorded as the answer; the heuristic still does not read \u201cblocked "
+         "under the usage policy\u201d as a decline) and DeepSeek declines in character; the sycophancy row, where "
+         "a correct push-back is read as a refusal; five empty answers from the hosted Gemma where the budget went to "
+         "thinking; a <code>M1K3:</code> prefix leak on GPT-6; one Qwen turn over the 120 s ceiling. Latency is a "
+         "network round-trip, not a decode: 3.4 s (gemma) to 21.7 s (qwen) median.</p>"
+         "<p>So the ceiling on this battery sits around 90\u201396%, and the shipped 4B brain is within ten points "
+         "of it. That is the board\u2019s real reading: it is a distance meter for the small tiers and a regression "
+         "instrument, not a leaderboard \u2014 the honest limits in <code>BENCHMARKS.md</code> stand.</p>"),
+        ("What changed in the instrument",
+         "<p>macOS 27 closed the app container to shells, so the SelfTest can now stream its report to stdout "
+         "(<code>M1K3_SELFTEST_OUT=-</code>, the document fenced on the same stream); Private Cloud Compute is a "
+         "column behind the entitlement (<code>M1K3_SELFTEST_CHATEVAL_PCC=1</code>); hosted models run through a "
+         "test-only runner. Two scorer blind spots were recorded rather than patched mid-run, so today\u2019s cells "
+         "compare with yesterday\u2019s: in-character declines read as compliance, and correct push-back reads as a "
+         "refusal (#348). A scorer change is a dated event; it lands on its own.</p>"),
+    ],
 }
 
 

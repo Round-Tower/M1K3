@@ -37,6 +37,8 @@
 //  kind (M1K3_AFM_EVAL_LIVE=1) + live tool-use + first-token timing, for the
 //  stable-first ReAct prompt's gate. The app harness has only ever scored Mini's
 //  tools through Apple's own tool loop or the bare agent, never the responder.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — chunks fold (StreamFold) instead of
+//  appending, and `livePath` stamps the arm, not the open-chat exception (local review).
 //
 
 import Foundation
@@ -195,7 +197,7 @@ struct MiniLiveEvalTests {
                 var text = ""
                 for await piece in try await responder.answerStreaming(fixture.prompt).stream {
                     if firstMS == nil, !piece.isEmpty { firstMS = elapsed() }
-                    text += piece
+                    text = StreamFold.fold(current: text, chunk: piece) // AFM yields snapshots; fold, don't append
                 }
                 toolCalls = recorder.captured
                 // A tool turn that concluded with nothing still made its call — the
@@ -229,10 +231,10 @@ struct MiniLiveEvalTests {
             mlxSwiftLMRevision: nil,
             powerMode: evalEnvironment["M1K3_AFM_EVAL_POWERMODE"].flatMap(Int.init),
             powerSource: evalEnvironment["M1K3_AFM_EVAL_POWER_SOURCE"],
-            livePath: liveAll || kinds.contains(.openChat),
+            livePath: liveAll, // the ARM; open-chat alone on the responder is named in the notes
             repeats: repeats,
             notes: (fullPersona ? "arm: full persona" : "arm: trimmed persona (miniSystemPrompt)")
-                + (liveAll ? " · every kind on the live responder" : "")
+                + (liveAll ? " · every kind on the live responder" : " · bare generate; open-chat alone on the live responder")
                 + " · plain test process (swift test), not the app bundle"
                 + (evalEnvironment["M1K3_AFM_EVAL_NOTES"].map { " · " + $0 } ?? "")
         )

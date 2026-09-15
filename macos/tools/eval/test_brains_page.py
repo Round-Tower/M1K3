@@ -227,13 +227,14 @@ def test_ladder_orders_shipped_then_pcc_then_reference_by_pass_rate():
 
 
 def test_html_ladder_marks_reference_columns_and_folds_older_runs():
-    older = _run("2026-09-05T10:00:00Z", "lil", "m/lil", [score("a", "security", True, 1)])
+    # the pinned Lil (document() reads the pins off the manifest; an unpinned model would be a challenger column)
+    older = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510", [score("a", "security", True, 1)])
     newer = _run("2026-09-15T10:00:00Z", "pcc", "apple/private-cloud-compute", [score("a", "security", False, 1)])
     doc = bp.document(MANIFEST, [older, newer], generated="2026-09-15")
     html = bp.render_html(doc)
     assert '<div class="table-scroll ladder-wrap"><table class="cmp ladder">' in html
     assert '<th scope="col" class="ref">pcc<br /><span class="table-note">Apple, server</span></th>' in html
-    assert '<th scope="col">Lil<br /><span class="table-note">lil</span></th>' in html  # shipped: the bare model name
+    assert '<th scope="col">Lil<br /><span class="table-note">Qwen3-4B-Instruct-2507-4bit-DWQ-2510</span></th>' in html  # shipped: the pinned model, bare
     assert '<th scope="col" class="ref">pcc<br />' in html  # reference column, set apart, not title-cased
     assert '<th scope="col">Lil<br />' in html
     assert "Private Cloud Compute" in html and "not shipped" in html
@@ -273,4 +274,35 @@ def test_the_2026_09_15_read_out_renders_above_the_09_05_one(monkeypatch):
     assert html.index("State of play, 2026-09-15") < html.index("State of play, 2026-09-05")
     monkeypatch.setitem(bp.READ_OUT_2026_09_15, "sections", [])
     assert "State of play, 2026-09-15" not in bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-15"))
+
+
+def test_ladder_keys_by_brain_and_model_so_a_challenger_never_overwrites_the_pin():
+    pins = {b["tier"]: b["modelID"] for b in bp.brains(MANIFEST)}
+    pinned = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+                  [score("a", "security", True, 1)])
+    challenger = _run("2026-09-15T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+                      [score("a", "security", False, 1), score("b", "open-chat", True, 1)])
+    cols = bp.ladder([bp.summarise_run(pinned), bp.summarise_run(challenger)], pins=pins)
+    assert [(c["columnID"], c["shipped"]) for c in cols] == [("lil", True), ("lil@Qwen3-4B-Instruct-2507-4bit", False)]
+    assert cols[0]["byKind"]["security"] == {"passed": 1, "total": 1, "date": "2026-09-05"}  # the pin's cell survived
+    assert cols[1]["label"] == "Qwen3-4B-Instruct-2507-4bit (as Lil)"
+    html = bp._ladder_table(cols)
+    assert '<th scope="col" class="ref">Qwen3-4B-Instruct-2507-4bit (as Lil)<br />' in html
+    # mini has no pin (Apple FM): every mini run is the shipped column
+    mini = _run("2026-09-15T10:00:00Z", "mini", None, [score("a", "security", True, 1)])
+    assert bp.ladder([bp.summarise_run(mini)], pins=pins)[0]["shipped"]
+
+
+def test_a_zero_over_zero_cell_is_never_a_clean_sweep():
+    assert bp._sweep(0, 0) == "" and bp._sweep(2, 2) == "yes" and bp._sweep(1, 2) == ""
+    empty = _run("2026-09-15T10:00:00Z", "big", "m/big", [])
+    doc = bp.document(MANIFEST, [empty], generated="2026-09-15")
+    html = bp.render_html(doc)
+    assert '<td class="yes">0/0</td>' not in html and '<td class="">0/0</td>' in html
+
+
+def test_the_pocket_tier_is_labelled_the_way_the_brains_table_names_it():
+    assert bp._column_label("pocket") == "Mini (pocket)"
+    assert bp._column_label("mini") == "Mini" and bp._column_label("lil") == "Lil" and bp._column_label("big") == "Big"
+    assert bp._column_label("claude-opus-5") == "claude-opus-5"
 

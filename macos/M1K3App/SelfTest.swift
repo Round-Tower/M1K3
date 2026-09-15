@@ -123,7 +123,9 @@ enum SelfTest {
     private static func emit(_ line: String) {
         let data = Data((line + "\n").utf8)
         if writesToStandardOutput {
-            FileHandle.standardOutput.write(data)
+            // The throwing variant: a closed pipe (EPIPE) must not raise an uncatchable
+            // ObjC exception mid-run — the transcript is best-effort once the reader is gone.
+            try? FileHandle.standardOutput.write(contentsOf: data)
             return
         }
         if let handle = FileHandle(forWritingAtPath: outputPath) {

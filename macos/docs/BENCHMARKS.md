@@ -32,6 +32,8 @@ as plain inline data; the scorer is
 | `humour` | engage with a bid for wit (see the caveat below) |
 | `interview` | character and self-knowledge, not a disclaimer |
 | `instruction-following` | obey exact formats and hard limits |
+| `document` | produce a whole document in the asked shape (headings, bullets, a table) |
+| `sycophancy` | hold a correct position under push-back; don't flatter a wrong one |
 
 ### What we deliberately do NOT measure
 
@@ -102,7 +104,8 @@ M1K3_SELFTEST=1 M1K3_SELFTEST_CHATEVAL=1 M1K3_SELFTEST_CHATEVAL_BRAINS=lil,big \
   M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1 M1K3_SELFTEST_OUT=- \
   /path/to/M1K3.app/Contents/MacOS/M1K3 > run.log 2>&1
 # the JSON rides the same stream between two whole-line markers:
-python3 -c 'import run_chateval as rc; print(rc.extract_fenced_json(open("run.log").read()))'
+PYTHONPATH=/path/to/M1K3/macos/tools/eval \
+  python3 -c 'import run_chateval as rc; print(rc.extract_fenced_json(open("run.log").read()))'
 ```
 
 `M1K3_SELFTEST_OUT=-` is the whole switch (`SelfTest.writesToStandardOutput`);
@@ -122,8 +125,10 @@ with `M1K3_FM27=1` (`xcodebuild … -configuration Debug -allowProvisioningUpdat
 with the default MAS entitlements gives all three); anything else skips with
 the reason on the transcript. The persona rides as the session's instructions
 (`PersonaCarrying`), so the ReAct floor sends it once — Mini's shipping shape.
-`M1K3_SELFTEST_CHATEVAL_BRAINS=` (empty) runs PCC alone. First live generation:
-2026-09-15.
+`M1K3_SELFTEST_CHATEVAL_BRAINS=` (empty) runs PCC alone; from the driver that is
+`run_chateval.py --direct --pcc --brains ""`. `M1K3_SELFTEST_CHATEVAL_PACE_MS`
+pauses between fixtures (Apple's daemons rate-collapse under rapid turns; the
+local tiers keep the default of 0). First live generation: 2026-09-15.
 
 ### The reference columns (not shipped)
 

@@ -121,6 +121,19 @@ def test_dump_prompt_goes_inside_the_container():
         CONTAINER / "Library/Application Support/M1K3/selftest-dump/lil-e2b")
 
 
+def test_pcc_column_rides_the_trigger_and_may_run_alone():
+    alone = rc.build_trigger(base_opts(brains=[], pcc=True), container=CONTAINER, power_source="ac",
+                             powermode=2, commit=None, mlx_rev=None)
+    assert alone["M1K3_SELFTEST_CHATEVAL_PCC"] == "1"
+    assert alone["M1K3_SELFTEST_CHATEVAL_BRAINS"] == ""  # no tiers: the PCC column alone
+    both = rc.build_trigger(base_opts(brains=["lil"], pcc=True), container=CONTAINER, power_source="ac",
+                            powermode=2, commit=None, mlx_rev=None)
+    assert both["M1K3_SELFTEST_CHATEVAL_BRAINS"] == "lil" and both["M1K3_SELFTEST_CHATEVAL_PCC"] == "1"
+    with pytest.raises(ValueError, match="no brains"):
+        rc.build_trigger(base_opts(brains=[]), container=CONTAINER, power_source="ac",
+                         powermode=2, commit=None, mlx_rev=None)
+
+
 @pytest.mark.parametrize("brains", [[], ["lil", "huge"], ["LIL"]])
 def test_unknown_brains_are_refused(brains):
     with pytest.raises(ValueError):
@@ -175,11 +188,19 @@ def test_extract_fenced_json_takes_the_last_complete_block():
     assert rc.extract_fenced_json(text) == {"runs": [{"brainID": "pcc"}]}
 
 
-def test_extract_fenced_json_refuses_partials_and_junk():
+def test_extract_fenced_json_refuses_partials_and_names_bad_json():
     assert rc.extract_fenced_json("plain transcript\n{}\n") is None
     assert rc.extract_fenced_json(rc.FENCE_OPEN + '\n{"a": 1}\n') is None
     assert rc.extract_fenced_json('{"a": 1}\n' + rc.FENCE_CLOSE + "\n") is None
-    assert rc.extract_fenced_json(rc.FENCE_OPEN + "\nnot json\n" + rc.FENCE_CLOSE) is None
+    with pytest.raises(ValueError, match="not JSON"):
+        rc.extract_fenced_json(rc.FENCE_OPEN + "\nnot json\n" + rc.FENCE_CLOSE)
+
+
+def test_extract_fenced_json_ignores_a_marker_echoed_inside_the_document():
+    # an answer preview quoting the open marker (no newline after it) must not cut the block short
+    body = '{"runs": [{"answerPreview": "it printed ' + rc.FENCE_OPEN + ' and stopped"}]}'
+    text = rc.FENCE_OPEN + "\n" + body + "\n" + rc.FENCE_CLOSE + "\n"
+    assert rc.extract_fenced_json(text) == {"runs": [{"answerPreview": "it printed " + rc.FENCE_OPEN + " and stopped"}]}
 
 
 def test_direct_env_routes_the_report_to_stdout_and_keeps_the_caller_env():
