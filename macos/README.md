@@ -4,9 +4,10 @@ The flagship surface: a Mac-native SwiftUI app — on-device MLX inference, live
 voice (Kokoro TTS + WhisperKit STT), a personal knowledge graph with RAG, an
 embedded agent, a 3D companion, and a local MCP server other agents can call.
 
-**Private by design.** M1K3 runs on your Mac by default. Models download once
-from Hugging Face; after that it's fully offline unless you opt into web
-search or Apple's Private Cloud Compute.
+**Private by design.** M1K3 runs on your Mac. Models download once from
+Hugging Face; after that it's fully offline unless you opt into web search.
+(An opt-in Apple Private Cloud Compute rung arrives in a later release; the
+1.0 build has no cloud path.)
 
 ## Requirements
 

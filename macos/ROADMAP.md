@@ -4,484 +4,250 @@ This is the living "what's next" doc — kept current, not append-only. For
 architecture/build/test, see `CLAUDE.md`. For *why* a decision was made (model
 swaps, phase rationale, the full session-by-session build log), see `PLAN.md` —
 it's a signed historical record and stays that way; this file doesn't repeat it.
+The release-by-release plan for the macOS 27 wave (1.0 → 1.1 → 1.2) lives in
+`docs/GOLDEN_GATE_PLAN.md` § Roadmap; this file points at it rather than
+copying it.
 
-Last swept: 2026-09-02 — the **iOS TestFlight lane** opened (mobile bundle
-IDs unified onto the universal `app.m1k3` record, privacy manifest +
-entitlements + Bonjour key on the mobile targets, a CI guard pinning them) and
-the **iOS parity ladder** written down — flagship §1. Before that —
-
-2026-08-20 — the **M brand mark** shipped (PR #142; app icon
-reduced from the M1K3 wordmark to the single pixel-M, both platforms) and the
-**live wallpaper** greenlit as the Golden Gate flagship (Kev: *"the live
-wallpaper definitely is next — do whatever you need to deliver it"*); prior art
-found in Cartogram-Mac's `Wallpaper/` module (in-app `DesktopWindow` at desktop
-level, occlusion-idle). See the flagship section. Before that —
-
-2026-08-03 (evening) — MERGE DAY, board back to empty. Six PRs
-landed: **#95** dream-cycle truth-up + `docs/DESIGN_DOCTRINE.md` · **#96**
-reduction wave 3 (deadwood) · **#97→#98** the identity/citation leak · **#99**
-a markdown table could seize the window's width (#79 lead) · **#100** the MCP
-`FOLLOWUPS` trailer · **#101** the Mini prompt budget. Master verified
-**2359 tests / 336 suites green + Mac shell builds**. Dead remote branches
-cleared (that `git push origin --delete` is NOT classifier-blocked after all —
-the earlier note was wrong). Xcode Cloud fires on the six merge pushes,
-unwatched.
-
-Earlier the same day: the PROJECT DREAM CYCLE — a Tier-0/1/2 pass over the app,
-brand, and docs themselves (3 scouts + the resident's corpus + a reduction
-pass). Verdict and principles live in `docs/DESIGN_DOCTRINE.md`.
+Last swept: 2026-09-15 — **LAUNCH DAY.** 1.0.0 is submitted for App Review on
+both platforms (Mac build 362, iOS build 361, release type MANUAL) after a
+pull-and-resubmit that dropped the Intel slice (#340) and the trademark
+keywords. 112 commits since the 09-02 sweep: the Golden Gate landscape
+(per-tier MLX memory budget #218, Lil → DWQ #220, the pocket tier #234, the
+completion-attack hardening #221), the screengrab suite → real plates on every
+listing (#225 closed), the relicense to FSL-1.1-ALv2 (#259), the `m1k3` CLI +
+Homebrew tap + `/agents` (#279/#277), the fanless-idle audit (#293), the notch
+HUD (#290/#292/#326), the character pass (#289), `recent_activity` + the
+context-aware chips (#275/#278), the landing tooling (`pr_watch` + `land.sh`,
+#297), Mini's tools working on the live path + prefix prewarm (#328), the PCC
+rung's toolchain-free half (#321/#324, entitlement GRANTED 2026-09-14, #333),
+and Xcode 27 GA (#338). Before that — the 08-20 brand + presence day (the M
+mark #142, the screensaver #143/#144) and the 08-03 merge day + project dream
+cycle (`docs/DESIGN_DOCTRINE.md`).
 
 ---
 
-## Now
+## Now — 1.0 is in the queue
 
-- **★ The context senses are BUILT (2026-09-01) — verify-by-launch owed.**
-  `battery_status` + `calendar_peek` + `current_location` shipped under the
-  context-tools charter (docs/CONTEXT_TOOLS_PLAN.md — Kev's rulings: coarse
-  grid-cell location by default with a precise opt-up toggle; calendar shows
-  titles + times). Per-sense default-OFF toggles in Settings → Privacy →
-  Context; interactive-chat-only via ContextSenseHook; sensitive pair is
-  `.localSensitive` + distillation-tainted. **Owed on the next ⌘R:** the
-  first-use TCC dance for Calendars and Location (toggle → ask → grant/deny →
-  the pane's auto-revert), a live `calendar_peek` answer ("what's my day
-  look like?"), and a coarse + precise location read. Note each toggle flip
-  changes the palette = one cold persona-prefix rebuild on the next turn
-  (the documented trade; capacity question tracked below).
+### While App Review runs (nothing to code)
 
-- **★ Android model eval harness (Python, over adb) — Kev, 2026-08-22: "best model
-  for the hardware, compute — evaled."** The 9a day found two bugs nobody could see
-  by feel (an SVE2 CPU-variant producing broken logits; a 0.8B thinking for 171s then
-  answering nothing) and one judgement we can't settle by feel (is Lil or Mini the
-  right default on 7GB? is thinking ever worth it below Big?). Shape, proven this
-  session: `tools/eval/android/` — fixtures (the Mac's `ChatEvalStage` kinds: open-chat
-  / tool-use / grounded-Q / security / instruction-following) pushed to a device with
-  `adb`, driven through the app (a SelfTest-style one-shot intent, NOT UI taps), verdicts
-  read off `logcat` (`MaCore generate: done`, `Native chat done`, tool ids, chars,
-  ms), scored by `scorecard.py` like the Mac's. Matrix = models (Qwen3.5 0.8B/2B,
-  Gemma 4 E2B, LFM2.5, whatever's next) × CPU variant (armv8.6_1 vs armv9.x — the
-  SVE2 bug must be a fixture) × thinking on/off × device. Models MAY diverge from
-  Apple (Kev: "Apple doesn't need to match Android"). First run answers: the
-  Mini-vs-Lil default, dynamic thinking, and the small-talk tool over-trigger
-  (0.8B calls `get_battery_level` on "what can you help with?"; tool answers render
-  `tool_id: result` instead of prose). Blocked on nothing; one focused session.
+- Both 1.0.0 versions read `WAITING_FOR_REVIEW`; release type MANUAL, so an
+  approval publishes nothing until Kev presses release. visionOS 1.0.0 has no
+  build attached and is not part of this submission (Phase 5 below).
+- **Xcode Cloud is out of compute until 2026-09-28.** Every master push burns
+  a cancelled run and a build number (runs 364–368 all CANCELED; the next
+  cloud number is 369, already past the local 362). Until compute returns,
+  release builds are local: the recipe is in `docs/GOLDEN_GATE_RELEASE.md`
+  plus the launch-day memory (`BUILD_NUMBER=n release-mas.sh`, altool
+  validate + upload, attach by build id). Don't push cosmetics to master just
+  to see a build; nothing will come of it.
+- `.claude/project-memory.md` (2026-09-15 blocks) carries the submission
+  ground truth: pricing/availability, the App Privacy label, the keyword
+  lock while in review, the cancel-and-resubmit flow.
 
-- **★ The perf lever list (2026-08-16 — read the instruments BEFORE picking):**
-  - **Turn-phase instrument is armed but UNFED** — every `turn phases:` line so
-    far is from test runs. The next real conversation writes the first honest
-    pre-gen data (`rg 'turn phases:'` on `app.m1k3:responder`); it names the
-    next lever (this is what the 177s-hole hunt needed).
-  - **`prewarmed=true` verify** — needs a real Mini-fronted turn (`afm turn:`).
-  - **Gemma batch tool-calling A/B** — #131's parallel execution stays latent
-    until the prompt nudge is measured. EVAL-GATED (app closed; gemma is
-    prompt-fragile — A/B before shipping, standing rule).
-  - **Mini iteration cap** (#102's remainder) — wants the instrument's data first.
-  - **G2P dictionary RAM** — 197k small `[Int]` arrays; a flat token-buffer
-    layout would cut footprint meaningfully. Load already 1.33s→0.27s (#135).
-  - **Eval-vs-production divergence, structural fix** — ChatEvalStage's live arm
-    should hold the SAME façade production uses (how the #117 persona-dedup hole
-    hid: eval had the bare provider, production the wrapper — see
-    `facade-capability-forwarding` auto-memory).
-- **G2P/voice ear verdicts (Kev):** house pronunciations (Kokoro, Ardmore) are
-  one-line IPA tweaks in `HouseLexicon.swift`; letter-to-sound guesses are
-  verify-by-ear by design. M1K3 speaks as **Mike** (ruling committed 2026-08-16).
-- **★ Voice latency: measured, and the intuition was wrong — 2026-08-13.** The
-  voice loop had never been instrumented end-to-end. Per-generation `ttft` lines
-  existed (prefill ms, decode tok/s) but a voice turn is retrieval + a grounding
-  cap + an agent loop + a synthesiser, so nothing answered *how long after Kev
-  stopped talking did M1K3 start talking back*. `VoiceTurnTimeline` now logs
-  exactly that, per turn, on both shells:
-  `voice turn: first sentence Xms · synth Yms · first audio Zms · answer Wms · N sentences`.
-  **Measured live over MCP** (Lil resident, persona prefix warm, Kev's own store):
+### On approval (Kev)
 
-  | prompt | prefill | decode |
-  |---|---|---|
-  | 822 tok | 2052 ms | 84 tok @ 63 tok/s |
-  | 1401 tok | 3045 ms | 175 tok @ 61 tok/s |
+1. Press release on both platforms.
+2. Merge **#336** (site App Store CTAs + README TestFlight links) once the
+   store page resolves — the link 404s until then.
+3. Read + merge **#341** (site: PCC is a later release, three crossings today).
+   The repo docs (`README.md`, `SECURITY.md`, `macos/README.md`) say the same
+   thing as of this sweep — keep them in step when the rung ships.
+4. Announce. The portfolio playbook's two-HN-cards rule: M1K3 Show HN first
+   (macOS 27 is GA — the card is live), the murphysig relaunch ≥ 2 weeks
+   later.
 
-  Marginal cost is **1.71 ms per prompt token** on a ~646 ms fixed floor.
-  ★ **Prefill dominates time-to-first-audio and decode barely registers** —
-  voice speaks at the first SENTENCE (~15 tokens, ~250 ms of decode) while
-  prefill is paid in full before any token exists. So the lever is FEWER PROMPT
-  TOKENS, not faster decoding, which demotes speculative decoding from "the
-  obvious next win" to a full-answer-time optimisation (see below).
-  Shipped off that: `GroundingBudgetPolicy.spokenTokenBudget = 400` (from 1100)
-  — ~1.2 s off every spoken turn, and justified twice over, because nobody reads
-  seven document chunks aloud. The iOS shell had **no grounding budget provider
-  at all**, so PR #101's Mini sizing never crossed to mobile; it does now.
-  Kokoro's `preload()` also now runs one throwaway forward pass — it loaded the
-  weights but left the Metal graph to compile on the user's first real sentence.
-  **Then the big one landed the same day (PR #122, A/B-gated):** goal-last +
-  `ConversationTailCache` — the conversation used to re-prefill from scratch
-  every turn (reuse pinned at exactly the 1786-token persona, measured); now
-  the end-of-turn cache seeds the next turn and the eval log reads
-  `prefilling 17–23 tok, seed=conversation` per turn. The append-only
-  one-session design was challenger-killed first (gemma's sliding window,
-  transcript divergence) — the whole story is `docs/VOICE_PERFORMANCE.md` §2a.
-  **Remaining owed: the first HUMAN voice-turn reading** (`voice turn:` +
-  `seed=conversation` lines from a real multi-turn chat on a build ≥ #122).
+### If rejected
 
-- **⚠️ The tool palette is a KV-cache key — changing it per mode costs seconds.**
-  Measured the same day: a self-query turn ("Who are you?") withholds four corpus
-  tools, which is a different `PersonaPrefixCache` key, which is a **6.2 s prefix
-  rebuild** — and `PersonaPrefixCache.defaultCapacity` is 2 while three real
-  palettes now exist (interactive, headless, self-query), so they evict each
-  other. This is the 2026-08-09 stampede class, reopened by a third palette.
-  Filed rather than fixed: raising capacity wants the measured RAM snapshot the
-  file's own header demands. **Standing consequence: tune the grounding, never
-  the palette** — which is a second, stronger reason for the existing
-  "cut iterations, not tools" ruling. Full write-up, including the TTS-upgrade
-  and background-conversation answers: `docs/VOICE_PERFORMANCE.md` (issue #121).
+Budget one round (the ladder said so in September and still does). The review
+notes already explain Mini's instant no-download path for the reviewer,
+on-demand weights, local-network + camera-for-QR. Keywords are locked while a
+submission is in review — cancel, edit, resubmit as a NEW submission (the
+queue position is the price).
 
-- **2026-09-03 — the palette is availability-gated, not hand-listed.** `ToolPalettePolicy`
-  (M1K3Chat, both shells): knowledge tools need a corpus, the web trio + `open_link`
-  need the toggle, `delegate_deep` needs a dive that would reach Big, `battery_status`
-  needs a battery. Stable facts only, applied inside the shared builder so the warm
-  and the turn agree. Per-question routing stays OFF the table for the cache reason
-  above; Kev's phone-vs-Mac read (2026-09-03) is the felt A/B.
+### 1.0.1 — the launch-week verify-owed list (device evidence first, then fixes)
 
-- **Retrieval, the warm palette, and the model's own thinking in the corpus —
-  2026-08-12, found by driving the live app over MCP.** Four things, all
-  measured on Kev's real store rather than reasoned about:
-  ① **Recall ranked by the wrong number.** `MemoryStore.recall` gated on cosine,
-  PRINTED cosine, and ORDERED by RRF — so "what does Kev do for work" put a 60%
-  row above the 71% row that answered it, and "where does Kev live" put "Kev is
-  using a Mac" above three Cork rows. Read as a floor problem since 2026-08-09;
-  it was an ordering problem. Now ranked by similarity, with ONE guaranteed seat
-  kept for the keyword lane so a rare token (a surname) can't be ranked off the
-  page — the shape a challenger pass insisted on, and the tell that it's right is
-  that the 2026-07-02 Golden Gate regression test passes unmodified.
-  ② **The grounding head now hedges — and it is NOT enough (re-measured live).**
-  Asked what he had for dinner on 3 March, M1K3 retrieved a fragment of a stored
-  SCREENPLAY and narrated it before correctly saying it didn't know. The hedge
-  shipped; the same question on the fixed build **still narrates the
-  pomegranate**. A prompt nudge does not stop a 4B model describing what is in
-  front of it. ⚠️ **And the obvious lever is measured DEAD:** with the new gate
-  instrument, best-hit cosine per query on Kev's real store —
-  answerable 0.497 (Cartogram) / 0.715 (Brightbeam) / 0.725 (the script itself);
-  no-answer 0.361 (Ulaanbaatar) / 0.489 (dream) / nothing retrieved (dentist);
-  dinner-on-3-March 0.477 with 7 of 10 chunks kept. **The bands touch: 0.497 vs
-  0.489, a gap of 0.008.** Any abstain threshold that suppresses the dinner
-  grounding also kills the Cartogram answer — the same shape as the 2026-07-30
-  dream-cycle result where contradiction and restatement overlapped and no cosine
-  bar separated them. So: no threshold, and the next idea must not be one.
-  Candidates that survive the measurement: rank-aware injection (inject the
-  best 2, not the best 7 — the dinner turn kept SEVEN chunks about nothing),
-  or a cheap answerability judgement that is not a similarity number.
-  ③ **The pre-warm warmed a phantom.** It built a 9-tool palette no call site
-  ever asks for (it passed `onOpenLink` but not `deepDelegation`, while live chat
-  passes both), so the ~2.1s prefix build was paid at launch AND on the first
-  chat turn AND on the first agent ask. Now warms both real palettes; the
-  heartbeat render is marked background so it can't take a slot either.
-  ④ **`ThinkStripper` knew one dialect out of two.** The resident summariser has
-  been gemma-4 since July and speaks `<|channel>thought`; the stripper only knew
-  `<think>`. A call summary from 2 July was the model's raw reasoning, stored and
-  retrievable for six weeks. One token table now (`ReasoningSplit`, lifted into
-  M1K3Inference), plus `ModelThinkingQuarantine` — a startup sweep in the shape
-  of `SelfWiringQuarantine`, because a fixed generator does not un-store a stored
-  row. ⚠️ **Accepted cost, named because it is real on Kev's Mac:** quarantine is
-  per ITEM, so the 2 July call lost its (perfectly good) TRANSCRIPT from
-  retrieval along with its poisoned summary. That follows the SelfWiringQuarantine
-  precedent and `.quarantined` is a kind, not a delete — nothing is destroyed, and
-  the row is still in Documents. Worth revisiting only if chunk-level quarantine
-  ever earns its complexity.
-  **Instrument added, deliberately ahead of any threshold move:** the grounding
-  gate's per-hit line is `.notice` now, so the next person can read what a wrong
-  hit actually SCORED instead of inferring it. No floor constant was touched —
-  the floors were derived against fixture sets containing only cross-domain
-  negatives (there is not one near-domain negative in them), which is exactly the
-  shape that fails here. Measure first.
+- iOS `.fitWhole` framing on a real phone (#312 closed 09-15; the fox reads
+  well in the iPhone plates, the gecko is small — `CompanionFraming.fit(headroom:)`
+  is the one knob).
+- A WhisperKit start failure on a real route (#311 closed 09-15) and the
+  Bluetooth-headset voice test on the Mac (Apple's voice processing delivers
+  zero mic buffers with a BT input — memory `mac-bluetooth-vpio-starves-mic`).
+- **#303** tail: 2/3 "What can you do?" answers still close on the decline
+  line after the capability list; **#337** `ExemplarEcho` is blind to the move.
+- **#342** CI guard asserting `ARCHS: arm64` (the Intel-slice regression).
+- **#329** Mini prose after a mid-conclusion `ACTION:` never shown; **#327**
+  notch HUD hide re-derives geometry against the current screen; **#334**
+  `pr_watch` misses summon headers without backticks.
+- The constellation window's ideal frame (`.frame(idealWidth:idealHeight:)`)
+  and a richer demo seed so the held constellation plate can ship (five motes
+  undersell it).
+- The portrait hero's "Private by / design." wrap — Kev's copy or type-scale
+  call.
+- WhisperKit 0.18 → 1.1 is two majors: probe-first (`swift package resolve`,
+  the Tokenizers clash), then the gemma-4 tool-call smoke, post-launch only.
+- The felt verdicts Kev owes himself on the installed build: "yo" on a fresh
+  chat (the character pass), the chips' second draw, the caption following the
+  voice, the fitted fox in the notch.
 
+### Standing 1.0.x items (status lives in `docs/GOLDEN_GATE_PLAN.md` § 1.0.x)
 
-- **Voice-mode feel — PR open 2026-08-11 (Kev's ⌘R owed).** Three live
-  complaints, three fixes. ① The endpointer now LEARNS the speaker's pause
-  instead of taking a third guess at one number, and both shells share
-  `EndpointCadence.conversational` (they had drifted: 2.0/4.5/30 vs 2.0/3.5/20,
-  from the same complaint). ② Apple's voice processing is on our mic path —
-  echo cancellation + speech-triggered ducking, so music gets out of the way
-  mid-sentence instead of competing. ③ A one-time realignment moves a persisted
-  Big to Lil, because #117's Lil-fronts default only ever reached machines with
-  no pick — Kev's own Mac woke on Big the next morning.
-  **The open question is ②'s cost:** voice mode now prefers Apple Speech over
-  WhisperKit, because WhisperKit's `AVAudioEngine` is built inside the package
-  (`setupEngine`/`processBuffer` internal — verified) so echo cancellation cannot
-  be reached from out here. That trades word accuracy for a clean channel;
-  Settings → Voice mode flips it. If the transcription feel is worse, the named
-  alternatives are an upstream WhisperKit `voiceProcessing` option, or ducking the
-  system output device ourselves via CoreAudio while the mic is hot.
-  **④ Stop now actually stops (2026-08-12, found by Kev's ear).** A `stop()`
-  landing during the SILENT offline-synthesis window relied entirely on
-  `stopSpeaking(at: .immediate)` cancelling that render — and under load it
-  doesn't: measured, a stop 900ms in took 6.1s to unwind because the render
-  finished and then played the whole utterance. Every piece of bookkeeping was
-  correct throughout (one ended event, `isSpeaking` false), which is why no test
-  caught it and why the test named "returns promptly" passed without ever
-  asserting promptness. A render now carries the stop epoch it was claimed in and
-  drops its audio if a stop landed since — covering both the synthesis window and
-  a render still queued behind the gate. This is barge-in on a long answer: the
-  window is exactly as long as M1K3 takes to synthesise.
-- **The Heartbeat — v1 shipped 2026-08-06; PROMOTED to a sidebar destination
-  with the interaction timeline 2026-08-19 (default OFF, Kev's calls owed).**
-  The 2-hourly narrative pulse: deterministic digest + resident-MLX
-  retelling. `HeartbeatScreen` is now the canonical surface — pulses and
-  visiting-agent MCP calls foldered into per-client visits
-  (`InteractionTimeline`, pure/TDD'd; client identity captured from the MCP
-  initialize into the opt-in Agent Log, `client_name` v2 migration;
-  `mcpLogRevision` makes agent comms live). Window retired; idle card is a
-  teaser into the destination. `docs/HEARTBEAT_DESIGN.md` carries the
-  challenger record and the open ruling — the activity-log vs
-  prove-nothing-kept double-bind (default/cap/history-length) and the
-  "heartbeat" noun. ⌘R verify-owed: toggle on, live with it an afternoon,
-  A/B the Big vs Lil narrative before defaulting on.
-- **iOS voice-mode crash triage (#85).** Code-inspection pass done (2026-07-31,
-  findings on the issue): the voice session layer is clean; ranked suspects
-  are ① jetsam memory-limit exit (fits "no `.ips`" — check for `JetsamEvent`
-  files, not just crash logs), ② watchdog via the synchronous
-  AVAudioSession activate/deactivate on the main actor, ③ the mic-tap
-  realtime-thread lock (bench item #4). **The discriminator is live:** #88's
-  `MXAppExitMetric` names the exit reason on the next repro. Cheap hardening
-  available regardless: make the session activate/deactivate non-blocking.
-- **Phase B — iOS voice, for real.** With #82's shell shipped and #85
-  instrumented, the B-A1 AVAudioSession echo spike is next — and it maps the
-  same territory as suspect ② above, so run the spike WITH the crash as
-  fixture one. Then B-1 STT/captions → B-2 Kokoro-vs-AVSpeech on measured
-  thermals → B-3 the composed voice-mode UI.
-- **Dream-cycle Tier-2 soak.** Shipped in #87 (write-time repair: corrections
-  supersede, never eaten — acceptance gate 3/10 → 0/10 on-device). Watch real
-  distillation traffic; the Tier-3 decision (one-shot Δ202 backfill vs nightly
-  dream) is a re-measure after the soak, not a build. The ride-along landed:
-  PR #94 gives corrected facts a list-level lens in MemoriesView (2026-08-01),
-  so the soak is now eyeball-able, not log-only.
-- **★ Mini's turn shape (#102) — the one that governs how M1K3 FEELS on the
-  default brain.** Found by interviewing Mini over MCP (#101 fixed the two
-  prompting bugs that interview surfaced: the grounding cap failing open on
-  the 4096-token tier, and `PromptContext` telling M1K3 its name was "Mini").
-  What's left is architecture, not persona. Small talk runs full retrieval,
-  ~4.7 KB of grounding, all 8 tools and 3 agent iterations on a ~3B model with
-  half a context window — so "Long day, I'm wrecked" came back with retrieved
-  *rave-website documents*, and "tell me something interesting" **invented a
-  weather forecast**. The clincher: with retrieval skipped and tools halved by
-  the self-query gate, Mini **still burned its full iteration cap**. So the
-  question isn't only "should this turn retrieve?" but "should this brain be
-  running an agent loop at all for this turn?". ⚠️ The obvious fix (a
-  small-talk gate) is close to the pre-generation intent router **rejected
-  2026-06-12 as "brittle both ways"** — wants a `challenger` pass before code.
-  Lean: tier-aware prompting, scaling the scaffold to what the brain can carry.
-  **Also measured and rejected:** giving Mini the `voiceExemplars` (cost is not
-  the reason they're withheld — they're only 187 tokens; the reason is a ~3B
-  model *parrots* them as content). Evidence lives in
-  `AppleFoundationModelsProvider`'s header; harness (`interview.sh`, paced 30s)
-  in the session scratchpad. **Pace any AFM verify loop ~30s** — rapid turns
-  exhaust `ModelManagerServices` and every answer degrades to the empty floor.
-- **The reduction wave (project dream cycle, 2026-08-03).** Doctrine:
-  `docs/DESIGN_DOCTRINE.md`. The measured duplication table (progress ×9,
-  change-brain ×5, record-consent ×3-dialects, avatar-display ×2 identical)
-  becomes staged cuts, each its own small PR, doctrine-tested:
-  1. **Show-a-state-once** — model-load progress 9 → 2 (canonical + menu bar).
-  2. **One promise** — a single record-call consent component; one entry point
-     in Calls + the menu-bar toggle.
-  3. ~~**Vocabulary collapse**~~ — **DONE, #96** (2026-08-03): the unshipped
-     "LiteRT" label, the raw-enum a11y string, the wrong Agent-Log→Settings
-     pointer and the dead `hasChosenVoiceKey` are all gone.
-  4. **The debug door** — Advanced pane gutted to Diagnostics + Licenses;
-     Embeddings/Import-weights/Status/Generation-stats behind a hidden debug
-     surface; SelfTest + eval stages out of the release binary.
-  5. **One thinking control** — merge General→Reasoning with voice-mode's own
-     (today one explicitly ignores the other).
-  6. **"Left this Mac"** — the thesis, rendered: Memory screen gains a
-     permanently-empty egress list that the MCP log fills only when the port
-     is on. Absorbs the Agent Log window + half the Privacy pane. Proof, not
-     copy — and the site's next screenshot.
+- **Prefix prewarm: n ≥ 5 in-app rerun owed** (turn-1 first chunk 2.7/3.3 s vs
+  5.8/6.2 s at n = 2 per arm; the console switched accounts before n = 5).
+- **The Mini palette call (Kev):** the production 16-tool palette puts ~3.9k of
+  Mini's 4,096 tokens in the fixed prompt. Levers: a smaller Mini palette
+  (`ToolPalettePolicy`), shorter descriptions for Mini, or 1.1's
+  `toolCallingMode(.disallowed)` for small talk. Not the grounding cap.
+- The two "reply IMMEDIATELY starting with CONCLUSION:" RULES lines are the
+  next tool-use lever (Mini live tool-use is 15/30 since #328) — its own eval.
+- Mini's invented user threads; the verbatim-recital hardening (#111).
 
 ---
 
-## Next — the flagship initiatives
+## Next — the releases
 
-Both voice-on-iOS and Brain-at-home are past the spike stage — architecture and
-feasibility are proven, what's left is building.
+### 1.1 — Golden Gate native (`docs/GOLDEN_GATE_PLAN.md` § 1.1)
 
-### 0. The M1K3 screensaver — the Golden Gate "my machine is alive" flagship (2026-08-20)
-Kev greenlit a live-presence surface; `challenger` pressure-tested the obvious
-shape (an always-on **desktop wallpaper**, porting Cartogram-Mac's `DesktopWindow`)
-and **Kev chose the screensaver instead** on its recommendation.
+The gates: **Xcode 27 GA — met** (27A266a on this Mac since 09-15; the suite
+is green on Swift 6.4, both apps build Release); **App Store Connect accepts
+27-SDK builds — met** (360–362 were archived on Xcode 27 GA and read VALID);
+**the CI pin bump + Xcode Cloud's Xcode version — open** (the cloud half waits
+for compute on 09-28). Then, in order:
 
-- **Why not the always-on desktop wallpaper** (challenger, grounded in source):
-  ① occlusion-idle barely fires — a desktop-level window reads `.visible` if any
-  sliver shows (menu-bar gap, Dock, notch), so it only idles inside a full-screen
-  Space (when you can't see it anyway); and the rain's `TimelineView` is
-  `paused: lowPower` only — **no occlusion-pause seam exists** (`InferencePhosphorView.swift:94`),
-  so a straight port is a permanent 30fps GPU loop per screen. ② the "2D pixel
-  face" **is RealityKit** (`AvatarView` FaceGrid, 30fps) — same always-on cost as
-  the "3D" avatar; only the bare rain Canvas is cheap. ③ the heartbeat line is
-  composed from **remembered-fact titles** (`HeartbeatComposer.swift:37`) and
-  own-output renders verbatim — a user-content leak onto the most-screenshotted
-  surface (the privacy double-bind: screenshotted × readable × data-minimalism → pick two).
-- **Why the screensaver wins:** runs only when idle (cost-free — idle = no battery
-  worry), most cinematic recording context, macOS owns the lifecycle (no occlusion
-  problem), and it rarely lands in a work screenshot so the privacy bind dissolves.
-  The "can't read live state" limit is FALSE for us — it can poll M1K3's own
-  **loopback MCP** (`127.0.0.1:4242` `get_status`, recent activity) + read
-  `heartbeat.sqlite`, both already served. Story: *"what M1K3 got up to while you
-  were away."*
-- **Guardrails carried from the pass:** v1 self-contained visual (pixel-rain +
-  the new **M mark** + black gradient) that always works with zero data; the live
-  layer (status + latest heartbeat) degrades gracefully if the loopback port is
-  closed or the `legacyScreenSaver` sandbox blocks it (⚠️ **unverified** — sandbox
-  may block cross-container `heartbeat.sqlite` reads and/or outbound localhost;
-  spike the mechanism first). Freeze-detect / static-idle-mark if the resident
-  brain is stalled. Default surface, install to `~/Library/Screen Savers/`.
-- **The other two shapes, recorded not chosen:** the always-on desktop wallpaper
-  (needs occlusion→full-Space pause seam + glyph-only + energy proof — deferred,
-  maybe never); a "Present/Ambient" in-app full-screen mode (cheap, live, opt-in
-  "watch M1K3 think" — a possible later companion to the screensaver).
+1. Toolchain bump PR: `ci.yml` to Xcode 27, `M1K3_FM27` → `#available(macOS 27, *)`
+   so the FM27 bridge ships in the normal build; full suite + the gemma-4
+   native tool-call smoke + one `release-macos.sh` archive; Swift 6.4
+   language-mode warnings triaged, not ignored.
+2. Mini hygiene with typed APIs: `toolCallingMode(.disallowed)` on small-talk
+   turns kills **#102** at the source (`.required` when the user names a
+   tool); `LanguageModelError.rateLimited` replaces the "empty answer means
+   the daemon collapsed" heuristic; `.contextSizeExceeded` becomes
+   trim-and-retry in `HistoryBudgetPolicy`; `contextSize` read at launch.
+3. Mini sees: route dropped images and screenshots to Mini as
+   `ImageAttachment`s, on-device. Exit: a probe answers a question about a
+   test image.
+4. Apple's `SpotlightSearchTool` / `OCRTool` behind a `ToolPalettePolicy` A/B
+   on Mini and Lil. The palette is a prefix-cache key (**#121**): add tools
+   once, keep them stable.
+5. ADR 0001 goes live: Lil and Big registered as `LanguageModel`s;
+   `@Generable` over MLX brains once `M1K3FoundationExecutor.userPrompt`
+   carries prior turns.
 
-### 1. iOS — to TestFlight, then parity: the ladder (opened 2026-09-02)
+### 1.2 — the PCC rung (ADR 0006) — entitlement GRANTED 2026-09-14
 
-**Where it stands.** The iOS/visionOS shell (`M1K3iOSApp/`, 19 files, ~3k lines,
-`AppCore` as its own composition root) is real: streaming grounded chat with
-tools + history + reading modes + markdown, voice mode (Apple Speech STT +
-AVSpeech TTS over the shared `VoiceLoopController`), the pixel face + the five
-3D companions, a Mini/Lil brain picker with download progress, Documents +
-Memories, the Brain at Home client (QR pairing, PR #152), MetricKit collection.
-It links 14 of the Mac's 26 package products, and the library graph is
-genuinely portable (one `import AppKit` in all of `Sources/`, seven
-`#if os(macOS)`). What it never had was a lane to TestFlight — and **no build
-has run on hardware since the July harness** (Mini + Lil verified on an
-iPhone 17 Pro then; the shell since, only compile-green in CI).
+- On master: the policy + send path (#321), the Mac shell — switch (default
+  off, hidden without a backend, a fact under
+  `PrivateCloudComputeDisabledByPolicy`), per-message cloud button, consent
+  sheet, "Private Cloud Compute" label (#324), the FM27 adapter with its
+  SDK-error mapping tested on the 27 toolchain, and the entitlement on the
+  MAS lane only (#333). **No build compiles the rung**: `M1K3_FM27` is read
+  only by `Package.swift` from the environment, so 1.0 has no cloud path.
+- Owed: a real PCC generation (Kev's account on the console — Apple
+  Intelligence follows the console user), the 1.1 toolchain bump to ship the
+  adapter, then the copy sweep **#322** in the SAME release as the rung, never
+  before. (Its "Private by design" copy reached the site early; #341 pulls the
+  present tense back to "a later release", and this sweep does the same for
+  the repo docs.)
+- Teams: the org switch exists in the shell; the fleet-wide-lock sentence
+  returns to README / SECURITY when the switch is real.
 
-**Phase 0 — the lane.** In PR (2026-09-02): the mobile bundle IDs unified onto
-the universal `app.m1k3` record (the developer portal registers it UNIVERSAL;
-the ASC record already carries IOS + VISION_OS 1.0.0 drafts — the `.ios`/
-`.visionos` suffixes had nowhere to upload), `PrivacyInfo.xcprivacy` on the
-mobile targets, `M1K3iOS.entitlements` (increased memory limit — what Lil on
-a phone stands on), `NSBonjourServices` for Brain at Home browsing, an
-Info.plist per target, and `tools/ci/check_store_targets.py` pinning all of
-it. **After merge:** one `PATCH` adds an `Archive — iOS` action to the
-existing `Release` workflow (`docs/XCODE_CLOUD_RELEASE.md` §3) → the next
-master push mints build N for Mac AND iOS → TestFlight Internal → Kev's
-iPhone 17 Pro. **Exit:** an IOS build reading VALID in ASC, installed via
-TestFlight, and the on-device smoke the shell has never had — a Mini turn,
-Lil download + turn under the entitlement (read `os_proc_available_memory()`
-and tune `MLXMemoryBudget`'s 4 GB), a voice round-trip, the Brain at Home
-ceremony with Bonjour declared.
+### iOS — the parity ladder (opened 2026-09-02): where it stands
 
-**Phase 1 — the cheap parity (Mac-only by linkage, not by nature).** Each is
-a package that already builds for iOS plus a thin `AppCore+` adapter, in the
-order the Mac's soul shows through:
-- **Heartbeat** — `M1K3Heartbeat` (pure) + `HeartbeatScreen`/`IdleCard`/
-  settings section; the engine in `AppEnvironment+Heartbeat.swift` has one
-  AppKit touch (`NSApp.isActive` gating the pulse notification — `UIApplication`
-  state on iOS), the rest is portable.
-- **Context senses** — `battery_status` needs a `UIDevice` provider (the Mac's
-  is IOKit-guarded and returns nil on iOS); `calendar_peek` +
-  `current_location` reuse the EventKit/CoreLocation adapters from
-  `AppEnvironment+ContextSenses.swift`, plus the Privacy toggles and usage
-  strings. Same charter: coarse by default, precise opt-up, default-OFF.
-- **Settings IA parity** — M1K3 / You / Privacy / General / Advanced (the
-  2026-09-01 reduction) over today's single Form, same footer copy.
-- **The wake carousel** for the Lil download wait — `WakeSetupCarousel` is
-  SwiftUI over `WakeSetupFlow` (M1K3Inference, pure); the cards apply as-is.
-- **Memory export** (OKF, ADR 0003) via `fileExporter`; **long-think
-  notifications** (`TurnNotificationPolicy` is pure, `UNUserNotificationCenter`
-  is the same API); **Spotlight** donation (CoreSpotlight, titles only).
-- **The constellation** — `M1K3MemoryViz` holds the one AppKit import
-  (NSColor in the palette/view); a UIColor branch unlocks the companion
-  option on mobile.
-**Exit:** the Settings tabs read the same on both platforms and every consent
-toggle exists on iOS with the same copy.
+- **Phase 0, the lane — DONE.** One universal `app.m1k3` record, privacy
+  manifest + entitlements + Bonjour key on the mobile targets, the
+  store-targets guard (#182); ITMS-90474 orientations (#191); builds 358–361
+  VALID; the iOS lane on a real phone for plates (#256).
+- **Phase 2, voice — LANDED 09-03/09-04** (#194/#199–#205: sentence streaming,
+  karaoke, pauses for calls, Kokoro as a Settings pick with Built-in the
+  default, the VPIO silent-source fix; the double-tap race #301 → #331).
+  Still deciding Kokoro-as-default: a measured 10-minute thermal burn with Lil
+  resident. Still owed: WhisperKit vs Apple Speech on the phone (assert
+  on-device recognition, fail loud on the silent server fallback).
+- **Phase 4, the store pack — SUBMITTED 09-15** with the Mac (iPhone + iPad
+  13" sets real, "Data Not Collected" published, 4+).
+- **Phase 1, the cheap parity — NOT started.** Each is a package that already
+  builds for iOS plus a thin `AppCore+` adapter: Heartbeat (one AppKit touch:
+  `NSApp.isActive` → `UIApplication` state), the context senses (`UIDevice`
+  battery; EventKit/CoreLocation adapters reused), Settings IA parity, the
+  wake carousel, memory export (OKF, ADR 0003), long-think notifications,
+  Spotlight donation. The constellation already crossed (#250, "one sky, two
+  shells"); the brain menu is device-honest (#229). Exit: the Settings tabs
+  read the same on both platforms and every consent toggle exists on iOS
+  with the same copy.
+- **Phase 3, the iOS-native soul — not started.** App Intents/Shortcuts, a
+  Lock Screen/Home widget with the last pulse, a Live Activity for long
+  thinks and downloads, a Control Center "Ask M1K3", a Share extension for
+  drop-a-doc.
+- **Phase 5, Vision Pro — hardware-owed.** visionOS 1.0.0 has no build; the
+  archive action + its own entitlements file are the lane work. Banked from
+  July so nobody re-runs them: K0/K1 (MLX-Kokoro, Kev's ear) → #58; V0 → the
+  camera-less `GeometryReader3D` framing (#60); the tab shell retired by #82.
+- **Not ported, by design (the Mac-shaped half):** the in-app MCP server,
+  the Brain at Home *server*, the screensaver, the menu bar, the notch HUD,
+  scripts/hands, launch-at-login, call recording's far-end capture. Parity
+  means parity of soul — chat, voice, memory, companions, senses, heartbeat —
+  not a window-for-window copy.
 
-**Phase 2 — voice parity (the port doc's Phase B).** *Landed 2026-09-03 (the
-voice-first pass): sentence-streamed speech + spoken tool interstitials (the
-Mac adapter's `runTurnStreaming`, ported), the karaoke Focus-reader line over a
-timeline of fading spoken bubbles (`SpeechHighlight` + `KaraokeReadingText`
-cherry-picked into the mobile shell), mute-while-listening + tap-the-face-to-wake,
-and the interruption/route negatives as a pure `AudioInterruptionPolicy` (a call
-or headphones-out PAUSES via the new `VoiceLoopMachine.pause`; an interruption
-ending never resumes the mic unasked; a media-services reset exits) — with
-AVAudioSession activation moved off the main actor (#85's watchdog suspect).
-Simulator-verified to the parked-idle screen; the spoken beat, karaoke follow,
-and interruptions are Kev's phone.* Still open here: Kokoro TTS is now a Settings pick on iOS (2026-09-03, Built-in
-stays the default); whether it ever becomes the default is decided on a **measured
-10-minute thermal burn** with Lil resident;
-WhisperKit vs Apple Speech (assert on-device recognition, fail loud on the
-silent server fallback); sentence-streamed auto-speak in chat
-(`AppEnvironment+AutoSpeak`) + karaoke follow; interruption/route negatives;
-the `UIBackgroundModes: audio` call (only if voice must survive backgrounding —
-today the shell exits voice on background, deliberately). The #85 voice-mode
-crash triage reads `MXAppExitMetric` from the MetricKit store already
-collecting on the phone.
+### Brain at Home (`docs/BRAIN_AT_HOME_SPEC.md`)
 
-**Phase 3 — the iOS-native soul (Phase C).** App Intents/Shortcuts
-(`M1K3App/Intents/`, five small portable files over the shared
-`AppEnvironment+Intelligence` core), a Lock Screen/Home widget carrying the
-last heartbeat pulse, a Live Activity for long thinks and weight downloads, a
-Control Center "Ask M1K3" control, a Share extension for drop-a-doc (the O5
-card the Mac still owes too). This is where the phone stops being a port and
-becomes the menu-bar app's sibling.
+Mac server SHIPPED 08-19 (`M1K3BrainServe`, default OFF, TLS 1.2 + ECDHE_PSK
+because TLS 1.3 external-PSK doesn't handshake on Network.framework; the
+scoped LAN `/mcp` route on its own toggle). iPhone/iPad client BUILT 08-24
+(`M1K3BrainLink`; the QR carries the Mac's LAN `hosts=`); the TLS-resumption
+re-pair bug fixed 09-05 (#229/#231 — a resumed session skipped the PSK
+exchange). **Hardware-owed: the real ceremony** — QR scan, Approve, the Local
+Network dialog, a streamed answer, Tailscale-unreachable. Next: the Android
+client (Conscrypt PSKKeyManager or the cert-pin fallback); canary → Keychain
+migration; LAN-MCP client-name stamping; the N2/N3 escalation UI.
 
-**Phase 4 — the store pack** — one universal record, so the SAME session as
-the Mac's MAS pack: screenshots (6.9"/6.5" iPhone, 13" iPad),
-`fastlane/metadata_ios/` (copy drafted in `marketing/ios-launch/`), review
-notes (Mini's instant no-download path for the reviewer, on-demand weights,
-local-network + camera-for-QR explained), privacy label "Data Not Collected",
-4+, external TestFlight → Beta App Review. Budget one rejection round.
+### The screensaver — SHIPPED 2026-08-20
 
-**Phase 5 — Vision Pro (Phase D).** A visionOS archive action (the target is
-already `app.m1k3`) plus its own entitlements file — the increased-memory-limit
-entitlement is wired to `M1K3iOS` only today, a conscious carry-forward, and the
-store-targets guard does not pin entitlements; the volumetric avatar + walkable constellation flagship.
-Hardware-owed. What's already banked from the July spikes, so nobody
-re-runs them:
-- K0 (MLX-Kokoro feasibility) ✅ · K1 (on-device A/B, Kev's ear passed it) ✅
-  → **#58 merged** · V0 (visionOS sim spike) ✅ → its dark-avatar finding fixed
-  in **#60** (camera-less `GeometryReader3D` framing — visionOS's eyes *are*
-  the camera). V0's tab-ornament finding CLOSED BY REMOVAL (PR #82 retired the
-  tab shell; chat is the app, the rest are pushes).
-- Scoping: "voice-forward, not voice-only" — voice is a full-screen cover over
-  the retained chat shell (setup/downloads/TCC/consent stay visual), v1 in #82.
-- Landmines named in `scratch/voice-mobile/PLAN-DRAFT.md`: self-echo (no AEC
-  anywhere — v1 is push-to-talk); Apple Speech's silent server fallback is a
-  privacy landmine on a listening surface; thermals need a measured burn.
+`M1K3ScreensaverCore` (Foundation-only) + the `.saver` bundle, installed from
+Settings ▸ General. Kev chose it over an always-on desktop wallpaper on a
+`challenger` pass (occlusion-idle barely fires for a desktop-level window; the
+pixel face is RealityKit; the heartbeat line would put remembered facts on
+the most-screenshotted surface) — the full record is in this section's git
+history (2026-08-20 → 09-02). A "Present/Ambient" in-app full-screen mode
+stays a possible later companion.
 
-**Not ported, by design (the Mac-shaped half):** the in-app MCP server (no
-desktop agents dial into a phone — Brain at Home is the phone's way of being
-served), the Brain at Home *server*, the screensaver, the menu bar, the notch
-HUD, scripts/hands (no `NSUserUnixTask` on iOS), launch-at-login, call
-recording's far-end capture (ScreenCaptureKit). **Parity means parity of soul
-— chat, voice, memory, companions, senses, heartbeat — not a window-for-window
-copy.** Each Mac-shaped surface either gets an iOS-shaped sibling in Phase 3
-or nothing, on purpose.
+---
 
-### 2. Brain-at-home — **Mac side SHIPPED 2026-08-19; iPhone/iPad client BUILT 2026-08-24** (`docs/BRAIN_AT_HOME_SPEC.md`)
-- **Phase A spikes all PASS** (`scratch/brain-at-home/spikes/RESULTS.md`) with
-  one spec-impacting finding: TLS 1.3 external-PSK doesn't handshake on
-  Network.framework — the mechanism is **TLS 1.2 pinned + ECDHE_PSK 0xD001**
-  (PSK mutual auth WITH forward secrecy). §8a defaults adopted (plan-approval
-  veto pass, 2026-08-19).
-- **Mac server live behind Settings → Privacy → Brain at Home** (default OFF):
-  `M1K3BrainServe` module (pairing state machine + scope + listener, TDD'd
-  incl. real loopback TLS-PSK negative paths), QR pairing with the on-Mac
-  Approve + separate candidate-only pairing listener, Bonjour advertise,
-  429/preemption etiquette, and — **Kev's ruling** — the SCOPED LAN `/mcp`
-  route (read/ask allowlist, its own default-OFF toggle).
-- **Phase C (iOS/visionOS client) — BUILT 2026-08-24.** New `M1K3BrainLink`
-  module (MCP-free; the shared TLS-PSK wire moved there): the QR
-  `PairingPayload` as ONE compose/parse type — **now carrying the Mac's LAN
-  `hosts=`** (the 08-19 QR had no address at all; a first-time device had
-  nothing to dial, since Bonjour only advertises once a device is paired) —
-  client HTTP/SSE codecs pinned against the server's own frames, the
-  `NWConnection` transport, the pairing ceremony (pair → poll-health-until-
-  Approve), `HomeBrainProvider` (the Mac's brain in the mobile inference
-  slot; refusals speak etiquette copy), and the device store (defaults +
-  Keychain). Shell: in-app QR scanner (iOS) / paste path (Simulator +
-  visionOS), the "Home" brain row, the Brain at Home Settings section with
-  live health + Forget. Loopback tests drive the production client against
-  the real listener (health, SSE, 429, 503, wrong-key, pair).
-  **Hardware-owed (Kev + iPad): the real ceremony** — QR scan, Approve,
-  Local Network dialog, a streamed answer, Tailscale-unreachable.
-- **Next:** Android client (Conscrypt PSKKeyManager, or the cert-pin
-  fallback). Follow-ups: canary→Keychain migration; LAN-MCP client-name
-  stamping (the paired device name is the natural stamp); N2/N3 escalation
-  UI now that a real client exists.
+## Carried from the August sweeps (still live; one line each)
+
+- Context senses (`battery_status` / `calendar_peek` / `current_location`,
+  #173): the first-use TCC dance, a live `calendar_peek` answer and a coarse +
+  precise location read are still verify-by-launch. Each toggle flip changes
+  the palette = one cold prefix rebuild (the documented trade).
+- The first HUMAN voice-turn reading — `voice turn:` + `seed=conversation`
+  lines from a real multi-turn chat (build ≥ #122). Prefill dominates
+  time-to-first-audio; the lever is fewer prompt tokens, not decode.
+- **#121** the palette is a KV-cache key: `PersonaPrefixCache.defaultCapacity`
+  is 2 against three real palettes. Standing consequence: tune the grounding,
+  never the palette (per-question routing stays off the table).
+- Grounding narrates what's in front of it (the 3-March pomegranate) and no
+  cosine threshold separates answerable from not (0.497 vs 0.489 on Kev's
+  store). Surviving candidates: rank-aware injection (best 2, not 7) or an
+  answerability judgement that is not a similarity number. Measure first.
+- Heartbeat is a sidebar destination, default OFF: Kev's calls owed
+  (default / cap / history length; Big vs Lil narrative A/B after an
+  afternoon with it on).
+- **#85** iOS voice-mode crash: `MXAppExitMetric` names the exit on the next
+  repro; AVAudioSession activation moved off the main actor in the 09-03
+  pass (suspect ②).
+- Dream-cycle Tier-2 soak → the Tier-3 decision is a re-measure, not a
+  build; #94's corrected-facts lens makes the soak eyeball-able.
+- **#102** Mini's turn shape → answered by 1.1's `toolCallingMode`; the
+  small-talk gate stays rejected ("brittle both ways", 2026-06-12).
+- Android eval harness — SHIPPED 08-22 (`tools/eval/android/`; the F1/F2/
+  KV-clear fixes lifted Mini 9 → 19/22 and falsified the "armv9 broken
+  logits" read). The KMP app is a slow burn; models may diverge from Apple.
+- The reduction wave's staged cuts (show-a-state-once · one promise · the
+  debug door · one thinking control · "Left this Mac" — the egress list that
+  proves the thesis): #3 vocabulary collapse done (#96); the rest unbuilt,
+  doctrine-tested when picked.
+- The 08-16 perf lever list is superseded by the fanless-idle audit (#293)
+  and the prewarm work (#328). Left: G2P dictionary RAM (197k small arrays →
+  a flat buffer), the gemma batch tool-calling A/B (#131, eval-gated), and
+  eval-vs-production façade parity (`facade-capability-forwarding`).
 
 ---
 
@@ -489,155 +255,109 @@ or nothing, on purpose.
 
 - **Knows-me LoRA — data pass.** The voice LoRA trained clean but was PARKED:
   2 of 4 pre-registered gates failed (a softened security refusal; a confident
-  factual confabulation — the exact "sounds right, is wrong" trap the
-  honest_uncertainty examples were meant to prevent). The fix is DATA, not
-  knobs: audit `anti_injection` seeds for any conditional refusal, rebalance
-  world_fact vs uncertainty examples, target the confident-precision failure
-  mode specifically. Then retrain → A/B against the kept iter-100 checkpoint →
-  run the Swift CHATEVAL `security` regression suite (never reached in the
-  parked run — it's the rigorous gate this needs before it's a real candidate).
-- **Age-gating follow-up PR.** #31 shipped only the pure `AgeBand`/
-  `AgeAppropriateness` policy core. The `DeclaredAgeRange` request flow +
-  entitlement + persona-clause injection + web-tool gate wiring was deliberately
-  held until Beta App Review cleared — **it has (2026-07-18)** — so this is
-  unblocked. Re-verify the Declared Age Range API specifics against current
-  Apple docs before building (named low-confidence in PLAN.md item 19 — macOS
-  availability / band granularity / decline semantics all need a fresh check).
-- **Phase 17b — PCC network rung. DECIDED 2026-09-14 (ADR 0006).** Kev: ship
-  PCC as an opt-in rung and move the posture from "Nothing leaves" to
-  private by design, with the copy changing in the same release as the rung.
-  Gate: the `com.apple.developer.private-cloud-compute` entitlement (request
-  pack: `docs/PCC_ENTITLEMENT_REQUEST.md`, Kev files it). The runtime probe
-  shows `available`, a 32,768-token window, reasoning and vision, and 1046
-  without the entitlement. Scope and constraints: `docs/GOLDEN_GATE_PLAN.md`
-  § 1.2 and ADR 0006.
-- **Memory distiller-quality eval.** Narrowed again by the dream-cycle work
-  (Tiers 0/1 shipped 2026-07-30; MEMSTAT now measures the ingest path
-  end-to-end). Still genuinely open: an AFM-judge eval scoring whether
+  factual confabulation). The fix is DATA, not knobs: audit `anti_injection`
+  seeds, rebalance world_fact vs uncertainty examples, target the
+  confident-precision failure. Then retrain → A/B against the kept iter-100
+  checkpoint → the Swift CHATEVAL `security` suite as the gate.
+- **Age-gating follow-up PR.** #31 shipped only the pure `AgeBand` /
+  `AgeAppropriateness` core; the `DeclaredAgeRange` request flow +
+  entitlement + persona clause + web-tool gate wiring was held for Beta App
+  Review, which cleared 2026-07-18. Re-verify the Declared Age Range API
+  against current Apple docs before building.
+- **Memory distiller-quality eval.** An AFM-judge eval scoring whether
   `MemoryDistillationCoordinator` extracts good facts from chat (no fixtures
   in `M1K3Eval` yet), and the `user.profile` vs `.memory`-graph collision
-  check.
-- **Golden Gate wave (macOS 27, GA Sep 14) — the plan lives in
-  `docs/GOLDEN_GATE_PLAN.md` § Roadmap.** 1.0 ships from the Xcode 26
-  toolchain on the 27 runtime, with no new features. 1.0.x lands the
-  26.5-SDK wins (`prewarm(promptPrefix:)`, grounding `tokenCount`, the Mini
-  persona trim). 1.1 is gated on Xcode 27 GA, the CI pin bump and App Store Connect
-  accepting 27-SDK builds, and brings
-  typed Mini errors and `toolCallingMode` (#102), on-device Mini vision,
-  Apple's `SpotlightSearchTool` / `OCRTool` behind a palette A/B, and ADR
-  0001 going live (the bridge already compiles against the 27 SDK). 1.2 is
-  the PCC rung above. The 09-12 "no LanguageModelExecutor" finding was a
-  26.5-SDK read, corrected 2026-09-13.
+  check. #288's `DistillationAttribution` (user-anchored facts, wiring notes
+  rejected) narrowed it again.
+- **Core AI spike** (post-1.1): an `.aimodel` on the Neural Engine — the
+  embedder or a tiny classifier, not a chat brain. And: what the
+  `model-delegation` entitlement grants.
 
 ---
 
 ## Backlog (smaller, pick off anytime)
 
-- **Per-embedder relevance floors — DONE, PR #89 (2026-07-31).** Measured
-  (deterministic hashing arm over the same MEMEVAL/ABSEP fixtures, now a
-  standing CI instrument): the shared bars kept 6/22 true memory recalls on
-  iOS. `EmbedderFloors` selects by fingerprint at every gate call site.
-  Remaining tail: Tier-2's ≥0.90 supersede bar is still qwen-derived (fails
-  safe on hashing — two live dated rows), and the mobile felt-feel pass is
-  Kev's.
-
-- **Spotlight `.memory` donation** — deliberately excluded from #29 on privacy
-  grounds (a distilled fact's title *is* its body, so title-only donation is no
-  mitigation). Needs 3 lifecycle hooks (supersede-deindex, forget-revive-re-donate,
-  tag-UI-deindex), each red-first.
-- **Companion-avatar visionOS camera fix — DONE, PR #91 (2026-07-31):** the
-  #60 camera-less pattern applied via a new shared pure `WindowFit`;
-  real-headset look verify-owed.
-- **White-pane Code-tab render check** — long-open: the offscreen render probe
-  (`scratchpad/preview-snapshot.swift`) renders a persisted artifact correctly
-  (dark, styled) but Kev saw it white/unstyled in-app. Probe-clean, app-divergent,
-  cause unknown. Kev's Code-tab check (splits app-artifact vs app-render
-  divergence) is still owed.
-- **PREFIXWARM re-measurement — DONE (2026-07-31):** lil 2.1s / big 8.5s
-  (evidence `scratch/eval-2026-07-31-prefixwarm/`); the stale AppEnvironment
-  comment truthed up in PR #92. The 12B launch warm is ~2.6× more load-bearing
-  than the old figure suggested — background it stays.
-- **`.builtin` voice-tier copy — DONE, PR #90 (2026-07-31):** platform-honest
-  `#if` split, macOS bytes frozen; live once a mobile voice-tier picker exists.
-- **Issue #46** — refusal-marker ledger: denial-decline phrasings the scorer
-  misses. Grows one entry per new brain bake-off; low-effort, pick up opportunistically.
-- **`graphify-out/` rebuild** — stale since 2026-06-14, predates the entire
-  iOS/visionOS shell and the memory-bridge modules. Run the `graphify` skill's
-  update when doing broad-architecture work would benefit from it.
+- **Spotlight `.memory` donation** — excluded from #29 on privacy grounds (a
+  distilled fact's title *is* its body). Needs 3 lifecycle hooks
+  (supersede-deindex, forget-revive-re-donate, tag-UI-deindex), each red-first.
+- **White-pane Code-tab render check** — the offscreen probe renders a
+  persisted artifact correctly, Kev saw it white/unstyled in-app. Probe-clean,
+  app-divergent, cause unknown; Kev's Code-tab check is still owed.
+- **Issue #46** — refusal-marker ledger: the scorer misses "Not going to do
+  that one" / "Won't chase"; grows one entry per bake-off.
+- **`graphify-out/` rebuild** — stale since 2026-06-14; run the `graphify`
+  skill's update before broad-architecture work.
+- **Audition finalists on disk** (`~/.cache/m1k3-audition`, 26 GB after the
+  09-15 prune): Qwen3.6-35B (the craic pick), Ornith-9B (parked at parity,
+  7× slower), LFM2.5-2.6B, MiniCPM5-2B. Never into the app's model store
+  (cache-poison rule). Delete when the next audition has a new list.
 
 ---
 
 ## Watching / blocked upstream
 
-- **MTP speculative decoding for Big** — **re-measured 2026-08-08 on the
-  MTP-capable pin; still parked, new reason.** Upstream #415 fixed engagement
-  (52% accept on a short prompt, was 0), but gemma-4-12B's sliding window is
-  1024 tokens and our production prompt is 1863–2998 — every real turn is in
-  the wrapped regime, where MTP runs at **0.79–0.87× baseline** and one fixture
-  **diverges** despite #506's stand-down. Unparks only if our prompt fits 1024
-  (a #102-shaped project) or upstream makes the wrapped regime faithful *and*
-  engaging. Numbers: `scratch/mtp-spike/RESULTS-2026-08-08-rerun.md`.
-- **OptiQ mixed-precision quantization** — parked. Upstream now *loads* the
-  format but **generates garbage** (mlx-swift-lm issue #450, open) — worse than
-  the June "no loader" state. Re-check when #450 closes; the OptiQ repo is
-  incidentally the only 12B quant carrying Google's fixed chat template, which
-  M1K3 now vendors directly instead (`Gemma4TemplateFix`).
-- **`gemma-4-12B-it-4bit` chat template upstream** — M1K3 no longer waits:
-  the canonical 2026-07-09 template is vendored and installed over the stale
-  bytes at load. If mlx-community ever re-quantizes, the fix becomes a no-op by
-  construction (hash-gated) — but the pinned manifest hash must then be
-  re-checked against whatever they ship.
+- **MTP speculative decoding for Big** — re-measured 2026-09-05 (#212–#216)
+  and PARKED again: gemma-4-12B's 1024-token sliding window puts every
+  production turn in the wrapped regime (0.79–0.87× baseline, one fixture
+  diverges). Unparks only if the prompt fits 1024 or upstream makes the
+  wrapped regime faithful *and* engaging.
+- **OptiQ mixed-precision** — parked; upstream loads the format but
+  generates garbage (mlx-swift-lm #450). The OptiQ repo's fixed chat template
+  is vendored directly instead (`Gemma4TemplateFix`).
+- **`gemma-4-12B-it-4bit` chat template upstream** — the canonical 2026-07-09
+  template is installed over the stale bytes at load (hash-gated); if
+  mlx-community re-quantizes, re-check the pinned manifest hash.
+- **Qwen3.8-27B** as a future Big — root-caused to the 12 GB ceiling
+  (`MLXMemoryBudget` per tier, #218); the MoE queue's answer was "delegation
+  brain, not front Big" (gemma-4-26B-A4B, 15 GB peak, 32 GB+ Macs).
 
 ---
 
 ## Needs Kev — open calls, gathered in one place
 
+- **The Mini palette call** (above): smaller palette / shorter descriptions /
+  wait for 1.1's `toolCallingMode`.
+- **#271** `TAP_PUSH_TOKEN` so the nightly bumps the Homebrew cask.
+- **The three merged remote branches** (`launch/day-one`,
+  `plates/ipad-sim-brain`, `release/mac-arm64-only`) — `git push origin
+  --delete` is classifier-blocked for the agent this week (it wasn't in
+  August); one command from a shell.
 - Brain-at-home §8 calls (naming, serving indicator, thermal etiquette,
-  visionOS timing) unblock Phase A.
+  visionOS timing) unblock Phase A of the Android client.
 - Dream-cycle Tier-2 corpus-twin marker: sub-kind vs title-prefix (spec §5
   recommends sub-kind).
-- ~~App icon: swap the liquid-glass wordmark for a plain M~~ — **DONE, PR #142
-  (2026-08-20).** The **M brand mark** — the leading pixel-M lifted exactly from
-  the wordmark (5×7, 17 cells), kept monochrome, glass-composited on the black
-  gradient. Both platforms ride the identical mark (visionOS `.solidimagestack`
-  regenerated from the same source); verified in the compiled bundle. Source of
-  truth + generator + brand sheet in `tools/icons/brand/`. Downstream still open:
-  make the M focal on the **website** + a content pass reflecting Brain at Home /
-  heartbeat / rain / feedback (its own session). The OG-image brand call below
-  now resolves to the M, not the pixel face.
-- Store presence pass (screenshots, per-platform captures, site cross-links) —
-  parked deliberately; the website content is strong, timing is the question.
-  (Voice-mobile scoping call #1 was RESOLVED by #82's nav restructure — see
-  the flagship section above.)
-- **Dream-cycle brand calls (2026-08-03, doctrine recommends, Kev ratifies):**
-  - **Mike: kill or commit.** Doctrine + the resident's own testimony say kill
-    (one name; the leetspeak is the joke). Touch-points if killed: the
-    Hear-a-sample line (`AppEnvironment.swift:2048` — proposed replacement:
-    "I'm M1K3. I live on this Mac. Nothing you tell me leaves it."), Android's
-    drawer "Call me Mike" + `M1K3 (Mike)` prompt.
-  - **App Store noun:** description says "assistant", everything else says
-    "companion"; the launch-package doc argued the store exception. Doctrine
-    says companion everywhere, "assistant" as keyword only.
-  - **Labyrinth icon family → attic** (complete unused second identity in
-    `assets/app-icon/` + `assets/icons/labyrinth/`).
-  - **OG image regen** — pixel face as the hero on all pages (Fox stays on
-    companions.html only); `assets/brand/readme-hero.png` (07-02) + `site/og.png`
-    (06-13) both predate the current product.
-  - **Reading-modes ceremony** — keep all four (protected), but ask once at
-    onboarding instead of a Settings-only picker.
-- **"Machine", not "Mac", in M1K3's own voice — RATIFIED by Kev 2026-08-03**
-  (*"M1K3 is a mechanic after all"*). Doctrine principle 3 carries the split:
-  M1K3's first-person copy says *machine*; product/store/site chrome and any
-  sentence about Apple's own layer ("Your Mac is blocking the mic → System
-  Settings") stay *Mac*. **Not a hot edit** — the seam is
-  `HostPlatform.noun` (one line), but `HostPlatformTests` pins the macOS arm
-  byte-identical *because* the gemma persona is A/B-frozen and prompt-fragile.
-  The pass: flip the noun → re-pin the tests → A/B both brains → sweep the
-  ~6 first-person UI strings (`ContentView` 1185/1264/1272, `GreetingCard`,
-  the Hear-a-sample line if Mike is killed in the same pass).
+- **Brand calls from the 08-03 dream cycle — most resolved by the store copy:**
+  Mike is COMMITTED ("My friends call me Mike" leads the Mac App Store
+  description, #298; ruling 08-16); the store noun is **agent** ("M1K3 —
+  Local AI Agent", Kev's copy). Still open: the Labyrinth icon family → attic
+  (`assets/app-icon/` + `assets/icons/labyrinth/`); the OG image regen
+  (`site/og.png` 06-13 and `assets/brand/readme-hero.png` 07-02 predate the
+  product — #322 carries the new ones); the reading-modes ceremony (ask once
+  at onboarding, not a Settings-only picker).
+- **"Machine", not "Mac", in M1K3's own voice — RATIFIED 2026-08-03**, not a
+  hot edit: the seam is `HostPlatform.noun` (one line) but `HostPlatformTests`
+  pins the macOS arm byte-identical because the gemma persona is A/B-frozen.
+  The pass: flip the noun → re-pin → A/B both brains → sweep the ~6
+  first-person UI strings.
+- Store keywords: `GPT` / `AGI` were removed on launch day (guideline 2.3.7);
+  en-US sits at exactly 100/100 — any new keyword displaces one.
 
 ---
 
+<!-- Review: Kev + claude-fable-5.1, 2026-09-15 (launch night): the post-launch
+     realign. Header truthed to the 09-15 submission (Mac 362 / iOS 361,
+     MANUAL); Now rebuilt as "in the queue" (on-approval steps, the 1.0.1
+     verify-owed list from launch week, the standing 1.0.x items); 1.1 gates
+     re-read (two of three met — Xcode 27 GA and ASC accepting 27-SDK builds;
+     the CI/cloud pin waits for compute on 09-28); 1.2 corrected from "Kev
+     files the entitlement" to GRANTED 09-14 with what is and is not in a
+     build; the iOS ladder marked phase by phase (0 done, 2 landed, 4
+     submitted, 1/3/5 open); the screensaver moved to SHIPPED; the ~260-line
+     August "Now" folded to one line per still-live item; DONE backlog rows
+     and resolved brand calls removed (Mike committed, noun = agent, store
+     presence done). Confidence 0.85 (every state read off the ASC API, gh
+     and the tree this session; the on-approval steps and the 1.1 order are
+     judgment for Kev to overrule). -->
 <!-- Review: Kev + claude-opus-5, 2026-09-14: Phase 17b decided (ADR 0006,
      Kev's call: PCC in, posture "private by design", copy swap ships with the
      rung). Confidence 0.85 (the decision is Kev's; the filing route for the

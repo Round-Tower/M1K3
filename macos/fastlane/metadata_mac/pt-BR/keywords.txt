@@ -1,1 +1,1 @@
-assistente,LLM,GPT,AGI,chatbot,seguro,offline,PDF,transcrição,ditado,companheiro,resumo
+assistente,LLM,chatbot,seguro,offline,PDF,transcrição,ditado,companheiro,resumo,privado,local

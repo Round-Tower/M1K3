@@ -288,10 +288,14 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
 
 ### 1.1 — "Golden Gate native" (gate: Xcode 27 GA + the CI pin bump + ASC accepting 27-SDK builds)
 
-**Status 2026-09-15 (launch day): the first gate is met locally.** Xcode 27.0
+**Status 2026-09-15 (launch day): two of the three gates are met.** Xcode 27.0
 GA (27A266a) replaced Xcode 26.6 in `/Applications/Xcode.app` on this Mac, so
-every local build from here is a 27-SDK build. Measured on it, before any
-1.1 code:
+every local build from here is a 27-SDK build — and App Store Connect accepted
+them: builds 360, 361 and 362 (Mac) and 360, 361 (iOS) were archived on the GA
+toolchain with the release scripts' guard bumped 26 → 27 (#338), uploaded by
+`altool`, read `VALID` on both platforms, and 362 / 361 are the builds on the
+1.0.0 submissions now `WAITING_FOR_REVIEW`. Measured on the GA toolchain,
+before any 1.1 code:
 
 - The package suite passes on Swift 6.4: 3,874 tests in 30 binaries, no
   failures. The Mac app (Release, arm64) and the iOS app (Release,
@@ -313,8 +317,10 @@ every local build from here is a 27-SDK build. Measured on it, before any
   `Package.swift` from the environment, and nothing in `project.yml` or the
   release scripts sets it. Item 1's `#available` switch is what ships it.
 
-Still open for 1.1: the `ci.yml` pin bump, Xcode Cloud's Xcode version, and
-proof that App Store Connect accepts a 27-SDK upload.
+Still open for 1.1: the `ci.yml` pin bump and Xcode Cloud's Xcode version —
+the cloud half waits for the team's compute to reset on 2026-09-28 (runs
+364–368 were all cancelled against the limit). App Store Connect accepting a
+27-SDK upload is no longer a question: see the status above.
 
 1. **Toolchain bump PR.** CI and Xcode Cloud move to Xcode 27. The
    `M1K3_FM27` compile gate becomes `#available(macOS 27, *)` so the bridge
@@ -417,6 +423,13 @@ proof that App Store Connect accepts a 27-SDK upload.
 - Conversational replay: ~5.7
 - Standing heuristic (code): 3.5 ← reasonable for code, conservative for prose
 
+<!-- Review: Kev + claude-fable-5.1, 2026-09-15 (launch night): the 1.1 gate status
+     is "two of three met" — App Store Connect accepted the 27-SDK builds 360–362
+     (VALID on both platforms; 362 / 361 are the builds under review), so that
+     gate is closed by evidence and the "still open" line names only the ci.yml
+     pin and Xcode Cloud's Xcode version (compute resets 09-28). Found by the
+     #343 review: ROADMAP.md said met, this file said open. Confidence 0.85
+     (build states read off the ASC API this session). -->
 <!-- Review: Kev + claude-opus-5, 2026-09-15: the 1.1 section records Xcode 27 GA on this Mac —
      suite, Mac and iOS builds green; the Metal-toolchain and CoreSimulator install
      steps; the two GA call-shape breaks, fixed; the read-only AFM variant. Confidence
