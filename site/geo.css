@@ -124,6 +124,9 @@ nav .links a:hover { color: var(--ink-bright); text-shadow: var(--glow); }
    caught by Kev on /teams, 2026-09-09. Signed: Kev + claude-fable-5.1, 2026-09-09, Confidence 0.85. Prior: Unknown. */
 .article a.btn, .article a.btn:hover { text-decoration: none; }
 .article a.btn-primary, .article a.btn-primary:hover { color: #000; }
+/* The ghost button keeps its ink: `.article a` (0,1,1) also outranks `.btn-ghost` (0,1,0), and once the link
+   colour moved to ink-bright the ghost CTA on every answer page brightened with it (review 1 on #347). */
+.article a.btn-ghost, .article a.btn-ghost:hover { color: var(--ink); }
 .article ul, .article ol { margin: 0 0 16px 22px; color: var(--ink-dim); max-width: 700px; }
 .article li { margin-bottom: 8px; }
 .article code {
