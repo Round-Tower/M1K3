@@ -53,7 +53,11 @@ public final class ReviewPromptLedger {
     private let calendar: Calendar
 
     /// Stamps first use on the first construction that is not suppressed;
-    /// a returning user's stamp is never overwritten.
+    /// a returning user's stamp is never overwritten. The stamp is the
+    /// LEDGER's first run, not the app's install date (there is none to
+    /// read): a 1.0 user upgrading to the first build with the ledger starts
+    /// the three-day honeymoon over. Accepted — one late ask beats a wrong
+    /// early one, and it happens once.
     public init(
         storage: ReviewPromptStorage,
         version: String,

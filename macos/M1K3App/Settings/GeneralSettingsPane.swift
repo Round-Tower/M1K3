@@ -83,6 +83,8 @@ struct GeneralSettingsPane: View {
             }
 
             Section {
+                // User-initiated: bypasses ReviewPromptLedger on purpose (no
+                // earned-moment gate, no once-per-version mark).
                 Button("Rate M1K3 on the App Store…") {
                     NSWorkspace.shared.open(ReviewPromptPolicy.writeReviewURL(storefront: .macAppStore))
                 }

@@ -154,7 +154,8 @@ struct SettingsScreen: View {
             Section {
                 LabeledContent("Version", value: appVersion)
                 Link("m1k3.app", destination: URL(string: "https://m1k3.app")!)
-                // The manual door beside the earned prompt (ReviewPromptPolicy).
+                // The manual door beside the earned prompt (ReviewPromptPolicy) —
+                // user-initiated, so it bypasses the ledger on purpose.
                 Link(
                     "Rate M1K3 on the App Store",
                     destination: ReviewPromptPolicy.writeReviewURL(storefront: .appStore)

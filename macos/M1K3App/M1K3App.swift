@@ -146,6 +146,8 @@ struct M1K3App: App {
             MemoryExportCommands(env: appDelegate.environment)
             // Help ▸ Rate M1K3… — the manual door beside the earned prompt
             // (ReviewPromptPolicy). Ratings are how a small app gets found.
+            // User-initiated, so it bypasses the ledger on purpose: no
+            // earned-moment gate, no once-per-version mark.
             CommandGroup(after: .help) {
                 Button("Rate M1K3 on the App Store…") {
                     NSWorkspace.shared.open(ReviewPromptPolicy.writeReviewURL(storefront: .macAppStore))
