@@ -15,9 +15,11 @@
 //  Scene reads `appDelegate.environment`. Self-test path unchanged (guarded).
 //  Review: Kev + claude-fable-5.1, 2026-09-07 — the screengrab harness pins the window to 1440×900 pt (content 848 +
 //  the 52 pt toolbar strip) so the Mac plates land at the frame system's native 2880×1800. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — Help ▸ Rate M1K3 on the App Store… (the manual door beside the earned rating prompt).
 
 import AppKit
 import M1K3Avatar
+import M1K3Inference
 import M1K3Launch
 import M1K3Screengrab
 import os
@@ -142,6 +144,13 @@ struct M1K3App: App {
             AgentLogCommands()
             // File ▸ Export Memories… — ADR 0003's one menu item.
             MemoryExportCommands(env: appDelegate.environment)
+            // Help ▸ Rate M1K3… — the manual door beside the earned prompt
+            // (ReviewPromptPolicy). Ratings are how a small app gets found.
+            CommandGroup(after: .help) {
+                Button("Rate M1K3 on the App Store…") {
+                    NSWorkspace.shared.open(ReviewPromptPolicy.writeReviewURL(storefront: .macAppStore))
+                }
+            }
         }
 
         // The 3D memory constellation — memories as motes, edges as threads, the

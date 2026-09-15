@@ -53,6 +53,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — `recentMemoryTitles` drops wiring-shaped self notes
 //  (#286) like the Mac chip gatherer; the mobile twin had been missed (review 5 on #288).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — the App Store rating ledger (ReviewPromptLedger); a completed answer counts toward the ask.
 
 import Foundation
 import M1K3Agent
@@ -94,6 +95,14 @@ final class AppCore {
     let chat: ChatSession
     /// The pixel-cube companion, shared verbatim with the Mac app (AvatarView).
     let avatar = AvatarController()
+    /// The App Store rating ledger (ReviewPromptPolicy's facts). The phone has
+    /// no thumbs-up, so completed turns carry the signal here; ChatScreen
+    /// alone consumes a due prompt. Silent under the screengrab harness.
+    let reviewLedger = ReviewPromptLedger(
+        storage: UserDefaults.standard,
+        version: ReviewPromptLedger.marketingVersion(),
+        suppressed: { ScreengrabHarness.current.isActive }
+    )
 
     // MARK: - Voice-first mode (system providers; wiring in AppCore+Voice)
 
@@ -748,6 +757,9 @@ final class AppCore {
         } else {
             avatar.setEmotion(.happy)
             avatar.resetToIdle()
+            // A real answer (not a stop before the first token) counts toward
+            // the rating ask; ChatScreen consumes it when it's earned.
+            if answer != nil { reviewLedger.recordCompletedTurn() }
         }
     }
 

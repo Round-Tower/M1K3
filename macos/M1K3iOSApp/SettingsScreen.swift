@@ -26,6 +26,7 @@
 //  (`localFallbackPhrase`) — "choose Mini" beside a Mini row was the one-Mini rule leaking into copy (PR #234
 //  review 12). Confidence now 0.8.
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — About gains the manual Rate M1K3 door.
 
 import M1K3BrainLink
 import M1K3Inference
@@ -153,6 +154,8 @@ struct SettingsScreen: View {
             Section {
                 LabeledContent("Version", value: appVersion)
                 Link("m1k3.app", destination: URL(string: "https://m1k3.app")!)
+                // The manual door beside the earned prompt (ReviewPromptPolicy).
+                Link("Rate M1K3 on the App Store", destination: ReviewPromptPolicy.writeReviewURL(storefront: .appStore))
             } header: {
                 Text("About")
             } footer: {

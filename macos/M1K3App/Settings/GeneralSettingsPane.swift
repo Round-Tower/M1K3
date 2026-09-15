@@ -15,8 +15,10 @@
 //  of Startup/Notifications/Sound/Reasoning, minus the glyph picker). Prior:
 //  Kev + claude-opus-4-8 (SettingsView.swift lineage, 2026-06-06).
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — an App Store section with the manual Rate M1K3… door.
 
 import AppKit
+import M1K3Inference
 import M1K3Launch
 import SwiftUI
 
@@ -77,6 +79,20 @@ struct GeneralSettingsPane: View {
             } footer: {
                 Text("A small pill under your menu bar shows your companion and what "
                     + "M1K3 is saying — even with the window closed. Off by default.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
+                Button("Rate M1K3 on the App Store…") {
+                    NSWorkspace.shared.open(ReviewPromptPolicy.writeReviewURL(storefront: .macAppStore))
+                }
+                .buttonStyle(.glass)
+            } header: {
+                Text("App Store")
+            } footer: {
+                Text("Ratings are how other people find a small app. This opens the "
+                    + "App Store's review sheet; M1K3 himself asks at most once per release, "
+                    + "and only after a few days together.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

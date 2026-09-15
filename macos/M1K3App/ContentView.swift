@@ -43,6 +43,7 @@
 //  empty the field with nothing sent and nothing said). "Keep it on this Mac" disarms, and an exhausted or
 //  unavailable control re-reads the status until it can be used (it used to recover only on relaunch).
 //  Confidence 0.8 (verified by launch with the Debug echo backend).
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — the rating ask: a liked answer records delight, every completed turn re-checks the ledger, and this view alone calls requestReview.
 
 import M1K3Avatar
 import M1K3Chat
@@ -51,6 +52,7 @@ import M1K3LanguageModel
 import M1K3Preview
 import M1K3Screengrab
 import M1K3Voice
+import StoreKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -73,6 +75,9 @@ struct ContentView: View {
 
     @State private var screengrabBeatFired = false
     @Environment(\.openSettings) private var openSettings
+    /// The App Store rating sheet — asked only when the ledger says the
+    /// moment is earned (ReviewPromptPolicy); the system may still decline.
+    @Environment(\.requestReview) private var requestReview
     /// Sidebar column visibility, bridged to NavigationSplitViewVisibility
     /// (not directly UserDefaults-storable) — same persisted-Bool shape as
     /// `avatarDisplay` below.
@@ -531,12 +536,29 @@ struct ContentView: View {
         .onChange(of: env.chat.messages.isEmpty) { _, isEmpty in
             if !isEmpty { greetingFirstTurnDone = true }
         }
+        // Every completed turn re-asks the ledger; it answers yes once per
+        // version, and only once the app has lived here a few days.
+        .onChange(of: env.reviewLedger.completedTurns) { _, _ in
+            askForRatingIfEarned()
+        }
     }
 
     /// One flag for both consumers (card mount + banner suppression) so the
     /// conditions can't drift apart.
     private var greetingCardVisible: Bool {
         env.chat.messages.isEmpty
+    }
+
+    /// The rating ask, consumed HERE and nowhere else — this is the view that
+    /// can show the sheet. A short beat after the answer lands so the dialog
+    /// never arrives on the last token; the system's own throttle decides
+    /// whether it appears at all.
+    private func askForRatingIfEarned() {
+        guard env.reviewLedger.consumePromptIfDue() else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            requestReview()
+        }
     }
 
     /// The nudge shows for a fresh offer AND for the rarer "Lil's already on
@@ -616,6 +638,12 @@ struct ContentView: View {
                                         comment: comment,
                                         brain: env.selectedBrain.displayName
                                     )
+                                    // A liked answer is the strongest earned
+                                    // moment the rating ask has.
+                                    if verdict == .good {
+                                        env.reviewLedger.recordDelight()
+                                        askForRatingIfEarned()
+                                    }
                                 },
                                 onSpeak: { text in Task { await env.speak(text) } },
                                 onOpenLink: { url in env.review.open(url: url) },
