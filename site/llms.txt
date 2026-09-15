@@ -62,6 +62,8 @@ Key facts:
 
 ## Optional
 
+- [Everything as one file](https://m1k3.app/llms-full.txt): every answer page above as plain text, generated from the pages (llms-full.txt)
+- [Install recipe](https://m1k3.app/install.txt): the four install steps as text an agent can follow
 - [Launch site](https://m1k3.app/): product overview and FAQ
 - [Meet the companions](https://m1k3.app/companions): the opt-in 3D voice-mode creatures — Fox, Inkfish, Sparrow, Gecko, Colobus — rendered on-device with RealityKit
 - [Round Tower](https://round-tower.ie): the company behind M1K3

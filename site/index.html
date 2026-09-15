@@ -34,16 +34,37 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "M1K3 for Mac",
-  "operatingSystem": "macOS 26",
+  "alternateName": ["M1K3", "Mike", "M1K3 — Local AI Agent"],
+  "operatingSystem": "macOS 26 (Tahoe) or later",
+  "processorRequirements": "Apple Silicon (arm64 only)",
   "applicationCategory": "UtilitiesApplication",
+  "applicationSubCategory": "Local AI assistant",
+  "softwareVersion": "1.0.0",
+  "isAccessibleForFree": true,
   "description": "Privacy-first AI that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), a native screensaver, and an MCP server with 18 tools.",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+  "featureList": [
+    "Three on-device brains: Mini (Apple Foundation Models, instant), Lil (Qwen 3 4B, fronts the conversation), Big (Gemma 4 12B, delegated deep work)",
+    "Live voice: on-device speech recognition in, Kokoro neural TTS out, sentence-streamed",
+    "Personal knowledge graph with RAG over your documents, encrypted under a Keychain-held key",
+    "Temporal memory graph with dream-cycle self-repair",
+    "Consent-gated call transcription and summaries",
+    "A local tool-using agent; web tools off by default",
+    "MCP server with 18 tools on http://127.0.0.1:4242/mcp (off by default) and the m1k3 command-line client",
+    "Brain at Home: serve the Mac's brain to your own devices over the LAN (off by default)",
+    "No account, no telemetry, no cloud path in 1.0"
+  ],
+  "keywords": "local AI, on-device LLM, private AI for Mac, offline AI assistant, MCP server, Apple Silicon, MLX, Apple Foundation Models, voice assistant, knowledge graph",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
   "url": "https://m1k3.app/",
+  "installUrl": "https://m1k3.app/install",
   "downloadUrl": "https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg",
+  "releaseNotes": "https://github.com/Round-Tower/M1K3/releases",
+  "softwareHelp": { "@type": "CreativeWork", "name": "Install M1K3", "url": "https://m1k3.app/install" },
   "license": "https://fsl.software/",
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie", "sameAs": ["https://github.com/Round-Tower"] },
   "sameAs": ["https://github.com/Round-Tower/M1K3"],
-  "dateModified": "2026-09-11"
+  "datePublished": "2026-07-02",
+  "dateModified": "2026-09-15"
 }
 </script>
 <script type="application/ld+json">
