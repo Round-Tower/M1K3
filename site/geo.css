@@ -114,8 +114,11 @@ nav .links a:hover { color: var(--ink-bright); text-shadow: var(--glow); }
 .article h3 { font-size: 17px; font-weight: 500; margin: 36px 0 10px; }
 .article p { color: var(--ink-dim); margin-bottom: 16px; max-width: 720px; }
 .article p strong, .article li strong { color: var(--ink); font-weight: 500; }
-.article a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--ink-faint); transition: color .25s; }
-.article a:hover { color: var(--ink-bright); text-decoration-color: var(--ink); }
+/* Links in copy: bright ink on a dim underline (the faint #4a4a4a underline read as no link at all on the
+   black), glow on hover; nav, footer, buttons and the related strip keep their own rules below.
+   Review: Kev + claude-fable-5.1, 2026-09-15 — brightened after Kev flagged the site's link colour. */
+.article a { color: var(--ink-bright); text-decoration: underline; text-decoration-color: var(--ink-dim); text-underline-offset: 3px; text-decoration-thickness: 1px; transition: color .25s, text-decoration-color .25s, text-shadow .25s; }
+.article a:hover { color: var(--ink-bright); text-decoration-color: var(--ink-bright); text-shadow: var(--glow); }
 /* Buttons inside an article keep their button colours: `.article a` (0,1,1) outranks `.btn-primary`
    (0,1,0), which painted the primary CTA white-on-white with an underline on every answer page —
    caught by Kev on /teams, 2026-09-09. Signed: Kev + claude-fable-5.1, 2026-09-09, Confidence 0.85. Prior: Unknown. */

@@ -142,6 +142,14 @@
   }
   h1, h2, h3 { font-weight: 400; color: var(--ink-bright); }
 
+  /* ---------- Links in copy ----------
+     Every anchor that is not a nav link, a button or the wordmark: bright ink, a dim underline that reads
+     as a link on the black, glow on hover — the same voice as geo.css's `.article a`. Before this rule the
+     FAQ, licence, sponsor and mailto links fell to the user-agent default (#0000EE on #050505); Kev, 2026-09-15.
+     Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.85 (computed colours audited on every page). Prior: Unknown */
+  a { color: var(--ink-bright); text-decoration: underline; text-decoration-color: var(--ink-dim); text-underline-offset: 3px; text-decoration-thickness: 1px; transition: color .25s, text-decoration-color .25s, text-shadow .25s; }
+  a:hover { text-decoration-color: var(--ink-bright); text-shadow: var(--glow); }
+
   /* ---------- Nav ---------- */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
