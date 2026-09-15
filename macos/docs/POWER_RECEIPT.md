@@ -56,13 +56,30 @@ well above 0.5 s was fighting for the cores — one more signal the run was not 
 | Run | Date | Brain | Valid | Idle W | Median Wh / answer | Note |
 |---|---|---|---|---|---|---|
 | 0 | 2026-09-15 | Lil (Qwen3-4B DWQ) | **no** | 42.8 (min 18.1, max 76.4) | 0.028 (not to be quoted) | Another session ran `xcodebuild test` + a nine-model remote eval throughout; M1K3 at ~49 % CPU beside WindowServer; GPU a steady ~28 W in and out of answers. The answers never rose clearly above the floor. Method proven, number not. (The first cut of the tool billed each sample a whole second and read 0.054; the per-header duration fold halved it — the #353 review's interval catch.) |
+| **1** | 2026-09-15 22:08 | Lil (Qwen3-4B DWQ) | **yes** | **1.09** (min 0.5, max 9.9; 50 of 58 samples under 3 W, eight brief ones at 3–10 W while Kev used the Mac — the median did not move) | **0.058** (mean 0.059; 10 answers; median 6.1 s, 679 chars) | Quiet Mac: no builds, other session done, M1K3 windows hidden, Kev at the Mac with a browser open. Answers ran the GPU at ~30–40 W (median mean 37 W, median peak 48 W) for 4–8 s; CPU stayed 1–5 W. `docs/evals/2026-09-15-power-receipt-lil-run1.json`. |
 
-The first valid run publishes to `/brains` beside tokens per second, and only then does the word
-"eco" go back on the site and into the store copy. Until then the honest line is the one 1.0
-already earns: no datacentre, no transmission, no cooling water, and a chip that was already on.
+## The number (run 1, Lil, M1 Max)
+
+**A Lil answer costs about 0.06 Wh** — six seconds of the GPU at ~35 W above a 1 W idle. For
+scale, the figure Google published in 2025 for a median Gemini text prompt is about 0.24 Wh
+(verify the citation before it goes on a page), so the same class of question answered here is
+roughly a quarter of that — and it involves no datacentre, no network transfer, no cooling
+water, and a chip that was already on. The attic's "energy saved" arithmetic, which credited the
+cloud with 50 Wh per answer, was off by three orders of magnitude; the cred survives the
+correction.
+
+Not yet measured: Mini (Apple Foundation Models — expect the ANE line to matter) and Big
+(gemma-4-12B), tokens per answer (v1 records chars), and a battery-powered run. Next: a row per
+brain on `/brains` beside tokens per second, then the word "eco" goes back on the site's receipts
+band and into the store copy, and one clause returns to the persona behind an A/B gate.
 
 <!-- Signed: Kev + claude-fable-5.1, 2026-09-15 (launch night), Confidence 0.8. The spike
      verdicts are from three 40-line Swift probes run this session; run 0's invalidity is
      read off the same log (per-10-second buckets, tagged idle/turn) and `top` at the time.
      Open: a valid run, and the token count per answer (v1 records chars). Prior: Unknown
-     (new file). -->
+     (new file).
+     Review: Kev + claude-fable-5.1, 2026-09-15 (22:15): run 1 recorded VALID — idle 1.09 W
+     median over 58 samples (eight brief samples at 3–10 W while Kev used the Mac; judged by
+     the median and the count above 3 W, not by the max alone), Lil median 0.058 Wh per
+     answer, every figure read off the receipt JSON the tool wrote. Confidence now 0.85
+     (n = 10 on one machine; Mini / Big / battery unmeasured). -->
