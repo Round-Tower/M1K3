@@ -155,7 +155,10 @@ struct SettingsScreen: View {
                 LabeledContent("Version", value: appVersion)
                 Link("m1k3.app", destination: URL(string: "https://m1k3.app")!)
                 // The manual door beside the earned prompt (ReviewPromptPolicy).
-                Link("Rate M1K3 on the App Store", destination: ReviewPromptPolicy.writeReviewURL(storefront: .appStore))
+                Link(
+                    "Rate M1K3 on the App Store",
+                    destination: ReviewPromptPolicy.writeReviewURL(storefront: .appStore)
+                )
             } header: {
                 Text("About")
             } footer: {

@@ -44,6 +44,7 @@
 //  unavailable control re-reads the status until it can be used (it used to recover only on relaunch).
 //  Confidence 0.8 (verified by launch with the Debug echo backend).
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — the rating ask: a liked answer records delight, every completed turn re-checks the ledger, and this view alone calls requestReview.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — a re-tapped thumb no longer double-counts; the ask needs a visible window (local review fold).
 
 import M1K3Avatar
 import M1K3Chat
@@ -78,6 +79,10 @@ struct ContentView: View {
     /// The App Store rating sheet — asked only when the ledger says the
     /// moment is earned (ReviewPromptPolicy); the system may still decline.
     @Environment(\.requestReview) private var requestReview
+    /// Occlusion-based (WindowVisibility): the ask is consumed only while
+    /// this window can actually be seen — a popover-driven turn with the
+    /// main window minimised must not spend the version's one chance.
+    @Environment(\.windowVisible) private var windowVisible
     /// Sidebar column visibility, bridged to NavigationSplitViewVisibility
     /// (not directly UserDefaults-storable) — same persisted-Bool shape as
     /// `avatarDisplay` below.
@@ -554,7 +559,10 @@ struct ContentView: View {
     /// never arrives on the last token; the system's own throttle decides
     /// whether it appears at all.
     private func askForRatingIfEarned() {
-        guard env.reviewLedger.consumePromptIfDue() else { return }
+        guard windowVisible, env.reviewLedger.consumePromptIfDue() else { return }
+        // The version is marked asked before the beat, on purpose: the
+        // system's quota is spent the moment we call it, and a window closed
+        // inside these two seconds forfeits one ask rather than re-asking.
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(2))
             requestReview()
@@ -632,6 +640,9 @@ struct ContentView: View {
                                 verdict: env.chat.feedbackVerdicts[message.id],
                                 existingComment: env.chat.feedbackComments[message.id],
                                 onFeedback: { verdict, comment in
+                                    // Only the transition INTO liked counts — a
+                                    // re-tapped thumb is one opinion, not two.
+                                    let wasLiked = env.chat.feedbackVerdicts[message.id] == .good
                                     env.chat.recordFeedback(
                                         messageID: message.id,
                                         verdict: verdict,
@@ -640,7 +651,7 @@ struct ContentView: View {
                                     )
                                     // A liked answer is the strongest earned
                                     // moment the rating ask has.
-                                    if verdict == .good {
+                                    if verdict == .good, !wasLiked {
                                         env.reviewLedger.recordDelight()
                                         askForRatingIfEarned()
                                     }

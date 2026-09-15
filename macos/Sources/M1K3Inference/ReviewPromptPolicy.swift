@@ -51,6 +51,15 @@ public enum ReviewPromptPolicy {
         return true
     }
 
+    /// What counts as a completed turn for the ask: an answer that neither
+    /// failed nor was stopped part-way. A stopped answer is persisted as
+    /// `.complete` with `interrupted` set, so status alone would count it —
+    /// and the whole doctrine is "only wins count". Every shell and both
+    /// voice paths ask this one question.
+    public static func isWin(answerFailed: Bool, interrupted: Bool) -> Bool {
+        !answerFailed && !interrupted
+    }
+
     /// Where the manual door ("Rate M1K3…") leads. The Mac opens the App
     /// Store app straight onto the review sheet; iOS opens the listing with
     /// the same action, which the store app honours.

@@ -71,6 +71,13 @@ struct ReviewPromptPolicyTests {
         #expect(!shouldPrompt(daysSinceFirstUse: -1))
     }
 
+    @Test("a failed or stopped answer is not a win; a clean one is")
+    func onlyWinsCount() {
+        #expect(ReviewPromptPolicy.isWin(answerFailed: false, interrupted: false))
+        #expect(!ReviewPromptPolicy.isWin(answerFailed: true, interrupted: false))
+        #expect(!ReviewPromptPolicy.isWin(answerFailed: false, interrupted: true))
+    }
+
     // MARK: - The manual door: "Rate M1K3…"
 
     @Test("the write-review link opens the store app on the Mac and the listing on iOS")

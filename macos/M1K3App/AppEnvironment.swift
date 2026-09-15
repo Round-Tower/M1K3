@@ -63,6 +63,7 @@
 //  `prewarmMini()`: the prewarm now processes the ReAct head over the interactive palette too (off with
 //  `-afm.prefixPrewarm NO`). Timing measured on the installed Release build — see the PR.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — the App Store rating ledger (ReviewPromptLedger) rides the after-answer beat; ContentView consumes it.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — voice turns count too (AppEnvironment+VoiceMode); a stopped answer is not a win (local review fold).
 
 import AppKit
 import Foundation
@@ -1228,7 +1229,10 @@ final class AppEnvironment {
         // does the rating ask (ContentView consumes it when it's earned).
         if !answerFailed {
             evaluateIntroductionOfferAfterAnswer()
-            reviewLedger.recordCompletedTurn()
+            // A stopped answer persists as .complete + interrupted — not a win.
+            if ReviewPromptPolicy.isWin(answerFailed: false, interrupted: answer?.interrupted == true) {
+                reviewLedger.recordCompletedTurn()
+            }
         }
         // Only reset to idle if the avatar isn't already in a speaking state
         // (e.g. auto-TTS path sets .speaking before we return here).

@@ -54,6 +54,7 @@
 //  (#286) like the Mac chip gatherer; the mobile twin had been missed (review 5 on #288).
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — the App Store rating ledger (ReviewPromptLedger); a completed answer counts toward the ask.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — a stopped answer is not a win; voice turns count too (AppCore+Voice) — local review fold.
 
 import Foundation
 import M1K3Agent
@@ -757,9 +758,11 @@ final class AppCore {
         } else {
             avatar.setEmotion(.happy)
             avatar.resetToIdle()
-            // A real answer (not a stop before the first token) counts toward
-            // the rating ask; ChatScreen consumes it when it's earned.
-            if answer != nil { reviewLedger.recordCompletedTurn() }
+            // A real, unstopped answer counts toward the rating ask;
+            // ChatScreen consumes it when it's earned.
+            if let answer, ReviewPromptPolicy.isWin(answerFailed: false, interrupted: answer.interrupted == true) {
+                reviewLedger.recordCompletedTurn()
+            }
         }
     }
 

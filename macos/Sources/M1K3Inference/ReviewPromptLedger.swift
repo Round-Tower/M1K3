@@ -89,6 +89,9 @@ public final class ReviewPromptLedger {
 
     /// Whole calendar days since the first recorded use; 0 when there is no
     /// stamp; negative when the stamp is in the future (broken state).
+    /// Calendar days, not 72 hours, on purpose: "three days" means three
+    /// dates on the user's calendar, DST and all — the honeymoon is a
+    /// feeling, not a stopwatch.
     public var daysSinceFirstUse: Int {
         guard let stamp = storage.object(forKey: Self.firstUseKey) as? Double else { return 0 }
         let firstUse = Date(timeIntervalSince1970: stamp)
