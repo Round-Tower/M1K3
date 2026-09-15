@@ -1,17 +1,40 @@
-# M1K3 — everyone is welcome, including AI crawlers.
+# M1K3 — everyone is welcome, including AI crawlers and the AI search agents
+# that fetch on a person's behalf. The content here is written to be cited.
+#
+# Machine-readable front doors:
+#   https://m1k3.app/llms.txt        the index (llmstxt.org)
+#   https://m1k3.app/llms-full.txt   every answer page as one text file
+#   https://m1k3.app/install.txt     the install recipe an agent can follow
+#   https://m1k3.app/brains.json     the brains scoreboard, as data
+
 User-agent: *
 Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 
-User-agent: GPTBot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
+# AI search and assistants — retrieval on a user's behalf
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: Claude-SearchBot
+User-agent: Claude-User
 User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: DuckAssistBot
+User-agent: Applebot
+User-agent: Bingbot
+User-agent: MistralAI-User
 Allow: /
 
+# AI training crawlers — also welcome
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: anthropic-ai
 User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+User-agent: meta-externalagent
+User-agent: Amazonbot
+User-agent: cohere-ai
+User-agent: YouBot
 Allow: /
 
 Sitemap: https://m1k3.app/sitemap.xml
