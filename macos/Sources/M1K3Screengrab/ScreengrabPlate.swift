@@ -18,6 +18,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — shader `off` on every plate (the other creatures in their
 //  own colour: "more colour in the screenshots") and a thirteenth plate, `constellation` (Mac lane). Pinned.
 //  Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (later) — the brain is no longer pinned in the recipe:
+//  `launchRecipe(brain:)` is the pure arm and `launchRecipe` reads the test runner's
+//  `M1K3_SCREENGRAB_BRAIN` (default `lil`), so an iPad-simulator run fronts on `mini` (no MLX there).
+//  Proven: 12/12 plates on the iPad Pro 13" simulator, the real iPad set on the 1.0.0 listing. Confidence 0.85.
 //
 
 import Foundation
@@ -68,13 +72,26 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
         }
     }
 
+    /// The brain the plates front on. Lil by default (Kev, 2026-09-08: the speaking
+    /// plate is a REAL turn and Lil carries the persona; Mini answered flat). The
+    /// TEST RUNNER's `M1K3_SCREENGRAB_BRAIN` overrides it — a simulator has no MLX,
+    /// so an iPad-simulator run fronts on `mini` (2026-09-15).
+    public static let brainOverrideKey = "M1K3_SCREENGRAB_BRAIN"
+    public static var brain: String {
+        ProcessInfo.processInfo.environment[brainOverrideKey] ?? "lil"
+    }
+
     public var launchRecipe: LaunchRecipe {
+        launchRecipe(brain: Self.brain)
+    }
+
+    /// The recipe for a given brain — pure, so the tests can pin both arms.
+    public func launchRecipe(brain: String) -> LaunchRecipe {
         var arguments: [[String]] = [
             ["-hasChosenBrain", self == .onboarding ? "NO" : "YES"],
-            // Lil fronts every plate (Kev, 2026-09-08): the speaking plate is a REAL
-            // turn and Lil carries the persona; Mini answered flat. Weights come from
-            // the live model store (the harness reroutes data, not brains).
-            ["-selectedBrain", "lil"],
+            // Weights come from the live model store (the harness reroutes data,
+            // not brains); see `brain` for why Lil, and when not.
+            ["-selectedBrain", brain],
             ["-voiceMode.companion", companionID ?? Self.houseFace],
             // Shader off on EVERY plate: the house face shows its baked white
             // lattice (Kev, 2026-09-12 and again 09-15 — the green tint was tried
