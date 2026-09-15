@@ -1,1 +1,1 @@
-Assistent,Sprachmodell,GPT,chatbot,sicher,Dokumente,Transkription,Diktat,Zusammenfassung,Wissen
+Assistent,Sprachmodell,chatbot,sicher,Dokumente,Transkription,Diktat,Zusammenfassung,Wissen,privat

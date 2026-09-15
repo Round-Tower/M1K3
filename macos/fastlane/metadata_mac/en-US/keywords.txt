@@ -1,1 +1,1 @@
-assistant,LLM,GPT,AGI,chatbot,secure,offline,PDF,transcribe,dictation,companion,summarize,memory,MLX
+assistant,LLM,chatbot,secure,offline,PDF,transcribe,dictation,companion,summarize,memory,MLX,private
