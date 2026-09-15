@@ -18,6 +18,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — shader `off` on every plate (the other creatures in their
 //  own colour: "more colour in the screenshots") and a thirteenth plate, `constellation` (Mac lane). Pinned.
 //  Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (later) — the brain is no longer pinned in the recipe:
+//  `launchRecipe(brain:)` is the pure arm and `launchRecipe` reads the test runner's
+//  `M1K3_SCREENGRAB_BRAIN` (default `lil`), so an iPad-simulator run fronts on `mini` (no MLX there).
+//  Proven: 12/12 plates on the iPad Pro 13" simulator, the real iPad set on the 1.0.0 listing. Confidence 0.85.
 //
 
 import Foundation
