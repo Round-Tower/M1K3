@@ -21,6 +21,9 @@
     "median_wh_per_answer": 0.02781,
     "mean_wh_per_answer": 0.02705,
     "median_seconds_per_answer": 13.34,
+    "median_mean_watts": 48.25,
+    "median_mean_cpu_watts": 15.52,
+    "median_mean_gpu_watts": 30.19,
     "total_wh_above_idle": 0.27046,
     "idle_min_watts": 18.08,
     "idle_max_watts": 76.43,
@@ -34,6 +37,8 @@
       "samples": 28,
       "mean_watts": 48.67,
       "peak_watts": 110.89,
+      "mean_cpu_watts": 14.89,
+      "mean_gpu_watts": 30.97,
       "joules_above_idle": 127.52,
       "wh_above_idle": 0.03542
     },
@@ -44,6 +49,8 @@
       "samples": 49,
       "mean_watts": 45.69,
       "peak_watts": 75.81,
+      "mean_cpu_watts": 15.12,
+      "mean_gpu_watts": 27.71,
       "joules_above_idle": 91.07,
       "wh_above_idle": 0.0253
     },
@@ -54,6 +61,8 @@
       "samples": 24,
       "mean_watts": 42.88,
       "peak_watts": 72.47,
+      "mean_cpu_watts": 14.71,
+      "mean_gpu_watts": 25.3,
       "joules_above_idle": 28.41,
       "wh_above_idle": 0.00789
     },
@@ -64,6 +73,8 @@
       "samples": 13,
       "mean_watts": 59.88,
       "peak_watts": 70.71,
+      "mean_cpu_watts": 15.22,
+      "mean_gpu_watts": 41.65,
       "joules_above_idle": 113.37,
       "wh_above_idle": 0.03149
     },
@@ -74,6 +85,8 @@
       "samples": 37,
       "mean_watts": 49.54,
       "peak_watts": 72.78,
+      "mean_cpu_watts": 12.14,
+      "mean_gpu_watts": 34.8,
       "joules_above_idle": 128.9,
       "wh_above_idle": 0.0358
     },
@@ -84,6 +97,8 @@
       "samples": 28,
       "mean_watts": 44.16,
       "peak_watts": 66.34,
+      "mean_cpu_watts": 15.82,
+      "mean_gpu_watts": 25.7,
       "joules_above_idle": 50.69,
       "wh_above_idle": 0.01408
     },
@@ -94,6 +109,8 @@
       "samples": 22,
       "mean_watts": 55.63,
       "peak_watts": 86.87,
+      "mean_cpu_watts": 18.19,
+      "mean_gpu_watts": 34.35,
       "joules_above_idle": 182.83,
       "wh_above_idle": 0.05079
     },
@@ -104,6 +121,8 @@
       "samples": 31,
       "mean_watts": 49.67,
       "peak_watts": 55.76,
+      "mean_cpu_watts": 16.76,
+      "mean_gpu_watts": 30.44,
       "joules_above_idle": 109.16,
       "wh_above_idle": 0.03032
     },
@@ -114,6 +133,8 @@
       "samples": 20,
       "mean_watts": 47.82,
       "peak_watts": 72.2,
+      "mean_cpu_watts": 16.12,
+      "mean_gpu_watts": 29.94,
       "joules_above_idle": 79.06,
       "wh_above_idle": 0.02196
     },
@@ -124,6 +145,8 @@
       "samples": 26,
       "mean_watts": 45.17,
       "peak_watts": 81.03,
+      "mean_cpu_watts": 16.48,
+      "mean_gpu_watts": 26.65,
       "joules_above_idle": 62.68,
       "wh_above_idle": 0.01741
     }

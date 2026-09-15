@@ -56,12 +56,13 @@ well above 0.5 s was fighting for the cores — one more signal the run was not 
 | Run | Date | Brain | Valid | Idle W | Median Wh / answer | Note |
 |---|---|---|---|---|---|---|
 | 0 | 2026-09-15 | Lil (Qwen3-4B DWQ) | **no** | 42.8 (min 18.1, max 76.4) | 0.028 (not to be quoted) | Another session ran `xcodebuild test` + a nine-model remote eval throughout; M1K3 at ~49 % CPU beside WindowServer; GPU a steady ~28 W in and out of answers. The answers never rose clearly above the floor. Method proven, number not. (The first cut of the tool billed each sample a whole second and read 0.054; the per-header duration fold halved it — the #353 review's interval catch.) |
-| **1** | 2026-09-15 22:08 | Lil (Qwen3-4B DWQ) | **yes** | **1.09** (min 0.5, max 9.9; 50 of 58 samples under 3 W, eight brief ones at 3–10 W while Kev used the Mac — the median did not move) | **0.058** (mean 0.059; 10 answers; median 6.1 s, 679 chars) | Quiet Mac: no builds, other session done, M1K3 windows hidden, Kev at the Mac with a browser open. Answers ran the GPU at ~30–40 W (median mean 37 W, median peak 48 W) for 4–8 s; CPU stayed 1–5 W. `docs/evals/2026-09-15-power-receipt-lil-run1.json`. |
+| **1** | 2026-09-15 22:08 | Lil (Qwen3-4B DWQ) | **yes** | **1.09** (min 0.5, max 9.9; 50 of 58 samples under 3 W, eight brief ones at 3–10 W while Kev used the Mac — the median did not move) | **0.058** (mean 0.059; 10 answers; median 6.1 s, 679 chars) | Quiet Mac: no builds, other session done, M1K3 windows hidden, Kev at the Mac with a browser open. Package power during an answer 35–43 W (median 37 W; median peak 48 W) for 4–8 s, of which the GPU 32–41 W (median 34 W) and the CPU 1.6–4.1 W (median 3 W) — the split is in the JSON per turn. `docs/evals/2026-09-15-power-receipt-lil-run1.json`. |
 
 ## The number (run 1, Lil, M1 Max)
 
-**A Lil answer costs about 0.06 Wh** — six seconds of the GPU at ~35 W above a 1 W idle. For
-scale, the figure Google published in 2025 for a median Gemini text prompt is about 0.24 Wh
+**A Lil answer costs about 0.06 Wh** — six seconds at ~37 W of package power above a 1 W idle,
+34 W of it the GPU and 3 W the CPU (the receipt carries `mean_cpu_watts` / `mean_gpu_watts` per
+turn, so that sentence is a field, not a shorthand). For scale, the figure Google published in 2025 for a median Gemini text prompt is about 0.24 Wh
 (verify the citation before it goes on a page), so the same class of question answered here is
 roughly a quarter of that — and it involves no datacentre, no network transfer, no cooling
 water, and a chip that was already on. The attic's "energy saved" arithmetic, which credited the
@@ -82,4 +83,8 @@ band and into the store copy, and one clause returns to the persona behind an A/
      median over 58 samples (eight brief samples at 3–10 W while Kev used the Mac; judged by
      the median and the count above 3 W, not by the max alone), Lil median 0.058 Wh per
      answer, every figure read off the receipt JSON the tool wrote. Confidence now 0.85
-     (n = 10 on one machine; Mini / Big / battery unmeasured). -->
+     (n = 10 on one machine; Mini / Big / battery unmeasured).
+     Review: Kev + claude-fable-5.1, 2026-09-15 (22:40): the #357 review caught "GPU ~35 W"
+     standing in for package power — the receipt now carries the CPU / GPU split per turn
+     (mean_cpu_watts / mean_gpu_watts + summary medians) and the prose quotes the fields:
+     package 37 W median, GPU 34 W, CPU 3 W. Confidence 0.85. -->

@@ -146,6 +146,10 @@ def receipt(turns: list[Turn], samples: list[Sample], idle_watts: float, provena
         joules = sum(max(s.watts - idle_watts, 0.0) * s.elapsed_s for s in inside)
         mean_w = statistics.fmean(s.watts for s in inside) if inside else 0.0
         peak_w = max((s.watts for s in inside), default=0.0)
+        # `watts` is PACKAGE power (CPU + GPU + ANE). The split is carried too, so a
+        # sentence like "the GPU did the work" is backed by a field, not a shorthand.
+        mean_cpu = statistics.fmean(s.cpu_watts for s in inside) if inside else 0.0
+        mean_gpu = statistics.fmean(s.gpu_watts for s in inside) if inside else 0.0
         rows.append({
             "question": t.question,
             "answer_chars": len(t.answer),
@@ -153,6 +157,8 @@ def receipt(turns: list[Turn], samples: list[Sample], idle_watts: float, provena
             "samples": len(inside),
             "mean_watts": round(mean_w, 2),
             "peak_watts": round(peak_w, 2),
+            "mean_cpu_watts": round(mean_cpu, 2),
+            "mean_gpu_watts": round(mean_gpu, 2),
             "joules_above_idle": round(joules, 2),
             "wh_above_idle": round(joules / 3600.0, 5),
         })
@@ -164,6 +170,9 @@ def receipt(turns: list[Turn], samples: list[Sample], idle_watts: float, provena
         "median_wh_per_answer": round(statistics.median(whs), 5) if whs else None,
         "mean_wh_per_answer": round(statistics.fmean(whs), 5) if whs else None,
         "median_seconds_per_answer": round(statistics.median(r["seconds"] for r in rows), 2) if rows else None,
+        "median_mean_watts": round(statistics.median(r["mean_watts"] for r in rows), 2) if rows else None,
+        "median_mean_cpu_watts": round(statistics.median(r["mean_cpu_watts"] for r in rows), 2) if rows else None,
+        "median_mean_gpu_watts": round(statistics.median(r["mean_gpu_watts"] for r in rows), 2) if rows else None,
         "total_wh_above_idle": round(sum(whs), 5),
     }
     return {"provenance": provenance or {}, "summary": summary, "turns": rows}
