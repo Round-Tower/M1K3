@@ -32,15 +32,22 @@ project:
   by other local processes beyond its design.
 - PII surviving the diagnostic redaction in issue reports.
 
-## Private Cloud Compute (opt-in)
+## Private Cloud Compute (a later release, opt-in)
+
+**Not in 1.0.** The shipping build has no cloud path at all: the rung is built
+(the policy, the consent sheet, the Mac shell, the adapter) but nothing
+compiles it into a release, and the Developer ID build does not even carry the
+entitlement. The App Store build carries the entitlement Apple granted for the
+later release; it is inert in 1.0. When the rung ships:
 
 With the Private Cloud Compute switch off — the default — nothing leaves the
-device. Turning it on in Settings adds one control next to the message field:
-sending a single message at a time to Apple's Private Cloud Compute, after a
-consent sheet shows exactly what goes — the message, plus the conversation so
-far only if you tick it. Never memories, documents, tools, calendar, location,
-or your profile. Every PCC answer is labelled in the chat. If PCC fails or the
-quota runs out, the on-device brain answers and says why.
+device. Turning it on in Settings will add one control next to the message
+field: sending a single message at a time to Apple's Private Cloud Compute,
+after a consent sheet shows exactly what goes — the message, plus the
+conversation so far only if you tick it. Never memories, documents, tools,
+calendar, location, or your profile. Every PCC answer will be labelled in the
+chat. If PCC fails or the quota runs out, the on-device brain answers and says
+why.
 
 Apple's own guarantee, not ours:
 
@@ -49,13 +56,14 @@ Apple's own guarantee, not ours:
 >
 > — Apple, [Private Cloud Compute](https://security.apple.com/blog/private-cloud-compute/)
 
-What M1K3 logs about a PCC turn: request/response sizes and error classes
+What M1K3 will log about a PCC turn: request/response sizes and error classes
 (rate-limited, quota reached, network failure) only — never the message, the
 conversation, or the answer. M1K3 itself has no servers and never sees or
 stores your conversations, on-device or via PCC.
 
-**M1K3 for Teams:** organisations can force the Private Cloud Compute switch
-off by policy, so on those installs nothing leaves the network at all.
+**M1K3 for Teams:** once the rung ships, organisations will be able to force
+the Private Cloud Compute switch off by policy, so on those installs nothing
+leaves the network at all. Today that is true of every install by construction.
 
 ## Supported versions
 
