@@ -36,6 +36,7 @@
 //  `any TranscriptionProvider` (the protocol requirement), not an `as? AppleSpeechTranscriber`
 //  downcast, so a WhisperKit start failure parks the loop with its reason instead of counting
 //  as an empty listen. Confidence 0.8 (verify-on-device: a real start failure on a real route).
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — both voice turn shapes feed the rating ledger (they bypass send(), so the ask never saw a spoken win).
 
 import AppKit
 import AVFoundation
@@ -453,6 +454,10 @@ extension AppEnvironment {
                     return .failure(VoiceTurnFailure(message: "The model had nothing to say."))
                 }
                 recordSpokenExchange()
+                // The rating ask counts spoken wins too — voice turns bypass send().
+                if ReviewPromptPolicy.isWin(answerFailed: false, interrupted: last.interrupted == true) {
+                    reviewLedger.recordCompletedTurn()
+                }
                 return .success(last.text)
             },
             speak: { [weak self] answer in
@@ -561,6 +566,9 @@ extension AppEnvironment {
                             : "The model had nothing to say."))
                 }
                 recordSpokenExchange()
+                if ReviewPromptPolicy.isWin(answerFailed: false, interrupted: settled.interrupted == true) {
+                    reviewLedger.recordCompletedTurn()
+                }
                 return .success(())
             }
         )

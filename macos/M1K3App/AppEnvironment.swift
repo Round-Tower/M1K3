@@ -62,6 +62,8 @@
 //  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — Mini's launch and fronting warms go through
 //  `prewarmMini()`: the prewarm now processes the ReAct head over the interactive palette too (off with
 //  `-afm.prefixPrewarm NO`). Timing measured on the installed Release build — see the PR.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — the App Store rating ledger (ReviewPromptLedger) rides the after-answer beat; ContentView consumes it.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — voice turns count too (AppEnvironment+VoiceMode); a stopped answer is not a win (local review fold).
 
 import AppKit
 import Foundation
@@ -81,6 +83,7 @@ import M1K3Memory
 import M1K3MemoryChatBridge
 import M1K3MLX
 import M1K3Preview
+import M1K3Screengrab
 import M1K3Todos
 import M1K3Voice
 import M1K3WhisperKit
@@ -580,6 +583,18 @@ final class AppEnvironment {
     /// @ObservationIgnored: infrastructure, not UI state — and @Observable's
     /// macro rejects a bare `lazy` stored property.
     @ObservationIgnored private(set) lazy var spotlightReconciler = SpotlightReconciler(indexer: spotlightIndexer)
+
+    /// The App Store rating ledger — ReviewPromptPolicy's facts (liked answers,
+    /// completed turns, first use, the once-per-version mark). Its counters
+    /// are observed by ContentView, which ALONE consumes a due prompt: a
+    /// headless MCP turn or the menu-bar popover must never spend the
+    /// version's one ask on a dialog nobody sees. Under the screengrab
+    /// harness the ledger stamps, counts and prompts nothing.
+    let reviewLedger = ReviewPromptLedger(
+        storage: UserDefaults.standard,
+        version: ReviewPromptLedger.marketingVersion(),
+        suppressed: { ScreengrabHarness.current.isActive }
+    )
 
     /// Runtime picker selection. Changing it re-points the inference façade at
     /// the chosen backend for the next turn — no rebuild, transcript preserved.
@@ -1210,8 +1225,15 @@ final class AppEnvironment {
             answerFailed: answerFailed,
             generationHitTokenCap: metrics.map { $0.generationTokens >= cap } ?? false
         )
-        // The intro invitation rides the same beat but only counts wins.
-        if !answerFailed { evaluateIntroductionOfferAfterAnswer() }
+        // The intro invitation rides the same beat but only counts wins — as
+        // does the rating ask (ContentView consumes it when it's earned).
+        if !answerFailed {
+            evaluateIntroductionOfferAfterAnswer()
+            // A stopped answer persists as .complete + interrupted — not a win.
+            if ReviewPromptPolicy.isWin(answerFailed: false, interrupted: answer?.interrupted == true) {
+                reviewLedger.recordCompletedTurn()
+            }
+        }
         // Only reset to idle if the avatar isn't already in a speaking state
         // (e.g. auto-TTS path sets .speaking before we return here).
         if case .speaking = avatar.state.activity { return }

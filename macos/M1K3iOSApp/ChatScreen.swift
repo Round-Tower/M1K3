@@ -39,15 +39,24 @@
 //  line for the store plates); M1K3_VOICE_AT_LAUNCH keeps precedence. Inert without the harness env.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the send button is Send while idle and Stop while streaming (the
 //  spinner it replaces said "wait"; the stop says you don't have to). Confidence now 0.85 (device-owed).
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — the rating ask: every completed turn re-checks the ledger and this screen alone calls requestReview.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — the ask needs an active scene (local review fold).
 
 import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
 import M1K3Screengrab
+import StoreKit
 import SwiftUI
 
 struct ChatScreen: View {
     @Environment(AppCore.self) private var core
+    /// The App Store rating sheet — asked only when the ledger says the
+    /// moment is earned (ReviewPromptPolicy); the system may still decline.
+    @Environment(\.requestReview) private var requestReview
+    /// The ask is consumed only in an active scene — never spend the
+    /// version's one chance on a backgrounded app.
+    @Environment(\.scenePhase) private var scenePhase
     @State private var voiceLaunched = false
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
@@ -130,6 +139,11 @@ struct ChatScreen: View {
             .task(id: chatting) {
                 if !chatting { reshuffleStarters() }
             }
+            // Every completed turn re-asks the ledger; it answers yes once per
+            // version, and only once the app has lived here a few days.
+            .onChange(of: core.reviewLedger.completedTurns) { _, _ in
+                askForRatingIfEarned()
+            }
             .task(id: brainReady) {
                 guard brainReady, !voiceLaunched else { return }
                 if Self.voiceAtLaunch {
@@ -145,6 +159,18 @@ struct ChatScreen: View {
 
     /// See the `.task(id: brainReady)` above — read once per process.
     private static let voiceAtLaunch = ProcessInfo.processInfo.environment["M1K3_VOICE_AT_LAUNCH"] == "1"
+
+    /// The rating ask, consumed HERE and nowhere else — this is the screen
+    /// that can show the sheet. A short beat after the answer lands so the
+    /// dialog never arrives on the last token.
+    private func askForRatingIfEarned() {
+        guard scenePhase == .active, core.reviewLedger.consumePromptIfDue() else { return }
+        // Marked asked before the beat on purpose (see ContentView on the Mac).
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            requestReview()
+        }
+    }
 
     // MARK: - Backdrop
 

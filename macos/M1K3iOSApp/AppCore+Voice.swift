@@ -57,6 +57,7 @@
 //  (`any TranscriptionProvider`), no `AppleSpeechTranscriber` downcast — the phone's transcriber is
 //  still the Apple one, so this is parity with the Mac shell, byte-identical in behaviour today.
 //  Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — both voice turn shapes feed the rating ledger — a voice-only phone user could never earn the ask before.
 
 import AVFoundation
 import Foundation
@@ -260,6 +261,10 @@ extension AppCore {
                 guard !last.text.isEmpty else {
                     return .failure(VoiceTurnFailure(message: "The model had nothing to say."))
                 }
+                // The rating ask counts spoken wins — the phone's main signal.
+                if ReviewPromptPolicy.isWin(answerFailed: false, interrupted: last.interrupted == true) {
+                    reviewLedger.recordCompletedTurn()
+                }
                 return .success(last.text)
             },
             speak: { [weak self] answer in
@@ -355,6 +360,9 @@ extension AppCore {
                     return .failure(VoiceTurnFailure(message: announcedAnyTool
                             ? "I checked, but no answer came back."
                             : "The model had nothing to say."))
+                }
+                if ReviewPromptPolicy.isWin(answerFailed: false, interrupted: settled.interrupted == true) {
+                    reviewLedger.recordCompletedTurn()
                 }
                 return .success(())
             }
