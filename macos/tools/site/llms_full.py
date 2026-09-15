@@ -46,6 +46,8 @@ SKIP_TAGS = {"script", "style", "nav", "footer", "svg", "button", "input", "labe
 SKIP_CLASSES = {"more", "page-cta", "term-bar", "wiz-doors", "wiz-note", "clients", "copy-btn", "label"}
 # Void elements never close, so they must never sit on the stack or count toward a skip.
 VOID_TAGS = {"br", "hr", "img", "input", "meta", "link", "source", "wbr"}
+# The markdown prefix each item/heading gets — one H1 per file, so pages start at ##.
+PREFIXES = {"h1": "## ", "h2": "### ", "h3": "#### ", "h4": "##### ", "li": "- ", "summary": "**Q: "}
 BLOCK_TAGS = {"p", "li", "h1", "h2", "h3", "h4", "pre", "tr", "summary", "div", "section", "header", "aside", "details", "table", "ul", "ol", "blockquote"}
 
 
@@ -94,7 +96,9 @@ class _Text(HTMLParser):
             self._stack.append((tag, True))
             return
         if tag in BLOCK_TAGS and tag != "pre":
-            self._flush()
+            # A block opening inside a list item or heading (a nested <ul>, a <p>)
+            # must not strand that item's leading text without its prefix.
+            self._flush(self._open_prefix())
         if tag in ("ul", "ol"):
             self._list.append(tag)
         if tag == "pre":
@@ -108,6 +112,13 @@ class _Text(HTMLParser):
         if tag == "a":
             self._href = a.get("href")
         self._stack.append((tag, False))
+
+    def _open_prefix(self) -> str:
+        """The markdown prefix of the innermost open item/heading, if any."""
+        for tag, counted in reversed(self._stack):
+            if not counted and tag in PREFIXES:
+                return PREFIXES[tag]
+        return ""
 
     def handle_endtag(self, tag):
         if not self._in_main or tag in VOID_TAGS:
@@ -151,9 +162,8 @@ class _Text(HTMLParser):
             return
         if tag in ("ul", "ol") and self._list:
             self._list.pop()
-        prefixes = {"h1": "## ", "h2": "### ", "h3": "#### ", "h4": "##### ", "li": "- ", "summary": "**Q: "}
-        if tag in prefixes:
-            self._flush(prefixes[tag])
+        if tag in PREFIXES:
+            self._flush(PREFIXES[tag])
             if tag == "summary" and self.lines:
                 self.lines[-1] += "**"
         elif tag in BLOCK_TAGS:
@@ -195,16 +205,18 @@ def build(site_dir: Path) -> str:
         "> on-device — local brains, live voice, a knowledge graph, a memory graph, and an",
         "> MCP server on loopback. Made by Round Tower, Ireland.",
         "",
-        "Sources, in order: " + ", ".join(f"{SITE_ROOT}/{slug}" for _, slug in PAGES) + f", {SITE_ROOT}/install.txt.",
-        "",
     ]
-    parts = ["\n".join(head)]
-    for file, slug in PAGES:
-        path = site_dir / file
-        if not path.exists():
-            continue
-        parts.append(f"\n---\n\n## Source: {SITE_ROOT}/{slug}\n\n{page_text(path.read_text())}")
+    # The header names exactly what the body holds — a page missing on this
+    # checkout is skipped in both places, never listed and then absent.
+    present = [(file, slug) for file, slug in PAGES if (site_dir / file).exists()]
     recipe = site_dir / "install.txt"
+    sources = [f"{SITE_ROOT}/{slug}" for _, slug in present]
+    if recipe.exists():
+        sources.append(f"{SITE_ROOT}/install.txt")
+    head += ["Sources, in order: " + ", ".join(sources) + ".", ""]
+    parts = ["\n".join(head)]
+    for file, slug in present:
+        parts.append(f"\n---\n\n## Source: {SITE_ROOT}/{slug}\n\n{page_text((site_dir / file).read_text())}")
     if recipe.exists():
         parts.append(f"\n---\n\n## Source: {SITE_ROOT}/install.txt (verbatim)\n\n```\n{recipe.read_text().rstrip()}\n```\n")
     return "".join(parts)

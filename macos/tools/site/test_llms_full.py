@@ -43,6 +43,25 @@ def test_build_lists_sources_and_includes_install_txt_verbatim(tmp_path: Path):
     assert "## Source: https://m1k3.app/install\n" in out
     assert "## Source: https://m1k3.app/install.txt (verbatim)\n\n```\n# recipe\nbrew install --cask round-tower/tap/m1k3\n```" in out
     assert "## Source: https://m1k3.app/agents" not in out      # missing pages are skipped, not invented
+    # …and the header names only what the body holds (review catch on #346).
+    header = out.split("\n---\n", 1)[0]
+    assert "Sources, in order: https://m1k3.app/install, https://m1k3.app/install.txt." in header
+    assert "agents" not in header
+
+
+def test_build_header_omits_install_txt_when_it_is_missing(tmp_path: Path):
+    (tmp_path / "agents.html").write_text(PAGE)
+    header = llms_full.build(tmp_path).split("\n---\n", 1)[0]
+    assert "Sources, in order: https://m1k3.app/agents." in header
+    assert "install.txt" not in header
+
+
+def test_a_block_nested_in_a_list_item_keeps_the_item_prefix():
+    nested = '<main><ul><li>a<ul><li>b</li></ul></li><li>c<p>d</p></li></ul><h2>x<div>y</div></h2></main>'
+    text = llms_full.page_text(nested)
+    assert "- a\n\n- b\n" in text
+    assert "- c\n\nd\n" in text
+    assert "### x\n\ny\n" in text
 
 
 def test_check_mode_flags_a_stale_file(tmp_path: Path, capsys):

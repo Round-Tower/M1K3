@@ -54,6 +54,21 @@ def test_payload_refuses_off_host_urls():
         indexnow.payload(KEY, ["https://example.com/"])
 
 
+def test_a_rejected_submission_reports_the_status_instead_of_raising(tmp_path, capsys, monkeypatch):
+    import io
+    import urllib.error
+
+    site = _site(tmp_path)
+
+    def refused(req, timeout):
+        raise urllib.error.HTTPError(req.full_url, 403, "Forbidden", {}, io.BytesIO(b"key not found"))
+
+    monkeypatch.setattr(indexnow.urllib.request, "urlopen", refused)
+    assert indexnow.main(["--site-dir", str(site), "https://m1k3.app/install"]) == 1
+    out = capsys.readouterr().out
+    assert "HTTP 403" in out and "key not found" in out
+
+
 def test_dry_run_prints_the_payload_and_touches_no_network(tmp_path, capsys, monkeypatch):
     site = _site(tmp_path)
     monkeypatch.setattr(indexnow, "submit", lambda body: (_ for _ in ()).throw(AssertionError("network")))

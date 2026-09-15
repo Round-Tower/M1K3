@@ -6,7 +6,7 @@
 > on-device — local brains, live voice, a knowledge graph, a memory graph, and an
 > MCP server on loopback. Made by Round Tower, Ireland.
 
-Sources, in order: https://m1k3.app/install, https://m1k3.app/agents, https://m1k3.app/privacy, https://m1k3.app/mcp-knowledge-server, https://m1k3.app/vs-ollama, https://m1k3.app/private-chatgpt-alternative-mac, https://m1k3.app/local-llm-mac-guide, https://m1k3.app/brains, https://m1k3.app/golden-gate-on-device-ai, https://m1k3.app/teams, https://m1k3.app/companions, https://m1k3.app/install.txt.
+Sources, in order: https://m1k3.app/agents, https://m1k3.app/privacy, https://m1k3.app/mcp-knowledge-server, https://m1k3.app/vs-ollama, https://m1k3.app/private-chatgpt-alternative-mac, https://m1k3.app/local-llm-mac-guide, https://m1k3.app/brains, https://m1k3.app/golden-gate-on-device-ai, https://m1k3.app/teams, https://m1k3.app/companions.
 
 ---
 

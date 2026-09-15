@@ -22,6 +22,7 @@ import argparse
 import json
 import re
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -59,15 +60,22 @@ def payload(key: str, urls: list[str], host: str = HOST) -> dict:
     return {"host": host, "key": key, "keyLocation": f"https://{host}/{key}.txt", "urlList": list(urls)}
 
 
-def submit(body: dict) -> int:
+def submit(body: dict) -> tuple[int, str]:
+    """POST the payload; returns (status, detail). IndexNow answers 200/202 for
+    accepted, 400 malformed, 403 bad key, 422 off-host URLs, 429 rate-limited —
+    urllib raises on every 4xx/5xx, so those come back as (status, reason)
+    instead of a stack trace."""
     req = urllib.request.Request(
         ENDPOINT,
         data=json.dumps(body).encode(),
         headers={"Content-Type": "application/json; charset=utf-8"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return resp.status
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.status, resp.reason or ""
+    except urllib.error.HTTPError as e:
+        return e.code, (e.reason or "") + " " + e.read().decode(errors="replace")[:200].strip()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -83,8 +91,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         print(json.dumps(body, indent=2))
         return 0
-    status = submit(body)
-    print(f"indexnow: HTTP {status} for {len(urls)} URL(s)")
+    status, detail = submit(body)
+    print(f"indexnow: HTTP {status} {detail.strip()} for {len(urls)} URL(s)")
     return 0 if status in (200, 202) else 1
 
 
