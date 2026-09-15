@@ -286,7 +286,7 @@ jobs:
         working-directory: macos
         run: |
           python3 -m pip install --quiet 'pytest>=8,<9' 'pyyaml>=6,<7'
-          python3 -m pytest -q tools/ci tools/eval tools/weights tools/site
+          python3 -m pytest -q tools/ci tools/eval tools/weights tools/site tools/asc
       # llms-full.txt is generated from the site pages; a page edit without a
       # regenerate would leave the AI-readable copy stale.
       - name: llms-full.txt is current

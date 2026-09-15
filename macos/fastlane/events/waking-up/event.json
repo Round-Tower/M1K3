@@ -1,0 +1,58 @@
+{
+  "referenceName": "waking-up-2026-09",
+  "badge": "PREMIERE",
+  "purpose": "ATTRACT_NEW_USERS",
+  "priority": "HIGH",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "locale": "en-US",
+  "publishStart": "2026-09-17T09:00:00Z",
+  "eventStart": "2026-09-18T09:00:00Z",
+  "eventEnd": "2026-10-16T21:00:00Z",
+  "copy": {
+    "name": "Waking Up",
+    "shortDescription": "A private AI companion, awake on your iPhone.",
+    "longDescription": "M1K3 is out. Three on-device brains, a neural voice, your notes as memory. No account, no cloud. Private by design."
+  },
+  "localizations": {
+    "en-US": {
+      "name": "Waking Up",
+      "shortDescription": "A private AI companion, awake on your iPhone.",
+      "longDescription": "M1K3 is out. Three on-device brains, a neural voice, your notes as memory. No account, no cloud. Private by design."
+    },
+    "de-DE": {
+      "name": "M1K3 wacht auf",
+      "shortDescription": "Ein privater KI-Begleiter, wach auf deinem iPhone.",
+      "longDescription": "M1K3 ist da. Drei Gehirne auf dem Gerät, eine neurale Stimme, deine Notizen als Gedächtnis. Kein Konto, keine Cloud."
+    },
+    "es-ES": {
+      "name": "M1K3 despierta",
+      "shortDescription": "Un compañero IA privado, despierto en tu iPhone.",
+      "longDescription": "M1K3 ya está aquí. Tres cerebros en el dispositivo, una voz neural, tus notas como memoria. Sin cuenta, sin nube."
+    },
+    "fr-FR": {
+      "name": "M1K3 se réveille",
+      "shortDescription": "Un compagnon IA privé, éveillé sur votre iPhone.",
+      "longDescription": "M1K3 est là. Trois cerveaux sur l'appareil, une voix neurale, vos notes comme mémoire. Pas de compte, pas de cloud."
+    },
+    "ja": {
+      "name": "M1K3、目覚める",
+      "shortDescription": "プライベートなAIコンパニオンが、iPhoneで目を覚ます。",
+      "longDescription": "M1K3登場。端末上の3つの頭脳、ニューラルボイス、メモが記憶に。アカウント不要、クラウド不要。プライベート設計。"
+    },
+    "ko": {
+      "name": "M1K3, 깨어나다",
+      "shortDescription": "프라이빗 AI 컴패니언이 iPhone에서 깨어납니다.",
+      "longDescription": "M1K3 출시. 기기 위의 세 두뇌, 뉴럴 보이스, 메모가 기억으로. 계정도 클라우드도 없이. 프라이빗 설계."
+    },
+    "pt-BR": {
+      "name": "M1K3 acorda",
+      "shortDescription": "Um companheiro IA privado, acordado no seu iPhone.",
+      "longDescription": "M1K3 chegou. Três cérebros no aparelho, uma voz neural, suas notas como memória. Sem conta, sem nuvem."
+    },
+    "zh-Hans": {
+      "name": "M1K3 醒来",
+      "shortDescription": "私密的 AI 伙伴，在你的 iPhone 上醒来。",
+      "longDescription": "M1K3 来了。设备上的三个大脑、神经语音、笔记即记忆。无需账户，无需云端。隐私为本。"
+    }
+  }
+}
