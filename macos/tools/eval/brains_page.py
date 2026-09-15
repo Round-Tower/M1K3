@@ -40,6 +40,11 @@ per kind, keyed by brain AND model so a challenger run never overwrites the
 pinned brain's cell), the reference columns (PCC, the hosted frontier), runs
 folded, the dated 2026-09-15 read-out. A 0/0 cell is never a clean sweep.
 Confidence now 0.85.
+Review: Kev + claude-fable-5.1, 2026-09-15 (late) — the reduction pass: `board()`
+(six columns of pass rates, the hosted models as one min–max range), `voices()`
+(each brain's interview answers as scored, rendered as the harness previewed
+them), the ladder and the 09-05 read-out folded, foreign documents in docs/evals
+skipped by name. Confidence now 0.85.
 """
 
 from __future__ import annotations
@@ -221,7 +226,9 @@ def ladder(summaries: list[dict], pins: dict[str, str | None] | None = None) -> 
         date = (run["provenance"].get("date") or "")[:10]
         for brain in run["brains"]:
             bid, mid = brain["brainID"], brain["modelID"]
-            pinned = bid in SHIPPED_ORDER and (mid == pins.get(bid) if bid in pins else True)
+            # No pins at all (a pure caller) → every tier is its own column; a pins dict that omits a
+            # tier says the tier has no pin → its runs are challengers, never the brain.
+            pinned = bid in SHIPPED_ORDER and (mid == pins.get(bid) if pins else True)
             key = (bid, None if pinned else mid)
             col = columns.setdefault(key, {"brainID": bid, "modelID": mid, "byKind": {}, "shipped": pinned})
             col["modelID"] = col["modelID"] or mid
@@ -312,7 +319,9 @@ def voices(runs: list[dict], pins: dict[str, str | None] | None = None, hosted: 
         date = (doc["provenance"].get("date") or "")[:10]
         for run in doc["runs"]:
             bid, mid = run["brainID"], run.get("modelID")
-            pinned = bid in SHIPPED_ORDER and (mid == pins.get(bid) if bid in pins else True)
+            # No pins at all (a pure caller) → every tier is its own column; a pins dict that omits a
+            # tier says the tier has no pin → its runs are challengers, never the brain.
+            pinned = bid in SHIPPED_ORDER and (mid == pins.get(bid) if pins else True)
             if bid in SHIPPED_ORDER and not pinned:
                 continue  # a challenger in a tier's slot is not the brain
             col = bid
@@ -536,9 +545,9 @@ def _voices(sections: list[dict]) -> str:
         figs = []
         for a in sec["answers"]:
             verdict = "passed" if a["passed"] else "failed " + ", ".join(a["failed"])
+            # The harness caps previews at 240 chars and appends its own ellipsis (ChatEvalScorer);
+            # render as-is — a second mark here doubled it on every long quote (review 4 on #355).
             text = a["answer"].strip()
-            if len(text) >= 240:  # the harness caps previews; say so rather than end mid-word silently
-                text = text.rstrip() + "…"
             figs.append(
                 f'<figure class="voice"><figcaption>{_e(a["label"])} <span class="table-note">· {_e(verdict)}</span></figcaption>'
                 f'<blockquote>{_e(text) or "<em>(no answer)</em>"}</blockquote></figure>'

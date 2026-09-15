@@ -128,20 +128,34 @@ def extract_fenced_json(text: str) -> dict | None:
     ValueError when a complete block is not JSON (a different problem from "no
     block", and named as such). Mirrors ChatEvalReport.unfenced in M1K3Eval —
     keep the two in step."""
-    close = text.rfind(FENCE_CLOSE)
+    # Both markers as WHOLE lines (a newline before and after), like the Swift side: a marker
+    # echoed INSIDE the document sits in a JSON string, where a real newline can never precede
+    # it, so it can neither open nor close the block. The transcript's first line is never a
+    # marker, so a leading newline is always there.
+    padded = "\n" + text  # so a marker on the very first line still sits at a line start
+    close = padded.rfind("\n" + FENCE_CLOSE)
     if close < 0:
         return None
-    # The open marker as a whole line (marker + newline), like the Swift side: a marker echoed
-    # INSIDE the document (an answer preview quoting it) has no newline after it and must not
-    # cut the block short.
-    open_at = text.rfind(FENCE_OPEN + "\n", 0, close)
+    open_at = padded.rfind("\n" + FENCE_OPEN + "\n", 0, close)
     if open_at < 0:
         return None
-    body = text[open_at + len(FENCE_OPEN) + 1:close].strip()
+    body = padded[open_at + len(FENCE_OPEN) + 2:close].strip()
     try:
         return json.loads(body)
     except json.JSONDecodeError as e:
         raise ValueError(f"a fenced block was there but is not JSON: {e}") from e
+
+
+def direct_outcome(doc: dict | None, returncode: int | None, log_path: "Path") -> tuple[int, str]:
+    """The exit code and the one line that explains it, for a direct run. A fenced document with a
+    clean exit is 0; a document beside a non-zero exit is 8 (the scorecard is complete — a SelfTest
+    writes it as its last act — but the process then died, and that is worth a look); no document
+    is 7."""
+    if doc is None:
+        return 7, f"✗ no fenced JSON on stdout (exit {returncode}) — read the transcript: {log_path}"
+    if returncode not in (0, None):
+        return 8, f"! scorecard saved, but the app exited {returncode} after writing it — read the transcript: {log_path}"
+    return 0, ""
 
 
 def direct_env(trig: dict[str, str], base: dict[str, str]) -> dict[str, str]:
@@ -325,20 +339,20 @@ def run_direct(args, app: Path, trig: dict[str, str], plan: "InstancePlan") -> i
                 print(f"  … {lines} report lines · {int((time.monotonic() - started) / 60)} min")
     try:
         doc = extract_fenced_json(log_path.read_text(errors="replace"))
-    except ValueError as e:
+    except ValueError as e:  # a block was there but is not JSON — one message, not two
         print(f"✗ {e} (exit {proc.returncode}) — read the transcript: {log_path}", file=sys.stderr)
-        doc = None
-    if doc is None:
-        print(f"✗ no fenced JSON on stdout (exit {proc.returncode}) — read the transcript: {log_path}", file=sys.stderr)
-        rc = 7
+        doc, rc = None, 7
     else:
+        rc, note = direct_outcome(doc, proc.returncode, log_path)
+        if note:
+            print(note, file=sys.stderr)
+    if doc is not None:
         if args.save_to:
             Path(args.save_to).write_text(json.dumps(doc, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
             print(summarise(Path(args.save_to)))
             print(f"  saved → {args.save_to}")
         else:
             print(json.dumps(doc, indent=2, sort_keys=True)[:2000])
-        rc = 0
     if plan.live_was_running and not args.no_relaunch:
         subprocess.run(["open", "-a", LIVE_APP])
     return rc

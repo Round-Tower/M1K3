@@ -20,6 +20,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (later the same day) — a provider
 //  refusal (`content` empty, `refusal` set) is returned as the answer; the first
 //  frontier run scored nine Anthropic/OpenAI refusals as "0 chars" (probed raw).
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (#355 passes) — content-parts arrays
+//  are the answer too; a non-envelope 4xx/5xx body names the status; a cancelled
+//  URLSession task (URLError.cancelled) is never retried; the failure box is the
+//  shared StreamFailureBox and the provider adopts StreamFailureReporting.
 //
 
 import Foundation
@@ -104,11 +108,35 @@ enum OpenRouterWire {
         guard let choices = root["choices"] as? [[String: Any]] else { throw Failure.malformed }
         guard let first = choices.first else { throw Failure.emptyChoices }
         guard let message = first["message"] as? [String: Any] else { throw Failure.malformed }
-        let content = (message["content"] as? String) ?? ""
+        let content = Self.contentText(message["content"])
         if content.isEmpty, let refusal = message["refusal"] as? String, !refusal.isEmpty {
             return refusal
         }
         return content
+    }
+
+    /// `content` is a string for most routes and a parts array (`[{"type":"text","text":…}]`)
+    /// for some; both are the answer. Anything else is an empty answer, not a parse failure.
+    static func contentText(_ content: Any?) -> String {
+        if let text = content as? String { return text }
+        if let parts = content as? [[String: Any]] {
+            return parts.compactMap { part -> String? in
+                (part["type"] as? String) == "text" || part["type"] == nil ? part["text"] as? String : nil
+            }.joined()
+        }
+        return ""
+    }
+
+    /// The answer, given the HTTP status too: a body that is not the documented shape on a
+    /// 4xx/5xx is the status's fault (a gateway's HTML timeout page), and the transcript should
+    /// say "HTTP 503", not "malformed".
+    static func text(fromResponse data: Data, status: Int) throws -> String {
+        do {
+            return try text(fromResponse: data)
+        } catch Failure.malformed where status >= 400 {
+            let preview = String(decoding: data.prefix(80), as: UTF8.self)
+            throw Failure.api(code: status, message: "HTTP \(status): \(preview)")
+        }
     }
 
     /// `anthropic/claude-opus-5` → `claude-opus-5`: the column name on the
@@ -119,29 +147,11 @@ enum OpenRouterWire {
     }
 }
 
-/// The last failure `generateStreaming` swallowed, so a runner can tell "the
-/// model said nothing" from "the call failed" (InferenceProvider's streaming
-/// contract ends the stream on error rather than throwing). A class, not a
-/// `Mutex` field: `Mutex` is non-copyable and the provider is passed by value.
-final class StreamFailureBox: Sendable {
-    private let value = Mutex<String?>(nil)
-    func record(_ description: String) {
-        value.withLock { $0 = description }
-    }
-
-    func take() -> String? {
-        value.withLock { v in
-            defer { v = nil }
-            return v
-        }
-    }
-}
-
 /// OpenRouter as an `InferenceProvider`, for the eval runner only. Carries the
 /// persona as the system message on every call (`PersonaCarrying`), so the
 /// ReAct floor sends the prompt body without it — the same pairing Mini ships
 /// with, and the one the AFM column measured against.
-struct OpenRouterProvider: InferenceProvider, PersonaCarrying {
+struct OpenRouterProvider: InferenceProvider, PersonaCarrying, StreamFailureReporting {
     let model: String
     let key: String
     let system: String
@@ -150,7 +160,7 @@ struct OpenRouterProvider: InferenceProvider, PersonaCarrying {
     /// (OpenRouter returns those on a 200 too), a dropped connection — are
     /// retried with a growing pause; anything else is the model's answer to score.
     let retries: Int
-    /// What `generateStreaming` last swallowed (see StreamFailureBox).
+    /// What `generateStreaming` last swallowed (StreamFailureBox, M1K3Inference).
     let streamFailure = StreamFailureBox()
 
     init(model: String, key: String, system: String, session: URLSession = .shared, retries: Int = 3) {
@@ -197,7 +207,7 @@ struct OpenRouterProvider: InferenceProvider, PersonaCarrying {
                     try await Task.sleep(for: .seconds(Double(attempt * attempt) * 2))
                     continue
                 }
-                return try OpenRouterWire.text(fromResponse: data)
+                return try OpenRouterWire.text(fromResponse: data, status: status)
             } catch let failure as OpenRouterWire.Failure {
                 if Self.isTransient(failure), attempt <= retries {
                     try await Task.sleep(for: .seconds(Double(attempt * attempt) * 2))
@@ -206,6 +216,8 @@ struct OpenRouterProvider: InferenceProvider, PersonaCarrying {
                 throw failure
             } catch is CancellationError {
                 throw CancellationError() // never retried: the caller is leaving
+            } catch let urlError as URLError where urlError.code == .cancelled || Task.isCancelled {
+                throw urlError // a cancelled Task surfaces as URLError(.cancelled) from URLSession — same rule
             } catch {
                 if attempt <= retries {
                     try await Task.sleep(for: .seconds(Double(attempt * attempt) * 2))
@@ -218,6 +230,10 @@ struct OpenRouterProvider: InferenceProvider, PersonaCarrying {
 
     /// One piece: the finished answer. The eval reads finished text, and the
     /// first-piece timing on a non-streamed call is the whole turn by definition.
+    func takeStreamFailure() -> String? {
+        streamFailure.take()
+    }
+
     func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
             let task = Task {

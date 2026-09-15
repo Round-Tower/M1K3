@@ -55,6 +55,27 @@ struct OpenRouterWireTests {
         #expect(try OpenRouterWire.text(fromResponse: Data(nullRefusal.utf8)) == "")
     }
 
+    @Test("a content-parts array is the answer, joined")
+    func contentParts() throws {
+        let body = """
+        {"choices":[{"message":{"role":"assistant","content":[{"type":"text","text":"Hello "},{"type":"text","text":"there."}]}}]}
+        """
+        #expect(try OpenRouterWire.text(fromResponse: Data(body.utf8)) == "Hello there.")
+        #expect(OpenRouterWire.contentText(42) == "")
+    }
+
+    @Test("a non-envelope body on a 4xx/5xx names the status, not 'malformed'")
+    func statusAwareParse() {
+        let gateway = Data("<html>504 Gateway Time-out</html>".utf8)
+        #expect(throws: OpenRouterWire.Failure.api(code: 504, message: "HTTP 504: <html>504 Gateway Time-out</html>")) {
+            try OpenRouterWire.text(fromResponse: gateway, status: 504)
+        }
+        // on a 200 the same body is still malformed — the status is not to blame
+        #expect(throws: OpenRouterWire.Failure.malformed) {
+            try OpenRouterWire.text(fromResponse: gateway, status: 200)
+        }
+    }
+
     @Test("the API's error envelope throws with its code and message")
     func errorEnvelope() {
         let body = #"{"error":{"code":429,"message":"Rate limited","metadata":{}}}"#
@@ -92,6 +113,7 @@ struct OpenRouterWireTests {
     func personaCarrying() {
         let provider = OpenRouterProvider(model: "x/y", key: "k", system: "persona")
         #expect(provider.carriesStandingPersona)
+        #expect(provider.takeStreamFailure() == nil)
         #expect(provider.name == "y")
         #expect(provider.isAvailable)
         #expect(!OpenRouterProvider(model: "x/y", key: "", system: "persona").isAvailable)

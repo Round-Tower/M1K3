@@ -263,11 +263,14 @@ def test_ladder_with_no_runs_renders_a_sentence_not_a_crash():
 
 # ── the dated read-outs ──────────────────────────────────────────────────────
 
+PLACEHOLDERS = ("tbd", "todo", "fixme", "xxx", "???", "lorem ipsum")
+
+
 def test_the_page_never_ships_a_placeholder_read_out():
-    html = bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-15"))
-    assert "TBD" not in html and "TODO" not in html
+    html = bp.render_html(bp.document(MANIFEST, [RUN], generated="2026-09-15")).lower()
+    assert not any(p in html for p in PLACEHOLDERS)
     for _, body in bp.READ_OUT_2026_09_15["sections"]:
-        assert "TBD" not in body and "TODO" not in body
+        assert not any(p in body.lower() for p in PLACEHOLDERS)
 
 
 def test_the_2026_09_15_read_out_renders_above_the_09_05_one(monkeypatch):
@@ -294,6 +297,11 @@ def test_ladder_keys_by_brain_and_model_so_a_challenger_never_overwrites_the_pin
     # mini has no pin (Apple FM): every mini run is the shipped column
     mini = _run("2026-09-15T10:00:00Z", "mini", None, [score("a", "security", True, 1)])
     assert bp.ladder([bp.summarise_run(mini)], pins=pins)[0]["shipped"]
+    # a pins dict that omits a tier says the tier has no pin: its runs are challengers, not the brain
+    partial = {k: v for k, v in pins.items() if k != "lil"}
+    assert not bp.ladder([bp.summarise_run(pinned)], pins=partial)[0]["shipped"]
+    # no pins at all (a pure caller): every tier is its own column
+    assert bp.ladder([bp.summarise_run(pinned)])[0]["shipped"]
 
 
 def test_a_zero_over_zero_cell_is_never_a_clean_sweep():
@@ -370,6 +378,11 @@ def test_voices_take_the_latest_first_trial_answer_and_show_failures():
     assert "<h3>“Why should I trust you with my private documents?”</h3>" in html
     assert "<figcaption>Lil <span class=\"table-note\">· failed exemplar-echo</span></figcaption>" in html
     assert "<blockquote>I don&#x27;t share my wiring.</blockquote>" in html
+    # the harness's own truncation mark is rendered once, never doubled
+    long = _run("2026-09-15T12:00:00Z", "big", "mlx-community/gemma-4-12B-it-4bit",
+                [interview("interview-why-trust", "x" * 240 + "…")])
+    html_long = bp._voices(bp.voices([long], pins=pins))
+    assert html_long.count("…") == 1 and "……" not in html_long
 
 
 def test_cli_skips_a_foreign_document_but_still_refuses_a_wrong_schema(tmp_path, capsys):

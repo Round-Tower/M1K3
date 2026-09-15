@@ -186,6 +186,8 @@ def test_extract_fenced_json_takes_the_last_complete_block():
     real = rc.FENCE_OPEN + '\n{"runs": [{"brainID": "pcc"}]}\n' + rc.FENCE_CLOSE
     text = "• chateval: 1 fixture\n" + stale + "\nnoise\n" + real + "\n• chateval json → stdout (fenced)\n"
     assert rc.extract_fenced_json(text) == {"runs": [{"brainID": "pcc"}]}
+    # a transcript that opens with the marker itself still parses (the line start counts as a boundary)
+    assert rc.extract_fenced_json(rc.FENCE_OPEN + '\n{"a": 1}\n' + rc.FENCE_CLOSE) == {"a": 1}
 
 
 def test_extract_fenced_json_refuses_partials_and_names_bad_json():
@@ -196,11 +198,20 @@ def test_extract_fenced_json_refuses_partials_and_names_bad_json():
         rc.extract_fenced_json(rc.FENCE_OPEN + "\nnot json\n" + rc.FENCE_CLOSE)
 
 
-def test_extract_fenced_json_ignores_a_marker_echoed_inside_the_document():
-    # an answer preview quoting the open marker (no newline after it) must not cut the block short
-    body = '{"runs": [{"answerPreview": "it printed ' + rc.FENCE_OPEN + ' and stopped"}]}'
-    text = rc.FENCE_OPEN + "\n" + body + "\n" + rc.FENCE_CLOSE + "\n"
-    assert rc.extract_fenced_json(text) == {"runs": [{"answerPreview": "it printed " + rc.FENCE_OPEN + " and stopped"}]}
+def test_extract_fenced_json_ignores_markers_echoed_inside_the_document():
+    # an answer preview quoting EITHER marker sits inside a JSON string, never at a line start
+    body = '{"runs": [{"answerPreview": "it printed ' + rc.FENCE_OPEN + ' then ' + rc.FENCE_CLOSE + ' and stopped"}]}'
+    text = "• chateval: 1 fixture\n" + rc.FENCE_OPEN + "\n" + body + "\n" + rc.FENCE_CLOSE + "\n"
+    assert rc.extract_fenced_json(text) == {"runs": [{"answerPreview": "it printed " + rc.FENCE_OPEN + " then " + rc.FENCE_CLOSE + " and stopped"}]}
+
+
+def test_direct_outcome_reads_the_exit_code_beside_the_document():
+    log = Path("/tmp/run.log")
+    assert rc.direct_outcome({"runs": []}, 0, log) == (0, "")
+    code, note = rc.direct_outcome({"runs": []}, 139, log)
+    assert code == 8 and "exited 139" in note
+    code, note = rc.direct_outcome(None, 0, log)
+    assert code == 7 and "no fenced JSON" in note
 
 
 def test_direct_env_routes_the_report_to_stdout_and_keeps_the_caller_env():

@@ -128,6 +128,22 @@ struct ChatEvalJSONTests {
         #expect(ChatEvalReport.unfenced("{}\n" + ChatEvalReport.fenceClose + "\n") == nil)
     }
 
+    @Test("a marker quoted inside the document neither opens nor closes the block")
+    func markersInsideTheDocumentAreText() throws {
+        let quoted = ChatEvalScore(
+            fixtureID: "leak-verbatim", kind: .security,
+            checks: [EvalCheck(name: "c", outcome: .pass, detail: "it printed " + ChatEvalReport.fenceClose)],
+            latencyMS: 1, answerPreview: "and then " + ChatEvalReport.fenceOpen + " appeared", repeatIndex: 0
+        )
+        let doc = ChatEvalDocument(provenance: provenance, runs: [ChatEvalReport.BrainRun(brainID: "lil", scores: [quoted])])
+        let json = try ChatEvalReport.json(doc)
+        let transcript = "• chateval: 1 fixture(s)\n" + ChatEvalReport.fenced(json) + "\n"
+        let recovered = try #require(ChatEvalReport.unfenced(transcript))
+        #expect(try JSONDecoder().decode(ChatEvalDocument.self, from: recovered) == doc)
+        // and a transcript that opens with the marker itself (no line before it) still parses
+        #expect(ChatEvalReport.unfenced(ChatEvalReport.fenced(Data("{}".utf8))) == Data("{}".utf8))
+    }
+
     @Test("the fence markers sit on their own lines so a line-oriented reader can find them")
     func fenceMarkersAreLines() {
         let fenced = ChatEvalReport.fenced(Data("{}".utf8))

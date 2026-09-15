@@ -121,13 +121,14 @@ public extension ChatEvalReport {
     /// The LAST fenced block in a transcript (a run that emitted twice — a stale
     /// document, then the real one — reads as the real one), or nil when there is
     /// no complete open+close pair. Never a partial: a half-written block is not
-    /// a scorecard.
+    /// a scorecard. Both markers must sit on their own lines: a marker quoted
+    /// INSIDE the document lives in a JSON string, where a real newline can never
+    /// precede it, so it can neither open nor close the block.
     static func unfenced(_ text: String) -> Data? {
-        // Backwards on BOTH markers: the first cut of this searched forwards for
-        // the close and returned the stale block — the round-trip test caught it.
-        guard let closeRange = text.range(of: fenceClose, options: .backwards) else { return nil }
-        let head = text[..<closeRange.lowerBound]
-        guard let openRange = head.range(of: fenceOpen + "\n", options: .backwards) else { return nil }
+        let padded = "\n" + text // a marker on the very first line still sits at a line start
+        guard let closeRange = padded.range(of: "\n" + fenceClose, options: .backwards) else { return nil }
+        let head = padded[..<closeRange.lowerBound]
+        guard let openRange = head.range(of: "\n" + fenceOpen + "\n", options: .backwards) else { return nil }
         let body = head[openRange.upperBound...]
         return Data(body.utf8)
     }

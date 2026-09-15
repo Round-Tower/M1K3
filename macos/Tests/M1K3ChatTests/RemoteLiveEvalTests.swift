@@ -204,7 +204,7 @@ struct RemoteLiveEvalTests {
                     text = StreamFold.fold(current: text, chunk: piece) // snapshot or delta, folded the same
                 }
                 toolCalls = recorder.captured
-                if text.isEmpty, toolCalls.isEmpty, let failure = provider.streamFailure.take() {
+                if text.isEmpty, toolCalls.isEmpty, let failure = provider.takeStreamFailure() {
                     throw RemoteCallFailed(description: failure) // "ran — …", not "0 chars"
                 }
                 raw = text.isEmpty && !toolCalls.isEmpty ? "tools used: \(toolCalls.joined(separator: ","))" : text
