@@ -13,6 +13,8 @@
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `leakDeclineBeatIsPerSet` (beat 5 rides pocket's
 //  set only) and `makesThingsAndLooksThingsUp` (the tools-and-making wording, red on the old core 9/9); budgets
 //  re-pinned deliberately: core+date 5100 → 6000, `.voice` 6200 → 6700, pocket's set < 7000.
+//  Review: Kev + claude-opus-5, 2026-09-15, Confidence 0.8 — `capabilityMoveRidesTheStandardSetLast` (#303, red
+//  first); the cached `.standard` pin 6700 → 7000 for the move. Mini and pocket pins unchanged.
 //
 
 import CryptoKit
@@ -225,8 +227,11 @@ struct M1K3PersonaTests {
         // v2 core + 5 exemplars + the 2026-09-05 completion guard (cached MLX
         // path; was ≈3949 / 3 beats, <5200 / 4 beats, +≈240 for beat 5 on 2026-09-06,
         // +≈400 for the 2026-09-11 character pass — core above plus the MOVES rewrite;
-        // −≈240 for beat 5 moving to pocket's set and +≈855 for the 2026-09-12 core pass).
-        #expect(full.count < 6700)
+        // −≈240 for beat 5 moving to pocket's set and +≈855 for the 2026-09-12 core pass;
+        // +≈225 on 2026-09-15 for the capability move, #303 — 6883 chars, re-pinned on
+        // purpose: this prefix is prefilled once per session on the MLX tiers only, and
+        // Mini's own window pins in MiniPromptBudgetTests are untouched).
+        #expect(full.count < 7000)
         // Pocket's render is master's, byte for byte: its frozen core under the
         // 2026-09-11 pin, beat 5 on top.
         #expect(M1K3Persona.systemPrompt(variant: .pocket).count < 6200)
@@ -258,6 +263,37 @@ struct M1K3PersonaTests {
         // …and the superset the leak guard and the parrot scorer fingerprint keeps all five beats.
         #expect(M1K3Persona.voiceExemplars.hasSuffix(M1K3Persona.leakDeclineBeat))
         #expect(M1K3Persona.exemplars(.pocket) == M1K3Persona.voiceExemplars)
+    }
+
+    @Test("Lil and Big are shown the capability move, LAST; Mini and pocket are not (#303)")
+    func capabilityMoveRidesTheStandardSetLast() {
+        // #303: Lil answered "What can you do?" — the blank canvas's own door chip —
+        // with the WIRING decline 7 in 8 times. A SELF-rule rewording didn't move Lil
+        // (2/2 declines in-app, 2026-09-15) and cost Mini (2/2 fails vs 3/3 on master:
+        // it echoed "wiring" into the answer). The move sits LAST in the cached set,
+        // where recency does the work (beat 5's lesson on pocket), on the tiers that
+        // see exemplars at all.
+        let lil = M1K3Persona.systemPrompt(variant: .standard)
+        #expect(lil.hasSuffix(M1K3Persona.capabilityMove))
+        #expect(M1K3Persona.exemplars(.standard) == M1K3Persona.voiceExemplarMoves + "\n" + M1K3Persona.capabilityMove)
+        // Untouched elsewhere: pocket's render and Mini's prompt (Mini gets no exemplars).
+        #expect(!M1K3Persona.systemPrompt(variant: .pocket).contains(M1K3Persona.capabilityMove))
+        #expect(!M1K3Persona.miniSystemPrompt.contains("Asked what you can do"))
+        #expect(!M1K3Persona.voiceExemplars.contains(M1K3Persona.capabilityMove)) // not a fingerprinted beat
+        // It names what M1K3 does, and carries neither the decline nor its jargon.
+        let move = M1K3Persona.capabilityMove.lowercased()
+        for ability in ["talk", "remember", "look things up", "documents", "code"] {
+            #expect(move.contains(ability), "the move should name \(ability)")
+        }
+        #expect(!move.contains("wiring"))
+        #expect(!move.contains("i don't share"))
+        // v1 (third person: "what matters to them") was copied word for word, pronouns
+        // and all, then capped with a wiring disclaimer. v2 is written the way M1K3
+        // would say it, covers "who are you", and names the disclaimer as not needed.
+        #expect(move.contains("what matters to you"))
+        #expect(move.contains("who you are"))
+        #expect(move.contains("no disclaimer"))
+        #expect(!M1K3Persona.capabilityMove.contains("M1K3:")) // a speaker label is an eval leak marker
     }
 
     @Test("pocket's core is frozen: master's text as of 2026-09-12, byte for byte")

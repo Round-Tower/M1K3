@@ -48,6 +48,11 @@
 //  Verify-by-launch per this file's header. Confidence 0.8 — three adversarial-verify
 //  rounds, not launch-tested; upstream WhisperKit timing taken on faith per the
 //  metallib-wall convention. Evidence in macos/scratch/voice-session-audit-2026-07-16/.
+//  Review: Kev + claude-opus-5, 2026-09-15 — `lastFailure` (#311): a stream that fails to start
+//  records its reason, generation-scoped and before the stop finishes the stream, so voice mode
+//  parks once with the reason on screen instead of counting empty listens. The engine teardown is
+//  WhisperKit's own `stopRecording` (tap removed, input disconnected, stop + reset), read in the
+//  pinned checkout. Confidence 0.8 (verify-by-launch: a real start failure on a real route).
 
 import AVFoundation
 #if os(macOS)
@@ -84,6 +89,16 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
     /// no-op instead of polluting the shared transcript state or finishing the
     /// wrong continuation.
     private var generation: UInt64 = 0
+    /// Why the current (or just-ended) session's stream failed to start, if it
+    /// did. Guarded by `lock`; cleared by every start; written only by the
+    /// session that still owns the generation (#311).
+    private var lastFailureMessage: String?
+
+    /// The reason the last listen ended wordless because WhisperKit failed —
+    /// read by the shells through `any TranscriptionProvider` (#311).
+    public var lastFailure: String? {
+        lock.withLock { lastFailureMessage }
+    }
 
     /// Per-session self-stop seam. Holds the session's own streamer (write-once,
     /// before `startStreamTranscription()` enables any callback) so a stale
@@ -295,6 +310,7 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
                 self.generation &+= 1
                 self.continuation = continuation
                 self.lastText = ""
+                self.lastFailureMessage = nil
                 return self.generation
             }
             // Consumer cancellation must release this session's capture
@@ -393,6 +409,14 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
                     // Generation-scoped: a superseded session's failure must not
                     // finish its successor's continuation.
                     Self.log.error("stream transcription failed: \(error.localizedDescription, privacy: .public)")
+                    // Recorded BEFORE the stop finishes the stream: the shell reads
+                    // `lastFailure` once the stream ends, and reports it through
+                    // `listenFailed` instead of counting an empty listen (#311).
+                    self.lock.withLock {
+                        if generation == self.generation {
+                            self.lastFailureMessage = error.localizedDescription
+                        }
+                    }
                     self.stopListening(ifGeneration: generation)
                 }
             }

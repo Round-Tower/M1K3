@@ -27,6 +27,8 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the title drops its ECG icon (launch snag
 //  list: titles are text; the empty states keep theirs). Confidence unchanged.
+//  Review: Kev + claude-opus-5, 2026-09-15 — the day headers drop the calendar glyph too (the same pass:
+//  rows keep their kind icons, repeated decoration goes). Confidence unchanged.
 
 import M1K3Heartbeat
 import M1K3MCPLog
@@ -160,7 +162,7 @@ struct HeartbeatScreen: View {
                             eventRow(event)
                         }
                     } header: {
-                        Label(dayTitle(day.day), systemImage: "calendar")
+                        Text(dayTitle(day.day)) // no calendar glyph on every day: the date says it (Kev's icon pass, 2026-09-15)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

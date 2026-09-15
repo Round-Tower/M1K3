@@ -53,6 +53,10 @@
 //  late failure no longer captions a listening mic. Confidence 0.85 (policy pinned; the
 //  double tap itself is verify-on-device). Review fold: a per-activation generation joins the
 //  idle check (a stalled activation landing at a re-settled idle), and an ignored result logs.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — #311: `lastFailure` read through the protocol
+//  (`any TranscriptionProvider`), no `AppleSpeechTranscriber` downcast — the phone's transcriber is
+//  still the Apple one, so this is parity with the Mac shell, byte-identical in behaviour today.
+//  Confidence 0.85.
 
 import AVFoundation
 import Foundation
@@ -229,7 +233,7 @@ extension AppCore {
                             continuation.yield(segment)
                         }
                         if !sawSegments, !Task.isCancelled,
-                           let failure = (self?.transcriber as? AppleSpeechTranscriber)?.lastFailure
+                           let failure = self?.transcriber.lastFailure
                         {
                             self?.voiceLoop?.listenFailed(failure)
                         }

@@ -18,6 +18,7 @@
 # (content-idempotent seed; persona edits land). Confidence now 0.75.
 # Review: Kev + claude-fable-5.1, 2026-09-12 — the sibling-root clear is best-effort (TCC blocks
 # it from a shell without container access); the run no longer dies on it. Confidence now 0.8.
+# Review: Kev + claude-fable-5.1, 2026-09-15 — `constellation` joins the plate export list (Mac lane).
 set -euo pipefail
 
 target=${1:?mac|ios}; shift
@@ -106,7 +107,8 @@ if [[ -d $xcresult ]]; then
 import json, shutil, sys, os
 export_dir, plates = sys.argv[1:3]
 PLATES = {"onboarding", "chat", "voice-listening", "voice-speaking", "documents", "memories", "brain-at-home",
-          "companion-fox", "companion-gecko", "companion-inkfish", "companion-colobus", "privacy-label"}
+          "companion-fox", "companion-gecko", "companion-inkfish", "companion-colobus", "privacy-label",
+          "constellation"}
 for test in json.load(open(os.path.join(export_dir, "manifest.json"))):
     for a in test.get("attachments", []):
         name = a.get("suggestedHumanReadableName") or a.get("exportedFileName", "")

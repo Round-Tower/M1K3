@@ -21,6 +21,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the creature takes `CompanionAvatarView`'s `.fit` framing:
 //  the camera is placed for the view's aspect (`CameraFit.distance`), so a portrait phone shows the whole
 //  fox instead of clipping its head at both sides under the Mac window's fixed shot. Verify-by-launch (device).
+//  Review: Kev + claude-opus-5, 2026-09-15 — `.fitWhole` (#312): the fit also backs off by half the creature's
+//  depth, so the turned fox's nose and head stay in the chat hero and the companion tiles. Verify-by-launch.
 //
 
 import M1K3Avatar
@@ -59,10 +61,11 @@ struct AvatarSurface: View {
             // in its update closure (a persistent root, one RealityView), so we keep
             // the same view identity and let it swap the mesh itself. (The Mac's
             // AvatarSurface keeps .id — recreation renders fine there.)
-            // `.fit`: a phone is portrait and the perspective field of view is
+            // `.fitWhole`: a phone is portrait and the perspective field of view is
             // vertical, so the fixed Mac-window shot clipped a broadside fox's
-            // head at both sides (Kev, 2026-09-12).
-            CompanionAvatarView(controller: controller, companion: spec, framing: .fit, loading: loading)
+            // head at both sides (Kev, 2026-09-12); the plane-only fit still let a
+            // turned fox's nose run off a wide hero, so the near face is framed (#312).
+            CompanionAvatarView(controller: controller, companion: spec, framing: .fitWhole, loading: loading)
         } else {
             AvatarView(controller: controller, paused: paused)
         }

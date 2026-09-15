@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-12, Confidence 0.85 (trig pinned by
 //  hand-computed cases; the felt framing is verify-by-launch), Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-15 — `contentDepth` (#312): the near face of a turned
+//  creature's box fits every slot shape; zero depth pinned byte-identical. Confidence 0.85.
 //
 
 import Foundation
@@ -48,6 +50,55 @@ struct CameraFitTests {
             verticalFOVDegrees: 60, headroom: 1.0
         ))
         #expect(abs(d - 0.85 / tanHalf) < 0.001) // ≈ 1.472 — width would need only 0.49
+    }
+
+    @Test("a turned creature's depth backs the camera off by half, so its near face fits (#312)")
+    func depthBacksTheCameraOff() throws {
+        // The three-quarter turn makes the fox's box ~1.48 deep; its nose sits
+        // half that nearer the camera, and perspective blew it past a wide
+        // view's edge at the plane-only distance (the head off the frame).
+        let plane = try #require(CameraFit.distance(
+            contentWidth: 1.7, contentHeight: 1.0, viewWidth: 1440, viewHeight: 848,
+            verticalFOVDegrees: 60, headroom: 1.25
+        ))
+        let whole = try #require(CameraFit.distance(
+            contentWidth: 1.7, contentHeight: 1.0, contentDepth: 1.48, viewWidth: 1440, viewHeight: 848,
+            verticalFOVDegrees: 60, headroom: 1.25
+        ))
+        #expect(abs(whole - (plane + 0.74)) < 0.001)
+        #expect(abs(whole - 1.824) < 0.01)
+    }
+
+    @Test("with depth, every near corner of the posed box lands inside the frame, in every slot shape")
+    func nearCornersFitEverySlot() throws {
+        let box = (w: Float(1.7), h: Float(1.0), d: Float(1.48))
+        for (vw, vh) in [(72, 72), (390, 844), (1440, 848), (200, 116), (278, 168)] as [(Float, Float)] {
+            let dist = try #require(CameraFit.distance(
+                contentWidth: box.w, contentHeight: box.h, contentDepth: box.d,
+                viewWidth: vw, viewHeight: vh, verticalFOVDegrees: 60, headroom: 1.25
+            ))
+            let nearest = dist - box.d / 2 // the box's near face, where perspective is largest
+            #expect(nearest > 0)
+            #expect(box.w / 2 / nearest <= tanHalf * (vw / vh) + 0.0001, "width clips at \(vw)x\(vh)")
+            #expect(box.h / 2 / nearest <= tanHalf + 0.0001, "height clips at \(vw)x\(vh)")
+        }
+    }
+
+    @Test("no depth is the plane-only distance, unchanged for every existing caller")
+    func zeroDepthIsUnchanged() {
+        let before = CameraFit.distance(
+            contentWidth: 1.7, contentHeight: 0.9, viewWidth: 72, viewHeight: 72,
+            verticalFOVDegrees: 60, headroom: 1.25
+        )
+        let explicit = CameraFit.distance(
+            contentWidth: 1.7, contentHeight: 0.9, contentDepth: 0, viewWidth: 72, viewHeight: 72,
+            verticalFOVDegrees: 60, headroom: 1.25
+        )
+        #expect(before == explicit)
+        #expect(CameraFit.distance(
+            contentWidth: 1.7, contentHeight: 0.9, contentDepth: -3, viewWidth: 72, viewHeight: 72,
+            verticalFOVDegrees: 60, headroom: 1.25
+        ) == before) // a negative depth is no depth, never a camera pulled INTO the creature
     }
 
     @Test("degenerate inputs refuse rather than place the camera at nonsense")

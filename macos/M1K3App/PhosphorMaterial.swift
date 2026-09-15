@@ -23,6 +23,17 @@
 //  result is verify-at-⌘R). Prior: Kev + claude-opus-4-8 (phosphor-only #46).
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `tintBakedLattice`: the Phosphor Fox's wire mesh
 //  gets an unlit phosphor-green material under every style's baseline. Confidence 0.75.
+//  Review: Kev + claude-opus-5, 2026-09-15 — the tint never landed: RealityKit merges the skinned fox
+//  into one ModelEntity ('root') and the `fox_wire` entities have no ModelComponent, so the name match
+//  painted nothing and every plate kept the grey wire. The slot choice is now `BakedLattice.slots` by
+//  mesh-part name (pinned; layout probed on the shipped USDZs), with a notice line when it lands.
+//  Confidence 0.8 (the green on screen is verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-09-15 (later) — `tintBakedLattice` REMOVED, with `BakedLattice`
+//  (M1K3Avatar) and its tests. The green lattice was seen on the plates and rejected (Kev: "too
+//  distracting — the white / original was better"); the Phosphor Fox keeps its baked neutral wire
+//  (0xe8e8e8, `tools/companion-pipeline/build_phosphor_fox.py`). The RealityKit fact stays worth
+//  knowing: a SkelRoot's skinned meshes merge into ONE ModelEntity whose PARTS keep the prim names.
+//  Confidence 0.9.
 //
 
 import M1K3Avatar
@@ -66,34 +77,6 @@ enum PhosphorMaterial {
     private static func surfaceShader(_ function: String) -> CustomMaterial.SurfaceShader? {
         guard let lib = loadedLibrary() else { return nil }
         return CustomMaterial.SurfaceShader(named: function, in: lib)
-    }
-
-    /// The Phosphor Fox bakes its lattice as its own mesh (`fox_wire`, an
-    /// emissive neutral 0xe8e8e8 — `tools/companion-pipeline/build_phosphor_fox.py`)
-    /// over a dark body. Under `.off` that read as a plain grey wire; the proper
-    /// look is the site's: a phosphor-green lattice. Repaint the wire mesh with
-    /// an unlit glow-coloured material; every other creature and mesh is left
-    /// alone. Call BEFORE `snapshotMaterials` so Off restores the tint.
-    static func tintBakedLattice(of root: Entity, companion: CompanionSpec, glow: PhosphorTreatment) {
-        guard companion.id == CompanionSpec.phosphorFox.id else { return }
-        let colour = RealityKit.Material.Color(
-            red: CGFloat(glow.red), green: CGFloat(glow.green), blue: CGFloat(glow.blue), alpha: 1
-        )
-        var wire = UnlitMaterial(color: colour)
-        wire.blending = .opaque
-        let painted = wire
-        func walk(_ entity: Entity) {
-            if entity.name.lowercased().contains("fox_wire"), var model = entity.components[ModelComponent.self] {
-                // No closure capture of the material (strict concurrency in Release
-                // flags a non-Sendable send) — a repeated array keeps the slot count.
-                model.materials = Array(repeating: painted, count: max(1, model.materials.count))
-                entity.components.set(model)
-            }
-            for child in entity.children {
-                walk(child)
-            }
-        }
-        walk(root)
     }
 
     /// Snapshot the baked materials per ModelEntity so styles can be switched live:

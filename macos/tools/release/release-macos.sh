@@ -43,14 +43,15 @@ echo "▸ M1K3 release — v$VERSION  (team $TEAM)"
 echo
 
 # ── Toolchain guard ──────────────────────────────────────────────────────────
-# Release artifacts come off STABLE Xcode 26.x only — never a beta toolchain
+# Release artifacts come off STABLE Xcode 27.x only — never a beta toolchain
 # (ADR 0001: release signing/notarization stays pinned to stable). With
 # Xcode-beta.app installed side-by-side, one stray xcode-select would otherwise
-# silently make this DMG a beta build. Bump the "26" here deliberately at GA.
+# silently make this DMG a beta build. Bumped 26 → 27 on 2026-09-15 (Xcode 27.0
+# GA, 27A266a, is the installed toolchain); bump again deliberately at the next GA.
 XCODE_PATH="$(xcode-select -p)"
 XCODE_MAJOR="$(xcodebuild -version | sed -nE 's/^Xcode ([0-9]+).*/\1/p')"
-if [ "$XCODE_MAJOR" != "26" ] || echo "$XCODE_PATH" | grep -qi "beta"; then
-  echo "✗ Release builds require stable Xcode 26.x — found Xcode ${XCODE_MAJOR:-?} at $XCODE_PATH"
+if [ "$XCODE_MAJOR" != "27" ] || echo "$XCODE_PATH" | grep -qi "beta"; then
+  echo "✗ Release builds require stable Xcode 27.x — found Xcode ${XCODE_MAJOR:-?} at $XCODE_PATH"
   echo "  Fix: sudo xcode-select -s /Applications/Xcode.app"
   exit 1
 fi

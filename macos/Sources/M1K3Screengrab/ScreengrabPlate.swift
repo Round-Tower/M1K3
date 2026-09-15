@@ -15,6 +15,9 @@
 //  Mini answered flat) and the Fox tile shows the registered PhosphorFox creature, not Fox + phosphor skin (Kev). Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — shading per plate: the house face's lattice under
 //  `off`, other creatures under `phosphor`. Confidence 0.85 (pinned).
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — shader `off` on every plate (the other creatures in their
+//  own colour: "more colour in the screenshots") and a thirteenth plate, `constellation` (Mac lane). Pinned.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -32,6 +35,10 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
     case companionInkfish = "companion-inkfish"
     case companionColobus = "companion-colobus"
     case privacyLabel = "privacy-label"
+    /// The 3D memory field in its own window (Mac lane; Kev, 2026-09-15:
+    /// "the constellation, which is gorgeous"). Same recipe as the memories
+    /// plate — the seeded persona's memories are the motes.
+    case constellation
 
     /// The face every non-tile plate wears, so chat/voice/memories match each
     /// other across a run. The Phosphor Fox is the house default on iOS and a
@@ -69,11 +76,11 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
             // the live model store (the harness reroutes data, not brains).
             ["-selectedBrain", "lil"],
             ["-voiceMode.companion", companionID ?? Self.houseFace],
-            // The house face (and its own tile) shows the BAKED lattice, tinted
-            // phosphor green by the app under `.off` (Kev, 2026-09-12: "proper
-            // Phosphor Fox wireframe" — the Fresnel glow filled it in). The other
-            // creatures keep the phosphor skin: their baked textures are cartoon fur.
-            ["-companion.shadingStyle", (companionID ?? Self.houseFace) == Self.houseFace ? "off" : "phosphor"],
+            // Shader off on EVERY plate: the house face shows its baked white
+            // lattice (Kev, 2026-09-12 and again 09-15 — the green tint was tried
+            // and rejected), and the other creatures show their own baked colour
+            // so the companion frame carries some colour (Kev, 2026-09-15).
+            ["-companion.shadingStyle", "off"],
             // Brain at Home serving reads the paired-device keys from the Keychain;
             // off for every plate (the pairing plate shows the QR from Settings).
             ["-brainServe.enabled", "NO"],

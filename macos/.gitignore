@@ -1,5 +1,7 @@
 # Swift Package Manager
 .build/
+# Side SwiftPM scratch paths (e.g. the M1K3_FM27 build in .build-fm27) — 1.1 GB, never source.
+.build-*/
 # xcodebuild -clonedSourcePackagesDirPath cache (local build artifact).
 .spm-cache/
 .swiftpm/

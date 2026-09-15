@@ -22,6 +22,8 @@
 //  attribute in 0.6 s (XCTest quiescence, not the app). Queries scoped to the window. Confidence now 0.7.
 //  Review: Kev + claude-opus-5, 2026-09-13 — the pointer is parked outside the window before each shot
 //  (a leftover hover tooltip floated mid-frame in four plates). Confidence now 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-09-15 — `testConstellation`: the memory field's own window, opened
+//  from Window ▸ Memory Constellation, shot after a 20 s settle. Verify-by-launch. Confidence now 0.75.
 //
 
 import M1K3Screengrab
@@ -85,6 +87,23 @@ final class ScreengrabUITests: XCTestCase {
 
     func testMemories() throws {
         try capture(.memories, settle: 12) { _ in }
+    }
+
+    func testConstellation() throws {
+        // The 3D memory field in its own window, summoned from the Window menu
+        // over the seeded persona's memories (Kev, 2026-09-15: "the constellation,
+        // which is gorgeous"). The shot is the constellation window itself; the
+        // accretion stagger and the 2 s store poll want a longer settle than the list.
+        try capture(.constellation, settle: 20, window: constellationWindow) { app in
+            let item = app.menuBarItems["Window"].menuItems["Memory Constellation"]
+            XCTAssert(item.waitForExistence(timeout: 60), "Window ▸ Memory Constellation never appeared")
+            item.click()
+            XCTAssert(constellationWindow(app).waitForExistence(timeout: 60), "constellation window never appeared")
+        }
+    }
+
+    private func constellationWindow(_ app: XCUIApplication) -> XCUIElement {
+        app.windows["Memory Constellation"]
     }
 
     func testBrainAtHome() throws {

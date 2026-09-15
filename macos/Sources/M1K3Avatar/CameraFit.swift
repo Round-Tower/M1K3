@@ -13,6 +13,9 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-12, Confidence 0.85 (the trig is
 //  pinned; the felt framing per surface is verify-by-launch), Prior: Unknown
+//  Review: Kev + claude-opus-5, 2026-09-15 — `contentDepth` (#312): back off by half the posed
+//  box's depth so a turned creature's nose can't clip a wide view. Default 0 keeps every existing
+//  surface byte-identical. Confidence 0.85.
 //
 
 import Foundation
@@ -24,9 +27,16 @@ public enum CameraFit {
     /// `headroom` as a multiplier on the content (1.25 = a quarter margin).
     /// nil for a non-measurable content, an unusable view, or a field of view
     /// outside (0, 180).
+    ///
+    /// `contentDepth` (#312): the posed box's depth. A turned creature's near
+    /// face sits half of it closer to the camera, and perspective enlarges it
+    /// there, so the camera backs off by `contentDepth / 2` to frame that face
+    /// rather than the z = 0 plane. 0 (the default) is the plane-only distance,
+    /// byte-identical for every caller that doesn't pass it; negative is 0.
     public static func distance(
         contentWidth: Float,
         contentHeight: Float,
+        contentDepth: Float = 0,
         viewWidth: Float,
         viewHeight: Float,
         verticalFOVDegrees: Float,
@@ -39,7 +49,7 @@ public enum CameraFit {
         let aspect = viewWidth / viewHeight
         let forHeight = (contentHeight / 2 * headroom) / tanHalf
         let forWidth = (contentWidth / 2 * headroom) / (tanHalf * aspect)
-        let distance = max(forHeight, forWidth)
+        let distance = max(forHeight, forWidth) + max(0, contentDepth) / 2
         guard distance.isFinite, distance > 0 else { return nil }
         return distance
     }

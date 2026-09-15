@@ -29,7 +29,7 @@ not release approval.
 | Context window expanded | **NOT TRUE** (on-device) | AFM still 4096 tokens (runtime-confirmed again 09-13). PCC reports **32,768** |
 | LanguageModelExecutor protocol | **EXISTS** (27 SDK) | ~~Does not exist~~ was a 26.5-SDK read. The 27 SDK has it, and M1K3's `M1K3FoundationModel` conformance compiles against it unchanged (09-13) |
 | Adapter API (LoRA) | **KILLED** | "Custom adapters are no longer supported since iOS 27, macOS 27, visionOS 27" |
-| AFM 3 Core Advanced (20B sparse) | **NO EVIDENCE** | Asset names still reference `instruct_3b`; no API change |
+| AFM 3 Core Advanced (20B sparse) | **NAME ONLY** (GA, 09-15) | Xcode 27 GA adds a read-only `SystemLanguageModel.variant` (`.core3` / `.coreAdvanced3`). Apps can't select it, the model catalog lists only `instruct_3b` assets, and this M1 Max reports **AFM 3 Core**. Nothing public says 20B, sparse or audio |
 | Metal Int4/UInt4 tensors | **CONFIRMED** | `MTLTensorDataTypeInt4/UInt4` at macOS 26.4 — upstream mlx-swift concern |
 
 ## Plan
@@ -288,6 +288,34 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
 
 ### 1.1 — "Golden Gate native" (gate: Xcode 27 GA + the CI pin bump + ASC accepting 27-SDK builds)
 
+**Status 2026-09-15 (launch day): the first gate is met locally.** Xcode 27.0
+GA (27A266a) replaced Xcode 26.6 in `/Applications/Xcode.app` on this Mac, so
+every local build from here is a 27-SDK build. Measured on it, before any
+1.1 code:
+
+- The package suite passes on Swift 6.4: 3,874 tests in 30 binaries, no
+  failures. The Mac app (Release, arm64) and the iOS app (Release,
+  `generic/platform=iOS`) both build.
+- A fresh Xcode 27 needs `xcodebuild -downloadComponent MetalToolchain`
+  (838 MB, no admin) before MLX's shaders compile. CoreSimulator is left
+  older than Xcode expects (1155.4 vs 1171.7), so simulator runs and
+  `devicectl` fail until `sudo xcodebuild -runFirstLaunch`.
+- The GA SDK changed two call shapes the beta took, and the FM27 bridge
+  broke on both: `LanguageModelCapabilities(capabilities:)` became `(_:)`,
+  and `updateUsage(_:)` became `updateUsage(input:output:)`. Both are fixed,
+  and `M1K3_FM27=1 swift build --target M1K3Agent` is green on GA again.
+- GA adds a read-only `SystemLanguageModel.variant`: `.core3` ("AFM 3 Core")
+  and `.coreAdvanced3` ("AFM 3 Core Advanced"). Apps can read it but not
+  choose it, and the public model catalog names only 3B assets. This M1 Max
+  reports AFM 3 Core, available, 4,096 tokens. So Core Advanced is not a Big
+  Brain slot we can claim, and on-device Apple Intelligence is not M3-only.
+- No app build carries the PCC rung yet. `M1K3_FM27` is read only by
+  `Package.swift` from the environment, and nothing in `project.yml` or the
+  release scripts sets it. Item 1's `#available` switch is what ships it.
+
+Still open for 1.1: the `ci.yml` pin bump, Xcode Cloud's Xcode version, and
+proof that App Store Connect accepts a 27-SDK upload.
+
 1. **Toolchain bump PR.** CI and Xcode Cloud move to Xcode 27. The
    `M1K3_FM27` compile gate becomes `#available(macOS 27, *)` so the bridge
    ships in the normal build. The full suite runs, plus the gemma-4 native
@@ -389,6 +417,10 @@ code this plan lets in before 1.0 is what the release gate itself turns up.
 - Conversational replay: ~5.7
 - Standing heuristic (code): 3.5 ← reasonable for code, conservative for prose
 
+<!-- Review: Kev + claude-opus-5, 2026-09-15: the 1.1 section records Xcode 27 GA on this Mac —
+     suite, Mac and iOS builds green; the Metal-toolchain and CoreSimulator install
+     steps; the two GA call-shape breaks, fixed; the read-only AFM variant. Confidence
+     0.85: every line measured today, and the SDK quotes are from 27A266a. -->
 <!-- Review: Kev + claude-opus-5, 2026-09-14 (evening): 1.2's toolchain-free half
      built and verified by launch against the Debug stand-in; the real path
      waits on the entitlement. Confidence 0.85. -->
