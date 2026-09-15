@@ -14,7 +14,7 @@ Private by design: on your Mac by default, no telemetry, and every network call 
 <p align="center">
   <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><strong>⬇ Download for macOS</strong></a>
   · <a href="https://m1k3.app">m1k3.app</a>
-  · <a href="https://testflight.apple.com/join/Fxp2F5Je">TestFlight beta</a>
+  · <a href="https://apps.apple.com/app/id6780230835">App Store</a>
 </p>
 
 <p align="center">Connecting a coding agent → <a href="https://m1k3.app/agents">m1k3.app/agents</a></p>
@@ -70,7 +70,7 @@ Private Cloud Compute.
 
 ## Get M1K3
 
-- **[TestFlight beta](https://testflight.apple.com/join/Fxp2F5Je)** — the easiest way in.
+- **[App Store](https://apps.apple.com/app/id6780230835)** — the easiest way in (Mac, iPhone, iPad; one universal app).
 - **[Download the DMG](https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)** — signed & notarized.
 - **Build from source** — [`macos/README.md`](./macos/README.md): clone → `xcodegen generate` → ⌘R.
 

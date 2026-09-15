@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-09-09"
+  "dateModified": "2026-09-15"
 }
 </script>
 <script type="application/ld+json">
@@ -47,7 +47,7 @@
     { "@type": "Question", "name": "Is M1K3 really private?",
       "acceptedAnswer": { "@type": "Answer", "text": "Yes — by architecture, not by policy. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the store encrypted under a Keychain-held key. The network is used in exactly four documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, an optional web-search tool that is off by default, app updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics." } },
     { "@type": "Question", "name": "Does M1K3 ever connect to the internet?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Four documented cases, all user-initiated: (1) downloading model weights from Hugging Face, once, only when you opt into the Lil or Big brain — the default Mini brain is Apple's built-in on-device model, nothing to download; (2) the optional web-search and page-reading agent tools, off by default behind a privacy toggle; (3) updates, via TestFlight or by downloading a new DMG from GitHub — the app has no self-updater; (4) Private Cloud Compute, opt-in and off by default — one message at a time, only when you turn it on. With Private Cloud Compute off, conversations, documents, voice, and calls never leave the Mac." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Four documented cases, all user-initiated: (1) downloading model weights from Hugging Face, once, only when you opt into the Lil or Big brain — the default Mini brain is Apple's built-in on-device model, nothing to download; (2) the optional web-search and page-reading agent tools, off by default behind a privacy toggle; (3) updates, via the App Store or by downloading a new DMG from GitHub — the app has no self-updater; (4) Private Cloud Compute, opt-in and off by default — one message at a time, only when you turn it on. With Private Cloud Compute off, conversations, documents, voice, and calls never leave the Mac." } },
     { "@type": "Question", "name": "Where is M1K3's data stored?",
       "acceptedAnswer": { "@type": "Answer", "text": "In the app's macOS sandbox container, in a GRDB store encrypted with a key held in your Keychain. Documents enter only when you explicitly open or drop them; call transcription is consent-gated and encrypted at rest; the memory store has a forget primitive so consent stays revocable." } },
     { "@type": "Question", "name": "How can I verify M1K3's privacy claims?",
@@ -81,7 +81,7 @@
   <header class="article-head">
     <span class="label">// privacy architecture</span>
     <h1>Is M1K3 really private?</h1>
-    <p class="meta">Updated 2026-09-09 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
+    <p class="meta">Updated 2026-09-15 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
   </header>
 
   <div class="answer">
@@ -111,7 +111,7 @@
       <ul>
         <li class="crossing"><strong>Model weights, once</strong> Downloaded from Hugging Face only when you opt into the Lil or Big brain. The default Mini brain is Apple's built-in model — nothing to download.</li>
         <li class="crossing"><strong>Web search &amp; page reading (optional)</strong> Agent tools behind a privacy toggle, off by default. Web off means web off.</li>
-        <li class="crossing"><strong>Updates</strong> Via TestFlight or a new DMG from GitHub Releases. The app has no self-updater phoning home.</li>
+        <li class="crossing"><strong>Updates</strong> Via the App Store or a new DMG from GitHub Releases. The app has no self-updater phoning home.</li>
         <li class="crossing"><strong>Private Cloud Compute (optional, off by default)</strong> A cloud button next to the message field, visible only once you turn it on in Settings. Sends one message at a time to Apple's Private Cloud Compute, after a consent sheet; every PCC answer is labelled.</li>
         <li><strong>And that's it.</strong> No telemetry, no analytics, no account, no crash reporting. With Private Cloud Compute off — the default — your prompts, documents, voice, and calls are not on this list, by construction. Turn it on and only the one message you send (plus the conversation so far, if you tick it) ever crosses — never memories, documents, tools, calendar, location, or your profile.</li>
       </ul>
@@ -124,7 +124,7 @@
   <ol>
     <li><strong>Model downloads (one-time, opt-in).</strong> M1K3 starts on Mini — Apple's on-device Foundation Model, instant, nothing to download. If you choose a bigger local brain (Lil or Big) or on-device Whisper speech models, the weights download once from <code>huggingface.co</code>; after that, inference runs fully offline. The app's outbound-network entitlement exists for this — the <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements">entitlements file</a> says so in a signed comment.</li>
     <li><strong>The web tools (opt-in, off by default).</strong> The local agent has web-search and page-reading tools behind a privacy toggle. When the toggle is off, the agent has no web tools at all — it can't quietly decide to search. When you turn it on, your search queries go to the web, as searches do.</li>
-    <li><strong>Updates (via the channel you chose).</strong> There is no Sparkle-style self-updater inside the app. TestFlight builds update through Apple's infrastructure; the DMG updates when you download a new one from <a href="https://github.com/Round-Tower/M1K3/releases">GitHub Releases</a>; a source build updates when you pull and rebuild.</li>
+    <li><strong>Updates (via the channel you chose).</strong> There is no Sparkle-style self-updater inside the app. App Store and TestFlight builds update through Apple's infrastructure; the DMG updates when you download a new one from <a href="https://github.com/Round-Tower/M1K3/releases">GitHub Releases</a>; a source build updates when you pull and rebuild.</li>
     <li><strong>Private Cloud Compute (opt-in, off by default).</strong> Turn it on in Settings and a cloud button appears next to the message field. Tap it and a consent sheet shows exactly what's about to go — the message, plus the conversation so far only if you tick that too — before it sends one message at a time to Apple's Private Cloud Compute. Never your memories, documents, tools, calendar, location, or profile. Every PCC answer is labelled in the chat; if PCC fails or the quota runs out, the on-device brain answers and says why. Detail below.</li>
   </ol>
   <p>One adjacent honesty, not a network call M1K3 makes: if you connect a <em>cloud-hosted</em> MCP client to M1K3's loopback server, whatever that client retrieves becomes part of the client's own context and travels wherever its conversations go. Local server, client's rules — the full caveat is on the <a href="/mcp-knowledge-server">MCP page</a>.</p>
@@ -187,7 +187,7 @@
     <h2>Privacy you can check.</h2>
     <p>M1K3 is free for humans, source-available, and on-device by default. Don't take this page's word for it — take the source's.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
+      <a class="btn btn-primary" href="https://apps.apple.com/app/id6780230835">Get it on the App Store</a>
       <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Read the source</a>
     </div>
   </section>
@@ -239,6 +239,13 @@
      page-cta label "// nothing leaves" → "// private by design". dateModified NOT bumped (not
      live). Confidence 0.75 (every claim checked against ADR 0006 and the task's given fact list;
      the Apple quote is copied from the brief, not fetched fresh from Apple's site this session —
-     re-verify at implementation time per the ADR's own instruction). -->
+     re-verify at implementation time per the ADR's own instruction).
+     Review: Kev + claude-fable-5.1, 2026-09-15 — the 1.0 App Store release. HELD until 1.0.0 is live on
+     the store (the link 404s before then). CTA "Join the TestFlight beta" → "Get it on the App Store"
+     (apps.apple.com/app/id6780230835); the Updates crossing (diagram row + JSON-LD answer, kept in
+     step) now names the App Store as the Apple channel; the numbered list says "App Store and
+     TestFlight builds update through Apple's infrastructure" — TestFlight remains a real tester
+     channel, so that line keeps it. Update mechanics unchanged: still no self-updater. dateModified +
+     Updated bumped. Confidence 0.85. -->
 </body>
 </html>
