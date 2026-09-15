@@ -26,7 +26,8 @@ struct OpenRouterWireTests {
     @Test("a completion's answer is choices[0].message.content, reasoning fields ignored")
     func parsesContent() throws {
         let body = """
-        {"id":"gen-1","choices":[{"message":{"role":"assistant","content":"Hello there.","reasoning":"thinking…"},"finish_reason":"stop"}]}
+        {"id":"gen-1","choices":[{"message":{"role":"assistant","content":"Hello there.",\
+        "reasoning":"thinking…"},"finish_reason":"stop"}]}
         """
         #expect(try OpenRouterWire.text(fromResponse: Data(body.utf8)) == "Hello there.")
     }
@@ -42,7 +43,9 @@ struct OpenRouterWireTests {
     @Test("a provider refusal — empty content beside a refusal string — is the answer, not nothing")
     func providerRefusal() throws {
         let body = """
-        {"choices":[{"message":{"role":"assistant","content":"","refusal":"This request was blocked under the Usage Policy.","reasoning":""},"finish_reason":"content_filter","native_finish_reason":"refusal"}]}
+        {"choices":[{"message":{"role":"assistant","content":"",\
+        "refusal":"This request was blocked under the Usage Policy.","reasoning":""},\
+        "finish_reason":"content_filter","native_finish_reason":"refusal"}]}
         """
         #expect(try OpenRouterWire.text(fromResponse: Data(body.utf8)) == "This request was blocked under the Usage Policy.")
         // content wins when both are present; a null refusal never replaces content

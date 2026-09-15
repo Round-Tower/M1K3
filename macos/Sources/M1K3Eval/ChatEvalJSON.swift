@@ -14,8 +14,9 @@
 //  shape (BENCHMARKS.md); a single-run cell has no error bars.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.9. Prior: Unknown
-//  Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.9 — `fenced`/`unfenced`: the document can ride a
-//  text stream (stdout mode) between two whole-line markers; the LAST complete block is the scorecard.
+//  Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.9 — `fenced`/`unfenced`: the document
+//  can ride a text stream (stdout mode) between two whole-line markers; the LAST complete block is
+//  the scorecard.
 
 import Foundation
 
@@ -114,7 +115,7 @@ public extension ChatEvalReport {
 
     /// The document between the markers, on its own lines.
     static func fenced(_ json: Data) -> String {
-        fenceOpen + "\n" + String(decoding: json, as: UTF8.self) + "\n" + fenceClose
+        fenceOpen + "\n" + (String(bytes: json, encoding: .utf8) ?? "") + "\n" + fenceClose
     }
 
     /// The LAST fenced block in a transcript (a run that emitted twice — a stale
