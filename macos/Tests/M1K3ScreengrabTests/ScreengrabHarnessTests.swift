@@ -78,8 +78,11 @@ struct ScreengrabHarnessTests {
         #expect(recipe.environment["M1K3_SCREENGRAB_PLATE"] == "companion-fox")
         #expect(recipe.arguments.contains(["-voiceMode.companion", "PhosphorFox"]))
         // Lil fronts every plate: the speaking plate is a real turn and Lil carries
-        // the persona (Kev, 2026-09-08).
+        // the persona (Kev, 2026-09-08). The pure arm takes any brain — the runner's
+        // M1K3_SCREENGRAB_BRAIN picks `mini` for a simulator, which has no MLX.
         #expect(recipe.arguments.contains(["-selectedBrain", "lil"]))
+        #expect(ScreengrabPlate.chat.launchRecipe(brain: "mini").arguments.contains(["-selectedBrain", "mini"]))
+        #expect(!ScreengrabPlate.chat.launchRecipe(brain: "mini").arguments.contains(["-selectedBrain", "lil"]))
         // The PhosphorFox tile shows its BAKED white lattice (Kev, 2026-09-12 / 09-15) — shader off.
         #expect(recipe.arguments.contains(["-companion.shadingStyle", "off"]))
         // The other creatures show their own baked colour too (Kev, 2026-09-15: "more colour

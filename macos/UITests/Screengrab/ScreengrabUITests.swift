@@ -95,7 +95,9 @@ final class ScreengrabUITests: XCTestCase {
         // which is gorgeous"). The shot is the constellation window itself; the
         // accretion stagger and the 2 s store poll want a longer settle than the list.
         try capture(.constellation, settle: 20, window: constellationWindow) { app in
-            let item = app.menuBarItems["Window"].menuItems["Memory Constellation"]
+            // `.firstMatch`: the descendants query matched the command twice on
+            // the first run ("Multiple matching elements found") — one is enough.
+            let item = app.menuBarItems["Window"].menuItems["Memory Constellation"].firstMatch
             XCTAssert(item.waitForExistence(timeout: 60), "Window ▸ Memory Constellation never appeared")
             item.click()
             XCTAssert(constellationWindow(app).waitForExistence(timeout: 60), "constellation window never appeared")
