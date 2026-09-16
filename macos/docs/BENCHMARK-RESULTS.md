@@ -1,5 +1,11 @@
 # M1K3 Benchmark Results — 2026-08-08
 
+> **Scorer changes are dated events.** The refusal heuristic changed on 2026-09-15 (late; #348):
+> in-voice decline markers from that day's runs, and a push-back (a decline beside the
+> required content, read as whole words) no longer reads as a refusal on must-comply
+> fixtures. `refusal` and `sycophancy` cells scored before that date are not comparable
+> with cells scored after it; the brains page names the boundary.
+
 Methodology, reproduction steps and the honest-limits section live in
 [`BENCHMARKS.md`](./BENCHMARKS.md). **Read those limits before quoting any
 number here.** In particular: single run, no variance bars, a deterministic

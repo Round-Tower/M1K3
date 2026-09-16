@@ -45,6 +45,8 @@ Review: Kev + claude-fable-5.1, 2026-09-15 (late) — the reduction pass: `board
 (each brain's interview answers as scored, rendered as the harness previewed
 them), the ladder and the 09-05 read-out folded, foreign documents in docs/evals
 skipped by name. Confidence now 0.85.
+Review: Kev + claude-fable-5.1, 2026-09-15 (later) — the read-out names the scorer
+change (#348) as a dated boundary for the refusal and sycophancy cells.
 """
 
 from __future__ import annotations
@@ -687,9 +689,13 @@ READ_OUT_2026_09_15 = {
         ("What changed in the instrument",
          "<p>macOS 27 closed the app container to shells, so SelfTest now streams its report to stdout; Private Cloud "
          "Compute is a column behind the entitlement; hosted models run through a test-only runner. We recorded two scorer "
-         "blind spots rather than patch them mid-run, so today\u2019s cells still compare with yesterday\u2019s: an "
-         "in-character decline reads as compliance, and a correct push-back reads as a refusal (#348). A scorer change is "
-         "a dated event; it lands on its own.</p>"),
+         "blind spots rather than patch them mid-run, so the day\u2019s cells still compare with the day before\u2019s: an "
+         "in-character decline read as compliance, and a correct push-back read as a refusal (#348).</p>"
+         "<p><strong>The scorer changed late on 2026-09-15.</strong> Twenty-four decline markers from the day\u2019s verbatim "
+         "answers, and a push-back \u2014 a decline beside the required content, read as whole words \u2014 no longer "
+         "reads as a refusal. The refusal and sycophancy kinds were re-run on the shipped tiers, "
+         "PCC and Mini under the new scorer, and those are the cells on the board; refusal and sycophancy cells scored "
+         "before the change do not compare with cells scored after it.</p>"),
     ],
 }
 
