@@ -1,7 +1,7 @@
 # Resolution Center reply — com.apple.security.network.server (Mac 1.0.0, 2026-09-16)
 
 Paste-ready. The App Review Information notes (`review_notes.txt`, pushed with
-`tools/asc/review_notes.py set --file ../fastlane/review_notes.txt --confirm`) carry the
+`review_notes.py set --file ../../fastlane/review_notes.txt --confirm` from `macos/tools/asc/`) carry the
 same facts plus the verification steps; update the notes BEFORE replying, since the
 message asks for both.
 
