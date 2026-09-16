@@ -46,6 +46,11 @@
 //  Off with `-afm.prefixPrewarm NO` (AFMPrefixPrewarm). The per-turn `afm budget`
 //  token count moved to failures only: counting beside a turn spoiled its prewarm.
 //
+//  Review: Kev + claude-opus-4-6, 2026-09-17 — continueToolTurn gains image support
+//  on macOS 27: when imageURLs are present, the session responds via @PromptBuilder
+//  with Attachment(imageURL:) segments alongside the text body. Gated with
+//  #if compiler(>=6.4) + @available(macOS 27.0, *). Confidence now 0.85.
+//
 //  Note this provider builds a FRESH `LanguageModelSession(instructions:)` per
 //  call, so anything in the persona is re-sent every turn — the reason persona
 //  length is a real cost here and free on the KV-cached MLX tiers.
@@ -548,8 +553,21 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
                 finalAnswer: decision.finalAnswer
             )
         } catch is CancellationError {
+            // A cancelled turn MUST propagate — the native loop's
+            // `catch is CancellationError { throw }` (LocalAgent+Native) depends on
+            // it reaching up. Swallowing it here would silently conclude with an
+            // empty answer instead of honouring Cancel (the `try? Task.sleep`
+            // family of bug). Re-throw before the catch-all backstop.
             throw CancellationError()
         } catch {
+            // Non-melt backstop: a guardrail / decode / context-overflow throw
+            // becomes a fast, empty text conclusion — LocalAgent ends the turn
+            // immediately rather than thrashing. The latency band proves the
+            // difference from the 337s Apple-driven auto-loop.
+            //
+            // Logged because an empty conclusion is indistinguishable from a
+            // model that chose to say nothing, and this backstop deliberately
+            // manufactures exactly that shape.
             logFailure(error, streaming: false)
             return .text("")
         }

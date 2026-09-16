@@ -9,15 +9,19 @@
 //
 //  Signed: Kev + claude-opus-4-6, 2026-09-16, Confidence 0.85,
 //  Prior: ImageAttachment (the established pattern)
+//  Review: Kev + claude-opus-4-6, 2026-09-17 — added UUID id for stable
+//  ForEach identity (two files with the same name must not collide).
 //
 
 import Foundation
 
-public struct FileAttachment: Sendable, Equatable, Hashable, Codable {
+public struct FileAttachment: Identifiable, Sendable, Equatable, Hashable, Codable {
+    public let id: UUID
     public let filename: String
     public let extractedText: String
 
-    public init(filename: String, extractedText: String) {
+    public init(id: UUID = UUID(), filename: String, extractedText: String) {
+        self.id = id
         self.filename = filename
         self.extractedText = extractedText
     }

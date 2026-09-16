@@ -53,6 +53,9 @@
 //  way. Mobile floor 3.5 GB is MEASURED, not memory: the 3 GB A12 iPad loads LFM2 then fatals on its first
 //  generation (Metal compiler LLVM error on MLX's bf16 gather kernel); 4 GB A13s untested. Mac eval through the
 //  tier path: 91/140 live path ×2 (open 16/16, tool 6/12, security 0/14). Confidence now 0.8.
+//  Review: Kev + claude-opus-4-6, 2026-09-17 — supportsImageInput gains .mini on macOS 27+ via
+//  FoundationModels' Attachment(imageURL:) API, gated with #if compiler(>=6.4) + @available.
+//  Confidence now 0.85.
 //
 
 import Foundation

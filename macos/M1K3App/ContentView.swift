@@ -472,7 +472,7 @@ struct ContentView: View {
         }
         .fileImporter(
             isPresented: $showFileContextImporter,
-            allowedContentTypes: [.plainText, .text, .sourceCode, .json, .yaml, .xml, .html, .pdf],
+            allowedContentTypes: [.plainText, .text, .sourceCode, .json, .yaml, .xml, .html],
             allowsMultipleSelection: true
         ) { result in
             if case let .success(urls) = result {
@@ -842,7 +842,7 @@ struct ContentView: View {
     private var pendingFilesStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(pendingFiles, id: \.filename) { file in
+                ForEach(pendingFiles) { file in
                     HStack(spacing: 6) {
                         Image(systemName: "doc.text")
                             .foregroundStyle(.secondary)
@@ -1205,6 +1205,7 @@ struct ContentView: View {
     }
 
     private func attachFiles(at urls: [URL]) {
+        var failures: [String] = []
         for url in urls {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -1212,8 +1213,11 @@ struct ContentView: View {
                 let attachment = try FileTextExtractor.extract(from: url)
                 pendingFiles.append(attachment)
             } catch {
-                attachmentError = "\(url.lastPathComponent): \(error.localizedDescription)"
+                failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
             }
+        }
+        if !failures.isEmpty {
+            attachmentError = failures.joined(separator: "\n")
         }
     }
 
