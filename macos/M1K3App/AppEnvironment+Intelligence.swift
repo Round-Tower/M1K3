@@ -39,7 +39,8 @@
 import Foundation
 import M1K3Avatar // AvatarEmotion
 import M1K3Chat // HeadlessAsk, RAGResponding, CanaryGuard, MemoryDistillationCoordinator
-import M1K3MCPKit // MCPVoiceError, withTimeout, TimeoutError, KnowledgeMCPTools
+import M1K3Knowledge // GroundedSearch — the hybrid retrieval both MCP and intents share
+import M1K3MCPKit // MCPVoiceError, withTimeout, TimeoutError
 import M1K3Memory // Memory — the temporal memory graph the dual-write seeds
 import M1K3Todos // Todo, TodoStore, TodoState
 import M1K3Voice
@@ -305,11 +306,19 @@ extension AppEnvironment {
     // MARK: - Search Knowledge
 
     /// Search the local RAG corpus — the core behind the SearchKnowledge App
-    /// Intent. Delegates to the same hybrid search the MCP `search_knowledge`
-    /// tool uses.
+    /// Intent. Uses the same GroundedSearch the MCP `search_knowledge` and the
+    /// implicit grounding both run through (public, in M1K3Knowledge).
     func intelligenceSearchKnowledge(_ query: String) async throws -> String {
-        let tools = KnowledgeMCPTools(store: store, embedder: embedder)
-        return try await tools.searchKnowledge(query: query)
+        let hits = try await GroundedSearch.run(
+            store: store, embedder: embedder, query: query, limit: 5
+        )
+        guard !hits.isEmpty else {
+            return "Nothing relevant in M1K3's knowledge for \"\(query)\"."
+        }
+        return hits.enumerated().map { index, hit -> String in
+            let heading = hit.heading.map { " \u{00A7}\($0)" } ?? ""
+            return "\(index + 1). [\(hit.itemTitle)\(heading)] (\(hit.kind.rawValue))\n\(hit.content)"
+        }.joined(separator: "\n\n")
     }
 
     // MARK: - Recall Memory
@@ -328,7 +337,8 @@ extension AppEnvironment {
         }
         return hits.enumerated().map { index, hit -> String in
             let kind = hit.memory.kind.rawValue
-            return "\(index + 1). [\(kind)] \(hit.memory.title)\n\(hit.memory.text)"
+            let heading = hit.memory.title ?? hit.memory.text
+            return "\(index + 1). [\(kind)] \(heading)\n\(hit.memory.text)"
         }.joined(separator: "\n\n")
     }
 
@@ -349,7 +359,7 @@ extension AppEnvironment {
         }.joined(separator: "\n")
     }
 
-    private nonisolated static let todoDateFormatter: DateFormatter = {
+    private static let todoDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         f.timeStyle = .none
@@ -360,13 +370,17 @@ extension AppEnvironment {
 
     /// Add a new todo item — the core behind the ProposeTodo App Intent.
     /// Since the user is asking directly (via Siri/Shortcuts), the item goes
-    /// straight to `.open` (no pending inbox step needed).
+    /// straight to `.open` (not the pending inbox the MCP propose_todo uses).
+    /// Bumps todosRevision and refreshes the grounding block so the Todos UI
+    /// and the next chat turn both see the new item.
     func intelligenceProposeTodo(title: String, note: String?) async throws -> String {
         guard let todoStore else {
             return "M1K3's todo list isn't available right now."
         }
         let todo = Todo(title: title, note: note, source: .user, state: .open)
         try todoStore.add(todo)
+        await refreshTodoGrounding()
+        todosRevision += 1
         return "Added \"\(title)\" to the todo list."
     }
 

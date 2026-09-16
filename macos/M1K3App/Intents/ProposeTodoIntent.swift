@@ -2,9 +2,9 @@
 //  ProposeTodoIntent.swift
 //  M1K3App
 //
-//  "Add a todo with M1K3" for Siri & Shortcuts — proposes a new item onto the
-//  user's todo list (pending until they accept). Sits on the same core as the
-//  MCP `propose_todo` tool (TodoToolHandlers.propose).
+//  "Add a todo with M1K3" for Siri & Shortcuts — adds a new item straight to
+//  the user's todo list as .open (unlike the MCP propose_todo, which files
+//  PENDING for the user to accept). The user IS asking directly via Siri.
 //
 //  App-glue (verify-by-launch). Signed: Kev + claude-opus-4-6, 2026-09-16,
 //  Confidence 0.8, Prior: RememberWithM1K3Intent (parameter pattern)

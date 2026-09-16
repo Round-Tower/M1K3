@@ -7,7 +7,7 @@
 //  "Hey Siri, talk to M1K3" → full-window voice conversation.
 //
 //  Unlike the other intents, this one opens the app (`openAppWhenRun = true`)
-//  and triggers voice mode via a UserDefaults flag the app reads on foreground.
+//  and calls enterVoiceMode() directly once the environment is warm.
 //
 //  App-glue (verify-by-launch). Signed: Kev + claude-opus-4-6, 2026-09-16,
 //  Confidence 0.75 (the voice-mode trigger path is verify-by-launch),
