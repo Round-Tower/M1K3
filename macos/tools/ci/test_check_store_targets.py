@@ -36,8 +36,13 @@ def _app(platform, bundle_id, info_path, templates=None, sources=None, type_="ap
     return t
 
 
-def _project(targets, templates=None):
-    return {"targetTemplates": templates or {}, "targets": targets}
+def _project(targets, templates=None, settings=None):
+    p = {"targetTemplates": templates or {}, "targets": targets}
+    if settings is None:
+        p["settings"] = {"base": {"ARCHS": "arm64"}}
+    else:
+        p["settings"] = settings
+    return p
 
 
 def test_store_targets_keeps_only_store_platform_applications():
@@ -179,3 +184,29 @@ def test_pcc_in_developer_id_entitlements_is_flagged():
     leaks = m.profile_only_leaks({"com.apple.developer.private-cloud-compute": True})
     assert len(leaks) == 1
     assert "private-cloud-compute" in leaks[0]
+
+
+def test_archs_arm64_passes():
+    project = _project(
+        {"M1K3": _app("macOS", "app.m1k3", "a.plist", sources=[{"path": "M1K3App"}])},
+        settings={"base": {"ARCHS": "arm64"}},
+    )
+    assert m.audit(project) == []
+
+
+def test_archs_missing_is_flagged():
+    project = _project(
+        {"M1K3": _app("macOS", "app.m1k3", "a.plist", sources=[{"path": "M1K3App"}])},
+        settings={"base": {}},
+    )
+    problems = m.audit(project)
+    assert any("ARCHS" in p and "arm64" in p for p in problems)
+
+
+def test_archs_universal_is_flagged():
+    project = _project(
+        {"M1K3": _app("macOS", "app.m1k3", "a.plist", sources=[{"path": "M1K3App"}])},
+        settings={"base": {"ARCHS": "$(ARCHS_STANDARD)"}},
+    )
+    problems = m.audit(project)
+    assert any("#340" in p for p in problems)

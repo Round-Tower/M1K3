@@ -82,7 +82,7 @@ public enum QueryStyleEvalFixtures {
             title: "Golden Gate milestone — July 2026",
             content: "The full-graph macOS 27 beta build passed end-to-end — the Golden Gate "
                 + "derisk milestone: every module compiled against the new LanguageModel "
-                + "surface behind the M1K3_FM27 gate."
+                + "surface behind the FoundationModels compile gate."
         ),
         Probe(
             keyword: "TestFlight external submission",
@@ -120,7 +120,7 @@ public enum QueryStyleEvalFixtures {
             title: "Golden Gate milestone — July 2026",
             content: "The full-graph macOS 27 beta build passed end-to-end — the Golden Gate "
                 + "derisk milestone: every module compiled against the new LanguageModel "
-                + "surface behind the M1K3_FM27 gate."
+                + "surface behind the FoundationModels compile gate."
         ),
         NoisePair(
             keyword: "apple tree pruning",

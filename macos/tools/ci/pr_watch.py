@@ -86,6 +86,8 @@ _PASS_HEADER = re.compile(r"^#{2,4} .*\bpass\b", re.IGNORECASE)
 _HEAD = re.compile(r"\bhead `([0-9a-f]{7,40})`")
 # "…pass on final head (3922a21d)" — the sha in parentheses, unbackticked (#347, 2026-09-15).
 _HEAD_PAREN = re.compile(r"\bhead \(([0-9a-f]{7,40})\)")
+# "Reviewing head f10c752c" — bare hex after "head", no delimiter (#334, 2026-09-14).
+_HEAD_BARE = re.compile(r"\bhead ([0-9a-f]{7,40})\b")
 _HEADER_LINE = re.compile(r"^#{2,4} ")
 _SHA = re.compile(r"`([0-9a-f]{7,40})`")
 
@@ -139,7 +141,7 @@ def named_heads(body: str) -> list[str]:
     shas: list[str] = []
     title_read = False
     for line in body.splitlines():
-        found = _HEAD.findall(line) + _HEAD_PAREN.findall(line)
+        found = _HEAD.findall(line) + _HEAD_PAREN.findall(line) + _HEAD_BARE.findall(line)
         if not title_read and _HEADER_LINE.match(line):
             title_read = True
             found += _SHA.findall(line)

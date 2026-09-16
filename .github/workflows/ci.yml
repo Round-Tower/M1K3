@@ -54,20 +54,19 @@ jobs:
     name: Swift · Mac MVP (swift test)
     needs: changes
     if: needs.changes.outputs.swift == 'true'
-    # macos/ targets .macOS(.v26): the package COMPILES on macos-latest (Xcode 26
-    # SDK) but the test binary links FoundationModels.framework, a macOS 26 runtime
-    # framework — so the tests must RUN on an actual Tahoe runner. macos-latest's
-    # OS still lags the SDK (build for 26 / run on 15 → dlopen fails). Pin macos-26.
+    # macos/ targets .macOS(.v26): the test binary links FoundationModels.framework,
+    # a macOS 26 runtime framework — so the tests must RUN on a Tahoe+ runner.
+    # Pin macos-26 (macOS 26 is the minimum; Xcode 27 is installed by setup-xcode).
     runs-on: macos-26
     timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Select Xcode (26.x, pinned)
+      - name: Select Xcode (27.x, pinned)
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "26" # pinned: Xcode 27 GA must be a deliberate bump, never a silent one
+          xcode-version: "27"
 
       # Restore/save are split on purpose. actions/cache SKIPS the save on an
       # exact key hit, so one snapshot (saved 2026-09-05, 1.1 GB) served every run
@@ -136,10 +135,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Select Xcode (26.x, pinned)
+      - name: Select Xcode (27.x, pinned)
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "26" # pinned: Xcode 27 GA must be a deliberate bump, never a silent one
+          xcode-version: "27"
 
       # Speeds package resolution (mlx-swift-lm is a heavy clone) by caching
       # xcodebuild's resolved SourcePackages between runs.
@@ -194,10 +193,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Select Xcode (26.x, pinned)
+      - name: Select Xcode (27.x, pinned)
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "26" # same deliberate-bump rule as app-build
+          xcode-version: "27"
 
       - name: Cache resolved packages
         uses: actions/cache@v4

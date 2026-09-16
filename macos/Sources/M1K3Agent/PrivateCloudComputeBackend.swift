@@ -3,15 +3,11 @@
 //  M1K3Agent
 //
 //  ADR 0006's real adapter: wraps Apple's `PrivateCloudComputeLanguageModel`
-//  behind `PrivateCloudAnswering` (M1K3LanguageModel). Gated behind `M1K3_FM27`
-//  the same way `M1K3FoundationModel.swift` is — the type only exists on the
-//  macOS 27 SDK, which only the Xcode 27 beta toolchain carries:
-//
-//    M1K3_FM27=1 DEVELOPER_DIR=/Applications/Xcode-beta.app \
-//      swift build --target M1K3Agent --scratch-path .build-fm27
+//  behind `PrivateCloudAnswering` (M1K3LanguageModel). Compile-gated on the
+//  FoundationModels SDK (Xcode 27+); runtime-gated on @available(macOS 27, *).
 //
 //  Everything above `PrivateCloudAnswering` (the rung's pure policy, the consent
-//  sheet, ChatSession's send path) builds and tests on today's toolchain against
+//  sheet, ChatSession's send path) builds and tests on any toolchain against
 //  fakes — this file is the one place that touches the real API, and it never
 //  runs unless the product decides PCC is allowed for this turn.
 //
@@ -33,6 +29,8 @@
 //  M1K3_FM27; a real PCC generation is verify-owed until Apple grants the
 //  entitlement — this Mac reads `available` today but every send 1046s
 //  unentitled, per ADR 0006's own context section). Prior: Unknown
+//  Review: Kev + claude-opus-4-6, 2026-09-16 — M1K3_FM27 env-var gate removed;
+//  now #if canImport(FoundationModels). Confidence now 0.85.
 //
 
 import Foundation
@@ -42,7 +40,7 @@ import M1K3LanguageModel
     import Security
 #endif
 
-#if M1K3_FM27
+#if canImport(FoundationModels)
     import FoundationModels
     import M1K3LogCore
 
@@ -148,11 +146,11 @@ import M1K3LanguageModel
     }
 #endif
 
-/// The always-compiled half — exists on every toolchain (M1K3_FM27 or not) so the
-/// composition root has one call to make regardless of build config.
+/// The always-compiled half — exists on every toolchain so the composition root
+/// has one call to make regardless of SDK availability.
 public enum PrivateCloudBackends {
-    /// The entitlement Round Tower has requested (`docs/PCC_ENTITLEMENT_REQUEST.md`)
-    /// but Apple has not yet granted, per ADR 0006's context section.
+    /// The entitlement Apple granted 2026-09-14 (`docs/PCC_ENTITLEMENT_REQUEST.md`,
+    /// ADR 0006).
     static let entitlementKey = "com.apple.developer.private-cloud-compute"
 
     /// A PCC backend for THIS process, or nil. Never partial: `PrivateCloudState`
@@ -160,16 +158,12 @@ public enum PrivateCloudBackends {
     /// non-nil, so a backend that could exist but can't actually generate must
     /// come back nil here, not a backend that would 1046 on first use.
     public static func live() -> (any PrivateCloudAnswering)? {
-        #if M1K3_FM27
+        #if canImport(FoundationModels)
             #if os(macOS)
                 guard #available(macOS 27.0, *) else { return nil }
                 guard processHasEntitlement() else { return nil }
                 return PrivateCloudComputeBackend()
             #else
-                // iOS/visionOS: no sandboxed-process entitlement read is proven on
-                // those platforms yet (SecTaskCopyValueForEntitlement is used here
-                // unverified off macOS). Brain at Home carries the mobile lane
-                // instead until this is probed on-device.
                 return nil
             #endif
         #else
@@ -179,9 +173,9 @@ public enum PrivateCloudBackends {
 
     /// Whether THIS process (not the app in general — a `swift test` binary, a
     /// debug run, the shipped app, each answer independently) holds the PCC
-    /// entitlement. Split out from `live()` so it's testable without the
-    /// M1K3_FM27 flag or a macOS 27 runtime: the SecTask read works on any OS
-    /// version, and a plain test process should always read false.
+    /// entitlement. Split out from `live()` so it's testable without a macOS 27
+    /// runtime: the SecTask read works on any OS version, and a plain test
+    /// process should always read false.
     public static func processHasEntitlement() -> Bool {
         #if os(macOS)
             guard let task = SecTaskCreateFromSelf(nil) else { return false }

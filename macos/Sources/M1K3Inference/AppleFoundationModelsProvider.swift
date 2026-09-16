@@ -268,9 +268,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// All three call sites catch cancellation first.
     private func logFailure(_ error: any Error, streaming: Bool) {
         let described = String(describing: error)
-        // Classify from the FULL text — the markers can sit anywhere — but emit
-        // only a bounded, flattened preview (see `errorPreviewCap`).
-        let failure = AFMFailure.classify(described)
+        let failure = AFMFailure.classify(error: error)
         let preview = LogPreview.preview(described, max: Self.errorPreviewCap)
         Self.log.error(
             """

@@ -75,6 +75,21 @@ def test_named_heads_reads_a_parenthesised_sha_after_the_word_head():
     assert m.named_heads("### pass on final head (docs only)") == []
 
 
+def test_named_heads_reads_a_bare_sha_after_the_word_head():
+    body = ("**Claude finished @kev's task in 2m 10s** ---\n"
+            "### Reviewing head f10c752c\n"
+            "Looking at the changes…")
+    assert m.named_heads(body) == ["f10c752c"]
+    assert m.summon_passes("f10c752c3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e", [bot(body)]) == 1
+
+
+def test_named_heads_reads_bare_sha_second_pass():
+    body = ("**Claude finished @kev's task** ---\n"
+            "### Second pass review — head a9c584f4\n"
+            "Everything looks clean.")
+    assert m.named_heads(body) == ["a9c584f4"]
+
+
 def test_named_heads_is_empty_when_no_sha_named():
     assert m.named_heads("## Review: something\nno sha here") == []
     assert m.named_heads("mentions `cccc333` without the word head") == []

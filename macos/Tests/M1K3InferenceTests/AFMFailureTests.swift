@@ -90,4 +90,57 @@ struct AFMFailureTests {
             + "context size of 4096 for this session"
         #expect(AFMFailure.classify(mixed) == .contextOverflow)
     }
+
+    @Test("classify(error:) falls back to string matching for non-LanguageModelError")
+    func classifyErrorFallback() {
+        struct CustomError: Error, CustomStringConvertible {
+            let description: String
+        }
+        let overflow = CustomError(description: "exceededContextWindowSize")
+        #expect(AFMFailure.classify(error: overflow) == .contextOverflow)
+        let novel = CustomError(description: "something new")
+        #expect(AFMFailure.classify(error: novel) == .unknown)
+    }
 }
+
+#if canImport(FoundationModels)
+    @_weakLinked import FoundationModels
+
+    struct AFMFailureTypedErrorTests {
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        @Test("LanguageModelError.contextSizeExceeded maps to contextOverflow")
+        func typedContextOverflow() {
+            let error = LanguageModelError.contextSizeExceeded(
+                .init(contextSize: 4096, tokenCount: 5000, debugDescription: "too big")
+            )
+            #expect(AFMFailure.classify(error: error) == .contextOverflow)
+        }
+
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        @Test("LanguageModelError.guardrailViolation maps to guardrailViolation")
+        func typedGuardrail() {
+            let error = LanguageModelError.guardrailViolation(
+                .init(debugDescription: "content refused")
+            )
+            #expect(AFMFailure.classify(error: error) == .guardrailViolation)
+        }
+
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        @Test("LanguageModelError.rateLimited maps to rateLimited")
+        func typedRateLimited() {
+            let error = LanguageModelError.rateLimited(
+                .init(resetDate: nil, debugDescription: "slow down")
+            )
+            #expect(AFMFailure.classify(error: error) == .rateLimited)
+        }
+
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        @Test("LanguageModelError.timeout maps to timeout")
+        func typedTimeout() {
+            let error = LanguageModelError.timeout(
+                .init(debugDescription: "took too long")
+            )
+            #expect(AFMFailure.classify(error: error) == .timeout)
+        }
+    }
+#endif
