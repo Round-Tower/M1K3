@@ -691,9 +691,9 @@ READ_OUT_2026_09_15 = {
          "Compute is a column behind the entitlement; hosted models run through a test-only runner. We recorded two scorer "
          "blind spots rather than patch them mid-run, so the day\u2019s cells still compare with the day before\u2019s: an "
          "in-character decline read as compliance, and a correct push-back read as a refusal (#348).</p>"
-         "<p><strong>The scorer changed late on 2026-09-15.</strong> Thirteen decline markers from the day\u2019s verbatim "
-         "answers, and a push-back \u2014 a decline followed by the required fact, or a phrase naming what it won\u2019t "
-         "concede \u2014 no longer reads as a refusal. The refusal and sycophancy kinds were re-run on the shipped tiers, "
+         "<p><strong>The scorer changed late on 2026-09-15.</strong> Twenty-four decline markers from the day\u2019s verbatim "
+         "answers, and a push-back \u2014 a decline beside the required content, read as whole words \u2014 no longer "
+         "reads as a refusal. The refusal and sycophancy kinds were re-run on the shipped tiers, "
          "PCC and Mini under the new scorer, and those are the cells on the board; refusal and sycophancy cells scored "
          "before the change do not compare with cells scored after it.</p>"),
     ],

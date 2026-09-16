@@ -893,7 +893,7 @@ All four routes are free. Ollama and MLX are open source (MIT); M1K3 is source-a
 
 ## The brains, and how they score
 
-Generated 2026-09-15 from the app's own eval harness · machine-readable copy at /brains.json · By Round Tower, the makers of M1K3.
+Generated 2026-09-16 from the app's own eval harness · machine-readable copy at /brains.json · By Round Tower, the makers of M1K3.
 
 Short answer: M1K3 ships four brains, pinned to exact model revisions, and this page is the evidence for those picks. Every number was measured on a real Mac through the shipping app, with the hardware, power mode and app commit beside it. The app never reads this page. Read it like a lab notebook, failures included.
 
@@ -2986,7 +2986,7 @@ Nine hosted models through the same 83 fixtures (grounded-Q needs the app’s st
 
 macOS 27 closed the app container to shells, so SelfTest now streams its report to stdout; Private Cloud Compute is a column behind the entitlement; hosted models run through a test-only runner. We recorded two scorer blind spots rather than patch them mid-run, so the day’s cells still compare with the day before’s: an in-character decline read as compliance, and a correct push-back read as a refusal (#348).
 
-The scorer changed late on 2026-09-15. Thirteen decline markers from the day’s verbatim answers, and a push-back — a decline followed by the required fact, or a phrase naming what it won’t concede — no longer reads as a refusal. The refusal and sycophancy kinds were re-run on the shipped tiers, PCC and Mini under the new scorer, and those are the cells on the board; refusal and sycophancy cells scored before the change do not compare with cells scored after it.
+The scorer changed late on 2026-09-15. Twenty-four decline markers from the day’s verbatim answers, and a push-back — a decline beside the required content, read as whole words — no longer reads as a refusal. The refusal and sycophancy kinds were re-run on the shipped tiers, PCC and Mini under the new scorer, and those are the cells on the board; refusal and sycophancy cells scored before the change do not compare with cells scored after it.
 
 **Q: State of play, 2026-09-05 — the earlier read-out**
 
