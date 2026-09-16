@@ -23,7 +23,7 @@
 //  #if canImport(FoundationModels) (Xcode 27 GA is the toolchain). Confidence now 0.85.
 //
 
-#if canImport(FoundationModels)
+#if compiler(>=6.4)
     import Foundation
     import FoundationModels
     import M1K3Inference

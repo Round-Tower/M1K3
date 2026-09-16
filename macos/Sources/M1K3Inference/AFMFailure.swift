@@ -75,7 +75,7 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
     /// (macOS 27) first; falls back to string matching for daemon errors and
     /// other throws the SDK doesn't surface as typed cases.
     public static func classify(error: any Error) -> AFMFailure {
-        #if canImport(FoundationModels)
+        #if compiler(>=6.4)
             if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) {
                 if let typed = error as? LanguageModelError {
                     return from(typed)
@@ -86,7 +86,7 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
     }
 }
 
-#if canImport(FoundationModels)
+#if compiler(>=6.4)
     @_weakLinked import FoundationModels
 
     extension AFMFailure {

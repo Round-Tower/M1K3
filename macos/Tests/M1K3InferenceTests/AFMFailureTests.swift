@@ -103,7 +103,7 @@ struct AFMFailureTests {
     }
 }
 
-#if canImport(FoundationModels)
+#if compiler(>=6.4)
     @_weakLinked import FoundationModels
 
     struct AFMFailureTypedErrorTests {

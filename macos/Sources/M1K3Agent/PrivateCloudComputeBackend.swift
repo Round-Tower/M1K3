@@ -40,7 +40,7 @@ import M1K3LanguageModel
     import Security
 #endif
 
-#if canImport(FoundationModels)
+#if compiler(>=6.4)
     import FoundationModels
     import M1K3LogCore
 
@@ -158,7 +158,7 @@ public enum PrivateCloudBackends {
     /// non-nil, so a backend that could exist but can't actually generate must
     /// come back nil here, not a backend that would 1046 on first use.
     public static func live() -> (any PrivateCloudAnswering)? {
-        #if canImport(FoundationModels)
+        #if compiler(>=6.4)
             #if os(macOS)
                 guard #available(macOS 27.0, *) else { return nil }
                 guard processHasEntitlement() else { return nil }

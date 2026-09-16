@@ -29,7 +29,7 @@
 import Foundation
 @testable import M1K3Agent
 import Testing
-#if canImport(FoundationModels)
+#if compiler(>=6.4)
     import FoundationModels
     import M1K3LanguageModel
 #endif
@@ -52,7 +52,7 @@ struct PrivateCloudBackendsTests {
     }
 }
 
-#if canImport(FoundationModels)
+#if compiler(>=6.4)
     /// The adapter's SDK mapping, always compiled on Xcode 27+. Runtime-gated
     /// on @available(macOS 27, *) so the tests only run on Golden Gate.
     struct PrivateCloudComputeFailureMappingTests {
