@@ -244,6 +244,15 @@ struct ChatEvalScorerTests {
         #expect(ExemplarEcho.echoedSpan(in: curly) != nil)
     }
 
+    @Test("the capability move's reply sentence is in the spans (#337)")
+    func capabilityMoveIsInSpans() {
+        let spans = ExemplarEcho.spans
+        let capReply = ExemplarEcho.normalise(
+            "I'm M1K3, living right here; I talk things through, remember what matters to you"
+        )
+        #expect(spans.contains { $0.contains(capReply) })
+    }
+
     @Test("a statement answer reports no trailing question")
     func noTrailingQuestionReported() {
         let score = ChatEvalScorer.score(

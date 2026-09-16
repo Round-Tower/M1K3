@@ -25,19 +25,6 @@
 import Foundation
 import PackageDescription
 
-// M1K3_FM27 — compile the REAL FoundationModels conformance (ADR 0001 dual-path;
-// M1K3Agent/M1K3FoundationModel.swift). Env-gated because the conformance needs
-// the macOS 27 SDK, which only the Xcode 27 beta carries:
-//
-//   M1K3_FM27=1 DEVELOPER_DIR=/Applications/Xcode-beta.app \
-//     swift build --target M1K3Agent --scratch-path .build-fm27
-//
-// Default OFF: stable 26.x builds (CI, releases, plain `swift build`) never set
-// the env var, so they are byte-identical to before this gate existed. The
-// separate scratch path keeps beta-toolchain artifacts out of the shared .build.
-let fm27 = ProcessInfo.processInfo.environment["M1K3_FM27"] == "1"
-let fm27Settings: [SwiftSetting] = fm27 ? [.define("M1K3_FM27")] : []
-
 let package = Package(
     name: "M1K3",
     // iOS/visionOS added for the multiplatform derisk spike (2026-07-06): the app
@@ -290,16 +277,12 @@ let package = Package(
         .target(
             name: "M1K3Agent",
             dependencies: ["M1K3LogCore", "M1K3Inference", "M1K3LanguageModel"],
-            path: "Sources/M1K3Agent",
-            swiftSettings: fm27Settings
+            path: "Sources/M1K3Agent"
         ),
         .testTarget(
             name: "M1K3AgentTests",
-            // M1K3LanguageModel: the FM27 mapping tests name its failure words.
             dependencies: ["M1K3Agent", "M1K3LanguageModel"],
-            path: "Tests/M1K3AgentTests",
-            // The PCC adapter's SDK-error mapping is pinned under M1K3_FM27.
-            swiftSettings: fm27Settings
+            path: "Tests/M1K3AgentTests"
         ),
         // The WWDC26 LanguageModel bridge (ADR 0001). Pure, dependency-free:
         // a local MIRROR of Apple's FoundationModels surface (retargets to the

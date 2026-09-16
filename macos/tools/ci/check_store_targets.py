@@ -137,9 +137,20 @@ def _carries_manifest(paths: list[str]) -> bool:
     return any(p.endswith(MANIFEST) for p in paths)
 
 
+def project_archs(project: dict) -> str | None:
+    """The project-wide ARCHS base setting, or None."""
+    return ((project.get("settings") or {}).get("base") or {}).get("ARCHS")
+
+
 def audit(project: dict) -> list[str]:
     """Every way the store targets diverge from the one shared record. Empty = aligned."""
     problems: list[str] = []
+    archs = project_archs(project)
+    if archs != "arm64":
+        problems.append(
+            f"settings.base.ARCHS is {archs!r}, must be 'arm64' — every brain is Apple-Silicon-only; "
+            f"an Intel slice installs but cannot think (#340)"
+        )
     targets = store_targets(project)
     for name, t in targets.items():
         bid = bundle_id(t)

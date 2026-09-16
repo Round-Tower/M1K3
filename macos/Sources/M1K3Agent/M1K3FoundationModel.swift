@@ -3,10 +3,9 @@
 //  M1K3Agent
 //
 //  The PRODUCTION conformance to Apple's real WWDC26 `LanguageModel` (ADR 0001).
-//  Gated behind `M1K3_FM27` (a COMPILE gate, not a product flag) so the macOS-26.5
-//  CI build — which lacks the 2026 SDK symbols — excludes it entirely. Build with
-//  the Xcode 27 toolchain + `-D M1K3_FM27` to compile it. Product behaviour is
-//  decided by ROUTING (EscalationLadder), never by this flag.
+//  Compile-gated on the FoundationModels SDK (Xcode 27+); runtime-gated on
+//  @available(macOS 27, *). Product behaviour is decided by ROUTING
+//  (EscalationLadder), never by this gate.
 //
 //  It's a thin adapter: it reuses the tested `M1K3ModelExecutor` (the real
 //  ToolTurnSession + ThinkStreamGate) and translates the gate's reasoning/answer
@@ -20,9 +19,11 @@
 //  Review: Kev + claude-opus-5, 2026-09-15 — the GA SDK (Xcode 27A266a) renamed two call shapes
 //  the beta (27A5194q) took: `LanguageModelCapabilities(_:)` and `updateUsage(input:output:)`.
 //  Both fixed; the bridge compiles again under M1K3_FM27 on GA. Confidence 0.8.
+//  Review: Kev + claude-opus-4-6, 2026-09-16 — M1K3_FM27 env-var gate removed; now
+//  #if canImport(FoundationModels) (Xcode 27 GA is the toolchain). Confidence now 0.85.
 //
 
-#if M1K3_FM27
+#if compiler(>=6.4)
     import Foundation
     import FoundationModels
     import M1K3Inference

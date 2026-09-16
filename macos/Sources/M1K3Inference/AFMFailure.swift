@@ -28,7 +28,7 @@ import Foundation
 
 /// A coarse, countable classification of an Apple Foundation Models failure.
 public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
-    /// The prompt did not fit the 4096-token window. Fix: shrink the prompt.
+    /// The prompt did not fit the context window. Fix: shrink the prompt.
     case contextOverflow = "context-overflow"
     /// Apple's safety guardrail refused the content. Fix: not a size problem —
     /// do NOT respond by trimming a prompt that fits.
@@ -37,6 +37,12 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
     /// seen under back-to-back turns (ModelManagerServices exhaustion). Fix:
     /// pace the caller; nothing about the prompt is wrong.
     case daemonUnavailable = "daemon-unavailable"
+    /// Apple's rate limiter fired (macOS 27 typed `LanguageModelError.rateLimited`).
+    /// Distinct from `.daemonUnavailable` (the daemon fell over vs the quota is
+    /// spent). Fix: back off.
+    case rateLimited = "rate-limited"
+    /// The generation timed out (macOS 27 typed `LanguageModelError.timeout`).
+    case timeout
     /// Unrecognised. Deliberately not folded into a neighbouring class — an
     /// honest "we don't know" is worth more than a confident misdiagnosis, and
     /// a rising `unknown` count is itself the signal to come back here.
@@ -64,4 +70,40 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
         }
         return .unknown
     }
+
+    /// Classify from a thrown error. Checks the typed `LanguageModelError` enum
+    /// (macOS 27) first; falls back to string matching for daemon errors and
+    /// other throws the SDK doesn't surface as typed cases.
+    public static func classify(error: any Error) -> AFMFailure {
+        #if compiler(>=6.4)
+            if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) {
+                if let typed = error as? LanguageModelError {
+                    return from(typed)
+                }
+            }
+        #endif
+        return classify(String(describing: error))
+    }
 }
+
+#if compiler(>=6.4)
+    @_weakLinked import FoundationModels
+
+    extension AFMFailure {
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        static func from(_ error: LanguageModelError) -> AFMFailure {
+            switch error {
+            case .contextSizeExceeded:
+                return .contextOverflow
+            case .guardrailViolation, .refusal:
+                return .guardrailViolation
+            case .rateLimited:
+                return .rateLimited
+            case .timeout:
+                return .timeout
+            default:
+                return .unknown
+            }
+        }
+    }
+#endif

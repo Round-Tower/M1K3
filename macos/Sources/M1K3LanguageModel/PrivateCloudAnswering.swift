@@ -5,9 +5,9 @@
 //  The seam a Private Cloud Compute backend sits behind (ADR 0006). The real
 //  backend wraps `PrivateCloudComputeLanguageModel` and needs the macOS 27 SDK
 //  and the `com.apple.developer.private-cloud-compute` entitlement, so it lives
-//  behind `M1K3_FM27` in M1K3Agent. Everything above this seam — the policy, the
-//  consent sheet, the send path, the label — builds and tests on today's
-//  toolchain against fakes.
+//  behind `#if canImport(FoundationModels)` in M1K3Agent. Everything above this
+//  seam — the policy, the consent sheet, the send path, the label — builds and
+//  tests on any toolchain against fakes.
 //
 //  The seam takes two strings and no tools, on purpose: a PCC turn gets the
 //  instructions and the prompt `PrivateCloudTurn.request` built from what the

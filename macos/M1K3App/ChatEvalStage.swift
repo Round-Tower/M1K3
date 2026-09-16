@@ -380,8 +380,8 @@ enum ChatEvalStage {
 
     /// `M1K3_SELFTEST_CHATEVAL_PCC=1` — Apple's server model (Private Cloud
     /// Compute) through the same fixtures, as a fifth column. Only a process that
-    /// holds the entitlement, on macOS 27, in an `M1K3_FM27` build, has a backend;
-    /// every other build skips with the reason on the transcript.
+    /// holds the entitlement on macOS 27 has a backend; every other build skips
+    /// with the reason on the transcript.
     private static var pccRequested: Bool {
         SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_PCC") == "1"
     }
@@ -389,7 +389,7 @@ enum ChatEvalStage {
     private static func evalPrivateCloud(emit: @escaping (String) -> Void) async -> [ChatEvalScore]? {
         emit("• chateval brain pcc (Private Cloud Compute) → \(PrivateCloudInferenceAdapter.modelID)…")
         guard let backend = PrivateCloudBackends.live() else {
-            emit("  – pcc: no backend in this process — needs M1K3_FM27 compiled in, macOS 27+, and the "
+            emit("  – pcc: no backend in this process — needs macOS 27+ and the "
                 + "private-cloud-compute entitlement (skipped)")
             return nil
         }

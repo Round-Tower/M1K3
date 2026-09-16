@@ -77,6 +77,9 @@ final class NotchHUDController {
     /// only while the pointer is over it, so it never blocks the menu bar or
     /// the app underneath otherwise.
     private var hoverTask: Task<Void, Never>?
+    /// The origin resolved at show time — reused on hide so a display change
+    /// mid-utterance doesn't re-derive geometry against a different screen (#327).
+    private var shownOrigin: NSPoint?
     private let clockStart = Date()
 
     init(env: AppEnvironment) {
@@ -129,6 +132,7 @@ final class NotchHUDController {
         animTask = nil
         hoverTask?.cancel()
         hoverTask = nil
+        shownOrigin = nil
         window?.orderOut(nil)
         window = nil
     }
@@ -150,6 +154,7 @@ final class NotchHUDController {
         guard let screen = NSScreen.main else { return }
         let window = resolveWindow()
         let shown = window.targetOrigin(on: screen)
+        shownOrigin = shown
         if window.geometry.growsFromNotch {
             // Only the notched HUD has a stop button; the docked pill stays
             // click-through for its whole life (review, #326 pass 4).
@@ -170,13 +175,13 @@ final class NotchHUDController {
     }
 
     private func hideWindow() {
-        guard let window, let screen = NSScreen.main else { return }
+        guard let window else { return }
         stopHoverTracking(window)
         if window.geometry.growsFromNotch {
             foldOut(window)
             return
         }
-        let shown = window.targetOrigin(on: screen)
+        let shown = shownOrigin ?? window.frame.origin
         let hidden = window.hiddenOrigin(shownAt: shown)
         animate(
             from: AnimationFrame(origin: shown, alpha: 1),

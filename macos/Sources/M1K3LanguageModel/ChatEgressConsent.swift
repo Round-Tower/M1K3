@@ -13,9 +13,8 @@
 //  a NO — consent is given, never assumed and never inherited from another
 //  setting.
 //
-//  Deliberately no UI in 17a: with no network rung wired on macOS 26, a toggle
-//  would be a dead control. The consent surface ships WITH the PCC rung (17b,
-//  M1K3_FM27). Until then this key simply makes the ladder's gate honest.
+//  The consent surface ships WITH the PCC rung (17b, 1.1.0). This key makes
+//  the ladder's gate honest.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-08, Confidence 0.9 (pure, total,
 //  test-pinned; the default-OFF semantics are the point — challenger finding

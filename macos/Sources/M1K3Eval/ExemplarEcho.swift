@@ -33,10 +33,15 @@ public enum ExemplarEcho {
     /// (security, tool-use, instruction) the check is informational.
     public static let characterKinds: Set<TaskKind> = [.openChat, .humour, .interview]
 
-    /// Exemplar reply sentences, normalised. Derived from the live constant on
-    /// every read so a persona edit is reflected without a second list to keep.
+    /// Exemplar reply sentences, normalised, from ALL exemplar beats across
+    /// BOTH persona variants — the capability move (#303) and the leak decline.
+    /// Wider than PersonaLeakGuard's fingerprint (which must NOT swap a
+    /// capability answer for the refusal); an echo of either is worth scoring.
     public static var spans: [String] {
-        sentences(in: M1K3Persona.exemplarReplies)
+        let all = M1K3Persona.voiceExemplarMoves + "\n"
+            + M1K3Persona.leakDeclineBeat + "\n"
+            + M1K3Persona.capabilityMove
+        return sentences(in: M1K3Persona.exemplarReplies(of: all))
     }
 
     /// The first exemplar sentence the answer reproduces, or nil.
