@@ -2,9 +2,9 @@
 //  AppEnvironment+Intelligence.swift
 //  M1K3App
 //
-//  The shared intelligence surface — ask / speak / remember — used by BOTH the
-//  in-process MCP server (MCPHostController) AND the macOS App Intents
-//  (Ask · Speak · Remember). One implementation, N adapters: the single-flight
+//  The shared intelligence surface — ask / speak / remember / search / recall /
+//  todos / voice — used by BOTH the in-process MCP server (MCPHostController)
+//  AND the macOS App Intents. One implementation, N adapters: the single-flight
 //  guard, the runaway ask backstop, the shared canary tripwire, the memory-graph
 //  dual-write all live here once, so a Siri/Shortcuts ask gets the exact same
 //  protections a visiting agent's `ask_m1k3` does.
@@ -30,13 +30,19 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 3 fold on #287) — a visitor `speak` arriving
 //  during a typed answer is QUEUED (the queue's busy gate waits the answer and its auto-speak out);
 //  only a live voice conversation still refuses, for everyone. Verify-by-launch: chat, then speak.
+//  Review: Kev + claude-opus-4-6, 2026-09-16 — five new bridge methods for the App Intents expansion:
+//  intelligenceSearchKnowledge (KnowledgeMCPTools), intelligenceRecallMemory (MemoryStore.recall),
+//  intelligenceListTodos, intelligenceProposeTodo (user source, straight to .open), requestVoiceMode.
+//  Confidence now 0.85.
 //
 
 import Foundation
 import M1K3Avatar // AvatarEmotion
 import M1K3Chat // HeadlessAsk, RAGResponding, CanaryGuard, MemoryDistillationCoordinator
+import M1K3Knowledge // GroundedSearch — the hybrid retrieval both MCP and intents share
 import M1K3MCPKit // MCPVoiceError, withTimeout, TimeoutError
 import M1K3Memory // Memory — the temporal memory graph the dual-write seeds
+import M1K3Todos // Todo, TodoStore, TodoState
 import M1K3Voice
 import os
 
@@ -295,6 +301,95 @@ extension AppEnvironment {
                 "memory-graph dual-write error (corpus write stands): \(error.localizedDescription, privacy: .public)"
             )
         }
+    }
+
+    // MARK: - Search Knowledge
+
+    /// Search the local RAG corpus — the core behind the SearchKnowledge App
+    /// Intent. Uses the same GroundedSearch the MCP `search_knowledge` and the
+    /// implicit grounding both run through (public, in M1K3Knowledge).
+    func intelligenceSearchKnowledge(_ query: String) async throws -> String {
+        let hits = try await GroundedSearch.run(
+            store: store, embedder: embedder, query: query, limit: 5
+        )
+        guard !hits.isEmpty else {
+            return "Nothing relevant in M1K3's knowledge for \"\(query)\"."
+        }
+        return hits.enumerated().map { index, hit -> String in
+            let heading = hit.heading.map { " \u{00A7}\($0)" } ?? ""
+            return "\(index + 1). [\(hit.itemTitle)\(heading)] (\(hit.kind.rawValue))\n\(hit.content)"
+        }.joined(separator: "\n\n")
+    }
+
+    // MARK: - Recall Memory
+
+    /// Recall matching facts from the temporal memory graph — the core behind
+    /// the RecallMemory App Intent. Delegates to the same handler the MCP
+    /// `recall_memory` tool uses.
+    func intelligenceRecallMemory(_ query: String) async throws -> String {
+        guard let memoryStore else {
+            return "M1K3's memory isn't available right now."
+        }
+        let vector = try await embedder.embed(query)
+        let hits = try memoryStore.recall(query: query, queryVector: vector)
+        guard !hits.isEmpty else {
+            return "Nothing in M1K3's memory matches \"\(query)\"."
+        }
+        return hits.enumerated().map { index, hit -> String in
+            let kind = hit.memory.kind.rawValue
+            let heading = hit.memory.title ?? hit.memory.text
+            return "\(index + 1). [\(kind)] \(heading)\n\(hit.memory.text)"
+        }.joined(separator: "\n\n")
+    }
+
+    // MARK: - List Todos
+
+    /// List open todos — the core behind the ListTodos App Intent.
+    func intelligenceListTodos() async throws -> String {
+        guard let todoStore else {
+            return "M1K3's todo list isn't available right now."
+        }
+        let todos = try todoStore.list(states: [.open])
+        guard !todos.isEmpty else {
+            return "No open todos."
+        }
+        return todos.enumerated().map { index, todo -> String in
+            let due = todo.due.map { " (due \(Self.todoDateFormatter.string(from: $0)))" } ?? ""
+            return "\(index + 1). \(todo.title)\(due)"
+        }.joined(separator: "\n")
+    }
+
+    private static let todoDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }()
+
+    // MARK: - Propose Todo
+
+    /// Add a new todo item — the core behind the ProposeTodo App Intent.
+    /// Since the user is asking directly (via Siri/Shortcuts), the item goes
+    /// straight to `.open` (not the pending inbox the MCP propose_todo uses).
+    /// Bumps todosRevision and refreshes the grounding block so the Todos UI
+    /// and the next chat turn both see the new item.
+    func intelligenceProposeTodo(title: String, note: String?) async throws -> String {
+        guard let todoStore else {
+            return "M1K3's todo list isn't available right now."
+        }
+        let todo = Todo(title: title, note: note, source: .user, state: .open)
+        try todoStore.add(todo)
+        await refreshTodoGrounding()
+        todosRevision += 1
+        return "Added \"\(title)\" to the todo list."
+    }
+
+    // MARK: - Voice Mode
+
+    /// Request voice mode — the core behind the OpenVoiceMode App Intent.
+    /// Brings the app forward and enters voice mode.
+    func requestVoiceMode() {
+        enterVoiceMode()
     }
 }
 

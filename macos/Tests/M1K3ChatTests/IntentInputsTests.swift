@@ -105,4 +105,65 @@ struct IntentInputsTests {
     func titleFallbackLabel() {
         #expect(IntentInput.rememberTitle(from: "   \n  ", explicit: nil) == "Memory")
     }
+
+    // MARK: searchQuery
+
+    @Test("searchQuery trims surrounding whitespace")
+    func searchTrims() throws {
+        #expect(try IntentInput.searchQuery("  local RAG  ") == "local RAG")
+    }
+
+    @Test("searchQuery rejects empty input")
+    func searchRejectsEmpty() {
+        #expect(throws: IntentInput.EmptyInput.self) { try IntentInput.searchQuery("") }
+        #expect(throws: IntentInput.EmptyInput.self) { try IntentInput.searchQuery("   ") }
+    }
+
+    @Test("searchQuery's empty error names the query field")
+    func searchErrorField() {
+        do {
+            _ = try IntentInput.searchQuery(" ")
+            Issue.record("expected EmptyInput")
+        } catch let error as IntentInput.EmptyInput {
+            #expect(error.field == "query")
+        } catch {
+            Issue.record("wrong error type: \(error)")
+        }
+    }
+
+    // MARK: recallQuery
+
+    @Test("recallQuery trims and passes content through")
+    func recallTrims() throws {
+        #expect(try IntentInput.recallQuery("  hiking trip  ") == "hiking trip")
+    }
+
+    @Test("recallQuery rejects empty input")
+    func recallRejectsEmpty() {
+        #expect(throws: IntentInput.EmptyInput.self) { try IntentInput.recallQuery("  \n ") }
+    }
+
+    // MARK: todoTitle
+
+    @Test("todoTitle trims and passes content through")
+    func todoTitleTrims() throws {
+        #expect(try IntentInput.todoTitle("  Buy milk  ") == "Buy milk")
+    }
+
+    @Test("todoTitle rejects empty input")
+    func todoTitleRejectsEmpty() {
+        #expect(throws: IntentInput.EmptyInput.self) { try IntentInput.todoTitle("") }
+    }
+
+    @Test("todoTitle's empty error names the title field")
+    func todoTitleErrorField() {
+        do {
+            _ = try IntentInput.todoTitle(" ")
+            Issue.record("expected EmptyInput")
+        } catch let error as IntentInput.EmptyInput {
+            #expect(error.field == "title")
+        } catch {
+            Issue.record("wrong error type: \(error)")
+        }
+    }
 }

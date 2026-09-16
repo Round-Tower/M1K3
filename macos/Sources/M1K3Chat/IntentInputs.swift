@@ -3,7 +3,8 @@
 //  M1K3Chat
 //
 //  Pure input validation + title derivation for the macOS App Intents
-//  (Ask · Speak · Remember). The intents' perform() bodies are app-glue
+//  (Ask · Speak · Remember · SearchKnowledge · RecallMemory · ListTodos ·
+//  ProposeTodo · OpenVoiceMode). The intents' perform() bodies are app-glue
 //  (verify-by-launch); this is the small testable core they call before
 //  touching any service — trim/reject-empty, and derive a memory title from
 //  free text when the user didn't supply one (voice-first ergonomics).
@@ -54,6 +55,21 @@ public enum IntentInput {
             if !trimmed.isEmpty { return trimmed }
         }
         return derivedTitle(from: text)
+    }
+
+    /// Trim + require a non-empty search query. Throws `EmptyInput(field: "query")`.
+    public static func searchQuery(_ raw: String) throws -> String {
+        try requireNonEmpty(raw, field: "query")
+    }
+
+    /// Trim + require a non-empty recall query. Throws `EmptyInput(field: "query")`.
+    public static func recallQuery(_ raw: String) throws -> String {
+        try requireNonEmpty(raw, field: "query")
+    }
+
+    /// Trim + require a non-empty todo title. Throws `EmptyInput(field: "title")`.
+    public static func todoTitle(_ raw: String) throws -> String {
+        try requireNonEmpty(raw, field: "title")
     }
 
     // MARK: - Internals
