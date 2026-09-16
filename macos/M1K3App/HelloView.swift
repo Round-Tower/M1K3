@@ -37,10 +37,16 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06 (2) — Try again retries `env.selectedBrain`, the tier that failed;
 //  `startFallbackDownload` lost its default so no call site can drift between Lil and pocket (PR #234 review 8).
 //  Confidence now 0.8.
+//  Review: Kev + claude-opus-4-6, 2026-09-16 — two-door onboarding (#363): "Full experience" writes seven
+//  defaults in one pass (OnboardingExperience, pure, 5 tests); "Private" keeps today's defaults. The single
+//  "Say hello" button replaced by two vertically stacked buttons with captions. PCC per-message consent
+//  unchanged. Confidence now 0.8 (flow logic tested; look/feel verify-by-launch).
 
 import M1K3Avatar
 import M1K3Inference
 import SwiftUI
+
+// MARK: - Onboarding experience choice
 
 struct HelloView: View {
     @Environment(AppEnvironment.self) private var env
@@ -125,15 +131,22 @@ struct HelloView: View {
                 .font(.title3)
                 .frame(maxWidth: 360)
                 .accessibilityLabel("Your name, optional")
-                .onSubmit(sayHello)
+                .onSubmit { sayHello(experience: .fullExperience) }
 
-            Button(action: sayHello) {
-                Text(needsFallbackDownload ? "Download & say hello →" : "Say hello →")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
+            VStack(spacing: 12) {
+                experienceButton(
+                    .fullExperience,
+                    title: needsFallbackDownload ? "Full experience · download & go →" : "Full experience →",
+                    caption: "Voice, notch HUD, heartbeat, senses, Private Cloud Compute — all on.",
+                    prominent: true
+                )
+                experienceButton(
+                    .privateByDefault,
+                    title: needsFallbackDownload ? "Private · download & go →" : "Private →",
+                    caption: "Everything off. Discover features one by one in Settings.",
+                    prominent: false
+                )
             }
-            .buttonStyle(.glassProminent)
             .frame(maxWidth: 360)
             .padding(.top, 4)
 
@@ -261,9 +274,33 @@ struct HelloView: View {
         }
     }
 
+    @ViewBuilder
+    private func experienceButton(
+        _ experience: OnboardingExperience, title: String, caption: String, prominent: Bool
+    ) -> some View {
+        let label = VStack(spacing: 4) {
+            Text(title)
+                .font(.headline)
+            Text(caption)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+
+        if prominent {
+            Button { sayHello(experience: experience) } label: { label }
+                .buttonStyle(.glassProminent)
+        } else {
+            Button { sayHello(experience: experience) } label: { label }
+                .buttonStyle(.bordered)
+        }
+    }
+
     // MARK: - Actions
 
-    private func sayHello() {
+    private func sayHello(experience: OnboardingExperience = .fullExperience) {
+        experience.apply(to: .standard)
         // Name first, brain second — the gate key flips in onComplete, and the
         // profile write must land before any window swap.
         env.saveFirstRunName(userName)
