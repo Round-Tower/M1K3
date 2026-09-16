@@ -20,6 +20,8 @@ Notes are LOCKED while a version is WAITING_FOR_REVIEW / IN_REVIEW; edit after a
 Signed: Kev + claude-fable-5.1, 2026-09-16, Confidence 0.85 (the pure checks are
 pytest-pinned; the PATCH shape mirrors keywords.py/promo.py; `set --confirm` is
 verify-by-run against the live record — ASC writes are Kev's to run). Prior: Unknown.
+Review: Kev + claude-fable-5.1, 2026-09-16 (later) — a per-platform PATCH failure prints and
+continues instead of bail() (which exits, so the "continue" never ran — #361's local pass).
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from asc import bail, call
+from asc import call
 
 NOTES_CAP = 4000
 
@@ -124,7 +126,8 @@ def run_set(platforms: tuple[str, ...], path: Path, confirm: bool) -> int:
             continue
         resp = call("PATCH", f"/v1/appStoreReviewDetails/{detail['id']}", json=payload)
         if "_error" in resp:
-            bail(f"{platform} notes PATCH", resp)
+            # not bail(): that exits, and the other platforms still deserve their write
+            print(f"{platform}: notes PATCH failed: {resp['_error']} {resp.get('_body', '')[:200]}")
             failed = True
             continue
         written = resp.get("data", {}).get("attributes", {}).get("notes") or ""
