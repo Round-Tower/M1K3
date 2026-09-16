@@ -269,15 +269,21 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         }
     }
 
-    /// Whether this tier can consume an attached image. Only Big today:
-    /// gemma-4-12B loads through VLMModelFactory with its vision tower
-    /// resident (proven on-device 2026-07-14/19, ~zero RAM delta vs the
-    /// text-only load). The UI reads this to show/hide the attach affordance;
-    /// the provider-side mapping drops images (loudly) for any tier where
-    /// this is false. Mini stays off until the AFM bridge carries an image
-    /// path; lil is a text-only checkpoint.
+    /// Whether this tier can consume an attached image. Big (gemma-4-12B)
+    /// loads through VLMModelFactory with its vision tower resident (proven
+    /// on-device 2026-07-14/19, ~zero RAM delta vs the text-only load). Mini
+    /// (AFM) gains vision on macOS 27 via FoundationModels' Attachment API.
+    /// The UI reads this to show/hide the attach affordance; the provider-side
+    /// mapping drops images (loudly) for any tier where this is false.
+    /// Lil is a text-only checkpoint.
     public var supportsImageInput: Bool {
-        self == .big
+        if self == .big { return true }
+        #if compiler(>=6.4)
+            if self == .mini {
+                if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) { return true }
+            }
+        #endif
+        return false
     }
 
     /// True when the backing model uses a fixed sliding-window KV cache

@@ -27,6 +27,10 @@
 //  here and the live harness is left to test only the genuine unknown.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-15, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-4-6, 2026-09-16 — image support: on macOS 27+ images
+//  ride the Prompt via Attachment(imageURL:) and the "cannot view" text note is
+//  suppressed; `imageURLs(from:)` extracts attached URLs for the provider.
+//  Confidence now 0.85.
 
 import Foundation
 
@@ -102,13 +106,20 @@ public enum AFMToolPrompt {
                 continue // lifted to session instructions
             case let .user(text, images):
                 lines.append("User: \(text)")
-                // AFM's bridge carries no image path (BrainTier.mini
-                // .supportsImageInput is false, so the UI shouldn't let one
-                // through) — if a turn arrives anyway, tell the model
+                // On macOS 27+ images ride the Prompt via Attachment(imageURL:)
+                // and never need a text note. On older runtimes, tell the model
                 // honestly instead of silently pretending nothing was sent.
-                if !images.isEmpty {
-                    lines.append("(The user attached \(images.count) image(s) this brain cannot view.)")
-                }
+                #if compiler(>=6.4)
+                    if !images.isEmpty {
+                        if #unavailable(macOS 27.0, iOS 27.0, visionOS 27.0) {
+                            lines.append("(The user attached \(images.count) image(s) this brain cannot view.)")
+                        }
+                    }
+                #else
+                    if !images.isEmpty {
+                        lines.append("(The user attached \(images.count) image(s) this brain cannot view.)")
+                    }
+                #endif
             case let .assistant(text, calls):
                 if let text, !text.isEmpty {
                     lines.append("Assistant: \(text)")
@@ -133,5 +144,14 @@ public enum AFMToolPrompt {
                 + "tool applies)."
         )
         return lines.joined(separator: "\n")
+    }
+
+    /// The image URLs attached to user turns in this transcript, in order.
+    /// Empty when the conversation carries no images.
+    public static func imageURLs(from messages: [ToolMessage]) -> [URL] {
+        messages.compactMap { message -> [URL]? in
+            guard case let .user(_, images) = message else { return nil }
+            return images.map(\.url)
+        }.flatMap { $0 }
     }
 }

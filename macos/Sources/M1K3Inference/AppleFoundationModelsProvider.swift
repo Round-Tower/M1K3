@@ -522,10 +522,25 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
     /// AFM" regardless; named so they aren't inherited silently.
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
         let body = AFMToolPrompt.render(messages: messages, tools: tools)
+        let imageURLs = AFMToolPrompt.imageURLs(from: messages)
         let standing = AFMToolPrompt.systemInstructions(from: messages) ?? instructions()
         let session = LanguageModelSession(instructions: standing)
         do {
-            let decision = try await session.respond(to: body, generating: AFMToolDecision.self).content
+            let decision: AFMToolDecision
+            #if compiler(>=6.4)
+                if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *), !imageURLs.isEmpty {
+                    decision = try await session.respond(generating: AFMToolDecision.self) {
+                        body
+                        for url in imageURLs {
+                            Attachment(imageURL: url)
+                        }
+                    }.content
+                } else {
+                    decision = try await session.respond(to: body, generating: AFMToolDecision.self).content
+                }
+            #else
+                decision = try await session.respond(to: body, generating: AFMToolDecision.self).content
+            #endif
             return AFMToolMapping.toolTurn(
                 isFinal: decision.isFinal,
                 toolName: decision.toolName,
@@ -533,21 +548,8 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
                 finalAnswer: decision.finalAnswer
             )
         } catch is CancellationError {
-            // A cancelled turn MUST propagate — the native loop's
-            // `catch is CancellationError { throw }` (LocalAgent+Native) depends on
-            // it reaching up. Swallowing it here would silently conclude with an
-            // empty answer instead of honouring Cancel (the `try? Task.sleep`
-            // family of bug). Re-throw before the catch-all backstop.
             throw CancellationError()
         } catch {
-            // Non-melt backstop: a guardrail / decode / context-overflow throw
-            // becomes a fast, empty text conclusion — LocalAgent ends the turn
-            // immediately rather than thrashing. The latency band proves the
-            // difference from the 337s Apple-driven auto-loop.
-            //
-            // Logged because an empty conclusion is indistinguishable from a
-            // model that chose to say nothing, and this backstop deliberately
-            // manufactures exactly that shape.
             logFailure(error, streaming: false)
             return .text("")
         }
