@@ -46,6 +46,11 @@
 //  Off with `-afm.prefixPrewarm NO` (AFMPrefixPrewarm). The per-turn `afm budget`
 //  token count moved to failures only: counting beside a turn spoiled its prewarm.
 //
+//  Review: Kev + claude-opus-4-6, 2026-09-17 — continueToolTurn gains image support
+//  on macOS 27: when imageURLs are present, the session responds via @PromptBuilder
+//  with Attachment(imageURL:) segments alongside the text body. Gated with
+//  #if compiler(>=6.4) + @available(macOS 27.0, *). Confidence now 0.85.
+//
 //  Note this provider builds a FRESH `LanguageModelSession(instructions:)` per
 //  call, so anything in the persona is re-sent every turn — the reason persona
 //  length is a real cost here and free on the KV-cached MLX tiers.
@@ -522,10 +527,25 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
     /// AFM" regardless; named so they aren't inherited silently.
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
         let body = AFMToolPrompt.render(messages: messages, tools: tools)
+        let imageURLs = AFMToolPrompt.imageURLs(from: messages)
         let standing = AFMToolPrompt.systemInstructions(from: messages) ?? instructions()
         let session = LanguageModelSession(instructions: standing)
         do {
-            let decision = try await session.respond(to: body, generating: AFMToolDecision.self).content
+            let decision: AFMToolDecision
+            #if compiler(>=6.4)
+                if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *), !imageURLs.isEmpty {
+                    decision = try await session.respond(generating: AFMToolDecision.self) {
+                        body
+                        for url in imageURLs {
+                            Attachment(imageURL: url)
+                        }
+                    }.content
+                } else {
+                    decision = try await session.respond(to: body, generating: AFMToolDecision.self).content
+                }
+            #else
+                decision = try await session.respond(to: body, generating: AFMToolDecision.self).content
+            #endif
             return AFMToolMapping.toolTurn(
                 isFinal: decision.isFinal,
                 toolName: decision.toolName,

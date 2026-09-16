@@ -339,11 +339,20 @@ struct BrainTierTests {
         #expect(BrainTier.big.supportsImageInput)
         // lil (dense Qwen3 text checkpoint) has no vision tower.
         #expect(!BrainTier.lil.supportsImageInput)
-        // mini (AFM): Apple's bridge carries no image path in our
-        // LanguageModel mirror yet — pinned OFF until that lands, so the UI
-        // never offers an attach that would be silently dropped.
-        #expect(!BrainTier.mini.supportsImageInput)
-        #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.big])
+        // mini (AFM): gains vision on macOS 27+ via FoundationModels'
+        // Attachment API. The test runs on the build host — Xcode 27 → true.
+        #if compiler(>=6.4)
+            if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) {
+                #expect(BrainTier.mini.supportsImageInput)
+                #expect(Set(BrainTier.allCases.filter(\.supportsImageInput)) == [.mini, .big])
+            } else {
+                #expect(!BrainTier.mini.supportsImageInput)
+                #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.big])
+            }
+        #else
+            #expect(!BrainTier.mini.supportsImageInput)
+            #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.big])
+        #endif
     }
 
     // MARK: - Pocket: the Mini for devices without Apple Intelligence (2026-09-06)

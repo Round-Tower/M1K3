@@ -418,7 +418,11 @@ struct MLXGemmaProviderTests {
         // for a brain that can't see. Review fold, PR #62.
         for tier in BrainTier.allCases {
             guard let modelID = tier.mlxModelID else {
-                #expect(!tier.supportsImageInput)
+                // Mini gains supportsImageInput on macOS 27 via AFM vision
+                // (Attachment API), not via an MLX VLM load path — skip it.
+                if tier != .mini {
+                    #expect(!tier.supportsImageInput)
+                }
                 continue
             }
             #expect(

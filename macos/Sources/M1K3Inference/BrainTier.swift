@@ -53,6 +53,9 @@
 //  way. Mobile floor 3.5 GB is MEASURED, not memory: the 3 GB A12 iPad loads LFM2 then fatals on its first
 //  generation (Metal compiler LLVM error on MLX's bf16 gather kernel); 4 GB A13s untested. Mac eval through the
 //  tier path: 91/140 live path ×2 (open 16/16, tool 6/12, security 0/14). Confidence now 0.8.
+//  Review: Kev + claude-opus-4-6, 2026-09-17 — supportsImageInput gains .mini on macOS 27+ via
+//  FoundationModels' Attachment(imageURL:) API, gated with #if compiler(>=6.4) + @available.
+//  Confidence now 0.85.
 //
 
 import Foundation
@@ -269,15 +272,21 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         }
     }
 
-    /// Whether this tier can consume an attached image. Only Big today:
-    /// gemma-4-12B loads through VLMModelFactory with its vision tower
-    /// resident (proven on-device 2026-07-14/19, ~zero RAM delta vs the
-    /// text-only load). The UI reads this to show/hide the attach affordance;
-    /// the provider-side mapping drops images (loudly) for any tier where
-    /// this is false. Mini stays off until the AFM bridge carries an image
-    /// path; lil is a text-only checkpoint.
+    /// Whether this tier can consume an attached image. Big (gemma-4-12B)
+    /// loads through VLMModelFactory with its vision tower resident (proven
+    /// on-device 2026-07-14/19, ~zero RAM delta vs the text-only load). Mini
+    /// (AFM) gains vision on macOS 27 via FoundationModels' Attachment API.
+    /// The UI reads this to show/hide the attach affordance; the provider-side
+    /// mapping drops images (loudly) for any tier where this is false.
+    /// Lil is a text-only checkpoint.
     public var supportsImageInput: Bool {
-        self == .big
+        if self == .big { return true }
+        #if compiler(>=6.4)
+            if self == .mini {
+                if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) { return true }
+            }
+        #endif
+        return false
     }
 
     /// True when the backing model uses a fixed sliding-window KV cache
