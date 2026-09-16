@@ -177,7 +177,7 @@ def run_submit(platform: str, confirm: bool) -> int:
         elif step.startswith("add version"):
             resp = call("POST", "/v1/reviewSubmissionItems", json=item_payload(sub_id, version["id"]))
             if "_error" in resp:
-                bail("add item", resp)  # exits: the submission stays READY_FOR_REVIEW, re-run to resume
+                bail("add item", resp)  # exits: the submission keeps its state, no item yet; re-run to resume
             print(f"   item {resp['data']['id'][:8]} added")
         elif step == "submit":
             resp = call("PATCH", f"/v1/reviewSubmissions/{sub_id}", json=submit_payload(sub_id))
