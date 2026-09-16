@@ -1,0 +1,35 @@
+Thank you for reviewing M1K3.
+
+NO ACCOUNT REQUIRED
+M1K3 has no sign-in, no account, and no demo credentials. Just launch and use it.
+
+FIRST LAUNCH — ONE-TIME MODEL DOWNLOAD
+On first run, M1K3 downloads an on-device AI model (a few hundred MB) so it can run entirely locally afterward. This download is the only network request the app needs to function. Please allow it to finish before testing chat/voice. After that, the assistant runs fully offline.
+
+OUTBOUND NETWORK USE (com.apple.security.network.client)
+  1. The one-time model download above.
+  2. An OPTIONAL web search, OFF by default, enabled by the user with a visible toggle.
+There is no analytics, no tracking, no telemetry, and no user data sent to any server. Chats, notes, PDFs and voice audio stay on the device.
+
+INBOUND NETWORK USE (com.apple.security.network.server) — macOS
+The app LISTENS for incoming connections in two user-enabled features. Both are OFF by default; nothing listens until the user turns them on in Settings ▸ Privacy.
+  1. MCP server — a local HTTP/JSON-RPC server bound to 127.0.0.1 port 4242 (loopback only; never a LAN interface). It lets AI coding agents on the same Mac (Claude Code, Cursor, VS Code) call the app's tools: search the user's notes, speak, remember. Switch: Settings ▸ Privacy ▸ MCP server; the same pane shows the connect command per client.
+  2. Brain at Home — a local-network service so the user's own iPhone/iPad running M1K3 can use this Mac's larger on-device models. It serves only devices the user has paired by scanning a QR code shown on this Mac; every connection is TLS with a pre-shared key established at pairing, and unpaired clients are refused before any HTTP is exchanged. Bonjour type _m1k3._tcp, default port 4243, private/LAN interfaces only (never cellular). Switch: Settings ▸ Privacy ▸ Brain at Home ▸ "Serve my brain to my devices".
+The App Sandbox refuses to bind a listening socket without the server entitlement, which is why it is present. The embedded command-line helper (Contents/Helpers/m1k3) is a client only and does not carry it. Neither feature reaches the internet.
+
+TO VERIFY THE LISTENERS
+  • MCP server: Settings ▸ Privacy ▸ turn on "MCP server". In Terminal: /Applications/M1K3.app/Contents/Helpers/m1k3 status (answers from the running app), or lsof -iTCP:4242 (the socket is bound to 127.0.0.1 only). Turn the switch off and the port closes.
+  • Brain at Home: Settings ▸ Privacy ▸ Brain at Home ▸ turn on "Serve my brain to my devices" ▸ "Pair a device…". While the pairing code is shown, a short-lived pairing listener is bound on an ephemeral port (lsof -iTCP -a -p $(pgrep -x M1K3)); the main service starts once a device is paired, and dns-sd -B _m1k3._tcp shows its advertisement.
+
+PERMISSIONS
+  • Microphone — on-device speech-to-text in voice mode; audio is transcribed locally and never transmitted.
+  • Files — only when the user drags in a note or PDF; processed locally.
+
+HOW TO EXERCISE THE APP
+  1. Complete first-run onboarding and let the model download finish.
+  2. Send a chat message, then try voice mode.
+  3. Drag in a short note or PDF and ask a question about it.
+  4. Open Memories and confirm "forget" removes an item.
+  5. Try voice output (system voice and the neural voice).
+
+Happy to clarify anything — thank you.

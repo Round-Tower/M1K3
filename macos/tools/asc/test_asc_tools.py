@@ -10,6 +10,7 @@ import asc
 import events
 import keywords
 import precheck
+import review_notes
 
 
 # --- asc.py -----------------------------------------------------------------
@@ -141,3 +142,56 @@ def test_the_waking_up_spec_is_within_every_cap() -> None:
     assert events.copy_problems(spec["copy"]) == []
     assert events.localization_problems(spec) == []
     assert set(spec["localizations"]) == {"en-US", "de-DE", "es-ES", "fr-FR", "ja", "ko", "pt-BR", "zh-Hans"}
+
+
+# --------------------------------------------------------------------------- #
+# review_notes.py — App Review Information notes (the network.server rejection, 2026-09-16)
+# --------------------------------------------------------------------------- #
+
+
+def test_review_notes_problems_wants_both_inbound_listeners_named() -> None:
+    # the 09-15 notes: outbound "in full", no listener named → the automated
+    # entitlement check found network.server with "no matching functionality"
+    stale = "NETWORK USAGE — IN FULL\nOutbound network use is limited to the model download."
+    assert review_notes.problems(stale) == [
+        "notes never mention the MCP server (com.apple.security.network.server)",
+        "notes never mention Brain at Home (com.apple.security.network.server)",
+    ]
+    good = "MCP server on 127.0.0.1:4242 … Brain at Home serves paired devices on the LAN"
+    assert review_notes.problems(good) == []
+
+
+def test_review_notes_problems_reports_the_cap_and_emptiness() -> None:
+    assert review_notes.problems("") == ["notes are empty"]
+    over = "MCP server Brain at Home " + "x" * review_notes.NOTES_CAP
+    assert review_notes.problems(over) == [f"notes over the {review_notes.NOTES_CAP}-char cap ({len(over)})"]
+
+
+def test_review_notes_patch_payload_shape() -> None:
+    payload = review_notes.patch_payload("detail-1", "hello")
+    assert payload == {
+        "data": {"type": "appStoreReviewDetails", "id": "detail-1", "attributes": {"notes": "hello"}}
+    }
+
+
+def test_the_tracked_review_notes_pass_their_own_check() -> None:
+    text = (Path(__file__).resolve().parents[2] / "fastlane" / "review_notes.txt").read_text()
+    assert review_notes.problems(text) == []
+    # the two listeners the entitlement exists for, by the names the reviewer will see in Settings
+    for phrase in ("MCP server", "Brain at Home", "127.0.0.1", "4242", "OFF by default", "network.server"):
+        assert phrase in text, phrase
+
+
+def test_precheck_review_notes_row_uses_the_shared_check() -> None:
+    ok = {"data": {"attributes": {"notes": "MCP server … Brain at Home"}}}
+    assert precheck.check_review_notes(ok) == ("PASS", "review notes name both inbound listeners")
+    status, detail = precheck.check_review_notes({"data": {"attributes": {"notes": "outbound only"}}})
+    assert status == "FAIL" and "MCP server" in detail and "Brain at Home" in detail
+
+
+def test_precheck_review_notes_row_splits_never_set_from_read_failed() -> None:
+    # the availability/price convention: a 404 is a real gap, anything else is a NOTE, never a FAIL
+    assert precheck.check_review_notes({"_error": 404}) == ("FAIL", "no App Review Information on this version")
+    assert precheck.check_review_notes({"_error": 401}) == ("NOTE", "review notes read failed: 401")
+    assert precheck.check_review_notes({"_error": "transport"}) == ("NOTE", "review notes read failed: transport")
+    assert precheck.check_review_notes({"data": {"attributes": {"notes": ""}}}) == ("FAIL", "notes are empty")

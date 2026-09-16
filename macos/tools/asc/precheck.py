@@ -16,6 +16,8 @@ Not checkable by API (say so, don't guess): the App Privacy label (the
 Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.8 (the evaluators are
   unit-pinned; the API shapes are the ones launch day drove, proven by a live
   read on the 1.0.0 records — see README).
+Review: Kev + claude-fable-5.1, 2026-09-16, Confidence 0.85 — `check_review_notes`: the App Review
+notes must name both inbound listeners (the network.server rejection); shares review_notes.problems().
 Format: MurphySig v0.4 (https://murphysig.dev/spec). Prior: none (new file).
 """
 from __future__ import annotations
@@ -27,6 +29,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from asc import APP_ID, PLATFORMS, call, paginate  # noqa: E402
+import review_notes
 from keywords import field_report  # noqa: E402
 
 # What a complete set looks like per platform — one display type each is the
@@ -52,6 +55,21 @@ def check_build(version_attrs: dict[str, Any], build: dict[str, Any] | None) -> 
     state = build.get("attributes", {}).get("processingState")
     version = build.get("attributes", {}).get("version", "?")
     return ("PASS" if state == "VALID" else "FAIL"), f"build {version} {state}"
+
+
+def check_review_notes(resp: dict[str, Any]) -> tuple[str, str]:
+    """Do the App Review notes name both inbound listeners? (2026-09-16: the Mac 1.0.0
+    submission was stopped because the notes said outbound-only while the binary
+    carries com.apple.security.network.server.) A 404 is a version with no App Review
+    Information at all; any other error is a read failure, a NOTE not a FAIL."""
+    if resp.get("_error") == 404:
+        return "FAIL", "no App Review Information on this version"
+    if "_error" in resp:
+        return "NOTE", f"review notes read failed: {resp['_error']}"
+    found = review_notes.problems(review_notes.notes_in(resp))
+    if found:
+        return "FAIL", "; ".join(found)
+    return "PASS", "review notes name both inbound listeners"
 
 
 def check_screenshots(platform: str, sets: list[dict[str, Any]]) -> list[tuple[str, str]]:
@@ -150,6 +168,7 @@ def run(platforms: tuple[str, ...]) -> int:
         state = a.get("appVersionState") or a.get("appStoreState")
         print(f"{platform} {a['versionString']} {state}")
         rows = [check_build(a, version.get("_build"))]
+        rows.append(check_review_notes(review_notes.review_detail(version["id"])))
         if state not in SUBMITTABLE_STATES:
             rows.append(("NOTE", f"state {state}: fields are locked until the version is editable again"))
         for loc in paginate(f"/v1/appStoreVersions/{version['id']}/appStoreVersionLocalizations?limit=50"):
