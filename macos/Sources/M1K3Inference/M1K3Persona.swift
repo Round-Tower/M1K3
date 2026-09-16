@@ -423,7 +423,7 @@ public enum M1K3Persona {
         exemplarReplies(of: voiceExemplars)
     }
 
-    static func exemplarReplies(of exemplars: String) -> String {
+    public static func exemplarReplies(of exemplars: String) -> String {
         exemplars
             .split(separator: "\n", omittingEmptySubsequences: true)
             .map { line -> String in
