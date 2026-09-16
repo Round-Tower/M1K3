@@ -45,6 +45,9 @@
 //  Confidence 0.8 (verified by launch with the Debug echo backend).
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — the rating ask: a liked answer records delight, every completed turn re-checks the ledger, and this view alone calls requestReview.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — a re-tapped thumb no longer double-counts; the ask needs a visible window (local review fold).
+//  Review: Kev + claude-opus-4-6, 2026-09-16 — file-as-context: a doc.badge.plus button, a third
+//  fileImporter for text/source/markup/PDF, pendingFiles strip (capsule chips), and the send path
+//  prepends file contextBlocks to the draft. Files are turn context, not permanent RAG. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -106,6 +109,8 @@ struct ContentView: View {
     @State private var starters: [String] = Array(StarterPrompts.doorPool.prefix(1))
     @State private var showAttachmentImporter = false
     @State private var pendingAttachments: [ImageAttachment] = []
+    @State private var showFileContextImporter = false
+    @State private var pendingFiles: [FileAttachment] = []
     /// ADR 0006: the chat-egress consent (default OFF), held here so the input
     /// bar re-renders when Settings flips it.
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
@@ -465,6 +470,15 @@ struct ContentView: View {
                 attachImages(at: urls)
             }
         }
+        .fileImporter(
+            isPresented: $showFileContextImporter,
+            allowedContentTypes: [.plainText, .text, .sourceCode, .json, .yaml, .xml, .html, .pdf],
+            allowsMultipleSelection: true
+        ) { result in
+            if case let .success(urls) = result {
+                attachFiles(at: urls)
+            }
+        }
         .sheet(item: $privateCloudPending) { pending in
             PrivateCloudConsentSheet(
                 consent: pending.consent,
@@ -774,6 +788,9 @@ struct ContentView: View {
             if !pendingAttachments.isEmpty {
                 pendingAttachmentsStrip
             }
+            if !pendingFiles.isEmpty {
+                pendingFilesStrip
+            }
             inputRow
         }
         .animation(.easeOut(duration: 0.2), value: env.speechHighlight.isActive)
@@ -822,6 +839,37 @@ struct ContentView: View {
         }
     }
 
+    private var pendingFilesStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(pendingFiles, id: \.filename) { file in
+                    HStack(spacing: 6) {
+                        Image(systemName: "doc.text")
+                            .foregroundStyle(.secondary)
+                        Text(file.filename)
+                            .lineLimit(1)
+                            .font(.caption)
+                        Button {
+                            pendingFiles.removeAll { $0 == file }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(.white, .black.opacity(0.6))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove \(file.filename)")
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial, in: Capsule())
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .frame(maxWidth: Self.chatContentMaxWidth)
+        .frame(maxWidth: .infinity)
+    }
+
     private var inputRow: some View {
         GlassEffectContainer(spacing: 12) {
             HStack(spacing: 12) {
@@ -857,6 +905,18 @@ struct ContentView: View {
                     .help("Attach an image — Big can see it")
                     .accessibilityLabel("Attach image")
                 }
+
+                Button { showFileContextImporter = true } label: {
+                    Image(systemName: "doc.badge.plus")
+                        .imageScale(.large)
+                        .fontWeight(.semibold)
+                        .frame(width: 22, height: 22)
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .disabled(env.chat.isResponding || !env.isReady)
+                .help("Attach a file as context for this message")
+                .accessibilityLabel("Attach file")
 
                 // New chat lives in the sidebar now (its toolbar pencil +
                 // ⌘N) — a second identical pencil here was pure duplication
@@ -1103,15 +1163,21 @@ struct ContentView: View {
         // ADR 0006: an armed send goes through the consent sheet first. Images
         // never ride a PCC turn (arming is disabled while any are staged).
         if PrivateCloudRung.presentsConsent(
-            armed: privateCloudArmed, control: privateCloudControl, hasAttachments: !pendingAttachments.isEmpty
+            armed: privateCloudArmed, control: privateCloudControl,
+            hasAttachments: !pendingAttachments.isEmpty || !pendingFiles.isEmpty
         ) {
             privateCloudPending = PendingPrivateCloudSend(consent: env.chat.privateCloudConsent(for: draft))
             return
         }
-        let text = draft
+        var text = draft
+        if !pendingFiles.isEmpty {
+            let fileContext = pendingFiles.map(\.contextBlock).joined(separator: "\n\n")
+            text = fileContext + "\n\n" + text
+        }
         let images = pendingAttachments
         draft = ""
         pendingAttachments = []
+        pendingFiles = []
         Task { await env.send(text, images: images) }
     }
 
@@ -1135,6 +1201,19 @@ struct ContentView: View {
         }
         if !failures.isEmpty {
             attachmentError = failures.joined(separator: "\n")
+        }
+    }
+
+    private func attachFiles(at urls: [URL]) {
+        for url in urls {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let attachment = try FileTextExtractor.extract(from: url)
+                pendingFiles.append(attachment)
+            } catch {
+                attachmentError = "\(url.lastPathComponent): \(error.localizedDescription)"
+            }
         }
     }
 
