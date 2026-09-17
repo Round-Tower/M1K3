@@ -31,8 +31,10 @@ struct ConclusionStreamSplitter {
     private(set) var isConclusion = false
 
     private var emittedAny = false
-    /// True once an ACTION: marker stopped emission for good.
-    private var truncated = false
+    /// True once an ACTION: marker stopped emission — skipping the ACTION
+    /// line. Cleared when a newline after the ACTION line arrives, so
+    /// post-ACTION prose resumes streaming (#329).
+    private var skippingActionLine = false
     /// Tail kept back from emission so a split "ACTION:" can be caught.
     private var heldBack = ""
 
@@ -49,7 +51,14 @@ struct ConclusionStreamSplitter {
         let delta = StreamFold.delta(current: thought, chunk: chunk)
         thought += delta
 
-        if truncated { return "" }
+        if skippingActionLine {
+            if let nl = delta.firstIndex(of: "\n") {
+                let resumed = String(delta[delta.index(after: nl)...])
+                skippingActionLine = false
+                return resumed.isEmpty ? "" : emitGuarded(resumed)
+            }
+            return ""
+        }
         if isConclusion {
             return emitGuarded(delta)
         }
@@ -62,7 +71,7 @@ struct ConclusionStreamSplitter {
     /// conclusion was being emitted.
     mutating func flush() -> String {
         defer { heldBack = "" }
-        guard isConclusion, !truncated else { return "" }
+        guard isConclusion, !skippingActionLine else { return "" }
         return heldBack
     }
 
@@ -77,8 +86,14 @@ struct ConclusionStreamSplitter {
             guard !working.isEmpty else { return "" }
         }
         if let stop = working.range(of: Self.stopMarker) {
-            truncated = true
             let kept = String(working[..<stop.lowerBound])
+            let afterMarker = String(working[stop.upperBound...])
+            if let nl = afterMarker.firstIndex(of: "\n") {
+                let resumed = String(afterMarker[afterMarker.index(after: nl)...])
+                if !resumed.isEmpty { heldBack = resumed }
+            } else {
+                skippingActionLine = true
+            }
             return markEmitted(trimTrailingWhitespace(kept))
         }
         guard working.count > Self.guardWindow else {

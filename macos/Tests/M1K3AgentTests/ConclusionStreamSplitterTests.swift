@@ -155,6 +155,24 @@ struct LocalAgentConclusionStreamingTests {
         #expect(collector.count > 1)
     }
 
+    @Test("prose after a mid-conclusion ACTION line is not lost (#329)")
+    func midConclusionActionProseCarried() async throws {
+        let provider = StreamingScriptedProvider([
+            "CONCLUSION: I'll check.\nACTION: lookup(Paris)\nHere's what I know: the city is on the Seine.",
+        ])
+        let tool = EchoTool(name: "lookup", description: "looks up", response: "found")
+        let agent = LocalAgent(inferenceProvider: provider, tools: [tool])
+
+        let collector = TokenCollector()
+        let result = try await agent.run(goal: "tell me about Paris", onConclusionToken: { token in
+            collector.append(token)
+        })
+
+        #expect(result.conclusion.contains("Here's what I know"))
+        let streamed = collector.joined
+        #expect(streamed.contains("Here's what I know"))
+    }
+
     @Test("without the callback the loop still uses blocking generation")
     func blockingPathUnchanged() async throws {
         let provider = StreamingScriptedProvider(["CONCLUSION: fine"])
