@@ -8,147 +8,78 @@ The release-by-release plan for the macOS 27 wave (1.0 → 1.1 → 1.2) lives in
 `docs/GOLDEN_GATE_PLAN.md` § Roadmap; this file points at it rather than
 copying it.
 
-Last swept: 2026-09-15 — **LAUNCH DAY.** 1.0.0 is submitted for App Review on
-both platforms (Mac build 362, iOS build 361, release type MANUAL) after a
-pull-and-resubmit that dropped the Intel slice (#340) and the trademark
-keywords. 112 commits since the 09-02 sweep: the Golden Gate landscape
-(per-tier MLX memory budget #218, Lil → DWQ #220, the pocket tier #234, the
-completion-attack hardening #221), the screengrab suite → real plates on every
-listing (#225 closed), the relicense to FSL-1.1-ALv2 (#259), the `m1k3` CLI +
-Homebrew tap + `/agents` (#279/#277), the fanless-idle audit (#293), the notch
-HUD (#290/#292/#326), the character pass (#289), `recent_activity` + the
-context-aware chips (#275/#278), the landing tooling (`pr_watch` + `land.sh`,
-#297), Mini's tools working on the live path + prefix prewarm (#328), the PCC
-rung's toolchain-free half (#321/#324, entitlement GRANTED 2026-09-14, #333),
-and Xcode 27 GA (#338). Before that — the 08-20 brand + presence day (the M
-mark #142, the screensaver #143/#144) and the 08-03 merge day + project dream
-cycle (`docs/DESIGN_DOCTRINE.md`).
+Last swept: 2026-09-17 — **1.1.0 SHIPPED.** M1K3 is on the App Store.
+1.1.0 (#362, 2026-09-16) landed the Xcode 27 toolchain, typed AFM errors,
+Private Cloud Compute (the planned 1.2 rung shipped early), and CI guards.
+Post-1.1.0: 5 new Siri/Shortcuts intents (#366), AFM vision on macOS 27 +
+file-as-context (#367). The site's TestFlight CTAs are being swept to App
+Store links (#370). iOS gains image + file attach (#371).
 
 ---
 
-## Now — 1.0 is in the queue
+## Now — 1.1.0 is live
 
-### While App Review runs (nothing to code)
+### Landing (open PRs)
 
-- Both 1.0.0 versions read `WAITING_FOR_REVIEW`; release type MANUAL, so an
-  approval publishes nothing until Kev presses release. visionOS 1.0.0 has no
-  build attached and is not part of this submission (Phase 5 below).
-- **Xcode Cloud is out of compute until 2026-09-28.** Every master push burns
-  a cancelled run and a build number (runs 364–368 all CANCELED; the next
-  cloud number is 369, already past the local 362). Until compute returns,
-  release builds are local: the recipe is in `docs/GOLDEN_GATE_RELEASE.md`
-  plus the launch-day memory (`BUILD_NUMBER=n release-mas.sh`, altool
-  validate + upload, attach by build id). Don't push cosmetics to master just
-  to see a build; nothing will come of it.
-- `.claude/project-memory.md` (2026-09-15 blocks) carries the submission
-  ground truth: pricing/availability, the App Privacy label, the keyword
-  lock while in review, the cancel-and-resubmit flow.
+- **#370** site: TestFlight CTAs → App Store (13 files, CI green, review pending).
+- **#371** iOS: image + file attachment on iPhone/iPad + Mac help-text fix
+  (review pending).
+- **#372** agent: mid-conclusion ACTION prose now streams (#329 fix, review
+  pending).
 
-### On approval (Kev)
+### Next picks
 
-1. Press release on both platforms.
-2. Merge **#336** (site App Store CTAs + README TestFlight links) once the
-   store page resolves — the link 404s until then.
-3. Read + merge **#341** (site: PCC is a later release, three crossings today).
-   The repo docs (`README.md`, `SECURITY.md`, `macos/README.md`) say the same
-   thing as of this sweep — keep them in step when the rung ships.
-4. Announce. The portfolio playbook's two-HN-cards rule: M1K3 Show HN first
-   (macOS 27 is GA — the card is live), the murphysig relaunch ≥ 2 weeks
-   later.
-
-### If rejected
-
-Budget one round (the ladder said so in September and still does). The review
-notes already explain Mini's instant no-download path for the reviewer,
-on-demand weights, local-network + camera-for-QR. Keywords are locked while a
-submission is in review — cancel, edit, resubmit as a NEW submission (the
-queue position is the price).
-
-### 1.0.1 — the launch-week verify-owed list (device evidence first, then fixes)
-
-- iOS `.fitWhole` framing on a real phone (#312 closed 09-15; the fox reads
-  well in the iPhone plates, the gecko is small — `CompanionFraming.fit(headroom:)`
-  is the one knob).
-- A WhisperKit start failure on a real route (#311 closed 09-15) and the
-  Bluetooth-headset voice test on the Mac (Apple's voice processing delivers
-  zero mic buffers with a BT input — memory `mac-bluetooth-vpio-starves-mic`).
-- **#303** tail: 2/3 "What can you do?" answers still close on the decline
-  line after the capability list; **#337** `ExemplarEcho` is blind to the move.
+- **#303** Lil "What can you do?" 2/3 answers close on the decline line — needs
+  an in-app eval gate before any prompt change (the capabilityMove shipped in
+  #338 but the rate barely moved).
+- **#356** idle CPU ~30% with every window hidden — needs a `sample` diagnosis
+  session; the #293 fanless-idle audit cut it to 0.4–1.8%, something regressed.
 - **#342** CI guard asserting `ARCHS: arm64` (the Intel-slice regression).
-- **#329** Mini prose after a mid-conclusion `ACTION:` never shown; **#327**
-  notch HUD hide re-derives geometry against the current screen; **#334**
-  `pr_watch` misses summon headers without backticks.
-- The constellation window's ideal frame (`.frame(idealWidth:idealHeight:)`)
-  and a richer demo seed so the held constellation plate can ship (five motes
-  undersell it).
-- The portrait hero's "Private by / design." wrap — Kev's copy or type-scale
-  call.
-- WhisperKit 0.18 → 1.1 is two majors: probe-first (`swift package resolve`,
-  the Tokenizers clash), then the gemma-4 tool-call smoke, post-launch only.
-- The felt verdicts Kev owes himself on the installed build: "yo" on a fresh
-  chat (the character pass), the chips' second draw, the caption following the
-  voice, the fitted fox in the notch.
+- **#334** `pr_watch` misses summon headers without backticks.
+
+### Monetization — the 90-day plan (#369)
+
+Three tiers: **Free** (full M1K3 — the promise), **Pro** (cosmetic: avatars,
+voices, companion skins — never gates intelligence), **Teams** (Custom App via
+ASC, stripped to business, org knowledge graph, managed deployment). The rule:
+Pro never gates intelligence, memory, or privacy. Kev's 90 days: LinkedIn,
+the first Teams customer, the move from engineer to honest founder.
+
+### 1.0.1 — verify-owed list (device evidence first, then fixes)
+
+- iOS `.fitWhole` framing on a real phone (#312); the gecko is small —
+  `CompanionFraming.fit(headroom:)` is the one knob.
+- Bluetooth-headset voice test on the Mac (memory `mac-bluetooth-vpio-starves-mic`).
+- **#327** notch HUD hide re-derives geometry against the current screen.
+- Constellation window ideal frame + a richer demo seed for the held plate.
+- WhisperKit 0.18 → 1.1: probe-first, post-launch only.
 
 ### Standing 1.0.x items (status lives in `docs/GOLDEN_GATE_PLAN.md` § 1.0.x)
 
-- **Prefix prewarm: n ≥ 5 in-app rerun owed** (turn-1 first chunk 2.7/3.3 s vs
-  5.8/6.2 s at n = 2 per arm; the console switched accounts before n = 5).
-- **The Mini palette call (Kev):** the production 16-tool palette puts ~3.9k of
-  Mini's 4,096 tokens in the fixed prompt. Levers: a smaller Mini palette
-  (`ToolPalettePolicy`), shorter descriptions for Mini, or 1.1's
-  `toolCallingMode(.disallowed)` for small talk. Not the grounding cap.
-- The two "reply IMMEDIATELY starting with CONCLUSION:" RULES lines are the
-  next tool-use lever (Mini live tool-use is 15/30 since #328) — its own eval.
+- **Prefix prewarm: n ≥ 5 in-app rerun owed** (turn-1 2.7 s vs 5.8 s at n = 2).
+- **The Mini palette call (Kev):** 16-tool palette puts ~3.9k of Mini's 4,096
+  in the fixed prompt. Levers: smaller palette, shorter descriptions, or
+  `toolCallingMode(.disallowed)` for small talk (now available in 1.1.0).
 - Mini's invented user threads; the verbatim-recital hardening (#111).
 
 ---
 
 ## Next — the releases
 
-### 1.1 — Golden Gate native (`docs/GOLDEN_GATE_PLAN.md` § 1.1)
+### 1.1.0 — SHIPPED 2026-09-16 (`docs/GOLDEN_GATE_PLAN.md`)
 
-The gates: **Xcode 27 GA — met** (27A266a on this Mac since 09-15; the suite
-is green on Swift 6.4, both apps build Release); **App Store Connect accepts
-27-SDK builds — met** (360–362 were archived on Xcode 27 GA and read VALID);
-**the CI pin bump + Xcode Cloud's Xcode version — open** (the cloud half waits
-for compute on 09-28). Then, in order:
+Toolchain bump to Xcode 27 GA (#362), typed AFM errors, CI guards, and
+**Private Cloud Compute ships** (the planned 1.2 rung shipped early — the
+policy, send path, consent sheet, Mac shell, FM27 adapter and entitlement
+are all live). Post-1.1.0 on master: 5 App Intents (#366), AFM vision +
+file-as-context (#367).
 
-1. Toolchain bump PR: `ci.yml` to Xcode 27, `M1K3_FM27` → `#available(macOS 27, *)`
-   so the FM27 bridge ships in the normal build; full suite + the gemma-4
-   native tool-call smoke + one `release-macos.sh` archive; Swift 6.4
-   language-mode warnings triaged, not ignored.
-2. Mini hygiene with typed APIs: `toolCallingMode(.disallowed)` on small-talk
-   turns kills **#102** at the source (`.required` when the user names a
-   tool); `LanguageModelError.rateLimited` replaces the "empty answer means
-   the daemon collapsed" heuristic; `.contextSizeExceeded` becomes
-   trim-and-retry in `HistoryBudgetPolicy`; `contextSize` read at launch.
-3. Mini sees: route dropped images and screenshots to Mini as
-   `ImageAttachment`s, on-device. Exit: a probe answers a question about a
-   test image.
-4. Apple's `SpotlightSearchTool` / `OCRTool` behind a `ToolPalettePolicy` A/B
-   on Mini and Lil. The palette is a prefix-cache key (**#121**): add tools
-   once, keep them stable.
-5. ADR 0001 goes live: Lil and Big registered as `LanguageModel`s;
-   `@Generable` over MLX brains once `M1K3FoundationExecutor.userPrompt`
-   carries prior turns.
-
-### 1.2 — the PCC rung (ADR 0006) — entitlement GRANTED 2026-09-14
-
-- On master: the policy + send path (#321), the Mac shell — switch (default
-  off, hidden without a backend, a fact under
-  `PrivateCloudComputeDisabledByPolicy`), per-message cloud button, consent
-  sheet, "Private Cloud Compute" label (#324), the FM27 adapter with its
-  SDK-error mapping tested on the 27 toolchain, and the entitlement on the
-  MAS lane only (#333). **No build compiles the rung**: `M1K3_FM27` is read
-  only by `Package.swift` from the environment, so 1.0 has no cloud path.
-- Owed: a real PCC generation (Kev's account on the console — Apple
-  Intelligence follows the console user), the 1.1 toolchain bump to ship the
-  adapter, then the copy sweep **#322** in the SAME release as the rung, never
-  before. (Its "Private by design" copy reached the site early; #341 pulls the
-  present tense back to "a later release", and this sweep does the same for
-  the repo docs.)
-- Teams: the org switch exists in the shell; the fleet-wide-lock sentence
-  returns to README / SECURITY when the switch is real.
+**Still open from 1.1's original list:**
+- `toolCallingMode(.disallowed)` for Mini small talk (#102) — the API is
+  available now; needs a Mini eval gate before shipping.
+- Apple's `SpotlightSearchTool` / `OCRTool` behind a `ToolPalettePolicy` A/B.
+- ADR 0001: Lil and Big registered as `LanguageModel`s.
+- Teams: the org switch + fleet-wide-lock (#350 policy-key forced-value read).
 
 ### iOS — the parity ladder (opened 2026-09-02): where it stands
 
@@ -162,8 +93,8 @@ for compute on 09-28). Then, in order:
   Still deciding Kokoro-as-default: a measured 10-minute thermal burn with Lil
   resident. Still owed: WhisperKit vs Apple Speech on the phone (assert
   on-device recognition, fail loud on the silent server fallback).
-- **Phase 4, the store pack — SUBMITTED 09-15** with the Mac (iPhone + iPad
-  13" sets real, "Data Not Collected" published, 4+).
+- **Phase 4, the store pack — SHIPPED.** M1K3 is on the App Store (Mac + iOS,
+  one universal `app.m1k3` record); iPhone + iPad 13" plate sets real.
 - **Phase 1, the cheap parity — NOT started.** Each is a package that already
   builds for iOS plus a thin `AppCore+` adapter: Heartbeat (one AppKit touch:
   `NSApp.isActive` → `UIApplication` state), the context senses (`UIDevice`
@@ -173,10 +104,12 @@ for compute on 09-28). Then, in order:
   shells"); the brain menu is device-honest (#229). Exit: the Settings tabs
   read the same on both platforms and every consent toggle exists on iOS
   with the same copy.
-- **Phase 3, the iOS-native soul — not started.** App Intents/Shortcuts, a
-  Lock Screen/Home widget with the last pulse, a Live Activity for long
-  thinks and downloads, a Control Center "Ask M1K3", a Share extension for
-  drop-a-doc.
+- **Phase 3, the iOS-native soul — STARTED.** App Intents/Shortcuts SHIPPED
+  (#366, 8 total: Ask, Speak, Remember, SearchKnowledge, RecallMemory,
+  ListTodos, ProposeTodo, OpenVoiceMode). Image + file attachment in flight
+  (#371). Still open: a Lock Screen/Home widget with the last pulse, a Live
+  Activity for long thinks and downloads, a Control Center "Ask M1K3", a Share
+  extension for drop-a-doc.
 - **Phase 5, Vision Pro — hardware-owed.** visionOS 1.0.0 has no build; the
   archive action + its own entitlements file are the lane work. Banked from
   July so nobody re-runs them: K0/K1 (MLX-Kokoro, Kev's ear) → #58; V0 → the
@@ -235,8 +168,8 @@ stays a possible later companion.
   pass (suspect ②).
 - Dream-cycle Tier-2 soak → the Tier-3 decision is a re-measure, not a
   build; #94's corrected-facts lens makes the soak eyeball-able.
-- **#102** Mini's turn shape → answered by 1.1's `toolCallingMode`; the
-  small-talk gate stays rejected ("brittle both ways", 2026-06-12).
+- **#102** Mini's turn shape → now answerable by `toolCallingMode` (shipped in
+  1.1.0); the small-talk gate stays rejected ("brittle both ways", 2026-06-12).
 - Android eval harness — SHIPPED 08-22 (`tools/eval/android/`; the F1/F2/
   KV-clear fixes lifted Mini 9 → 19/22 and falsified the "armv9 broken
   logits" read). The KMP app is a slow burn; models may diverge from Apple.
@@ -315,35 +248,31 @@ stays a possible later companion.
 
 ## Needs Kev — open calls, gathered in one place
 
+- **LinkedIn + the first Teams customer** — the 90-day founder move (#369).
+  One post a week; the product demos itself; the DyslexiaAI story is the
+  unfair advantage.
 - **The Mini palette call** (above): smaller palette / shorter descriptions /
-  wait for 1.1's `toolCallingMode`.
+  `toolCallingMode(.disallowed)` (available since 1.1.0).
 - **#271** `TAP_PUSH_TOKEN` so the nightly bumps the Homebrew cask.
-- **The three merged remote branches** (`launch/day-one`,
-  `plates/ipad-sim-brain`, `release/mac-arm64-only`) — `git push origin
-  --delete` is classifier-blocked for the agent this week (it wasn't in
-  August); one command from a shell.
 - Brain-at-home §8 calls (naming, serving indicator, thermal etiquette,
   visionOS timing) unblock Phase A of the Android client.
 - Dream-cycle Tier-2 corpus-twin marker: sub-kind vs title-prefix (spec §5
   recommends sub-kind).
-- **Brand calls from the 08-03 dream cycle — most resolved by the store copy:**
-  Mike is COMMITTED ("My friends call me Mike" leads the Mac App Store
-  description, #298; ruling 08-16); the store noun is **agent** ("M1K3 —
-  Local AI Agent", Kev's copy). Still open: the Labyrinth icon family → attic
-  (`assets/app-icon/` + `assets/icons/labyrinth/`); the OG image regen
-  (`site/og.png` 06-13 and `assets/brand/readme-hero.png` 07-02 predate the
-  product — #322 carries the new ones); the reading-modes ceremony (ask once
-  at onboarding, not a Settings-only picker).
-- **"Machine", not "Mac", in M1K3's own voice — RATIFIED 2026-08-03**, not a
-  hot edit: the seam is `HostPlatform.noun` (one line) but `HostPlatformTests`
-  pins the macOS arm byte-identical because the gemma persona is A/B-frozen.
-  The pass: flip the noun → re-pin → A/B both brains → sweep the ~6
-  first-person UI strings.
-- Store keywords: `GPT` / `AGI` were removed on launch day (guideline 2.3.7);
-  en-US sits at exactly 100/100 — any new keyword displaces one.
+- **Brand calls** still open: the Labyrinth icon family → attic; the OG image
+  regen (`site/og.png` 06-13 and `assets/brand/readme-hero.png` 07-02 predate
+  the product — #322 carries the new ones); the reading-modes ceremony.
+- **"Machine", not "Mac", in M1K3's own voice — RATIFIED 2026-08-03**: the seam
+  is `HostPlatform.noun`; the pass: flip → re-pin → A/B both brains → sweep
+  the ~6 first-person UI strings.
+- Store keywords: en-US at exactly 100/100 — any new keyword displaces one.
 
 ---
 
+<!-- Review: Kev + claude-opus-4-6, 2026-09-17 — post-1.1.0 sweep: 1.0/1.1/1.2
+     sections folded (1.1.0 shipped PCC, intents, vision); "Now" rebuilt for the
+     landing PRs (#370/#371/#372) + the monetization issue (#369). #336/#341
+     closed (stale/backwards). iOS Phase 3 App Intents marked SHIPPED (#366).
+     Confidence 0.85. -->
 <!-- Review: Kev + claude-fable-5.1, 2026-09-15 (launch night): the post-launch
      realign. Header truthed to the 09-15 submission (Mac 362 / iOS 361,
      MANUAL); Now rebuilt as "in the queue" (on-approval steps, the 1.0.1
