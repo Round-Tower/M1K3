@@ -902,7 +902,7 @@ struct ContentView: View {
                     .buttonStyle(.glass)
                     .buttonBorderShape(.circle)
                     .disabled(env.chat.isResponding || !env.isReady)
-                    .help("Attach an image — Big can see it")
+                    .help("Attach an image — \(env.selectedBrain.displayName) can see it")
                     .accessibilityLabel("Attach image")
                 }
 
