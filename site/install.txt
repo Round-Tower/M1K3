@@ -1,6 +1,6 @@
 # M1K3 — install recipe
 # https://m1k3.app/install.txt · the text version of https://m1k3.app/install
-# Updated 2026-09-15. For coding agents, and for people who prefer text.
+# Updated 2026-09-17. For coding agents, and for people who prefer text.
 
 M1K3 is a private, on-device AI for macOS: local brains (MLX + Apple
 Foundation Models), live voice, a knowledge graph over the user's documents,
@@ -21,8 +21,8 @@ STEP 1 — GET THE APP
     https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg
   The command-line client then lives at
     /Applications/M1K3.app/Contents/Helpers/m1k3
-  Mac App Store: 1.0 was submitted to App Review on 2026-09-15; until it is
-  live the TestFlight beta is the same lane — https://testflight.apple.com/join/Fxp2F5Je
+  Mac App Store: M1K3 is on the App Store —
+    https://apps.apple.com/app/id6780230835
   Note: the App Store copy of `m1k3` is sandboxed, so its `connect` prints
   the config instead of writing it. Prefer Homebrew or the DMG for agents.
 
