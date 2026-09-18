@@ -10,6 +10,10 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-5, 2026-09-13 — pins the every-launch hero restore (a voice turn
 //  grew the demo conversation run over run). Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — the seed's count pins move to `allMemories`, and the edges land exactly
+//  once across a double seed. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (3) — #383 review fold: `theCuratedFiveAreEmbeddedFirst…` — an order-spy embedder pins that the five, then every
+//  document chunk, are embedded before any backstory fact. Red before the reorder. Confidence 0.9.
 //
 
 import Foundation
@@ -51,7 +55,11 @@ struct DemoSeederTests {
         let ingester = DocumentIngester(store: store, embedder: embedder)
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
-        #expect(try memory.liveCount() == DemoPersona.memories.count)
+        #expect(try memory.liveCount() == DemoPersona.allMemories.count)
+        // The threads land with the motes, once. (What stops the second call is the
+        // MARKER guard — it returns before any write. `link`'s own idempotence is a
+        // second line of defence, pinned where it lives: MemoryStoreTests.linkIsIdempotent.)
+        #expect(try memory.allEdges().count == DemoPersona.constellationEdges.count)
         #expect(try store.allItems(kind: .document).count == DemoPersona.documents.count)
         let vector = try await embedder.embed("lair")
         let hits = try memory.recall(query: "lair", queryVector: vector, limit: 3, threshold: 0)
@@ -114,7 +122,75 @@ struct DemoSeederTests {
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
         try FileManager.default.removeItem(at: root.appendingPathComponent(".demo-knowledge-seeded"))
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
-        #expect(try memory.liveCount() == DemoPersona.memories.count)
+        #expect(try memory.liveCount() == DemoPersona.allMemories.count)
         #expect(try store.allItems(kind: .document).count == DemoPersona.documents.count)
+    }
+
+    @Test func theCuratedFiveAreEmbeddedFirstSoTheMemoriesPlateIsReadyAsEarlyAsEver() async throws {
+        // The Memories plate waits a FIXED settle and loads once (onAppear) — nothing
+        // re-renders it when seeding finishes (#383 second pass). With 39 embeds
+        // instead of 5, the five it actually shows must not be the LAST to land:
+        // seeded first, the plate is ready exactly as early as it was before the
+        // backstory existed. Dates — not insertion order — still sort the list.
+        let root = try tempRoot()
+        let store = try KnowledgeStore(path: root.appendingPathComponent("knowledge.sqlite").path)
+        let memory = try MemoryStore(path: root.appendingPathComponent("memory.sqlite").path)
+        let spy = OrderSpyEmbedder()
+        let ingester = DocumentIngester(store: store, embedder: spy)
+        try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: spy, root: root)
+        let order = await spy.texts
+        let firstFive = Array(order.prefix(DemoPersona.memories.count))
+        #expect(firstFive == DemoPersona.memories.map(\.text))
+        // …and the DOCUMENTS land before any backstory too: the Documents plate has
+        // the same fixed settle, and the voice plates recall "the original roofline"
+        // from a document. The old workload, in the old order, comes first; the
+        // backstory and its threads are the constellation's alone, and that view
+        // re-polls the store.
+        let memoryTexts = Set(DemoPersona.allMemories.map(\.text))
+        let backstoryTexts = Set(DemoPersona.backstory.map(\.text))
+        let lastDocumentChunk = try #require(order.lastIndex { !memoryTexts.contains($0) })
+        let firstBackstory = try #require(order.firstIndex { backstoryTexts.contains($0) })
+        #expect(lastDocumentChunk < firstBackstory)
+        #expect(try memory.liveCount() == DemoPersona.allMemories.count)
+    }
+}
+
+/// Records the order texts are embedded in; vectors come from the hashing service.
+private actor OrderLog {
+    var texts: [String] = []
+    func append(_ text: String) {
+        texts.append(text)
+    }
+}
+
+private struct OrderSpyEmbedder: EmbeddingService {
+    private let inner = HashingEmbeddingService()
+    private let log = OrderLog()
+    var dimension: Int {
+        inner.dimension
+    }
+
+    var fingerprint: String {
+        inner.fingerprint
+    }
+
+    var texts: [String] {
+        get async { await log.texts }
+    }
+
+    func embed(_ text: String) async throws -> [Float] {
+        await log.append(text)
+        return try await inner.embed(text)
+    }
+
+    func embedBatch(_ texts: [String]) async throws -> [[Float]] {
+        for text in texts {
+            await log.append(text)
+        }
+        return try await inner.embedBatch(texts)
+    }
+
+    func isAvailable() async -> Bool {
+        await inner.isAvailable()
     }
 }
