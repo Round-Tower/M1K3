@@ -16,6 +16,10 @@
 # Review: Kev + claude-opus-5, 2026-09-11 — the `m1k3` command-line client: a `tool` target embedded into the app at
 # Contents/Helpers/m1k3, and the entitlements INDIRECTION ($(M1K3_APP_ENTITLEMENTS) / $(M1K3_CLI_ENTITLEMENTS)) that lets a
 # release script pick each one separately instead of stamping the app's set onto the helper with one global override.
+# Review: Kev + claude-fable-5.1, 2026-09-18 — M1K3CLI gains GENERATE_INFOPLIST_FILE + CREATE_INFOPLIST_SECTION_IN_BINARY. Without an
+# Info.plist INSIDE the binary the sandboxed helper traps in libsystem_secinit before main() (exit 133, no output): App Store
+# build 362 (the 1.0.0 build in App Review, and on TestFlight) carried it — caught before release. A/B proven on two ad-hoc-signed sandboxed builds; guarded by tools/ci/check_helper_embed.py and by
+# a launch smoke in both release scripts. Confidence 0.9.
 
 name: M1K3
 
@@ -518,6 +522,18 @@ targets:
       base:
         PRODUCT_NAME: m1k3
         PRODUCT_BUNDLE_IDENTIFIER: app.m1k3.cli
+        # ★ The bundle id above is only a build setting until it is INSIDE the
+        # binary. A bare Mach-O has no Info.plist beside it, so without a
+        # `__TEXT,__info_plist` section the SANDBOXED copy has no identifier for
+        # the sandbox to build its container from: libsystem_secinit traps
+        # before main() — exit 133, zero bytes out, `--help` included. App Store
+        # build 362 — in review for 1.0.0 — carried it (found 2026-09-18); the unsandboxed DMG
+        # copy, the only one anyone had run, worked. It also made codesign fall
+        # back to the identifier `m1k3` instead of app.m1k3.cli.
+        # tools/ci/check_helper_embed.py fails CI (the Project-guards job) if either
+        # line goes, and both release scripts refuse a helper without the section.
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
         # Same indirection as the app target: the DEFAULT is the App-Store-safe
         # sandboxed set (network.client only), and release-macos.sh opts the
         # DMG's copy into the unsandboxed one. A sandboxed helper can't write

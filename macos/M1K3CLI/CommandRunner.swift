@@ -24,6 +24,11 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — the already-connected read of
 //  `claude`'s stderr now lives in ConnectPlan, anchored on the server name.
 //  Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — `agent-notes --write` is sandbox-aware, as `connect`
+//  already was. Found the first time the sandboxed helper ever RAN (it had trapped at launch since it
+//  was added — no Info.plist section, see project.yml): it wrote AGENTS.md into its own container and
+//  printed "wrote …". Now it prints the block (stdout) and says why (stderr). Verified by run on an
+//  ad-hoc-signed sandboxed build; `connect` was driven the same way and already printed. Confidence 0.85.
 //
 
 import Darwin // getpwuid — the account's REAL home, which the sandbox hides
@@ -185,6 +190,17 @@ struct CommandRunner {
             Output.line(AgentNotes.block)
             return ExitCode.ok
         case let .file(path):
+            // Same stance as `connect`: a sandboxed helper's `~` and its working
+            // directory both resolve inside ~/Library/Containers/app.m1k3.cli, so
+            // a write "succeeds" into a file no agent will ever read. The notice
+            // goes to stderr so the block on stdout stays pipeable (`>> AGENTS.md`
+            // is the shell's write, outside the sandbox, and lands where asked).
+            if isSandboxed {
+                Output.error("m1k3: this copy is sandboxed (App Store build) and can't write \(path) for you.")
+                Output.error("m1k3: here's the block — or run: m1k3 agent-notes >> \(path)")
+                Output.line(AgentNotes.block)
+                return ExitCode.ok
+            }
             let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
             let existing = try? String(contentsOf: url, encoding: .utf8)
             let merged = AgentNotes.merge(into: existing)
