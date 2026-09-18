@@ -381,6 +381,13 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     }
 
     public func generate(prompt: String) async throws -> String {
+        guard isAvailable else {
+            Self.log.error("afm unavailable at generate — Apple Intelligence is not ready")
+            throw InferenceError.providerUnavailable(
+                "Mini is temporarily unavailable — Apple Intelligence is not ready. "
+                    + "Try switching to another brain in Settings."
+            )
+        }
         let instrText = instructions()
         let (session, warmth, heldPrefix) = takeSession(instructions: instrText, prompt: prompt)
         logTurnStart(promptChars: prompt.count, streaming: false, warmth: warmth)
@@ -406,7 +413,11 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     }
 
     public func generateStreaming(prompt: String) -> AsyncStream<String> {
-        AsyncStream { continuation in
+        guard isAvailable else {
+            Self.log.error("afm unavailable at generateStreaming — Apple Intelligence is not ready")
+            return AsyncStream { $0.finish() }
+        }
+        return AsyncStream { continuation in
             let instrText = instructions()
             let (session, warmth, _) = takeSession(instructions: instrText, prompt: prompt)
             logTurnStart(promptChars: prompt.count, streaming: true, warmth: warmth)

@@ -34,4 +34,8 @@ public protocol InferenceProvider: Sendable {
 public enum InferenceError: Error, Sendable, Equatable {
     /// The backend failed to produce a response.
     case generationFailed(String)
+    /// The backend is not available right now (e.g. Apple Intelligence went
+    /// away after a profile switch). Callers must NOT fall back on the same
+    /// provider — it will fail identically.
+    case providerUnavailable(String)
 }

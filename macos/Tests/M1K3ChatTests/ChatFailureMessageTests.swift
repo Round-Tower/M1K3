@@ -6,6 +6,7 @@
 
 import Foundation
 @testable import M1K3Chat
+import M1K3Inference
 import Testing
 
 private struct GenericError: Error, LocalizedError {
@@ -27,5 +28,12 @@ struct ChatFailureMessageTests {
         let message = ChatFailureMessage.userFacing(for: GenericError())
         #expect(message.contains("Sorry"))
         #expect(message.contains("something broke"))
+    }
+
+    @Test("provider unavailable surfaces the provider's own message")
+    func providerUnavailable() {
+        let error = InferenceError.providerUnavailable("Mini is temporarily unavailable.")
+        let message = ChatFailureMessage.userFacing(for: error)
+        #expect(message == "Mini is temporarily unavailable.")
     }
 }

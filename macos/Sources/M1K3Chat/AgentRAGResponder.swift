@@ -286,6 +286,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             return (sources: [], stream: stream)
         }
 
+        if !provider.isAvailable {
+            throw InferenceError.providerUnavailable(
+                "Mini is temporarily unavailable — Apple Intelligence is not ready. "
+                    + "Try switching to another brain in Settings."
+            )
+        }
+
         // Pre-generation phase instrument: the 2026-08-10 eval found 177s of
         // total log silence before a turn's first model call — "turn start:"
         // only fires after retrieval, so a blocked embed was invisible. One
