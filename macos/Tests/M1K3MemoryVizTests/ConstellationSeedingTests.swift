@@ -7,6 +7,8 @@
 //  affinity, related memories thread themselves, empty is empty.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-08, Confidence 0.85. Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — two pins: a typed + an affinity edge between the same pair draw ONE thread (the typed
+//  one, in either direction), and affinity still threads the pairs the typed graph leaves uncovered. Both red first. Confidence 0.9.
 //
 
 import Foundation
@@ -52,5 +54,32 @@ struct ConstellationSeedingTests {
     @Test("an empty world is an empty model")
     func emptyIsEmpty() {
         #expect(ConstellationSeeding.build(graphMemories: [], edges: [], seeds: [], maxNodes: 10).isEmpty)
+    }
+
+    @Test("a typed edge and an affinity edge between the SAME two memories draw ONE thread, and the typed one wins")
+    func noDoubledThreads() {
+        // Related memories thread themselves (affinity) — and the user, or the
+        // distiller, may ALSO have linked them. `edges + affinity` with no dedupe drew
+        // two lines on top of each other for that pair, in either direction (found by
+        // a review of the screengrab seed, #383 — but it is every user's sky).
+        let a = memory("The hydraulic seal failed under load")
+        let b = memory("Replace the hydraulic seal every spring")
+        let c = memory("Pancakes on Sunday")
+        let typed = MemoryEdge(fromID: b.id, toID: a.id, relation: "caused-by") // note: b → a
+        let model = ConstellationSeeding.build(graphMemories: [a, b, c], edges: [typed], seeds: [], maxNodes: 300)
+        let between = model.edges.filter { Set([$0.from, $0.to]) == Set([a.id, b.id]) }
+        #expect(between.count == 1)
+        #expect(between.first?.from == b.id && between.first?.to == a.id, "the typed edge is the one kept")
+    }
+
+    @Test("affinity still threads a pair the typed edges do not cover")
+    func affinityStillFillsTheGaps() {
+        let a = memory("The hydraulic seal failed under load")
+        let b = memory("Replace the hydraulic seal every spring")
+        let c = memory("The hydraulic press needs a new seal")
+        let typed = MemoryEdge(fromID: a.id, toID: b.id, relation: "related")
+        let model = ConstellationSeeding.build(graphMemories: [a, b, c], edges: [typed], seeds: [], maxNodes: 300)
+        #expect(model.edges.contains { Set([$0.from, $0.to]) == Set([a.id, c.id]) || Set([$0.from, $0.to]) == Set([b.id, c.id]) })
+        #expect(model.edges.count(where: { Set([$0.from, $0.to]) == Set([a.id, b.id]) }) == 1)
     }
 }

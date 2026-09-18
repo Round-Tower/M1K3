@@ -13,6 +13,9 @@
 //  cap-before-affinity order and graph-wins dedup are pinned; the Mac host
 //  now calls this, so the two shells cannot disagree). Prior: the Mac's
 //  MemoryConstellationCanvas.buildSeeded (Kev + claude-fable-5, 2026-06-17).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — affinity edges are dropped for any pair a TYPED edge already joins (unordered).
+//  `edges + affinity` drew a doubled line for linked memories that are also topically alike — every user's sky, found by a review of
+//  the screengrab seed (#383). The typed edge is the one kept. Confidence 0.9.
 //
 
 import Foundation
@@ -33,7 +36,23 @@ public enum ConstellationSeeding {
         let capped = merged.count > maxNodes
             ? Array(merged.sorted { $0.createdAt > $1.createdAt }.prefix(maxNodes))
             : merged
-        let affinity = MemoryAffinity.edges(among: capped)
+        // Affinity fills the GAPS the typed graph leaves — it never redraws a thread
+        // that is already there. Two memories the user (or the distiller) linked are
+        // usually topically alike too, so `edges + affinity` drew a second line on top
+        // of the first for exactly the pairs that matter most. Unordered: a typed
+        // b → a covers an affinity a → b. The typed edge is the one kept.
+        let typedPairs = Set(edges.map { UnorderedPair($0.fromID, $0.toID) })
+        let affinity = MemoryAffinity.edges(among: capped).filter { !typedPairs.contains(UnorderedPair($0.fromID, $0.toID)) }
         return ConstellationLayout.build(memories: capped, edges: edges + affinity, maxNodes: maxNodes)
+    }
+}
+
+/// Two memory ids as a pair with no direction — the key a thread is unique on.
+private struct UnorderedPair: Hashable {
+    let low: UUID
+    let high: UUID
+
+    init(_ a: UUID, _ b: UUID) {
+        (low, high) = a.uuidString <= b.uuidString ? (a, b) : (b, a)
     }
 }
