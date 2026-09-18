@@ -20,6 +20,11 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.8 — #286: memoryTitles now filters out
 //  SelfNoteClassifier-flagged wiring notes before drawing chips (this gatherer stays
 //  verify-by-launch; the classifier itself is pinned in SelfNoteClassifierTests).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — the canvas reads the newest pulse's own chips (`latestChips()`, one indexed read, only when
+//  a pulse exists); StarterPrompts gates freshness and judges each chip again. Still no inference at canvas time. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: one store read (`latestPulseForCanvas`) for the pulse's age and chips. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (3) — the flag gates DISPLAY too: stored chips only reach the canvas while
+//  `heartbeat.authorChips` is on. The write side alone was gated (PR #382 fourth pass). Confidence 0.9.
 //
 
 import Foundation
@@ -57,8 +62,15 @@ extension AppEnvironment {
         let open = (try? todoStore?.list(states: [.open])) ?? []
         context.openTodoCount = open.count
         context.overdueTodoCount = open.count(where: { $0.isOverdue(now: now) })
-        if let latest = try? heartbeatStore?.latestDate() {
-            context.latestPulseAge = now.timeIntervalSince(latest)
+        // ONE read for the pulse: its age and the questions it authored, from a
+        // single transaction, so they always describe the same pulse. StarterPrompts
+        // applies the freshness gate and judges each chip again.
+        if let latest = try? heartbeatStore?.latestPulseForCanvas() {
+            context.latestPulseAge = now.timeIntervalSince(latest.createdAt)
+            // OFF governs DISPLAY too, not only authoring: chips stored while the flag was
+            // on (a dev machine, a later default flipped back) must not keep surfacing
+            // once it is off (PR #382 fourth pass — the write side alone was gated).
+            context.pulseChips = Self.heartbeatAuthorsChips() ? latest.chips : []
         }
         if UserDefaults.standard.bool(forKey: Self.conversationLogEnabledKey),
            let activity = try? conversationLog?.activity(since: calendar.startOfDay(for: now))

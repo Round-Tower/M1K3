@@ -30,6 +30,8 @@
 //  laundering hole closed: `earlierPulses` → `earlierDigests`, so the
 //  evidence set is code-composed digests only, never earlier narratives.
 //  Red-first test pinned; the call site passes digests.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — `digitRuns` private → internal so `PulseAskLine.admit` holds a chip to the
+//  SAME invented-digit rule (one copy). No behaviour change; the guard's own 15 pins re-run green. Confidence 0.9.
 //
 
 import Foundation
@@ -120,7 +122,8 @@ public enum NarrativeGuard {
             .map { $0 }
     }
 
-    private static func digitRuns(in text: String) -> Set<String> {
+    /// Internal, not private: `PulseAskLine.admit` holds a chip to this same rule — one copy of it.
+    static func digitRuns(in text: String) -> Set<String> {
         var runs: Set<String> = []
         var current = ""
         for character in text {

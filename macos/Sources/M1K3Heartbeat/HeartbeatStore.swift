@@ -31,6 +31,13 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: `latestID()` — the row id a todo
 //  proposed by this pulse records as its origin.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — pulse-authored chips: `v3-chips` sidecar (`pulse_chips`, ordered by `position`, ON DELETE CASCADE
+//  like the tags — Clear and the cap trim take them too), `record(chips:)`, one grouped `attachChips`, and `latestChips()` —
+//  the NEWEST pulse only, so an older pulse's questions never stand in for a newer chipless one. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: `latestPulseForCanvas()` returns the newest pulse's date AND chips from ONE transaction;
+//  `latestChips()` is retired with its only caller (two reads could pair one pulse's age with another's questions). Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (6) — PR #382, the two SUMMONED passes I had not read: `foreignKeysEnabled()` — the cascades rest on GRDB's default Configuration turning
+//  foreign keys ON (raw SQLite ships them OFF); now pinned, so dropping it fails one test that names the cause. Confidence 0.9.
 
 import Foundation
 import GRDB
@@ -47,10 +54,14 @@ public struct HeartbeatEntry: Identifiable, Equatable, Sendable {
     /// Structural shape tags (2026-08-30) — composed by HeartbeatComposer,
     /// never content. Empty for pre-tag rows.
     public var tags: Set<PulseTag>
+    /// The "ask me" chips this pulse authored for the next blank canvas
+    /// (2026-09-18) — already through `PulseAskLine.admit`, in the order
+    /// written. Empty for pre-chip rows and for every pulse that wrote none.
+    public var chips: [String]
 
     public init(
         id: Int64, digest: String, narrative: String?, renderedBy: String,
-        createdAt: Date, tags: Set<PulseTag> = []
+        createdAt: Date, tags: Set<PulseTag> = [], chips: [String] = []
     ) {
         self.id = id
         self.digest = digest
@@ -58,6 +69,7 @@ public struct HeartbeatEntry: Identifiable, Equatable, Sendable {
         self.renderedBy = renderedBy
         self.createdAt = createdAt
         self.tags = tags
+        self.chips = chips
     }
 
     /// What the UI shows: the narrative when one passed the guard, else the
@@ -109,6 +121,18 @@ public final class HeartbeatStore: @unchecked Sendable {
                 t.primaryKey(["pulse_id", "tag"])
             }
         }
+        // Pulse-authored chips (2026-09-18). Same cascade rule as the tags, for
+        // the same reason: Clear and the cap trim take a pulse's chips with it.
+        // `position` keeps the order written; the canvas rotates between them.
+        migrator.registerMigration("v3-chips") { db in
+            try db.create(table: "pulse_chips") { t in
+                t.column("pulse_id", .integer).notNull().indexed()
+                    .references("pulses", onDelete: .cascade)
+                t.column("position", .integer).notNull()
+                t.column("text", .text).notNull()
+                t.primaryKey(["pulse_id", "position"])
+            }
+        }
         try migrator.migrate(dbQueue)
     }
 
@@ -124,7 +148,7 @@ public final class HeartbeatStore: @unchecked Sendable {
     @discardableResult
     public func record(
         digest: String, narrative: String?, renderedBy: String,
-        tags: Set<PulseTag> = [], at date: Date = Date()
+        tags: Set<PulseTag> = [], chips: [String] = [], at date: Date = Date()
     ) -> Int64? {
         try? dbQueue.write { [capacity] db -> Int64 in
             try db.execute(
@@ -139,6 +163,12 @@ public final class HeartbeatStore: @unchecked Sendable {
                 try db.execute(
                     sql: "INSERT OR IGNORE INTO pulse_tags (pulse_id, tag) VALUES (?, ?)",
                     arguments: [pulseID, tag.rawValue]
+                )
+            }
+            for (position, chip) in chips.enumerated() {
+                try db.execute(
+                    sql: "INSERT INTO pulse_chips (pulse_id, position, text) VALUES (?, ?, ?)",
+                    arguments: [pulseID, position, chip]
                 )
             }
             try db.execute(
@@ -163,7 +193,7 @@ public final class HeartbeatStore: @unchecked Sendable {
                 sql: "SELECT * FROM pulses ORDER BY id DESC LIMIT ?",
                 arguments: [limit]
             )
-            return try Self.attachTags(to: rows.map(Self.entry(from:)), db: db)
+            return try Self.attachChips(to: Self.attachTags(to: rows.map(Self.entry(from:)), db: db), db: db)
         }
     }
 
@@ -177,7 +207,7 @@ public final class HeartbeatStore: @unchecked Sendable {
                 sql: "SELECT * FROM pulses WHERE created_at >= ? ORDER BY id ASC",
                 arguments: [date.timeIntervalSince1970]
             )
-            return try Self.attachTags(to: rows.map(Self.entry(from:)), db: db)
+            return try Self.attachChips(to: Self.attachTags(to: rows.map(Self.entry(from:)), db: db), db: db)
         }
     }
 
@@ -185,6 +215,42 @@ public final class HeartbeatStore: @unchecked Sendable {
     func tagRowCount() throws -> Int {
         try dbQueue.read { db in
             try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pulse_tags") ?? 0
+        }
+    }
+
+    /// Whether SQLite is enforcing foreign keys on this store's queue. Raw SQLite
+    /// ships with them OFF; GRDB's default `Configuration` turns them ON, and both
+    /// sidecars' `ON DELETE CASCADE` — the "nothing survives Clear" guarantee —
+    /// rest on that default. Pinned, so a future custom `Configuration` that drops
+    /// it fails one test that names the cause (PR #382 review).
+    func foreignKeysEnabled() throws -> Bool {
+        try dbQueue.read { db in try Bool.fetchOne(db, sql: "PRAGMA foreign_keys") ?? false }
+    }
+
+    /// Total chip rows — the cascade tests' probe.
+    func chipRowCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pulse_chips") ?? 0
+        }
+    }
+
+    /// The blank canvas's ONE read: the newest pulse's date and its chips, from a
+    /// single transaction. Two reads (`latestDate()`, then a separate chips query) left a
+    /// window — tiny, pulses are hours apart, but real — in which a pulse landing
+    /// between them paired a fresh age with an older pulse's questions, or the
+    /// reverse (PR #382 second pass). nil = never pulsed.
+    public func latestPulseForCanvas() throws -> (createdAt: Date, chips: [String])? {
+        try dbQueue.read { db in
+            guard let row = try Row.fetchOne(db, sql: "SELECT id, created_at FROM pulses ORDER BY id DESC LIMIT 1")
+            else { return nil }
+            let pulseID: Int64 = row["id"] ?? 0
+            let createdAt: Double = row["created_at"] ?? 0
+            let chips = try String.fetchAll(
+                db,
+                sql: "SELECT text FROM pulse_chips WHERE pulse_id = ? ORDER BY position ASC",
+                arguments: [pulseID]
+            )
+            return (Date(timeIntervalSince1970: createdAt), chips)
         }
     }
 
@@ -250,6 +316,32 @@ public final class HeartbeatStore: @unchecked Sendable {
             var tagged = entry
             tagged.tags = byPulse[entry.id] ?? []
             return tagged
+        }
+    }
+
+    /// One grouped fetch for the batch's chips — never a query per pulse.
+    private static func attachChips(to entries: [HeartbeatEntry], db: Database) throws -> [HeartbeatEntry] {
+        guard !entries.isEmpty else { return entries }
+        let ids = entries.map(\.id)
+        let placeholders = databaseQuestionMarks(count: ids.count)
+        let rows = try Row.fetchAll(
+            db,
+            sql: """
+            SELECT pulse_id, text FROM pulse_chips
+            WHERE pulse_id IN (\(placeholders)) ORDER BY pulse_id, position
+            """,
+            arguments: StatementArguments(ids)
+        )
+        var byPulse: [Int64: [String]] = [:]
+        for row in rows {
+            let pulseID: Int64 = row["pulse_id"] ?? 0
+            let text: String = row["text"] ?? ""
+            byPulse[pulseID, default: []].append(text)
+        }
+        return entries.map { entry in
+            var chipped = entry
+            chipped.chips = byPulse[entry.id] ?? []
+            return chipped
         }
     }
 }

@@ -6,6 +6,9 @@
 //  (QA pass, 2026-09-05, item 10). Deterministic under a seeded generator.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.9. Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — five pins for pulse-authored chips: replace-the-sentence, the fallback,
+//  stale-means-silent, judged-again (fold / drop / fall back), and one-per-canvas-with-rotation over 60 seeds (that one
+//  went red on 5 seeds before `pick` learned the rule). Confidence 0.9.
 //
 
 @testable import M1K3Chat
@@ -265,5 +268,71 @@ struct StarterPromptsContextTests {
             let picks = pick(context, seed: seed)
             #expect(Set(picks).count == picks.count)
         }
+    }
+
+    // MARK: - Pulse-authored chips (2026-09-18)
+
+    @Test("a fresh pulse's own chips replace the fixed sentence — up to two, in the order written")
+    func pulseAuthoredChips() {
+        var context = StarterPrompts.Context.empty
+        context.hour = 14
+        context.latestPulseAge = 3 * 3600
+        context.pulseChips = ["What did Claude Code want today?", "Shall we clear the overdue todo?", "A third one?"]
+        let pulse = StarterPrompts.candidates(for: context).filter { $0.source == .pulse }.map(\.text)
+        #expect(pulse == ["What did Claude Code want today?", "Shall we clear the overdue todo?"])
+    }
+
+    @Test("no authored chips: the fixed sentence is still the pulse chip")
+    func pulseFallsBackToTheFixedSentence() {
+        var context = StarterPrompts.Context.empty
+        context.hour = 14
+        context.latestPulseAge = 3 * 3600
+        let pulse = StarterPrompts.candidates(for: context).filter { $0.source == .pulse }.map(\.text)
+        #expect(pulse == ["What did you notice while I was away?"])
+    }
+
+    @Test("a stale pulse's chips are stale too — they say nothing")
+    func stalePulseChipsAreDropped() {
+        var context = StarterPrompts.Context.empty
+        context.hour = 14
+        context.latestPulseAge = 3 * 24 * 3600
+        context.pulseChips = ["What did Claude Code want today?"]
+        #expect(StarterPrompts.candidates(for: context).isEmpty)
+    }
+
+    @Test("the canvas is the final judge: an over-long or blank chip is dropped, never cut into another question")
+    func pulseChipsAreJudgedAgain() {
+        var context = StarterPrompts.Context.empty
+        context.hour = 14
+        context.latestPulseAge = 3 * 3600
+        context.pulseChips = [
+            String(repeating: "long ", count: 12) + "?", // > maxChipLength
+            " \n ",
+            "What\ndid I\r\nmiss?", // folds to one line and fits
+        ]
+        let pulse = StarterPrompts.candidates(for: context).filter { $0.source == .pulse }.map(\.text)
+        #expect(pulse == ["What did I miss?"])
+        // All refused → the fixed sentence comes back rather than an empty slot.
+        context.pulseChips = [String(repeating: "long ", count: 12) + "?"]
+        let fallback = StarterPrompts.candidates(for: context).filter { $0.source == .pulse }.map(\.text)
+        #expect(fallback == ["What did you notice while I was away?"])
+    }
+
+    @Test("one authored chip per canvas at most — and across canvases both get their turn")
+    func onePulseChipPerCanvasAndTheyRotate() {
+        var context = StarterPrompts.Context.empty
+        context.hour = 14
+        context.latestPulseAge = 3 * 3600
+        context.pulseChips = ["What did Claude Code want today?", "Shall we clear the overdue todo?"]
+        context.memoryTitles = ["Ardmore round tower"]
+        context.openTodoCount = 2
+        var seen: Set<String> = []
+        for seed in UInt64(1) ... 60 {
+            let picks = pick(context, seed: seed)
+            let authored = picks.filter(context.pulseChips.contains)
+            #expect(authored.count <= 1, "seed \(seed): \(picks)")
+            seen.formUnion(authored)
+        }
+        #expect(seen == Set(context.pulseChips))
     }
 }

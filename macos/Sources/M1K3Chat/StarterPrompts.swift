@@ -22,6 +22,14 @@
 //  timestamps, so the chip must not promise a window the answer (recent_activity) decides for itself;
 //  the activity gate reads the same trimmed titles as the chips (a blank-only title is no activity);
 //  the phone's memory chips fold embedded newlines through the same `trimmed` (was ends-only).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — PULSE-AUTHORED CHIPS (item 3 of the 09-11 read-out): `Context.pulseChips`
+//  carries the questions the latest pulse wrote for itself (M1K3Heartbeat.PulseAskLine, guarded at write time). While the
+//  pulse is fresh they REPLACE the fixed sentence, which stays as the fallback; `.pulse` caps at two candidates and `pick`
+//  takes at most ONE per canvas, so the two rotate. Judged again here (one line, dropped — never cut — past maxChipLength):
+//  they are model-authored from a digest carrying untrusted text and are sent as the user's words. No inference at canvas
+//  time, still. Confidence 0.85 (rules pinned red-first; what a real brain writes after `ASK:` is verify-by-run).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (2) — a note at `pick`: the one-`.pulse`-per-canvas rule evens its odds only while
+//  `contextRoom` >= 2 (the Mac's count of 4). Comment only. Confidence 0.9.
 //
 
 import Foundation
@@ -92,6 +100,12 @@ public enum StarterPrompts {
         public var overdueTodoCount: Int
         /// Seconds since the latest heartbeat pulse; nil when there is none.
         public var latestPulseAge: TimeInterval?
+        /// The "ask me" chips the latest pulse authored for itself (M1K3Heartbeat's
+        /// `PulseAskLine`, guarded there at write time), in the order written. Only
+        /// read while that pulse is fresh. MODEL-AUTHORED from a digest that carries
+        /// untrusted text, and sent as the user's words when tapped — so they are
+        /// judged again here: folded to one line, dropped (never cut) when too long.
+        public var pulseChips: [String]
         /// MCP visitor calls since midnight (0 when the log is off).
         public var visitorCallsToday: Int
         /// Self-reported MCP client names today, in the log's own order
@@ -105,6 +119,7 @@ public enum StarterPrompts {
         public init(
             memoryTitles: [String] = [], conversationTitles: [String] = [],
             openTodoCount: Int = 0, overdueTodoCount: Int = 0, latestPulseAge: TimeInterval? = nil,
+            pulseChips: [String] = [],
             visitorCallsToday: Int = 0, visitorNames: [String] = [], hour: Int = 12
         ) {
             self.memoryTitles = memoryTitles
@@ -112,6 +127,7 @@ public enum StarterPrompts {
             self.openTodoCount = openTodoCount
             self.overdueTodoCount = overdueTodoCount
             self.latestPulseAge = latestPulseAge
+            self.pulseChips = pulseChips
             self.visitorCallsToday = visitorCallsToday
             self.visitorNames = visitorNames
             self.hour = hour
@@ -127,7 +143,7 @@ public enum StarterPrompts {
 
         public var cap: Int {
             switch self {
-            case .memory, .conversation: 2
+            case .memory, .conversation, .pulse: 2 // .pulse: the two chips a pulse may author
             default: 1
             }
         }
@@ -177,7 +193,17 @@ public enum StarterPrompts {
             add(.todos, "What's on my list?")
         }
         if let age = context.latestPulseAge, age <= freshPulseAge {
-            add(.pulse, "What did you notice while I was away?")
+            // The pulse's own questions when it wrote any that still fit; else the
+            // fixed sentence. Never both: the sentence is the fallback, not a third chip.
+            let authored = context.pulseChips.map(trimmed)
+                .filter { !$0.isEmpty && $0.count <= maxChipLength }
+            if authored.isEmpty {
+                add(.pulse, "What did you notice while I was away?")
+            } else {
+                for chip in authored {
+                    add(.pulse, chip)
+                }
+            }
         }
         if context.visitorCallsToday > 0 {
             if let name = context.visitorNames.map(trimmed).first(where: { !$0.isEmpty }) {
@@ -205,7 +231,7 @@ public enum StarterPrompts {
 
     /// `count` chips for a fresh canvas: one door (random), up to
     /// `maxContextChips` drawn at random from the candidates (already capped
-    /// per source by `candidates(for:)`), the rest from the pool — so the
+    /// per source by `candidates(for:)`; at most ONE from `.pulse`), the rest from the pool — so the
     /// canvas always carries what the stores know AND something it didn't
     /// have to. From three chips up, one slot is always the pool's, so at
     /// count 3 the context gets ONE chip and two only from count 4 (the Mac's
@@ -223,10 +249,23 @@ public enum StarterPrompts {
         // Room for context chips, keeping at least one pool slot when there
         // are three or more chips in total.
         let contextRoom = min(maxContextChips, max(0, count - picks.count - (count >= 3 ? 1 : 0)))
+        // `.pulse` may offer two candidates (the chips a pulse authored), but a
+        // canvas takes ONE: they are the same voice asking twice, and both slots
+        // to the pulse would crowd out what the stores know. The shuffle decides
+        // which — so across canvases both get their turn. (This evens `.pulse`'s odds
+        // with the single-candidate sources only while `contextRoom` >= 2, the Mac's
+        // count of 4; at a room of 1 the first shuffled ticket wins and `.pulse`'s two
+        // tickets keep their raw weight — the same edge `.memory`/`.conversation` have.
+        // No live caller uses that count; note it if one ever does. PR #382 review.)
+        var tookPulse = false
         for candidate in candidates(for: context).shuffled(using: &rng)
             where picks.count - 1 < contextRoom
         {
             guard !picks.contains(candidate.text) else { continue }
+            if candidate.source == .pulse {
+                guard !tookPulse else { continue }
+                tookPulse = true
+            }
             picks.append(candidate.text)
         }
         for prompt in pool.shuffled(using: &rng) where picks.count < count {
