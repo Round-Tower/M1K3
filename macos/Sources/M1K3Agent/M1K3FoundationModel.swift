@@ -21,6 +21,13 @@
 //  Both fixed; the bridge compiles again under M1K3_FM27 on GA. Confidence 0.8.
 //  Review: Kev + claude-opus-4-6, 2026-09-16 — M1K3_FM27 env-var gate removed; now
 //  #if canImport(FoundationModels) (Xcode 27 GA is the toolchain). Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — the three `@available(macOS 27.0, *)` gain `iOS 27.0,
+//  visionOS 27.0`. With the env gate gone this file compiles for EVERY platform on Xcode 27, and `*` left
+//  iOS at its deployment target, so `LanguageModelCapabilities` and the executor types failed as
+//  "only available in iOS 27.0 or newer" — no local iOS build of the shell could pass (CI's runner is on
+//  the older compiler, where `#if compiler(>=6.4)` skips the file). Verified on Xcode 27A266a: the M1K3iOS
+//  simulator build goes from 6 errors to BUILD SUCCEEDED, and M1K3visionOS builds too. No behaviour
+//  change. Confidence 0.9.
 //
 
 #if compiler(>=6.4)
@@ -37,7 +44,7 @@
     /// Apple keys the executor on its `Configuration` (a Hashable cache key), so the
     /// non-hashable session factory can't live in the config. This registry resolves a
     /// model id → the real `M1K3Model` (descriptor + session factory) at executor build.
-    @available(macOS 27.0, *)
+    @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
     public enum M1K3FoundationRegistry {
         private static let models = Mutex<[String: M1K3Model]>([:])
 
@@ -52,7 +59,7 @@
 
     /// A M1K3 brain as Apple's real `LanguageModel`. Registers itself so its executor
     /// can be reconstructed from the (hashable) configuration.
-    @available(macOS 27.0, *)
+    @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
     public struct M1K3FoundationModel: FoundationModels.LanguageModel {
         public typealias Executor = M1K3FoundationExecutor
 
@@ -78,7 +85,7 @@
         }
     }
 
-    @available(macOS 27.0, *)
+    @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
     public struct M1K3FoundationExecutor: FoundationModels.LanguageModelExecutor {
         public struct Configuration: Hashable, Sendable {
             public let modelID: String
