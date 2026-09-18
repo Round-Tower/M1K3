@@ -15,6 +15,8 @@
 //  test-first to graduate Fable's sketch; cosine engineered for deterministic
 //  cutoff assertions). Prior: scratch/memory-store-sketch/MemoryStore.swift
 //  (Kev + claude-fable-5).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — `linkIsIdempotent`: `link`'s doc comment has always claimed INSERT OR IGNORE on
+//  (from, to, relation); nothing pinned it until a review of the screengrab seeder (#383) noticed. The FIRST date stands. Confidence 0.9.
 
 import Foundation
 @testable import M1K3Knowledge
@@ -453,6 +455,23 @@ struct MemoryStoreGraphTests {
         let edges = try f.store.allEdges()
         #expect(edges.count == 2)
         #expect(edges.map(\.relation) == ["first", "second"]) // oldest-first
+    }
+
+    @Test("link is idempotent on (from, to, relation): the same edge twice is one edge, and the FIRST date stands")
+    func linkIsIdempotent() async throws {
+        // The doc comment on `link` has always claimed this (INSERT OR IGNORE on the
+        // composite key) and the screengrab seeder leans on it; nothing pinned it
+        // until a review of the seeder noticed (#383, 2026-09-18).
+        let f = try Fixture()
+        let a = try await f.remember("a")
+        let b = try await f.remember("b")
+        let first = MemoryEdge(fromID: a.id, toID: b.id, relation: "part-of", createdAt: Date(timeIntervalSince1970: 10))
+        try f.store.link(first)
+        try f.store.link(MemoryEdge(fromID: a.id, toID: b.id, relation: "part-of", createdAt: Date(timeIntervalSince1970: 99)))
+        #expect(try f.store.allEdges() == [first])
+        // A different relation between the same pair is a different thread.
+        try f.store.link(MemoryEdge(fromID: a.id, toID: b.id, relation: "related", createdAt: Date(timeIntervalSince1970: 20)))
+        #expect(try f.store.allEdges().count == 2)
     }
 
     @Test("related orders nearest hops first and excludes the seed itself")

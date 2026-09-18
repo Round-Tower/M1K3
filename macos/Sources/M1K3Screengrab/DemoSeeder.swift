@@ -72,7 +72,8 @@ public enum DemoSeeder {
         if let memory {
             // The backstory and the curated five, then the threads between them —
             // the constellation's plate needs a life, not five motes (DemoPersona).
-            // `link` is idempotent on (from, to, relation).
+            // Once-only by the marker + liveCount guards above; `link` is idempotent on
+            // (from, to, relation) besides (MemoryStoreTests.linkIsIdempotent).
             for fact in DemoPersona.allMemories {
                 try memory.remember(fact, embedding: await embedder.embed(fact.text))
             }

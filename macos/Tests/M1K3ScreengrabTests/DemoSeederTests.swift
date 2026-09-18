@@ -54,7 +54,9 @@ struct DemoSeederTests {
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
         #expect(try memory.liveCount() == DemoPersona.allMemories.count)
-        // The threads land with the motes, once — a second seed must not double them.
+        // The threads land with the motes, once. (What stops the second call is the
+        // MARKER guard — it returns before any write. `link`'s own idempotence is a
+        // second line of defence, pinned where it lives: MemoryStoreTests.linkIsIdempotent.)
         #expect(try memory.allEdges().count == DemoPersona.constellationEdges.count)
         #expect(try store.allItems(kind: .document).count == DemoPersona.documents.count)
         let vector = try await embedder.embed("lair")
