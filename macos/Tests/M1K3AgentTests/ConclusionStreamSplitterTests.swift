@@ -86,6 +86,31 @@ struct ConclusionStreamSplitterTests {
         #expect(emitted == "Fine so far.")
     }
 
+    @Test("post-ACTION prose resumes with a separator, not glued to the prior sentence")
+    func resumesWithSeparator() {
+        var splitter = ConclusionStreamSplitter()
+        let emitted = collect(
+            ["CONCLUSION: I'll check.\nACTION: lookup(Paris)\nHere's what I know."],
+            into: &splitter
+        )
+        #expect(emitted.contains("I'll check."))
+        #expect(emitted.contains("Here's what I know."))
+        #expect(!emitted.contains("I'll check.Here"))
+    }
+
+    @Test("a second ACTION after resumed prose does not leak through flush")
+    func secondActionDoesNotLeak() {
+        var splitter = ConclusionStreamSplitter()
+        let emitted = collect(
+            ["CONCLUSION: I'll check.\nACTION: lookup(Paris)\nHere's what I know.\nACTION: lookup(Rome)\nMore prose."],
+            into: &splitter
+        )
+        #expect(emitted.contains("I'll check."))
+        #expect(emitted.contains("Here's what I know."))
+        #expect(!emitted.contains("lookup(Rome)"))
+        #expect(emitted.contains("More prose."))
+    }
+
     @Test("emission is incremental — most of the conclusion arrives before the flush")
     func emitsIncrementally() {
         var splitter = ConclusionStreamSplitter()
