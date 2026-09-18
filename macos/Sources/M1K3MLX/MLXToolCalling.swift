@@ -2,7 +2,7 @@
 //  MLXToolCalling.swift
 //  M1K3MLX
 //
-//  Phase 12c — makes MLXGemmaProvider a `ToolCallingProvider`, so M1K3's main
+//  Phase 12c — makes MLXBrainProvider a `ToolCallingProvider`, so M1K3's main
 //  on-device brain calls tools in its model's NATIVE dialect instead of the
 //  prompt-ReAct floor. mlx-swift-lm 2.30.6 already parses the output for us
 //  (ToolCallProcessor + per-dialect parsers emit `.toolCall(ToolCall)` inline
@@ -337,7 +337,7 @@ enum MLXToolMapping {
 
 // MARK: - ToolCallingProvider conformance
 
-extension MLXGemmaProvider: ToolCallingProvider {
+extension MLXBrainProvider: ToolCallingProvider {
     /// Resolve a model's native tool-call dialect from its identifier. Explicit
     /// configuration wins; otherwise the model family decides. `nil` means we
     /// don't recognise the family → the agent falls back to the ReAct floor
@@ -1011,7 +1011,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                     toolNames: ToolTurnDiagnostics.toolNames(from: specs), text: text
                 ) { context.tokenizer.decode(tokenIds: fullIDs) }
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                turn = .text(MLXGemmaProvider.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded))
+                turn = .text(MLXBrainProvider.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded))
             } else {
                 turn = .toolCalls(calls)
             }

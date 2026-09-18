@@ -11,7 +11,7 @@ import Testing
 /// does NOT run safely under CLI `swift test` — MLX **aborts the whole process**
 /// ("Failed to load the default metallib", no catchable Swift error) because the
 /// xctest runner isn't an .app bundle (the same known limit
-/// `MLXEmbeddingServiceTests`/`MLXGemmaProviderTests` document, but WORSE here:
+/// `MLXEmbeddingServiceTests`/`MLXBrainProviderTests` document, but WORSE here:
 /// those two only fail their own test; this one takes the entire `swift test`
 /// run down with it). That is exactly why the env-var gate was ADDED here
 /// (verified: with the flag off, `swift test --parallel` stayed green at

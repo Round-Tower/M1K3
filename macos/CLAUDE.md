@@ -218,7 +218,7 @@ format runs **native** (`runNative`); otherwise the **ReAct** floor
   this dep moves) — the 08-08 bump took gemma-4 tool-use from 5/5 to **0/5**
   and only the smoke caught it (upstream #453's typed KV validation now
   *throws* on the caller `maxKVSize` that Gemma4Text had always silently
-  ignored; see `MLXGemmaProvider.supportsCallerKVCapacity`). Run it with
+  ignored; see `MLXBrainProvider.supportsCallerKVCapacity`). Run it with
   `M1K3_SELFTEST_CHATEVAL=1 M1K3_SELFTEST_CHATEVAL_BRAINS=big
   M1K3_SELFTEST_CHATEVAL_KINDS=tool-use`.
 - **`xcodebuild` needs `-skipPackagePluginValidation`** since the mlx-swift

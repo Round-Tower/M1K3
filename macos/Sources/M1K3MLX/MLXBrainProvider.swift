@@ -1,20 +1,20 @@
 //
-//  MLXGemmaProvider.swift
+//  MLXBrainProvider.swift
 //  M1K3MLX
 //
-//  Gemma generation on-device via MLX (Metal), behind the same InferenceProvider
-//  seam as AppleFoundationModelsProvider. This is M1K3's "main brain" tier — when
-//  selected, the chat answers stream from a real Gemma running in-process, no
-//  server, no cloud.
+//  On-device generation via MLX (Metal), behind the same InferenceProvider seam as
+//  AppleFoundationModelsProvider. This one class runs EVERY MLX brain — Qwen3 (Lil),
+//  LFM2.5 (pocket Mini), Gemma 4 (Big) — in-process, no server, no cloud. The model
+//  family is data (the `modelID` each call site passes from `BrainTier`), not the type.
 //
-//  Unproven-path note: the broader prior-project stack only ever exercised
-//  MLXEmbedders; MLXLLM generation is new here. It's compile-verified and covered
-//  by a gated integration test (downloads weights — minutes, network), but the
-//  first real on-device generation is the milestone to watch, not a settled fact.
+//  History: born 2026-06-06 as `MLXGemmaProvider`, when Gemma was the only model it
+//  had run. The family-specific behaviour that remains is keyed on the model id or the
+//  downloaded config/template (tool-call dialect, think traits, KV allow-list, sliding
+//  window), never on this type's name.
 //
-//  Default model: gemma-3-1b-it (QAT 4-bit, ~1GB) — the smallest current Gemma,
-//  picked so the first download is tolerable. Pass a beefier ModelConfiguration
-//  (e.g. LLMRegistry.gemma_2_9b_it_4bit) for quality once the path is trusted.
+//  Default model: the no-argument init still resolves gemma-3-1b-it (QAT 4-bit, ~1GB),
+//  a June fossil only the fast-tier tests lean on — every shipping call site passes a
+//  `modelID`. Changing it is a behaviour change and was left out of the rename.
 //
 //  Streaming contract: MLX yields *delta* chunks (incremental text). ChatSession's
 //  fold normalises that against AFM's cumulative snapshots, so both render right.
@@ -77,6 +77,13 @@
 //  traits are `thinkTraitsByName` for a family the dialect heuristic knows (unchanged answers), else nil and
 //  `ChatTemplateTraits` read off the downloaded template after the first load (fill-only, behind the same
 //  lock). `preOpensThinkTemplate` / `supportsThinkingToggle` / `thinkPrefixNeeded` are computed over the two.
+//  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — RENAMED `MLXGemmaProvider` →
+//  `MLXBrainProvider` (PLAN.md's queued misnomer fix: two of the three tiers it serves are not Gemma), with
+//  its four extension files and the test file; `RuntimeOption.mlxGemma` → `.mlx`; the default diagnostics
+//  `name` "mlx-gemma" → "mlx-brain" (checked: no store, eval JSON or router reads it). Mechanical — no
+//  behaviour change; the header above was rewritten because it still described a Gemma-only provider.
+//  Left alone on purpose: `Gemma4TemplateFix` / `GemmaMTPSpike` / `GemmaVisionSpike` (really Gemma-specific),
+//  dated records under scratch/ and ADR 0001, and the fossil default configuration.
 
 import Foundation
 import Hub
@@ -129,7 +136,7 @@ func logGenerationInfo(
 /// actor and the loaded `ModelContainer` is itself an isolation actor; the two
 /// post-load fills (the late dialect and the late think traits, #264) sit
 /// behind `lateDialectLock`; everything else is immutable.
-public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchecked Sendable {
+public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchecked Sendable {
     public let name: String
 
     let generateParameters: GenerateParameters
@@ -224,8 +231,8 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
 
     public init(
         configuration: ModelConfiguration = LLMRegistry.gemma3_1B_qat_4bit,
-        maxTokens: Int = MLXGemmaProvider.defaultMaxTokens,
-        name: String = "mlx-gemma",
+        maxTokens: Int = MLXBrainProvider.defaultMaxTokens,
+        name: String = "mlx-brain",
         thinkingEnabled: Bool = true
     ) {
         var params = GenerateParameters()
@@ -387,8 +394,8 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     /// unknown ids fall back to a plain configuration.
     public convenience init(
         modelID: String,
-        maxTokens: Int = MLXGemmaProvider.defaultMaxTokens,
-        name: String = "mlx-gemma",
+        maxTokens: Int = MLXBrainProvider.defaultMaxTokens,
+        name: String = "mlx-brain",
         thinkingEnabled: Bool = true
     ) {
         self.init(
@@ -587,7 +594,7 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
     /// template pass. The seeded case no longer goes through ChatSession at
     /// all — `ChatSession(cache:)` renders each new turn alone, which on a
     /// BOS-opening template (LFM2) planted a second start-of-text after the
-    /// cached persona and erased it (see MLXGemmaProvider+SeededPlainTurn).
+    /// cached persona and erased it (see MLXBrainProvider+SeededPlainTurn).
     private func makeUpstreamSession(_ container: ModelContainer) -> ChatSession {
         let session = ChatSession(
             container,
@@ -890,7 +897,7 @@ public final class MLXGemmaProvider: InferenceProvider, ModelPreloading, @unchec
 
 // MARK: - Reasoning-template normalisation
 
-extension MLXGemmaProvider {
+extension MLXBrainProvider {
     /// Whether the model family's chat template pre-opens `<think>` in the
     /// generation prompt, so the model emits only the CLOSING tag. Verified in
     /// Qwen3.5's chat_template.jinja (both 2B and 9B). Qwen3 re-emits its own
@@ -1104,7 +1111,7 @@ extension MLXGemmaProvider {
 /// Brain at Home raw route — a network-reachable session primed with the
 /// persona (About-the-user block included) is a prefix-extraction surface,
 /// so raw-ness is structural, not filtered (2026-08-19 audit, finding 1).
-extension MLXGemmaProvider: RawCompletionProviding {
+extension MLXBrainProvider: RawCompletionProviding {
     public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
         AsyncStream { continuation in
             let task = Task {

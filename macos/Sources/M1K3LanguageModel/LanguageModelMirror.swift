@@ -8,7 +8,7 @@
 //  on macOS < 27 (Tahoe today) — it is M1K3's universal floor for the bridge.
 //
 //  Scope: this module is the PURE surface + the escalation policy. The real
-//  executor (wrapping MLXGemmaProvider + ThinkStreamGate) lands on M1K3Agent.
+//  executor (wrapping MLXBrainProvider + ThinkStreamGate) lands on M1K3Agent.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.85 (mirror shape proven
 //  against AnyLanguageModel + WWDC26 339; retarget is mechanical). Prior: Unknown

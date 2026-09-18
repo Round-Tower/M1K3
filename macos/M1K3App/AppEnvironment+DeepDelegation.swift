@@ -135,10 +135,10 @@ extension AppEnvironment {
             // the parked brain — the one-decode-loop invariant this whole
             // design rests on. `selectBrain` already refuses while the label is
             // set, so nothing else re-points the slot underneath us.
-            let big = MLXGemmaProvider(
+            let big = MLXBrainProvider(
                 modelID: bigID,
                 maxTokens: HistoryBudgetPolicy.generationTokenCap(
-                    for: .big, defaultCap: MLXGemmaProvider.defaultMaxTokens
+                    for: .big, defaultCap: MLXBrainProvider.defaultMaxTokens
                 )
             )
             deepDiveRestoreProvider = currentMLXProvider

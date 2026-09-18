@@ -65,7 +65,7 @@ enum MemBlockProbeStage {
             let store = try await seededStore(embedder: embedder)
             for modelID in models {
                 emit("• memblock brain \(modelID)…")
-                let provider = MLXGemmaProvider(modelID: modelID, name: "memblock")
+                let provider = MLXBrainProvider(modelID: modelID, name: "memblock")
                 let responder = AgentRAGResponder(
                     store: store, embedder: embedder, provider: provider,
                     toolsProvider: { [] }, maxIterations: 3

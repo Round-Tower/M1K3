@@ -28,7 +28,7 @@
 //    • the native seam (`makeToolTurnSession`, wrapping the returned session's
 //      `send`) for the path Big actually takes — capturing the exact messages
 //      LocalAgent+Native sent, not a re-assembly of them.
-//  The seed itself is measured via `MLXGemmaProvider.seedPrefixTokenCount`,
+//  The seed itself is measured via `MLXBrainProvider.seedPrefixTokenCount`,
 //  which reuses the SAME `personaPrefixSnapshot`/`prefixInputs` derivation the
 //  live turn's KV-seed is built from — so it can't drift from what was
 //  actually prefilled, even though (being KV-seeded, never rendered as a
@@ -40,7 +40,7 @@
 //  The component breakdown of whatever flat text IS available (the ReAct
 //  floor's whole prompt, or Big's native per-turn `.user` message) comes from
 //  PromptSectionSplitter over PromptMarker.live; real token counts come from
-//  the model's own tokenizer via MLXGemmaProvider.tokenCount. A tier with no
+//  the model's own tokenizer via MLXBrainProvider.tokenCount. A tier with no
 //  exposed tokenizer (AFM/mini) reports bytes with nil tokens — never a silent
 //  zero.
 //
@@ -62,7 +62,7 @@
 //  wraps the real session so the exact per-turn `.user` message LocalAgent+Native
 //  sends is captured at its actual call site — never reconstructed. The
 //  persona+tool-spec KV-seed, which never appears as prompt text on the native
-//  path, is now measured via the new `MLXGemmaProvider.seedPrefixTokenCount`
+//  path, is now measured via the new `MLXBrainProvider.seedPrefixTokenCount`
 //  seam and reported as its own component. The tool palette also changed from
 //  `tools: []` to `ChatEvalStage.toolPalette` — the empty list was silently
 //  trimming the RULES/routing text too, on top of forcing the ReAct floor.
@@ -94,6 +94,7 @@
 //  `nativePromptShape` and `personaVariant`. It had forwarded neither, so on a pocket (lfm2) brain
 //  the instrument measured the standard persona in the grounding-in-user layout (the #232 gap and
 //  this PR's new seam). Found by the pre-push review of the PersonaVariant PR.
+//  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — mechanical rename only: `MLXGemmaProvider` → `MLXBrainProvider`; no behaviour change.
 //
 
 import Foundation
@@ -288,7 +289,7 @@ enum PromptSizeStage {
             emit("  – \(tier.rawValue): not an MLX tier, no tokenizer — skipped")
             return
         }
-        let provider = MLXGemmaProvider(modelID: modelID)
+        let provider = MLXBrainProvider(modelID: modelID)
 
         var measurements: [PromptSizeMeasurement] = []
         for kind in kinds {
@@ -341,7 +342,7 @@ enum PromptSizeStage {
     /// reporting something true rather than silently going empty if a future
     /// Big model ever lost native support.
     private static func measure(
-        kind: TaskKind, recorder: PromptRecorder, tier: BrainTier, provider: MLXGemmaProvider
+        kind: TaskKind, recorder: PromptRecorder, tier: BrainTier, provider: MLXBrainProvider
     ) async -> PromptSizeMeasurement? {
         if let firstBatch = await recorder.sentMessageBatches.first {
             let tools = await recorder.toolTurnTools ?? []
@@ -358,7 +359,7 @@ enum PromptSizeStage {
     /// component (templated whole − sum of raw sections) so the parts re-sum
     /// honestly. The ReAct-floor fallback path — see `measure(kind:...)`.
     private static func measure(
-        prompt: String, label: String, tier: BrainTier, provider: MLXGemmaProvider
+        prompt: String, label: String, tier: BrainTier, provider: MLXBrainProvider
     ) async -> PromptSizeMeasurement {
         PromptSizeMeasurement(
             label: "\(label) [\(tier.rawValue)]",
@@ -376,7 +377,7 @@ enum PromptSizeStage {
     /// it gets the SAME split-and-count recipe as the ReAct floor's prompt.
     private static func measureNative(
         messages: [ToolMessage], tools: [ToolDefinition], label: String, tier: BrainTier,
-        provider: MLXGemmaProvider
+        provider: MLXBrainProvider
     ) async -> PromptSizeMeasurement {
         var components: [PromptComponentSize] = []
 
@@ -404,7 +405,7 @@ enum PromptSizeStage {
     /// prompt and Big's native per-turn `.user` message; only the input text
     /// differs between the two call sites.
     private static func splitAndCount(
-        _ text: String, provider: MLXGemmaProvider
+        _ text: String, provider: MLXBrainProvider
     ) async -> [PromptComponentSize] {
         var components: [PromptComponentSize] = []
         var sectionTokenTotal = 0

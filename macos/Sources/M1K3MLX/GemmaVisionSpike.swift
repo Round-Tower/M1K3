@@ -5,11 +5,11 @@
 //  SPIKE (2026-07-14): does gemma-4-e4b's vision tower actually work on-device,
 //  and what does an image really cost? MLXLLM's Gemma4Model strips vision
 //  weights at load (`vision_tower`/`vision_embedder`/`multi_modal_projector` —
-//  see MLXGemmaProvider's LLMModelFactory path); only MLXVLM's separate Gemma4
+//  see MLXBrainProvider's LLMModelFactory path); only MLXVLM's separate Gemma4
 //  implementation consumes UserInput.images. Both factories load the SAME HF
 //  checkpoint (mlx-community/gemma-4-e4b-it-4bit) into a common ModelContainer
 //  ChatSession is agnostic to, so this probes the VLM load path directly — NO
-//  change to the production MLXGemmaProvider/InferenceProvider seam.
+//  change to the production MLXBrainProvider/InferenceProvider seam.
 //
 //  Answers three questions before any protocol design:
 //    1. Does it load + generate a sane image description at all?
@@ -18,7 +18,7 @@
 //    3. Peak RAM with the vision tower resident — the 7.4GB figure in
 //       docs/MODEL_CHOICES.md was measured on the STRIPPED (text-only) load.
 //
-//  Not wired into BrainTier/MLXGemmaProvider. Isolated on purpose — the
+//  Not wired into BrainTier/MLXBrainProvider. Isolated on purpose — the
 //  project's own doctrine (docs/MODEL_CHOICES.md): "existence ≠ loadability ≠
 //  quality. Verify each stage."
 //

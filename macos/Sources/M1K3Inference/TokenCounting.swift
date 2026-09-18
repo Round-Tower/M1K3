@@ -24,14 +24,14 @@
 //  tokens of headroom before `RotatingKVCache(8192)` silently rotates the
 //  persona/grounding head out mid-turn). This protocol lives in M1K3Inference
 //  — already an M1K3Chat dependency — rather than M1K3Chat casting to the
-//  concrete `MLXGemmaProvider` type, which would need a new M1K3Chat→M1K3MLX
+//  concrete `MLXBrainProvider` type, which would need a new M1K3Chat→M1K3MLX
 //  edge that doesn't otherwise exist.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-20, Confidence 0.85, Prior: Unknown
 //  Context: grounding-cap PR. The protocol shape mirrors ToolCallingProvider's
 //  existing "runtimes without the capability simply don't conform" pattern
-//  (M1K3Inference/ToolCallingProvider.swift). MLXGemmaProvider's conformance
-//  (M1K3MLX/MLXGemmaProvider+TokenCounting.swift) is Metal-backed and
+//  (M1K3Inference/ToolCallingProvider.swift). MLXBrainProvider's conformance
+//  (M1K3MLX/MLXBrainProvider+TokenCounting.swift) is Metal-backed and
 //  verify-by-launch, same as every other MLX generation path — it can't run
 //  under `swift test`.
 //

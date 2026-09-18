@@ -118,7 +118,7 @@ pressure-tested and killed. Do not resurrect it without new facts:
    for any prefix over 1024 tokens, and the app already logs *"persona prefix
    SKIPPED — longer than the sliding window"* on Big. **The 1.71 ms/token above
    is Lil's number; Big's measured prefill is ~6.1 ms/token** (13.1–14.5 s for a
-   2357-token prompt, `MLXGemmaProvider`). The architecture change would deliver
+   2357-token prompt, `MLXBrainProvider`). The architecture change would deliver
    exactly zero to the slow tier.
 2. **The session's transcript is not the user's transcript.** Every native
    tool-using turn synthesises its final answer through a flat fallback prompt

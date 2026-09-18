@@ -402,7 +402,7 @@ struct MenuBarPopover: View {
     private static func runtimeLabel(_ runtime: RuntimeOption) -> String {
         switch runtime {
         case .appleFoundationModels: "Apple on-device"
-        case .mlxGemma: "MLX · local"
+        case .mlx: "MLX · local"
         }
     }
 }

@@ -21,6 +21,7 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.85 — `M1K3_SELFTEST_OUT=-` streams the report to
 //  the inherited stdout (the sandboxed route on macOS 27; verified by a direct exec of the signed Debug build).
+//  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — mechanical rename only: `MLXGemmaProvider` → `MLXBrainProvider`; no behaviour change.
 
 import Foundation
 import M1K3Chat
@@ -204,7 +205,7 @@ enum SelfTest {
             ?? "mlx-community/Llama-3.2-1B-Instruct-4bit"
         emit("• loading MLX generation model \(modelID)…")
         do {
-            let llm = MLXGemmaProvider(modelID: modelID, maxTokens: 48)
+            let llm = MLXBrainProvider(modelID: modelID, maxTokens: 48)
 
             // 3-pre. Optional persona-prefix warm A/B (M1K3_SELFTEST_PREFIXWARM=1).
             // MUST run before ANY generation on this provider — turn A's whole
@@ -452,7 +453,7 @@ enum SelfTest {
 
         // 9. Optional Gemma-4 vision spike (M1K3_SELFTEST_VISION=1 +
         //    M1K3_SELFTEST_VISION_IMAGE=<path>): loads gemma-4-e4b through
-        //    MLXVLM — NOT the production MLXLLM path MLXGemmaProvider uses,
+        //    MLXVLM — NOT the production MLXLLM path MLXBrainProvider uses,
         //    which strips vision weights at load — and reports whether it can
         //    actually see an image, the measured per-image token cost, and RAM
         //    with the vision tower resident. See GemmaVisionSpike.swift.
@@ -536,7 +537,7 @@ enum SelfTest {
             ?? BrainTier.big.mlxModelID ?? ""
         emit("• visionchat: \(modelID) + \(imagePath) through AgentRAGResponder…")
         do {
-            let provider = MLXGemmaProvider(modelID: modelID, name: "visionchat")
+            let provider = MLXBrainProvider(modelID: modelID, name: "visionchat")
             let store = try KnowledgeStore()
             let responder = AgentRAGResponder(
                 store: store, embedder: MLXEmbeddingService(), provider: provider,
@@ -800,7 +801,7 @@ enum SelfTest {
     /// 3d. Optional prompt-cache persistence probe (M1K3_SELFTEST_KVPERSIST=1):
     /// persona-prefix KV → disk → reload → generate from the reloaded cache.
     /// The prototype gate for persisting PersonaPrefixCache across launches.
-    private static func runKVPersistProbeIfRequested(llm: MLXGemmaProvider) async {
+    private static func runKVPersistProbeIfRequested(llm: MLXBrainProvider) async {
         guard SelfTestEnv.value("M1K3_SELFTEST_KVPERSIST") == "1" else { return }
         emit(await llm.promptCacheRoundTripProbe(
             directory: FileManager.default.temporaryDirectory
@@ -816,7 +817,7 @@ enum SelfTest {
         // 2048, not the chat default: a reasoning model can spend 200–800
         // tokens inside <think> before the one-word answer the think-contract
         // check wants — 1024 risked false truncation FAILs on verbose models.
-        let provider = MLXGemmaProvider(modelID: modelID, maxTokens: 2048)
+        let provider = MLXBrainProvider(modelID: modelID, maxTokens: 2048)
 
         // Check 1+2: generates a usable answer; reasoning families emit a
         // well-formed think pair (the Qwen3.5 lone-close bug class).
@@ -905,7 +906,7 @@ enum SelfTest {
         return ModelEvalReport(modelID: modelID, records: records)
     }
 
-    private static func evalLongContextRecall(provider: MLXGemmaProvider) async -> ModelEvalRecord {
+    private static func evalLongContextRecall(provider: MLXBrainProvider) async -> ModelEvalRecord {
         do {
             let raw = try await provider.generate(prompt: LongContextRecall.prompt())
             let answer = ModelEvalReport.strippingThink(raw)

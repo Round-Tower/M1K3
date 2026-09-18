@@ -1,5 +1,5 @@
 //
-//  MLXGemmaProvider+PersonaPrefixProbe.swift
+//  MLXBrainProvider+PersonaPrefixProbe.swift
 //  M1K3MLX
 //
 //  The safety net that makes the persona-prefix optimisation shippable.
@@ -32,7 +32,7 @@ import Foundation
 import M1K3Inference
 import MLXLMCommon
 
-extension MLXGemmaProvider {
+extension MLXBrainProvider {
     /// Verify `[prefix] + [delta] == [full]` for plain chat and an agent turn.
     /// Returns a multi-line report; never throws (errors become report lines).
     public func personaPrefixInvariantProbe() async -> String {

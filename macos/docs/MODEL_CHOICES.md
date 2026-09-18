@@ -382,7 +382,7 @@ are deliberately left unpinned so the evaluation loop stays usable.
     `parameters` entirely** (StandardKVCache for the 8 `full_attention` layers, a
     modelNative `RotatingKVCache(slidingWindow)` for the rest) — so our 8192 "hard bound on
     KV growth" was **always a silent no-op on Big**. Upstream merely made a false belief
-    loud. Fix: `MLXGemmaProvider.supportsCallerKVCapacity`. A test that pinned
+    loud. Fix: `MLXBrainProvider.supportsCallerKVCapacity`. A test that pinned
     `maxKVSize == 8192` for gemma-4 was corrected, not deleted.
     **⚠️ CORRECTED IN #108 — the first cut of this fix was a deny-list with a
     permissive default (gemma-4/3n excluded, everything else allowed), and it was
@@ -569,7 +569,7 @@ incumbent fails), which is the standing weakness of whatever runs Lil.
 LFM2.5's mean was dragged by `grounded-Q` at 41s against its OWN `reasoning`
 average of 3.2s — a 13× spread within one model, across kinds, which is a
 plumbing signature rather than a speed one. Named 2026-08-13:
-`MLXGemmaProvider.slidingWindow(forModelID:)` returns nil for everything except
+`MLXBrainProvider.slidingWindow(forModelID:)` returns nil for everything except
 gemma-4, and nil means "dense attention, prefix reuse works" — while the same
 file records that `LFM2Model` builds `KVCacheSimple` + **`MambaCache`**. Reusing
 a prefix is not a meaningful operation on a RECURRENT state, so LFM2.5 plausibly

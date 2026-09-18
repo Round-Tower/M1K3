@@ -28,7 +28,7 @@
 //       pollution is real and the production integration must gate on prompt
 //       length (or fix upstream).
 //
-//  Not wired into BrainTier/MLXGemmaProvider. Isolated on purpose — same
+//  Not wired into BrainTier/MLXBrainProvider. Isolated on purpose — same
 //  doctrine as GemmaVisionSpike: "existence ≠ loadability ≠ quality. Verify
 //  each stage."
 //

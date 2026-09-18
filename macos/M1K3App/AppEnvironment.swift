@@ -64,6 +64,7 @@
 //  `-afm.prefixPrewarm NO`). Timing measured on the installed Release build — see the PR.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — the App Store rating ledger (ReviewPromptLedger) rides the after-answer beat; ContentView consumes it.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — voice turns count too (AppEnvironment+VoiceMode); a stopped answer is not a win (local review fold).
+//  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — mechanical rename only: `MLXGemmaProvider` → `MLXBrainProvider` (it runs Qwen3, LFM2.5 and Gemma alike), `RuntimeOption.mlxGemma` → `.mlx` (raw value unchanged, never persisted), the local `gemma` → `mlxBrain`. No behaviour change.
 
 import AppKit
 import Foundation
@@ -105,7 +106,7 @@ enum RuntimeOption: String {
     case appleFoundationModels = "Apple Foundation Models"
     /// Model-neutral label: the MLX slot now serves whichever brain is chosen
     /// (Qwen3 Lil, Gemma 4 Big) — not display-persisted, safe to rename.
-    case mlxGemma = "MLX (local model)"
+    case mlx = "MLX (local model)"
 }
 
 @MainActor
@@ -208,9 +209,9 @@ final class AppEnvironment {
     /// `deepDiveRestoreProvider` and the slot is restored from it on EVERY dive
     /// exit — `finishDeepDelegation` is the single teardown point for success
     /// and failure alike, so there is no path that leaves Big in the slot.
-    @ObservationIgnored var deepDiveRestoreProvider: MLXGemmaProvider?
+    @ObservationIgnored var deepDiveRestoreProvider: MLXBrainProvider?
     /// The Big provider an escalated dive runs on — released at restore.
-    @ObservationIgnored var deepDiveEscalatedProvider: MLXGemmaProvider?
+    @ObservationIgnored var deepDiveEscalatedProvider: MLXBrainProvider?
     /// The heartbeat's coarse check loop (10-min ticks deciding via the pure
     /// policy) — see AppEnvironment+Heartbeat.swift.
     @ObservationIgnored var heartbeatTask: Task<Void, Never>?
@@ -268,7 +269,7 @@ final class AppEnvironment {
     /// `private(set)`: written only in this file (selectBrain); READ by
     /// AppEnvironment+DeepDelegation to park the resident provider across an
     /// escalated dive's slot swap.
-    private(set) var currentMLXProvider: MLXGemmaProvider
+    private(set) var currentMLXProvider: MLXBrainProvider
     /// The chat-facing AFM provider (Mini + the façade's fallback) — retained so
     /// the launch and Mini-fronting hooks can arm its prewarm slot (provider
     /// copies share one slot; the struct holds the box by reference).
@@ -282,7 +283,7 @@ final class AppEnvironment {
     /// Why the last removal did not free the space, keyed to the folder it was
     /// about; shown in the row and dropped once that folder is no longer retired.
     var retiredWeightsFailure: RetiredWeightsFailure?
-    /// The single MLX slot behind `RuntimeOption.mlxGemma` in the façade; re-pointed
+    /// The single MLX slot behind `RuntimeOption.mlx` in the façade; re-pointed
     /// at `currentMLXProvider` whenever the brain switches between Lil and Big, so
     /// the swap is seen without rebuilding the RAGResponder. Internal (not
     /// private) for AppEnvironment+DeepDelegation.swift — the delegation lane
@@ -607,7 +608,7 @@ final class AppEnvironment {
             // cancels the warm-up — the SingleFlightLoader lets any in-flight
             // download finish + cache; we just stop tracking it and clear the bar.
             preloadTask?.cancel()
-            if selectedRuntime == .mlxGemma {
+            if selectedRuntime == .mlx {
                 preloadTask = Task { await preloadGemma() }
             } else {
                 preloadTask = nil
@@ -876,7 +877,7 @@ final class AppEnvironment {
         // slot starts on the chosen brain's model (or Big's, when Mini is active and
         // MLX isn't needed yet) so switching Lil↔Big just re-points the slot.
         let runtimeForBrain: RuntimeOption =
-            brain.backing == .appleFoundationModels ? .appleFoundationModels : .mlxGemma
+            brain.backing == .appleFoundationModels ? .appleFoundationModels : .mlx
         let selection = RuntimeSelectionBox(runtimeForBrain)
         runtimeSelection = selection
         // prewarmsBetweenTurns: after each Mini generation the provider arms a
@@ -896,21 +897,21 @@ final class AppEnvironment {
         // uncapped decode crosses the 8192 window mid-answer and silently
         // rotates the persona/grounding head out.
         let slotTier = brain.mlxModelID != nil ? brain : BrainTier.big
-        let gemma = MLXGemmaProvider(
+        let mlxBrain = MLXBrainProvider(
             modelID: initialMLXModelID,
             maxTokens: HistoryBudgetPolicy.generationTokenCap(
-                for: slotTier, defaultCap: MLXGemmaProvider.defaultMaxTokens
+                for: slotTier, defaultCap: MLXBrainProvider.defaultMaxTokens
             )
         )
-        currentMLXProvider = gemma
-        let mlxSlot = SwappableInferenceProvider(gemma)
+        currentMLXProvider = mlxBrain
+        let mlxSlot = SwappableInferenceProvider(mlxBrain)
         swappableMLX = mlxSlot
         let runtimeProvider = RuntimeInferenceProvider(
             selection: selection,
             interimOverride: interimRuntimeOverride,
             backends: [
                 .appleFoundationModels: afm,
-                .mlxGemma: mlxSlot,
+                .mlx: mlxSlot,
             ],
             fallback: afm
         )
@@ -1051,7 +1052,7 @@ final class AppEnvironment {
         // Mini (Apple) needs nothing. Setting selectedRuntime drives the existing
         // preload path + the progress UI. No-op/fast once the weights are cached.
         if brain.mlxModelID != nil {
-            selectedRuntime = .mlxGemma
+            selectedRuntime = .mlx
         }
 
         // Restore M1K3 Voice only if it was chosen AND already staged — never kick
@@ -1218,7 +1219,7 @@ final class AppEnvironment {
         // policy's mirrored literal (review nit on #22; the 116-F1 test
         // still pins the mirror for everyone else).
         let cap = HistoryBudgetPolicy.generationTokenCap(
-            for: selectedBrain, defaultCap: MLXGemmaProvider.defaultMaxTokens
+            for: selectedBrain, defaultCap: MLXBrainProvider.defaultMaxTokens
         )
         evaluateBrainUpgradeAfterAnswer(
             questionCharacters: text.count,
@@ -1359,7 +1360,7 @@ final class AppEnvironment {
         // — drop the gate's snapshot so its next read re-probes live.
         invalidateBridgeAFMCache()
         // Already on this exact MLX brain and it's loaded — re-selecting would spin up
-        // a fresh MLXGemmaProvider (cold persona-KV prefix) and release the warm one,
+        // a fresh MLXBrainProvider (cold persona-KV prefix) and release the warm one,
         // repaying a multi-GB load + persona prefill for nothing. The predicate is
         // BrainSwitcher's (unit-pinned there): non-ready falls through so onboarding
         // "Try again" and first-wake re-attempt; Mini (no mlxModelID) is never guarded.
@@ -1392,15 +1393,15 @@ final class AppEnvironment {
         if let modelID = tier.mlxModelID {
             // Rotating-KV tiers get a capped decode so prefill + generation fit
             // the window together (see HistoryBudgetPolicy.rotatingGenerationTokenCap).
-            let mlx = MLXGemmaProvider(
+            let mlx = MLXBrainProvider(
                 modelID: modelID,
                 maxTokens: HistoryBudgetPolicy.generationTokenCap(
-                    for: tier, defaultCap: MLXGemmaProvider.defaultMaxTokens
+                    for: tier, defaultCap: MLXBrainProvider.defaultMaxTokens
                 )
             )
             currentMLXProvider = mlx
             swappableMLX.setProvider(mlx)
-            selectedRuntime = .mlxGemma // didSet warms it + streams progress
+            selectedRuntime = .mlx // didSet warms it + streams progress
         } else {
             selectedRuntime = .appleFoundationModels // didSet clears the bar
         }
@@ -1513,7 +1514,7 @@ final class AppEnvironment {
     /// `makeToolTurnSession` (pinned in MLXPrefixInputsTests).
     /// Internal (not private): AppEnvironment+DeepDelegation re-warms the
     /// restored resident brain after an escalated dive releases the slot.
-    func warmPersonaPrefixAfterLoad(_ mlx: MLXGemmaProvider) {
+    func warmPersonaPrefixAfterLoad(_ mlx: MLXBrainProvider) {
         guard Self.backgroundWorkAllowed() else {
             // Hot right now (the model download itself can heat the Mac):
             // arm the cooldown retry, or this session would pay the inline
