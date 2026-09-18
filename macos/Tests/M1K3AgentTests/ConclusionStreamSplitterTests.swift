@@ -86,6 +86,31 @@ struct ConclusionStreamSplitterTests {
         #expect(emitted == "Fine so far.")
     }
 
+    @Test("post-ACTION prose resumes with a separator, not glued to the prior sentence")
+    func resumesWithSeparator() {
+        var splitter = ConclusionStreamSplitter()
+        let emitted = collect(
+            ["CONCLUSION: I'll check.\nACTION: lookup(Paris)\nHere's what I know."],
+            into: &splitter
+        )
+        #expect(emitted.contains("I'll check."))
+        #expect(emitted.contains("Here's what I know."))
+        #expect(!emitted.contains("I'll check.Here"))
+    }
+
+    @Test("a second ACTION after resumed prose does not leak through flush")
+    func secondActionDoesNotLeak() {
+        var splitter = ConclusionStreamSplitter()
+        let emitted = collect(
+            ["CONCLUSION: I'll check.\nACTION: lookup(Paris)\nHere's what I know.\nACTION: lookup(Rome)\nMore prose."],
+            into: &splitter
+        )
+        #expect(emitted.contains("I'll check."))
+        #expect(emitted.contains("Here's what I know."))
+        #expect(!emitted.contains("lookup(Rome)"))
+        #expect(emitted.contains("More prose."))
+    }
+
     @Test("emission is incremental — most of the conclusion arrives before the flush")
     func emitsIncrementally() {
         var splitter = ConclusionStreamSplitter()
@@ -153,6 +178,24 @@ struct LocalAgentConclusionStreamingTests {
         let streamed = collector.joined
         #expect(streamed == "The seal failed under load.")
         #expect(collector.count > 1)
+    }
+
+    @Test("prose after a mid-conclusion ACTION line is not lost (#329)")
+    func midConclusionActionProseCarried() async throws {
+        let provider = StreamingScriptedProvider([
+            "CONCLUSION: I'll check.\nACTION: lookup(Paris)\nHere's what I know: the city is on the Seine.",
+        ])
+        let tool = EchoTool(name: "lookup", description: "looks up", response: "found")
+        let agent = LocalAgent(inferenceProvider: provider, tools: [tool])
+
+        let collector = TokenCollector()
+        let result = try await agent.run(goal: "tell me about Paris", onConclusionToken: { token in
+            collector.append(token)
+        })
+
+        #expect(result.conclusion.contains("Here's what I know"))
+        let streamed = collector.joined
+        #expect(streamed.contains("Here's what I know"))
     }
 
     @Test("without the callback the loop still uses blocking generation")

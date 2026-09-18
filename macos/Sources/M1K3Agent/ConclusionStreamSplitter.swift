@@ -13,13 +13,16 @@
 //
 //  Scaffolding guard: a model that writes "CONCLUSION: … ACTION: …" would
 //  otherwise stream raw ReAct scaffolding to the user (seen live at ⌘R, the
-//  Boston-weather bug). Emission is therefore cut at any ACTION: marker, with
-//  a small holdback window so a marker split across chunks is still caught —
-//  call `flush()` after the stream ends to release the held-back tail.
+//  Boston-weather bug). Each ACTION: line is skipped, but prose AFTER it
+//  resumes streaming (#329). A small holdback window catches a marker split
+//  across chunks — call `flush()` after the stream ends to release the tail.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.9, Prior: Unknown
 //  Review: Kev + claude-fable-5, 2026-07-02 — snapshot-vs-delta normalisation
 //  delegated to M1K3Inference.StreamFold (was one of three inlined copies).
+//  Review: Kev + claude-opus-4-6, 2026-09-18 — skippingActionLine resumes via
+//  emitGuarded (was raw heldBack: a second ACTION leaked through flush); "\n"
+//  separator between pre/post-ACTION text. Confidence 0.9.
 
 import Foundation
 import M1K3Inference
@@ -31,8 +34,10 @@ struct ConclusionStreamSplitter {
     private(set) var isConclusion = false
 
     private var emittedAny = false
-    /// True once an ACTION: marker stopped emission for good.
-    private var truncated = false
+    /// True once an ACTION: marker stopped emission — skipping the ACTION
+    /// line. Cleared when a newline after the ACTION line arrives, so
+    /// post-ACTION prose resumes streaming (#329).
+    private var skippingActionLine = false
     /// Tail kept back from emission so a split "ACTION:" can be caught.
     private var heldBack = ""
 
@@ -49,7 +54,14 @@ struct ConclusionStreamSplitter {
         let delta = StreamFold.delta(current: thought, chunk: chunk)
         thought += delta
 
-        if truncated { return "" }
+        if skippingActionLine {
+            if let nl = delta.firstIndex(of: "\n") {
+                let resumed = String(delta[delta.index(after: nl)...])
+                skippingActionLine = false
+                return resumed.isEmpty ? "" : emitGuarded("\n" + resumed)
+            }
+            return ""
+        }
         if isConclusion {
             return emitGuarded(delta)
         }
@@ -62,7 +74,7 @@ struct ConclusionStreamSplitter {
     /// conclusion was being emitted.
     mutating func flush() -> String {
         defer { heldBack = "" }
-        guard isConclusion, !truncated else { return "" }
+        guard isConclusion, !skippingActionLine else { return "" }
         return heldBack
     }
 
@@ -77,9 +89,17 @@ struct ConclusionStreamSplitter {
             guard !working.isEmpty else { return "" }
         }
         if let stop = working.range(of: Self.stopMarker) {
-            truncated = true
             let kept = String(working[..<stop.lowerBound])
-            return markEmitted(trimTrailingWhitespace(kept))
+            let afterMarker = String(working[stop.upperBound...])
+            let keptText = markEmitted(trimTrailingWhitespace(kept))
+            if let nl = afterMarker.firstIndex(of: "\n") {
+                let resumed = String(afterMarker[afterMarker.index(after: nl)...])
+                guard !resumed.isEmpty else { return keptText }
+                return keptText + emitGuarded("\n" + resumed)
+            } else {
+                skippingActionLine = true
+            }
+            return keptText
         }
         guard working.count > Self.guardWindow else {
             heldBack = working
