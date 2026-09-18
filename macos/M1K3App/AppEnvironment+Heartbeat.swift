@@ -42,6 +42,11 @@
 //  gathered off-main as ambient TodoActivity, `mayProposeTodo` (toggle + ProposalCeiling) lets the prompt end
 //  with one TODO line, extracted BEFORE NarrativeGuard and filed PENDING via proposeTodoFromResident; the
 //  record tail moved to `recordPulse` + `RenderedPulse` (the tick was already over the advisory 100-line bar).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — pulse-authored chips, behind `heartbeat.authorChips` (OFF; no Settings row until the prompt
+//  line is measured). With the flag on: the prompt asks, PulseAskLine lifts the ASK lines AFTER the TODO line, `admitAll` holds them
+//  to the guard's own evidence (digest + earlier DIGESTS), a rejected narrative drops them, and one `.notice` line per render
+//  (`chips: written=N admitted=M`) is the measuring instrument. Flag off = the old path, line for line. Builds; live renders owed.
+//  Confidence 0.8.
 
 import AppKit
 import Foundation
@@ -56,6 +61,18 @@ extension AppEnvironment {
 
     var heartbeatEnabled: Bool {
         UserDefaults.standard.bool(forKey: Self.heartbeatEnabledKey)
+    }
+
+    /// Pulse-authored chips (2026-09-18) — the pulse's second write. OFF unless
+    /// switched on: asking for them changes the heartbeat PROMPT, and that is
+    /// measured on real renders before it is anyone's default (no Settings row
+    /// yet, by design). `defaults write app.m1k3 heartbeat.authorChips -bool YES`
+    /// reaches the unsandboxed dev build; `-heartbeat.authorChips YES` as a launch
+    /// argument reaches any build (`bool(forKey:)` reads the NSString "YES" true).
+    nonisolated static let heartbeatAuthorChipsKey = "heartbeat.authorChips"
+
+    nonisolated static func heartbeatAuthorsChips() -> Bool {
+        UserDefaults.standard.bool(forKey: heartbeatAuthorChipsKey)
     }
 
     func setHeartbeatEnabled(_ enabled: Bool) {
@@ -241,7 +258,8 @@ extension AppEnvironment {
             earlierDigests: gathered.earlierDigests,
             recentPulses: gathered.recentPulses,
             device: gathered.device,
-            mayProposeTodo: mayProposeTodo
+            mayProposeTodo: mayProposeTodo,
+            mayAuthorChips: Self.heartbeatAuthorsChips()
         )
         await recordPulse(rendered, digest: digest, context: context, store: pulseStore, at: now)
     }
@@ -271,7 +289,8 @@ extension AppEnvironment {
         let todoStore = todoStore
         await Task.detached(priority: .utility) {
             let pulseID = pulseStore.record(
-                digest: digest, narrative: narrative, renderedBy: renderedBy, tags: tags, at: now
+                digest: digest, narrative: narrative, renderedBy: renderedBy, tags: tags,
+                chips: rendered.chips, at: now
             )
             if let filedTodoID, let pulseID {
                 try? todoStore?.setOrigin(id: filedTodoID, TodoOrigin(pulseId: pulseID))
@@ -300,7 +319,8 @@ extension AppEnvironment {
         earlierDigests: [String],
         recentPulses: [String],
         device: HeartbeatContext.Device,
-        mayProposeTodo: Bool = false
+        mayProposeTodo: Bool = false,
+        mayAuthorChips: Bool = false
     ) async -> RenderedPulse {
         // Don't ask the model when there is no news (fix 5): an ambience-only
         // digest gave it nothing to retell but thermals and uptime — the
@@ -327,7 +347,7 @@ extension AppEnvironment {
         }
         let prompt = HeartbeatPrompt.render(
             digest: digest, earlierToday: earlierToday, recentPulses: recentPulses,
-            mayProposeTodo: mayProposeTodo
+            mayProposeTodo: mayProposeTodo, mayAuthorChips: mayAuthorChips
         )
         // Marked background like the titler and the distiller (2026-08-12): nobody
         // is waiting on a pulse. Unmarked, it was the one background generate that
@@ -360,8 +380,22 @@ extension AppEnvironment {
         let split = TodoProposalLine.extract(
             from: FollowUpSplit.split(raw).answer.trimmingCharacters(in: .whitespacesAndNewlines)
         )
-        let cleaned = split.narrative
+        // The ASK lines come off next, and ONLY when they were asked for — so the
+        // flag off is behaviourally identical to before it existed. TODO first,
+        // then ASK: TodoProposalLine reads only the last line, and the prompt asks
+        // for the ASKs above it (order pinned in PulseAskLineTests).
+        let asked = mayAuthorChips ? PulseAskLine.extract(from: split.narrative) : (narrative: split.narrative, asks: [])
+        let cleaned = asked.narrative
         let proposedTitle = mayProposeTodo ? split.title : nil
+        // Held to the guard's own evidence — the digest plus the day's earlier
+        // DIGESTS, never a narrative. A chip is sent as the user's words.
+        let chips = PulseAskLine.admitAll(asked.asks, digest: digest, earlierDigests: earlierDigests)
+        if mayAuthorChips {
+            // The measuring instrument: .notice so it persists in the log store.
+            let written = asked.asks.count
+            let admitted = chips.count
+            Self.heartbeatLog.notice("chips: written=\(written) admitted=\(admitted)")
+        }
         // The guard's evidence is the day's earlier DIGESTS, not the
         // narratives the prompt shows: a faithful thread of a code-composed
         // number still passes (pulse 2's live rejection), but a digit a
@@ -382,7 +416,11 @@ extension AppEnvironment {
                 narrative: nil, renderedBy: "digest", proposedTitle: verdict == .empty ? proposedTitle : nil
             )
         }
-        return RenderedPulse(narrative: cleaned, renderedBy: selectedBrain.displayName, proposedTitle: proposedTitle)
+        // Chips ride only a narrative that PASSED: a rejection (invented digit,
+        // repeated opener…) discredits what the same generation wrote beside it.
+        return RenderedPulse(
+            narrative: cleaned, renderedBy: selectedBrain.displayName, proposedTitle: proposedTitle, chips: chips
+        )
     }
 }
 
@@ -392,6 +430,8 @@ private struct RenderedPulse {
     var narrative: String?
     var renderedBy: String
     var proposedTitle: String?
+    /// The admitted "ask me" chips — empty unless asked for and the narrative passed.
+    var chips: [String] = []
 
     static let digest = RenderedPulse(narrative: nil, renderedBy: "digest", proposedTitle: nil)
 }

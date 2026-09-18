@@ -31,6 +31,9 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: `latestID()` — the row id a todo
 //  proposed by this pulse records as its origin.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — pulse-authored chips: `v3-chips` sidecar (`pulse_chips`, ordered by `position`, ON DELETE CASCADE
+//  like the tags — Clear and the cap trim take them too), `record(chips:)`, one grouped `attachChips`, and `latestChips()` —
+//  the NEWEST pulse only, so an older pulse's questions never stand in for a newer chipless one. Confidence 0.9.
 
 import Foundation
 import GRDB
@@ -47,10 +50,14 @@ public struct HeartbeatEntry: Identifiable, Equatable, Sendable {
     /// Structural shape tags (2026-08-30) — composed by HeartbeatComposer,
     /// never content. Empty for pre-tag rows.
     public var tags: Set<PulseTag>
+    /// The "ask me" chips this pulse authored for the next blank canvas
+    /// (2026-09-18) — already through `PulseAskLine.admit`, in the order
+    /// written. Empty for pre-chip rows and for every pulse that wrote none.
+    public var chips: [String]
 
     public init(
         id: Int64, digest: String, narrative: String?, renderedBy: String,
-        createdAt: Date, tags: Set<PulseTag> = []
+        createdAt: Date, tags: Set<PulseTag> = [], chips: [String] = []
     ) {
         self.id = id
         self.digest = digest
@@ -58,6 +65,7 @@ public struct HeartbeatEntry: Identifiable, Equatable, Sendable {
         self.renderedBy = renderedBy
         self.createdAt = createdAt
         self.tags = tags
+        self.chips = chips
     }
 
     /// What the UI shows: the narrative when one passed the guard, else the
@@ -109,6 +117,18 @@ public final class HeartbeatStore: @unchecked Sendable {
                 t.primaryKey(["pulse_id", "tag"])
             }
         }
+        // Pulse-authored chips (2026-09-18). Same cascade rule as the tags, for
+        // the same reason: Clear and the cap trim take a pulse's chips with it.
+        // `position` keeps the order written; the canvas rotates between them.
+        migrator.registerMigration("v3-chips") { db in
+            try db.create(table: "pulse_chips") { t in
+                t.column("pulse_id", .integer).notNull().indexed()
+                    .references("pulses", onDelete: .cascade)
+                t.column("position", .integer).notNull()
+                t.column("text", .text).notNull()
+                t.primaryKey(["pulse_id", "position"])
+            }
+        }
         try migrator.migrate(dbQueue)
     }
 
@@ -124,7 +144,7 @@ public final class HeartbeatStore: @unchecked Sendable {
     @discardableResult
     public func record(
         digest: String, narrative: String?, renderedBy: String,
-        tags: Set<PulseTag> = [], at date: Date = Date()
+        tags: Set<PulseTag> = [], chips: [String] = [], at date: Date = Date()
     ) -> Int64? {
         try? dbQueue.write { [capacity] db -> Int64 in
             try db.execute(
@@ -139,6 +159,12 @@ public final class HeartbeatStore: @unchecked Sendable {
                 try db.execute(
                     sql: "INSERT OR IGNORE INTO pulse_tags (pulse_id, tag) VALUES (?, ?)",
                     arguments: [pulseID, tag.rawValue]
+                )
+            }
+            for (position, chip) in chips.enumerated() {
+                try db.execute(
+                    sql: "INSERT INTO pulse_chips (pulse_id, position, text) VALUES (?, ?, ?)",
+                    arguments: [pulseID, position, chip]
                 )
             }
             try db.execute(
@@ -163,7 +189,7 @@ public final class HeartbeatStore: @unchecked Sendable {
                 sql: "SELECT * FROM pulses ORDER BY id DESC LIMIT ?",
                 arguments: [limit]
             )
-            return try Self.attachTags(to: rows.map(Self.entry(from:)), db: db)
+            return try Self.attachChips(to: Self.attachTags(to: rows.map(Self.entry(from:)), db: db), db: db)
         }
     }
 
@@ -177,7 +203,7 @@ public final class HeartbeatStore: @unchecked Sendable {
                 sql: "SELECT * FROM pulses WHERE created_at >= ? ORDER BY id ASC",
                 arguments: [date.timeIntervalSince1970]
             )
-            return try Self.attachTags(to: rows.map(Self.entry(from:)), db: db)
+            return try Self.attachChips(to: Self.attachTags(to: rows.map(Self.entry(from:)), db: db), db: db)
         }
     }
 
@@ -185,6 +211,30 @@ public final class HeartbeatStore: @unchecked Sendable {
     func tagRowCount() throws -> Int {
         try dbQueue.read { db in
             try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pulse_tags") ?? 0
+        }
+    }
+
+    /// Total chip rows — the cascade tests' probe.
+    func chipRowCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pulse_chips") ?? 0
+        }
+    }
+
+    /// The NEWEST pulse's chips, in the order written — the blank canvas's one
+    /// read. Newest pulse only, by design: an older pulse's questions must never
+    /// stand in for a newer pulse that wrote none (they describe a day that has
+    /// moved on). Pair with `latestDate()` for the freshness gate.
+    public func latestChips() throws -> [String] {
+        try dbQueue.read { db in
+            try String.fetchAll(
+                db,
+                sql: """
+                SELECT text FROM pulse_chips
+                WHERE pulse_id = (SELECT MAX(id) FROM pulses)
+                ORDER BY position ASC
+                """
+            )
         }
     }
 
@@ -250,6 +300,32 @@ public final class HeartbeatStore: @unchecked Sendable {
             var tagged = entry
             tagged.tags = byPulse[entry.id] ?? []
             return tagged
+        }
+    }
+
+    /// One grouped fetch for the batch's chips — never a query per pulse.
+    private static func attachChips(to entries: [HeartbeatEntry], db: Database) throws -> [HeartbeatEntry] {
+        guard !entries.isEmpty else { return entries }
+        let ids = entries.map(\.id)
+        let placeholders = databaseQuestionMarks(count: ids.count)
+        let rows = try Row.fetchAll(
+            db,
+            sql: """
+            SELECT pulse_id, text FROM pulse_chips
+            WHERE pulse_id IN (\(placeholders)) ORDER BY pulse_id, position
+            """,
+            arguments: StatementArguments(ids)
+        )
+        var byPulse: [Int64: [String]] = [:]
+        for row in rows {
+            let pulseID: Int64 = row["pulse_id"] ?? 0
+            let text: String = row["text"] ?? ""
+            byPulse[pulseID, default: []].append(text)
+        }
+        return entries.map { entry in
+            var chipped = entry
+            chipped.chips = byPulse[entry.id] ?? []
+            return chipped
         }
     }
 }

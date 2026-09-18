@@ -9,6 +9,8 @@
 //  Signed: Kev + claude-fable-5, 2026-08-06, Confidence 0.85 (string
 //  contract pinned; whether the prompt WORKS on Big/Lil is a named
 //  verify-owed on-device run, not claimable from here). Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — three pins for `mayAuthorChips`: off by default and byte-identical, asked for before the
+//  digest with the length cap quoted from PulseAskLine, and ABOVE the TODO line when both writes are on. Confidence 0.9.
 //
 
 @testable import M1K3Heartbeat
@@ -85,5 +87,34 @@ struct HeartbeatPromptTests {
     func noOpenersSection() {
         let prompt = HeartbeatPrompt.render(digest: "Quiet stretch.", earlierToday: [])
         #expect(!prompt.lowercased().contains("do not open"))
+    }
+
+    // MARK: - Pulse-authored chips (2026-09-18) — off by default, measured before it is ever on
+
+    @Test("mayAuthorChips is OFF by default and leaves every pinned prompt byte-identical")
+    func chipsOffByDefault() {
+        let plain = HeartbeatPrompt.render(digest: "d", earlierToday: ["Slow start."], recentPulses: ["Quiet one."])
+        let explicitOff = HeartbeatPrompt.render(
+            digest: "d", earlierToday: ["Slow start."], recentPulses: ["Quiet one."], mayAuthorChips: false
+        )
+        #expect(plain == explicitOff)
+        #expect(!plain.contains("ASK:"))
+    }
+
+    @Test("when on, the prompt asks for up to two ASK lines, before the digest")
+    func chipsOn() throws {
+        let on = HeartbeatPrompt.render(digest: "d", earlierToday: [], mayAuthorChips: true)
+        #expect(on.contains("`ASK: <question>`"))
+        #expect(on.contains("\(PulseAskLine.maxLength) characters"))
+        #expect(try #require(on.range(of: "ASK:")?.lowerBound) < #require(on.range(of: "Digest:")?.lowerBound))
+    }
+
+    @Test("with both writes on, ASK is asked for ABOVE the TODO — TodoProposalLine reads only the last line")
+    func chipsSitAboveTheTodo() throws {
+        let both = HeartbeatPrompt.render(digest: "d", earlierToday: [], mayProposeTodo: true, mayAuthorChips: true)
+        let ask = try #require(both.range(of: "`ASK: <question>`")?.lowerBound)
+        let todo = try #require(both.range(of: "`TODO: <short title>`")?.lowerBound)
+        #expect(ask < todo)
+        #expect(both.contains("TODO line, if any, stays last"))
     }
 }

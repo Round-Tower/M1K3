@@ -24,6 +24,9 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: `mayProposeTodo` appends the one-
 //  TODO-line rule only when the app allows it; default false keeps every pinned prompt unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — `mayAuthorChips` (default OFF, every pinned prompt byte-identical): asks for up to two
+//  `ASK:` lines ABOVE the TODO line. A prompt change — the wording is a first draft to MEASURE on real renders, not a finding.
+//  Confidence 0.6 on the wording, 0.9 on the plumbing.
 
 import Foundation
 
@@ -41,11 +44,20 @@ public enum HeartbeatPrompt {
     /// the note with a single `TODO: <title>` line, which TodoProposalLine
     /// strips before the guard and the app files as a PENDING todo. Off by
     /// default so every pinned prompt is unchanged.
+    /// `mayAuthorChips`: the second write (2026-09-18). The model may add up to
+    /// two `ASK: <question>` lines — the "ask me" chips the next blank canvas
+    /// shows, lifted by PulseAskLine and guarded before they are stored. Asked
+    /// for ABOVE the TODO line, because TodoProposalLine reads only the last.
+    /// ★ A PROMPT CHANGE, so off by default and behind a flag until it has been
+    /// measured on real renders: every sentence this prompt has ever gained got
+    /// performed (the #349 date line, the small-talk RULE). The wording below is
+    /// a first draft to measure, not a finding.
     public static func render(
         digest: String,
         earlierToday: [String],
         recentPulses: [String] = [],
-        mayProposeTodo: Bool = false
+        mayProposeTodo: Bool = false,
+        mayAuthorChips: Bool = false
     ) -> String {
         var sections: [String] = []
         sections.append(
@@ -79,6 +91,18 @@ public enum HeartbeatPrompt {
                 Your recent notes opened with these lines. Do not open like them — \
                 find a different first sentence:
                 \(openers)
+                """
+            )
+        }
+        if mayAuthorChips {
+            sections.append(
+                """
+                After the note you may add up to two lines of the form `ASK: <question>` \
+                — a short question the user might like to ask YOU next, about something \
+                in the digest, in their voice, under \(PulseAskLine.maxLength) characters, \
+                ending in a question mark, using no number the digest does not show. These \
+                lines are not part of the note. If nothing in the digest invites a \
+                question, write none. A TODO line, if any, stays last.
                 """
             )
         }

@@ -13,6 +13,8 @@
 //  in-memory store). Prior: none (new file).
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: pins `latestID()`.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — four pins for the chips sidecar: ordered round-trip (recent + since), chipless validity,
+//  cascade on the cap trim AND Clear, and latestChips = newest pulse only. Confidence 0.9.
 
 import Foundation
 @testable import M1K3Heartbeat
@@ -158,5 +160,49 @@ struct HeartbeatStoreTests {
         #expect(first != nil && second != nil && first != second)
         #expect(try store.recent(limit: 1).first?.id == second)
         #expect(try store.latestID() == second)
+    }
+
+    // MARK: - Pulse-authored chips (2026-09-18: a second sidecar, same cascade rule)
+
+    @Test("chips round-trip with their pulse, in the order written")
+    func chipsRoundTrip() throws {
+        let store = try makeStore()
+        store.record(
+            digest: "d", narrative: "n", renderedBy: "Lil",
+            chips: ["What did Claude Code want today?", "Shall we clear the overdue todo?"], at: Date()
+        )
+        let entry = try #require(try store.recent().first)
+        #expect(entry.chips == ["What did Claude Code want today?", "Shall we clear the overdue todo?"])
+        #expect(try store.since(.distantPast).first?.chips == entry.chips)
+    }
+
+    @Test("a chipless record stays a valid pulse with an empty list")
+    func chiplessIsValid() throws {
+        let store = try makeStore()
+        store.record(digest: "d", narrative: nil, renderedBy: "digest", at: Date())
+        #expect(try store.recent().first?.chips == [])
+    }
+
+    @Test("Clear and the cap trim take the chips with them — nothing survives")
+    func chipsCascade() throws {
+        let store = try makeStore(capacity: 1)
+        let base = Date(timeIntervalSince1970: 1_754_480_000)
+        store.record(digest: "old", narrative: nil, renderedBy: "digest", chips: ["Old one?"], at: base)
+        store.record(digest: "new", narrative: nil, renderedBy: "digest", chips: ["New one?"], at: base.addingTimeInterval(7200))
+        #expect(try store.chipRowCount() == 1)
+        #expect(try store.recent()[0].chips == ["New one?"])
+        try store.clear()
+        #expect(try store.chipRowCount() == 0)
+    }
+
+    @Test("latestChips reads the NEWEST pulse only — an older pulse's chips never stand in for a newer chipless one")
+    func latestChipsIsTheNewestPulseOnly() throws {
+        let store = try makeStore()
+        let base = Date(timeIntervalSince1970: 1_754_480_000)
+        #expect(try store.latestChips() == [])
+        store.record(digest: "a", narrative: nil, renderedBy: "digest", chips: ["From the first?"], at: base)
+        #expect(try store.latestChips() == ["From the first?"])
+        store.record(digest: "b", narrative: nil, renderedBy: "digest", at: base.addingTimeInterval(7200))
+        #expect(try store.latestChips() == [])
     }
 }

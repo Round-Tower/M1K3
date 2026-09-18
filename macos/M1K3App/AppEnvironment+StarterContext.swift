@@ -20,6 +20,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.8 — #286: memoryTitles now filters out
 //  SelfNoteClassifier-flagged wiring notes before drawing chips (this gatherer stays
 //  verify-by-launch; the classifier itself is pinned in SelfNoteClassifierTests).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — the canvas reads the newest pulse's own chips (`latestChips()`, one indexed read, only when
+//  a pulse exists); StarterPrompts gates freshness and judges each chip again. Still no inference at canvas time. Confidence 0.85.
 //
 
 import Foundation
@@ -59,6 +61,10 @@ extension AppEnvironment {
         context.overdueTodoCount = open.count(where: { $0.isOverdue(now: now) })
         if let latest = try? heartbeatStore?.latestDate() {
             context.latestPulseAge = now.timeIntervalSince(latest)
+            // The newest pulse's own questions (empty unless it authored any). One
+            // indexed read; StarterPrompts applies the freshness gate and judges
+            // each chip again before it can reach the canvas.
+            context.pulseChips = (try? heartbeatStore?.latestChips()) ?? []
         }
         if UserDefaults.standard.bool(forKey: Self.conversationLogEnabledKey),
            let activity = try? conversationLog?.activity(since: calendar.startOfDay(for: now))
