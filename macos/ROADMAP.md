@@ -68,13 +68,13 @@ the first Teams customer, the move from engineer to honest founder.
 
 ## Next — the releases
 
-### 1.1.0 — SHIPPED 2026-09-16 (`docs/GOLDEN_GATE_PLAN.md`)
+### "1.1.0" — MERGED 2026-09-16, riding under 1.0.0 (`docs/GOLDEN_GATE_PLAN.md`)
 
-Toolchain bump to Xcode 27 GA (#362), typed AFM errors, CI guards, and
-**Private Cloud Compute ships** (the planned 1.2 rung shipped early — the
-policy, send path, consent sheet, Mac shell, FM27 adapter and entitlement
-are all live). Post-1.1.0 on master: 5 App Intents (#366), AFM vision +
-file-as-context (#367).
+On master, not on the store (see the header). Toolchain bump to Xcode 27 GA
+(#362), typed AFM errors, CI guards, and **Private Cloud Compute is merged**
+(the planned 1.2 rung landed early — the policy, send path, consent sheet, Mac
+shell, FM27 adapter and entitlement are all on master). Since then: 5 App
+Intents (#366), AFM vision + file-as-context (#367).
 
 **Still open from 1.1's original list:**
 - `toolCallingMode(.disallowed)` for Mini small talk (#102) — the API is
@@ -270,6 +270,10 @@ stays a possible later companion.
 
 ---
 
+<!-- Review: Kev + claude-fable-5.1, 2026-09-18 (2) — review fold on #381: the "1.1.0" section heading still
+     said SHIPPED, with "PCC ships" and "are all live" under it — the same error in three phrasings, two
+     screens below my own correction. Now "MERGED, riding under 1.0.0". The code-landed SHIPPED lines
+     (App Intents, Mac server, screensaver, Android harness) describe the repo and stand. Confidence 0.9. -->
 <!-- Review: Kev + claude-fable-5.1, 2026-09-18 — FACT correction only: 1.1.0 was merged, never
      shipped; 1.0.0 is still in App Review (store lookup → no listing; Kev's word). Header, the
      "Now" title, the #370 line and the store-pack line truthed; the plan itself untouched.
