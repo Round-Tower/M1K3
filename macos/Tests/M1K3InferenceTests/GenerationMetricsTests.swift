@@ -5,11 +5,18 @@
 //  The pure metrics value + the install/report reporter sink.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-01, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — the suite is `.serialized`. `GenerationMetricsReporter` is ONE process-wide
+//  handler, and two tests here write it: Swift Testing runs a suite's tests in parallel, so `reportWithoutHandler`'s
+//  `install(nil)` could land between `reportForwards`'s install and its report → `box.last → nil`. Latent since July; it
+//  failed CI on PR #383 (run 35375840922), a PR that touches none of this. No other suite installs the handler (checked),
+//  so serialising this one closes the race. Read-derived — a race has no deterministic red. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Inference
 import Testing
 
+/// Serialized: the tests below share a process-wide handler (see the header's Review).
+@Suite(.serialized)
 struct GenerationMetricsTests {
     @Test("context fraction is promptTokens / window, clamped to 0…1")
     func contextFraction() {
