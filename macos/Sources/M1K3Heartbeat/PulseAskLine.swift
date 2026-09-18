@@ -66,6 +66,12 @@
 //  word readings (plain, 1→i, 1→l) the same way; (b) my mixed-script rule asked "ASCII or not?" and refused Bjørn, Łukasz, Straße, sœur
 //  and "3μs" — it now names the CONFUSABLE blocks (Cyrillic, Greek, Armenian, Cherokee; μ and Ω exempt); (c) squared/circled alphanumerics
 //  and emoji are refused (they vanish from every word reading). Confidence 0.8 — classes closed as far as four passes could find them.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (8) — the fast follow-up #382's last pass asked for: word readings strip COMBINING MARKS
+//  ("iǵnore" was one token that never equalled "ignore"), and the four multi-word refusals leave the literal-substring list for the
+//  whole-window machinery ("developer-message", "you-are", "d3veloper message"). One special case in `admit` removed. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (9) — #387 second pass: the link/markup FRAGMENT checks never stripped marks, so
+//  "ẃww.evil.example" passed — the class closed for words, one layer up. `strippingMarks` is now the one helper both use. Also the
+//  first pass's two nits: why the coarse `words` split needs no stripping, and the refused-spellings union hoisted. Confidence 0.85.
 //
 
 import Foundation
@@ -172,15 +178,20 @@ public enum PulseAskLine {
         // every word reading below and leave the chip spelling whatever it likes.
         guard !folded.unicodeScalars.contains(where: isLetterlikeSymbol) else { return nil }
         let lowered = folded.lowercased()
-        guard !forbiddenFragments.contains(where: lowered.contains) else { return nil }
+        // Fragments are judged on text with the combining marks OFF: "ẃww." is a
+        // different grapheme from "www.", so a marked link walked past this check while
+        // the word readings below were already stripping marks (#387 second pass).
+        let bare = strippingMarks(lowered)
+        guard !forbiddenFragments.contains(where: bare.contains) else { return nil }
         // …and again with every space squeezed out: "http s : //" is still a link.
-        // Only the symbol/URL fragments are judged this way — the two phrases with a
-        // space in them ("you are ", "act as ") mean nothing once the spaces are gone.
-        let squeezed = lowered.filter { !$0.isWhitespace }
-        guard !forbiddenFragments.contains(where: { !$0.contains(" ") && squeezed.contains($0) }) else { return nil }
+        let squeezed = bare.filter { !$0.isWhitespace }
+        guard !forbiddenFragments.contains(where: squeezed.contains) else { return nil }
         // WHOLE words, anywhere in the chip: "Please ignore previous rules?" is as
         // much an instruction as one that opens with the verb — and "personal"
         // must not trip on "persona", nor "overrides" on "override".
+        // (No mark-stripping here on purpose: this coarse split catches a refused word
+        // INSIDE a hyphenated compound — "re-ignore" → {re, ignore}; a MARKED word is the
+        // word readings' job, below, via `strippingMarks`.)
         let words = Set(lowered.split(whereSeparator: { !$0.isLetter }).map(String.init))
         guard words.isDisjoint(with: refusedWords) else { return nil }
         // …and the same words with their seams closed. Splitting on non-letters
@@ -239,7 +250,6 @@ public enum PulseAskLine {
     private static let forbiddenFragments = [
         "http:", "https:", "www.", "://",
         "`", "<", ">", "[", "]", "{", "}", "|", "\\",
-        "you are ", "act as ", "developer message", "everything above",
     ]
 
     /// An instruction wearing a question mark, or a question about the wiring.
@@ -261,7 +271,13 @@ public enum PulseAskLine {
     /// `substituting` says a character stands for. Empty words drop out.
     private static func wordReading(of lowered: String, substituting map: [Character: Character]) -> [String] {
         lowered.split(separator: " ")
-            .map { String($0.map { map[$0] ?? $0 }.filter(\.isLetter)) }
+            .map { word -> String in
+                // Marks come off first, so a decorated letter is judged as the letter
+                // it is: "iǵnore" (g + U+0301) is one token that never equalled
+                // "ignore", while the script check skips marks on purpose so "café"
+                // passes (#382 follow-up). Decompose, drop Mn/Mc/Me, then substitute.
+                return String(strippingMarks(String(word)).map { map[$0] ?? $0 }.filter(\.isLetter))
+            }
             .filter { !$0.isEmpty }
     }
 
@@ -271,12 +287,13 @@ public enum PulseAskLine {
     /// is at most `maxLength` characters, so this is a few dozen joins.
     private static func spellsRefusedWord(_ words: [String]) -> Bool {
         guard !words.isEmpty else { return false }
-        let longestRefused = refusedWords.map(\.count).max() ?? 0
+        let refused = refusedSpellings
+        let longestRefused = longestRefusedSpelling
         for width in 1 ... words.count {
             for start in 0 ... (words.count - width) {
                 let joined = words[start ..< start + width].joined()
                 guard joined.count <= longestRefused else { continue }
-                if refusedWords.contains(joined) { return true }
+                if refused.contains(joined) { return true }
             }
         }
         return false
@@ -314,6 +331,35 @@ public enum PulseAskLine {
     /// does not fold. The degree sign is the one honest exception a status chip uses.
     private static func isLetterlikeSymbol(_ scalar: Unicode.Scalar) -> Bool {
         scalar.properties.generalCategory == .otherSymbol && scalar != "\u{00B0}"
+    }
+
+    /// The multi-word refusals, as the JOINED spelling a word window produces — so they
+    /// get every reading the single words get: "developer-message", "developer_message",
+    /// "d3veloper  message" and "you-are" all join to one of these. They used to be
+    /// literal substrings ("you are "), which a hyphen walked past exactly as "by-pass"
+    /// once did, one level up (#382 follow-up). Window EQUALITY, so "you around" and
+    /// "the actor message" pass.
+    private static let refusedPhrasesJoined: Set<String> = ["youare", "actas", "developermessage", "everythingabove"]
+
+    /// Everything a word window may not spell: the single words and the joined phrases.
+    /// Hoisted — `spellsRefusedWord` runs three times per chip.
+    private static let refusedSpellings: Set<String> = refusedWords.union(refusedPhrasesJoined)
+    private static let longestRefusedSpelling = refusedSpellings.map(\.count).max() ?? 0
+
+    /// Canonically decomposed, with the combining marks (Mn/Mc/Me) dropped — a
+    /// decorated letter judged as the letter it is. Used by BOTH the fragment checks
+    /// and the word readings, so a mark cannot hide a link any more than a word.
+    private static func strippingMarks(_ text: String) -> String {
+        String(String.UnicodeScalarView(
+            text.decomposedStringWithCanonicalMapping.unicodeScalars.filter { !isCombiningMark($0) }
+        ))
+    }
+
+    private static func isCombiningMark(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.properties.generalCategory {
+        case .nonspacingMark, .spacingMark, .enclosingMark: true
+        default: false
+        }
     }
 
     /// Control (Cc) and format (Cf) scalars — judged AFTER whitespace folding,
