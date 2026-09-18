@@ -64,7 +64,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie", "sameAs": ["https://github.com/Round-Tower"] },
   "sameAs": ["https://github.com/Round-Tower/M1K3"],
   "datePublished": "2026-07-02",
-  "dateModified": "2026-09-17"
+  "dateModified": "2026-09-15"
 }
 </script>
 <script type="application/ld+json">
@@ -87,7 +87,7 @@
     { "@type": "Question", "name": "Can my other devices use my Mac's brain?",
       "acceptedAnswer": { "@type": "Answer", "text": "That's Brain at Home: your Mac can serve its brain to your own devices over the local network — discovered via Bonjour, paired once by QR code, encrypted with TLS-PSK, with paired devices limited to a scoped read-only tool set. It is off by default and nothing ever crosses the internet; everything stays inside your walls." } },
     { "@type": "Question", "name": "Is M1K3 free? Is it open source?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Free for humans, forever — no account, no subscription, no telemetry. It is source-available, not open source: the whole repository is public under the Functional Source License (FSL-1.1-ALv2), so you can read every line, build it, modify it, and run it for yourself or inside your organisation. What the licence withholds is offering M1K3 or a copy of it to others as a competing commercial product; each version becomes Apache-2.0 two years after release. Organisations that want M1K3 on their own hardware, under their own domain, license M1K3 for Teams from Round Tower. Developed by Round Tower in Ireland; download from the App Store, get the signed DMG directly, or build it from source on GitHub." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "Free for humans, forever — no account, no subscription, no telemetry. It is source-available, not open source: the whole repository is public under the Functional Source License (FSL-1.1-ALv2), so you can read every line, build it, modify it, and run it for yourself or inside your organisation. What the licence withholds is offering M1K3 or a copy of it to others as a competing commercial product; each version becomes Apache-2.0 two years after release. Organisations that want M1K3 on their own hardware, under their own domain, license M1K3 for Teams from Round Tower. Developed by Round Tower in Ireland; download the signed Mac app directly, join the TestFlight beta, or build it from source on GitHub." } }
   ]
 }
 </script>
@@ -601,7 +601,7 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>Is it free? Is it open source?</summary>
-      <p>Free for humans, forever — made by Round Tower in Ireland. No account, no subscription, no telemetry. It is source-available, not open source: the whole repository is public under the <a href="https://github.com/Round-Tower/M1K3/blob/master/LICENSE">Functional Source License</a>: read every line, build it, run it for yourself or inside your organisation; the one thing it withholds is selling M1K3 or a copy of it to others, and each version becomes Apache-2.0 two years on. Download from the App Store, grab the signed &amp; notarized DMG, or build from source today. If M1K3 earns a place on your Mac, there's an optional <a href="https://github.com/sponsors/Round-Tower">GitHub Sponsors</a> page — it funds development, never gates features.</p>
+      <p>Free for humans, forever — made by Round Tower in Ireland. No account, no subscription, no telemetry. It is source-available, not open source: the whole repository is public under the <a href="https://github.com/Round-Tower/M1K3/blob/master/LICENSE">Functional Source License</a>: read every line, build it, run it for yourself or inside your organisation; the one thing it withholds is selling M1K3 or a copy of it to others, and each version becomes Apache-2.0 two years on. Download the signed &amp; notarized Mac app, join the TestFlight beta, or build from source today. If M1K3 earns a place on your Mac, there's an optional <a href="https://github.com/sponsors/Round-Tower">GitHub Sponsors</a> page — it funds development, never gates features.</p>
       <p><strong>Organisations:</strong> <a href="/teams">M1K3 for Teams</a> puts the same brains, an institutional memory, and a persona tuned to your people on your own Apple Silicon hardware, under your own domain. An administrator can lock the Private Cloud Compute switch off fleet-wide, so nothing leaves your network. Licensed separately; write to <a href="mailto:kevin@round-tower.ie">kevin@round-tower.ie</a>.</p>
     </details>
   </div>
@@ -611,13 +611,13 @@ the action list?<br />
 
 <!-- ================= FINAL CTA ================= -->
 <section class="final" id="get">
-  <span class="label reveal">// now on the app store</span>
+  <span class="label reveal">// now in open beta</span>
   <h2 class="reveal" style="margin-top:18px;">Own your AI.</h2>
   <p class="reveal">M1K3 for Mac is ready to download. Free for humans, forever — run it on your own Mac, or build it from source. Two minutes, no account: <a href="/install">get the app</a>, say hello to the brain already on your Mac, and — if you want — <a href="/install#connect">connect your coding agent</a> with one command.</p>
   <div class="cta-row reveal" style="justify-content:center;">
     <a class="btn btn-primary" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">Download for Mac</a>
     <a class="btn btn-ghost" href="/install">Install guide</a>
-    <a class="btn btn-ghost" href="https://apps.apple.com/app/id6780230835">Get it on the App Store</a>
+    <a class="btn btn-ghost" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
     <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Build from source</a>
   </div>
   <p class="reveal" style="margin-top:30px; font-family:var(--mono); font-size:13px; letter-spacing:0.06em; color:var(--ink-faint);">Free, and staying that way. If it earns a place on your Mac, you can <a href="https://github.com/sponsors/Round-Tower" style="color:var(--ink-dim); text-decoration:underline;">sponsor its development</a> — optional, never nagged.</p>
@@ -1042,9 +1042,6 @@ tick();
      nine feature cells, but worth a fuller pass before ship. og:image:alt / twitter:image:alt
      untouched — the image itself still renders "Nothing leaves." dateModified NOT bumped (this
      content isn't live). Confidence 0.75 (every claim checked against ADR 0006; the atmospheric
-     copy left alone is a judgment call, not a verified-safe one).
-
-     Review: 2026-09-17 — TestFlight CTAs → App Store (1.1.0 live). JSON-LD FAQ, visible FAQ,
-     final CTA button, label. dateModified 2026-09-17. Confidence now 0.85. -->
+     copy left alone is a judgment call, not a verified-safe one). -->
 </body>
 </html>
