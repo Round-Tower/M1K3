@@ -21,6 +21,9 @@
 //  five motes on a dark pane undersold it. All backstory is dated BEFORE the five, so the Memories plate's first screen (newest
 //  first) is unchanged. Names are invented; the forbidden-terms sweep now covers every memory. Plate re-shoot is verify-by-launch.
 //  Confidence 0.85 on the data, 0.6 on how it LOOKS until the plate is shot.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (2) — #383 review fold: every edge was stamped with one date. Each is now dated at
+//  the LATER of its two endpoints (a thread cannot predate either mote), so the threads accrete over the weeks. Nothing reads
+//  edge recency today; this keeps the seed honest for the day something does. Confidence 0.9.
 //
 
 import Foundation
@@ -249,17 +252,22 @@ public enum DemoPersona {
     ]
 
     public static let constellationEdges: [MemoryEdge] = {
-        var ids: [String: UUID] = [:]
+        var byKey: [String: Memory] = [:]
         for (fact, memory) in zip(backstoryFacts, backstory) {
-            ids[fact.key] = memory.id
+            byKey[fact.key] = memory
         }
         for (key, memory) in zip(["cur.tea", "cur.lair", "cur.phone", "cur.loaf", "cur.scheme"], memories) {
-            ids[key] = memory.id
+            byKey[key] = memory
         }
         // A misspelt key drops its edge here; `theEdgeSpecsAllResolve` fails on it.
+        // Dated at the LATER endpoint: a thread cannot predate either mote, and the
+        // threads then accrete over the weeks like the memories do (#383 review).
         return edgeSpecs.compactMap { from, to, relation in
-            guard let fromID = ids[from], let toID = ids[to] else { return nil }
-            return MemoryEdge(fromID: fromID, toID: toID, relation: relation, createdAt: memories[0].createdAt)
+            guard let fromMemory = byKey[from], let toMemory = byKey[to] else { return nil }
+            return MemoryEdge(
+                fromID: fromMemory.id, toID: toMemory.id, relation: relation,
+                createdAt: max(fromMemory.createdAt, toMemory.createdAt)
+            )
         }
     }()
 

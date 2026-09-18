@@ -12,6 +12,7 @@
 //  memories in M1K3's voice). Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 — five pins for the constellation backstory: a life not a list, the curated five
 //  stay the newest, every edge key resolves, edges well-formed, and no lonely motes in ONE connected sky. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (2) — one more pin: an edge is dated at its later endpoint (red on 44 of 45). Confidence 0.9.
 //
 
 import Foundation
@@ -119,6 +120,19 @@ struct DemoPersonaTests {
             #expect(DemoPersona.edgeRelations.contains(edge.relation), "unknown relation: \(edge.relation)")
             #expect(seen.insert("\(edge.fromID)>\(edge.toID)>\(edge.relation)").inserted, "duplicate edge")
         }
+    }
+
+    @Test func anEdgeIsNeverOlderThanTheMemoriesItJoins() {
+        // A thread cannot predate either mote. Each edge is dated at the LATER of
+        // its two endpoints — so if edge recency ever feeds layout or opacity, the
+        // seed tells the truth instead of 45 edges all claiming one moment.
+        let dates = Dictionary(uniqueKeysWithValues: DemoPersona.allMemories.map { ($0.id, $0.createdAt) })
+        for edge in DemoPersona.constellationEdges {
+            let from = dates[edge.fromID] ?? .distantFuture
+            let to = dates[edge.toID] ?? .distantFuture
+            #expect(edge.createdAt == max(from, to))
+        }
+        #expect(Set(DemoPersona.constellationEdges.map(\.createdAt)).count > 10, "the threads accrete over the weeks")
     }
 
     @Test func noLonelyMotesAndOneSky() {
