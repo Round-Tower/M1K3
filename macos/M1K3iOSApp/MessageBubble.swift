@@ -30,15 +30,30 @@ struct MessageBubble: View {
     var body: some View {
         switch message.role {
         case .user:
-            HStack {
-                Spacer(minLength: 48)
-                Text(message.text)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    // Byte-parity with the Mac's user turn (MessageView): regular
-                    // glass, accent tint 0.2, rect 18.
-                    .m1k3Glass(cornerRadius: 18, tint: .accentColor.opacity(0.2))
-                    .textSelection(.enabled)
+            VStack(alignment: .trailing, spacing: 6) {
+                if let attachments = message.attachments, !attachments.isEmpty {
+                    HStack(spacing: 8) {
+                        Spacer(minLength: 48)
+                        ForEach(attachments, id: \.url) { attachment in
+                            AsyncImage(url: attachment.url) { image in
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Color.secondary.opacity(0.2)
+                            }
+                            .frame(width: 80, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .accessibilityLabel("Attached image")
+                        }
+                    }
+                }
+                HStack {
+                    Spacer(minLength: 48)
+                    Text(message.text)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .m1k3Glass(cornerRadius: 18, tint: .accentColor.opacity(0.2))
+                        .textSelection(.enabled)
+                }
             }
         case .assistant:
             VStack(alignment: .leading, spacing: 8) {

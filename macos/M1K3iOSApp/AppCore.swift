@@ -745,10 +745,10 @@ final class AppCore {
         chat.stopResponding()
     }
 
-    func send(_ text: String) async {
+    func send(_ text: String, images: [ImageAttachment] = []) async {
         guard isReady else { return }
         avatar.setActivity(.thinking)
-        await chat.send(text)
+        await chat.send(text, images: images)
         // After a stop with nothing streamed, `messages.last` is the user's own
         // question (the assistant bubble is removed) — only an assistant row
         // is an answer.

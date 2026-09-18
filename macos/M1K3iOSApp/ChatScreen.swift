@@ -48,6 +48,7 @@ import M1K3Inference
 import M1K3Screengrab
 import StoreKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ChatScreen: View {
     @Environment(AppCore.self) private var core
@@ -63,6 +64,11 @@ struct ChatScreen: View {
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
     @State private var draft = ""
     @State private var starters: [String] = []
+    @State private var showAttachmentImporter = false
+    @State private var pendingAttachments: [ImageAttachment] = []
+    @State private var showFileContextImporter = false
+    @State private var pendingFiles: [FileAttachment] = []
+    @State private var attachmentError: String?
     @FocusState private var inputFocused: Bool
 
     private var chatting: Bool {
@@ -84,7 +90,7 @@ struct ChatScreen: View {
 
     /// Composing — keyboard up or a draft in hand; recedes the backdrop avatar.
     private var isComposing: Bool {
-        inputFocused || !draft.isEmpty
+        inputFocused || !draft.isEmpty || !pendingAttachments.isEmpty || !pendingFiles.isEmpty
     }
 
     var body: some View {
@@ -129,6 +135,41 @@ struct ChatScreen: View {
                 set: { active in if !active { core.exitVoiceMode() } }
             )) {
                 VoiceScreen()
+            }
+            .alert(
+                "Attachment Error",
+                isPresented: Binding(
+                    get: { attachmentError != nil },
+                    set: { if !$0 { attachmentError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(attachmentError ?? "")
+            }
+            .fileImporter(
+                isPresented: $showAttachmentImporter,
+                allowedContentTypes: [.image],
+                allowsMultipleSelection: true
+            ) { result in
+                if case let .success(urls) = result {
+                    attachImages(at: urls)
+                }
+            }
+            .fileImporter(
+                isPresented: $showFileContextImporter,
+                allowedContentTypes: [.plainText, .text, .sourceCode, .json, .yaml, .xml, .html],
+                allowsMultipleSelection: true
+            ) { result in
+                if case let .success(urls) = result {
+                    attachFiles(at: urls)
+                }
+            }
+            .onChange(of: core.selectedBrain) {
+                if !core.selectedBrain.supportsImageInput {
+                    AttachmentStore.discard(pendingAttachments)
+                    pendingAttachments = []
+                }
             }
             // Harness switch for device field tests driven from the Mac: a launch
             // environment of M1K3_VOICE_AT_LAUNCH=1 enters voice mode as soon as
@@ -387,40 +428,124 @@ struct ChatScreen: View {
     // MARK: - Input bar
 
     private var inputBar: some View {
-        // One glass container for the whole row — the Mac inputRow's pattern, so
-        // the field's glass and any neighbouring chips render/blend as a group.
-        M1K3GlassGroup(spacing: 10) {
-            HStack(spacing: 10) {
-                TextField("Ask M1K3…", text: $draft, axis: .vertical)
-                    .lineLimit(1 ... 4)
-                    .focused($inputFocused)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 11)
-                    .m1k3Glass(cornerRadius: 22)
-                    .onSubmit(send)
-                // Send while idle, Stop while streaming — one control, the
-                // symbol replaced in place (hit list 2026-09-08). The spinner
-                // it replaces told the user to wait; the stop tells them they
-                // don't have to.
-                Button {
-                    if core.chat.isResponding { core.stopResponding() } else { send() }
-                } label: {
-                    Image(systemName: core.chat.isResponding ? "stop.circle.fill" : "arrow.up.circle.fill")
-                        .font(.system(size: 30))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(core.chat.isResponding ? .red : .accentColor)
-                        .contentTransition(.symbolEffect(.replace))
-                        .animation(.default, value: core.chat.isResponding)
+        VStack(spacing: 0) {
+            if !pendingAttachments.isEmpty {
+                pendingImagesStrip
+            }
+            if !pendingFiles.isEmpty {
+                pendingFilesStrip
+            }
+            M1K3GlassGroup(spacing: 10) {
+                HStack(spacing: 10) {
+                    if core.selectedBrain.supportsImageInput {
+                        Button { showAttachmentImporter = true } label: {
+                            Image(systemName: "photo.badge.plus")
+                                .font(.system(size: 20))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(core.chat.isResponding || !core.isReady)
+                        .accessibilityLabel("Attach image")
+                    }
+
+                    Button { showFileContextImporter = true } label: {
+                        Image(systemName: "doc.badge.plus")
+                            .font(.system(size: 20))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(core.chat.isResponding || !core.isReady)
+                    .accessibilityLabel("Attach file")
+
+                    TextField("Ask M1K3…", text: $draft, axis: .vertical)
+                        .lineLimit(1 ... 4)
+                        .focused($inputFocused)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .m1k3Glass(cornerRadius: 22)
+                        .onSubmit(send)
+
+                    Button {
+                        if core.chat.isResponding { core.stopResponding() } else { send() }
+                    } label: {
+                        Image(systemName: core.chat.isResponding ? "stop.circle.fill" : "arrow.up.circle.fill")
+                            .font(.system(size: 30))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(core.chat.isResponding ? .red : .accentColor)
+                            .contentTransition(.symbolEffect(.replace))
+                            .animation(.default, value: core.chat.isResponding)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSend && !core.chat.isResponding)
+                    .accessibilityLabel(core.chat.isResponding ? "Stop generating" : "Send")
                 }
-                .buttonStyle(.plain)
-                .disabled(!canSend && !core.chat.isResponding)
-                .accessibilityLabel(core.chat.isResponding ? "Stop generating" : "Send")
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .frame(maxWidth: 760)
         .frame(maxWidth: .infinity)
+    }
+
+    private var pendingImagesStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(pendingAttachments, id: \.url) { attachment in
+                    ZStack(alignment: .topTrailing) {
+                        AsyncImage(url: attachment.url) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Color.gray.opacity(0.3)
+                        }
+                        .frame(width: 56, height: 56)
+                        .clipShape(.rect(cornerRadius: 8))
+
+                        Button {
+                            AttachmentStore.discard([attachment])
+                            pendingAttachments.removeAll { $0 == attachment }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.caption)
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(.white, .black.opacity(0.6))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove attachment")
+                        .offset(x: 4, y: -4)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 6)
+        }
+    }
+
+    private var pendingFilesStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(pendingFiles) { file in
+                    HStack(spacing: 6) {
+                        Image(systemName: "doc.text")
+                            .font(.caption2)
+                        Text(file.filename)
+                            .font(.caption2)
+                            .lineLimit(1)
+                        Button {
+                            pendingFiles.removeAll { $0 == file }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove \(file.filename)")
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial, in: Capsule())
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 6)
+        }
     }
 
     private var canSend: Bool {
@@ -436,13 +561,58 @@ struct ChatScreen: View {
     }
 
     private func send() {
-        // Guard on the SAME condition the Button uses — otherwise a Return key while
-        // the brain is warming or a prior answer is streaming would clear `draft` and
-        // then no-op in core.send/ChatSession.send, silently eating the message.
         guard canSend else { return }
-        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !pendingFiles.isEmpty {
+            let fileContext = pendingFiles.map(\.contextBlock).joined(separator: "\n\n")
+            text = text.isEmpty ? fileContext : fileContext + "\n\n" + text
+        }
+        let images = pendingAttachments
         draft = ""
+        pendingAttachments = []
+        pendingFiles = []
         inputFocused = false
-        Task { await core.send(text) }
+        Task { await core.send(text, images: images) }
     }
+
+    // MARK: - Attachments
+
+    private func attachImages(at urls: [URL]) {
+        var failures: [String] = []
+        for url in urls {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            do {
+                try pendingAttachments.append(Self.attachmentStore.store(originalURL: url))
+            } catch {
+                failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+        if !failures.isEmpty {
+            attachmentError = failures.joined(separator: "\n")
+        }
+    }
+
+    private func attachFiles(at urls: [URL]) {
+        var failures: [String] = []
+        for url in urls {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let attachment = try FileTextExtractor.extract(from: url)
+                pendingFiles.append(attachment)
+            } catch {
+                failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+        if !failures.isEmpty {
+            attachmentError = failures.joined(separator: "\n")
+        }
+    }
+
+    private static let attachmentStore = AttachmentStore(
+        directory: ScreengrabHarness.current.dataRoot(
+            live: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        ).appendingPathComponent("attachments")
+    )
 }
