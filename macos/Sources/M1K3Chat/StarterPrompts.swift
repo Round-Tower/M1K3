@@ -28,6 +28,8 @@
 //  takes at most ONE per canvas, so the two rotate. Judged again here (one line, dropped — never cut — past maxChipLength):
 //  they are model-authored from a digest carrying untrusted text and are sent as the user's words. No inference at canvas
 //  time, still. Confidence 0.85 (rules pinned red-first; what a real brain writes after `ASK:` is verify-by-run).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (2) — a note at `pick`: the one-`.pulse`-per-canvas rule evens its odds only while
+//  `contextRoom` >= 2 (the Mac's count of 4). Comment only. Confidence 0.9.
 //
 
 import Foundation
@@ -250,7 +252,11 @@ public enum StarterPrompts {
         // `.pulse` may offer two candidates (the chips a pulse authored), but a
         // canvas takes ONE: they are the same voice asking twice, and both slots
         // to the pulse would crowd out what the stores know. The shuffle decides
-        // which — so across canvases both get their turn.
+        // which — so across canvases both get their turn. (This evens `.pulse`'s odds
+        // with the single-candidate sources only while `contextRoom` >= 2, the Mac's
+        // count of 4; at a room of 1 the first shuffled ticket wins and `.pulse`'s two
+        // tickets keep their raw weight — the same edge `.memory`/`.conversation` have.
+        // No live caller uses that count; note it if one ever does. PR #382 review.)
         var tookPulse = false
         for candidate in candidates(for: context).shuffled(using: &rng)
             where picks.count - 1 < contextRoom

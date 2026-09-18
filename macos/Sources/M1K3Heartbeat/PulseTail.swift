@@ -21,6 +21,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 (three lines of
 //  ordering, pinned against every tail order and against the flag-off path).
 //  Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (6) — PR #382, the two SUMMONED passes I had not read: `lift` FAILS CLOSED when a control line is still inside the note after
+//  both parsers (they read only the tail; NarrativeGuard has no rule for it): empty narrative → the guard's `.empty` → the digest ships,
+//  no chips, nothing filed. Only when chips were asked for — the flag-off path is still TodoProposalLine alone. Confidence 0.9.
 //
 
 import Foundation
@@ -38,14 +41,26 @@ public enum PulseTail {
     /// `TodoProposalLine.extract`'s shape, so it can be passed by name.
     public typealias TodoLifter = (String) -> (narrative: String, title: String?)
 
-    /// ASK first, then TODO. `PulseAskLine.extract` is order-independent with the
+    /// ASK first, then TODO, then a fail-closed check that no control line is left
+    /// inside the note. `PulseAskLine.extract` is order-independent with the
     /// TODO line and hands it on as the LAST line — the only place the TODO parser
     /// looks. With `mayAuthorChips` false nothing is lifted that nobody asked for:
     /// the text goes to the TODO parser untouched, exactly the path that existed
     /// before chips did.
     public static func lift(_ answer: String, mayAuthorChips: Bool, todo: TodoLifter) -> Lifted {
-        let asked = mayAuthorChips ? PulseAskLine.extract(from: answer) : (narrative: answer, asks: [])
+        guard mayAuthorChips else {
+            let split = todo(answer)
+            return Lifted(narrative: split.narrative, asks: [], todoTitle: split.title)
+        }
+        let asked = PulseAskLine.extract(from: answer)
         let split = todo(asked.narrative)
+        // FAIL CLOSED on a control line still inside the note. The two parsers read
+        // only the tail, so `ASK: …` or `TODO: …` stranded mid-prose survives them —
+        // and NarrativeGuard has no rule for it, so it would be stored and SHOWN as
+        // the pulse. An empty narrative is the guard's `.empty` verdict: the digest
+        // ships, no chips ride it, and nothing is filed from a note this malformed.
+        let stranded = split.narrative.split(separator: "\n").contains { PulseAskLine.controlKind(of: String($0)) != nil }
+        guard !stranded else { return Lifted(narrative: "", asks: [], todoTitle: nil) }
         return Lifted(narrative: split.narrative, asks: asked.asks, todoTitle: split.title)
     }
 }

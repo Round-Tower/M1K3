@@ -56,6 +56,10 @@
 //  (found while thinking like the reviewer: NFKC does not fold a Cyrillic "о", so "ignоre" passed). The header now says plainly
 //  what a denylist cannot do and what actually bounds the risk — the chip is shown, and the tap is the consent. Confidence 0.8:
 //  three passes each found a new spelling; the classes are closed, the list is not complete.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (6) — PR #382, the two SUMMONED passes I had not read: `extract` stopped at a SECOND tail TODO and
+//  returned `ASK: …` / `TODO: …` lines as "prose" — which then reached the STORED note (my own test pinned it as correct). Every
+//  trailing control line now comes off, any count, any order; the TODO nearest the end is handed on; `controlKind(of:)` is the one
+//  reading of "is this a control line", shared with PulseTail. Confidence 0.9.
 //
 
 import Foundation
@@ -72,19 +76,24 @@ public enum PulseAskLine {
 
     // MARK: - extract
 
-    /// Lift the trailing `ASK:` lines out of a narrative. Reads upward from the
-    /// end and stops at the first line that is neither an ASK nor (once) a TODO;
-    /// blank lines between them are skipped. Every ASK line read is removed, and
-    /// the `maxAsks` nearest the end are returned in the order written.
+    /// Lift the trailing `ASK:` lines out of a narrative. Reads upward from the end
+    /// and consumes EVERY control line it meets — any number of `ASK:` and `TODO:`
+    /// lines, in any order, blank lines between them skipped — stopping at the first
+    /// line that is neither. The `maxAsks` ASKs nearest the end come back in the
+    /// order written.
     ///
-    /// ★ ORDER-INDEPENDENT with the `TODO:` line (PR #382 review). The prompt asks
-    /// for the ASKs above the TODO, but a small model flips adjacent instructions,
-    /// and `TodoProposalLine` reads ONLY the last line — so with a fixed extraction
-    /// order a flipped tail lost the proposal AND left `TODO: …` inside the stored
-    /// narrative, silently. One tail TODO line is therefore TRANSPARENT here: ASKs
-    /// are lifted from either side of it and it is handed back as the LAST line,
-    /// which is exactly where `TodoProposalLine` looks. Call this FIRST, then that.
-    /// A second TODO line is prose (that parser's own stance) and ends the scan.
+    /// ★ The `TODO:` line belongs to another parser (M1K3Todos' TodoProposalLine,
+    /// which reads ONLY the last line), so this one hands it on: the TODO nearest
+    /// the end is put back as the LAST line of the narrative, where that parser
+    /// looks. Call this FIRST, then that (`PulseTail.lift` does).
+    ///
+    /// Two bugs shaped this, both silent (PR #382): with a fixed TODO-then-ASK order
+    /// a flipped tail lost the proposal and left `TODO: …` in the stored note; and
+    /// when only ONE tail TODO was treated as transparent, a second one stopped the
+    /// scan and left `ASK: …` and `TODO: …` lines in the narrative as "prose". A
+    /// control line is never prose: at the tail they ALL come off, extra TODOs are
+    /// dropped (one proposal per pulse is the ceiling's rule anyway), and a control
+    /// line stranded mid-prose is `PulseTail`'s to refuse.
     public static func extract(from narrative: String) -> (narrative: String, asks: [String]) {
         var lines = narrative.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         var found: [String] = []
@@ -96,21 +105,19 @@ public enum PulseAskLine {
                 lines.removeLast()
                 continue
             }
-            let stripped = bare.trimmingCharacters(in: CharacterSet(charactersIn: "-*• ")).lowercased()
-            if stripped.hasPrefix("todo:"), todoLine == nil {
-                todoLine = last
-                lines.removeLast()
-                continue
-            }
-            guard stripped.hasPrefix("ask:") else { break }
+            guard let control = controlKind(of: bare) else { break }
             lines.removeLast()
-            sawAskLine = true
-            let question = bare.trimmingCharacters(in: CharacterSet(charactersIn: "-*• "))
-                .dropFirst("ask:".count).trimmingCharacters(in: .whitespaces)
-            if !question.isEmpty { found.append(question) }
+            switch control {
+            case .todo:
+                // Bottom-up, so the first one met is the one nearest the end.
+                if todoLine == nil { todoLine = last }
+            case let .ask(question):
+                sawAskLine = true
+                if !question.isEmpty { found.append(question) }
+            }
         }
-        // No ASK line at the tail: hand the text back byte-for-byte (the blank
-        // lines and the TODO popped above were only ever a lookahead).
+        // No ASK line at the tail: hand the text back byte-for-byte (everything
+        // popped above was only ever a lookahead) — a lone TODO is not ours to touch.
         guard sawAskLine else { return (narrative, []) }
         var body = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
         if let todoLine {
@@ -118,6 +125,25 @@ public enum PulseAskLine {
         }
         // `found` was read bottom-up: the first `maxAsks` are the nearest the end.
         return (body, Array(found.prefix(maxAsks).reversed()))
+    }
+
+    /// What kind of control line this is, decoration-tolerant (bullets, case,
+    /// leading space) — or nil for prose. "I did ask: nobody knew" is prose: the
+    /// keyword has to OPEN the line.
+    enum ControlLine: Equatable {
+        case ask(String)
+        case todo
+    }
+
+    static func controlKind(of line: String) -> ControlLine? {
+        let stripped = line.trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-*• "))
+        let lowered = stripped.lowercased()
+        if lowered.hasPrefix("todo:") { return .todo }
+        if lowered.hasPrefix("ask:") {
+            return .ask(stripped.dropFirst("ask:".count).trimmingCharacters(in: .whitespaces))
+        }
+        return nil
     }
 
     // MARK: - admit

@@ -15,6 +15,7 @@
 //  narrative carries neither control line). Prior: none (new file).
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: the suite now calls `PulseTail.lift` — the function the APP calls — instead of a hand-copied
 //  twin of the app's lines, and pins that the flag-off path is `TodoProposalLine.extract` alone. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (6) — PR #382, the two SUMMONED passes I had not read: two tail TODOs and a stranded control line, through the REAL composition. Confidence 0.9.
 //
 
 @testable import M1K3Heartbeat
@@ -75,5 +76,34 @@ struct PulseTailTests {
         #expect(off.todo == old.title)
         #expect(off.asks.isEmpty)
         #expect(off.narrative.contains("ASK: What did I miss?"), "nothing lifts what nobody asked for")
+    }
+
+    @Test("★ two TODO lines at the tail: nothing control-shaped reaches the narrative, and ONE proposal is filed")
+    func twoTodosAtTheTail() {
+        let out = lift("Day.\nASK: Hidden above?\nTODO: first\nTODO: second\nASK: Tail?")
+        #expect(out.narrative == "Day.")
+        #expect(out.asks == ["Hidden above?", "Tail?"])
+        #expect(out.todo == "second") // the one nearest the end — TodoProposalLine's own last-line rule
+    }
+
+    @Test("a control line stranded INSIDE the prose fails closed: the digest ships, nothing is filed, no chips")
+    func aStrandedControlLineFailsClosed() {
+        // extract only reads the tail (a model that scatters ASKs gets none of them) —
+        // but the note must not then be PUBLISHED with `ASK: …` sitting in it, and
+        // NarrativeGuard has no rule that would stop it. Empty narrative → the guard's
+        // `.empty` verdict → the deterministic digest ships instead.
+        for raw in [
+            "Busy day.\nASK: is this a chip?\nNo — the day went on after that.",
+            "Busy day.\n- todo: stranded\nMore prose here.\nASK: What did I miss?",
+        ] {
+            let out = lift(raw)
+            #expect(out.narrative.isEmpty, "\(raw)")
+            #expect(out.asks.isEmpty)
+            #expect(out.todo == nil)
+        }
+        // Prose that merely MENTIONS the words is prose.
+        let honest = lift("Busy day. I did ask: nobody knew. The todo list grew.\nASK: What did I miss?")
+        #expect(honest.narrative == "Busy day. I did ask: nobody knew. The todo list grew.")
+        #expect(honest.asks == ["What did I miss?"])
     }
 }

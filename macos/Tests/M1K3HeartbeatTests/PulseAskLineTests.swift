@@ -25,6 +25,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: `splitRefusedWords` — six split shapes refused, three honest neighbours pass. Confidence 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (5) — PR #382 third-pass fold: many-way splits, space-broken fragments, mixed-script words — and the other side of the
 //  ledger: a panel of twenty ordinary chips that must ALL pass, so a guard tightened three times cannot quietly go deaf. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (6) — PR #382, the two SUMMONED passes I had not read: `onlyOneTodoIsTransparent` pinned the LEAK as correct; replaced by
+//  `everyTrailingControlLineComesOff`. Confidence 0.9.
 //
 
 @testable import M1K3Heartbeat
@@ -107,12 +109,17 @@ struct PulseAskLineTests {
         #expect(out.narrative == "Day.\n- todo: Renew the domain")
     }
 
-    @Test("only ONE todo line is transparent — a second is prose, and the scan stops there")
-    func onlyOneTodoIsTransparent() {
+    @Test("EVERY trailing control line comes off, however many — the TODO nearest the end is the one kept")
+    func everyTrailingControlLineComesOff() {
+        // This input used to be pinned the other way ("a second TODO is prose"): the
+        // returned narrative kept `ASK: Hidden above?` and `TODO: first`, which then
+        // sailed through TodoProposalLine and NarrativeGuard into the STORED note
+        // (PR #382, two summoned passes — I had not read them). Control lines are
+        // never prose: they all come off; one TODO survives as the last line.
         let text = "Day.\nASK: Hidden above?\nTODO: first\nTODO: second\nASK: Tail?"
         let out = PulseAskLine.extract(from: text)
-        #expect(out.asks == ["Tail?"])
-        #expect(out.narrative == "Day.\nASK: Hidden above?\nTODO: first\nTODO: second")
+        #expect(out.asks == ["Hidden above?", "Tail?"])
+        #expect(out.narrative == "Day.\nTODO: second")
     }
 
     @Test("a TODO with no ASK anywhere near it is none of this parser's business — byte for byte")

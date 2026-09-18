@@ -36,6 +36,8 @@
 //  the NEWEST pulse only, so an older pulse's questions never stand in for a newer chipless one. Confidence 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: `latestPulseForCanvas()` returns the newest pulse's date AND chips from ONE transaction;
 //  `latestChips()` is retired with its only caller (two reads could pair one pulse's age with another's questions). Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (6) — PR #382, the two SUMMONED passes I had not read: `foreignKeysEnabled()` — the cascades rest on GRDB's default Configuration turning
+//  foreign keys ON (raw SQLite ships them OFF); now pinned, so dropping it fails one test that names the cause. Confidence 0.9.
 
 import Foundation
 import GRDB
@@ -214,6 +216,15 @@ public final class HeartbeatStore: @unchecked Sendable {
         try dbQueue.read { db in
             try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pulse_tags") ?? 0
         }
+    }
+
+    /// Whether SQLite is enforcing foreign keys on this store's queue. Raw SQLite
+    /// ships with them OFF; GRDB's default `Configuration` turns them ON, and both
+    /// sidecars' `ON DELETE CASCADE` — the "nothing survives Clear" guarantee —
+    /// rest on that default. Pinned, so a future custom `Configuration` that drops
+    /// it fails one test that names the cause (PR #382 review).
+    func foreignKeysEnabled() throws -> Bool {
+        try dbQueue.read { db in try Bool.fetchOne(db, sql: "PRAGMA foreign_keys") ?? false }
     }
 
     /// Total chip rows — the cascade tests' probe.

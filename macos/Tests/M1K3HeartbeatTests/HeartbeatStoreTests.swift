@@ -16,6 +16,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-18 — four pins for the chips sidecar: ordered round-trip (recent + since), chipless validity,
 //  cascade on the cap trim AND Clear, and latestChips = newest pulse only. Confidence 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: the newest-only pin moves to `latestPulseForCanvas` (date + chips, one read). Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (6) — PR #382, the two SUMMONED passes I had not read: `foreignKeysAreEnforced`. Confidence 0.9.
 
 import Foundation
 @testable import M1K3Heartbeat
@@ -209,5 +210,14 @@ struct HeartbeatStoreTests {
         latest = try #require(try store.latestPulseForCanvas())
         #expect(latest.createdAt == base.addingTimeInterval(7200))
         #expect(latest.chips.isEmpty, "the newer, chipless pulse — not the older one's questions under a fresh date")
+    }
+
+    @Test("foreign keys are ENFORCED on the queue this store opens — the cascades above depend on it")
+    func foreignKeysAreEnforced() throws {
+        // Raw SQLite ships with foreign_keys OFF; GRDB's default Configuration turns
+        // them on, and nothing in HeartbeatStore says so. If a future init passes a
+        // custom Configuration that drops it, THIS fails — one line pointing at the
+        // cause — instead of a cascade test failing three files away (PR #382).
+        #expect(try makeStore().foreignKeysEnabled())
     }
 }
