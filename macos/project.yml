@@ -530,7 +530,8 @@ targets:
         # build 362 — in review for 1.0.0 — carried it (found 2026-09-18); the unsandboxed DMG
         # copy, the only one anyone had run, worked. It also made codesign fall
         # back to the identifier `m1k3` instead of app.m1k3.cli.
-        # tools/ci/check_helper_embed.py fails the build if either line goes.
+        # tools/ci/check_helper_embed.py fails CI (the Project-guards job) if either
+        # line goes, and both release scripts refuse a helper without the section.
         GENERATE_INFOPLIST_FILE: YES
         CREATE_INFOPLIST_SECTION_IN_BINARY: YES
         # Same indirection as the app target: the DEFAULT is the App-Store-safe
