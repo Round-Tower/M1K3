@@ -19,6 +19,11 @@
 //  container under macOS app-data privacy, so a voice turn grew it run over run. Confidence 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 — seeds `DemoPersona.allMemories` (backstory + the five) and then links
 //  `constellationEdges`; `link` is idempotent, and the marker + liveCount guards still make the whole seed once-only. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (3) — #383 review fold: SEED ORDER. With 39 embeds the curated five and the documents had moved BEHIND the backstory,
+//  yet the Memories and Documents plates wait a fixed settle and load once. Now: the five, then the documents (the old workload, old
+//  order), then the backstory and its edges (the constellation's alone; it re-polls). Pinned with a spy embedder. Carried: a death
+//  between the five and the backstory trips the liveCount guard and leaves five motes — the disposable-root trade-off, a shade wider.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -69,20 +74,32 @@ public enum DemoSeeder {
             try Data().write(to: marker)
             return
         }
+        // ORDER IS LOAD-BEARING (#383 review). The Memories and Documents plates wait
+        // a FIXED settle and load once — nothing re-renders them when seeding ends —
+        // and the voice plates recall "the original roofline" from a document. So the
+        // old workload comes first, in its old order: the curated five, then the
+        // documents. The backstory and its threads follow; only the constellation
+        // needs them, and that view re-polls the store. Dates, not insertion order,
+        // sort the Memories list, so its first screen is the five either way.
         if let memory {
-            // The backstory and the curated five, then the threads between them —
-            // the constellation's plate needs a life, not five motes (DemoPersona).
-            // Once-only by the marker + liveCount guards above; `link` is idempotent on
-            // (from, to, relation) besides (MemoryStoreTests.linkIsIdempotent).
-            for fact in DemoPersona.allMemories {
+            for fact in DemoPersona.memories {
+                try memory.remember(fact, embedding: await embedder.embed(fact.text))
+            }
+        }
+        for document in DemoPersona.documents {
+            try await ingester.ingest(title: document.title, text: document.text, sourceRef: document.sourceRef)
+        }
+        if let memory {
+            // The constellation's life (DemoPersona.backstory) and the threads that make
+            // it one sky. The whole seed is once-only by the marker + liveCount guards
+            // above; `link` is also idempotent on (from, to, relation), pinned at
+            // MemoryStoreTests.linkIsIdempotent.
+            for fact in DemoPersona.backstory {
                 try memory.remember(fact, embedding: await embedder.embed(fact.text))
             }
             for edge in DemoPersona.constellationEdges {
                 try memory.link(edge)
             }
-        }
-        for document in DemoPersona.documents {
-            try await ingester.ingest(title: document.title, text: document.text, sourceRef: document.sourceRef)
         }
         try Data().write(to: marker)
     }
