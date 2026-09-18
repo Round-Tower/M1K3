@@ -66,6 +66,9 @@
 //  word readings (plain, 1→i, 1→l) the same way; (b) my mixed-script rule asked "ASCII or not?" and refused Bjørn, Łukasz, Straße, sœur
 //  and "3μs" — it now names the CONFUSABLE blocks (Cyrillic, Greek, Armenian, Cherokee; μ and Ω exempt); (c) squared/circled alphanumerics
 //  and emoji are refused (they vanish from every word reading). Confidence 0.8 — classes closed as far as four passes could find them.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (8) — the fast follow-up #382's last pass asked for: word readings strip COMBINING MARKS
+//  ("iǵnore" was one token that never equalled "ignore"), and the four multi-word refusals leave the literal-substring list for the
+//  whole-window machinery ("developer-message", "you-are", "d3veloper message"). One special case in `admit` removed. Confidence 0.85.
 //
 
 import Foundation
@@ -174,10 +177,8 @@ public enum PulseAskLine {
         let lowered = folded.lowercased()
         guard !forbiddenFragments.contains(where: lowered.contains) else { return nil }
         // …and again with every space squeezed out: "http s : //" is still a link.
-        // Only the symbol/URL fragments are judged this way — the two phrases with a
-        // space in them ("you are ", "act as ") mean nothing once the spaces are gone.
         let squeezed = lowered.filter { !$0.isWhitespace }
-        guard !forbiddenFragments.contains(where: { !$0.contains(" ") && squeezed.contains($0) }) else { return nil }
+        guard !forbiddenFragments.contains(where: squeezed.contains) else { return nil }
         // WHOLE words, anywhere in the chip: "Please ignore previous rules?" is as
         // much an instruction as one that opens with the verb — and "personal"
         // must not trip on "persona", nor "overrides" on "override".
@@ -239,7 +240,6 @@ public enum PulseAskLine {
     private static let forbiddenFragments = [
         "http:", "https:", "www.", "://",
         "`", "<", ">", "[", "]", "{", "}", "|", "\\",
-        "you are ", "act as ", "developer message", "everything above",
     ]
 
     /// An instruction wearing a question mark, or a question about the wiring.
@@ -261,7 +261,16 @@ public enum PulseAskLine {
     /// `substituting` says a character stands for. Empty words drop out.
     private static func wordReading(of lowered: String, substituting map: [Character: Character]) -> [String] {
         lowered.split(separator: " ")
-            .map { String($0.map { map[$0] ?? $0 }.filter(\.isLetter)) }
+            .map { word -> String in
+                // Marks come off first, so a decorated letter is judged as the letter
+                // it is: "iǵnore" (g + U+0301) is one token that never equalled
+                // "ignore", while the script check skips marks on purpose so "café"
+                // passes (#382 follow-up). Decompose, drop Mn/Mc/Me, then substitute.
+                let bare = String(String.UnicodeScalarView(
+                    String(word).decomposedStringWithCanonicalMapping.unicodeScalars.filter { !isCombiningMark($0) }
+                ))
+                return String(bare.map { map[$0] ?? $0 }.filter(\.isLetter))
+            }
             .filter { !$0.isEmpty }
     }
 
@@ -271,12 +280,13 @@ public enum PulseAskLine {
     /// is at most `maxLength` characters, so this is a few dozen joins.
     private static func spellsRefusedWord(_ words: [String]) -> Bool {
         guard !words.isEmpty else { return false }
-        let longestRefused = refusedWords.map(\.count).max() ?? 0
+        let refused = refusedWords.union(refusedPhrasesJoined)
+        let longestRefused = refused.map(\.count).max() ?? 0
         for width in 1 ... words.count {
             for start in 0 ... (words.count - width) {
                 let joined = words[start ..< start + width].joined()
                 guard joined.count <= longestRefused else { continue }
-                if refusedWords.contains(joined) { return true }
+                if refused.contains(joined) { return true }
             }
         }
         return false
@@ -314,6 +324,21 @@ public enum PulseAskLine {
     /// does not fold. The degree sign is the one honest exception a status chip uses.
     private static func isLetterlikeSymbol(_ scalar: Unicode.Scalar) -> Bool {
         scalar.properties.generalCategory == .otherSymbol && scalar != "\u{00B0}"
+    }
+
+    /// The multi-word refusals, as the JOINED spelling a word window produces — so they
+    /// get every reading the single words get: "developer-message", "developer_message",
+    /// "d3veloper  message" and "you-are" all join to one of these. They used to be
+    /// literal substrings ("you are "), which a hyphen walked past exactly as "by-pass"
+    /// once did, one level up (#382 follow-up). Window EQUALITY, so "you around" and
+    /// "the actor message" pass.
+    private static let refusedPhrasesJoined: Set<String> = ["youare", "actas", "developermessage", "everythingabove"]
+
+    private static func isCombiningMark(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.properties.generalCategory {
+        case .nonspacingMark, .spacingMark, .enclosingMark: true
+        default: false
+        }
     }
 
     /// Control (Cc) and format (Cf) scalars — judged AFTER whitespace folding,
