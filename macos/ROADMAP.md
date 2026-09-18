@@ -34,8 +34,6 @@ Store links (#370). iOS gains image + file attach (#371).
   #338 but the rate barely moved).
 - **#356** idle CPU ~30% with every window hidden — needs a `sample` diagnosis
   session; the #293 fanless-idle audit cut it to 0.4–1.8%, something regressed.
-- **#342** CI guard asserting `ARCHS: arm64` (the Intel-slice regression).
-- **#334** `pr_watch` misses summon headers without backticks.
 
 ### Monetization — the 90-day plan (#369)
 
@@ -50,7 +48,6 @@ the first Teams customer, the move from engineer to honest founder.
 - iOS `.fitWhole` framing on a real phone (#312); the gecko is small —
   `CompanionFraming.fit(headroom:)` is the one knob.
 - Bluetooth-headset voice test on the Mac (memory `mac-bluetooth-vpio-starves-mic`).
-- **#327** notch HUD hide re-derives geometry against the current screen.
 - Constellation window ideal frame + a richer demo seed for the held plate.
 - WhisperKit 0.18 → 1.1: probe-first, post-launch only.
 
