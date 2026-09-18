@@ -13,9 +13,10 @@
 //  - `extract` lifts the trailing ASK lines out before NarrativeGuard sees the
 //    text (the guard would count them against length, and a chip's wording is
 //    not the narrative's). Only the TAIL is read, the TodoProposalLine stance:
-//    a model that scatters ASKs through its prose gets none of them. The
-//    composer lifts `TODO:` FIRST (it reads only the last line), then the ASKs
-//    off what is left — so the prompt asks for ASKs above the TODO.
+//    a model that scatters ASKs through its prose gets none of them. It runs
+//    BEFORE TodoProposalLine and is order-independent with the `TODO:` line
+//    (see `extract`): whichever way round a model writes the two, the TODO is
+//    handed on as the last line and no control line reaches the narrative.
 //
 //  - `admit` is the tripwire between what the model wrote and what is stored.
 //    ★ A chip, tapped, is sent as THE USER'S OWN WORDS. The digest the model
@@ -34,6 +35,9 @@
 //  judging, control/format scalars refused, and the instruction + prompt-fishing vocabulary matched as WHOLE WORDS
 //  anywhere (so "personal" and "overrides" still pass). Blunt on purpose. Confidence 0.85 on the rule's shape; the
 //  word list is still a prediction, and a live brain will find the next one.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (3) — PR #382 review fold: `extract` is ORDER-INDEPENDENT with the `TODO:` line. One tail TODO is
+//  transparent — ASKs lift from either side and the TODO is handed back as the last line — and the app now calls this BEFORE
+//  TodoProposalLine. A flipped tail used to lose the proposal and leak `TODO: …` into the stored narrative, silently. Confidence 0.9.
 //
 
 import Foundation
@@ -51,30 +55,49 @@ public enum PulseAskLine {
     // MARK: - extract
 
     /// Lift the trailing `ASK:` lines out of a narrative. Reads upward from the
-    /// end and stops at the first line that is not an ASK (blank lines between
-    /// them are skipped); every ASK line read is removed from the narrative,
-    /// and the `maxAsks` nearest the end are returned in the order written.
+    /// end and stops at the first line that is neither an ASK nor (once) a TODO;
+    /// blank lines between them are skipped. Every ASK line read is removed, and
+    /// the `maxAsks` nearest the end are returned in the order written.
+    ///
+    /// ★ ORDER-INDEPENDENT with the `TODO:` line (PR #382 review). The prompt asks
+    /// for the ASKs above the TODO, but a small model flips adjacent instructions,
+    /// and `TodoProposalLine` reads ONLY the last line — so with a fixed extraction
+    /// order a flipped tail lost the proposal AND left `TODO: …` inside the stored
+    /// narrative, silently. One tail TODO line is therefore TRANSPARENT here: ASKs
+    /// are lifted from either side of it and it is handed back as the LAST line,
+    /// which is exactly where `TodoProposalLine` looks. Call this FIRST, then that.
+    /// A second TODO line is prose (that parser's own stance) and ends the scan.
     public static func extract(from narrative: String) -> (narrative: String, asks: [String]) {
         var lines = narrative.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         var found: [String] = []
         var sawAskLine = false
+        var todoLine: String?
         while let last = lines.last {
             let bare = last.trimmingCharacters(in: .whitespaces)
             if bare.isEmpty {
                 lines.removeLast()
                 continue
             }
-            let stripped = bare.trimmingCharacters(in: CharacterSet(charactersIn: "-*• "))
-            guard stripped.lowercased().hasPrefix("ask:") else { break }
+            let stripped = bare.trimmingCharacters(in: CharacterSet(charactersIn: "-*• ")).lowercased()
+            if stripped.hasPrefix("todo:"), todoLine == nil {
+                todoLine = last
+                lines.removeLast()
+                continue
+            }
+            guard stripped.hasPrefix("ask:") else { break }
             lines.removeLast()
             sawAskLine = true
-            let question = stripped.dropFirst("ask:".count).trimmingCharacters(in: .whitespaces)
+            let question = bare.trimmingCharacters(in: CharacterSet(charactersIn: "-*• "))
+                .dropFirst("ask:".count).trimmingCharacters(in: .whitespaces)
             if !question.isEmpty { found.append(question) }
         }
         // No ASK line at the tail: hand the text back byte-for-byte (the blank
-        // lines popped above were only ever a lookahead).
+        // lines and the TODO popped above were only ever a lookahead).
         guard sawAskLine else { return (narrative, []) }
-        let body = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        var body = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        if let todoLine {
+            body = body.isEmpty ? todoLine : body + "\n" + todoLine
+        }
         // `found` was read bottom-up: the first `maxAsks` are the nearest the end.
         return (body, Array(found.prefix(maxAsks).reversed()))
     }

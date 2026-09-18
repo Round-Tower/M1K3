@@ -20,6 +20,8 @@
 //  red-first; the shapes a real brain produces are verify-by-run — the list of
 //  refusals here is what I could predict, not what Lil will actually try).
 //  Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (3) — PR #382 review fold: five extract × TODO pins replace the one fixed-order pin (prompt's order, flipped,
+//  sandwiched, only-one-is-transparent, a lone TODO is untouched byte for byte). Confidence 0.9.
 //
 
 @testable import M1K3Heartbeat
@@ -79,17 +81,43 @@ struct PulseAskLineTests {
         #expect(out.asks.isEmpty)
     }
 
-    @Test("composes with the todo line: TODO is last, the ASKs sit above it")
-    func composesWithTodo() {
-        // The composer lifts TODO first (it reads only the LAST line), then the
-        // ASKs off what is left. Pinned here so the prompt's line order and the
-        // two extractors' order cannot drift apart.
-        let raw = "Day.\nASK: What did I miss?\nTODO: Renew the domain"
-        let afterTodo = "Day.\nASK: What did I miss?"
-        #expect(PulseAskLine.extract(from: raw).asks.isEmpty) // TODO: still in the way
-        let out = PulseAskLine.extract(from: afterTodo)
-        #expect(out.narrative == "Day.")
+    // MARK: - extract × the TODO line (order-independent — PR #382 review fold)
+
+    @Test("the prompt's order: ASKs above the TODO — the asks lift out and the TODO stays the last line")
+    func todoBelowTheAsks() {
+        let out = PulseAskLine.extract(from: "Day.\nASK: What did I miss?\nTODO: Renew the domain")
         #expect(out.asks == ["What did I miss?"])
+        #expect(out.narrative == "Day.\nTODO: Renew the domain")
+    }
+
+    @Test("★ a model that flips them — TODO above the ASKs — loses nothing and leaks nothing")
+    func todoAboveTheAsks() {
+        let out = PulseAskLine.extract(from: "Day.\nTODO: Renew the domain\nASK: What did I miss?\nASK: And the todo?")
+        #expect(out.asks == ["What did I miss?", "And the todo?"])
+        #expect(out.narrative == "Day.\nTODO: Renew the domain")
+    }
+
+    @Test("a TODO sandwiched between two ASKs: both asks lift, the TODO is still last")
+    func todoBetweenTheAsks() {
+        let out = PulseAskLine.extract(from: "Day.\nASK: One?\n- todo: Renew the domain\nASK: Two?")
+        #expect(out.asks == ["One?", "Two?"])
+        #expect(out.narrative == "Day.\n- todo: Renew the domain")
+    }
+
+    @Test("only ONE todo line is transparent — a second is prose, and the scan stops there")
+    func onlyOneTodoIsTransparent() {
+        let text = "Day.\nASK: Hidden above?\nTODO: first\nTODO: second\nASK: Tail?"
+        let out = PulseAskLine.extract(from: text)
+        #expect(out.asks == ["Tail?"])
+        #expect(out.narrative == "Day.\nASK: Hidden above?\nTODO: first\nTODO: second")
+    }
+
+    @Test("a TODO with no ASK anywhere near it is none of this parser's business — byte for byte")
+    func todoAloneIsUntouched() {
+        let text = "Day.\n\nTODO: Renew the domain\n"
+        let out = PulseAskLine.extract(from: text)
+        #expect(out.narrative == text)
+        #expect(out.asks.isEmpty)
     }
 
     // MARK: - admit

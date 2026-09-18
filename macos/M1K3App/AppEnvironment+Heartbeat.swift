@@ -47,6 +47,8 @@
 //  to the guard's own evidence (digest + earlier DIGESTS), a rejected narrative drops them, and one `.notice` line per render
 //  (`chips: written=N admitted=M`) is the measuring instrument. Flag off = the old path, line for line. Builds; live renders owed.
 //  Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (3) — PR #382 review fold: the tail parsers run ASK-first, then TODO (PulseAskLine is order-independent with the
+//  TODO: line). The composition is pinned in PulseTailCompositionTests. Flag off = the old path, line for line. Confidence 0.85.
 
 import AppKit
 import Foundation
@@ -375,18 +377,21 @@ extension AppEnvironment {
         // The models emit their trained FOLLOWUPS trailer even here (the #100
         // bug class, re-observed on the FIRST live pulse) — strip it before
         // the guard sees the text.
-        // The TODO line comes off BEFORE the guard (it would count against
-        // length and could carry a digit). Without permission it is dropped
-        // on the floor — an unasked proposal never reaches the inbox.
-        let split = TodoProposalLine.extract(
-            from: FollowUpSplit.split(raw).answer.trimmingCharacters(in: .whitespacesAndNewlines)
-        )
-        // The ASK lines come off next, and ONLY when they were asked for — so the
-        // flag off is behaviourally identical to before it existed. TODO first,
-        // then ASK: TodoProposalLine reads only the last line, and the prompt asks
-        // for the ASKs above it (order pinned in PulseAskLineTests).
-        let asked = mayAuthorChips ? PulseAskLine.extract(from: split.narrative) : (narrative: split.narrative, asks: [])
-        let cleaned = asked.narrative
+        // Two control lines may trail the note, and both come off BEFORE the guard
+        // (they would count against length and could carry a digit).
+        //
+        // ASK first, then TODO — and only when chips were asked for, so the flag
+        // off is the old path line for line. PulseAskLine is order-independent with
+        // the TODO line: it lifts the ASKs from either side and hands the TODO on
+        // as the LAST line, which is the only place TodoProposalLine looks. (The
+        // other way round, a model that wrote TODO above ASK lost its proposal and
+        // leaked `TODO: …` into the stored narrative — PR #382 review.)
+        let answer = FollowUpSplit.split(raw).answer.trimmingCharacters(in: .whitespacesAndNewlines)
+        let asked = mayAuthorChips ? PulseAskLine.extract(from: answer) : (narrative: answer, asks: [])
+        // Without permission the TODO title is dropped on the floor — an unasked
+        // proposal never reaches the inbox.
+        let split = TodoProposalLine.extract(from: asked.narrative)
+        let cleaned = split.narrative
         let proposedTitle = mayProposeTodo ? split.title : nil
         // Held to the guard's own evidence — the digest plus the day's earlier
         // DIGESTS, never a narrative. A chip is sent as the user's words.
