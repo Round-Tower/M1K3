@@ -272,6 +272,7 @@ extension AppEnvironment {
     ) async {
         let narrative = rendered.narrative
         let renderedBy = rendered.renderedBy
+        let chips = rendered.chips
         // The proposal is filed BEFORE the pulse so the pulse's tag can tell
         // the truth: `todoProposed` ("Suggested") marks that a proposal
         // LANDED, not that the narrative merely carried a TODO line the
@@ -290,7 +291,7 @@ extension AppEnvironment {
         await Task.detached(priority: .utility) {
             let pulseID = pulseStore.record(
                 digest: digest, narrative: narrative, renderedBy: renderedBy, tags: tags,
-                chips: rendered.chips, at: now
+                chips: chips, at: now
             )
             if let filedTodoID, let pulseID {
                 try? todoStore?.setOrigin(id: filedTodoID, TodoOrigin(pulseId: pulseID))
@@ -390,12 +391,6 @@ extension AppEnvironment {
         // Held to the guard's own evidence — the digest plus the day's earlier
         // DIGESTS, never a narrative. A chip is sent as the user's words.
         let chips = PulseAskLine.admitAll(asked.asks, digest: digest, earlierDigests: earlierDigests)
-        if mayAuthorChips {
-            // The measuring instrument: .notice so it persists in the log store.
-            let written = asked.asks.count
-            let admitted = chips.count
-            Self.heartbeatLog.notice("chips: written=\(written) admitted=\(admitted)")
-        }
         // The guard's evidence is the day's earlier DIGESTS, not the
         // narratives the prompt shows: a faithful thread of a code-composed
         // number still passes (pulse 2's live rejection), but a digit a
@@ -404,7 +399,16 @@ extension AppEnvironment {
             narrative: cleaned, digest: digest, earlierDigests: earlierDigests,
             recentPulses: recentPulses
         )
+        // The measuring instrument for the ASK prompt line (.notice, so it persists):
+        // what the model WROTE, what the guard ADMITTED, and what was STORED — logged
+        // after the verdict, because a rejected narrative stores none (local review
+        // fold: logged earlier, a rejection read as a success).
+        let chipsWritten = asked.asks.count
+        let chipsAdmitted = chips.count
         guard verdict == .pass else {
+            if mayAuthorChips {
+                Self.heartbeatLog.notice("chips: written=\(chipsWritten) admitted=\(chipsAdmitted) stored=0 (narrative rejected)")
+            }
             Self.heartbeatLog.notice(
                 "render rejected by NarrativeGuard (\(verdict.rawValue, privacy: .public)) — digest ships"
             )
@@ -415,6 +419,9 @@ extension AppEnvironment {
             return RenderedPulse(
                 narrative: nil, renderedBy: "digest", proposedTitle: verdict == .empty ? proposedTitle : nil
             )
+        }
+        if mayAuthorChips {
+            Self.heartbeatLog.notice("chips: written=\(chipsWritten) admitted=\(chipsAdmitted) stored=\(chipsAdmitted)")
         }
         // Chips ride only a narrative that PASSED: a rejection (invented digit,
         // repeated opener…) discredits what the same generation wrote beside it.
