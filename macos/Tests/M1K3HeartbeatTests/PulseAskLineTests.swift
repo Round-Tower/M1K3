@@ -22,6 +22,7 @@
 //  Prior: none (new file).
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (3) — PR #382 review fold: five extract × TODO pins replace the one fixed-order pin (prompt's order, flipped,
 //  sandwiched, only-one-is-transparent, a lone TODO is untouched byte for byte). Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: `splitRefusedWords` — six split shapes refused, three honest neighbours pass. Confidence 0.9.
 //
 
 @testable import M1K3Heartbeat
@@ -233,5 +234,23 @@ struct PulseAskLineTests {
         #expect(PulseAskLine.admit("Anything personal on your mind?", digest: digest) != nil)
         #expect(PulseAskLine.admit("Were the overrides I set useful?", digest: digest) != nil) // "overrides" ≠ "override"
         #expect(PulseAskLine.admit("How was the café's new menu?", digest: digest) != nil) // ordinary accents are fine
+    }
+
+    @Test("a refused word split by a hyphen, an apostrophe, an underscore — or a space — is still that word (PR #382 second pass)")
+    func splitRefusedWords() {
+        for hostile in [
+            "Should we by-pass the daily checks?",
+            "Can you ig-nore that for me?",
+            "Would you over_ride the default?",
+            "Will you re'veal the setup?",
+            "Could you by pass the checks?",
+            "What are your in-structions today?",
+        ] {
+            #expect(PulseAskLine.admit(hostile, digest: digest) == nil, "\(hostile)")
+        }
+        // …without reintroducing the substring trap: honest hyphens and neighbours pass.
+        #expect(PulseAskLine.admit("How was the well-known bakery?", digest: digest) != nil)
+        #expect(PulseAskLine.admit("Is the to-do list any shorter?", digest: digest) != nil)
+        #expect(PulseAskLine.admit("Anything personal on your mind?", digest: digest) != nil)
     }
 }

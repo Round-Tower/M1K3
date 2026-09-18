@@ -34,6 +34,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-18 — pulse-authored chips: `v3-chips` sidecar (`pulse_chips`, ordered by `position`, ON DELETE CASCADE
 //  like the tags — Clear and the cap trim take them too), `record(chips:)`, one grouped `attachChips`, and `latestChips()` —
 //  the NEWEST pulse only, so an older pulse's questions never stand in for a newer chipless one. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: `latestPulseForCanvas()` returns the newest pulse's date AND chips from ONE transaction;
+//  `latestChips()` is retired with its only caller (two reads could pair one pulse's age with another's questions). Confidence 0.9.
 
 import Foundation
 import GRDB
@@ -221,20 +223,23 @@ public final class HeartbeatStore: @unchecked Sendable {
         }
     }
 
-    /// The NEWEST pulse's chips, in the order written — the blank canvas's one
-    /// read. Newest pulse only, by design: an older pulse's questions must never
-    /// stand in for a newer pulse that wrote none (they describe a day that has
-    /// moved on). Pair with `latestDate()` for the freshness gate.
-    public func latestChips() throws -> [String] {
+    /// The blank canvas's ONE read: the newest pulse's date and its chips, from a
+    /// single transaction. Two reads (`latestDate()`, then a separate chips query) left a
+    /// window — tiny, pulses are hours apart, but real — in which a pulse landing
+    /// between them paired a fresh age with an older pulse's questions, or the
+    /// reverse (PR #382 second pass). nil = never pulsed.
+    public func latestPulseForCanvas() throws -> (createdAt: Date, chips: [String])? {
         try dbQueue.read { db in
-            try String.fetchAll(
+            guard let row = try Row.fetchOne(db, sql: "SELECT id, created_at FROM pulses ORDER BY id DESC LIMIT 1")
+            else { return nil }
+            let pulseID: Int64 = row["id"] ?? 0
+            let createdAt: Double = row["created_at"] ?? 0
+            let chips = try String.fetchAll(
                 db,
-                sql: """
-                SELECT text FROM pulse_chips
-                WHERE pulse_id = (SELECT MAX(id) FROM pulses)
-                ORDER BY position ASC
-                """
+                sql: "SELECT text FROM pulse_chips WHERE pulse_id = ? ORDER BY position ASC",
+                arguments: [pulseID]
             )
+            return (Date(timeIntervalSince1970: createdAt), chips)
         }
     }
 

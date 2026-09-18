@@ -48,7 +48,9 @@
 //  (`chips: written=N admitted=M`) is the measuring instrument. Flag off = the old path, line for line. Builds; live renders owed.
 //  Confidence 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (3) — PR #382 review fold: the tail parsers run ASK-first, then TODO (PulseAskLine is order-independent with the
-//  TODO: line). The composition is pinned in PulseTailCompositionTests. Flag off = the old path, line for line. Confidence 0.85.
+//  TODO: line). The composition is pinned in PulseTailTests. Flag off = the old path, line for line. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: the tail's order is no longer re-derived here: this calls `PulseTail.lift`, handing it
+//  `TodoProposalLine.extract`. Confidence 0.85.
 
 import AppKit
 import Foundation
@@ -377,25 +379,22 @@ extension AppEnvironment {
         // The models emit their trained FOLLOWUPS trailer even here (the #100
         // bug class, re-observed on the FIRST live pulse) — strip it before
         // the guard sees the text.
-        // Two control lines may trail the note, and both come off BEFORE the guard
-        // (they would count against length and could carry a digit).
-        //
-        // ASK first, then TODO — and only when chips were asked for, so the flag
-        // off is the old path line for line. PulseAskLine is order-independent with
-        // the TODO line: it lifts the ASKs from either side and hands the TODO on
-        // as the LAST line, which is the only place TodoProposalLine looks. (The
-        // other way round, a model that wrote TODO above ASK lost its proposal and
-        // leaked `TODO: …` into the stored narrative — PR #382 review.)
-        let answer = FollowUpSplit.split(raw).answer.trimmingCharacters(in: .whitespacesAndNewlines)
-        let asked = mayAuthorChips ? PulseAskLine.extract(from: answer) : (narrative: answer, asks: [])
+        // Two control lines may trail the note — `ASK:` and `TODO:` — and both come
+        // off BEFORE the guard (they would count against length and could carry a
+        // digit). The ORDER is load-bearing and was silently wrong once, so it lives
+        // in tested code this calls (PulseTail), not in lines re-derived here. With
+        // chips not asked for, that is the old TODO-only path, line for line.
+        let lifted = PulseTail.lift(
+            FollowUpSplit.split(raw).answer.trimmingCharacters(in: .whitespacesAndNewlines),
+            mayAuthorChips: mayAuthorChips, todo: TodoProposalLine.extract
+        )
+        let cleaned = lifted.narrative
         // Without permission the TODO title is dropped on the floor — an unasked
         // proposal never reaches the inbox.
-        let split = TodoProposalLine.extract(from: asked.narrative)
-        let cleaned = split.narrative
-        let proposedTitle = mayProposeTodo ? split.title : nil
+        let proposedTitle = mayProposeTodo ? lifted.todoTitle : nil
         // Held to the guard's own evidence — the digest plus the day's earlier
         // DIGESTS, never a narrative. A chip is sent as the user's words.
-        let chips = PulseAskLine.admitAll(asked.asks, digest: digest, earlierDigests: earlierDigests)
+        let chips = PulseAskLine.admitAll(lifted.asks, digest: digest, earlierDigests: earlierDigests)
         // The guard's evidence is the day's earlier DIGESTS, not the
         // narratives the prompt shows: a faithful thread of a code-composed
         // number still passes (pulse 2's live rejection), but a digit a
@@ -408,7 +407,7 @@ extension AppEnvironment {
         // what the model WROTE, what the guard ADMITTED, and what was STORED — logged
         // after the verdict, because a rejected narrative stores none (local review
         // fold: logged earlier, a rejection read as a success).
-        let chipsWritten = asked.asks.count
+        let chipsWritten = lifted.asks.count
         let chipsAdmitted = chips.count
         guard verdict == .pass else {
             if mayAuthorChips {

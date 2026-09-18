@@ -1,5 +1,5 @@
 //
-//  PulseTailCompositionTests.swift
+//  PulseTailTests.swift
 //  M1K3HeartbeatTests
 //
 //  A pulse's note may trail TWO control lines — `ASK:` (M1K3Heartbeat's
@@ -13,18 +13,21 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 (the invariant is
 //  small and total: whatever the order, both writes are recovered and the
 //  narrative carries neither control line). Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: the suite now calls `PulseTail.lift` — the function the APP calls — instead of a hand-copied
+//  twin of the app's lines, and pins that the flag-off path is `TodoProposalLine.extract` alone. Confidence 0.9.
 //
 
 @testable import M1K3Heartbeat
 import M1K3Todos
 import Testing
 
-struct PulseTailCompositionTests {
-    /// The app's composition, verbatim (AppEnvironment+Heartbeat.renderHeartbeatNarrative).
-    private func lift(_ raw: String) -> (narrative: String, asks: [String], todo: String?) {
-        let asked = PulseAskLine.extract(from: raw)
-        let split = TodoProposalLine.extract(from: asked.narrative)
-        return (split.narrative, asked.asks, split.title)
+struct PulseTailTests {
+    /// The function the APP calls (AppEnvironment+Heartbeat.renderHeartbeatNarrative),
+    /// handed the real TODO parser exactly as the app hands it. Not a twin of the
+    /// app's lines: a twin stays green while the call site drifts (PR #382 second pass).
+    private func lift(_ raw: String, mayAuthorChips: Bool = true) -> (narrative: String, asks: [String], todo: String?) {
+        let out = PulseTail.lift(raw, mayAuthorChips: mayAuthorChips, todo: TodoProposalLine.extract)
+        return (out.narrative, out.asks, out.todoTitle)
     }
 
     @Test(
@@ -61,5 +64,16 @@ struct PulseTailCompositionTests {
         #expect(out.narrative.isEmpty)
         #expect(out.asks == ["What did I miss?"])
         #expect(out.todo == "Renew the domain")
+    }
+
+    @Test("chips not asked for: the old path exactly — the TODO parser alone, and an unasked ASK line is left where it lay")
+    func flagOffIsTheOldPath() {
+        let raw = "Busy day.\nASK: What did I miss?\nTODO: Renew the domain"
+        let off = lift(raw, mayAuthorChips: false)
+        let old = TodoProposalLine.extract(from: raw)
+        #expect(off.narrative == old.narrative)
+        #expect(off.todo == old.title)
+        #expect(off.asks.isEmpty)
+        #expect(off.narrative.contains("ASK: What did I miss?"), "nothing lifts what nobody asked for")
     }
 }

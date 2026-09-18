@@ -27,6 +27,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-18 — `mayAuthorChips` (default OFF, every pinned prompt byte-identical): asks for up to two
 //  `ASK:` lines ABOVE the TODO line. A prompt change — the wording is a first draft to MEASURE on real renders, not a finding.
 //  Confidence 0.6 on the wording, 0.9 on the plumbing.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: "under N characters" → "at most N" — the guard admits exactly N. Wording only; still a draft
+//  to measure. Confidence 0.6 on the wording.
 
 import Foundation
 
@@ -99,7 +101,7 @@ public enum HeartbeatPrompt {
                 """
                 After the note you may add up to two lines of the form `ASK: <question>` \
                 — a short question the user might like to ask YOU next, about something \
-                in the digest, in their voice, under \(PulseAskLine.maxLength) characters, \
+                in the digest, in their voice, at most \(PulseAskLine.maxLength) characters, \
                 ending in a question mark, using no number the digest does not show. These \
                 lines are not part of the note. If nothing in the digest invites a \
                 question, write none. A TODO line, if any, stays last.

@@ -15,6 +15,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: pins `latestID()`.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 — four pins for the chips sidecar: ordered round-trip (recent + since), chipless validity,
 //  cascade on the cap trim AND Clear, and latestChips = newest pulse only. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: the newest-only pin moves to `latestPulseForCanvas` (date + chips, one read). Confidence 0.9.
 
 import Foundation
 @testable import M1K3Heartbeat
@@ -195,14 +196,18 @@ struct HeartbeatStoreTests {
         #expect(try store.chipRowCount() == 0)
     }
 
-    @Test("latestChips reads the NEWEST pulse only — an older pulse's chips never stand in for a newer chipless one")
-    func latestChipsIsTheNewestPulseOnly() throws {
+    @Test("latestPulseForCanvas returns the newest pulse's date AND chips from one read — never two pulses' halves")
+    func latestPulseForCanvasIsOneRead() throws {
         let store = try makeStore()
+        #expect(try store.latestPulseForCanvas() == nil)
         let base = Date(timeIntervalSince1970: 1_754_480_000)
-        #expect(try store.latestChips() == [])
         store.record(digest: "a", narrative: nil, renderedBy: "digest", chips: ["From the first?"], at: base)
-        #expect(try store.latestChips() == ["From the first?"])
+        var latest = try #require(try store.latestPulseForCanvas())
+        #expect(latest.createdAt == base)
+        #expect(latest.chips == ["From the first?"])
         store.record(digest: "b", narrative: nil, renderedBy: "digest", at: base.addingTimeInterval(7200))
-        #expect(try store.latestChips() == [])
+        latest = try #require(try store.latestPulseForCanvas())
+        #expect(latest.createdAt == base.addingTimeInterval(7200))
+        #expect(latest.chips.isEmpty, "the newer, chipless pulse — not the older one's questions under a fresh date")
     }
 }

@@ -546,7 +546,7 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3HeartbeatTests",
-            // M1K3Todos is a TEST-only edge: PulseTailCompositionTests pins the two
+            // M1K3Todos is a TEST-only edge: PulseTailTests pins the two
             // tail parsers (PulseAskLine here, TodoProposalLine there) working as the
             // app composes them. The products stay uncoupled.
             dependencies: ["M1K3Heartbeat", "M1K3Todos"],

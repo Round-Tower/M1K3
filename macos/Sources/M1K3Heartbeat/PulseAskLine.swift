@@ -38,6 +38,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (3) — PR #382 review fold: `extract` is ORDER-INDEPENDENT with the `TODO:` line. One tail TODO is
 //  transparent — ASKs lift from either side and the TODO is handed back as the last line — and the app now calls this BEFORE
 //  TodoProposalLine. A flipped tail used to lose the proposal and leak `TODO: …` into the stored narrative, silently. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: a plain HYPHEN beat the whole-word check ("by-pass" → {by, pass}) — the zero-width-space
+//  bug again, in ASCII. Two more whole-word readings close it: each space-delimited word with its non-letters squeezed out, and
+//  each adjacent pair joined ("by pass"). "personal", "well-known" and "to-do" still pass, pinned. Confidence 0.85.
 //
 
 import Foundation
@@ -123,6 +126,17 @@ public enum PulseAskLine {
         // must not trip on "persona", nor "overrides" on "override".
         let words = Set(lowered.split(whereSeparator: { !$0.isLetter }).map(String.init))
         guard words.isDisjoint(with: refusedWords) else { return nil }
+        // …and the same words with their seams closed. Splitting on non-letters
+        // alone let "by-pass" through as {"by", "pass"} — a plain hyphen doing what
+        // the zero-width space was refused for (PR #382 second pass). Two more
+        // readings, both still WHOLE-word so "personal" and "well-known" pass:
+        // each space-delimited word with its non-letters squeezed out ("by-pass",
+        // "re'veal", "over_ride" → one word), and each adjacent pair joined
+        // ("by pass" → "bypass").
+        let spaced = lowered.split(separator: " ").map { String($0.filter(\.isLetter)) }.filter { !$0.isEmpty }
+        guard Set(spaced).isDisjoint(with: refusedWords) else { return nil }
+        let joinedPairs = zip(spaced, spaced.dropFirst()).map { $0 + $1 }
+        guard Set(joinedPairs).isDisjoint(with: refusedWords) else { return nil }
         // NarrativeGuard's own rule, held to the same evidence: a number in a
         // chip must already be a number in a code-composed digest.
         var allowed = NarrativeGuard.digitRuns(in: digest)
