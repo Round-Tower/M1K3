@@ -504,9 +504,11 @@ struct ChatScreen: View {
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.caption)
+                                .symbolRenderingMode(.palette)
                                 .foregroundStyle(.white, .black.opacity(0.6))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Remove attachment")
                         .offset(x: 4, y: -4)
                     }
                 }
@@ -534,6 +536,7 @@ struct ChatScreen: View {
                                 .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Remove \(file.filename)")
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
