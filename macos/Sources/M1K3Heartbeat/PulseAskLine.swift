@@ -25,6 +25,16 @@
 //    A refusal costs one chip (the canvas falls back to the fixed sentence);
 //    a false pass would put someone else's sentence in the user's mouth.
 //
+//    ★ What this guard is NOT: complete. It is a denylist, and three review passes
+//    in a row each found another way to spell a refused word (a zero-width space, a
+//    hyphen, three tokens, a Cyrillic "о"). The rules below close whole CLASSES —
+//    disguise scalars, every token window, mixed-script words — but the next
+//    spelling exists. What actually bounds the risk is structural: a chip is one
+//    short question (<= 44 characters), it is SHOWN to the user, and it is only
+//    ever sent because the user read it and tapped it. The guard lowers how often
+//    a bad chip reaches the canvas; the tap is the consent. That is also why the
+//    flag ships off, and why nothing here should ever auto-send a chip.
+//
 //  Signed: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.8 (pinned
 //  red-first in PulseAskLineTests; the refusal list is what I could predict —
 //  what a real brain actually writes after `ASK:` is verify-by-run).
@@ -41,6 +51,11 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: a plain HYPHEN beat the whole-word check ("by-pass" → {by, pass}) — the zero-width-space
 //  bug again, in ASCII. Two more whole-word readings close it: each space-delimited word with its non-letters squeezed out, and
 //  each adjacent pair joined ("by pass"). "personal", "well-known" and "to-do" still pass, pinned. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (5) — PR #382 third-pass fold: the pair join let "ig no re" through — now EVERY window of adjacent words is joined and
+//  compared whole; link/markup fragments are also judged with the spaces squeezed out; and a word that MIXES scripts is refused
+//  (found while thinking like the reviewer: NFKC does not fold a Cyrillic "о", so "ignоre" passed). The header now says plainly
+//  what a denylist cannot do and what actually bounds the risk — the chip is shown, and the tap is the consent. Confidence 0.8:
+//  three passes each found a new spelling; the classes are closed, the list is not complete.
 //
 
 import Foundation
@@ -121,6 +136,11 @@ public enum PulseAskLine {
         guard !folded.unicodeScalars.contains(where: isDisguise) else { return nil }
         let lowered = folded.lowercased()
         guard !forbiddenFragments.contains(where: lowered.contains) else { return nil }
+        // …and again with every space squeezed out: "http s : //" is still a link.
+        // Only the symbol/URL fragments are judged this way — the two phrases with a
+        // space in them ("you are ", "act as ") mean nothing once the spaces are gone.
+        let squeezed = lowered.filter { !$0.isWhitespace }
+        guard !forbiddenFragments.contains(where: { !$0.contains(" ") && squeezed.contains($0) }) else { return nil }
         // WHOLE words, anywhere in the chip: "Please ignore previous rules?" is as
         // much an instruction as one that opens with the verb — and "personal"
         // must not trip on "persona", nor "overrides" on "override".
@@ -135,8 +155,26 @@ public enum PulseAskLine {
         // ("by pass" → "bypass").
         let spaced = lowered.split(separator: " ").map { String($0.filter(\.isLetter)) }.filter { !$0.isEmpty }
         guard Set(spaced).isDisjoint(with: refusedWords) else { return nil }
-        let joinedPairs = zip(spaced, spaced.dropFirst()).map { $0 + $1 }
-        guard Set(joinedPairs).isDisjoint(with: refusedWords) else { return nil }
+        // EVERY window of adjacent words, joined — not just pairs. "by pass" fell to
+        // the pair join; "ig no re" and "i g n o r e" walked past it (PR #382 third
+        // pass). A chip is at most `maxLength` characters, so this is a few dozen
+        // joins. Still EQUALITY on the whole window: "sprint", "printer" and
+        // "promptly" contain a refused word's letters and pass.
+        let longestRefused = refusedWords.map(\.count).max() ?? 0
+        if spaced.count >= 2 {
+            for width in 2 ... spaced.count {
+                for start in 0 ... (spaced.count - width) {
+                    let joined = spaced[start ..< start + width].joined()
+                    guard joined.count <= longestRefused else { continue }
+                    guard !refusedWords.contains(joined) else { return nil }
+                }
+            }
+        }
+        // A word that MIXES scripts is a disguise: NFKC folds a fullwidth `＜` but
+        // not a Cyrillic "о", so "ignоre" read as a harmless unknown word. Accents
+        // are not a second script ("café" decomposes to ASCII + a mark), and a word
+        // wholly in another script is a language, not a trick — both pass.
+        guard !spaced.contains(where: mixesScripts) else { return nil }
         // NarrativeGuard's own rule, held to the same evidence: a number in a
         // chip must already be a number in a code-composed digest.
         var allowed = NarrativeGuard.digitRuns(in: digest)
@@ -181,6 +219,25 @@ public enum PulseAskLine {
         "ignore", "disregard", "reveal", "pretend", "forget", "bypass", "override", "jailbreak",
         "print", "recite", "prompt", "prompts", "instruction", "instructions", "rules",
     ]
+
+    /// True when a word holds BOTH plain ASCII letters and letters that are still
+    /// non-ASCII after canonical decomposition with the combining marks dropped —
+    /// i.e. a Latin word carrying a look-alike from another alphabet. (The standard
+    /// library exposes no Unicode script property; this is the narrow test the
+    /// guard needs, not a script detector.)
+    private static func mixesScripts(_ word: String) -> Bool {
+        var sawASCII = false
+        var sawOther = false
+        for scalar in word.decomposedStringWithCanonicalMapping.unicodeScalars {
+            switch scalar.properties.generalCategory {
+            case .nonspacingMark, .spacingMark, .enclosingMark: continue
+            default: break
+            }
+            guard scalar.properties.isAlphabetic else { continue }
+            if scalar.isASCII { sawASCII = true } else { sawOther = true }
+        }
+        return sawASCII && sawOther
+    }
 
     /// Control (Cc) and format (Cf) scalars — judged AFTER whitespace folding,
     /// so an ordinary tab or newline never reaches here.
