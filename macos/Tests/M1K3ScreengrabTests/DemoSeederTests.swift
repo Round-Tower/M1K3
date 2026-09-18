@@ -10,6 +10,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-5, 2026-09-13 — pins the every-launch hero restore (a voice turn
 //  grew the demo conversation run over run). Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — the seed's count pins move to `allMemories`, and the edges land exactly
+//  once across a double seed. Confidence 0.9.
 //
 
 import Foundation
@@ -51,7 +53,9 @@ struct DemoSeederTests {
         let ingester = DocumentIngester(store: store, embedder: embedder)
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
-        #expect(try memory.liveCount() == DemoPersona.memories.count)
+        #expect(try memory.liveCount() == DemoPersona.allMemories.count)
+        // The threads land with the motes, once — a second seed must not double them.
+        #expect(try memory.allEdges().count == DemoPersona.constellationEdges.count)
         #expect(try store.allItems(kind: .document).count == DemoPersona.documents.count)
         let vector = try await embedder.embed("lair")
         let hits = try memory.recall(query: "lair", queryVector: vector, limit: 3, threshold: 0)
@@ -114,7 +118,7 @@ struct DemoSeederTests {
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
         try FileManager.default.removeItem(at: root.appendingPathComponent(".demo-knowledge-seeded"))
         try await DemoSeeder.seedKnowledge(memory: memory, ingester: ingester, embedder: embedder, root: root)
-        #expect(try memory.liveCount() == DemoPersona.memories.count)
+        #expect(try memory.liveCount() == DemoPersona.allMemories.count)
         #expect(try store.allItems(kind: .document).count == DemoPersona.documents.count)
     }
 }

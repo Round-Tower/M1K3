@@ -17,6 +17,8 @@
 //  Review: Kev + claude-opus-5, 2026-09-13 — the hero conversation is RESTORED every launch
 //  (and strays dropped, only inside the screengrab root): capture.sh can no longer clear the
 //  container under macOS app-data privacy, so a voice turn grew it run over run. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 — seeds `DemoPersona.allMemories` (backstory + the five) and then links
+//  `constellationEdges`; `link` is idempotent, and the marker + liveCount guards still make the whole seed once-only. Confidence 0.9.
 //
 
 import Foundation
@@ -68,8 +70,14 @@ public enum DemoSeeder {
             return
         }
         if let memory {
-            for fact in DemoPersona.memories {
+            // The backstory and the curated five, then the threads between them —
+            // the constellation's plate needs a life, not five motes (DemoPersona).
+            // `link` is idempotent on (from, to, relation).
+            for fact in DemoPersona.allMemories {
                 try memory.remember(fact, embedding: await embedder.embed(fact.text))
+            }
+            for edge in DemoPersona.constellationEdges {
+                try memory.link(edge)
             }
         }
         for document in DemoPersona.documents {
