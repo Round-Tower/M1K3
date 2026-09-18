@@ -157,7 +157,7 @@ final class AppCore {
     /// (Mini = AFM, Lil = MLX) so the transcript is preserved across a swap.
     private let activeProvider: SwappableInferenceProvider
     private let afm = AppleFoundationModelsProvider()
-    private var currentMLX: MLXGemmaProvider?
+    private var currentMLX: MLXBrainProvider?
     private var warmTask: Task<Void, Never>?
     /// Monotonic token: a late-arriving warm progress hop only applies if it still
     /// matches the current generation, so a brain switch mid-warm can't be clobbered
@@ -347,7 +347,7 @@ final class AppCore {
         // directly; an MLX brain starts on a provider that's warmed below.
         let initialBackend: any InferenceProvider
         if let modelID = brain.mlxModelID, Self.mlxAvailable {
-            let mlx = MLXGemmaProvider(modelID: modelID, maxTokens: Self.generationCap(for: brain))
+            let mlx = MLXBrainProvider(modelID: modelID, maxTokens: Self.generationCap(for: brain))
             currentMLX = mlx
             initialBackend = mlx
         } else {
@@ -584,7 +584,7 @@ final class AppCore {
     /// The live decode cap for an MLX tier — 2048 where the window is a hard
     /// budget (pocket; Big never runs here), the provider default elsewhere.
     nonisolated static func generationCap(for tier: BrainTier) -> Int {
-        HistoryBudgetPolicy.generationTokenCap(for: tier, defaultCap: MLXGemmaProvider.defaultMaxTokens)
+        HistoryBudgetPolicy.generationTokenCap(for: tier, defaultCap: MLXBrainProvider.defaultMaxTokens)
     }
 
     private func warmSelectedBrain() {
@@ -598,12 +598,12 @@ final class AppCore {
             // Reuse the provider already built for this exact model (cold launch made
             // one as the slot's initial backend); only build fresh on a model change,
             // releasing the outgoing weights first — never leak two Metal instances.
-            let mlx: MLXGemmaProvider
+            let mlx: MLXBrainProvider
             if let existing = currentMLX, existing.modelIdentifier == modelID {
                 mlx = existing
             } else {
                 currentMLX?.releaseMemory()
-                mlx = MLXGemmaProvider(modelID: modelID, maxTokens: Self.generationCap(for: selectedBrain))
+                mlx = MLXBrainProvider(modelID: modelID, maxTokens: Self.generationCap(for: selectedBrain))
             }
             do {
                 try await mlx.prepare { fraction in

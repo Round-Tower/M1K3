@@ -206,7 +206,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         // is where the speed lives: tools 4.4s vs 21.0s median, reasoning
         // answers 1.8s vs 11.9s, security parity with the model it replaces
         // (Run E, 44 fixtures, macos/docs/MODEL_CHOICES.md 2026-07-16 entry).
-        // The thinking TOGGLE is pinned off for the 2507 line in MLXGemmaProvider
+        // The thinking TOGGLE is pinned off for the 2507 line in MLXBrainProvider
         // (its template has no enable_thinking — the reasoning picker hides).
         // DWQ-2510 since 2026-09-05: identical weights, the distilled-weight-
         // quantization recipe; A/B on mains 18/21 vs 15/21, security 6/7 vs 3/7
@@ -294,7 +294,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// prompt HEAD rather than erroring, so the budget layer must clamp BELOW it
     /// (with margin for the char≈token estimate). Only `big` (gemma-4-12B) today;
     /// the dense-Qwen lil uses an unbounded `KVCacheSimple`. Verified against
-    /// `MLXGemmaProvider`'s per-family cache config (see docs/MODEL_CHOICES.md).
+    /// `MLXBrainProvider`'s per-family cache config (see docs/MODEL_CHOICES.md).
     public var usesRotatingKVCache: Bool {
         self == .big
     }

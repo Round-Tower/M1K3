@@ -1,12 +1,16 @@
 //
-//  MLXGemmaProviderTests.swift
+//  MLXBrainProviderTests.swift
 //  M1K3MLXTests
 //
 //  Fast tier: protocol conformance + availability, no model load. Integration
-//  tier (M1K3_MLX_INTEGRATION=1): actually downloads Gemma and generates — the
+//  tier (M1K3_MLX_INTEGRATION=1): actually downloads a model and generates — the
 //  first real proof the MLXLLM path works end-to-end. Network + minutes.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.75, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — renamed with the class
+//  (MLXGemmaProvider → MLXBrainProvider; it runs Qwen3, LFM2.5 and Gemma alike). The
+//  default diagnostics label pinned below moved "mlx-gemma" → "mlx-brain"; nothing
+//  persists or routes on it. No test logic changed.
 
 import Foundation
 import M1K3Chat
@@ -15,11 +19,11 @@ import M1K3Inference
 import MLXLMCommon
 import Testing
 
-struct MLXGemmaProviderTests {
+struct MLXBrainProviderTests {
     @Test("conforms to InferenceProvider and is available on this target")
     func conformanceAndAvailability() {
-        let provider: any InferenceProvider = MLXGemmaProvider()
-        #expect(provider.name == "mlx-gemma")
+        let provider: any InferenceProvider = MLXBrainProvider()
+        #expect(provider.name == "mlx-brain")
         #expect(provider.isAvailable)
     }
 
@@ -29,10 +33,10 @@ struct MLXGemmaProviderTests {
         // policy's generationTokenCap(defaultCap:) mirrors this class's default.
         // If either moves alone, the window math silently models a value the
         // live provider never uses — this pin makes the drift loud.
-        #expect(HistoryBudgetPolicy.generationTokenCap(for: .lil) == MLXGemmaProvider.defaultMaxTokens)
+        #expect(HistoryBudgetPolicy.generationTokenCap(for: .lil) == MLXBrainProvider.defaultMaxTokens)
         // And the rotating cap must stay UNDER the default (a cap that exceeds
         // the ceiling would be a no-op).
-        #expect(HistoryBudgetPolicy.rotatingGenerationTokenCap < MLXGemmaProvider.defaultMaxTokens)
+        #expect(HistoryBudgetPolicy.rotatingGenerationTokenCap < MLXBrainProvider.defaultMaxTokens)
     }
 
     @Test("caller KV capacity is an ALLOW-list — anything unproven owns its own geometry")
@@ -51,13 +55,13 @@ struct MLXGemmaProviderTests {
         // backstop that the per-turn session lifecycle + maxTokens already
         // bound. So this is an allow-list defaulting to false — the same
         // crash-safe-over-fast shape as supportsQuantizedKVCache.
-        #expect(MLXGemmaProvider.supportsCallerKVCapacity(
+        #expect(MLXBrainProvider.supportsCallerKVCapacity(
             for: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")
         ))
         // Version-scoped: this function has been broken twice by unscoped
         // family assumptions, so a hypothetical Llama-4 must NOT inherit the
         // allow-list entry — it has to be audited and added deliberately.
-        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
+        #expect(!MLXBrainProvider.supportsCallerKVCapacity(
             for: ModelConfiguration(id: "mlx-community/Llama-4-Scout-4bit")
         ))
         // Architectures that own their geometry — every one of these throws.
@@ -69,12 +73,12 @@ struct MLXGemmaProviderTests {
             "local/LFM2.5-2.6B-4bit-liquid",
         ] {
             #expect(
-                !MLXGemmaProvider.supportsCallerKVCapacity(for: ModelConfiguration(id: id)),
+                !MLXBrainProvider.supportsCallerKVCapacity(for: ModelConfiguration(id: id)),
                 "\(id) owns its KV geometry — must not be sent a capacity"
             )
         }
         // Unknown families default to NO capacity — the safe direction.
-        #expect(!MLXGemmaProvider.supportsCallerKVCapacity(
+        #expect(!MLXBrainProvider.supportsCallerKVCapacity(
             for: ModelConfiguration(id: "mlx-community/some-unknown-model-4bit")
         ))
     }
@@ -85,7 +89,7 @@ struct MLXGemmaProviderTests {
         // LFM2 is the family that actually broke (0/44, incompatibleCapacity),
         // so the provider-level path deserves the same guard gemma-4 has.
         for id in ["mlx-community/LFM2.5-2.6B-4bit", "local/LFM2.5-2.6B-4bit-liquid"] {
-            let provider = MLXGemmaProvider(configuration: ModelConfiguration(id: id))
+            let provider = MLXBrainProvider(configuration: ModelConfiguration(id: id))
             #expect(provider.generateParameters.maxKVSize == nil, "\(id) must request no capacity")
             #expect(provider.generateParameters.kvBits == nil, "\(id) is not in the quantized allow-list")
         }
@@ -93,7 +97,7 @@ struct MLXGemmaProviderTests {
 
     @Test("a gemma-4 provider requests neither quantized KV nor a caller capacity")
     func gemma4RequestsNoCacheOverrides() {
-        let provider = MLXGemmaProvider(
+        let provider = MLXBrainProvider(
             configuration: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
         )
         // Both nil: quantized KV is unsafe for this family (raw cache.update)
@@ -106,40 +110,40 @@ struct MLXGemmaProviderTests {
     func kvQuantizationFamilyResolution() {
         // Safe: attention routes through upstream's attentionWithCacheUpdate
         // dispatcher, which handles QuantizedKVCache via updateQuantized.
-        #expect(MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "mlx-community/Qwen3.5-2B-4bit")
         ))
-        #expect(MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "mlx-community/Qwen3.5-9B-4bit")
         ))
-        #expect(MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "mlx-community/gemma-3-1b-it-qat-4bit")
         ))
         // Unsafe: Gemma3nText/Gemma4Text call cache.update(keys:values:) raw,
         // which is an upstream fatalError on a quantized cache.
-        #expect(!MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(!MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit")
         ))
-        #expect(!MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(!MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "mlx-community/gemma-3n-E4B-it-lm-4bit")
         ))
         // Unknown families default to NOT quantizing — crash-safe over fast.
-        #expect(!MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(!MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "some/unknown-model")
         ))
         // The WIRED dense tier (lil): Qwen3 attention routes through
         // upstream's attentionWithCacheUpdate dispatcher (Qwen3.swift:84), which
         // handles QuantizedKVCache — unlike Gemma4Text's raw cache.update. So
         // quantized KV is SAFE for dense Qwen3 (verified vs mlx-swift-lm 3.31.3).
-        #expect(MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "mlx-community/Qwen3-4B-4bit")
         ))
-        #expect(MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "mlx-community/Qwen3-8B-4bit")
         ))
         // Ternary Bonsai 8B IS dense Qwen3 under the brand (model_type "qwen3" →
         // Qwen3Model → attentionWithCacheUpdate), so quantized KV is safe.
-        #expect(MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "prism-ml/Ternary-Bonsai-8B-mlx-2bit")
         ))
         // Bonsai-27B is qwen3_5 under a brand id (config verified 2026-07-17).
@@ -148,7 +152,7 @@ struct MLXGemmaProviderTests {
         // mlx-swift-lm 3.31.4) and quantized KV ran in production on the same
         // arch when lil was Qwen3.5-4B — safe, so the old unverified-default
         // exclusion lifts.
-        #expect(MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "prism-ml/Ternary-Bonsai-27B-mlx-2bit")
         ))
     }
@@ -159,13 +163,13 @@ struct MLXGemmaProviderTests {
         // enable_thinking switch (verified against the HF template 2026-07-15) —
         // claiming toggle support would render a kwarg the template ignores and
         // silently break fast mode's expectations. Pin it off.
-        #expect(!MLXGemmaProvider.templateSupportsThinkingToggle(
+        #expect(!MLXBrainProvider.templateSupportsThinkingToggle(
             for: ModelConfiguration(id: "prism-ml/Ternary-Bonsai-8B-mlx-2bit")
         ))
         // The 27B DIFFERS: its qwen3_5 template reads enable_thinking (verified
         // against the HF chat_template.jinja 2026-07-17) — so it claims the
         // toggle and the reasoning picker stays a live control on this brain.
-        #expect(MLXGemmaProvider.templateSupportsThinkingToggle(
+        #expect(MLXBrainProvider.templateSupportsThinkingToggle(
             for: ModelConfiguration(id: "prism-ml/Ternary-Bonsai-27B-mlx-2bit")
         ))
     }
@@ -178,22 +182,22 @@ struct MLXGemmaProviderTests {
         // leave the Settings reasoning picker as a control that does nothing —
         // the dead-control rule says pin it off instead. THE WIRED LIL (since
         // 2026-07-16) is the Instruct variant, so this pin is load-bearing.
-        #expect(!MLXGemmaProvider.templateSupportsThinkingToggle(
+        #expect(!MLXBrainProvider.templateSupportsThinkingToggle(
             for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit")
         ))
-        #expect(!MLXGemmaProvider.templateSupportsThinkingToggle(
+        #expect(!MLXBrainProvider.templateSupportsThinkingToggle(
             for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Thinking-2507-4bit")
         ))
         // Stock (pre-2507) Qwen3 keeps the toggle — the exclusion must not
         // over-reach.
-        #expect(MLXGemmaProvider.templateSupportsThinkingToggle(
+        #expect(MLXBrainProvider.templateSupportsThinkingToggle(
             for: ModelConfiguration(id: "mlx-community/Qwen3-4B-4bit")
         ))
         // And the 2507 line still rides the rest of the qwen3 family arms.
-        #expect(MLXGemmaProvider.supportsQuantizedKVCache(
+        #expect(MLXBrainProvider.supportsQuantizedKVCache(
             for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit")
         ))
-        #expect(MLXGemmaProvider.resolveToolCallFormat(
+        #expect(MLXBrainProvider.resolveToolCallFormat(
             for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit")
         ) == .json)
     }
@@ -203,38 +207,38 @@ struct MLXGemmaProviderTests {
         // The Ornith case: no family word in the repo name, config.json absent
         // at construction → nil → ReAct floor. Once the loader has the files,
         // model_type names the dialect.
-        #expect(MLXGemmaProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "qwen3_5") == .xmlFunction)
-        #expect(MLXGemmaProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "lfm2") == .lfm2)
+        #expect(MLXBrainProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "qwen3_5") == .xmlFunction)
+        #expect(MLXBrainProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "lfm2") == .lfm2)
         // Already resolved at init (by name or explicit config): the late read
         // must NOT move it — the persona-prefix cache was rendered in that dialect.
-        #expect(MLXGemmaProvider.lateToolCallFormat(initial: .json, modelTypeOnDisk: "qwen3_5") == nil)
+        #expect(MLXBrainProvider.lateToolCallFormat(initial: .json, modelTypeOnDisk: "qwen3_5") == nil)
         // Nothing to learn: no config, or an architecture we have not verified.
-        #expect(MLXGemmaProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: nil) == nil)
-        #expect(MLXGemmaProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "qwen3_next") == nil)
+        #expect(MLXBrainProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: nil) == nil)
+        #expect(MLXBrainProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "qwen3_next") == nil)
     }
 
     @Test("think traits by name: known families answer, an unknown family defers to its template (#264)")
     func thinkTraitsByNameGate() {
         // Pinned tiers keep their name answers (byte-identical behaviour).
-        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3.5-4B-MLX-4bit"))
+        #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3.5-4B-MLX-4bit"))
             == ChatTemplateTraits(preOpensThink: true, supportsThinkingToggle: true))
-        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510"))
+        #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510"))
             == ChatTemplateTraits(preOpensThink: false, supportsThinkingToggle: false))
-        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit"))
+        #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit"))
             == ChatTemplateTraits(preOpensThink: false, supportsThinkingToggle: false))
         // Qwen3.8 pre-opens like 3.5 (on-disk template, 2026-09-10) — the review's catch.
-        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3.8-27B-4bit"))
+        #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3.8-27B-4bit"))
             == ChatTemplateTraits(preOpensThink: true, supportsThinkingToggle: true))
         // No family word: nil, the template decides after the load.
-        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "ornith-ai/Ornith-1.5-9B-MLX-4bit")) == nil)
+        #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "ornith-ai/Ornith-1.5-9B-MLX-4bit")) == nil)
         // A dialect-known family the think rules were never verified on also
         // defers — LFM2.5-2.6B's template pre-opens, the 1.2B's does not; the
         // file decides, not the name.
-        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/LFM2.5-1.2B-Instruct-4bit")) == nil)
-        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")) == nil)
+        #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/LFM2.5-1.2B-Instruct-4bit")) == nil)
+        #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")) == nil)
         // Only gemma-4 was measured; a gemma-3 class checkpoint reads its template (review on #267).
-        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-3-1b-it-qat-4bit")) == nil)
-        #expect(MLXGemmaProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-3n-E4B-it-lm-4bit")) == nil)
+        #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-3-1b-it-qat-4bit")) == nil)
+        #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/gemma-3n-E4B-it-lm-4bit")) == nil)
     }
 
     @Test("late think traits fill a nil from the template, never move a name-decided answer")
@@ -250,19 +254,19 @@ struct MLXGemmaProviderTests {
             {%- endif %}
         {%- endif %}
         """#
-        #expect(MLXGemmaProvider.lateThinkTraits(initial: nil, templateOnDisk: ornithTail)
+        #expect(MLXBrainProvider.lateThinkTraits(initial: nil, templateOnDisk: ornithTail)
             == ChatTemplateTraits(preOpensThink: true, supportsThinkingToggle: true))
         let pinned = ChatTemplateTraits(preOpensThink: false, supportsThinkingToggle: false)
-        #expect(MLXGemmaProvider.lateThinkTraits(initial: pinned, templateOnDisk: ornithTail) == nil)
-        #expect(MLXGemmaProvider.lateThinkTraits(initial: nil, templateOnDisk: nil) == nil)
+        #expect(MLXBrainProvider.lateThinkTraits(initial: pinned, templateOnDisk: ornithTail) == nil)
+        #expect(MLXBrainProvider.lateThinkTraits(initial: nil, templateOnDisk: nil) == nil)
     }
 
     @Test("dialect source names where the resolution came from")
     func dialectSourceLabel() {
-        #expect(MLXGemmaProvider.dialectSource(explicit: .json, byType: nil, resolved: .json) == "explicit")
-        #expect(MLXGemmaProvider.dialectSource(explicit: nil, byType: .gemma4, resolved: .gemma4) == "config")
-        #expect(MLXGemmaProvider.dialectSource(explicit: nil, byType: nil, resolved: .json) == "name")
-        #expect(MLXGemmaProvider.dialectSource(explicit: nil, byType: nil, resolved: nil) == "none")
+        #expect(MLXBrainProvider.dialectSource(explicit: .json, byType: nil, resolved: .json) == "explicit")
+        #expect(MLXBrainProvider.dialectSource(explicit: nil, byType: .gemma4, resolved: .gemma4) == "config")
+        #expect(MLXBrainProvider.dialectSource(explicit: nil, byType: nil, resolved: .json) == "name")
+        #expect(MLXBrainProvider.dialectSource(explicit: nil, byType: nil, resolved: nil) == "none")
     }
 
     @Test("tool-turn thinking is decided per-turn, never from construction-time state")
@@ -270,13 +274,13 @@ struct MLXGemmaProviderTests {
         // A toggle family that ALSO pre-opens (Qwen3.5): thinking ON ⇒ no
         // enable_thinking suppression + a pre-opened <think>; OFF ⇒
         // enable_thinking:false + no pre-open.
-        let thinkOn = MLXGemmaProvider.toolTurnThinkingDecision(
+        let thinkOn = MLXBrainProvider.toolTurnThinkingDecision(
             turnThinking: true, supportsToggle: true, preOpensThink: true
         )
         #expect(thinkOn.context == nil)
         #expect(thinkOn.prefixNeeded)
 
-        let thinkOff = MLXGemmaProvider.toolTurnThinkingDecision(
+        let thinkOff = MLXBrainProvider.toolTurnThinkingDecision(
             turnThinking: false, supportsToggle: true, preOpensThink: true
         )
         #expect(thinkOff.context?["enable_thinking"] as? Bool == false)
@@ -285,26 +289,26 @@ struct MLXGemmaProviderTests {
         // THE FIX — dense Qwen3 (lil): toggles enable_thinking but does NOT
         // pre-open. Fast mode MUST suppress (enable_thinking:false), and a thinking
         // turn must NOT add a synthetic opener (the model emits its own <think>).
-        let denseFast = MLXGemmaProvider.toolTurnThinkingDecision(
+        let denseFast = MLXBrainProvider.toolTurnThinkingDecision(
             turnThinking: false, supportsToggle: true, preOpensThink: false
         )
         #expect(denseFast.context?["enable_thinking"] as? Bool == false)
         #expect(!denseFast.prefixNeeded)
 
-        let denseThink = MLXGemmaProvider.toolTurnThinkingDecision(
+        let denseThink = MLXBrainProvider.toolTurnThinkingDecision(
             turnThinking: true, supportsToggle: true, preOpensThink: false
         )
         #expect(denseThink.context == nil)
         #expect(!denseThink.prefixNeeded)
 
         // A non-toggle family (gemma) never suppresses and never pre-opens.
-        let noToggleOn = MLXGemmaProvider.toolTurnThinkingDecision(
+        let noToggleOn = MLXBrainProvider.toolTurnThinkingDecision(
             turnThinking: true, supportsToggle: false, preOpensThink: false
         )
         #expect(noToggleOn.context == nil)
         #expect(!noToggleOn.prefixNeeded)
 
-        let noToggleOff = MLXGemmaProvider.toolTurnThinkingDecision(
+        let noToggleOff = MLXBrainProvider.toolTurnThinkingDecision(
             turnThinking: false, supportsToggle: false, preOpensThink: false
         )
         #expect(noToggleOff.context == nil)
@@ -317,14 +321,14 @@ struct MLXGemmaProviderTests {
         // distorting tool-call JSON or citation tokens (each repeats little
         // within 64 tokens). A silent edit toward ≥1.2 — where structured
         // output measurably degrades — should fail here, not at ⌘R.
-        let provider = MLXGemmaProvider()
+        let provider = MLXBrainProvider()
         #expect(provider.generateParameters.repetitionPenalty == 1.1)
         #expect(provider.generateParameters.repetitionContextSize == 64)
     }
 
     @Test("quantizing families carry kvBits; default-newCache families keep the rotation cap")
     func generateParametersPerFamily() {
-        let qwen = MLXGemmaProvider(configuration: ModelConfiguration(id: "mlx-community/Qwen3.5-2B-4bit"))
+        let qwen = MLXBrainProvider(configuration: ModelConfiguration(id: "mlx-community/Qwen3.5-2B-4bit"))
         #expect(qwen.generateParameters.kvBits == 8)
         #expect(qwen.generateParameters.kvGroupSize == 64)
         #expect(qwen.generateParameters.quantizedKVStart == 0)
@@ -334,12 +338,12 @@ struct MLXGemmaProviderTests {
         // a caller capacity is meaningless (its newCache ignores parameters).
         // This assertion used to read `maxKVSize == 8192` — pinning a bound
         // the model never honoured. See supportsCallerKVCapacity.
-        let gemma4 = MLXGemmaProvider(configuration: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit"))
+        let gemma4 = MLXBrainProvider(configuration: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit"))
         #expect(gemma4.generateParameters.kvBits == nil)
         #expect(gemma4.generateParameters.maxKVSize == nil)
 
         // A family on upstream's default newCache still gets the real backstop.
-        let llama = MLXGemmaProvider(
+        let llama = MLXBrainProvider(
             configuration: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")
         )
         #expect(llama.generateParameters.maxKVSize == 8192)
@@ -350,7 +354,7 @@ struct MLXGemmaProviderTests {
         .enabled(if: ProcessInfo.processInfo.environment["M1K3_MLX_INTEGRATION"] == "1")
     )
     func generatesRealText() async throws {
-        let provider = MLXGemmaProvider(maxTokens: 64)
+        let provider = MLXBrainProvider(maxTokens: 64)
         let answer = try await provider.generate(prompt: "Reply with exactly one short sentence about seals.")
         #expect(!answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
@@ -360,7 +364,7 @@ struct MLXGemmaProviderTests {
         .enabled(if: ProcessInfo.processInfo.environment["M1K3_MLX_INTEGRATION"] == "1")
     )
     func streamsRealText() async {
-        let provider = MLXGemmaProvider(maxTokens: 64)
+        let provider = MLXBrainProvider(maxTokens: 64)
         var collected = ""
         for await chunk in provider.generateStreaming(prompt: "Say hello in one word.") {
             collected += chunk
@@ -376,28 +380,28 @@ struct MLXGemmaProviderTests {
         // text behaviour through the VLM container proven by three greedy
         // fixtures. The VLM path is what unlocks image input AND the MTP
         // drafter state emission (once upstream wires Gemma4Unified).
-        #expect(MLXGemmaProvider.usesVLMLoadPath(
+        #expect(MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
         ))
         // e4b is NOT routable to MLXVLM: keyNotFound layers.24.self_attn.v_proj
         // (upstream's Gemma4Unified sanitize lacks the KV-shared-layer fix;
         // e4b has 18 shared layers, 12B has 0 — GemmaVisionSpike review,
         // 2026-07-14). Family-wide routing would brick the fallback tier.
-        #expect(!MLXGemmaProvider.usesVLMLoadPath(
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit")
         ))
         // Text-only families stay on the LLM factory untouched.
-        #expect(!MLXGemmaProvider.usesVLMLoadPath(
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-3-1b-it-qat-4bit")
         ))
-        #expect(!MLXGemmaProvider.usesVLMLoadPath(
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit")
         ))
-        #expect(!MLXGemmaProvider.usesVLMLoadPath(
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "prism-ml/Ternary-Bonsai-8B-2bit-mlx")
         ))
         // Unknown ids default to the LLM factory — the known-good path.
-        #expect(!MLXGemmaProvider.usesVLMLoadPath(
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "someorg/some-future-model-4bit")
         ))
     }
@@ -406,8 +410,8 @@ struct MLXGemmaProviderTests {
     func providerVisionFlagMatchesRouting() {
         // supportsImageInput is what actually gates images into the chat
         // render (imagesAllowed) — pin the thin wrapper, not just the static.
-        #expect(MLXGemmaProvider(modelID: "mlx-community/gemma-4-12B-it-4bit").supportsImageInput)
-        #expect(!MLXGemmaProvider(modelID: "mlx-community/Qwen3-4B-Instruct-2507-4bit").supportsImageInput)
+        #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-12B-it-4bit").supportsImageInput)
+        #expect(!MLXBrainProvider(modelID: "mlx-community/Qwen3-4B-Instruct-2507-4bit").supportsImageInput)
     }
 
     @Test("BrainTier.supportsImageInput can never drift from the VLM load-path allow-list")
@@ -427,7 +431,7 @@ struct MLXGemmaProviderTests {
             }
             #expect(
                 tier.supportsImageInput
-                    == MLXGemmaProvider.usesVLMLoadPath(for: ModelConfiguration(id: modelID))
+                    == MLXBrainProvider.usesVLMLoadPath(for: ModelConfiguration(id: modelID))
             )
         }
     }
@@ -439,15 +443,15 @@ struct MLXGemmaProviderTests {
     /// assumptions, and an unmeasured model deserves upstream's default.
     @Test("window-sized prefill is opt-IN per family, not a blanket default")
     func windowSizedPrefillIsScoped() {
-        #expect(MLXGemmaProvider.prefersWindowSizedPrefill(
+        #expect(MLXBrainProvider.prefersWindowSizedPrefill(
             for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
         ))
         // Lil has no sliding window and cross-turn reuse works there, so its
         // prefill profile is a different question — upstream's default stands.
-        #expect(!MLXGemmaProvider.prefersWindowSizedPrefill(
+        #expect(!MLXBrainProvider.prefersWindowSizedPrefill(
             for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit")
         ))
-        #expect(!MLXGemmaProvider.prefersWindowSizedPrefill(
+        #expect(!MLXBrainProvider.prefersWindowSizedPrefill(
             for: ModelConfiguration(id: "mlx-community/Llama-3.2-3B-Instruct-4bit")
         ))
     }
@@ -461,15 +465,15 @@ struct MLXGemmaProviderTests {
     @Test("a prefix longer than the sliding window is never reusable, so never worth building")
     func prefixReusabilityFollowsTheWindow() {
         let big = "mlx-community/gemma-4-12B-it-4bit"
-        #expect(MLXGemmaProvider.slidingWindow(forModelID: big) == 1024)
-        #expect(!MLXGemmaProvider.prefixIsReusable(tokens: 1878, modelID: big))
-        #expect(MLXGemmaProvider.prefixIsReusable(tokens: 1024, modelID: big), "exactly the window fits")
-        #expect(!MLXGemmaProvider.prefixIsReusable(tokens: 1025, modelID: big))
+        #expect(MLXBrainProvider.slidingWindow(forModelID: big) == 1024)
+        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 1878, modelID: big))
+        #expect(MLXBrainProvider.prefixIsReusable(tokens: 1024, modelID: big), "exactly the window fits")
+        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 1025, modelID: big))
 
         // Dense attention: no window, so a prefix of any size stays trimmable
         // and reuse genuinely works — which is why Lil is 10x faster per turn.
         let lil = "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510"
-        #expect(MLXGemmaProvider.slidingWindow(forModelID: lil) == nil)
-        #expect(MLXGemmaProvider.prefixIsReusable(tokens: 1878, modelID: lil))
+        #expect(MLXBrainProvider.slidingWindow(forModelID: lil) == nil)
+        #expect(MLXBrainProvider.prefixIsReusable(tokens: 1878, modelID: lil))
     }
 }

@@ -1,5 +1,5 @@
 //
-//  MLXGemmaProvider+PromptCachePersistence.swift
+//  MLXBrainProvider+PromptCachePersistence.swift
 //  M1K3MLX
 //
 //  PROTOTYPE probe (SelfTest-only today): proves the upstream
@@ -17,7 +17,7 @@ import Foundation
 import M1K3Inference
 import MLXLMCommon
 
-public extension MLXGemmaProvider {
+public extension MLXBrainProvider {
     /// Full disk round-trip on the persona prefix, returning a human-readable
     /// report for the self-test log. Never throws — failures are the finding.
     func promptCacheRoundTripProbe(directory: URL) async -> String {
@@ -88,7 +88,7 @@ public extension MLXGemmaProvider {
     }
 }
 
-private extension MLXGemmaProvider {
+private extension MLXBrainProvider {
     /// One short generation from a session seeded with the given prefix.
     func seededAnswer(container: ModelContainer, seed: PersonaPrefixSnapshot) async throws -> String {
         let session = MLXToolTurnSession(

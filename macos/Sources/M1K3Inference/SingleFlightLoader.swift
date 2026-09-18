@@ -4,7 +4,7 @@
 //
 //  A single-flight async loader: concurrent callers share ONE in-flight load
 //  instead of each kicking off their own. This replaces the check-then-act
-//  NSLock MLXGemmaProvider used to cache its model container — that pattern read
+//  NSLock MLXBrainProvider used to cache its model container — that pattern read
 //  the cache under the lock, released it, then ran the slow load with no lock
 //  held, so two callers (a Settings preload racing the first generate) could both
 //  pass the "not loaded yet" check and redundantly download the ~1GB container.
@@ -124,7 +124,7 @@ public actor SingleFlightLoader<Value: Sendable> {
 
     /// Evict the cached value so the next caller re-runs the operation.
     /// Added 2026-08-15 for the deep-dive escalation: a parked
-    /// MLXGemmaProvider's "release" freed KV caches and the Metal buffer pool
+    /// MLXBrainProvider's "release" freed KV caches and the Metal buffer pool
     /// but never the weights, because this cache had no eviction path — so an
     /// escalated dive ran Big beside the parked brain's resident weights
     /// against the process-global back-pressure ceiling (review catch, #130).

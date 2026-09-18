@@ -1,8 +1,8 @@
 //
-//  MLXGemmaProvider+TokenCounting.swift
+//  MLXBrainProvider+TokenCounting.swift
 //  M1K3MLX
 //
-//  Conforms MLXGemmaProvider to M1K3Inference's `TokenCounting` seam so
+//  Conforms MLXBrainProvider to M1K3Inference's `TokenCounting` seam so
 //  `GroundingBudget` (M1K3Knowledge, wired from M1K3Chat's AgentRAGResponder)
 //  can measure the REAL rendered grounding cost before it's injected into a
 //  prompt — without M1K3Chat linking M1K3MLX (M1K3Chat → M1K3Inference is
@@ -16,7 +16,7 @@
 //  throws rather than self-managing. See GroundingBudget.measure.
 //
 //  The conformance is DECLARATION-ONLY on purpose. `tokenCount(_:)` itself
-//  lives on `MLXGemmaProvider` (MLXGemmaProvider.swift), added by PR #65's
+//  lives on `MLXBrainProvider` (MLXBrainProvider.swift), added by PR #65's
 //  prompt-size instrument, and its signature satisfies `TokenCounting`
 //  exactly. The two arrived independently with byte-identical bodies; this
 //  file carried a duplicate until both PRs landed together, which is the
@@ -44,4 +44,4 @@
 import Foundation
 import M1K3Inference
 
-extension MLXGemmaProvider: TokenCounting {}
+extension MLXBrainProvider: TokenCounting {}

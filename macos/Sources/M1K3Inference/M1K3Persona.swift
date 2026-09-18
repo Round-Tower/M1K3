@@ -40,7 +40,7 @@
 //  (pocket / LFM2.5-1.2B: replay 51/105 → 76/105, n=15 per fixture; the variants that
 //  lost are recorded on the constant). Core prompt byte-identical; every leak-guard /
 //  quarantine span is unchanged. Found while chasing #235 — the bigger half of that
-//  score was the double-BOS render in MLXGemmaProvider, fixed alongside.
+//  score was the double-BOS render in MLXBrainProvider, fixed alongside.
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.8 — the character pass (Kev:
 //  "M1K3 is a little too dry"). Not dry: CANNED — exemplar 1's status line was read back

@@ -4,7 +4,7 @@
 //
 //  Contract tests for the single-flight async loader — the pure concurrency
 //  primitive behind "don't download the ~1GB MLX container twice". The old
-//  MLXGemmaProvider used a check-then-act NSLock: read the cache under the lock,
+//  MLXBrainProvider used a check-then-act NSLock: read the cache under the lock,
 //  release it, then do the slow load with no lock held — so two concurrent
 //  callers (a Settings preload racing the first generate) both saw nil and both
 //  loaded. This actor makes concurrent callers share ONE load by construction,
@@ -218,7 +218,7 @@ struct SingleFlightLoaderTests {
     @Test("reset evicts the cached value so the next caller reloads")
     func resetEvictsCachedValue() async throws {
         // Until reset() existed, cachedValue lived for the loader's lifetime —
-        // so "releasing" a parked MLXGemmaProvider freed its KV caches but
+        // so "releasing" a parked MLXBrainProvider freed its KV caches but
         // never its weights, and an escalated deep dive ran Big beside the
         // parked brain's resident weights (review catch, #130).
         let counter = InvocationCounter()

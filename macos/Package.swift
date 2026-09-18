@@ -411,7 +411,7 @@ let package = Package(
         ),
         // The heavy on-device backends, isolated here so nothing else links
         // MLX/Metal. MLXEmbeddingService conforms to EmbeddingService; the
-        // MLXGemmaProvider conforms to InferenceProvider — both swap in behind
+        // MLXBrainProvider conforms to InferenceProvider — both swap in behind
         // the same seams the core already tests against fakes.
         .target(
             name: "M1K3MLX",
@@ -427,7 +427,7 @@ let package = Package(
                 // UserInput.images. Both factories load the SAME HF checkpoint
                 // (mlx-community/gemma-4-e4b-it-4bit) into a common ModelContainer
                 // ChatSession is agnostic to; probe-first before touching the
-                // production MLXGemmaProvider load path.
+                // production MLXBrainProvider load path.
                 .product(name: "MLXVLM", package: "mlx-swift-lm"),
                 .product(name: "Transformers", package: "swift-transformers"),
             ],
@@ -443,7 +443,7 @@ let package = Package(
                 "M1K3MLX",
                 "M1K3Knowledge",
                 "M1K3Inference",
-                "M1K3Chat", // HistoryBudgetPolicy ↔ MLXGemmaProvider default-cap equality pin (116-F1)
+                "M1K3Chat", // HistoryBudgetPolicy ↔ MLXBrainProvider default-cap equality pin (116-F1)
                 .product(name: "Transformers", package: "swift-transformers"),
             ],
             path: "Tests/M1K3MLXTests"

@@ -1,5 +1,5 @@
 //
-//  MLXGemmaProvider+SeededPlainTurn.swift
+//  MLXBrainProvider+SeededPlainTurn.swift
 //  M1K3MLX
 //
 //  The plain-chat turn (`generate` / `generateStreaming`) on a seeded persona
@@ -21,7 +21,7 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.85 (the slice is
 //  pinned in SeededPlainTurnTests; the render + generate is verify-by-launch
 //  through SelfTest security on pocket AND Lil — one seam for every seeded
-//  MLX tier). Prior: Kev + claude-fable-5 (MLXGemmaProvider plain paths).
+//  MLX tier). Prior: Kev + claude-fable-5 (MLXBrainProvider plain paths).
 //  Review: claude-fable-5.1, 2026-09-06 — PR #240 review 1: reuse now also
 //  requires every seed layer trimmable (an untrimmed seed is one position
 //  longer than its ids), mirroring MLXToolTurnSession's gate. Not academic:
@@ -35,7 +35,7 @@ import Foundation
 import MLX
 import MLXLMCommon
 
-extension MLXGemmaProvider {
+extension MLXBrainProvider {
     /// Run one plain turn on `seed`. `onChunk` receives generated text as it
     /// streams; the whole render's token count is what the info line reports
     /// (the seed is part of the context the model sees, not free).

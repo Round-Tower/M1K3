@@ -13,6 +13,7 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-10, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `pocketPersonaIsLFM2Only` pins the
 //  dialect → persona-variant mapping (lfm2 only).
+//  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — mechanical rename only: `MLXGemmaProvider` → `MLXBrainProvider`; no test logic changed.
 
 import Foundation
 import M1K3Inference
@@ -233,10 +234,10 @@ struct MLXGemmaCallTextTests {
 struct MLXToolFormatResolutionTests {
     @Test("resolves the native dialect by model family")
     func familyResolution() {
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "mlx-community/gemma-3-1b")) == .gemma)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3-1.7B")) == .json)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "meta/Llama-3.2-1B")) == .json)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "some/unknown-model")) == nil)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/gemma-3-1b")) == .gemma)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3-1.7B")) == .json)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "meta/Llama-3.2-1B")) == .json)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "some/unknown-model")) == nil)
     }
 
     @Test("gemma-4 resolves to .gemma4 (native parser on main) BEFORE the generic gemma arm")
@@ -245,21 +246,21 @@ struct MLXToolFormatResolutionTests {
         let gemma3n = ModelConfiguration(id: "mlx-community/gemma-3n-E4B-it-lm-4bit")
         let gemma3 = ModelConfiguration(id: "mlx-community/gemma3-1b-it-4bit")
         // gemma-4 routes native now that we build off main (#183 GemmaFunctionParser).
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: gemma4) == .gemma4)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: gemma4) == .gemma4)
         // gemma3n / gemma3 contain "gemma" but NOT "gemma4" → still the generic .gemma arm.
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: gemma3n) == .gemma)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: gemma3) == .gemma)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: gemma3n) == .gemma)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: gemma3) == .gemma)
     }
 
     @Test("qwen3.5 resolves to xmlFunction BEFORE the generic qwen arm")
     func qwen35ResolvesXMLFunction() {
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.5-2B-4bit")) == .xmlFunction)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.5-9B-4bit")) == .xmlFunction)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3-1.7B-4bit")) == .json)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.5-2B-4bit")) == .xmlFunction)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.5-9B-4bit")) == .xmlFunction)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3-1.7B-4bit")) == .json)
         // The WIRED dense tier (lil) resolves to .json — the agentic path
         // depends on this; Qwen3 (no ".5") must NOT hit the xmlFunction arm.
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3-4B-4bit")) == .json)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3-8B-4bit")) == .json)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3-4B-4bit")) == .json)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3-8B-4bit")) == .json)
     }
 
     @Test("ternary Bonsai resolves per size: 8B (Qwen3 QAT) → .json, 27B (qwen3_5) → .xmlFunction")
@@ -268,7 +269,7 @@ struct MLXToolFormatResolutionTests {
         // Qwen3-8B ternary QAT (config.json: model_type "qwen3", Qwen3ForCausalLM;
         // chat template emits <tool_call> JSON — verified 2026-07-15). Without a
         // family match it would silently fall to the ReAct floor.
-        #expect(MLXGemmaProvider.resolveToolCallFormat(
+        #expect(MLXBrainProvider.resolveToolCallFormat(
             for: .init(id: "prism-ml/Ternary-Bonsai-8B-mlx-2bit")
         ) == .json)
         // The 27B is a DIFFERENT family than the 8B: config model_type "qwen3_5"
@@ -277,7 +278,7 @@ struct MLXToolFormatResolutionTests {
         // <parameter=…>) — verified against the HF config + chat_template.jinja
         // 2026-07-17, which is the re-verification the old nil pin demanded.
         // It must ride the .xmlFunction arm, NOT the 8B's .json arm.
-        #expect(MLXGemmaProvider.resolveToolCallFormat(
+        #expect(MLXBrainProvider.resolveToolCallFormat(
             for: .init(id: "prism-ml/Ternary-Bonsai-27B-mlx-2bit")
         ) == .xmlFunction)
     }
@@ -289,69 +290,69 @@ struct MLXToolFormatResolutionTests {
         // "qwen" but not "qwen3.5", so the name arm alone routed it to .json —
         // silently degrading tool-use to 0/5, the exact 08-08 regression shape.
         let qwen38 = ModelConfiguration(id: "mlx-community/Qwen3.8-27B-4bit")
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: qwen38, modelType: "qwen3_5") == .xmlFunction)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: qwen38, modelType: "qwen3_5_text") == .xmlFunction)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: qwen38, modelType: "qwen3_5") == .xmlFunction)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: qwen38, modelType: "qwen3_5_text") == .xmlFunction)
         // A dense Qwen3 under a brand id with no "qwen" substring — the type
         // carries what the name cannot.
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "acme/brand-8B"), modelType: "qwen3") == .json)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "gemma4_unified") == .gemma4)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "gemma3_text") == .gemma)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "lfm2") == .lfm2)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "glm4") == .glm4)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "acme/brand-8B"), modelType: "qwen3") == .json)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "gemma4_unified") == .gemma4)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "gemma3_text") == .gemma)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "lfm2") == .lfm2)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "acme/brand"), modelType: "glm4") == .glm4)
         // An unknown type falls through to the name heuristic, never to nil.
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "x/Qwen3-4B"), modelType: "novel_arch") == .json)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "some/unknown"), modelType: "novel_arch") == nil)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "x/Qwen3-4B"), modelType: "novel_arch") == .json)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "some/unknown"), modelType: "novel_arch") == nil)
     }
 
     @Test("Qwen3.8 resolves to xmlFunction by name too (pre-download, before config.json exists)")
     func qwen38NameArm() {
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.8-27B-4bit")) == .xmlFunction)
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: .init(id: "lmstudio-community/Qwen3.8-27B-MLX-6bit")) == .xmlFunction)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.8-27B-4bit")) == .xmlFunction)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "lmstudio-community/Qwen3.8-27B-MLX-6bit")) == .xmlFunction)
     }
 
     @Test("an explicit configuration format wins over the family heuristic")
     func explicitWins() {
         var config = ModelConfiguration(id: "some/unknown-model")
         config.toolCallFormat = .json
-        #expect(MLXGemmaProvider.resolveToolCallFormat(for: config) == .json)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: config) == .json)
     }
 
     @Test("supportsToolCalls reflects whether the family is recognised")
     func capabilityFlag() {
-        #expect(MLXGemmaProvider(modelID: "mlx-community/gemma-3-1b-it-qat-4bit").supportsToolCalls)
-        #expect(MLXGemmaProvider(modelID: "mlx-community/Qwen3-1.7B-4bit").supportsToolCalls)
-        #expect(!MLXGemmaProvider(modelID: "some/unknown-model").supportsToolCalls)
+        #expect(MLXBrainProvider(modelID: "mlx-community/gemma-3-1b-it-qat-4bit").supportsToolCalls)
+        #expect(MLXBrainProvider(modelID: "mlx-community/Qwen3-1.7B-4bit").supportsToolCalls)
+        #expect(!MLXBrainProvider(modelID: "some/unknown-model").supportsToolCalls)
     }
 }
 
 struct MLXThinkTemplateTests {
     @Test("qwen3.5 templates pre-open <think> — the output needs a synthetic opener")
     func qwen35PreOpensThink() {
-        #expect(MLXGemmaProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3.5-2B-4bit")))
-        #expect(MLXGemmaProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3.5-9B-4bit")))
-        #expect(MLXGemmaProvider.templatePreOpensThink(for: .init(id: "mlx-community/qwen3_5-instruct")))
+        #expect(MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3.5-2B-4bit")))
+        #expect(MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3.5-9B-4bit")))
+        #expect(MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/qwen3_5-instruct")))
         // Bonsai-27B is qwen3_5 under a brand id with NO qwen spelling — its
         // template ends the generation prompt with an opened <think> (verified
         // against the HF chat_template.jinja 2026-07-17). Without this arm the
         // name heuristic misses it and reasoning splitting never engages.
-        #expect(MLXGemmaProvider.templatePreOpensThink(
+        #expect(MLXBrainProvider.templatePreOpensThink(
             for: .init(id: "prism-ml/Ternary-Bonsai-27B-mlx-2bit")
         ))
     }
 
     @Test("qwen3 and non-reasoning families do NOT pre-open think")
     func othersDoNot() {
-        #expect(!MLXGemmaProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3-1.7B-4bit")))
+        #expect(!MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3-1.7B-4bit")))
         // The WIRED dense tier (lil): verified against the real Qwen3 chat
         // template — it pre-opens <think> ONLY when thinking is disabled, so the
         // default reasoning path must NOT add a synthetic opener.
-        #expect(!MLXGemmaProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3-4B-4bit")))
-        #expect(!MLXGemmaProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3-8B-4bit")))
-        #expect(!MLXGemmaProvider.templatePreOpensThink(for: .init(id: "mlx-community/gemma-4-e4b-it-4bit")))
-        #expect(!MLXGemmaProvider.templatePreOpensThink(for: .init(id: "meta/Llama-3.2-1B")))
+        #expect(!MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3-4B-4bit")))
+        #expect(!MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3-8B-4bit")))
+        #expect(!MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/gemma-4-e4b-it-4bit")))
+        #expect(!MLXBrainProvider.templatePreOpensThink(for: .init(id: "meta/Llama-3.2-1B")))
         // The Bonsai-27B arm must not over-reach to the 8B — that one is dense
         // Qwen3 (no pre-open).
-        #expect(!MLXGemmaProvider.templatePreOpensThink(
+        #expect(!MLXBrainProvider.templatePreOpensThink(
             for: .init(id: "prism-ml/Ternary-Bonsai-8B-mlx-2bit")
         ))
     }
@@ -363,23 +364,23 @@ struct MLXThinkTemplateTests {
         // check — so fast mode could never send enable_thinking:false and the model
         // thought on every turn. ALL Qwen3 honour the switch (verified: the template
         // pre-opens <think> only when thinking is disabled = it reads the flag).
-        #expect(MLXGemmaProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/Qwen3-4B-4bit")))
-        #expect(MLXGemmaProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/Qwen3-8B-4bit")))
-        #expect(MLXGemmaProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/Qwen3-1.7B-4bit")))
-        #expect(MLXGemmaProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/Qwen3.5-9B-4bit")))
-        #expect(MLXGemmaProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/qwen3_5-instruct")))
+        #expect(MLXBrainProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/Qwen3-4B-4bit")))
+        #expect(MLXBrainProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/Qwen3-8B-4bit")))
+        #expect(MLXBrainProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/Qwen3-1.7B-4bit")))
+        #expect(MLXBrainProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/Qwen3.5-9B-4bit")))
+        #expect(MLXBrainProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/qwen3_5-instruct")))
         // Families with no enable_thinking switch.
-        #expect(!MLXGemmaProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/gemma-4-e4b-it-4bit")))
-        #expect(!MLXGemmaProvider.templateSupportsThinkingToggle(for: .init(id: "meta/Llama-3.2-1B")))
+        #expect(!MLXBrainProvider.templateSupportsThinkingToggle(for: .init(id: "mlx-community/gemma-4-e4b-it-4bit")))
+        #expect(!MLXBrainProvider.templateSupportsThinkingToggle(for: .init(id: "meta/Llama-3.2-1B")))
     }
 
     @Test("the synthetic opener is added once and never duplicated")
     func normalisePrefix() {
-        #expect(MLXGemmaProvider.normaliseThinkPrefix("plan</think>answer", preOpened: true)
+        #expect(MLXBrainProvider.normaliseThinkPrefix("plan</think>answer", preOpened: true)
             == "<think>plan</think>answer")
-        #expect(MLXGemmaProvider.normaliseThinkPrefix("<think>plan</think>answer", preOpened: true)
+        #expect(MLXBrainProvider.normaliseThinkPrefix("<think>plan</think>answer", preOpened: true)
             == "<think>plan</think>answer")
-        #expect(MLXGemmaProvider.normaliseThinkPrefix("plain answer", preOpened: false)
+        #expect(MLXBrainProvider.normaliseThinkPrefix("plain answer", preOpened: false)
             == "plain answer")
     }
 }
@@ -519,10 +520,10 @@ struct LFM2ToolBlockTests {
         // Its frozen core and the leak-decline beat were measured on LFM2.5-1.2B;
         // the 4B Lil recited the beat to innocent tool requests. Extend only with a
         // same-session A/B.
-        #expect(MLXGemmaProvider.personaVariant(forDialect: .lfm2) == .pocket)
+        #expect(MLXBrainProvider.personaVariant(forDialect: .lfm2) == .pocket)
         for dialect in [ToolCallFormat.json, .xmlFunction, .gemma, .gemma4] {
-            #expect(MLXGemmaProvider.personaVariant(forDialect: dialect) == .standard)
+            #expect(MLXBrainProvider.personaVariant(forDialect: dialect) == .standard)
         }
-        #expect(MLXGemmaProvider.personaVariant(forDialect: nil) == .standard)
+        #expect(MLXBrainProvider.personaVariant(forDialect: nil) == .standard)
     }
 }

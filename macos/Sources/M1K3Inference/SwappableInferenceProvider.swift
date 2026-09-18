@@ -5,7 +5,7 @@
 //  An InferenceProvider façade whose backing provider can change at runtime, so
 //  switching the chosen brain's MLX model (Lil = Qwen ↔ Big = Gemma) re-points the
 //  generation backend without rebuilding the RuntimeInferenceProvider / RAGResponder
-//  that hold it. Lil and Big both route through RuntimeOption.mlxGemma, so this is
+//  that hold it. Lil and Big both route through RuntimeOption.mlx, so this is
 //  the single MLX slot behind that key; AppEnvironment sets the concrete model.
 //
 //  Mirrors SwappableEmbeddingService: a lock-protected swap so this Sendable type

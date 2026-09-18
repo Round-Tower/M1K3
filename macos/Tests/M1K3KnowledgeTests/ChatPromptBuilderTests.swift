@@ -77,7 +77,7 @@ struct ChatPromptBuilderTests {
     @Test("the per-turn body never restates M1K3's identity — the persona owns it")
     func doesNotAssertACompetingIdentity() {
         // Every provider path injects M1K3Persona as the SESSION instructions
-        // (AppleFoundationModelsProvider / MLXGemmaProvider `instructions:`, the
+        // (AppleFoundationModelsProvider / MLXBrainProvider `instructions:`, the
         // native system turn, the ReAct prepend). This builder produced a SECOND,
         // contradicting identity in the per-turn body — "a private local
         // assistant" against the persona's "a curious AI living entirely on your

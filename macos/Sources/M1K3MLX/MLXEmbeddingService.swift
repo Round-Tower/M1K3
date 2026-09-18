@@ -34,7 +34,7 @@
 //  `var modelContainer` cache was an unguarded check-then-act across the ~4s
 //  cold load: a launch warm racing a first embed (MCP recall / first chat turn)
 //  could load TWO ~600MB containers and race the unsynchronized write. Load is
-//  now coalesced through `SingleFlightLoader` — the exact fix MLXGemmaProvider
+//  now coalesced through `SingleFlightLoader` — the exact fix MLXBrainProvider
 //  adopted for the same bug class on 06-08/09; the embedder was the last
 //  straggler. Behaviour otherwise identical (failures clear the slot, so
 //  `isAvailable()` retry semantics are preserved).
