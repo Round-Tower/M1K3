@@ -70,6 +70,29 @@ private final class AgentScriptedProvider: InferenceProvider, @unchecked Sendabl
     }
 }
 
+/// A provider that reports itself unavailable — proves the pre-flight check
+/// throws before touching retrieval, embedding, or the agent loop.
+private final class UnavailableProvider: InferenceProvider, @unchecked Sendable {
+    let name = "unavailable"
+    let isAvailable = false
+    private let lock = NSLock()
+    private(set) var generateCallCount = 0
+
+    func generate(prompt _: String) async throws -> String {
+        lock.withLock { generateCallCount += 1 }
+        return ""
+    }
+
+    func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        lock.withLock { generateCallCount += 1 }
+        return AsyncStream { $0.finish() }
+    }
+
+    var callCount: Int {
+        lock.withLock { generateCallCount }
+    }
+}
+
 /// A `TokenCounting`-conforming provider — proves the grounding-size safety
 /// cap actually reaches the wiring, not just the pure `GroundingBudgetTests`.
 /// `costPerCharacter` inflates the fake per-character cost well past
@@ -286,6 +309,25 @@ private final class QuerySpyEmbedder: EmbeddingService, @unchecked Sendable {
 // MARK: - Tests
 
 struct AgentRAGResponderTests {
+    // MARK: Provider availability pre-flight
+
+    @Test("an unavailable provider throws before any retrieval or generation")
+    func unavailableProviderThrowsPreFlight() async throws {
+        let (store, hashing) = try await ingestedStore()
+        let embedder = QuerySpyEmbedder(hashing)
+        let provider = UnavailableProvider()
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] }
+        )
+
+        await #expect(throws: InferenceError.self) {
+            _ = try await responder.answerStreaming("Hello")
+        }
+        #expect(provider.callCount == 0)
+        #expect(embedder.allQueryCalls.isEmpty)
+    }
+
     // MARK: Self-query router (prompt-hardening v2, code-side)
 
     @Test("self-query turn: retrieval skipped, corpus tools withheld from the prompt")

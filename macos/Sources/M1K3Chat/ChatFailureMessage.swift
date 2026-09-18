@@ -14,6 +14,9 @@ import M1K3Inference
 
 enum ChatFailureMessage {
     static func userFacing(for error: Error) -> String {
+        if case let .providerUnavailable(message) = error as? InferenceError {
+            return message
+        }
         if RetryPolicy.isTransientNetworkError(error) {
             return "M1K3's brain is still downloading, or the network was slow. "
                 + "Give it a moment and try again."
