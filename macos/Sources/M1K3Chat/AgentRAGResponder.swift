@@ -286,6 +286,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             return (sources: [], stream: stream)
         }
 
+        // Only AFM returns false today (MLX/HomeBrain hardcode true). If another
+        // backend tightens isAvailable, its message should come from the provider.
         if !provider.isAvailable {
             throw InferenceError.providerUnavailable(
                 "Mini is temporarily unavailable — Apple Intelligence is not ready. "
@@ -730,6 +732,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         afterPreamble: Bool = false,
         into continuation: AsyncStream<String>.Continuation
     ) async {
+        // The same provider may have gone away mid-turn (profile switch during a
+        // multi-iteration ReAct loop). Yield the message instead of a hollow stream.
+        if !provider.isAvailable {
+            if afterPreamble { continuation.yield("\n\n") }
+            continuation.yield(
+                "Sorry — my brain went offline mid-answer. "
+                    + "Try switching to another brain in Settings, or ask again in a moment."
+            )
+            return
+        }
         let body = Self.fallbackPrompt(question: question, chunks: chunks, gathered: gathered)
         // Carry the same per-turn context (precise date + active brain) the agent
         // path got, so a "what day is it?" that collapses to the fallback still answers.
