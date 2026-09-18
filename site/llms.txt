@@ -40,7 +40,7 @@ Key facts:
 - Install: the two-minute guide is https://m1k3.app/install (Homebrew
   `brew trust round-tower/tap && brew install --cask round-tower/tap/m1k3`,
   the signed & notarized DMG at
-  https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg, the
+  https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg,
   the App Store, or the TestFlight beta) — and the same
   recipe as plain text an agent can follow: https://m1k3.app/install.txt
 - License/source: Functional Source License FSL-1.1-ALv2 (source-available: read, build, modify, use for yourself or inside your organisation; no competing commercial use; Apache-2.0 two years after each release; revisions before 2026-09-09 were Apache-2.0), public repo https://github.com/Round-Tower/M1K3
