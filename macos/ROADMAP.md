@@ -8,20 +8,25 @@ The release-by-release plan for the macOS 27 wave (1.0 → 1.1 → 1.2) lives in
 `docs/GOLDEN_GATE_PLAN.md` § Roadmap; this file points at it rather than
 copying it.
 
-Last swept: 2026-09-17 — **1.1.0 SHIPPED.** M1K3 is on the App Store.
-1.1.0 (#362, 2026-09-16) landed the Xcode 27 toolchain, typed AFM errors,
-Private Cloud Compute (the planned 1.2 rung shipped early), and CI guards.
-Post-1.1.0: 5 new Siri/Shortcuts intents (#366), AFM vision on macOS 27 +
-file-as-context (#367). The site's TestFlight CTAs are being swept to App
-Store links (#370). iOS gains image + file attach (#371).
+Last swept: 2026-09-18 — **1.0.0 is still in App Review; nothing is live yet.**
+(The 09-17 sweep read "1.1.0 merged" as "1.1.0 shipped". Checked 09-18:
+`itunes.apple.com/lookup?id=6780230835` → no listing; Kev: "we're releasing all
+the recent work under 1.0.0 — we're still in review, and have the room.")
+Merged to master and riding under 1.0.0: the "1.1.0" work (#362, 2026-09-16 —
+Xcode 27 toolchain, typed AFM errors, Private Cloud Compute, CI guards), 5 new
+Siri/Shortcuts intents (#366), AFM vision on macOS 27 + file-as-context (#367),
+iOS image + file attach (#371). The site's App Store CTAs (#370) went out on the
+same false premise and 404'd; reverted to TestFlight until the listing exists.
+⚠️ The build in review (Mac 362) predates all of that AND carries a dead
+sandboxed `m1k3` helper (#376) — a new build has to be attached before release.
 
 ---
 
-## Now — 1.1.0 is live
+## Now — 1.0.0 in review, the recent work rides under it
 
 ### Landing (open PRs)
 
-- **#370** site: TestFlight CTAs → App Store (13 files, CI green, review pending).
+- ~~**#370** site: TestFlight CTAs → App Store~~ — merged on a false premise, reverted 09-18; re-land it the day the listing is live.
 - **#371** iOS: image + file attachment on iPhone/iPad + Mac help-text fix
   (review pending).
 - **#372** agent: mid-conclusion ACTION prose now streams (#329 fix, review
@@ -63,13 +68,13 @@ the first Teams customer, the move from engineer to honest founder.
 
 ## Next — the releases
 
-### 1.1.0 — SHIPPED 2026-09-16 (`docs/GOLDEN_GATE_PLAN.md`)
+### "1.1.0" — MERGED 2026-09-16, riding under 1.0.0 (`docs/GOLDEN_GATE_PLAN.md`)
 
-Toolchain bump to Xcode 27 GA (#362), typed AFM errors, CI guards, and
-**Private Cloud Compute ships** (the planned 1.2 rung shipped early — the
-policy, send path, consent sheet, Mac shell, FM27 adapter and entitlement
-are all live). Post-1.1.0 on master: 5 App Intents (#366), AFM vision +
-file-as-context (#367).
+On master, not on the store (see the header). Toolchain bump to Xcode 27 GA
+(#362), typed AFM errors, CI guards, and **Private Cloud Compute is merged**
+(the planned 1.2 rung landed early — the policy, send path, consent sheet, Mac
+shell, FM27 adapter and entitlement are all on master). Since then: 5 App
+Intents (#366), AFM vision + file-as-context (#367).
 
 **Still open from 1.1's original list:**
 - `toolCallingMode(.disallowed)` for Mini small talk (#102) — the API is
@@ -90,8 +95,8 @@ file-as-context (#367).
   Still deciding Kokoro-as-default: a measured 10-minute thermal burn with Lil
   resident. Still owed: WhisperKit vs Apple Speech on the phone (assert
   on-device recognition, fail loud on the silent server fallback).
-- **Phase 4, the store pack — SHIPPED.** M1K3 is on the App Store (Mac + iOS,
-  one universal `app.m1k3` record); iPhone + iPad 13" plate sets real.
+- **Phase 4, the store pack — SUBMITTED, in review** (Mac + iOS, one universal
+  `app.m1k3` record); iPhone + iPad 13" plate sets real. Not live as of 09-18.
 - **Phase 1, the cheap parity — NOT started.** Each is a package that already
   builds for iOS plus a thin `AppCore+` adapter: Heartbeat (one AppKit touch:
   `NSApp.isActive` → `UIApplication` state), the context senses (`UIDevice`
@@ -265,6 +270,15 @@ stays a possible later companion.
 
 ---
 
+<!-- Review: Kev + claude-fable-5.1, 2026-09-18 (2) — review fold on #381: the "1.1.0" section heading still
+     said SHIPPED, with "PCC ships" and "are all live" under it — the same error in three phrasings, two
+     screens below my own correction. Now "MERGED, riding under 1.0.0". The code-landed SHIPPED lines
+     (App Intents, Mac server, screensaver, Android harness) describe the repo and stand. Confidence 0.9. -->
+<!-- Review: Kev + claude-fable-5.1, 2026-09-18 — FACT correction only: 1.1.0 was merged, never
+     shipped; 1.0.0 is still in App Review (store lookup → no listing; Kev's word). Header, the
+     "Now" title, the #370 line and the store-pack line truthed; the plan itself untouched.
+     The 09-17 entry below stands as written — its "1.1.0 shipped" is the error this corrects.
+     Confidence 0.9. -->
 <!-- Review: Kev + claude-opus-4-6, 2026-09-17 — post-1.1.0 sweep: 1.0/1.1/1.2
      sections folded (1.1.0 shipped PCC, intents, vision); "Now" rebuilt for the
      landing PRs (#370/#371/#372) + the monetization issue (#369). #336/#341

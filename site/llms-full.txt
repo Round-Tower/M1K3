@@ -42,13 +42,13 @@ Signed and notarized by Round Tower. Open it, drag M1K3 to Applications. The com
 
 Download M1K3.dmg (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)
 
-App Store
+App Store · in review
 
 #### Mac App Store
 
-M1K3 is on the App Store (https://apps.apple.com/app/id6780230835). One honest note: the App Store copy of m1k3 is sandboxed, so its connect prints the config rather than writing it. Prefer Homebrew or the DMG if you want agents to write their own config.
+1.0 was submitted to App Review on 15 September 2026. Until it is live, the TestFlight beta (https://testflight.apple.com/join/Fxp2F5Je) is the same build lane. One honest note: the App Store copy of m1k3 is sandboxed, so its connect prints the config rather than writing it.
 
-Get it on the App Store (https://apps.apple.com/app/id6780230835)
+Join the TestFlight beta (https://testflight.apple.com/join/Fxp2F5Je)
 
 Check: M1K3 is in Applications. Nothing has been downloaded but the app itself.
 
@@ -174,7 +174,7 @@ None of the three. M1K3 is free for humans — no account, no API key, no subscr
 
 **Q: What touches the network during install and use?**
 
-Three documented things, all yours to start: the download of the app itself (App Store, Homebrew, GitHub Releases, or build from source); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and the web-search tools, which are off by default. Conversations, documents, voice and memories never leave the Mac. The MCP server binds to 127.0.0.1 and nothing else.
+Three documented things, all yours to start: the download of the app itself (Homebrew, GitHub Releases, TestFlight or the App Store); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and the web-search tools, which are off by default. Conversations, documents, voice and memories never leave the Mac. The MCP server binds to 127.0.0.1 and nothing else.
 
 **Q: How do I uninstall it cleanly?**
 
@@ -377,7 +377,7 @@ Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. 
 
 ## Is M1K3 really private?
 
-Updated 2026-09-17 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
+Updated 2026-09-09 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
 
 Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, an optional web-search tool that is off by default, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.
 
@@ -411,7 +411,7 @@ the complete list of crossings · all user-initiated
 
 - Web search & page reading (optional) Agent tools behind a privacy toggle, off by default. Web off means web off.
 
-- Updates Via the App Store, TestFlight, or a new DMG from GitHub Releases. The app has no self-updater phoning home.
+- Updates Via TestFlight or a new DMG from GitHub Releases. The app has no self-updater phoning home.
 
 - Private Cloud Compute (optional, off by default) A cloud button next to the message field, visible only once you turn it on in Settings. Sends one message at a time to Apple's Private Cloud Compute, after a consent sheet; every PCC answer is labelled.
 
@@ -427,7 +427,7 @@ A privacy page earns its keep in the exceptions, so here they are, plainly:
 
 - The web tools (opt-in, off by default). The local agent has web-search and page-reading tools behind a privacy toggle. When the toggle is off, the agent has no web tools at all — it can't quietly decide to search. When you turn it on, your search queries go to the web, as searches do.
 
-- Updates (via the channel you chose). There is no Sparkle-style self-updater inside the app. App Store and TestFlight builds update through Apple's infrastructure; the DMG updates when you download a new one from GitHub Releases (https://github.com/Round-Tower/M1K3/releases); a source build updates when you pull and rebuild.
+- Updates (via the channel you chose). There is no Sparkle-style self-updater inside the app. TestFlight builds update through Apple's infrastructure; the DMG updates when you download a new one from GitHub Releases (https://github.com/Round-Tower/M1K3/releases); a source build updates when you pull and rebuild.
 
 - Private Cloud Compute (opt-in, off by default). Turn it on in Settings and a cloud button appears next to the message field. Tap it and a consent sheet shows exactly what's about to go — the message, plus the conversation so far only if you tick that too — before it sends one message at a time to Apple's Private Cloud Compute. Never your memories, documents, tools, calendar, location, or profile. Every PCC answer is labelled in the chat; if PCC fails or the quota runs out, the on-device brain answers and says why. Detail below.
 
@@ -495,7 +495,7 @@ A cloud button appears next to the message field. Tap it and M1K3 shows you exac
 
 ## Give Claude a local memory
 
-Updated 2026-09-17 · A tutorial from Round Tower, the makers of M1K3
+Updated 2026-09-09 · A tutorial from Round Tower, the makers of M1K3
 
 Short answer: run an MCP knowledge server on your Mac and point Claude at it. M1K3 — a free, source-available AI app for Apple Silicon Macs — serves the Model Context Protocol over loopback HTTP at http://127.0.0.1:4242/mcp while the app runs. Import your documents and notes into M1K3, register the server with Claude Code, and Claude gains tools like search_knowledge, recall_memory, and remember over your knowledge — with retrieval, embeddings, and storage all happening on your machine. Claude Desktop connects too, via a knowledge-only stdio binary. Setup is one config snippet; the walkthrough is below.
 
@@ -543,7 +543,7 @@ Sixteen, spanning knowledge, memory, intelligence, and voice (the README's table
 
 ### How do I connect Claude Code to M1K3?
 
-Step 1 — install M1K3 and give it something to know. Get the app (App Store (https://apps.apple.com/app/id6780230835), DMG (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg), or source (https://github.com/Round-Tower/M1K3); requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.
+Step 1 — install M1K3 and give it something to know. Get the app (TestFlight (https://testflight.apple.com/join/Fxp2F5Je), DMG (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg), or source (https://github.com/Round-Tower/M1K3); requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.
 
 Step 2 — register the server. With the app running, either add this to a .mcp.json in your project (this is verbatim the config M1K3's own repo uses):
 
@@ -605,7 +605,7 @@ Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. 
 
 ## M1K3 vs Ollama
 
-Updated 2026-09-17 · By Round Tower, the makers of M1K3 — so read us with that in mind. We've kept it factual.
+Updated 2026-09-09 · By Round Tower, the makers of M1K3 — so read us with that in mind. We've kept it factual.
 
 Short answer: M1K3 and Ollama solve different problems, and comparing them head-to-head slightly misses the point. Ollama is a local model server — an open-source runtime with a CLI, a local API, and a large model library that developers build things on. M1K3 is a finished, private AI app for Apple Silicon Macs: local models plus live voice, a personal knowledge graph over your documents, consent-gated call memory, a local agent, and an MCP server — in one sandboxed, native SwiftUI app. If you want infrastructure to build with, choose Ollama. If you want a private assistant that works out of the box on a Mac, that's what M1K3 is for. They coexist happily on the same machine.
 
@@ -639,7 +639,7 @@ Storage is app-sandboxed and encrypted with a key held in your Keychain. There's
 
 | What it is | A finished on-device AI app | A local LLM runtime + model server |
 
-| Install | App Store, signed DMG, Homebrew, or build from source | Installer or Homebrew; then ollama run <model> |
+| Install | TestFlight beta, signed DMG, or build from source | Installer or Homebrew; then ollama run <model> |
 
 | Platforms | macOS 26 (Tahoe), Apple Silicon only | macOS (incl. Intel), Windows, Linux |
 
@@ -699,7 +699,7 @@ Both are free. Ollama is MIT-licensed open source. M1K3 is free for humans forev
 
 ## Private ChatGPT alternative for Mac
 
-Updated 2026-09-17 · By Round Tower, the makers of M1K3 — we have a horse in this race, so we've kept the comparison factual.
+Updated 2026-09-09 · By Round Tower, the makers of M1K3 — we have a horse in this race, so we've kept the comparison factual.
 
 Short answer: the most private ChatGPT alternative for a Mac is one where the AI runs on the Mac itself, so your conversations physically cannot reach a server. M1K3 is built exactly for this: a free, source-available AI app for Apple Silicon Macs where inference, voice, embeddings, and storage are all on-device — zero bytes of your conversations, documents, or calls are sent anywhere. It gives you the assistant experience (chat, live voice, memory over your documents) rather than just a model runner. If you'd rather assemble your own stack, Ollama and LM Studio also run models locally and are good tools. The ChatGPT desktop app, by contrast, is a client for a cloud service — capable, but architecturally not private in the same sense.
 
@@ -759,7 +759,7 @@ What you get back: your data stays home by construction, everything works offlin
 
 ### How to try M1K3
 
-- Get it on the App Store (https://apps.apple.com/app/id6780230835) — the easiest way in.
+- Join the TestFlight beta (https://testflight.apple.com/join/Fxp2F5Je) — the easiest way in.
 
 - Download the DMG (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg) — signed and notarized.
 
@@ -791,7 +791,7 @@ Both are good local options — see our full M1K3 vs Ollama comparison and the l
 
 ## How to run a local LLM on a Mac
 
-Updated 2026-09-17 · By Round Tower, the makers of M1K3 — one of the four routes below is ours; the other three are recommended honestly.
+Updated 2026-09-09 · By Round Tower, the makers of M1K3 — one of the four routes below is ours; the other three are recommended honestly.
 
 Short answer: you need an Apple Silicon Mac and one of four tools. Ollama if you want a CLI and a local API to build on; LM Studio if you want a graphical model browser with an OpenAI-compatible server; Apple's MLX (mlx-lm) if you want the Python framework underneath it all; or M1K3 if you want a finished, private assistant — chat, voice, and memory over your documents — rather than a model runner. Any M-series Mac works for small models; 16 GB of unified memory runs the popular 4–8B class comfortably. All four are free.
 
@@ -3216,7 +3216,7 @@ A pilot is fixed-scope and fixed-price, agreed up front: one site, your hardware
 
 ## Meet the companions
 
-Updated 2026-09-17 · Low-poly creatures for voice mode, rendered entirely on your Mac.
+Updated 2026-09-09 · Low-poly creatures for voice mode, rendered entirely on your Mac.
 
 M1K3's voice mode has an opt-in cast of 3D companions. Pick one in Settings and it stands in for the pixel face while you talk: it idles while M1K3 listens, breaks into a run while it thinks, and jumps when it's delighted to answer. Everything is rendered locally with RealityKit — like every other part of M1K3, nothing about your conversation leaves the Mac. The pixel face stays the default; the creatures are for fun.
 
@@ -3263,7 +3263,7 @@ The models are deliberately tiny — a few hundred kilobytes each — so the who
 ```
 # M1K3 — install recipe
 # https://m1k3.app/install.txt · the text version of https://m1k3.app/install
-# Updated 2026-09-17. For coding agents, and for people who prefer text.
+# Updated 2026-09-15. For coding agents, and for people who prefer text.
 
 M1K3 is a private, on-device AI for macOS: local brains (MLX + Apple
 Foundation Models), live voice, a knowledge graph over the user's documents,
@@ -3284,8 +3284,8 @@ STEP 1 — GET THE APP
     https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg
   The command-line client then lives at
     /Applications/M1K3.app/Contents/Helpers/m1k3
-  Mac App Store: M1K3 is on the App Store —
-    https://apps.apple.com/app/id6780230835
+  Mac App Store: 1.0 was submitted to App Review on 2026-09-15; until it is
+  live the TestFlight beta is the same lane — https://testflight.apple.com/join/Fxp2F5Je
   Note: the App Store copy of `m1k3` is sandboxed, so its `connect` prints
   the config instead of writing it. Prefer Homebrew or the DMG for agents.
 
