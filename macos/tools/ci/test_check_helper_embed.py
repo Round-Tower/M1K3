@@ -41,3 +41,47 @@ def test_non_tool_embeds_and_unembedded_tools_are_ignored():
         {"package": "M1K3", "product": "Core"},  # not a target dep at all
     ]
     assert m.misplaced_tool_embeds(p) == []
+
+
+# --- the Info.plist section (the sandboxed helper's launch trap, 2026-09-18) --- #
+
+
+def tool_project(settings):
+    p = project({"copy": {"destination": "wrapper", "subpath": "Contents/Helpers"}})
+    p["targets"]["tool"]["settings"] = {"base": settings}
+    return p
+
+
+def test_embedded_tool_without_plist_section_is_flagged():
+    # The shipped shape: a bundle id, and nothing that puts it INSIDE the binary.
+    assert m.tools_without_embedded_plist(tool_project({"PRODUCT_BUNDLE_IDENTIFIER": "app.example.cli"})) == [
+        "tool: CREATE_INFOPLIST_SECTION_IN_BINARY is not YES",
+        "tool: no Info.plist to embed (GENERATE_INFOPLIST_FILE: YES or an INFOPLIST_FILE)",
+    ]
+
+
+def test_section_flag_alone_has_nothing_to_embed():
+    assert m.tools_without_embedded_plist(tool_project({"CREATE_INFOPLIST_SECTION_IN_BINARY": "YES"})) == [
+        "tool: no Info.plist to embed (GENERATE_INFOPLIST_FILE: YES or an INFOPLIST_FILE)"
+    ]
+
+
+def test_generated_or_explicit_plist_with_the_section_passes():
+    assert m.tools_without_embedded_plist(
+        tool_project({"CREATE_INFOPLIST_SECTION_IN_BINARY": "YES", "GENERATE_INFOPLIST_FILE": "YES"})
+    ) == []
+    assert m.tools_without_embedded_plist(
+        tool_project({"CREATE_INFOPLIST_SECTION_IN_BINARY": True, "INFOPLIST_FILE": "Tool/Info.plist"})
+    ) == []  # YAML reads a bare YES as a boolean — both spellings must pass
+
+
+def test_flat_settings_without_a_base_block_are_read_too():
+    p = tool_project({})
+    p["targets"]["tool"]["settings"] = {"CREATE_INFOPLIST_SECTION_IN_BINARY": "YES", "GENERATE_INFOPLIST_FILE": "YES"}
+    assert m.tools_without_embedded_plist(p) == []
+
+
+def test_unembedded_tools_are_not_this_guards_business():
+    p = tool_project({})
+    p["targets"]["App"]["dependencies"] = [{"target": "tool", "embed": False}]
+    assert m.tools_without_embedded_plist(p) == []

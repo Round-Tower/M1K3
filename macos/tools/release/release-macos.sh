@@ -190,6 +190,31 @@ case "$CLI_ENT" in
 esac
 echo "✓ m1k3 helper is unsandboxed (direct-distribution entitlements)"
 
+# ── The helper must actually RUN ─────────────────────────────────────────────
+# Entitlements being right proves nothing about launching. A sandboxed tool with
+# no `__TEXT,__info_plist` section has no bundle id for the sandbox to build a
+# container from, and libsystem_secinit traps before main(): exit 133, zero
+# bytes out. Build 362, in App Review for 1.0.0, carried exactly that (found 2026-09-18) while
+# the check above passed. So: the section must be there, and `--help` — which
+# touches no network and no file — must answer. Same check on both channels.
+# Captured first, THEN grepped: under `set -o pipefail` a live `otool | grep -q`
+# can fail on a MATCH — grep -q exits at the first hit, otool takes SIGPIPE (141)
+# on its next write, and pipefail reports that instead of grep's 0.
+CLI_LOAD_COMMANDS="$(otool -l "$CLI_BIN")"
+grep -q __info_plist <<<"$CLI_LOAD_COMMANDS" || {
+  echo "✗ The m1k3 helper has no __TEXT,__info_plist section — a sandboxed copy traps at launch."
+  echo "  (project.yml: GENERATE_INFOPLIST_FILE + CREATE_INFOPLIST_SECTION_IN_BINARY on M1K3CLI.)"
+  exit 1
+}
+CLI_HELP_RC=0
+CLI_HELP="$("$CLI_BIN" --help 2>/dev/null)" || CLI_HELP_RC=$?
+if [ "$CLI_HELP_RC" -ne 0 ] || [ -z "$CLI_HELP" ]; then
+  echo "✗ The m1k3 helper does not run: \`m1k3 --help\` exited $CLI_HELP_RC with ${#CLI_HELP} bytes of output."
+  echo "  (133 = trace trap in sandbox init; see the comment above.)"
+  exit 1
+fi
+echo "✓ m1k3 helper launches (--help answered)"
+
 # ── 3. Notarize + staple the .app (offline first-launch) ─────────────────────
 if [ "$SKIP_NOTARIZE" -eq 0 ]; then
   echo "▸ [3/6] Notarizing the app…"
