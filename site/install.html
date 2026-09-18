@@ -38,7 +38,7 @@
   "tool": [ { "@type": "HowToTool", "name": "Homebrew 6 (optional)" } ],
   "step": [
     { "@type": "HowToStep", "name": "Get the app", "url": "https://m1k3.app/install#get",
-      "text": "Homebrew: brew trust round-tower/tap, then brew install --cask round-tower/tap/m1k3 — this also puts the m1k3 command on your PATH. Or download the signed, notarized M1K3.dmg from GitHub Releases and drag it to Applications. The Mac App Store build is in review; the TestFlight beta is the same lane meanwhile." },
+      "text": "Homebrew: brew trust round-tower/tap, then brew install --cask round-tower/tap/m1k3 — this also puts the m1k3 command on your PATH. Or download the signed, notarized M1K3.dmg from GitHub Releases and drag it to Applications. M1K3 is also on the Mac App Store." },
     { "@type": "HowToStep", "name": "Say hello", "url": "https://m1k3.app/install#hello",
       "text": "Open M1K3. First run picks Mini, Apple's on-device model — instant, nothing to download, no account. Ask it anything. Upgrade to Lil (about 2.2 GB, the brain that fronts the conversation) from the prompt after your first answer or in Settings." },
     { "@type": "HowToStep", "name": "Connect your agent", "url": "https://m1k3.app/install#connect",
@@ -58,7 +58,7 @@
     { "@type": "Question", "name": "Do I need an account, a key, or a subscription?",
       "acceptedAnswer": { "@type": "Answer", "text": "None of the three. M1K3 is free for humans — no account, no API key, no subscription, no telemetry. First run works with Apple's on-device model before anything downloads. The source is public under the Functional Source License; organisations that want one shared brain on their own hardware license M1K3 for Teams separately." } },
     { "@type": "Question", "name": "What touches the network during install and use?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Three documented things, all yours to start: the download of the app itself (Homebrew, GitHub Releases, TestFlight or the App Store); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and the web-search tools, which are off by default. Conversations, documents, voice and memories never leave the Mac. The MCP server binds to 127.0.0.1 and nothing else." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Three documented things, all yours to start: the download of the app itself (App Store, Homebrew, GitHub Releases, or build from source); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and the web-search tools, which are off by default. Conversations, documents, voice and memories never leave the Mac. The MCP server binds to 127.0.0.1 and nothing else." } },
     { "@type": "Question", "name": "How do I uninstall it cleanly?",
       "acceptedAnswer": { "@type": "Answer", "text": "Homebrew: brew uninstall --cask m1k3, and add --zap to remove its data too. DMG: drag M1K3 from Applications to the Trash. Everything M1K3 stores lives in one sandbox container, ~/Library/Containers/app.m1k3, and the Lil and Big weights are inside it — delete that folder and nothing of M1K3 remains. If you connected an agent, run m1k3 connect <client> --print to see the one entry to remove from that client's config." } },
     { "@type": "Question", "name": "Why does connect only print on the App Store build?",
@@ -202,11 +202,10 @@
         <a class="btn btn-primary" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">Download M1K3.dmg</a>
       </div>
       <div class="route">
-        <span class="tag">App Store · in review</span>
+        <span class="tag">App Store</span>
         <h3>Mac App Store</h3>
-        <p>1.0 was submitted to App Review on 15 September 2026. Until it is live, the <a href="https://testflight.apple.com/join/Fxp2F5Je">TestFlight beta</a> is the same build lane. One honest note: the App Store copy of <code>m1k3</code> is sandboxed, so its <code>connect</code> prints the config rather than writing it.</p>
-        <!-- APP-STORE-LIVE: when 1.0.0 is on the store, swap this button for the App Store link (PR #336 carries it). -->
-        <a class="btn btn-ghost" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
+        <p>M1K3 is on the <a href="https://apps.apple.com/app/id6780230835">App Store</a>. One honest note: the App Store copy of <code>m1k3</code> is sandboxed, so its <code>connect</code> prints the config rather than writing it. Prefer Homebrew or the DMG if you want agents to write their own config.</p>
+        <a class="btn btn-ghost" href="https://apps.apple.com/app/id6780230835">Get it on the App Store</a>
       </div>
     </div>
     <p class="check"><strong>Check:</strong> M1K3 is in Applications. Nothing has been downloaded but the app itself.</p>
@@ -363,7 +362,7 @@ m1k3 ask "what can you do?"</pre></div>
     </details>
     <details>
       <summary>What touches the network during install and use?</summary>
-      <p>Three documented things, all yours to start: the download of the app itself (Homebrew, GitHub Releases, TestFlight or the App Store); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and the web-search tools, which are off by default. Conversations, documents, voice and memories never leave the Mac. The MCP server binds to 127.0.0.1 and nothing else.</p>
+      <p>Three documented things, all yours to start: the download of the app itself (App Store, Homebrew, GitHub Releases, or build from source); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and the web-search tools, which are off by default. Conversations, documents, voice and memories never leave the Mac. The MCP server binds to 127.0.0.1 and nothing else.</p>
     </details>
     <details>
       <summary>How do I uninstall it cleanly?</summary>
@@ -446,10 +445,13 @@ m1k3 ask "what can you do?"</pre></div>
      as clicks, not flags: the MCP switch and the brain download are the
      user's to do — a `defaults write` from a shell never reaches the
      sandboxed app's container plist, and the page must not pretend it does.
-     The App Store card says "in review" with a marker comment for the flip
-     (#336). The only JS is the copy button, gated on the Clipboard API; the
+     The App Store card originally said "in review" with a marker comment for
+     the flip (#336). The only JS is the copy button, gated on the Clipboard API; the
      doors and picker are radio + :has(), and a browser without :has() shows
      every panel in reading order. FAQ JSON-LD answers are byte-identical to
-     the visible ones. Prior: Unknown (new file). -->
+     the visible ones. Prior: Unknown (new file).
+
+     Review: 2026-09-17 — TestFlight CTAs → App Store (1.1.0 live). App Store route card, JSON-LD
+     HowToStep + FAQ, visible FAQ. Confidence now 0.85. -->
 </body>
 </html>

@@ -40,8 +40,8 @@ Key facts:
 - Install: the two-minute guide is https://m1k3.app/install (Homebrew
   `brew trust round-tower/tap && brew install --cask round-tower/tap/m1k3`,
   the signed & notarized DMG at
-  https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg, the
-  TestFlight beta, or the App Store once 1.0 clears review) — and the same
+  https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg,
+  the App Store, or the TestFlight beta) — and the same
   recipe as plain text an agent can follow: https://m1k3.app/install.txt
 - License/source: Functional Source License FSL-1.1-ALv2 (source-available: read, build, modify, use for yourself or inside your organisation; no competing commercial use; Apache-2.0 two years after each release; revisions before 2026-09-09 were Apache-2.0), public repo https://github.com/Round-Tower/M1K3
 - Organisations: M1K3 for Teams — the same on-device brains, institutional memory and a tuned persona on the organisation's own Apple Silicon hardware under its own domain, nothing leaving its network; licensed separately — https://m1k3.app/teams — kevin@round-tower.ie
