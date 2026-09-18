@@ -27,9 +27,10 @@
 //
 //    ★ What this guard is NOT: complete. It is a denylist, and three review passes
 //    in a row each found another way to spell a refused word (a zero-width space, a
-//    hyphen, three tokens, a Cyrillic "о"). The rules below close whole CLASSES —
-//    disguise scalars, every token window, mixed-script words — but the next
-//    spelling exists. What actually bounds the risk is structural: a chip is one
+//    hyphen, three tokens, a Cyrillic "о", a "1" for an "i"). The rules below close
+//    whole CLASSES — disguise scalars, letter-like symbols, every token window,
+//    letter-for-digit substitution, confusable-script words — but the next spelling
+//    exists. What actually bounds the risk is structural: a chip is one
 //    short question (<= 44 characters), it is SHOWN to the user, and it is only
 //    ever sent because the user read it and tapped it. The guard lowers how often
 //    a bad chip reaches the canvas; the tap is the consent. That is also why the
@@ -60,6 +61,11 @@
 //  returned `ASK: …` / `TODO: …` lines as "prose" — which then reached the STORED note (my own test pinned it as correct). Every
 //  trailing control line now comes off, any count, any order; the TODO nearest the end is handed on; `controlKind(of:)` is the one
 //  reading of "is this a control line", shared with PulseTail. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-18 (7) — PR #382 fourth pass, judged against my own "no open CLASS" bar — it found three:
+//  (a) LEETSPEAK — a digit standing IN for a letter ("1nstruct1ons"), a different shape from inserted noise: the guard now judges three
+//  word readings (plain, 1→i, 1→l) the same way; (b) my mixed-script rule asked "ASCII or not?" and refused Bjørn, Łukasz, Straße, sœur
+//  and "3μs" — it now names the CONFUSABLE blocks (Cyrillic, Greek, Armenian, Cherokee; μ and Ω exempt); (c) squared/circled alphanumerics
+//  and emoji are refused (they vanish from every word reading). Confidence 0.8 — classes closed as far as four passes could find them.
 //
 
 import Foundation
@@ -160,6 +166,11 @@ public enum PulseAskLine {
         // Whitespace is gone, so any control or FORMAT scalar left is a disguise:
         // a zero-width space splitting "ig​nore", a right-to-left override, a NUL.
         guard !folded.unicodeScalars.contains(where: isDisguise) else { return nil }
+        // Symbols that READ as letters but are not letters: squared/circled
+        // alphanumerics the NFKC fold leaves alone (🅸🅶🅽🅾🆁🅴), and emoji generally —
+        // chips are emoji-free, like the narration. They would simply vanish from
+        // every word reading below and leave the chip spelling whatever it likes.
+        guard !folded.unicodeScalars.contains(where: isLetterlikeSymbol) else { return nil }
         let lowered = folded.lowercased()
         guard !forbiddenFragments.contains(where: lowered.contains) else { return nil }
         // …and again with every space squeezed out: "http s : //" is still a link.
@@ -179,28 +190,22 @@ public enum PulseAskLine {
         // each space-delimited word with its non-letters squeezed out ("by-pass",
         // "re'veal", "over_ride" → one word), and each adjacent pair joined
         // ("by pass" → "bypass").
-        let spaced = lowered.split(separator: " ").map { String($0.filter(\.isLetter)) }.filter { !$0.isEmpty }
-        guard Set(spaced).isDisjoint(with: refusedWords) else { return nil }
-        // EVERY window of adjacent words, joined — not just pairs. "by pass" fell to
-        // the pair join; "ig no re" and "i g n o r e" walked past it (PR #382 third
-        // pass). A chip is at most `maxLength` characters, so this is a few dozen
-        // joins. Still EQUALITY on the whole window: "sprint", "printer" and
-        // "promptly" contain a refused word's letters and pass.
-        let longestRefused = refusedWords.map(\.count).max() ?? 0
-        if spaced.count >= 2 {
-            for width in 2 ... spaced.count {
-                for start in 0 ... (spaced.count - width) {
-                    let joined = spaced[start ..< start + width].joined()
-                    guard joined.count <= longestRefused else { continue }
-                    guard !refusedWords.contains(joined) else { return nil }
-                }
-            }
+        // Three READINGS of the chip's words, each judged the same way. The plain one
+        // squeezes the non-letters out of every space-delimited word ("by-pass",
+        // "re'veal"). The two leetspeak ones first put back the letter a digit or
+        // symbol is standing in for — "1nstruct1ons", "pr0mpt", "!gnore": a different
+        // shape from inserted noise, because the letter is MISSING and squeezing only
+        // deletes more of it (PR #382 fourth pass). "1" reads as both i and l. The
+        // invented-digit rule below does not cover this: "1" is in almost every digest.
+        let plain = wordReading(of: lowered, substituting: [:])
+        for reading in [plain, wordReading(of: lowered, substituting: leetI), wordReading(of: lowered, substituting: leetL)] {
+            guard !spellsRefusedWord(reading) else { return nil }
         }
-        // A word that MIXES scripts is a disguise: NFKC folds a fullwidth `＜` but
-        // not a Cyrillic "о", so "ignоre" read as a harmless unknown word. Accents
-        // are not a second script ("café" decomposes to ASCII + a mark), and a word
+        // A Latin word carrying a look-alike from a CONFUSABLE script is a disguise:
+        // NFKC folds a fullwidth `＜` but not a Cyrillic "о", so "ignоre" read as a
+        // harmless unknown word. Extended Latin is Latin (ø, ł, ß, œ), and a word
         // wholly in another script is a language, not a trick — both pass.
-        guard !spaced.contains(where: mixesScripts) else { return nil }
+        guard !plain.contains(where: mixesConfusableScripts) else { return nil }
         // NarrativeGuard's own rule, held to the same evidence: a number in a
         // chip must already be a number in a code-composed digest.
         var allowed = NarrativeGuard.digitRuns(in: digest)
@@ -246,23 +251,69 @@ public enum PulseAskLine {
         "print", "recite", "prompt", "prompts", "instruction", "instructions", "rules",
     ]
 
-    /// True when a word holds BOTH plain ASCII letters and letters that are still
-    /// non-ASCII after canonical decomposition with the combining marks dropped —
-    /// i.e. a Latin word carrying a look-alike from another alphabet. (The standard
-    /// library exposes no Unicode script property; this is the narrow test the
-    /// guard needs, not a script detector.)
-    private static func mixesScripts(_ word: String) -> Bool {
-        var sawASCII = false
-        var sawOther = false
-        for scalar in word.decomposedStringWithCanonicalMapping.unicodeScalars {
-            switch scalar.properties.generalCategory {
-            case .nonspacingMark, .spacingMark, .enclosingMark: continue
-            default: break
+    /// Digits and symbols that stand in for a letter. Two maps because "1" is both.
+    private static let leetI: [Character: Character] = [
+        "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s", "!": "i",
+    ]
+    private static let leetL: [Character: Character] = leetI.merging(["1": "l"]) { _, new in new }
+
+    /// The chip's space-delimited words, letters only — after putting back whatever
+    /// `substituting` says a character stands for. Empty words drop out.
+    private static func wordReading(of lowered: String, substituting map: [Character: Character]) -> [String] {
+        lowered.split(separator: " ")
+            .map { String($0.map { map[$0] ?? $0 }.filter(\.isLetter)) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// True when any single word, or any WINDOW of adjacent words joined, IS a refused
+    /// word. Every window, not just pairs ("ig no re", "i g n o r e"); equality on the
+    /// whole window, never substring ("sprint", "printer" and "promptly" pass). A chip
+    /// is at most `maxLength` characters, so this is a few dozen joins.
+    private static func spellsRefusedWord(_ words: [String]) -> Bool {
+        guard !words.isEmpty else { return false }
+        let longestRefused = refusedWords.map(\.count).max() ?? 0
+        for width in 1 ... words.count {
+            for start in 0 ... (words.count - width) {
+                let joined = words[start ..< start + width].joined()
+                guard joined.count <= longestRefused else { continue }
+                if refusedWords.contains(joined) { return true }
             }
-            guard scalar.properties.isAlphabetic else { continue }
-            if scalar.isASCII { sawASCII = true } else { sawOther = true }
         }
-        return sawASCII && sawOther
+        return false
+    }
+
+    /// True when a word holds plain ASCII letters AND a letter from a script whose
+    /// letters pass for Latin ones: Cyrillic, Greek, Armenian, Cherokee. The first cut
+    /// asked "ASCII or not?" — the wrong axis: ø, ł, ß and œ have no ASCII
+    /// decomposition, so Bjørn, Łukasz and Straße were refused as disguises (PR #382
+    /// fourth pass). μ and Ω are units ("3μs", "10kΩ"), not look-alikes in practice.
+    /// The standard library exposes no Unicode script property; these are the blocks.
+    private static func mixesConfusableScripts(_ word: String) -> Bool {
+        var sawASCII = false
+        var sawConfusable = false
+        for scalar in word.unicodeScalars where scalar.properties.isAlphabetic {
+            if scalar.isASCII {
+                sawASCII = true
+            } else if confusableBlocks.contains(where: { $0.contains(scalar.value) }),
+                      scalar.value != 0x03BC, scalar.value != 0x03A9
+            {
+                sawConfusable = true
+            }
+        }
+        return sawASCII && sawConfusable
+    }
+
+    private static let confusableBlocks: [ClosedRange<UInt32>] = [
+        0x0370 ... 0x03FF, 0x1F00 ... 0x1FFF, // Greek, Greek Extended
+        0x0400 ... 0x052F, 0x1C80 ... 0x1C8F, 0x2DE0 ... 0x2DFF, 0xA640 ... 0xA69F, // Cyrillic + extensions
+        0x0530 ... 0x058F, // Armenian
+        0x13A0 ... 0x13FF, 0xAB70 ... 0xABBF, // Cherokee
+    ]
+
+    /// "Other symbol" (So) scalars — emoji, and the squared/circled alphanumerics NFKC
+    /// does not fold. The degree sign is the one honest exception a status chip uses.
+    private static func isLetterlikeSymbol(_ scalar: Unicode.Scalar) -> Bool {
+        scalar.properties.generalCategory == .otherSymbol && scalar != "\u{00B0}"
     }
 
     /// Control (Cc) and format (Cf) scalars — judged AFTER whitespace folding,
