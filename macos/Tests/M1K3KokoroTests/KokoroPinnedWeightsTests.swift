@@ -3,7 +3,7 @@
 //  M1K3KokoroTests
 //
 //  Pins the pure decision at the heart of #70: does an on-disk file at
-//  `name` match the digest pinned for `mlx-community/Kokoro-82M-bf16`, or
+//  `name` match the digest pinned for `round-tower/Kokoro-82M-bf16`, or
 //  does `prepare(progress:)` need to discard it and re-fetch from the pinned
 //  revision? Kept dependency-free (no filesystem) so the trust-vs-re-fetch
 //  decision is provable in isolation from `KokoroSpeechProvider`'s IO.
@@ -28,7 +28,7 @@ struct KokoroPinnedWeightsTests {
     func matchingBytesAreTrusted() throws {
         #expect(try KokoroPinnedWeights.matches(size: 2351, sha256: #require(KokoroPinnedWeights.files["config.json"]?.sha256), file: "config.json"))
         #expect(try KokoroPinnedWeights.matches(
-            size: 327_115_152,
+            size: 163_588_165,
             sha256: #require(KokoroPinnedWeights.files["model.safetensors"]?.sha256),
             file: "model.safetensors"
         ))

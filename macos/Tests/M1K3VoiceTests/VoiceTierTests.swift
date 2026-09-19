@@ -17,7 +17,7 @@ struct VoiceTierTests {
     func downloadRequirement() {
         #expect(VoiceTier.builtin.approxDownloadMB == nil)
         #expect(VoiceTier.builtin.requiresDownload == false)
-        #expect(VoiceTier.m1k3Voice.approxDownloadMB == 354)
+        #expect(VoiceTier.m1k3Voice.approxDownloadMB == 184)
         #expect(VoiceTier.m1k3Voice.requiresDownload == true)
     }
 
