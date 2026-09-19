@@ -205,6 +205,8 @@ struct SettingsScreen: View {
                                 ageBandRaw = AgeBand.undeclared.rawValue
                             case let .sharing(range):
                                 ageBandRaw = AgeBand(lowerBound: range.lowerBound, upperBound: range.upperBound).rawValue
+                            @unknown default:
+                                break
                             }
                         } catch {
                             // notAvailable / network — leave as-is.

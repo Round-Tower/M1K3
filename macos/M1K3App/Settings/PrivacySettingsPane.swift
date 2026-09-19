@@ -207,6 +207,8 @@ struct PrivacySettingsPane: View {
                     case let .sharing(range):
                         let band = AgeBand(lowerBound: range.lowerBound, upperBound: range.upperBound)
                         ageBandRaw = band.rawValue
+                    @unknown default:
+                        break
                     }
                 } catch {
                     // notAvailable / invalidAccount / network — leave as-is, user can retry.

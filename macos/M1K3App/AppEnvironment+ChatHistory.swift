@@ -497,17 +497,17 @@ extension AppEnvironment {
                     spoken: defaults.bool(forKey: Self.voiceModeActiveKey)
                 )
             },
+            ageClauseProvider: {
+                guard let ageBandProvider else { return nil }
+                return AgeAppropriateness.policy(for: ageBandProvider.currentBand()).promptClause
+            },
             // What's open beside the chat (the review panel's rendered page) — a
             // snapshot the web view updates on load; nil when no page is showing.
             browserContextProvider: { ReviewModel.liveContext.withLock { $0 } },
             // The user's open todos, rendered once per write (todosRevision)
             // and read here as a snapshot — per-turn content, never the
             // cached persona prefix.
-            todoContextProvider: { AppEnvironment.todoGroundingSnapshot.withLock { $0 } },
-            ageClauseProvider: {
-                guard let ageBandProvider else { return nil }
-                return AgeAppropriateness.policy(for: ageBandProvider.currentBand()).promptClause
-            }
+            todoContextProvider: { AppEnvironment.todoGroundingSnapshot.withLock { $0 } }
         )
     }
 
