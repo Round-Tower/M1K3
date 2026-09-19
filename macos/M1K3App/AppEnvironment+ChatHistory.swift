@@ -200,6 +200,7 @@ extension AppEnvironment {
         scriptExecution: ScriptExecutionHook? = nil,
         contextSenses: ContextSenseHook? = nil,
         recentActivity: (any ActivityReading)? = nil,
+        ageBandProvider _: (any AgeBandProviding)? = nil,
         availability: ToolPalettePolicy.Availability? = nil
     ) -> [any AgentTool] {
         var tools: [any AgentTool] = [
@@ -229,7 +230,10 @@ extension AppEnvironment {
             tools.append(RecentActivityTool(reader: recentActivity))
         }
         let defaults = UserDefaults.standard
-        let webAllowed = Self.webSearchAllowed()
+        let agePolicy = AgeAppropriateness.policy(
+            for: ageBandProvider?.currentBand() ?? .undeclared
+        )
+        let webAllowed = Self.webSearchAllowed() && agePolicy.webToolsAllowed
         if webAllowed {
             tools.insert(WikipediaTool(), at: 0)
             tools.insert(FetchPageTool(), at: 0)
@@ -318,10 +322,15 @@ extension AppEnvironment {
     /// The four availability facts, read fresh. Real I/O — call it off the main
     /// actor when the caller can (the warm does); a live turn already runs on
     /// the responder's own task.
-    nonisolated static func paletteAvailability(store: KnowledgeStore) -> ToolPalettePolicy.Availability {
-        ToolPalettePolicy.Availability(
+    nonisolated static func paletteAvailability(
+        store: KnowledgeStore, ageBandProvider: (any AgeBandProviding)? = nil
+    ) -> ToolPalettePolicy.Availability {
+        let ageAllows = AgeAppropriateness.policy(
+            for: ageBandProvider?.currentBand() ?? .undeclared
+        ).webToolsAllowed
+        return ToolPalettePolicy.Availability(
             corpusHasItems: ToolPalettePolicy.corpusHasItems(count: try? store.itemCount()),
-            webAllowed: webSearchAllowed(),
+            webAllowed: webSearchAllowed() && ageAllows,
             deepBrainAvailable: deepBrainAvailable(),
             hasBattery: hasBattery
         )
@@ -373,7 +382,8 @@ extension AppEnvironment {
         deepDelegation: DeepDelegationHook? = nil,
         scriptExecution: ScriptExecutionHook? = nil,
         contextSenses: ContextSenseHook? = nil,
-        recentActivity: (any ActivityReading)? = nil
+        recentActivity: (any ActivityReading)? = nil,
+        ageBandProvider _: (any AgeBandProviding)? = nil
     ) -> any RAGResponding {
         // Hits the model retrieves itself (search_knowledge) flow through the
         // collector into the turn's sources + the citation allow-list.
@@ -391,7 +401,8 @@ extension AppEnvironment {
                     deepDelegation: deepDelegation,
                     scriptExecution: scriptExecution,
                     contextSenses: contextSenses,
-                    recentActivity: recentActivity
+                    recentActivity: recentActivity,
+                    ageBandProvider: ageBandProvider
                 )
             },
             sourceCollector: sourceCollector,
@@ -487,7 +498,11 @@ extension AppEnvironment {
             // The user's open todos, rendered once per write (todosRevision)
             // and read here as a snapshot — per-turn content, never the
             // cached persona prefix.
-            todoContextProvider: { AppEnvironment.todoGroundingSnapshot.withLock { $0 } }
+            todoContextProvider: { AppEnvironment.todoGroundingSnapshot.withLock { $0 } },
+            ageClauseProvider: {
+                guard let ageBandProvider else { return nil }
+                return AgeAppropriateness.policy(for: ageBandProvider.currentBand()).promptClause
+            }
         )
     }
 

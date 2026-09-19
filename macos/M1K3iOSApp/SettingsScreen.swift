@@ -28,13 +28,18 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — About gains the manual Rate M1K3 door.
 
+#if canImport(DeclaredAgeRange)
+    import DeclaredAgeRange
+#endif
 import M1K3BrainLink
+import M1K3Chat
 import M1K3Inference
 import SwiftUI
 
 struct SettingsScreen: View {
     @Environment(AppCore.self) private var core
     @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
+    @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
     @AppStorage(ReadingMode.storageKey) private var readingModeRaw = ReadingMode.standard.rawValue
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
 
@@ -117,6 +122,8 @@ struct SettingsScreen: View {
 
             VoiceOutputSection()
 
+            contentControlsSection
+
             Section {
                 Toggle("Web search in chat", isOn: $webSearchEnabled)
             } header: {
@@ -168,6 +175,55 @@ struct SettingsScreen: View {
         }
         .navigationTitle("Settings")
     }
+
+    #if !os(visionOS)
+        @Environment(\.requestAgeRange) private var requestAgeRange
+
+        private var contentControlsSection: some View {
+            let band = AgeBand(persisted: ageBandRaw)
+            let active = band != .undeclared && band != .adult
+            return Section {
+                HStack {
+                    Label(
+                        active ? "Age-appropriate adjustments active" : "No age range declared",
+                        systemImage: active ? "person.crop.circle.badge.checkmark" : "person.crop.circle"
+                    )
+                    Spacer()
+                    if band != .undeclared {
+                        Button("Clear") {
+                            ageBandRaw = nil
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+                Button(band == .undeclared ? "Set up" : "Update") {
+                    Task {
+                        do {
+                            let response = try await requestAgeRange(ageGates: 13, 16, 18)
+                            switch response {
+                            case .declinedSharing:
+                                ageBandRaw = AgeBand.undeclared.rawValue
+                            case let .sharing(range):
+                                ageBandRaw = AgeBand(lowerBound: range.lowerBound, upperBound: range.upperBound).rawValue
+                            }
+                        } catch {
+                            // notAvailable / network — leave as-is.
+                        }
+                    }
+                }
+            } header: {
+                Text("Content Controls")
+            } footer: {
+                Text("Uses Apple's Declared Age Range to adjust content for younger users. "
+                    + "Web search is disabled for under 16; the assistant's tone adjusts for all minors. "
+                    + "Declining gives full capability.")
+            }
+        }
+    #else
+        private var contentControlsSection: some View {
+            EmptyView()
+        }
+    #endif
 
     /// The Home tier row: the paired Mac's brain, selectable like a tier.
     private func homeBrainRow(_ brain: PairedBrain) -> some View {

@@ -21,9 +21,26 @@ TO VERIFY THE LISTENERS
   • MCP server: Settings ▸ Privacy ▸ turn on "MCP server". In Terminal: /Applications/M1K3.app/Contents/Helpers/m1k3 status (answers from the running app), or lsof -iTCP:4242 (the socket is bound to 127.0.0.1 only). Turn the switch off and the port closes.
   • Brain at Home: Settings ▸ Privacy ▸ Brain at Home ▸ turn on "Serve my brain to my devices" ▸ "Pair a device…". While the pairing code is shown, a short-lived pairing listener is bound on an ephemeral port (lsof -iTCP -a -p $(pgrep -x M1K3)); the main service starts once a device is paired, and dns-sd -B _m1k3._tcp shows its advertisement.
 
+CONTENT CONTROLS (Age Assurance — com.apple.security.personal-information.calendars, com.apple.security.personal-information.location, DeclaredAgeRange)
+  • Uses Apple's Declared Age Range API with age gates at 13, 16, and 18.
+  • Settings ▸ Privacy ▸ Content Controls ▸ "Set up" button → the system sheet.
+  • Under 16: web search, page fetch, and Wikipedia tools are absent from the AI agent's tool palette (a hard code gate, not a prompt-only restriction).
+  • All minors: the assistant's tone adjusts to an age-appropriate, encouraging register (a dynamic prompt clause).
+  • Declining to share an age range gives full capability — undeclared is byte-identical to adult.
+  • ZERO PII: only the coarse band enum (under13 / teen13to15 / teen16to17 / adult / undeclared) is persisted, as a UserDefaults string. No age, birthdate, or identifying information is stored or transmitted.
+
 PERMISSIONS
   • Microphone — on-device speech-to-text in voice mode; audio is transcribed locally and never transmitted.
   • Files — only when the user drags in a note or PDF; processed locally.
+  • Calendar (com.apple.security.personal-information.calendars) — optional context sense, default OFF (Settings ▸ Privacy ▸ Calendar). When enabled, peeks at upcoming event titles and times for time-aware responses. Reads events via EventKit; nothing stored persistently or transmitted. The macOS TCC prompt fires on first use.
+  • Location (com.apple.security.personal-information.location) — optional context sense, default OFF (Settings ▸ Privacy ▸ Location). When enabled, takes a one-shot reading at kilometre accuracy for location-aware responses. Uses CoreLocation; the location is used for the current turn only, never stored or transmitted. The macOS TCC prompt fires on first use.
+
+SCREEN RECORDING (ScreenCaptureKit — system audio capture only)
+  • Used ONLY for capturing the far-end speaker's system audio during the Call Recording feature (Sources/M1K3Calls/StereoCallRecorder.swift).
+  • SCStream configured with capturesAudio=true, excludesCurrentProcessAudio=true; the video pipeline is set to 2×2 pixels at 1fps (the minimum SCStream allows) — no video frames are consumed, only audio samples.
+  • If the user denies screen recording permission, the feature gracefully degrades to mono microphone-only recording.
+  • No visual screen data is captured, stored, or transmitted. All audio is processed on-device via WhisperKit.
+  • The app does NOT hold com.apple.security.personal-information.screen-capture.
 
 HOW TO EXERCISE THE APP
   1. Complete first-run onboarding and let the model download finish.

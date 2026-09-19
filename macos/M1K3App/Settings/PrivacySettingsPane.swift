@@ -29,8 +29,11 @@
 //  Verified by launch in all four states (no backend, off, on, org switch). Confidence 0.85.
 
 import AppKit // NSPasteboard — the Copy buttons
+#if canImport(DeclaredAgeRange)
+    import DeclaredAgeRange
+#endif
 import M1K3AgentTools
-import M1K3Chat // PrivateCloudTurn — the guarantee's source link
+import M1K3Chat // PrivateCloudTurn + AgeBand/AgeAppropriateness/PersistedAgeBandProvider
 import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets
 import M1K3LanguageModel // PrivateCloudRung / ChatEgressConsent
 import M1K3Screengrab // the harness shows the shipped helper path, not the build's
@@ -51,9 +54,13 @@ struct PrivacySettingsPane: View {
     @State private var connectClient: MCPClient = .claude
     /// ADR 0006: the chat-egress consent, default OFF (absent reads as off).
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
+    @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
+    @State private var ageBandRequesting = false
 
     var body: some View {
         Form {
+            contentControlsSection
+
             Section {
                 Toggle("Web search (DuckDuckGo)", isOn: $webSearchEnabled)
             } header: {
@@ -143,6 +150,70 @@ struct PrivacySettingsPane: View {
             }
         }
     }
+
+    // Content Controls: Apple's Declared Age Range for age-adaptive behaviour.
+    // The system sheet handles the actual declaration; we persist the coarse band.
+    #if !os(visionOS)
+        private var contentControlsSection: some View {
+            let band = AgeBand(persisted: ageBandRaw)
+            let active = band != .undeclared && band != .adult
+            return Section {
+                HStack {
+                    Label(
+                        active ? "Age-appropriate adjustments active" : "No age range declared",
+                        systemImage: active ? "person.crop.circle.badge.checkmark" : "person.crop.circle"
+                    )
+                    Spacer()
+                    if band != .undeclared {
+                        Button("Clear") {
+                            ageBandRaw = nil
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+                Button(band == .undeclared ? "Set up" : "Update") {
+                    requestAgeRange()
+                }
+                .disabled(ageBandRequesting)
+            } header: {
+                Text("Content Controls")
+            } footer: {
+                Text("""
+                Uses Apple's Declared Age Range to adjust content for younger users. \
+                Web search is disabled for users under 16; the assistant's tone adjusts \
+                for all minors. Declining gives full capability.
+                """)
+                .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    #else
+        private var contentControlsSection: some View {
+            EmptyView()
+        }
+    #endif
+
+    #if !os(visionOS)
+        private func requestAgeRange() {
+            ageBandRequesting = true
+            Task { @MainActor in
+                defer { ageBandRequesting = false }
+                guard let window = NSApp.keyWindow ?? NSApp.mainWindow else { return }
+                do {
+                    let service = AgeRangeService.shared
+                    let response = try await service.requestAgeRange(ageGates: 13, 16, 18, in: window)
+                    switch response {
+                    case .declinedSharing:
+                        ageBandRaw = AgeBand.undeclared.rawValue
+                    case let .sharing(range):
+                        let band = AgeBand(lowerBound: range.lowerBound, upperBound: range.upperBound)
+                        ageBandRaw = band.rawValue
+                    }
+                } catch {
+                    // notAvailable / invalidAccount / network — leave as-is, user can retry.
+                }
+            }
+        }
+    #endif
 
     /// The context senses (context-tools charter): per-sense consent, all
     /// default OFF — off means the model can't see the tool. Toggle first,
