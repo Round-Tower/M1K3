@@ -1,52 +1,32 @@
 Thank you for reviewing M1K3.
 
-NO ACCOUNT REQUIRED
-M1K3 has no sign-in, no account, and no demo credentials. Just launch and use it.
+NO ACCOUNT REQUIRED — just launch and use it.
 
-FIRST LAUNCH — ONE-TIME MODEL DOWNLOAD
-On first run, M1K3 downloads an on-device AI model (a few hundred MB) so it can run entirely locally afterward. This download is the only network request the app needs to function. Please allow it to finish before testing chat/voice. After that, the assistant runs fully offline.
+FIRST LAUNCH: downloads an on-device AI model (~200 MB). Please let it finish before testing. After that, fully offline.
 
-OUTBOUND NETWORK USE (com.apple.security.network.client)
-  1. The one-time model download above.
-  2. An OPTIONAL web search, OFF by default, enabled by the user with a visible toggle.
-There is no analytics, no tracking, no telemetry, and no user data sent to any server. Chats, notes, PDFs and voice audio stay on the device.
+OUTBOUND (network.client): model download + optional web search (OFF by default). No analytics, tracking, or telemetry.
 
-INBOUND NETWORK USE (com.apple.security.network.server) — macOS
-The app LISTENS for incoming connections in two user-enabled features. Both are OFF by default; nothing listens until the user turns them on in Settings ▸ Privacy.
-  1. MCP server — a local HTTP/JSON-RPC server bound to 127.0.0.1 port 4242 (loopback only; never a LAN interface). It lets AI coding agents on the same Mac (Claude Code, Cursor, VS Code) call the app's tools: search the user's notes, speak, remember. Switch: Settings ▸ Privacy ▸ MCP server; the same pane shows the connect command per client.
-  2. Brain at Home — a local-network service so the user's own iPhone/iPad running M1K3 can use this Mac's larger on-device models. It serves only devices the user has paired by scanning a QR code shown on this Mac; every connection is TLS with a pre-shared key established at pairing, and unpaired clients are refused before any HTTP is exchanged. Bonjour type _m1k3._tcp, default port 4243, private/LAN interfaces only (never cellular). Switch: Settings ▸ Privacy ▸ Brain at Home ▸ "Serve my brain to my devices".
-The App Sandbox refuses to bind a listening socket without the server entitlement, which is why it is present. The embedded command-line helper (Contents/Helpers/m1k3) is a client only and does not carry it. Neither feature reaches the internet.
+INBOUND (network.server): two features, both OFF by default in Settings > Privacy:
+  1. MCP server — loopback only (127.0.0.1:4242), lets AI coding agents call M1K3's tools. Verify: /Applications/M1K3.app/Contents/Helpers/m1k3 status
+  2. Brain at Home — LAN service for QR-paired iPhone/iPad only. TLS-PSK, private interfaces. Verify: dns-sd -B _m1k3._tcp
+The helper (Contents/Helpers/m1k3) is a client only; no server entitlement.
 
-TO VERIFY THE LISTENERS
-  • MCP server: Settings ▸ Privacy ▸ turn on "MCP server". In Terminal: /Applications/M1K3.app/Contents/Helpers/m1k3 status (answers from the running app), or lsof -iTCP:4242 (the socket is bound to 127.0.0.1 only). Turn the switch off and the port closes.
-  • Brain at Home: Settings ▸ Privacy ▸ Brain at Home ▸ turn on "Serve my brain to my devices" ▸ "Pair a device…". While the pairing code is shown, a short-lived pairing listener is bound on an ephemeral port (lsof -iTCP -a -p $(pgrep -x M1K3)); the main service starts once a device is paired, and dns-sd -B _m1k3._tcp shows its advertisement.
+CONTENT CONTROLS (DeclaredAgeRange): Settings > Privacy > Content Controls > "Set up" uses Apple's Declared Age Range API (gates 13/16/18). Under 16: web tools removed from the agent palette (code gate). All minors: age-appropriate tone. Declining = full capability. Only a coarse band enum is persisted.
 
-CONTENT CONTROLS (Age Assurance — com.apple.security.personal-information.calendars, com.apple.security.personal-information.location, DeclaredAgeRange)
-  • Uses Apple's Declared Age Range API with age gates at 13, 16, and 18.
-  • Settings ▸ Privacy ▸ Content Controls ▸ "Set up" button → the system sheet.
-  • Under 16: web search, page fetch, and Wikipedia tools are absent from the AI agent's tool palette (a hard code gate, not a prompt-only restriction).
-  • All minors: the assistant's tone adjusts to an age-appropriate, encouraging register (a dynamic prompt clause).
-  • Declining to share an age range gives full capability — undeclared is byte-identical to adult.
-  • ZERO PII: only the coarse band enum (under13 / teen13to15 / teen16to17 / adult / undeclared) is persisted, as a UserDefaults string. No age, birthdate, or identifying information is stored or transmitted.
+CALENDAR (calendars entitlement): optional context sense, OFF by default. Settings > Privacy > Calendar toggle. Peeks upcoming events via EventKit for time-aware responses. On-device only, TCC-gated.
 
-PERMISSIONS
-  • Microphone — on-device speech-to-text in voice mode; audio is transcribed locally and never transmitted.
-  • Files — only when the user drags in a note or PDF; processed locally.
-  • Calendar (com.apple.security.personal-information.calendars) — optional context sense, default OFF (Settings ▸ Privacy ▸ Calendar). When enabled, peeks at upcoming event titles and times for time-aware responses. Reads events via EventKit; nothing stored persistently or transmitted. The macOS TCC prompt fires on first use.
-  • Location (com.apple.security.personal-information.location) — optional context sense, default OFF (Settings ▸ Privacy ▸ Location). When enabled, takes a one-shot reading at kilometre accuracy for location-aware responses. Uses CoreLocation; the location is used for the current turn only, never stored or transmitted. The macOS TCC prompt fires on first use.
+LOCATION (location entitlement): optional context sense, OFF by default. Settings > Privacy > Location toggle. One-shot reading at km accuracy. On-device only, TCC-gated.
 
-SCREEN RECORDING (ScreenCaptureKit — system audio capture only)
-  • Used ONLY for capturing the far-end speaker's system audio during the Call Recording feature (Sources/M1K3Calls/StereoCallRecorder.swift).
-  • SCStream configured with capturesAudio=true, excludesCurrentProcessAudio=true; the video pipeline is set to 2×2 pixels at 1fps (the minimum SCStream allows) — no video frames are consumed, only audio samples.
-  • If the user denies screen recording permission, the feature gracefully degrades to mono microphone-only recording.
-  • No visual screen data is captured, stored, or transmitted. All audio is processed on-device via WhisperKit.
-  • The app does NOT hold com.apple.security.personal-information.screen-capture.
+SCREEN RECORDING (ScreenCaptureKit): system AUDIO capture only, for call transcription (far-end speaker). SCStream: capturesAudio=true, video 2x2@1fps (minimum; no frames consumed). Degrades to mono mic if denied. No screen-capture entitlement held. All audio processed on-device via WhisperKit.
 
-HOW TO EXERCISE THE APP
-  1. Complete first-run onboarding and let the model download finish.
-  2. Send a chat message, then try voice mode.
-  3. Drag in a short note or PDF and ask a question about it.
-  4. Open Memories and confirm "forget" removes an item.
-  5. Try voice output (system voice and the neural voice).
+MICROPHONE: on-device speech-to-text. Never transmitted.
+FILES: user-selected notes/PDFs only. Processed locally.
+
+HOW TO TEST:
+  1. Finish onboarding + model download
+  2. Chat, then voice mode
+  3. Drag in a note/PDF and ask about it
+  4. Memories > "forget" an item
+  5. Settings > Privacy > Content Controls > "Set up"
 
 Happy to clarify anything — thank you.

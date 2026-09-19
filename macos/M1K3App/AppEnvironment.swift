@@ -160,7 +160,8 @@ final class AppEnvironment {
     /// is where the fuller answer lives. (See AppEnvironment+Intelligence.swift.)
     @ObservationIgnored private(set) lazy var intelligenceResponder: any RAGResponding =
         Self.makeAgentResponder(
-            store: store, embedder: embedder, provider: provider, forcedThinkingMode: .fast
+            store: store, embedder: embedder, provider: provider, forcedThinkingMode: .fast,
+            ageBandProvider: Self.ageBandProvider
         )
     /// True while an `ask_m1k3` / Ask-intent generation is running (shared lock).
     /// Observation is intentionally suppressed: the VISIBLE "answering" signal is
@@ -937,7 +938,8 @@ final class AppEnvironment {
                 }
             ),
             contextSenses: .live,
-            recentActivity: recentActivityHook
+            recentActivity: recentActivityHook,
+            ageBandProvider: Self.ageBandProvider
         )
 
         // TTS seam: Built-in Apple voice wrapped in a swappable façade so the
@@ -1543,16 +1545,17 @@ final class AppEnvironment {
             // The palette's availability facts are real I/O (a SQLite count, a
             // directory listing, IOKit once) — computed ONCE, here, off the
             // main actor, and shared by both palettes (review fold, #201).
-            let availability = Self.paletteAvailability(store: store)
+            let availability = Self.paletteAvailability(store: store, ageBandProvider: Self.ageBandProvider)
             let headlessTools = Self.interactiveAgentTools(
                 store: store, embedder: embedder,
-                onHits: { _ in }, onOpenLink: nil, availability: availability
+                onHits: { _ in }, onOpenLink: nil,
+                ageBandProvider: Self.ageBandProvider, availability: availability
             ).map(\.toolDefinition)
             let interactiveTools = Self.interactiveAgentTools(
                 store: store, embedder: embedder,
                 onHits: { _ in }, onOpenLink: { _ in }, deepDelegation: deepDelegationHook,
                 scriptExecution: .forWarm, contextSenses: .forWarm, recentActivity: NullActivityReading(),
-                availability: availability
+                ageBandProvider: Self.ageBandProvider, availability: availability
             ).map(\.toolDefinition)
             // Sequentially: one ModelContainer, and the coalescer only dedupes
             // IDENTICAL keys — two concurrent builds of different keys would just

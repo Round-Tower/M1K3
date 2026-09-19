@@ -200,7 +200,7 @@ extension AppEnvironment {
         scriptExecution: ScriptExecutionHook? = nil,
         contextSenses: ContextSenseHook? = nil,
         recentActivity: (any ActivityReading)? = nil,
-        ageBandProvider _: (any AgeBandProviding)? = nil,
+        ageBandProvider: (any AgeBandProviding)? = nil, // swiftformat:disable:next unusedArguments
         availability: ToolPalettePolicy.Availability? = nil
     ) -> [any AgentTool] {
         var tools: [any AgentTool] = [
@@ -313,6 +313,11 @@ extension AppEnvironment {
         return AgentRAGResponder.reactPromptPrefix(tools: tools)
     }
 
+    /// Shared age-band provider — reads the persisted band from UserDefaults.
+    /// Constructed once, used by every responder + palette warm. UserDefaults
+    /// is internally thread-safe; no other mutable state.
+    nonisolated static let ageBandProvider = PersistedAgeBandProvider()
+
     /// The Settings web toggle — absent means allowed (the shipped default).
     nonisolated static func webSearchAllowed() -> Bool {
         let defaults = UserDefaults.standard
@@ -383,7 +388,7 @@ extension AppEnvironment {
         scriptExecution: ScriptExecutionHook? = nil,
         contextSenses: ContextSenseHook? = nil,
         recentActivity: (any ActivityReading)? = nil,
-        ageBandProvider _: (any AgeBandProviding)? = nil
+        ageBandProvider: (any AgeBandProviding)? = nil // swiftformat:disable:next unusedArguments
     ) -> any RAGResponding {
         // Hits the model retrieves itself (search_knowledge) flow through the
         // collector into the turn's sources + the citation allow-list.

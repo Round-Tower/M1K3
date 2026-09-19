@@ -30,6 +30,7 @@ public struct FixedAgeBandProvider: AgeBandProviding {
 
 /// Reads the persisted band from UserDefaults; writes after the system sheet.
 /// Pure Foundation — no DeclaredAgeRange import (that lives in the app target).
+/// `@unchecked Sendable`: UserDefaults is internally thread-safe; no other mutable state.
 public final class PersistedAgeBandProvider: AgeBandProviding, @unchecked Sendable {
     public static let defaultsKey = "ageBandRawValue"
     private let defaults: UserDefaults

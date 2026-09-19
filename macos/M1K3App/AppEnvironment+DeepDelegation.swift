@@ -168,7 +168,8 @@ extension AppEnvironment {
         let deepResponder = Self.makeAgentResponder(
             store: store,
             embedder: embedder,
-            provider: swappableMLX
+            provider: swappableMLX,
+            ageBandProvider: Self.ageBandProvider
         )
         deepDelegationTask = Task { [weak self] in
             let clock = ContinuousClock()
