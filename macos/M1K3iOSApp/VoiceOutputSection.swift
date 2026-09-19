@@ -4,7 +4,7 @@
 //
 //  The Voice section of Settings — how M1K3 sounds. Two tiers, same rows as the
 //  Brain picker: Built-in (instant, no download — the default) and M1K3 Voice
-//  (Kokoro, one ~354 MB download, then offline forever). Picking M1K3 Voice IS the
+//  (Kokoro, one ~184 MB download, then offline forever). Picking M1K3 Voice IS the
 //  download consent; the bar below the rows is the honest progress; "Hear a
 //  sample" speaks in whichever voice is live right now.
 //

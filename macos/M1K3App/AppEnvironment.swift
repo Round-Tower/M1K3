@@ -1056,7 +1056,7 @@ final class AppEnvironment {
         }
 
         // Restore M1K3 Voice only if it was chosen AND already staged — never kick
-        // a silent ~354 MB re-download on launch.
+        // a silent ~184 MB re-download on launch.
         if VoiceTierRestore.shouldRestore(selected: selectedVoiceTier, modelStaged: kokoro.isModelStaged) {
             prepareM1K3Voice()
         }

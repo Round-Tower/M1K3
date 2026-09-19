@@ -43,6 +43,10 @@
 //  another hyphen/underscore footgun in this file). `voices-v1.0.bin` is
 //  UNCHANGED — M1K3's own KokoroVoices npz reader stays, not the new repo's
 //  per-voice `.safetensors` files.
+//  Review: Kev + claude-opus-4-6, 2026-09-19 — F32→bf16: weights moved from
+//  `mlx-community/Kokoro-82M-bf16` (F32, 312 MB) to `round-tower/Kokoro-82M-bf16`
+//  (bf16, ~156 MB). config.json identical; model.safetensors is the conversion.
+//  Progress-bar weights recalibrated from 91/8 to 84/15. Confidence 0.85.
 //  Review: Kev + claude-sonnet-5, 2026-09-01 (issue #70) — `configURL`/
 //  `modelURL` fetched an unpinned `main`, and nothing checked the bytes
 //  before handing them to MLX (the same gap ADR 0002 closed for the two chat
@@ -67,11 +71,9 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
 
     private static let log = M1K3Log.logger(.voice)
 
-    /// The MLX Kokoro checkpoint (mlx-community/Kokoro-82M-bf16 — the model
-    /// the passed synthesis spike validated bm_daniel against). `configURL`'s
-    /// destination filename and `modelURL`'s BOTH stay as the HF repo names
-    /// them; the weights are renamed on download to `model.safetensors` (see
-    /// `prepare(progress:)`) — the vendored loader's expected name.
+    /// The MLX Kokoro checkpoint (round-tower/Kokoro-82M-bf16 — bf16 weights,
+    /// ~156 MB). Both files are named `config.json` and `model.safetensors` on
+    /// the repo, matching the vendored loader's expected names.
     ///
     /// Resolved against `KokoroPinnedWeights.revision` — a pinned commit SHA
     /// — rather than `main` (#70): both files are verified against a digest
@@ -79,10 +81,10 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
     /// `main` that changed under us (or a compromised host) can no longer
     /// silently hand MLX arbitrary tensors.
     private static let configURL = URL(
-        string: "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/\(KokoroPinnedWeights.revision)/config.json"
+        string: "https://huggingface.co/round-tower/Kokoro-82M-bf16/resolve/\(KokoroPinnedWeights.revision)/config.json"
     )!
     private static let modelURL = URL(
-        string: "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/\(KokoroPinnedWeights.revision)/kokoro-v1_0.safetensors"
+        string: "https://huggingface.co/round-tower/Kokoro-82M-bf16/resolve/\(KokoroPinnedWeights.revision)/model.safetensors"
     )!
     private static let voicesURL = URL(
         string: "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
@@ -245,7 +247,7 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
         // there. Unlike M1K3MLX's WeightIntegrity (which never auto-heals a
         // digest mismatch on the multi-GB brains, by design), a PRE-EXISTING
         // mismatch self-heals here the same way the floor check above does:
-        // Kokoro's own files are ~327 MB, not 6.7 GB, so re-fetching from the
+        // Kokoro's own files are ~156 MB, not 6.7 GB, so re-fetching from the
         // pinned revision is cheap enough to be the right recovery, not just
         // an accepted risk. A mismatch on a FRESH download (just staged by
         // this same call) is treated more strictly below — see the throwing
@@ -275,12 +277,12 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
             return
         }
 
-        // The weights are ~327 MB, voices ~28 MB, config.json a few KB — weight
+        // The weights are ~156 MB, voices ~28 MB, config.json a few KB — weight
         // the combined bar by size so it advances proportionally rather than
         // jumping at a file boundary.
         let configWeight = 0.01
-        let modelWeight = 0.91
-        let voicesWeight = 0.08
+        let modelWeight = 0.84
+        let voicesWeight = 0.15
 
         // Tracks which of the two HF-pinned files this call ACTUALLY fetched,
         // so the post-download verification below only re-hashes bytes that
@@ -366,7 +368,7 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
 /// file-existence would trust it forever. Status validation stops future bad
 /// stages; the plausibility floor also self-heals installs already poisoned.
 enum KokoroDownloadValidation {
-    /// Deliberately far below the real payloads (~327 MB weights, ~28 MB voices):
+    /// Deliberately far below the real payloads (~156 MB weights, ~28 MB voices):
     /// the floors only need to reject staged HTML error pages (a few KB).
     static let modelFloorBytes: Int64 = 50 * 1024 * 1024
     static let voicesFloorBytes: Int64 = 1024 * 1024
@@ -407,7 +409,7 @@ struct KokoroDownloadHTTPError: LocalizedError {
 struct KokoroWeightTamperError: LocalizedError {
     let file: String
     var errorDescription: String? {
-        "Kokoro's \(file) does not match the digest pinned for mlx-community/Kokoro-82M-bf16 — refusing to use it"
+        "Kokoro's \(file) does not match the digest pinned for round-tower/Kokoro-82M-bf16 — refusing to use it"
     }
 }
 

@@ -30,7 +30,7 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
     public var tagline: String {
         switch self {
         case .builtin: "Ready now · no download"
-        case .m1k3Voice: "Neural voice · ~354 MB"
+        case .m1k3Voice: "Neural voice · ~184 MB"
         }
     }
 
@@ -85,7 +85,7 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
     public var approxDownloadMB: Int? {
         switch self {
         case .builtin: nil
-        case .m1k3Voice: 354
+        case .m1k3Voice: 184
         }
     }
 

@@ -7,7 +7,7 @@
 //  and the instant swap-back; M1K3 Voice (Kokoro, pure MLX) downloads once on pick
 //  and then runs fully on-device. The download is the consent: nothing fetches
 //  until the user taps the tier, and launch only restores it when the weights are
-//  already staged (VoiceTierRestore — never a silent ~354 MB re-download).
+//  already staged (VoiceTierRestore — never a silent ~184 MB re-download).
 //
 //  One deliberate difference from the Mac: the download is a HELD task. Picking
 //  Built-in mid-download cancels it, so the swap can't land a minute later on top

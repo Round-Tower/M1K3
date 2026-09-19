@@ -403,7 +403,7 @@ final class AppCore {
         // signal (speechDidEnd). One-time wiring, like the Mac's.
         wireSpeechCallbacks()
         // Restore M1K3 Voice only if it was chosen AND already staged — never a
-        // silent ~354 MB re-download on launch (VoiceTierRestore, pinned). A
+        // silent ~184 MB re-download on launch (VoiceTierRestore, pinned). A
         // chosen-but-purged voice shows as Built-in until picked again. Never on
         // the Simulator: Kokoro's MLX preload would abort the process.
         let persistedVoice = VoiceTierRestore.restoredTier(
