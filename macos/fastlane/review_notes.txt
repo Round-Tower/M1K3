@@ -2,7 +2,7 @@ Thank you for reviewing M1K3.
 
 NO ACCOUNT REQUIRED — just launch and use it.
 
-FIRST LAUNCH: downloads an on-device AI model (~200 MB). Please let it finish before testing. After that, fully offline.
+FIRST LAUNCH: on most Macs, uses Apple Intelligence (instant, no download). Without Apple Intelligence, downloads a local AI model (~630 MB). After setup, fully offline.
 
 OUTBOUND (network.client): model download + optional web search (OFF by default). No analytics, tracking, or telemetry.
 

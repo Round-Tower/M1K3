@@ -41,6 +41,9 @@
 //  defaults in one pass (OnboardingExperience, pure, 5 tests); "Private" keeps today's defaults. The single
 //  "Say hello" button replaced by two vertically stacked buttons with captions. PCC per-message consent
 //  unchanged. Confidence now 0.8 (flow logic tested; look/feel verify-by-launch).
+//  Review: Kev + claude-opus-4-6, 2026-09-19 — PCC confirmed present in the MAS entitlements
+//  (granted 2026-09-14, com.apple.developer.private-cloud-compute); caption is correct.
+//  The stale file header comment ("No backend … the only state") predates the grant. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Inference
