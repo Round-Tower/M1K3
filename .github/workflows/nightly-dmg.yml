@@ -42,8 +42,15 @@ jobs:
     # GitHub's Xcode 27 image (label `xcode-27`, a preview image on macOS 27).
     # release-macos.sh refuses anything but stable Xcode 27.x since 2026-09-15
     # (#338), and the macos-26 image tops out at Xcode 26.6 — so this job failed
-    # every night from 09-16 until it moved here. ci.yml stays on macos-26 on
-    # purpose: it compiles and tests, it does not cut a release artifact.
+    # every night from 09-16 until it moved here. The app links
+    # FoundationModels.framework (needs a macOS 26+ runtime — ci.yml's swift-mac
+    # comment has the detail); macOS 27 satisfies that. ci.yml stays on macos-26
+    # on purpose: it compiles and tests, it does not cut a release artifact.
+    #
+    # ⚠️ `xcode-27` is a PREVIEW label GitHub may rename or retire on its own
+    # schedule. If it stops resolving, this job never starts: it sits queued and
+    # ends `cancelled`, not `failure`, and timeout-minutes never fires. When a
+    # macos-27 image goes GA, move to it.
     runs-on: xcode-27
     timeout-minutes: 60
     steps:
@@ -83,8 +90,10 @@ jobs:
         if: steps.gate.outputs.configured == 'true'
         # Pinned by path, not by "latest": the next Xcode must be a deliberate
         # bump here AND in release-macos.sh's toolchain guard, never a silent
-        # one. (The image's app is named Xcode_27_Release_Candidate; its build,
-        # 27A266a, is the GA build — the RC was promoted unchanged.)
+        # one. Xcode_27.0.app is a symlink the image provides; the bundle on
+        # disk is Xcode_27_Release_Candidate.app, whose build (27A266a) is the GA
+        # build — the RC was promoted unchanged. release-macos.sh's guard rejects
+        # only a path containing "beta", so either name passes it.
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode_27.0.app
@@ -226,6 +235,12 @@ jobs:
         if: always() && steps.gate.outputs.configured == 'true'
         run: security delete-keychain "$KEYCHAIN" 2>/dev/null || true
 
+# Review: Kev + claude-fable-5.1, 2026-09-19 (review folds, comments only) — the
+# preview-label warning above `runs-on`, the FoundationModels reason restored, and
+# the symlink-vs-bundle wording on the Xcode step (#389 passes 1 + 2). Correction
+# of my own PR text: CI Health Triage HAD named this exact cause in its #11
+# digest all four nights — detection worked, delivery did not (a rolling issue
+# nobody reads). Confidence unchanged.
 # Review: Kev + claude-fable-5.1, 2026-09-19 — moved the job from macos-26 to
 # GitHub's `xcode-27` image. #338 made release-macos.sh require stable Xcode 27
 # while this file still pinned Xcode 26, so the nightly failed four nights running
