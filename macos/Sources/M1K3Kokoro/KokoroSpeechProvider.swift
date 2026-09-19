@@ -274,8 +274,8 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
         // the combined bar by size so it advances proportionally rather than
         // jumping at a file boundary.
         let configWeight = 0.01
-        let modelWeight = 0.91
-        let voicesWeight = 0.08
+        let modelWeight = 0.84
+        let voicesWeight = 0.15
 
         // Tracks which of the two HF-pinned files this call ACTUALLY fetched,
         // so the post-download verification below only re-hashes bytes that
@@ -402,7 +402,7 @@ struct KokoroDownloadHTTPError: LocalizedError {
 struct KokoroWeightTamperError: LocalizedError {
     let file: String
     var errorDescription: String? {
-        "Kokoro's \(file) does not match the digest pinned for mlx-community/Kokoro-82M-bf16 — refusing to use it"
+        "Kokoro's \(file) does not match the digest pinned for round-tower/Kokoro-82M-bf16 — refusing to use it"
     }
 }
 

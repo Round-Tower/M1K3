@@ -3,7 +3,7 @@ import Testing
 
 /// The launch-time restore rule for M1K3 Voice: reload the neural voice only when
 /// the user chose it before AND its weights are already on disk. Either half alone
-/// must NOT restore — one would kick a silent ~354 MB re-download on launch, the
+/// must NOT restore — one would kick a silent ~184 MB re-download on launch, the
 /// other would load a voice the user never picked.
 struct VoiceTierRestoreTests {
     @Test("chosen and staged — restore")
