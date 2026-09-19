@@ -35,11 +35,18 @@
 //  KokoroDownloadValidationTests; the swallowed-preload-failure fallback
 //  design is deliberately untouched).
 //  Review: Kev + claude-fable-5, 2026-07-18 — the ONNX backend is gone
-//  (KokoroSynthesizer.swift now runs pure MLX). Staging fetches TWO files from
-//  `round-tower/Kokoro-82M-bf16`: `config.json` (tiny) + `model.safetensors`
-//  (~156 MB, bfloat16 — converted from the mlx-community repo's F32 weights to
-//  halve the download). `voices-v1.0.bin` is UNCHANGED — M1K3's own KokoroVoices
-//  npz reader stays, not the new repo's per-voice `.safetensors` files.
+//  (KokoroSynthesizer.swift now runs pure MLX). Staging swaps the single
+//  ~326 MB kokoro-v1.0.onnx for TWO files from `mlx-community/Kokoro-82M-bf16`:
+//  `config.json` (tiny) + the weights (staged locally as `model.safetensors`,
+//  matching what the vendored MLX loader expects — the HF repo's own
+//  filename is `kokoro-v1_0.safetensors`, renamed on download to avoid yet
+//  another hyphen/underscore footgun in this file). `voices-v1.0.bin` is
+//  UNCHANGED — M1K3's own KokoroVoices npz reader stays, not the new repo's
+//  per-voice `.safetensors` files.
+//  Review: Kev + claude-opus-4-6, 2026-09-19 — F32→bf16: weights moved from
+//  `mlx-community/Kokoro-82M-bf16` (F32, 312 MB) to `round-tower/Kokoro-82M-bf16`
+//  (bf16, ~156 MB). config.json identical; model.safetensors is the conversion.
+//  Progress-bar weights recalibrated from 91/8 to 84/15. Confidence 0.85.
 //  Review: Kev + claude-sonnet-5, 2026-09-01 (issue #70) — `configURL`/
 //  `modelURL` fetched an unpinned `main`, and nothing checked the bytes
 //  before handing them to MLX (the same gap ADR 0002 closed for the two chat

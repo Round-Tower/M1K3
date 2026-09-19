@@ -17,7 +17,7 @@
 //
 //  Signed: Kev + claude-sonnet-5, 2026-09-01, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-4-6, 2026-09-19 — F32→bf16 weight conversion:
-//  new repo (Round-Tower/Kokoro-82M-bf16), model.safetensors 327→164 MB,
+//  new repo (round-tower/Kokoro-82M-bf16), model.safetensors 312→156 MB,
 //  config.json unchanged. Original F32 digests verified against the old pin
 //  before conversion. Confidence 0.85.
 //

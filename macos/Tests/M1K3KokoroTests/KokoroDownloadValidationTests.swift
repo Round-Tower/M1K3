@@ -92,7 +92,7 @@ struct KokoroDownloadValidationTests {
 
     @Test("the production floors reject error pages but sit far below the real payloads")
     func productionFloors() {
-        // Weights ~327 MB, voices ~28 MB. Floors only need to reject staged HTML
+        // Weights ~156 MB, voices ~28 MB. Floors only need to reject staged HTML
         // error bodies (a few KB) with a huge margin in both directions.
         #expect(KokoroDownloadValidation.modelFloorBytes == 50 * 1024 * 1024)
         #expect(KokoroDownloadValidation.voicesFloorBytes == 1024 * 1024)
