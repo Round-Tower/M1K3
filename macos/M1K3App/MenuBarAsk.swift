@@ -45,7 +45,8 @@ final class MenuBarAsk {
             store: environment.store,
             embedder: environment.embedder,
             provider: environment.provider,
-            forcedThinkingMode: .fast
+            forcedThinkingMode: .fast,
+            ageBandProvider: AppEnvironment.ageBandProvider
         )
     }
 

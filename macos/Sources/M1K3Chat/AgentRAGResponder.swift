@@ -175,6 +175,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// 27% of everything the model has. `GroundingBudgetPolicy` sizes it per
     /// tier. Defaults to the old constant so unwired callers are byte-identical.
     private let groundingBudgetProvider: @Sendable () -> Int
+    /// The age-band prompt clause, read FRESH each turn (same per-turn pattern)
+    /// so an age-range declaration takes effect on the next turn.
+    private let ageClauseProvider: @Sendable () -> String?
     /// What's open beside the chat right now (the review panel's rendered page),
     /// or nil — the app reads a snapshot the web view updates on load.
     private let browserContextProvider: (@Sendable () -> BrowserContext?)?
@@ -199,6 +202,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         maxIterationsProvider: (@Sendable () -> Int)? = nil,
         defersHeavyGenerationProvider: (@Sendable () -> Bool)? = nil,
         groundingBudgetProvider: @escaping @Sendable () -> Int = { GroundingBudget.defaultTokenBudget },
+        ageClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
         browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
         todoContextProvider: (@Sendable () -> String?)? = nil
     ) {
@@ -215,6 +219,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.maxIterationsProvider = maxIterationsProvider
         self.fastThinkingProvider = fastThinkingProvider
         self.historyBudgetProvider = historyBudgetProvider
+        self.ageClauseProvider = ageClauseProvider
         self.browserContextProvider = browserContextProvider
         self.todoContextProvider = todoContextProvider
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
@@ -477,6 +482,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // Prepended here (not inside `grounding`, which stays pure/testable) so it
         // rides the variable grounding, never the cached persona prefix.
         let contextLine = PromptContext.line(now: Date(), brainName: brainNameProvider())
+        let ageClause = ageClauseProvider()
+        let contextPreamble = [contextLine, ageClause].compactMap { $0 }.joined(separator: "\n\n")
         let toolNames = Set(tools.map(\.name))
         let historyBudget = historyBudgetProvider().reservingImages(images.count)
         let ambient = browserContextProvider?()?.render()
@@ -492,10 +499,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 chunks: chunks, memories: memories, toolNames: toolNames, history: history,
                 historyBudget: historyBudget, ambient: ambient, todos: todos
             )
-            grounding = contextLine + "\n\n" + parts.context
+            grounding = contextPreamble + "\n\n" + parts.context
             standing = parts.standing
         case .native:
-            grounding = contextLine + "\n\n" + Self.grounding(
+            grounding = contextPreamble + "\n\n" + Self.grounding(
                 chunks: chunks, memories: memories, toolNames: toolNames, history: history,
                 historyBudget: historyBudget, style: style, ambient: ambient, todos: todos
             )
