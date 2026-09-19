@@ -7,11 +7,11 @@
 //  every decision is `PrivateCloudRung` / `PrivateCloudTurn` /
 //  `ChatSession.sendPrivateCloud`, unit-tested in the package.
 //
-//  No backend is the default and, today, the only state a user can reach: the
-//  real one needs the macOS 27 SDK and an entitlement not yet granted, and the
-//  echo stand-in exists only in a Debug build launched with M1K3_PCC_ECHO. With
-//  no backend the switch, the control and the label never appear, and a send
-//  never goes anywhere but this Mac.
+//  The real backend needs the macOS 27 SDK and the PCC entitlement (granted
+//  2026-09-14, MAS lane only — the Developer ID lane cannot carry it). The echo
+//  stand-in exists only in a Debug build launched with M1K3_PCC_ECHO. Without a
+//  backend the switch, the control and the label never appear, and a send never
+//  goes anywhere but this Mac.
 //
 //  App glue, committed with TDD_SKIP: every decision it makes is a tested
 //  package call (PrivateCloudRung, ChatEgressConsent.persisted, ChatSession).
