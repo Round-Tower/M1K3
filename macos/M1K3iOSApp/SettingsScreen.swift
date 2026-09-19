@@ -27,9 +27,12 @@
 //  review 12). Confidence now 0.8.
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — About gains the manual Rate M1K3 door.
+//  Review: Kev + claude-opus-4-6, 2026-09-19 — Content Controls section (DeclaredAgeRange
+//  age-band wiring: Settings > Content Controls > system sheet, web-tool gating for under-16,
+//  @preconcurrency import for the non-Sendable DeclaredAgeRangeAction). Confidence 0.8.
 
 #if canImport(DeclaredAgeRange)
-    import DeclaredAgeRange
+    @preconcurrency import DeclaredAgeRange
 #endif
 import M1K3BrainLink
 import M1K3Chat
@@ -197,21 +200,7 @@ struct SettingsScreen: View {
                     }
                 }
                 Button(band == .undeclared ? "Set up" : "Update") {
-                    Task {
-                        do {
-                            let response = try await requestAgeRange(ageGates: 13, 16, 18)
-                            switch response {
-                            case .declinedSharing:
-                                ageBandRaw = AgeBand.undeclared.rawValue
-                            case let .sharing(range):
-                                ageBandRaw = AgeBand(lowerBound: range.lowerBound, upperBound: range.upperBound).rawValue
-                            @unknown default:
-                                break
-                            }
-                        } catch {
-                            // notAvailable / network — leave as-is.
-                        }
-                    }
+                    requestAgeBand()
                 }
             } header: {
                 Text("Content Controls")
@@ -219,6 +208,22 @@ struct SettingsScreen: View {
                 Text("Uses Apple's Declared Age Range to adjust content for younger users. "
                     + "Web search is disabled for under 16; the assistant's tone adjusts for all minors. "
                     + "Declining gives full capability.")
+            }
+        }
+
+        private func requestAgeBand() {
+            Task { @MainActor in
+                do {
+                    let response = try await requestAgeRange(ageGates: 13, 16, 18)
+                    switch response {
+                    case .declinedSharing:
+                        ageBandRaw = AgeBand.undeclared.rawValue
+                    case let .sharing(range):
+                        ageBandRaw = AgeBand(lowerBound: range.lowerBound, upperBound: range.upperBound).rawValue
+                    @unknown default:
+                        break
+                    }
+                } catch {}
             }
         }
     #else
