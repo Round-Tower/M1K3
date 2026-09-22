@@ -72,7 +72,10 @@
             _ = callLog.drain()
             transcript.append(contentsOf: messages)
 
-            let body = AFMToolPrompt.render(messages: transcript, tools: toolDefinitions)
+            // Empty tool list: the text catalogue is omitted because the FM
+            // session already carries structured definitions via `tools:`.
+            // Rendering both doubled the token count past Mini's 4096 window.
+            let body = AFMToolPrompt.render(messages: transcript, tools: [])
             let imageURLs = AFMToolPrompt.imageURLs(from: transcript)
             let standing = AFMToolPrompt.systemInstructions(from: transcript) ?? instructions
 
