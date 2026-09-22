@@ -192,7 +192,7 @@ struct MiniLiveEvalTests {
                 }
                 let responder = try AgentRAGResponder(
                     store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
-                    tools: tools, maxIterations: 3
+                    tools: tools
                 )
                 var text = ""
                 for await piece in try await responder.answerStreaming(fixture.prompt).stream {

@@ -548,7 +548,10 @@ extension AppEnvironment {
 
     /// The agent-loop iteration base the thermal cap eases DOWN from. Matches
     /// AgentRAGResponder's default — one named home so the two can't drift.
-    nonisolated static let baseMaxIterations = 3
+    /// Raised from 3 → 5 (2026-09-22): 3 allowed exactly one tool call
+    /// (call → observe → conclude); two calls needed 5, and CoolHeadPolicy
+    /// eased it to 2 or 1, making multi-tool turns structurally impossible.
+    nonisolated static let baseMaxIterations = 5
 
     /// Conservative fixed reserve (tokens) for the NON-history parts of the prompt
     /// — persona+exemplars (~1130) + tools spec (~600) + grounding chunks (~1100)

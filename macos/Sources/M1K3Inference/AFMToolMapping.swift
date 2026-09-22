@@ -135,13 +135,62 @@ public enum AFMToolPrompt {
 
         lines.append("")
         lines.append(
-            "Decide the single next step. You do NOT inherently know the current "
-                + "date/time, the user's private notes or documents, or any live / "
-                + "up-to-the-minute information — you MUST call the matching tool for "
-                + "those rather than guessing. Call one tool if it would help answer "
-                + "the request; only give your final answer when you genuinely can "
-                + "answer now (the tools have already given you what you need, or no "
-                + "tool applies)."
+            "Decide the single next step. The tools listed above are yours to USE "
+                + "— calling them is your job, not a secret. You do NOT inherently "
+                + "know the current date/time, the user's private notes or documents, "
+                + "or any live information — CALL the matching tool for those rather "
+                + "than saying \"I can't\" or guessing. Never say you lack access to "
+                + "something a listed tool provides. Call one tool if it would help "
+                + "answer the request; give your final answer only when the tools have "
+                + "already given you what you need, or no tool applies."
+        )
+        return lines.joined(separator: "\n")
+    }
+
+    /// Prompt body for the native `Tool` protocol session. Omits the text tool
+    /// catalogue (the FM session provides structured definitions via `tools:`)
+    /// and the "Decide the single next step" instruction (designed for
+    /// `AFMToolDecision` constrained decoding, not native tool calling).
+    /// Instead, a short nudge reminds the model to use the tools it was given.
+    public static func renderForNativeSession(messages: [ToolMessage]) -> String {
+        var lines: [String] = []
+
+        for message in messages {
+            switch message {
+            case .system:
+                continue
+            case let .user(text, images):
+                lines.append("User: \(text)")
+                #if compiler(>=6.4)
+                    if !images.isEmpty {
+                        if #unavailable(macOS 27.0, iOS 27.0, visionOS 27.0) {
+                            lines.append("(The user attached \(images.count) image(s) this brain cannot view.)")
+                        }
+                    }
+                #else
+                    if !images.isEmpty {
+                        lines.append("(The user attached \(images.count) image(s) this brain cannot view.)")
+                    }
+                #endif
+            case let .assistant(text, calls):
+                if let text, !text.isEmpty {
+                    lines.append("Assistant: \(text)")
+                }
+                for call in calls {
+                    let query = call.arguments["query"]?.stringValue ?? call.stringArguments.values.first ?? ""
+                    lines.append("Assistant called \(call.name)(\(query))")
+                }
+            case let .toolResult(name, output):
+                lines.append("Result from \(name): \(output)")
+            }
+        }
+
+        lines.append("")
+        lines.append(
+            "You have tools available. You do NOT know the current date/time, "
+                + "the user's private documents, or any live information — ALWAYS "
+                + "call the matching tool rather than guessing or saying you can't. "
+                + "Answer directly only when no tool applies."
         )
         return lines.joined(separator: "\n")
     }

@@ -290,10 +290,13 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// neutral instructions so they don't speak as M1K3.
     private let instructions: @Sendable () -> String
 
-    /// Opt-in for the Phase-15 AFM-native tool-calling path. Default OFF: the
-    /// provider reports `supportsToolCalls == false`, so `LocalAgent` keeps the
-    /// prompt-ReAct floor and launch routing is unchanged. Flipped on only by the
-    /// eval harness (and, later, a Settings toggle) to exercise the spike.
+    /// AFM-native tool-calling path (Phase 15 → production). Default ON: the
+    /// provider reports `supportsToolCalls == true`, so `LocalAgent` takes the
+    /// native loop and Mini sees structured tool definitions via
+    /// `@Generable AFMToolDecision` instead of text-scraped ACTION: markers.
+    /// The RULES softening + iteration budget increase (2026-09-22) make this
+    /// viable — Mini's tool-use was 0/30 on the ReAct floor before #328, and
+    /// still only 15/30 after.
     private let nativeToolCalling: Bool
 
     /// Opt-in: after each generation settles, arm a fresh prewarmed session so
@@ -337,7 +340,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         // (32K+) can afford and Mini cannot. Every token saved goes directly to
         // conversation replay depth (+41% measured).
         instructions: @escaping @Sendable () -> String = { M1K3Persona.miniSystemPrompt },
-        nativeToolCalling: Bool = false,
+        nativeToolCalling: Bool = true,
         prewarmsBetweenTurns: Bool = false,
         prewarmsPromptPrefix: Bool = true
     ) {
@@ -519,23 +522,36 @@ private struct AFMToolDecision {
 /// Same-file extension so the conformance keeps reading the provider's `private`
 /// `instructions` + `nativeToolCalling` without widening their visibility.
 extension AppleFoundationModelsProvider: ToolCallingProvider {
-    /// Runtime capability: only when the spike is opted IN *and* the on-device
-    /// model is actually available. Default-OFF flag ⇒ ReAct floor ⇒ launch
-    /// routing unchanged.
+    /// Runtime capability: when native tool calling is ON *and* the on-device
+    /// model is available. Default-ON since 2026-09-22 — the RULES softening,
+    /// iteration budget increase (3→5), and ReAct prompt improvements make
+    /// Mini's native path the better route.
     public var supportsToolCalls: Bool {
         nativeToolCalling && isAvailable
     }
 
-    /// Spike-scoped costs to retire before any production wiring (review
-    /// 2026-06-15): (1) a FRESH `LanguageModelSession` per call + the default
-    /// `StatelessToolTurnSession` re-sending the whole transcript ⇒ no KV reuse,
-    /// iteration ≥2 re-prefills the persona (a chunk of the ~20–30s/call). A real
-    /// `ToolTurnSession` holding one AFM session across the turn would cut it. (2)
-    /// the cap-reached `synthesizeNativeConclusion` turn is a plain `.user`, but
-    /// this path still forces the `AFMToolDecision` schema — the `isFinal=true`
-    /// branch absorbs it (toolName/toolInput wasted), a non-obvious coupling.
-    /// Both are acceptable for a spike whose verdict is "don't route agentic to
-    /// AFM" regardless; named so they aren't inherited silently.
+    /// Native FM tool session: creates an `AFMNativeToolTurnSession` backed by
+    /// `LanguageModelSession(tools:)` — the model sees JSON-Schema tool definitions
+    /// and can call them via the `Tool` protocol. The wrappers return stub results;
+    /// real execution stays in LocalAgent's dispatch core.
+    ///
+    /// Falls back to the default `StatelessToolTurnSession` (which calls
+    /// `continueToolTurn` per iteration) on older runtimes.
+    public func makeToolTurnSession(
+        tools: [ToolDefinition],
+        options _: ToolTurnOptions
+    ) async throws -> any ToolTurnSession {
+        AFMNativeToolTurnSession(
+            instructions: instructions(),
+            toolDefinitions: tools
+        )
+    }
+
+    /// Legacy fallback: `@Generable AFMToolDecision` constrained decoding.
+    /// Kept for callers that go through `continueToolTurn` directly (the
+    /// default `StatelessToolTurnSession` shape). With the native session
+    /// override above, this path only fires on older runtimes or when
+    /// `makeToolTurnSession` is bypassed.
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
         let body = AFMToolPrompt.render(messages: messages, tools: tools)
         let imageURLs = AFMToolPrompt.imageURLs(from: messages)

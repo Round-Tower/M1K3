@@ -98,10 +98,12 @@ public enum CoolHeadPolicy {
     // MARK: - Effort knobs
 
     /// The agent-loop cap for a level, never RAISING the caller's `base` budget.
+    /// Eased allows one tool call (3 iterations: call → observe → conclude);
+    /// minimal gets one shot (no tools).
     public static func maxIterations(for level: CoolHeadLevel, base: Int) -> Int {
         switch level {
         case .full: base
-        case .eased: min(base, 2)
+        case .eased: min(base, 3)
         case .minimal: min(base, 1)
         }
     }

@@ -83,7 +83,7 @@ struct CoolHeadPolicyTests {
     @Test("full is unconstrained; eased trims iterations + pauses background; minimal defers heavy gen")
     func effortKnobs() {
         #expect(CoolHeadPolicy.maxIterations(for: .full, base: 5) == 5)
-        #expect(CoolHeadPolicy.maxIterations(for: .eased, base: 5) == 2)
+        #expect(CoolHeadPolicy.maxIterations(for: .eased, base: 5) == 3)
         #expect(CoolHeadPolicy.maxIterations(for: .minimal, base: 5) == 1)
         // Never raise a caller's already-low budget.
         #expect(CoolHeadPolicy.maxIterations(for: .eased, base: 1) == 1)

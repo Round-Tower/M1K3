@@ -792,8 +792,8 @@ struct AgentRAGResponderTests {
     @Test("agent coming back empty with NO gathered info falls back to the plain RAG prompt")
     func emptyFallsBack() async throws {
         let (store, embedder) = try await ingestedStore()
-        // 3 empty thoughts (cap), empty synthesis, then the fallback stream.
-        let provider = AgentScriptedProvider(["", "", "", "", "Plain grounded answer."])
+        // 5 empty thoughts (cap), empty synthesis, then the fallback stream.
+        let provider = AgentScriptedProvider(["", "", "", "", "", "", "Plain grounded answer."])
         let responder = AgentRAGResponder(
             store: store, embedder: embedder, provider: provider, tools: []
         )
@@ -813,7 +813,7 @@ struct AgentRAGResponderTests {
     func contextLineInFallback() async throws {
         let (store, embedder) = try await ingestedStore()
         // Empty thoughts to the cap + empty synthesis → the empty-fallback fires.
-        let provider = AgentScriptedProvider(["", "", "", "", "Plain grounded answer."])
+        let provider = AgentScriptedProvider(["", "", "", "", "", "", "Plain grounded answer."])
         let responder = AgentRAGResponder(
             store: store, embedder: embedder, provider: provider,
             toolsProvider: { [] },
@@ -837,6 +837,8 @@ struct AgentRAGResponderTests {
         let provider = AgentScriptedProvider([
             "ACTION: web_search(weather boston)",
             "", // prose chance burnt
+            "", // extra iteration
+            "", // extra iteration
             "", // cap
             "", // empty synthesis
             "Sunny and 25 all week.", // the gathered-info fallback stream
