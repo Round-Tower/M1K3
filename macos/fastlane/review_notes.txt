@@ -2,7 +2,10 @@ Thank you for reviewing M1K3.
 
 NO ACCOUNT REQUIRED — just launch and use it.
 
-FIRST LAUNCH: on most Macs, uses Apple Intelligence (instant, no download). Without Apple Intelligence, downloads a local AI model (~630 MB). After setup, fully offline.
+FIRST LAUNCH:
+  Mac: on most Macs, uses Apple Intelligence (instant, no download).
+  iPhone/iPad: downloads a local AI model (~2 GB). After setup, fully offline.
+  Without Apple Intelligence on any platform, downloads a local model (~630 MB–2 GB).
 
 OUTBOUND (network.client): model download + optional web search (OFF by default). No analytics, tracking, or telemetry.
 
@@ -11,7 +14,9 @@ INBOUND (network.server): two features, both OFF by default in Settings > Privac
   2. Brain at Home — LAN service for QR-paired iPhone/iPad only. TLS-PSK, private interfaces. Verify: dns-sd -B _m1k3._tcp
 The helper (Contents/Helpers/m1k3) is a client only; no server entitlement.
 
-CONTENT CONTROLS (DeclaredAgeRange): Settings > Privacy > Content Controls > "Set up" uses Apple's Declared Age Range API (gates 13/16/18). Under 16: web tools removed from the agent palette (code gate). All minors: age-appropriate tone. Declining = full capability. Only a coarse band enum is persisted.
+CONTENT CONTROLS (DeclaredAgeRange): uses Apple's Declared Age Range API (gates 13/16/18). Under 16: web tools removed from the agent palette (code gate). All minors: age-appropriate tone. Declining = full capability. Only a coarse band enum is persisted.
+  Mac: Settings > Privacy tab > Content Controls > "Set up"
+  iPhone/iPad: Settings > Content Controls > "Set up"
 
 CALENDAR (calendars entitlement): optional context sense, OFF by default. Settings > Privacy > Calendar toggle. Peeks upcoming events via EventKit for time-aware responses. On-device only, TCC-gated.
 
@@ -27,6 +32,8 @@ HOW TO TEST:
   2. Chat, then voice mode
   3. Drag in a note/PDF and ask about it
   4. Memories > "forget" an item
-  5. Settings > Privacy > Content Controls > "Set up"
+  5. Content Controls:
+     Mac: Settings > Privacy tab > Content Controls > "Set up"
+     iPhone/iPad: Settings > Content Controls > "Set up"
 
 Happy to clarify anything — thank you.
