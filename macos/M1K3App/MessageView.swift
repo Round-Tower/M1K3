@@ -179,7 +179,6 @@ struct MessageView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
-                .contentTransition(.numericText())
                 .animation(.easeOut(duration: 0.2), value: tools)
         }
     }

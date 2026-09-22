@@ -3,13 +3,13 @@
 //  M1K3Chat
 //
 //  What the responder is doing while no tokens are streaming — the cover for
-//  the agent loop’s silence. The labeler doubles as the privacy surface: a
+//  the agent loop's silence. The labeler doubles as the privacy surface: a
 //  web search always shows its query, so nothing leaves the device invisibly.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-4-6, 2026-09-22 — live tool labels for 6 tools that
-//  fell through to the raw default; default fallback humanises with displayName;
-//  tool trace footer now visible during streaming, not just after. Confidence 0.85.
+//  fell through to the raw default; default fallback humanises via displayName.
+//  Confidence 0.85.
 
 import Foundation
 
@@ -27,23 +27,27 @@ public enum ActivityLabeler {
     public static func label(for activity: ResponderActivity) -> String {
         switch activity {
         case .retrieving:
-            "Recalling what I know\u{2026}"
+            // Deliberately NOT "…your knowledge": the every-turn RAG phase used
+            // to read like the search_knowledge tool, so tool calls looked like
+            // they fired on every turn when they hadn't (Kev, 2026-08-16). A
+            // self-action verb keeps the phase and the tool distinguishable.
+            "Recalling what I know…"
         case .thinking:
-            "Thinking\u{2026}"
+            "Thinking…"
         case let .usingTool(name, argument):
             toolLabel(name: name, argument: argument)
         }
     }
 
-    /// The transcript's persisted provenance line ("Used web search \u{00B7} date &
-    /// time") -- pinned here rather than composed in the View so the product
+    /// The transcript's persisted provenance line ("Used web search · date &
+    /// time") — pinned here rather than composed in the View so the product
     /// string is testable.
     public static func traceLabel(for tools: [String]) -> String {
-        "Used " + tools.map { displayName(forTool: $0) }.joined(separator: " \u{00B7} ")
+        "Used " + tools.map { displayName(forTool: $0) }.joined(separator: " · ")
     }
 
     /// Short noun for a tool in the transcript's persisted trace
-    /// ("Used web search \u{00B7} date & time"). Unknown tools humanize
+    /// ("Used web search · date & time"). Unknown tools humanize
     /// (underscores → spaces) rather than leak snake_case into the UI.
     public static func displayName(forTool name: String) -> String {
         switch name {
@@ -57,7 +61,6 @@ public enum ActivityLabeler {
         case "list_documents": "documents"
         case "get_document": "document"
         case "open_link": "link"
-        case "recent_activity": "recent activity"
         default: name.replacingOccurrences(of: "_", with: " ")
         }
     }
@@ -65,34 +68,34 @@ public enum ActivityLabeler {
     private static func toolLabel(name: String, argument: String) -> String {
         switch name {
         case "web_search":
-            "Searching the web for \u{201C}\(truncate(argument))\u{201D}\u{2026}"
+            "Searching the web for “\(truncate(argument))”…"
         case "fetch_page":
-            "Reading \(URL(string: argument)?.host() ?? "a web page")\u{2026}"
+            "Reading \(URL(string: argument)?.host() ?? "a web page")…"
         case "search_knowledge":
-            "Searching your knowledge\u{2026}"
+            "Searching your knowledge…"
         case "datetime":
-            "Checking the date & time\u{2026}"
+            "Checking the date & time…"
         case "system_status":
-            "Checking system status\u{2026}"
+            "Checking system status…"
         case "delegate_deep":
-            "Starting a deep dive\u{2026}"
+            "Starting a deep dive…"
         case "list_documents":
-            "Scanning your documents\u{2026}"
+            "Scanning your documents…"
         case "get_document":
-            "Opening a document\u{2026}"
+            "Opening a document…"
         case "open_link":
-            "Opening a link\u{2026}"
+            "Opening a link…"
         case "lookup_fact":
-            "Looking that up\u{2026}"
+            "Looking that up…"
         case "recent_activity":
-            "Looking back over the week\u{2026}"
+            "Looking back over the week…"
         default:
-            "Using \(displayName(forTool: name))\u{2026}"
+            "Using \(displayName(forTool: name))…"
         }
     }
 
     private static func truncate(_ query: String) -> String {
         guard query.count > queryCap else { return query }
-        return query.prefix(queryCap).trimmingCharacters(in: .whitespaces) + "\u{2026}"
+        return query.prefix(queryCap).trimmingCharacters(in: .whitespaces) + "…"
     }
 }

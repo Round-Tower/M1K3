@@ -112,7 +112,6 @@ struct MessageBubble: View {
             Label(ActivityLabeler.traceLabel(for: tools), systemImage: "wrench.and.screwdriver")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .contentTransition(.numericText())
                 .animation(.easeOut(duration: 0.2), value: tools)
                 .padding(.top, 2)
         }
