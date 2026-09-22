@@ -10,15 +10,16 @@
 //  and activity events.
 //
 //  Flow per send():
-//    1. Render the ToolMessage transcript → a text prompt.
-//    2. Call session.respond(to:, options:) with toolCallingMode: .allowed.
-//    3. If the model called a tool → the wrapper fires onCall and records it.
+//    1. Accumulate messages into a full transcript (the agent sends only deltas).
+//    2. Render the full transcript → a text prompt.
+//    3. Call session.respond(to:, options:) with toolCallingMode: .allowed.
+//    4. If the model called a tool → the wrapper fires onCall and records it.
 //       Return .toolCalls so the agent dispatches the REAL tool.
-//    4. If no tool was called → return .text(answer).
+//    5. If no tool was called → return .text(answer).
 //
-//  The session is created FRESH per send() — same cost as the AFMToolDecision
-//  path (Phase 15 review note 1). A future optimisation: hold one session
-//  across the turn, feeding tool results as Transcript entries.
+//  A FRESH LanguageModelSession is created per send() — same cost as the
+//  AFMToolDecision path (Phase 15 review note 1). The full transcript is
+//  re-rendered each call so the model always sees the complete conversation.
 
 #if compiler(>=6.2)
     import Foundation
@@ -26,6 +27,8 @@
     import M1K3LogCore
     import os
 
+    /// The agent loop uses a session strictly serially (one send at a time,
+    /// awaited before the next), so the unsynchronized transcript is safe.
     @available(macOS 26.0, iOS 26.0, visionOS 26.0, *)
     final class AFMNativeToolTurnSession: ToolTurnSession, @unchecked Sendable {
         private let instructions: String
@@ -33,6 +36,7 @@
         private let toolDefinitions: [ToolDefinition]
         private static let log = M1K3Log.logger(.afm)
         private let callLog: ToolCallLog
+        private var transcript: [ToolMessage] = []
 
         final class ToolCallLog: @unchecked Sendable {
             private let lock = NSLock()
@@ -51,8 +55,6 @@
             }
         }
 
-        private var iteration = 0
-
         init(instructions: String, toolDefinitions: [ToolDefinition]) {
             let log = ToolCallLog()
             self.toolDefinitions = toolDefinitions
@@ -68,11 +70,11 @@
             onToken: @escaping @Sendable (String) -> Void
         ) async throws -> ToolTurn {
             _ = callLog.drain()
-            defer { iteration += 1 }
+            transcript.append(contentsOf: messages)
 
-            let body = AFMToolPrompt.render(messages: messages, tools: toolDefinitions)
-            let imageURLs = AFMToolPrompt.imageURLs(from: messages)
-            let standing = AFMToolPrompt.systemInstructions(from: messages) ?? instructions
+            let body = AFMToolPrompt.render(messages: transcript, tools: toolDefinitions)
+            let imageURLs = AFMToolPrompt.imageURLs(from: transcript)
+            let standing = AFMToolPrompt.systemInstructions(from: transcript) ?? instructions
 
             let session = LanguageModelSession(
                 tools: tools,

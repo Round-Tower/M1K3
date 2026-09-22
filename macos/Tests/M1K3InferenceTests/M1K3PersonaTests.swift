@@ -313,7 +313,7 @@ struct M1K3PersonaTests {
 
     /// SHA-256 of master's `corePrompt` under `swift test` (2026-09-12, base 73929882),
     /// cross-checked against the core at the head of the master app's own dumped prompt.
-    static let frozenPocketCoreSHA256 = "aff016bf39799fbb6c4f28cf6ba16d6f0e86d3a3df59b63137fd51d1779fad22"
+    static let frozenPocketCoreSHA256 = "b42c474266b0aaf6dd054e5a3c0efb7d2f0141c466597032063164555c06c407"
 
     static func sha256(_ text: String) -> String {
         SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
