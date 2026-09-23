@@ -21,6 +21,8 @@
 //  Outcome plus the NSOpenPanel/Task glue. Confidence 0.85 (compiles + app
 //  builds; the render is verify-by-launch like every SwiftUI change in this
 //  file family — see WeightImportDisplay.swift for what's actually pinned).
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
+//  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //
 
 import AppKit
@@ -51,7 +53,7 @@ struct AdvancedSettingsPane: View {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
                         Text(env.embeddingStatus ?? "Rebuilding index…")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.callout).foregroundStyle(.secondary)
                     }
                 } else {
                     let embeddingToggleTitle = env.usingMLXEmbeddings
@@ -62,28 +64,28 @@ struct AdvancedSettingsPane: View {
                     }
                     .buttonStyle(.glass)
                     if let status = env.embeddingStatus {
-                        Text(status).font(.caption).foregroundStyle(.secondary)
+                        Text(status).font(.callout).foregroundStyle(.secondary)
                     }
                 }
             } header: {
-                Text("Embeddings")
+                SettingsHeader("Embeddings", systemImage: "point.3.connected.trianglepath.dotted")
             } footer: {
                 Text("Semantic MLX embeddings improve retrieval but download a model on "
                     + "first use and re-embed every stored chunk.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
 
             Section {
                 if env.isTranscribingCall {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text("Transcribing call…").font(.caption).foregroundStyle(.secondary)
+                        Text("Transcribing call…").font(.callout).foregroundStyle(.secondary)
                     }
                 } else if env.isPreparingBatchTranscription {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
                         Text(env.lastCallStatus ?? "Preparing call transcription…")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.callout).foregroundStyle(.secondary)
                     }
                 } else if env.batchTranscriptionReady {
                     LabeledContent("Transcription", value: "Ready")
@@ -94,35 +96,37 @@ struct AdvancedSettingsPane: View {
                     .buttonStyle(.glass)
                 }
                 if let status = env.lastCallStatus, !env.isPreparingBatchTranscription {
-                    Text(status).font(.caption).foregroundStyle(.secondary)
+                    Text(status).font(.callout).foregroundStyle(.secondary)
                 }
             } header: {
-                Text("Call recording")
+                SettingsHeader("Call recording", systemImage: "phone.bubble")
             } footer: {
                 Text("Record a call from the chat toolbar (consent-gated). With transcription "
                     + "enabled, a stopped recording is transcribed, summarised, encrypted, and "
                     + "indexed — on-device.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
 
             Section {
                 Toggle("Show generation stats", isOn: $showGenerationStats)
             } header: {
-                Text("Generation stats")
+                SettingsHeader("Generation stats", systemImage: "gauge.with.dots.needle.33percent")
             } footer: {
                 Text("A testing aid: shows context tokens and tokens/sec under each answer "
                     + "from Lil or Big. Mini (Apple's on-device model) doesn't report "
                     + "generation metrics.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
 
             conversationLogSection
 
-            Section("Status") {
+            Section {
                 LabeledContent("Indexed items", value: "\(env.indexedItemCount)")
                     .monospacedDigit()
                 LabeledContent("Model availability",
                                value: env.providerAvailable ? "Ready" : "Unavailable")
+            } header: {
+                SettingsHeader("Status", systemImage: "info.circle")
             }
 
             weightImportSection
@@ -145,7 +149,7 @@ struct AdvancedSettingsPane: View {
                 }
                 .buttonStyle(.glass)
             } header: {
-                Text("Diagnostics")
+                SettingsHeader("Diagnostics", systemImage: "stethoscope")
             } footer: {
                 Text(issueReported
                     ? (issueTruncated
@@ -154,7 +158,7 @@ struct AdvancedSettingsPane: View {
                     : "Copies recent logs and this Mac's details, scrubbed of paths, "
                     + "emails and your name, into a prefilled GitHub issue — nothing "
                     + "sent until you submit. MetricKit summaries above are opt-in.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
 
             Section {
@@ -163,7 +167,7 @@ struct AdvancedSettingsPane: View {
             } footer: {
                 Text("M1K3 is built with open-source components. "
                     + "Everything runs on this Mac.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -183,12 +187,12 @@ struct AdvancedSettingsPane: View {
             }
             .buttonStyle(.glass)
         } header: {
-            Text("Agent conversation log")
+            SettingsHeader("Agent conversation log", systemImage: "list.bullet.rectangle")
         } footer: {
             Text("Off by default. When on, M1K3 keeps the last 500 tool calls a "
                 + "connected agent makes — see them in Window → Agent Log, or the "
                 + "Heartbeat timeline.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
         }
     }
 
@@ -218,12 +222,12 @@ struct AdvancedSettingsPane: View {
 
             weightImportStatusRow
         } header: {
-            Text("Import weights")
+            SettingsHeader("Import weights", systemImage: "square.and.arrow.down")
         } footer: {
             Text("Already have a model's weights on disk from somewhere else? Point M1K3 at "
                 + "the folder — it verifies every file against the digests pinned in this "
                 + "build before installing, and refuses anything that doesn't match.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
         }
     }
 
@@ -246,7 +250,7 @@ struct AdvancedSettingsPane: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("On this Mac")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.secondary)
                     Text(url.path(percentEncoded: false))
                         .font(.caption.monospaced())
                         .foregroundStyle(.secondary)
@@ -262,7 +266,7 @@ struct AdvancedSettingsPane: View {
             }
         case .absent:
             Text("Not on this Mac yet — download it, or import a folder below.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
         }
     }
 
@@ -275,13 +279,13 @@ struct AdvancedSettingsPane: View {
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
                 Text("Verifying and installing…")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
             .accessibilityElement(children: .combine)
         case let .result(.success(message)):
             Label(message, systemImage: "checkmark.circle.fill")
                 .symbolRenderingMode(.hierarchical)
-                .font(.caption)
+                .font(.callout)
                 .foregroundStyle(.green)
         case let .result(.failure(message)):
             // Verbatim from WeightImportDisplay — these strings (the tamper
@@ -289,7 +293,7 @@ struct AdvancedSettingsPane: View {
             // softened.
             Label(message, systemImage: "exclamationmark.triangle")
                 .symbolRenderingMode(.hierarchical)
-                .font(.caption)
+                .font(.callout)
                 .foregroundStyle(.orange)
         }
     }

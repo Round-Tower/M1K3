@@ -16,6 +16,8 @@
 //  Kev + claude-opus-4-8 (SettingsView.swift lineage, 2026-06-06).
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — an App Store section with the manual Rate M1K3… door.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
+//  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 
 import AppKit
 import M1K3Inference
@@ -44,11 +46,11 @@ struct GeneralSettingsPane: View {
                         Task { await env.setLongTurnNotifications(on) }
                     }
             } header: {
-                Text("Notifications")
+                SettingsHeader("Notifications", systemImage: "bell")
             } footer: {
                 Text("Pings you when a long reply finishes or a brain loads — only "
                     + "while M1K3's in the background, never with the reply itself.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
 
             Section {
@@ -64,22 +66,22 @@ struct GeneralSettingsPane: View {
                     }
                     .disabled(!soundEffectsEnabled)
             } header: {
-                Text("Sound effects")
+                SettingsHeader("Sound effects", systemImage: "speaker.wave.2")
             } footer: {
                 Text("Short earcons for errors, saved memories, and voice mode waking "
                     + "up — never over M1K3's voice. The dial-up sound plays while a "
                     + "brain loads and has its own switch since it loops.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
 
             Section {
                 Toggle("Show a heads-up display while M1K3 talks", isOn: $notchHUDEnabled)
             } header: {
-                Text("Narration HUD")
+                SettingsHeader("Narration HUD", systemImage: "text.bubble")
             } footer: {
                 Text("A small pill under your menu bar shows your companion and what "
                     + "M1K3 is saying — even with the window closed. Off by default.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
 
             Section {
@@ -90,12 +92,12 @@ struct GeneralSettingsPane: View {
                 }
                 .buttonStyle(.glass)
             } header: {
-                Text("App Store")
+                SettingsHeader("App Store", systemImage: "star")
             } footer: {
                 Text("Ratings are how other people find a small app. This opens the "
                     + "App Store's review sheet; M1K3 himself asks at most once per release, "
                     + "and only after a few days together.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -139,7 +141,7 @@ struct GeneralSettingsPane: View {
                     .buttonStyle(.glass)
             }
             if let error = launchAtLogin.lastError {
-                Text(error).font(.caption).foregroundStyle(.red)
+                Text(error).font(.callout).foregroundStyle(.red)
             }
             // Live: flip the Dock icon now for instant feedback. The window-at-
             // launch suppression is applied by defaultLaunchBehavior next launch.
@@ -156,11 +158,11 @@ struct GeneralSettingsPane: View {
             Button("Re-run onboarding…", role: .destructive) { showResetOnboarding = true }
                 .buttonStyle(.glass)
         } header: {
-            Text("Startup")
+            SettingsHeader("Startup", systemImage: "power")
         } footer: {
             Text("\u{201C}Menu bar only\u{201D} hides the Dock icon and starts M1K3 quietly "
                 + "— open it anytime from the menu bar.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
         }
     }
 

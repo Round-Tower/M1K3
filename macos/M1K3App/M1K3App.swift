@@ -88,6 +88,8 @@ struct M1K3App: App {
                     if hasChosenBrain {
                         ContentView()
                             .environment(env)
+                            // Settings ▸ General's launch-at-login row lives in this window now.
+                            .environment(launchAtLogin)
                     } else if onboardingStartAtBrain {
                         BrainPickerView {
                             hasChosenBrain = true
@@ -140,6 +142,8 @@ struct M1K3App: App {
             StartupVisibility(menuBarOnly: menuBarOnly).suppressesLaunchWindow ? .suppressed : .automatic
         )
         .commands {
+            // M1K3 ▸ Settings… (⌘,) opens the Settings screen in the main window.
+            SettingsCommands(env: appDelegate.environment)
             ConstellationCommands()
             AgentLogCommands()
             // File ▸ Export Memories… — ADR 0003's one menu item.
@@ -181,26 +185,12 @@ struct M1K3App: App {
         // Window retired with the promotion; other scenes reach it via
         // env.pendingSidebarRequest.
 
-        // Native macOS Settings scene — opened with ⌘, (or the toolbar gear via
-        // SettingsLink), in its own window with the system title bar, instead of
-        // the iOS-style modal sheet it used to be. Shares the one AppEnvironment;
-        // the env-nil branch only shows in the first beat before startup completes.
+        // No `Settings` scene since 2026-09-23: Settings is a screen in the main
+        // window (SidebarSelection.settings). ⌘, is SettingsCommands below.
         // Signed: Kev + claude-opus-4-8, 2026-06-08, Confidence 0.8, Prior: Unknown
-        Settings {
-            Group {
-                if let env = appDelegate.environment {
-                    SettingsView()
-                        .environment(env)
-                        .environment(launchAtLogin)
-                        // The Companion pane previews the live face.
-                        .trackWindowVisibility()
-                } else {
-                    Text("M1K3 is still waking up…")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 480, height: 220)
-                }
-            }
-        }
+        // Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings scene retired for the
+        // in-window screen (Kev's reference: a sidebar destination, not a modal window).
+        // Confidence 0.8.
 
         // The always-resident status-bar item. Its presence alone keeps M1K3
         // running after the window is closed — the menu-bar companion. A rich glass

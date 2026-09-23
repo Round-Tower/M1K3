@@ -21,6 +21,8 @@
 //  of the Brain/Companion/Voice-output sections; the two cuts are honest
 //  behaviour changes documented at their source, not dead UI). Prior: Kev +
 //  claude-opus-4-8 (SettingsView.swift lineage, 2026-06-06).
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
+//  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //
 
 import M1K3Chat
@@ -60,7 +62,7 @@ struct M1K3SettingsPane: View {
                     .onChange(of: autoRouteBrain) { _, _ in env.applyAutoRouteIfEnabled() }
                 retiredWeightsRows
             } header: {
-                Text("Brain")
+                SettingsHeader("Brain", systemImage: "brain")
             } footer: {
                 // A multiline literal (no `+` chain) keeps this copy out of the
                 // ViewBuilder's overload resolution — the old 7-segment `String`
@@ -74,7 +76,7 @@ struct M1K3SettingsPane: View {
                 moment, and M1K3 eases off on its own when your Mac runs hot.
                 """
                 Text(copy)
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
@@ -86,12 +88,12 @@ struct M1K3SettingsPane: View {
                 }
                 .pickerStyle(.segmented)
             } header: {
-                Text("Reasoning")
+                SettingsHeader("Reasoning", systemImage: "lightbulb")
             } footer: {
                 Text("Reasoning models think before answering — sharper on hard "
                     + "questions, slower on small talk. Auto decides per turn; voice "
                     + "mode has its own toggle and ignores this setting.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
 
             CompanionSettingsSection(env: env)
@@ -112,18 +114,18 @@ struct M1K3SettingsPane: View {
                         }
                     }
                     Text(env.voiceCharacter.summary)
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.secondary)
                 }
                 Button("Hear a sample") { Task { await env.speakSample() } }
                     .buttonStyle(.glass)
             } header: {
-                Text("Voice output")
+                SettingsHeader("Voice output", systemImage: "waveform")
             } footer: {
                 Text("Built-in is Apple's default voice. M1K3 Voice downloads a neural "
                     + "voice model and runs entirely offline. Character shapes the tone "
                     + "\u{2014} Clean is the full range, M1K3 is the signature sound, Radio "
                     + "leans lo-fi. Hit \u{201C}Hear a sample\u{201D} to compare.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
 
             voiceInputSection
@@ -163,7 +165,7 @@ struct M1K3SettingsPane: View {
             }
             if let failure = env.retiredWeightsFailure {
                 Label(failure.message, systemImage: "exclamationmark.triangle")
-                    .font(.caption).foregroundStyle(.red)
+                    .font(.callout).foregroundStyle(.red)
             }
             ForEach(env.retiredWeights) { weights in
                 HStack {
@@ -171,7 +173,7 @@ struct M1K3SettingsPane: View {
                         Text(weights.repoID.split(separator: "/").last.map(String.init) ?? weights.repoID)
                             .font(.callout)
                         Text("No longer used · \(weights.bytes.formatted(.byteCount(style: .file)))")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.callout).foregroundStyle(.secondary)
                     }
                     Spacer()
                     Button("Remove…") { pendingRemoval = weights }
@@ -192,18 +194,18 @@ struct M1K3SettingsPane: View {
                     .controlSize(.small)
                     .frame(maxWidth: 160)
                 Text(env.modelLoad.label(modelName: env.downloadingBrainName))
-                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
             }
         case .preparing:
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small) // indeterminate
                 Text(env.modelLoad.label(modelName: env.downloadingBrainName))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
         case .failed:
             Label(env.modelLoad.label(modelName: env.downloadingBrainName), systemImage: "exclamationmark.triangle")
                 .symbolRenderingMode(.hierarchical)
-                .font(.caption).foregroundStyle(.orange)
+                .font(.callout).foregroundStyle(.orange)
         case .idle, .ready:
             EmptyView()
         }
@@ -225,7 +227,7 @@ struct M1K3SettingsPane: View {
                     .controlSize(.small)
                     .frame(maxWidth: 160)
                 Text("Fetching \(upgradeTargetName) in the background… \(Int((fraction * 100).rounded()))%")
-                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
             }
         case let .failed(_, transient):
             Label(
@@ -235,7 +237,7 @@ struct M1K3SettingsPane: View {
                 systemImage: "exclamationmark.triangle"
             )
             .symbolRenderingMode(.hierarchical)
-            .font(.caption).foregroundStyle(.orange)
+            .font(.callout).foregroundStyle(.orange)
         case .idle, .offered, .staged, .done, .dismissed:
             EmptyView()
         }
@@ -250,7 +252,7 @@ struct M1K3SettingsPane: View {
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView(value: fraction)
                 Text(env.voiceLoad.label(modelName: "M1K3 Voice"))
-                    .font(.caption.monospacedDigit())
+                    .font(.callout.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
         default:
@@ -264,7 +266,7 @@ struct M1K3SettingsPane: View {
             if case let .failed(message) = env.voiceLoad {
                 Label(message, systemImage: "exclamationmark.triangle")
                     .symbolRenderingMode(.hierarchical)
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.orange)
             }
         }
@@ -287,13 +289,13 @@ struct M1K3SettingsPane: View {
             whisperLoadRow
             Toggle("Keep other audio out of the mic", isOn: $preferEchoCancellation)
         } header: {
-            Text("Voice input")
+            SettingsHeader("Voice input", systemImage: "mic")
         } footer: {
             Text("Apple Speech works by default; WhisperKit is higher accuracy after "
                 + "a one-time download and applies on the next launch. Echo "
                 + "cancellation stops M1K3 hearing itself, at some cost to accuracy "
                 + "in a quiet room.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
         }
     }
 
@@ -308,21 +310,21 @@ struct M1K3SettingsPane: View {
             if case let .failed(msg) = env.whisperLoad {
                 Label(msg, systemImage: "exclamationmark.triangle")
                     .symbolRenderingMode(.hierarchical)
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.orange)
             }
         case let .downloading(fraction):
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView(value: fraction)
                 Text(env.whisperLoad.label(modelName: "WhisperKit"))
-                    .font(.caption.monospacedDigit())
+                    .font(.callout.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
         case .preparing:
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView() // indeterminate — load has no honest fraction
                 Text(env.whisperLoad.label(modelName: "WhisperKit"))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
         case .ready:
             Label("WhisperKit ready", systemImage: "checkmark.circle.fill")

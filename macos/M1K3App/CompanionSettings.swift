@@ -16,6 +16,8 @@
 //  + reuses proven pieces; the preview height, card row density and the
 //  "Say hi" beat are verify-by-eye at ⌘R). Prior: SettingsView.companionSection
 //  (Kev + claude-opus-4-8 lineage).
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
+//  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //
 
 import M1K3Avatar
@@ -78,7 +80,7 @@ struct CompanionSettingsSection: View {
                     + "Cel toon-bands the creature's own texture.")
             }
         } header: {
-            Text("Companion")
+            SettingsHeader("Companion", systemImage: "pawprint")
         } footer: {
             caption("M1K3's face in the avatar panel and voice mode. "
                 + "The menu-bar mark stays the pixel M either way.")
@@ -116,7 +118,7 @@ struct CompanionSettingsSection: View {
     }
 
     private func caption(_ text: String) -> some View {
-        Text(text).font(.caption).foregroundStyle(.secondary)
+        Text(text).font(.callout).foregroundStyle(.secondary)
     }
 
     /// A quick greeting beat on the shared controller, then back to idle —

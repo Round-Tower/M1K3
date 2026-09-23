@@ -13,6 +13,8 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: the Todos consent toggle ("M1K3 may
 //  suggest todos", default ON) — fact + guarantee footer.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
+//  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 
 import M1K3Inference
 import SwiftUI
@@ -40,18 +42,18 @@ struct YouSettingsPane: View {
                     }
                 }
                 Text(readingMode.detail)
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                 // Live preview in the chosen mode.
                 ReadingText("M1K3 keeps your words on this Mac — ask it anything.",
                             mode: readingMode)
                     .padding(.vertical, 4)
             } header: {
-                Text("Reading")
+                SettingsHeader("Reading", systemImage: "text.book.closed")
             } footer: {
                 Text("How M1K3's replies are typeset. Dyslexia-friendly uses OpenDyslexic; "
                     + "Bionic reader bolds the start of each word to guide the eye.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -81,12 +83,12 @@ struct YouSettingsPane: View {
                 .disabled((M1K3Persona.userProfile ?? "").isEmpty)
             }
         } header: {
-            Text("About you")
+            SettingsHeader("About you", systemImage: "person.crop.circle")
         } footer: {
             Text("What M1K3 knows about you — it rides every conversation's "
                 + "system prompt. Stored on this machine only, never retrieved or "
                 + "cited, yours to edit or clear.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
         }
         .onAppear { profileDraft = M1K3Persona.userProfile ?? "" }
     }
@@ -98,11 +100,11 @@ struct YouSettingsPane: View {
             Button("View memories…") { showMemories = true }
                 .buttonStyle(.glass)
         } header: {
-            Text("Memories")
+            SettingsHeader("Memories", systemImage: "brain.head.profile")
         } footer: {
             Text("M1K3 extracts durable facts about you — preferences, decisions, "
                 + "people — from conversations, on-device. Review and erase anytime.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
         }
         .sheet(isPresented: $showMemories) {
             MemoriesView().environment(env)
@@ -115,11 +117,11 @@ struct YouSettingsPane: View {
         Section {
             Toggle("M1K3 may suggest todos", isOn: $todoSuggestions)
         } header: {
-            Text("Todos")
+            SettingsHeader("Todos", systemImage: "checklist")
         } footer: {
             Text("Suggestions from M1K3 and connected agents land in your inbox as pending. "
                 + "Only you can accept or close a todo.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
         }
     }
 }

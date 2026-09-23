@@ -14,6 +14,8 @@
 //  Prior: none (new file). Review: Kev + claude-fable-5, 2026-08-06 — list
 //  moved to HeartbeatWindow on Kev's "core / idle piece" call; notification
 //  opt-in added on his "rich notification" call.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
+//  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //
 
 import M1K3Heartbeat
@@ -52,11 +54,11 @@ struct HeartbeatSettingsSection: View {
                 }
             }
         } header: {
-            Text("Heartbeat")
+            SettingsHeader("Heartbeat", systemImage: "waveform.path.ecg")
         } footer: {
             Text("Every couple of hours M1K3 takes stock and writes a short note. "
                 + "Kept on this machine, capped at a week, never remembered as facts.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
         }
         .onChange(of: heartbeatOn) { _, enabled in
             env.setHeartbeatEnabled(enabled)

@@ -48,6 +48,8 @@
 //  Review: Kev + claude-opus-4-6, 2026-09-16 — file-as-context: a doc.badge.plus button, a third
 //  fileImporter for text/source/markup/PDF, pendingFiles strip (capsule chips), and the send path
 //  prepends file contextBlocks to the draft. Files are turn context, not permanent RAG. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — `.settings` in the detail switch (Settings is a screen
+//  now); the gate's "Open Settings" links and the screengrab beat select it. Confidence 0.85.
 
 import M1K3Avatar
 import M1K3Chat
@@ -78,7 +80,6 @@ struct ContentView: View {
     }()
 
     @State private var screengrabBeatFired = false
-    @Environment(\.openSettings) private var openSettings
     /// The App Store rating sheet — asked only when the ledger says the
     /// moment is earned (ReviewPromptPolicy); the system may still decline.
     @Environment(\.requestReview) private var requestReview
@@ -207,7 +208,7 @@ struct ContentView: View {
         .task(id: env.isReady) {
             guard env.isReady, !screengrabBeatFired else { return }
             screengrabBeatFired = true
-            if ScreengrabHarness.current.opensSettings { openSettings() }
+            if ScreengrabHarness.current.opensSettings { sidebarSelection = .settings }
             await env.performScreengrabBeat()
         }
     }
@@ -230,6 +231,10 @@ struct ContentView: View {
                 NavigationStack { HeartbeatScreen(env: env) }
             case .todos:
                 NavigationStack { TodosScreen(env: env) }
+            case .settings:
+                // Its own stack, like every destination: the chat's toolbar
+                // items must not follow you into Settings.
+                NavigationStack { SettingsView() }
             default:
                 // .chat, the transient .conversation(_) (see onChange below),
                 // and nil all read as chat.
@@ -1281,10 +1286,13 @@ struct ContentView: View {
 
     /// True for `.chat`, the transient `.conversation(_)` (see the onChange in
     /// `body`), and `nil` — false only for the four other destinations.
+    /// Chat and its transient conversation pick are the chat; every other
+    /// destination is not — named the chat side, so a new destination
+    /// (Todos, Settings) can't inherit the chat's toolbar by default.
     private var isChatSelected: Bool {
         switch sidebarSelection {
-        case .documents, .memories, .calls, .heartbeat: false
-        default: true
+        case .chat, .conversation, nil: true
+        default: false
         }
     }
 
@@ -1475,6 +1483,7 @@ private struct DropHintView: View {
 /// interaction so a turn can't be fired before the model is warm. The window
 /// toolbar (Settings) stays reachable as chrome above this overlay.
 private struct ModelGateView: View {
+    @Environment(AppEnvironment.self) private var env
     let readiness: AppReadiness
     let brainName: String
     /// Non-nil when Lil's weights are on disk — the `.unavailable` dead-end
@@ -1525,7 +1534,7 @@ private struct ModelGateView: View {
                 HStack(spacing: 12) {
                     Button("Try again", action: retry)
                         .buttonStyle(.borderedProminent)
-                    SettingsLink { Text("Open Settings") }
+                    Button("Open Settings") { env.pendingSidebarRequest = .settings }
                 }
             }
         case .unavailable:
@@ -1562,7 +1571,7 @@ private struct ModelGateView: View {
                             .buttonStyle(.bordered)
                     }
                 }
-                SettingsLink { Text("Open Settings") }
+                Button("Open Settings") { env.pendingSidebarRequest = .settings }
             }
         case .ready:
             EmptyView() // unreachable: the overlay is only mounted while !env.isReady

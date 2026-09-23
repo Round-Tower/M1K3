@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-fable-5, 2026-08-19, Confidence 0.75 (thin view over
 //  the tested controller/policies; layout + the pairing feel are ⌘R
 //  verify-owed). Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
+//  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //
 
 import M1K3BrainServe
@@ -44,7 +46,7 @@ struct BrainAtHomeSection: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(device.name)
                             Text("Paired \(device.addedAt, format: .relative(presentation: .named))")
-                                .font(.caption)
+                                .font(.callout)
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
@@ -55,7 +57,7 @@ struct BrainAtHomeSection: View {
                 }
             }
         } header: {
-            Text("Brain at Home")
+            SettingsHeader("Brain at Home", systemImage: "house")
         } footer: {
             Text("""
             Serves raw generation to devices you pair by QR code — local \
@@ -65,7 +67,7 @@ struct BrainAtHomeSection: View {
             can reach the web when the web-search toggle allows. Off by \
             default; revoking a device cuts it off immediately.
             """)
-            .font(.caption).foregroundStyle(.secondary)
+            .font(.callout).foregroundStyle(.secondary)
         }
         .sheet(isPresented: $showPairingSheet, onDismiss: { env.brainServe.cancelPairing() }) {
             BrainPairingSheet(showSheet: $showPairingSheet)
@@ -103,7 +105,7 @@ struct BrainPairingSheet: View {
                 }
                 Text("Scan this in M1K3 on the other device. The code lives for a "
                     + "minute and commits nothing until you approve.")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                 // Camera-less clients (desktops, emulators, a paired agent on
@@ -124,7 +126,7 @@ struct BrainPairingSheet: View {
                 Text("“\(candidateName)” wants to pair")
                     .font(.headline)
                 Text("Only approve a device you're holding right now.")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                 HStack {
                     Button("Decline", role: .cancel) {

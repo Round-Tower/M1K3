@@ -17,6 +17,8 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-07-19, Confidence 0.85 (thin nav-state
 //  glue; verify-by-launch). Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — `.settings` joins the destinations (the
+//  Settings window became a main-window screen). Confidence 0.85.
 //
 
 import Foundation
@@ -34,6 +36,10 @@ enum SidebarSelection: Hashable {
     case heartbeat
     /// The todo list — one list, three sources (2026-09-07).
     case todos
+    /// Settings — a screen in its own right since 2026-09-23 (was a separate
+    /// Settings window). Reached from the sidebar footer, ⌘, and every
+    /// "Open Settings" link (via `pendingSidebarRequest`).
+    case settings
     /// A tap on a past-conversation row — transient, see file header.
     case conversation(UUID)
 }

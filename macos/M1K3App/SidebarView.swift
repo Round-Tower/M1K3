@@ -26,6 +26,10 @@
 //  tested session logic — ChatSession+Conversations.swift's API is unchanged;
 //  layout/feel verify-at-⌘R, incl. the .hiddenTitleBar top-edge gotcha the
 //  trailing .inspector already hit once). Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — Settings moved from the footer's
+//  window-launching gear to a pinned pill that SELECTS the new `.settings`
+//  destination (the Settings window became a screen). Agent Log stays a window
+//  action beside it. Confidence 0.8 (verify-by-launch).
 //
 
 import M1K3Chat
@@ -126,12 +130,24 @@ struct SidebarView: View {
         VStack(spacing: 0) {
             Divider()
             HStack(spacing: 6) {
-                SettingsLink {
-                    Image(systemName: "gearshape")
-                        .imageScale(.large)
+                // Settings is a destination now (2026-09-23): it selects, it
+                // doesn't launch a window — a pinned pill, like Kev's reference.
+                Button {
+                    selection = .settings
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .foregroundStyle(selection == .settings ? Color.white : Color.primary)
+                        .background {
+                            Capsule().fill(
+                                selection == .settings ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary)
+                            )
+                        }
+                        .contentShape(Capsule())
                 }
                 .help("M1K3 settings (⌘,)")
-                .accessibilityLabel("Settings")
+                .accessibilityAddTraits(selection == .settings ? .isSelected : [])
 
                 Button {
                     openWindow(id: M1K3App.agentLogWindowID)

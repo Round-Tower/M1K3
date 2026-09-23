@@ -18,6 +18,8 @@
 //  is TDD'd; the NSWorkspace prompt + the installed-state refresh are
 //  verify-by-launch — a sandbox can't be exercised in a unit test). Prior: the
 //  screensaver (PR #143).
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
+//  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //
 
 import AppKit
@@ -35,7 +37,7 @@ struct ScreenSaverSettingsSection: View {
                 Button("Open Screen Saver Settings") { openScreenSaverSettings() }
             }
         } header: {
-            Text("Screen Saver")
+            SettingsHeader("Screen Saver", systemImage: "sparkles.tv")
         } footer: {
             Text(footerText)
         }

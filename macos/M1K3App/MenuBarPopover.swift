@@ -12,6 +12,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.7, Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: a one-line todo count (open ·
 //  suggested) under the heartbeat line, tap → the Todos destination; store read off-main on todosRevision.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the footer's Settings opens the main window's
+//  Settings screen (the Settings scene retired). Confidence 0.85.
 
 import AppKit
 import M1K3Avatar
@@ -348,7 +350,10 @@ struct MenuBarPopover: View {
         HStack {
             Button("Open M1K3") { openMainWindow() }
             Spacer()
-            SettingsLink { Text("Settings") }
+            Button("Settings") {
+                env?.pendingSidebarRequest = .settings
+                openMainWindow()
+            }
             Spacer()
             Button("Quit") { NSApplication.shared.terminate(nil) }
         }

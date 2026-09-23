@@ -30,6 +30,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-09-23 — Context: the macOS Calendars/Location dialog now fires as the switch
 //  goes ON (App Review expected the alert and saw none — it waited for the first tool call). SensePermissionPolicy
 //  decides request/keep/revert; a refusal or dismissed dialog flips the switch back. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
+//  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 
 import AppKit // NSPasteboard — the Copy buttons
 #if canImport(DeclaredAgeRange)
@@ -69,7 +71,7 @@ struct PrivacySettingsPane: View {
             Section {
                 Toggle("Web search (DuckDuckGo)", isOn: $webSearchEnabled)
             } header: {
-                Text("Tools")
+                SettingsHeader("Tools", systemImage: "wrench.and.screwdriver")
             } footer: {
                 // The "one capability" sentence is true only while no Private
                 // Cloud Compute rung exists in this build (ADR 0006: the copy
@@ -84,7 +86,7 @@ struct PrivacySettingsPane: View {
                     Every search and page read shows in the reply as it happens. Date, \
                     time, and system tools stay local either way.
                     """)
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
 
             privateCloudSection
@@ -95,14 +97,14 @@ struct PrivacySettingsPane: View {
                         Task { await env.syncSpotlightIndex() }
                     }
             } header: {
-                Text("Spotlight")
+                SettingsHeader("Spotlight", systemImage: "magnifyingglass")
             } footer: {
                 Text("""
                 Puts your document and call titles — never contents or memories — \
                 into Spotlight (⌘Space). Managed by macOS; turning off removes \
                 everything M1K3 donated.
                 """)
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
             }
 
             contextSection
@@ -135,13 +137,13 @@ struct PrivacySettingsPane: View {
                 Label("Turned off by your organisation", systemImage: "building.2")
                     .foregroundStyle(.secondary)
             } header: {
-                Text("Private Cloud Compute")
+                SettingsHeader("Private Cloud Compute", systemImage: "lock.icloud")
             }
         case .shown:
             Section {
                 Toggle("Private Cloud Compute", isOn: $privateCloudConsent)
             } header: {
-                Text("Private Cloud Compute")
+                SettingsHeader("Private Cloud Compute", systemImage: "lock.icloud")
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("""
@@ -151,7 +153,7 @@ struct PrivacySettingsPane: View {
                     """)
                     Link("How Apple protects it", destination: PrivateCloudTurn.appleGuaranteeURL)
                 }
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
             }
         }
     }
@@ -181,14 +183,14 @@ struct PrivacySettingsPane: View {
                 }
                 .disabled(ageBandRequesting)
             } header: {
-                Text("Content Controls")
+                SettingsHeader("Content Controls", systemImage: "hand.raised")
             } footer: {
                 Text("""
                 Uses Apple's Declared Age Range to adjust content for younger users. \
                 Web search is disabled for users under 16; the assistant's tone adjusts \
                 for all minors. Declining gives full capability.
                 """)
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
             }
         }
     #else
@@ -235,7 +237,7 @@ struct PrivacySettingsPane: View {
                 Text("macOS has calendar access off for M1K3 — grant it in System "
                     + "Settings → Privacy & Security → Calendars, then switch this "
                     + "back on.")
-                    .font(.caption).foregroundStyle(.orange)
+                    .font(.callout).foregroundStyle(.orange)
             }
             Toggle("Location", isOn: $contextLocation)
             if contextLocation {
@@ -243,16 +245,16 @@ struct PrivacySettingsPane: View {
             }
             ForEach(unansweredSenses.sorted(), id: \.self) { sense in
                 Text("macOS didn't get an answer, so \(sense) stayed off. Switch it on again to be asked.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
             if locationDenied {
                 Text("macOS has location access off for M1K3 — grant it in System "
                     + "Settings → Privacy & Security → Location Services, then "
                     + "switch this back on.")
-                    .font(.caption).foregroundStyle(.orange)
+                    .font(.callout).foregroundStyle(.orange)
             }
         } header: {
-            Text("Context")
+            SettingsHeader("Context", systemImage: "calendar.badge.clock")
         } footer: {
             Text("""
             Lets M1K3 ground answers in the moment — battery, your next \
@@ -261,7 +263,7 @@ struct PrivacySettingsPane: View {
             tools in a turn. macOS asks its own permission when you switch \
             Calendar or Location on.
             """)
-            .font(.caption).foregroundStyle(.secondary)
+            .font(.callout).foregroundStyle(.secondary)
         }
         .task { refreshContextAuth() }
         .onChange(of: contextCalendar) { _, on in
@@ -333,7 +335,7 @@ struct PrivacySettingsPane: View {
             if scriptToolsEnabled {
                 if scriptRows.isEmpty {
                     Text("No scripts installed yet — M1K3 can propose one in chat, or drop your own in the scripts folder and approve it here.")
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                 }
                 ForEach(scriptRows) { row in
@@ -342,7 +344,7 @@ struct PrivacySettingsPane: View {
                         Spacer()
                         switch row.state {
                         case .approved:
-                            Text("Approved").font(.caption).foregroundStyle(.secondary)
+                            Text("Approved").font(.callout).foregroundStyle(.secondary)
                             Button("Revoke") {
                                 env.revokeScriptApproval(named: row.script.name)
                                 Task { await refreshScriptRows() }
@@ -353,7 +355,7 @@ struct PrivacySettingsPane: View {
                                 Task { await refreshScriptRows() }
                             }
                         case .drifted:
-                            Text("Changed since approval").font(.caption).foregroundStyle(.orange)
+                            Text("Changed since approval").font(.callout).foregroundStyle(.orange)
                             Button("Re-approve") {
                                 env.approveScript(row.script)
                                 Task { await refreshScriptRows() }
@@ -368,7 +370,7 @@ struct PrivacySettingsPane: View {
                 Button("Open Scripts Folder…") { env.revealScriptsFolder() }
             }
         } header: {
-            Text("Scripts")
+            SettingsHeader("Scripts", systemImage: "applescript")
         } footer: {
             Text("""
             M1K3's "hands" — it can only propose a script; every install and \
@@ -377,7 +379,7 @@ struct PrivacySettingsPane: View {
             becomes a remembered fact. An approved script can be re-run later \
             with different input, so approve only scripts you trust with anything.
             """)
-            .font(.caption).foregroundStyle(.secondary)
+            .font(.callout).foregroundStyle(.secondary)
         }
         .task(id: scriptToolsEnabled) { await refreshScriptRows() }
     }
@@ -398,13 +400,13 @@ struct PrivacySettingsPane: View {
             }
             connectAnAgent
         } header: {
-            Text("MCP server")
+            SettingsHeader("MCP server", systemImage: "network")
         } footer: {
             Text("""
             Lets an agent on this Mac use M1K3's knowledge, memory, voice, and \
             mic. Loopback-only, one client at a time.
             """)
-            .font(.caption).foregroundStyle(.secondary)
+            .font(.callout).foregroundStyle(.secondary)
         }
     }
 
@@ -430,7 +432,7 @@ struct PrivacySettingsPane: View {
             }
         }
         VStack(alignment: .leading, spacing: 6) {
-            Text("Or from Terminal:").font(.caption).foregroundStyle(.secondary)
+            Text("Or from Terminal:").font(.callout).foregroundStyle(.secondary)
             HStack {
                 Text(terminalCommand)
                     .font(.system(.caption, design: .monospaced))
