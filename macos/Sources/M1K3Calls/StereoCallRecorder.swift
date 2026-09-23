@@ -3,20 +3,20 @@
 //  M1K3Calls
 //
 //  Capture a call as TWO channels — near-end mic (left) + far-end system audio
-//  (right, via ScreenCaptureKit) — muxed into one stereo file. The
+//  (right, via a Core Audio process tap) — muxed into one stereo file. The
 //  StereoChannelDiarizer then reads channel == speaker, so a live recording is
-//  speaker-attributed with no ML. If system-audio capture is unavailable (no
-//  screen-recording permission, unsupported), it degrades GRACEFULLY to a mono
-//  mic recording (diarizer returns no turns → unattributed transcript, never a
-//  failure).
+//  speaker-attributed with no ML. If the system-audio tap can't start, it
+//  degrades GRACEFULLY to a mono mic recording (diarizer returns no turns →
+//  unattributed transcript, never a failure); a refused System Audio Recording
+//  permission leaves the far channel silent (see SystemAudioTap).
 //
-//  Verify-by-launch: SCStream + the mic engine + the screen-recording TCC prompt
+//  Verify-by-launch: the process tap + the mic engine + the audio-capture TCC prompt
 //  need a real device and a live call — none of it runs headless. The file write
 //  is now in CallAudioWriter (atomic + validated, unit-tested). This adapter is the
 //  OS glue, kept defensive (mono fallback) so a capture fault can't lose a recording.
 //
-//  Async by necessity: SCStream start/stopCapture are async, so this carries its
-//  own async start()/stop().
+//  start()/stop() stay async: the mic permission request is async, and callers
+//  already await them.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-07, Confidence 0.55, Prior: Unknown
 //  Review: claude-opus-4-8, 2026-06-09 (PR #10) — stop() now atomically claims the
@@ -28,6 +28,12 @@
 //  appeared" bug). Write moved to CallAudioWriter: deinterleaved buffer in the file's
 //  processingFormat, written to a .partial, frame-count validated, then atomically
 //  renamed — so an empty or interrupted write never surfaces as a recording.
+//  Review: Kev + claude-opus-5.5, 2026-09-23 — the far end moves from ScreenCaptureKit
+//  to a Core Audio process tap (SystemAudioTap). SCK held the SCREEN RECORDING
+//  permission and ran a throwaway 2×2 video stream just to hear system audio; App
+//  Review asked what M1K3 does with screen recordings. The tap asks only for System
+//  Audio Recording (NSAudioCaptureUsageDescription), excludes M1K3's own process, and
+//  is converted to 48 kHz mono like the mic. Confidence now 0.7 (verify-by-launch).
 
 // NOT @preconcurrency (dropped 2026-07-16, proven dead by full-SIL compile on all
 // three SDKs): the attribute was blanket-suppressing Sendable diagnostics in the
@@ -38,17 +44,16 @@ import AVFoundation
 import Foundation
 import os
 
-// Far-end (system-audio) capture is ScreenCaptureKit, which is macOS-only — it has
-// no iOS/visionOS equivalent (ReplayKit is a different, foreground-consent model).
+// Far-end (system-audio) capture is a Core Audio process tap, which is macOS-only — it
+// has no iOS/visionOS equivalent (ReplayKit is a different, foreground-consent model).
 // The whole recorder is guarded so the M1K3Calls library compiles on iOS/visionOS;
 // the shared adaptive shell reaches call-recording only on macOS. On mobile the
 // feature is simply absent (a Phase-2 decision, not a silent stub).
 // Signed: Kev + claude-opus-4-8, 2026-07-06, Confidence 0.8, Prior: Kev + claude-opus-4-8
-#if canImport(ScreenCaptureKit)
-    import ScreenCaptureKit
+#if os(macOS)
 
     /// Records a stereo call (mic + system audio). `@unchecked Sendable`: mutable
-    /// capture state is guarded by `lock`; the SCStream/engine callbacks append under it.
+    /// capture state is guarded by `lock`; the tap/engine callbacks append under it.
     public final class StereoCallRecorder: NSObject, @unchecked Sendable {
         /// Common capture format both sources are normalised to before interleaving.
         private static let sampleRate: Double = 48000
@@ -58,12 +63,12 @@ import os
 
         private let lock = NSLock()
         private let engine = AVAudioEngine()
-        private var stream: SCStream?
+        private var tap: SystemAudioTap?
+        private var farConverter: AVAudioConverter?
         private var nearSamples: [Float] = []
         private var farSamples: [Float] = []
         private var recording = false
         private var micConverter: AVAudioConverter?
-        private let captureQueue = DispatchQueue(label: "app.m1k3.stereocapture")
 
         public var isRecording: Bool {
             lock.withLock { recording }
@@ -85,7 +90,7 @@ import os
                 Self.log.notice("capturing stereo (mic + system audio)")
                 return true
             } catch {
-                // No screen-recording permission / unsupported → mono mic only.
+                // The tap couldn't be built (no output device, Core Audio refusal) → mono mic only.
                 Self.log.notice("system audio unavailable → mono mic only: \(error, privacy: .public)")
                 return false
             }
@@ -103,15 +108,14 @@ import os
             }
             guard claimed else { return nil }
 
-            if let stream {
-                try? await stream.stopCapture()
-            }
+            lock.withLock { tap }?.stop()
             engine.stop()
             engine.inputNode.removeTap(onBus: 0)
 
             let (near, far) = lock.withLock {
                 let result = (nearSamples, farSamples)
-                stream = nil
+                tap = nil
+                farConverter = nil
                 nearSamples = []
                 farSamples = []
                 micConverter = nil
@@ -198,30 +202,28 @@ import os
         // MARK: - System audio (far-end, right)
 
         private func startSystemAudio() async throws {
-            let content = try await SCShareableContent.current
-            guard let display = content.displays.first else { throw RecorderError.noDisplay }
+            guard let target = AVAudioFormat(
+                commonFormat: .pcmFormatFloat32,
+                sampleRate: Self.sampleRate, channels: 1, interleaved: false
+            ) else { throw RecorderError.formatUnavailable }
+            let tap = SystemAudioTap()
+            try tap.start { [weak self] buffer in
+                guard let self else { return }
+                let samples = Self.convert(buffer, to: target, using: self.farConverter(for: buffer.format, to: target))
+                guard !samples.isEmpty else { return }
+                self.lock.withLock { self.farSamples.append(contentsOf: samples) }
+            }
+            lock.withLock { self.tap = tap }
+        }
 
-            let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
-            let config = SCStreamConfiguration()
-            config.capturesAudio = true
-            config.excludesCurrentProcessAudio = true // don't record our own TTS/output
-            config.sampleRate = Int(Self.sampleRate)
-            config.channelCount = 1
-            // Audio is all we consume, but SCStream always runs the video pipeline for a
-            // display filter — keep it tiny (2×2) and slow (1 fps) so it costs almost
-            // nothing.
-            config.width = 2
-            config.height = 2
-            config.minimumFrameInterval = CMTime(value: 1, timescale: 1)
-
-            let stream = SCStream(filter: filter, configuration: config, delegate: nil)
-            try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: captureQueue)
-            // Register a sink for the video frames too — the delegate drops them (guards
-            // type == .audio), but WITHOUT a registered .screen output SCStream logs
-            // "stream output NOT found. Dropping frame" for every frame it can't deliver.
-            try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: captureQueue)
-            lock.withLock { self.stream = stream }
-            try await stream.startCapture()
+        /// The tap's format is only known once it runs (the output device's rate):
+        /// build the converter on the first buffer, reuse it after. Allocation happens
+        /// OUTSIDE the lock the mic tap also takes (the mic path's own rule).
+        private func farConverter(for format: AVAudioFormat, to target: AVAudioFormat) -> AVAudioConverter? {
+            if let cached = lock.withLock({ farConverter }), cached.inputFormat == format { return cached }
+            let built = AVAudioConverter(from: format, to: target)
+            lock.withLock { farConverter = built }
+            return built
         }
 
         // MARK: - File output
@@ -253,15 +255,12 @@ import os
 
         public enum RecorderError: Error, Sendable, LocalizedError {
             case formatUnavailable
-            case noDisplay
             case micPermissionDenied
 
             public var errorDescription: String? {
                 switch self {
                 case .formatUnavailable:
                     String(localized: "The microphone isn’t ready yet — try again in a moment.")
-                case .noDisplay:
-                    String(localized: "No display is available to capture system audio.")
                 case .micPermissionDenied:
                     String(localized: "Microphone access is off. Enable it in System Settings → Privacy & Security → Microphone.")
                 }
@@ -283,29 +282,4 @@ import os
         }
     }
 
-    // MARK: - SCStreamOutput
-
-    extension StereoCallRecorder: SCStreamOutput {
-        public func stream(_: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
-            guard type == .audio, sampleBuffer.isValid else { return }
-            let samples = Self.samples(from: sampleBuffer)
-            guard !samples.isEmpty else { return }
-            lock.withLock { farSamples.append(contentsOf: samples) }
-        }
-
-        /// Extract mono Float32 samples from an SCStream audio CMSampleBuffer.
-        private static func samples(from sampleBuffer: CMSampleBuffer) -> [Float] {
-            var samples: [Float] = []
-            try? sampleBuffer.withAudioBufferList { audioBufferList, _ in
-                for buffer in audioBufferList {
-                    guard let data = buffer.mData else { continue }
-                    let count = Int(buffer.mDataByteSize) / MemoryLayout<Float>.size
-                    let pointer = data.assumingMemoryBound(to: Float.self)
-                    samples.append(contentsOf: UnsafeBufferPointer(start: pointer, count: count))
-                    break // mono → first buffer only
-                }
-            }
-            return samples
-        }
-    }
 #endif

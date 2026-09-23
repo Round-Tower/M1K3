@@ -27,6 +27,9 @@
 //  Review: Kev + claude-opus-5, 2026-09-14 — the Private Cloud Compute switch (ADR 0006): hidden without a PCC
 //  backend, a fact under the org switch, default OFF. The web footer drops "the one capability" only when it exists.
 //  Verified by launch in all four states (no backend, off, on, org switch). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-09-23 — Context: the macOS Calendars/Location dialog now fires as the switch
+//  goes ON (App Review expected the alert and saw none — it waited for the first tool call). SensePermissionPolicy
+//  decides request/keep/revert; a refusal or dismissed dialog flips the switch back. Confidence 0.85.
 
 import AppKit // NSPasteboard — the Copy buttons
 #if canImport(DeclaredAgeRange)
@@ -219,7 +222,7 @@ struct PrivacySettingsPane: View {
 
     /// The context senses (context-tools charter): per-sense consent, all
     /// default OFF — off means the model can't see the tool. Toggle first,
-    /// then macOS asks its own permission on first use; a system-level
+    /// then macOS asks its own permission as the switch goes on; a system-level
     /// denial auto-reverts the toggle here with calm copy (charter fold —
     /// never a per-turn "permission denied" loop).
     private var contextSection: some View {
@@ -249,25 +252,64 @@ struct PrivacySettingsPane: View {
             Lets M1K3 ground answers in the moment — battery, your next \
             events, where you are (a coarse ~10 km area unless Precise is \
             on). Snapshots only: never remembered, never mixed with web \
-            tools in a turn. macOS asks its own permission on first use.
+            tools in a turn. macOS asks its own permission when you switch \
+            Calendar or Location on.
             """)
             .font(.caption).foregroundStyle(.secondary)
         }
-        .task(id: "\(contextCalendar)-\(contextLocation)") { refreshContextAuth() }
+        .task { refreshContextAuth() }
+        .onChange(of: contextCalendar) { _, on in
+            settleSense(on: on, status: ContextSenseAuth.calendarStatus,
+                        request: ContextSenseAuth.requestCalendar,
+                        denied: $calendarDenied, toggle: $contextCalendar)
+        }
+        .onChange(of: contextLocation) { _, on in
+            settleSense(on: on, status: ContextSenseAuth.locationStatus,
+                        request: ContextSenseAuth.requestLocation,
+                        denied: $locationDenied, toggle: $contextLocation)
+        }
     }
 
+    /// On appear, every switch that is ON is settled the same way as a fresh
+    /// flip: a denial made in System Settings reverts calmly, and a switch left
+    /// ON with the question still open (the app quit before the dialog was
+    /// answered) asks macOS again.
     private func refreshContextAuth() {
-        if ContextSenseAuth.calendarDenied {
-            calendarDenied = true
-            contextCalendar = false
-        } else {
-            calendarDenied = false
+        if contextCalendar {
+            settleSense(on: true, status: ContextSenseAuth.calendarStatus,
+                        request: ContextSenseAuth.requestCalendar,
+                        denied: $calendarDenied, toggle: $contextCalendar)
         }
-        if ContextSenseAuth.locationDenied {
-            locationDenied = true
-            contextLocation = false
-        } else {
-            locationDenied = false
+        if contextLocation {
+            settleSense(on: true, status: ContextSenseAuth.locationStatus,
+                        request: ContextSenseAuth.requestLocation,
+                        denied: $locationDenied, toggle: $contextLocation)
+        }
+    }
+
+    /// Charter rule 4 (amended 2026-09-23): the macOS dialog fires as the
+    /// switch goes ON, and a refusal flips it back (SensePermissionPolicy).
+    private func settleSense(
+        on: Bool,
+        status: SensePermissionStatus,
+        request: @escaping @MainActor () async -> SensePermissionStatus,
+        denied: Binding<Bool>,
+        toggle: Binding<Bool>
+    ) {
+        switch SensePermissionPolicy.onToggle(enabled: on, status: status) {
+        case .keep:
+            if on { denied.wrappedValue = false }
+        case .revert:
+            denied.wrappedValue = true
+            toggle.wrappedValue = false
+        case .request:
+            Task { @MainActor in
+                let answer = await request()
+                let revert = SensePermissionPolicy.afterRequest(answer) == .revert
+                // A dismissed dialog is not a denial: only name the Settings path when macOS said no.
+                denied.wrappedValue = answer == .denied
+                if revert { toggle.wrappedValue = false }
+            }
         }
     }
 

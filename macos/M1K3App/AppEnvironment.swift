@@ -65,6 +65,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — the App Store rating ledger (ReviewPromptLedger) rides the after-answer beat; ContentView consumes it.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — voice turns count too (AppEnvironment+VoiceMode); a stopped answer is not a win (local review fold).
 //  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — mechanical rename only: `MLXGemmaProvider` → `MLXBrainProvider` (it runs Qwen3, LFM2.5 and Gemma alike), `RuntimeOption.mlxGemma` → `.mlx` (raw value unchanged, never persisted), the local `gemma` → `mlxBrain`. No behaviour change.
+//  Review: Kev + claude-opus-5.5, 2026-09-23, Confidence 0.85 — call recording's far end is a Core Audio process tap now (System Audio Recording, never Screen Recording); the recorder comments + the mono-fallback status line follow.
 
 import AppKit
 import Foundation
@@ -253,9 +254,9 @@ final class AppEnvironment {
     /// Recording is consent-gated (legal: call recording needs consent) and captured
     /// by the StereoCallRecorder below.
     private let consentGate = RecordingConsentGate(store: UserDefaultsConsentStore())
-    /// Stereo capture: near-end mic + far-end system audio (ScreenCaptureKit),
-    /// muxed so the diarizer can separate speakers. Degrades to mono mic if
-    /// screen-recording permission is absent.
+    /// Stereo capture: near-end mic + far-end system audio (a Core Audio process
+    /// tap — System Audio Recording permission, never Screen Recording), muxed so
+    /// the diarizer can separate speakers. Degrades to mono mic if the tap can't start.
     private let recorder = StereoCallRecorder()
     /// Durable home for captured recordings (under Application Support, NOT the OS
     /// temp dir). A recording lives here until it's transcribed + saved, then it's
@@ -1739,8 +1740,9 @@ extension AppEnvironment {
     }
 
     /// Start capturing — only call once consent is in hand (pre-authorised or just
-    /// affirmed). Captures the far-end (system audio) too when screen-recording
-    /// permission is granted; falls back to mono mic otherwise. Surfaces failures
+    /// affirmed). Captures the far-end (system audio) too through a process tap
+    /// (macOS asks for System Audio Recording once); falls back to mono mic if the
+    /// tap can't start. Surfaces failures
     /// rather than crashing.
     func startRecording() async {
         guard !isRecording else { return }
@@ -1751,7 +1753,7 @@ extension AppEnvironment {
             Self.callLog.notice("recording started (stereo=\(stereo, privacy: .public))")
             lastCallStatus = stereo
                 ? "Recording… (both sides — speakers will be separated)"
-                : "Recording… (mic only — grant Screen Recording to capture the other side)"
+                : "Recording… (mic only — the other side couldn’t be captured)"
         } catch {
             Self.callLog.error("start failed: \(error, privacy: .public)")
             lastCallStatus = "Couldn’t start recording: \(error.localizedDescription)"

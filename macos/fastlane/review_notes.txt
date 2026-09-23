@@ -18,11 +18,9 @@ CONTENT CONTROLS (DeclaredAgeRange): uses Apple's Declared Age Range API (gates 
   Mac: Settings > Privacy tab > Content Controls > "Set up"
   iPhone/iPad: Settings > Content Controls > "Set up"
 
-CALENDAR (calendars entitlement): optional context sense, OFF by default. Settings > Privacy > Calendar toggle. Peeks upcoming events via EventKit for time-aware responses. On-device only, TCC-gated.
+CALENDAR + LOCATION: optional context senses, OFF by default, so no alert at launch (expected). To see the macOS alert: Settings > Privacy > Context > switch Calendar (or Location) on, then ask "What's on my calendar today?" (or "Where am I?"). On-device only; never stored or sent.
 
-LOCATION (location entitlement): optional context sense, OFF by default. Settings > Privacy > Location toggle. One-shot reading at km accuracy. On-device only, TCC-gated.
-
-SCREEN RECORDING (ScreenCaptureKit): system AUDIO capture only, for call transcription (far-end speaker). SCStream: capturesAudio=true, video 2x2@1fps (minimum; no frames consumed). Degrades to mono mic if denied. No screen-capture entitlement held. All audio processed on-device via WhisperKit.
+CALL RECORDING (system audio): user-started, consent-affirmed. Captures the Mac's audio output (the other side of a call) + the mic, transcribed on-device (WhisperKit). Audio only, never screen content. Nothing leaves the Mac. Recording deleted after transcription; transcript encrypted, deletable. Policy: https://m1k3.app/privacy#call-recording
 
 MICROPHONE: on-device speech-to-text. Never transmitted.
 FILES: user-selected notes/PDFs only. Processed locally.

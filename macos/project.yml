@@ -20,6 +20,9 @@
 # Info.plist INSIDE the binary the sandboxed helper traps in libsystem_secinit before main() (exit 133, no output): App Store
 # build 362 (the 1.0.0 build in App Review, and on TestFlight) carried it — caught before release. A/B proven on two ad-hoc-signed sandboxed builds; guarded by tools/ci/check_helper_embed.py and by
 # a launch smoke in both release scripts. Confidence 0.9.
+# Review: Kev + claude-opus-5.5, 2026-09-23 — NSAudioCaptureUsageDescription for the call recorder's Core Audio process tap
+# (it replaced ScreenCaptureKit, so the app no longer asks for Screen Recording); the context-senses comment now says the
+# TCC dialog fires as the toggle goes on. Confidence 0.85.
 
 name: M1K3
 
@@ -310,6 +313,10 @@ targets:
         NSHumanReadableDescription: "Local, private AI companion."
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice input. Audio is transcribed on-device and never leaves your Mac."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device to let you ask questions by voice. Nothing is sent to Apple or any server."
+        # Call recording (consent-gated, user-started): the far end is a Core
+        # Audio process tap — System Audio Recording, never Screen Recording
+        # (App Review 2026-09-23; SystemAudioTap.swift).
+        NSAudioCaptureUsageDescription: "When you record a call, M1K3 captures the other side's audio so it can transcribe the call on your Mac. Nothing leaves your Mac."
         # Brain at Home (default OFF): advertising the paired-devices brain
         # service on the local network (Bonjour) — macOS surfaces a local-network
         # consent dialog on first use.
@@ -317,7 +324,7 @@ targets:
         NSBonjourServices:
           - "_m1k3._tcp"
         # The context senses (default OFF, docs/CONTEXT_TOOLS_PLAN.md): TCC
-        # prompts fire only on first use, after the in-app toggle is on.
+        # prompts fire as the in-app toggle is switched on (never before it).
         NSCalendarsFullAccessUsageDescription: "M1K3 reads your next few events (titles and times) to ground answers — only while the Calendar context toggle is on. Nothing leaves your Mac."
         # Both location keys: requestWhenInUseAuthorization documents the
         # WhenInUse key on macOS; the general key is belt-and-braces (audit S3).
