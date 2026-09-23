@@ -20,6 +20,8 @@
 //  Signed: Kev + claude-opus-5, 2026-08-03, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `includeExemplars:` became `variant: nil / .standard`.
 //  After the tools-and-making pass the compact persona sits ≈20 tokens under this suite's one-third line.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the standing-persona check measures `miniSystemPrompt`, what
+//  Mini actually receives since #320 (it measured the full standard core). Confidence 0.9.
 //
 
 import Foundation
@@ -41,10 +43,12 @@ struct MiniPromptBudgetTests {
 
     @Test("the standing persona alone leaves Mini room to work")
     func personaFitsWithHeadroom() {
-        // Mini gets the COMPACT core (no voiceExemplars — those ride only where
-        // a KV-cached prefix makes them free). Whatever else changes, the
-        // always-on part of the prompt must not eat the window on its own.
-        let persona = M1K3Persona.systemPrompt(variant: nil)
+        // Mini gets the TRIMMED core — `AppleFoundationModelsProvider`'s default
+        // instructions are `miniSystemPrompt` (#320): no FOLLOW-UPS, no BEING
+        // YOURSELF, no voiceExemplars. Whatever else changes, the always-on part
+        // of the prompt must not eat the window on its own. (Until 2026-09-23 this
+        // measured the full standard core, which Mini stopped receiving in #320.)
+        let persona = M1K3Persona.miniSystemPrompt
         let tokens = Self.estimatedTokens(persona)
         #expect(
             tokens < Self.miniContextWindow / 3,
