@@ -92,7 +92,11 @@ import os
                 Self.log.notice("capturing stereo (mic + system audio)")
                 return true
             } catch {
-                // The tap couldn't be built (no output device, Core Audio refusal) → mono mic only.
+                // The tap couldn't be built (no output device, Core Audio refusal), or a
+                // stop() won the race → mono mic only. Either way, dispose of whatever tap
+                // this start published: a stop() that claimed before the publish never saw
+                // it, and nothing else will ever stop it (its IO proc outlives the object).
+                disposeTap()
                 Self.log.notice("system audio unavailable → mono mic only: \(error, privacy: .public)")
                 return false
             }
@@ -108,21 +112,26 @@ import os
                 recording = false
                 return true
             }
-            guard claimed else { return nil }
+            guard claimed else {
+                disposeTap() // never leave a live tap behind, even on an unclaimed stop
+                return nil
+            }
 
-            lock.withLock { tap }?.stop()
+            disposeTap()
             engine.stop()
             engine.inputNode.removeTap(onBus: 0)
 
             let (near, far) = lock.withLock {
                 let result = (nearSamples, farSamples)
-                tap = nil
-                farConverter = nil
                 nearSamples = []
                 farSamples = []
                 micConverter = nil
                 return result
             }
+            // Every tap clear goes through disposeTap (take + stop under one rule): a tap
+            // a racing start() published after the first dispose is stopped here, or —
+            // if published later still — by that start's own catch (it sees recording=false).
+            disposeTap()
             Self.log.notice("stopped: near=\(near.count, privacy: .public) far=\(far.count, privacy: .public) samples")
             guard !near.isEmpty || !far.isEmpty else {
                 Self.log.error("nothing captured — no file written (mic delivered 0 samples)")
@@ -184,6 +193,15 @@ import os
             }
             engine.prepare()
             try engine.start()
+        }
+
+        /// Stop and forget the published tap (SystemAudioTap.stop is idempotent).
+        private func disposeTap() {
+            let stale = lock.withLock { () -> SystemAudioTap? in
+                defer { tap = nil; farConverter = nil }
+                return tap
+            }
+            stale?.stop()
         }
 
         private func converter() -> AVAudioConverter? {

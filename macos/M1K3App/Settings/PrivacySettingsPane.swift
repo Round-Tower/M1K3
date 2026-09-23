@@ -53,8 +53,8 @@ struct PrivacySettingsPane: View {
     @AppStorage(AppEnvironment.contextLocationPreciseKey) private var contextLocationPrecise = false
     @State private var calendarDenied = false
     @State private var locationDenied = false
-    /// The sense whose dialog closed without an answer (its switch went back off).
-    @State private var unansweredSense: String?
+    /// Senses whose dialog closed without an answer (their switch went back off).
+    @State private var unansweredSenses: Set<String> = []
     @State private var scriptRows: [AppEnvironment.ScriptRow] = []
     @State private var connectClient: MCPClient = .claude
     /// ADR 0006: the chat-egress consent, default OFF (absent reads as off).
@@ -241,8 +241,8 @@ struct PrivacySettingsPane: View {
             if contextLocation {
                 Toggle("Precise location", isOn: $contextLocationPrecise)
             }
-            if let unansweredSense {
-                Text("macOS didn't get an answer, so \(unansweredSense) stayed off. Switch it on again to be asked.")
+            ForEach(unansweredSenses.sorted(), id: \.self) { sense in
+                Text("macOS didn't get an answer, so \(sense) stayed off. Switch it on again to be asked.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if locationDenied {
@@ -306,7 +306,7 @@ struct PrivacySettingsPane: View {
         toggle: Binding<Bool>,
         name: String
     ) {
-        if on, unansweredSense == name { unansweredSense = nil }
+        if on { unansweredSenses.remove(name) }
         switch SensePermissionPolicy.onToggle(enabled: on, status: status) {
         case .keep:
             if on { denied.wrappedValue = false }
@@ -320,7 +320,7 @@ struct PrivacySettingsPane: View {
                 // A dismissed dialog is not a denial: only name the Settings path when macOS said no.
                 denied.wrappedValue = answer == .denied
                 if revert { toggle.wrappedValue = false }
-                if revert, answer != .denied { unansweredSense = name }
+                if revert, answer != .denied { unansweredSenses.insert(name) }
             }
         }
     }
