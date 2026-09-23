@@ -206,14 +206,17 @@ import os
                 commonFormat: .pcmFormatFloat32,
                 sampleRate: Self.sampleRate, channels: 1, interleaved: false
             ) else { throw RecorderError.formatUnavailable }
+            // Publish BEFORE starting: a stop() racing this start then finds the tap
+            // and tears it down (SystemAudioTap makes the later start a no-op),
+            // instead of missing a device that went live a few instructions later.
             let tap = SystemAudioTap()
+            lock.withLock { self.tap = tap }
             try tap.start { [weak self] buffer in
                 guard let self else { return }
                 let samples = Self.convert(buffer, to: target, using: self.farConverter(for: buffer.format, to: target))
                 guard !samples.isEmpty else { return }
                 self.lock.withLock { self.farSamples.append(contentsOf: samples) }
             }
-            lock.withLock { self.tap = tap }
         }
 
         /// The tap's format is only known once it runs (the output device's rate):

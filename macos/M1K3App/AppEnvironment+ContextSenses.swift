@@ -67,19 +67,13 @@ struct ContextSenseHook {
 /// "permission denied" loop). Reading status never prompts.
 @MainActor
 enum ContextSenseAuth {
+    /// One mapping per sense (the *Status below); the booleans derive from it.
     static var calendarDenied: Bool {
-        switch EKEventStore.authorizationStatus(for: .event) {
-        // writeOnly can't read events — for this tool that's a denial.
-        case .denied, .restricted, .writeOnly: true
-        default: false
-        }
+        calendarStatus == .denied
     }
 
     static var locationDenied: Bool {
-        switch CLLocationManager().authorizationStatus {
-        case .denied, .restricted: true
-        default: false
-        }
+        locationStatus == .denied
     }
 
     // MARK: Toggle-time requests (charter rule 4, amended 2026-09-23)
@@ -88,6 +82,7 @@ enum ContextSenseAuth {
         switch EKEventStore.authorizationStatus(for: .event) {
         case .notDetermined: .notDetermined
         case .fullAccess: .granted
+        // writeOnly can't read events — for this tool that's a denial.
         default: .denied
         }
     }

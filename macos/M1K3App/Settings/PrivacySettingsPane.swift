@@ -53,6 +53,8 @@ struct PrivacySettingsPane: View {
     @AppStorage(AppEnvironment.contextLocationPreciseKey) private var contextLocationPrecise = false
     @State private var calendarDenied = false
     @State private var locationDenied = false
+    /// A dialog closed without an answer: the switch went back off, and this says why.
+    @State private var senseUnanswered: String?
     @State private var scriptRows: [AppEnvironment.ScriptRow] = []
     @State private var connectClient: MCPClient = .claude
     /// ADR 0006: the chat-egress consent, default OFF (absent reads as off).
@@ -239,6 +241,9 @@ struct PrivacySettingsPane: View {
             if contextLocation {
                 Toggle("Precise location", isOn: $contextLocationPrecise)
             }
+            if let senseUnanswered {
+                Text(senseUnanswered).font(.caption).foregroundStyle(.secondary)
+            }
             if locationDenied {
                 Text("macOS has location access off for M1K3 — grant it in System "
                     + "Settings → Privacy & Security → Location Services, then "
@@ -261,12 +266,12 @@ struct PrivacySettingsPane: View {
         .onChange(of: contextCalendar) { _, on in
             settleSense(on: on, status: ContextSenseAuth.calendarStatus,
                         request: ContextSenseAuth.requestCalendar,
-                        denied: $calendarDenied, toggle: $contextCalendar)
+                        denied: $calendarDenied, toggle: $contextCalendar, name: "Calendar")
         }
         .onChange(of: contextLocation) { _, on in
             settleSense(on: on, status: ContextSenseAuth.locationStatus,
                         request: ContextSenseAuth.requestLocation,
-                        denied: $locationDenied, toggle: $contextLocation)
+                        denied: $locationDenied, toggle: $contextLocation, name: "Location")
         }
     }
 
@@ -278,12 +283,12 @@ struct PrivacySettingsPane: View {
         if contextCalendar {
             settleSense(on: true, status: ContextSenseAuth.calendarStatus,
                         request: ContextSenseAuth.requestCalendar,
-                        denied: $calendarDenied, toggle: $contextCalendar)
+                        denied: $calendarDenied, toggle: $contextCalendar, name: "Calendar")
         }
         if contextLocation {
             settleSense(on: true, status: ContextSenseAuth.locationStatus,
                         request: ContextSenseAuth.requestLocation,
-                        denied: $locationDenied, toggle: $contextLocation)
+                        denied: $locationDenied, toggle: $contextLocation, name: "Location")
         }
     }
 
@@ -294,8 +299,10 @@ struct PrivacySettingsPane: View {
         status: SensePermissionStatus,
         request: @escaping @MainActor () async -> SensePermissionStatus,
         denied: Binding<Bool>,
-        toggle: Binding<Bool>
+        toggle: Binding<Bool>,
+        name: String
     ) {
+        if on { senseUnanswered = nil }
         switch SensePermissionPolicy.onToggle(enabled: on, status: status) {
         case .keep:
             if on { denied.wrappedValue = false }
@@ -309,6 +316,10 @@ struct PrivacySettingsPane: View {
                 // A dismissed dialog is not a denial: only name the Settings path when macOS said no.
                 denied.wrappedValue = answer == .denied
                 if revert { toggle.wrappedValue = false }
+                if revert, answer != .denied {
+                    senseUnanswered = "macOS didn't get an answer, so \(name) stayed off. "
+                        + "Switch it on again to be asked."
+                }
             }
         }
     }

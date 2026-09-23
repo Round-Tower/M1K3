@@ -38,6 +38,9 @@
 
     /// A running system-audio tap. `start` builds it, `stop` tears every Core
     /// Audio object down in reverse order. Not reusable: make a new one per call.
+    /// `@unchecked Sendable`: the Core Audio object IDs are only touched under
+    /// `stateLock`, and a `stop` that lands first makes a later `start` a no-op —
+    /// so start/stop from different tasks can't race or orphan a live device.
     final class SystemAudioTap: @unchecked Sendable {
         private static let log = Logger(subsystem: "app.m1k3", category: "calls")
 
@@ -45,6 +48,8 @@
         private var aggregateID = AudioObjectID(kAudioObjectUnknown)
         private var procID: AudioDeviceIOProcID?
         private let queue = DispatchQueue(label: "app.m1k3.systemaudiotap")
+        private let stateLock = NSLock()
+        private var stopped = false
 
         enum TapError: Error {
             case coreAudio(String, OSStatus)
@@ -54,11 +59,14 @@
         /// Start the tap; `onBuffer` receives each IO cycle's audio (tap format,
         /// on a private queue). Throws — and leaves nothing behind — on failure.
         func start(onBuffer: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws {
-            do {
-                try build(onBuffer: onBuffer)
-            } catch {
-                stop()
-                throw error
+            try stateLock.withLock {
+                guard !stopped else { return }
+                do {
+                    try build(onBuffer: onBuffer)
+                } catch {
+                    teardown()
+                    throw error
+                }
             }
         }
 
@@ -112,6 +120,13 @@
 
         /// Tear down in reverse order; safe on a half-built tap and when called twice.
         func stop() {
+            stateLock.withLock {
+                stopped = true
+                teardown()
+            }
+        }
+
+        private func teardown() {
             if aggregateID != kAudioObjectUnknown {
                 if let procID {
                     AudioDeviceStop(aggregateID, procID)
