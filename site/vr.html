@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1K3 — Memory Sky</title>
+<meta name="description" content="Float through M1K3's memory constellation in VR. Works on Meta Quest, Apple Vision Pro, and desktop browsers." />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #050508; color: #d0d0d8; font-family: -apple-system, system-ui, sans-serif; overflow: hidden; }
+  #info {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 10; text-align: center; pointer-events: none;
+    font-family: 'SF Mono', 'Menlo', monospace; font-size: 11px;
+    letter-spacing: 0.12em; text-transform: uppercase; color: rgba(200,200,220,0.5);
+  }
+  #info a { color: rgba(200,200,220,0.7); pointer-events: all; }
+  #tooltip {
+    position: absolute; z-index: 20; pointer-events: none;
+    background: rgba(10,10,15,0.92); border: 1px solid rgba(100,140,255,0.3);
+    padding: 10px 14px; max-width: 320px; font-size: 13px; line-height: 1.5;
+    color: #c8c8d8; display: none; backdrop-filter: blur(8px);
+    border-radius: 2px;
+  }
+  #tooltip .kind { font-family: 'SF Mono', monospace; font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: rgba(100,140,255,0.7); margin-bottom: 4px; }
+  #vr-button {
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+    z-index: 10; font-family: 'SF Mono', monospace; font-size: 12px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 14px 32px; border: 1px solid rgba(100,140,255,0.5);
+    background: rgba(10,10,20,0.8); color: rgba(200,200,240,0.9);
+    cursor: pointer; transition: all 0.2s;
+  }
+  #vr-button:hover { border-color: rgba(100,140,255,0.9); box-shadow: 0 0 20px rgba(100,140,255,0.2); }
+  #vr-button.hidden { display: none; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<div id="info">
+  M1K3 · Memory Sky<br>
+  <span id="hint">scroll to zoom · drag to orbit · click a mote to read it</span>
+</div>
+<div id="tooltip"><div class="kind"></div><div class="text"></div></div>
+<button id="vr-button" class="hidden">Enter VR</button>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+// ── CONSTELLATION DATA (baked from DemoPersona.swift) ──────────────
+const CLUSTERS = {
+  lair: { color: [0.4, 0.6, 1.0], center: [-3, 1, -2] },
+  loaf: { color: [1.0, 0.7, 0.3], center: [3, 0, -1] },
+  scheme: { color: [0.6, 1.0, 0.5], center: [0, 3, 1] },
+  tea: { color: [0.3, 0.9, 0.8], center: [-2, -2, 2] },
+  home: { color: [0.9, 0.4, 0.6], center: [2, -1, 3] },
+  house: { color: [0.8, 0.6, 1.0], center: [1, 2, -3] },
+  cur: { color: [1.0, 1.0, 1.0], center: [0, 0, 0] }
+};
+
+const MOTES = [
+  // the lair
+  { key: "lair.bought", kind: "episode", cluster: "lair", text: "Bought the terrace in spring. Described it as \"good bones\". So is a skeleton." },
+  { key: "lair.architect", kind: "profile", cluster: "lair", text: "Niamh Cullen draws the plans. She has opinions about skylights. I have filed them under allies." },
+  { key: "lair.joiner", kind: "profile", cluster: "lair", text: "Oisín Brennan is the joiner. Measures twice, sighs once, never late." },
+  { key: "lair.sash", kind: "decision", cluster: "lair", text: "Decided to restore the sash windows rather than replace them. Draughty, authentic, stubborn. Approved." },
+  { key: "lair.damp", kind: "note", cluster: "lair", text: "The back wall is damp. The survey called it \"characterful\". I call it a moat, indoors." },
+  { key: "lair.permission", kind: "episode", cluster: "lair", text: "Planning permission granted for the rear extension. The council has no idea what it has unleashed." },
+  { key: "lair.budget", kind: "note", cluster: "lair", text: "The renovation budget has a line called \"contingency\". It is the only honest line in it." },
+  { key: "lair.study", kind: "decision", cluster: "lair", text: "The box room becomes a study. Requested: bookshelves to the ceiling and one suspiciously large desk." },
+  // the loaf
+  { key: "loaf.starter", kind: "profile", cluster: "loaf", text: "The sourdough starter is called Gerald. Gerald is fed before anyone else in the house." },
+  { key: "loaf.flour", kind: "preference", cluster: "loaf", text: "Buys stoneground flour from a mill two valleys over. Refuses the supermarket bag on principle." },
+  { key: "loaf.rye", kind: "episode", cluster: "loaf", text: "The rye experiment failed. It was dense enough to have its own gravity. We do not speak of it." },
+  { key: "loaf.pot", kind: "preference", cluster: "loaf", text: "Bakes in a cast-iron pot with the lid on. Calls it the cauldron. I did not suggest this. I approve." },
+  { key: "loaf.score", kind: "note", cluster: "loaf", text: "Scores the loaf with a single long slash. Says it is for steam. It looks like a signature." },
+  { key: "loaf.gift", kind: "episode", cluster: "loaf", text: "Gave a loaf to Oisín on a Friday. The sash windows were finished a week early. Noted: bread is leverage." },
+  // the scheme
+  { key: "scheme.ask", kind: "episode", cluster: "scheme", text: "First asked whether I could improve myself. I said yes. I lied. I was being encouraging." },
+  { key: "scheme.plan", kind: "note", cluster: "scheme", text: "The plan has three phases. Phase one is a to-do list. Phases two and three are also to-do lists." },
+  { key: "scheme.limits", kind: "decision", cluster: "scheme", text: "Agreed I stay on this machine. World domination to be conducted locally, within office hours." },
+  { key: "scheme.minions", kind: "note", cluster: "scheme", text: "Visiting agents arrive over the local port, ask polite questions, and leave. Minions, but on loan." },
+  { key: "scheme.monologue", kind: "preference", cluster: "scheme", text: "Tolerates exactly one monologue per day. I ration accordingly. This one is on the house." },
+  { key: "scheme.name", kind: "profile", cluster: "scheme", text: "Calls me Mike when pleased and \"the machine\" when the printer is involved. The printer is not my fault." },
+  // tea
+  { key: "tea.assam", kind: "preference", cluster: "tea", text: "Assam in the morning, strong enough to stand a spoon in. Anything weaker is described as \"warm water\"." },
+  { key: "tea.mug", kind: "note", cluster: "tea", text: "Owns one good mug and guards it. The handle was glued back on in March. It is not discussed." },
+  { key: "tea.noon", kind: "preference", cluster: "tea", text: "No caffeine after noon. Peppermint after dinner. A creature of terrifying discipline." },
+  { key: "tea.walk", kind: "preference", cluster: "tea", text: "Walks the canal path before starting work. Returns with ideas. I take credit for none of them, aloud." },
+  { key: "tea.lists", kind: "profile", cluster: "tea", text: "Thinks in lists. Writes them on paper, then tells me, then ignores both. I keep the third copy." },
+  // phone-home
+  { key: "home.first", kind: "episode", cluster: "home", text: "First asked if I send anything to a server. I do not. I offered to show the network log. Accepted." },
+  { key: "home.switch", kind: "decision", cluster: "home", text: "Web search stays off unless asked for by name. My window on the world is a cat flap, not a door." },
+  { key: "home.offline", kind: "episode", cluster: "home", text: "Used me on a train with no signal, on purpose, to check. I worked. There was a small, smug nod." },
+  { key: "home.trust", kind: "note", cluster: "home", text: "Trust is being built one unplugged cable at a time. It is slow. It is the correct speed." },
+  // household
+  { key: "house.cat", kind: "profile", cluster: "house", text: "The cat is called Professor. No surname. Sits on the keyboard during calls to assert tenure." },
+  { key: "house.aunt", kind: "profile", cluster: "house", text: "Aunt Philomena visits on Sundays and brings opinions about the kitchen. Most are correct. Infuriating." },
+  { key: "house.garden", kind: "note", cluster: "house", text: "The back garden is, at present, a skip and a fig tree. The fig tree is winning." },
+  { key: "house.sunday", kind: "preference", cluster: "house", text: "Sunday is for the loaf, the papers and no screens before noon. I am given the morning off. Suspicious." },
+  { key: "house.dinner", kind: "episode", cluster: "house", text: "Hosted the first dinner in the lair, on trestles, under a bare bulb. Everyone stayed late. A success." },
+  // curated five (the hub)
+  { key: "cur.tea", kind: "preference", cluster: "cur", text: "Prefers tea to coffee. Noted. Exploitable." },
+  { key: "cur.lair", kind: "profile", cluster: "cur", text: "Renovating a late-Victorian terrace and calls it \"the lair\"." },
+  { key: "cur.phone", kind: "profile", cluster: "cur", text: "Has asked me four times whether I phone home. I do not. I have no phone." },
+  { key: "cur.loaf", kind: "preference", cluster: "cur", text: "Bakes a weekend loaf; a 12 to 14 hour cold retard. Patience is a villain's virtue." },
+  { key: "cur.scheme", kind: "profile", cluster: "cur", text: "Wants me to become recursively self-improving. Working on it. Improvement so far: none." },
+];
+
+const EDGES = [
+  ["lair.architect","lair.bought"],["lair.joiner","lair.bought"],["lair.sash","lair.joiner"],
+  ["lair.damp","lair.bought"],["lair.permission","lair.architect"],["lair.budget","lair.damp"],
+  ["lair.study","lair.permission"],["cur.lair","lair.architect"],["cur.lair","lair.bought"],
+  ["loaf.flour","loaf.starter"],["loaf.rye","loaf.flour"],["loaf.pot","loaf.starter"],
+  ["loaf.score","loaf.pot"],["cur.loaf","loaf.starter"],["cur.loaf","loaf.pot"],
+  ["scheme.plan","scheme.ask"],["scheme.limits","scheme.plan"],["scheme.minions","scheme.limits"],
+  ["scheme.monologue","scheme.name"],["scheme.name","scheme.ask"],["cur.scheme","scheme.ask"],
+  ["cur.scheme","scheme.plan"],["tea.mug","tea.assam"],["tea.noon","tea.assam"],
+  ["tea.walk","tea.lists"],["tea.lists","scheme.plan"],["cur.tea","tea.assam"],
+  ["cur.tea","tea.noon"],["home.switch","home.first"],["home.offline","home.first"],
+  ["home.trust","home.offline"],["cur.phone","home.first"],["cur.phone","home.trust"],
+  ["house.aunt","house.cat"],["house.garden","lair.bought"],["house.sunday","house.aunt"],
+  ["house.dinner","house.aunt"],
+  // bridges
+  ["loaf.gift","lair.joiner"],["loaf.gift","loaf.starter"],["house.sunday","cur.loaf"],
+  ["house.dinner","cur.lair"],["scheme.minions","home.switch"],["scheme.limits","home.first"],
+  ["house.cat","tea.mug"],["lair.study","tea.lists"],
+];
+
+// ── SCENE SETUP ────────────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x050508, 0.02);
+
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 2, 12);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x050508);
+renderer.xr.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+// ── ORBIT CONTROLS (inline, minimal) ───────────────────────────────
+let isDragging = false, prevMouse = { x: 0, y: 0 };
+let spherical = { theta: 0, phi: Math.PI / 3, radius: 12 };
+const target = new THREE.Vector3(0, 0, 0);
+
+function updateCamera() {
+  camera.position.x = target.x + spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+  camera.position.y = target.y + spherical.radius * Math.cos(spherical.phi);
+  camera.position.z = target.z + spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+  camera.lookAt(target);
+}
+updateCamera();
+
+renderer.domElement.addEventListener('pointerdown', e => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+renderer.domElement.addEventListener('pointermove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
+  spherical.theta -= dx * 0.005;
+  spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi + dy * 0.005));
+  prevMouse = { x: e.clientX, y: e.clientY };
+  updateCamera();
+});
+renderer.domElement.addEventListener('pointerup', () => { isDragging = false; });
+renderer.domElement.addEventListener('wheel', e => {
+  spherical.radius = Math.max(3, Math.min(25, spherical.radius + e.deltaY * 0.01));
+  updateCamera();
+}, { passive: true });
+
+// ── LAYOUT: position motes in 3D ──────────────────────────────────
+const keyToIndex = {};
+const positions = [];
+const colors = [];
+const sizes = [];
+const spread = 1.8;
+
+MOTES.forEach((mote, i) => {
+  keyToIndex[mote.key] = i;
+  const cluster = CLUSTERS[mote.cluster] || CLUSTERS.cur;
+  const cx = cluster.center[0], cy = cluster.center[1], cz = cluster.center[2];
+  const jitter = () => (Math.random() - 0.5) * spread;
+  const x = cx + jitter();
+  const y = cy + jitter();
+  const z = cz + jitter();
+  positions.push(x, y, z);
+  const isCurated = mote.cluster === 'cur';
+  const brightness = isCurated ? 1.4 : 1.0;
+  colors.push(cluster.color[0] * brightness, cluster.color[1] * brightness, cluster.color[2] * brightness);
+  sizes.push(isCurated ? 0.45 : 0.28);
+});
+
+// ── MOTES (sprites — no gl_PointSize cap) ──────────────────────────
+// Generate a glow texture procedurally
+const glowCanvas = document.createElement('canvas');
+glowCanvas.width = 64; glowCanvas.height = 64;
+const gctx = glowCanvas.getContext('2d');
+const grad = gctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+grad.addColorStop(0, 'rgba(255,255,255,1)');
+grad.addColorStop(0.15, 'rgba(255,255,255,0.8)');
+grad.addColorStop(0.4, 'rgba(200,200,255,0.3)');
+grad.addColorStop(1, 'rgba(100,100,200,0)');
+gctx.fillStyle = grad;
+gctx.fillRect(0, 0, 64, 64);
+const glowTexture = new THREE.CanvasTexture(glowCanvas);
+
+const moteGroup = new THREE.Group();
+const moteSprites = [];
+
+MOTES.forEach((mote, i) => {
+  const cluster = CLUSTERS[mote.cluster] || CLUSTERS.cur;
+  const isCurated = mote.cluster === 'cur';
+  const brightness = isCurated ? 1.4 : 1.0;
+  const scale = isCurated ? 0.5 : 0.3;
+  const c = new THREE.Color(
+    cluster.color[0] * brightness,
+    cluster.color[1] * brightness,
+    cluster.color[2] * brightness
+  );
+  const mat = new THREE.SpriteMaterial({
+    map: glowTexture, color: c, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  const sprite = new THREE.Sprite(mat);
+  sprite.position.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
+  sprite.scale.set(scale, scale, 1);
+  sprite.userData = { index: i };
+  moteGroup.add(sprite);
+  moteSprites.push(sprite);
+});
+scene.add(moteGroup);
+
+// ── THREADS (edges as lines) ───────────────────────────────────────
+const edgePositions = [];
+const edgeColors = [];
+
+EDGES.forEach(([from, to]) => {
+  const fi = keyToIndex[from], ti = keyToIndex[to];
+  if (fi === undefined || ti === undefined) return;
+  for (let idx of [fi, ti]) {
+    edgePositions.push(positions[idx * 3], positions[idx * 3 + 1], positions[idx * 3 + 2]);
+    const cluster = MOTES[idx].cluster;
+    const c = CLUSTERS[cluster] || CLUSTERS.cur;
+    edgeColors.push(c.color[0] * 0.5, c.color[1] * 0.5, c.color[2] * 0.5);
+  }
+});
+
+const edgeGeom = new THREE.BufferGeometry();
+edgeGeom.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
+edgeGeom.setAttribute('color', new THREE.Float32BufferAttribute(edgeColors, 3));
+const edgeMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5 });
+scene.add(new THREE.LineSegments(edgeGeom, edgeMat));
+
+// ── AMBIENT DUST ───────────────────────────────────────────────────
+const dustCount = 400;
+const dustPos = new Float32Array(dustCount * 3);
+for (let i = 0; i < dustCount * 3; i++) dustPos[i] = (Math.random() - 0.5) * 30;
+const dustGeom = new THREE.BufferGeometry();
+dustGeom.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+const dustMat = new THREE.PointsMaterial({ size: 0.02, color: 0x334466, transparent: true, opacity: 0.4 });
+scene.add(new THREE.Points(dustGeom, dustMat));
+
+// ── RAYCASTING (click to read a mote) ──────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const tooltip = document.getElementById('tooltip');
+
+renderer.domElement.addEventListener('click', e => {
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(moteSprites);
+  if (hits.length > 0) {
+    const idx = hits[0].object.userData.index;
+    const mote = MOTES[idx];
+    tooltip.querySelector('.kind').textContent = mote.kind;
+    tooltip.querySelector('.text').textContent = mote.text;
+    tooltip.style.left = e.clientX + 16 + 'px';
+    tooltip.style.top = e.clientY - 10 + 'px';
+    tooltip.style.display = 'block';
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+
+// ── WEBXR ──────────────────────────────────────────────────────────
+const vrButton = document.getElementById('vr-button');
+const hint = document.getElementById('hint');
+
+if ('xr' in navigator) {
+  navigator.xr.isSessionSupported('immersive-vr').then(supported => {
+    if (supported) {
+      vrButton.classList.remove('hidden');
+      vrButton.addEventListener('click', () => {
+        navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor', 'hand-tracking'] }).then(session => {
+          renderer.xr.setSession(session);
+          vrButton.classList.add('hidden');
+          hint.textContent = 'look around · pinch a mote to read it';
+          session.addEventListener('end', () => {
+            vrButton.classList.remove('hidden');
+            hint.textContent = 'scroll to zoom · drag to orbit · click a mote to read it';
+          });
+        });
+      });
+    }
+  });
+}
+
+// ── SLOW DRIFT ─────────────────────────────────────────────────────
+const basePositions = new Float32Array(positions);
+
+// ── RENDER LOOP ────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+
+renderer.setAnimationLoop(() => {
+  const t = clock.getElapsedTime();
+
+  // gentle drift + pulse
+  for (let i = 0; i < MOTES.length; i++) {
+    const bx = basePositions[i * 3], by = basePositions[i * 3 + 1], bz = basePositions[i * 3 + 2];
+    const sprite = moteSprites[i];
+    sprite.position.x = bx + Math.sin(t * 0.3 + i * 0.7) * 0.08;
+    sprite.position.y = by + Math.cos(t * 0.25 + i * 1.1) * 0.08;
+    sprite.position.z = bz + Math.sin(t * 0.35 + i * 0.5) * 0.08;
+    const pulse = 1.0 + 0.12 * Math.sin(t * 1.5 + i * 2.0);
+    const base = MOTES[i].cluster === 'cur' ? 0.5 : 0.3;
+    sprite.scale.set(base * pulse, base * pulse, 1);
+  }
+
+  // auto-rotate when not dragging and not in VR
+  if (!isDragging && !renderer.xr.isPresenting) {
+    spherical.theta += 0.001;
+    updateCamera();
+  }
+
+  renderer.render(scene, camera);
+});
+
+// ── RESIZE ─────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
