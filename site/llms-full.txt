@@ -377,7 +377,7 @@ Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. 
 
 ## Is M1K3 really private?
 
-Updated 2026-09-09 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
+Updated 2026-09-23 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
 
 Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, an optional web-search tool that is off by default, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.
 
@@ -446,6 +446,18 @@ M1K3 itself has no servers and never sees or stores your conversations, whether 
 Everything lives inside the app's macOS sandbox container. The knowledge and memory stores are GRDB databases encrypted with a key held in your Keychain — one place your knowledge lives, on hardware you own. Documents enter only when you explicitly open or drop them (the sandbox grants read access to user-selected files, nothing broader). Call transcription is consent-gated and encrypted at rest. Memory has a consent primitive going the other way too: forget_memory permanently deletes a fact, so what M1K3 knows stays revocable.
 
 There's no telemetry to store elsewhere. Bug reports are user-initiated: Settings → Report an issue… generates a redacted diagnostic that you read and attach to a GitHub issue by hand — nothing is transmitted automatically.
+
+### Which macOS permissions does M1K3 ask for, and why?
+
+Each one is off until you use the feature that needs it, and each one serves only that feature. None of this data leaves your Mac.
+
+- Call recording (System Audio Recording, and Microphone). Calls are recorded only when you start a recording yourself and affirm that you have consent to record (M1K3 asks every time unless you choose to remember that answer; the decision is timestamped). M1K3 captures two audio channels: your microphone, and the audio your Mac plays (the other side of the call), so the transcript can tell the speakers apart. It captures audio only: M1K3 never captures, records, or stores what is on your screen. The audio is used for one purpose, to transcribe and summarise that call on your Mac with WhisperKit and the on-device brain. It is never sent to Round Tower, Apple, or any third party. The recording is written to the app's sandbox container, kept only until it has been transcribed, and then deleted; the transcript and summary are stored encrypted at rest, and you can delete any call from the Calls list. If you decline the permission, M1K3 records your microphone only. Earlier builds reached the same system audio through macOS's Screen Recording permission, because that was how the capture API delivered it; they read the audio track and discarded every screen frame unread (a 2×2-pixel minimum), never storing an image. Current builds ask only for System Audio Recording.
+
+- Calendar and Location (optional context). Off by default. Switch one on in Settings → Privacy → Context and macOS asks for its permission right then. Calendar reads the titles and times of your next few events; Location reads a coarse ~10 km area unless you choose Precise. Both are read only when a question needs them, used only to ground that answer, never stored, never remembered, never shared, and never mixed with web search in the same turn. Switch it off, or refuse the macOS prompt, and M1K3 stops reading it.
+
+- Microphone and Speech Recognition. Used for voice input. Transcribed on your Mac and never sent anywhere.
+
+- Local Network. Used only by Brain at Home (off by default) to serve M1K3's brain to devices you pair on your own network, encrypted.
 
 ### How can you verify any of this?
 
