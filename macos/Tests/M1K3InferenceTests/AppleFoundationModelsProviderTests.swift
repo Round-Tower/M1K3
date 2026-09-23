@@ -11,6 +11,8 @@
 //  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 — pins that the default
 //  (trimmed) Mini provider still reports carrying the persona, and neutral
 //  instructions still don't. Red on master: the 09-12 trim broke the first.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the default pin follows #397 (native tool
+//  calling ON where AFM is available); the old OFF pin passed only on AI-less CI. Confidence 0.9.
 
 @testable import M1K3Inference
 import Testing
@@ -31,12 +33,19 @@ struct AppleFoundationModelsProviderTests {
         #expect(provider.name == "apple-foundation-models")
     }
 
-    @Test("native tool-calling is OFF by default — launch routing keeps the ReAct floor")
-    func toolCallingDefaultsOff() {
-        // The default-constructed provider must report no tool support regardless
-        // of host availability, so LocalAgent never hands AFM the native loop
-        // unless the spike is explicitly opted in.
-        #expect(AppleFoundationModelsProvider().supportsToolCalls == false)
+    @Test("native tool-calling is ON by default (#397) — gated on host availability")
+    func toolCallingDefaultsOnWhereAvailable() {
+        // #397 flipped the default: Mini takes the native FM tool loop wherever
+        // Apple Intelligence runs, and never claims tool support where it
+        // doesn't. The old "OFF by default" pin only passed on CI because CI has
+        // no Apple Intelligence (false == false); on an AI-capable Mac it failed.
+        let provider = AppleFoundationModelsProvider()
+        #expect(provider.supportsToolCalls == provider.isAvailable)
+    }
+
+    @Test("opting OUT keeps the ReAct floor on every host")
+    func toolCallingOptOutKeepsReActFloor() {
+        #expect(AppleFoundationModelsProvider(nativeToolCalling: false).supportsToolCalls == false)
     }
 
     @Test("opting in gates tool support on host availability, not the flag alone")
