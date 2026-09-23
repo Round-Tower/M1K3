@@ -15,6 +15,8 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.75 (paint layer over
 //  tested classification; visual tuning verify-at-⌘R). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — upcoming words 0.45 → 0.62 opacity (≈4:1 → ≈6.4:1 on the
+//  voice panel); the readability pass Kev asked for. Confidence 0.85 (verify-by-eye in the voice plate).
 //
 
 import M1K3Chat
@@ -151,7 +153,10 @@ struct KaraokeReadingText: View {
             piece.foregroundColor = .primary
             piece.backgroundColor = Color.accentColor.opacity(0.32)
         case .upcoming:
-            piece.foregroundColor = Color.primary.opacity(0.45)
+            // 0.62, not 0.45: on the voice panel's dark glass 0.45 read ≈4:1 — under
+            // WCAG AA for body text — and the rest of the line looked faint in the
+            // store plates. 0.62 ≈6.4:1 and still clearly behind the spoken words.
+            piece.foregroundColor = Color.primary.opacity(0.62)
         }
         return piece
     }
