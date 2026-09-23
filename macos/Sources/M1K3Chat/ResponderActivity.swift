@@ -7,6 +7,9 @@
 //  web search always shows its query, so nothing leaves the device invisibly.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-4-6, 2026-09-22 — live tool labels for 6 tools that
+//  fell through to the raw default; default fallback humanises via displayName.
+//  Confidence 0.85.
 
 import Foundation
 
@@ -74,8 +77,20 @@ public enum ActivityLabeler {
             "Checking the date & time…"
         case "system_status":
             "Checking system status…"
+        case "delegate_deep":
+            "Starting a deep dive…"
+        case "list_documents":
+            "Scanning your documents…"
+        case "get_document":
+            "Opening a document…"
+        case "open_link":
+            "Opening a link…"
+        case "lookup_fact":
+            "Looking that up…"
+        case "recent_activity":
+            "Looking back over the week…"
         default:
-            "Using \(name)…"
+            "Using \(displayName(forTool: name))…"
         }
     }
 

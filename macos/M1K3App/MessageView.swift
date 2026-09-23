@@ -16,6 +16,8 @@
 //  Review: Kev + claude-opus-5, 2026-09-14 — a "Private Cloud Compute" label under every answer PCC produced
 //  (`answerOrigin`, ADR 0006). Confidence 0.85 (verified by launch with the Debug echo backend: a PCC answer,
 //  a stopped PCC partial, and no label on the local answer after a fallback).
+//  Review: Kev + claude-opus-4-6, 2026-09-22 — toolTraceFooter now visible DURING streaming (was gated
+//  on status != .streaming); tools show live as each dispatches, with a content transition. Confidence 0.85.
 
 import AppKit
 import M1K3Chat
@@ -163,20 +165,21 @@ struct MessageView: View {
         }
     }
 
-    /// Persisted provenance: which tools served this turn. The live activity
-    /// label vanishes the moment tokens stream — this line is what survives in
-    /// the transcript, so tool use (and what left the device) is never
-    /// invisible after the fact. Rendered on failed turns too, not just
-    /// complete ones — a turn that searched the web and THEN failed is exactly
-    /// when "what left the device" matters most (bot review, PR #132). Leaked
+    /// Persisted provenance: which tools served this turn. Visible LIVE as
+    /// each tool dispatches — the activity label vanishes the moment tokens
+    /// stream, but this line stays so tool use (and what left the device) is
+    /// never invisible, during OR after the turn. Rendered on failed turns
+    /// too — a turn that searched the web and THEN failed is exactly when
+    /// "what left the device" matters most (bot review, PR #132). Leaked
     /// turns can't reach here with a trace: the guard nils it with the rest.
     @ViewBuilder
     private var toolTraceFooter: some View {
-        if message.status != .streaming, let tools = message.toolsUsed, !tools.isEmpty {
+        if let tools = message.toolsUsed, !tools.isEmpty {
             Label(ActivityLabeler.traceLabel(for: tools), systemImage: "wrench.and.screwdriver")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
+                .animation(.easeOut(duration: 0.2), value: tools)
         }
     }
 

@@ -26,6 +26,18 @@ struct ActivityLabelerTests {
             == "Checking the date & time…")
         #expect(ActivityLabeler.label(for: .usingTool(name: "system_status", argument: ""))
             == "Checking system status…")
+        #expect(ActivityLabeler.label(for: .usingTool(name: "delegate_deep", argument: ""))
+            == "Starting a deep dive…")
+        #expect(ActivityLabeler.label(for: .usingTool(name: "list_documents", argument: ""))
+            == "Scanning your documents…")
+        #expect(ActivityLabeler.label(for: .usingTool(name: "get_document", argument: ""))
+            == "Opening a document…")
+        #expect(ActivityLabeler.label(for: .usingTool(name: "open_link", argument: ""))
+            == "Opening a link…")
+        #expect(ActivityLabeler.label(for: .usingTool(name: "lookup_fact", argument: ""))
+            == "Looking that up…")
+        #expect(ActivityLabeler.label(for: .usingTool(name: "recent_activity", argument: ""))
+            == "Looking back over the week…")
     }
 
     @Test("fetch_page shows which site is being read")
@@ -45,7 +57,7 @@ struct ActivityLabelerTests {
         #expect(ActivityLabeler.label(for: .retrieving) == "Recalling what I know…")
         #expect(ActivityLabeler.label(for: .thinking(iteration: 0)) == "Thinking…")
         #expect(ActivityLabeler.label(for: .usingTool(name: "query_graph", argument: "x"))
-            == "Using query_graph…")
+            == "Using query graph…")
     }
 
     @Test("tools have short display names for the transcript trace")

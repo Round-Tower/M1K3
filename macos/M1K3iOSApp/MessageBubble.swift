@@ -14,6 +14,9 @@
 //  the FOLLOWUPS chips the shared ChatSession was already populating are finally
 //  rendered — tap-to-send via `onSendFollowUp`, mirroring MessageView.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — "Stopped" caption for an `interrupted` answer. Confidence now 0.8.
+//  Review: Kev + claude-opus-4-6, 2026-09-22 — added toolTraceRow (the persisted
+//  "Used web search · date & time" provenance line), visible live during and after
+//  the turn. iOS had no tool trace at all. Confidence 0.85.
 //
 
 import M1K3Chat
@@ -87,6 +90,7 @@ struct MessageBubble: View {
                 if !message.sources.isEmpty {
                     sourcesRow(message.sources)
                 }
+                toolTraceRow
                 followUpChips
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -99,6 +103,17 @@ struct MessageBubble: View {
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var toolTraceRow: some View {
+        if let tools = message.toolsUsed, !tools.isEmpty {
+            Label(ActivityLabeler.traceLabel(for: tools), systemImage: "wrench.and.screwdriver")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .animation(.easeOut(duration: 0.2), value: tools)
+                .padding(.top, 2)
         }
     }
 
