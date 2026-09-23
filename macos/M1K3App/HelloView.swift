@@ -44,6 +44,9 @@
 //  Review: Kev + claude-opus-4-6, 2026-09-19 — PCC confirmed present in the MAS entitlements
 //  (granted 2026-09-14, com.apple.developer.private-cloud-compute); caption is correct.
 //  The stale file header comment ("No backend … the only state") predates the grant. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — the hello card sits on a material panel: the
+//  full-window fox ran through the "Private" door and the disclosure line (seen in the new
+//  onboarding plate). Confidence 0.85 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Inference
@@ -168,6 +171,17 @@ struct HelloView: View {
                 .foregroundStyle(.secondary)
             }
         }
+        // The words sit on a panel, the face stays the room: the full-window fox
+        // ran straight through the "Private" door and the disclosure line, which
+        // read as noise in the onboarding plate (2026-09-23 readability pass).
+        .padding(.horizontal, 36)
+        .padding(.vertical, 30)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(.white.opacity(0.08))
+        }
+        .frame(maxWidth: 560)
     }
 
     /// True when the tested policy would answer this tap with the Lil download

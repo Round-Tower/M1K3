@@ -106,6 +106,11 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
             ["-notchHUD.enabled", "NO"],
             // Off: beside a live app it fails on :4242 and the Privacy pane prints the error.
             ["-mcpServer.enabled", "NO"],
+            // The SHIPPED privacy defaults, not the owner's: the harness reroutes stores,
+            // not UserDefaults, and a run showed the owner's own PCC switch ON in the
+            // Privacy plate (2026-09-23). PCC consent is off by default; web search on.
+            ["-chatEgressAllowed", "NO"],
+            ["-webSearchEnabled", "YES"],
             // No auto-distillation of the seeded conversation: the Memories plate
             // shows the persona's dated facts, not "I noticed" rows stamped today.
             ["-memoryAutoCapture", "NO"],

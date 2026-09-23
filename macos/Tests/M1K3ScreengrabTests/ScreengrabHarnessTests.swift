@@ -185,3 +185,17 @@ struct ScreengrabFreshRootTests {
         #expect(FileManager.default.fileExists(atPath: live.appendingPathComponent("knowledge.sqlite").path))
     }
 }
+
+/// The privacy plates show the SHIPPED privacy defaults, never the owner's own
+/// switches: the harness reroutes stores, not UserDefaults, and the 2026-09-23
+/// run caught Private Cloud Compute ON in the Privacy plate (the owner's choice).
+struct ScreengrabPrivacyDefaultsTests {
+    @Test("every plate pins Private Cloud Compute consent off and web search at its default")
+    func pinsShippedPrivacyDefaults() {
+        for plate in ScreengrabPlate.allCases {
+            let arguments = plate.launchRecipe.arguments
+            #expect(arguments.contains(["-chatEgressAllowed", "NO"]), "\(plate.rawValue)")
+            #expect(arguments.contains(["-webSearchEnabled", "YES"]), "\(plate.rawValue)")
+        }
+    }
+}
