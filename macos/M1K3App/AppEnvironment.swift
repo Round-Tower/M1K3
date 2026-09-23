@@ -695,6 +695,8 @@ final class AppEnvironment {
 
     /// True while the mic is capturing a call (drives the recording indicator).
     private(set) var isRecording = false
+    /// A recorder.start() is in flight (see startRecording).
+    private var isStartingRecording = false
     /// When the current capture started — drives the live elapsed clock in the
     /// Calls view. Nil whenever `isRecording` is false.
     private(set) var recordingStartedAt: Date?
@@ -1745,7 +1747,12 @@ extension AppEnvironment {
     /// tap can't start. Surfaces failures
     /// rather than crashing.
     func startRecording() async {
-        guard !isRecording else { return }
+        // Claimed BEFORE the await: `isRecording` only turns true after the recorder
+        // starts, so a double-tap used to run two recorder.start()s at once — and the
+        // recorder's single tap slot would orphan the first live system-audio tap.
+        guard !isRecording, !isStartingRecording else { return }
+        isStartingRecording = true
+        defer { isStartingRecording = false }
         do {
             let stereo = try await recorder.start()
             isRecording = true

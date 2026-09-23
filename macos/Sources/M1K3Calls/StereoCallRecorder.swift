@@ -229,6 +229,9 @@ import os
             // Publish BEFORE starting: a stop() racing this start then finds the tap
             // and tears it down (SystemAudioTap makes the later start a no-op),
             // instead of missing a device that went live a few instructions later.
+            // Mic first (start() runs startMic before this), so the HAL already knows
+            // our process and the tap can exclude M1K3's own voice. tap.start is a few
+            // synchronous HAL calls — fast, and never gated on the TCC dialog.
             let tap = SystemAudioTap()
             lock.withLock { self.tap = tap }
             try tap.start { [weak self] buffer in

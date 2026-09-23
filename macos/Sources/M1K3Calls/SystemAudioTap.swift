@@ -90,7 +90,9 @@
             try Self.check("read tap format", AudioObjectGetPropertyData(tapID, &formatAddress, 0, nil, &size, &asbd))
             guard let format = AVAudioFormat(streamDescription: &asbd) else { throw TapError.unsupportedFormat }
 
-            // 3. A private aggregate device clocked by the default output, carrying the tap.
+            // 3. A private aggregate device carrying the tap. The output device is only its
+            //    clock — the tap is global — so the SYSTEM default output (alerts) serves as
+            //    well as the user's chosen one, as in Apple's tap sample.
             let outputUID = try Self.defaultOutputUID()
             let aggregate: [String: Any] = [
                 kAudioAggregateDeviceNameKey: "M1K3 call capture",
