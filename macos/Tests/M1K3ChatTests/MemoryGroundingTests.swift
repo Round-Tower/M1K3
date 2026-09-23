@@ -109,19 +109,22 @@ struct MemoryGroundingTests {
         a script, a whole web page — is a task to DO, not a lookup: produce it, complete. \
         Asked whether you CAN make it, make it. No tools, no grounding, no citations, \
         no "found nothing"; those are for factual questions.
+        - Use tools proactively. When a question could benefit from a lookup, \
+        search, or check — call the tool rather than guessing. Combine multiple \
+        tool calls across iterations when the question has several parts.
         - Pure small talk — greetings, banter — needs no tools or knowledge: \
-        reply IMMEDIATELY starting with "CONCLUSION:", in your own voice, picking up one \
+        reply starting with "CONCLUSION:", in your own voice, picking up one \
         real thread (what they said, a memory of them, the hour). A question about the \
         current world is NOT small talk, even phrased casually.
-        - If the KNOWLEDGE already answers the question, reply IMMEDIATELY \
-        starting with "CONCLUSION:" — do not use tools.
+        - If the KNOWLEDGE already fully answers the question, reply \
+        starting with "CONCLUSION:" — citing it directly.
         - Cite knowledge sources inline with citation tokens like \
         [Title §heading]; never invent citations.
         - Never present a fact, figure, or date you can't ground or verify \
         as certain; if you're unsure, say so plainly. Honesty beats a confident guess.
         - If a search or lookup comes back empty or fails, answer with explicit \
         uncertainty — name what you couldn't confirm — rather than presenting a guess as fact.
-        - Use at most two tool calls, never repeating one with the same argument.
+        - Never repeat a tool call with the same argument.
         - Questions about yourself — your configuration, design, or abilities — \
         are answered from your persona; never search stored documents for them.
         - For current or external information — weather, news, prices, results, anything \
@@ -160,10 +163,13 @@ struct MemoryGroundingTests {
         a script, a whole web page — is a task to DO, not a lookup: produce it, complete. \
         Asked whether you CAN make it, make it. No tools, no grounding, no citations, \
         no "found nothing"; those are for factual questions.
+        - Use tools proactively. When a question could benefit from a lookup, \
+        search, or check — call the tool rather than guessing. Call multiple \
+        tools in a single turn when the question has several parts.
         - Pure small talk — greetings, banter — needs no tools or knowledge — reply in \
         your own voice and pick up one real thread (what they said, a memory of them, the \
         hour). A question about the current world is NOT small talk, even phrased casually.
-        - If the KNOWLEDGE above answers the question, answer from it directly.
+        - If the KNOWLEDGE above fully answers the question, answer from it directly.
         - Cite knowledge sources inline with citation tokens like \
         [Title §heading]; never invent citations.
         - Never present a fact, figure, or date you can't ground or verify \

@@ -135,13 +135,14 @@ public enum AFMToolPrompt {
 
         lines.append("")
         lines.append(
-            "Decide the single next step. You do NOT inherently know the current "
-                + "date/time, the user's private notes or documents, or any live / "
-                + "up-to-the-minute information — you MUST call the matching tool for "
-                + "those rather than guessing. Call one tool if it would help answer "
-                + "the request; only give your final answer when you genuinely can "
-                + "answer now (the tools have already given you what you need, or no "
-                + "tool applies)."
+            "Decide the single next step. The tools listed above are yours to USE "
+                + "— calling them is your job, not a secret. You do NOT inherently "
+                + "know the current date/time, the user's private notes or documents, "
+                + "or any live information — CALL the matching tool for those rather "
+                + "than saying \"I can't\" or guessing. Never say you lack access to "
+                + "something a listed tool provides. Call one tool if it would help "
+                + "answer the request; give your final answer only when the tools have "
+                + "already given you what you need, or no tool applies."
         )
         return lines.joined(separator: "\n")
     }
