@@ -50,7 +50,11 @@ implementation details:
 4. **TCC is the floor, not the ceiling.** Where macOS gates the data (location,
    Bluetooth, calendar), the OS prompt happens ONLY after the in-app toggle is
    on — flipping the toggle explains why first (calm-invite copy), then the
-   system dialog fires on first use. Two consents, ordered.
+   system dialog fires as the switch goes on. Two consents, ordered.
+   *(Amended 2026-09-23: it fired on first TOOL use, so switching a sense on
+   showed nothing until a question needed it — App Review asked whether the
+   missing alert was expected. `SensePermissionPolicy` pins the new order; a
+   refused or dismissed dialog flips the switch back.)*
 
 ## The tools
 

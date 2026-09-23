@@ -9,7 +9,8 @@
 //  never see it), the EventKit + CoreLocation adapters (thin,
 //  verify-by-launch), and the TCC probes the Privacy pane's auto-revert
 //  reads. Toggle-first, TCC-second per charter rule 4: the OS prompt can
-//  only ever fire on first tool use, after the in-app toggle is on — and
+//  only ever fire after the in-app toggle is on (as the switch goes on;
+//  first tool use is the fallback) — and
 //  the warm variant uses inert providers so a launch warm can never
 //  trigger a permission dialog.
 //
@@ -17,6 +18,13 @@
 //  gating mirror the hands; the adapters compile + are exercised only by
 //  launch — the TCC dance, the one-shot fix and its 15s watchdog are all
 //  named ⌘R verify-owed). Prior: none (new file).
+//
+//  Review: Kev + claude-opus-5.5, 2026-09-23 — App Review (Mac 1.0.0) asked
+//  why switching Calendar/Location on raised no system alert: the dialog
+//  waited for the first tool call. Charter rule 4 amended — the dialog now
+//  fires when the switch goes ON (SensePermissionPolicy, pure + tested);
+//  `ContextSenseAuth` gains the status mapping + the two requests. The tool
+//  adapters keep their own first-use request as a fallback. Confidence 0.85.
 //
 
 import CoreLocation
@@ -59,18 +67,83 @@ struct ContextSenseHook {
 /// "permission denied" loop). Reading status never prompts.
 @MainActor
 enum ContextSenseAuth {
+    /// One mapping per sense (the *Status below); the booleans derive from it.
     static var calendarDenied: Bool {
-        switch EKEventStore.authorizationStatus(for: .event) {
-        // writeOnly can't read events — for this tool that's a denial.
-        case .denied, .restricted, .writeOnly: true
-        default: false
-        }
+        calendarStatus == .denied
     }
 
     static var locationDenied: Bool {
+        locationStatus == .denied
+    }
+
+    // MARK: Toggle-time requests (charter rule 4, amended 2026-09-23)
+
+    static var calendarStatus: SensePermissionStatus {
+        switch EKEventStore.authorizationStatus(for: .event) {
+        case .notDetermined: .notDetermined
+        // `.authorized` is the pre-14 spelling of full access (deprecated, still in the enum).
+        case .fullAccess, .authorized: .granted
+        // writeOnly can't read events — for this tool that's a denial.
+        default: .denied
+        }
+    }
+
+    static var locationStatus: SensePermissionStatus {
         switch CLLocationManager().authorizationStatus {
-        case .denied, .restricted: true
-        default: false
+        case .notDetermined: .notDetermined
+        case .denied, .restricted: .denied
+        default: .granted
+        }
+    }
+
+    /// Show the Calendars dialog now (the user just switched Calendar on).
+    static func requestCalendar() async -> SensePermissionStatus {
+        _ = try? await EKEventStore().requestFullAccessToEvents()
+        return calendarStatus
+    }
+
+    /// Show the Location Services dialog now (the user just switched Location on).
+    static func requestLocation() async -> SensePermissionStatus {
+        await LocationAuthorizationRequest().run()
+    }
+}
+
+/// One Location Services dialog, awaited. CoreLocation reports the current
+/// status to a new delegate straight away, so this waits for the first
+/// status that is no longer undetermined — or gives up after two minutes
+/// (a dialog left open), which the policy reads as "revert".
+@MainActor
+private final class LocationAuthorizationRequest: NSObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    private var continuation: CheckedContinuation<SensePermissionStatus, Never>?
+
+    func run() async -> SensePermissionStatus {
+        guard ContextSenseAuth.locationStatus == .notDetermined else {
+            return ContextSenseAuth.locationStatus
+        }
+        return await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            manager.delegate = self
+            manager.requestWhenInUseAuthorization()
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(120))
+                self?.finish(ContextSenseAuth.locationStatus)
+            }
+        }
+    }
+
+    private func finish(_ status: SensePermissionStatus) {
+        guard let continuation else { return }
+        self.continuation = nil
+        manager.delegate = nil
+        continuation.resume(returning: status)
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_: CLLocationManager) {
+        MainActor.assumeIsolated {
+            let status = ContextSenseAuth.locationStatus
+            guard status != .notDetermined else { return } // the dialog is still up
+            finish(status)
         }
     }
 }
