@@ -535,8 +535,8 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
     /// and can call them via the `Tool` protocol. The wrappers return stub results;
     /// real execution stays in LocalAgent's dispatch core.
     ///
-    /// Falls back to the default `StatelessToolTurnSession` (which calls
-    /// `continueToolTurn` per iteration) on older runtimes.
+    /// Always the native session: the macOS-27-vs-26 split (whether
+    /// `toolCallingMode: .allowed` exists) lives inside its `send()`.
     public func makeToolTurnSession(
         tools: [ToolDefinition],
         options _: ToolTurnOptions

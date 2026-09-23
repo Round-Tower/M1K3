@@ -90,4 +90,34 @@ struct AFMToolPromptTests {
         let firstWins = AFMToolPrompt.systemInstructions(from: [.system("A."), .user("hi"), .system("B.")])
         #expect(firstWins == "A.")
     }
+
+    @Test("the native session's body (no text catalogue) never points at a list that isn't there")
+    func nativeBodyHasNoPhantomCatalogue() {
+        let body = AFMToolPrompt.render(messages: [.user("What time is it?")], tools: [])
+        #expect(!body.contains("Available tools:"))
+        #expect(!body.contains("listed above"))
+        // The push to actually USE tools survives without the catalogue.
+        #expect(body.contains("yours to USE"))
+    }
+
+    @Test("a transcript that records the model's own turns renders each call before its result")
+    func nativeTranscriptPairsCallsWithResults() {
+        // The native session's bookkeeping: what the agent sent, then what the
+        // model generated, then the next delta. Without recordGenerated the body
+        // showed "Result from datetime" with no call that asked for it (#397).
+        var transcript = ToolTurnTranscript()
+        transcript.recordSent([.system("persona"), .user("What day is it?")])
+        transcript.recordGenerated(.toolCalls([
+            ParsedToolCall(name: "datetime", arguments: [AFMToolMapping.argumentKey: .string("today")]),
+        ]))
+        transcript.recordSent([.toolResult(name: "datetime", output: "Tuesday 22 September")])
+
+        let body = AFMToolPrompt.render(messages: transcript.full, tools: [])
+        let call = body.range(of: "Assistant called datetime(today)")
+        let result = body.range(of: "Result from datetime: Tuesday 22 September")
+        #expect(call != nil)
+        #expect(result != nil)
+        if let call, let result { #expect(call.lowerBound < result.lowerBound) }
+        #expect(!body.contains("persona")) // .system lifts to instructions, never the body
+    }
 }

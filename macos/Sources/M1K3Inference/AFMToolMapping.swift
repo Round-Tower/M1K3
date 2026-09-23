@@ -31,6 +31,9 @@
 //  ride the Prompt via Attachment(imageURL:) and the "cannot view" text note is
 //  suppressed; `imageURLs(from:)` extracts attached URLs for the provider.
 //  Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — #397 fold: `render(tools: [])` (the
+//  native session) no longer ends by pointing at "the tools listed above" when
+//  nothing is listed. Pinned in AFMToolPromptTests. Confidence now 0.85.
 
 import Foundation
 
@@ -134,13 +137,16 @@ public enum AFMToolPrompt {
         }
 
         lines.append("")
+        // The native session passes `tools: []` (its definitions ride the FM
+        // session's structured `tools:`), so there is no list "above" to name.
+        let yourTools = tools.isEmpty ? "Your tools are" : "The tools listed above are"
         lines.append(
-            "Decide the single next step. The tools listed above are yours to USE "
+            "Decide the single next step. \(yourTools) yours to USE "
                 + "— calling them is your job, not a secret. You do NOT inherently "
                 + "know the current date/time, the user's private notes or documents, "
                 + "or any live information — CALL the matching tool for those rather "
                 + "than saying \"I can't\" or guessing. Never say you lack access to "
-                + "something a listed tool provides. Call one tool if it would help "
+                + "something one of your tools provides. Call one tool if it would help "
                 + "answer the request; give your final answer only when the tools have "
                 + "already given you what you need, or no tool applies."
         )

@@ -19,16 +19,25 @@
 //
 //  A FRESH LanguageModelSession is created per send() — same cost as the
 //  AFMToolDecision path (Phase 15 review note 1). The full transcript is
-//  re-rendered each call so the model always sees the complete conversation.
+//  re-rendered each call so the model always sees the complete conversation:
+//  what the agent sent AND the turns the model generated. The agent sends
+//  only tool results as the next delta, so without `recordGenerated` the body
+//  showed "Result from X" with no call that asked for it.
+//
+//  Signed: Kev + claude-opus-5-5, 2026-09-23, Confidence 0.8, Prior: Unknown
+//  (the #397 fold only: the transcript records the model's own turns through
+//  the tested `ToolTurnTranscript`, Mutex-guarded like StatelessToolTurnSession.
+//  The live session itself is verify-by-launch — AFM does not run in swift test.)
 
 #if compiler(>=6.2)
     import Foundation
     @_weakLinked import FoundationModels
     import M1K3LogCore
     import os
+    import Synchronization
 
-    /// The agent loop uses a session strictly serially (one send at a time,
-    /// awaited before the next), so the unsynchronized transcript is safe.
+    /// `@unchecked Sendable`: the transcript is Mutex-guarded and `callLog` is
+    /// lock-guarded; the agent loop uses a session strictly serially anyway.
     @available(macOS 26.0, iOS 26.0, visionOS 26.0, *)
     final class AFMNativeToolTurnSession: ToolTurnSession, @unchecked Sendable {
         private let instructions: String
@@ -36,7 +45,7 @@
         private let toolDefinitions: [ToolDefinition]
         private static let log = M1K3Log.logger(.afm)
         private let callLog: ToolCallLog
-        private var transcript: [ToolMessage] = []
+        private let transcript = Mutex(ToolTurnTranscript())
 
         final class ToolCallLog: @unchecked Sendable {
             private let lock = NSLock()
@@ -70,14 +79,17 @@
             onToken: @escaping @Sendable (String) -> Void
         ) async throws -> ToolTurn {
             _ = callLog.drain()
-            transcript.append(contentsOf: messages)
+            let snapshot = transcript.withLock { current in
+                current.recordSent(messages)
+                return current.full
+            }
 
             // Empty tool list: the text catalogue is omitted because the FM
             // session already carries structured definitions via `tools:`.
             // Rendering both doubled the token count past Mini's 4096 window.
-            let body = AFMToolPrompt.render(messages: transcript, tools: [])
-            let imageURLs = AFMToolPrompt.imageURLs(from: transcript)
-            let standing = AFMToolPrompt.systemInstructions(from: transcript) ?? instructions
+            let body = AFMToolPrompt.render(messages: snapshot, tools: [])
+            let imageURLs = AFMToolPrompt.imageURLs(from: snapshot)
+            let standing = AFMToolPrompt.systemInstructions(from: snapshot) ?? instructions
 
             let session = LanguageModelSession(
                 tools: tools,
@@ -119,9 +131,11 @@
                     Self.log.notice(
                         "afm native tools: \(calls.count, privacy: .public) call(s) — \(calls.map(\.name).joined(separator: ", "), privacy: .public)"
                     )
+                    transcript.withLock { $0.recordGenerated(.toolCalls(parsed)) }
                     return .toolCalls(parsed)
                 }
 
+                transcript.withLock { $0.recordGenerated(.text(response.content)) }
                 onToken(response.content)
                 return .text(response.content)
 

@@ -24,7 +24,7 @@
     }
 
     @available(macOS 26.0, iOS 26.0, visionOS 26.0, *)
-    public struct AFMNativeTool: Tool, @unchecked Sendable {
+    public struct AFMNativeTool: Tool, Sendable {
         public typealias Arguments = AFMToolArguments
         public typealias Output = String
 
