@@ -202,6 +202,11 @@ final class ScreengrabUITests: XCTestCase {
         let app = XCUIApplication()
         let recipe = plate.launchRecipe
         app.launchEnvironment = recipe.environment
+        // capture.sh's run token: the first plate of a run starts the app on an
+        // empty sibling root (ScreengrabHarness.prepareRoot), later plates reuse it.
+        if let run = ProcessInfo.processInfo.environment[ScreengrabHarness.runKey], !run.isEmpty {
+            app.launchEnvironment[ScreengrabHarness.runKey] = run
+        }
         app.launchArguments = recipe.flatArguments
         addTeardownBlock { app.terminate() } // a failed wait must not leave the app running
         app.launch()

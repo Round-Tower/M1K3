@@ -130,3 +130,58 @@ struct ScreengrabHarnessTests {
         #expect(ScreengrabPlate.allCases.map(\.rawValue) == plan)
     }
 }
+
+/// A capture run starts from a fresh sibling root (2026-09-23): a shell can no
+/// longer clear the app's container, so the stale seed marker from an old run
+/// kept the #383 backstory out and the constellation plate showed five motes.
+/// The app clears its OWN root, once per run token.
+struct ScreengrabFreshRootTests {
+    private func sandbox() throws -> (live: URL, sibling: URL) {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("screengrab-fresh-\(UUID().uuidString)", isDirectory: true)
+        let live = base.appendingPathComponent("M1K3", isDirectory: true)
+        try FileManager.default.createDirectory(at: live, withIntermediateDirectories: true)
+        try Data("mine".utf8).write(to: live.appendingPathComponent("knowledge.sqlite"))
+        let sibling = base.appendingPathComponent(ScreengrabHarness.dataRootName, isDirectory: true)
+        try FileManager.default.createDirectory(at: sibling, withIntermediateDirectories: true)
+        try Data("stale".utf8).write(to: sibling.appendingPathComponent("seed.marker"))
+        return (live, sibling)
+    }
+
+    private func harness(run: String?) -> ScreengrabHarness {
+        var environment = [ScreengrabHarness.activeKey: "1", ScreengrabHarness.plateKey: "chat"]
+        environment[ScreengrabHarness.runKey] = run
+        return ScreengrabHarness(environment: environment)
+    }
+
+    @Test("a new run token clears the sibling root and stamps it")
+    func newRunClears() throws {
+        let (live, sibling) = try sandbox()
+        let cleared = try harness(run: "run-1").prepareRoot(live: live)
+        #expect(cleared)
+        #expect(!FileManager.default.fileExists(atPath: sibling.appendingPathComponent("seed.marker").path))
+        let stamp = try String(contentsOf: sibling.appendingPathComponent(ScreengrabHarness.runStampName), encoding: .utf8)
+        #expect(stamp == "run-1")
+    }
+
+    @Test("the same run token keeps the root: later plates reuse the seed")
+    func sameRunKeeps() throws {
+        let (live, sibling) = try sandbox()
+        _ = try harness(run: "run-1").prepareRoot(live: live)
+        try Data("seeded".utf8).write(to: sibling.appendingPathComponent("seed.marker"))
+        let cleared = try harness(run: "run-1").prepareRoot(live: live)
+        #expect(!cleared)
+        #expect(FileManager.default.fileExists(atPath: sibling.appendingPathComponent("seed.marker").path))
+    }
+
+    @Test("no run token, or an inactive harness, touches nothing — and the live root never")
+    func noTokenNoop() throws {
+        let (live, sibling) = try sandbox()
+        #expect(try harness(run: nil).prepareRoot(live: live) == false)
+        #expect(try harness(run: "").prepareRoot(live: live) == false)
+        let inactive = ScreengrabHarness(environment: [ScreengrabHarness.runKey: "run-9"])
+        #expect(try inactive.prepareRoot(live: live) == false)
+        #expect(FileManager.default.fileExists(atPath: sibling.appendingPathComponent("seed.marker").path))
+        #expect(FileManager.default.fileExists(atPath: live.appendingPathComponent("knowledge.sqlite").path))
+    }
+}

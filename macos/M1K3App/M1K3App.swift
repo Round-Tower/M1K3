@@ -279,6 +279,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         return .terminateNow
     }
 
+    /// `Application Support/M1K3` — the live data root every store sits under.
+    private static var liveDataRoot: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("M1K3", isDirectory: true)
+    }
+
     func applicationDidFinishLaunching(_: Notification) {
         Self.logLaunchStamp()
         // The self-test path drives its own composition; don't double-build here.
@@ -287,6 +293,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         // app scope, not window scope — a background intent launch has no window.
         Task { @MainActor in
             do {
+                // A capture run's first launch empties the screengrab sibling root
+                // before any store opens (no-op outside a capture run).
+                try ScreengrabHarness.current.prepareRoot(live: Self.liveDataRoot)
                 let env = try AppEnvironment()
                 environment = env
                 AppEnvironment.registerShared(env)

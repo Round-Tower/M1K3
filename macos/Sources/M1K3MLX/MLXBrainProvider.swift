@@ -84,6 +84,9 @@
 //  behaviour change; the header above was rewritten because it still described a Gemma-only provider.
 //  Left alone on purpose: `Gemma4TemplateFix` / `GemmaMTPSpike` / `GemmaVisionSpike` (really Gemma-specific),
 //  dated records under scratch/ and ADR 0001, and the fossil default configuration.
+//  Review: Kev + claude-opus-5-5, 2026-09-23, Confidence 0.85 — sampling rides a SamplingProfile
+//  (M1K3Inference): `house` = the old 1.1/64 loop guard + upstream defaults, still the default;
+//  M1K3_SAMPLING picks the model-card arm for the Lil personality A/B.
 
 import Foundation
 import Hub
@@ -244,8 +247,22 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // (default is 20) reaches sentence-length loops; true mid-generation
         // loop DETECTION is deferred until per-token cancellation exists —
         // without it a detector could watch a loop but not stop it.
-        params.repetitionPenalty = 1.1
-        params.repetitionContextSize = 64
+        //
+        // Sampling (2026-09-23): the loop guard above now rides a SamplingProfile —
+        // `house` is exactly the old 1.1/64 plus mlx-swift-lm's defaults (0.6 /
+        // top-p 1.0 / top-k off), and stays the default; M1K3_SAMPLING picks an
+        // experiment arm (the model card's sampling) for the evals.
+        let sampling = SamplingProfile.resolve(
+            modelID: configuration.name,
+            environment: ProcessInfo.processInfo.environment
+        )
+        params.temperature = sampling.temperature
+        params.topP = sampling.topP
+        params.topK = sampling.topK
+        params.minP = sampling.minP
+        params.repetitionPenalty = sampling.repetitionPenalty
+        params.repetitionContextSize = sampling.repetitionContextSize
+        params.presencePenalty = sampling.presencePenalty
         if Self.supportsQuantizedKVCache(for: configuration) {
             // 8-bit quantized KV: halves per-token KV memory and, since decode is
             // memory-bandwidth-bound, speeds long transcripts. Replaces the

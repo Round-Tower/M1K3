@@ -19,6 +19,8 @@
 # Review: Kev + claude-fable-5.1, 2026-09-12 — the sibling-root clear is best-effort (TCC blocks
 # it from a shell without container access); the run no longer dies on it. Confidence now 0.8.
 # Review: Kev + claude-fable-5.1, 2026-09-15 — `constellation` joins the plate export list (Mac lane).
+# Review: Kev + claude-opus-5-5, 2026-09-23 — every run passes a fresh M1K3_SCREENGRAB_RUN token: the
+# app empties its own sibling root on the run's first launch (the shell's rm is TCC-blocked). Confidence 0.85.
 set -euo pipefail
 
 target=${1:?mac|ios}; shift
@@ -92,6 +94,7 @@ xcodebuild test -project M1K3.xcodeproj -scheme "$scheme" -destination "$dest" \
   -skipPackagePluginValidation -skipMacroValidation \
   -only-testing:"$testTarget" "${only[@]}" "${sign[@]}" \
   TEST_RUNNER_M1K3_SCREENGRAB_OUT="$([[ $target == mac ]] && print -r -- "$plates")" \
+  TEST_RUNNER_M1K3_SCREENGRAB_RUN="$(date +%s)" \
   2>&1 | xcbeautify --quiet
 rc=$pipestatus[1]
 set -e

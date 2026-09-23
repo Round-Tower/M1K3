@@ -27,16 +27,24 @@ public struct ScreengrabHarness: Sendable, Equatable {
     public static let plateKey = "M1K3_SCREENGRAB_PLATE"
     /// The sibling directory name beside the live `M1K3` data root.
     public static let dataRootName = "M1K3-screengrab"
+    /// One token per capture run (capture.sh stamps it): the first launch that
+    /// sees a new token starts from an empty sibling root.
+    public static let runKey = "M1K3_SCREENGRAB_RUN"
+    /// The file inside the sibling root that remembers which run it belongs to.
+    public static let runStampName = ".screengrab-run"
 
     /// The process-wide read; the shells consult this at init.
     public static let current = ScreengrabHarness(environment: ProcessInfo.processInfo.environment)
 
     public let isActive: Bool
     public let plate: ScreengrabPlate?
+    /// The capture run this launch belongs to; nil outside a capture run.
+    public let runToken: String?
 
     public init(environment: [String: String]) {
         isActive = environment[Self.activeKey] == "1"
         plate = isActive ? environment[Self.plateKey].flatMap(ScreengrabPlate.init(rawValue:)) : nil
+        runToken = isActive ? environment[Self.runKey].flatMap { $0.isEmpty ? nil : $0 } : nil
     }
 
     /// Where the stores live for this launch: the live root when inactive, the
@@ -45,6 +53,28 @@ public struct ScreengrabHarness: Sendable, Equatable {
         guard isActive else { return live }
         return live.deletingLastPathComponent()
             .appendingPathComponent(Self.dataRootName, isDirectory: true)
+    }
+
+    /// Empties the sibling root once per capture run, before any store opens.
+    /// A shell can't clear another app's container under macOS app-data privacy,
+    /// so a stale seed marker used to survive every run (the constellation plate
+    /// kept five motes after #383 seeded thirty-nine). The app clears its OWN
+    /// root: when the run token differs from the one stamped inside it. Returns
+    /// whether it cleared. Never touches `live`.
+    @discardableResult
+    public func prepareRoot(live: URL, fileManager: FileManager = .default) throws -> Bool {
+        guard isActive, let runToken else { return false }
+        let root = dataRoot(live: live)
+        let stamp = root.appendingPathComponent(Self.runStampName)
+        if let existing = try? String(contentsOf: stamp, encoding: .utf8), existing == runToken {
+            return false
+        }
+        if fileManager.fileExists(atPath: root.path) {
+            try fileManager.removeItem(at: root)
+        }
+        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+        try Data(runToken.utf8).write(to: stamp)
+        return true
     }
 
     // MARK: - Per-plate questions the shells ask
