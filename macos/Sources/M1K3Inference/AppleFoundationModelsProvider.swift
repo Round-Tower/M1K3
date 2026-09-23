@@ -54,6 +54,8 @@
 //  Note this provider builds a FRESH `LanguageModelSession(instructions:)` per
 //  call, so anything in the persona is re-sent every turn — the reason persona
 //  length is a real cost here and free on the KV-cached MLX tiers.
+//  Review: Kev + claude-opus-5-5, 2026-09-23 — carriesStandingPersona checks M1K3Persona.standingPersonaAnchor:
+//  with BEING YOURSELF mid-core the trimmed core is no longer a substring of the full one. Confidence 0.9.
 
 import Foundation
 import M1K3LogCore
@@ -492,8 +494,11 @@ extension AppleFoundationModelsProvider: PersonaCarrying {
     /// core, and a `contains(corePrompt)` check can never match a strict prefix:
     /// from 2026-09-12 to this fix it read false, the ReAct floor re-sent the full
     /// persona in the body, and every Mini agent turn overflowed 4096.
+    /// (2026-09-23: checks the anchor every rendering shares — the trimmed core
+    /// is no longer a substring of the full one once an MLX-only section sits
+    /// mid-core.)
     public var carriesStandingPersona: Bool {
-        instructions().contains(M1K3Persona.miniCorePrompt)
+        instructions().contains(M1K3Persona.standingPersonaAnchor)
     }
 }
 

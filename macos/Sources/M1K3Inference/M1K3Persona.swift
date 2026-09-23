@@ -160,6 +160,16 @@ public enum M1K3Persona {
         return removingSection("# BEING YOURSELF", from: core)
     }()
 
+    /// The stretch of the standard core EVERY rendering carries — the full core,
+    /// Mini's trimmed one, the compact prompt: everything before the first MLX-only
+    /// section. What "this instruction set carries the persona" checks against;
+    /// `miniCorePrompt` itself stopped being a substring of the full core when
+    /// BEING YOURSELF landed mid-core (2026-09-23).
+    static let standingPersonaAnchor: String = {
+        guard let range = corePrompt.range(of: "\n\n# BEING YOURSELF") else { return miniCorePrompt }
+        return String(corePrompt[..<range.lowerBound])
+    }()
+
     /// `text` without the `# header` section (up to the next blank-line `# ` header).
     static func removingSection(_ header: String, from text: String) -> String {
         guard let start = text.range(of: "\n\n" + header) else { return text }
