@@ -54,13 +54,16 @@
         enum TapError: Error {
             case coreAudio(String, OSStatus)
             case unsupportedFormat
+            /// `stop` already ran: the recorder lost a start/stop race and must not
+            /// report a far channel it never built.
+            case stopped
         }
 
         /// Start the tap; `onBuffer` receives each IO cycle's audio (tap format,
         /// on a private queue). Throws — and leaves nothing behind — on failure.
         func start(onBuffer: @escaping @Sendable (AVAudioPCMBuffer) -> Void) throws {
             try stateLock.withLock {
-                guard !stopped else { return }
+                guard !stopped else { throw TapError.stopped }
                 do {
                     try build(onBuffer: onBuffer)
                 } catch {
@@ -124,6 +127,9 @@
                 stopped = true
                 teardown()
             }
+            // An IO cycle already handed to `queue` may still be pending: wait it out,
+            // so no straggler buffer lands in the NEXT recording's samples.
+            queue.sync {}
         }
 
         private func teardown() {

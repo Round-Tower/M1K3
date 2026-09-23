@@ -53,8 +53,8 @@ struct PrivacySettingsPane: View {
     @AppStorage(AppEnvironment.contextLocationPreciseKey) private var contextLocationPrecise = false
     @State private var calendarDenied = false
     @State private var locationDenied = false
-    /// A dialog closed without an answer: the switch went back off, and this says why.
-    @State private var senseUnanswered: String?
+    /// The sense whose dialog closed without an answer (its switch went back off).
+    @State private var unansweredSense: String?
     @State private var scriptRows: [AppEnvironment.ScriptRow] = []
     @State private var connectClient: MCPClient = .claude
     /// ADR 0006: the chat-egress consent, default OFF (absent reads as off).
@@ -241,8 +241,9 @@ struct PrivacySettingsPane: View {
             if contextLocation {
                 Toggle("Precise location", isOn: $contextLocationPrecise)
             }
-            if let senseUnanswered {
-                Text(senseUnanswered).font(.caption).foregroundStyle(.secondary)
+            if let unansweredSense {
+                Text("macOS didn't get an answer, so \(unansweredSense) stayed off. Switch it on again to be asked.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             if locationDenied {
                 Text("macOS has location access off for M1K3 — grant it in System "
@@ -280,6 +281,9 @@ struct PrivacySettingsPane: View {
     /// ON with the question still open (the app quit before the dialog was
     /// answered) asks macOS again.
     private func refreshContextAuth() {
+        // A switch that is OFF only clears a stale denial (granted meanwhile in System Settings).
+        if !contextCalendar, calendarDenied, ContextSenseAuth.calendarStatus != .denied { calendarDenied = false }
+        if !contextLocation, locationDenied, ContextSenseAuth.locationStatus != .denied { locationDenied = false }
         if contextCalendar {
             settleSense(on: true, status: ContextSenseAuth.calendarStatus,
                         request: ContextSenseAuth.requestCalendar,
@@ -302,7 +306,7 @@ struct PrivacySettingsPane: View {
         toggle: Binding<Bool>,
         name: String
     ) {
-        if on { senseUnanswered = nil }
+        if on, unansweredSense == name { unansweredSense = nil }
         switch SensePermissionPolicy.onToggle(enabled: on, status: status) {
         case .keep:
             if on { denied.wrappedValue = false }
@@ -316,10 +320,7 @@ struct PrivacySettingsPane: View {
                 // A dismissed dialog is not a denial: only name the Settings path when macOS said no.
                 denied.wrappedValue = answer == .denied
                 if revert { toggle.wrappedValue = false }
-                if revert, answer != .denied {
-                    senseUnanswered = "macOS didn't get an answer, so \(name) stayed off. "
-                        + "Switch it on again to be asked."
-                }
+                if revert, answer != .denied { unansweredSense = name }
             }
         }
     }

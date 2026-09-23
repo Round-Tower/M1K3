@@ -81,7 +81,8 @@ enum ContextSenseAuth {
     static var calendarStatus: SensePermissionStatus {
         switch EKEventStore.authorizationStatus(for: .event) {
         case .notDetermined: .notDetermined
-        case .fullAccess: .granted
+        // `.authorized` is the pre-14 spelling of full access (deprecated, still in the enum).
+        case .fullAccess, .authorized: .granted
         // writeOnly can't read events — for this tool that's a denial.
         default: .denied
         }

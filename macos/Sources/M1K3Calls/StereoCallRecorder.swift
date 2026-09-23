@@ -87,6 +87,8 @@ import os
 
             do {
                 try await startSystemAudio()
+                // A stop() that raced this start leaves no far channel to report.
+                guard lock.withLock({ recording }) else { throw SystemAudioTap.TapError.stopped }
                 Self.log.notice("capturing stereo (mic + system audio)")
                 return true
             } catch {

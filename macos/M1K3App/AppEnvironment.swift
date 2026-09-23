@@ -1752,7 +1752,7 @@ extension AppEnvironment {
             recordingStartedAt = Date()
             Self.callLog.notice("recording started (stereo=\(stereo, privacy: .public))")
             lastCallStatus = stereo
-                ? "Recording… (both sides — speakers will be separated)"
+                ? "Recording… (your mic + this Mac's audio — speakers will be separated)"
                 : "Recording… (mic only — the other side couldn’t be captured)"
         } catch {
             Self.callLog.error("start failed: \(error, privacy: .public)")
