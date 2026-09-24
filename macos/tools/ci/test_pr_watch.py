@@ -147,6 +147,36 @@ def test_auto_pass_uses_the_newest_run_on_the_head():
     assert m.auto_pass_ok(head, runs) is False
 
 
+def test_auto_pass_needs_the_comment_its_run_posted():
+    # #408, 2026-09-24: the action skips itself when the workflow file differs
+    # from master — a 13-second green run that posted nothing. Not a pass.
+    head = "572a108e" + "0" * 32
+    runs = [{"headSha": head, "status": "completed", "conclusion": "success",
+             "createdAt": "2026-09-24T21:36:22Z", "updatedAt": "2026-09-24T21:36:38Z"}]
+    assert m.auto_pass_ok(head, runs, comments=[]) is False
+    review = bot("**Claude finished @kev's task in 2m** ---\n### Reviewed head `572a108e`\n- [x] a", created="2026-09-24T21:36:30Z")
+    assert m.auto_pass_ok(head, runs, comments=[review]) is True
+    assert m.auto_pass_comment(head, runs, [review]) is review
+    late = bot("## Review: someone else's, after the run", created="2026-09-24T21:40:00Z")
+    assert m.auto_pass_ok(head, runs, comments=[late]) is False
+    placeholder = bot("**Claude working…**", created="2026-09-24T21:36:30Z")
+    assert m.auto_pass_ok(head, runs, comments=[placeholder]) is False
+
+
+def test_an_auto_review_that_names_the_head_counts_once_not_twice():
+    # #404, 2026-09-24: the auto pass's own comment is "Claude finished … Reviewed
+    # head `x`" — summon-shaped and naming the head. One review, one pass.
+    head = "cd1aa308" + "0" * 32
+    review = bot("**Claude finished @kev's task in 1m 47s** ---\n### Reviewed head `cd1aa308` (both commits)\n- [x] a", created="2026-09-24T18:54:10Z")
+    jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
+    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, [review], auto_ok=True, passes_needed=2, auto_comment=review)
+    assert v.passes == 1 and not v.ready
+    # An auto comment that names no head still adds its one pass.
+    plain = bot("## Review: perf pass\nFocused…", created="2026-09-24T18:54:10Z")
+    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, [plain], auto_ok=True, passes_needed=2, auto_comment=plain)
+    assert v.passes == 1
+
+
 # --- which CI jobs gate the merge ------------------------------------------
 
 def test_package_only_change_does_not_wait_for_the_mobile_job():
@@ -176,7 +206,7 @@ def test_mobile_prefixes_cover_every_mac_shell_file_the_mobile_targets_compile()
     import pathlib
     import re
     spec = (pathlib.Path(__file__).resolve().parents[2] / "project.yml").read_text()
-    shared = sorted(set(re.findall(r"^\s*-\s*path:\s*(M1K3App/\S+)", spec, re.M)))
+    shared = sorted(set(re.findall(r"^\s*-\s*path:\s*(M1K3App/\S+)", spec, re.MULTILINE)))
     assert shared, "expected shared M1K3App/ files in project.yml"
     for rel in shared:
         assert m.JOB_MOBILE in m.required_jobs([f"macos/{rel}"]), f"macos/{rel} is compiled by a mobile target but not in MOBILE_PATH_PREFIXES"
