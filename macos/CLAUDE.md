@@ -81,9 +81,10 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' build | xcbeautify   # alw
   clean master merge on an already-reviewed head is a *trivial head*:
   `--passes 0`. Master has no required status checks (2026-09-12) — the gate
   is this rule. The mobile job (~19 min) is advisory unless the diff touches
-  `M1K3iOSApp/`, `M1K3visionOS/`, a Mac-shell file the MobileShell compiles
-  (the `M1K3App/` list in `pr_watch.py`, pinned against `project.yml` by
-  test), `project.yml`, `Package.swift`, `Package.resolved` or `ci.yml`.
+  `M1K3iOSApp/`, `M1K3visionOS/`, `M1K3.icon` (the iOS target compiles the
+  shared document itself), a Mac-shell file the MobileShell compiles (the
+  `M1K3App/` list in `pr_watch.py`, pinned against `project.yml` by test),
+  `project.yml`, `Package.swift`, `Package.resolved` or `ci.yml`.
   Do NOT merge master into a PR branch unless git reports a conflict or the
   PR needs a fix from master to go green — each merge is a full CI + review
   cycle. A one-file, test-only fix that unblocks a PR rides in that PR, named
