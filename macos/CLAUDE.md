@@ -51,8 +51,8 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' build | xcbeautify   # alw
   against the simulator SDKs) run on a PR only when the diff touches what they
   compile — `app-build`: `M1K3App/`, `M1K3CLI/`, `M1K3Screensaver/`,
   `M1K3.icon`, `project.yml`, the package manifest, `ci.yml`; `mobile-build`:
-  `M1K3iOSApp/`, `M1K3visionOS/`, `UITests/`, `M1K3.icon`, `M1K3App/` (the
-  MobileShell compiles a dozen files from it), `project.yml`, the package
+  `M1K3iOSApp/`, `M1K3visionOS/`, `M1K3.icon`, `M1K3App/` (the MobileShell
+  compiles a dozen shared files from it), `project.yml`, the package
   manifest, `ci.yml` — and on every push to master or develop regardless. A
   package rename that breaks a shell lands, fails the push run within the
   hour, and is fixed forward (since 2026-09-24; ~20 min saved per
@@ -81,8 +81,9 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' build | xcbeautify   # alw
   clean master merge on an already-reviewed head is a *trivial head*:
   `--passes 0`. Master has no required status checks (2026-09-12) — the gate
   is this rule. The mobile job (~19 min) is advisory unless the diff touches
-  `M1K3iOSApp/`, `M1K3visionOS/`, `UITests/`, `project.yml`, `Package.swift`,
-  `Package.resolved` or `ci.yml`.
+  `M1K3iOSApp/`, `M1K3visionOS/`, a Mac-shell file the MobileShell compiles
+  (the `M1K3App/` list in `pr_watch.py`, pinned against `project.yml` by
+  test), `project.yml`, `Package.swift`, `Package.resolved` or `ci.yml`.
   Do NOT merge master into a PR branch unless git reports a conflict or the
   PR needs a fix from master to go green — each merge is a full CI + review
   cycle. A one-file, test-only fix that unblocks a PR rides in that PR, named

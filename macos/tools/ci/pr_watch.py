@@ -16,7 +16,8 @@ in project memory. Now they are code, tested in test_pr_watch.py:
 * Placeholders ("**Claude working…**", an unchecked `- [ ]` checklist, the
   older "I'll analyze this and get back to you") never count.
 * The mobile job (iOS + visionOS shells, ~19 min) is ADVISORY unless the diff
-  touches the mobile shell, the project spec, the package manifest, or ci.yml.
+  touches the mobile shell, a Mac-shell file the MobileShell compiles, the
+  project spec, the package manifest, or ci.yml.
   Package-only changes do not wait for it; a break there is fixed forward, with
   Xcode Cloud as the backstop. Master has no required status checks (checked
   2026-09-12) — every gate is ours. Since 2026-09-24 ci.yml itself skips the
@@ -46,7 +47,11 @@ Review: Kev + claude-fable-5.1, 2026-09-24 — MOBILE_PATH_PREFIXES gains the
 package manifest (Package.swift / Package.resolved) to mirror ci.yml's new
 `mobile` filter: a dependency bump is exactly where the iOS shell breaks. The
 watch needs no change for the now path-gated App-shell job — GREEN already
-holds "skipped". Confidence now 0.85.
+holds "skipped". Summon 1 on #408 then caught the mirror being incomplete: the
+Mac-shell files the MobileShell template compiles (AvatarView, ReadingText,
+Phosphor…, project.yml lines 87–118 and 373–374) are now prefixes too, pinned
+against project.yml by test; UITests/ left the list — it is a test target no
+CI job compiles, so it bought a 19-min wait for nothing. Confidence now 0.85.
 """
 from __future__ import annotations
 
@@ -67,13 +72,30 @@ JOB_GUARDS = "Project guards (test scheme · store targets)"
 JOB_DOCS = "Docs match the code (module map)"
 
 ALWAYS_REQUIRED = frozenset({JOB_GATE, JOB_SWIFT_TEST, JOB_APP, JOB_GUARDS, JOB_DOCS})
-# Paths only the mobile job compiles. project.yml defines every target; the
-# package manifest moves the dependencies the shell links; ci.yml changes the
-# jobs themselves — each makes the full matrix required.
+# Paths the mobile job compiles that the always-required App-shell job does not
+# vouch for. project.yml defines every target; the package manifest moves the
+# dependencies the shell links; ci.yml changes the jobs themselves — each makes
+# the full matrix required. The M1K3App/ entries are the files the MobileShell
+# template pulls out of the Mac shell (project.yml `MobileShell.sources` and the
+# M1K3iOS target) — test_pr_watch pins this list against project.yml. Not here:
+# M1K3.icon (App-shell compiles it too, and App-shell is always required) and
+# UITests/ (test targets; no CI job compiles them).
 MOBILE_PATH_PREFIXES = (
     "macos/M1K3iOSApp/",
     "macos/M1K3visionOS/",
-    "macos/UITests/",
+    "macos/M1K3App/AvatarView.swift",
+    "macos/M1K3App/AvatarEmotion+SwiftUI.swift",
+    "macos/M1K3App/PixelFont.swift",
+    "macos/M1K3App/ReadingMode.swift",
+    "macos/M1K3App/ReadingText.swift",
+    "macos/M1K3App/SpeechHighlight.swift",
+    "macos/M1K3App/KaraokeReadingText.swift",
+    "macos/M1K3App/CompanionAvatarView.swift",
+    "macos/M1K3App/CodeBlockView.swift",
+    "macos/M1K3App/PhosphorMaterial.swift",
+    "macos/M1K3App/Phosphor.metal",
+    "macos/M1K3App/PrivacyInfo.xcprivacy",
+    "macos/M1K3App/Resources/Fonts/",
     "macos/project.yml",
     "macos/Package.swift",
     "macos/Package.resolved",

@@ -156,8 +156,29 @@ def test_package_only_change_does_not_wait_for_the_mobile_job():
 
 
 def test_mobile_shell_change_makes_the_mobile_job_required():
-    for path in ("macos/M1K3iOSApp/ChatScreen.swift", "macos/M1K3visionOS/Info.generated.plist", "macos/project.yml", "macos/UITests/ScreengrabiOS/A.swift", "macos/Package.swift", "macos/Package.resolved"):
+    for path in ("macos/M1K3iOSApp/ChatScreen.swift", "macos/M1K3visionOS/Info.generated.plist", "macos/project.yml", "macos/Package.swift", "macos/Package.resolved",
+                 "macos/M1K3App/AvatarView.swift", "macos/M1K3App/Phosphor.metal", "macos/M1K3App/Resources/Fonts/Silkscreen-Bold.ttf"):
         assert m.JOB_MOBILE in m.required_jobs([path]), path
+
+
+def test_mac_only_shell_files_and_test_targets_leave_the_mobile_job_advisory():
+    # SelfTest.swift is Mac-shell only; UITests/ are test targets no CI job compiles.
+    for path in ("macos/M1K3App/SelfTest.swift", "macos/M1K3App/Info.generated.plist", "macos/UITests/ScreengrabiOS/A.swift"):
+        assert m.JOB_MOBILE not in m.required_jobs([path]), path
+
+
+def test_mobile_prefixes_cover_every_mac_shell_file_the_mobile_targets_compile():
+    # project.yml is the source of truth: every `path: M1K3App/<file>` entry is a
+    # Mac-shell file some mobile target compiles (the Mac target takes the whole
+    # directory as `path: M1K3App`). A new shared file must land here too, or a
+    # break in it would read as advisory.
+    import pathlib
+    import re
+    spec = (pathlib.Path(__file__).resolve().parents[2] / "project.yml").read_text()
+    shared = sorted(set(re.findall(r"^\s*-\s*path:\s*(M1K3App/\S+)", spec, re.M)))
+    assert shared, "expected shared M1K3App/ files in project.yml"
+    for rel in shared:
+        assert m.JOB_MOBILE in m.required_jobs([f"macos/{rel}"]), f"macos/{rel} is compiled by a mobile target but not in MOBILE_PATH_PREFIXES"
 
 
 def test_ci_workflow_change_requires_everything():

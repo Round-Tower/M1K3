@@ -73,14 +73,14 @@ jobs:
               - 'macos/Package.swift'
               - 'macos/Package.resolved'
             # What the mobile job compiles — MobileShell also builds a dozen
-            # files out of M1K3App/ and the same icon document.
+            # files out of M1K3App/ and the same icon document. UITests/ is not
+            # here: those are test targets, and this job only builds.
             mobile:
               - '.github/workflows/ci.yml'
               - 'macos/M1K3iOSApp/**'
               - 'macos/M1K3visionOS/**'
               - 'macos/M1K3App/**'
               - 'macos/M1K3.icon/**'
-              - 'macos/UITests/**'
               - 'macos/project.yml'
               - 'macos/Package.swift'
               - 'macos/Package.resolved'
