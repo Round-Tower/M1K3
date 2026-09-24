@@ -30,7 +30,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0 # Full history for better diff context
+          fetch-depth: 1 # the review reads the PR via `gh pr diff`; a full clone of an 800 MB repo bought nothing (2026-09-24)
 
       - name: Run Claude Code Review
         id: claude-review

@@ -16,8 +16,8 @@ distinct surface from the KMP `../app/` (that's the Android effort).
 The parent `../CLAUDE.md` covers repo orientation (the legacy Python CLI was
 cleared from the tree 2026-08-13 — git history before `7545b4a4` keeps it).
 When working under `macos/`, this
-file is the relevant one. Durable session history lives in
-`../.claude/project-memory.md` (read it for in-flight threads and hard-won gotchas).
+file is the relevant one. The session chronicle is `../.claude/project-memory.md`
+(private, not imported — read its last block only when continuing a thread).
 **`ROADMAP.md` is the current "what's next" doc** — kept live, not append-only.
 `PLAN.md` is the historical build log / decision record (append-only, signed —
 reconcile additively, never rewrite signed blocks); read it for *why* a decision
@@ -45,12 +45,18 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' build | xcbeautify   # alw
 ```
 
 - **CI** (`../.github/workflows/ci.yml`) runs `swift test --parallel` on a
-  `macos-26` runner with `M1K3_MLX_INTEGRATION=0`, plus a curated Python smoke
-  subset for the legacy tree. PR CI also runs an `app-build` job (xcodegen
-  generate + unsigned `xcodebuild -scheme M1K3` on `macos-26`) so app-shell
-  compile breaks in `M1K3App/` fail at PR time, not only at release, and a
-  `mobile-build` job (unsigned `M1K3iOS` + `M1K3visionOS` against the
-  simulator SDKs) so the iOS/visionOS shell can't silently break either.
+  `macos-26` runner with `M1K3_MLX_INTEGRATION=0` — the gate for every
+  compilable PR. The `app-build` job (xcodegen + unsigned `xcodebuild -scheme
+  M1K3`) and the `mobile-build` job (unsigned `M1K3iOS` + `M1K3visionOS`
+  against the simulator SDKs) run on a PR only when the diff touches what they
+  compile — `app-build`: `M1K3App/`, `M1K3CLI/`, `M1K3Screensaver/`,
+  `M1K3.icon`, `project.yml`, the package manifest, `ci.yml`; `mobile-build`:
+  `M1K3iOSApp/`, `M1K3visionOS/`, `UITests/`, `M1K3.icon`, `M1K3App/` (the
+  MobileShell compiles a dozen files from it), `project.yml`, the package
+  manifest, `ci.yml` — and on every push to master or develop regardless. A
+  package rename that breaks a shell lands, fails the push run within the
+  hour, and is fixed forward (since 2026-09-24; ~20 min saved per
+  package-only PR).
   The app targets build for distribution via Xcode Cloud → TestFlight
   (`M1K3` for macOS and `M1K3iOS` for iPhone/iPad, both archived by the one
   `Release` workflow into the single universal `app.m1k3` App Store record);
@@ -65,15 +71,18 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' build | xcbeautify   # alw
   run). A bound must separate its two outcomes by a wide margin — ≥ 30 s, with
   the fallback moved past it — or assert which side acted.
   `tools/ci/check_wall_clock_bounds.py` enforces it in Project guards (#296).
-- **Landing a PR** (`tools/ci/pr_watch.py <PR>` then `tools/ci/land.sh <PR>`;
-  rules pinned in `test_pr_watch.py`): review LOCALLY before the first push
-  (swiftformat, `swift test --filter` on the touched suites, a code-quality
-  pass on the diff), push once, then two passes on that head — the auto pass
-  plus one `@claude` summon. A comment-only fold or a clean master merge on an
-  already-reviewed head is a *trivial head*: `--passes 0`, merge on green CI.
-  Master has no required status checks (2026-09-12) — the gate is this rule.
-  The mobile job (~19 min) is advisory unless the diff touches
-  `M1K3iOSApp/`, `M1K3visionOS/`, `UITests/`, `project.yml` or `ci.yml`.
+- **Landing a PR** (`tools/ci/land.sh <PR> [--passes N]`, which gates on
+  `tools/ci/pr_watch.py`; rules pinned in `test_pr_watch.py`): review LOCALLY
+  before the first push (swiftformat, `swift test --filter` on the touched
+  suites, a code-quality pass on the diff), push once, then size the loop:
+  a *small* PR (under ~100 lines, no logic change) lands on green CI plus the
+  auto pass, `--passes 1`; a *substantive* PR takes two passes on the final
+  head — the auto pass plus one `@claude` summon; a comment-only fold or a
+  clean master merge on an already-reviewed head is a *trivial head*:
+  `--passes 0`. Master has no required status checks (2026-09-12) — the gate
+  is this rule. The mobile job (~19 min) is advisory unless the diff touches
+  `M1K3iOSApp/`, `M1K3visionOS/`, `UITests/`, `project.yml`, `Package.swift`,
+  `Package.resolved` or `ci.yml`.
   Do NOT merge master into a PR branch unless git reports a conflict or the
   PR needs a fix from master to go green — each merge is a full CI + review
   cycle. A one-file, test-only fix that unblocks a PR rides in that PR, named

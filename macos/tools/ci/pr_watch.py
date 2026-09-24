@@ -16,10 +16,12 @@ in project memory. Now they are code, tested in test_pr_watch.py:
 * Placeholders ("**Claude working…**", an unchecked `- [ ]` checklist, the
   older "I'll analyze this and get back to you") never count.
 * The mobile job (iOS + visionOS shells, ~19 min) is ADVISORY unless the diff
-  touches the mobile shell, the project spec, or ci.yml. Package-only changes
-  do not wait for it; a break there is fixed forward, with Xcode Cloud as the
-  backstop. Master has no required status checks (checked 2026-09-12) — every
-  gate is ours.
+  touches the mobile shell, the project spec, the package manifest, or ci.yml.
+  Package-only changes do not wait for it; a break there is fixed forward, with
+  Xcode Cloud as the backstop. Master has no required status checks (checked
+  2026-09-12) — every gate is ours. Since 2026-09-24 ci.yml itself skips the
+  App-shell and mobile xcodebuild jobs on a PR whose diff misses their paths
+  (pushes to master/develop build everything); a skipped job reads green here.
 * `--passes 0` is the trivial-head rule: a comment-only fold or a clean master
   merge whose substantive head already had two passes merges on green CI.
 
@@ -40,6 +42,11 @@ sha in the pass's own title (the first markdown header line): #318's summon
 wrote "### Review of `75c23b64`" with no word "head", and the watch read 0/2 on
 a reviewed head. Title only, so a finding header quoting an older commit is not
 credited (review 2 on #318). Dedup keeps document order. Confidence now 0.85.
+Review: Kev + claude-fable-5.1, 2026-09-24 — MOBILE_PATH_PREFIXES gains the
+package manifest (Package.swift / Package.resolved) to mirror ci.yml's new
+`mobile` filter: a dependency bump is exactly where the iOS shell breaks. The
+watch needs no change for the now path-gated App-shell job — GREEN already
+holds "skipped". Confidence now 0.85.
 """
 from __future__ import annotations
 
@@ -60,13 +67,16 @@ JOB_GUARDS = "Project guards (test scheme · store targets)"
 JOB_DOCS = "Docs match the code (module map)"
 
 ALWAYS_REQUIRED = frozenset({JOB_GATE, JOB_SWIFT_TEST, JOB_APP, JOB_GUARDS, JOB_DOCS})
-# Paths only the mobile job compiles. project.yml defines every target; ci.yml
-# changes the jobs themselves — both make the full matrix required.
+# Paths only the mobile job compiles. project.yml defines every target; the
+# package manifest moves the dependencies the shell links; ci.yml changes the
+# jobs themselves — each makes the full matrix required.
 MOBILE_PATH_PREFIXES = (
     "macos/M1K3iOSApp/",
     "macos/M1K3visionOS/",
     "macos/UITests/",
     "macos/project.yml",
+    "macos/Package.swift",
+    "macos/Package.resolved",
     ".github/workflows/ci.yml",
 )
 

@@ -156,12 +156,19 @@ def test_package_only_change_does_not_wait_for_the_mobile_job():
 
 
 def test_mobile_shell_change_makes_the_mobile_job_required():
-    for path in ("macos/M1K3iOSApp/ChatScreen.swift", "macos/M1K3visionOS/Info.generated.plist", "macos/project.yml", "macos/UITests/ScreengrabiOS/A.swift"):
+    for path in ("macos/M1K3iOSApp/ChatScreen.swift", "macos/M1K3visionOS/Info.generated.plist", "macos/project.yml", "macos/UITests/ScreengrabiOS/A.swift", "macos/Package.swift", "macos/Package.resolved"):
         assert m.JOB_MOBILE in m.required_jobs([path]), path
 
 
 def test_ci_workflow_change_requires_everything():
     assert m.JOB_MOBILE in m.required_jobs([".github/workflows/ci.yml"])
+
+
+def test_a_skipped_app_shell_job_reads_green_on_a_package_only_head():
+    # ci.yml path-gates the App-shell job on PRs (2026-09-24); the watch must
+    # not hold a package-only PR hostage to a job that never ran.
+    jobs = {m.JOB_GATE: "success", m.JOB_SWIFT_TEST: "success", m.JOB_APP: "skipped", m.JOB_GUARDS: "success", m.JOB_DOCS: "success"}
+    assert m.ci_verdict(m.ALWAYS_REQUIRED, jobs).state == "green"
 
 
 def test_ci_verdict_treats_skipped_as_green_and_pending_as_pending():
