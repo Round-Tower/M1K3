@@ -11,15 +11,24 @@ in project memory. Now they are code, tested in test_pr_watch.py:
   and names the head it reviewed in a backticked sha. A pass naming an OLDER
   head does not count — the summon reviews whatever head it checks out at run
   time, and a fold pushed seconds after the summon is reviewed by nobody.
-* The auto pass (claude-code-review-mac.yml, fires on `synchronize`) names no
-  sha; it counts when the review workflow's run FOR THIS HEAD completed green.
+* The auto pass (claude-code-review-mac.yml, fires on `synchronize` — path-gated
+  to Swift, the manifest, project.yml, macos/tools/ and the workflows; a
+  docs-only head gets none and needs a summon) counts when the review
+  workflow's run FOR THIS HEAD completed green AND posted its comment inside
+  that run's window. The action skips itself — green in ~13 s, no comment —
+  whenever the workflow file on the PR differs from master's (#408): that is
+  no pass. The comment it does post is summon-shaped and may name the head
+  ("Claude finished … Reviewed head `x`", #404); it is counted once.
 * Placeholders ("**Claude working…**", an unchecked `- [ ]` checklist, the
   older "I'll analyze this and get back to you") never count.
 * The mobile job (iOS + visionOS shells, ~19 min) is ADVISORY unless the diff
-  touches the mobile shell, the project spec, or ci.yml. Package-only changes
-  do not wait for it; a break there is fixed forward, with Xcode Cloud as the
-  backstop. Master has no required status checks (checked 2026-09-12) — every
-  gate is ours.
+  touches the mobile shell, a Mac-shell file the MobileShell compiles, the
+  project spec, the package manifest, or ci.yml.
+  Package-only changes do not wait for it; a break there is fixed forward, with
+  Xcode Cloud as the backstop. Master has no required status checks (checked
+  2026-09-12) — every gate is ours. Since 2026-09-24 ci.yml itself skips the
+  App-shell and mobile xcodebuild jobs on a PR whose diff misses their paths
+  (pushes to master/develop build everything); a skipped job reads green here.
 * `--passes 0` is the trivial-head rule: a comment-only fold or a clean master
   merge whose substantive head already had two passes merges on green CI.
 
@@ -40,6 +49,24 @@ sha in the pass's own title (the first markdown header line): #318's summon
 wrote "### Review of `75c23b64`" with no word "head", and the watch read 0/2 on
 a reviewed head. Title only, so a finding header quoting an older commit is not
 credited (review 2 on #318). Dedup keeps document order. Confidence now 0.85.
+Review: Kev + claude-fable-5.1, 2026-09-24 — MOBILE_PATH_PREFIXES gains the
+package manifest (Package.swift / Package.resolved) to mirror ci.yml's new
+`mobile` filter: a dependency bump is exactly where the iOS shell breaks. The
+watch needs no change for the now path-gated App-shell job — GREEN already
+holds "skipped". Summon 1 on #408 then caught the mirror being incomplete: the
+Mac-shell files the MobileShell template compiles (AvatarView, ReadingText,
+Phosphor…, project.yml lines 87–118 and 373–374) are now prefixes too, pinned
+against project.yml by test; UITests/ left the list — it is a test target no
+CI job compiles, so it bought a 19-min wait for nothing. Summon 2: M1K3.icon
+joins the prefixes — the iOS target runs actool on the shared document with its
+own idiom set, so "App-shell compiles it too" was not a reason. The widened
+review trigger then exposed two counting bugs: (1) a validation-skipped run
+(13 s, no comment — the action refuses a workflow file that differs from
+master's) read as an auto pass; (2) the auto pass's own comment is
+summon-shaped and names the head, so one review could count as 2/2. An auto
+pass is now the run plus the comment it posted, counted once
+(auto_pass_comment; verdict's auto_comment). Confidence now 0.85 — both
+shapes are pinned from #408's and #404's real threads.
 """
 from __future__ import annotations
 
@@ -60,13 +87,35 @@ JOB_GUARDS = "Project guards (test scheme · store targets)"
 JOB_DOCS = "Docs match the code (module map)"
 
 ALWAYS_REQUIRED = frozenset({JOB_GATE, JOB_SWIFT_TEST, JOB_APP, JOB_GUARDS, JOB_DOCS})
-# Paths only the mobile job compiles. project.yml defines every target; ci.yml
-# changes the jobs themselves — both make the full matrix required.
+# Paths the mobile job compiles that the always-required App-shell job does not
+# vouch for. project.yml defines every target; the package manifest moves the
+# dependencies the shell links; ci.yml changes the jobs themselves — each makes
+# the full matrix required. The M1K3App/ entries are the files the MobileShell
+# template pulls out of the Mac shell (project.yml `MobileShell.sources` and the
+# M1K3iOS target) — test_pr_watch pins this list against project.yml. M1K3.icon
+# is here because the iOS target compiles the same document with its own idiom
+# set, so App-shell green does not vouch for it. Not here: UITests/ (test
+# targets; no CI job compiles them).
 MOBILE_PATH_PREFIXES = (
     "macos/M1K3iOSApp/",
     "macos/M1K3visionOS/",
-    "macos/UITests/",
+    "macos/M1K3.icon/",
+    "macos/M1K3App/AvatarView.swift",
+    "macos/M1K3App/AvatarEmotion+SwiftUI.swift",
+    "macos/M1K3App/PixelFont.swift",
+    "macos/M1K3App/ReadingMode.swift",
+    "macos/M1K3App/ReadingText.swift",
+    "macos/M1K3App/SpeechHighlight.swift",
+    "macos/M1K3App/KaraokeReadingText.swift",
+    "macos/M1K3App/CompanionAvatarView.swift",
+    "macos/M1K3App/CodeBlockView.swift",
+    "macos/M1K3App/PhosphorMaterial.swift",
+    "macos/M1K3App/Phosphor.metal",
+    "macos/M1K3App/PrivacyInfo.xcprivacy",
+    "macos/M1K3App/Resources/Fonts/",
     "macos/project.yml",
+    "macos/Package.swift",
+    "macos/Package.resolved",
     ".github/workflows/ci.yml",
 )
 
@@ -137,7 +186,8 @@ def named_heads(body: str) -> list[str]:
     "head" anywhere — backticked, or in parentheses as on #347 (2026-09-15:
     "second full pass on final head (3922a21d)") — or sits backticked in the
     pass's own title — the FIRST markdown header line. A later "####" finding header quoting an older commit,
-    and a sha in body prose, name nothing. Auto passes name none."""
+    and a sha in body prose, name nothing. An auto pass's comment may name the
+    head too (#404, 2026-09-24) — verdict() counts that review once."""
     shas: list[str] = []
     title_read = False
     for line in body.splitlines():
@@ -166,14 +216,45 @@ def summon_passes(head: str, comments: list[dict]) -> int:
     )
 
 
-def auto_pass_ok(head: str, review_runs: list[dict]) -> bool:
-    """The review workflow's NEWEST run on this head finished green. An older
-    green run does not vouch for a re-triggered one still in progress."""
+def _newest_green_review_run(head: str, review_runs: list[dict]) -> dict | None:
+    """The review workflow's NEWEST run on this head, if it finished green. An
+    older green run does not vouch for a re-triggered one still in progress."""
     mine = [r for r in review_runs if r.get("headSha") == head]
     if not mine:
-        return False
+        return None
     newest = max(mine, key=lambda r: r.get("createdAt", ""))
-    return newest.get("status") == "completed" and newest.get("conclusion") == "success"
+    if newest.get("status") == "completed" and newest.get("conclusion") == "success":
+        return newest
+    return None
+
+
+def auto_pass_comment(head: str, review_runs: list[dict], comments: list[dict]) -> dict | None:
+    """The comment the newest green review run on this head posted — the first
+    finished claude[bot] comment created inside that run's window. None when
+    the run posted nothing: the action skips itself, green in ~13 s, whenever
+    the workflow file on the PR differs from master's (#408, 2026-09-24), and
+    a run that reviewed nothing is not a pass. ISO-8601 Z timestamps compare
+    as strings."""
+    run = _newest_green_review_run(head, review_runs)
+    if run is None:
+        return None
+    start, end = run.get("createdAt", ""), run.get("updatedAt", "")
+    for c in comments:
+        if c.get("user", {}).get("login") != BOT_LOGIN:
+            continue
+        created = c.get("created_at", "")
+        if start <= created <= (end or created) and classify(c.get("body", "")) is not Kind.PLACEHOLDER:
+            return c
+    return None
+
+
+def auto_pass_ok(head: str, review_runs: list[dict], comments: list[dict] | None = None) -> bool:
+    """Green newest run on this head — and, when the thread is given, the
+    comment it posted (see auto_pass_comment). The watch always passes the
+    thread; the two-argument form is the 2026-09-12 rule kept for its pins."""
+    if comments is None:
+        return _newest_green_review_run(head, review_runs) is not None
+    return auto_pass_comment(head, review_runs, comments) is not None
 
 
 def required_jobs(changed_files: list[str]) -> frozenset[str]:
@@ -218,9 +299,18 @@ def verdict(
     comments: list[dict],
     auto_ok: bool,
     passes_needed: int,
+    auto_comment: dict | None = None,
 ) -> Verdict:
     ci = ci_verdict(required_jobs(changed_files), jobs)
-    passes = summon_passes(head, comments) + (1 if auto_ok else 0)
+    # The auto pass's own comment can be summon-shaped AND name the head
+    # ("Claude finished … ### Reviewed head `x`", #404) — then summon_passes has
+    # already counted it. One review is one pass.
+    auto_extra = 1 if auto_ok else 0
+    if auto_ok and auto_comment is not None:
+        body = auto_comment.get("body", "")
+        if classify(body) is Kind.SUMMON and _names(head, named_heads(body)):
+            auto_extra = 0
+    passes = summon_passes(head, comments) + auto_extra
     reasons: list[str] = []
     if ci.state != "green":
         reasons.append(f"CI {ci.state} ({ci.detail})")
@@ -246,7 +336,7 @@ def _gh_json(*args: str):
     return json.loads(_gh(*args))
 
 
-def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], bool, int]:
+def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], dict | None, int]:
     view = _gh_json("pr", "view", str(pr), "--repo", repo, "--json", "state,headRefOid")
     head = view["headRefOid"]
     # REST + --paginate: `gh pr view --json files` caps at 100 files, and a
@@ -261,12 +351,12 @@ def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | N
         for j in _gh_json("api", f"repos/{repo}/actions/runs/{newest['databaseId']}/jobs")["jobs"]:
             jobs[j["name"]] = j.get("conclusion")
     review_runs = _gh_json("run", "list", "--repo", repo, "--workflow", "claude-code-review-mac.yml",
-                           "--limit", "40", "--json", "headSha,status,conclusion,createdAt")
+                           "--limit", "40", "--json", "headSha,status,conclusion,createdAt,updatedAt")
     comments = _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/issues/{pr}/comments")
     comments = [c for page in comments for c in page]
     inline = _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/comments")
     inline_count = sum(len(page) for page in inline)
-    return view["state"], head, files, jobs, comments, auto_pass_ok(head, review_runs), inline_count
+    return view["state"], head, files, jobs, comments, auto_pass_comment(head, review_runs, comments), inline_count
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -283,7 +373,7 @@ def main(argv: list[str] | None = None) -> int:
     deadline = time.monotonic() + args.timeout
     while True:
         try:
-            state, head, files, jobs, comments, auto_ok, inline = snapshot(repo, args.pr)
+            state, head, files, jobs, comments, auto_comment, inline = snapshot(repo, args.pr)
         except subprocess.CalledProcessError as err:
             # A gh blip (rate limit, 5xx) must not read as "CI red": exit 4 once,
             # or wait out the interval and look again while polling.
@@ -295,7 +385,7 @@ def main(argv: list[str] | None = None) -> int:
         if state != "OPEN":
             print(f"PR #{args.pr} is {state}", flush=True)
             return 3
-        v = verdict(head, files, jobs, comments, auto_ok, args.passes)
+        v = verdict(head, files, jobs, comments, auto_comment is not None, args.passes, auto_comment=auto_comment)
         stamp = time.strftime("%H:%M:%S")
         print(f"{stamp} #{args.pr} {v.summary} · inline comments {inline}", flush=True)
         if v.ready:

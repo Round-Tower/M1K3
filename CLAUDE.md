@@ -1,43 +1,59 @@
-# M1K3 - Local AI Assistant
+# M1K3 — the local AI assistant for Mac (and iPhone / iPad / Vision Pro)
 
-@.claude/project-memory.md
+Privacy-focused, on-device AI: MLX inference, live voice, knowledge graph + RAG,
+and an MCP server. **The live product is the Mac-native SwiftUI app under
+`macos/`** (`M1K3App/`), on the Mac App Store as 1.x. The same portable
+`macos/Sources/` package graph drives the iOS + visionOS shell under
+`macos/M1K3iOSApp/`. The legacy Python surface lives only in git history before
+`7545b4a4` (`git checkout 7545b4a4 -- attic` resurrects it).
 
-> **⚠️ Orientation (2026-08-13):** The **live product** is the Mac-native SwiftUI
-> app under **`macos/`** (`M1K3App/`) — see `macos/CLAUDE.md`, `macos/PLAN.md` and
-> `.claude/project-memory.md`. The same portable `macos/Sources/` package graph
-> also drives a native **iOS + visionOS** SwiftUI shell under `macos/M1K3iOSApp/`
-> (`M1K3iOS` / `M1K3visionOS` targets) — see `macos/docs/IOS_VISIONOS_PORT.md`.
-> The legacy Python surface (CLI, RAG engine, web avatar, PWA, Tauri popover —
-> pre-Mac-app, last meaningful work Jan 2026) was archived under `attic/` and
-> then **cleared from the working tree on 2026-08-13** — git history before
-> `7545b4a4` keeps all of it (`git checkout 7545b4a4 -- attic` resurrects the
-> tree, old repo-root layout intact). The live MCP surface is the Mac app's
-> in-app HTTP server (`.mcp.json` points at `127.0.0.1:4242/mcp`).
+## Start here
+- **`macos/CLAUDE.md`** — build, test, architecture, conventions. Read it first.
+- **`macos/docs/IOS_VISIONOS_PORT.md`** — the iOS / visionOS shell.
+- **`app/CLAUDE.md`** — M1K3 for Android (KMP, slow burn).
+- **`CONTRIBUTING.md` / `SECURITY.md`** — the public-repo contributor surface.
+- `.mcp.json` points at the Mac app's in-app MCP server (`127.0.0.1:4242/mcp`).
 
-Privacy-focused, on-device AI for macOS — MLX inference, live voice,
-knowledge graph + RAG, and an MCP server.
+## Session memory
+`.claude/project-memory.md` is the private session chronicle: gitignored, never
+`git add -f`, append-only (a `Write` lost 700 lines on 2026-09-15). It is **not
+imported** — read its last block when a task continues prior work, not before.
+Anything a cold session needs on turn one belongs below, not there.
 
-## Pointers
+## Standing carry-forwards
+- **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
+  `pr_watch.py` (required CI green on the head sha, review passes read against
+  that head), squash-merges by sha, verifies `state`+`mergedAt`. Small PR (under
+  ~100 lines, no logic change): `--passes 1`, the auto bot pass only — it fires
+  on Swift, the manifest, `project.yml`, `macos/tools/**` and the workflows; a
+  docs-only PR gets no auto pass, so summon once.
+  Substantive: two passes on the final head (auto + one summon). Trivial head
+  (comment fold, clean master merge on a passed head): `--passes 0`. A summon
+  reviews the head at RUN time — push first, then summon. Same-day small fixes
+  ride one PR unless a release gate needs them apart.
+- **CI on a PR:** package-only diffs are gated by `swift test` (~4 min); the
+  App-shell and iOS+visionOS xcodebuild jobs run only when their paths change
+  (the `shell` / `mobile` filters in `ci.yml`). Every push to master or develop
+  builds all three — a shell break lands, then is fixed forward.
+- `xcodegen` after every checkout; `M1K3.xcodeproj` is a gitignored artifact.
+- A worktree `xcodebuild` needs `-skipPackagePluginValidation -skipMacroValidation`.
+- `swift package clean` before protocol/struct-shape changes (segfault, 3+ hits).
+- swiftformat's unused-parameter rename runs BETWEEN batched edits: change a
+  signature and its call sites in ONE edit, re-read before the next.
+- Merge stacked PRs bottom-up; never `--delete-branch` on a stack base;
+  `git rebase --onto` over a squash-merged base.
+- Two MLX processes crawl — quit the live app before an eval run.
+- Bundle ID, log subsystem, Keychain and container are all `app.m1k3`.
+- `.info` / `.debug` do not persist in OSLogStore; breadcrumbs are `.notice`+.
+- Read the store (`itunes.apple.com/lookup?id=`) before saying what users have.
+- Never pre-seed the model cache with `hf download` (cache poison).
 
-- **`macos/CLAUDE.md`** — the live product: build, test, architecture. Start here.
-- **`macos/README.md`** — human-facing build-from-source.
-- **`macos/docs/IOS_VISIONOS_PORT.md`** — the native iOS + visionOS SwiftUI shell
-  (`macos/M1K3iOSApp/`) on the shared package graph. This — not `app/` — is the
-  Apple mobile/spatial surface.
-- **`app/CLAUDE.md`** — M1K3 for Android (Kotlin Multiplatform, slow burn — the **Android** surface).
-- **The attic** — the original Python CLI, avatar experiments, and era docs
-  live in git history before `7545b4a4` (the tour starts at `attic/README.md`
-  there). Cleared from the tree 2026-08-13; nothing under `macos/` or `app/`
-  depends on it.
-- **`CONTRIBUTING.md` / `SECURITY.md`** — public-repo contributor surface.
-
-## graphify
-
-This project *can* carry a knowledge graph at graphify-out/ (god nodes, community structure, cross-file relationships) — but it's gitignored/regenerable, so a fresh clone has none.
-
-Rules:
-- ⚠️ **Only if `graphify-out/graph.json` exists.** The last local build (2026-06-14) is materially stale — it predates the entire iOS/visionOS shell and the `M1K3MemoryChatBridge`/`M1K3MCPLog` modules. There is no `graphify` binary on PATH — it runs via the graphify *skill*, not a shell command. Until rebuilt (via the skill), prefer direct reads under `macos/`.
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+<!--
+Signed: Kev + claude-fable-5.1, 2026-09-24, Confidence 0.8, Prior: Unknown (the
+file carried no signature). Rewritten as the imported standing-facts page:
+dropped the `@.claude/project-memory.md` import (~14k tokens of chronicle on
+every turn of every session), the graphify section (its graph file has not
+existed since June) and the 2026-08-13 orientation banner; distilled the
+carry-forwards that recent session blocks kept repeating.
+Open: which carry-forwards go stale first — prune at the next /retro.
+-->

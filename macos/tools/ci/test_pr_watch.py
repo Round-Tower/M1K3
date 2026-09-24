@@ -147,6 +147,36 @@ def test_auto_pass_uses_the_newest_run_on_the_head():
     assert m.auto_pass_ok(head, runs) is False
 
 
+def test_auto_pass_needs_the_comment_its_run_posted():
+    # #408, 2026-09-24: the action skips itself when the workflow file differs
+    # from master — a 13-second green run that posted nothing. Not a pass.
+    head = "572a108e" + "0" * 32
+    runs = [{"headSha": head, "status": "completed", "conclusion": "success",
+             "createdAt": "2026-09-24T21:36:22Z", "updatedAt": "2026-09-24T21:36:38Z"}]
+    assert m.auto_pass_ok(head, runs, comments=[]) is False
+    review = bot("**Claude finished @kev's task in 2m** ---\n### Reviewed head `572a108e`\n- [x] a", created="2026-09-24T21:36:30Z")
+    assert m.auto_pass_ok(head, runs, comments=[review]) is True
+    assert m.auto_pass_comment(head, runs, [review]) is review
+    late = bot("## Review: someone else's, after the run", created="2026-09-24T21:40:00Z")
+    assert m.auto_pass_ok(head, runs, comments=[late]) is False
+    placeholder = bot("**Claude working…**", created="2026-09-24T21:36:30Z")
+    assert m.auto_pass_ok(head, runs, comments=[placeholder]) is False
+
+
+def test_an_auto_review_that_names_the_head_counts_once_not_twice():
+    # #404, 2026-09-24: the auto pass's own comment is "Claude finished … Reviewed
+    # head `x`" — summon-shaped and naming the head. One review, one pass.
+    head = "cd1aa308" + "0" * 32
+    review = bot("**Claude finished @kev's task in 1m 47s** ---\n### Reviewed head `cd1aa308` (both commits)\n- [x] a", created="2026-09-24T18:54:10Z")
+    jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
+    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, [review], auto_ok=True, passes_needed=2, auto_comment=review)
+    assert v.passes == 1 and not v.ready
+    # An auto comment that names no head still adds its one pass.
+    plain = bot("## Review: perf pass\nFocused…", created="2026-09-24T18:54:10Z")
+    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, [plain], auto_ok=True, passes_needed=2, auto_comment=plain)
+    assert v.passes == 1
+
+
 # --- which CI jobs gate the merge ------------------------------------------
 
 def test_package_only_change_does_not_wait_for_the_mobile_job():
@@ -156,12 +186,41 @@ def test_package_only_change_does_not_wait_for_the_mobile_job():
 
 
 def test_mobile_shell_change_makes_the_mobile_job_required():
-    for path in ("macos/M1K3iOSApp/ChatScreen.swift", "macos/M1K3visionOS/Info.generated.plist", "macos/project.yml", "macos/UITests/ScreengrabiOS/A.swift"):
+    for path in ("macos/M1K3iOSApp/ChatScreen.swift", "macos/M1K3visionOS/Info.generated.plist", "macos/project.yml", "macos/Package.swift", "macos/Package.resolved",
+                 "macos/M1K3App/AvatarView.swift", "macos/M1K3App/Phosphor.metal", "macos/M1K3App/Resources/Fonts/Silkscreen-Bold.ttf",
+                 "macos/M1K3.icon/icon.json"):
         assert m.JOB_MOBILE in m.required_jobs([path]), path
+
+
+def test_mac_only_shell_files_and_test_targets_leave_the_mobile_job_advisory():
+    # SelfTest.swift is Mac-shell only; UITests/ are test targets no CI job compiles.
+    for path in ("macos/M1K3App/SelfTest.swift", "macos/M1K3App/Info.generated.plist", "macos/UITests/ScreengrabiOS/A.swift"):
+        assert m.JOB_MOBILE not in m.required_jobs([path]), path
+
+
+def test_mobile_prefixes_cover_every_mac_shell_file_the_mobile_targets_compile():
+    # project.yml is the source of truth: every `path: M1K3App/<file>` entry is a
+    # Mac-shell file some mobile target compiles (the Mac target takes the whole
+    # directory as `path: M1K3App`). A new shared file must land here too, or a
+    # break in it would read as advisory.
+    import pathlib
+    import re
+    spec = (pathlib.Path(__file__).resolve().parents[2] / "project.yml").read_text()
+    shared = sorted(set(re.findall(r"^\s*-\s*path:\s*(M1K3App/\S+)", spec, re.MULTILINE)))
+    assert shared, "expected shared M1K3App/ files in project.yml"
+    for rel in shared:
+        assert m.JOB_MOBILE in m.required_jobs([f"macos/{rel}"]), f"macos/{rel} is compiled by a mobile target but not in MOBILE_PATH_PREFIXES"
 
 
 def test_ci_workflow_change_requires_everything():
     assert m.JOB_MOBILE in m.required_jobs([".github/workflows/ci.yml"])
+
+
+def test_a_skipped_app_shell_job_reads_green_on_a_package_only_head():
+    # ci.yml path-gates the App-shell job on PRs (2026-09-24); the watch must
+    # not hold a package-only PR hostage to a job that never ran.
+    jobs = {m.JOB_GATE: "success", m.JOB_SWIFT_TEST: "success", m.JOB_APP: "skipped", m.JOB_GUARDS: "success", m.JOB_DOCS: "success"}
+    assert m.ci_verdict(m.ALWAYS_REQUIRED, jobs).state == "green"
 
 
 def test_ci_verdict_treats_skipped_as_green_and_pending_as_pending():

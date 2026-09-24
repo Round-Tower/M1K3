@@ -14,13 +14,16 @@ and never covered the Swift Mac MVP — the active surface. It was removed.
 | **`nightly-dmg.yml`** | Signed/notarized DMG → GitHub Release (skips until signing secrets are set). | nightly cron, manual |
 | **`claude.yml`** | `@claude` assistant on issues/PRs. | `@claude` mentions |
 | **`claude-code-review.yml`** | Auto Claude review of **Android/Kotlin** changes. | PRs touching `app/**/*.kt` |
-| **`claude-code-review-mac.yml`** | Auto Claude review of **Swift/Mac** changes. | PRs touching `macos/**` |
+| **`claude-code-review-mac.yml`** | Auto Claude review of **Swift/Mac** changes and the CI tooling. | PRs touching `macos/**/*.swift`, the package manifest, `project.yml`, `macos/tools/**`, `.github/workflows/**` — docs-only PRs get no auto pass; summon one |
 
 ## Landing tooling
 
 `macos/tools/ci/pr_watch.py <PR>` watches a PR by HEAD SHA: required CI jobs
-green (the mobile job is advisory for package-only diffs) and enough review
-passes that name that head (`--passes 0` for a trivial head). `land.sh <PR>`
+green (on a PR the App-shell and mobile xcodebuild jobs run only when their
+paths change — a skipped job reads green; every push to master/develop builds all three)
+and enough review passes that name that head: `--passes 1` for a small PR
+(under ~100 lines, no logic change — the auto pass only), the default 2 for
+a substantive one, `--passes 0` for a trivial head. `land.sh <PR> [--passes N]`
 gates on it, squash-merges by sha, verifies the merge landed, deletes the
 branch. Rules are tests in `test_pr_watch.py`.
 

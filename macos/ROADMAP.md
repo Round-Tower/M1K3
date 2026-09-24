@@ -218,8 +218,6 @@ stays a possible later companion.
   app-divergent, cause unknown; Kev's Code-tab check is still owed.
 - **Issue #46** — refusal-marker ledger: the scorer misses "Not going to do
   that one" / "Won't chase"; grows one entry per bake-off.
-- **`graphify-out/` rebuild** — stale since 2026-06-14; run the `graphify`
-  skill's update before broad-architecture work.
 - **Audition finalists on disk** (`~/.cache/m1k3-audition`, 26 GB after the
   09-15 prune): Qwen3.6-35B (the craic pick), Ornith-9B (parked at parity,
   7× slower), LFM2.5-2.6B, MiniCPM5-2B. Never into the app's model store

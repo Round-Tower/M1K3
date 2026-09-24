@@ -29,11 +29,22 @@ jobs:
   # guards (scheme-drift, doc-drift) still run on everything, so docs↔code
   # sync stays enforced. Public-repo runners are free; the spend here is
   # wall-clock and the shared macOS concurrency queue.
+  #
+  # Two finer gates (2026-09-24): on a PULL REQUEST the App-shell job runs only
+  # when the `shell` filter matches and the iOS+visionOS job only when `mobile`
+  # does (the lists differ: mobile also compiles shell sources; shell does not
+  # compile mobile ones). A package-only PR is gated by `swift test` (~4 min)
+  # instead of ~20. Every PUSH (master, develop) still builds all three, so a
+  # package rename that breaks a shell is caught on the push run within the
+  # hour and fixed forward — with Xcode Cloud and the nightly DMG behind it.
+  # pr_watch reads a skipped job as green.
   changes:
     name: Detect compilable changes
     runs-on: ubuntu-latest
     outputs:
       swift: ${{ steps.filter.outputs.swift }}
+      shell: ${{ steps.filter.outputs.shell }}
+      mobile: ${{ steps.filter.outputs.mobile }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -49,6 +60,30 @@ jobs:
               - '!macos/tools/release/**'
               - '!macos/fastlane/**'
               - '!macos/**/*.md'
+            # What the App-shell job compiles and nothing else does: the shell,
+            # the two Xcode-native targets it embeds (M1K3CLI helper, the
+            # .saver), the shared icon document, the project spec, the manifest.
+            shell:
+              - '.github/workflows/ci.yml'
+              - 'macos/M1K3App/**'
+              - 'macos/M1K3CLI/**'
+              - 'macos/M1K3Screensaver/**'
+              - 'macos/M1K3.icon/**'
+              - 'macos/project.yml'
+              - 'macos/Package.swift'
+              - 'macos/Package.resolved'
+            # What the mobile job compiles — MobileShell also builds a dozen
+            # files out of M1K3App/ and the same icon document. UITests/ is not
+            # here: those are test targets, and this job only builds.
+            mobile:
+              - '.github/workflows/ci.yml'
+              - 'macos/M1K3iOSApp/**'
+              - 'macos/M1K3visionOS/**'
+              - 'macos/M1K3App/**'
+              - 'macos/M1K3.icon/**'
+              - 'macos/project.yml'
+              - 'macos/Package.swift'
+              - 'macos/Package.resolved'
 
   swift-mac:
     name: Swift · Mac MVP (swift test)
@@ -124,7 +159,9 @@ jobs:
   app-build:
     name: Swift · App shell (xcodebuild)
     needs: changes
-    if: needs.changes.outputs.swift == 'true'
+    # PR: only when the diff touches what this job alone compiles (the `shell`
+    # filter). Push (master, develop): always — the fix-forward backstop.
+    if: needs.changes.outputs.swift == 'true' && (github.event_name == 'push' || needs.changes.outputs.shell == 'true')
     # `swift test` compiles only the SwiftPM PACKAGE. The app shell (M1K3App/:
     # AppEnvironment + its extensions, SelfTest, MCPHostController, IssueReporter,
     # every SwiftUI view) is an Xcode target that otherwise compiles ONLY in
@@ -181,7 +218,9 @@ jobs:
   mobile-build:
     name: Swift · iOS + visionOS shells (xcodebuild)
     needs: changes
-    if: needs.changes.outputs.swift == 'true'
+    # PR: only when the diff touches what this job alone compiles (the `mobile`
+    # filter). Push (master, develop): always — the fix-forward backstop.
+    if: needs.changes.outputs.swift == 'true' && (github.event_name == 'push' || needs.changes.outputs.mobile == 'true')
     # The iOS/visionOS shell (M1K3iOSApp/ on the portable package graph) was
     # local-verify-only since PR #9 — a PR could break the mobile compile and
     # first fail at release. Builds both schemes unsigned against the SIMULATOR
@@ -356,3 +395,10 @@ jobs:
 # for the #296 stall hunt. Confidence now 0.8: the mechanism is actions/cache's
 # documented behaviour; the saving is verify-by-run (compare a PR run AFTER the
 # first master save: "Compiling MLX" count and build time vs 1013 / 222 s).
+# Review: Kev + claude-fable-5.1, 2026-09-24 — the two xcodebuild jobs are
+# path-gated on pull requests (`shell` / `mobile` filters) and unconditional on
+# branch pushes (master, develop). Why: 100 PRs in 30 days, a third under 100 lines, each paying
+# ~20 min of shell builds for a package-only diff; `swift test` is the PR gate
+# now. The cost is a shell break landing on master first — caught on the push
+# run, Xcode Cloud and the nightly. Confidence now 0.8: the `if` shape and the
+# skipped-reads-green path are verify-by-run on this PR's own checks.
