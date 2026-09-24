@@ -22,6 +22,7 @@
 
 import Foundation
 @testable import M1K3Kokoro
+import M1K3Voice
 import Testing
 
 struct SpellOutLettersTests {
@@ -77,6 +78,22 @@ struct SpellOutLettersTests {
         // unpolished callers can't drift apart.
         let g2p = try KokoroG2P.bundled()
         #expect(g2p.phonemeTokens("M1K3") == g2p.phonemeTokens("mike"))
+    }
+
+    @Test("the introduction's spelled name speaks all four characters, and isn't Mike")
+    func introductionSpellsEveryCharacter() throws {
+        // Kev, 2026-09-24: the self-introduction says the letters. They're written
+        // as WORDS — the letter table's own "em" and "kay" — so the house lexicon
+        // can't turn them into "Mike", and each must resolve or a character goes
+        // silent (the 08-11 bug).
+        let g2p = try KokoroG2P.bundled()
+        let words = SpokenName.spelled.split(separator: " ").map(String.init)
+        #expect(words.count == 4)
+        for word in words {
+            #expect(!g2p.phonemeTokens(word).isEmpty, "silent word in the spelled name: \(word)")
+        }
+        #expect(spelledSeparators(SpokenName.spelled, g2p) == 3)
+        #expect(g2p.phonemeTokens(SpokenName.spelled) != g2p.phonemeTokens("mike"))
     }
 
     @Test("mixed alphanumerics that are NOT the name still spell out in full")

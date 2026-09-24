@@ -2702,8 +2702,8 @@ extension AppEnvironment {
     }
 
     /// Speak a short sample line in the current voice — the onboarding/Settings
-    /// "Hear a sample" affordance.
+    /// "Hear a sample" affordance. The one line that says the name's letters.
     func speakSample() async {
-        await speech.speak("Hi, I'm M1K3 — but my friends call me Mike!")
+        await speech.speak(SpokenName.introduction)
     }
 }
