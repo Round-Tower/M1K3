@@ -18,7 +18,7 @@ CONTENT CONTROLS (DeclaredAgeRange): uses Apple's Declared Age Range API (gates 
   Mac: Settings > Privacy tab > Content Controls > "Set up"
   iPhone/iPad: Settings > Content Controls > "Set up"
 
-CALENDAR + LOCATION: optional context senses, OFF by default, so no alert at launch (expected). To see the macOS alert: Settings > Privacy > Context > switch Calendar (or Location) on, then ask "What's on my calendar today?" (or "Where am I?"). On-device only; never stored or sent.
+CALENDAR + LOCATION: optional context senses, OFF by default, so no alert at launch (expected). The macOS alert appears the moment you switch one on: Settings > Privacy > Context > Calendar (or Location). Declining turns the switch back off. Then ask "What's on my calendar today?" (or "Where am I?"). On-device only; never stored or sent.
 
 CALL RECORDING (system audio): user-started, consent-affirmed. Captures the Mac's audio output (the other side of a call) + the mic, transcribed on-device (WhisperKit). Audio only, never screen content. Nothing leaves the Mac. Recording deleted after transcription; transcript encrypted, deletable. Policy: https://m1k3.app/privacy#call-recording
 
