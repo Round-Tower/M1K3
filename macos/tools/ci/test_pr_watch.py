@@ -157,7 +157,8 @@ def test_package_only_change_does_not_wait_for_the_mobile_job():
 
 def test_mobile_shell_change_makes_the_mobile_job_required():
     for path in ("macos/M1K3iOSApp/ChatScreen.swift", "macos/M1K3visionOS/Info.generated.plist", "macos/project.yml", "macos/Package.swift", "macos/Package.resolved",
-                 "macos/M1K3App/AvatarView.swift", "macos/M1K3App/Phosphor.metal", "macos/M1K3App/Resources/Fonts/Silkscreen-Bold.ttf"):
+                 "macos/M1K3App/AvatarView.swift", "macos/M1K3App/Phosphor.metal", "macos/M1K3App/Resources/Fonts/Silkscreen-Bold.ttf",
+                 "macos/M1K3.icon/icon.json"):
         assert m.JOB_MOBILE in m.required_jobs([path]), path
 
 

@@ -51,7 +51,10 @@ holds "skipped". Summon 1 on #408 then caught the mirror being incomplete: the
 Mac-shell files the MobileShell template compiles (AvatarView, ReadingText,
 Phosphor…, project.yml lines 87–118 and 373–374) are now prefixes too, pinned
 against project.yml by test; UITests/ left the list — it is a test target no
-CI job compiles, so it bought a 19-min wait for nothing. Confidence now 0.85.
+CI job compiles, so it bought a 19-min wait for nothing. Summon 2: M1K3.icon
+joins the prefixes — the iOS target runs actool on the shared document with its
+own idiom set, so "App-shell compiles it too" was not a reason. Confidence now
+0.85.
 """
 from __future__ import annotations
 
@@ -77,12 +80,14 @@ ALWAYS_REQUIRED = frozenset({JOB_GATE, JOB_SWIFT_TEST, JOB_APP, JOB_GUARDS, JOB_
 # dependencies the shell links; ci.yml changes the jobs themselves — each makes
 # the full matrix required. The M1K3App/ entries are the files the MobileShell
 # template pulls out of the Mac shell (project.yml `MobileShell.sources` and the
-# M1K3iOS target) — test_pr_watch pins this list against project.yml. Not here:
-# M1K3.icon (App-shell compiles it too, and App-shell is always required) and
-# UITests/ (test targets; no CI job compiles them).
+# M1K3iOS target) — test_pr_watch pins this list against project.yml. M1K3.icon
+# is here because the iOS target compiles the same document with its own idiom
+# set, so App-shell green does not vouch for it. Not here: UITests/ (test
+# targets; no CI job compiles them).
 MOBILE_PATH_PREFIXES = (
     "macos/M1K3iOSApp/",
     "macos/M1K3visionOS/",
+    "macos/M1K3.icon/",
     "macos/M1K3App/AvatarView.swift",
     "macos/M1K3App/AvatarEmotion+SwiftUI.swift",
     "macos/M1K3App/PixelFont.swift",
