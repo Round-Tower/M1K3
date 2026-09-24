@@ -40,6 +40,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — two more trailers never speak: a model-written
 //  "Sources:" list and the follow-ups trailer in any spelling (narration read both verbatim —
 //  launch snag list). Confidence now 0.9 (pinned incl. the mid-prose non-matches).
+//  Review: Kev + claude-opus-5-5, 2026-09-24 — the name's spoken form now comes from
+//  `SpokenName.everyday`, beside the introduction's spelled form, so the two can't
+//  drift. No behaviour change. Confidence now 0.9.
 //
 
 import Foundation
@@ -96,7 +99,7 @@ public enum SpeechTextPolish {
             let isWholeName = precedesBoundary(precedes)
                 && !trailingIsPath
                 && (follows == "." || followsBoundary(follows))
-            result += isWholeName ? "Mike" : text[found]
+            result += isWholeName ? SpokenName.everyday : String(text[found])
             index = found.upperBound
         }
         result += text[index ..< text.endIndex]

@@ -111,7 +111,7 @@ extension AppCore {
     /// façade decides who speaks, so mid-download this is honestly Built-in.
     func speakSample() async {
         await Self.activateSampleAudioSession()
-        await speech.speak("Hi, I'm M1K3 — but my friends call me Mike!")
+        await speech.speak(SpokenName.introduction)
     }
 
     /// Settings is reachable only outside voice mode, whose session is

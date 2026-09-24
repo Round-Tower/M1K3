@@ -44,4 +44,29 @@ struct SpokenNameTests {
     func leavesEverythingElse() {
         #expect(SpeechTextPolish.polish("MCP and MLX are fine") == "MCP and MLX are fine")
     }
+
+    // MARK: - The introduction (Kev, 2026-09-24)
+
+    @Test("the introduction says the letters, then the nickname")
+    func introductionSpellsTheName() {
+        // "Hi, I'm M1K3 — but my friends call me Mike!" reached Kokoro raw, and its
+        // house lexicon (rightly, everywhere else) said "Mike": "Hi, I'm Mike — but
+        // my friends call me Mike!" The one line that introduces the brand says it.
+        #expect(SpokenName.introduction == "Hi, I'm em one kay three — but my friends call me Mike!")
+    }
+
+    @Test("the introduction never hands an engine the raw name")
+    func introductionHasNoRawName() {
+        // Raw "M1K3" is Mike on Kokoro and an alphanumeric jumble on AVSpeech —
+        // neither is the letters. Words are the only form every engine agrees on.
+        #expect(!SpokenName.introduction.localizedCaseInsensitiveContains("m1k3"))
+    }
+
+    @Test("polish keeps the letters — only the raw name becomes Mike")
+    func polishKeepsTheLetters() {
+        // Future-proofing: speakSample() hands the line to the engine directly
+        // today, but a later route through speak() (polish) must not undo it.
+        #expect(SpeechTextPolish.polish(SpokenName.introduction).contains(SpokenName.spelled))
+        #expect(SpeechTextPolish.polish("I'm M1K3.") == "I'm \(SpokenName.everyday).")
+    }
 }
