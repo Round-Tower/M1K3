@@ -11,8 +11,10 @@ in project memory. Now they are code, tested in test_pr_watch.py:
   and names the head it reviewed in a backticked sha. A pass naming an OLDER
   head does not count — the summon reviews whatever head it checks out at run
   time, and a fold pushed seconds after the summon is reviewed by nobody.
-* The auto pass (claude-code-review-mac.yml, fires on `synchronize`) names no
-  sha; it counts when the review workflow's run FOR THIS HEAD completed green.
+* The auto pass (claude-code-review-mac.yml, fires on `synchronize` — path-gated
+  to Swift, the manifest, project.yml, macos/tools/ and the workflows; a
+  docs-only head gets none and needs a summon) names no sha; it counts when the
+  review workflow's run FOR THIS HEAD completed green.
 * Placeholders ("**Claude working…**", an unchecked `- [ ]` checklist, the
   older "I'll analyze this and get back to you") never count.
 * The mobile job (iOS + visionOS shells, ~19 min) is ADVISORY unless the diff

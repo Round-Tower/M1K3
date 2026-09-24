@@ -15,6 +15,11 @@ on:
       - "macos/**/Package.swift"
       - "macos/**/Package.resolved"
       - "macos/**/project.yml"
+      # 2026-09-24: the CI tooling and the workflows carry logic too. Without
+      # these a tooling-only PR got no auto pass and `--passes 1` silently needed
+      # a summon. Docs-only PRs still get none — summon those.
+      - "macos/tools/**"
+      - ".github/workflows/**"
 
 jobs:
   claude-review-mac:
@@ -92,7 +97,13 @@ jobs:
               `@Test` / `#expect`).
             - Edge cases: empty input, cancellation, mid-stream errors, clamping.
 
-            **6. Provenance (MurphySig)**
+            **6. CI tooling and workflows** (`macos/tools/**`, `.github/workflows/**`)
+            - Python tools are pure and pinned by `test_*.py` beside them; a rule
+              stated in a docstring or CLAUDE.md must match what the code does.
+            - Workflow `if:`/`paths:` changes: name what stops running and where
+              it is still caught.
+
+            **7. Provenance (MurphySig)**
             - Respect existing `Signed:` blocks; never fabricate signatures or
               authorship. New files should be signed `Prior: Unknown`.
 

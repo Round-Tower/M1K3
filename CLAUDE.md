@@ -24,7 +24,9 @@ Anything a cold session needs on turn one belongs below, not there.
 - **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
   `pr_watch.py` (required CI green on the head sha, review passes read against
   that head), squash-merges by sha, verifies `state`+`mergedAt`. Small PR (under
-  ~100 lines, no logic change): `--passes 1`, the auto bot pass only.
+  ~100 lines, no logic change): `--passes 1`, the auto bot pass only — it fires
+  on Swift, the manifest, `project.yml`, `macos/tools/**` and the workflows; a
+  docs-only PR gets no auto pass, so summon once.
   Substantive: two passes on the final head (auto + one summon). Trivial head
   (comment fold, clean master merge on a passed head): `--passes 0`. A summon
   reviews the head at RUN time — push first, then summon. Same-day small fixes

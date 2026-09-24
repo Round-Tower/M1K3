@@ -14,7 +14,7 @@ and never covered the Swift Mac MVP — the active surface. It was removed.
 | **`nightly-dmg.yml`** | Signed/notarized DMG → GitHub Release (skips until signing secrets are set). | nightly cron, manual |
 | **`claude.yml`** | `@claude` assistant on issues/PRs. | `@claude` mentions |
 | **`claude-code-review.yml`** | Auto Claude review of **Android/Kotlin** changes. | PRs touching `app/**/*.kt` |
-| **`claude-code-review-mac.yml`** | Auto Claude review of **Swift/Mac** changes. | PRs touching `macos/**` |
+| **`claude-code-review-mac.yml`** | Auto Claude review of **Swift/Mac** changes and the CI tooling. | PRs touching `macos/**/*.swift`, the package manifest, `project.yml`, `macos/tools/**`, `.github/workflows/**` — docs-only PRs get no auto pass; summon one |
 
 ## Landing tooling
 
