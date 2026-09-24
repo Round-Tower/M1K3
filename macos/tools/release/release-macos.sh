@@ -233,8 +233,27 @@ STAGE="$BUILD/dmg-stage"
 rm -rf "$STAGE" "$DMG"; mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "$APP_NAME $VERSION" -srcfolder "$STAGE" \
-  -ov -format UDZO "$DMG" >/dev/null
+# `hdiutil create` fails "Resource busy" now and then on GitHub's macOS runners
+# (a system daemon still holds the fresh image) — the 2026-09-24 nightly died
+# here after a clean build, export and notarize. Retry with a short back-off
+# before calling it a failure; the `until` condition keeps `set -e` out of it.
+DMG_ATTEMPTS=5
+dmg_attempt=1
+until hdiutil create -volname "$APP_NAME $VERSION" -srcfolder "$STAGE" \
+        -ov -format UDZO "$DMG" >/dev/null; do
+  if [ "$dmg_attempt" -ge "$DMG_ATTEMPTS" ]; then
+    echo "✗ hdiutil create failed $DMG_ATTEMPTS times" >&2
+    exit 1
+  fi
+  echo "  hdiutil create failed (attempt $dmg_attempt/$DMG_ATTEMPTS); retrying in $((dmg_attempt * 5)) s" >&2
+  # "Resource busy" is usually the create's own temporary image failing to
+  # detach — force it loose and drop any partial image, or the next attempt
+  # can fail the same way for the same reason (best effort: never fatal).
+  hdiutil detach "/Volumes/$APP_NAME $VERSION" -force >/dev/null 2>&1 || true
+  rm -f "$DMG"
+  sleep $((dmg_attempt * 5))
+  dmg_attempt=$((dmg_attempt + 1))
+done
 echo "  → $DMG"
 
 # ── 5. Sign + notarize + staple the DMG ──────────────────────────────────────
