@@ -246,10 +246,10 @@ until hdiutil create -volname "$APP_NAME $VERSION" -srcfolder "$STAGE" \
     exit 1
   fi
   echo "  hdiutil create failed (attempt $dmg_attempt/$DMG_ATTEMPTS); retrying in $((dmg_attempt * 5)) s" >&2
-  # "Resource busy" is usually the create's own temporary image failing to
-  # detach — force it loose and drop any partial image, or the next attempt
-  # can fail the same way for the same reason (best effort: never fatal).
-  hdiutil detach "/Volumes/$APP_NAME $VERSION" -force >/dev/null 2>&1 || true
+  # Drop any partial image; the back-off is what lets the busy hold clear. No
+  # detach-by-name: VERSION is the fixed MARKETING_VERSION, so "/Volumes/M1K3
+  # 1.0.0" can be a DMG the person already has open, and the create's own temp
+  # image lives in $TMPDIR, not $BUILD, so it can't be told apart (#401 review).
   rm -f "$DMG"
   sleep $((dmg_attempt * 5))
   dmg_attempt=$((dmg_attempt + 1))
