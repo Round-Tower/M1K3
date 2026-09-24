@@ -350,13 +350,38 @@ struct AvatarView: View {
 ///
 /// Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.6 (spike — constants
 /// are first-guess, judged by eye, not measured), Prior: Unknown.
+/// Review: Kev + claude-opus-5-5, 2026-09-24 — the clock also stops when the
+/// hosting window can't be seen (#356). The notch HUD mounts one unpaused for
+/// the app's lifetime: from the first `speak` on, the ordered-out panel redrew
+/// ~70 scanlines at 30 fps forever. Two measurements: the installed 1.0 (371,
+/// Release) idled at ~16 % CPU with this timeline its only SwiftUI update source
+/// (Instruments); a Debug A/B of master, app hidden, HUD shown once then folded,
+/// read 13.9 % unfixed → 0.6 % fixed (0.7 % before any HUD). Owning the gate
+/// here means no host can forget it. Confidence now 0.85.
 struct CRTOverlay: View {
     /// Freeze the rolling band + phosphor breathe (see AvatarView.paused).
     var paused = false
 
+    #if canImport(AppKit)
+        /// Published by `.trackWindowVisibility()` at the window root; `true`
+        /// outside a tracked window, so an untracked host behaves as before.
+        @Environment(\.windowVisible) private var windowVisible
+    #else
+        /// iOS/visionOS have no occlusion tracker (WindowVisibility.swift is
+        /// Mac-only) — the key's own default, so nothing changes there.
+        private let windowVisible = true
+    #endif
+
     /// Elapsed-time origin — sin/cos arguments stay small (the
     /// AudioCaptureBackdrop precision lesson; see AvatarScene.startDate).
     @State private var start = Date()
+
+    /// A window nobody can see gets no clock; a still treatment keeps one frame.
+    /// Pausing is enough here — unlike a RealityView (`AvatarPresence`), a
+    /// paused Canvas timeline costs nothing, so there is nothing to unmount.
+    private var clockPaused: Bool {
+        paused || !windowVisible
+    }
 
     // Tunables, judged by eye.
     private static let scanlineOpacity: Double = 0.20
@@ -375,7 +400,7 @@ struct CRTOverlay: View {
     }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: paused)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: clockPaused)) { context in
             let time = context.date.timeIntervalSince(start)
             Canvas { canvas, size in
                 drawScanlines(canvas, size: size, time: time)

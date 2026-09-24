@@ -37,8 +37,6 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 - **#303** Lil "What can you do?" 2/3 answers close on the decline line — needs
   an in-app eval gate before any prompt change (the capabilityMove shipped in
   #338 but the rate barely moved).
-- **#356** idle CPU ~30% with every window hidden — needs a `sample` diagnosis
-  session; the #293 fanless-idle audit cut it to 0.4–1.8%, something regressed.
 
 ### Monetization — the 90-day plan (#369)
 
