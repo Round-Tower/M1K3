@@ -233,8 +233,27 @@ STAGE="$BUILD/dmg-stage"
 rm -rf "$STAGE" "$DMG"; mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "$APP_NAME $VERSION" -srcfolder "$STAGE" \
-  -ov -format UDZO "$DMG" >/dev/null
+# `hdiutil create` fails "Resource busy" now and then on GitHub's macOS runners
+# (a system daemon still holds the fresh image) — the 2026-09-24 nightly died
+# here after a clean build, export and notarize. Retry with a short back-off
+# before calling it a failure; the `until` condition keeps `set -e` out of it.
+DMG_ATTEMPTS=5
+dmg_attempt=1
+until hdiutil create -volname "$APP_NAME $VERSION" -srcfolder "$STAGE" \
+        -ov -format UDZO "$DMG" >/dev/null; do
+  if [ "$dmg_attempt" -ge "$DMG_ATTEMPTS" ]; then
+    echo "✗ hdiutil create failed $DMG_ATTEMPTS times" >&2
+    exit 1
+  fi
+  echo "  hdiutil create failed (attempt $dmg_attempt/$DMG_ATTEMPTS); retrying in $((dmg_attempt * 5)) s" >&2
+  # Drop any partial image; the back-off is what lets the busy hold clear. No
+  # detach-by-name: VERSION is the fixed MARKETING_VERSION, so "/Volumes/M1K3
+  # 1.0.0" can be a DMG the person already has open, and the create's own temp
+  # image lives in $TMPDIR, not $BUILD, so it can't be told apart (#401 review).
+  rm -f "$DMG"
+  sleep $((dmg_attempt * 5))
+  dmg_attempt=$((dmg_attempt + 1))
+done
 echo "  → $DMG"
 
 # ── 5. Sign + notarize + staple the DMG ──────────────────────────────────────
