@@ -150,6 +150,10 @@ _HEAD_PAREN = re.compile(r"\bhead \(([0-9a-f]{7,40})\)")
 _HEAD_BARE = re.compile(r"\bhead ([0-9a-f]{7,40})\b")
 _HEADER_LINE = re.compile(r"^#{2,4} ")
 _SHA = re.compile(r"`([0-9a-f]{7,40})`")
+# The action's tracking-comment anchor. If the action ever renames "View job",
+# the identity match silently falls back to the window heuristic and #409 comes
+# back — re-pin from a live thread, as classify's wording list has needed
+# (#334, #347, #404).
 _RUN_LINK = re.compile(r"\[View job\]\([^)]*?/actions/runs/(\d+)")
 
 

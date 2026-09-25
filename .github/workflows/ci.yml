@@ -161,7 +161,9 @@ jobs:
     name: Swift · App shell (xcodebuild)
     needs: changes
     # PR: only when the diff touches what this job alone compiles (the `shell`
-    # filter). Push (master, develop): always — the fix-forward backstop.
+    # filter). Push (master, develop): whenever the push touches Swift — the
+    # fix-forward backstop. A docs- or tools/ci-only push sets swift=false and
+    # skips this too; nothing it compiles changed.
     if: needs.changes.outputs.swift == 'true' && (github.event_name == 'push' || needs.changes.outputs.shell == 'true')
     # `swift test` compiles only the SwiftPM PACKAGE. The app shell (M1K3App/:
     # AppEnvironment + its extensions, SelfTest, MCPHostController, IssueReporter,
@@ -220,7 +222,9 @@ jobs:
     name: Swift · iOS + visionOS shells (xcodebuild)
     needs: changes
     # PR: only when the diff touches what this job alone compiles (the `mobile`
-    # filter). Push (master, develop): always — the fix-forward backstop.
+    # filter). Push (master, develop): whenever the push touches Swift — the
+    # fix-forward backstop. A docs- or tools/ci-only push sets swift=false and
+    # skips this too; nothing it compiles changed.
     if: needs.changes.outputs.swift == 'true' && (github.event_name == 'push' || needs.changes.outputs.mobile == 'true')
     # The iOS/visionOS shell (M1K3iOSApp/ on the portable package graph) was
     # local-verify-only since PR #9 — a PR could break the mobile compile and

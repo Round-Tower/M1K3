@@ -25,7 +25,7 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' -skipPackagePluginValidati
 - **CI** (`../.github/workflows/ci.yml`, `macos-26` runner, `M1K3_MLX_INTEGRATION=0`):
   `swift test --parallel` gates every compilable PR; the App-shell and iOS+visionOS
   xcodebuild jobs run on a PR only when the diff touches what they compile, and on every
-  push to master/develop. Python under `tools/` is tested by the guards job, not the
+  Swift-touching push to master/develop (a docs- or tools-only push skips them). Python under `tools/` is tested by the guards job, not the
   Swift job. **Pushing to `master` starts Xcode Cloud → TestFlight** — the one `Release`
   workflow archives `M1K3` + `M1K3iOS` into the single `app.m1k3` store record, so a master
   push is a release action; `tools/ci/check_store_targets.py` pins the bundle-ID /
