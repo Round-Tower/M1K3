@@ -55,6 +55,9 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — the App Store rating ledger (ReviewPromptLedger); a completed answer counts toward the ask.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — a stopped answer is not a win; voice turns count too (AppCore+Voice) — local review fold.
+//  Review: Kev + claude-opus-5-5, 2026-09-25 — `mlxAvailable` also refuses Apple GPU family 5 (MLXRuntimeSupport): an iPad 8th gen
+//  trapped warming M1K3 Voice; A12X/A12Z iPad Pros pass the brain memory floor but share that GPU. A stage left behind is
+//  discarded at launch. Verify-by-launch on the A12 iPad. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -72,6 +75,7 @@ import M1K3MemoryChatBridge
 import M1K3MLX
 import M1K3Screengrab
 import M1K3Voice
+import Metal
 import Observation
 import os
 import SwiftUI
@@ -258,13 +262,23 @@ final class AppCore {
     /// the only brain, and the memory budget is skipped. A real device (proven on
     /// iPhone 17 Pro) runs the full Mini + Lil ladder. Verified: the crash stack
     /// bottomed out at `MLXMemoryBudget.applyOnce()` from `AppCore.init`.
-    static let mlxAvailable: Bool = {
+    ///
+    /// A real device can still be refused: Apple GPU family 5 (A12 / A12X / A12Z)
+    /// cannot compile MLX's kernels, and mlx-swift traps rather than throws —
+    /// M1K3 Voice killed an iPad 8th gen warming Kokoro (2026-09-25), LFM2 did
+    /// the same (#236). `MLXRuntimeSupport` owns the rule and the notes.
+    static let mlxSupport: MLXRuntimeSupport = {
         #if targetEnvironment(simulator)
-            return false
+            return MLXRuntimeSupport.resolve(isSimulator: true, gpuSupportsApple6: false)
         #else
-            return true
+            let apple6 = MTLCreateSystemDefaultDevice()?.supportsFamily(.apple6) ?? false
+            return MLXRuntimeSupport.resolve(isSimulator: false, gpuSupportsApple6: apple6)
         #endif
     }()
+
+    static var mlxAvailable: Bool {
+        mlxSupport.isAvailable
+    }
 
     init() throws {
         // Voice output starts on Built-in; M1K3 Voice is restored below only
@@ -403,9 +417,13 @@ final class AppCore {
         // signal (speechDidEnd). One-time wiring, like the Mac's.
         wireSpeechCallbacks()
         // Restore M1K3 Voice only if it was chosen AND already staged — never a
-        // silent ~184 MB re-download on launch (VoiceTierRestore, pinned). A
-        // chosen-but-purged voice shows as Built-in until picked again. Never on
-        // the Simulator: Kokoro's MLX preload would abort the process.
+        // silent ~192 MB re-download on launch (VoiceTierRestore, pinned). A
+        // chosen-but-purged voice shows as Built-in until picked again. Never
+        // without MLX: Kokoro's preload aborts on the Simulator and traps on an
+        // A12-family GPU — where a stage left by an older build is reclaimed.
+        if Self.mlxSupport == .gpuTooOld, kokoro.isModelStaged {
+            kokoro.discardStagedModel()
+        }
         let persistedVoice = VoiceTierRestore.restoredTier(
             persisted: UserDefaults.standard.string(forKey: Self.selectedVoiceTierKey)
         )
@@ -443,15 +461,15 @@ final class AppCore {
     func selectBrain(_ tier: BrainTier) {
         // An explicit pick always wins over a restore-time offer (#237).
         pendingBrainDownloadOffer = nil
-        // Simulator: MLX can't run (no Metal GPU — touching it aborts). Record the
-        // note and stay on Mini so chat still works; a real device runs Lil.
+        // No MLX here (the Simulator, or an A12-family GPU — MLXRuntimeSupport).
+        // Record the note and stay on Mini so chat still works.
         // Both refusals fall back to Mini THROUGH this same function, whose
         // first act is `brainNote = nil` — so the note is written AFTER the
         // recursive call returns, or it is wiped before SwiftUI ever sees it
         // (#228 review; the Simulator branch had the same dead note).
         if tier.mlxModelID != nil, !Self.mlxAvailable {
             selectBrain(.mini)
-            brainNote = "\(tier.displayName) runs on a real device — the Simulator has no GPU for MLX. Staying on Mini."
+            brainNote = Self.mlxSupport.brainFallbackNote(tierName: tier.displayName)
             return
         }
         // Below the tier's memory floor the load cannot succeed — iOS kills it

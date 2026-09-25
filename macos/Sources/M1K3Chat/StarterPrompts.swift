@@ -30,6 +30,9 @@
 //  time, still. Confidence 0.85 (rules pinned red-first; what a real brain writes after `ASK:` is verify-by-run).
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (2) — a note at `pick`: the one-`.pulse`-per-canvas rule evens its odds only while
 //  `contextRoom` >= 2 (the Mac's count of 4). Comment only. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-09-25 — the phone rule drops to ONE memory chip, drawn at random from the newest
+//  `recentMemoryWindow` (5): two chips pinned to the two newest memories read as "not random" on the iPad (Kev's field
+//  test) — two thirds of the canvas never changed. `count: 4` is the iPad's draw. Confidence 0.9 (pinned red-first).
 //
 
 import Foundation
@@ -38,8 +41,13 @@ public enum StarterPrompts {
     /// Chips must stay one line on a phone.
     public static let maxChipLength = 44
 
-    /// At most this many chips come from memories; the rest from the pool.
-    public static let maxMemoryChips = 2
+    /// At most this many chips come from memories; the rest from the pool. One:
+    /// two pinned the canvas to the same newest memories on every visit.
+    public static let maxMemoryChips = 1
+
+    /// The memory chip is drawn from this many of the newest memories, so it
+    /// rotates instead of always naming the latest one.
+    public static let recentMemoryWindow = 5
 
     public static let pool: [String] = [
         "What can you help me with?",
@@ -57,9 +65,11 @@ public enum StarterPrompts {
     /// of its own, so the door questions ride in its shuffle).
     public static let phonePool: [String] = pool + doorPool
 
-    /// Three chips: up to two from `memoryTitles` (newest first, blanks skipped,
-    /// long titles trimmed), the rest a shuffle of `phonePool`. Never duplicates.
-    /// `count` beyond the pool + memory chips returns what exists, no repeats.
+    /// `count` chips (3 on a phone, 4 on an iPad): at most `maxMemoryChips` drawn
+    /// at random from the newest `recentMemoryWindow` of `memoryTitles` (newest
+    /// first, blanks skipped, long titles trimmed), the rest a shuffle of
+    /// `phonePool`. Never duplicates. `count` beyond the pool + memory chips
+    /// returns what exists, no repeats.
     public static func pick(
         memoryTitles: [String],
         count: Int = 3,
@@ -67,13 +77,14 @@ public enum StarterPrompts {
     ) -> [String] {
         // Dedupe AFTER trimming to chip form: two memories with the same title,
         // or two long titles that collide once truncated, must not print twice.
-        var picks: [String] = []
-        for title in memoryTitles where picks.count < min(maxMemoryChips, count) {
+        var memoryChips: [String] = []
+        for title in memoryTitles.prefix(recentMemoryWindow) {
             let oneLine = trimmed(title) // folds embedded newlines too, like the Mac path
             guard !oneLine.isEmpty else { continue }
             let chip = memoryChip(oneLine)
-            if !picks.contains(chip) { picks.append(chip) }
+            if !memoryChips.contains(chip) { memoryChips.append(chip) }
         }
+        var picks = Array(memoryChips.shuffled(using: &rng).prefix(min(maxMemoryChips, count)))
         for prompt in phonePool.shuffled(using: &rng) where picks.count < count {
             if !picks.contains(prompt) { picks.append(prompt) }
         }

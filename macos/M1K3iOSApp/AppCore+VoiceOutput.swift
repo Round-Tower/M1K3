@@ -7,7 +7,7 @@
 //  and the instant swap-back; M1K3 Voice (Kokoro, pure MLX) downloads once on pick
 //  and then runs fully on-device. The download is the consent: nothing fetches
 //  until the user taps the tier, and launch only restores it when the weights are
-//  already staged (VoiceTierRestore — never a silent ~184 MB re-download).
+//  already staged (VoiceTierRestore — never a silent ~192 MB re-download).
 //
 //  One deliberate difference from the Mac: the download is a HELD task. Picking
 //  Built-in mid-download cancels it, so the swap can't land a minute later on top
@@ -23,6 +23,8 @@
 //  actually wired), per the #199 review note; the Mac keeps the older optimistic behaviour.
 //  Review: Kev + claude-fable-5.1, 2026-09-03 (post-merge folds) — the progress tick is generation-stamped, and an
 //  explicit Built-in pick clears a stale failure banner.
+//  Review: Kev + claude-opus-5-5, 2026-09-25 — doc only: neuralVoiceAvailable (= mlxAvailable) now also refuses an
+//  A12-family GPU (warming Kokoro traps there); ~192 MB. Confidence 0.9.
 //
 
 import AVFoundation
@@ -35,7 +37,8 @@ extension AppCore {
     private nonisolated static let ttsLog = Logger(subsystem: "app.m1k3", category: "voice")
 
     /// M1K3 Voice is MLX — it cannot run on the Simulator (MLX aborts the
-    /// process there), so the picker offers only Built-in.
+    /// process there) or an A12-family GPU (warming Kokoro traps — iPad 8th
+    /// gen, 2026-09-25), so the picker offers only Built-in there.
     static var neuralVoiceAvailable: Bool {
         mlxAvailable
     }

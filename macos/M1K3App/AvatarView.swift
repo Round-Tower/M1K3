@@ -35,6 +35,10 @@
 //  (`cube.model?.materials = [...]`, a GPU resource update per cube per frame)
 //  is now gated on the cell's intensity or the accent actually changing; the
 //  position/scale jitter still writes every tick. Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-25 — CRTOverlay stops rasterising per tick: scanlines + vignette are drawn
+//  once per size (views with no time input, so SwiftUI skips them), and the 30 fps clock moves only the scanline
+//  layer's opacity and the band's offset. Same look (lines at the breathe peak × a layer breathing down from it).
+//  Full-screen pixel-face hero on an A12 iPad idled at ~47% CPU before; re-measured on device. Confidence 0.8.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the avatar is brand-default and now
 // cross-platform (the pixel face is pure RealityKit + SwiftUI; only the accent
@@ -400,72 +404,103 @@ struct CRTOverlay: View {
     }
 
     var body: some View {
+        // The clock moves only a layer's opacity and the band's offset —
+        // compositing, never rasterising. The scanlines and vignette are drawn
+        // once per size: their views take no time input, so SwiftUI skips their
+        // bodies on every tick. Redrawing all three into one Canvas at 30 fps
+        // cost an A12 iPad ~47% CPU once the face filled the screen (the
+        // backdrop hero, 2026-09-25).
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: clockPaused)) { context in
             let time = context.date.timeIntervalSince(start)
-            Canvas { canvas, size in
-                drawScanlines(canvas, size: size, time: time)
-                drawRollingBand(canvas, size: size, time: time)
-                drawVignette(canvas, size: size)
+            GeometryReader { geometry in
+                ZStack(alignment: .top) {
+                    Scanlines()
+                        .opacity(Self.breathe(time: time) / Self.breathePeak)
+                    RollingBand()
+                        .offset(y: Self.bandY(time: time, height: geometry.size.height))
+                    Vignette()
+                }
             }
         }
+        .clipped()
         .allowsHitTesting(false)
         // Purely decorative — scanlines/band/vignette add nothing VoiceOver should
         // announce; the meaningful label lives on the avatar surface underneath.
         .accessibilityHidden(true)
     }
 
-    /// Thin dark lines every few points; opacity breathes ~8% at a slow beat so
-    /// the mask shimmers like a real tube instead of sitting like a sticker.
-    private func drawScanlines(_ canvas: GraphicsContext, size: CGSize, time: Double) {
-        let breathe = 1 + 0.08 * sin(time * 1.7)
-        let opacity = Self.scanlineOpacity * breathe
-        let spacing = Self.scanlineSpacing(forHeight: size.height)
-        var y: CGFloat = 0
-        while y < size.height {
-            let line = CGRect(x: 0, y: y, width: size.width, height: 1)
-            canvas.fill(Path(line), with: .color(.black.opacity(opacity)))
-            y += spacing
+    /// Scanline opacity breathes ~8% at a slow beat so the mask shimmers like a
+    /// real tube instead of sitting like a sticker.
+    private static func breathe(time: Double) -> Double {
+        1 + 0.08 * sin(time * 1.7)
+    }
+
+    /// Layer opacity can't exceed 1, so the lines are drawn at the breathe's
+    /// peak and the layer breathes down from it: line × layer is exactly the
+    /// old per-line `scanlineOpacity × breathe`.
+    private static let breathePeak = 1.08
+
+    /// The band's top edge: starts above the frame, exits below, then wraps.
+    private static func bandY(time: Double, height: CGFloat) -> CGFloat {
+        let travel = height + bandHeight * 2
+        return (CGFloat(time) * bandSpeed).truncatingRemainder(dividingBy: travel) - bandHeight
+    }
+
+    /// Thin dark lines every few points — one path, one fill, drawn per size.
+    private struct Scanlines: View {
+        var body: some View {
+            Canvas { canvas, size in
+                let spacing = CRTOverlay.scanlineSpacing(forHeight: size.height)
+                var lines = Path()
+                var y: CGFloat = 0
+                while y < size.height {
+                    lines.addRect(CGRect(x: 0, y: y, width: size.width, height: 1))
+                    y += spacing
+                }
+                let opacity = CRTOverlay.scanlineOpacity * CRTOverlay.breathePeak
+                canvas.fill(lines, with: .color(.black.opacity(opacity)))
+            }
         }
     }
 
     /// A soft bright band rolling down the screen — the classic out-of-sync
-    /// refresh artifact. Starts above the frame and exits below before wrapping.
-    private func drawRollingBand(_ canvas: GraphicsContext, size: CGSize, time: Double) {
-        let travel = size.height + Self.bandHeight * 2
-        let offset = (CGFloat(time) * Self.bandSpeed).truncatingRemainder(dividingBy: travel)
-        let bandY = offset - Self.bandHeight
-        let rect = CGRect(x: 0, y: bandY, width: size.width, height: Self.bandHeight)
-        let gradient = Gradient(stops: [
-            .init(color: .clear, location: 0),
-            .init(color: .white.opacity(0.05), location: 0.5),
-            .init(color: .clear, location: 1),
-        ])
-        canvas.fill(
-            Path(rect),
-            with: .linearGradient(
-                gradient,
-                startPoint: CGPoint(x: 0, y: rect.minY),
-                endPoint: CGPoint(x: 0, y: rect.maxY)
+    /// refresh artifact. A static gradient; the clock only offsets it.
+    private struct RollingBand: View {
+        var body: some View {
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .white.opacity(0.05), location: 0.5),
+                    .init(color: .clear, location: 1),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
             )
-        )
+            .frame(maxWidth: .infinity)
+            .frame(height: CRTOverlay.bandHeight)
+        }
     }
 
     /// Radial darkening toward the corners — curved-glass falloff. The radius
     /// eases outward as the surface grows (0.75 → ~1.05) so a full-window face
     /// keeps gentle corner curvature instead of crushed black wells; the small
-    /// panel is unchanged.
-    private func drawVignette(_ canvas: GraphicsContext, size: CGSize) {
-        let centre = CGPoint(x: size.width / 2, y: size.height / 2)
-        let ease = min(0.30, size.height / 3000)
-        let radius = max(size.width, size.height) * (0.75 + ease)
-        let gradient = Gradient(stops: [
-            .init(color: .clear, location: 0),
-            .init(color: .clear, location: 0.55),
-            .init(color: .black.opacity(Self.vignetteOpacity), location: 1),
-        ])
-        canvas.fill(
-            Path(CGRect(origin: .zero, size: size)),
-            with: .radialGradient(gradient, center: centre, startRadius: 0, endRadius: radius)
-        )
+    /// panel is unchanged. Static — drawn per size, never per tick.
+    private struct Vignette: View {
+        var body: some View {
+            Canvas { canvas, size in
+                let centre = CGPoint(x: size.width / 2, y: size.height / 2)
+                let ease = min(0.30, size.height / 3000)
+                let radius = max(size.width, size.height) * (0.75 + ease)
+                let gradient = Gradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .clear, location: 0.55),
+                    .init(color: .black.opacity(CRTOverlay.vignetteOpacity), location: 1),
+                ])
+                canvas.fill(
+                    Path(CGRect(origin: .zero, size: size)),
+                    with: .radialGradient(gradient, center: centre, startRadius: 0, endRadius: radius)
+                )
+            }
+        }
     }
 }

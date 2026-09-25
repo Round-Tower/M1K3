@@ -11,6 +11,8 @@
 //  stays testable in the package.
 //
 //  Signed: Kev + claude-sonnet-4-6, 2026-06-08, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-09-25 — M1K3 Voice quotes ~192 MB (decimal, as iOS shows it); 184 was the
+//  MiB figure for the same bytes. Pinned to the Kokoro manifest by KokoroDownloadSizeTests. Confidence 0.9.
 
 public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
     case builtin
@@ -30,7 +32,7 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
     public var tagline: String {
         switch self {
         case .builtin: "Ready now · no download"
-        case .m1k3Voice: "Neural voice · ~184 MB"
+        case .m1k3Voice: "Neural voice · ~192 MB"
         }
     }
 
@@ -81,11 +83,13 @@ public enum VoiceTier: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// One-time download size, or nil when nothing to download (Built-in).
+    /// One-time download size in DECIMAL MB (what iOS and the Finder show), or
+    /// nil when nothing to download (Built-in). Pinned to Kokoro's manifest
+    /// bytes by KokoroDownloadSizeTests — the old 184 was the MiB figure.
     public var approxDownloadMB: Int? {
         switch self {
         case .builtin: nil
-        case .m1k3Voice: 184
+        case .m1k3Voice: 192
         }
     }
 

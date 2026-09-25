@@ -9,6 +9,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-18 — five pins for pulse-authored chips: replace-the-sentence, the fallback,
 //  stale-means-silent, judged-again (fold / drop / fall back), and one-per-canvas-with-rotation over 60 seeds (that one
 //  went red on 5 seeds before `pick` learned the rule). Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-09-25 — four pins for the one-memory-chip rule (at most one over 40 seeds; rotates
+//  within the newest five, never older; pool chips still vary; the iPad's count of 4). `weavesMemories` moves 2 → 1.
+//  Red first (recentMemoryWindow missing), green after. Confidence 0.9.
 //
 
 @testable import M1K3Chat
@@ -64,7 +67,52 @@ struct StarterPromptsTests {
         #expect(picks.allSatisfy { !$0.contains("\n") && !$0.contains("\r") })
     }
 
-    @Test("recent memories: at most two memory chips, the rest from the pool, still three")
+    @Test("at most ONE memory chip — two pinned to the newest memories made the canvas look the same every time")
+    func oneMemoryChipAtMost() {
+        let titles = ["Ardmore cliff walk", "The Round Tower", "Kev's coffee order", "Jazz festival", "Dark mode"]
+        for seed in UInt64(1) ... 40 {
+            var rng = FixedRNG(state: seed)
+            let picks = StarterPrompts.pick(memoryTitles: titles, using: &rng)
+            #expect(picks.count == 3)
+            #expect(picks.filter { $0.hasPrefix("Remind me about ") }.count == 1)
+        }
+    }
+
+    @Test("the memory chip rotates through the newest few — never older ones")
+    func memoryChipRotatesAcrossRecentFew() {
+        let titles = (1 ... 8).map { "Memory \($0)" } // newest first
+        var seen: Set<String> = []
+        for seed in UInt64(1) ... 60 {
+            var rng = FixedRNG(state: seed)
+            let picks = StarterPrompts.pick(memoryTitles: titles, using: &rng)
+            seen.formUnion(picks.filter { $0.hasPrefix("Remind me about ") })
+        }
+        let window = titles.prefix(StarterPrompts.recentMemoryWindow).map { "Remind me about \($0)" }
+        #expect(seen.count > 2)
+        #expect(seen.isSubset(of: Set(window)))
+    }
+
+    @Test("with memories present, the pool chips still vary — the canvas feels random")
+    func poolChipsVaryWithMemories() {
+        var seen: Set<String> = []
+        for seed in UInt64(1) ... 30 {
+            var rng = FixedRNG(state: seed)
+            let picks = StarterPrompts.pick(memoryTitles: ["Ardmore", "Round Tower"], using: &rng)
+            seen.formUnion(picks.filter { !$0.hasPrefix("Remind me about ") })
+        }
+        #expect(seen.count >= 6)
+    }
+
+    @Test("the iPad's roomier canvas draws four, still one memory chip at most")
+    func iPadDrawsFour() {
+        var rng = FixedRNG(state: 11)
+        let picks = StarterPrompts.pick(memoryTitles: ["Ardmore", "Round Tower"], count: 4, using: &rng)
+        #expect(picks.count == 4)
+        #expect(Set(picks).count == 4)
+        #expect(picks.filter { $0.hasPrefix("Remind me about ") }.count == 1)
+    }
+
+    @Test("recent memories: one memory chip, the rest from the pool, still three")
     func weavesMemories() {
         var rng = FixedRNG(state: 7)
         let picks = StarterPrompts.pick(
@@ -72,8 +120,10 @@ struct StarterPromptsTests {
         )
         #expect(picks.count == 3)
         let memoryChips = picks.filter { !StarterPrompts.phonePool.contains($0) }
-        #expect(memoryChips.count == 2)
-        #expect(memoryChips.allSatisfy { $0.contains("Ardmore") || $0.contains("Round Tower") })
+        #expect(memoryChips.count == 1)
+        #expect(memoryChips.allSatisfy {
+            $0.contains("Ardmore") || $0.contains("Round Tower") || $0.contains("coffee")
+        })
     }
 
     @Test("blank or whitespace titles are skipped")
