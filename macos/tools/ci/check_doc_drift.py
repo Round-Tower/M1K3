@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fail loudly if macos/CLAUDE.md's Module map drifts from Package.swift.
+"""Fail loudly if macos/docs/MODULE_MAP.md drifts from Package.swift.
 
-CLAUDE.md is the first thing a contributor (human or agent) reads to learn the
-module layout. The risk: someone adds a `.library` product to Package.swift and
+The Module map is where a contributor (human or agent) learns the module
+layout (it lived in macos/CLAUDE.md until 2026-09-25). The risk: someone adds a `.library` product to Package.swift and
 forgets the Module map table — the new module is then invisible to every reader,
 and someone re-implements what already exists (the exact failure this guard was
 born from: four products silently absent from the table). This compares the two
@@ -10,7 +10,7 @@ sets and exits non-zero on ANY divergence — an undocumented product OR a ghost
 row for a module that no longer exists — so the omission fails CI instead of
 hiding. Seconds, pure Python, no Xcode/build. Sibling of check_test_scheme.py.
 
-    python3 check_doc_drift.py [PACKAGE_SWIFT] [CLAUDE_MD]
+    python3 check_doc_drift.py [PACKAGE_SWIFT] [MODULE_MAP_MD]
 
 Defaults resolve both files relative to this script's repo. Read-only.
 
@@ -19,6 +19,10 @@ convention, so a future rename of either is a deliberate act that trips this.
 The pure helpers (parsing + diff) are unit-tested in test_check_doc_drift.py.
 
 Signed: Kev + claude-opus-4-8, 2026-07-07, Confidence 0.85, Prior: Unknown
+Review: Kev + claude-fable-5.1, 2026-09-25 — the table moved out of CLAUDE.md
+(23 KB loaded on every turn of every macos/ session) into docs/MODULE_MAP.md;
+only the default path and the messages changed, the parser and its tests are
+untouched. Confidence now 0.85.
 """
 from __future__ import annotations
 
@@ -41,7 +45,7 @@ def package_library_products(package_swift: str) -> set[str]:
 
 
 def module_map_names(claude_md: str) -> set[str]:
-    """Module names in the CLAUDE.md 'Module map' table's first (Target) cell.
+    """Module names in the 'Module map' table's first (Target) cell.
 
     Scoped to the table that follows the 'Module map' marker so an M1K3* name
     mentioned in prose elsewhere doesn't count. Handles multi-module rows
@@ -80,26 +84,26 @@ def main(argv: list[str]) -> int:
     here = os.path.dirname(os.path.abspath(__file__))
     macos = os.path.dirname(os.path.dirname(here))
     pkg_path = argv[1] if len(argv) > 1 else os.path.join(macos, "Package.swift")
-    claude_path = argv[2] if len(argv) > 2 else os.path.join(macos, "CLAUDE.md")
+    claude_path = argv[2] if len(argv) > 2 else os.path.join(macos, "docs", "MODULE_MAP.md")
 
     products = package_library_products(open(pkg_path).read())
     documented = module_map_names(open(claude_path).read())
     undocumented, ghost = diff_modules(products=products, documented=documented)
 
     if not undocumented and not ghost:
-        print(f"✓ CLAUDE.md Module map documents all {len(products)} package library products.")
+        print(f"✓ docs/MODULE_MAP.md documents all {len(products)} package library products.")
         return 0
 
     if undocumented:
-        print("❌ .library products in Package.swift but MISSING from the CLAUDE.md Module map")
+        print("❌ .library products in Package.swift but MISSING from docs/MODULE_MAP.md")
         print("   (these modules are invisible to every reader of the doc):")
         for m in sorted(undocumented):
             print(f"     - {m}")
     if ghost:
-        print("⚠️  modules documented in the CLAUDE.md Module map but GONE from Package.swift:")
+        print("⚠️  modules documented in docs/MODULE_MAP.md but GONE from Package.swift:")
         for m in sorted(ghost):
             print(f"     - {m}")
-    print("\nFix: update the Module map table in macos/CLAUDE.md to match Package.swift's .library products.")
+    print("\nFix: update the table in macos/docs/MODULE_MAP.md to match Package.swift's .library products.")
     return 1
 
 

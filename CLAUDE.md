@@ -34,7 +34,12 @@ Anything a cold session needs on turn one belongs below, not there.
 - **CI on a PR:** package-only diffs are gated by `swift test` (~4 min); the
   App-shell and iOS+visionOS xcodebuild jobs run only when their paths change
   (the `shell` / `mobile` filters in `ci.yml`). Every push to master or develop
-  builds all three — a shell break lands, then is fixed forward.
+  that touches Swift builds all three (a docs- or tools-only push skips them) —
+  a shell break lands, then is fixed forward.
+- **Never merge master into a PR branch** unless git reports a conflict or the
+  PR needs a fix from master to go green — each merge is a full CI + review
+  cycle. A one-file, test-only fix that unblocks a PR rides in that PR, named
+  in the body.
 - `xcodegen` after every checkout; `M1K3.xcodeproj` is a gitignored artifact.
 - A worktree `xcodebuild` needs `-skipPackagePluginValidation -skipMacroValidation`.
 - `swift package clean` before protocol/struct-shape changes (segfault, 3+ hits).
@@ -56,4 +61,9 @@ every turn of every session), the graphify section (its graph file has not
 existed since June) and the 2026-08-13 orientation banner; distilled the
 carry-forwards that recent session blocks kept repeating.
 Open: which carry-forwards go stale first — prune at the next /retro.
+Review: Kev + claude-fable-5.1, 2026-09-25 — the two landing rules the
+macos/CLAUDE.md trim dropped (never merge master in; a test-only unblock
+rides the PR) live here now, and "every push builds all three" says
+Swift-touching, which is what ci.yml's `swift` filter has always meant.
+Confidence 0.8.
 -->

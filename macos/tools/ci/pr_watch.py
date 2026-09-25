@@ -14,8 +14,11 @@ in project memory. Now they are code, tested in test_pr_watch.py:
 * The auto pass (claude-code-review-mac.yml, fires on `synchronize` — path-gated
   to Swift, the manifest, project.yml, macos/tools/ and the workflows; a
   docs-only head gets none and needs a summon) counts when the review
-  workflow's run FOR THIS HEAD completed green AND posted its comment inside
-  that run's window. The action skips itself — green in ~13 s, no comment —
+  workflow's run FOR THIS HEAD completed green AND posted its comment — the
+  finished bot comment that links THAT run's id (the action's tracking
+  comment), else the first inside the run's window that links no other run:
+  a summon fired in the same breath as the push lands its placeholder inside
+  the window, ahead of the run's own comment (#409). The action skips itself — green in ~13 s, no comment —
   whenever the workflow file on the PR differs from master's (#408): that is
   no pass. The comment it does post is summon-shaped and may name the head
   ("Claude finished … Reviewed head `x`", #404); it is counted once.
@@ -67,6 +70,14 @@ summon-shaped and names the head, so one review could count as 2/2. An auto
 pass is now the run plus the comment it posted, counted once
 (auto_pass_comment; verdict's auto_comment). Confidence now 0.85 — both
 shapes are pinned from #408's and #404's real threads.
+Review: Kev + claude-fable-5.1, 2026-09-25 — auto_pass_comment attributes by
+run id first (#409, summon 2 on #408): a summon fired in the same breath as the
+push posts its placeholder inside the auto run's window and ahead of the run's
+own comment, so it was returned as the auto pass, the run's `gh pr comment`
+review counted zero, and a substantive PR would have waited for a third review.
+The action's tracking comment links `actions/runs/<id>` (read off #400/#401/
+#404); snapshot now fetches databaseId; the window fallback skips a comment
+that links another run. Confidence now 0.9.
 """
 from __future__ import annotations
 
@@ -139,6 +150,11 @@ _HEAD_PAREN = re.compile(r"\bhead \(([0-9a-f]{7,40})\)")
 _HEAD_BARE = re.compile(r"\bhead ([0-9a-f]{7,40})\b")
 _HEADER_LINE = re.compile(r"^#{2,4} ")
 _SHA = re.compile(r"`([0-9a-f]{7,40})`")
+# The action's tracking-comment anchor. If the action ever renames "View job",
+# the identity match silently falls back to the window heuristic and #409 comes
+# back — re-pin from a live thread, as classify's wording list has needed
+# (#334, #347, #404).
+_RUN_LINK = re.compile(r"\[View job\]\([^)]*?/actions/runs/(\d+)")
 
 
 def _progress_unchecked(text: str) -> bool:
@@ -216,6 +232,16 @@ def summon_passes(head: str, comments: list[dict]) -> int:
     )
 
 
+def linked_run_id(body: str) -> str | None:
+    """The workflow run a bot comment links — the action's own
+    "[View job](…/actions/runs/N)" anchor on every summon and auto run's tracking
+    comment. Anchored to that markdown shape, so a review that cites some run's
+    URL in its prose links nothing. None for a comment a run posted through
+    `gh pr comment` (the mac review's findings)."""
+    mt = _RUN_LINK.search(body)
+    return mt.group(1) if mt else None
+
+
 def _newest_green_review_run(head: str, review_runs: list[dict]) -> dict | None:
     """The review workflow's NEWEST run on this head, if it finished green. An
     older green run does not vouch for a re-triggered one still in progress."""
@@ -229,21 +255,35 @@ def _newest_green_review_run(head: str, review_runs: list[dict]) -> dict | None:
 
 
 def auto_pass_comment(head: str, review_runs: list[dict], comments: list[dict]) -> dict | None:
-    """The comment the newest green review run on this head posted — the first
-    finished claude[bot] comment created inside that run's window. None when
+    """The comment the newest green review run on this head posted. By identity
+    first: the finished claude[bot] comment that links THIS run's id (the
+    action's tracking comment). Then by time: the first finished bot comment
+    created inside the run's window that links no OTHER run — a summon fired in
+    the same breath as the push posts its placeholder seconds later, inside the
+    window and ahead of the run's own comment, and was read as the auto pass
+    while the run's real `gh pr comment` review counted zero (#409). None when
     the run posted nothing: the action skips itself, green in ~13 s, whenever
-    the workflow file on the PR differs from master's (#408, 2026-09-24), and
-    a run that reviewed nothing is not a pass. ISO-8601 Z timestamps compare
-    as strings."""
+    the workflow file on the PR differs from master's (#408), and a run that
+    reviewed nothing is not a pass. ISO-8601 Z timestamps compare as strings."""
     run = _newest_green_review_run(head, review_runs)
     if run is None:
         return None
+    finished = [
+        c for c in comments
+        if c.get("user", {}).get("login") == BOT_LOGIN and classify(c.get("body", "")) is not Kind.PLACEHOLDER
+    ]
+    run_id = str(run.get("databaseId") or "")
+    if run_id:
+        for c in finished:
+            if linked_run_id(c.get("body", "")) == run_id:
+                return c
     start, end = run.get("createdAt", ""), run.get("updatedAt", "")
-    for c in comments:
-        if c.get("user", {}).get("login") != BOT_LOGIN:
-            continue
+    for c in finished:
+        linked = linked_run_id(c.get("body", ""))
+        if run_id and linked is not None and linked != run_id:
+            continue  # another run's comment (a concurrent summon), not this one's
         created = c.get("created_at", "")
-        if start <= created <= (end or created) and classify(c.get("body", "")) is not Kind.PLACEHOLDER:
+        if start <= created <= (end or created):
             return c
     return None
 
@@ -351,7 +391,7 @@ def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | N
         for j in _gh_json("api", f"repos/{repo}/actions/runs/{newest['databaseId']}/jobs")["jobs"]:
             jobs[j["name"]] = j.get("conclusion")
     review_runs = _gh_json("run", "list", "--repo", repo, "--workflow", "claude-code-review-mac.yml",
-                           "--limit", "40", "--json", "headSha,status,conclusion,createdAt,updatedAt")
+                           "--limit", "40", "--json", "headSha,databaseId,status,conclusion,createdAt,updatedAt")
     comments = _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/issues/{pr}/comments")
     comments = [c for page in comments for c in page]
     inline = _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/comments")

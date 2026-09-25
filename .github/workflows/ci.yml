@@ -59,6 +59,7 @@ jobs:
               - '!macos/docs/**'
               - '!macos/tools/release/**'
               - '!macos/fastlane/**'
+              - '!macos/tools/ci/**'   # Python, tested by the guards job — no Swift compiles it
               - '!macos/**/*.md'
             # What the App-shell job compiles and nothing else does: the shell,
             # the two Xcode-native targets it embeds (M1K3CLI helper, the
@@ -160,7 +161,9 @@ jobs:
     name: Swift · App shell (xcodebuild)
     needs: changes
     # PR: only when the diff touches what this job alone compiles (the `shell`
-    # filter). Push (master, develop): always — the fix-forward backstop.
+    # filter). Push (master, develop): whenever the push touches Swift — the
+    # fix-forward backstop. A docs- or tools/ci-only push sets swift=false and
+    # skips this too; nothing it compiles changed.
     if: needs.changes.outputs.swift == 'true' && (github.event_name == 'push' || needs.changes.outputs.shell == 'true')
     # `swift test` compiles only the SwiftPM PACKAGE. The app shell (M1K3App/:
     # AppEnvironment + its extensions, SelfTest, MCPHostController, IssueReporter,
@@ -219,7 +222,9 @@ jobs:
     name: Swift · iOS + visionOS shells (xcodebuild)
     needs: changes
     # PR: only when the diff touches what this job alone compiles (the `mobile`
-    # filter). Push (master, develop): always — the fix-forward backstop.
+    # filter). Push (master, develop): whenever the push touches Swift — the
+    # fix-forward backstop. A docs- or tools/ci-only push sets swift=false and
+    # skips this too; nothing it compiles changed.
     if: needs.changes.outputs.swift == 'true' && (github.event_name == 'push' || needs.changes.outputs.mobile == 'true')
     # The iOS/visionOS shell (M1K3iOSApp/ on the portable package graph) was
     # local-verify-only since PR #9 — a PR could break the mobile compile and
@@ -335,7 +340,7 @@ jobs:
 
   doc-drift:
     # Guard the docs against silent staleness: every `.library` product in
-    # Package.swift must appear in the macos/CLAUDE.md Module map (and no ghost
+    # Package.swift must appear in macos/docs/MODULE_MAP.md (and no ghost
     # rows). Born from four modules going undocumented — the first thing a
     # contributor reads must not lie. Pure-Python, no build, seconds.
     name: Docs match the code (module map)
@@ -343,7 +348,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      - name: Check CLAUDE.md Module map vs Package.swift
+      - name: Check docs/MODULE_MAP.md vs Package.swift
         working-directory: macos
         run: python3 tools/ci/check_doc_drift.py
 

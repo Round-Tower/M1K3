@@ -177,6 +177,65 @@ def test_an_auto_review_that_names_the_head_counts_once_not_twice():
     assert v.passes == 1
 
 
+
+def _run(head, run_id, created, updated):
+    return {"headSha": head, "status": "completed", "conclusion": "success", "databaseId": run_id,
+            "createdAt": created, "updatedAt": updated}
+
+
+def _tracking(run_id, head8, created):
+    # the action's own comment: links its run, names the head it reviewed
+    return bot(f"**Claude finished @kev's task in 3m** —— [View job](https://github.com/o/r/actions/runs/{run_id})\n\n---\n"
+               f"### Reviewed head `{head8}`\n- [x] a", created=created)
+
+
+def test_auto_pass_is_the_comment_linking_the_runs_id_not_the_first_in_its_window():
+    # #409 (summon 2 on #408): a summon fired in the same breath as the push
+    # posts its placeholder seconds later — inside the auto run's window and
+    # ahead of the auto run's own comment. Identity beats order.
+    head = "95e8dbaf" + "0" * 32
+    runs = [_run(head, 222, "2026-09-24T21:08:05Z", "2026-09-24T21:10:05Z")]
+    summon = _tracking(111, "95e8dbaf", created="2026-09-24T21:08:35Z")
+    auto = _tracking(222, "95e8dbaf", created="2026-09-24T21:09:55Z")
+    assert m.auto_pass_comment(head, runs, [summon, auto]) is auto
+    assert m.linked_run_id(auto["body"]) == "222"
+    assert m.linked_run_id("## Review: posted with gh pr comment") is None
+
+
+def test_a_concurrent_summon_in_the_window_does_not_eat_the_auto_runs_gh_pr_comment_review():
+    # The mac review posts its findings with `gh pr comment` — no run link. The
+    # window fallback skips the summon (it links another run) and finds them,
+    # so the thread's two real reviews read as two passes.
+    head = "95e8dbaf" + "0" * 32
+    runs = [_run(head, 222, "2026-09-24T21:08:05Z", "2026-09-24T21:10:05Z")]
+    summon = _tracking(111, "95e8dbaf", created="2026-09-24T21:08:35Z")
+    review = bot("## Review: CI tooling pass\nFocused on pr_watch.py…", created="2026-09-24T21:09:55Z")
+    assert m.auto_pass_comment(head, runs, [summon, review]) is review
+    jobs = {m.JOB_SWIFT_TEST: "skipped", m.JOB_APP: "skipped", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
+    v = m.verdict(head, ["macos/tools/ci/pr_watch.py"], jobs, [summon, review], auto_ok=True, passes_needed=2, auto_comment=review)
+    assert v.passes == 2 and v.ready
+
+
+def test_a_run_that_posted_nothing_is_not_rescued_by_a_summon_in_its_window():
+    # #408's validation-skipped run again, now with a summon landing inside its
+    # 16-second window: still no pass — that comment belongs to the summon.
+    head = "572a108e" + "0" * 32
+    runs = [_run(head, 222, "2026-09-24T21:36:22Z", "2026-09-24T21:36:38Z")]
+    summon = _tracking(111, "572a108e", created="2026-09-24T21:36:30Z")
+    assert m.auto_pass_comment(head, runs, [summon]) is None
+    assert m.auto_pass_ok(head, runs, comments=[summon]) is False
+
+
+def test_a_review_citing_another_runs_url_in_prose_is_still_this_runs_comment():
+    # Only the action's own "[View job](…)" anchor is a link. The mac review
+    # posts with `gh pr comment` and may quote a run URL in a finding.
+    head = "95e8dbaf" + "0" * 32
+    runs = [_run(head, 222, "2026-09-24T21:08:05Z", "2026-09-24T21:10:05Z")]
+    review = bot("## Review: CI tooling pass\nCompare https://github.com/o/r/actions/runs/111 — that run skipped itself.",
+                 created="2026-09-24T21:09:55Z")
+    assert m.linked_run_id(review["body"]) is None
+    assert m.auto_pass_comment(head, runs, [review]) is review
+
 # --- which CI jobs gate the merge ------------------------------------------
 
 def test_package_only_change_does_not_wait_for_the_mobile_job():
