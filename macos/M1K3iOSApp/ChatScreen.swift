@@ -41,6 +41,10 @@
 //  spinner it replaces said "wait"; the stop says you don't have to). Confidence now 0.85 (device-owed).
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — the rating ask: every completed turn re-checks the ledger and this screen alone calls requestReview.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — the ask needs an active scene (local review fold).
+//  Review: Kev + claude-opus-5-5, 2026-09-25 — the backdrop IS the hero (Kev: "minimal and coherent"): the full-screen
+//  avatar runs on the blank canvas too and recedes once chatting — one RealityView from launch to answer, no hand-off.
+//  The 168 pt box is only the fallback (backdrop off / Reduce Transparency). Starter chips move to the thumb, above
+//  the input bar; four on regular width. Verify-by-launch on the A12 iPad (idle cost + chip legibility). Confidence 0.75.
 
 import M1K3Avatar
 import M1K3Chat
@@ -60,6 +64,7 @@ struct ChatScreen: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var voiceLaunched = false
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
     @State private var draft = ""
@@ -80,12 +85,15 @@ struct ChatScreen: View {
         CompanionDefaults.hidesAvatar(companion)
     }
 
-    /// The live avatar backdrop is on when chatting, unless the user opted out
-    /// (the Appearance toggle or the None companion) or asked the OS for Reduce
+    /// The live avatar backdrop is the whole experience's one avatar: the
+    /// full-screen hero on the blank canvas, receding behind the transcript once
+    /// chatting (2026-09-25, Kev: "minimal and coherent") — one RealityView from
+    /// launch to answer, no hand-off. Off only when the user opted out (the
+    /// Appearance toggle or the None companion) or asked the OS for Reduce
     /// Transparency (a layered live scene is exactly what that setting asks us
-    /// not to do — the Mac's glass swap, same spirit).
+    /// not to do — the Mac's glass swap, same spirit); the boxed hero stands in.
     private var backdropActive: Bool {
-        chatting && avatarBackdrop && !avatarHidden && !reduceTransparency
+        avatarBackdrop && !avatarHidden && !reduceTransparency
     }
 
     /// Composing — keyboard up or a draft in hand; recedes the backdrop avatar.
@@ -97,6 +105,14 @@ struct ChatScreen: View {
         VStack(spacing: 0) {
             hero
             transcript
+            // The blank canvas's chips sit at the thumb, over the scrim — the
+            // creature owns the screen above them.
+            if !chatting {
+                starterChips
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
+                    .transition(.opacity)
+            }
             inputBar
         }
         .background(backdrop)
@@ -235,14 +251,14 @@ struct ChatScreen: View {
 
     // MARK: - Hero avatar
 
-    /// The big pixel face owns the empty state; once chatting it hands off to
-    /// the full-bleed ChatBackdrop instead of shrinking to a dock (the Mac's
-    /// background-avatar mode, which reads far better on a phone). The load /
-    /// readiness rows stay inline in both states.
+    /// The wordmark over the full-screen backdrop avatar (the hero IS the
+    /// backdrop). Only when the backdrop is off does the boxed face stand in —
+    /// never both: one RealityView at a time. The load / readiness rows stay
+    /// inline in both states.
     private var hero: some View {
         VStack(spacing: 6) {
             if !chatting {
-                if !avatarHidden {
+                if !avatarHidden, !backdropActive {
                     AvatarSurface(controller: core.avatar)
                         .frame(height: 168)
                         .padding(.horizontal, 56)
@@ -319,9 +335,6 @@ struct ChatScreen: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    if core.chat.messages.isEmpty {
-                        emptyState
-                    }
                     ForEach(core.chat.messages) { message in
                         MessageBubble(
                             message: message,
@@ -364,13 +377,6 @@ struct ChatScreen: View {
         }
     }
 
-    /// The blank canvas is just the starter chips — no headline, no tagline
-    /// (Kev's cognitive-load cut, 2026-09-03: the chips already say "ask").
-    private var emptyState: some View {
-        starterChips
-            .padding(.top, 32) // one number: was 28 on the wrapper + 4 on the chips
-    }
-
     /// Starter prompts for the blank canvas — the same tap-to-send path (and the
     /// same `canSend` gate) as the reply follow-up chips, so a tap while the brain
     /// is still warming is a no-op rather than an eaten message. Dimmed until ready
@@ -411,10 +417,15 @@ struct ChatScreen: View {
     }
 
     /// A fresh draw every time the canvas goes blank: a shuffle of the pool with
-    /// up to two of the newest memories woven in (StarterPrompts, pure + tested).
+    /// one recent memory woven in (StarterPrompts, pure + tested) — four on the
+    /// iPad's regular width, three on a phone.
     private func reshuffleStarters() {
         var rng = SystemRandomNumberGenerator()
-        starters = StarterPrompts.pick(memoryTitles: core.recentMemoryTitles(), using: &rng)
+        starters = StarterPrompts.pick(
+            memoryTitles: core.recentMemoryTitles(),
+            count: horizontalSizeClass == .regular ? 4 : 3,
+            using: &rng
+        )
     }
 
     private func sendStarter(_ prompt: String) {

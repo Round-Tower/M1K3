@@ -4,7 +4,7 @@
 //
 //  The Voice section of Settings — how M1K3 sounds. Two tiers, same rows as the
 //  Brain picker: Built-in (instant, no download — the default) and M1K3 Voice
-//  (Kokoro, one ~184 MB download, then offline forever). Picking M1K3 Voice IS the
+//  (Kokoro, one ~192 MB download, then offline forever). Picking M1K3 Voice IS the
 //  download consent; the bar below the rows is the honest progress; "Hear a
 //  sample" speaks in whichever voice is live right now.
 //
@@ -15,6 +15,8 @@
 //  AppCore+VoiceOutput; the rows are the Brain picker's idiom byte-for-byte; the
 //  download bar and the sample are verify-by-launch on device).
 //  Prior: none (new file, patterned on SettingsScreen's Brain section).
+//  Review: Kev + claude-opus-5-5, 2026-09-25 — the unavailable note comes from MLXRuntimeSupport.voiceNote, so an
+//  A12-family GPU says why (a newer chip) instead of blaming the Simulator; ~192 MB in the header. Confidence 0.85.
 //
 
 import M1K3Inference
@@ -55,8 +57,8 @@ struct VoiceOutputSection: View {
                 .buttonStyle(.plain)
             }
             loadState
-            if !AppCore.neuralVoiceAvailable {
-                Text("M1K3 Voice runs on a real device.")
+            if let note = AppCore.mlxSupport.voiceNote {
+                Text(note)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

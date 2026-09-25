@@ -59,6 +59,10 @@
 //  (a GitHub release, not HuggingFace) is unchanged — out of this pin's scope.
 //  See `KokoroPinnedWeights.swift` for why this duplicates rather than
 //  imports M1K3MLX's WeightIntegrity shape. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-25 — `discardStagedModel()` + a static staged-check seam: an iPad
+//  8th gen (Apple GPU family 5) staged all 192 MB, then trapped in `warm()` — MLX kernels don't compile on
+//  that GPU. The shell now never offers M1K3 Voice there (MLXRuntimeSupport) and discards a stage left
+//  behind. Pinned by KokoroStageDiscardTests. Confidence 0.9.
 
 import Foundation
 import M1K3Inference
@@ -122,10 +126,34 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
     /// Whether all three staged files are already on disk — lets the app restore
     /// the M1K3 Voice tier on launch without kicking a fresh download.
     public var isModelStaged: Bool {
+        Self.isModelStaged(at: modelDirectory)
+    }
+
+    /// Delete the staged weights — for a device that can never run them (Apple
+    /// GPU family 5 traps warming Kokoro, 2026-09-25), so 192 MB doesn't sit
+    /// there forever. Only when not ready: never pull files from under a live voice.
+    /// `_ready` does NOT guard a download in flight — call this only where
+    /// `prepare` can't be running (today: a device that never offers M1K3 Voice).
+    /// A future "free up space" button must cancel the prepare task first.
+    public func discardStagedModel() {
+        guard !lock.withLock({ _ready }) else { return }
+        Self.discardStagedModel(at: modelDirectory)
+    }
+
+    static func isModelStaged(at directory: URL) -> Bool {
         let fileManager = FileManager.default
-        return fileManager.fileExists(atPath: modelDirectory.appendingPathComponent("config.json").path)
-            && fileManager.fileExists(atPath: modelDirectory.appendingPathComponent("model.safetensors").path)
-            && fileManager.fileExists(atPath: modelDirectory.appendingPathComponent("voices-v1.0.bin").path)
+        return fileManager.fileExists(atPath: directory.appendingPathComponent("config.json").path)
+            && fileManager.fileExists(atPath: directory.appendingPathComponent("model.safetensors").path)
+            && fileManager.fileExists(atPath: directory.appendingPathComponent("voices-v1.0.bin").path)
+    }
+
+    static func discardStagedModel(at directory: URL) {
+        guard FileManager.default.fileExists(atPath: directory.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: directory)
+        } catch {
+            log.error("Kokoro stage discard failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     public func speak(_ utterance: SpeechUtterance) async {

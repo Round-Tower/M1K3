@@ -17,8 +17,13 @@ struct VoiceTierTests {
     func downloadRequirement() {
         #expect(VoiceTier.builtin.approxDownloadMB == nil)
         #expect(VoiceTier.builtin.requiresDownload == false)
-        #expect(VoiceTier.m1k3Voice.approxDownloadMB == 184)
+        #expect(VoiceTier.m1k3Voice.approxDownloadMB == 192)
         #expect(VoiceTier.m1k3Voice.requiresDownload == true)
+    }
+
+    @Test("the tagline quotes the same size the download really is (decimal MB, as iOS shows it)")
+    func taglineQuotesTheDownloadSize() {
+        #expect(VoiceTier.m1k3Voice.tagline == "Neural voice · ~192 MB")
     }
 
     @Test("macOS keeps M1K3 Voice's exact card copy — the platform-honesty byte freeze")

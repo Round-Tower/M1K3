@@ -208,6 +208,12 @@ The MLX Metal graph links for **both** the iOS and visionOS simulators (the stor
 arch). Verification ceiling is **compile-green** — the simulator can't run MLX (no Metal
 for it), so on-device run is verify-owed, same as the spike.
 
+**Where MLX may run** (`MLXRuntimeSupport`, 2026-09-25): never on the Simulator, and never
+on Apple GPU family 5 (A12 / A12X / A12Z) — its compiler can't build MLX's kernels and
+mlx-swift traps (LFM2 #236; M1K3 Voice on an iPad 8th gen). `AppCore.mlxAvailable` gates
+every MLX path (brains, M1K3 Voice, the launch restores); an A12 keeps Built-in voice and
+Brain at Home. The A13 floor is inferred, not measured.
+
 ### Still to do (honestly device/runtime-gated — NOT claimed done)
 
 - **Phase B — Voice.** `AVAudioSession` lifecycle behind the `SpeechProvider`/
@@ -323,12 +329,13 @@ First pass at closing the LOOK gap Kev named ("the iOS app doesn't have the Mac
 aesthetic we nailed"). All composition of already-shared, already-TDD'd pieces —
 no new policy logic:
 
-- **Reactive avatar backdrop** (`M1K3iOSApp/ChatBackdrop.swift`): once a
-  conversation starts, the pixel face stops shrinking to a 76pt dock and becomes
-  the full-bleed background — bloom when idle, recede (dim/blur/scale) while an
-  answer streams or the user is composing. Drives the shared
-  `ChatBackdropTreatment` (package-tested); one RealityView at a time (the hero
-  hands off to the backdrop). `isComposing` is broader than the Mac's
+- **Reactive avatar backdrop** (`M1K3iOSApp/ChatBackdrop.swift`): the backdrop
+  IS the hero (2026-09-25) — the full-bleed avatar owns the blank canvas (starter
+  chips at the thumb, above the input bar) and stays through the conversation —
+  bloom when idle, recede (dim/blur/scale) while an answer streams or the user is
+  composing. Drives the shared `ChatBackdropTreatment` (package-tested); one
+  RealityView from launch to answer, no hand-off. The 168 pt boxed face stands in
+  only when the backdrop is off (Appearance toggle, Reduce Transparency). `isComposing` is broader than the Mac's
   `!draft.isEmpty` — keyboard focus alone recedes, because the keyboard
   shortens the viewport on a phone.
 - **Reading modes on mobile**: `ReadingMode.swift` + `ReadingText.swift` joined
