@@ -59,6 +59,7 @@ jobs:
               - '!macos/docs/**'
               - '!macos/tools/release/**'
               - '!macos/fastlane/**'
+              - '!macos/tools/ci/**'   # Python, tested by the guards job — no Swift compiles it
               - '!macos/**/*.md'
             # What the App-shell job compiles and nothing else does: the shell,
             # the two Xcode-native targets it embeds (M1K3CLI helper, the
@@ -335,7 +336,7 @@ jobs:
 
   doc-drift:
     # Guard the docs against silent staleness: every `.library` product in
-    # Package.swift must appear in the macos/CLAUDE.md Module map (and no ghost
+    # Package.swift must appear in macos/docs/MODULE_MAP.md (and no ghost
     # rows). Born from four modules going undocumented — the first thing a
     # contributor reads must not lie. Pure-Python, no build, seconds.
     name: Docs match the code (module map)
@@ -343,7 +344,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-      - name: Check CLAUDE.md Module map vs Package.swift
+      - name: Check docs/MODULE_MAP.md vs Package.swift
         working-directory: macos
         run: python3 tools/ci/check_doc_drift.py
 
