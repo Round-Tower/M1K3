@@ -5,7 +5,7 @@
 //  The launch-time decision for the M1K3 Voice (Kokoro) tier, made testable and
 //  shared by every shell: reload the neural voice only when the user chose it
 //  before AND its weights are already on disk. Chosen-but-missing must never kick
-//  a silent ~184 MB re-download on launch; staged-but-unchosen must never load a
+//  a silent ~192 MB re-download on launch; staged-but-unchosen must never load a
 //  voice the user didn't pick. The same shape as M1K3Calls' CallTranscriptionRestore
 //  (and the Mac's inline rule in AppEnvironment.init), lifted here so the iOS shell
 //  and the Mac share one rule instead of two copies.

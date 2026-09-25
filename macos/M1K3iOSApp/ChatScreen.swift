@@ -45,6 +45,8 @@
 //  avatar runs on the blank canvas too and recedes once chatting — one RealityView from launch to answer, no hand-off.
 //  The 168 pt box is only the fallback (backdrop off / Reduce Transparency). Starter chips move to the thumb, above
 //  the input bar; four on regular width. Verify-by-launch on the A12 iPad (idle cost + chip legibility). Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-09-25 (2) — #411 review fold: the chips' fade needed its own transaction (a Group
+//  with `.animation(value: chatting)`); hero's animation is scoped to hero, so they popped. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -106,13 +108,18 @@ struct ChatScreen: View {
             hero
             transcript
             // The blank canvas's chips sit at the thumb, over the scrim — the
-            // creature owns the screen above them.
-            if !chatting {
-                starterChips
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
-                    .transition(.opacity)
+            // creature owns the screen above them. The Group carries the
+            // transaction: hero's animation is scoped to hero, so without this
+            // the chips pop instead of fading on the first send (#411 review).
+            Group {
+                if !chatting {
+                    starterChips
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 10)
+                        .transition(.opacity)
+                }
             }
+            .animation(.easeInOut(duration: 0.25), value: chatting)
             inputBar
         }
         .background(backdrop)
