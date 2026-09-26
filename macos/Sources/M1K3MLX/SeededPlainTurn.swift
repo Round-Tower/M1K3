@@ -37,17 +37,6 @@ enum SeededPlainTurn {
         case fresh
     }
 
-    /// `seed`: the exact token ids the persona cache holds. `full`: the token
-    /// ids of the whole `[system, user]` render for this turn.
-    ///
-    /// `seedTrimmed`: whether the seed cache really holds EXACTLY `seed.count`
-    /// positions. `renderPersonaPrefix` prefills one throwaway token and trims
-    /// it back off only on a linear cache — a persona that wrapped a sliding
-    /// window keeps that extra position (trimming a wrapped RotatingKVCache
-    /// underflows its rotation pointer), so its cache is one token longer than
-    /// its ids say. Appending to it would be silently misaligned KV — the very
-    /// class of bug this seam exists to close — so a non-trimmed seed is never
-    /// reused. Pass `CrossTurnCacheReuse.cacheReusable(layersTrimmable:)`.
     /// How to build a persona seed on a FRESH cache.
     enum SeedBuild: Equatable {
         /// Run a 1-token generation over the prefix, then trim the sampled
@@ -75,6 +64,17 @@ enum SeededPlainTurn {
         return !freshLayersTrimmable.isEmpty && freshLayersTrimmable.allSatisfy { $0 } ? .sampleAndTrim : .exactPrefill
     }
 
+    /// `seed`: the exact token ids the persona cache holds. `full`: the token
+    /// ids of the whole `[system, user]` render for this turn.
+    ///
+    /// `seedTrimmed`: whether the seed cache really holds EXACTLY `seed.count`
+    /// positions — the seed's `exact`, vouched by its builder: trimmed back on a
+    /// linear cache, or prefilled without a sampled token (`SeedBuild`). A
+    /// persona that wrapped a sliding window keeps its sampled position
+    /// (trimming a wrapped RotatingKVCache underflows its rotation pointer), so
+    /// its cache is one token longer than its ids say. Appending to it would be
+    /// silently misaligned KV — the very class of bug this seam exists to close
+    /// — so a non-exact seed is never reused.
     static func plan(seed: [Int], full: [Int], seedTrimmed: Bool) -> Plan {
         guard seedTrimmed, !seed.isEmpty, full.count > seed.count, full.starts(with: seed) else {
             return .fresh

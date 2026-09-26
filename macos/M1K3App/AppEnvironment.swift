@@ -1553,8 +1553,8 @@ final class AppEnvironment {
             armThermalRecovery()
             return
         }
-        // Warm BOTH palettes that really exist. Until 2026-08-12 this warmed a
-        // THIRD one that nothing ever asks for: it passed onOpenLink but not
+        // Warm the prefixes that really exist (three since 2026-09-26, below).
+        // Until 2026-08-12 this also warmed a palette nothing ever asks for: it passed onOpenLink but not
         // deepDelegation, while the live responder (AppEnvironment.swift:684)
         // always passes both — so the warmed key matched no caller and the ~2.1s
         // build was paid at launch AND again on the first chat turn AND again on

@@ -111,6 +111,16 @@ struct PersonaPrefixCacheTests {
         #expect(store.snapshot(for: plain)?.tokenCount == 1170)
     }
 
+    /// #415 review: capacity 3 was platform-flat. iOS/visionOS live under a jetsam
+    /// limit (MLXMemoryBudget's 4 GB mobile ceiling) where a kill is the failure,
+    /// not a slowdown — mobile keeps the two slots it had until an on-device RAM
+    /// snapshot says a third fits.
+    @Test("the third slot is desktop-only; mobile keeps two")
+    func capacityByDeviceProfile() {
+        #expect(PersonaPrefixCache.capacity(for: .desktop) == 3)
+        #expect(PersonaPrefixCache.capacity(for: .mobile) == 2)
+    }
+
     /// Capacity is finite because each slot retains Metal-backed KV arrays for
     /// a ~2k-token prefix across every layer of a 12B model. When it overflows,
     /// the LEAST RECENTLY USED entry goes — so a prefix in constant interactive

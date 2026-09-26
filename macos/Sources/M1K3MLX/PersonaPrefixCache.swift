@@ -20,6 +20,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.75 — capacity 2 → 3: the live keys have
 //  been three since #116 (headless + interactive palettes, plus the plain no-tools prefix a
 //  foreground synthesis fallback seeds from). Sized by arithmetic (~90 MB on Lil); RAM snapshot owed.
+//  Desktop only after the #415 review — mobile keeps two under its jetsam ceiling.
 //
 
 import Foundation
@@ -88,7 +89,22 @@ final class PersonaPrefixCache: @unchecked Sendable {
     /// heads × 128 dims, 8-bit KV) is ~78 KB/token, so the ~1.2k-token plain
     /// prefix is ~90 MB; Big stores none (its persona overruns the 1024-token
     /// sliding window, see renderPersonaPrefix). Verify-by-launch owed.
-    static let defaultCapacity = 3
+    ///
+    /// DESKTOP only (#415 review): iOS/visionOS live under a jetsam limit where
+    /// the failure is a kill, not a slowdown, so mobile keeps the two slots it
+    /// had until an on-device RAM snapshot says a third fits.
+    static func capacity(for profile: MLXMemoryBudget.DeviceProfile) -> Int {
+        profile == .desktop ? 3 : 2
+    }
+
+    /// This build's platform capacity — the same `#if` split MLXMemoryBudget.settle uses.
+    static var defaultCapacity: Int {
+        #if os(iOS) || os(visionOS)
+            capacity(for: .mobile)
+        #else
+            capacity(for: .desktop)
+        #endif
+    }
 
     private let lock = NSLock()
     private let capacity: Int
