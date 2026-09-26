@@ -36,6 +36,22 @@ def test_finished_pass_with_a_trailing_optional_checklist_is_still_finished():
     assert m.classify(body) is m.Kind.SUMMON
 
 
+def test_auto_review_quoting_an_unchecked_checklist_in_a_fence_is_a_review():
+    # #416, 2026-09-26: the finished auto review quoted the PR body's own
+    # unchecked merge-gate list inside a ``` fence, and the any-box fallback
+    # read it as the bot's progress list — a done review counted as a
+    # placeholder, and the watch reported passes 1/2 on a head with two.
+    body = ("## Review: mlx-swift-lm pin bump\n\nThe PR body ships with both checklist items unchecked:\n\n"
+            "```\n- [ ] gemma-4 native tool-call smoke on this head (in-app SelfTest)\n"
+            "- [ ] Lil tool-use spot check\n```\n\nPlease don't merge until both boxes are checked.")
+    assert m.classify(body) is m.Kind.REVIEW
+
+
+def test_an_unfenced_unchecked_box_without_a_pass_header_is_still_progress():
+    # the fallback keeps its job for a progress list with no "### … pass" header
+    assert m.classify("Working on it\n- [x] Fetch\n- [ ] Post findings") is m.Kind.PLACEHOLDER
+
+
 def test_finished_summon_with_all_boxes_ticked_is_a_summon_pass():
     body = "**Claude finished @kev's task in 53s** —— [View job](x)\n\n---\n### Final pass — review of head `64daf36d`\n\n- [x] Fetch branch\n- [x] Post findings\n\nNothing blocking."
     assert m.classify(body) is m.Kind.SUMMON
