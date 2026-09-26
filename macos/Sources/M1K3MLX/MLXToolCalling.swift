@@ -400,6 +400,10 @@ extension MLXBrainProvider: ToolCallingProvider {
         // qwen3_next is NOT listed: same SSM/hybrid lineage, but its tool template is
         // unverified — add it only with the config + chat_template check the other arms carry.
         if type.hasPrefix("qwen3_5") { return .xmlFunction }
+        // granite (4.x dense) and nanbeige teach the same <tool_call><function=…>
+        // <parameter=…> dialect — both chat templates read 2026-09-26. EXACT
+        // types: granitemoe*/granite_speech carry different templates.
+        if type == "granite" || type == "nanbeige" { return .xmlFunction }
         if type == "qwen3" || type == "qwen3_moe" || type == "qwen2" || type == "llama" || type == "phi3"
             || type == "mistral" || type == "mistral3" { return .json }
         if type.hasPrefix("glm4") { return .glm4 }
