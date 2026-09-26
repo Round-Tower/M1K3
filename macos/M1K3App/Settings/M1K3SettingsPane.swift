@@ -24,7 +24,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //
-
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — the Reasoning section is hidden until Lil runs a model
+//  whose template reads enable_thinking (ThinkingToggleSupport, tested). On every shipping brain the
+//  choice changed nothing. Kev's call. Confidence 0.9.
 import M1K3Chat
 import M1K3Inference
 import M1K3MLX
@@ -80,20 +82,24 @@ struct M1K3SettingsPane: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section {
-                Picker("Reasoning", selection: $thinkingMode) {
-                    Text("Auto").tag(ThinkingMode.auto.rawValue)
-                    Text("Always think").tag(ThinkingMode.always.rawValue)
-                    Text("Fast answers").tag(ThinkingMode.fast.rawValue)
+            // Hidden until Lil can honour it (ThinkingToggleSupport): on today's
+            // brains the choice changed nothing.
+            if ThinkingToggleSupport.showsReasoningPicker(lilModelID: BrainTier.lil.mlxModelID) {
+                Section {
+                    Picker("Reasoning", selection: $thinkingMode) {
+                        Text("Auto").tag(ThinkingMode.auto.rawValue)
+                        Text("Always think").tag(ThinkingMode.always.rawValue)
+                        Text("Fast answers").tag(ThinkingMode.fast.rawValue)
+                    }
+                    .pickerStyle(.segmented)
+                } header: {
+                    SettingsHeader("Reasoning", systemImage: "lightbulb")
+                } footer: {
+                    Text("Reasoning models think before answering — sharper on hard "
+                        + "questions, slower on small talk. Auto decides per turn; voice "
+                        + "mode has its own toggle and ignores this setting.")
+                        .font(.callout).foregroundStyle(.secondary)
                 }
-                .pickerStyle(.segmented)
-            } header: {
-                SettingsHeader("Reasoning", systemImage: "lightbulb")
-            } footer: {
-                Text("Reasoning models think before answering — sharper on hard "
-                    + "questions, slower on small talk. Auto decides per turn; voice "
-                    + "mode has its own toggle and ignores this setting.")
-                    .font(.callout).foregroundStyle(.secondary)
             }
 
             CompanionSettingsSection(env: env)

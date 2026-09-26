@@ -56,7 +56,8 @@
 //  length is a real cost here and free on the KV-cached MLX tiers.
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — carriesStandingPersona checks M1K3Persona.standingPersonaAnchor:
 //  with BEING YOURSELF mid-core the trimmed core is no longer a substring of the full one. Confidence 0.9.
-
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — `InferenceIntent.instructions` replaces the persona for
+//  a call when set (summaries). Unset, nothing changes. Confidence 0.9.
 import Foundation
 import M1K3LogCore
 import os
@@ -393,7 +394,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
                     + "Try switching to another brain in Settings."
             )
         }
-        let instrText = instructions()
+        let instrText = InferenceIntent.instructions ?? instructions()
         let (session, warmth, heldPrefix) = takeSession(instructions: instrText, prompt: prompt)
         logTurnStart(promptChars: prompt.count, streaming: false, warmth: warmth)
         defer { rearmAfterHeld(heldPrefix) }
@@ -423,7 +424,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
             return AsyncStream { $0.finish() }
         }
         return AsyncStream { continuation in
-            let instrText = instructions()
+            let instrText = InferenceIntent.instructions ?? instructions()
             let (session, warmth, _) = takeSession(instructions: instrText, prompt: prompt)
             logTurnStart(promptChars: prompt.count, streaming: true, warmth: warmth)
             let task = Task { [self] in

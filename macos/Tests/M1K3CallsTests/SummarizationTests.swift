@@ -219,13 +219,21 @@ final class ScriptedInference: InferenceProvider, @unchecked Sendable {
         self.answer = answer
     }
 
+    private var replies: [String] = []
+
     var seen: [String] {
         lock.withLock { prompts }
     }
 
+    var answers: [String] {
+        get async { lock.withLock { replies } }
+    }
+
     func generate(prompt: String) async throws -> String {
         lock.withLock { prompts.append(prompt) }
-        return try answer(prompt)
+        let reply = try answer(prompt)
+        lock.withLock { replies.append(reply) }
+        return reply
     }
 
     func generateStreaming(prompt _: String) -> AsyncStream<String> {
@@ -257,6 +265,22 @@ struct LongCallSummarizationTests {
         let chunks = SummarizationPipeline.chunks(line, budget: 1000)
         #expect(chunks.allSatisfy { $0.count <= 1000 })
         #expect(chunks.joined() == line)
+    }
+
+    /// Kev, 2026-09-26: "remove the persona from the summarization". Every tier's
+    /// call runs under the neutral instructions (the MLX and AFM providers read
+    /// them instead of the persona) and as background work (no prefix-cache slot).
+    @Test("every summary call runs under the neutral instructions, as background work")
+    func neutralOnEveryCall() async {
+        let seen = ScriptedInference { _ in
+            "\(InferenceIntent.instructions == SummarizationPipeline.neutralInstructions)|\(InferenceIntent.isBackgroundUtility)"
+        }
+        let long = transcript(lines: 2000)
+        _ = await SummarizationPipeline(quickProvider: seen, deepProvider: seen).summarize(transcript: "A: hi")
+        _ = await SummarizationPipeline(quickProvider: seen, deepProvider: seen).summarize(transcript: long)
+        let answers = await seen.answers
+        #expect(answers.count > 3)
+        #expect(answers.allSatisfy { $0 == "true|true" })
     }
 
     @Test("a short call is one pass per tier, exactly as before")

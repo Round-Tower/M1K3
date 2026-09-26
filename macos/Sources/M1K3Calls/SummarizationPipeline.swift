@@ -19,6 +19,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26 (2) — review fold: every chunk failing no longer blanks the
 //  quick tier too; it summarises the opening chunk. Chunk calls are still unpaced (open: AFM daemon
 //  exhaustion on very long calls). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (3) — every call runs under
+//  `InferenceIntent.withInstructions(neutralInstructions)` + `backgroundUtility`, so no brain (MLX
+//  included) carries the persona into a summary, and summaries never take chat's prefix slot.
+//  Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -68,6 +72,13 @@ public struct SummarizationPipeline: Sendable {
     /// Run both tiers independently; each catches its own failure. A call past
     /// `chunkBudget` goes through `summarizeLong` instead.
     public func summarize(transcript: String) async -> Output {
+        // No persona on any brain, and never a prefix-cache slot taken from chat.
+        await InferenceIntent.withInstructions(Self.neutralInstructions) {
+            await InferenceIntent.backgroundUtility { await summarizeInPlace(transcript) }
+        }
+    }
+
+    private func summarizeInPlace(_ transcript: String) async -> Output {
         guard transcript.count > Self.chunkBudget else {
             async let quick = runQuick(Self.quickPrompt(transcript))
             async let full = runDeep(Self.deepPrompt(transcript))

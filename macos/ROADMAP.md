@@ -37,7 +37,8 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
   into stored overviews, action items lost to markdown headers, and no summary
   at all past the window. Neutral instructions + leak drop + parser + map-reduce:
   Mini 2/6 → 6, 4, 3 of 6 (`docs/evals/2026-09-26-calls-summary-mini.json`).
-  Owed: a Lil/Big deep-summary SelfTest (MLX still seeds the persona).
+  No brain carries the persona into a summary now (`InferenceIntent.instructions`);
+  a Lil/Big summary is verify-by-launch.
 - **Reasoning (Auto / Think / Off) — Kev's call.** The Settings picker is a
   dead control on every shipping brain: Lil (Instruct-2507) never thinks, Big's
   gemma-4 toggle is pinned off, Mini and Pocket have no think phase.

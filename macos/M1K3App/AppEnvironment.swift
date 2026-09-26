@@ -70,7 +70,9 @@
 //  a neutral-instructions AFM session serves the quick tier and stands in for Mini on the deep tier (a second
 //  RuntimeInferenceProvider over the same selection), with `PersonaLeakGuard.leaks` as the backstop. Mini had
 //  recited its system prompt into 4 of 5 stored overviews (docs/evals/2026-09-26-calls-summary-mini.json).
-//  Lil/Big deep summaries still seed with the persona (MLX generate) — SelfTest-owed.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (2) — Lil/Big too: SummarizationPipeline runs every call under
+//  `InferenceIntent.withInstructions(neutralInstructions)`, which MLX generate honours (no persona seed).
+//  Confidence 0.8 (the MLX path is verify-by-launch).
 
 import AppKit
 import Foundation
@@ -1017,8 +1019,9 @@ final class AppEnvironment {
         callIngester = CallIngester(store: store, embedder: embedder)
         // Summaries run WITHOUT the chat persona: carried into a summary, Mini
         // recited its system prompt into the stored overview (4 of 5 calls in
-        // CallSummaryLiveEvalTests). The deep tier follows the active brain, with
-        // Mini swapped for the neutral session; the leak check is the backstop.
+        // CallSummaryLiveEvalTests). The pipeline sets neutral instructions on
+        // every call (MLX and AFM both honour them); the quick tier's own session
+        // also skips the chat prewarm. The leak check is the backstop.
         let summaryAFM = AppleFoundationModelsProvider(instructions: { SummarizationPipeline.neutralInstructions })
         callSummarizer = SummarizationPipeline(
             quickProvider: summaryAFM,

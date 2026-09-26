@@ -87,7 +87,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-23, Confidence 0.85 — sampling rides a SamplingProfile
 //  (M1K3Inference): `house` = the old 1.1/64 loop guard + upstream defaults, still the default;
 //  M1K3_SAMPLING picks the model-card arm for the Lil personality A/B.
-
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — plain generations honour `InferenceIntent.instructions`:
+//  the override replaces the persona and skips the persona seed (summaries carry no persona on Lil/Big).
+//  Interactive turns are unchanged (the override is nil). Confidence 0.8 (verify-by-launch on a call).
+//  `templateSupportsThinkingToggle` delegates to M1K3Inference's ThinkingToggleSupport (moved verbatim,
+//  so Settings can ask it); the MLX tests still pin it.
 import Foundation
 import Hub
 import M1K3Inference
@@ -474,7 +478,10 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // process-global MLX cache holds each generation's peak forever.
         defer { MLXMemoryBudget.reclaim(label: "generate") }
         let key = toolTurnCacheKey(toolNames: [])
-        if let seed = await personaPrefixSnapshot(container: container, specs: nil, toolNames: [], key: key) {
+        // An instructions override never rides the persona seed: the seed IS the persona.
+        if InferenceIntent.instructions == nil,
+           let seed = await personaPrefixSnapshot(container: container, specs: nil, toolNames: [], key: key)
+        {
             // Seeded: ONE [system, user] render, prefill past the seed — never a
             // lone user render on the cache (the double-BOS bug, see the extension).
             let collected = OSAllocatedUnfairLock(initialState: "")
@@ -510,7 +517,11 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                     // token one instead of after the closing tag.
                     if thinkPrefixNeeded { continuation.yield("<think>") }
                     let key = toolTurnCacheKey(toolNames: [])
-                    if let seed = await personaPrefixSnapshot(container: container, specs: nil, toolNames: [], key: key) {
+                    if InferenceIntent.instructions == nil,
+                       let seed = await personaPrefixSnapshot(
+                           container: container, specs: nil, toolNames: [], key: key
+                       )
+                    {
                         try await runSeededPlainTurn(
                             container: container, seed: seed, persona: key.personaText, prompt: prompt, label: "stream"
                         ) { piece in
@@ -612,10 +623,16 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     /// all — `ChatSession(cache:)` renders each new turn alone, which on a
     /// BOS-opening template (LFM2) planted a second start-of-text after the
     /// cached persona and erased it (see MLXBrainProvider+SeededPlainTurn).
+    /// The system turn a plain generation carries: the override when the task set
+    /// one (`InferenceIntent.withInstructions` — summaries), else the persona.
+    static func plainTurnInstructions(override: String?, variant: PersonaVariant) -> String {
+        override ?? M1K3Persona.compactPrompt(for: variant)
+    }
+
     private func makeUpstreamSession(_ container: ModelContainer) -> ChatSession {
         let session = ChatSession(
             container,
-            instructions: M1K3Persona.compactPrompt(for: personaVariant),
+            instructions: Self.plainTurnInstructions(override: InferenceIntent.instructions, variant: personaVariant),
             generateParameters: generateParameters
         )
         if let context = thinkingAdditionalContext {
@@ -941,18 +958,8 @@ extension MLXBrainProvider {
     /// does not pre-open, so tying toggle-support to the pre-open check meant
     /// `enable_thinking:false` was never sent and the model thought on every turn.
     static func templateSupportsThinkingToggle(for configuration: ModelConfiguration) -> Bool {
-        // "qwen3" matches Qwen3-4B/8B AND every Qwen3.5 spelling (which contains it).
-        // The 2507 refresh is EXCLUDED: Qwen split it into fixed-mode variants
-        // (Instruct never thinks, Thinking always does) and dropped
-        // enable_thinking from both templates (verified 2026-07-16) — claiming
-        // the toggle would leave the reasoning picker a dead control. The
-        // Instruct variant is the wired lil since 2026-07-16.
-        let name = configuration.name.lowercased()
-        // Bonsai-27B's qwen3_5 template reads enable_thinking (verified against
-        // the HF chat_template.jinja 2026-07-17) — the 8B stays out (its
-        // template carries no switch, pinned 2026-07-15).
-        return (name.contains("qwen3") && !name.contains("2507"))
-            || name.contains("ternary-bonsai-27b")
+        // The name rule lives in M1K3Inference so Settings can ask it too.
+        ThinkingToggleSupport.readsToggle(modelName: configuration.name)
     }
 
     /// The think traits by NAME, for exactly the families the two rules above
