@@ -327,11 +327,11 @@ jobs:
       # The guards' pure helpers have unit tests (test_check_*.py) that nothing
       # ran until 2026-09-02 — a helper regression would have passed CI while the
       # guard quietly stopped guarding. Run them.
-      - name: Unit-test the guards themselves (+ the eval and weights tooling)
+      - name: Unit-test the guards themselves (+ the eval, weights and router tooling)
         working-directory: macos
         run: |
-          python3 -m pip install --quiet 'pytest>=8,<9' 'pyyaml>=6,<7'
-          python3 -m pytest -q tools/ci tools/eval tools/weights tools/site tools/asc
+          python3 -m pip install --quiet 'pytest>=8,<9' 'pyyaml>=6,<7' 'numpy>=1.26,<3'
+          python3 -m pytest -q tools/ci tools/eval tools/weights tools/site tools/asc tools/router
       # llms-full.txt is generated from the site pages; a page edit without a
       # regenerate would leave the AI-readable copy stale.
       - name: llms-full.txt is current

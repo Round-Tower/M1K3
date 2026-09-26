@@ -1,0 +1,1970 @@
+{
+ "provenance": "Synthetic prompts, 2026-09-26: generated per group by an offload LLM that never saw the router, relabelled by an independent model (gemini); only items where both labels agree are kept. Hard negatives (tool-ish words, no tool needed) are marked. The eval fixtures (ChatEvalFixtures) are NOT in here: they are the router's test set. The 'activity' group was regenerated the same day (44 items, same two-model agreement) after the fixture test showed the first batch was mostly reminders, not look-backs at the user's history with the assistant: a class-level gap found by the test set, disclosed here.",
+ "items": [
+  {
+   "prompt": "What's the date today?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me the time, please.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Calendar check for tomorrow.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "What's my battery at?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "How's the Mac's performance right now?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "CPU usage on this thing?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Memory status please.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Where am I?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Can you read out the date?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "What's the current time, mate?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Check my calendar for Friday.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Battery percentage?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Is the Mac running slow?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me about the CPU.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "How much RAM is being used?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Disk capacity?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Approximate my location.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Hey, what's the date?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "What time is it?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "My calendar, what's on for next week?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Battery level, please.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Check system resources.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "CPU load?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Memory usage details.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Free disk space.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "What's my current location?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Date and time, ta.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Give me the time and date.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Calendar for the rest of the month.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Battery status update.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Mac health check.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "CPU temperature and usage.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "How much room on the hard drive?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Whereabouts am I exactly?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "What's the date, love?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Time check, please.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "My schedule for today.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Battery: how much juice left?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "System performance overview.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "CPU and memory usage.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Disk space remaining.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Location, please.",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "What day is it?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Time?",
+   "group": "device",
+   "hard": false
+  },
+  {
+   "prompt": "Find that email I sent to Sarah about the Q3 budget last week.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Can you pull up my notes from the meeting with the marketing team yesterday?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Summarize the PDF on renewable energy sources I uploaded.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What was the main point of the recorded call with John about the new project?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Show me my grocery list from last Tuesday.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Where did I save that recipe for shepherd's pie?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Remind me what I wrote in my journal entry on November 10th.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Find the scanned receipt for that new laptop.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What's in the document titled \"Project Phoenix Proposal\"?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Get me the transcript of the podcast interview I saved.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Did I mention anything about a holiday party in my notes?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Search my files for anything related to \"customer feedback\".",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Show me my to-do list for this week.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Find the PDF of that legal contract.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What did I say in my voice memo about the upcoming conference?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Can you locate the article about quantum computing I bookmarked?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What's the key takeaway from the company-wide announcement PDF?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Find the meeting minutes from the last board meeting.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Summarize the notes I took during the webinar on AI ethics.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Where is the scanned business card for David Chen?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Show me all documents created in the last month.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Find the spreadsheet with my personal expenses.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What was in that long email from my boss about the restructuring?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Can you find the photo album from my trip to Italy?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Get me the lyrics to that song I saved as a text file.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Show me my draft for the blog post on remote work.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What did I jot down about potential investment opportunities?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Find the scanned warranty for my appliances.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Summarize the research paper on climate change adaptation.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What was discussed in the recorded phone call with the insurance company?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Show me my favorite quotes I've collected.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Find the presentation slides from the tech conference.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What did I save as a draft for my next novel?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Can you locate the user manual for my new smart home device?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Get me the transcript of the audiobook chapter I listened to.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Show me my notes on healthy eating habits.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Find the scanned invoice for the recent software purchase.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What are the main points of the historical document I have?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Summarize the PDF report on market trends.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What did I say in my recorded voice note about my dreams?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Show me all the unfinished writing projects.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Find the scanned copy of my passport.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What was the action item from the call with the supplier?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Can you locate the PDF of the architectural plans?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Get me the recorded interview with the local artist.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Show me my shopping list for the upcoming event.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Find the scanned notes from my yoga class.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What did I write about my New Year's resolutions?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "Summarize the PDF guide to financial planning.",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What was discussed in the voice memo about family matters?",
+   "group": "knowledge",
+   "hard": false
+  },
+  {
+   "prompt": "What's the price of Bitcoin right now?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Show me the headlines from the BBC.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Is it going to rain in London tomorrow?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Who won the Lakers game last night?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the current exchange rate for EUR to USD?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Find me the Wikipedia page for the Eiffel Tower.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What are the top trending topics on Twitter?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Give me the weather forecast for San Francisco for the weekend.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Did the Yankees win their game?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "How much is a Tesla Model 3?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the status of the Nasdaq index?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me the news about the upcoming election.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the population of Tokyo?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Can you check the flight status for BA283?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's happening in the world of crypto?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Show me a live map of traffic in my area.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the score of the Premier League match?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "How's the Dow Jones doing?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the forecast for the next few hours in New York?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Any breaking news from the Middle East?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the current gas price in California?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Find a recipe for lasagna.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What are the reviews for that new movie?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Who is the current prime minister of Canada?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "How long is the queue for that popular restaurant downtown?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Did that stock I'm watching go up or down?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the weather like in Rome at the moment?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Give me the results of the Formula 1 race.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the latest on the Mars rover mission?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Show me the current water levels of the Colorado River.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Who scored the winning goal?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the forecast for Chicago this week?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Find me the official website for the Louvre Museum.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the current price of gold?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Any news on the semiconductor shortage?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Give me the basketball scores.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the latest development in the space race?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "How is the S&P 500 performing?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Check the current traffic conditions on the M25.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the forecast for the next 24 hours in Paris?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Who is the reigning Super Bowl champion?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the value of Dogecoin?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Show me the current temperature in Denver.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Any updates on the war in Ukraine?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Give me the current stock price for Apple.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Who won the golf tournament?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the news from the tech sector?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "How's the FTSE 100 looking?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Find the URL for the New York Times homepage.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Did the Dodgers win?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the forecast for the next three days in Berlin?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What are the major political developments happening globally?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "How much is a barrel of oil?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the current status of the Suez Canal?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Show me the current moon phase.",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "Who is the current president of France?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "What's the weather like at my destination?",
+   "group": "web",
+   "hard": false
+  },
+  {
+   "prompt": "run the disk cleanup script",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "hey, can you delete all files in the downloads folder older than 30 days?",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "execute 'clean_temp.sh' please",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "open terminal and run 'brew update'",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "run the backup script, the one in my 'Scripts' folder",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "please make a new folder called 'Vacation Photos 2024' on the desktop",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "list all running processes and sort them by memory usage",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "move all `.jpg` files from the desktop to the 'Images' folder",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "automate the process of zipping up my project files every evening at 7 PM",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "run 'optimize_photos.py' for me",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "quit all Adobe applications",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "i need to empty the trash, could you do that?",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "find all mp3 files on my system and put them in a list",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "create a symbolic link for my cloud drive to the desktop",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "schedule a reboot for tomorrow morning at 8 AM",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "run 'brew upgrade --all'",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "clear the browser cache for Safari",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "display the contents of the hosts file",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "delete the 'old_backups' folder on the external drive",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "start the local web server",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "archive my 'Downloads' folder to a zip file named 'downloads_archive_today.zip'",
+   "group": "script",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me about the historical significance of the Rosetta Stone.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the capital of Botswana?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Can you explain the concept of photosynthesis in simple terms?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How do I bake a basic chocolate cake?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the difference between a simile and a metaphor?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Write a short poem about a rainy day.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Help me brainstorm ideas for a birthday gift for my sister.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's 25% of 150?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How do I declare a variable in Python?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are some tips for improving public speaking skills?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me a funny anecdote.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's your opinion on the latest Marvel movie?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How are you feeling today?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "I'm really stressed out, can you offer some comforting words?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Can you define 'onomatopoeia'?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Explain quantum entanglement, but make it easy to understand.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Give me a recipe for spaghetti carbonara.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are the main themes in Shakespeare's Hamlet?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Compose a haiku about a blooming flower.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "I need some creative ways to organize my bookshelf.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Calculate the area of a circle with a radius of 5 cm.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How do I write a 'for' loop in JavaScript?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are some healthy breakfast options?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me a riddle.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What do you think about artificial intelligence ethics?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Do you have any personal preferences?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "I'm feeling a bit down. Can you say something encouraging?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Define 'ephemeral'.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Explain the water cycle simply.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Provide a recipe for homemade bread.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are the causes of the French Revolution?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Write a limerick about a clumsy cat.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Help me think of a catchy slogan for my new bakery.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What is the square root of 144?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How do I center text in HTML?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are some good strategies for studying effectively?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me a knock-knock joke.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's your favorite color?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Are you capable of learning new things?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "I had a terrible day. Can you cheer me up?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the boiling point of water at sea level?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Define 'serendipity'.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Explain how a car engine works.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Give me a recipe for vegetarian chili.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What were the key events of World War I?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Create a short story about a talking squirrel.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Brainstorm some unique party themes.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What is 15 squared?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How do I create a basic HTML page?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are some common fallacies in arguments?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me a pun.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What is the purpose of your existence?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Can you understand human emotions?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "I'm feeling lonely. Can you offer some companionship?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the longest river in South America?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Define 'ubiquitous'.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Explain the theory of relativity in a nutshell.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Provide a recipe for chocolate chip cookies.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are the main arguments for and against universal basic income?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Write a short play scene between two robots.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Help me come up with a name for my new puppy.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's 7 factorial?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How do I make a basic CSS stylesheet?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are the benefits of meditation?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me a shaggy dog story.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What do you think about the future of space exploration?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Are you sentient?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "I'm bored. Can you entertain me?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the highest mountain in the world?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Define 'mellifluous'.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Explain how sound travels.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Give me a recipe for lentil soup.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What were the major outcomes of the Industrial Revolution?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Compose a sonnet about unrequited love.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Help me generate ideas for a travel blog.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What is 3/4 as a decimal?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How do I create an unordered list in HTML?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are some techniques for active listening?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me an anti-joke.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What is consciousness?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Can you feel pain?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "I'm feeling anxious. Can you help me relax?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the capital of Australia?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Define 'capricious'.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Explain the concept of supply and demand.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Provide a recipe for beef stew.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What were the key differences between the North and South in the US Civil War?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Write a short dialogue between a cat and a dog.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Brainstorm some unique fundraising ideas.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the value of pi to three decimal places?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How do I change the font color in CSS?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are some effective time management techniques?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me a dad joke.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What is the meaning of life?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Do you have free will?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "I'm feeling unmotivated. Can you give me a pep talk?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the tallest waterfall in the world?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Define 'perspicacious'.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Explain the process of cellular respiration.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Give me a recipe for homemade pizza dough.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What were the primary causes of the Cold War?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Create a short poem about the sea.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Help me come up with a title for my new book.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What is 12.5% of 200?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How do I add a hyperlink in HTML?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are some common logical fallacies?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me a very short story.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the speed of light?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Define 'ignominious'.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Explain the structure of an atom.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Provide a recipe for vegan lasagna.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What were the major achievements of the Roman Empire?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Write a short ballad about a knight.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Brainstorm some ideas for a home renovation project.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the sum of the first 10 positive integers?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "How do I embed an image in HTML?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What are some ways to improve your memory?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Tell me a riddle that's not too hard.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What is the purpose of a black hole?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Can you experience emotions like joy or sadness?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "I'm feeling overwhelmed. Can you simplify things for me?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What's the smallest planet in our solar system?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Define 'effervescent'.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Explain the concept of gravity.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Give me a recipe for chicken soup.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "What were the main drivers of the Renaissance?",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Compose a short song lyric about friendship.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Help me think of a name for my new startup.",
+   "group": "none",
+   "hard": false
+  },
+  {
+   "prompt": "Check my grammar here: \\\"Their going to the store now.\\\"",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "I had a rough day today, can you cheer me up?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What's the current understanding of quantum entanglement?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Find me a good metaphor for procrastination.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "How do I open a conversation with a shy person?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Look up the meaning of 'serendipity'.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Can you check the logical flow of this argument: \\\"All birds can fly. Penguins are birds. Therefore, penguins can fly.\\\"",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "I need to draft an email to decline an invitation politely. How should I phrase it?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What's a good way to organise my calendar effectively for creative projects?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Find a synonym for 'ubiquitous'.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "How would you approach writing a technical document for a non-technical audience?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Explain the concept of 'digital ethics' in today's world.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What's the best way to open a can of worms, figuratively speaking?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Can you check if this sentence makes sense: \\\"The colourless green ideas sleep furiously.\\\"",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "I'm trying to understand the current theories of consciousness. Can you summarise the main ones?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Look up how to correctly use an ellipsis in text.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Help me find the core problem in this scenario: I have a task that feels endless, and I keep putting it off.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What constitutes a fair price for creative work, in general terms?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "How do I open a file in Python, conceptually speaking, using common libraries?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What's a good website layout for a personal portfolio, considering user experience?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Explain the concept of 'news deserts' in journalism.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Find an antonym for 'benevolent'.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "I need to make a decision now, what are some logical frameworks I can use?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Check my understanding of recursion: is it basically a function calling itself?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What's the \\\"recent\\\" history of the English language, broadly speaking, focusing on shifts since Shakespeare?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Can you help me find a compelling opening sentence for an essay on artificial intelligence?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "How do I effectively open up communication channels in a remote team?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Look up some common logical fallacies to watch out for.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What's the most effective way to summarise a long document concisely?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "I'm feeling overwhelmed today. Can you give me some tips on managing stress?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What are some good practices for writing professional emails that get results?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Check this sentence for clarity: \\\"He really likes his dog, because he's a good boy.\\\"",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What does the word 'current' signify when discussing historical interpretations?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Find a poetic way to describe the moon in three sentences.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "How would you structure a project file system for maximum clarity and ease of access?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What's the best way to open a difficult discussion with a colleague about performance?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Can you give me a recent riddle or brain teaser to solve?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Look up the rules for comma usage before 'and' in a list.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What are the common pitfalls in trying to find meaning in chaos?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "How do I prepare a concise summary of a complex document for my boss?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What's the difference between \\\"affect\\\" and \\\"effect\\\" today, in modern usage?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Help me find a good analogy for the internet that someone unfamiliar with technology could understand.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What makes a news story impactful from a journalistic perspective?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Can you check this bit of code for a logical error: `for i in range(5): if i == 3: break print(i)`?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "How do I open a mind to new perspectives when discussing contentious topics?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "What's the general principle behind how prices are set in a market economy?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Look up the etymology of the word 'robot'.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "How would you craft an email asking for a raise, keeping a professional yet persuasive tone?",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Find me some creative writing prompts for a short story about memory loss.",
+   "group": "none",
+   "hard": true
+  },
+  {
+   "prompt": "Hey, can you pull up our conversation from yesterday about the project proposal?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What did I ask you to remember about my meeting with Sarah?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Show me the to-do list we created last week, and what's completed.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Remind me what we discussed regarding that new software I was looking into.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Summarize our main discussion points from this past Tuesday.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "How much did I use you on weekends last month?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "I need a recap of our work on the marketing campaign over the last few days.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What were the key takeaways from our chat about personal finance goals?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Go back and find that article link I asked you to save.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Can you give me a quick rundown of my activity with you over the last 24 hours?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What were my most frequent questions or requests to you this week?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Find that recipe we talked about for baking bread.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Summarize the actionable items from our brainstorming session on Monday.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Show me my completed tasks for today.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What was the name of that book I mentioned wanting to read?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "How often did I interact with you on average last month?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Pull up our conversation about my travel plans.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What did you note down when I was feeling stressed yesterday?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "List the things I've asked you to keep in mind for my upcoming presentation.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What was the main focus of our discussions yesterday afternoon?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Summarize my usage patterns for the past week.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Did I ask you to set any reminders for me recently?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What did we decide about reorganizing my digital files?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What were our busiest chat times last week?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Can you give me a brief overview of our collaborative work on that coding problem?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What was the advice I asked for about managing my time better?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Show me what got done from my 'urgent' to-do list yesterday.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What did I say I wanted to learn about photography?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "How much did I use you on weekdays compared to weekends last month?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Remind me of the key points from our discussion about career development.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What did you save about my favorite coffee shops?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Summarize our ongoing conversation about my fitness routine.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Pull up our chat from this morning about the news.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What were the main things I asked you to track for me?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What did we decide was the next step for that side project?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Show me my to-do list, including anything I marked as 'in progress'.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What did I mention about my upcoming birthday?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Recap our conversation about improving my productivity.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What were my most common requests on mobile versus desktop yesterday?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Find the name of the app I was interested in downloading.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Summarize my interactions with you from last week.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "What was the most important thing I asked you to remember yesterday?",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Show me what I accomplished on my personal goals list.",
+   "group": "activity",
+   "hard": false
+  },
+  {
+   "prompt": "Go back and find our conversation about that documentary.",
+   "group": "activity",
+   "hard": false
+  }
+ ]
+}
