@@ -39,6 +39,8 @@
 //  tools through Apple's own tool loop or the bare agent, never the responder.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — chunks fold (StreamFold) instead of
 //  appending, and `livePath` stamps the arm, not the open-chat exception (local review).
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — `M1K3_AFM_EVAL_TOOLS=none` runs the live
+//  turn with an empty palette: the tool-router A/B (scratch/laya-spike). Confidence 0.85.
 //
 
 import Foundation
@@ -187,9 +189,11 @@ struct MiniLiveEvalTests {
             var firstMS: Int?
             if fixture.kind == .openChat || liveAll {
                 let recorder = ToolRecorder()
-                let tools: [any AgentTool] = ChatEvalStubPalette.specs.map {
-                    StubTool(spec: $0, recorder: recorder)
-                }
+                // `M1K3_AFM_EVAL_TOOLS=none`: the same live turn with nothing on offer,
+                // what a tool router's "no tools" verdict would hand Mini.
+                let tools: [any AgentTool] = evalEnvironment["M1K3_AFM_EVAL_TOOLS"] == "none"
+                    ? []
+                    : ChatEvalStubPalette.specs.map { StubTool(spec: $0, recorder: recorder) }
                 let responder = try AgentRAGResponder(
                     store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
                     tools: tools
