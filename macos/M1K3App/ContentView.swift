@@ -59,6 +59,8 @@
 //  Implements the ADR 0006 amendment, which awaits Kev. Confidence 0.8 (verify by launch, Debug echo backend).
 //  Review: Kev + claude-opus-5-5, 2026-09-26 (3) — review fold: a consent for another conversation (switched
 //  under an open sheet) sends nothing and keeps the words; ChatSession enforces the same. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (4) — PR #412 review fold: a PCC send also refuses while an
+//  attachment is staged (one staged with the sheet open used to go through, text only). Confidence 0.85.
 
 import M1K3Avatar
 import M1K3Chat
@@ -1187,7 +1189,9 @@ struct ContentView: View {
     /// nothing; ChatSession refuses it too, and this keeps the words in the field.
     private func sendToPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) {
         guard env.privateCloudSendAllowed(),
-              consent.conversationID == nil || consent.conversationID == env.chat.activeConversationID
+              consent.conversationID == nil || consent.conversationID == env.chat.activeConversationID,
+              // Staged while the sheet was open: attachments never ride a PCC turn (PR #412 review).
+              !hasStagedAttachments
         else { return }
         let text = draft
         draft = ""

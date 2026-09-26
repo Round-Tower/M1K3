@@ -110,6 +110,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26 (2) — review fold: analyzer segments and the closing segment
 //  yield under `lock`, and nothing yields once ending has begun, so the audio-thread end and the results
 //  task can't race a segment past finish(). Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (3) — PR #412 review fold: `isAvailable` asks whether the
+//  analyzer can serve THIS locale (cached async check, AppleSpeechAvailability), not whether the device
+//  has SpeechAnalyzer at all; otherwise the mic read ready and the listen failed at once. Confidence 0.8.
 
 import AVFoundation
 import Foundation
@@ -158,6 +161,9 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     private var analyzerFold = AnalyzerTranscriptFold(finality: .endsListen)
     private var analyzerEndpoint = AnalyzerEndpoint(finality: .endsListen)
     private var analyzerEnding = false
+    /// Whether the analyzer can serve `locale` right now (guarded by `lock`):
+    /// nil until the async check lands, then refreshed by every listen's outcome.
+    private var analyzerServesLocale: Bool?
     private var continuation: AsyncStream<TranscriptSegment>.Continuation?
     /// One-shot breadcrumb flag (guarded by `lock`): the mono-mixdown adapter
     /// failing soft on a >2-channel device is a silent-capture risk and must
@@ -207,15 +213,26 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
 
     public init(locale: Locale = .current) {
         self.locale = locale
+        Task { [weak self, locale] in
+            let serves = await AnalyzerLiveRecognition.servesLocale(locale)
+            self?.lock.withLock { self?.analyzerServesLocale = serves }
+        }
     }
 
     /// Available when a recogniser exists for the locale, is ready, and supports
     /// on-device recognition (our privacy floor). Authorization is requested at
     /// `startListening` time, not here.
+    /// The analyzer's locale + asset check is async, so it is cached (see
+    /// `analyzerServesLocale`); SFSpeech's own check answers otherwise. A device
+    /// that merely HAS SpeechAnalyzer no longer counts (PR #412 review).
     public var isAvailable: Bool {
-        if AnalyzerLiveRecognition.deviceSupportsAnalyzer { return true }
+        let serves = lock.withLock { analyzerServesLocale }
+        if AppleSpeechAvailability.isAvailable(analyzerServesLocale: serves, legacyAvailable: false) { return true }
         guard let recognizer = SFSpeechRecognizer(locale: locale) else { return false }
-        return recognizer.isAvailable && recognizer.supportsOnDeviceRecognition
+        return AppleSpeechAvailability.isAvailable(
+            analyzerServesLocale: serves,
+            legacyAvailable: recognizer.isAvailable && recognizer.supportsOnDeviceRecognition
+        )
     }
 
     /// Why the most recent listen ended without yielding a word, if the
@@ -367,9 +384,11 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 self.stopListening(ifGeneration: generation)
             }
         ) {
+            lock.withLock { analyzerServesLocale = true }
             beginAnalyzer(analyzer, continuation, generation: generation)
             return
         }
+        lock.withLock { analyzerServesLocale = false }
         guard let recognizer = SFSpeechRecognizer(locale: locale),
               recognizer.isAvailable,
               recognizer.supportsOnDeviceRecognition

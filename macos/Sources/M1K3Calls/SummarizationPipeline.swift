@@ -23,6 +23,9 @@
 //  `InferenceIntent.withInstructions(neutralInstructions)` + `backgroundUtility`, so no brain (MLX
 //  included) carries the persona into a summary, and summaries never take chat's prefix slot.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (4) — PR #412 review fold: an all-blank long transcript
+//  returns nothing instead of indexing an empty chunk list; the part framing shares `deepOpening`.
+//  Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -103,7 +106,9 @@ public struct SummarizationPipeline: Sendable {
         // Every chunk failed (AFM falls over under back-to-back turns): the quick
         // tier still gets its turn, on the opening chunk rather than the whole call.
         guard !partials.isEmpty else {
-            return Output(quick: await runQuick(Self.quickPrompt(parts[0])), full: nil)
+            // An all-blank transcript chunks to nothing (PR #412 review).
+            guard let opening = parts.first else { return Output(quick: nil, full: nil) }
+            return Output(quick: await runQuick(Self.quickPrompt(opening)), full: nil)
         }
 
         let notes = partials.enumerated()
@@ -189,9 +194,13 @@ public struct SummarizationPipeline: Sendable {
         """
     }
 
+    /// The deep prompt's first sentence, shared so the per-part framing can't
+    /// silently stop matching it (PR #412 review).
+    static let deepOpening = "Analyse this call transcript."
+
     static func deepPrompt(_ transcript: String, part: Int, of total: Int) -> String {
         deepPrompt(transcript).replacingOccurrences(
-            of: "Analyse this call transcript.",
+            of: deepOpening,
             with: "This is part \(part) of \(total) of one call transcript. Analyse this part."
         )
     }
@@ -207,7 +216,7 @@ public struct SummarizationPipeline: Sendable {
 
     static func deepPrompt(_ transcript: String) -> String {
         """
-        Analyse this call transcript. Respond using exactly these headers:
+        \(deepOpening) Respond using exactly these headers:
         Overview: <one paragraph>
         Key points:
         - <point>

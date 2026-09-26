@@ -39,6 +39,21 @@ struct AnalyzerTranscriptFoldTests {
     }
 }
 
+/// PR #412 review: `isAvailable` said yes whenever the DEVICE had SpeechAnalyzer,
+/// even for a locale it can't serve or whose asset isn't on disk yet, so the
+/// mic looked ready and the listen failed at once.
+struct AppleSpeechAvailabilityTests {
+    @Test("available when the analyzer can serve this locale, else only if SFSpeech can")
+    func availability() {
+        #expect(AppleSpeechAvailability.isAvailable(analyzerServesLocale: true, legacyAvailable: false))
+        #expect(!AppleSpeechAvailability.isAvailable(analyzerServesLocale: false, legacyAvailable: false))
+        #expect(AppleSpeechAvailability.isAvailable(analyzerServesLocale: false, legacyAvailable: true))
+        // Not known yet (the async check hasn't landed): never claim on the analyzer's behalf.
+        #expect(!AppleSpeechAvailability.isAvailable(analyzerServesLocale: nil, legacyAvailable: false))
+        #expect(AppleSpeechAvailability.isAvailable(analyzerServesLocale: nil, legacyAvailable: true))
+    }
+}
+
 struct AnalyzerEndpointTests {
     private let loud: Float = 0.05
     private let quiet: Float = 0.0005

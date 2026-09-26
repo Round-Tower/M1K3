@@ -333,6 +333,18 @@ struct LongCallSummarizationTests {
         #expect(prompt.contains("line 0 of the call"))
     }
 
+    /// PR #412 review: a transcript past the budget that is all blank lines
+    /// chunks to nothing, and the fallback indexed `parts[0]`.
+    @Test("a long all-blank transcript yields nothing instead of crashing")
+    func blankLongTranscript() async {
+        let blank = String(repeating: "\n", count: SummarizationPipeline.chunkBudget + 10)
+        let out = await SummarizationPipeline(
+            quickProvider: ScriptedInference { _ in "gist" },
+            deepProvider: ScriptedInference { _ in "Overview: x" }
+        ).summarize(transcript: blank)
+        #expect(out.full == nil)
+    }
+
     @Test("a failing chunk doesn't sink the rest")
     func failingChunk() async {
         let text = transcript(lines: 2000)

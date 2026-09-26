@@ -117,3 +117,12 @@ public struct AnalyzerEndpoint: Sendable {
         return (sum / Float(samples.count)).squareRoot()
     }
 }
+
+/// Whether AppleSpeechTranscriber can listen. The analyzer's locale/asset check
+/// is async, so the transcriber caches it; until it lands (nil), only SFSpeech's
+/// own synchronous check can say yes (PR #412 review).
+public enum AppleSpeechAvailability {
+    public static func isAvailable(analyzerServesLocale: Bool?, legacyAvailable: Bool) -> Bool {
+        analyzerServesLocale == true || legacyAvailable
+    }
+}

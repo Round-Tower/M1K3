@@ -53,6 +53,23 @@ final class AnalyzerLiveRecognition: @unchecked Sendable {
         SpeechTranscriber.isAvailable
     }
 
+    /// Whether a listen in `locale` would run on the analyzer right now: the
+    /// device has it, the locale is supported, and its asset is on disk. The
+    /// same gates `start` applies, for `isAvailable`'s cache.
+    static func servesLocale(_ locale: Locale) async -> Bool {
+        guard SpeechTranscriber.isAvailable,
+              let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale)
+        else { return false }
+        if await SpeechTranscriber.installedLocales.contains(where: { $0.identifier == supported.identifier }) {
+            return true
+        }
+        let transcriber = SpeechTranscriber(
+            locale: supported, transcriptionOptions: [], reportingOptions: [.volatileResults, .fastResults],
+            attributeOptions: []
+        )
+        return await AssetInventory.status(forModules: [transcriber]) == .installed
+    }
+
     static func start(
         locale: Locale,
         onResult: @escaping @Sendable (_ text: String, _ isFinal: Bool) -> Void,
