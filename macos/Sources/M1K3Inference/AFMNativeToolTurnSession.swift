@@ -122,6 +122,8 @@
                     response = try await session.respond(to: body)
                 #endif
 
+                // Defensive since 2026-09-26: a tool call now ends the generation
+                // (`Intercepted`, caught below), so a normal return means no call.
                 let calls = callLog.drain()
 
                 if !calls.isEmpty {

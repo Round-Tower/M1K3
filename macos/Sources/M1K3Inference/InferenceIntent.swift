@@ -54,6 +54,10 @@ public enum InferenceIntent {
     /// generations: every provider reads this before its own persona, and MLX
     /// skips the cached persona seed. Summaries use it (a persona in a stored
     /// summary recited itself, 2026-09-26). Nil means "the provider's persona".
+    ///
+    /// Use it on a provider that does NOT serve chat (the app's `summaryAFM`):
+    /// AFM's PrewarmSlot drops a stored session whose instructions don't match,
+    /// so an override call on the chat provider would evict chat's persona prewarm.
     @TaskLocal public static var instructions: String?
 
     public static func withInstructions<T>(

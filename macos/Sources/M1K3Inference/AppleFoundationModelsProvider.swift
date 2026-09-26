@@ -57,7 +57,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — carriesStandingPersona checks M1K3Persona.standingPersonaAnchor:
 //  with BEING YOURSELF mid-core the trimmed core is no longer a substring of the full one. Confidence 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — `InferenceIntent.instructions` replaces the persona for
-//  a call when set (summaries). Unset, nothing changes. Confidence 0.9.
+//  a call when set (summaries). Unset, nothing changes. The `afm turn` line logs the instructions actually
+//  used (review fold). Confidence 0.9.
 import Foundation
 import M1K3LogCore
 import os
@@ -111,8 +112,9 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     ///
     /// Window is 4096 tokens. Since macOS 26.4 we can log exact token counts
     /// via `SystemLanguageModel.tokenCount(for:)`.
-    private func logTurnStart(promptChars: Int, streaming: Bool, warmth: AFMPrefixPrewarm.Warmth) {
-        let instructionChars = instructions().count
+    private func logTurnStart(
+        promptChars: Int, instructionChars: Int, streaming: Bool, warmth: AFMPrefixPrewarm.Warmth
+    ) {
         Self.log.notice(
             """
             afm turn: body=\(promptChars, privacy: .public) \
@@ -396,7 +398,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         }
         let instrText = InferenceIntent.instructions ?? instructions()
         let (session, warmth, heldPrefix) = takeSession(instructions: instrText, prompt: prompt)
-        logTurnStart(promptChars: prompt.count, streaming: false, warmth: warmth)
+        logTurnStart(promptChars: prompt.count, instructionChars: instrText.count, streaming: false, warmth: warmth)
         defer { rearmAfterHeld(heldPrefix) }
         do {
             let response = try await session.respond(to: prompt)
@@ -426,7 +428,7 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         return AsyncStream { continuation in
             let instrText = InferenceIntent.instructions ?? instructions()
             let (session, warmth, _) = takeSession(instructions: instrText, prompt: prompt)
-            logTurnStart(promptChars: prompt.count, streaming: true, warmth: warmth)
+            logTurnStart(promptChars: prompt.count, instructionChars: instrText.count, streaming: true, warmth: warmth)
             let task = Task { [self] in
                 do {
                     let clock = ContinuousClock()

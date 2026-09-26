@@ -107,6 +107,9 @@
 //  per-range finals and its own endpointer. Measured on synthetic calls: WER 9.0% vs WhisperKit
 //  small.en 7.3%, ~4x faster. Confidence 0.7 (verify-by-launch: chat dictation cadence, voice mode,
 //  Bluetooth, iPhone).
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (2) — review fold: analyzer segments and the closing segment
+//  yield under `lock`, and nothing yields once ending has begun, so the audio-thread end and the results
+//  task can't race a segment past finish(). Confidence 0.75.
 
 import AVFoundation
 import Foundation
@@ -543,14 +546,19 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         generation: UInt64,
         continuation: AsyncStream<TranscriptSegment>.Continuation
     ) {
-        let (segment, ends) = lock.withLock { () -> (TranscriptSegment?, Bool) in
-            guard generation == self.generation else { return (nil, false) }
-            let segment = analyzerFold.ingest(text: text, isFinal: isFinal)
-            if segment != nil { sessionHasText = true }
+        // Yield UNDER `lock`, like the closing yield in endAnalyzerListen: the
+        // audio thread can end the listen at any moment, and a segment yielded
+        // after that end's finish() would be dropped (review, 2026-09-26). Once
+        // ending has begun, the closing segment already carries this text.
+        let ends = lock.withLock { () -> Bool in
+            guard generation == self.generation, !analyzerEnding else { return false }
+            if let segment = analyzerFold.ingest(text: text, isFinal: isFinal) {
+                sessionHasText = true
+                continuation.yield(segment)
+            }
             analyzerEndpoint.result(isFinal: isFinal, hasText: analyzerFold.hasText)
-            return (segment, analyzerEndpoint.shouldEnd)
+            return analyzerEndpoint.shouldEnd
         }
-        if let segment { continuation.yield(segment) }
         if ends { endAnalyzerListen(generation: generation) }
     }
 
@@ -559,14 +567,16 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// from the tap's render callback, and stopping the engine there would
     /// block on the very callback it runs in.
     private func endAnalyzerListen(generation: UInt64) {
-        let claim = lock.withLock { () -> (TranscriptSegment?, AsyncStream<TranscriptSegment>.Continuation?)? in
-            guard generation == self.generation, !analyzerEnding else { return nil }
+        // Claim + closing yield under `lock`, so no result can be yielded after
+        // it; only the stop (which blocks on the engine) leaves the thread.
+        let claimed = lock.withLock { () -> Bool in
+            guard generation == self.generation, !analyzerEnding else { return false }
             analyzerEnding = true
-            return (analyzerFold.closingSegment(), continuation)
+            if let closing = analyzerFold.closingSegment() { continuation?.yield(closing) }
+            return true
         }
-        guard let (closing, continuation) = claim else { return }
+        guard claimed else { return }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            if let closing { continuation?.yield(closing) }
             self?.stopListening(ifGeneration: generation)
         }
     }
