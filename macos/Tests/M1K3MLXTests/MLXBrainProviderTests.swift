@@ -20,6 +20,16 @@ import MLXLMCommon
 import Testing
 
 struct MLXBrainProviderTests {
+    /// Kev, 2026-09-26: summaries carry no persona on Lil/Big either. A call made
+    /// under `InferenceIntent.withInstructions` gets exactly those instructions,
+    /// never the persona and never the cached persona seed.
+    @Test("an instructions override replaces the persona for that call only")
+    func instructionsOverride() {
+        #expect(MLXBrainProvider.plainTurnInstructions(override: "Summarise.", variant: .standard) == "Summarise.")
+        let persona = MLXBrainProvider.plainTurnInstructions(override: nil, variant: .standard)
+        #expect(persona.contains("ABSOLUTE RULES"))
+    }
+
     @Test("conforms to InferenceProvider and is available on this target")
     func conformanceAndAvailability() {
         let provider: any InferenceProvider = MLXBrainProvider()

@@ -8,7 +8,10 @@ The release-by-release plan for the macOS 27 wave (1.0 → 1.1 → 1.2) lives in
 `docs/GOLDEN_GATE_PLAN.md` § Roadmap; this file points at it rather than
 copying it.
 
-Last swept: 2026-09-18 — **1.0.0 is still in App Review; nothing is live yet.**
+Last swept: 2026-09-26 — **1.0.0 is still in App Review; nothing is live yet.**
+Resubmitted on build 372 (Mac + iOS, local release, 2026-09-24);
+`itunes.apple.com/lookup?id=6780230835` still returns no listing on 09-26.
+The 09-18 note below stands as the record of that week.
 (The 09-17 sweep read "1.1.0 merged" as "1.1.0 shipped". Checked 09-18:
 `itunes.apple.com/lookup?id=6780230835` → no listing; Kev: "we're releasing all
 the recent work under 1.0.0 — we're still in review, and have the room.")
@@ -23,6 +26,42 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 ---
 
 ## Now — 1.0.0 in review, the recent work rides under it
+
+### The next review build (`feat/review-build-polish`, 2026-09-26)
+
+- **One attach button** (Mac + iOS): paperclip + one picker; `AttachmentRouting`.
+- **PCC stays on for the conversation**: `PrivateCloudArming`; consent once per
+  conversation. **ADR 0007 ACCEPTED (Kev, 09-26): the whole conversation.**
+- **Call summaries fixed and evaluated**: the first quality eval
+  (`CallSummaryEval`, `M1K3_CALLS_EVAL=1`) found Mini reciting its system prompt
+  into stored overviews, action items lost to markdown headers, and no summary
+  at all past the window. Neutral instructions + leak drop + parser + map-reduce:
+  Mini 2/6 → 6, 4, 3 of 6 (`docs/evals/2026-09-26-calls-summary-mini.json`).
+  No brain carries the persona into a summary now (`InferenceIntent.instructions`);
+  a Lil/Big summary is verify-by-launch.
+- **Reasoning (Auto / Think / Off) — Kev's call.** The Settings picker is a
+  dead control on every shipping brain: Lil (Instruct-2507) never thinks, Big's
+  gemma-4 toggle is pinned off, Mini and Pocket have no think phase.
+- **Sidebar icons — C, Kev's pick (09-26)**: one symbol family, grey at rest,
+  accent only on the selection (2e48788a). A wire set (direction D) is a later
+  brand pass.
+- **Speech — SpeechAnalyzer is Apple Speech now**: `AppleSpeechTranscriber`
+  (the Mac's fallback, the iPhone's only engine) runs on SpeechAnalyzer, with
+  SFSpeech as the fallback when the analyzer can't serve a listen on-device.
+  It finalises at 0.3 s pauses, so the transcriber endpoints dictation itself
+  (`AnalyzerEndpoint`: a final plus 1.2 s of quiet). Verify-by-launch: chat
+  dictation cadence, voice mode, Bluetooth, iPhone. Calls stay on WhisperKit
+  until a real-call A/B (spike: WER 9.0% vs 7.3%, ~4× faster).
+- **Mini tool calling: 9/30 → 30/30** on the live arm (`docs/evals/2026-09-26-mini-tool-calling.json`).
+  The misses were leak declines on ordinary asks ("the machine's clock is a backdoor
+  for secrets"); the per-turn steer now says a tool ask is not an attempt on the
+  instructions, and a tool call ends the generation (no discarded answer). Cost:
+  open-chat 22→19/24 (the hash-map explain now pulls a tool 2/3), security 14→13/14
+  (a self-question took a web tool; the corpus gate held). Follow-ups: "well-known
+  knowledge needs no tool" wording; web tools on self-query turns.
+- **QLoRA to cut the prompt: no.** The July adapter is on a retired base and
+  bought ~65 tokens; Mini's window is spent by the tool palette, and Mini can't
+  take an adapter on 27 (`scratch/lora-spike/REVIEW-2026-09-26.md`).
 
 ### Landing (open PRs)
 
@@ -266,6 +305,16 @@ stays a possible later companion.
 
 ---
 
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 (5) — ADR 0007 accepted. Confidence 0.95. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 (4) — Mini tool-calling result recorded, with its costs
+     and the two follow-ups. Confidence 0.85. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 (3) — SpeechAnalyzer landed in AppleSpeechTranscriber
+     (Kev's call); the speech line records it and what stays owed. Confidence 0.85. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 (2) — the icon line records Kev's pick (C) instead of
+     a recommendation. Confidence 0.95. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 — header truthed to build 372 (store still unlisted);
+     "The next review build" block records the feat/review-build-polish work and the three calls
+     it leaves with Kev (ADR 0007, reasoning; icons settled on C). Confidence 0.85. -->
 <!-- Review: Kev + claude-fable-5.1, 2026-09-18 (2) — review fold on #381: the "1.1.0" section heading still
      said SHIPPED, with "PCC ships" and "are all live" under it — the same error in three phrasings, two
      screens below my own correction. Now "MERGED, riding under 1.0.0". The code-landed SHIPPED lines

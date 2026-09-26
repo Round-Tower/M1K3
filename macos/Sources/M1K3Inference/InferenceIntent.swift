@@ -30,6 +30,8 @@
 //  prefix STORAGE only — it deliberately does not change what a background
 //  call generates, or which brain answers it.) Prior: Unknown
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — `instructions`: a task-local override of the persona,
+//  read by the MLX and AFM providers, so summaries run persona-free on every brain. Confidence 0.85.
 
 import Foundation
 
@@ -46,5 +48,21 @@ public enum InferenceIntent {
         _ body: () async throws -> T
     ) async rethrows -> T {
         try await $isBackgroundUtility.withValue(true) { try await body() }
+    }
+
+    /// Instructions that REPLACE the chat persona for the current task's
+    /// generations: every provider reads this before its own persona, and MLX
+    /// skips the cached persona seed. Summaries use it (a persona in a stored
+    /// summary recited itself, 2026-09-26). Nil means "the provider's persona".
+    ///
+    /// Use it on a provider that does NOT serve chat (the app's `summaryAFM`):
+    /// AFM's PrewarmSlot drops a stored session whose instructions don't match,
+    /// so an override call on the chat provider would evict chat's persona prewarm.
+    @TaskLocal public static var instructions: String?
+
+    public static func withInstructions<T>(
+        _ text: String, _ body: () async throws -> T
+    ) async rethrows -> T {
+        try await $instructions.withValue(text) { try await body() }
     }
 }

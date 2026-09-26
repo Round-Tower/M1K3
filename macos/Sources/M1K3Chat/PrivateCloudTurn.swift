@@ -18,6 +18,10 @@
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 (pure; the sheet and
 //  the send are the app's, verify-by-launch). Prior: Unknown
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — a PCC consent carries the conversation it was given in
+//  (`Consent.conversationID`) and a send from any other conversation is refused: with PCC now on for a
+//  whole conversation, a sheet left open across a switch would have sent A's history and answered into B.
+//  Confidence 0.9 (ChatSessionPrivateCloudTests.consentIsBoundToItsConversation).
 
 import Foundation
 import M1K3Inference
@@ -49,6 +53,9 @@ public enum PrivateCloudTurn {
         /// The exact text that goes if the user ticks "this conversation". Nil
         /// when there is nothing earlier to share.
         public let conversation: String?
+        /// The conversation this consent was given in. A send from any other
+        /// conversation is refused: its history is not what the user saw.
+        public var conversationID: UUID?
     }
 
     /// The one request that goes to PCC.
@@ -59,8 +66,8 @@ public enum PrivateCloudTurn {
 
     /// `history` is the replayable conversation (display-only messages such as
     /// script output are already excluded by the caller, as for local turns).
-    public static func consent(question: String, history: [ChatTurn]) -> Consent {
-        Consent(question: question, conversation: conversationText(history))
+    public static func consent(question: String, history: [ChatTurn], conversationID: UUID? = nil) -> Consent {
+        Consent(question: question, conversation: conversationText(history), conversationID: conversationID)
     }
 
     public static func request(_ consent: Consent, includeConversation: Bool, now: Date) -> Request {

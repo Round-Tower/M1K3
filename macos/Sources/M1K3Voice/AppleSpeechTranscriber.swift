@@ -98,6 +98,21 @@
 //  Review: Kev + claude-opus-5, 2026-09-13 (merge of #306 + #307) — both fixes for the same abort
 //  stack: the hardware-rate gate (#307) decides whether the route is ready and logs node vs hw;
 //  the tap itself installs with format: nil (#306), so a mismatch is impossible by construction.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — SpeechAnalyzer is the recognizer now (Kev: "do the
+//  SpeechAnalyzer"), SFSpeech the fallback for a listen it can't serve on-device right now (no
+//  asset yet, unsupported locale). Engine, tap, generations and ownership are shared and unchanged;
+//  `beginAnalyzer` mirrors begin()'s liveness checks. Because the analyzer finalises ranges at pauses
+//  as short as 0.3 s, AnalyzerTranscriptFold/AnalyzerEndpoint (tested) keep the consumer contract:
+//  dictation gets cumulative partials and one final after real quiet at the mic; voice-first gets
+//  per-range finals and its own endpointer. Measured on synthetic calls: WER 9.0% vs WhisperKit
+//  small.en 7.3%, ~4x faster. Confidence 0.7 (verify-by-launch: chat dictation cadence, voice mode,
+//  Bluetooth, iPhone).
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (2) — review fold: analyzer segments and the closing segment
+//  yield under `lock`, and nothing yields once ending has begun, so the audio-thread end and the results
+//  task can't race a segment past finish(). Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (3) — PR #412 review fold: `isAvailable` asks whether the
+//  analyzer can serve THIS locale (cached async check, AppleSpeechAvailability), not whether the device
+//  has SpeechAnalyzer at all; otherwise the mic read ready and the listen failed at once. Confidence 0.8.
 
 import AVFoundation
 import Foundation
@@ -137,6 +152,18 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     private let engineLock = NSLock()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
+    /// The SpeechAnalyzer session, when this listen runs on it instead of
+    /// `request`/`task` (guarded by `lock`, like them). Exactly one of the two
+    /// recognizers is live per listen.
+    private var analyzer: AnalyzerLiveRecognition?
+    /// The analyzer path's fold + endpoint (AnalyzerRecognitionPolicy, tested),
+    /// reset per listen; `analyzerEnding` makes the self-ended listen fire once.
+    private var analyzerFold = AnalyzerTranscriptFold(finality: .endsListen)
+    private var analyzerEndpoint = AnalyzerEndpoint(finality: .endsListen)
+    private var analyzerEnding = false
+    /// Whether the analyzer can serve `locale` right now (guarded by `lock`):
+    /// nil until the async check lands, then refreshed by every listen's outcome.
+    private var analyzerServesLocale: Bool?
     private var continuation: AsyncStream<TranscriptSegment>.Continuation?
     /// One-shot breadcrumb flag (guarded by `lock`): the mono-mixdown adapter
     /// failing soft on a >2-channel device is a silent-capture risk and must
@@ -186,14 +213,26 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
 
     public init(locale: Locale = .current) {
         self.locale = locale
+        Task { [weak self, locale] in
+            let serves = await AnalyzerLiveRecognition.servesLocale(locale)
+            self?.lock.withLock { self?.analyzerServesLocale = serves }
+        }
     }
 
     /// Available when a recogniser exists for the locale, is ready, and supports
     /// on-device recognition (our privacy floor). Authorization is requested at
     /// `startListening` time, not here.
+    /// The analyzer's locale + asset check is async, so it is cached (see
+    /// `analyzerServesLocale`); SFSpeech's own check answers otherwise. A device
+    /// that merely HAS SpeechAnalyzer no longer counts (PR #412 review).
     public var isAvailable: Bool {
+        let serves = lock.withLock { analyzerServesLocale }
+        if AppleSpeechAvailability.isAvailable(analyzerServesLocale: serves, legacyAvailable: false) { return true }
         guard let recognizer = SFSpeechRecognizer(locale: locale) else { return false }
-        return recognizer.isAvailable && recognizer.supportsOnDeviceRecognition
+        return AppleSpeechAvailability.isAvailable(
+            analyzerServesLocale: serves,
+            legacyAvailable: recognizer.isAvailable && recognizer.supportsOnDeviceRecognition
+        )
     }
 
     /// Why the most recent listen ended without yielding a word, if the
@@ -269,6 +308,12 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             return captured
         }
         guard let (claimedGeneration, request, task, continuation, observer) = claimed else { return }
+        // Only the claiming stop takes the analyzer (a stale one returned above).
+        let analyzer = lock.withLock { () -> AnalyzerLiveRecognition? in
+            defer { self.analyzer = nil }
+            return self.analyzer
+        }
+        analyzer?.stop()
         // Tear the engine down only if THIS claimed session still owns it — a
         // begin() that hasn't armed yet leaves ownership with an older/nil value,
         // so this no-ops and begin's own commit-point cleans up. Prevents a stop
@@ -325,6 +370,25 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             continuation.finish()
             return
         }
+        // SpeechAnalyzer first (2026-09-26); SFSpeech below when it can't serve
+        // this listen on-device right now (see AnalyzerLiveRecognition.start).
+        if let analyzer = await AnalyzerLiveRecognition.start(
+            locale: locale,
+            onResult: { [weak self] text, isFinal in
+                self?.analyzerResult(text: text, isFinal: isFinal, generation: generation, continuation: continuation)
+            },
+            onError: { [weak self] error in
+                guard let self else { return }
+                Self.log.error("speech analyzer failed mid-listen — ending: \(error.localizedDescription, privacy: .public)")
+                self.recordFailure(error.localizedDescription, ifGeneration: generation)
+                self.stopListening(ifGeneration: generation)
+            }
+        ) {
+            lock.withLock { analyzerServesLocale = true }
+            beginAnalyzer(analyzer, continuation, generation: generation)
+            return
+        }
+        lock.withLock { analyzerServesLocale = false }
         guard let recognizer = SFSpeechRecognizer(locale: locale),
               recognizer.isAvailable,
               recognizer.supportsOnDeviceRecognition
@@ -433,6 +497,115 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             task.cancel()
             continuation.finish()
         }
+    }
+
+    // MARK: - SpeechAnalyzer path
+
+    /// The analyzer twin of `begin()`'s engine stanza: the same liveness checks at
+    /// the same points, with the analyzer session in place of request + task. The
+    /// analyzer is already running (it waits on input), so there is no task to
+    /// store; every unwind stops it.
+    private func beginAnalyzer(
+        _ analyzer: AnalyzerLiveRecognition,
+        _ continuation: AsyncStream<TranscriptSegment>.Continuation,
+        generation: UInt64
+    ) {
+        let stillCurrent = lock.withLock {
+            guard generation == self.generation else { return false }
+            self.analyzer = analyzer
+            self.analyzerFold = AnalyzerTranscriptFold(finality: sessionFinality)
+            self.analyzerEndpoint = AnalyzerEndpoint(finality: sessionFinality)
+            self.analyzerEnding = false
+            self.mixdownFallbackLogged = false
+            return true
+        }
+        guard stillCurrent else {
+            analyzer.stop()
+            continuation.finish()
+            return
+        }
+        Self.log.notice("listening on SpeechAnalyzer")
+        guard installTapAsOwner(generation) else {
+            Self.log.error("mic input route not ready or session superseded — not listening")
+            recordFailure("The microphone isn't ready yet.", ifGeneration: generation)
+            stopListening(ifGeneration: generation)
+            analyzer.stop()
+            continuation.finish()
+            return
+        }
+        observeConfigurationChanges(ifGeneration: generation)
+        switch startEngineIfOwner(generation) {
+        case .notOwner:
+            analyzer.stop()
+            continuation.finish()
+            return
+        case .failed:
+            recordFailure("The microphone couldn't start.", ifGeneration: generation)
+            stopListening(ifGeneration: generation)
+            analyzer.stop()
+            continuation.finish()
+            return
+        case .started:
+            break
+        }
+        // Commit-point epilogue, as in begin(): a stop that landed between the
+        // start and here may have run its engine teardown before we owned it.
+        if lock.withLock({ generation != self.generation }) {
+            teardownEngineIfOwner(generation)
+            analyzer.stop()
+            continuation.finish()
+        }
+    }
+
+    /// One analyzer result: fold it into the consumer's contract, yield, and end
+    /// the listen if the endpoint says so. Generation-gated like SFSpeech's callback.
+    private func analyzerResult(
+        text: String,
+        isFinal: Bool,
+        generation: UInt64,
+        continuation: AsyncStream<TranscriptSegment>.Continuation
+    ) {
+        // Yield UNDER `lock`, like the closing yield in endAnalyzerListen: the
+        // audio thread can end the listen at any moment, and a segment yielded
+        // after that end's finish() would be dropped (review, 2026-09-26). Once
+        // ending has begun, the closing segment already carries this text.
+        let ends = lock.withLock { () -> Bool in
+            guard generation == self.generation, !analyzerEnding else { return false }
+            if let segment = analyzerFold.ingest(text: text, isFinal: isFinal) {
+                sessionHasText = true
+                continuation.yield(segment)
+            }
+            analyzerEndpoint.result(isFinal: isFinal, hasText: analyzerFold.hasText)
+            return analyzerEndpoint.shouldEnd
+        }
+        if ends { endAnalyzerListen(generation: generation) }
+    }
+
+    /// The analyzer path ending a listen itself (AnalyzerEndpoint): yield the
+    /// dictation's one final, then stop. Off the calling thread: this can fire
+    /// from the tap's render callback, and stopping the engine there would
+    /// block on the very callback it runs in.
+    private func endAnalyzerListen(generation: UInt64) {
+        // Claim + closing yield under `lock`, so no result can be yielded after
+        // it; only the stop (which blocks on the engine) leaves the thread.
+        let claimed = lock.withLock { () -> Bool in
+            guard generation == self.generation, !analyzerEnding else { return false }
+            analyzerEnding = true
+            if let closing = analyzerFold.closingSegment() { continuation?.yield(closing) }
+            return true
+        }
+        guard claimed else { return }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.stopListening(ifGeneration: generation)
+        }
+    }
+
+    /// RMS of the (mono, float) tap buffer for AnalyzerEndpoint; a non-float
+    /// buffer reads as loud, so it can never end a listen early.
+    private static func level(of buffer: AVAudioPCMBuffer) -> Float {
+        guard let channel = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return 1 }
+        let samples = Array(UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)))
+        return AnalyzerEndpoint.rms(samples)
     }
 
     /// One recognition request, configured in ONE place so a mid-listen restart
@@ -753,8 +926,22 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             // `self` check alone can't do that (this object is an app-lifetime
             // singleton; sessions are generation-scoped, and it's the nil'd
             // request that marks teardown — post-merge review, #127).
-            guard self.lock.withLock({ self.request != nil }) else { return }
+            let (legacyLive, analyzer) = self.lock.withLock { (self.request != nil, self.analyzer) }
+            guard legacyLive || analyzer != nil else { return }
             let audible = MonoMixdown.mixIfNeeded(buffer)
+            if let analyzer {
+                // SpeechAnalyzer path: meter the level for AnalyzerEndpoint, feed
+                // the analyzer outside `lock` (it converts), end if it's time.
+                let seconds = Double(audible.frameLength) / audible.format.sampleRate
+                let level = Self.level(of: audible)
+                let (ends, generation) = self.lock.withLock { () -> (Bool, UInt64) in
+                    self.analyzerEndpoint.audio(rms: level, seconds: seconds)
+                    return (self.analyzerEndpoint.shouldEnd, self.generation)
+                }
+                analyzer.append(audible)
+                if ends { self.endAnalyzerListen(generation: generation) }
+                return
+            }
             self.lock.withLock {
                 // The adapter fails SOFT (returns the original buffer) if it
                 // can't build the mono copy — which would re-open the exact

@@ -117,6 +117,25 @@ struct ChatSessionPrivateCloudTests {
         #expect(responder.callCount == callsBefore, "the local responder must not be asked")
     }
 
+    /// Review on the sticky-PCC branch (2026-09-26): a consent sheet left open
+    /// while the conversation switched would have sent conversation A's history
+    /// to PCC and written the answer into conversation B.
+    @Test("a consent built for one conversation never sends from another")
+    func consentIsBoundToItsConversation() async {
+        let responder = CountingResponder()
+        let session = await sessionWithHistory(responder)
+        let cloud = FakeCloud(snapshots: ["answer"])
+
+        let consent = session.privateCloudConsent(for: "Is that a good dog name?")
+        session.startNewConversation()
+        await session.sendPrivateCloud(
+            consent, includeConversation: true, backend: cloud, gate: Self.open, localBrainName: "Mini", now: now
+        )
+
+        #expect(cloud.received.isEmpty, "nothing leaves for a stale consent")
+        #expect(session.messages.isEmpty, "the new conversation is untouched")
+    }
+
     @Test("ticked: the shared conversation carries the chat, never display-only messages")
     func conversationTicked() async throws {
         let responder = CountingResponder()

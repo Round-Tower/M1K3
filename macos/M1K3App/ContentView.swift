@@ -50,6 +50,17 @@
 //  prepends file contextBlocks to the draft. Files are turn context, not permanent RAG. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — `.settings` in the detail switch (Settings is a screen
 //  now); the gate's "Open Settings" links and the screengrab beat select it. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — one attach button (paperclip) and one picker replace the
+//  image + file pair; `AttachmentRouting` (tested) sorts images from text and names an image a blind brain
+//  can't take. Two fileImporters on one view was also a SwiftUI hazard. Confidence 0.85 (verify at ⌘R).
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (2) — PCC stays on for the conversation (`PrivateCloudArming`,
+//  tested): the sheet shows once, later sends reuse its answer; off on decline, manual off, a conversation
+//  change, an unready control, or any staged attachment (files too — they used to slip past the disable).
+//  Implements the ADR 0006 amendment, which awaits Kev. Confidence 0.8 (verify by launch, Debug echo backend).
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (3) — review fold: a consent for another conversation (switched
+//  under an open sheet) sends nothing and keeps the words; ChatSession enforces the same. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (4) — PR #412 review fold: a PCC send also refuses while an
+//  attachment is staged (one staged with the sheet open used to go through, text only). Confidence 0.85.
 
 import M1K3Avatar
 import M1K3Chat
@@ -110,13 +121,12 @@ struct ContentView: View {
     @State private var starters: [String] = Array(StarterPrompts.doorPool.prefix(1))
     @State private var showAttachmentImporter = false
     @State private var pendingAttachments: [ImageAttachment] = []
-    @State private var showFileContextImporter = false
     @State private var pendingFiles: [FileAttachment] = []
     /// ADR 0006: the chat-egress consent (default OFF), held here so the input
     /// bar re-renders when Settings flips it.
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
     /// The next message goes to Private Cloud Compute — one send, then it disarms.
-    @State private var privateCloudArmed = false
+    @State private var privateCloudArming = PrivateCloudArming()
     /// A send waiting on the consent sheet; the draft stays until it's confirmed.
     @State private var privateCloudPending: PendingPrivateCloudSend?
     @State private var attachmentError: String?
@@ -456,7 +466,7 @@ struct ContentView: View {
             }
         }
         .alert(
-            "Couldn't attach image",
+            "Couldn't attach",
             isPresented: Binding(
                 get: { attachmentError != nil },
                 set: { if !$0 { attachmentError = nil } }
@@ -466,48 +476,33 @@ struct ContentView: View {
         } message: {
             Text(attachmentError ?? "")
         }
+        // One picker for images and files; AttachmentRouting sorts them.
         .fileImporter(
             isPresented: $showAttachmentImporter,
-            allowedContentTypes: [.image],
+            allowedContentTypes: AttachmentRouting.contentTypes(
+                imagesAccepted: env.selectedBrain.supportsImageInput
+            ),
             allowsMultipleSelection: true
         ) { result in
             if case let .success(urls) = result {
-                attachImages(at: urls)
-            }
-        }
-        .fileImporter(
-            isPresented: $showFileContextImporter,
-            allowedContentTypes: [.plainText, .text, .sourceCode, .json, .yaml, .xml, .html],
-            allowsMultipleSelection: true
-        ) { result in
-            if case let .success(urls) = result {
-                attachFiles(at: urls)
+                attach(urls)
             }
         }
         .sheet(item: $privateCloudPending) { pending in
             PrivateCloudConsentSheet(
                 consent: pending.consent,
+                // Consent holds for the rest of this conversation: the control stays
+                // on and later sends skip the sheet with the same choice.
                 onSend: { includeConversation in
                     privateCloudPending = nil
-                    privateCloudArmed = false
-                    // Re-read the gate BEFORE touching the draft: if the switch, the org
-                    // policy or the quota changed while the sheet was open, nothing is
-                    // sent and the words stay where they are.
-                    guard env.privateCloudSendAllowed() else { return }
-                    let text = draft
-                    draft = ""
-                    Task {
-                        let sent = await env.sendPrivateCloud(pending.consent, includeConversation: includeConversation)
-                        // The async re-check can still refuse (a change inside one hop);
-                        // hand the words back unless something new was typed.
-                        if !sent, draft.isEmpty { draft = text }
-                    }
+                    privateCloudArming.consented(includeConversation: includeConversation)
+                    sendToPrivateCloud(pending.consent, includeConversation: includeConversation)
                 },
-                // "Keep it on this Mac" disarms: the words stay in the field, and the
-                // next Return sends them here instead of reopening the sheet.
+                // "Keep it on this Mac" turns it off: the words stay in the field, and
+                // the next Return sends them here instead of reopening the sheet.
                 onCancel: {
                     privateCloudPending = nil
-                    privateCloudArmed = false
+                    privateCloudArming.declined()
                 }
             )
         }
@@ -897,22 +892,8 @@ struct ContentView: View {
                         .onSubmit(send)
                 }
 
-                if env.selectedBrain.supportsImageInput {
-                    Button { showAttachmentImporter = true } label: {
-                        Image(systemName: "photo.badge.plus")
-                            .imageScale(.large)
-                            .fontWeight(.semibold)
-                            .frame(width: 22, height: 22)
-                    }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .disabled(env.chat.isResponding || !env.isReady)
-                    .help("Attach an image — \(env.selectedBrain.displayName) can see it")
-                    .accessibilityLabel("Attach image")
-                }
-
-                Button { showFileContextImporter = true } label: {
-                    Image(systemName: "doc.badge.plus")
+                Button { showAttachmentImporter = true } label: {
+                    Image(systemName: "paperclip")
                         .imageScale(.large)
                         .fontWeight(.semibold)
                         .frame(width: 22, height: 22)
@@ -920,8 +901,10 @@ struct ContentView: View {
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
                 .disabled(env.chat.isResponding || !env.isReady)
-                .help("Attach a file as context for this message")
-                .accessibilityLabel("Attach file")
+                .help(env.selectedBrain.supportsImageInput
+                    ? "Attach an image or a file — \(env.selectedBrain.displayName) can see images"
+                    : "Attach a file as context for this message")
+                .accessibilityLabel("Attach")
 
                 // New chat lives in the sidebar now (its toolbar pencil +
                 // ⌘N) — a second identical pencil here was pure duplication
@@ -1053,13 +1036,14 @@ struct ContentView: View {
         PrivateCloudRung.control(env.privateCloudState(consent: privateCloudConsent))
     }
 
-    /// Arms the NEXT message for Private Cloud Compute. Exists only when this
-    /// build has a PCC backend and the Settings switch is on; the sheet, not
-    /// this button, is where anything is actually sent.
+    /// Turns Private Cloud Compute on for this conversation. Exists only when
+    /// this build has a PCC backend and the Settings switch is on; the first
+    /// send opens the consent sheet, later ones reuse its answer.
     private var privateCloudButton: some View {
         let control = privateCloudControl
-        return Button { privateCloudArmed.toggle() } label: {
-            Image(systemName: privateCloudArmed ? "cloud.fill" : PrivateCloudLabel.symbolName)
+        let isOn = privateCloudArming.isOn
+        return Button { privateCloudArming.toggle() } label: {
+            Image(systemName: isOn ? "cloud.fill" : PrivateCloudLabel.symbolName)
                 .imageScale(.large)
                 .fontWeight(.semibold)
                 .frame(width: 22, height: 22)
@@ -1067,18 +1051,22 @@ struct ContentView: View {
         }
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
-        .tint(privateCloudArmed ? .accentColor : nil)
-        .disabled(control != .ready || env.chat.isResponding || !pendingAttachments.isEmpty)
-        .help(PrivateCloudRung.controlHelp(control, armed: privateCloudArmed, now: Date()))
-        .accessibilityLabel("Ask Private Cloud Compute")
-        .accessibilityValue(privateCloudArmed ? "On for the next message" : "Off")
-        // Disarm the moment it can't be honoured: the switch went off, the
-        // quota ran out, or an image was staged. A disarmed send stays local.
+        .tint(isOn ? .accentColor : nil)
+        .disabled(control != .ready || env.chat.isResponding || hasStagedAttachments)
+        .help(PrivateCloudRung.controlHelp(control, armed: isOn, now: Date()))
+        .accessibilityLabel("Private Cloud Compute")
+        .accessibilityValue(isOn ? "On for this conversation" : "Off")
+        // Off the moment it can't be honoured or the consent could be stale:
+        // the switch went off, the quota ran out, something was staged, or the
+        // conversation changed. An off send stays local.
         .onChange(of: control) { _, newValue in
-            if newValue != .ready { privateCloudArmed = false }
+            privateCloudArming.controlChanged(newValue)
         }
-        .onChange(of: pendingAttachments.isEmpty) { _, isEmpty in
-            if !isEmpty { privateCloudArmed = false }
+        .onChange(of: hasStagedAttachments) { _, staged in
+            if staged { privateCloudArming.attachmentsStaged() }
+        }
+        .onChange(of: env.chat.activeConversationID) {
+            privateCloudArming.conversationChanged()
         }
         // A control that can't be used re-reads PCC's status until it can (the
         // quota resets, the service comes back). Restarts whenever the control changes.
@@ -1165,14 +1153,18 @@ struct ContentView: View {
 
     private func send() {
         guard canSend else { return }
-        // ADR 0006: an armed send goes through the consent sheet first. Images
-        // never ride a PCC turn (arming is disabled while any are staged).
-        if PrivateCloudRung.presentsConsent(
-            armed: privateCloudArmed, control: privateCloudControl,
-            hasAttachments: !pendingAttachments.isEmpty || !pendingFiles.isEmpty
-        ) {
+        // ADR 0006 (amended 2026-09-26): the first PCC send in a conversation goes
+        // through the consent sheet; later ones reuse its answer. Attachments
+        // never ride a PCC turn (the control turns off while any are staged).
+        switch privateCloudArming.action(control: privateCloudControl, hasAttachments: hasStagedAttachments) {
+        case .askConsent:
             privateCloudPending = PendingPrivateCloudSend(consent: env.chat.privateCloudConsent(for: draft))
             return
+        case let .sendDirect(includeConversation):
+            sendToPrivateCloud(env.chat.privateCloudConsent(for: draft), includeConversation: includeConversation)
+            return
+        case .local:
+            break
         }
         var text = draft
         if !pendingFiles.isEmpty {
@@ -1186,14 +1178,51 @@ struct ContentView: View {
         Task { await env.send(text, images: images) }
     }
 
+    private var hasStagedAttachments: Bool {
+        !pendingAttachments.isEmpty || !pendingFiles.isEmpty
+    }
+
+    /// Re-reads the gate BEFORE touching the draft: if the switch, the org policy
+    /// or the quota changed since the control was read, nothing is sent and the
+    /// words stay where they are.
+    /// A consent for another conversation (switched under an open sheet) sends
+    /// nothing; ChatSession refuses it too, and this keeps the words in the field.
+    private func sendToPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) {
+        guard env.privateCloudSendAllowed(),
+              consent.conversationID == nil || consent.conversationID == env.chat.activeConversationID,
+              // Staged while the sheet was open: attachments never ride a PCC turn (PR #412 review).
+              !hasStagedAttachments
+        else { return }
+        let text = draft
+        draft = ""
+        Task {
+            let sent = await env.sendPrivateCloud(consent, includeConversation: includeConversation)
+            // The async re-check can still refuse (a change inside one hop);
+            // hand the words back unless something new was typed.
+            if !sent, draft.isEmpty { draft = text }
+        }
+    }
+
+    /// The one attach button's landing: images to the vision path, the rest
+    /// to file-as-context. A swallowed failure (disk full, source vanished, an
+    /// image the brain can't see) reads as "the picker ignored me" — the exact
+    /// silent-failure class the vision probe caught model-side — so every
+    /// failed file is named, not just whichever failed last.
+    private func attach(_ urls: [URL]) {
+        let route = AttachmentRouting.route(urls, imagesAccepted: env.selectedBrain.supportsImageInput)
+        let refused = route.refusedImages.map {
+            "\($0.lastPathComponent): \(env.selectedBrain.displayName) can't see images"
+        }
+        let failures = refused + attachImages(at: route.images) + attachFiles(at: route.files)
+        if !failures.isEmpty {
+            attachmentError = failures.joined(separator: "\n")
+        }
+    }
+
     /// Copy picked images into the app's attachments store (security-scoped
     /// picker URLs are only readable inside the access window — the copy is
     /// what makes the attachment durable for the send and history replay).
-    private func attachImages(at urls: [URL]) {
-        // A swallowed copy failure (disk full, source vanished) reads as
-        // "the picker ignored me" — the exact silent-failure class the
-        // vision probe caught model-side. Accumulate so a multi-select
-        // surfaces EVERY failed file, not just whichever failed last.
+    private func attachImages(at urls: [URL]) -> [String] {
         var failures: [String] = []
         for url in urls {
             let scoped = url.startAccessingSecurityScopedResource()
@@ -1204,12 +1233,10 @@ struct ContentView: View {
                 failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
             }
         }
-        if !failures.isEmpty {
-            attachmentError = failures.joined(separator: "\n")
-        }
+        return failures
     }
 
-    private func attachFiles(at urls: [URL]) {
+    private func attachFiles(at urls: [URL]) -> [String] {
         var failures: [String] = []
         for url in urls {
             let scoped = url.startAccessingSecurityScopedResource()
@@ -1221,9 +1248,7 @@ struct ContentView: View {
                 failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
             }
         }
-        if !failures.isEmpty {
-            attachmentError = failures.joined(separator: "\n")
-        }
+        return failures
     }
 
     /// Attachments live in the app container beside the other user data.

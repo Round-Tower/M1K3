@@ -128,9 +128,9 @@ struct PrivateCloudRungTests {
     func controlHelpNamesTheReset() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         #expect(PrivateCloudRung.controlHelp(.ready, armed: false, now: now)
-            == "Send the next message to Apple's Private Cloud Compute")
+            == "Use Apple's Private Cloud Compute for this conversation")
         #expect(PrivateCloudRung.controlHelp(.ready, armed: true, now: now)
-            == "Your next message goes to Private Cloud Compute. You'll see it first.")
+            == "On: this conversation goes to Private Cloud Compute until you turn it off")
         #expect(PrivateCloudRung.controlHelp(.unavailable, armed: false, now: now)
             == "Private Cloud Compute isn't available right now")
         let inThreeHours = now.addingTimeInterval(3 * 3600)

@@ -34,6 +34,19 @@ struct InferenceIntentTests {
         #expect(seen)
     }
 
+    /// Summaries must not carry the chat persona on any brain (Kev, 2026-09-26).
+    /// The override rides the task like the background flag, so it reaches the
+    /// provider's own inner work.
+    @Test("instructions override is nil by default, scoped to the block, and reaches child tasks")
+    func instructionsOverride() async {
+        #expect(InferenceIntent.instructions == nil)
+        let seen: String? = await InferenceIntent.withInstructions("Summarise neutrally.") {
+            await Task { InferenceIntent.instructions }.value
+        }
+        #expect(seen == "Summarise neutrally.")
+        #expect(InferenceIntent.instructions == nil)
+    }
+
     @Test("a value is returned through the wrapper unchanged")
     func returnsTheBodysValue() async {
         let answer = await InferenceIntent.backgroundUtility { 42 }

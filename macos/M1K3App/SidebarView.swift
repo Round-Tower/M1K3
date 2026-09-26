@@ -30,7 +30,10 @@
 //  window-launching gear to a pinned pill that SELECTS the new `.settings`
 //  destination (the Settings window became a screen). Agent Log stays a window
 //  action beside it. Confidence 0.8 (verify-by-launch).
-//
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — the destination icons: one symbol family (bubble.left,
+//  doc.text, sparkles, phone, waveform.path.ecg, checkmark.circle), grey at rest, accent only when
+//  selected (`destination(_:systemImage:_:)`). Direction C of the icon mock. Confidence 0.8 (look is
+//  verify-by-launch).
 
 import M1K3Chat
 import SwiftUI
@@ -42,8 +45,7 @@ struct SidebarView: View {
 
     var body: some View {
         List(selection: $selection) {
-            Label("Chat", systemImage: "bubble.left.and.bubble.right")
-                .tag(SidebarSelection.chat)
+            destination("Chat", systemImage: "bubble.left", .chat)
 
             // No header text (Kev's call) — the row icons/labels carry
             // enough meaning on their own without a "Workspace" caption.
@@ -53,20 +55,15 @@ struct SidebarView: View {
             // live in the pinned footer below, so the two kinds don't read
             // as peers.
             Section {
-                Label("Documents", systemImage: "books.vertical")
-                    .tag(SidebarSelection.documents)
-                Label("Memories", systemImage: "brain")
-                    .tag(SidebarSelection.memories)
-                Label("Calls", systemImage: "phone.bubble")
-                    .tag(SidebarSelection.calls)
+                destination("Documents", systemImage: "doc.text", .documents)
+                destination("Memories", systemImage: "sparkles", .memories)
+                destination("Calls", systemImage: "phone", .calls)
                 // Promoted from the footer 2026-08-19: the Heartbeat became a
                 // destination (timeline detail pane), which is precisely the
                 // destination-vs-app-action line this file polices — it was on
                 // the wrong side as a footer window-opener.
-                Label("Heartbeat", systemImage: "waveform.path.ecg")
-                    .tag(SidebarSelection.heartbeat)
-                Label("Todos", systemImage: "checklist")
-                    .tag(SidebarSelection.todos)
+                destination("Heartbeat", systemImage: "waveform.path.ecg", .heartbeat)
+                destination("Todos", systemImage: "checkmark.circle", .todos)
             }
 
             Section("Conversations") {
@@ -116,6 +113,20 @@ struct SidebarView: View {
                 .help("Start a fresh conversation — this one stays in Conversations (⌘N)")
             }
         }
+    }
+
+    /// A destination row. One symbol family (single-object outlines, one
+    /// weight), grey at rest; only the page you're on wears the accent. Every
+    /// row in accent blue made the selection hard to find (Kev, 2026-09-26:
+    /// "our blue menu icons need some re-designing"; direction C of the mock).
+    private func destination(_ title: String, systemImage: String, _ tag: SidebarSelection) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(selection == tag ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+        }
+        .tag(tag)
     }
 
     /// App-action items pinned to the sidebar's bottom edge — Settings and
