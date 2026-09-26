@@ -29,6 +29,9 @@
 //  an exhausted or unavailable control now re-reads the status until it can
 //  be used; it used to recover only on relaunch. `resetPhrase` no longer
 //  rounds minutes up to "about an hour" (seen by launch). Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — `controlHelp` speaks for the whole
+//  conversation: the control now stays on (`PrivateCloudArming`), no longer one
+//  message. Confidence 0.85.
 //
 
 import Foundation
@@ -114,8 +117,8 @@ public enum PrivateCloudRung {
         switch control {
         case .ready:
             armed
-                ? "Your next message goes to Private Cloud Compute. You'll see it first."
-                : "Send the next message to Apple's Private Cloud Compute"
+                ? "On: this conversation goes to Private Cloud Compute until you turn it off"
+                : "Use Apple's Private Cloud Compute for this conversation"
         case .unavailable:
             "Private Cloud Compute isn't available right now"
         case let .exhausted(resetsAt):

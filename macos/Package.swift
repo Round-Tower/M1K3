@@ -637,7 +637,7 @@ let package = Package(
         .testTarget(
             name: "M1K3CallsTests",
             dependencies: [
-                "M1K3Calls", "M1K3Knowledge", "M1K3Inference",
+                "M1K3Calls", "M1K3Knowledge", "M1K3Inference", "M1K3Eval",
                 .product(name: "GRDB", package: "GRDB.swift"),
             ],
             path: "Tests/M1K3CallsTests"

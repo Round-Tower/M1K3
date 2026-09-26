@@ -47,6 +47,8 @@
 //  the input bar; four on regular width. Verify-by-launch on the A12 iPad (idle cost + chip legibility). Confidence 0.75.
 //  Review: Kev + claude-opus-5-5, 2026-09-25 (2) — #411 review fold: the chips' fade needed its own transaction (a Group
 //  with `.animation(value: chatting)`); hero's animation is scoped to hero, so they popped. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — one paperclip + one picker replace the image/file pair (the Mac's
+//  change, shared `AttachmentRouting`); an image a blind brain can't take is named. Confidence 0.8 (device-owed).
 
 import M1K3Avatar
 import M1K3Chat
@@ -73,7 +75,6 @@ struct ChatScreen: View {
     @State private var starters: [String] = []
     @State private var showAttachmentImporter = false
     @State private var pendingAttachments: [ImageAttachment] = []
-    @State private var showFileContextImporter = false
     @State private var pendingFiles: [FileAttachment] = []
     @State private var attachmentError: String?
     @FocusState private var inputFocused: Bool
@@ -170,22 +171,16 @@ struct ChatScreen: View {
             } message: {
                 Text(attachmentError ?? "")
             }
+            // One picker for images and files; AttachmentRouting sorts them.
             .fileImporter(
                 isPresented: $showAttachmentImporter,
-                allowedContentTypes: [.image],
+                allowedContentTypes: AttachmentRouting.contentTypes(
+                    imagesAccepted: core.selectedBrain.supportsImageInput
+                ),
                 allowsMultipleSelection: true
             ) { result in
                 if case let .success(urls) = result {
-                    attachImages(at: urls)
-                }
-            }
-            .fileImporter(
-                isPresented: $showFileContextImporter,
-                allowedContentTypes: [.plainText, .text, .sourceCode, .json, .yaml, .xml, .html],
-                allowsMultipleSelection: true
-            ) { result in
-                if case let .success(urls) = result {
-                    attachFiles(at: urls)
+                    attach(urls)
                 }
             }
             .onChange(of: core.selectedBrain) {
@@ -455,23 +450,13 @@ struct ChatScreen: View {
             }
             M1K3GlassGroup(spacing: 10) {
                 HStack(spacing: 10) {
-                    if core.selectedBrain.supportsImageInput {
-                        Button { showAttachmentImporter = true } label: {
-                            Image(systemName: "photo.badge.plus")
-                                .font(.system(size: 20))
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(core.chat.isResponding || !core.isReady)
-                        .accessibilityLabel("Attach image")
-                    }
-
-                    Button { showFileContextImporter = true } label: {
-                        Image(systemName: "doc.badge.plus")
+                    Button { showAttachmentImporter = true } label: {
+                        Image(systemName: "paperclip")
                             .font(.system(size: 20))
                     }
                     .buttonStyle(.plain)
                     .disabled(core.chat.isResponding || !core.isReady)
-                    .accessibilityLabel("Attach file")
+                    .accessibilityLabel("Attach")
 
                     TextField("Ask M1K3…", text: $draft, axis: .vertical)
                         .lineLimit(1 ... 4)
@@ -595,7 +580,20 @@ struct ChatScreen: View {
 
     // MARK: - Attachments
 
-    private func attachImages(at urls: [URL]) {
+    /// The one attach button's landing: images to the vision path, the rest to
+    /// file-as-context; every failed file is named (never a silent drop).
+    private func attach(_ urls: [URL]) {
+        let route = AttachmentRouting.route(urls, imagesAccepted: core.selectedBrain.supportsImageInput)
+        let refused = route.refusedImages.map {
+            "\($0.lastPathComponent): \(core.selectedBrain.displayName) can't see images"
+        }
+        let failures = refused + attachImages(at: route.images) + attachFiles(at: route.files)
+        if !failures.isEmpty {
+            attachmentError = failures.joined(separator: "\n")
+        }
+    }
+
+    private func attachImages(at urls: [URL]) -> [String] {
         var failures: [String] = []
         for url in urls {
             let scoped = url.startAccessingSecurityScopedResource()
@@ -606,12 +604,10 @@ struct ChatScreen: View {
                 failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
             }
         }
-        if !failures.isEmpty {
-            attachmentError = failures.joined(separator: "\n")
-        }
+        return failures
     }
 
-    private func attachFiles(at urls: [URL]) {
+    private func attachFiles(at urls: [URL]) -> [String] {
         var failures: [String] = []
         for url in urls {
             let scoped = url.startAccessingSecurityScopedResource()
@@ -623,9 +619,7 @@ struct ChatScreen: View {
                 failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
             }
         }
-        if !failures.isEmpty {
-            attachmentError = failures.joined(separator: "\n")
-        }
+        return failures
     }
 
     private static let attachmentStore = AttachmentStore(

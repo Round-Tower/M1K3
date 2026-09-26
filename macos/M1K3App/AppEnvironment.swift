@@ -66,6 +66,11 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — voice turns count too (AppEnvironment+VoiceMode); a stopped answer is not a win (local review fold).
 //  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — mechanical rename only: `MLXGemmaProvider` → `MLXBrainProvider` (it runs Qwen3, LFM2.5 and Gemma alike), `RuntimeOption.mlxGemma` → `.mlx` (raw value unchanged, never persisted), the local `gemma` → `mlxBrain`. No behaviour change.
 //  Review: Kev + claude-opus-5.5, 2026-09-23, Confidence 0.85 — call recording's far end is a Core Audio process tap now (System Audio Recording, never Screen Recording); the recorder comments + the mono-fallback status line follow.
+//  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8 — call summaries no longer carry the chat persona:
+//  a neutral-instructions AFM session serves the quick tier and stands in for Mini on the deep tier (a second
+//  RuntimeInferenceProvider over the same selection), with `PersonaLeakGuard.leaks` as the backstop. Mini had
+//  recited its system prompt into 4 of 5 stored overviews (docs/evals/2026-09-26-calls-summary-mini.json).
+//  Lil/Big deep summaries still seed with the persona (MLX generate) — SelfTest-owed.
 
 import AppKit
 import Foundation
@@ -1010,7 +1015,21 @@ final class AppEnvironment {
         let callsURL = url.deletingLastPathComponent().appendingPathComponent("calls.sqlite")
         callPersistence = Self.makeCallPersistence(at: callsURL)
         callIngester = CallIngester(store: store, embedder: embedder)
-        callSummarizer = SummarizationPipeline(quickProvider: afm, deepProvider: runtimeProvider)
+        // Summaries run WITHOUT the chat persona: carried into a summary, Mini
+        // recited its system prompt into the stored overview (4 of 5 calls in
+        // CallSummaryLiveEvalTests). The deep tier follows the active brain, with
+        // Mini swapped for the neutral session; the leak check is the backstop.
+        let summaryAFM = AppleFoundationModelsProvider(instructions: { SummarizationPipeline.neutralInstructions })
+        callSummarizer = SummarizationPipeline(
+            quickProvider: summaryAFM,
+            deepProvider: RuntimeInferenceProvider(
+                selection: selection,
+                interimOverride: interimRuntimeOverride,
+                backends: [.appleFoundationModels: summaryAFM, .mlx: mlxSlot],
+                fallback: summaryAFM
+            ),
+            leaks: { PersonaLeakGuard.leaks($0) }
+        )
         recordingsDir = url.deletingLastPathComponent().appendingPathComponent("recordings", isDirectory: true)
         try? FileManager.default.createDirectory(at: recordingsDir, withIntermediateDirectories: true)
 
