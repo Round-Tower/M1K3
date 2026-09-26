@@ -18,11 +18,15 @@
 //
 //  It fails OPEN. No vector (another language, no embedding asset), a vector of
 //  the wrong size, or a non-finite score keeps the tools: hiding a tool the
-//  turn needed is a wrong answer, keeping one it didn't is only slower.
+//  turn needed is a wrong answer, keeping one it didn't is only slower. Short
+//  turns skip the language guess, which is noise under ~24 characters.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.75 (pure and pinned;
 //  the weights come from synthetic data until a shadow log grows real labels,
 //  and the live gain is re-measured once the chat route is wired). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — challenger review: the strict
+//  dominant-language gate failed "hi" (Catalan), "lol" (Dutch) and "ok cool" (Polish)
+//  open to the palette. Short turns now skip the guess. Confidence 0.8.
 //
 
 import Foundation
@@ -69,11 +73,20 @@ public final class NLSentenceEmbedder: @unchecked Sendable {
     public init() {}
 
     public func vector(_ text: String) -> [Double]? {
-        guard let embedding else { return nil }
-        let recognizer = NLLanguageRecognizer()
-        recognizer.processString(text)
-        guard recognizer.dominantLanguage == .english else { return nil }
+        guard let embedding, Self.readsAsEnglish(text) else { return nil }
         // NLEmbedding documents no thread-safety guarantee; turns are rare, so serialise.
         return lock.withLock { embedding.vector(for: text) }
     }
+
+    /// Too little text for a language guess ("hi" reads as Catalan, "lol" as Dutch)
+    /// is taken as English; longer text abstains only when English is clearly unlikely.
+    static func readsAsEnglish(_ text: String) -> Bool {
+        guard text.count >= shortTurnLength else { return true }
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(text)
+        if recognizer.dominantLanguage == .english { return true }
+        return (recognizer.languageHypotheses(withMaximum: 3)[.english] ?? 0) >= 0.2
+    }
+
+    static let shortTurnLength = 24
 }

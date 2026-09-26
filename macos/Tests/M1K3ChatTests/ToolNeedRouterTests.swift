@@ -67,6 +67,16 @@ struct ToolNeedRouterFixtureTests {
         #expect(free.count * 4 >= chat.count, "only \(free.count)/\(chat.count) chat fixtures went tool-free")
     }
 
+    /// Challenger review, 2026-09-26: NLLanguageRecognizer reads "hi" as Catalan,
+    /// "lol" as Dutch, "ok cool" as Polish, so a strict dominant-language gate sent
+    /// the easiest chat turns of all to the tool palette.
+    @Test("short chat turns are read as English, not failed open on a noisy language guess")
+    func shortTurnsGetAVector() {
+        for text in ["hi", "lol", "ok cool", "thanks!", "Hey M1K3", "nice one"] {
+            #expect(embedder.vector(text) != nil, "\(text) abstained")
+        }
+    }
+
     @Test("the embedder abstains on non-English text, so the router keeps the tools")
     func nonEnglishFailsOpen() {
         #expect(embedder.vector("¿Cuál es la capital de Australia y por qué la eligieron?") == nil)
