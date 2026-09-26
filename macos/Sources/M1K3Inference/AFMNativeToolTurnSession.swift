@@ -28,6 +28,9 @@
 //  (the #397 fold only: the transcript records the model's own turns through
 //  the tested `ToolTurnTranscript`, Mutex-guarded like StatelessToolTurnSession.
 //  The live session itself is verify-by-launch — AFM does not run in swift test.)
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — a tool call now ENDS the generation (the wrapper throws
+//  `AFMNativeTool.Intercepted`, caught here as the call it is): the stub result used to let Mini write
+//  a whole answer the agent discarded before the real tool ran. Confidence 0.8 (live Mini arm).
 
 #if compiler(>=6.2)
     import Foundation
@@ -141,6 +144,16 @@
 
             } catch is CancellationError {
                 throw CancellationError()
+            } catch where AFMNativeTool.isIntercept(error) {
+                // The model called a tool and the wrapper stopped it there.
+                let parsed = callLog.drain().map { call in
+                    ParsedToolCall(name: call.name, arguments: [AFMToolMapping.argumentKey: .string(call.query)])
+                }
+                Self.log.notice(
+                    "afm native tools: \(parsed.count, privacy: .public) call(s), stopped at the call — \(parsed.map(\.name).joined(separator: ", "), privacy: .public)"
+                )
+                transcript.withLock { $0.recordGenerated(.toolCalls(parsed)) }
+                return .toolCalls(parsed)
             } catch {
                 let described = String(describing: error)
                 let preview = LogPreview.preview(described, max: 200)

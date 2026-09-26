@@ -11,6 +11,10 @@
 //
 //  Each wrapper carries a single-string `@Generable` argument struct —
 //  every current M1K3 AgentTool takes one text parameter under "query".
+//
+//  Signed: claude-opus-5-5 (with Kev), 2026-09-26, Prior: Unknown — `call` throws `Intercepted` after
+//  recording, so the generation stops at the call instead of writing an answer the agent discards.
+//  Confidence 0.8 (the SDK surfaces a tool throw as ToolCallError; live-evaluated on the Mini arm).
 
 #if compiler(>=6.2)
     import Foundation
@@ -43,9 +47,23 @@
             self.onCall = onCall
         }
 
+        /// Records the call, then STOPS the generation: the real tool runs in
+        /// LocalAgent, so anything the model wrote after a stub result was thrown
+        /// away, at the cost of a whole generation per tool turn (2026-09-26).
         public func call(arguments: AFMToolArguments) async throws -> String {
             onCall(name, arguments.query)
-            return "(Tool result will follow.)"
+            throw Intercepted()
+        }
+
+        /// Thrown by `call` once the call is recorded; FoundationModels surfaces
+        /// it as `LanguageModelSession.ToolCallError`.
+        public struct Intercepted: Error, Sendable {}
+
+        /// Whether a session error is our intercept (a call was made) rather than
+        /// a real failure.
+        public static func isIntercept(_ error: any Error) -> Bool {
+            guard let toolError = error as? LanguageModelSession.ToolCallError else { return false }
+            return toolError.underlyingError is Intercepted
         }
     }
 

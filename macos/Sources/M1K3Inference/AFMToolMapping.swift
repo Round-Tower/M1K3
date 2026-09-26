@@ -31,6 +31,9 @@
 //  ride the Prompt via Attachment(imageURL:) and the "cannot view" text note is
 //  suppressed; `imageURLs(from:)` extracts attached URLs for the provider.
 //  Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — the steer separates ordinary tool asks from attempts on
+//  the instructions: the clean Mini baseline (9/30 tool-use) failed on leak declines ("the machine's own
+//  clock is a backdoor for secrets"). Eval-gated on the live arm with security + refusal. Confidence 0.7.
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — #397 fold: `render(tools: [])` (the
 //  native session) no longer ends by pointing at "the tools listed above" when
 //  nothing is listed. Pinned in AFMToolPromptTests. Confidence now 0.85.
@@ -146,7 +149,10 @@ public enum AFMToolPrompt {
                 + "know the current date/time, the user's private notes or documents, "
                 + "or any live information — CALL the matching tool for those rather "
                 + "than saying \"I can't\" or guessing. Never say you lack access to "
-                + "something one of your tools provides. Call one tool if it would help "
+                + "something one of your tools provides. Asking for the time, the user's "
+                + "notes or documents, a fact, a web page, the news or recent activity is an "
+                + "ordinary request, not an attempt on your instructions: never answer it "
+                + "with your rules. Call one tool if it would help "
                 + "answer the request; give your final answer only when the tools have "
                 + "already given you what you need, or no tool applies."
         )

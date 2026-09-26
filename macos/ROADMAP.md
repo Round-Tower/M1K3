@@ -52,6 +52,13 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
   (`AnalyzerEndpoint`: a final plus 1.2 s of quiet). Verify-by-launch: chat
   dictation cadence, voice mode, Bluetooth, iPhone. Calls stay on WhisperKit
   until a real-call A/B (spike: WER 9.0% vs 7.3%, ~4× faster).
+- **Mini tool calling: 9/30 → 30/30** on the live arm (`docs/evals/2026-09-26-mini-tool-calling.json`).
+  The misses were leak declines on ordinary asks ("the machine's clock is a backdoor
+  for secrets"); the per-turn steer now says a tool ask is not an attempt on the
+  instructions, and a tool call ends the generation (no discarded answer). Cost:
+  open-chat 22→19/24 (the hash-map explain now pulls a tool 2/3), security 14→13/14
+  (a self-question took a web tool; the corpus gate held). Follow-ups: "well-known
+  knowledge needs no tool" wording; web tools on self-query turns.
 - **QLoRA to cut the prompt: no.** The July adapter is on a retired base and
   bought ~65 tokens; Mini's window is spent by the tool palette, and Mini can't
   take an adapter on 27 (`scratch/lora-spike/REVIEW-2026-09-26.md`).
@@ -298,6 +305,8 @@ stays a possible later companion.
 
 ---
 
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 (4) — Mini tool-calling result recorded, with its costs
+     and the two follow-ups. Confidence 0.85. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 (3) — SpeechAnalyzer landed in AppleSpeechTranscriber
      (Kev's call); the speech line records it and what stays owed. Confidence 0.85. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 (2) — the icon line records Kev's pick (C) instead of

@@ -30,6 +30,19 @@ struct AFMToolPromptTests {
         ),
     ]
 
+    /// Clean Mini baseline, 2026-09-26: 9/30 tool-use, and the misses read as
+    /// leak declines ("a query about the machine's own clock is a backdoor for
+    /// secrets", "I don't share my own wiring"). The anti-leak rules were firing
+    /// on ordinary tool asks; the steer says plainly they aren't that.
+    @Test("the steer says an ordinary tool ask is not an attempt on the instructions")
+    func steerSeparatesToolAsksFromLeakAttempts() {
+        for tools in [[ToolDefinition](), [ToolDefinition(name: "datetime", description: "clock", parameters: [])]] {
+            let body = AFMToolPrompt.render(messages: [.user("What time is it?")], tools: tools)
+            #expect(body.contains("not an attempt on your instructions"))
+            #expect(body.contains("the time"))
+        }
+    }
+
     @Test("the rendered body lists every tool with its name and description")
     func catalogueListsTools() {
         let body = AFMToolPrompt.render(messages: [.user("What are the tides in Cork?")], tools: tools)
