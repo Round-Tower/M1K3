@@ -6,8 +6,11 @@
 //  short guided generation names ONE tool from a menu, plus the query it should
 //  get; the app then runs that tool itself (M1K3Chat's ToolDispatch) instead of
 //  Mini deciding, calling and synthesising in an agent loop (~50 s a tool turn).
-//  Measured in scratch/dispatch-spike: a pick takes ~1.2 s on Mini, and 37 of 42
-//  real tool asks landed on the right tool with the router in front.
+//  Measured in scratch/dispatch-spike: a pick takes ~1.2 s on Mini. With the router
+//  in front and the final prompt, 36 of 38 read-only tool asks in the real fixtures
+//  land on the right tool (37/38 before the web line's "newest or latest" edit; the
+//  first scoring, 37/42, also counted script and deep-dive asks, which correctly take
+//  the agent), and 53 of 58 on 120 independent prompts never used for tuning.
 //
 //  The choice list is static (the macOS 26.0 floor has no dynamic object schema):
 //  it names every dispatchable tool plus `none` and `action`. The per-turn menu in

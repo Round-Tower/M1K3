@@ -65,6 +65,9 @@ notes, not their calendar. Which tool is a finer decision than whether a tool is
 - Picker misses cluster on well-known facts sent to a lookup or a notes search; the empty-
   search rule answers those as plain chat, and a fact lookup is a cited answer.
 
-<!-- Signed: Kev + claude-opus-5-5, 2026-09-26. Confidence 0.75 (the pick is measured offline on
-     the real fixtures, 37/38 read-only asks; the live arm and an independent-set validation are
-     the gate). Prior: ADR 0008. -->
+<!-- Signed: Kev + claude-opus-5-5, 2026-09-26. Confidence 0.8 (the pick: 36/38 read-only asks on
+     the real fixtures with the final prompt, 53/58 on 120 independent prompts; the live arm is in
+     the table above; verify-by-launch owed). Prior: ADR 0008. -->
+<!-- Review: same day, PR #420 review — the picker figures reconciled (the first scoring, 37/42,
+     counted script and deep-dive asks that correctly take the agent); a guardrail after a
+     successful tool now synthesises from its result instead of re-running the loop. -->

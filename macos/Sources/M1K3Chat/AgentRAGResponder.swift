@@ -657,9 +657,17 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             observation: ToolDispatch.observationBlock(tool: plan.tool.name, output: output),
             onActivity: onActivity, continuation: continuation
         )
-        guard answered else { return false }
-        // The same deterministic provenance the agent turn appends.
         let step = ReasoningStep(iteration: 1, thought: "", action: "\(plan.tool.name)(\(argument))", observation: output)
+        if !answered {
+            // A guardrail after a SUCCESSFUL tool call: the agent's own synthesis step with
+            // the result in hand, never the whole loop again (it would re-run the tool over
+            // the network; PR #420 review).
+            if Task.isCancelled { return true }
+            Self.log.notice("tool dispatch: empty answer after \(plan.tool.name, privacy: .public) — synthesising from its result")
+            let contextLine = PromptContext.line(now: Date(), brainName: brainNameProvider())
+            await streamFallback(question: question, chunks: chunks, contextLine: contextLine, gathered: [step], into: continuation)
+        }
+        // The same deterministic provenance the agent turn appends.
         let trace = AgentResult(conclusion: "", toolsUsed: [plan.tool.name], iterations: 1, reasoningTrace: [step])
         let tail = Self.webSourcesBlock(for: trace) + Self.factSourcesBlock(for: trace)
         if !tail.isEmpty { continuation.yield(tail) }

@@ -108,7 +108,7 @@ public enum ToolDispatch {
         case "fetch_page":
             guard let url = webURL(query) ?? webURL(question) else { return nil }
             return Plan(tool: tool, input: [parameter: url])
-        case "recent_activity", "list_documents":
+        case "recent_activity":
             // Optional filters: absent means the tool's own default.
             return Plan(tool: tool, input: query.isEmpty ? [:] : [parameter: query])
         default:

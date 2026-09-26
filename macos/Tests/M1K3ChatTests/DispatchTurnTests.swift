@@ -163,6 +163,24 @@ struct DispatchTurnTests {
         #expect(provider.prompts.first?.contains("RETURNED JUST NOW") == false)
     }
 
+    /// PR #420 review: a guardrail after a SUCCESSFUL tool call must not re-run the
+    /// agent loop (and the tool, over the network) from scratch. It gets the agent's
+    /// own synthesis step, with the result already in hand: one more generation.
+    @Test("an empty answer after a tool ran synthesises from the result, without running the tool again")
+    func emptySynthesisReusesResult() async throws {
+        let calls = Calls()
+        let provider = Scripted(["", "The top story is about the M5."])
+        let text = try await run(
+            provider,
+            tools: [Recording(name: "web_search", output: "Apple news — https://example.com/m5", calls: calls)],
+            pick: ToolPick(tool: "web_search", query: "apple news"), question: "latest Apple news?"
+        )
+        #expect(text.contains("The top story is about the M5."))
+        #expect(calls.log.withLock { $0 }.count == 1, "the tool ran again")
+        #expect(provider.prompts.count == 2)
+        #expect(provider.prompts.last?.contains("example.com/m5") == true, "the synthesis never saw the result")
+    }
+
     @Test("a tool that fails hands the turn to the agent")
     func failedToolFallsBack() async throws {
         let provider = Scripted(["CONCLUSION: sorry"])
