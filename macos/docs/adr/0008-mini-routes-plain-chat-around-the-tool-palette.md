@@ -56,3 +56,6 @@ tools three times, and with none to call Mini wrote junk (`TOOLS: ["search"]`, t
      fixture; the weights are synthetic-trained until real labels exist; verify-by-launch owed for a
      Mini chat turn in the app and on iPhone). Prior: ADR 0006 (the rungs), the ToolPalettePolicy
      note ("availability gating, NOT per-question routing … a separate, measured decision"). -->
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 — the persona line is superseded by ADR 0009: with a
+     tool result in the prompt the standard persona narrated 12/39 answers in the third person, so
+     the route keeps Mini's own persona (no chips on routed turns). Confidence 0.85. -->

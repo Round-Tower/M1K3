@@ -14,6 +14,9 @@
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85. Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — the route's persona is the agent turns'
 //  (Kev's call on the voice-vs-speed trade-off), not Mini's trimmed prewarmed one.
+//  Review: same day, reversed on evidence (dispatch arm): the standard persona narrated
+//  12/39 answers in the third person once tool results sat in the prompt; Mini's own 0/100.
+//  The route keeps Mini's persona; routed turns lose follow-up chips. Confidence 0.85.
 //
 
 import Foundation
@@ -39,9 +42,11 @@ public enum ToolRouterWiring {
     private static let embedder = NLSentenceEmbedder()
 
     /// This turn's plain-chat route, or nil for today's agent turn.
-    /// The route speaks in the persona Mini's agent turns use (Kev, 2026-09-26): the
-    /// same voice and follow-up chips on either route, for ~0.7 s of first-word time
-    /// over Mini's trimmed prewarmed persona (live A/B, 5.1 s against 4.4 s).
+    /// The route keeps Mini's own trimmed, prewarmed persona (nil = the provider's).
+    /// First chosen the other way (the agent turns' standard persona, for its voice and
+    /// chips); reversed the same day on evidence: with a tool result in the prompt the
+    /// standard persona narrated 12 of 39 answers in the third person, Mini's own 0 of
+    /// 100, and it's faster. Mini's synthesised tool answers always used this one.
     public static func route(provider: any InferenceProvider, enabled: Bool, dispatch: Bool = false) -> PlainTurnRoute? {
         guard enabled, let mini = servedMini(provider) else { return nil }
         var picker: (@Sendable (String, String) async -> ToolPick?)?
@@ -50,7 +55,7 @@ public enum ToolRouterWiring {
         }
         return PlainTurnRoute(
             decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) },
-            instructions: M1K3Persona.systemPrompt(variant: mini.personaVariant),
+            instructions: nil,
             pick: picker
         )
     }

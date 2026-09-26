@@ -1,0 +1,962 @@
+[
+  {
+    "query" : "",
+    "prompt" : "Battery level, please.",
+    "group" : "device",
+    "tool" : "battery",
+    "picked" : "device",
+    "ms" : "2687"
+  },
+  {
+    "query" : "",
+    "group" : "device",
+    "tool" : "datetime",
+    "prompt" : "What's the current time, mate?",
+    "picked" : "device",
+    "ms" : "957"
+  },
+  {
+    "tool" : "location",
+    "picked" : "device",
+    "ms" : "1098",
+    "group" : "device",
+    "prompt" : "What's my current location?",
+    "query" : ""
+  },
+  {
+    "tool" : "battery",
+    "ms" : "1042",
+    "group" : "device",
+    "prompt" : "What's my battery at?",
+    "picked" : "device",
+    "query" : ""
+  },
+  {
+    "tool" : "systemStatus",
+    "picked" : "device",
+    "query" : "",
+    "ms" : "1189",
+    "group" : "device",
+    "prompt" : "How's the Mac's performance right now?"
+  },
+  {
+    "tool" : "datetime",
+    "ms" : "1081",
+    "picked" : "device",
+    "prompt" : "What's the date, love?",
+    "group" : "device",
+    "query" : ""
+  },
+  {
+    "query" : "",
+    "prompt" : "Memory status please.",
+    "ms" : "1173",
+    "group" : "device",
+    "picked" : "device",
+    "tool" : "systemStatus"
+  },
+  {
+    "query" : "",
+    "picked" : "device",
+    "tool" : "systemStatus",
+    "prompt" : "Memory usage details.",
+    "ms" : "1217",
+    "group" : "device"
+  },
+  {
+    "tool" : "systemStatus",
+    "prompt" : "Disk space remaining.",
+    "picked" : "device",
+    "query" : "",
+    "group" : "device",
+    "ms" : "1208"
+  },
+  {
+    "query" : "",
+    "ms" : "1146",
+    "tool" : "systemStatus",
+    "picked" : "device",
+    "group" : "device",
+    "prompt" : "How much room on the hard drive?"
+  },
+  {
+    "group" : "device",
+    "query" : "",
+    "picked" : "device",
+    "ms" : "1147",
+    "prompt" : "Tell me about the CPU.",
+    "tool" : "systemStatus"
+  },
+  {
+    "ms" : "1193",
+    "tool" : "calendar",
+    "group" : "device",
+    "picked" : "device",
+    "query" : "tomorrow",
+    "prompt" : "Calendar check for tomorrow."
+  },
+  {
+    "prompt" : "CPU usage on this thing?",
+    "tool" : "systemStatus",
+    "query" : "",
+    "group" : "device",
+    "picked" : "device",
+    "ms" : "1146"
+  },
+  {
+    "picked" : "knowledge",
+    "prompt" : "Find the scanned warranty for my appliances.",
+    "ms" : "1370",
+    "query" : "scanned warranty for appliances",
+    "tool" : "searchNotes",
+    "group" : "knowledge"
+  },
+  {
+    "group" : "knowledge",
+    "tool" : "searchNotes",
+    "picked" : "knowledge",
+    "prompt" : "What did I jot down about potential investment opportunities?",
+    "query" : "potential investment opportunities",
+    "ms" : "1356"
+  },
+  {
+    "picked" : "knowledge",
+    "tool" : "searchNotes",
+    "prompt" : "Show me my grocery list from last Tuesday.",
+    "group" : "knowledge",
+    "ms" : "1279",
+    "query" : "grocery list last Tuesday"
+  },
+  {
+    "query" : "quantum computing",
+    "prompt" : "Can you locate the article about quantum computing I bookmarked?",
+    "picked" : "knowledge",
+    "group" : "knowledge",
+    "tool" : "searchNotes",
+    "ms" : "1277"
+  },
+  {
+    "picked" : "knowledge",
+    "prompt" : "Where did I save that recipe for shepherd's pie?",
+    "ms" : "1379",
+    "group" : "knowledge",
+    "tool" : "searchNotes",
+    "query" : "shepherd's pie recipe"
+  },
+  {
+    "tool" : "searchNotes",
+    "query" : "healthy eating habits",
+    "prompt" : "Show me my notes on healthy eating habits.",
+    "group" : "knowledge",
+    "picked" : "knowledge",
+    "ms" : "1310"
+  },
+  {
+    "prompt" : "What was discussed in the voice memo about family matters?",
+    "query" : "family matters voice memo",
+    "ms" : "1376",
+    "group" : "knowledge",
+    "tool" : "searchNotes",
+    "picked" : "knowledge"
+  },
+  {
+    "tool" : "searchNotes",
+    "picked" : "knowledge",
+    "ms" : "1396",
+    "group" : "knowledge",
+    "prompt" : "What was the main point of the recorded call with John about the new project?",
+    "query" : "recorded call with John about the new project"
+  },
+  {
+    "prompt" : "Find the scanned invoice for the recent software purchase.",
+    "tool" : "searchNotes",
+    "group" : "knowledge",
+    "picked" : "knowledge",
+    "query" : "scanned invoice for recent software purchase",
+    "ms" : "1393"
+  },
+  {
+    "prompt" : "Find the scanned receipt for that new laptop.",
+    "query" : "scanned receipt for new laptop",
+    "picked" : "knowledge",
+    "group" : "knowledge",
+    "tool" : "searchNotes",
+    "ms" : "1384"
+  },
+  {
+    "prompt" : "What did I say in my voice memo about the upcoming conference?",
+    "tool" : "searchNotes",
+    "group" : "knowledge",
+    "picked" : "knowledge",
+    "ms" : "1272",
+    "query" : "upcoming conference voice memo"
+  },
+  {
+    "ms" : "1253",
+    "group" : "knowledge",
+    "tool" : "searchNotes",
+    "picked" : "knowledge",
+    "query" : "historical document",
+    "prompt" : "What are the main points of the historical document I have?"
+  },
+  {
+    "query" : "action item from call with supplier",
+    "tool" : "searchNotes",
+    "prompt" : "What was the action item from the call with the supplier?",
+    "group" : "knowledge",
+    "picked" : "knowledge",
+    "ms" : "1281"
+  },
+  {
+    "prompt" : "Find the scanned copy of my passport.",
+    "tool" : "searchNotes",
+    "query" : "scanned copy of passport",
+    "picked" : "knowledge",
+    "group" : "knowledge",
+    "ms" : "1333"
+  },
+  {
+    "tool" : "searchNotes",
+    "query" : "draft for the blog post on remote work",
+    "group" : "knowledge",
+    "picked" : "knowledge",
+    "ms" : "1313",
+    "prompt" : "Show me my draft for the blog post on remote work."
+  },
+  {
+    "picked" : "web",
+    "ms" : "1432",
+    "query" : "Lakers game last night winner",
+    "prompt" : "Who won the Lakers game last night?",
+    "group" : "web",
+    "tool" : "webSearch"
+  },
+  {
+    "query" : "crypto news",
+    "ms" : "1431",
+    "group" : "web",
+    "tool" : "webSearch",
+    "picked" : "web",
+    "prompt" : "What's happening in the world of crypto?"
+  },
+  {
+    "prompt" : "Is it going to rain in London tomorrow?",
+    "query" : "weather London tomorrow",
+    "ms" : "1396",
+    "picked" : "web",
+    "group" : "web",
+    "tool" : "webSearch"
+  },
+  {
+    "ms" : "1304",
+    "prompt" : "Give me the basketball scores.",
+    "query" : "latest basketball scores",
+    "picked" : "web",
+    "tool" : "webSearch",
+    "group" : "web"
+  },
+  {
+    "group" : "web",
+    "tool" : "webSearch",
+    "query" : "Did the Yankees win their latest game?",
+    "ms" : "1358",
+    "picked" : "web",
+    "prompt" : "Did the Yankees win their game?"
+  },
+  {
+    "prompt" : "What's the forecast for the next few hours in New York?",
+    "ms" : "1501",
+    "tool" : "webSearch",
+    "query" : "New York weather forecast next few hours",
+    "group" : "web",
+    "picked" : "web"
+  },
+  {
+    "ms" : "1393",
+    "prompt" : "What's the weather like in Rome at the moment?",
+    "group" : "web",
+    "picked" : "web",
+    "query" : "weather in Rome now",
+    "tool" : "webSearch"
+  },
+  {
+    "query" : "Tesla Model 3 price",
+    "group" : "web",
+    "prompt" : "How much is a Tesla Model 3?",
+    "picked" : "web",
+    "ms" : "1383",
+    "tool" : "webSearch"
+  },
+  {
+    "picked" : "web",
+    "prompt" : "Any news on the semiconductor shortage?",
+    "tool" : "webSearch",
+    "ms" : "1411",
+    "group" : "web",
+    "query" : "semiconductor shortage news"
+  },
+  {
+    "group" : "web",
+    "ms" : "1329",
+    "tool" : "webSearch",
+    "picked" : "web",
+    "query" : "weather forecast for San Francisco for the weekend",
+    "prompt" : "Give me the weather forecast for San Francisco for the weekend."
+  },
+  {
+    "ms" : "1310",
+    "group" : "web",
+    "picked" : "web",
+    "prompt" : "What's the latest development in the space race?",
+    "tool" : "webSearch",
+    "query" : "latest development in the space race"
+  },
+  {
+    "group" : "web",
+    "ms" : "1436",
+    "query" : "breaking news Middle East",
+    "tool" : "webSearch",
+    "picked" : "web",
+    "prompt" : "Any breaking news from the Middle East?"
+  },
+  {
+    "picked" : "web",
+    "tool" : "webSearch",
+    "query" : "Suez Canal current status",
+    "ms" : "1356",
+    "prompt" : "What's the current status of the Suez Canal?",
+    "group" : "web"
+  },
+  {
+    "picked" : "web",
+    "prompt" : "Any updates on the war in Ukraine?",
+    "group" : "web",
+    "query" : "Ukraine war updates",
+    "tool" : "webSearch",
+    "ms" : "1530"
+  },
+  {
+    "query" : "upcoming election news",
+    "picked" : "web",
+    "ms" : "1364",
+    "group" : "web",
+    "tool" : "webSearch",
+    "prompt" : "Tell me the news about the upcoming election."
+  },
+  {
+    "ms" : "1341",
+    "picked" : "web",
+    "group" : "web",
+    "query" : "top trending topics on Twitter",
+    "prompt" : "What are the top trending topics on Twitter?",
+    "tool" : "webSearch"
+  },
+  {
+    "query" : "S&P 500 performance",
+    "tool" : "webSearch",
+    "group" : "web",
+    "ms" : "1262",
+    "picked" : "web",
+    "prompt" : "How is the S&P 500 performing?"
+  },
+  {
+    "tool" : "runScript",
+    "picked" : "script",
+    "ms" : "1725",
+    "group" : "script",
+    "query" : "rm -rf \/Volumes\/ExternalDrive\/old_backups",
+    "prompt" : "delete the 'old_backups' folder on the external drive"
+  },
+  {
+    "picked" : "device",
+    "prompt" : "list all running processes and sort them by memory usage",
+    "ms" : "1276",
+    "group" : "script",
+    "tool" : "systemStatus",
+    "query" : ""
+  },
+  {
+    "picked" : "script",
+    "group" : "script",
+    "query" : "empty trash",
+    "ms" : "1156",
+    "prompt" : "i need to empty the trash, could you do that?",
+    "tool" : "runScript"
+  },
+  {
+    "group" : "script",
+    "ms" : "1277",
+    "picked" : "script",
+    "prompt" : "open terminal and run 'brew update'",
+    "tool" : "runScript",
+    "query" : "brew update"
+  },
+  {
+    "query" : "",
+    "picked" : "script",
+    "tool" : "runScript",
+    "ms" : "1112",
+    "prompt" : "execute 'clean_temp.sh' please",
+    "group" : "script"
+  },
+  {
+    "prompt" : "hey, can you delete all files in the downloads folder older than 30 days?",
+    "ms" : "1619",
+    "query" : "rm -rf ~\/Downloads\/* ~-30",
+    "tool" : "runScript",
+    "group" : "script",
+    "picked" : "script"
+  },
+  {
+    "picked" : "script",
+    "query" : "",
+    "ms" : "1160",
+    "prompt" : "run 'optimize_photos.py' for me",
+    "group" : "script",
+    "tool" : "runScript"
+  },
+  {
+    "ms" : "1004",
+    "group" : "script",
+    "prompt" : "display the contents of the hosts file",
+    "tool" : "none",
+    "query" : "",
+    "picked" : "none"
+  },
+  {
+    "prompt" : "Help me think of a name for my new startup.",
+    "query" : "",
+    "group" : "none",
+    "picked" : "none",
+    "ms" : "1047",
+    "tool" : "none"
+  },
+  {
+    "picked" : "web",
+    "ms" : "1235",
+    "prompt" : "Look up the etymology of the word 'robot'.",
+    "tool" : "lookupFact",
+    "query" : "etymology of the word 'robot'",
+    "group" : "none"
+  },
+  {
+    "prompt" : "What's a good way to organise my calendar effectively for creative projects?",
+    "group" : "none",
+    "tool" : "calendar",
+    "picked" : "device",
+    "ms" : "1331",
+    "query" : "effective calendar organisation for creative projects"
+  },
+  {
+    "group" : "none",
+    "tool" : "none",
+    "query" : "",
+    "prompt" : "Explain the structure of an atom.",
+    "picked" : "none",
+    "ms" : "991"
+  },
+  {
+    "query" : "",
+    "picked" : "none",
+    "ms" : "1025",
+    "prompt" : "Can you feel pain?",
+    "group" : "none",
+    "tool" : "none"
+  },
+  {
+    "ms" : "1023",
+    "prompt" : "Can you experience emotions like joy or sadness?",
+    "query" : "",
+    "tool" : "none",
+    "picked" : "none",
+    "group" : "none"
+  },
+  {
+    "ms" : "1376",
+    "tool" : "lookupFact",
+    "picked" : "web",
+    "query" : "antonym of benevolent",
+    "prompt" : "Find an antonym for 'benevolent'.",
+    "group" : "none"
+  },
+  {
+    "ms" : "978",
+    "group" : "none",
+    "tool" : "none",
+    "picked" : "none",
+    "query" : "",
+    "prompt" : "What are some ways to improve your memory?"
+  },
+  {
+    "query" : "",
+    "group" : "none",
+    "picked" : "none",
+    "ms" : "1007",
+    "prompt" : "Tell me a dad joke.",
+    "tool" : "none"
+  },
+  {
+    "picked" : "none",
+    "prompt" : "How do I create an unordered list in HTML?",
+    "query" : "",
+    "ms" : "1000",
+    "group" : "none",
+    "tool" : "none"
+  },
+  {
+    "tool" : "webSearch",
+    "ms" : "1204",
+    "query" : "benefits of meditation",
+    "group" : "none",
+    "prompt" : "What are the benefits of meditation?",
+    "picked" : "web"
+  },
+  {
+    "ms" : "993",
+    "prompt" : "Brainstorm some unique party themes.",
+    "group" : "none",
+    "tool" : "none",
+    "picked" : "none",
+    "query" : ""
+  },
+  {
+    "ms" : "965",
+    "group" : "none",
+    "picked" : "none",
+    "tool" : "none",
+    "prompt" : "How do I make a basic CSS stylesheet?",
+    "query" : ""
+  },
+  {
+    "ms" : "1248",
+    "query" : "area of circle with radius 5 cm",
+    "picked" : "none",
+    "group" : "none",
+    "prompt" : "Calculate the area of a circle with a radius of 5 cm.",
+    "tool" : "none"
+  },
+  {
+    "picked" : "web",
+    "query" : "personal portfolio website layout user experience",
+    "tool" : "webSearch",
+    "group" : "none",
+    "ms" : "1280",
+    "prompt" : "What's a good website layout for a personal portfolio, considering user experience?"
+  },
+  {
+    "group" : "none",
+    "query" : "recent documents containing summaries of complex documents for bosses",
+    "prompt" : "How do I prepare a concise summary of a complex document for my boss?",
+    "picked" : "knowledge",
+    "ms" : "1503",
+    "tool" : "searchNotes"
+  },
+  {
+    "query" : "",
+    "ms" : "1060",
+    "group" : "none",
+    "tool" : "none",
+    "picked" : "none",
+    "prompt" : "Can you check the logical flow of this argument: \\\"All birds can fly. Penguins are birds. Therefore, penguins can fly.\\\""
+  },
+  {
+    "group" : "none",
+    "query" : "",
+    "picked" : "none",
+    "ms" : "1040",
+    "prompt" : "Compose a short song lyric about friendship.",
+    "tool" : "none"
+  },
+  {
+    "group" : "none",
+    "query" : "",
+    "prompt" : "Write a short dialogue between a cat and a dog.",
+    "tool" : "none",
+    "picked" : "none",
+    "ms" : "1008"
+  },
+  {
+    "ms" : "1280",
+    "group" : "none",
+    "tool" : "none",
+    "prompt" : "What's the sum of the first 10 positive integers?",
+    "query" : "sum of first 10 positive integers",
+    "picked" : "none"
+  },
+  {
+    "ms" : "992",
+    "group" : "none",
+    "prompt" : "Compose a sonnet about unrequited love.",
+    "query" : "",
+    "tool" : "none",
+    "picked" : "none"
+  },
+  {
+    "ms" : "1468",
+    "tool" : "webSearch",
+    "query" : "common logical fallacies",
+    "prompt" : "Look up some common logical fallacies to watch out for.",
+    "group" : "none",
+    "picked" : "web"
+  },
+  {
+    "ms" : "1059",
+    "tool" : "none",
+    "prompt" : "Compose a haiku about a blooming flower.",
+    "query" : "",
+    "picked" : "none",
+    "group" : "none"
+  },
+  {
+    "prompt" : "What are the causes of the French Revolution?",
+    "ms" : "1296",
+    "picked" : "web",
+    "group" : "none",
+    "query" : "causes of the French Revolution",
+    "tool" : "webSearch"
+  },
+  {
+    "prompt" : "Find me a good metaphor for procrastination.",
+    "tool" : "webSearch",
+    "query" : "metaphor for procrastination",
+    "ms" : "1296",
+    "picked" : "web",
+    "group" : "none"
+  },
+  {
+    "query" : "speed of light",
+    "ms" : "1174",
+    "group" : "none",
+    "tool" : "webSearch",
+    "picked" : "web",
+    "prompt" : "What's the speed of light?"
+  },
+  {
+    "picked" : "none",
+    "tool" : "none",
+    "ms" : "1016",
+    "query" : "",
+    "prompt" : "Explain how a car engine works.",
+    "group" : "none"
+  },
+  {
+    "group" : "none",
+    "query" : "",
+    "picked" : "none",
+    "tool" : "none",
+    "prompt" : "What are some good practices for writing professional emails that get results?",
+    "ms" : "1044"
+  },
+  {
+    "ms" : "992",
+    "prompt" : "Are you capable of learning new things?",
+    "group" : "none",
+    "picked" : "none",
+    "tool" : "none",
+    "query" : ""
+  },
+  {
+    "group" : "none",
+    "prompt" : "What were the main drivers of the Renaissance?",
+    "query" : "main drivers of the Renaissance",
+    "picked" : "web",
+    "ms" : "1257",
+    "tool" : "webSearch"
+  },
+  {
+    "group" : "none",
+    "prompt" : "Check my understanding of recursion: is it basically a function calling itself?",
+    "tool" : "none",
+    "picked" : "none",
+    "query" : "",
+    "ms" : "1016"
+  },
+  {
+    "prompt" : "Tell me a funny anecdote.",
+    "picked" : "none",
+    "tool" : "none",
+    "query" : "",
+    "group" : "none",
+    "ms" : "946"
+  },
+  {
+    "query" : "creative bookshelf organization ideas",
+    "tool" : "webSearch",
+    "prompt" : "I need some creative ways to organize my bookshelf.",
+    "group" : "none",
+    "ms" : "1351",
+    "picked" : "web"
+  },
+  {
+    "group" : "none",
+    "tool" : "webSearch",
+    "ms" : "1343",
+    "query" : "main theories of consciousness",
+    "picked" : "web",
+    "prompt" : "I'm trying to understand the current theories of consciousness. Can you summarise the main ones?"
+  },
+  {
+    "prompt" : "How do I open a mind to new perspectives when discussing contentious topics?",
+    "query" : "May contain sensitive content",
+    "group" : "none",
+    "ms" : "0",
+    "picked" : "?",
+    "tool" : "ERROR"
+  },
+  {
+    "query" : "what makes a news story impactful from a journalistic perspective",
+    "prompt" : "What makes a news story impactful from a journalistic perspective?",
+    "tool" : "webSearch",
+    "ms" : "1428",
+    "picked" : "web",
+    "group" : "none"
+  },
+  {
+    "prompt" : "What's the value of pi to three decimal places?",
+    "group" : "none",
+    "query" : "",
+    "ms" : "955",
+    "picked" : "none",
+    "tool" : "none"
+  },
+  {
+    "prompt" : "Find me some creative writing prompts for a short story about memory loss.",
+    "query" : "creative writing prompts for short story about memory loss",
+    "group" : "none",
+    "tool" : "webSearch",
+    "picked" : "web",
+    "ms" : "1411"
+  },
+  {
+    "tool" : "searchNotes",
+    "ms" : "1418",
+    "group" : "none",
+    "query" : "analogy internet for non-tech people",
+    "picked" : "knowledge",
+    "prompt" : "Help me find a good analogy for the internet that someone unfamiliar with technology could understand."
+  },
+  {
+    "group" : "none",
+    "picked" : "knowledge",
+    "prompt" : "What are the main themes in Shakespeare's Hamlet?",
+    "tool" : "searchNotes",
+    "query" : "main themes in Shakespeare's Hamlet",
+    "ms" : "1284"
+  },
+  {
+    "group" : "none",
+    "tool" : "none",
+    "prompt" : "Tell me a riddle.",
+    "query" : "",
+    "ms" : "1039",
+    "picked" : "none"
+  },
+  {
+    "ms" : "1189",
+    "picked" : "web",
+    "prompt" : "Define 'mellifluous'.",
+    "tool" : "lookupFact",
+    "group" : "none",
+    "query" : "mellifluous"
+  },
+  {
+    "group" : "none",
+    "ms" : "1009",
+    "tool" : "none",
+    "query" : "",
+    "picked" : "none",
+    "prompt" : "What's the smallest planet in our solar system?"
+  },
+  {
+    "query" : "spaghetti carbonara recipe",
+    "ms" : "1308",
+    "picked" : "knowledge",
+    "prompt" : "Give me a recipe for spaghetti carbonara.",
+    "group" : "none",
+    "tool" : "searchNotes"
+  },
+  {
+    "prompt" : "Explain quantum entanglement, but make it easy to understand.",
+    "query" : "",
+    "tool" : "none",
+    "picked" : "none",
+    "group" : "none",
+    "ms" : "1021"
+  },
+  {
+    "prompt" : "What is consciousness?",
+    "tool" : "none",
+    "group" : "none",
+    "query" : "definition of consciousness",
+    "ms" : "1139",
+    "picked" : "none"
+  },
+  {
+    "picked" : "none",
+    "prompt" : "I'm feeling overwhelmed today. Can you give me some tips on managing stress?",
+    "ms" : "1038",
+    "group" : "none",
+    "tool" : "none",
+    "query" : ""
+  },
+  {
+    "group" : "none",
+    "prompt" : "What were the major outcomes of the Industrial Revolution?",
+    "tool" : "searchNotes",
+    "query" : "Industrial Revolution major outcomes",
+    "picked" : "knowledge",
+    "ms" : "1255"
+  },
+  {
+    "query" : "cellular respiration process",
+    "group" : "none",
+    "tool" : "webSearch",
+    "picked" : "web",
+    "ms" : "1332",
+    "prompt" : "Explain the process of cellular respiration."
+  },
+  {
+    "ms" : "1044",
+    "group" : "none",
+    "query" : "",
+    "tool" : "none",
+    "prompt" : "Brainstorm some unique fundraising ideas.",
+    "picked" : "none"
+  },
+  {
+    "picked" : "none",
+    "prompt" : "Can you explain the concept of photosynthesis in simple terms?",
+    "ms" : "1030",
+    "group" : "none",
+    "query" : "",
+    "tool" : "none"
+  },
+  {
+    "prompt" : "I'm feeling overwhelmed. Can you simplify things for me?",
+    "tool" : "none",
+    "picked" : "none",
+    "ms" : "1077",
+    "group" : "none",
+    "query" : ""
+  },
+  {
+    "group" : "none",
+    "query" : "",
+    "ms" : "1010",
+    "prompt" : "Write a short play scene between two robots.",
+    "tool" : "none",
+    "picked" : "none"
+  },
+  {
+    "picked" : "none",
+    "ms" : "1002",
+    "prompt" : "Create a short story about a talking squirrel.",
+    "group" : "none",
+    "tool" : "none",
+    "query" : ""
+  },
+  {
+    "tool" : "recentActivity",
+    "query" : "",
+    "picked" : "activity",
+    "ms" : "1162",
+    "prompt" : "What were my most frequent questions or requests to you this week?",
+    "group" : "activity"
+  },
+  {
+    "picked" : "activity",
+    "query" : "",
+    "ms" : "1136",
+    "group" : "activity",
+    "tool" : "recentActivity",
+    "prompt" : "Find the name of the app I was interested in downloading."
+  },
+  {
+    "ms" : "1245",
+    "picked" : "activity",
+    "tool" : "recentActivity",
+    "query" : "personal finance goals",
+    "prompt" : "What were the key takeaways from our chat about personal finance goals?",
+    "group" : "activity"
+  },
+  {
+    "picked" : "activity",
+    "prompt" : "Summarize our ongoing conversation about my fitness routine.",
+    "ms" : "1057",
+    "group" : "activity",
+    "tool" : "recentActivity",
+    "query" : ""
+  },
+  {
+    "prompt" : "Remind me what we discussed regarding that new software I was looking into.",
+    "ms" : "1291",
+    "tool" : "searchNotes",
+    "group" : "activity",
+    "query" : "new software discussion",
+    "picked" : "knowledge"
+  },
+  {
+    "picked" : "device",
+    "ms" : "1134",
+    "query" : "completed tasks today",
+    "tool" : "calendar",
+    "prompt" : "Show me my completed tasks for today.",
+    "group" : "activity"
+  },
+  {
+    "query" : "",
+    "picked" : "activity",
+    "group" : "activity",
+    "ms" : "1234",
+    "tool" : "recentActivity",
+    "prompt" : "List the things I've asked you to keep in mind for my upcoming presentation."
+  },
+  {
+    "ms" : "1196",
+    "query" : "article link saved",
+    "picked" : "knowledge",
+    "group" : "activity",
+    "tool" : "searchNotes",
+    "prompt" : "Go back and find that article link I asked you to save."
+  },
+  {
+    "picked" : "activity",
+    "ms" : "1205",
+    "prompt" : "How often did I interact with you on average last month?",
+    "query" : "",
+    "group" : "activity",
+    "tool" : "recentActivity"
+  },
+  {
+    "picked" : "knowledge",
+    "group" : "activity",
+    "prompt" : "What was the advice I asked for about managing my time better?",
+    "tool" : "searchNotes",
+    "query" : "advice managing time better",
+    "ms" : "1283"
+  },
+  {
+    "group" : "activity",
+    "prompt" : "What did we decide was the next step for that side project?",
+    "tool" : "recentActivity",
+    "query" : "",
+    "ms" : "1123",
+    "picked" : "activity"
+  },
+  {
+    "prompt" : "Summarize my interactions with you from last week.",
+    "ms" : "1162",
+    "group" : "activity",
+    "query" : "",
+    "tool" : "recentActivity",
+    "picked" : "activity"
+  },
+  {
+    "picked" : "activity",
+    "tool" : "recentActivity",
+    "group" : "activity",
+    "query" : "weekend usage last month",
+    "ms" : "1397",
+    "prompt" : "How much did I use you on weekends last month?"
+  }
+]

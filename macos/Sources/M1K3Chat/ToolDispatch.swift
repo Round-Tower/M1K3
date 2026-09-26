@@ -68,7 +68,7 @@ public enum ToolDispatch {
         "recent_activity": "the user's recent chats, todos, activity or usage patterns with the assistant (busiest days, what we talked about)",
         "search_knowledge": "the user's own documents, notes, files or recorded calls",
         "list_documents": "a list of the user's stored documents",
-        "web_search": "anything current, recent or upcoming: news, prices, weather, results",
+        "web_search": "anything current, recent or upcoming, or the newest or latest of anything: news, prices, weather, results, releases",
         "lookup_fact": "an obscure or changeable fact from a reference source",
         "fetch_page": "read a specific web page or URL",
     ]
