@@ -21,6 +21,8 @@
 //  been three since #116 (headless + interactive palettes, plus the plain no-tools prefix a
 //  foreground synthesis fallback seeds from). Sized by arithmetic (~90 MB on Lil); RAM snapshot owed.
 //  Desktop only after the #415 review — mobile keeps two under its jetsam ceiling.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (2), Confidence 0.85 — the RAM snapshot is paid: measured
+//  at launch on Lil (1,747 / 2,426 / 3,349-token prefixes, 3.17 GB RSS); the capacity comment carries it.
 //
 
 import Foundation
@@ -83,12 +85,13 @@ final class PersonaPrefixCache: @unchecked Sendable {
     /// three.
     ///
     /// Kept deliberately small: each entry retains Metal-backed KV arrays for
-    /// a ~1-2k-token prefix across every layer, and `MLXMemoryBudget`'s ceiling
-    /// is back-pressure, not a cap (the 2026-07-14 lesson). The third slot is
-    /// sized by arithmetic, not yet by a RAM snapshot: Lil (36 layers × 8 KV
-    /// heads × 128 dims, 8-bit KV) is ~78 KB/token, so the ~1.2k-token plain
-    /// prefix is ~90 MB; Big stores none (its persona overruns the 1024-token
-    /// sliding window, see renderPersonaPrefix). Verify-by-launch owed.
+    /// a ~2-3k-token prefix across every layer, and `MLXMemoryBudget`'s ceiling
+    /// is back-pressure, not a cap (the 2026-07-14 lesson). Measured on Lil at
+    /// launch, 2026-09-26 (M1 Max, #415): plain 1,747 / headless 2,426 /
+    /// interactive 3,349 tokens — at ~78 KB/token (36 layers × 8 KV heads × 128
+    /// dims, 8-bit KV) the third slot is ~136 MB, all three ~590 MB, and the
+    /// process sat at 3.17 GB RSS with Lil resident. Big stores none (its
+    /// persona overruns the 1024-token sliding window, see renderPersonaPrefix).
     ///
     /// DESKTOP only (#415 review): iOS/visionOS live under a jetsam limit where
     /// the failure is a kill, not a slowdown, so mobile keeps the two slots it
