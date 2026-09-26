@@ -111,6 +111,11 @@
 //  no longer means "answered": an empty conclusion after a streamed preamble falls back too, a
 //  paragraph on, with the fallback's snapshots turned into deltas so they read once after the
 //  preamble (ReActPreambleFallbackTests). The agent-threw fallback gets the same care.
+//  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8 — the tool router's plain-chat
+//  route (`plainRouteProvider`, nil by default = byte-identical). A turn ToolNeedRouter reads
+//  as chat runs `runPlainTurn`: one streamed generation over the turn's context, replay and
+//  grounding with tool-free `plainRules`; an empty stream falls back to the agent turn. Why:
+//  Mini's chat turn measured 51.5 s with the palette, 13.4 s without (PlainTurnRouteTests).
 
 import Foundation
 import M1K3Agent
@@ -185,6 +190,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// M1K3Todos — this target stays list-agnostic), or nil for none. Per-turn
     /// content beside the memory block, never the cached persona prefix.
     private let todoContextProvider: (@Sendable () -> String?)?
+    /// The tool router's plain-chat route, read per turn. nil (the default, and
+    /// every brain but Mini with the flag on) is today's agent turn, byte for byte.
+    private let plainRouteProvider: (@Sendable () -> PlainTurnRoute?)?
 
     public init(
         store: KnowledgeStore,
@@ -204,7 +212,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         groundingBudgetProvider: @escaping @Sendable () -> Int = { GroundingBudget.defaultTokenBudget },
         ageClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
         browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
-        todoContextProvider: (@Sendable () -> String?)? = nil
+        todoContextProvider: (@Sendable () -> String?)? = nil,
+        plainRouteProvider: (@Sendable () -> PlainTurnRoute?)? = nil
     ) {
         self.store = store
         self.embedder = embedder
@@ -224,6 +233,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.todoContextProvider = todoContextProvider
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
         self.groundingBudgetProvider = groundingBudgetProvider
+        self.plainRouteProvider = plainRouteProvider
     }
 
     /// Fixed tool list — convenience for tests and simple callers.
@@ -419,8 +429,33 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             ? toolsProvider().filter { !SelfQueryGate.withheldToolNames.contains($0.name) }
             : toolsProvider()
 
+        // The tool router (Mini, flagged): a turn it reads as plain chat skips the
+        // palette and the agent loop for one streamed generation. Images always
+        // take the agent turn, which is where the vision path lives.
+        let plainRoute = images.isEmpty && !tools.isEmpty ? plainRouteProvider?() : nil
+        let decision = plainRoute.map { $0.decide(question) }
+        if let decision {
+            let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
+            Self.log.notice("tool router: \(decision.verdict == .chat ? "chat" : "tools", privacy: .public) p=\(score, privacy: .public)")
+        }
+        let routeInstructions = plainRoute?.instructions
+        let routesPlain = decision?.verdict == .chat
+
         let stream = AsyncStream<String> { continuation in
             let turnTask = Task {
+                if routesPlain {
+                    let answered = await runPlainTurn(
+                        question: question, chunks: cappedChunks, memories: cappedMemories,
+                        history: history, instructions: routeInstructions,
+                        onActivity: onActivity, continuation: continuation
+                    )
+                    // Answered, or the consumer went away: either way, no agent turn.
+                    if answered || Task.isCancelled {
+                        continuation.finish()
+                        return
+                    }
+                    Self.log.notice("plain turn came back empty — the agent turn answers instead")
+                }
                 await runAgentTurn(
                     question: question,
                     images: images,
@@ -460,6 +495,95 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     static func usableMemories(_ memories: [ChunkHit]) -> [ChunkHit] {
         memories.filter { !SelfNoteClassifier.isWiringNote(title: $0.itemTitle, text: $0.content) }
     }
+
+    /// One plain-chat turn into `continuation`: the turn's context, history and
+    /// grounding with tool-free rules, one streamed generation. Returns false when
+    /// nothing came back (AFM turns a guardrail or overflow into an empty stream),
+    /// so the caller can hand the turn to the agent instead of a blank bubble.
+    private func runPlainTurn(
+        question: String,
+        chunks: [ChunkHit],
+        memories: [ChunkHit],
+        history: [ChatTurn],
+        instructions: String?,
+        onActivity: @escaping @Sendable (ResponderActivity) -> Void,
+        continuation: AsyncStream<String>.Continuation
+    ) async -> Bool {
+        onActivity(.thinking(iteration: 0))
+        let contextPreamble = [PromptContext.line(now: Date(), brainName: brainNameProvider()), ageClauseProvider()]
+            .compactMap { $0 }
+            .joined(separator: "\n\n")
+        let prompt = Self.plainTurnPrompt(
+            question: question, contextPreamble: contextPreamble, chunks: chunks, memories: memories,
+            history: history, historyBudget: historyBudgetProvider(),
+            ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
+        )
+        let generate: @Sendable () async -> Bool = { [provider] in
+            var answer = PlainTurnStream()
+            var answered = false
+            for await chunk in provider.generateStreaming(prompt: prompt) {
+                if Task.isCancelled { break }
+                // Cumulative out, whatever came in: the consumer folds snapshots.
+                guard let clean = answer.ingest(chunk) else { continue }
+                answered = true
+                continuation.yield(clean)
+            }
+            return answered
+        }
+        // `InferenceIntent` warns against an override on the chat provider: AFM's
+        // PrewarmSlot drops a warm session whose instructions don't match. Crossed on
+        // purpose (ADR 0008): the route speaks in the agent turns' persona, and the
+        // re-arm below restores the slot. The cost is measured (~0.7 s of first word).
+        let answered = if let instructions {
+            await InferenceIntent.withInstructions(instructions) { await generate() }
+        } else {
+            await generate()
+        }
+        // LocalAgent re-arms the next turn in its defer; this turn never ran it. On an
+        // empty stream the agent turn takes over and re-arms itself: one re-arm, not two
+        // back to back (the AFM daemon has fallen over under rapid prewarms).
+        if answered {
+            (provider as? TurnWarmable)?.prepareForNextTurn(promptPrefix: nil)
+        }
+        return answered
+    }
+
+    /// The plain turn's prompt: the per-turn context line, the history replay and
+    /// the turn's grounding sections, tool-free rules, then the question.
+    static func plainTurnPrompt(
+        question: String, contextPreamble: String, chunks: [ChunkHit], memories: [ChunkHit],
+        history: [ChatTurn], historyBudget: HistoryWindow.Budget, ambient: String?, todos: String?,
+        now: Date = Date()
+    ) -> String {
+        let sections = groundingSections(
+            chunks: chunks, memories: memories, toolNames: [], now: now, ambient: ambient, todos: todos
+        )
+        let body = (sections + [plainRules]).joined(separator: "\n\n")
+        let grounded = HistoryWindow.render(history, budget: historyBudget)
+            .map { "\($0)\n\(replayFraming)\n\n\(body)" } ?? body
+        return [contextPreamble, grounded, "USER: \(question)"]
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
+    }
+
+    /// The native RULES with every tool line taken out: the router already decided
+    /// this turn needs none, and a small model told to call tools it doesn't have
+    /// writes the calls out as text (the 2026-09-26 empty-palette A/B).
+    static let plainRules = """
+    RULES:
+    \(generativeCarveHead)No grounding, no citations, no "found nothing"; those are for factual questions.
+    - Pure small talk — greetings, banter — reply in your own voice and pick up one real \
+    thread (what they said, a memory of them, the hour).
+    - Stable, well-known facts (who wrote a famous book, a capital city, basic science) \
+    you can just answer from what you know — you're reliable there.
+    - If the KNOWLEDGE above fully answers the question, answer from it directly.
+    - Cite knowledge sources inline with citation tokens like [Title §heading]; never \
+    invent citations.
+    - Never present a fact, figure, or date you can't ground or verify as certain; if \
+    you're unsure, say so plainly. Honesty beats a confident guess.
+    - Questions about yourself — your configuration, design, or abilities — are answered \
+    from your persona.
+    """
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail
     /// streams live), then the web-sources tail, with the plain-RAG fallback

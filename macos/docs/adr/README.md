@@ -12,3 +12,4 @@ never edit, accepted ones.
 | [0005](0005-relicense-to-fsl-organisations-are-the-paid-line.md) | Relicense forward to FSL-1.1-ALv2; humans stay free, organisations are the paid line | Accepted | 2026-09-09 |
 | [0006](0006-private-cloud-compute-rung-and-the-private-by-design-posture.md) | Add Private Cloud Compute as an opt-in rung; move the posture from "Nothing leaves" to private by design | Accepted | 2026-09-14 |
 | [0007](0007-private-cloud-consent-per-conversation.md) | Private Cloud Compute consent holds for a conversation, not one request | Accepted | 2026-09-26 |
+| [0008](0008-mini-routes-plain-chat-around-the-tool-palette.md) | Mini routes plain chat around the tool palette | Accepted | 2026-09-26 |

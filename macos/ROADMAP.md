@@ -27,7 +27,7 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 
 ## Now — 1.0.0 in review, the recent work rides under it
 
-### The next review build (`feat/review-build-polish`, 2026-09-26)
+### The next review build (#412 merged 09-26 + `feat/mini-tool-router`)
 
 - **One attach button** (Mac + iOS): paperclip + one picker; `AttachmentRouting`.
 - **PCC stays on for the conversation**: `PrivateCloudArming`; consent once per
@@ -62,6 +62,15 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 - **QLoRA to cut the prompt: no.** The July adapter is on a retired base and
   bought ~65 tokens; Mini's window is spent by the tool palette, and Mini can't
   take an adapter on 27 (`scratch/lora-spike/REVIEW-2026-09-26.md`).
+- **Mini's chat turns skip the tool palette** (`ToolNeedRouter`, ON by default, Kev 09-26).
+  A logistic layer over Apple's sentence embedding reads each turn; plain chat gets one
+  streamed generation instead of the agent loop. Live, app quit: open chat 51.1 s → 10.1 s,
+  first words ~5 s (the agent path never streamed), tool use 10/10 kept, security unchanged.
+  Mini only: Lil gains nothing, Big ~18% (a later call). The spike started from Laya (an MLX
+  decision encoder); trained on the same labels, the built-in embedding matched it with no
+  download. Next: tool turns are still ~50 s; the router is cautious on well-known facts.
+- **Debug builds: the visible avatar slows MLX decode 6–7×** (#413). Release on M1 Max is
+  unaffected (65 vs 67 tok/s); evals hide the app; an A-series check is owed.
 
 ### Landing (open PRs)
 
@@ -305,6 +314,8 @@ stays a possible later companion.
 
 ---
 
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 (6) — #412 merged; the tool router (default on) and the
+     Debug-build avatar finding (#413) join the next review build. Confidence 0.85. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 (5) — ADR 0007 accepted. Confidence 0.95. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 (4) — Mini tool-calling result recorded, with its costs
      and the two follow-ups. Confidence 0.85. -->

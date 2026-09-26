@@ -148,8 +148,8 @@ struct PrivacySettingsPane: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("""
                     Off unless you turn it on. Then a cloud button beside the message field \
-                    sends one message at a time to Apple's Private Cloud Compute. You see \
-                    your words before they go, and each answer it gives is labelled.
+                    sends that conversation to Apple's Private Cloud Compute until you turn it \
+                    off. You see your words before the first one goes, and each answer is labelled.
                     """)
                     Link("How Apple protects it", destination: PrivateCloudTurn.appleGuaranteeURL)
                 }

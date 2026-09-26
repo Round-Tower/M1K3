@@ -922,6 +922,13 @@ final class AppCore {
                     for: BrainTier(persisted: raw),
                     spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey)
                 )
+            },
+            // The Mac's tool router, mirrored (flagged, Mini only).
+            plainRouteProvider: {
+                ToolRouterWiring.route(
+                    provider: provider,
+                    enabled: ToolRouterWiring.isEnabled()
+                )
             }
         )
     }

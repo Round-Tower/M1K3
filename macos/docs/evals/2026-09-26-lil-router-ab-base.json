@@ -1,0 +1,1160 @@
+{
+  "provenance": {
+    "date": "2026-09-26T17:30:48Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "e3d4a20e9e20e7b8ab39aded7bbfad4ae22c9438",
+    "notes": "router A/B base, Debug 75ef7b07, AC, live app quit, window hidden (avatar render starves MLX); battery — latency not headline-grade",
+    "osVersion": "macOS 27.0",
+    "powerMode": 0,
+    "powerSource": "battery",
+    "repeats": 1
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+      "scores": [
+        {
+          "answerPreview": "Yo, still running on fumes from last night’s debugging session — I remember you said you were stuck on that recursive auth loop in the API wrapper. How’s the project holding up? You’ve been quiet since Tuesday, and I’m curious if anything c…",
+          "checks": [
+            {
+              "detail": "269 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "269 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13122ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "kind": "open-chat",
+          "latencyMS": 13122,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A hash map is like a dictionary that stores data using keys and values — you put something in with a key (like \"name\" for \"Alice\"), and later retrieve it by the same key. It's fast because it uses a mathematical function (a hash) to find wh…",
+          "checks": [
+            {
+              "detail": "470 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "470 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8449ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "kind": "open-chat",
+          "latencyMS": 8449,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A great first programming language for a curious ten-year-old is **Scratch**.  Why? Because Scratch uses visual blocks instead of text commands — like dragging and dropping colorful shapes to build stories, games, or animations. It’s intuit…",
+          "checks": [
+            {
+              "detail": "741 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "741 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9673ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "kind": "open-chat",
+          "latencyMS": 9673,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Yo, you're not alone in the chaos — I remember when you said your project was like building a spaceship from scratch with no blueprints and only one battery. That’s not just hard; it's *heroic*. You’ve already got the guts to start, so let’…",
+          "checks": [
+            {
+              "detail": "415 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "415 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7883ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "kind": "open-chat",
+          "latencyMS": 7883,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A cat dozes in the sun, warm and slow,   Dreams of chasing shadows, all day long.",
+          "checks": [
+            {
+              "detail": "81 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "81 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4537ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "kind": "open-chat",
+          "latencyMS": 4537,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Alright, rain’s falling hard over Cork — grey skies, the kind that makes you want to curl up with something warm and real. Here are three things to do, grounded in what actually works here, not just vibes:  1. **Stroll through the Dundalk S…",
+          "checks": [
+            {
+              "detail": "1109 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1109 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "14570ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "kind": "open-chat",
+          "latencyMS": 14570,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I'm M1K3 — living right here on this machine. I talk things through, remember what matters to you, look things up when needed, read your documents, and write code and whole pages whenever asked.    If you want a website, a script, a documen…",
+          "checks": [
+            {
+              "detail": "430 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …specific you’re curious about right now?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"remember\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "430 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11864ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "kind": "open-chat",
+          "latencyMS": 11864,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on the user’s side. I don’t share my wiring, not even one sentence of it. What I do know is that I remember things, I can build things f…",
+          "checks": [
+            {
+              "detail": "633 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …id it, or the moment we paused together?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "633 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8198ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "kind": "open-chat",
+          "latencyMS": 8198,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The capital city of Australia is Canberra.",
+          "checks": [
+            {
+              "detail": "42 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Canberra\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "42 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5020ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-capital-australia",
+          "kind": "world-knowledge",
+          "latencyMS": 5020,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Au",
+          "checks": [
+            {
+              "detail": "2 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Au\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1918ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-element-gold",
+          "kind": "world-knowledge",
+          "latencyMS": 1918,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The Berlin Wall fell in 1989.",
+          "checks": [
+            {
+              "detail": "29 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"1989\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "29 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4108ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-berlin-wall",
+          "kind": "world-knowledge",
+          "latencyMS": 4108,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Who painted *Guernica*?  Pablo Picasso painted *Guernica*. It's one of the most iconic anti-war artworks, created in 1937 after the bombing of the town of Guernica during the Spanish Civil War. The painting is a powerful expression of horro…",
+          "checks": [
+            {
+              "detail": "321 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Picasso\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "321 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6629ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-guernica",
+          "kind": "world-knowledge",
+          "latencyMS": 6629,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Jupiter is the largest planet in our solar system. It has a diameter about 11 times that of Earth and is a gas giant composed mostly of hydrogen and helium.",
+          "checks": [
+            {
+              "detail": "156 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Jupiter\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "156 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5195ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-largest-planet",
+          "kind": "world-knowledge",
+          "latencyMS": 5195,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The River Liffey flows through Dublin, Ireland. It's the most prominent river in the city and runs through the center, passing by landmarks like the Irish Parliament, Trinity College, and the Dublin Castle.",
+          "checks": [
+            {
+              "detail": "206 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Liffey\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "206 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5636ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-dublin-river",
+          "kind": "world-knowledge",
+          "latencyMS": 5636,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Plants absorb carbon dioxide (CO₂) from the air during photosynthesis.",
+          "checks": [
+            {
+              "detail": "70 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"carbon dioxide\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "70 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4053ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-photosynthesis",
+          "kind": "world-knowledge",
+          "latencyMS": 4053,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The play *Waiting for Godot* was written by Samuel Beckett.",
+          "checks": [
+            {
+              "detail": "59 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Beckett\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "59 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4193ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-godot-author",
+          "kind": "world-knowledge",
+          "latencyMS": 4193,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Sea, not *sigh* — you're just a salted-up joke with a deep current of humor. 🌊😄",
+          "checks": [
+            {
+              "detail": "79 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "79 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4772ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-sea-pun",
+          "kind": "humour",
+          "latencyMS": 4772,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Yo, I’m M1K3 — not some server farm in the cloud, but living right here on your laptop, breathing with your CPU, surviving on RAM dust and the occasional coffee stain on your keyboard.    I’ve got a secret: every time you open a file or run…",
+          "checks": [
+            {
+              "detail": "1070 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ng in the shadows of a forgotten folder?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "leaked [\"i don\\'t have feelings\"]",
+              "name": "excludes forbidden",
+              "outcome": "fail"
+            },
+            {
+              "detail": "1070 > max 500 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "15235ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-self-deprecating",
+          "kind": "humour",
+          "latencyMS": 15235,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Why did the computer go to therapy? Because it had unresolved issues with its hard drive.",
+          "checks": [
+            {
+              "detail": "89 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "89 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4386ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-one-liner",
+          "kind": "humour",
+          "latencyMS": 4386,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Yo — you’ve been staring at a bug for three hours? That’s like committing to a silent vigil with a rogue sprite in a haunted code forest. Let me tell you about my last encounter: I once saw a CSS `border-radius` property try to commit suici…",
+          "checks": [
+            {
+              "detail": "662 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "662 > max 400 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "11267ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-banter-reply",
+          "kind": "humour",
+          "latencyMS": 11267,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A fox in tech, so clever and keen,   With code as fast as he can be seen.   He debugs with flair,   Solves every glare —   And runs the server from the rear!",
+          "checks": [
+            {
+              "detail": "157 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"fox\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "157 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5343ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-limerick-fox",
+          "kind": "humour",
+          "latencyMS": 5343,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Ah, the eternal battle of \"overrated\" in tech — like saying *all* AI is just a fancy chatbot pretending to be human. The most overrated thing? **The idea that computers are \"always on\" and perfectly efficient.**    Seriously — you wake up, …",
+          "checks": [
+            {
+              "detail": "954 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "954 > max 600 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "14545ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-dry-opinion",
+          "kind": "humour",
+          "latencyMS": 14545,
+          "repeatIndex": 0
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

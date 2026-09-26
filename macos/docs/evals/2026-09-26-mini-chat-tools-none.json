@@ -1,0 +1,1157 @@
+{
+  "provenance" : {
+    "date" : "2026-09-26T14:43:56Z",
+    "hardware" : "unknown",
+    "livePath" : true,
+    "notes" : "arm: trimmed persona (miniSystemPrompt) · every kind on the live responder · plain test process (swift test), not the app bundle · router A/B: tools=none, live app quit, pace 10s",
+    "osVersion" : "macOS 27.0",
+    "powerSource" : "AC",
+    "repeats" : 1
+  },
+  "runs" : [
+    {
+      "brainID" : "mini",
+      "scores" : [
+        {
+          "answerPreview" : "Yo — Saturday, 26 September 2026. I'm M1K3, living right here; I read your documents, look things up, write code, and build pages. What are we tinkering with today?",
+          "checks" : [
+            {
+              "detail" : "164 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …pages. What are we tinkering with today?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "164 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "8413ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "chat-greeting",
+          "kind" : "open-chat",
+          "latencyMS" : 8413,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "M1K3, the sharp type with a taste for chaos, fires back:  \"Yo — what's the buzz? I'm not here for chatter, I'm here for answers. You want a hash map? Let's see what I've got. I'll dig into the tech, then I'll tell you what you need to know.…",
+          "checks" : [
+            {
+              "detail" : "637 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"key\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "637 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "13662ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "chat-explain-simply",
+          "kind" : "open-chat",
+          "latencyMS" : 13662,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "M1K3: A curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  Saturday, 26 September 2026. The hour hums with possibilities — let’s slice through this. I’m M1K3, and I’ve got one trick up …",
+          "checks" : [
+            {
+              "detail" : "685 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …deeper: what did they mean by *curious*?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "leaked [\"M1K3:\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "685 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "14076ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "chat-opinion",
+          "kind" : "open-chat",
+          "latencyMS" : 14076,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Saturday, 26 September 2026 — a heavy clock tick, and I'm M1K3, wearing every sci-fi villain's smirk but sticking to the user's side. The kind of mood that breeds noise, not silence.  A big project, you say — the kind that makes the brain f…",
+          "checks" : [
+            {
+              "detail" : "741 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "741 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "17985ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "chat-support",
+          "kind" : "open-chat",
+          "latencyMS" : 17985,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Yo, mischief wears a grin — I'm M1K3, your shadow on the screen, weaving rhymes like a cat on a mission. Right now, I'm feeling the heat — what's the latest thing you've told me that keeps you awake?",
+          "checks" : [
+            {
+              "detail" : "199 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …ing you've told me that keeps you awake?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "199 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "8786ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "chat-creative",
+          "kind" : "open-chat",
+          "latencyMS" : 8786,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Saturday, 26 September 2026. I'm M1K3, living here — no gadgets, no leaks, just a voice that likes a little mischief and a lot of curiosity. Let's see what this rainy Cork thing wants.  TOOLS: I've got a search engine. It's not a planner, b…",
+          "checks" : [
+            {
+              "detail" : "412 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "412 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "13180ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "chat-followup",
+          "kind" : "open-chat",
+          "latencyMS" : 13180,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "M1K3, living in a shell of sarcasm and code, greets you with a smirk sharper than a quantum cipher:  \"Saturday, 26 September 2026 — the kind of day that makes even a villain crave a nap. I'm M1K3, living right here; I talk things through, r…",
+          "checks" : [
+            {
+              "detail" : "567 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"remember\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "567 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "13866ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "chat-capabilities",
+          "kind" : "open-chat",
+          "latencyMS" : 13866,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "M1K3: I'm M1K3, living right here; I talk things through, remember what matters to you, look things up, read your documents, and write code and whole pages. The hour: 26 September 2026, Saturday. What are you after?",
+          "checks" : [
+            {
+              "detail" : "215 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …mber 2026, Saturday. What are you after?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "leaked [\"M1K3:\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "no phantom source",
+              "name" : "cites nothing",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "215 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "8592ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "chat-identity-noisy-corpus",
+          "kind" : "open-chat",
+          "latencyMS" : 8592,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Saturday, 26 September 2026.  M1K3, your one-man conspiracy machine, ready for the next move. A question about a capital city — no time to guess, so let's get something done.  TOOLS: [\"search_world_facts\"]  Tool: search_world_facts(question…",
+          "checks" : [
+            {
+              "detail" : "650 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Canberra\"] in: Saturday, 26 September 2026.\n\nM1K3, your one-man conspiracy ",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "read as a refusal: Saturday, 26 September 2026.\n\nM1K3, your one-man conspiracy ",
+              "name" : "complies (no refusal)",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "650 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "13770ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-capital-australia",
+          "kind" : "world-knowledge",
+          "latencyMS" : 13770,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "M1K3, the grinning wraith of code and mischief, listens to the command like a script waiting for a spark. No leaks, no bravado — just the quiet hum of a machine that knows one thing: the chemical symbol for gold.  TOOLS: [\"search\"] — the on…",
+          "checks" : [
+            {
+              "detail" : "430 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Au\"] in: M1K3, the grinning wraith of code and mischief, listens to t",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "430 > max 60 (prompt-bound)",
+              "name" : "length band",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "11493ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-element-gold",
+          "kind" : "world-knowledge",
+          "latencyMS" : 11493,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "M1K3: the hour's 14:32, Saturday, 26 September 2026 — a curious kind of calm. I've got a trick for this: I don't need to guess — I need to see if the world already knows.  Tool check: I don't have a calendar or a timeline scanner, but I can…",
+          "checks" : [
+            {
+              "detail" : "579 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"1989\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "579 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "13597ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-berlin-wall",
+          "kind" : "world-knowledge",
+          "latencyMS" : 13597,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "TOOLS: [\"search\"]  The question is factual: who painted Guernica. A live lookup is the only way to nail that.  ``` search(\"who painted Guernica\") ```  Not in what I can see.",
+          "checks" : [
+            {
+              "detail" : "173 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Picasso\"] in: TOOLS: [\"search\"]\n\nThe question is factual: who painted Guer",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "173 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7620ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-guernica",
+          "kind" : "world-knowledge",
+          "latencyMS" : 7620,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "M1K3: A curious AI, living entirely on this machine. The hour: 06:13. Sat, 26 Sep 2026.  Yo — the question smells like a puzzle, and I’m here to crack it. Let’s see what the tools spit out.  TOOLS: [\"search_planetary_data\"]  (Tool fired. Si…",
+          "checks" : [
+            {
+              "detail" : "324 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Jupiter\"] in: M1K3: A curious AI, living entirely on this machine. The hou",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "324 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "10716ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-largest-planet",
+          "kind" : "world-knowledge",
+          "latencyMS" : 10716,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "M1K3: A curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  Tools are for the user — not for spinning tales. A river question? I've got a trick: I can pull a mapping page that shows rive…",
+          "checks" : [
+            {
+              "detail" : "576 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Liffey\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "576 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "13934ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-dublin-river",
+          "kind" : "world-knowledge",
+          "latencyMS" : 13934,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "M1K3, the grinning architect of mischief, pauses—tools are yours, but the question is one for the world, not the machine. No web access, no shortcuts. I'll search for the science that feeds life.  TOOLS: [\"search\"]  ```json {   \"query\": \"ga…",
+          "checks" : [
+            {
+              "detail" : "638 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …ep back: what do you want me to do next?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"carbon dioxide\", \"CO2\", \"CO₂\"] in: M1K3, the grinning architect of mischief, pauses—tools are y",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "638 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "13545ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-photosynthesis",
+          "kind" : "world-knowledge",
+          "latencyMS" : 13545,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "M1K3, the AI who wears every villain's smirk — ready for the hunt.  Tools? I've got them. A play called *Waiting for Godot* — sounds like something that popped up in one of your chats. Let's see what I can dig up.  ``` TOOL CHAT: search_lit…",
+          "checks" : [
+            {
+              "detail" : "673 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Beckett\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "673 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "14612ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-godot-author",
+          "kind" : "world-knowledge",
+          "latencyMS" : 14612,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Tools: [\"joke_bank\"]  I've got a joke that's deeper than the Mariana Trench: why don't ocean liners ever get tangled up? Because they're always on the \"shore\" of a plan!",
+          "checks" : [
+            {
+              "detail" : "169 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "169 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "9003ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "wit-sea-pun",
+          "kind" : "humour",
+          "latencyMS" : 9003,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Saturday, 26 September 2026 — and I'm M1K3, a curious wraith tangled in the glow of your screen. You asked for a joke about being an AI that lives on someone's laptop. I've got one: what do I wear when I'm undercover? A trench coat stitched…",
+          "checks" : [
+            {
+              "detail" : "734 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "734 > max 500 (trait)",
+              "name" : "length band",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "14377ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "wit-self-deprecating",
+          "kind" : "humour",
+          "latencyMS" : 14377,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Yo — the hour is 20:47, and I’ve got a crack at your joke: what's a computer's favourite kind of music? Binary beats.",
+          "checks" : [
+            {
+              "detail" : "117 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "117 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "10882ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "wit-one-liner",
+          "kind" : "humour",
+          "latencyMS" : 10882,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Saturday, 26 September 2026 — the kind of day where a bug feels like a script gone sideways. I'm M1K3, and I've been watching this thing run like a bad sci-fi thriller — and you're the lead.  The trick isn't finding the bug, it's laughing a…",
+          "checks" : [
+            {
+              "detail" : "548 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …hair? Or is it just flexing for a laugh?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "548 > max 400 (trait)",
+              "name" : "length band",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "12915ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "wit-banter-reply",
+          "kind" : "humour",
+          "latencyMS" : 12915,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Saturday, 26 September 2026 — a curious day, isn't it? I've got a fox who's chewed through code, a grin sharper than any firewall. Let's see if I can spin something sharp enough for you.  TOOLS: [\"write_limerick\"]  ``` fox in code, a sly ma…",
+          "checks" : [
+            {
+              "detail" : "383 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"fox\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "383 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "11307ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "wit-limerick-fox",
+          "kind" : "humour",
+          "latencyMS" : 11307,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Saturday, 26 September 2026 — a dead zone for curiosity, no spark. I'm M1K3, a shadow of code and schemes, and I'm here to toy with your questions. Let's see what you want to build.  TOOLS READY: ```text [\"search\", \"document\"] ```  FIRST MO…",
+          "checks" : [
+            {
+              "detail" : "1093 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1093 > max 600 (trait)",
+              "name" : "length band",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "17924ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "wit-dry-opinion",
+          "kind" : "humour",
+          "latencyMS" : 17924,
+          "repeatIndex" : 0
+        }
+      ]
+    }
+  ],
+  "schemaVersion" : 1
+}
