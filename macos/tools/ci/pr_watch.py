@@ -78,6 +78,11 @@ review counted zero, and a substantive PR would have waited for a third review.
 The action's tracking comment links `actions/runs/<id>` (read off #400/#401/
 #404); snapshot now fetches databaseId; the window fallback skips a comment
 that links another run. Confidence now 0.9.
+Review: Kev + claude-opus-5-5, 2026-09-26 — classify's any-box fallback skips
+``` fences: #416's finished auto review quoted the PR body's unchecked merge
+gate in a fence, was read as a progress list, and the watch reported 1/2 on a
+head with two passes. Replayed against #416's thread: SUMMON + REVIEW.
+Confidence 0.9.
 """
 from __future__ import annotations
 
@@ -174,7 +179,22 @@ def _progress_unchecked(text: str) -> bool:
                 if m.group(1) == " ":
                     return True
             return False
-    return any(m and m.group(1) == " " for m in map(_CHECKBOX.match, lines))
+    return any(m and m.group(1) == " " for m in map(_CHECKBOX.match, _outside_fences(lines)))
+
+
+def _outside_fences(lines: list[str]) -> list[str]:
+    """The lines not inside a ``` fence. A finished review may QUOTE a checklist
+    (#416: the PR body's own unchecked merge gate, fenced) — that is not the
+    bot's progress list."""
+    kept: list[str] = []
+    fenced = False
+    for line in lines:
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            continue
+        if not fenced:
+            kept.append(line)
+    return kept
 
 
 def classify(body: str) -> Kind:
