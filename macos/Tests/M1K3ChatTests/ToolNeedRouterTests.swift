@@ -1,6 +1,7 @@
 import Foundation
 @testable import M1K3Chat
 @testable import M1K3Eval
+import M1K3Inference
 import NaturalLanguage
 import Testing
 
@@ -81,5 +82,38 @@ struct ToolNeedRouterFixtureTests {
     func nonEnglishFailsOpen() {
         #expect(embedder.vector("¿Cuál es la capital de Australia y por qué la eligieron?") == nil)
         #expect(ToolNeedRouter.verdict(for: "Quelle heure est-il maintenant, s'il vous plaît ?", embed: embedder.vector) == .tools)
+    }
+}
+
+/// Both shells ask one place whether this turn gets the router: the flag is on
+/// AND the brain answering is Apple's on-device model (Mini). The pocket Mini
+/// (LFM2 on MLX) and Lil/Big never see it: their prompt cache is keyed on the
+/// palette, and the A/B that justified the route was measured on AFM.
+struct ToolRouterWiringTests {
+    private struct OtherBrain: InferenceProvider {
+        let name = "other"
+        let isAvailable = true
+        func generate(prompt _: String) async throws -> String {
+            ""
+        }
+
+        func generateStreaming(prompt _: String) -> AsyncStream<String> {
+            AsyncStream { $0.finish() }
+        }
+    }
+
+    @Test("only Mini (AFM) with the flag on gets a route, directly or behind the swappable façade")
+    func gate() {
+        let mini = AppleFoundationModelsProvider()
+        #expect(ToolRouterWiring.route(provider: mini, enabled: true) != nil)
+        #expect(ToolRouterWiring.route(provider: mini, enabled: false) == nil)
+        #expect(ToolRouterWiring.route(provider: OtherBrain(), enabled: true) == nil)
+        #expect(ToolRouterWiring.route(provider: SwappableInferenceProvider(mini), enabled: true) != nil)
+        #expect(ToolRouterWiring.route(provider: SwappableInferenceProvider(OtherBrain()), enabled: true) == nil)
+    }
+
+    @Test("the app route keeps the provider's own persona (Mini's prewarmed one)")
+    func routeKeepsProviderPersona() {
+        #expect(ToolRouterWiring.route(provider: AppleFoundationModelsProvider(), enabled: true)?.instructions == nil)
     }
 }

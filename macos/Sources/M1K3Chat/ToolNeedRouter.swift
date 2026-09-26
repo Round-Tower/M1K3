@@ -30,6 +30,7 @@
 //
 
 import Foundation
+import M1K3Inference
 import NaturalLanguage
 
 public enum ToolNeedRouter {
@@ -60,7 +61,69 @@ public enum ToolNeedRouter {
     }
 
     public static func verdict(for question: String, embed: (String) -> [Double]?) -> Verdict {
-        verdict(probability: embed(question).flatMap(probability))
+        decide(for: question, embed: embed).verdict
+    }
+
+    /// The verdict with the score behind it (nil when it couldn't be scored), so
+    /// a caller can log what the router saw: those lines are future labels.
+    public struct Decision: Sendable, Equatable {
+        public let verdict: Verdict
+        public let probability: Double?
+
+        public init(verdict: Verdict, probability: Double?) {
+            self.verdict = verdict
+            self.probability = probability
+        }
+    }
+
+    public static func decide(for question: String, embed: (String) -> [Double]?) -> Decision {
+        let p = embed(question).flatMap(probability)
+        return Decision(verdict: verdict(probability: p), probability: p)
+    }
+}
+
+/// How a turn the router reads as plain chat is answered: `decide` is the
+/// router, `instructions` the persona for the plain generation (nil keeps the
+/// provider's own, which on Mini is the prewarmed one).
+public struct PlainTurnRoute: Sendable {
+    public let decide: @Sendable (String) -> ToolNeedRouter.Decision
+    public let instructions: String?
+
+    public init(decide: @escaping @Sendable (String) -> ToolNeedRouter.Decision, instructions: String?) {
+        self.decide = decide
+        self.instructions = instructions
+    }
+}
+
+/// The plain turn replays history as `USER:` / `M1K3:` lines, and a small model
+/// may answer in that transcript voice, so the label is cut from the answer.
+/// Providers stream either cumulative snapshots (AFM) or deltas (MLX): `ingest`
+/// folds either into the whole answer so far, and yields the cleaned WHOLE text
+/// each time it grows, so every yield extends the last and a held first piece
+/// ("M", which might have become the label) is never lost (code review).
+public struct PlainTurnStream {
+    static let label = "M1K3:"
+    private var raw = ""
+    private var sent = ""
+
+    public init() {}
+
+    /// One provider chunk in; the cleaned answer so far when it grew, else nil.
+    public mutating func ingest(_ chunk: String) -> String? {
+        raw = StreamFold.fold(current: raw, chunk: chunk)
+        guard let clean = Self.clean(raw), clean.count > sent.count, clean.hasPrefix(sent) else { return nil }
+        sent = clean
+        return clean
+    }
+
+    // The label cut from a WHOLE answer so far; nil while it could still become the label.
+
+    public static func clean(_ snapshot: String) -> String? {
+        let text = snapshot.drop(while: \.isWhitespace)
+        if label.hasPrefix(text) { return nil }
+        guard text.hasPrefix(label) else { return snapshot }
+        let rest = text.dropFirst(label.count).drop(while: \.isWhitespace)
+        return rest.isEmpty ? nil : String(rest)
     }
 }
 

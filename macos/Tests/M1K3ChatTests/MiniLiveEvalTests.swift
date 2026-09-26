@@ -41,6 +41,8 @@
 //  appending, and `livePath` stamps the arm, not the open-chat exception (local review).
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — `M1K3_AFM_EVAL_TOOLS=none` runs the live
 //  turn with an empty palette: the tool-router A/B (scratch/laya-spike). Confidence 0.85.
+//  `M1K3_AFM_EVAL_ROUTER=mini|standard` puts the shipping router and its plain-chat route
+//  in front, on Mini's own persona or the standard one (the route's own eval arm).
 //
 
 import Foundation
@@ -194,9 +196,25 @@ struct MiniLiveEvalTests {
                 let tools: [any AgentTool] = evalEnvironment["M1K3_AFM_EVAL_TOOLS"] == "none"
                     ? []
                     : ChatEvalStubPalette.specs.map { StubTool(spec: $0, recorder: recorder) }
+                // `M1K3_AFM_EVAL_ROUTER=mini|standard`: the shipping tool router in
+                // front, its plain-chat route on Mini's own persona or the standard one.
+                let routeInstructions: String?? = switch evalEnvironment["M1K3_AFM_EVAL_ROUTER"] {
+                case "mini": .some(nil)
+                case "standard": .some(M1K3Persona.systemPrompt(variant: .standard))
+                default: nil
+                }
+                let embedder = NLSentenceEmbedder()
                 let responder = try AgentRAGResponder(
                     store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
-                    tools: tools
+                    toolsProvider: { tools },
+                    plainRouteProvider: routeInstructions.map { instructions in
+                        { @Sendable in
+                            PlainTurnRoute(
+                                decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) },
+                                instructions: instructions
+                            )
+                        }
+                    }
                 )
                 var text = ""
                 for await piece in try await responder.answerStreaming(fixture.prompt).stream {

@@ -42,6 +42,9 @@
 //  entitlement (the adapter lives in M1K3Agent, `PrivateCloudInferenceAdapter`, where `swift test` reaches it);
 //  the document rides stdout fenced when `M1K3_SELFTEST_OUT=-`; an empty live stream from a provider that
 //  can name its failure scores as "ran — <reason>". Verify-by-launch: one PCC run (233/273, the same day).
+//  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8 — the tool-router A/B on any brain, on the
+//  live path: `M1K3_SELFTEST_CHATEVAL_TOOLS=none` empties the palette, `M1K3_SELFTEST_CHATEVAL_ROUTER=1`
+//  fronts the turn with ToolNeedRouter's plain-chat route without the app's Mini-only gate (does Lil/Big gain?).
 
 import Foundation
 
@@ -290,9 +293,20 @@ enum ChatEvalStage {
         // carries the live "No stored knowledge was injected" head — the exact
         // shape a closed-book code ask meets in production.
         let store = try KnowledgeStore()
+        // The tool-router A/B on any brain (2026-09-26): `_TOOLS=none` empties the
+        // palette; `_ROUTER=1` puts the shipping router and its plain-chat route in
+        // front WITHOUT the app's Mini-only gate, to measure what Lil/Big would get.
+        let palette = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
+        let routed = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER") == "1"
+        let embedder = NLSentenceEmbedder()
         let responder = AgentRAGResponder(
             store: store, embedder: MLXEmbeddingService(), provider: provider,
-            tools: toolPalette, maxIterations: 3
+            toolsProvider: { palette }, maxIterations: 3,
+            plainRouteProvider: routed ? {
+                PlainTurnRoute(
+                    decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) }, instructions: nil
+                )
+            } : nil
         )
         let (_, stream) = try await responder.answerStreaming(fixture.prompt)
         var raw = ""

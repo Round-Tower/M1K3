@@ -507,7 +507,15 @@ extension AppEnvironment {
             // The user's open todos, rendered once per write (todosRevision)
             // and read here as a snapshot — per-turn content, never the
             // cached persona prefix.
-            todoContextProvider: { AppEnvironment.todoGroundingSnapshot.withLock { $0 } }
+            todoContextProvider: { AppEnvironment.todoGroundingSnapshot.withLock { $0 } },
+            // The tool router (flagged, Mini only): a turn it reads as plain chat
+            // skips the palette for one streamed generation. Read per turn.
+            plainRouteProvider: {
+                ToolRouterWiring.route(
+                    provider: provider,
+                    enabled: UserDefaults.standard.bool(forKey: ToolRouterWiring.enabledKey)
+                )
+            }
         )
     }
 
