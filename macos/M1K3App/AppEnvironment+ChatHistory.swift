@@ -513,7 +513,7 @@ extension AppEnvironment {
             plainRouteProvider: {
                 ToolRouterWiring.route(
                     provider: provider,
-                    enabled: UserDefaults.standard.bool(forKey: ToolRouterWiring.enabledKey)
+                    enabled: ToolRouterWiring.isEnabled()
                 )
             }
         )

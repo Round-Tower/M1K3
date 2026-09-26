@@ -8,18 +8,24 @@
 //  measured on AFM; the MLX tiers (and the pocket Mini, LFM2 on MLX) key their
 //  prompt cache on the palette, so a per-turn palette would thrash it.
 //
-//  Default OFF until the route's own eval arm has run (chat, tool-use, security).
+//  Default ON (Kev, 2026-09-26) after the route's own eval arm: Mini open chat 51.1 s →
+//  10.1 s, tool use 10/10, security unchanged. `miniToolRouter = false` turns it off.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85. Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — the route's persona is the agent turns'
 //  (Kev's call on the voice-vs-speed trade-off), not Mini's trimmed prewarmed one.
 //
 
+import Foundation
 import M1K3Inference
 
 public enum ToolRouterWiring {
-    /// UserDefaults Bool; absent = off.
+    /// UserDefaults Bool; absent = ON (Kev, 2026-09-26). Only an explicit false turns it off.
     public static let enabledKey = "miniToolRouter"
+
+    public static func isEnabled(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: enabledKey) == nil || defaults.bool(forKey: enabledKey)
+    }
 
     /// Loaded once: the embedding asset is read-only and shared across turns.
     private static let embedder = NLSentenceEmbedder()

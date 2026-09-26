@@ -112,6 +112,20 @@ struct ToolRouterWiringTests {
         #expect(ToolRouterWiring.route(provider: SwappableInferenceProvider(OtherBrain()), enabled: true) == nil)
     }
 
+    /// Kev, 2026-09-26: default ON. An absent key is on; only an explicit false
+    /// turns the router off (the escape hatch if a build needs it gone).
+    @Test("the flag defaults on: absent reads on, an explicit false reads off")
+    func defaultsOn() throws {
+        let suite = "ToolRouterWiringTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(ToolRouterWiring.isEnabled(defaults))
+        defaults.set(false, forKey: ToolRouterWiring.enabledKey)
+        #expect(!ToolRouterWiring.isEnabled(defaults))
+        defaults.set(true, forKey: ToolRouterWiring.enabledKey)
+        #expect(ToolRouterWiring.isEnabled(defaults))
+    }
+
     /// Kev, 2026-09-26: the route speaks in the standard persona, the one Mini's
     /// agent turns use, so a routed turn keeps the voice and the follow-up chips.
     /// Measured: first words ~5.1 s against ~4.4 s on Mini's trimmed prewarmed one.
