@@ -181,6 +181,21 @@ struct DispatchTurnTests {
         #expect(provider.prompts.last?.contains("example.com/m5") == true, "the synthesis never saw the result")
     }
 
+    /// PR #420 review: both the answer and the synthesis retry come back empty (a
+    /// guardrail twice on the same fetched text). Never a dead bubble: an honest line.
+    @Test("an empty answer and an empty synthesis still leave an honest line, not a blank bubble")
+    func doubleEmptyIsHonest() async throws {
+        let calls = Calls()
+        let provider = Scripted(["", ""])
+        let text = try await run(
+            provider,
+            tools: [Recording(name: "web_search", output: "Apple news — https://example.com/m5", calls: calls)],
+            pick: ToolPick(tool: "web_search", query: "apple news"), question: "latest Apple news?"
+        )
+        #expect(text.hasPrefix(AgentRAGResponder.dispatchUnansweredMessage))
+        #expect(calls.log.withLock { $0 }.count == 1)
+    }
+
     @Test("a tool that fails hands the turn to the agent")
     func failedToolFallsBack() async throws {
         let provider = Scripted(["CONCLUSION: sorry"])
