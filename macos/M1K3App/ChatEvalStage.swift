@@ -45,6 +45,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8 — the tool-router A/B on any brain, on the
 //  live path: `M1K3_SELFTEST_CHATEVAL_TOOLS=none` empties the palette, `M1K3_SELFTEST_CHATEVAL_ROUTER=1`
 //  fronts the turn with ToolNeedRouter's plain-chat route without the app's Mini-only gate (does Lil/Big gain?).
+//  Review: same day — the switches are typed explicitly: the ternary closure crashed the type checker in
+//  the app build ("failed to produce diagnostic"), which `swift test` never compiles.
 
 import Foundation
 
@@ -296,17 +298,17 @@ enum ChatEvalStage {
         // The tool-router A/B on any brain (2026-09-26): `_TOOLS=none` empties the
         // palette; `_ROUTER=1` puts the shipping router and its plain-chat route in
         // front WITHOUT the app's Mini-only gate, to measure what Lil/Big would get.
-        let palette = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
-        let routed = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER") == "1"
-        let embedder = NLSentenceEmbedder()
+        let palette: [any AgentTool] = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
+        var plainRoute: (@Sendable () -> PlainTurnRoute?)?
+        if SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER") == "1" {
+            let embedder = NLSentenceEmbedder()
+            let route = PlainTurnRoute(decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) }, instructions: nil)
+            plainRoute = { route }
+        }
         let responder = AgentRAGResponder(
             store: store, embedder: MLXEmbeddingService(), provider: provider,
             toolsProvider: { palette }, maxIterations: 3,
-            plainRouteProvider: routed ? {
-                PlainTurnRoute(
-                    decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) }, instructions: nil
-                )
-            } : nil
+            plainRouteProvider: plainRoute
         )
         let (_, stream) = try await responder.answerStreaming(fixture.prompt)
         var raw = ""
