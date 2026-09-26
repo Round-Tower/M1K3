@@ -1,3 +1,15 @@
+//
+//  ToolNeedRouterTests.swift
+//  M1K3ChatTests
+//
+//  The tool router's pure math, its fail-open language gate (every length ×
+//  signal × confidence cell pinned across the PR #414 review rounds), the
+//  shipping weights over the real embedder on fixtures they never trained on,
+//  and the one gate both shells read.
+//
+//  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85. Prior: Unknown.
+//
+
 import Foundation
 @testable import M1K3Chat
 @testable import M1K3Eval

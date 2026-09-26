@@ -18,8 +18,9 @@
 //
 //  It fails OPEN. No vector (another language, no embedding asset), a vector of
 //  the wrong size, or a non-finite score keeps the tools: hiding a tool the
-//  turn needed is a wrong answer, keeping one it didn't is only slower. Short
-//  turns skip the language guess, which is noise under ~24 characters.
+//  turn needed is a wrong answer, keeping one it didn't is only slower. On a
+//  short turn only a CONFIDENT non-English guess counts (the guess is noise under
+//  ~24 characters); a long turn with no language signal at all abstains.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.75 (pure and pinned;
 //  the weights come from synthetic data until a shadow log grows real labels,
