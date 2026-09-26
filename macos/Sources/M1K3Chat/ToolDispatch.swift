@@ -112,7 +112,9 @@ public enum ToolDispatch {
             // Two optional filters, a time `window` and a `focus` (chats, todos, …), with
             // disjoint vocabularies that both ignore unknown text: the query goes to both
             // (PR #420 review). Absent means the tool's own default.
-            return Plan(tool: tool, input: query.isEmpty ? [:] : ["window": query, "focus": query])
+            // Only keys the tool declares (a rename must not fail silently).
+            let keys = tool.parameters.map(\.name).filter { $0 == "window" || $0 == "focus" }
+            return Plan(tool: tool, input: query.isEmpty ? [:] : Dictionary(uniqueKeysWithValues: keys.map { ($0, query) }))
         default:
             return Plan(tool: tool, input: [parameter: query.isEmpty ? question : query])
         }
@@ -126,8 +128,12 @@ public enum ToolDispatch {
         return text.isEmpty || emptyResultPrefixes.contains { text.hasPrefix($0) }
     }
 
+    /// The dispatchable tools' own "found nothing" wording (search_knowledge, web_search,
+    /// lookup_fact, list_documents; each site carries a pointer back here). A new
+    /// dispatchable tool that can come back empty adds its phrase here too.
     static let emptyResultPrefixes = [
         "No results for", "Nothing relevant in stored knowledge", "No web results for", "No Wikipedia article found",
+        "No stored knowledge yet",
     ]
 
     /// How the result reads in the plain turn's prompt: named, fresh, bounded, and

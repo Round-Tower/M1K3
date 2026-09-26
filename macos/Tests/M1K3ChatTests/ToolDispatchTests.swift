@@ -20,12 +20,13 @@ import Testing
 private struct Stub: AgentTool {
     let name: String
     var parameter: String? = "query"
+    var extra: [String] = []
     var description: String {
         name
     }
 
     var parameters: [ToolParameter] {
-        parameter.map { [ToolParameter(name: $0, description: "")] } ?? []
+        ((parameter.map { [$0] } ?? []) + extra).map { ToolParameter(name: $0, description: "") }
     }
 
     func execute(input _: [String: String]) async throws -> ToolResult {
@@ -36,7 +37,7 @@ private struct Stub: AgentTool {
 private let palette: [any AgentTool] = [
     Stub(name: "datetime"), Stub(name: "battery_status"), Stub(name: "search_knowledge"),
     Stub(name: "web_search"), Stub(name: "lookup_fact", parameter: "topic"), Stub(name: "fetch_page", parameter: "url"),
-    Stub(name: "recent_activity", parameter: "window"), Stub(name: "propose_script", parameter: "script"),
+    Stub(name: "recent_activity", parameter: "window", extra: ["focus"]), Stub(name: "propose_script", parameter: "script"),
     Stub(name: "open_link", parameter: "url"), Stub(name: "delegate_deep", parameter: "task"),
 ]
 
@@ -79,6 +80,13 @@ struct ToolDispatchPlanTests {
             ToolPick(tool: "recent_activity", query: "todos"), palette: palette, question: "what have I asked you to do lately?"
         ))
         #expect(plan.input == ["window": "todos", "focus": "todos"])
+        // Keys come from the tool's own declaration: a tool that declares only `window`
+        // gets only `window` (PR #420 review — a rename must not fail silently).
+        let windowOnly = try #require(ToolDispatch.plan(
+            ToolPick(tool: "recent_activity", query: "today"),
+            palette: [Stub(name: "recent_activity", parameter: "window")], question: "today?"
+        ))
+        #expect(windowOnly.input == ["window": "today"])
     }
 
     @Test("fetch_page is planned only with a URL in hand")
@@ -106,7 +114,7 @@ struct ToolDispatchPlanTests {
 
     @Test("the search tools' no-result outputs read as empty")
     func emptyResults() {
-        for output in ["No results for \"x\".", "Nothing relevant in stored knowledge for \"x\" …",
+        for output in ["No results for \"x\".", "Nothing relevant in stored knowledge for \"x\" …", "No stored knowledge yet.",
                        "No web results for \"x\".", "No Wikipedia article found for \"x\".", "  "]
         {
             #expect(ToolDispatch.isEmptyResult(output), "\(output)")

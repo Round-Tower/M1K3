@@ -615,7 +615,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// plain route answers with the result. Returns false (nothing yielded) when the
     /// turn belongs to the agent: a failed pick, an action or a plan it refuses, or a
     /// tool that errors. A tool that ran and then got an empty answer synthesises from
-    /// its result instead (no second call). A none pick or an empty search answers as
+    /// its result instead (no second call); if that is empty too, the turn ends on an
+    /// honest line, never a blank bubble. A none pick or an empty search answers as
     /// plain chat; only if THAT comes back empty too does the agent take the turn,
     /// which may search once more (two stacked failures: accepted).
     private func runDispatchedTurn(

@@ -36,6 +36,7 @@ public struct ListDocumentsTool: AgentTool {
 
     public func execute(input _: [String: String]) async throws -> ToolResult {
         let items = try store.allItems(limit: limit)
+        // Wording is load-bearing: ToolDispatch.emptyResultPrefixes reads it (ADR 0009).
         guard !items.isEmpty else { return ToolResult(output: "No stored knowledge yet.") }
         let body = items.enumerated().map { index, item in
             "\(index + 1). \(item.title) [\(item.kind.rawValue)]"
