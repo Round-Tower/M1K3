@@ -8,7 +8,10 @@ The release-by-release plan for the macOS 27 wave (1.0 → 1.1 → 1.2) lives in
 `docs/GOLDEN_GATE_PLAN.md` § Roadmap; this file points at it rather than
 copying it.
 
-Last swept: 2026-09-18 — **1.0.0 is still in App Review; nothing is live yet.**
+Last swept: 2026-09-26 — **1.0.0 is still in App Review; nothing is live yet.**
+Resubmitted on build 372 (Mac + iOS, local release, 2026-09-24);
+`itunes.apple.com/lookup?id=6780230835` still returns no listing on 09-26.
+The 09-18 note below stands as the record of that week.
 (The 09-17 sweep read "1.1.0 merged" as "1.1.0 shipped". Checked 09-18:
 `itunes.apple.com/lookup?id=6780230835` → no listing; Kev: "we're releasing all
 the recent work under 1.0.0 — we're still in review, and have the room.")
@@ -23,6 +26,30 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 ---
 
 ## Now — 1.0.0 in review, the recent work rides under it
+
+### The next review build (`feat/review-build-polish`, 2026-09-26)
+
+- **One attach button** (Mac + iOS): paperclip + one picker; `AttachmentRouting`.
+- **PCC stays on for the conversation**: `PrivateCloudArming`; consent once per
+  conversation. **ADR 0007 is PROPOSED — Kev approves before merge.**
+- **Call summaries fixed and evaluated**: the first quality eval
+  (`CallSummaryEval`, `M1K3_CALLS_EVAL=1`) found Mini reciting its system prompt
+  into stored overviews, action items lost to markdown headers, and no summary
+  at all past the window. Neutral instructions + leak drop + parser + map-reduce:
+  Mini 2/6 → 6, 4, 3 of 6 (`docs/evals/2026-09-26-calls-summary-mini.json`).
+  Owed: a Lil/Big deep-summary SelfTest (MLX still seeds the persona).
+- **Reasoning (Auto / Think / Off) — Kev's call.** The Settings picker is a
+  dead control on every shipping brain: Lil (Instruct-2507) never thinks, Big's
+  gemma-4 toggle is pinned off, Mini and Pocket have no think phase.
+- **Sidebar icons**: four directions mocked; C (one symbol family, grey,
+  accent only on the selection) for this build, a wire set after.
+- **Speech**: SpeechAnalyzer spike (`scratch/speechanalyzer-spike/FINDINGS.md`):
+  WER 9.0% vs WhisperKit small.en 7.3% on synthetic calls, ~4× faster, no
+  481 MB download. Swap the legacy `SFSpeechRecognizer` fallback first; A/B
+  real calls before touching the calls engine.
+- **QLoRA to cut the prompt: no.** The July adapter is on a retired base and
+  bought ~65 tokens; Mini's window is spent by the tool palette, and Mini can't
+  take an adapter on 27 (`scratch/lora-spike/REVIEW-2026-09-26.md`).
 
 ### Landing (open PRs)
 
@@ -266,6 +293,9 @@ stays a possible later companion.
 
 ---
 
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 — header truthed to build 372 (store still unlisted);
+     "The next review build" block records the feat/review-build-polish work and the three calls
+     it leaves with Kev (ADR 0007, reasoning, icon direction). Confidence 0.85. -->
 <!-- Review: Kev + claude-fable-5.1, 2026-09-18 (2) — review fold on #381: the "1.1.0" section heading still
      said SHIPPED, with "PCC ships" and "are all live" under it — the same error in three phrasings, two
      screens below my own correction. Now "MERGED, riding under 1.0.0". The code-landed SHIPPED lines
