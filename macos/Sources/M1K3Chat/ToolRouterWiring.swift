@@ -14,6 +14,9 @@
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85. Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — the route's persona is the agent turns'
 //  (Kev's call on the voice-vs-speed trade-off), not Mini's trimmed prewarmed one.
+//  Review: same day, reversed on evidence (dispatch arm): the standard persona narrated
+//  12/39 answers in the third person once tool results sat in the prompt; Mini's own 0/100.
+//  The route keeps Mini's persona; routed turns lose follow-up chips. Confidence 0.85.
 //
 
 import Foundation
@@ -27,19 +30,43 @@ public enum ToolRouterWiring {
         defaults.object(forKey: enabledKey) == nil || defaults.bool(forKey: enabledKey)
     }
 
+    /// Router-invoked tools: its own kill switch, absent = ON. Off, a tools verdict
+    /// takes the agent turn as before.
+    public static let dispatchKey = "miniToolDispatch"
+
+    public static func dispatchEnabled(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: dispatchKey) == nil || defaults.bool(forKey: dispatchKey)
+    }
+
     /// Loaded once: the embedding asset is read-only and shared across turns.
     private static let embedder = NLSentenceEmbedder()
 
     /// This turn's plain-chat route, or nil for today's agent turn.
-    /// The route speaks in the persona Mini's agent turns use (Kev, 2026-09-26): the
-    /// same voice and follow-up chips on either route, for ~0.7 s of first-word time
-    /// over Mini's trimmed prewarmed persona (live A/B, 5.1 s against 4.4 s).
-    public static func route(provider: any InferenceProvider, enabled: Bool) -> PlainTurnRoute? {
+    /// The route keeps Mini's own trimmed, prewarmed persona (nil = the provider's).
+    /// First chosen the other way (the agent turns' standard persona, for its voice and
+    /// chips); reversed the same day on evidence: with a tool result in the prompt the
+    /// standard persona narrated 12 of 39 answers in the third person, Mini's own 0 of
+    /// 100, and it's faster. Mini's synthesised tool answers always used this one.
+    public static func route(provider: any InferenceProvider, enabled: Bool, dispatch: Bool = false) -> PlainTurnRoute? {
         guard enabled, let mini = servedMini(provider) else { return nil }
+        var picker: (@Sendable (String, String) async -> ToolPick?)?
+        if dispatch {
+            picker = { question, menu in await pick(with: mini, question: question, menu: menu) }
+        }
         return PlainTurnRoute(
             decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) },
-            instructions: M1K3Persona.systemPrompt(variant: mini.personaVariant)
+            instructions: nil,
+            pick: picker
         )
+    }
+
+    /// Mini names one tool from the menu; any failure (a guardrail, the daemon) is
+    /// nil, which keeps the agent turn.
+    static func pick(with picker: some ToolPicking, question: String, menu: String) async -> ToolPick? {
+        guard let choice = try? await picker.pickTool(
+            message: question, instructions: ToolDispatch.pickerInstructions + "\n\n" + menu
+        ) else { return nil }
+        return ToolPick(tool: choice.tool, query: choice.query)
     }
 
     static func servedMini(_ provider: any InferenceProvider) -> AppleFoundationModelsProvider? {

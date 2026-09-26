@@ -60,6 +60,7 @@ public struct WikipediaTool: AgentTool {
             }
             guard let fact = WikipediaSummaryParser.parse(data) else {
                 Self.log.info("no article for \"\(topic, privacy: .public)\"")
+                // Wording is load-bearing: ToolDispatch.emptyResultPrefixes reads it (ADR 0009).
                 return ToolResult(output: "No Wikipedia article found for \"\(topic)\".")
             }
             return ToolResult(output: WikipediaFormatter.format(fact))

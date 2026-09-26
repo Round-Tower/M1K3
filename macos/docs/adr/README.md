@@ -13,3 +13,4 @@ never edit, accepted ones.
 | [0006](0006-private-cloud-compute-rung-and-the-private-by-design-posture.md) | Add Private Cloud Compute as an opt-in rung; move the posture from "Nothing leaves" to private by design | Accepted | 2026-09-14 |
 | [0007](0007-private-cloud-consent-per-conversation.md) | Private Cloud Compute consent holds for a conversation, not one request | Accepted | 2026-09-26 |
 | [0008](0008-mini-routes-plain-chat-around-the-tool-palette.md) | Mini routes plain chat around the tool palette | Accepted | 2026-09-26 |
+| [0009](0009-mini-runs-read-only-tools-outside-the-model-loop.md) | Mini runs read-only tools outside the model loop | Accepted | 2026-09-26 |

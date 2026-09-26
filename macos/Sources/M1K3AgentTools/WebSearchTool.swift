@@ -73,6 +73,7 @@ public struct WebSearchTool: AgentTool {
                 // .notice: "the search found nothing" is a load-bearing breadcrumb
                 // (distinguishes empty-result from never-ran) that must persist.
                 Self.log.notice("no results for \"\(query, privacy: .public)\"")
+                // Wording is load-bearing: ToolDispatch.emptyResultPrefixes reads it (ADR 0009).
                 return ToolResult(output: "No web results for \"\(query)\".")
             case let .results(results):
                 Self.log.notice("\(results.count) result(s) for \"\(query, privacy: .public)\"")
