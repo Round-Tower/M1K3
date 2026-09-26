@@ -45,10 +45,13 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 - **Sidebar icons — C, Kev's pick (09-26)**: one symbol family, grey at rest,
   accent only on the selection (2e48788a). A wire set (direction D) is a later
   brand pass.
-- **Speech**: SpeechAnalyzer spike (`scratch/speechanalyzer-spike/FINDINGS.md`):
-  WER 9.0% vs WhisperKit small.en 7.3% on synthetic calls, ~4× faster, no
-  481 MB download. Swap the legacy `SFSpeechRecognizer` fallback first; A/B
-  real calls before touching the calls engine.
+- **Speech — SpeechAnalyzer is Apple Speech now**: `AppleSpeechTranscriber`
+  (the Mac's fallback, the iPhone's only engine) runs on SpeechAnalyzer, with
+  SFSpeech as the fallback when the analyzer can't serve a listen on-device.
+  It finalises at 0.3 s pauses, so the transcriber endpoints dictation itself
+  (`AnalyzerEndpoint`: a final plus 1.2 s of quiet). Verify-by-launch: chat
+  dictation cadence, voice mode, Bluetooth, iPhone. Calls stay on WhisperKit
+  until a real-call A/B (spike: WER 9.0% vs 7.3%, ~4× faster).
 - **QLoRA to cut the prompt: no.** The July adapter is on a retired base and
   bought ~65 tokens; Mini's window is spent by the tool palette, and Mini can't
   take an adapter on 27 (`scratch/lora-spike/REVIEW-2026-09-26.md`).
@@ -295,6 +298,8 @@ stays a possible later companion.
 
 ---
 
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 (3) — SpeechAnalyzer landed in AppleSpeechTranscriber
+     (Kev's call); the speech line records it and what stays owed. Confidence 0.85. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 (2) — the icon line records Kev's pick (C) instead of
      a recommendation. Confidence 0.95. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 — header truthed to build 372 (store still unlisted);
