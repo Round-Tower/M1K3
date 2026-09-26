@@ -41,8 +41,9 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 - **Reasoning (Auto / Think / Off) — Kev's call.** The Settings picker is a
   dead control on every shipping brain: Lil (Instruct-2507) never thinks, Big's
   gemma-4 toggle is pinned off, Mini and Pocket have no think phase.
-- **Sidebar icons**: four directions mocked; C (one symbol family, grey,
-  accent only on the selection) for this build, a wire set after.
+- **Sidebar icons — C, Kev's pick (09-26)**: one symbol family, grey at rest,
+  accent only on the selection (2e48788a). A wire set (direction D) is a later
+  brand pass.
 - **Speech**: SpeechAnalyzer spike (`scratch/speechanalyzer-spike/FINDINGS.md`):
   WER 9.0% vs WhisperKit small.en 7.3% on synthetic calls, ~4× faster, no
   481 MB download. Swap the legacy `SFSpeechRecognizer` fallback first; A/B
@@ -293,9 +294,11 @@ stays a possible later companion.
 
 ---
 
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 (2) — the icon line records Kev's pick (C) instead of
+     a recommendation. Confidence 0.95. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 — header truthed to build 372 (store still unlisted);
      "The next review build" block records the feat/review-build-polish work and the three calls
-     it leaves with Kev (ADR 0007, reasoning, icon direction). Confidence 0.85. -->
+     it leaves with Kev (ADR 0007, reasoning; icons settled on C). Confidence 0.85. -->
 <!-- Review: Kev + claude-fable-5.1, 2026-09-18 (2) — review fold on #381: the "1.1.0" section heading still
      said SHIPPED, with "PCC ships" and "are all live" under it — the same error in three phrasings, two
      screens below my own correction. Now "MERGED, riding under 1.0.0". The code-landed SHIPPED lines
