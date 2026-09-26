@@ -14,6 +14,8 @@
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `pocketPersonaIsLFM2Only` pins the
 //  dialect → persona-variant mapping (lfm2 only).
 //  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — mechanical rename only: `MLXGemmaProvider` → `MLXBrainProvider`; no test logic changed.
+//  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85 — granite + nanbeige pin the XML function
+//  dialect by model_type (templates read off HF); granitemoehybrid stays unarmed.
 
 import Foundation
 import M1K3Inference
@@ -302,6 +304,23 @@ struct MLXToolFormatResolutionTests {
         // An unknown type falls through to the name heuristic, never to nil.
         #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "x/Qwen3-4B"), modelType: "novel_arch") == .json)
         #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "some/unknown"), modelType: "novel_arch") == nil)
+    }
+
+    /// 2026-09-26 audition prep: both chat templates were read off Hugging Face and
+    /// both teach `<tool_call><function=…><parameter=…>` — the Qwen3.5 XML
+    /// dialect (granite calls it qwen3_coder; Nanbeige's `tool_call_format`
+    /// defaults to 'xml'). Without an arm neither has a family word in a name the
+    /// heuristic knows, so an audition would run on the ReAct floor (#264's shape).
+    @Test("granite and nanbeige resolve to the XML function dialect by model_type")
+    func graniteAndNanbeigeAreXMLFunction() {
+        #expect(MLXBrainProvider.resolveToolCallFormat(
+            for: .init(id: "ibm-granite/granite-4.2-8b-q4-mlx"), modelType: "granite"
+        ) == .xmlFunction)
+        #expect(MLXBrainProvider.resolveToolCallFormat(
+            for: .init(id: "mlx-community/Nanbeige4.2-3B-OptiQ-4bit"), modelType: "nanbeige"
+        ) == .xmlFunction)
+        // granitemoe* and granite_speech are different templates — unverified, so no arm.
+        #expect(MLXBrainProvider.toolCallFormat(forModelType: "granitemoehybrid") == nil)
     }
 
     @Test("Qwen3.8 resolves to xmlFunction by name too (pre-download, before config.json exists)")
