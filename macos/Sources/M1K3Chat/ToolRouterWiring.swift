@@ -11,6 +11,8 @@
 //  Default OFF until the route's own eval arm has run (chat, tool-use, security).
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85. Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — the route's persona is the agent turns'
+//  (Kev's call on the voice-vs-speed trade-off), not Mini's trimmed prewarmed one.
 //
 
 import M1K3Inference
@@ -23,16 +25,18 @@ public enum ToolRouterWiring {
     private static let embedder = NLSentenceEmbedder()
 
     /// This turn's plain-chat route, or nil for today's agent turn.
+    /// The route speaks in the persona Mini's agent turns use (Kev, 2026-09-26): the
+    /// same voice and follow-up chips on either route, for ~0.7 s of first-word time
+    /// over Mini's trimmed prewarmed persona (live A/B, 5.1 s against 4.4 s).
     public static func route(provider: any InferenceProvider, enabled: Bool) -> PlainTurnRoute? {
-        guard enabled, servesMini(provider) else { return nil }
+        guard enabled, let mini = servedMini(provider) else { return nil }
         return PlainTurnRoute(
             decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) },
-            instructions: nil
+            instructions: M1K3Persona.systemPrompt(variant: mini.personaVariant)
         )
     }
 
-    static func servesMini(_ provider: any InferenceProvider) -> Bool {
-        let active = (provider as? SwappableInferenceProvider)?.active ?? provider
-        return active is AppleFoundationModelsProvider
+    static func servedMini(_ provider: any InferenceProvider) -> AppleFoundationModelsProvider? {
+        ((provider as? SwappableInferenceProvider)?.active ?? provider) as? AppleFoundationModelsProvider
     }
 }

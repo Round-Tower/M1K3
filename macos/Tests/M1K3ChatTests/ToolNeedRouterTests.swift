@@ -112,8 +112,15 @@ struct ToolRouterWiringTests {
         #expect(ToolRouterWiring.route(provider: SwappableInferenceProvider(OtherBrain()), enabled: true) == nil)
     }
 
-    @Test("the app route keeps the provider's own persona (Mini's prewarmed one)")
-    func routeKeepsProviderPersona() {
-        #expect(ToolRouterWiring.route(provider: AppleFoundationModelsProvider(), enabled: true)?.instructions == nil)
+    /// Kev, 2026-09-26: the route speaks in the standard persona, the one Mini's
+    /// agent turns use, so a routed turn keeps the voice and the follow-up chips.
+    /// Measured: first words ~5.1 s against ~4.4 s on Mini's trimmed prewarmed one.
+    @Test("the app route speaks in the same persona as Mini's agent turns")
+    func routeUsesAgentPersona() {
+        let mini = AppleFoundationModelsProvider()
+        #expect(ToolRouterWiring.route(provider: mini, enabled: true)?.instructions
+            == M1K3Persona.systemPrompt(variant: mini.personaVariant))
+        #expect(ToolRouterWiring.route(provider: SwappableInferenceProvider(mini), enabled: true)?.instructions
+            == M1K3Persona.systemPrompt(variant: .standard))
     }
 }
