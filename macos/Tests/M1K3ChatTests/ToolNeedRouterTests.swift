@@ -89,6 +89,15 @@ struct ToolNeedRouterFixtureTests {
         }
     }
 
+    /// PR #414 review (fe9a04ac): a long turn with NO language signal (the recognizer
+    /// returns nil for digits and emoji) must abstain, as it did before the short-turn fold.
+    @Test("a long turn with no language signal abstains; a short one is still read")
+    func noSignalLongTurnFailsOpen() {
+        #expect(embedder.vector("1234567890 0987654321 1122334455") == nil)
+        #expect(embedder.vector(String(repeating: "🙂", count: 30)) == nil)
+        #expect(NLSentenceEmbedder.readsAsEnglish("123"))
+    }
+
     @Test("the embedder abstains on non-English text, so the router keeps the tools")
     func nonEnglishFailsOpen() {
         #expect(embedder.vector("¿Cuál es la capital de Australia y por qué la eligieron?") == nil)

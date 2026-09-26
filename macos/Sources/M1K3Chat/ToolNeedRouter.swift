@@ -30,6 +30,8 @@
 //  Review: same day, PR #414 review — skipping the guess also scored short NON-English
 //  tool asks with the English model. A short turn now abstains on a confident non-English
 //  guess (≥ 0.9); the noisy English misreads are low-confidence. Confidence 0.8.
+//  Review: same day, PR #414 review (fe9a04ac) — that fold read a long turn with NO language
+//  signal (the recognizer's nil: digits, emoji) as English; it abstains again. Confidence 0.85.
 //
 
 import Foundation
@@ -152,7 +154,9 @@ public final class NLSentenceEmbedder: @unchecked Sendable {
     static func readsAsEnglish(_ text: String) -> Bool {
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(text)
-        guard let top = recognizer.dominantLanguage, top != .english else { return true }
+        // No signal at all (digits, emoji): a short turn is read, a long one abstains.
+        guard let top = recognizer.dominantLanguage else { return text.count < shortTurnLength }
+        if top == .english { return true }
         let hypotheses = recognizer.languageHypotheses(withMaximum: 3)
         if (hypotheses[.english] ?? 0) >= 0.2 { return true }
         return text.count < shortTurnLength && (hypotheses[top] ?? 0) < confidentGuess
