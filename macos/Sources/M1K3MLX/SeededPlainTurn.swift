@@ -22,6 +22,9 @@
 //  the seam leaning on the current model roster having no sliding windows.
 //  Confidence now 0.9.
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8 — `seedBuild(freshLayersTrimmable:)`:
+//  a cache with any untrimmable layer is seeded by a sample-free prefill, so pocket's seed is exact
+//  and `plan` can reuse it (the caller now passes the builder's `exact`, not layer trimmability).
 
 import Foundation
 
@@ -34,17 +37,44 @@ enum SeededPlainTurn {
         case fresh
     }
 
+    /// How to build a persona seed on a FRESH cache.
+    enum SeedBuild: Equatable {
+        /// Run a 1-token generation over the prefix, then trim the sampled
+        /// position back off. Kept for linear caches because it runs upstream's
+        /// own TokenIterator — including its KV-cache plan (Lil's 8-bit
+        /// quantization at quantizedKVStart 0), so the seed is stored in the
+        /// form the turn's decode will use.
+        case sampleAndTrim
+        /// Forward-only prefill that never samples, so the cache holds exactly
+        /// the prefix and nothing needs trimming. The only exact build for a
+        /// recurrent layer (LFM2's MambaCache is never trimmable). It runs NO
+        /// KVCachePlan, so it is only chosen for a family that does not
+        /// quantize its KV (see `quantizesKV`).
+        case exactPrefill
+    }
+
+    /// `freshLayersTrimmable`: `isTrimmable` of each layer of a fresh
+    /// `newCache` — false only on recurrent/state caches, which can never be
+    /// trimmed back after a sampled token. `quantizesKV`: the parameters carry
+    /// `kvBits` — the exact prefill would store an unquantized seed where the
+    /// turn's iterator expects its plan applied, so such a family keeps the
+    /// sample build (not reusable when untrimmable, but never wrong).
+    static func seedBuild(freshLayersTrimmable: [Bool], quantizesKV: Bool = false) -> SeedBuild {
+        if quantizesKV { return .sampleAndTrim }
+        return !freshLayersTrimmable.isEmpty && freshLayersTrimmable.allSatisfy { $0 } ? .sampleAndTrim : .exactPrefill
+    }
+
     /// `seed`: the exact token ids the persona cache holds. `full`: the token
     /// ids of the whole `[system, user]` render for this turn.
     ///
     /// `seedTrimmed`: whether the seed cache really holds EXACTLY `seed.count`
-    /// positions. `renderPersonaPrefix` prefills one throwaway token and trims
-    /// it back off only on a linear cache — a persona that wrapped a sliding
-    /// window keeps that extra position (trimming a wrapped RotatingKVCache
-    /// underflows its rotation pointer), so its cache is one token longer than
-    /// its ids say. Appending to it would be silently misaligned KV — the very
-    /// class of bug this seam exists to close — so a non-trimmed seed is never
-    /// reused. Pass `CrossTurnCacheReuse.cacheReusable(layersTrimmable:)`.
+    /// positions — the seed's `exact`, vouched by its builder: trimmed back on a
+    /// linear cache, or prefilled without a sampled token (`SeedBuild`). A
+    /// persona that wrapped a sliding window keeps its sampled position
+    /// (trimming a wrapped RotatingKVCache underflows its rotation pointer), so
+    /// its cache is one token longer than its ids say. Appending to it would be
+    /// silently misaligned KV — the very class of bug this seam exists to close
+    /// — so a non-exact seed is never reused.
     static func plan(seed: [Int], full: [Int], seedTrimmed: Bool) -> Plan {
         guard seedTrimmed, !seed.isEmpty, full.count > seed.count, full.starts(with: seed) else {
             return .fresh

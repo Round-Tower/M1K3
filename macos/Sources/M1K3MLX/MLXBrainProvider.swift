@@ -92,6 +92,12 @@
 //  Interactive turns are unchanged (the override is nil). Confidence 0.8 (verify-by-launch on a call).
 //  `templateSupportsThinkingToggle` delegates to M1K3Inference's ThinkingToggleSupport (moved verbatim,
 //  so Settings can ask it); the MLX tests still pin it.
+//  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8 — prefill chunking left the llama-only
+//  caller-capacity branch: gemma-4's measured 1024 step (and the `prefillStepSize` override) had sat
+//  inside it since #116, so Big never got them. Now `prefillStepSize(for:override:)`, pinned in the
+//  tests. The −8.5% is a 2026-08 number on an older pin (no window clamp now, balanced chunking):
+//  re-measure owed by launch. Same PR: a cache with an untrimmable layer (LFM2) seeds by
+//  `prefillExactly` — forward-only, no sampled token — and every seed records `exact`.
 import Foundation
 import Hub
 import M1K3Inference
@@ -294,37 +300,16 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             // capacity — see supportsCallerKVCapacity for the list and why the
             // default is "no capacity".
             params.maxKVSize = 8192
-
-            // PREFILL CHUNKING — measured 2026-08-09 on this machine (M1 Max,
-            // powermode 0), same 2357-token prompt every run:
-            //
-            //   upstream default   14333 / 14254 ms   (two runs, <0.6% apart)
-            //   stepSize 1024      13092 ms           -8.5%
-            //   stepSize 2048      13074 ms           -8.5%  (clamps to 1024)
-            //   unchunked          14513 ms           +1.5%  — bigger is NOT better
-            //
-            // 1024 and 2048 land together because upstream clamps the step to the
-            // model's `maximumStepSize`, which for gemma-4 is its sliding window.
-            // So this is really "use the whole window per forward"; the gemma text
-            // path's own default is smaller and costs us ~8.5% on every turn.
-            //
-            // Why this matters more than it looks: gemma-4's 1024-token window
-            // means the KV cache WRAPS on every real turn (prompts run 2.3-2.9k),
-            // which vetoes cross-turn reuse entirely — see MLXToolCalling's
-            // `reusable` gate. Every turn re-prefills the whole prompt, so prefill
-            // THROUGHPUT is the only lever left short of changing brains.
-            //
-            // Scoped to the family it was measured on. Qwen (Lil) has no sliding
-            // window and reuse works there, so its prefill profile is a different
-            // question and gets upstream's default until someone measures it.
-            if Self.prefersWindowSizedPrefill(for: configuration) {
-                params.prefill.stepSize = 1024
-            }
-            // Escape hatch for the next measurement pass — one build, many variants:
-            //   defaults write app.m1k3 prefillStepSize -int 2048
-            let stepOverride = UserDefaults.standard.integer(forKey: "prefillStepSize")
-            if stepOverride > 0 { params.prefill.stepSize = stepOverride }
         }
+        // PREFILL CHUNKING — its own decision, OUTSIDE the cache-geometry branches
+        // above. Until 2026-09-26 this block sat inside the llama-only
+        // caller-capacity branch, so the gemma-4 step it was measured for never
+        // reached gemma-4 (Big) and the override reached no shipping tier.
+        // See prefillStepSize(for:override:).
+        params.prefill.stepSize = Self.prefillStepSize(
+            for: configuration,
+            override: UserDefaults.standard.integer(forKey: "prefillStepSize")
+        )
         generateParameters = params
         self.name = name
 
@@ -733,6 +718,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         struct PrefixBox: @unchecked Sendable {
             let cache: [KVCache]
             let tokenIDs: [Int]
+            var exact = false
         }
         // Resolved OUTSIDE the closure: touching `self.configuration` inside it
         // makes the closure async and `perform`'s overload no longer matches.
@@ -751,12 +737,24 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             guard reusableWindow.map({ ids.count <= $0 }) ?? true else {
                 return PrefixBox(cache: [], tokenIDs: [])
             }
+            let cache = try context.model.newCache(parameters: parameters)
+            let build = SeededPlainTurn.seedBuild(
+                freshLayersTrimmable: cache.map(\.isTrimmable), quantizesKV: parameters.kvBits != nil
+            )
+            if build == .exactPrefill {
+                // A recurrent layer (LFM2's MambaCache) can never be trimmed, so
+                // the sampled position of the generate-and-trim build below would
+                // stay in the seed for good and no turn could append to it
+                // (pocket re-prefilled every plain turn, #240). Prefill forward
+                // only: the cache ends holding exactly `ids`.
+                try Self.prefillExactly(ids, into: cache, parameters: parameters, model: context.model)
+                return PrefixBox(cache: cache, tokenIDs: ids, exact: true)
+            }
             // Prefill: run a 1-token generation over the prefix, then trim
             // the cache back to exactly the prompt (the sampled token must
             // not pollute the reusable prefix).
             var prefill = parameters
             prefill.maxTokens = 1
-            let cache = try context.model.newCache(parameters: parameters)
             let stream = try MLXLMCommon.generate(
                 input: LMInput(tokens: MLXArray(ids)),
                 cache: cache,
@@ -770,13 +768,14 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             // (the temporalOrder crash). A wrapped prefix can't be linearly
             // reused anyway; leave it untrimmed — the cross-turn gate rejects a
             // non-trimmable seed downstream, so it just re-prefills, never reuses.
-            if CrossTurnCacheReuse.cacheReusable(layersTrimmable: cache.map(\.isTrimmable)) {
+            let trimmed = CrossTurnCacheReuse.cacheReusable(layersTrimmable: cache.map(\.isTrimmable))
+            if trimmed {
                 for layer in cache {
                     let extra = layer.offset - ids.count
                     if extra > 0 { _ = layer.trim(extra) }
                 }
             }
-            return PrefixBox(cache: cache, tokenIDs: ids)
+            return PrefixBox(cache: cache, tokenIDs: ids, exact: trimmed)
         }
         guard !built.tokenIDs.isEmpty else {
             mlxTTFTLog.notice(
@@ -784,7 +783,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             )
             return
         }
-        personaPrefix.store(built.cache, tokenIDs: built.tokenIDs, for: key)
+        personaPrefix.store(built.cache, tokenIDs: built.tokenIDs, exact: built.exact, for: key)
         let tokens = built.tokenIDs.count
         // Key fingerprint stays in the line: this log is the ONLY way to tell a
         // legitimate second prefix (a different tool palette) from the same one
@@ -793,6 +792,31 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         mlxTTFTLog.notice(
             "persona prefix built: \(tokens)tok key=\(key.hashValue, privacy: .public) tools=[\(key.toolsFingerprint, privacy: .public)]"
         )
+    }
+
+    /// Prefill `ids` into `cache` without sampling — the cache ends holding
+    /// exactly `ids.count` positions. The model's own chunked `prepare` does
+    /// all but the remainder it hands back; one forward over that remainder
+    /// finishes the prompt, and its logits are discarded instead of sampled.
+    /// Mirrors TokenIterator's prepare + first step, minus the token — and minus
+    /// its KVCachePlan: nothing is quantized here, which is why `seedBuild`
+    /// never routes a `kvBits` family to this path. The processed-token
+    /// timeline is not lost: the turn's `generate` rebuilds its KVCacheStorage
+    /// and infers the count from the attention leaves' offsets.
+    static func prefillExactly(
+        _ ids: [Int], into cache: [KVCache], parameters: GenerateParameters, model: any LanguageModel
+    ) throws {
+        let input = LMInput(tokens: MLXArray(ids))
+        switch try model.prepare(input, cache: cache, state: nil, prefill: parameters.prefill) {
+        case let .tokens(remaining):
+            let output = withPreparedCache(cache, lengths: remaining.sequenceLengths) {
+                model(remaining[text: .newAxis], cache: cache.isEmpty ? nil : cache, state: nil)
+            }
+            eval(output.logits)
+        case let .logits(output):
+            eval(output.logits)
+        }
+        eval(cache.flatMap { $0.innerState() })
     }
 
     /// System-block token ids for the persona prefill (no assistant opener).
@@ -1045,6 +1069,35 @@ extension MLXBrainProvider {
     /// ours.
     static func prefersWindowSizedPrefill(for configuration: ModelConfiguration) -> Bool {
         configuration.name.lowercased().contains("gemma-4")
+    }
+
+    /// The prefill chunk ceiling to request, or nil for upstream's per-model
+    /// default (512 on the generic and gemma-4 text paths at e3d4a20e).
+    ///
+    /// Measured 2026-08-09 on an M1 Max (powermode 0), gemma-4, same 2357-token
+    /// prompt every run:
+    ///
+    ///   upstream default   14333 / 14254 ms   (two runs, <0.6% apart)
+    ///   stepSize 1024      13092 ms           -8.5%
+    ///   stepSize 2048      13074 ms           -8.5%  (then clamped to 1024)
+    ///   unchunked          14513 ms           +1.5%  — bigger is NOT better
+    ///
+    /// Upstream has since stopped clamping gemma-4's step to its window, and
+    /// #470 made chunking "balanced" (the fewest equal chunks under the
+    /// ceiling), so the −8.5% is a 2026-08 figure that owes a re-measure here.
+    ///
+    /// Why it matters more than it looks: gemma-4's 1024-token sliding window
+    /// wraps on every real turn, which vetoes cross-turn reuse (MLXToolCalling's
+    /// `reusable` gate) — every Big turn re-prefills the whole prompt, so prefill
+    /// throughput is the lever. Qwen (Lil) has no sliding window and reuse works
+    /// there; it keeps upstream's default until someone measures it.
+    ///
+    /// `override` is the operator escape hatch for the next measurement pass —
+    /// `defaults write app.m1k3 prefillStepSize -int 2048` — and wins for every
+    /// family; 0 (the unset default) means no override.
+    static func prefillStepSize(for configuration: ModelConfiguration, override: Int) -> Int? {
+        if override > 0 { return override }
+        return prefersWindowSizedPrefill(for: configuration) ? 1024 : nil
     }
 
     /// A model's attention window, when it is SMALLER than its context length —

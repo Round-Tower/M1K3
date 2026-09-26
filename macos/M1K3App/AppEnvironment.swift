@@ -73,6 +73,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26 (2) — Lil/Big too: SummarizationPipeline runs every call under
 //  `InferenceIntent.withInstructions(neutralInstructions)`, which MLX generate honours (no persona seed).
 //  Confidence 0.8 (the MLX path is verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (3), Confidence 0.8 — the launch warm builds the plain
+//  no-tools prefix too (three warms for three live keys; PersonaPrefixCache holds three).
+//  Verify-by-launch: three `persona prefix warmed` lines on Lil.
 
 import AppKit
 import Foundation
@@ -1550,8 +1553,8 @@ final class AppEnvironment {
             armThermalRecovery()
             return
         }
-        // Warm BOTH palettes that really exist. Until 2026-08-12 this warmed a
-        // THIRD one that nothing ever asks for: it passed onOpenLink but not
+        // Warm the prefixes that really exist (three since 2026-09-26, below).
+        // Until 2026-08-12 this also warmed a palette nothing ever asks for: it passed onOpenLink but not
         // deepDelegation, while the live responder (AppEnvironment.swift:684)
         // always passes both — so the warmed key matched no caller and the ~2.1s
         // build was paid at launch AND again on the first chat turn AND again on
@@ -1560,8 +1563,12 @@ final class AppEnvironment {
         // a fingerprint of the tool SET, and nothing checks that the set we warm
         // is a set anyone wants.
         //
-        // Order matters — the second warm becomes MRU, and the cache holds two.
-        // Interactive goes last because a person waiting on their first chat turn
+        // THREE warms for the three live keys (PersonaPrefixCache holds three):
+        // the plain no-tools prefix first — the one a tool turn's synthesis
+        // fallback seeds from, never warmed before 2026-09-26, so each first
+        // use built it inline and evicted a palette — then headless, then
+        // interactive. Order still matters when something else takes a slot:
+        // the last warm is MRU, and a person waiting on their first chat turn
         // beats an agent's first ask.
         // weak: a brain swap mid-warm must not have this task pin the OUTGOING
         // provider's multi-GB weights alive while the new brain's are loading
@@ -1585,6 +1592,7 @@ final class AppEnvironment {
             // Sequentially: one ModelContainer, and the coalescer only dedupes
             // IDENTICAL keys — two concurrent builds of different keys would just
             // queue on the actor anyway, with the loser's ordering unpredictable.
+            await mlx?.warmPersonaPrefix(tools: [])
             await mlx?.warmPersonaPrefix(tools: headlessTools)
             await mlx?.warmPersonaPrefix(tools: interactiveTools)
         }

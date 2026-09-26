@@ -11,6 +11,8 @@
 //  (MLXGemmaProvider → MLXBrainProvider; it runs Qwen3, LFM2.5 and Gemma alike). The
 //  default diagnostics label pinned below moved "mlx-gemma" → "mlx-brain"; nothing
 //  persists or routes on it. No test logic changed.
+//  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.9 — prefill step pins: gemma-4 gets 1024
+//  whatever its cache geometry; the override wins for every family (red before the fix).
 
 import Foundation
 import M1K3Chat
@@ -357,6 +359,32 @@ struct MLXBrainProviderTests {
             configuration: ModelConfiguration(id: "mlx-community/Llama-3.2-1B-Instruct-4bit")
         )
         #expect(llama.generateParameters.maxKVSize == 8192)
+    }
+
+    // 2026-09-26: the measured gemma-4 1024 step (−8.5% prefill, 2026-08-09) sat
+    // inside the llama-only caller-capacity branch from the day it landed (#116,
+    // four days after #107 took gemma-4 out of that branch) — Big never got it.
+    @Test("prefill step: gemma-4 gets its measured 1024 whatever its cache geometry")
+    func prefillStepReachesGemma4() {
+        let big = MLXBrainProvider(configuration: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit"))
+        #expect(big.generateParameters.prefill.stepSize == 1024)
+        let e4b = MLXBrainProvider(configuration: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit"))
+        #expect(e4b.generateParameters.prefill.stepSize == 1024)
+        // Unmeasured families keep upstream's choice.
+        let lil = MLXBrainProvider(
+            configuration: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510")
+        )
+        #expect(lil.generateParameters.prefill.stepSize == nil)
+    }
+
+    @Test("prefill step: the operator override wins for every family, zero means unset")
+    func prefillStepOverride() {
+        let gemma = ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
+        let qwen = ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510")
+        #expect(MLXBrainProvider.prefillStepSize(for: qwen, override: 2048) == 2048)
+        #expect(MLXBrainProvider.prefillStepSize(for: gemma, override: 256) == 256)
+        #expect(MLXBrainProvider.prefillStepSize(for: gemma, override: 0) == 1024)
+        #expect(MLXBrainProvider.prefillStepSize(for: qwen, override: 0) == nil)
     }
 
     @Test(

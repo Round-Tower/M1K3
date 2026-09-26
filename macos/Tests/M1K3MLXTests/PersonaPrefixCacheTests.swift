@@ -9,6 +9,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.85, Prior: Unknown
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85 — the three live prefixes coexist at
+//  the default capacity (was red at 2).
+//
 
 import Foundation
 @testable import M1K3MLX
@@ -87,6 +90,37 @@ struct PersonaPrefixCacheTests {
         #expect(store.snapshot(for: background)?.tokenCount == 1170)
     }
 
+    /// 2026-09-26: since #116 (2026-08-12) the launch warm builds TWO tool
+    /// palettes — headless (MCP / Shortcuts) and interactive — and the plain
+    /// `generate`/`generateStreaming` path keys a THIRD, no-tools prefix. Three
+    /// live keys in two slots: whichever ran least recently re-prefills (~2 s on
+    /// Lil) on its next use, every time the traffic alternates.
+    @Test("the headless, interactive and plain prefixes all fit the default capacity")
+    func threeLivePrefixesCoexist() {
+        let store = PersonaPrefixCache()
+        let headless = key(["search_knowledge", "web_search"])
+        let interactive = key(["open_link", "search_knowledge", "web_search"])
+        let plain = key([])
+
+        store.store([], tokenIDs: Array(0 ..< 1786), for: headless)
+        store.store([], tokenIDs: Array(0 ..< 1900), for: interactive)
+        store.store([], tokenIDs: Array(0 ..< 1170), for: plain)
+
+        #expect(store.snapshot(for: headless)?.tokenCount == 1786)
+        #expect(store.snapshot(for: interactive)?.tokenCount == 1900)
+        #expect(store.snapshot(for: plain)?.tokenCount == 1170)
+    }
+
+    /// #415 review: capacity 3 was platform-flat. iOS/visionOS live under a jetsam
+    /// limit (MLXMemoryBudget's 4 GB mobile ceiling) where a kill is the failure,
+    /// not a slowdown — mobile keeps the two slots it had until an on-device RAM
+    /// snapshot says a third fits.
+    @Test("the third slot is desktop-only; mobile keeps two")
+    func capacityByDeviceProfile() {
+        #expect(PersonaPrefixCache.capacity(for: .desktop) == 3)
+        #expect(PersonaPrefixCache.capacity(for: .mobile) == 2)
+    }
+
     /// Capacity is finite because each slot retains Metal-backed KV arrays for
     /// a ~2k-token prefix across every layer of a 12B model. When it overflows,
     /// the LEAST RECENTLY USED entry goes — so a prefix in constant interactive
@@ -138,6 +172,15 @@ struct PersonaPrefixCacheTests {
         store.store([], tokenIDs: [3], for: key(["a", "b"]))
         #expect(store.contains(older) == false, "a mere peek must not have saved it")
         #expect(store.contains(newer))
+    }
+
+    @Test("a stored seed says whether its cache holds exactly its ids — unvouched means not exact")
+    func exactnessRidesTheSnapshot() {
+        let store = PersonaPrefixCache()
+        store.store([], tokenIDs: [1, 2, 3], exact: true, for: key(["web_search"]))
+        store.store([], tokenIDs: [4, 5], for: key([]))
+        #expect(store.snapshot(for: key(["web_search"]))?.exact == true)
+        #expect(store.snapshot(for: key([]))?.exact == false)
     }
 
     @Test("invalidate clears every slot, not just the newest")

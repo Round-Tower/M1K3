@@ -72,7 +72,8 @@ public extension MLXBrainProvider {
             let genStart = clock.now
             let answer = try await seededAnswer(
                 container: container,
-                seed: PersonaPrefixSnapshot(cache: loaded, tokenIDs: reloadedIDs)
+                // A disk round-trip of the in-memory seed carries its exactness.
+                seed: PersonaPrefixSnapshot(cache: loaded, tokenIDs: reloadedIDs, exact: seed.exact)
             )
             let genMS = (clock.now - genStart).milliseconds
 
