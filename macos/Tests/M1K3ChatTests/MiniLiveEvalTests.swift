@@ -43,6 +43,7 @@
 //  turn with an empty palette: the tool-router A/B (scratch/laya-spike). Confidence 0.85.
 //  `M1K3_AFM_EVAL_ROUTER=mini|standard` puts the shipping router and its plain-chat route
 //  in front, on Mini's own persona or the standard one (the route's own eval arm).
+//  `M1K3_AFM_EVAL_DISPATCH=1` adds router-invoked tools: Mini picks one tool, the app runs it.
 //
 
 import Foundation
@@ -204,6 +205,14 @@ struct MiniLiveEvalTests {
                 default: nil
                 }
                 let embedder = NLSentenceEmbedder()
+                // `M1K3_AFM_EVAL_DISPATCH=1`: router-invoked tools, Mini picking the tool.
+                var dispatchPicker: (@Sendable (String, String) async -> ToolPick?)?
+                if evalEnvironment["M1K3_AFM_EVAL_DISPATCH"] == "1" {
+                    dispatchPicker = { question, menu in
+                        await ToolRouterWiring.pick(with: provider, question: question, menu: menu)
+                    }
+                }
+                let picker = dispatchPicker
                 let responder = try AgentRAGResponder(
                     store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
                     toolsProvider: { tools },
@@ -211,7 +220,8 @@ struct MiniLiveEvalTests {
                         { @Sendable in
                             PlainTurnRoute(
                                 decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) },
-                                instructions: instructions
+                                instructions: instructions,
+                                pick: picker
                             )
                         }
                     }

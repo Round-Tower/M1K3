@@ -927,7 +927,8 @@ final class AppCore {
             plainRouteProvider: {
                 ToolRouterWiring.route(
                     provider: provider,
-                    enabled: ToolRouterWiring.isEnabled()
+                    enabled: ToolRouterWiring.isEnabled(),
+                    dispatch: ToolRouterWiring.dispatchEnabled()
                 )
             }
         )

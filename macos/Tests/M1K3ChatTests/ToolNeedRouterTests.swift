@@ -146,6 +146,19 @@ struct ToolRouterWiringTests {
 
     /// Kev, 2026-09-26: default ON. An absent key is on; only an explicit false
     /// turns the router off (the escape hatch if a build needs it gone).
+    @Test("dispatch has its own kill switch, also on by default; the route carries a picker only when it's on")
+    func dispatchFlag() throws {
+        let suite = "ToolDispatchFlag.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(ToolRouterWiring.dispatchEnabled(defaults))
+        defaults.set(false, forKey: ToolRouterWiring.dispatchKey)
+        #expect(!ToolRouterWiring.dispatchEnabled(defaults))
+        let mini = AppleFoundationModelsProvider()
+        #expect(ToolRouterWiring.route(provider: mini, enabled: true, dispatch: true)?.pick != nil)
+        #expect(ToolRouterWiring.route(provider: mini, enabled: true, dispatch: false)?.pick == nil)
+    }
+
     @Test("the flag defaults on: absent reads on, an explicit false reads off")
     func defaultsOn() throws {
         let suite = "ToolRouterWiringTests.\(UUID().uuidString)"

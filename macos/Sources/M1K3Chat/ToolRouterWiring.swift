@@ -27,6 +27,14 @@ public enum ToolRouterWiring {
         defaults.object(forKey: enabledKey) == nil || defaults.bool(forKey: enabledKey)
     }
 
+    /// Router-invoked tools: its own kill switch, absent = ON. Off, a tools verdict
+    /// takes the agent turn as before.
+    public static let dispatchKey = "miniToolDispatch"
+
+    public static func dispatchEnabled(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: dispatchKey) == nil || defaults.bool(forKey: dispatchKey)
+    }
+
     /// Loaded once: the embedding asset is read-only and shared across turns.
     private static let embedder = NLSentenceEmbedder()
 
@@ -34,12 +42,26 @@ public enum ToolRouterWiring {
     /// The route speaks in the persona Mini's agent turns use (Kev, 2026-09-26): the
     /// same voice and follow-up chips on either route, for ~0.7 s of first-word time
     /// over Mini's trimmed prewarmed persona (live A/B, 5.1 s against 4.4 s).
-    public static func route(provider: any InferenceProvider, enabled: Bool) -> PlainTurnRoute? {
+    public static func route(provider: any InferenceProvider, enabled: Bool, dispatch: Bool = false) -> PlainTurnRoute? {
         guard enabled, let mini = servedMini(provider) else { return nil }
+        var picker: (@Sendable (String, String) async -> ToolPick?)?
+        if dispatch {
+            picker = { question, menu in await pick(with: mini, question: question, menu: menu) }
+        }
         return PlainTurnRoute(
             decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) },
-            instructions: M1K3Persona.systemPrompt(variant: mini.personaVariant)
+            instructions: M1K3Persona.systemPrompt(variant: mini.personaVariant),
+            pick: picker
         )
+    }
+
+    /// Mini names one tool from the menu; any failure (a guardrail, the daemon) is
+    /// nil, which keeps the agent turn.
+    static func pick(with picker: some ToolPicking, question: String, menu: String) async -> ToolPick? {
+        guard let choice = try? await picker.pickTool(
+            message: question, instructions: ToolDispatch.pickerInstructions + "\n\n" + menu
+        ) else { return nil }
+        return ToolPick(tool: choice.tool, query: choice.query)
     }
 
     static func servedMini(_ provider: any InferenceProvider) -> AppleFoundationModelsProvider? {

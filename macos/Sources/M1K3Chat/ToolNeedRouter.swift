@@ -94,10 +94,19 @@ public enum ToolNeedRouter {
 public struct PlainTurnRoute: Sendable {
     public let decide: @Sendable (String) -> ToolNeedRouter.Decision
     public let instructions: String?
+    /// On a turn that needs a tool: names ONE tool from the menu (question, menu),
+    /// which the app then runs itself (ToolDispatch). nil, or a nil pick, keeps the
+    /// agent turn.
+    public let pick: (@Sendable (String, String) async -> ToolPick?)?
 
-    public init(decide: @escaping @Sendable (String) -> ToolNeedRouter.Decision, instructions: String?) {
+    public init(
+        decide: @escaping @Sendable (String) -> ToolNeedRouter.Decision,
+        instructions: String?,
+        pick: (@Sendable (String, String) async -> ToolPick?)? = nil
+    ) {
         self.decide = decide
         self.instructions = instructions
+        self.pick = pick
     }
 }
 
