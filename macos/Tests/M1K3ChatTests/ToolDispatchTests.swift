@@ -70,6 +70,17 @@ struct ToolDispatchPlanTests {
         #expect(plan.input.isEmpty)
     }
 
+    /// PR #420 review: the tool reads a time `window` AND a `focus` (chats, todos, …).
+    /// Their vocabularies are disjoint and both ignore unknown text, so the pick's query
+    /// goes to both; "todos" used to land in `window` and come back as a week digest.
+    @Test("recent_activity hands the query to both its window and its focus")
+    func activityWindowAndFocus() throws {
+        let plan = try #require(ToolDispatch.plan(
+            ToolPick(tool: "recent_activity", query: "todos"), palette: palette, question: "what have I asked you to do lately?"
+        ))
+        #expect(plan.input == ["window": "todos", "focus": "todos"])
+    }
+
     @Test("fetch_page is planned only with a URL in hand")
     func fetchNeedsURL() {
         #expect(ToolDispatch.plan(

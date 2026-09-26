@@ -109,8 +109,10 @@ public enum ToolDispatch {
             guard let url = webURL(query) ?? webURL(question) else { return nil }
             return Plan(tool: tool, input: [parameter: url])
         case "recent_activity":
-            // Optional filters: absent means the tool's own default.
-            return Plan(tool: tool, input: query.isEmpty ? [:] : [parameter: query])
+            // Two optional filters, a time `window` and a `focus` (chats, todos, …), with
+            // disjoint vocabularies that both ignore unknown text: the query goes to both
+            // (PR #420 review). Absent means the tool's own default.
+            return Plan(tool: tool, input: query.isEmpty ? [:] : ["window": query, "focus": query])
         default:
             return Plan(tool: tool, input: [parameter: query.isEmpty ? question : query])
         }
