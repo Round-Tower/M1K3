@@ -77,6 +77,7 @@ public struct SearchKnowledgeTool: AgentTool {
         )
         guard !hits.isEmpty else {
             if embedder != nil {
+                // Wording is load-bearing: ToolDispatch.emptyResultPrefixes reads it (ADR 0009).
                 return ToolResult(output: "Nothing relevant in stored knowledge for \"\(query)\" "
                     + "— the user's documents don't cover this. Do not search again for it; "
                     + "if the answer isn't already in this conversation, say it isn't in "
@@ -84,6 +85,7 @@ public struct SearchKnowledgeTool: AgentTool {
             }
             // FTS-only fallback (no embedder, self-test): no vector scores
             // exist, so no floor applied — a plain miss, not an abstention.
+            // Wording is load-bearing: ToolDispatch.emptyResultPrefixes reads it (ADR 0009).
             return ToolResult(output: "No results for \"\(query)\".")
         }
         onHits?(hits)
