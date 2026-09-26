@@ -121,7 +121,7 @@ public struct PlainTurnStream {
     public static func clean(_ snapshot: String) -> String? {
         let text = snapshot.drop(while: \.isWhitespace)
         if label.hasPrefix(text) { return nil }
-        guard text.hasPrefix(label) else { return snapshot }
+        guard text.hasPrefix(label) else { return String(text) }
         let rest = text.dropFirst(label.count).drop(while: \.isWhitespace)
         return rest.isEmpty ? nil : String(rest)
     }

@@ -180,6 +180,9 @@ struct PlainTurnRouteTests {
         let text = try await answer(responder(provider, route: chat(.chat)), "capital of Australia?")
         #expect(text.contains("Canberra"))
         #expect(provider.prompts.count == 2)
+        // PR #414 review: the plain turn doesn't re-arm when the agent turn takes over
+        // (it re-arms itself); two back-to-back prewarms strain the AFM daemon.
+        #expect(provider.warms.count == 1, "one re-arm, the agent turn's: \(provider.warms)")
     }
 
     @Test("a turn with images never consults the router")
@@ -270,5 +273,7 @@ struct PlainTurnStreamTests {
         #expect(PlainTurnStream.clean("  M1K3:  Hi there") == "Hi there")
         #expect(PlainTurnStream.clean("Mostly sunny") == "Mostly sunny")
         #expect(PlainTurnStream.clean("Hello") == "Hello")
+        // PR #414 review: leading whitespace (a tokenizer artifact) must not ride into the bubble.
+        #expect(PlainTurnStream.clean("  Well, hi") == "Well, hi")
     }
 }

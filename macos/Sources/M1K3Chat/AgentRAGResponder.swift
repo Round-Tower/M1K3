@@ -530,13 +530,21 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             }
             return answered
         }
+        // `InferenceIntent` warns against an override on the chat provider: AFM's
+        // PrewarmSlot drops a warm session whose instructions don't match. Crossed on
+        // purpose (ADR 0008): the route speaks in the agent turns' persona, and the
+        // re-arm below restores the slot. The cost is measured (~0.7 s of first word).
         let answered = if let instructions {
             await InferenceIntent.withInstructions(instructions) { await generate() }
         } else {
             await generate()
         }
-        // LocalAgent re-arms the next turn in its defer; this turn never ran it.
-        (provider as? TurnWarmable)?.prepareForNextTurn(promptPrefix: nil)
+        // LocalAgent re-arms the next turn in its defer; this turn never ran it. On an
+        // empty stream the agent turn takes over and re-arms itself: one re-arm, not two
+        // back to back (the AFM daemon has fallen over under rapid prewarms).
+        if answered {
+            (provider as? TurnWarmable)?.prepareForNextTurn(promptPrefix: nil)
+        }
         return answered
     }
 

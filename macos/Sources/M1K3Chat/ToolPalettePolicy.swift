@@ -16,7 +16,8 @@
 //  PersonaPrefixCache key: a different tool set is a ~6 s cold prefix rebuild
 //  (ROADMAP: "tune the grounding, never the palette"). So this is availability
 //  gating, NOT per-question routing; the latter would thrash the 2-entry cache
-//  and is a separate, measured decision.
+//  and is a separate, measured decision. It was measured and taken for Mini only
+//  (ADR 0008, ToolNeedRouter): Mini's AFM path has no palette-keyed MLX cache.
 //
 //  Names are strings for the same reason SelfQueryGate's are: M1K3Chat cannot
 //  link the tool modules (tools are injected by the app layer). The
