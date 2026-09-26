@@ -78,6 +78,17 @@ struct ToolNeedRouterFixtureTests {
         }
     }
 
+    /// PR #414 review: skipping the guess for every short turn also scored short
+    /// NON-English tool asks with the English model. A confident non-English guess
+    /// (measured: es 0.93–0.98, fr 0.99, de 1.00) abstains at any length; the noisy
+    /// short-English misreads are low-confidence ("hi" ca 0.80, "lol" nl 0.24).
+    @Test("a short but confidently non-English turn abstains, so its tools stay")
+    func shortNonEnglishFailsOpen() {
+        for text in ["busca mi correo", "envía un email", "wie spät ist es?", "abre la web"] {
+            #expect(embedder.vector(text) == nil, "\(text) was scored as English")
+        }
+    }
+
     @Test("the embedder abstains on non-English text, so the router keeps the tools")
     func nonEnglishFailsOpen() {
         #expect(embedder.vector("¿Cuál es la capital de Australia y por qué la eligieron?") == nil)

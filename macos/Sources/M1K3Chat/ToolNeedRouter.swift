@@ -27,6 +27,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — challenger review: the strict
 //  dominant-language gate failed "hi" (Catalan), "lol" (Dutch) and "ok cool" (Polish)
 //  open to the palette. Short turns now skip the guess. Confidence 0.8.
+//  Review: same day, PR #414 review — skipping the guess also scored short NON-English
+//  tool asks with the English model. A short turn now abstains on a confident non-English
+//  guess (≥ 0.9); the noisy English misreads are low-confidence. Confidence 0.8.
 //
 
 import Foundation
@@ -141,15 +144,20 @@ public final class NLSentenceEmbedder: @unchecked Sendable {
         return lock.withLock { embedding.vector(for: text) }
     }
 
-    /// Too little text for a language guess ("hi" reads as Catalan, "lol" as Dutch)
-    /// is taken as English; longer text abstains only when English is clearly unlikely.
+    /// Abstain only when English is clearly unlikely. On a short turn the guess is
+    /// noise unless it is confident: "hi" reads as Catalan at 0.80 and "lol" as Dutch
+    /// at 0.24, while "busca mi correo" is Spanish at 0.97 (measured 2026-09-26). So a
+    /// short turn abstains only on a confident non-English guess; a longer one on
+    /// any non-English guess. Either way, English at 0.2 or more keeps the vector.
     static func readsAsEnglish(_ text: String) -> Bool {
-        guard text.count >= shortTurnLength else { return true }
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(text)
-        if recognizer.dominantLanguage == .english { return true }
-        return (recognizer.languageHypotheses(withMaximum: 3)[.english] ?? 0) >= 0.2
+        guard let top = recognizer.dominantLanguage, top != .english else { return true }
+        let hypotheses = recognizer.languageHypotheses(withMaximum: 3)
+        if (hypotheses[.english] ?? 0) >= 0.2 { return true }
+        return text.count < shortTurnLength && (hypotheses[top] ?? 0) < confidentGuess
     }
 
     static let shortTurnLength = 24
+    static let confidentGuess = 0.9
 }
