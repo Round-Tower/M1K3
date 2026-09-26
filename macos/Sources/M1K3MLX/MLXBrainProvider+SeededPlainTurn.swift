@@ -30,6 +30,10 @@
 //  prefills fresh every plain turn (~1 s on M1 Max) until the seed can be
 //  built without the sampled token (follow-up issue). Confidence now 0.85.
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.75 — closes the #240 follow-up: the
+//  reuse gate reads the seed's `exact` (vouched by the builder), and LFM2 seeds are now built by a
+//  sample-free prefill, so pocket appends to its seed instead of re-prefilling (~1 s/turn on M1 Max).
+//  Verify-by-launch owed: SelfTest security on pocket (the double-BOS regression lives here).
 
 import Foundation
 import MLX
@@ -59,6 +63,7 @@ extension MLXBrainProvider {
         let thinkingContext = thinkingAdditionalContext
         let model = modelIdentifier
         let seedIDs = seed.tokenIDs
+        let seedExact = seed.exact
         // `@unchecked Sendable` box: the cache crosses into `perform` the way
         // MLXToolTurnSession's does. It is safe to move because it is already a
         // private deep copy — `PersonaPrefixCache.snapshot(for:)` `.copy()`s the
@@ -82,9 +87,10 @@ extension MLXBrainProvider {
             let fullIDs = prepared.text.tokens.asArray(Int.self)
             let cache: [KVCache]
             let input: LMInput
-            let seedTrimmed = CrossTurnCacheReuse.cacheReusable(
-                layersTrimmable: box.cache.map(\.isTrimmable)
-            )
+            // The builder vouches for exactness (trimmed back, or prefilled
+            // without a sampled token) — layer trimmability alone would veto an
+            // exact recurrent seed that never needed trimming.
+            let seedTrimmed = seedExact
             switch SeededPlainTurn.plan(seed: seedIDs, full: fullIDs, seedTrimmed: seedTrimmed) {
             case let .reuse(prefixTokens):
                 cache = box.cache
@@ -100,15 +106,16 @@ extension MLXBrainProvider {
                     at += 1
                 }
                 if !seedTrimmed, at == seedIDs.count {
-                    // An exact prefix on a cache that could not be trimmed back to
-                    // it: a wrapped sliding window, or a recurrent layer (LFM2's
-                    // MambaCache is never trimmable) — the seed holds one sampled
-                    // token past its ids. Correct answer is a full prefill; say so
-                    // without the divergence line, which would read as a bug.
+                    // An exact prefix on a seed its builder could not vouch exact:
+                    // a persona that wrapped a sliding window keeps one sampled
+                    // token past its ids. (Recurrent LFM2 seeds are built exact
+                    // since 2026-09-26 and no longer land here.) Correct answer is
+                    // a full prefill; say so without the divergence line, which
+                    // would read as a bug.
                     mlxTTFTLog.notice(
                         """
-                        \(label, privacy: .public): persona seed (\(seedIDs.count)tok) is an untrimmed \
-                        cache (recurrent or wrapped layer) — full prefill, no reuse
+                        \(label, privacy: .public): persona seed (\(seedIDs.count)tok) is not an exact \
+                        cache (a wrapped window) — full prefill, no reuse
                         """
                     )
                     cache = try context.model.newCache(parameters: parameters)

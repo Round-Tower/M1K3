@@ -99,7 +99,10 @@ final class ConversationTailCache: @unchecked Sendable {
         }()
         lock.unlock()
         guard let held else { return nil }
-        return PersonaPrefixSnapshot(cache: held.cache.map { $0.copy() }, tokenIDs: held.tokens)
+        // Not vouched exact: a finished session's cache is only ever consumed by
+        // the tool path, which gates reuse on its own trim check (it trims back
+        // to the common prefix), never by the append-only seeded plain turn.
+        return PersonaPrefixSnapshot(cache: held.cache.map { $0.copy() }, tokenIDs: held.tokens, exact: false)
     }
 
     /// Drop the slot (brain swap / eager memory release).

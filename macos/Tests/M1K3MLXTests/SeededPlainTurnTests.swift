@@ -73,4 +73,43 @@ struct SeededPlainTurnTests {
         let plan = SeededPlainTurn.plan(seed: [1, 10, 11, 12], full: [1, 10, 11, 12, 20, 21], seedTrimmed: false)
         #expect(plan == .fresh)
     }
+
+    // MARK: - Building the seed (2026-09-26)
+
+    /// The seed used to be built by a 1-token GENERATION and then trimmed back —
+    /// impossible on LFM2's MambaCache (never trimmable), so pocket's seed held
+    /// one sampled position past its ids and every plain pocket turn prefilled
+    /// fresh (~1 s on M1 Max, #240). A cache that cannot be trimmed is built by a
+    /// forward-only prefill that never samples, so there is nothing to trim.
+    @Test("a fully trimmable fresh cache keeps the sample-and-trim build")
+    func trimmableCacheSamplesAndTrims() {
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, true, true]) == .sampleAndTrim)
+    }
+
+    @Test("any untrimmable layer (a recurrent MambaCache) gets the exact, sample-free prefill")
+    func recurrentLayerGetsExactPrefill() {
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, false, true]) == .exactPrefill)
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [false]) == .exactPrefill)
+    }
+
+    /// The exact prefill runs no KVCachePlan, so it never quantizes. A family that
+    /// both quantizes its KV and carries a recurrent layer (none today: LFM2 is off
+    /// the quantized allow-list) keeps the sample build — not reusable, but never an
+    /// unquantized seed stored where the turn expects a quantized one.
+    @Test("a quantizing family never takes the plan-free exact prefill")
+    func quantizedKVKeepsTheIteratorBuild() {
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, false], quantizesKV: true) == .sampleAndTrim)
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, false], quantizesKV: false) == .exactPrefill)
+    }
+
+    @Test("no layers at all is not evidence of trimmability — exact prefill")
+    func emptyCacheTakesExactPrefill() {
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: []) == .exactPrefill)
+    }
+
+    @Test("an exact seed is reusable even though its layers can never be trimmed")
+    func exactSeedReusesWithoutTrim() {
+        let plan = SeededPlainTurn.plan(seed: [1, 10, 11, 12], full: [1, 10, 11, 12, 20, 21], seedTrimmed: true)
+        #expect(plan == .reuse(prefixTokens: 4))
+    }
 }

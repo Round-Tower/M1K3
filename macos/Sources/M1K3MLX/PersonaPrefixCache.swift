@@ -17,6 +17,10 @@
 //  tested; the prefill render + trim normalisation is verify-at-⌘R like all
 //  MLX generation). Prior: Unknown
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.75 — capacity 2 → 3: the live keys have
+//  been three since #116 (headless + interactive palettes, plus the plain no-tools prefix a
+//  foreground synthesis fallback seeds from). Sized by arithmetic (~90 MB on Lil); RAM snapshot owed.
+//
 
 import Foundation
 import MLXLMCommon
@@ -40,6 +44,10 @@ struct PersonaCacheKey: Hashable {
 struct PersonaPrefixSnapshot {
     let cache: [KVCache]
     let tokenIDs: [Int]
+    /// Whether `cache` holds EXACTLY `tokenIDs.count` positions — the builder
+    /// vouches for it (trimmed back on a linear cache, or prefilled without a
+    /// sampled token). Appending to a non-exact seed is misaligned KV.
+    let exact: Bool
     var tokenCount: Int {
         tokenIDs.count
     }
@@ -60,21 +68,27 @@ final class PersonaPrefixCache: @unchecked Sendable {
         let key: PersonaCacheKey
         let cache: [KVCache]
         let tokenIDs: [Int]
+        let exact: Bool
     }
 
-    /// TWO, because the provider renders exactly two prefixes in normal use:
-    /// the interactive tool-turn one (persona + tool specs) and the plain
-    /// one used by background work. A single slot made them evict each other
-    /// on every alternation — measured live on 2026-08-09 as a 16-19 SECOND
-    /// re-prefill on the next chat turn, with decode healthy at 30 tok/s the
-    /// whole time. The pause was never the model thinking; it was M1K3
-    /// re-reading its own personality before every answer.
+    /// THREE, one per prefix the provider renders in normal use: the headless
+    /// tool palette (MCP / Shortcuts), the interactive one, and the plain
+    /// no-tools prefix `generate`/`generateStreaming` seed from — which a
+    /// foreground tool turn's synthesis fallback builds. A single slot made two
+    /// of them evict each other on every alternation — measured live on
+    /// 2026-08-09 as a 16-19 SECOND re-prefill on the next chat turn, with
+    /// decode healthy at 30 tok/s the whole time. Two slots held until #116
+    /// (2026-08-12) warmed a second palette and quietly made the live keys
+    /// three.
     ///
     /// Kept deliberately small: each entry retains Metal-backed KV arrays for
-    /// a ~2k-token prefix across every layer of a 12B model, and
-    /// `MLXMemoryBudget`'s ceiling is back-pressure, not a cap (the 2026-07-14
-    /// lesson). Raise this only with a measured RAM snapshot in hand.
-    static let defaultCapacity = 2
+    /// a ~1-2k-token prefix across every layer, and `MLXMemoryBudget`'s ceiling
+    /// is back-pressure, not a cap (the 2026-07-14 lesson). The third slot is
+    /// sized by arithmetic, not yet by a RAM snapshot: Lil (36 layers × 8 KV
+    /// heads × 128 dims, 8-bit KV) is ~78 KB/token, so the ~1.2k-token plain
+    /// prefix is ~90 MB; Big stores none (its persona overruns the 1024-token
+    /// sliding window, see renderPersonaPrefix). Verify-by-launch owed.
+    static let defaultCapacity = 3
 
     private let lock = NSLock()
     private let capacity: Int
@@ -95,17 +109,19 @@ final class PersonaPrefixCache: @unchecked Sendable {
         // if a concurrent store/invalidate drops the entry mid-copy — and
         // immutability: retained arrays are never mutated after store.
         lock.lock()
-        let held: (cache: [KVCache], tokens: [Int])? = {
+        let held: (cache: [KVCache], tokens: [Int], exact: Bool)? = {
             guard let index = entries.firstIndex(where: { $0.key == requested }) else { return nil }
             // A HIT is a use: move to front so the eviction candidate is always
             // the genuinely coldest entry, not merely the oldest stored.
             let entry = entries.remove(at: index)
             entries.insert(entry, at: 0)
-            return (entry.cache, entry.tokenIDs)
+            return (entry.cache, entry.tokenIDs, entry.exact)
         }()
         lock.unlock()
         guard let held else { return nil }
-        return PersonaPrefixSnapshot(cache: held.cache.map { $0.copy() }, tokenIDs: held.tokens)
+        return PersonaPrefixSnapshot(
+            cache: held.cache.map { $0.copy() }, tokenIDs: held.tokens, exact: held.exact
+        )
     }
 
     /// Whether a prefix for `requested` is held — WITHOUT copying it.
@@ -124,11 +140,13 @@ final class PersonaPrefixCache: @unchecked Sendable {
         return entries.contains { $0.key == requested }
     }
 
-    func store(_ cache: [KVCache], tokenIDs: [Int], for newKey: PersonaCacheKey) {
+    /// `exact` defaults to false — the safe direction: a seed nobody vouched for
+    /// is never appended to, only re-prefilled.
+    func store(_ cache: [KVCache], tokenIDs: [Int], exact: Bool = false, for newKey: PersonaCacheKey) {
         lock.lock()
         defer { lock.unlock() }
         entries.removeAll { $0.key == newKey }
-        entries.insert(Entry(key: newKey, cache: cache, tokenIDs: tokenIDs), at: 0)
+        entries.insert(Entry(key: newKey, cache: cache, tokenIDs: tokenIDs, exact: exact), at: 0)
         // Dropping the Entry releases its KVCache refs — the Metal arrays go
         // with them once no in-flight snapshot still holds a copy.
         if entries.count > capacity { entries.removeLast(entries.count - capacity) }
