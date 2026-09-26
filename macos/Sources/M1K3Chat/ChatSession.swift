@@ -56,6 +56,10 @@
 //  and consent hold whoever calls — review 1 on #321.
 //  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 — `turn first chunk: Nms` at .notice on every
 //  local turn (send → first streamed chunk): the user's wait, per brain, readable off an installed build.
+//  Review: Kev + claude-opus-5-5, 2026-09-26 — a PCC consent carries the conversation it was given in
+//  (`Consent.conversationID`) and a send from any other conversation is refused: with PCC now on for a
+//  whole conversation, a sheet left open across a switch would have sent A's history and answered into B.
+//  Confidence 0.9 (ChatSessionPrivateCloudTests.consentIsBoundToItsConversation).
 
 import Foundation
 import M1K3Inference
@@ -657,7 +661,8 @@ public final class ChatSession {
     public func privateCloudConsent(for question: String) -> PrivateCloudTurn.Consent {
         PrivateCloudTurn.consent(
             question: question.trimmingCharacters(in: .whitespacesAndNewlines),
-            history: Self.replayableHistory(messages)
+            history: Self.replayableHistory(messages),
+            conversationID: activeConversationID
         )
     }
 
@@ -694,11 +699,19 @@ public final class ChatSession {
             Self.log.notice("private cloud: send refused by the rung's gate")
             return
         }
+        // A consent sheet can outlive its conversation (the sidebar or the menu
+        // bar switches underneath it): the history it showed is not this one's.
+        if let consented = consent.conversationID, consented != activeConversationID {
+            Self.log.notice("private cloud: send refused — the consent was for another conversation")
+            return
+        }
         // Trimmed here as well as in `privateCloudConsent(for:)`: a consent can
         // reach this method by another road, and a blank turn must never leave.
         let question = consent.question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty, !isResponding else { return }
-        let consent = PrivateCloudTurn.Consent(question: question, conversation: consent.conversation)
+        let consent = PrivateCloudTurn.Consent(
+            question: question, conversation: consent.conversation, conversationID: consent.conversationID
+        )
         // Captured before the question joins the transcript. Only the local
         // fallback uses it: the PCC request was fixed by the consent.
         let history = Self.replayableHistory(messages)

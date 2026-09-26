@@ -291,6 +291,24 @@ struct LongCallSummarizationTests {
         #expect(quick.seen.allSatisfy { !$0.contains("line 1999 of the call") })
     }
 
+    /// Review on the map-reduce branch: with every chunk failing (AFM exhausted
+    /// by back-to-back turns), the long path returned nothing, quick tier included,
+    /// breaking the promise that a flaky deep pass still leaves a quick summary.
+    @Test("every chunk failing still leaves a quick gist of the call's opening")
+    func allChunksFail() async throws {
+        let text = transcript(lines: 2000)
+        let quick = ScriptedInference { _ in "The call opened on line zero." }
+        let out = await SummarizationPipeline(
+            quickProvider: quick,
+            deepProvider: ScriptedInference { _ in throw FakeError.boom }
+        ).summarize(transcript: text)
+        #expect(out.full == nil)
+        #expect(out.quick?.overview == "The call opened on line zero.")
+        let prompt = try #require(quick.seen.first)
+        #expect(prompt.count < SummarizationPipeline.chunkBudget + 1500, "the head, never the whole call")
+        #expect(prompt.contains("line 0 of the call"))
+    }
+
     @Test("a failing chunk doesn't sink the rest")
     func failingChunk() async {
         let text = transcript(lines: 2000)

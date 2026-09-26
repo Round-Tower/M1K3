@@ -16,6 +16,9 @@
 //  the prompt; `neutralInstructions` is what the app's summarising sessions carry instead of the
 //  persona. A transcript past `chunkBudget` is summarised per chunk and merged (map-reduce); before,
 //  it came back with no summary on any tier. Confidence 0.8 (the merge is live-evaluated on Mini only).
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (2) — review fold: every chunk failing no longer blanks the
+//  quick tier too; it summarises the opening chunk. Chunk calls are still unpaced (open: AFM daemon
+//  exhaustion on very long calls). Confidence 0.8.
 
 import Foundation
 import M1K3Inference
@@ -86,7 +89,11 @@ public struct SummarizationPipeline: Sendable {
                 partials.append(partial)
             }
         }
-        guard !partials.isEmpty else { return Output(quick: nil, full: nil) }
+        // Every chunk failed (AFM falls over under back-to-back turns): the quick
+        // tier still gets its turn, on the opening chunk rather than the whole call.
+        guard !partials.isEmpty else {
+            return Output(quick: await runQuick(Self.quickPrompt(parts[0])), full: nil)
+        }
 
         let notes = partials.enumerated()
             .map { "Part \($0.offset + 1): \($0.element.overview)" }

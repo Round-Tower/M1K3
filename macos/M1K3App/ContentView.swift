@@ -57,6 +57,8 @@
 //  tested): the sheet shows once, later sends reuse its answer; off on decline, manual off, a conversation
 //  change, an unready control, or any staged attachment (files too — they used to slip past the disable).
 //  Implements the ADR 0006 amendment, which awaits Kev. Confidence 0.8 (verify by launch, Debug echo backend).
+//  Review: Kev + claude-opus-5-5, 2026-09-26 (3) — review fold: a consent for another conversation (switched
+//  under an open sheet) sends nothing and keeps the words; ChatSession enforces the same. Confidence 0.85.
 
 import M1K3Avatar
 import M1K3Chat
@@ -1181,8 +1183,12 @@ struct ContentView: View {
     /// Re-reads the gate BEFORE touching the draft: if the switch, the org policy
     /// or the quota changed since the control was read, nothing is sent and the
     /// words stay where they are.
+    /// A consent for another conversation (switched under an open sheet) sends
+    /// nothing; ChatSession refuses it too, and this keeps the words in the field.
     private func sendToPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) {
-        guard env.privateCloudSendAllowed() else { return }
+        guard env.privateCloudSendAllowed(),
+              consent.conversationID == nil || consent.conversationID == env.chat.activeConversationID
+        else { return }
         let text = draft
         draft = ""
         Task {
