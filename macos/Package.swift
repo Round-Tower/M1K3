@@ -139,7 +139,16 @@ let package = Package(
         // carrying #516. Gemma-4 native tool-call smoke re-verified on this
         // revision the day it was pinned (6/6 native calls). MTP itself stays
         // parked — measured 0.73×/0.69×/1.24× on M1 Max at batch 1.
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", revision: "e3d4a20e9e20e7b8ab39aded7bbfad4ae22c9438"),
+        // Moved 2026-09-26 to ee673d6a (main, 2026-09-22; e3d4a20e + 10, still
+        // untagged) for #620 (MLX cache cleared on the FIRST generated token, not
+        // token 256 — short replies stop leaving their prefill buffers pooled),
+        // #584 (RotatingKVCache.trim wrap-aware instead of corrupting the ring),
+        // #611 (the generation loop off Swift's cooperative pool) and #613 (the
+        // streaming detokenizer stops re-emitting emoji/ZWJ/accent scalars).
+        // ⚠️ #548 adds cross-dialect tool-call recovery and rejects native calls
+        // whose arguments miss the declared schema — the tool-call smoke is the
+        // gate for this bump, not a formality.
+        .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", revision: "ee673d6a71d76e67b532dc7eaf91d92edc3bb8bb"),
         // mlx-swift itself (MLX/MLXNN/MLXFFT/MLXFast) — mlx-swift-lm depends on
         // this but doesn't re-export its products, so M1K3Kokoro (which needs
         // the raw neural-net/FFT primitives for the vendored Kokoro port, not
