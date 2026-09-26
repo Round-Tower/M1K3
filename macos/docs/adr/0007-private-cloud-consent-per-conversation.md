@@ -1,7 +1,7 @@
 # 0007. Private Cloud Compute consent holds for a conversation, not one request
 
 Date: 2026-09-26
-Status: PROPOSED — awaiting Kev
+Status: ACCEPTED — Kev, 2026-09-26 (scope confirmed: the whole conversation)
 Deciders: Kev (the ask: "PCC should stay on when selected by the user") + claude-opus-5-5
 Supersedes: the "Default OFF, per request" constraint of [ADR 0006](0006-private-cloud-compute-rung-and-the-private-by-design-posture.md), in part
 
@@ -50,3 +50,5 @@ The lifecycle is the pure `PrivateCloudArming` (M1K3LanguageModel), pinned by
      (once per conversation, off on any staleness) is the proposal.
      Confidence 0.8 (the state machine is pinned; the feel of a sticky cloud
      control is verify-by-launch with the Debug echo backend). Prior: ADR 0006. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 — ACCEPTED. Kev confirmed the scope as the whole
+     conversation (not tools inside a PCC turn, not surviving an attachment or a switch). -->

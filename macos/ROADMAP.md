@@ -31,7 +31,7 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 
 - **One attach button** (Mac + iOS): paperclip + one picker; `AttachmentRouting`.
 - **PCC stays on for the conversation**: `PrivateCloudArming`; consent once per
-  conversation. **ADR 0007 is PROPOSED — Kev approves before merge.**
+  conversation. **ADR 0007 ACCEPTED (Kev, 09-26): the whole conversation.**
 - **Call summaries fixed and evaluated**: the first quality eval
   (`CallSummaryEval`, `M1K3_CALLS_EVAL=1`) found Mini reciting its system prompt
   into stored overviews, action items lost to markdown headers, and no summary
@@ -305,6 +305,7 @@ stays a possible later companion.
 
 ---
 
+<!-- Review: Kev + claude-opus-5-5, 2026-09-26 (5) — ADR 0007 accepted. Confidence 0.95. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 (4) — Mini tool-calling result recorded, with its costs
      and the two follow-ups. Confidence 0.85. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 (3) — SpeechAnalyzer landed in AppleSpeechTranscriber
