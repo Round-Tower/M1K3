@@ -59,6 +59,13 @@
 //  un-gated renderStream to avoid self-deadlocking inside the gate.) The gate's
 //  serialisation is unit-tested (SpeechEntryGateTests, headless); the live barge-in
 //  WIRING stays verify-by-launch.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #394 (objc_retain in TextToSpeech on the main queue,
+//  macOS 27): the render's SynthBox was kept alive only by `write`'s buffer closure, but the
+//  synthesizer's delegate callbacks arrive later on the main queue. The provider now holds the
+//  current box until the next render replaces it; the `owner` guard already makes a stale callback
+//  a no-op. n=1 crash, so a likely cause, not a proven one. Confidence 0.6.
+//  Review: same day (2), #436 review — the previous render's box is held too: the gate lets the next
+//  render start on the zero-frame sentinel, before the previous didFinish lands. Confidence 0.65.
 
 import AVFoundation
 import Foundation
@@ -90,6 +97,13 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     }
 
     private let synthesizer = AVSpeechSynthesizer()
+    /// The current render's delegate. `synthesizer.delegate` is weak and didFinish/didCancel
+    /// reach the main queue after `write`'s last buffer, so the box must outlive the render
+    /// (#394: a freed delegate is an objc_retain crash inside TextToSpeech). Held until
+    /// superseded, and the one before it too: the gate lets the next render start on the
+    /// zero-frame sentinel, before the previous render's didFinish lands (#436 review).
+    @MainActor private var renderDelegate: SynthBox?
+    @MainActor private var previousRenderDelegate: SynthBox?
     private let engine = AVAudioEngine()
     let player = AVAudioPlayerNode()
     /// Used only when the effect/render path fails — M1K3 still speaks, just dry.
@@ -414,6 +428,18 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     /// recorded from the willSpeakRange delegate during the offline render.
     private typealias PCM = ([Float], Double, [WordOnset])
 
+    /// Test seam (#394): the synthesizer's delegate is the box this provider holds.
+    @MainActor
+    var renderDelegateIsHeld: Bool {
+        renderDelegate != nil && synthesizer.delegate === renderDelegate
+    }
+
+    /// Test seam (#436 review): the superseded render's box is still held.
+    @MainActor
+    var previousRenderDelegateIsHeld: Bool {
+        previousRenderDelegate != nil && previousRenderDelegate !== renderDelegate
+    }
+
     @MainActor
     private func synthesizeToFloats(_ utterance: SpeechUtterance) async throws -> PCM {
         let spoken = AVSpeechUtterance(string: utterance.text)
@@ -426,7 +452,9 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
         }
 
         let box = SynthBox(owner: spoken)
-        synthesizer.delegate = box // weak; the write callbacks keep `box` alive
+        previousRenderDelegate = renderDelegate // its didFinish may still be in flight (#436 review)
+        renderDelegate = box // held past the render: the delegate property is weak (#394)
+        synthesizer.delegate = box
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<PCM, Error>) in
             box.onDone = { continuation.resume(with: $0) }
             synthesizer.write(spoken) { buffer in
