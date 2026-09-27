@@ -71,6 +71,14 @@ struct AppleFoundationModelsProviderTests {
         #expect(AppleFoundationModelsProvider.clampedRawResponseTokens(-5) == 1)
     }
 
+    @Test("the raw cap is half the DEVICE window — 2,048 at the floor, more on a bigger window")
+    func rawResponseCapFollowsTheWindow() {
+        #expect(AppleFoundationModelsProvider.rawResponseTokenCap(windowTokens: 4096) == 2048)
+        #expect(AppleFoundationModelsProvider.rawResponseTokenCap(windowTokens: 8192) == 4096)
+        #expect(AppleFoundationModelsProvider.rawResponseTokenCap(windowTokens: 2048) == 1024)
+        #expect(AppleFoundationModelsProvider.rawResponseTokenCap == 2048) // nothing recorded in tests
+    }
+
     @Test("the default Mini provider carries the standing persona — the trimmed prompt still counts")
     func defaultMiniCarriesPersona() {
         // b7672ace (2026-09-12) trimmed Mini's instructions to the core minus

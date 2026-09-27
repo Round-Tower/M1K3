@@ -76,6 +76,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26 (3), Confidence 0.8 — the launch warm builds the plain
 //  no-tools prefix too (three warms for three live keys; PersonaPrefixCache holds three).
 //  Verify-by-launch: three `persona prefix warmed` lines on Lil.
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — records the device's AFM window at launch
+//  (AppleFoundationModelsProvider.recordDeviceContextWindow), whatever brain is selected.
 
 import AppKit
 import Foundation
@@ -1040,6 +1042,11 @@ final class AppEnvironment {
         try? FileManager.default.createDirectory(at: recordingsDir, withIntermediateDirectories: true)
 
         refreshCounts()
+        // Mini's window is this device's (MiniContextWindow), recorded HERE in
+        // init — synchronously, before any turn can run (a fast MCP or restored
+        // turn would otherwise race the maintenance Task and budget at the
+        // floor). A cheap property read; nil (no AFM) keeps the 4,096 floor.
+        AppleFoundationModelsProvider.recordDeviceContextWindow()
         Task { await self.runStartupMaintenance() }
         seedScreengrabKnowledgeIfActive(root: url.deletingLastPathComponent())
 

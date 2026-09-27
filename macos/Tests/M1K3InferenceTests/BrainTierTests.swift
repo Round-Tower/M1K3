@@ -321,8 +321,9 @@ struct BrainTierTests {
         // dense Qwen3 lil is unbounded (memory-bound, not truncation-bound) and wide.
         #expect(BrainTier.lil.approximateContextTokens == 32768)
         #expect(!BrainTier.lil.usesRotatingKVCache)
-        // mini (AFM) is conservatively small and not rotating.
-        #expect(BrainTier.mini.approximateContextTokens == 4096)
+        // mini (AFM) is the DEVICE's window (MiniContextWindow) — the 4,096 floor in
+        // tests, which never record one (suites run in parallel) — and not rotating.
+        #expect(BrainTier.mini.approximateContextTokens == MiniContextWindow.floorTokens)
         #expect(!BrainTier.mini.usesRotatingKVCache)
         // Only big rotates — the clamp is a correctness bound there, a latency knob elsewhere.
         #expect(BrainTier.allCases.filter(\.usesRotatingKVCache) == [.big])

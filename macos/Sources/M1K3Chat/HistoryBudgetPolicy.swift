@@ -38,6 +38,9 @@
 //  long chat plus a 4096-token decode could ask an unbounded KVCacheSimple for ~10k tokens (PR #234 review 4).
 //  Confidence now 0.85.
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — `measuredMiniBudget` sizes to the device window
+//  (`windowTokens`, default MiniContextWindow.current) and subtracts grounding's gain above its 4,096
+//  baseline, so a bigger window adds no overcommit. Byte-identical at 4,096.
 
 import Foundation
 import M1K3Inference
@@ -114,12 +117,20 @@ public enum HistoryBudgetPolicy {
     /// heuristic) to ~1,606 tokens (~5,621 chars) — a 1.9× uplift. The early
     /// standalone probe used a compact 214-token test persona and claimed 3×;
     /// the live launch log corrected it.
+    ///
+    /// `windowTokens`: the device's AFM window (`MiniContextWindow`, 2026-09-27).
+    /// Whatever Mini's grounding gains above its 4,096 baseline comes out of the
+    /// replay here, so a bigger window adds no overcommit the floor didn't have.
     public static func measuredMiniBudget(
         reservedTokens: Int,
-        generationTokens: Int = 1024
+        generationTokens: Int = 1024,
+        windowTokens: Int = MiniContextWindow.current
     ) -> HistoryWindow.Budget {
+        let groundingGain = max(
+            0, GroundingBudgetPolicy.miniTokens(windowTokens: windowTokens) - GroundingBudgetPolicy.miniTokenBudget
+        )
         let available = max(
-            0, BrainTier.mini.approximateContextTokens - reservedTokens - generationTokens
+            0, windowTokens - reservedTokens - generationTokens - groundingGain
         )
         let totalChars = Int(Double(available) * charsPerToken)
         let perTurnChars = min(HistoryWindow.maxCharsPerTurn, totalChars)

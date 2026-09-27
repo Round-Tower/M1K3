@@ -59,6 +59,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — `InferenceIntent.instructions` replaces the persona for
 //  a call when set (summaries). Unset, nothing changes. The `afm turn` line logs the instructions actually
 //  used (review fold). Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.8 — `deviceContextSize()` + `recordDeviceContextWindow()`:
+//  the launch read of SystemLanguageModel.contextSize that frees Mini's budgets from the author's M1
+//  Max (4,096). Logs `afm window: N tokens (reported R)`. >4,096 is verify-on-a-newer-device.
 import Foundation
 import M1K3LogCore
 import os
@@ -110,7 +113,8 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// body and instructions ever both carry the persona again, `total` jumps
     /// by ~3.8k chars and the line says so on every turn.
     ///
-    /// Window is 4096 tokens. Since macOS 26.4 we can log exact token counts
+    /// Window is the device's (`MiniContextWindow`, 4,096 floor; an M1 Max
+    /// reports 4,096). Since macOS 26.4 we can log exact token counts
     /// via `SystemLanguageModel.tokenCount(for:)`.
     private func logTurnStart(
         promptChars: Int, instructionChars: Int, streaming: Bool, warmth: AFMPrefixPrewarm.Warmth
@@ -353,6 +357,31 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         self.nativeToolCalling = nativeToolCalling
         self.prewarmsBetweenTurns = prewarmsBetweenTurns
         self.prewarmsPromptPrefix = prewarmsPromptPrefix
+    }
+
+    /// The on-device model's context window as THIS device reports it — nil
+    /// when AFM is unavailable. An M1 Max reports 4,096 (AFM 3 Core); newer
+    /// hardware may report more. The app shells record it into
+    /// `MiniContextWindow` at launch so Mini's budgets size to the device, not
+    /// to the Mac they were tuned on. `contextSize` is back-deployed to 26.0.
+    public static func deviceContextSize() -> Int? {
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else { return nil }
+        return model.contextSize
+    }
+
+    /// Read this device's window, record it for every Mini budget, and log it
+    /// with its source — the launch line that proves a newer device budgets past
+    /// 4,096. Both app shells call this once at launch, whatever brain is
+    /// selected (a later switch to Mini must find the window already known).
+    @discardableResult
+    public static func recordDeviceContextWindow() -> Int {
+        let reported = deviceContextSize()
+        MiniContextWindow.record(reported: reported)
+        let window = MiniContextWindow.current
+        let source = reported.map { "reported \($0)" } ?? "unavailable — floor"
+        log.notice("afm window: \(window, privacy: .public) tokens (\(source, privacy: .public))")
+        return window
     }
 
     public var isAvailable: Bool {
@@ -618,11 +647,19 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
 extension AppleFoundationModelsProvider: RawCompletionProviding {
     /// The raw route's response cap — the seam's "shorten, never lengthen"
     /// contract needs an explicit ceiling because AFM has no caller-visible
-    /// default the way MLX's `defaultMaxTokens` is. Half the 4096-token
-    /// window: a remote completion may fill at most the half the prompt
-    /// doesn't, so one request can't monopolize the single-flight slot for
-    /// the longest generation AFM could physically produce (PR #139 review).
-    public static let rawResponseTokenCap = 2048
+    /// default the way MLX's `defaultMaxTokens` is. Half the DEVICE's window
+    /// (`MiniContextWindow`; 2,048 at the 4,096 floor): a remote completion may
+    /// fill at most the half the prompt doesn't, so one request can't
+    /// monopolize the single-flight slot for the longest generation AFM could
+    /// physically produce (PR #139 review).
+    public static var rawResponseTokenCap: Int {
+        rawResponseTokenCap(windowTokens: MiniContextWindow.current)
+    }
+
+    /// Pure: half of `windowTokens`.
+    public static func rawResponseTokenCap(windowTokens: Int) -> Int {
+        max(1, windowTokens / 2)
+    }
 
     /// Pure clamp, pinned by tests (the forwarding tests only prove the
     /// value ARRIVES; this proves the ceiling holds): nil = the cap itself.

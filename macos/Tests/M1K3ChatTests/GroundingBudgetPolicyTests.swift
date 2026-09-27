@@ -31,6 +31,8 @@
 //  output is a judgement call, and the on-device re-measure is owed).
 //  Prior: Unknown.
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.9 — pins Mini's grounding across 2,048 / 4,096 /
+//  5,120 / 8,192 / 16,384 windows; spoken and pocket ignore the window.
 
 @testable import M1K3Chat
 import M1K3Inference
@@ -155,5 +157,34 @@ struct GroundingBudgetPolicyTests {
     func pocketTakesMiniBudget() {
         #expect(GroundingBudgetPolicy.tokens(for: .pocket) == GroundingBudgetPolicy.tokens(for: .mini))
         #expect(GroundingBudgetPolicy.tokens(for: .pocket, spoken: true) == GroundingBudgetPolicy.tokens(for: .mini, spoken: true))
+    }
+
+    // MARK: - The device's window, not the author's Mac's (2026-09-27)
+
+    @Test("at the 4,096 floor Mini's grounding is exactly today's 600")
+    func miniGroundingAtFloorIsUnchanged() {
+        #expect(GroundingBudgetPolicy.tokens(for: .mini, miniWindowTokens: 4096) == 600)
+        #expect(GroundingBudgetPolicy.tokens(for: .mini) == GroundingBudgetPolicy.miniTokenBudget)
+    }
+
+    @Test("a bigger AFM window grows Mini's grounding, up to parity with the MLX tiers")
+    func miniGroundingGrowsWithTheWindow() {
+        let at5120 = GroundingBudgetPolicy.tokens(for: .mini, miniWindowTokens: 5120)
+        #expect(at5120 > 600 && at5120 < GroundingBudget.defaultTokenBudget)
+        #expect(GroundingBudgetPolicy.tokens(for: .mini, miniWindowTokens: 8192) == GroundingBudget.defaultTokenBudget)
+        #expect(GroundingBudgetPolicy.tokens(for: .mini, miniWindowTokens: 16384) == GroundingBudget.defaultTokenBudget)
+    }
+
+    @Test("a smaller window shrinks it, with a floor that still grounds something")
+    func miniGroundingShrinksOnASmallerWindow() {
+        let small = GroundingBudgetPolicy.tokens(for: .mini, miniWindowTokens: 2048)
+        #expect(small < 600)
+        #expect(small >= 200)
+    }
+
+    @Test("spoken stays capped, and pocket (not AFM) ignores the AFM window")
+    func spokenAndPocketUnaffectedByWindow() {
+        #expect(GroundingBudgetPolicy.tokens(for: .mini, spoken: true, miniWindowTokens: 8192) == 400)
+        #expect(GroundingBudgetPolicy.tokens(for: .pocket, miniWindowTokens: 8192) == 600)
     }
 }
