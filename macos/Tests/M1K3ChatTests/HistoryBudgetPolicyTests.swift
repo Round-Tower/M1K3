@@ -12,6 +12,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06 — pocket's clamped window pinned (cap + margin + sum inside 8192).
 //  Confidence 0.9.
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.9 — the measured Mini replay is unchanged at 4,096 and
+//  grows at 8,192 without double-spending grounding's gain.
 
 @testable import M1K3Chat
 import M1K3Inference
@@ -245,5 +247,40 @@ struct HistoryBudgetPolicyTests {
             for: .big, reservedTokens: 3000, generationTokens: 2048
         )
         #expect(big == bigWithout)
+    }
+
+    // MARK: - The device's window, not the author's Mac's (2026-09-27)
+
+    @Test("at the 4,096 floor the measured Mini replay is exactly today's")
+    func measuredMiniAtFloorIsUnchanged() {
+        let today = HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: 1466)
+        let floor = HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: 1466, windowTokens: 4096)
+        #expect(today.totalChars == floor.totalChars)
+        #expect(today.perTurnChars == floor.perTurnChars)
+    }
+
+    @Test("an 8,192 window buys Mini more replay — without double-spending grounding's gain")
+    func measuredMiniGrowsWithTheWindow() {
+        let persona = 1466, generation = 1024, window = 8192
+        let small = HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: persona, windowTokens: 4096)
+        let big = HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: persona, windowTokens: window)
+        #expect(big.totalChars > small.totalChars)
+        // Whatever grounding gained above its 4,096 baseline comes out of replay,
+        // so the bigger window adds no overcommit the floor didn't already have.
+        let groundingGain = GroundingBudgetPolicy.tokens(for: .mini, miniWindowTokens: window)
+            - GroundingBudgetPolicy.tokens(for: .mini, miniWindowTokens: 4096)
+        let historyTokens = Int(Double(big.totalChars) / HistoryBudgetPolicy.charsPerToken)
+        #expect(historyTokens + persona + generation + groundingGain <= window)
+    }
+
+    @Test("a sub-floor window shrinks the replay and still fits — never negative")
+    func measuredMiniBelowTheFloor() {
+        let persona = 1466, generation = 1024, window = 2048
+        let tiny = HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: persona, windowTokens: window)
+        let floor = HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: persona, windowTokens: 4096)
+        #expect(tiny.totalChars < floor.totalChars)
+        #expect(tiny.totalChars >= 0)
+        let historyTokens = Int(Double(tiny.totalChars) / HistoryBudgetPolicy.charsPerToken)
+        #expect(historyTokens + persona + generation <= max(window, persona + generation))
     }
 }

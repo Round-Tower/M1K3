@@ -58,6 +58,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-25 — `mlxAvailable` also refuses Apple GPU family 5 (MLXRuntimeSupport): an iPad 8th gen
 //  trapped warming M1K3 Voice; A12X/A12Z iPad Pros pass the brain memory floor but share that GPU. A stage left behind is
 //  discarded at launch. Verify-by-launch on the A12 iPad. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — records the device's AFM window at launch
+//  (AppleFoundationModelsProvider.recordDeviceContextWindow), whatever brain is selected.
 
 import Foundation
 import M1K3Agent
@@ -439,6 +441,9 @@ final class AppCore {
         // swap it away right after activateHomeBrain() above set it.
         // Screengrab harness: memories + documents (no-op without the env).
         seedScreengrabKnowledgeIfActive(root: base)
+        // Mini's window is this device's, not a constant (MiniContextWindow) —
+        // recorded whatever brain is selected; nil (no AFM) keeps the floor.
+        AppleFoundationModelsProvider.recordDeviceContextWindow()
         if brain.mlxModelID != nil, Self.mlxAvailable, !homeBrainActive {
             warmSelectedBrain()
         } else if brain.backing == .appleFoundationModels, !homeBrainActive {

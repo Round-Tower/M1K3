@@ -57,6 +57,8 @@
 //  FoundationModels' Attachment(imageURL:) API, gated with #if compiler(>=6.4) + @available.
 //  Confidence now 0.85.
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — `.mini`'s window is MiniContextWindow.current (the
+//  device's, recorded at launch; 4,096 floor), no longer a literal 4,096.
 
 import Foundation
 
@@ -251,9 +253,11 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// Approximate USABLE context window in tokens — a per-tier FACT, not a knob,
     /// used by `HistoryBudgetPolicy` to size the conversation replay. It is the
     /// budget layer's hard upper bound, especially on a rotating-KV tier.
-    /// - `mini` (Apple Foundation Models): a conservative ~4K until measured —
-    ///   AFM manages its own window and overflows are surfaced as errors, so
-    ///   under-estimating is the safe direction.
+    /// - `mini` (Apple Foundation Models): the DEVICE's window —
+    ///   `MiniContextWindow.current`, recorded at launch from
+    ///   `SystemLanguageModel.contextSize` (4,096 on an M1 Max; the WWDC26
+    ///   sample shows 8,192), the 4,096 floor until then. AFM throws on
+    ///   overflow, so a smaller report is believed, never rounded up.
     /// - `lil` (dense Qwen3, `maxKVSize == nil` → `KVCacheSimple`): the
     ///   native ~32K window; growth is MEMORY-bounded, never silently truncated.
     /// - `big` (gemma-4-12B, `RotatingKVCache(maxSize: 8192)`): a HARD 8192-token
@@ -263,7 +267,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     ///   See `usesRotatingKVCache`.
     public var approximateContextTokens: Int {
         switch self {
-        case .mini: 4096
+        case .mini: MiniContextWindow.current
         // LFM2.5 advertises 32k; 8k keeps the KV inside a small device's
         // jetsam budget — the 3 GB iPad is the design target, measured there.
         case .pocket: 8192

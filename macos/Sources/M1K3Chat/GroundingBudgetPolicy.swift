@@ -27,6 +27,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06 — pocket shares Mini's budget (PR #234 review 2); measured on pocket
 //  before it ever widens. Confidence now 0.85.
 //
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — Mini's grounding follows the device window:
+//  `miniTokens(windowTokens:)` = 600 at 4,096, +¼ token per extra window token, capped at MLX parity
+//  (1,100 at 8,192), floor 200 below 4,096. pocket and an unknown tier keep 600. Byte-identical at 4,096.
 
 import Foundation
 import M1K3Inference
@@ -51,6 +54,19 @@ public enum GroundingBudgetPolicy {
     ///
     /// A budget that consumes the window is not a budget.
     public static let miniTokenBudget = 600
+
+    /// The least grounding a SMALLER-than-4,096 Mini window still gets.
+    public static let miniFloorTokenBudget = 200
+
+    /// Mini's grounding for the device's window (2026-09-27). The 600 above is
+    /// the arithmetic answer for 4,096; each extra window token buys a quarter
+    /// token of grounding (the rest goes to history replay and the answer), up
+    /// to parity with the MLX tiers' measured budget — 8,192 reaches it. A
+    /// smaller window shrinks it, never below `miniFloorTokenBudget`.
+    public static func miniTokens(windowTokens: Int) -> Int {
+        let scaled = miniTokenBudget + (windowTokens - MiniContextWindow.floorTokens) / 4
+        return min(GroundingBudget.defaultTokenBudget, max(miniFloorTokenBudget, scaled))
+    }
 
     /// The ceiling for a SPOKEN turn, on any tier.
     ///
@@ -88,17 +104,27 @@ public enum GroundingBudgetPolicy {
     /// Both reasons for the spoken cap apply to Mini at least as hard as to the
     /// others: nobody reads seven chunks aloud whichever brain read them, and
     /// Mini has the least window to spend in the first place.
-    public static func tokens(for tier: BrainTier?, spoken: Bool = false) -> Int {
+    ///
+    /// `miniWindowTokens`: Mini's window — the device's (`MiniContextWindow`)
+    /// unless a test pins one. pocket is not AFM and ignores it.
+    public static func tokens(
+        for tier: BrainTier?,
+        spoken: Bool = false,
+        miniWindowTokens: Int = MiniContextWindow.current
+    ) -> Int {
         // nil is an unresolvable persisted brain string. Fail small, matching
         // HistoryBudgetPolicy's nil guard: the cost of being wrong is asymmetric.
         let typed: Int
         // pocket (LFM2.5-1.2B, the non-AFM Mini) takes Mini's budget: a 1.2B with
         // an 8k window, never measured with the 1100-token MLX default — its
         // grounded-Q cell was 6/16 on PR #234's eval. Fail small until measured.
-        if let tier, tier != .mini, tier != .pocket {
-            typed = GroundingBudget.defaultTokenBudget
-        } else {
+        switch tier {
+        case .mini:
+            typed = miniTokens(windowTokens: miniWindowTokens)
+        case .pocket, nil:
             typed = miniTokenBudget
+        case .some:
+            typed = GroundingBudget.defaultTokenBudget
         }
         return spoken ? min(typed, spokenTokenBudget) : typed
     }
