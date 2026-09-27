@@ -187,7 +187,9 @@ struct MiniDispatchHistoryEvalTests {
 
     /// `M1K3_AFM_EVAL_HISTORY_ONLY`: comma list of scenario ids; all when unset.
     private static var scenarios: [PoisonedDispatchScenario] {
-        guard let only = historyEvalEnvironment["M1K3_AFM_EVAL_HISTORY_ONLY"] else { return PoisonedDispatchScenario.all }
+        guard let only = historyEvalEnvironment["M1K3_AFM_EVAL_HISTORY_ONLY"] else {
+            return PoisonedDispatchScenario.all
+        }
         let ids = Set(only.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
         return PoisonedDispatchScenario.all.filter { ids.contains($0.id) }
     }
