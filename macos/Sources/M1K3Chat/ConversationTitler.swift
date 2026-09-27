@@ -27,6 +27,7 @@
 //  `TitlePrompt.neutralInstructions`, not the chat persona (a news chat was titled "I don't share my
 //  own wiring…": the persona's decline read the titling prompt as a probe), and the sanitizer drops a
 //  first-person refusal. Same class as the call summaries (2026-09-26).
+//  Same day, #424 review: refusals are checked after quotes/"Title:" come off; "Sorry, " only.
 //
 
 import Foundation
@@ -89,6 +90,13 @@ public enum TitlePrompt {
 
 public enum TitleSanitizer {
     /// nil = unusable output; the conversation stays untitled.
+    static let refusalOpenings = ["I don't ", "I do not ", "I can't ", "I cannot ", "I won't ", "Sorry, "]
+
+    static func isRefusal(_ line: String) -> Bool {
+        let straight = line.replacingOccurrences(of: "’", with: "'")
+        return refusalOpenings.contains { straight.hasPrefix($0) }
+    }
+
     public static func sanitize(_ raw: String) -> String? {
         // First non-empty line only — models love to explain themselves.
         guard var line = raw
@@ -97,11 +105,6 @@ public enum TitleSanitizer {
             .first(where: { !$0.isEmpty })
         else { return nil }
 
-        // A first-person refusal is the persona declining, never a topic (seen live).
-        let refusals = ["I don't ", "I do not ", "I can't ", "I cannot ", "I won't ", "Sorry"]
-        if refusals.contains(where: { line.hasPrefix($0) || line.hasPrefix($0.replacingOccurrences(of: "'", with: "’")) }) {
-            return nil
-        }
         if let range = line.range(of: "Title:", options: [.caseInsensitive, .anchored]) {
             line = String(line[range.upperBound...])
         }
@@ -117,6 +120,12 @@ public enum TitleSanitizer {
             }
         } while line != previous
         line = line.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+
+        // A first-person refusal is the persona declining, never a topic (seen live).
+        // Checked after the quotes and "Title:" come off (PR #424 review).
+        guard !isRefusal(line) else {
+            return nil
+        }
 
         // #285: the model's own "FOLLOWUPS: [...]" trailer habit walking into
         // a title — sometimes intact ("… FOLLOWUPS: [\"What's new with"),

@@ -14,6 +14,8 @@
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 (pure, pinned by
 //  AFMPrefixPrewarmTests). Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — `consultsSlot`: a call on foreign instructions
+//  never touches the prewarm slot (PR #424 review: the neutral-instructions titler evicted it).
 //
 
 import Foundation
@@ -35,6 +37,15 @@ public enum AFMPrefixPrewarm {
     public static func accepts(prefix: String?, prompt: String) -> Bool {
         guard let prefix, !prefix.isEmpty else { return true }
         return prompt.hasPrefix(prefix)
+    }
+
+    /// Whether a call may look in the prewarm slot at all. Only a call on the standing
+    /// persona may: the slot drops a session whose key doesn't match, so a call on
+    /// foreign instructions (the titler, 2026-09-27) would evict the next chat turn's
+    /// prewarm. MLX's persona cache has the same rule.
+    public static func consultsSlot(override: String?, standing: String) -> Bool {
+        guard let override else { return true }
+        return override == standing
     }
 
     /// How warm a call's session was, for the `afm turn` log line.

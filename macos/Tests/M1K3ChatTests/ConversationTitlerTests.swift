@@ -105,6 +105,12 @@ extension TitleSanitizerTests {
         #expect(TitleSanitizer.sanitize("I don't share my own wiring or setup") == nil)
         #expect(TitleSanitizer.sanitize("I can't help with that") == nil)
         #expect(TitleSanitizer.sanitize("Sorry, I cannot do that") == nil)
+        // PR #424 review: a quoted or labelled refusal is still a refusal…
+        #expect(TitleSanitizer.sanitize("\"I don't share my own wiring\"") == nil)
+        #expect(TitleSanitizer.sanitize("Title: I can't share that") == nil)
+        #expect(TitleSanitizer.sanitize("“I don’t do that”") == nil)
+        // …and a title that merely starts with "Sorry" is a title.
+        #expect(TitleSanitizer.sanitize("Sorry to Bother You review") == "Sorry to Bother You review")
         #expect(TitleSanitizer.sanitize("I/O Kit Deep Dive") == "I/O Kit Deep Dive")
         #expect(TitleSanitizer.sanitize("Idle CPU Hunt") == "Idle CPU Hunt")
     }

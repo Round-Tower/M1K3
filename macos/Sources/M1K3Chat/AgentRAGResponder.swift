@@ -121,6 +121,7 @@
 //  excerpts, memories, small-talk rule or identity line (`observationRule` is gone). Under the
 //  plain rules Mini disowned web results and pivoted to old threads (build 373). A/B n=12: used
 //  the result 9 → 12, injection obeyed 1 → 0, prompt ~3,200 → ~1,300 chars (ADR 0009 review).
+//  Same day, #424 review: the empty-answer synthesis gets the framed result + age clause (was raw).
 
 import Foundation
 import M1K3Agent
@@ -529,9 +530,6 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         continuation: AsyncStream<String>.Continuation
     ) async -> Bool {
         onActivity(.thinking(iteration: 0))
-        let contextPreamble = [PromptContext.line(now: Date(), brainName: brainNameProvider()), ageClauseProvider()]
-            .compactMap { $0 }
-            .joined(separator: "\n\n")
         let prompt = if let observation {
             // A dispatched turn: the date (not the identity line) and the age clause.
             Self.dispatchTurnPrompt(
@@ -542,7 +540,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             )
         } else {
             Self.plainTurnPrompt(
-                question: question, contextPreamble: contextPreamble, chunks: chunks, memories: memories,
+                question: question,
+                contextPreamble: [PromptContext.line(now: Date(), brainName: brainNameProvider()), ageClauseProvider()]
+                    .compactMap { $0 }.joined(separator: "\n\n"),
+                chunks: chunks, memories: memories,
                 history: history, historyBudget: historyBudgetProvider(),
                 ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
             )
@@ -700,10 +701,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             )
         }
         Self.log.notice("tool dispatch: \(plan.tool.name, privacy: .public) ran, \(output.count, privacy: .public) chars")
+        let observation = ToolDispatch.observationBlock(tool: plan.tool.name, output: output)
         let answered = await runPlainTurn(
             question: question, chunks: chunks, memories: memories, history: history,
-            instructions: instructions,
-            observation: ToolDispatch.observationBlock(tool: plan.tool.name, output: output),
+            instructions: instructions, observation: observation,
             onActivity: onActivity, continuation: continuation
         )
         let step = ReasoningStep(iteration: 1, thought: "", action: "\(plan.tool.name)(\(argument))", observation: output)
@@ -713,9 +714,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // the network; PR #420 review).
             if Task.isCancelled { return true }
             Self.log.notice("tool dispatch: empty answer after \(plan.tool.name, privacy: .public) — synthesising from its result")
-            let contextLine = PromptContext.line(now: Date(), brainName: brainNameProvider())
+            // The result keeps its framed header (the injection guard) and the age clause
+            // rides along: this path once handed the raw web text over bare (PR #424 review).
+            let contextLine = [PromptContext.line(now: Date(), brainName: brainNameProvider()), ageClauseProvider()]
+                .compactMap { $0 }.joined(separator: "\n\n")
+            let framed = ReasoningStep(iteration: 1, thought: "", action: step.action, observation: observation)
             let synthesised = await streamFallback(
-                question: question, chunks: chunks, contextLine: contextLine, gathered: [step], into: continuation
+                question: question, chunks: chunks, contextLine: contextLine, gathered: [framed], into: continuation
             )
             // Guardrail twice on the same fetched text: never a dead bubble (PR #420 review).
             if !synthesised, !Task.isCancelled {
