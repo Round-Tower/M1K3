@@ -1426,6 +1426,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let carveOut = toolNames.contains("propose_script")
             ? Self.generativeCarveOutWithScripts
             : Self.generativeCarveOut
+        // Both styles' small-talk line still says "pick up one real thread (… a memory of
+        // them, the hour)". Lil and Big read it against a real history; Mini, handed small
+        // talk here instead of the plain route, would invent a past again (#428). If the
+        // router's chat verdict ever loosens, take the clause out for Mini here too.
         return switch style {
         case .react:
             """
