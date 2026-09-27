@@ -41,13 +41,15 @@ enum DateTimeDescriber {
         // Count from the minute `describe` shows, so the two lines agree.
         let shown = calendar.dateInterval(of: .minute, for: date)?.start ?? date
         let today = calendar.startOfDay(for: shown)
-        let midnight = calendar.date(byAdding: .day, value: 1, to: today) ?? shown
+        let line = describe(date, timeZone: timeZone, locale: locale)
+        // Unreachable for real zones; without a midnight the reading is just the line.
+        guard let midnight = calendar.date(byAdding: .day, value: 1, to: today) else { return line }
         let minutes = Int(midnight.timeIntervalSince(shown) / 60)
         let formatter = DateFormatter()
         formatter.locale = locale
         formatter.timeZone = timeZone
         formatter.dateFormat = "EEEE, d MMMM"
-        return describe(date, timeZone: timeZone, locale: locale)
+        return line
             + "\nUntil midnight: \(duration(minutes: minutes)). Tomorrow is \(formatter.string(from: midnight))."
     }
 

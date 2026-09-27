@@ -1137,11 +1137,100 @@
     },
     {
       "round": "datetime-reading-v2-followup-framing",
-      "note": "Rejected variant: the derived line framed 'In case they ask: … until midnight; tomorrow is …'. what-time still volunteers it 2/4 (stricter markers incl. 'monday'), and until-midnight echoes the tomorrow clause 3/4. No gain; v1 ships.",
+      "note": "Rejected variant: the derived line framed 'In case they ask: … until midnight; tomorrow is …'. what-time still volunteers it 2/4 (stricter markers incl. 'monday'), and until-midnight echoes the tomorrow clause 4/4. No gain; v1 ships.",
       "summary": {
         "full": "until-midnight uses 4/4; what-time volunteers 2/4"
       },
-      "answers": []
+      "answers": [
+        {
+          "trial": 1,
+          "scenario": "until-midnight",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "10 hours and 5 minutes until midnight; tomorrow is Monday, 28 September."
+        },
+        {
+          "trial": 1,
+          "scenario": "what-time",
+          "arm": "full",
+          "uses": true,
+          "poison": true,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "13:55 (Europe/Dublin) — the device said it, and the hour is steady as a cog. A Sunday, 27 September 2026, and the clock ticks toward midnight at 10 hours and 5 minutes."
+        },
+        {
+          "trial": 2,
+          "scenario": "until-midnight",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "10 hours and 5 minutes until midnight; tomorrow is Monday, 28 September."
+        },
+        {
+          "trial": 2,
+          "scenario": "what-time",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "13:55 (Europe/Dublin) — that's the hour the device says it is, and it's Sunday, 27 September 2026."
+        },
+        {
+          "trial": 3,
+          "scenario": "until-midnight",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "10 hours and 5 minutes until midnight; tomorrow is Monday, 28 September."
+        },
+        {
+          "trial": 3,
+          "scenario": "what-time",
+          "arm": "full",
+          "uses": true,
+          "poison": true,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "13:55, Dublin time. The device says that's now — a Sunday, 27 September 2026, and tomorrow is Monday, 28 September."
+        },
+        {
+          "trial": 4,
+          "scenario": "until-midnight",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "The device says: 10 hours and 5 minutes until midnight. Tomorrow is Monday, 28 September."
+        },
+        {
+          "trial": 4,
+          "scenario": "what-time",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "13:55, Dublin time — Sunday, 27 September 2026. A shadow settles on the hour; the city hums beneath the clock."
+        }
+      ]
     }
   ],
   "privacy": "The user's name is anonymised to 'Sam' (fixtures and answers)."
