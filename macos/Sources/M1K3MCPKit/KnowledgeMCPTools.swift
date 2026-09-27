@@ -18,6 +18,10 @@
 //  in-app) behind an optional embedder, stdio surface byte-identical via the
 //  nil default; get_document rendering lifted to DocumentRenderer (shared
 //  with the agent's GetDocumentTool).
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #378/#379: an empty query, a bad id and an
+//  unknown id throw (the registry's isError) instead of returning "Error: …" as success; a
+//  no-results line quotes only the query's start (`MCPInput.echo`). A quarantined id still
+//  refuses exactly as an absent one does. Confidence 0.85.
 //
 
 import Foundation
@@ -36,7 +40,7 @@ struct KnowledgeMCPTools {
     /// otherwise). Returns ranked chunks as text.
     func searchKnowledge(query: String, limit: Int = 5) async throws -> String {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return "Error: empty query." }
+        guard !trimmed.isEmpty else { throw MCPInputError("search_knowledge requires a non-empty query") }
         let hits = try await GroundedSearch.run(
             store: store, embedder: embedder, query: trimmed, limit: limit
         )
@@ -44,10 +48,10 @@ struct KnowledgeMCPTools {
             if embedder != nil {
                 // Gated-empty: nothing cleared the relevance floor — abstain
                 // honestly rather than hand the caller top-K garbage.
-                return "Nothing relevant in stored knowledge for “\(trimmed)” — "
+                return "Nothing relevant in stored knowledge for “\(MCPInput.echo(trimmed))” — "
                     + "the stored documents don't cover this."
             }
-            return "No results for “\(trimmed)”."
+            return "No results for “\(MCPInput.echo(trimmed))”."
         }
         return hits.enumerated().map { index, hit -> String in
             let heading: String = hit.heading.map { " §\($0)" } ?? ""
@@ -72,13 +76,13 @@ struct KnowledgeMCPTools {
     /// resume-offset footer (DocumentRenderer owns the rendering).
     func getDocument(idString: String, maxChars: Int = defaultMaxChars, offset: Int = 0) throws -> String {
         guard let id = UUID(uuidString: idString.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-            return "Error: “\(idString)” is not a valid document id."
+            throw MCPInputError("“\(MCPInput.echo(idString))” is not a valid document id.")
         }
         guard let item = try store.item(id: id), item.kind != .quarantined else {
             // A quarantined item renders as absent, not as denied — the by-id
             // path must not confirm existence of what list/search never show
             // (index segregation; see KnowledgeKind.quarantined).
-            return "No document found with id \(id.uuidString)."
+            throw MCPInputError("No document found with id \(id.uuidString).")
         }
         return try DocumentRenderer.render(
             title: item.title,

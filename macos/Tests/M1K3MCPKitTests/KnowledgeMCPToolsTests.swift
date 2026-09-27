@@ -9,6 +9,8 @@
 //  Review: Kev + claude-fable-5, 2026-07-02 — search is async + optionally
 //  hybrid (GroundedSearch); added the embedder-injected hybrid + gated
 //  abstention pins. FTS-only surface unchanged via the nil default.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #378: empty query and bad/unknown ids now pin a
+//  throw, the quarantine case included. Confidence 0.85.
 
 import Foundation
 import M1K3Knowledge
@@ -44,7 +46,11 @@ struct KnowledgeMCPToolsTests {
             embeddings: await HashingEmbeddingService().embedBatch([text])
         )
         let tools = KnowledgeMCPTools(store: store)
-        let out = try tools.getDocument(idString: quarantinedID.uuidString)
+        // Refused exactly as an absent id is (#378: as an error), naming nothing inside.
+        let refusal = #expect(throws: MCPInputError.self) {
+            try tools.getDocument(idString: quarantinedID.uuidString)
+        }
+        let out = refusal?.description ?? ""
         #expect(out.contains("No document found"))
         #expect(!out.contains("canary"))
         #expect(!out.contains("Internal QA"))
@@ -58,10 +64,10 @@ struct KnowledgeMCPToolsTests {
         #expect(out.contains("hydraulic seal"))
     }
 
-    @Test("search_knowledge handles empty query + no matches")
+    @Test("search_knowledge refuses an empty query (#378: as an error) and reports no matches")
     func searchEdges() async throws {
         let tools = try await KnowledgeMCPTools(store: seededStore())
-        #expect(try await tools.searchKnowledge(query: "   ").contains("empty"))
+        await #expect(throws: MCPInputError.self) { try await tools.searchKnowledge(query: "   ") }
         #expect(try await tools.searchKnowledge(query: "zzzznotpresent").contains("No results"))
     }
 
@@ -112,8 +118,8 @@ struct KnowledgeMCPToolsTests {
         #expect(out.contains("# Plant Notes"))
         #expect(out.contains("hydraulic seal"))
 
-        #expect(try tools.getDocument(idString: "not-a-uuid").contains("not a valid"))
-        #expect(try tools.getDocument(idString: UUID().uuidString).contains("No document found"))
+        #expect(throws: MCPInputError.self) { try tools.getDocument(idString: "not-a-uuid") }
+        #expect(throws: MCPInputError.self) { try tools.getDocument(idString: UUID().uuidString) }
     }
 
     @Test("get_document on a title-only item explains the empty body instead of a bare header")

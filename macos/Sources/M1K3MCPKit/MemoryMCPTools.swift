@@ -18,6 +18,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.85 (formatting +
 //  empty-state contract test-pinned against a real in-memory store; live
 //  embedder/path/dual-write wiring is app glue, verify-at-⌘R). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #379: recall/related/forget queries read through
+//  `MCPInput.text` (capped before the embedder, wrong type refused). Confidence 0.85.
 //
 
 import Foundation
@@ -94,7 +96,7 @@ public func makeMemoryToolDefinitions(handlers: MemoryToolHandlers) -> [MCPToolD
                 ]
             ),
             handler: { args in
-                let query = stringArg(args, "query")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let query = try MCPInput.text(args, "query", tool: "recall_memory", maxLength: MCPInput.maxQuery) ?? ""
                 guard !query.isEmpty else { throw MCPMemoryError("recall_memory requires a non-empty query") }
                 let hits = try await handlers.recall(query)
                 return formatRecall(hits, query: query)
@@ -116,7 +118,7 @@ public func makeMemoryToolDefinitions(handlers: MemoryToolHandlers) -> [MCPToolD
                 ]
             ),
             handler: { args in
-                let query = stringArg(args, "query")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let query = try MCPInput.text(args, "query", tool: "related_memory", maxLength: MCPInput.maxQuery) ?? ""
                 guard !query.isEmpty else { throw MCPMemoryError("related_memory requires a non-empty query") }
                 guard let result = try await handlers.related(query) else {
                     return "Nothing recalled for “\(query)” — no fact to anchor the graph walk on."
@@ -161,7 +163,7 @@ public func makeMemoryToolDefinitions(handlers: MemoryToolHandlers) -> [MCPToolD
                 ]
             ),
             handler: { args in
-                let query = stringArg(args, "query")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let query = try MCPInput.text(args, "query", tool: "forget_memory", maxLength: MCPInput.maxQuery) ?? ""
                 guard !query.isEmpty else { throw MCPMemoryError("forget_memory requires a non-empty query") }
                 return try formatForget(await handlers.forget(query), query: query)
             }

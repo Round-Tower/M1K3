@@ -185,7 +185,7 @@ private func speakDefinition(
             ]
         ),
         handler: { args in
-            let text = stringArg(args, "text")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let text = try MCPInput.text(args, "text", tool: "speak", maxLength: MCPInput.maxText) ?? ""
             guard !text.isEmpty else { throw MCPVoiceError("speak requires non-empty text") }
             let emotion = stringArg(args, "emotion")
             guard boolArg(args, "wait") ?? false else {
