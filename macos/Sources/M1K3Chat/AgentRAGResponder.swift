@@ -140,8 +140,8 @@
 //  Review: same day (6), #438 review — the rule keys on the router's verdict, not the lane that
 //  answers: a chat verdict carries no excerpts even into the agent turn a blank plain turn hands
 //  to, and a tools verdict keeps them in its plain fallbacks (only the chat route was measured).
-//  Sources come from the same `turnChunks`, so they name only what could reach a prompt; before,
-//  both fallbacks listed the wrong set. Confidence 0.8.
+//  Sources come from the same `turnChunks`; before, both fallbacks listed the wrong set. A
+//  dispatched tool's answer still lists excerpts it never read (pre-existing). Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -467,9 +467,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let routeInstructions = plainRoute?.instructions
         let routesPlain = decision?.verdict == .chat
         // A chat verdict carries no knowledge excerpts (#430), whichever lane ends up
-        // answering — the agent turn a blank plain turn hands over to included — so the
-        // sources below name only what could reach the prompt. A tools verdict keeps them
-        // everywhere, its plain fallbacks too: the eval measured the chat route only.
+        // answering — the agent turn a blank plain turn hands over to included — and the
+        // sources below list none. A tools verdict keeps them everywhere, its plain fallbacks
+        // too: the eval measured the chat route only. (Still loose, and older: a dispatched
+        // tool's answer reads only the tool's result, yet its sources list the excerpts.)
         let turnChunks = routesPlain ? [] : cappedChunks
         // Router-invoked tools: on a tools verdict, a picker may name ONE read-only
         // tool that the app runs itself (ToolDispatch); nil keeps the agent turn.
