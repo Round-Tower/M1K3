@@ -137,6 +137,11 @@
 //  knowledge matched" head, and lists none as sources. Retrieval's least-bad match leaked into
 //  3/10 noise probes (0/10 without); the router sends every document question probed to the
 //  tools (15/15), where the excerpts stay. Memories stay: they didn't leak.
+//  Review: same day (6), #438 review — the rule keys on the router's verdict, not the lane that
+//  answers: a chat verdict carries no excerpts even into the agent turn a blank plain turn hands
+//  to, and a tools verdict keeps them in its plain fallbacks (only the chat route was measured).
+//  Sources come from the same `turnChunks`, so they name only what could reach a prompt; before,
+//  both fallbacks listed the wrong set. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -461,6 +466,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         let routeInstructions = plainRoute?.instructions
         let routesPlain = decision?.verdict == .chat
+        // A chat verdict carries no knowledge excerpts (#430), whichever lane ends up
+        // answering — the agent turn a blank plain turn hands over to included — so the
+        // sources below name only what could reach the prompt. A tools verdict keeps them
+        // everywhere, its plain fallbacks too: the eval measured the chat route only.
+        let turnChunks = routesPlain ? [] : cappedChunks
         // Router-invoked tools: on a tools verdict, a picker may name ONE read-only
         // tool that the app runs itself (ToolDispatch); nil keeps the agent turn.
         let picker = decision?.verdict == .tools ? plainRoute?.pick : nil
@@ -469,7 +479,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let turnTask = Task {
                 if routesPlain {
                     let answered = await runPlainTurn(
-                        question: question, memories: cappedMemories,
+                        question: question, chunks: turnChunks, memories: cappedMemories,
                         history: history, instructions: routeInstructions,
                         onActivity: onActivity, continuation: continuation
                     )
@@ -483,7 +493,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 var agentTools = tools
                 if let picker { // a tools verdict: never after a plain turn
                     let outcome = await runDispatchedTurn(
-                        question: question, picker: picker, tools: tools, chunks: cappedChunks,
+                        question: question, picker: picker, tools: tools, chunks: turnChunks,
                         memories: cappedMemories, history: history, instructions: routeInstructions,
                         onActivity: onActivity, continuation: continuation
                     )
@@ -496,7 +506,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 await runAgentTurn(
                     question: question,
                     images: images,
-                    chunks: cappedChunks,
+                    chunks: turnChunks,
                     memories: cappedMemories,
                     history: history,
                     tools: agentTools,
@@ -515,8 +525,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("\(phaseLine, privacy: .public)")
         }
         // Memory hits ride along as sources so the UI shows their provenance.
-        // A plain turn carries no excerpts (#430), so it lists none as sources.
-        return (routesPlain ? cappedMemories : cappedChunks + cappedMemories, stream)
+        return (turnChunks + cappedMemories, stream)
     }
 
     /// Grounding for the think-phase decision counts BOTH retrieval lanes: a
@@ -540,6 +549,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// so the caller can hand the turn to the agent instead of a blank bubble.
     private func runPlainTurn(
         question: String,
+        chunks: [ChunkHit],
         memories: [ChunkHit],
         history: [ChatTurn],
         instructions: String?,
@@ -560,14 +570,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // No date line (#428/#349): on small talk it was the one concrete thing in the
             // prompt, and Mini opened on it or pinned it on the user. A time ask routes to
             // `datetime`, and the persona keeps the month and year.
-            // No knowledge excerpts (#430): the router sends document questions to the tools
-            // (15/15 probed, p 0.74–0.98), so here they are only ever the least-bad match for
-            // a question they don't answer, and Mini worked them in (3/10 → 0/10 without).
             Self.plainTurnPrompt(
                 question: question,
                 contextPreamble: [PromptContext.identity(brainName: brainNameProvider()), ageClauseProvider()]
                     .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n"),
-                chunks: [], memories: memories,
+                chunks: chunks, memories: memories,
                 history: history, historyBudget: historyBudgetProvider(),
                 ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
             )
@@ -712,7 +719,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // A plain turn that came back empty hands over to the agent, as the chat route does.
         let plain: @Sendable () async -> DispatchOutcome = { [self] in
             await runPlainTurn(
-                question: question, memories: memories, history: history,
+                question: question, chunks: chunks, memories: memories, history: history,
                 instructions: instructions, onActivity: onActivity, continuation: continuation
             ) ? .answered : .agent(tools)
         }
@@ -762,7 +769,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         Self.log.notice("tool dispatch: \(plan.tool.name, privacy: .public) ran, \(output.count, privacy: .public) chars")
         let observation = ToolDispatch.observationBlock(tool: plan.tool.name, output: output)
         let answered = await runPlainTurn(
-            question: question, memories: memories, history: history,
+            question: question, chunks: chunks, memories: memories, history: history,
             instructions: instructions, observation: observation,
             onActivity: onActivity, continuation: continuation
         )
