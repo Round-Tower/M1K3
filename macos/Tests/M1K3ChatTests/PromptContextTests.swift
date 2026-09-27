@@ -7,6 +7,8 @@
 //  brain is answering (mini/lil/big share one persona).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-21, Confidence 0.85. Prior: this file.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — `identity(brainName:)`, the date-free line Mini's
+//  plain turn takes (#428/#349). Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -82,6 +84,24 @@ struct PromptContextTests {
     func blankBrainIsEmpty() {
         let line = PromptContext.line(now: noon(2026, 6, 21), brainName: "   ")
         #expect(!line.lowercased().contains("you're"))
+    }
+
+    /// #428/#349 (2026-09-27): on Mini's plain turn the date line was the one concrete thing
+    /// in the prompt, and small talk opened on it ("Sunday, 27 September 2026 — …") 11/16,
+    /// or pinned it on the user ("You mentioned Sunday, 27 September 2026"). The plain turn
+    /// takes the identity alone.
+    @Test("the identity line names the brain and carries no date")
+    func identityHasNoDate() {
+        let line = PromptContext.identity(brainName: "Mini M1K3")
+        #expect(line.contains("Mini M1K3"))
+        #expect(line.hasPrefix("You're M1K3"))
+        #expect(!line.contains("Right now"))
+        #expect(PromptContext.line(now: noon(2026, 6, 21), brainName: "Mini M1K3").hasSuffix(line))
+    }
+
+    @Test("a blank brain gives no identity line")
+    func blankIdentityIsEmpty() {
+        #expect(PromptContext.identity(brainName: "  ").isEmpty)
     }
 
     @Test("English month names regardless of host locale")

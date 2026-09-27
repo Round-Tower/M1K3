@@ -125,6 +125,10 @@
 //  Review: same day (2), 374 over MCP — a well-known fact survives a lookup that missed it
 //  (Wikipedia returned the rental market for "capital of Australia"); a pick this turn doesn't
 //  offer is a plain turn, not an agent turn that overflowed Mini at 4,423 tokens.
+//  Review: same day (3), #428/#349 — the plain turn takes the identity line without the date,
+//  and its small-talk rule drops "pick up one real thread (what they said, a memory of them,
+//  the hour)". Small talk opened on the date 11/16 and invented a shared past 6/14; with Mini's
+//  curiosity beat gone too, 1/16 and 2–3/14 (MiniInventedMemoryEvalTests).
 
 import Foundation
 import M1K3Agent
@@ -542,10 +546,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 history: history, historyBudget: historyBudgetProvider(), observation: observation
             )
         } else {
+            // No date line (#428/#349): on small talk it was the one concrete thing in the
+            // prompt, and Mini opened on it or pinned it on the user. A time ask routes to
+            // `datetime`, and the persona keeps the month and year.
             Self.plainTurnPrompt(
                 question: question,
-                contextPreamble: [PromptContext.line(now: Date(), brainName: brainNameProvider()), ageClauseProvider()]
-                    .compactMap { $0 }.joined(separator: "\n\n"),
+                contextPreamble: [PromptContext.identity(brainName: brainNameProvider()), ageClauseProvider()]
+                    .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n"),
                 chunks: chunks, memories: memories,
                 history: history, historyBudget: historyBudgetProvider(),
                 ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
@@ -641,8 +648,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     static let plainRules = """
     RULES:
     \(generativeCarveHead)No grounding, no citations, no "found nothing"; those are for factual questions.
-    - Pure small talk — greetings, banter — reply in your own voice and pick up one real \
-    thread (what they said, a memory of them, the hour).
+    - Pure small talk — greetings, banter — reply in your own voice.
     - Stable, well-known facts (who wrote a famous book, a capital city, basic science) \
     you can just answer from what you know — you're reliable there.
     - If the KNOWLEDGE above fully answers the question, answer from it directly.
@@ -1420,6 +1426,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let carveOut = toolNames.contains("propose_script")
             ? Self.generativeCarveOutWithScripts
             : Self.generativeCarveOut
+        // Both styles' small-talk line still says "pick up one real thread (… a memory of
+        // them, the hour)". Lil and Big read it against a real history; Mini, handed small
+        // talk here instead of the plain route, would invent a past again (#428). If the
+        // router's chat verdict ever loosens, take the clause out for Mini here too.
         return switch style {
         case .react:
             """

@@ -83,6 +83,11 @@
 //  canned decline/disclaimer 9/38 → 3/38, tool-use 20/20 and security 14/14 held; security x3 21/21.
 //  A v2 that SPELLED OUT the banned disclaimers did worse (6/10, 6/38) — the planting lesson again.
 //  Confidence 0.8 (n=2 arms; the "like humans do" habit survives in paraphrase — an exemplar is next).
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — Mini's core drops the curiosity beat ("be curious back:
+//  notice one real thing and ask about it"). On a fresh chat there's nothing real to notice, so Mini
+//  invented a shared past ("you once asked about pairing spices", "I've got the Irish in me"): 6/14
+//  → 2/14 without it (MiniInventedMemoryEvalTests, #428). The persona anchor now starts at the rules,
+//  since the openings differ. Lil and Big keep the beat. Confidence 0.75 (n=14 per arm, x2 rounds).
 
 import Foundation
 import Synchronization
@@ -157,17 +162,28 @@ public enum M1K3Persona {
         if let range = core.range(of: "\n\n# FOLLOW-UPS") {
             core = String(core[..<range.lowerBound])
         }
+        // #428: the curiosity beat, with nothing to be curious about on a fresh chat, had
+        // Mini invent a shared past ("you once asked about pairing spices") 6/14 → 2/14
+        // without it (MiniInventedMemoryEvalTests). Lil and Big keep it.
+        core = core.replacingOccurrences(of: curiosityBeat, with: "Listen first; answer what was asked.")
         return removingSection("# BEING YOURSELF", from: core)
     }()
 
+    /// The opening's curiosity sentence, which Mini's core drops.
+    static let curiosityBeat =
+        "Listen first; answer what was asked — then be curious back: notice one real thing and ask about it."
+
     /// The stretch of the standard core EVERY rendering carries — the full core,
-    /// Mini's trimmed one, the compact prompt: everything before the first MLX-only
+    /// Mini's trimmed one, the compact prompt: from the rules to the first MLX-only
     /// section. What "this instruction set carries the persona" checks against;
     /// `miniCorePrompt` itself stopped being a substring of the full core when
     /// BEING YOURSELF landed mid-core (2026-09-23).
     static let standingPersonaAnchor: String = {
-        guard let range = corePrompt.range(of: "\n\n# BEING YOURSELF") else { return miniCorePrompt }
-        return String(corePrompt[..<range.lowerBound])
+        // From the rules on: the opening differs between Mini and the standard core (#428).
+        guard let end = corePrompt.range(of: "\n\n# BEING YOURSELF"),
+              let start = corePrompt.range(of: "# ABSOLUTE RULES")
+        else { return miniCorePrompt }
+        return String(corePrompt[start.lowerBound ..< end.lowerBound])
     }()
 
     /// `text` without the `# header` section (up to the next blank-line `# ` header).

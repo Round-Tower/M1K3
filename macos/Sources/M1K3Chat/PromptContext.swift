@@ -29,6 +29,9 @@
 //  Now: M1K3 THINKS WITH a brain, it is not the brain. Third instance of one
 //  pattern (see #97's "private local assistant"): a per-turn line asserting an
 //  identity the persona already owns.
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.8 — `identity(brainName:)` splits the
+//  brain clause out: Mini's plain turn takes it without the date (#428/#349,
+//  MiniInventedMemoryEvalTests: date mentions on small talk 11/16 → 1/16).
 
 import Foundation
 import M1K3Inference
@@ -41,16 +44,22 @@ public enum PromptContext {
         formatter.locale = Locale(identifier: "en_US_POSIX") // stable English names
         formatter.dateFormat = "EEEE, d MMMM yyyy"
         let date = formatter.string(from: now)
+        let identity = identity(brainName: brainName)
+        return "Right now (true for this turn): it's \(date)." + (identity.isEmpty ? "" : " " + identity)
+    }
+
+    /// The brain clause alone, no date: what Mini's plain turn takes (#428/#349). On small
+    /// talk the date was the one concrete thing in the prompt, and Mini opened on it or
+    /// pinned it on the user ("You mentioned Sunday, 27 September 2026"). Empty for a
+    /// blank brain name.
+    public static func identity(brainName: String) -> String {
         let brain = brainName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !brain.isEmpty else {
-            return "Right now (true for this turn): it's \(date)."
-        }
+        guard !brain.isEmpty else { return "" }
         // The brain is what M1K3 THINKS WITH, never what it IS. "you're \(brain)"
         // made the tier name an identity claim, and since it sits closer to the
         // question than the persona does, it won: Mini introduced itself as
         // "I'm Mini, an AI living on this Mac" (MCP interview, 2026-08-03). A
         // tier name is internal vocabulary the user has never heard.
-        return "Right now (true for this turn): it's \(date). You're M1K3, thinking with your "
-            + "\(brain) brain — running entirely on \(HostPlatform.thisDevice)."
+        return "You're M1K3, thinking with your \(brain) brain — running entirely on \(HostPlatform.thisDevice)."
     }
 }

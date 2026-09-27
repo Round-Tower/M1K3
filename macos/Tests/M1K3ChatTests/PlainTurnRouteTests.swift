@@ -9,6 +9,8 @@
 //  palette through the AGENT prompt produced junk, hence a route of its own.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8. Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — the plain prompt carries no date line and no
+//  remembered-thread cue (#428/#349). Confidence 0.8.
 //
 
 import Foundation
@@ -162,6 +164,19 @@ struct PlainTurnRouteTests {
         #expect(!prompt.localizedCaseInsensitiveContains("tool"), "the plain prompt talks about tools")
         #expect(activities.items.withLock { $0 }.contains(.thinking(iteration: 0)))
         #expect(provider.warms == [nil], "the plain turn re-arms the next turn itself")
+    }
+
+    /// #428/#349 (2026-09-27, MiniInventedMemoryEvalTests): Mini opened small talk on the
+    /// turn's date 11/16 and invented a shared past ("you once asked about pairing spices")
+    /// 6/14. Without the date line and the "a memory of them, the hour" thread: 1/16 and 2–3/14.
+    @Test("the plain prompt carries no date line and no remembered-thread cue")
+    func plainPromptHasNoDateOrThreadCue() async throws {
+        let provider = RouteProvider(["Not much, you?"])
+        _ = try await answer(responder(provider, route: chat(.chat)), "what's up?")
+        let prompt = try #require(provider.prompts.first)
+        #expect(!prompt.contains("Right now (true for this turn)"))
+        #expect(!prompt.contains("a memory of them"))
+        #expect(!prompt.contains("the hour"))
     }
 
     @Test("tools verdict: the agent loop runs exactly as without a router")
