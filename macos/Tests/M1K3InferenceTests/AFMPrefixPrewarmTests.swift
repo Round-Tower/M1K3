@@ -8,6 +8,7 @@
 //  log line carries.
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — `foreignInstructionsSkipTheSlot` (PR #424 review).
 //
 
 import Foundation
@@ -15,6 +16,18 @@ import M1K3Inference
 import Testing
 
 struct AFMPrefixPrewarmTests {
+    /// PR #424 review: the titler moved to neutral instructions on the chat's own AFM
+    /// instance, and PrewarmSlot drops a slot whose key doesn't match — so a title
+    /// written after a turn evicted the next turn's prewarm (the 16-19 s cold start).
+    /// A call on foreign instructions never touches the slot; MLX's persona cache has
+    /// the same rule (`InferenceIntent.instructions == nil`).
+    @Test("only the standing persona consults the prewarm slot; a foreign-instructions call leaves it armed")
+    func foreignInstructionsSkipTheSlot() {
+        #expect(AFMPrefixPrewarm.consultsSlot(override: nil, standing: "persona"))
+        #expect(AFMPrefixPrewarm.consultsSlot(override: "persona", standing: "persona"))
+        #expect(!AFMPrefixPrewarm.consultsSlot(override: "You write short titles…", standing: "persona"))
+    }
+
     private static func defaults(_ value: Any?) -> UserDefaults {
         let name = "AFMPrefixPrewarmTests.\(UUID().uuidString)"
         let store = UserDefaults(suiteName: name)!

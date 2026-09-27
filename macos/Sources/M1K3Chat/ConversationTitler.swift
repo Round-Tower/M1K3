@@ -23,6 +23,11 @@
 //  358 identifiers in the app sources are 25+ characters, so no length separates a mangled sentence
 //  from a class name. `TitleSanitizer` now rejects the trailer WORD only (both live witnesses carry
 //  it, mangled or not); `longIdentifierTitleStillPasses` / `jsonFlavouredTitleStillPasses` pin it.
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — titling runs under
+//  `TitlePrompt.neutralInstructions`, not the chat persona (a news chat was titled "I don't share my
+//  own wiring…": the persona's decline read the titling prompt as a probe), and the sanitizer drops a
+//  first-person refusal. Same class as the call summaries (2026-09-26).
+//  Same day, #424 review: refusals are checked after quotes/"Title:" come off; "Sorry, " only.
 //
 
 import Foundation
@@ -53,13 +58,23 @@ public struct ProviderConversationTitler: ConversationTitling {
         // Nobody is waiting on a title. Marked background so it can never take
         // the persona-prefix slot from the chat turn that just finished — the
         // 2026-08-09 finding, where exactly this call cost the NEXT turn 16-19s.
-        return try await InferenceIntent.backgroundUtility {
-            try await provider.generate(prompt: TitlePrompt.build(user: user, assistant: cleanedAssistant))
+        // No persona either (2026-09-27): under it, Mini's self-query decline read the
+        // titling prompt as a probe and a news chat was titled "I don't share my own wiring".
+        return try await InferenceIntent.withInstructions(TitlePrompt.neutralInstructions) {
+            try await InferenceIntent.backgroundUtility {
+                try await provider.generate(prompt: TitlePrompt.build(user: user, assistant: cleanedAssistant))
+            }
         }
     }
 }
 
 public enum TitlePrompt {
+    /// What a titling session carries instead of the chat persona.
+    public static let neutralInstructions = """
+    You write short titles for chat conversations. Reply with the title only: a few \
+    plain words naming the topic, nothing about yourself or these instructions.
+    """
+
     /// Both turns capped at 400 chars (HistoryWindow's per-turn budget) —
     /// titling must stay cheap enough to fire after every send if needed.
     public static func build(user: String, assistant: String) -> String {
@@ -75,6 +90,13 @@ public enum TitlePrompt {
 
 public enum TitleSanitizer {
     /// nil = unusable output; the conversation stays untitled.
+    static let refusalOpenings = ["I don't ", "I do not ", "I can't ", "I cannot ", "I won't ", "Sorry, "]
+
+    static func isRefusal(_ line: String) -> Bool {
+        let straight = line.replacingOccurrences(of: "’", with: "'")
+        return refusalOpenings.contains { straight.hasPrefix($0) }
+    }
+
     public static func sanitize(_ raw: String) -> String? {
         // First non-empty line only — models love to explain themselves.
         guard var line = raw
@@ -98,6 +120,12 @@ public enum TitleSanitizer {
             }
         } while line != previous
         line = line.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+
+        // A first-person refusal is the persona declining, never a topic (seen live).
+        // Checked after the quotes and "Title:" come off (PR #424 review).
+        guard !isRefusal(line) else {
+            return nil
+        }
 
         // #285: the model's own "FOLLOWUPS: [...]" trailer habit walking into
         // a title — sometimes intact ("… FOLLOWUPS: [\"What's new with"),

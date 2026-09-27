@@ -62,6 +62,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.8 — `deviceContextSize()` + `recordDeviceContextWindow()`:
 //  the launch read of SystemLanguageModel.contextSize that frees Mini's budgets from the author's M1
 //  Max (4,096). Logs `afm window: N tokens (reported R)`. >4,096 is verify-on-a-newer-device.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 (2), Confidence 0.85 — `takeSession(consultSlot:)`: a call
+//  on foreign instructions (the neutral titler) gets a fresh session and never touches the prewarm slot,
+//  which drops on a key mismatch (PR #424 review: it evicted the next chat turn's prewarm).
 import Foundation
 import M1K3LogCore
 import os
@@ -188,6 +191,11 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// this struct, so provider copies share one slot.
     private let prewarmSlot = PrewarmSlot<WarmSession>()
 
+    /// Whether a warm session is waiting (diagnostics and live tests only).
+    var prewarmArmed: Bool {
+        prewarmSlot.isArmed
+    }
+
     /// Build a session ahead of need and ask the framework to load assets +
     /// process the instructions now, so the NEXT turn doesn't pay cold-start.
     /// Mini opens a fresh `LanguageModelSession` per call (no KV prefix reuse,
@@ -221,8 +229,10 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
     /// a prefix-warm session waits for the turn it was built for), else a fresh
     /// one. Optionally re-arms afterwards (see `prewarmsBetweenTurns`).
     private func takeSession(
-        instructions text: String, prompt: String
+        instructions text: String, prompt: String, consultSlot: Bool
     ) -> (session: LanguageModelSession, warmth: AFMPrefixPrewarm.Warmth, heldPrefix: String?) {
+        // Foreign instructions (a title) never look: a key mismatch empties the slot.
+        guard consultSlot else { return (LanguageModelSession(instructions: text), .cold, nil) }
         var heldPrefix: String?
         if let warm = prewarmSlot.take(matching: text, accepting: { waiting in
             let fits = AFMPrefixPrewarm.accepts(prefix: waiting.prefix, prompt: prompt)
@@ -425,8 +435,12 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
                     + "Try switching to another brain in Settings."
             )
         }
-        let instrText = InferenceIntent.instructions ?? instructions()
-        let (session, warmth, heldPrefix) = takeSession(instructions: instrText, prompt: prompt)
+        let standing = instructions()
+        let instrText = InferenceIntent.instructions ?? standing
+        let (session, warmth, heldPrefix) = takeSession(
+            instructions: instrText, prompt: prompt,
+            consultSlot: AFMPrefixPrewarm.consultsSlot(override: InferenceIntent.instructions, standing: standing)
+        )
         logTurnStart(promptChars: prompt.count, instructionChars: instrText.count, streaming: false, warmth: warmth)
         defer { rearmAfterHeld(heldPrefix) }
         do {
@@ -455,8 +469,12 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
             return AsyncStream { $0.finish() }
         }
         return AsyncStream { continuation in
-            let instrText = InferenceIntent.instructions ?? instructions()
-            let (session, warmth, _) = takeSession(instructions: instrText, prompt: prompt)
+            let standing = instructions()
+            let instrText = InferenceIntent.instructions ?? standing
+            let (session, warmth, _) = takeSession(
+                instructions: instrText, prompt: prompt,
+                consultSlot: AFMPrefixPrewarm.consultsSlot(override: InferenceIntent.instructions, standing: standing)
+            )
             logTurnStart(promptChars: prompt.count, instructionChars: instrText.count, streaming: true, warmth: warmth)
             let task = Task { [self] in
                 do {
