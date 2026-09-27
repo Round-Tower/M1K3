@@ -72,6 +72,18 @@ struct EffectfulStreamingIntegrationTests {
         }
     }
 
+    /// #394: `objc_retain` inside TextToSpeech on the main queue (macOS 27, 2026-09-16), a
+    /// use-after-free. The render's delegate box was kept alive only by `write`'s buffer
+    /// closure, while didFinish/didCancel arrive later, dispatched to the main queue: the
+    /// box could be gone by then. The provider now holds it until the next render.
+    @Test("the render's delegate outlives the render")
+    func renderDelegateOutlivesRender() async {
+        guard audioEnabled else { return }
+        let provider = EffectfulSpeechProvider()
+        await provider.speak(SpeechUtterance(text: "Held."))
+        #expect(provider.renderDelegateIsHeld)
+    }
+
     @Test("a spoken utterance fires one lifecycle pair, a timeline, and advancing words")
     func appleStreamingPath() async throws {
         guard audioEnabled else { return }
