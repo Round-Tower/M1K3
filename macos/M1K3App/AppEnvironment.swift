@@ -512,7 +512,7 @@ final class AppEnvironment {
     nonisolated static let heartbeatEnabledKey = "heartbeat.enabled"
     /// One-shot: the call-encryption key has been migrated to Touch-ID protection.
     /// Guards the (prompt-triggering) reassert so it runs once, not every launch.
-    static let callKeyProtectionMigratedKey = "calls.keyProtectionMigrated"
+    nonisolated static let callKeyProtectionMigratedKey = "calls.keyProtectionMigrated"
     /// Call-subsystem diagnostics — pairs with StereoCallRecorder's trail so a full
     /// record→transcribe QA pass is one `log stream` predicate.
     private static let callLog = Logger(subsystem: "app.m1k3", category: "calls")

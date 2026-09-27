@@ -26,6 +26,8 @@
 //  Review: Kev + claude-opus-5, 2026-09-14 — "needs a close / stop button": a non-activating NSPanel whose
 //  hosting view accepts the first mouse; `panelHitRect` is what the controller's hover poll tests, so the
 //  panel takes clicks only while the pointer is over it. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #406: `canHide = false`. The HUD ordering front in a
+//  hidden app un-hid the whole app, so an MCP `speak` brought back hidden windows. Confidence 0.85.
 //
 
 import AppKit
@@ -98,6 +100,10 @@ final class NotchHUDWindow: NSPanel {
         level = .screenSaver
         ignoresMouseEvents = true
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
+        // Stays up while M1K3 is hidden (#406). A hideable panel ordered front un-hides its
+        // whole app, so one MCP `speak` brought back every window the person had hidden
+        // (reproduced with a bare NSPanel: hidden → visible; canHide = false → stays hidden).
+        canHide = false
         isReleasedWhenClosed = false
         becomesKeyOnlyIfNeeded = true
         let hosting = FirstMouseHostingView(
