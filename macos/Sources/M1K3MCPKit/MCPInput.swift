@@ -39,6 +39,9 @@ public enum MCPInput {
 
     /// The trimmed string argument `key`: nil when absent, null or blank. Throws when it is
     /// not a string, or runs past `maxLength` once trimmed; the refusal never quotes it.
+    /// Counted in Unicode scalars, not characters: one base letter can carry any number of
+    /// combining marks and still be ONE character, so a character cap let a megabyte through
+    /// (#439 review). A scalar is still one character for any real text.
     public static func text(_ args: [String: Value]?, _ key: String, tool: String, maxLength: Int) throws -> String? {
         let text: String
         switch args?[key] {
@@ -50,8 +53,9 @@ public enum MCPInput {
             throw MCPInputError("\(tool): \(key) must be a string")
         }
         guard !text.isEmpty else { return nil }
-        guard text.count <= maxLength else {
-            throw MCPInputError("\(tool): \(key) is over \(maxLength) characters (got \(text.count))")
+        let length = text.unicodeScalars.count
+        guard length <= maxLength else {
+            throw MCPInputError("\(tool): \(key) is over \(maxLength) characters (got \(length))")
         }
         return text
     }

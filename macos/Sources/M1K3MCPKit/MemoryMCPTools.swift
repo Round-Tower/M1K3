@@ -19,7 +19,8 @@
 //  empty-state contract test-pinned against a real in-memory store; live
 //  embedder/path/dual-write wiring is app glue, verify-at-⌘R). Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #379: recall/related/forget queries read through
-//  `MCPInput.text` (capped before the embedder, wrong type refused). Confidence 0.85.
+//  `MCPInput.text` (capped before the embedder, wrong type refused); no-match lines quote only the
+//  query's start (`MCPInput.echo`, #439 review). Confidence 0.85.
 //
 
 import Foundation
@@ -121,7 +122,7 @@ public func makeMemoryToolDefinitions(handlers: MemoryToolHandlers) -> [MCPToolD
                 let query = try MCPInput.text(args, "query", tool: "related_memory", maxLength: MCPInput.maxQuery) ?? ""
                 guard !query.isEmpty else { throw MCPMemoryError("related_memory requires a non-empty query") }
                 guard let result = try await handlers.related(query) else {
-                    return "Nothing recalled for “\(query)” — no fact to anchor the graph walk on."
+                    return "Nothing recalled for “\(MCPInput.echo(query))” — no fact to anchor the graph walk on."
                 }
                 return formatRelated(seed: result.seed, neighbours: result.neighbours, query: query)
             }
@@ -175,7 +176,7 @@ public func makeMemoryToolDefinitions(handlers: MemoryToolHandlers) -> [MCPToolD
 
 private func formatRecall(_ hits: [MemoryHit], query: String) -> String {
     guard !hits.isEmpty else {
-        return "Nothing recalled for “\(query)”."
+        return "Nothing recalled for “\(MCPInput.echo(query))”."
     }
     return hits.enumerated().map { index, hit in
         "\(index + 1). \(hit.memory.text)\(similarityHint(hit.similarity)) [\(hit.memory.kind.rawValue)]"
@@ -201,9 +202,9 @@ private func formatForget(_ outcome: ForgetOutcome, query: String) -> String {
         return "Forgotten: “\(text)”. It's gone from M1K3's memory — graph and corpus, no residue."
     case let .notConfident(closest):
         guard let closest else {
-            return "Nothing matching “\(query)” to forget."
+            return "Nothing matching “\(MCPInput.echo(query))” to forget."
         }
-        return "Nothing confident enough to forget for “\(query)”. Closest: “\(closest)” — "
+        return "Nothing confident enough to forget for “\(MCPInput.echo(query))”. Closest: “\(closest)” — "
             + "if that's the one, repeat it back word-for-word to forget it."
     }
 }

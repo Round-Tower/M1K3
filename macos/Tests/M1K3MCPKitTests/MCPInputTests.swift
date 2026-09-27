@@ -48,6 +48,14 @@ struct MCPInputTests {
         #expect(message == "t: q is over 1000 characters (got 131999)")
     }
 
+    @Test("#439 review: combining marks can't hide a payload inside one character")
+    func combiningMarksCounted() throws {
+        let zalgo = "a" + String(repeating: "\u{0301}", count: 5000)
+        #expect(zalgo.count == 1) // one grapheme: what the cap used to count
+        let message = try #require(refusal { try MCPInput.text(["q": .string(zalgo)], "q", tool: "t", maxLength: 1000) })
+        #expect(message == "t: q is over 1000 characters (got 5001)")
+    }
+
     @Test("an echo of the caller's text is cut short")
     func echoCut() {
         #expect(MCPInput.echo("short") == "short")

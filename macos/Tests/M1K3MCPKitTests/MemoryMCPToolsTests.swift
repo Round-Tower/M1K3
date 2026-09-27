@@ -208,4 +208,17 @@ extension MemoryMCPToolsTests {
             #expect(text(result)?.contains("over \(MCPInput.maxQuery) characters") == true, "\(tool)")
         }
     }
+
+    @Test("#439 review: a no-match line quotes only the start of a long query")
+    func noMatchEchoIsShort() async throws {
+        let registry = try MCPToolRegistry(makeMemoryToolDefinitions(
+            handlers: makeHandlers(store: MemoryStore(), embedder: HashingEmbeddingService())
+        ))
+        let query = String(repeating: "zyzzyva ", count: 110) // 880 chars, under the cap
+        for tool in ["recall_memory", "related_memory", "forget_memory"] {
+            let result = await registry.call(name: tool, arguments: ["query": .string(query)])
+            #expect(result.isError != true, "\(tool)")
+            #expect((text(result)?.count ?? 0) < 250, "\(tool) echoed \(text(result)?.count ?? 0) chars")
+        }
+    }
 }
