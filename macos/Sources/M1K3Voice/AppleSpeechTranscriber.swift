@@ -117,6 +117,8 @@
 //  mic at 48 kHz, the node kept the speakers' rate after the input pin and `start()` threw -10868 on every
 //  Mac listen (build 375, "The microphone couldn't start"). Realigned to the mic's rate before the tap.
 //  Reproduced outside the app with and without the realign. Confidence 0.8 (one Mac, one rate pair).
+//  Review: same day (2), #435 review — the realign runs after the voice-processing back-out (a VP toggle
+//  reconfigures the unit and would discard it) and never under VPIO (unverified there). Confidence 0.8.
 
 import AVFoundation
 import Foundation
@@ -856,7 +858,6 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         if VoiceProcessingPolicy.feedsSilentOutputSource(platform: VoiceProcessingPolicy.current) {
             audioEngine.mainMixerNode.outputVolume = 0
         }
-        realignClientRate(inputNode)
         var nodeFormat = inputNode.outputFormat(forBus: 0)
         // Ground truth beats the transport read: if VPIO handed back a
         // >2-channel format (a Bluetooth headset or an aggregate-routed
@@ -872,6 +873,11 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 "stt voice processing backed out — VPIO format was \(nodeFormat.channelCount, privacy: .public)ch (route starves the recogniser)"
             )
             disableVoiceProcessingIfOn(inputNode, reason: "VPIO format \(nodeFormat.channelCount)ch")
+            nodeFormat = inputNode.outputFormat(forBus: 0)
+        }
+        // After the back-out: toggling voice processing reconfigures the unit and would
+        // discard a realign made before it (#435 review).
+        if realignClientRate(inputNode) {
             nodeFormat = inputNode.outputFormat(forBus: 0)
         }
         // The tap's rate must equal the input HARDWARE rate or AVAudioEngine
@@ -1031,12 +1037,19 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// 44.1 kHz, the format-nil tap inherits that, and `start()` throws -10868 on every
     /// listen: build 375's "The microphone couldn't start" (2026-09-27, Kev's MacBook).
     /// Reproduced outside the app both ways; `reset()` does not clear it, this does.
-    private func realignClientRate(_ inputNode: AVAudioInputNode) {
+    /// Never under voice processing: VPIO does its own rate handling, and this path has
+    /// only been verified on the plain HAL unit (voice processing is off on the Mac).
+    /// True when it changed the format.
+    @discardableResult
+    private func realignClientRate(_ inputNode: AVAudioInputNode) -> Bool {
         #if os(macOS)
             let node = inputNode.outputFormat(forBus: 0)
-            guard let rate = MicTapFormatGate.clientRateToRealign(
-                nodeRate: node.sampleRate, hardwareRate: inputNode.inputFormat(forBus: 0).sampleRate
-            ), let unit = inputNode.audioUnit else { return }
+            guard !inputNode.isVoiceProcessingEnabled,
+                  let rate = MicTapFormatGate.clientRateToRealign(
+                      nodeRate: node.sampleRate, hardwareRate: inputNode.inputFormat(forBus: 0).sampleRate
+                  ),
+                  let unit = inputNode.audioUnit
+            else { return false }
             var description = node.streamDescription.pointee
             description.mSampleRate = rate
             let status = AudioUnitSetProperty(
@@ -1045,9 +1058,12 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             )
             if status == noErr {
                 Self.log.notice("stt client rate realigned \(node.sampleRate, privacy: .public)Hz → \(rate, privacy: .public)Hz")
-            } else {
-                Self.log.error("stt could not realign the client rate to \(rate, privacy: .public)Hz: \(status, privacy: .public)")
+                return true
             }
+            Self.log.error("stt could not realign the client rate to \(rate, privacy: .public)Hz: \(status, privacy: .public)")
+            return false
+        #else
+            return false
         #endif
     }
 
