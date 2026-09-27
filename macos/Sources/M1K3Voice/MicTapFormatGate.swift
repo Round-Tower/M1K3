@@ -15,6 +15,9 @@
 //  (mirrors the StereoCallRecorder.startMic 0-Hz guard, 2026-06-12).
 //  Review: Kev + claude-opus-5, 2026-09-13 — tapSampleRate: the tap takes the HARDWARE
 //  rate (a stale 44.1k node read-back against a 48k mic aborted voice mode). Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — clientRateToRealign: the same stale read-back also
+//  made `start()` throw -10868 on every Mac listen (speakers 44.1k, mic 48k, build 375); the
+//  transcriber now realigns the client format. Confidence 0.85.
 
 import Foundation
 
@@ -36,5 +39,15 @@ public enum MicTapFormatGate {
     public static func tapSampleRate(nodeRate: Double, hardwareRate: Double) -> Double? {
         if hardwareRate > 0 { return hardwareRate }
         return nodeRate > 0 ? nodeRate : nil
+    }
+
+    /// The rate to set as the input's client format when the node lags the mic, or nil
+    /// to leave it alone. On the Mac the engine's I/O can bind an aggregate at the OUTPUT
+    /// device's rate (speakers at 44.1 kHz); re-pinned to a 48 kHz mic, the node's client
+    /// format stays 44.1 kHz, a format-nil tap inherits it, and `start()` throws -10868 on
+    /// every listen (2026-09-27, build 375). Only when both sides report a real rate.
+    public static func clientRateToRealign(nodeRate: Double, hardwareRate: Double) -> Double? {
+        guard nodeRate > 0, hardwareRate > 0, nodeRate != hardwareRate else { return nil }
+        return hardwareRate
     }
 }

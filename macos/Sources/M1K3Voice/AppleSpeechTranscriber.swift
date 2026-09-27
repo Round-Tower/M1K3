@@ -113,6 +113,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26 (3) — PR #412 review fold: `isAvailable` asks whether the
 //  analyzer can serve THIS locale (cached async check, AppleSpeechAvailability), not whether the device
 //  has SpeechAnalyzer at all; otherwise the mic read ready and the listen failed at once. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — `realignClientRate`: with the speakers at 44.1 kHz and the
+//  mic at 48 kHz, the node kept the speakers' rate after the input pin and `start()` threw -10868 on every
+//  Mac listen (build 375, "The microphone couldn't start"). Realigned to the mic's rate before the tap.
+//  Reproduced outside the app with and without the realign. Confidence 0.8 (one Mac, one rate pair).
 
 import AVFoundation
 import Foundation
@@ -852,6 +856,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         if VoiceProcessingPolicy.feedsSilentOutputSource(platform: VoiceProcessingPolicy.current) {
             audioEngine.mainMixerNode.outputVolume = 0
         }
+        realignClientRate(inputNode)
         var nodeFormat = inputNode.outputFormat(forBus: 0)
         // Ground truth beats the transport read: if VPIO handed back a
         // >2-channel format (a Bluetooth headset or an aggregate-routed
@@ -1016,6 +1021,32 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             )
             if setStatus != noErr {
                 Self.log.error("stt could not pin input device \(wanted, privacy: .public): \(setStatus, privacy: .public)")
+            }
+        #endif
+    }
+
+    /// Bring the input's client format up to the mic's rate when the node lags it. The
+    /// engine's I/O can bind an aggregate at the SPEAKERS' rate (44.1 kHz); after
+    /// `pinInputToDefaultDevice` moves it to a 48 kHz mic, the node keeps reporting
+    /// 44.1 kHz, the format-nil tap inherits that, and `start()` throws -10868 on every
+    /// listen: build 375's "The microphone couldn't start" (2026-09-27, Kev's MacBook).
+    /// Reproduced outside the app both ways; `reset()` does not clear it, this does.
+    private func realignClientRate(_ inputNode: AVAudioInputNode) {
+        #if os(macOS)
+            let node = inputNode.outputFormat(forBus: 0)
+            guard let rate = MicTapFormatGate.clientRateToRealign(
+                nodeRate: node.sampleRate, hardwareRate: inputNode.inputFormat(forBus: 0).sampleRate
+            ), let unit = inputNode.audioUnit else { return }
+            var description = node.streamDescription.pointee
+            description.mSampleRate = rate
+            let status = AudioUnitSetProperty(
+                unit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, &description,
+                UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+            )
+            if status == noErr {
+                Self.log.notice("stt client rate realigned \(node.sampleRate, privacy: .public)Hz → \(rate, privacy: .public)Hz")
+            } else {
+                Self.log.error("stt could not realign the client rate to \(rate, privacy: .public)Hz: \(status, privacy: .public)")
             }
         #endif
     }
