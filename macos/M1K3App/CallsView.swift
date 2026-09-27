@@ -32,8 +32,8 @@ struct CallsView: View {
             if env.isRecording || env.isTranscribingCall { activityBanner }
             content
         }
-        .task { calls = env.calls() }
-        .onChange(of: env.callCount) { _, _ in calls = env.calls() }
+        .task { calls = await env.calls() }
+        .onChange(of: env.callCount) { _, _ in Task { calls = await env.calls() } }
         .fileImporter(
             isPresented: $showImporter,
             allowedContentTypes: [.plainText, .text],

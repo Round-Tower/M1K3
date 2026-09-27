@@ -1737,7 +1737,7 @@ final class AppEnvironment {
                 quickSummary: summary.quick,
                 fullSummary: summary.full
             )
-            try callPersistence.save(session)
+            try await Self.offMainCallStore(callPersistence) { try $0.save(session) }
             let ingestResult = try await callIngester.ingest(session)
             refreshCounts()
             if !ingestResult.wasDeduped { await spotlightDonate(itemID: session.id) }
@@ -1747,9 +1747,10 @@ final class AppEnvironment {
         }
     }
 
-    /// All stored calls, newest first.
-    func calls() -> [CallSession] {
-        (try? callPersistence.loadAll()) ?? []
+    /// All stored calls, newest first. Off the main actor: it may be the store's first
+    /// decrypt, which waits on Touch ID (`offMainCallStore`).
+    func calls() async -> [CallSession] {
+        (try? await Self.offMainCallStore(callPersistence) { try $0.loadAll() }) ?? []
     }
 
     /// Delete a call from both the encrypted store and the knowledge graph.
@@ -2533,7 +2534,7 @@ extension AppEnvironment {
             // must NOT undo the save or re-park the .caf (the duplicate-on-relaunch bug
             // the self-test caught). Mirrors the pipeline's own optional/isolated
             // diarizer + summary stages.
-            try callPersistence.save(session)
+            try await Self.offMainCallStore(callPersistence) { try $0.save(session) }
             consumeRecording(at: url)
             refreshCounts()
             var indexed = true

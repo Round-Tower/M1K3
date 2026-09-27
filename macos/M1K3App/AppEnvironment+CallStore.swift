@@ -19,6 +19,8 @@
 //  wait on Touch ID. A dismissed prompt now fails that save (the recording stays parked) instead of
 //  dropping the whole session to an in-memory store, where a recovered call was consumed and then
 //  lost at quit. Confidence 0.8 (the prompt timing is verified live, not in a test).
+//  Review: same day (2), #440 review — `offMainCallStore`: saves and the list load run detached, so
+//  the first decrypt's Touch ID sheet never blocks the main actor (and MCP behind it). Confidence 0.8.
 
 import CryptoKit
 import Foundation
@@ -71,6 +73,17 @@ extension AppEnvironment {
             callStoreLog.error("call key unavailable: \(error, privacy: .public)")
             throw error
         }
+    }
+
+    /// Store work that may decrypt, run off the main actor. The first decrypt reads the key
+    /// behind Touch ID, synchronously; on the main actor the waiting sheet stalled the UI and
+    /// every MCP request queued behind it — #407 again, whenever a parked recording was
+    /// recovered at launch (#440 review). Count and delete never decrypt and stay put.
+    nonisolated static func offMainCallStore<T: Sendable>(
+        _ persistence: any CallPersistence,
+        _ work: @escaping @Sendable (any CallPersistence) throws -> T
+    ) async throws -> T {
+        try await Task.detached { try work(persistence) }.value
     }
 
     static func storeURL() throws -> URL {
