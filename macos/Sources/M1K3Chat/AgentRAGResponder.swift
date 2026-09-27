@@ -129,6 +129,10 @@
 //  and its small-talk rule drops "pick up one real thread (what they said, a memory of them,
 //  the hour)". Small talk opened on the date 11/16 and invented a shared past 6/14; with Mini's
 //  curiosity beat gone too, 1/16 and 2–3/14 (MiniInventedMemoryEvalTests).
+//  Review: same day (4), #427 — an action pick's agent turn is offered only the tools that act
+//  (`ToolDispatch.actionPalette`); with the whole palette Mini's native session overflowed at
+//  4,282 tokens (375 over MCP). None on offer act → a plain turn. `runDispatchedTurn` returns
+//  a `DispatchOutcome` carrying the palette instead of a Bool.
 
 import Foundation
 import M1K3Agent
@@ -471,16 +475,19 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                         return
                     }
                     Self.log.notice("plain turn came back empty — the agent turn answers instead")
-                } else if let picker {
-                    let dispatched = await runDispatchedTurn(
+                }
+                var agentTools = tools
+                if let picker { // a tools verdict: never after a plain turn
+                    let outcome = await runDispatchedTurn(
                         question: question, picker: picker, tools: tools, chunks: cappedChunks,
                         memories: cappedMemories, history: history, instructions: routeInstructions,
                         onActivity: onActivity, continuation: continuation
                     )
-                    if dispatched || Task.isCancelled {
+                    guard case let .agent(palette) = outcome, !Task.isCancelled else {
                         continuation.finish()
                         return
                     }
+                    agentTools = palette
                 }
                 await runAgentTurn(
                     question: question,
@@ -488,7 +495,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                     chunks: cappedChunks,
                     memories: cappedMemories,
                     history: history,
-                    tools: tools,
+                    tools: agentTools,
                     onActivity: onActivity,
                     continuation: continuation
                 )
@@ -664,10 +671,17 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     static let dispatchUnansweredMessage =
         "I looked that up, but I couldn't put an answer together from it just now. Try asking another way."
 
+    /// How a dispatched turn ended: answered here, or handed to the agent with the
+    /// palette it should be offered (the whole one, or only the tools that act).
+    enum DispatchOutcome {
+        case answered
+        case agent([any AgentTool])
+    }
+
     /// One router-invoked tool turn: the picker names a tool, the app runs it, the
-    /// plain route answers with the result. Returns false (nothing yielded) when the
-    /// turn belongs to the agent: a failed pick, an action or a plan it refuses, or a
-    /// tool that errors. A tool that ran and then got an empty answer synthesises from
+    /// plain route answers with the result. Returns `.agent` (nothing yielded) when the
+    /// turn belongs to the agent: a failed pick, a plan it refuses or a tool that errors
+    /// keep the whole palette; an action pick gets only the tools that act (#427). A tool that ran and then got an empty answer synthesises from
     /// its result instead (no second call); if that is empty too, the turn ends on an
     /// honest line, never a blank bubble. A none pick or an empty search answers as
     /// plain chat; only if THAT comes back empty too does the agent take the turn,
@@ -682,44 +696,56 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         instructions: String?,
         onActivity: @escaping @Sendable (ResponderActivity) -> Void,
         continuation: AsyncStream<String>.Continuation
-    ) async -> Bool {
+    ) async -> DispatchOutcome {
+        // A plain turn that came back empty hands over to the agent, as the chat route does.
+        let plain: @Sendable () async -> DispatchOutcome = { [self] in
+            await runPlainTurn(
+                question: question, chunks: chunks, memories: memories, history: history,
+                instructions: instructions, onActivity: onActivity, continuation: continuation
+            ) ? .answered : .agent(tools)
+        }
         guard let pick = await picker(question, ToolDispatch.menu(palette: tools)) else {
             Self.log.notice("tool dispatch: no pick — the agent turn answers")
-            return false
+            return .agent(tools)
         }
         if pick.tool == ToolPick.noTool {
             Self.log.notice("tool dispatch: none — a plain turn answers")
-            return await runPlainTurn(
-                question: question, chunks: chunks, memories: memories, history: history,
-                instructions: instructions, onActivity: onActivity, continuation: continuation
-            )
+            return await plain()
+        }
+        // #427: the read-only tools are this path's job. Offered them as well, Mini's native
+        // session overflowed its window (4,282 tokens on 375). Nothing on offer acts (MCP):
+        // a plain turn, since an empty palette through the agent prompt writes junk.
+        // Known narrowing: a same-turn read-then-act ("check my calendar, then script it")
+        // can't read here; a big one goes through delegate_deep, whose agent has the reads.
+        if pick.tool == ToolPick.action {
+            let acting = ToolDispatch.actionPalette(tools)
+            guard !acting.isEmpty else {
+                Self.log.notice("tool dispatch: action, but nothing on offer acts — a plain turn answers")
+                return await plain()
+            }
+            Self.log.notice("tool dispatch: action — the agent gets \(acting.count, privacy: .public) acting tool(s)")
+            return .agent(acting)
         }
         // A tool this turn doesn't offer (MCP carries no device senses): the agent has no
         // such tool either, and on Mini its native session can overflow the window. A plain
         // turn answers honestly in one generation (374 over MCP).
         if ToolDispatch.dispatchable.contains(pick.tool), !tools.contains(where: { $0.name == pick.tool }) {
             Self.log.notice("tool dispatch: \(pick.tool, privacy: .public) is not on offer — a plain turn answers")
-            return await runPlainTurn(
-                question: question, chunks: chunks, memories: memories, history: history,
-                instructions: instructions, onActivity: onActivity, continuation: continuation
-            )
+            return await plain()
         }
         guard let plan = ToolDispatch.plan(pick, palette: tools, question: question) else {
             Self.log.notice("tool dispatch: \(pick.tool, privacy: .public) stays with the agent")
-            return false
+            return .agent(tools)
         }
         let argument = plan.input.values.first ?? ""
         onActivity(.usingTool(name: plan.tool.name, argument: argument))
         guard let output = try? await plan.tool.execute(input: plan.input).output, !output.hasPrefix("Error") else {
             Self.log.notice("tool dispatch: \(plan.tool.name, privacy: .public) failed — the agent turn answers")
-            return false
+            return .agent(tools)
         }
         if ToolDispatch.isEmptyResult(output) {
             Self.log.notice("tool dispatch: \(plan.tool.name, privacy: .public) found nothing — a plain turn answers")
-            return await runPlainTurn(
-                question: question, chunks: chunks, memories: memories, history: history,
-                instructions: instructions, onActivity: onActivity, continuation: continuation
-            )
+            return await plain()
         }
         Self.log.notice("tool dispatch: \(plan.tool.name, privacy: .public) ran, \(output.count, privacy: .public) chars")
         let observation = ToolDispatch.observationBlock(tool: plan.tool.name, output: output)
@@ -733,7 +759,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // A guardrail after a SUCCESSFUL tool call: the agent's own synthesis step with
             // the result in hand, never the whole loop again (it would re-run the tool over
             // the network; PR #420 review).
-            if Task.isCancelled { return true }
+            if Task.isCancelled { return .answered }
             Self.log.notice("tool dispatch: empty answer after \(plan.tool.name, privacy: .public) — synthesising from its result")
             // The result keeps its framed header (the injection guard) and the age clause
             // rides along: this path once handed the raw web text over bare (PR #424 review).
@@ -752,7 +778,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let trace = AgentResult(conclusion: "", toolsUsed: [plan.tool.name], iterations: 1, reasoningTrace: [step])
         let tail = Self.webSourcesBlock(for: trace) + Self.factSourcesBlock(for: trace)
         if !tail.isEmpty { continuation.yield(tail) }
-        return true
+        return .answered
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail

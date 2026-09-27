@@ -12,6 +12,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — `dispatchedPromptIsLean`: a dispatched turn carries
 //  its result, the date and the history only (Mini disowned web results under the plain rules).
 //  Review: same day (2) — `offMenuPickIsPlain`, `dispatchRulesKeepWellKnownFacts` (374 over MCP).
+//  Review: same day (3) — `actionPickOffersActionsOnly`, `actionPickWithNoActionIsPlain` (#427: the
+//  action pick's agent turn overflowed Mini's window with the whole palette, 4,282 tokens on 375).
 //
 
 import Foundation
@@ -222,6 +224,52 @@ struct DispatchTurnTests {
             let prompt = try #require(provider.prompts.first)
             #expect(!prompt.hasSuffix("USER: rename my screenshots"), "took the plain route for \(String(describing: pick))")
         }
+    }
+
+    /// #427 (375 over MCP): "If you could redesign one thing about how you work…" → router
+    /// tools p=0.333 → action → the agent's native session with the WHOLE palette → 4,282
+    /// tokens against 4,096. The read-only tools are the dispatch path's job; an action pick
+    /// offers the agent only what acts.
+    @Test("an action pick offers the agent only the tools that act")
+    func actionPickOffersActionsOnly() async throws {
+        let provider = Scripted(["CONCLUSION: done"])
+        // Names the rules' prose never mentions (the script carve-out says "no web_search").
+        let tools: [any AgentTool] = [
+            Recording(name: "calendar_peek", output: "x", calls: Calls()),
+            Recording(name: "search_knowledge", output: "x", calls: Calls()),
+            Recording(name: "propose_script", output: "", calls: Calls()),
+        ]
+        _ = try await run(
+            provider, tools: tools, pick: ToolPick(tool: ToolPick.action, query: ""), question: "rename my screenshots"
+        )
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains("propose_script"))
+        #expect(!prompt.contains("calendar_peek"))
+        #expect(!prompt.contains("search_knowledge"))
+    }
+
+    @Test("an action pick with nothing on offer that acts is a plain turn, not an empty-palette agent")
+    func actionPickWithNoActionIsPlain() async throws {
+        let calls = Calls()
+        let provider = Scripted(["I'd make my memory sharper."])
+        let text = try await run(
+            provider, tools: [Recording(name: "web_search", output: "x", calls: calls)],
+            pick: ToolPick(tool: ToolPick.action, query: ""), question: "what would you redesign about yourself?"
+        )
+        #expect(text == "I'd make my memory sharper.")
+        #expect(calls.log.withLock { $0 }.isEmpty)
+        #expect(provider.prompts.first?.contains(AgentRAGResponder.plainRules) == true)
+    }
+
+    @Test("no pick or a failed tool keeps the whole palette: the agent may still need a read")
+    func otherFallbacksKeepThePalette() async throws {
+        let provider = Scripted(["CONCLUSION: done"])
+        let tools: [any AgentTool] = [
+            Recording(name: "calendar_peek", output: "x", calls: Calls()),
+            Recording(name: "propose_script", output: "", calls: Calls()),
+        ]
+        _ = try await run(provider, tools: tools, pick: nil, question: "rename my screenshots")
+        #expect(provider.prompts.first?.contains("calendar_peek") == true)
     }
 
     /// The picker sends some well-known facts to a search ("Who wrote Ulysses?" →
