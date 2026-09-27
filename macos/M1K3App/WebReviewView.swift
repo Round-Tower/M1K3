@@ -19,6 +19,8 @@
 //  captured that page into the chat; `WebURLPolicy.refusesNavigation` now judges every main-frame
 //  move. A person's click passes. Confidence 0.75 (verify-by-run; a script-synthesised click reads
 //  as a click — WebKit gives no user-gesture bit here).
+//  Review: same day (2) — found live: WebKit reports the cancel as a failed load ("Frame load
+//  interrupted") and that overwrote the note; the coordinator keeps its refusal for it. Confidence 0.8.
 
 import M1K3Chat
 import M1K3Preview
@@ -134,9 +136,15 @@ private struct WebViewContainer: NSViewRepresentable {
             guard refused else { return .allow }
             Self.securityLog.notice("review panel: a page-driven move into private space was refused")
             parent.isLoading = false
-            parent.loadError = String(localized: "This page tried to send the panel to a local or private-network address. M1K3 won’t open those on a page’s say-so.")
+            let note = String(localized: "This page tried to send the panel to a local or private-network address. M1K3 won’t open those on a page’s say-so.")
+            refusal = note
+            parent.loadError = note
             return .cancel
         }
+
+        /// The note for a move the gate cancelled. WebKit reports the cancel as a failed
+        /// provisional load ("Frame load interrupted") right after; this keeps the real reason.
+        private var refusal: String?
 
         func webView(_: WKWebView, didStartProvisionalNavigation _: WKNavigation!) {
             parent.loadError = nil
@@ -185,6 +193,12 @@ private struct WebViewContainer: NSViewRepresentable {
         }
 
         private func fail(_ error: Error) {
+            if let refusal {
+                self.refusal = nil
+                parent.loadError = refusal
+                parent.isLoading = false
+                return
+            }
             // A navigation cancelled by a newer load isn't a real failure.
             let nsError = error as NSError
             guard !(nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled) else {
