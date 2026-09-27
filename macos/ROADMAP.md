@@ -27,7 +27,7 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 
 ## Now — 1.0.0 in review, the recent work rides under it
 
-### The next review build (#412 + #414 merged 09-26, `feat/mini-tool-dispatch`)
+### The next review build: 374 (master `10eff677`, uploaded 09-27; #412, #414, #420, #422, #423, #424)
 
 - **One attach button** (Mac + iOS): paperclip + one picker; `AttachmentRouting`.
 - **PCC stays on for the conversation**: `PrivateCloudArming`; consent once per
@@ -76,6 +76,18 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
   tokens against the native tool session's 5.1–5.6k (which overflowed Mini's window 4 times
   in ~306 calls that day). The route keeps Mini's own persona: the standard one narrated 12/39
   answers in the third person once a tool result sat in the prompt. Routed turns lose chips.
+- **Walking 373 found the route dead on the Mac** (#423): `servedMini` saw through the
+  swappable façade only, and the Mac responder holds `RuntimeInferenceProvider`; every eval held
+  the bare provider. `BackendRouting` fixes it; iOS was unaffected. 373 is not submitted.
+- **Dispatched turns get their own lean prompt** (#424): under the plain turn's rules and
+  grounding Mini waved web results off and pivoted to old threads (373: "I don't know what's
+  happening in the outside world"). A/B n=12: used the result 9 → 12, injection 1 → 0, prompt
+  ~3.2k → ~1.3k chars; live first words 10.6 → 8.9 s in the poisoned 373 thread, 6.9 s in a fresh chat. Also: AFM's transient not-ready
+  reads "Preparing Mini…" (was "This Mac can't run the selected brain"), and titles run on
+  neutral instructions without evicting chat's prewarm ("I don't share my own wiring" was a title).
+  Carried: the router reads "how's your Sunday going?" as a tools ask; Mini's plain-chat
+  persona claims the user's details ("I've got the Irish in me") and invents memories in its
+  "Curiosity:" line; the distiller and Heartbeat still generate under the persona.
 - **Debug builds: the visible avatar slows MLX decode 6–7×** (#413). Release on M1 Max is
   unaffected (65 vs 67 tok/s); evals hide the app; an A-series check is owed.
 
@@ -321,6 +333,9 @@ stays a possible later companion.
 
 ---
 
+<!-- Review: Kev + claude-opus-5-5, 2026-09-27 — the review build is 374: #423 (the route was dead on the
+     Mac in 373) and #424 (the lean dispatched prompt, "Preparing Mini…", neutral titles) plus the carried
+     items from walking it. Confidence 0.85. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 (7) — router-invoked tools (ADR 0009) join the next
      review build; the route's persona reversed to Mini's own on evidence. Confidence 0.85. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-09-26 (6) — #412 merged; the tool router (default on) and the
