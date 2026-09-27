@@ -47,6 +47,8 @@
 //  age, never answer text). Pairs with the app-side change that turned the 120s
 //  cancel-the-work deadline into a 600s runaway backstop — a slow Big answer now
 //  finishes and stays redeemable for the job store's full retention.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #379: ask_m1k3's question and remember's title
+//  and text read through `MCPInput.text` (capped, wrong type refused). Confidence 0.85.
 //
 
 import Foundation
@@ -196,8 +198,8 @@ private func rememberDefinition(handlers: IntelligenceToolHandlers) -> MCPToolDe
             ]
         ),
         handler: { args in
-            let title = stringArg(args, "title")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let text = stringArg(args, "text")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let title = try MCPInput.text(args, "title", tool: "remember", maxLength: MCPInput.maxTitle) ?? ""
+            let text = try MCPInput.text(args, "text", tool: "remember", maxLength: MCPInput.maxText) ?? ""
             guard !title.isEmpty, !text.isEmpty else {
                 throw MCPVoiceError("remember requires both a title and text")
             }
@@ -228,7 +230,7 @@ private func askM1K3Handler(
             return try await redeemJob(id: jobID, jobStore: jobStore)
         }
 
-        let question = stringArg(args, "question")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let question = try MCPInput.text(args, "question", tool: "ask_m1k3", maxLength: MCPInput.maxQuestion) ?? ""
         guard !question.isEmpty else { throw MCPVoiceError("ask_m1k3 requires a non-empty question") }
 
         // Honest busy: the app-side ask is single-flight, so a question fired

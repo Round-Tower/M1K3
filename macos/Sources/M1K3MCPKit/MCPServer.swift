@@ -111,7 +111,8 @@ public func makeKnowledgeToolDefinitions(
                 ]
             ),
             handler: { args in
-                try await tools.searchKnowledge(query: stringArg(args, "query") ?? "", limit: intArg(args, "limit") ?? 5)
+                let query = try MCPInput.text(args, "query", tool: "search_knowledge", maxLength: MCPInput.maxQuery)
+                return try await tools.searchKnowledge(query: query ?? "", limit: intArg(args, "limit") ?? 5)
             }
         ),
         MCPToolDefinition(
@@ -148,7 +149,9 @@ public func makeKnowledgeToolDefinitions(
                 ]
             ),
             handler: { args in
-                try tools.getDocument(idString: stringArg(args, "id") ?? "", offset: intArg(args, "offset") ?? 0)
+                // A UUID is 36 characters; the query cap only bounds the echo of a bad one.
+                let id = try MCPInput.text(args, "id", tool: "get_document", maxLength: MCPInput.maxQuery)
+                return try tools.getDocument(idString: id ?? "", offset: intArg(args, "offset") ?? 0)
             }
         ),
     ]

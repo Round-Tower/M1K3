@@ -469,3 +469,22 @@ struct IntelligenceMCPToolsTests {
         #expect(log.all.isEmpty)
     }
 }
+
+/// #379: the question and the note are capped; over-cap never reaches the model or the store.
+extension IntelligenceMCPToolsTests {
+    @Test("#379: ask_m1k3 and remember refuse over-cap text with isError, and nothing runs")
+    func textCaps() async {
+        let log = CallLog()
+        let registry = MCPToolRegistry(makeIntelligenceToolDefinitions(handlers: makeHandlers(log: log)))
+        let question = String(repeating: "q", count: MCPInput.maxQuestion + 1)
+        let ask = await registry.call(name: "ask_m1k3", arguments: ["question": .string(question)])
+        #expect(ask.isError == true)
+        let title = String(repeating: "t", count: MCPInput.maxTitle + 1)
+        let longTitle = await registry.call(name: "remember", arguments: ["title": .string(title), "text": .string("fine")])
+        #expect(longTitle.isError == true)
+        let note = String(repeating: "n", count: MCPInput.maxText + 1)
+        let longText = await registry.call(name: "remember", arguments: ["title": .string("fine"), "text": .string(note)])
+        #expect(longText.isError == true)
+        #expect(log.all.isEmpty)
+    }
+}

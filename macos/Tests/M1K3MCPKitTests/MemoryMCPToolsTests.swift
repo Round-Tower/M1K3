@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.85 (handlers pinned
 //  against a real store + a deterministic embedder; live embedder/path wiring
 //  is app glue, verify-at-⌘R). Prior: IntelligenceMCPToolsTests (this file).
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #379: the over-cap query refusal for all three
+//  query tools. Confidence 0.85.
 //
 
 import Foundation
@@ -189,5 +191,34 @@ struct MemoryMCPToolsTests {
         let registry = MCPToolRegistry(makeMemoryToolDefinitions(handlers: makeHandlers(store: store, embedder: embedder)))
         let result = await registry.call(name: "forget_memory", arguments: ["query": .string("   ")])
         #expect(result.isError == true)
+    }
+}
+
+/// #379: memory queries are embedded, so an over-cap one is refused before the embedder.
+extension MemoryMCPToolsTests {
+    @Test("#379: recall, related and forget refuse an over-cap query with isError")
+    func queryCap() async throws {
+        let registry = try MCPToolRegistry(makeMemoryToolDefinitions(
+            handlers: makeHandlers(store: MemoryStore(), embedder: HashingEmbeddingService())
+        ))
+        let long = String(repeating: "q", count: MCPInput.maxQuery + 1)
+        for tool in ["recall_memory", "related_memory", "forget_memory"] {
+            let result = await registry.call(name: tool, arguments: ["query": .string(long)])
+            #expect(result.isError == true, "\(tool)")
+            #expect(text(result)?.contains("over \(MCPInput.maxQuery) characters") == true, "\(tool)")
+        }
+    }
+
+    @Test("#439 review: a no-match line quotes only the start of a long query")
+    func noMatchEchoIsShort() async throws {
+        let registry = try MCPToolRegistry(makeMemoryToolDefinitions(
+            handlers: makeHandlers(store: MemoryStore(), embedder: HashingEmbeddingService())
+        ))
+        let query = String(repeating: "zyzzyva ", count: 110) // 880 chars, under the cap
+        for tool in ["recall_memory", "related_memory", "forget_memory"] {
+            let result = await registry.call(name: tool, arguments: ["query": .string(query)])
+            #expect(result.isError != true, "\(tool)")
+            #expect((text(result)?.count ?? 0) < 250, "\(tool) echoed \(text(result)?.count ?? 0) chars")
+        }
     }
 }

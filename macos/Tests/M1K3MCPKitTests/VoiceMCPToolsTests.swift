@@ -245,3 +245,16 @@ struct VoiceMCPToolsTests {
         #expect(log.all == ["stop"])
     }
 }
+
+/// #379: speech is capped too; an over-cap text never reaches the voice.
+extension VoiceMCPToolsTests {
+    @Test("#379: speak refuses over-cap text with isError, and nothing is spoken")
+    func speakCap() async {
+        let log = HandlerLog()
+        let registry = MCPToolRegistry(makeVoiceToolDefinitions(handlers: makeHandlers(log: log)))
+        let long = String(repeating: "la ", count: MCPInput.maxText)
+        let result = await registry.call(name: "speak", arguments: ["text": .string(long)])
+        #expect(result.isError == true)
+        #expect(log.all.isEmpty)
+    }
+}
