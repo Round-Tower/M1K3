@@ -20,6 +20,10 @@
 //  the compiler proves what the escape hatch used to assert.
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — forwards `nativePromptShape` (missing since #232:
 //  the live app never gave pocket its grounding-in-system layout) and the new `personaVariant`.
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — conforms to `BackendRouting`, so
+//  code gated on WHICH brain serves (the Mini tool router) sees through this façade. Without it
+//  the router never ran on the Mac (build 373). Compile-checked; verify-by-launch owed via the
+//  `tool router:` notice on a Mini turn.
 
 import Foundation
 import M1K3Inference
@@ -90,6 +94,14 @@ final class RuntimeInferenceProvider: InferenceProvider, Sendable {
 
     func generateStreaming(prompt: String) -> AsyncStream<String> {
         active.generateStreaming(prompt: prompt)
+    }
+}
+
+/// Which brain serves this turn — the question a capability forward can't answer.
+/// The tool router is Mini-only and asks it through here (build 373 shipped without it).
+extension RuntimeInferenceProvider: BackendRouting {
+    var routedBackend: any InferenceProvider {
+        active
     }
 }
 

@@ -8,6 +8,9 @@
 //  and the one gate both shells read.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85. Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — `routeSeesThroughFacades`: the Mac responder holds
+//  the app's RuntimeInferenceProvider, which the route never saw through (build 373 shipped
+//  with the router dead on the Mac). A runtime-shaped façade pins it. Confidence 0.9.
 //
 
 import Foundation
@@ -181,5 +184,41 @@ struct ToolRouterWiringTests {
         let mini = AppleFoundationModelsProvider()
         #expect(ToolRouterWiring.route(provider: mini, enabled: true)?.instructions == nil)
         #expect(ToolRouterWiring.route(provider: SwappableInferenceProvider(mini), enabled: true)?.instructions == nil)
+    }
+
+    /// Build 373, 2026-09-27: the Mac responder holds the app's RuntimeInferenceProvider,
+    /// not a SwappableInferenceProvider, so `servedMini` never found AFM and the route
+    /// never ran in the shipped Mac app ("what's the latest Apple news?" took the
+    /// native session, overflowed at 5,509 tokens, and answered from local notes).
+    /// Every eval handed the bare provider. The router asks which brain serves through
+    /// `BackendRouting`, however many façades deep.
+    @Test("the route reaches Mini through any façade, and stays off for other brains")
+    func routeSeesThroughFacades() {
+        let mini = AppleFoundationModelsProvider()
+        #expect(ToolRouterWiring.route(provider: RoutingFacade(mini), enabled: true) != nil)
+        #expect(ToolRouterWiring.route(provider: RoutingFacade(SwappableInferenceProvider(mini)), enabled: true) != nil)
+        #expect(ToolRouterWiring.route(provider: RoutingFacade(OtherBrain()), enabled: true) == nil)
+        #expect(ToolRouterWiring.route(provider: RoutingFacade(SwappableInferenceProvider(OtherBrain())), enabled: true) == nil)
+    }
+}
+
+/// The app's RuntimeInferenceProvider in miniature: routes each turn to one backend.
+private final class RoutingFacade: InferenceProvider, BackendRouting, Sendable {
+    let name = "runtime-shaped"
+    let routedBackend: any InferenceProvider
+    init(_ backend: any InferenceProvider) {
+        routedBackend = backend
+    }
+
+    var isAvailable: Bool {
+        routedBackend.isAvailable
+    }
+
+    func generate(prompt: String) async throws -> String {
+        try await routedBackend.generate(prompt: prompt)
+    }
+
+    func generateStreaming(prompt: String) -> AsyncStream<String> {
+        routedBackend.generateStreaming(prompt: prompt)
     }
 }
