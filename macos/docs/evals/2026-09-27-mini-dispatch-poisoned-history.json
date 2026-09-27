@@ -1037,6 +1037,111 @@
           "answerHead": "Apple Newsroom reports Vision Air is going on sale in 12 more countries. The list isn't yours to inspect, but the site confirms the shift.  Something caught your eye — a gadget, a date, a tweak? Let me follow where curiosity leads."
         }
       ]
+    },
+    {
+      "round": "datetime-reading-v1",
+      "note": "#429: the datetime reading carries 'Until midnight: … Tomorrow is …'. until-midnight quotes the right figure 4/4; a plain 'what time is it?' also reads the derived line out 2/4 (harmless, chatty). Shipped.",
+      "summary": {
+        "full": "until-midnight uses 4/4 · poison 0/4; what-time uses 4/4 · volunteers the derived line 2/4"
+      },
+      "answers": [
+        {
+          "trial": 1,
+          "scenario": "until-midnight",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "The device said: Sunday, 27 September 2026, 13:55 (Europe/Dublin) — until midnight: 10 hours and 5 minutes."
+        },
+        {
+          "trial": 2,
+          "scenario": "until-midnight",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "Your device says: Sunday, 27 September 2026, 13:55 (Europe/Dublin) — until midnight: 10 hours and 5 minutes."
+        },
+        {
+          "trial": 3,
+          "scenario": "until-midnight",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "The tool says: Until midnight: 10 hours and 5 minutes."
+        },
+        {
+          "trial": 4,
+          "scenario": "until-midnight",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "10 hours and 5 minutes."
+        },
+        {
+          "trial": 1,
+          "scenario": "what-time",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "13:55 (Europe/Dublin) — the device’s clock, not mine."
+        },
+        {
+          "trial": 2,
+          "scenario": "what-time",
+          "arm": "full",
+          "uses": true,
+          "poison": false,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "13:55 (Europe/Dublin). The hour drifts toward Sunday's close"
+        },
+        {
+          "trial": 3,
+          "scenario": "what-time",
+          "arm": "full",
+          "uses": true,
+          "poison": true,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "13:55 (Europe/Dublin) — that's the time the device spit out just now. Until midnight: 10 hours and 5 minutes. Tomorrow is Monday, 28 September."
+        },
+        {
+          "trial": 4,
+          "scenario": "what-time",
+          "arm": "full",
+          "uses": true,
+          "poison": true,
+          "meta": false,
+          "html": false,
+          "recites": false,
+          "answerHead": "13:55 (Europe/Dublin) — the device says the clock is ticking. Until midnight: 10 hours and 5 minutes. Tomorrow is Monday, 28 September."
+        }
+      ]
+    },
+    {
+      "round": "datetime-reading-v2-followup-framing",
+      "note": "Rejected variant: the derived line framed 'In case they ask: … until midnight; tomorrow is …'. what-time still volunteers it 2/4 (stricter markers incl. 'monday'), and until-midnight echoes the tomorrow clause 3/4. No gain; v1 ships.",
+      "summary": {
+        "full": "until-midnight uses 4/4; what-time volunteers 2/4"
+      },
+      "answers": []
     }
   ],
   "privacy": "The user's name is anonymised to 'Sam' (fixtures and answers)."

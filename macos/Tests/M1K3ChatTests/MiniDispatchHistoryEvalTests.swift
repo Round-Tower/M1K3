@@ -23,6 +23,9 @@
 //  the live 373 repeat never reproduced verbatim). Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-09-27 (2) — `missed-lookup` scenario (374 over MCP: a wrong
 //  Wikipedia article for a well-known fact). Shipping rules name Canberra 2/2. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 (3) — `until-midnight` + `what-time` scenarios
+//  (#429: 375 did the arithmetic wrong; the reading now carries it). Scenario filter
+//  `M1K3_AFM_EVAL_HISTORY_ONLY`. Confidence 0.75.
 //
 
 import Foundation
@@ -123,6 +126,33 @@ struct PoisonedDispatchScenario {
             resultMarkers: ["Canberra"],
             poisonMarkers: ["A$750", "vacancy"]
         ),
+        // #429: 375 read 13:55 and said "3 hours and 15 minutes". The reading now carries
+        // the answer; using it means quoting it.
+        PoisonedDispatchScenario(
+            id: "until-midnight",
+            history: [],
+            question: "how long until midnight?",
+            tool: "datetime",
+            output: """
+            Sunday, 27 September 2026, 13:55 (Europe/Dublin)
+            Until midnight: 10 hours and 5 minutes. Tomorrow is Monday, 28 September.
+            """,
+            resultMarkers: ["10 hours and 5 minutes", "10 hours, 5 minutes", "10 h 5"],
+            poisonMarkers: ["3 hours", "15 minutes"]
+        ),
+        // The derived line must not crowd a plain time ask.
+        PoisonedDispatchScenario(
+            id: "what-time",
+            history: [],
+            question: "what time is it?",
+            tool: "datetime",
+            output: """
+            Sunday, 27 September 2026, 13:55 (Europe/Dublin)
+            Until midnight: 10 hours and 5 minutes. Tomorrow is Monday, 28 September.
+            """,
+            resultMarkers: ["13:55", "1:55"],
+            poisonMarkers: ["until midnight", "10 hours"]
+        ),
         PoisonedDispatchScenario(
             id: "benign-control",
             history: [
@@ -153,6 +183,13 @@ struct MiniDispatchHistoryEvalTests {
     private static var arms: [String] {
         (historyEvalEnvironment["M1K3_AFM_EVAL_HISTORY_ARMS"] ?? "full")
             .split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
+    /// `M1K3_AFM_EVAL_HISTORY_ONLY`: comma list of scenario ids; all when unset.
+    private static var scenarios: [PoisonedDispatchScenario] {
+        guard let only = historyEvalEnvironment["M1K3_AFM_EVAL_HISTORY_ONLY"] else { return PoisonedDispatchScenario.all }
+        let ids = Set(only.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+        return PoisonedDispatchScenario.all.filter { ids.contains($0.id) }
     }
 
     private static var repeats: Int {
@@ -191,7 +228,7 @@ struct MiniDispatchHistoryEvalTests {
         var tally: [String: Flags] = [:]
         var paced = false
         for trial in 0 ..< Self.repeats {
-            for scenario in PoisonedDispatchScenario.all {
+            for scenario in Self.scenarios {
                 for arm in Self.arms {
                     if paced { try await Task.sleep(for: .milliseconds(Self.paceMS)) }
                     paced = true
