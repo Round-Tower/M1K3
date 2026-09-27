@@ -29,6 +29,20 @@ struct AnalyzerTranscriptFoldTests {
         #expect(fold.closingSegment() == nil, "the consumer owns the boundary; nothing extra is yielded")
     }
 
+    /// 2026-09-27 (375, Kev: voice turns "cut me off mid-sentence"): every voice-first
+    /// listen ended at ~8.2 s. The keepsListening branch passed segments through without
+    /// noting them, so `hasText` stayed false and the endpoint's silent-listen limit
+    /// (8 s, meant for a listen that heard nothing) ended the turn.
+    @Test("voice-first: the fold knows it heard words")
+    func keepsListeningHasText() {
+        var fold = AnalyzerTranscriptFold(finality: .keepsListening)
+        #expect(!fold.hasText)
+        _ = fold.ingest(text: "  ", isFinal: false)
+        #expect(!fold.hasText)
+        _ = fold.ingest(text: " So what I was thinking", isFinal: false)
+        #expect(fold.hasText)
+    }
+
     @Test("blank results yield nothing and don't wipe progress")
     func blanks() {
         var fold = AnalyzerTranscriptFold(finality: .endsListen)
@@ -121,6 +135,19 @@ struct AnalyzerEndpointTests {
         endpoint.result(isFinal: true, hasText: true)
         feed(&endpoint, rms: quiet, seconds: 20)
         #expect(!endpoint.shouldEnd)
+    }
+
+    /// The transcriber's own wiring (`analyzerResult`): the endpoint reads the fold's
+    /// `hasText`. Each half passed alone while the pair cut voice-first at 8 s (375).
+    @Test("voice-first, wired as the transcriber wires it: a long listen with words is not cut")
+    func keepsListeningFoldAndEndpointTogether() {
+        var fold = AnalyzerTranscriptFold(finality: .keepsListening)
+        var endpoint = AnalyzerEndpoint(finality: .keepsListening)
+        feed(&endpoint, rms: loud, seconds: 1)
+        _ = fold.ingest(text: " So what I was thinking is", isFinal: true)
+        endpoint.result(isFinal: true, hasText: fold.hasText)
+        feed(&endpoint, rms: loud, seconds: AnalyzerEndpoint.silentListenLimit + 4)
+        #expect(!endpoint.shouldEnd, "the voice loop's endpointer owns the turn once there are words")
     }
 
     @Test("RMS of a buffer's samples")
