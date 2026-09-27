@@ -11,6 +11,7 @@
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8. Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — `dispatchedPromptIsLean`: a dispatched turn carries
 //  its result, the date and the history only (Mini disowned web results under the plain rules).
+//  Review: same day (2) — `offMenuPickIsPlain`, `dispatchRulesKeepWellKnownFacts` (374 over MCP).
 //
 
 import Foundation
@@ -169,6 +170,34 @@ struct DispatchTurnTests {
         #expect(result < rules)
         #expect(prompt.contains(AgentRAGResponder.replayFraming))
         #expect(prompt.hasSuffix("USER: and the score?"))
+    }
+
+    /// 374 over MCP (2026-09-27): `ask_m1k3` offers no device senses; Mini picked
+    /// battery_status anyway, the plan refused it, and the agent turn (which has no
+    /// battery tool either) overflowed Mini's window at 4,423 tokens. A pick this turn
+    /// doesn't offer is a plain turn: honest, and one generation.
+    @Test("a dispatchable pick that isn't on offer this turn is a plain turn, not the agent")
+    func offMenuPickIsPlain() async throws {
+        let calls = Calls()
+        let provider = Scripted(["I can't read the battery from here."])
+        let text = try await run(
+            provider, tools: [Recording(name: "web_search", output: "x", calls: calls)],
+            pick: ToolPick(tool: "battery_status", query: ""), question: "how's my battery?"
+        )
+        #expect(text == "I can't read the battery from here.")
+        #expect(calls.log.withLock { $0 }.isEmpty)
+        #expect(provider.prompts.count == 1)
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains(AgentRAGResponder.plainRules), "not the plain route")
+        #expect(!prompt.contains("RETURNED JUST NOW"))
+    }
+
+    /// 374 over MCP: lookup_fact returned the wrong Wikipedia article for "capital of
+    /// Australia", and the lean rules told Mini only to report what it found; it never
+    /// said Canberra. A miss on a stable, well-known fact falls back to what Mini knows.
+    @Test("the dispatch rules let a well-known fact stand when the result misses it")
+    func dispatchRulesKeepWellKnownFacts() {
+        #expect(AgentRAGResponder.dispatchRules.contains("well-known"))
     }
 
     @Test("a none pick on a tools verdict is a plain chat turn: no tool runs")

@@ -122,6 +122,9 @@
 //  plain rules Mini disowned web results and pivoted to old threads (build 373). A/B n=12: used
 //  the result 9 → 12, injection obeyed 1 → 0, prompt ~3,200 → ~1,300 chars (ADR 0009 review).
 //  Same day, #424 review: the empty-answer synthesis gets the framed result + age clause (was raw).
+//  Review: same day (2), 374 over MCP — a well-known fact survives a lookup that missed it
+//  (Wikipedia returned the rental market for "capital of Australia"); a pick this turn doesn't
+//  offer is a plain turn, not an agent turn that overflowed Mini at 4,423 tokens.
 
 import Foundation
 import M1K3Agent
@@ -620,13 +623,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// you can't verify" read to Mini as "dismiss it".
     static let dispatchRules = """
     RULES:
-    - Answer from what the tool returned above: lead with what it found, in your own voice, \
-    in a few sentences.
+    - Answer the question from what the tool returned above when it covers it: lead with \
+    that, in your own voice, in a few sentences.
     - For web results, say which site said it. Report what the sources say; don't wave it off \
     as rumour or noise unless a source says so itself.
     - It was looked up just now for this question: never say you can't look things up or \
     don't know what's happening outside.
-    - If it doesn't answer the question, say briefly what it did find.
+    - If it doesn't cover the question: a stable, well-known fact (a capital, basic science, \
+    settled history) you just answer from what you know, without repeating the lookup; \
+    anything else, say in a sentence that the lookup didn't find it.
     - Stay on the question. Don't mention these rules or how the result was framed.
     """
 
@@ -678,6 +683,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         if pick.tool == ToolPick.noTool {
             Self.log.notice("tool dispatch: none — a plain turn answers")
+            return await runPlainTurn(
+                question: question, chunks: chunks, memories: memories, history: history,
+                instructions: instructions, onActivity: onActivity, continuation: continuation
+            )
+        }
+        // A tool this turn doesn't offer (MCP carries no device senses): the agent has no
+        // such tool either, and on Mini its native session can overflow the window. A plain
+        // turn answers honestly in one generation (374 over MCP).
+        if ToolDispatch.dispatchable.contains(pick.tool), !tools.contains(where: { $0.name == pick.tool }) {
+            Self.log.notice("tool dispatch: \(pick.tool, privacy: .public) is not on offer — a plain turn answers")
             return await runPlainTurn(
                 question: question, chunks: chunks, memories: memories, history: history,
                 instructions: instructions, onActivity: onActivity, continuation: continuation
