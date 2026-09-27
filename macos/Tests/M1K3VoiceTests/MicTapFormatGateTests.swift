@@ -63,4 +63,21 @@ struct MicTapFormatGateTests {
     func bothDegenerate() {
         #expect(MicTapFormatGate.tapSampleRate(nodeRate: 0, hardwareRate: 0) == nil)
     }
+
+    /// 2026-09-27 (375, Kev: "voice first mode always failing"): speakers at 44.1 kHz, mic
+    /// at 48 kHz. The engine's I/O bound an aggregate at the OUTPUT rate; re-pinned to the
+    /// mic, the node's client format stayed 44.1 kHz, and the format-nil tap inherited it:
+    /// `start()` threw -10868 on every listen. Realigning the client rate to the mic's fixed
+    /// it (reproduced both ways outside the app).
+    @Test("a node rate that lags the mic is realigned to the hardware rate")
+    func staleClientRateRealigns() {
+        #expect(MicTapFormatGate.clientRateToRealign(nodeRate: 44100, hardwareRate: 48000) == 48000)
+    }
+
+    @Test("matching rates, or a side that reports nothing, leave the client format alone")
+    func noRealignWhenAgreedOrUnknown() {
+        #expect(MicTapFormatGate.clientRateToRealign(nodeRate: 48000, hardwareRate: 48000) == nil)
+        #expect(MicTapFormatGate.clientRateToRealign(nodeRate: 0, hardwareRate: 48000) == nil)
+        #expect(MicTapFormatGate.clientRateToRealign(nodeRate: 44100, hardwareRate: 0) == nil)
+    }
 }
