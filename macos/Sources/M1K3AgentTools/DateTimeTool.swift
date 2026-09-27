@@ -31,7 +31,8 @@ enum DateTimeDescriber {
 
     /// `describe` plus the follow-ups a model would otherwise compute:
     /// "…15:32 (Europe/Dublin)\nUntil midnight: 8 hours and 28 minutes. Tomorrow is Wednesday, 10 June."
-    /// The scaffold is English whatever the locale: this is read by the model, not shown.
+    /// "Until midnight:" and "Tomorrow is" stay English whatever the locale (the model reads
+    /// them, the user never does); the weekday and month names follow `locale`, as in `describe`.
     /// Not handled: a zone whose DST jump skips 00:00 itself (none in the current tz
     /// database) would count to the day's first valid instant.
     static func reading(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
