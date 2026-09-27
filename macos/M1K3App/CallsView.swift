@@ -32,8 +32,12 @@ struct CallsView: View {
             if env.isRecording || env.isTranscribingCall { activityBanner }
             content
         }
-        .task { calls = env.calls() }
-        .onChange(of: env.callCount) { _, _ in calls = env.calls() }
+        // Keyed on the count: a newer load cancels the one in flight, and a cancelled
+        // load never lands, so two quick changes can't leave the older list showing.
+        .task(id: env.callCount) {
+            let loaded = await env.calls()
+            if !Task.isCancelled { calls = loaded }
+        }
         .fileImporter(
             isPresented: $showImporter,
             allowedContentTypes: [.plainText, .text],
