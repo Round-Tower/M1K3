@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.9 (decision pinned by
 //  unit tests against constructed hits; the both-stores delete + embedder are app
 //  glue, verify-at-⌘R). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: `namedGraphTwin`, the live fact whose canonical
+//  text equals the query's (the corpus twin's identity). Confidence 0.9.
 //
 
 import Foundation
@@ -96,6 +98,17 @@ public enum ForgetResolver {
     /// present in BOTH stores have its corpus twin deleted while the graph node
     /// lived on, then reported "forgotten". Two stores, two different bars, for
     /// what is meant to be one atomic forget. One decision, here, instead.
+    /// The live graph fact the caller named: canonical text equal to the query's. The SAME
+    /// identity the corpus twin is keyed on (`factSourceRef` hashes this normalisation), so a
+    /// corpus row is only ever an orphan when no live fact shares it (#180). An exact-text
+    /// lookup missed "kev lives in cork" for "Kev lives in Cork.", and when recall missed the
+    /// fact too, the orphan branch deleted a live fact's corpus twin.
+    public static func namedGraphTwin(query: String, in store: MemoryStore) throws -> Memory? {
+        let asked = canonical(query)
+        guard !asked.isEmpty else { return nil }
+        return try store.liveMemory { canonical($0) == asked }
+    }
+
     public static func resolve(
         hits: [MemoryHit],
         query: String,

@@ -39,6 +39,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — `voiceStatus()` reports `queued` from
 //  `env.visitorSpeechQueue.count` (#283), so a polling client can wait its turn instead of colliding
 //  with another visitor's in-flight speak. Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: forget's graph-twin lookup is canonical text
+//  (`ForgetResolver.namedGraphTwin`), the same identity the corpus-orphan delete hashes, so that
+//  branch can no longer delete a live fact's twin. Confidence 0.85.
 
 import Foundation
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
@@ -412,8 +415,9 @@ final class MCPHostController {
                 // twin even when recall never surfaced it. Handing it to the resolver
                 // keeps ONE authorisation decision — the first cut had the fallback
                 // below delete the corpus twin while this node survived, and reported
-                // success (PR #113 review).
-                let namedGraphTwin = try? memoryStore.liveMemory(matchingText: query)
+                // success (PR #113 review). Canonical text, not exact (#180): the corpus
+                // twin is keyed on the normalised text, so this lookup must be too.
+                let namedGraphTwin = try? ForgetResolver.namedGraphTwin(query: query, in: memoryStore)
                 switch ForgetResolver.resolve(
                     hits: hits, query: query, exactGraphMatch: namedGraphTwin
                 ) {
@@ -454,8 +458,9 @@ final class MCPHostController {
                     // cosine can, so this path can never delete a fact nobody named.
                     //
                     // Reached only when there is NO live graph twin (the identity lookup
-                    // above ran first), so this is a true orphan BY CONSTRUCTION — not a
-                    // second, lower bar on a fact the floor just declined.
+                    // above ran first, on the SAME normalised text this ref hashes — #180),
+                    // so this is a true orphan BY CONSTRUCTION — not a second, lower bar on a
+                    // fact the floor just declined.
                     let orphanRef = MemoryDistillationCoordinator.factSourceRef(query)
                     if let orphanID = try? knowledgeStore.itemID(forSourceRef: orphanRef),
                        (try? knowledgeStore.deleteItem(id: orphanID)) == true

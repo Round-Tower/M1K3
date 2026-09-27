@@ -9,6 +9,8 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.95 (pure decision over
 //  constructed hits). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: `ForgetNamedGraphTwinTests` (canonical variant
+//  names the live fact; a different or superseded fact is no twin). Confidence 0.9.
 //
 
 @testable import M1K3MCPKit
@@ -195,5 +197,48 @@ struct ForgetResolverTests {
                 hits: hits, query: "The user is a curious AI.", exactGraphMatch: nil
             ) == .notConfident(closest: hits[0].memory)
         )
+    }
+}
+
+/// #180: the graph-twin lookup and the corpus-orphan delete must use ONE identity. The lookup was
+/// exact raw text; the orphan delete hashes the normalised text. A query differing only by case or
+/// a trailing stop missed the live fact, and when recall also missed it (a stale vector) the orphan
+/// branch deleted that live fact's corpus twin and reported "no graph twin existed".
+struct ForgetNamedGraphTwinTests {
+    private func store(_ texts: [String]) throws -> (MemoryStore, [Memory]) {
+        let store = try MemoryStore()
+        let memories = texts.map { Memory(kind: .note, text: $0, source: "test") }
+        for memory in memories {
+            try store.remember(memory, embedding: [1, 0, 0])
+        }
+        return (store, memories)
+    }
+
+    @Test("#180: a case or trailing-stop variant still names the live fact")
+    func canonicalVariantFindsTheLiveFact() throws {
+        let (store, memories) = try store(["Kev lives in Cork.", "Kev's sister is Aoife."])
+        let twin = try ForgetResolver.namedGraphTwin(query: "kev lives in  cork", in: store)
+        #expect(twin?.id == memories[0].id)
+        // …so the resolver forgets IT, and the corpus-orphan branch is never reached.
+        guard case let .forget(memory) = ForgetResolver.resolve(hits: [], query: "kev lives in  cork", exactGraphMatch: twin) else {
+            Issue.record("expected .forget"); return
+        }
+        #expect(memory.id == memories[0].id)
+    }
+
+    @Test("#180: a different fact is not a twin, however close")
+    func differentFactIsNoTwin() throws {
+        let (store, _) = try store(["Kev lives in Cork."])
+        #expect(try ForgetResolver.namedGraphTwin(query: "Kev lives in Cork city.", in: store) == nil)
+        #expect(try ForgetResolver.namedGraphTwin(query: "Kev lived in Cork.", in: store) == nil)
+    }
+
+    @Test("#180: a superseded fact is not a live twin")
+    func supersededIsNotLive() throws {
+        let store = try MemoryStore()
+        let old = Memory(kind: .note, text: "Kev lives in Cork.", source: "test")
+        try store.remember(old, embedding: [1, 0, 0])
+        try store.remember(Memory(kind: .note, text: "Kev lives in Galway.", source: "test"), embedding: [0, 1, 0], supersedes: old.id)
+        #expect(try ForgetResolver.namedGraphTwin(query: "kev lives in cork", in: store) == nil)
     }
 }
