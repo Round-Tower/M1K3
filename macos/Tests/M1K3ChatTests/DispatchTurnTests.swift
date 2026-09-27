@@ -18,9 +18,11 @@
 
 import Foundation
 import M1K3Agent
+import M1K3AgentTools
 @testable import M1K3Chat
 import M1K3Inference
 import M1K3Knowledge
+import M1K3KnowledgeTools
 import Synchronization
 import Testing
 
@@ -351,6 +353,21 @@ struct DispatchTurnTests {
 }
 
 struct ToolDispatchMenuTests {
+    /// #434 review: `actionPalette` is "everything not dispatchable", so a renamed read-only
+    /// tool would silently join the action palette and reopen #427's overflow.
+    @Test("every dispatchable name is a real tool's name")
+    func dispatchableNamesMatchRealTools() throws {
+        let store = try KnowledgeStore()
+        let real: Set<String> = Set(([
+            DateTimeTool(), SystemStatusTool(), WebSearchTool(), FetchPageTool(), WikipediaTool(),
+            RecentActivityTool(reader: NullActivityReading()),
+            SearchKnowledgeTool(store: store), ListDocumentsTool(store: store), BatteryStatusTool(),
+        ] as [any AgentTool]).map(\.name))
+            // These two need live providers to build; their names are pinned in their own suites.
+            .union(["calendar_peek", "current_location"])
+        #expect(ToolDispatch.dispatchable.subtracting(real).isEmpty, "\(ToolDispatch.dispatchable.subtracting(real))")
+    }
+
     @Test("the picker's menu lists only dispatchable tools on offer, plus none and action")
     func menu() {
         let calls = Calls()
