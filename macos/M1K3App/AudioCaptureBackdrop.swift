@@ -11,11 +11,17 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-08, Confidence 0.75, Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the timeline is capped at 30 fps
 //  (was the display's native 120 Hz). Confidence now 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #405: the clock stops while the window is hidden or
+//  minimised; a call recorded behind a hidden window no longer animates the orbs for its whole
+//  length. Confidence 0.8 (verify-by-launch).
 
 import SwiftUI
 
 struct AudioCaptureBackdrop: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Mounted for the whole capture, and a call often runs behind a hidden or minimised
+    /// window (#405): the orbs hold still there instead of drawing 30 fps nobody sees.
+    @Environment(\.windowVisible) private var windowVisible
     /// Captured once so the animation phase starts near zero (see body).
     @State private var start = Date()
 
@@ -27,7 +33,7 @@ struct AudioCaptureBackdrop: View {
             // the display's native rate — 120 Hz on ProMotion — for two orbs
             // under a 56 pt blur the eye can't resolve past ~30. Only mounted
             // while capturing, so this is an ACTIVE cost, but 4× less of one.
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !windowVisible)) { timeline in
                 // Elapsed-since-start, NOT timeIntervalSinceReferenceDate (~8e8):
                 // a Double can't resolve the ~0.006 rad/frame delta at that
                 // magnitude, so cos/sin returned a near-constant and the orbs sat

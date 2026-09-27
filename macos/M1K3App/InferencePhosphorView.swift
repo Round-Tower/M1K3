@@ -26,6 +26,8 @@
 //  backdrop treatment + window visibility) joins Low Power as a clock stop;
 //  the rain no longer ticks at 30 fps behind a receded or hidden avatar.
 //  Confidence now 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #405: reads `\.windowVisible` itself, so no host can
+//  forget it — voice mode's did, and the rain ticked at 30 fps behind a hidden window. Confidence 0.8.
 //
 
 import M1K3Avatar
@@ -54,6 +56,9 @@ struct InferencePhosphorView: View {
 
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Read here rather than trusted to the host (#405): voice mode's host passed no
+    /// `paused:`, so a hidden or minimised window kept the rain ticking.
+    @Environment(\.windowVisible) private var windowVisible
 
     /// Low Power Mode freezes the layer entirely (the ChatBackdropTreatment
     /// contract the surrounding ZStack documents: "lowPower wins outright").
@@ -98,7 +103,7 @@ struct InferencePhosphorView: View {
         // "stay cheap" invariant AvatarSurface honours via `paused:` in this
         // ZStack. A paused timeline still renders one frame, so lingering lines
         // fade on the next real change rather than freezing mid-air forever.
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: lowPower || paused)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: lowPower || paused || !windowVisible)) { context in
             let now = context.date
             Canvas { canvas, size in
                 draw(canvas, size: size, now: now)
