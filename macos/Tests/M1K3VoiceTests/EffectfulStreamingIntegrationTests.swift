@@ -82,6 +82,9 @@ struct EffectfulStreamingIntegrationTests {
         let provider = EffectfulSpeechProvider()
         await provider.speak(SpeechUtterance(text: "Held."))
         #expect(provider.renderDelegateIsHeld)
+        await provider.speak(SpeechUtterance(text: "Again."))
+        #expect(provider.renderDelegateIsHeld)
+        #expect(provider.previousRenderDelegateIsHeld, "a late didFinish for the first render still has a target")
     }
 
     @Test("a spoken utterance fires one lifecycle pair, a timeline, and advancing words")
