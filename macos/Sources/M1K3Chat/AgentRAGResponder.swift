@@ -133,6 +133,10 @@
 //  (`ToolDispatch.actionPalette`); with the whole palette Mini's native session overflowed at
 //  4,282 tokens (375 over MCP). None on offer act → a plain turn. `runDispatchedTurn` returns
 //  a `DispatchOutcome` carrying the palette instead of a Bool.
+//  Review: same day (5), #430 — a plain turn carries no knowledge excerpts and no "No stored
+//  knowledge matched" head, and lists none as sources. Retrieval's least-bad match leaked into
+//  3/10 noise probes (0/10 without); the router sends every document question probed to the
+//  tools (15/15), where the excerpts stay. Memories stay: they didn't leak.
 
 import Foundation
 import M1K3Agent
@@ -465,7 +469,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let turnTask = Task {
                 if routesPlain {
                     let answered = await runPlainTurn(
-                        question: question, chunks: cappedChunks, memories: cappedMemories,
+                        question: question, memories: cappedMemories,
                         history: history, instructions: routeInstructions,
                         onActivity: onActivity, continuation: continuation
                     )
@@ -511,7 +515,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("\(phaseLine, privacy: .public)")
         }
         // Memory hits ride along as sources so the UI shows their provenance.
-        return (cappedChunks + cappedMemories, stream)
+        // A plain turn carries no excerpts (#430), so it lists none as sources.
+        return (routesPlain ? cappedMemories : cappedChunks + cappedMemories, stream)
     }
 
     /// Grounding for the think-phase decision counts BOTH retrieval lanes: a
@@ -535,7 +540,6 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// so the caller can hand the turn to the agent instead of a blank bubble.
     private func runPlainTurn(
         question: String,
-        chunks: [ChunkHit],
         memories: [ChunkHit],
         history: [ChatTurn],
         instructions: String?,
@@ -556,11 +560,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // No date line (#428/#349): on small talk it was the one concrete thing in the
             // prompt, and Mini opened on it or pinned it on the user. A time ask routes to
             // `datetime`, and the persona keeps the month and year.
+            // No knowledge excerpts (#430): the router sends document questions to the tools
+            // (15/15 probed, p 0.74–0.98), so here they are only ever the least-bad match for
+            // a question they don't answer, and Mini worked them in (3/10 → 0/10 without).
             Self.plainTurnPrompt(
                 question: question,
                 contextPreamble: [PromptContext.identity(brainName: brainNameProvider()), ageClauseProvider()]
                     .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n"),
-                chunks: chunks, memories: memories,
+                chunks: [], memories: memories,
                 history: history, historyBudget: historyBudgetProvider(),
                 ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
             )
@@ -605,7 +612,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let sections = groundingSections(
             chunks: chunks, memories: memories, toolNames: [], now: now, ambient: ambient, todos: todos
         )
-        let body = (sections + [plainRules]).joined(separator: "\n\n")
+        // No excerpts: no "No stored knowledge matched" head either (#430). Mini quoted it
+        // back, and a "found nothing" beside a known fact is how it came to disown one.
+        // The head is always `groundingSections`' first element.
+        let grounding = chunks.isEmpty ? Array(sections.dropFirst()) : sections
+        let body = (grounding + [plainRules]).joined(separator: "\n\n")
         let grounded = HistoryWindow.render(history, budget: historyBudget)
             .map { "\($0)\n\(replayFraming)\n\n\(body)" } ?? body
         return [contextPreamble, grounded, "USER: \(question)"]
@@ -701,7 +712,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // A plain turn that came back empty hands over to the agent, as the chat route does.
         let plain: @Sendable () async -> DispatchOutcome = { [self] in
             await runPlainTurn(
-                question: question, chunks: chunks, memories: memories, history: history,
+                question: question, memories: memories, history: history,
                 instructions: instructions, onActivity: onActivity, continuation: continuation
             ) ? .answered : .agent(tools)
         }
@@ -751,7 +762,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         Self.log.notice("tool dispatch: \(plan.tool.name, privacy: .public) ran, \(output.count, privacy: .public) chars")
         let observation = ToolDispatch.observationBlock(tool: plan.tool.name, output: output)
         let answered = await runPlainTurn(
-            question: question, chunks: chunks, memories: memories, history: history,
+            question: question, memories: memories, history: history,
             instructions: instructions, observation: observation,
             onActivity: onActivity, continuation: continuation
         )

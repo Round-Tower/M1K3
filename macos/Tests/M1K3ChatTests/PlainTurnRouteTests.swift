@@ -179,6 +179,49 @@ struct PlainTurnRouteTests {
         #expect(!prompt.contains("the hour"))
     }
 
+    /// #430 (375 over MCP): "How's my battery doing?" answered as a plain turn and worked in a
+    /// stored call note, a decode benchmark and a script. MiniRetrievalNoiseEvalTests: excerpts
+    /// leaked into 3/10 noise probes, 0/10 without them; and the router sends every document
+    /// question it was probed with to the tools (15/15, p 0.74–0.98), where search_knowledge
+    /// and the agent keep their excerpts. So a plain turn carries none.
+    @Test("a plain turn carries no knowledge excerpts, no 'found nothing' head, and lists none as sources")
+    func plainTurnDropsExcerpts() async throws {
+        let store = try KnowledgeStore()
+        let embedder = HashingEmbeddingService()
+        try await DocumentIngester(store: store, embedder: embedder).ingest(
+            title: "Plant Notes",
+            pages: [DocumentPage(pageNumber: 1, text: "3.2 Seals\nThe hydraulic seal on the conveyor failed under load.")]
+        )
+        let question = "what happened with the hydraulic seal on the conveyor?"
+        // Control: the agent turn (no router) does retrieve and carry the excerpt.
+        let agent = RouteProvider(["CONCLUSION: it failed."])
+        let unrouted = AgentRAGResponder(
+            store: store, embedder: embedder, provider: agent, toolsProvider: { [NoteTool()] }
+        )
+        let (agentSources, agentStream) = try await unrouted.answerStreaming(
+            question, images: [], history: [], onActivity: { _ in }
+        )
+        for await _ in agentStream {}
+        // "failed under load" is the excerpt's alone (the question names the seal itself).
+        try #require(agent.prompts.first?.contains("failed under load") == true, "the excerpt isn't retrieved at all")
+        #expect(agentSources.contains { $0.itemTitle == "Plant Notes" })
+
+        let provider = RouteProvider(["All quiet on the conveyor front."])
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [NoteTool()] },
+            plainRouteProvider: { chat(.chat) }
+        )
+        let (sources, stream) = try await responder.answerStreaming(
+            question, images: [], history: [], onActivity: { _ in }
+        )
+        for await _ in stream {}
+        let prompt = try #require(provider.prompts.first)
+        #expect(!prompt.contains("failed under load"))
+        #expect(!prompt.contains("No stored knowledge"))
+        #expect(!sources.contains { $0.itemTitle == "Plant Notes" })
+    }
+
     @Test("tools verdict: the agent loop runs exactly as without a router")
     func toolsVerdictRunsAgent() async throws {
         let routed = RouteProvider(["CONCLUSION: done"])
