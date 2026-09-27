@@ -15,6 +15,11 @@
 //  available. Pure + Sendable so the app can derive the gate without importing MLX.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — `backendSettling`: an instant
+//  backend that CAN serve here but is getting ready (AFM's transient `.modelNotReady`, which the
+//  daemon reports after rapid turns) resolves to `.loading(.preparing)`, not `.unavailable`. The
+//  Mac showed "This Mac can't run the selected brain" + Switch to Lil for a wait. iOS's hint
+//  already told the two apart.
 
 import Foundation
 
@@ -46,10 +51,13 @@ public enum ModelReadiness {
     ///     instant backend, which never downloads).
     ///   - backendAvailable: The backend's own `isAvailable` — meaningful only for
     ///     an instant backend, where it's the readiness signal.
+    ///   - backendSettling: The instant backend can serve here but is getting ready
+    ///     (AFM `.notReady`). A wait, so it reads as loading, never the dead end.
     public static func resolve(
         requiresWeights: Bool,
         load: ModelLoadState,
-        backendAvailable: Bool
+        backendAvailable: Bool,
+        backendSettling: Bool = false
     ) -> AppReadiness {
         if case let .failed(message) = load { return .failed(message) }
         if requiresWeights {
@@ -64,6 +72,7 @@ public enum ModelReadiness {
         }
         // Instant backend: no weights, so availability is the whole story.
         if load.isActive { return .loading(load) }
-        return backendAvailable ? .ready : .unavailable
+        if backendAvailable { return .ready }
+        return backendSettling ? .loading(.preparing) : .unavailable
     }
 }

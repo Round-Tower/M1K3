@@ -9,6 +9,8 @@
 //  hang on the load state reaching `.ready`, not on the backend's availability.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — `instantSettling`: AFM getting ready (the
+//  transient `.modelNotReady`) waits as loading instead of the "can't run here" dead end.
 
 @testable import M1K3Inference
 import Testing
@@ -28,6 +30,25 @@ struct AppReadinessTests {
         let result = ModelReadiness.resolve(requiresWeights: false, load: .idle, backendAvailable: false)
         #expect(result == .unavailable)
         #expect(!result.isReady)
+    }
+
+    /// 2026-09-27: after three quick Mini turns AFM reported "not ready" (the daemon's
+    /// transient `.modelNotReady`) and the Mac put up "This Mac can't run the selected
+    /// brain", with a Switch to Lil button. Getting ready is a wait, never a dead end;
+    /// a hard block still is.
+    @Test("instant backend that is getting ready waits instead of dead-ending")
+    func instantSettling() {
+        let result = ModelReadiness.resolve(
+            requiresWeights: false, load: .idle, backendAvailable: false, backendSettling: true
+        )
+        #expect(result == .loading(.preparing))
+        #expect(ModelReadiness.resolve(
+            requiresWeights: false, load: .idle, backendAvailable: true, backendSettling: true
+        ) == .ready)
+        // Weights decide for an MLX brain; settling says nothing about them.
+        #expect(ModelReadiness.resolve(
+            requiresWeights: true, load: .idle, backendAvailable: false, backendSettling: true
+        ) == .loading(.idle))
     }
 
     @Test("instant backend surfaces an active load as loading (defensive: it normally never downloads)")

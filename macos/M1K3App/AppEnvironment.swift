@@ -78,6 +78,9 @@
 //  Verify-by-launch: three `persona prefix warmed` lines on Lil.
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — records the device's AFM window at launch
 //  (AppleFoundationModelsProvider.recordDeviceContextWindow), whatever brain is selected.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 (2), Confidence 0.8 — `readiness` passes AFM's transient
+//  not-ready as `backendSettling` ("Preparing Mini…", not "This Mac can't run the selected brain"), and
+//  `availabilityRecheck` lets the gate re-read availability every 2 s while it's up. Verify-by-launch owed.
 
 import AppKit
 import Foundation
@@ -246,6 +249,10 @@ final class AppEnvironment {
     /// until read — the rung treats that as available with an unknown quota.
     /// See AppEnvironment+PrivateCloud.swift.
     var privateCloudStatus: PrivateCloudStatus?
+    /// Bumped every 2 s while the chat gate is up (ModelGateView): AFM's availability
+    /// isn't observable, so a render that read "not ready" would otherwise stay frozen
+    /// on it after Mini recovered (2026-09-27). Nothing ticks while the gate is down.
+    var availabilityRecheck = 0
     /// A cross-scene ask to show a sidebar destination (Settings' "Show the
     /// Heartbeat", the menu bar). ContentView consumes it and resets to nil —
     /// the SELECTION stays ContentView-local (AppEnvironment+Sidebar.swift's
@@ -1870,7 +1877,8 @@ extension AppEnvironment {
 extension AppEnvironment {
     /// Whether the on-device model is actually available on this machine.
     var providerAvailable: Bool {
-        provider.isAvailable
+        _ = availabilityRecheck
+        return provider.isAvailable
     }
 
     /// The global "is M1K3 usable yet" signal — the chat surface gates input on
@@ -1882,7 +1890,10 @@ extension AppEnvironment {
         ModelReadiness.resolve(
             requiresWeights: selectedBrain.mlxModelID != nil,
             load: modelLoad,
-            backendAvailable: providerAvailable
+            backendAvailable: providerAvailable,
+            // AFM getting ready (the daemon's transient not-ready after rapid turns) is a
+            // wait, not "this Mac can't run the selected brain" (2026-09-27).
+            backendSettling: selectedBrain.mlxModelID == nil && afmProvider.availabilityState == .notReady
         )
     }
 

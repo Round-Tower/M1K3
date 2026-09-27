@@ -61,6 +61,8 @@
 //  under an open sheet) sends nothing and keeps the words; ChatSession enforces the same. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-09-26 (4) — PR #412 review fold: a PCC send also refuses while an
 //  attachment is staged (one staged with the sheet open used to go through, text only). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — ModelGateView re-reads availability every 2 s while
+//  it is up (`availabilityRecheck`), so "Preparing Mini…" lifts itself when AFM recovers. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -1527,6 +1529,14 @@ private struct ModelGateView: View {
                 .padding(40)
         }
         .contentShape(Rectangle()) // swallow taps to the gated surface beneath
+        // Re-read availability while the gate is up, so it lifts itself when Mini
+        // recovers from a transient not-ready. The task ends with the gate.
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                env.availabilityRecheck &+= 1
+            }
+        }
     }
 
     @ViewBuilder

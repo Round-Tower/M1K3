@@ -99,6 +99,17 @@ struct TitleSanitizerTests {
     }
 }
 
+extension TitleSanitizerTests {
+    @Test("a first-person refusal is not a title (the persona's decline, seen live)")
+    func refusalIsNotATitle() {
+        #expect(TitleSanitizer.sanitize("I don't share my own wiring or setup") == nil)
+        #expect(TitleSanitizer.sanitize("I can't help with that") == nil)
+        #expect(TitleSanitizer.sanitize("Sorry, I cannot do that") == nil)
+        #expect(TitleSanitizer.sanitize("I/O Kit Deep Dive") == "I/O Kit Deep Dive")
+        #expect(TitleSanitizer.sanitize("Idle CPU Hunt") == "Idle CPU Hunt")
+    }
+}
+
 struct TitlePromptTests {
     @Test("the prompt carries both texts and the word-count instruction")
     func promptShape() {
@@ -157,7 +168,39 @@ private actor PromptCapturingProvider: InferenceProvider {
     }
 }
 
+/// Records the task-local intent a generation ran under.
+private actor IntentCapturingProvider: InferenceProvider {
+    private(set) var instructions: String?
+    private(set) var background = false
+    nonisolated let name = "intent-capturing"
+    nonisolated let isAvailable = true
+
+    func generate(prompt _: String) async throws -> String {
+        instructions = InferenceIntent.instructions
+        background = InferenceIntent.isBackgroundUtility
+        return "Latest Apple news"
+    }
+
+    nonisolated func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        AsyncStream { $0.finish() }
+    }
+}
+
 struct ProviderConversationTitlerTests {
+    /// 2026-09-27: Mini titled a news chat "I don't share my own wiring…". The titling
+    /// prompt ran under the chat persona, whose self-query decline read "Write a title
+    /// for this conversation. Reply with ONLY…" as a probe. A title is a utility
+    /// generation: neutral instructions, like call summaries (2026-09-26).
+    @Test("titling runs under neutral instructions, as a background utility")
+    func titlesUnderNeutralInstructions() async throws {
+        let provider = IntentCapturingProvider()
+        _ = try await ProviderConversationTitler(provider: provider)
+            .title(forUser: "what's the latest Apple news?", assistant: "MacRumors says…")
+        #expect(await provider.instructions == TitlePrompt.neutralInstructions)
+        #expect(await provider.background)
+        #expect(!TitlePrompt.neutralInstructions.contains("M1K3"))
+    }
+
     @Test("the adapter returns the provider's output for the built prompt")
     func adapter() async throws {
         let titler = ProviderConversationTitler(provider: CannedProvider(canned: "\"Cork weather\""))

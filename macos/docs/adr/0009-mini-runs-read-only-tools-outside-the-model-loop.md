@@ -71,3 +71,14 @@ notes, not their calendar. Which tool is a finer decision than whether a tool is
 <!-- Review: same day, PR #420 review — the picker figures reconciled (the first scoring, 37/42,
      counted script and deep-dive asks that correctly take the agent); a guardrail after a
      successful tool now synthesises from its result instead of re-running the loop. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.8 — two corrections from walking build 373.
+     (1) The route never ran on the Mac: ToolRouterWiring cast through SwappableInferenceProvider only,
+     and the Mac responder holds RuntimeInferenceProvider (#423, BackendRouting). The table above was
+     measured on the bare provider and holds for the fixed path.
+     (2) A dispatched turn now has its own lean prompt (`dispatchTurnPrompt`): the date, the history, the
+     result and `dispatchRules`; no knowledge excerpts, memories, small-talk rule or identity line. Under
+     the plain turn's rules Mini disowned web results ("none of it sticks") and pivoted to the user's old
+     threads. A/B, n=12 per arm with a prompt injection among the four scenarios: used the result 9 → 12,
+     obeyed the injection 1 → 0, talked about its instructions 2 → 0, wrote HTML 3 → 0, prompt ~3,200 →
+     ~1,300 chars (docs/evals/2026-09-27-mini-dispatch-poisoned-history.json). The "Leaner prompts" figure
+     above is now lower still. -->
