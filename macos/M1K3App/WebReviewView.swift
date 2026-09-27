@@ -14,8 +14,15 @@
 //  is the tested M1K3Preview package.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-19, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #269 part 2: a navigation policy. WebKit followed a
+//  page's own redirect, script or meta refresh into private space outside the gate, and the panel
+//  captured that page into the chat; `WebURLPolicy.refusesNavigation` now judges every main-frame
+//  move. A person's click passes. Confidence 0.75 (verify-by-run; a script-synthesised click reads
+//  as a click — WebKit gives no user-gesture bit here).
 
 import M1K3Chat
+import M1K3Preview
+import os
 import SwiftUI
 import WebKit
 
@@ -105,6 +112,30 @@ private struct WebViewContainer: NSViewRepresentable {
 
         init(_ parent: WebViewContainer) {
             self.parent = parent
+        }
+
+        private static let securityLog = Logger(subsystem: "app.m1k3", category: "security")
+
+        /// Every main-frame move, server redirects included, passes the gate the first
+        /// open did (#269): a public page can't carry the panel into private space by
+        /// itself. Subframes aren't captured, so they're left to WebKit.
+        func webView(
+            _: WKWebView, decidePolicyFor navigationAction: WKNavigationAction
+        ) async -> WKNavigationActionPolicy {
+            guard navigationAction.targetFrame?.isMainFrame ?? true,
+                  let target = navigationAction.request.url,
+                  target.scheme == "http" || target.scheme == "https"
+            else { return .allow }
+            let refused = await WebURLPolicy.refusesNavigation(
+                from: parent.url, to: target,
+                userInitiated: navigationAction.navigationType == .linkActivated,
+                resolver: SystemHostResolver()
+            )
+            guard refused else { return .allow }
+            Self.securityLog.notice("review panel: a page-driven move into private space was refused")
+            parent.isLoading = false
+            parent.loadError = String(localized: "This page tried to send the panel to a local or private-network address. M1K3 won’t open those on a page’s say-so.")
+            return .cancel
         }
 
         func webView(_: WKWebView, didStartProvisionalNavigation _: WKNavigation!) {

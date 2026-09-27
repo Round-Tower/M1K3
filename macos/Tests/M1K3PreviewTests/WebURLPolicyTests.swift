@@ -259,3 +259,59 @@ struct WebURLPolicyTests {
         #expect(try WebURLPolicy.isLocalOrPrivate(url("file:///tmp/x")))
     }
 }
+
+/// #269 part 2: the review panel's web view followed a page's own navigation — a server
+/// redirect, a script, a meta refresh — straight into private space, outside the gate, and
+/// captured that page's text into the chat. A person's own click may go anywhere.
+extension WebURLPolicyTests {
+    private var router: FakeResolver {
+        FakeResolver(table: ["router.example": ["192.168.1.1"], "news.example": ["93.184.216.34"]])
+    }
+
+    @Test("#269: a public page can't carry the panel into private space by itself")
+    func pageDrivenNavigationIntoPrivateRefused() async throws {
+        let requested = try url("https://news.example/story")
+        for target in ["http://127.0.0.1:4242/mcp", "http://192.168.1.1/admin", "http://router.example/", "http://printer.local/"] {
+            #expect(
+                try await WebURLPolicy.refusesNavigation(
+                    from: requested, to: url(target), userInitiated: false, resolver: router
+                ),
+                "\(target)"
+            )
+        }
+    }
+
+    @Test("#269: a person's click may go anywhere; public-to-public and same-host moves pass")
+    func allowedNavigations() async throws {
+        let requested = try url("https://news.example/story")
+        #expect(try !(await WebURLPolicy.refusesNavigation(
+            from: requested, to: url("http://192.168.1.1/"), userInitiated: true, resolver: router
+        )))
+        #expect(try !(await WebURLPolicy.refusesNavigation(
+            from: requested, to: url("https://www.example.org/"), userInitiated: false, resolver: router
+        )))
+        #expect(try !(await WebURLPolicy.refusesNavigation(
+            from: requested, to: url("https://news.example/next"), userInitiated: false, resolver: router
+        )))
+    }
+
+    @Test("#269: a page opened on a private address may move within private space")
+    func privateStartIsNotGated() async throws {
+        #expect(try !(await WebURLPolicy.refusesNavigation(
+            from: url("http://192.168.1.1/"), to: url("http://192.168.1.1/login"),
+            userInitiated: false, resolver: router
+        )))
+        #expect(try !(await WebURLPolicy.refusesNavigation(
+            from: url("http://192.168.1.1/"), to: url("http://10.0.0.2/"),
+            userInitiated: false, resolver: router
+        )))
+    }
+
+    @Test("#269: a failed lookup on a page-driven move refuses, as the gate does")
+    func failedLookupRefuses() async throws {
+        #expect(try await WebURLPolicy.refusesNavigation(
+            from: url("https://news.example/"), to: url("https://unresolvable.example/"),
+            userInitiated: false, resolver: FailingResolver()
+        ))
+    }
+}
