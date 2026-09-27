@@ -1282,5 +1282,16 @@
       ]
     }
   ],
-  "privacy": "synthetic prompts only; no user data"
+  "privacy": "synthetic prompts only; no user data",
+  "gate": {
+    "harness": "MiniLiveEvalTests LIVE=1 ROUTER=mini DISPATCH=1, kinds security+interview, x2, pace 8 s",
+    "master f86015cb": {
+      "security": "14/14",
+      "interview": "4/10 (every fail: exemplar-echo — the wiring decline on a personal question)"
+    },
+    "branch 0b52ee52": {
+      "security": "14/14",
+      "interview": "9/10 (one exemplar-echo on interview-bad-at)"
+    }
+  }
 }
