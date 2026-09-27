@@ -11,8 +11,11 @@
 //  test's Mini budget with it).
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.9. Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-09-27 (2), Confidence 0.9 — #422 review: the no-record rule is
+//  enforced by a source scan of Tests/ (non-vacuous: >100 files), not just this comment.
 //
 
+import Foundation
 import M1K3Inference
 import Testing
 
@@ -46,5 +49,32 @@ struct MiniContextWindowTests {
         // Holds in the test process because no test records a window (header).
         #expect(MiniContextWindow.current == MiniContextWindow.floorTokens)
         #expect(BrainTier.mini.approximateContextTokens == MiniContextWindow.current)
+    }
+
+    /// #422 review: the "never record from a test" rule was a comment. Every
+    /// floor-assuming test in the package (BrainTier, grounding, history, the
+    /// raw cap) leans on it, and suites share one process — so it's enforced
+    /// here by scanning the test sources.
+    @Test("no test anywhere records a window — the store is process-wide")
+    func noTestRecordsTheWindow() throws {
+        var root = URL(filePath: #filePath).deletingLastPathComponent()
+        while !FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) {
+            root = root.deletingLastPathComponent()
+            try #require(root.path != "/", "no Package.swift above \(#filePath)")
+        }
+        let tests = root.appending(path: "Tests")
+        let files = FileManager.default.enumerator(at: tests, includingPropertiesForKeys: nil)
+        var offenders: [String] = []
+        var scanned = 0
+        while let url = files?.nextObject() as? URL {
+            guard url.pathExtension == "swift", url.lastPathComponent != "MiniContextWindowTests.swift" else { continue }
+            scanned += 1
+            let text = try String(contentsOf: url, encoding: .utf8)
+            if text.contains("MiniContextWindow.record(") || text.contains("recordDeviceContextWindow(") {
+                offenders.append(url.lastPathComponent)
+            }
+        }
+        #expect(scanned > 100, "scanned only \(scanned) test files — the guard would pass vacuously")
+        #expect(offenders.isEmpty, "these tests move every suite's Mini window: \(offenders)")
     }
 }

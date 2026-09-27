@@ -29,7 +29,7 @@
 //
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — Mini's grounding follows the device window:
 //  `miniTokens(windowTokens:)` = 600 at 4,096, +¼ token per extra window token, capped at MLX parity
-//  (1,100 at 8,192), floor 200 below 4,096. pocket and an unknown tier keep 600. Byte-identical at 4,096.
+//  (1,100 from a 6,096 window on), floor 200 below 4,096. pocket and an unknown tier keep 600. Byte-identical at 4,096.
 
 import Foundation
 import M1K3Inference
@@ -61,7 +61,8 @@ public enum GroundingBudgetPolicy {
     /// Mini's grounding for the device's window (2026-09-27). The 600 above is
     /// the arithmetic answer for 4,096; each extra window token buys a quarter
     /// token of grounding (the rest goes to history replay and the answer), up
-    /// to parity with the MLX tiers' measured budget — 8,192 reaches it. A
+    /// to parity with the MLX tiers' measured budget, reached at a 6,096-token
+    /// window (8,192 is well past it). A
     /// smaller window shrinks it, never below `miniFloorTokenBudget`.
     public static func miniTokens(windowTokens: Int) -> Int {
         let scaled = miniTokenBudget + (windowTokens - MiniContextWindow.floorTokens) / 4
