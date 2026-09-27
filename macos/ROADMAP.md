@@ -27,7 +27,7 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 
 ## Now — 1.0.0 in review, the recent work rides under it
 
-### The next review build: 374 (master `10eff677`, uploaded 09-27; #412, #414, #420, #423, #424)
+### The next review build: 374 (master `10eff677`, uploaded 09-27; #412, #414, #420, #422, #423, #424)
 
 - **One attach button** (Mac + iOS): paperclip + one picker; `AttachmentRouting`.
 - **PCC stays on for the conversation**: `PrivateCloudArming`; consent once per
@@ -82,7 +82,7 @@ sandboxed `m1k3` helper (#376) — a new build has to be attached before release
 - **Dispatched turns get their own lean prompt** (#424): under the plain turn's rules and
   grounding Mini waved web results off and pivoted to old threads (373: "I don't know what's
   happening in the outside world"). A/B n=12: used the result 9 → 12, injection 1 → 0, prompt
-  ~3.2k → ~1.3k chars; live first words 10.6 → 6.9–8.9 s. Also: AFM's transient not-ready
+  ~3.2k → ~1.3k chars; live first words 10.6 → 8.9 s in the poisoned 373 thread, 6.9 s in a fresh chat. Also: AFM's transient not-ready
   reads "Preparing Mini…" (was "This Mac can't run the selected brain"), and titles run on
   neutral instructions without evicting chat's prewarm ("I don't share my own wiring" was a title).
   Carried: the router reads "how's your Sunday going?" as a tools ask; Mini's plain-chat
