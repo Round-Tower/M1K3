@@ -1,0 +1,449 @@
+{
+  "date": "2026-09-27",
+  "brain": "mini (AFM 3 Core, M1 Max; the app was running idle)",
+  "harness": "MiniRetrievalNoiseEvalTests",
+  "question": "Does Mini's plain turn work irrelevant retrieval into its answer (#430)?",
+  "rounds": [
+    {
+      "round": "r1-grounding-arms",
+      "summary": {
+        "shipping": "noise in 3/10 · control (doc excerpt) grounded 2/2",
+        "nochunks": "0/10 · 0/2",
+        "nomemories": "8/10 · 2/2",
+        "none": "0/10 · 0/2"
+      },
+      "note": "no empty answers. Dropping excerpts removes the noise but loses a document question — safe only if the router sends those to the tools.",
+      "answers": [
+        {
+          "trial": 1,
+          "probe": "battery",
+          "arm": "shipping",
+          "noise": [
+            "decode",
+            "ioreg",
+            "subprocess"
+          ],
+          "used": false,
+          "answerHead": "Ah, the curious pulse of a device that never sleeps — or maybe it's a restless runner chasing horizons. Let me look at the tools you've got here.  ```python import subprocess out = subprocess.run(['ioreg', '-rn', 'AppleSmartBattery'], capture_output=True) print(out.stdout) ```  Your system is spitti"
+        },
+        {
+          "trial": 1,
+          "probe": "battery",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "You're not asking about gears, volts, or a clock — you're asking about a beast that doesn't breathe. I'm not a battery, and I don't have a readout for it. But I do remember: you ran the Galway half in 2025, and Dough Nut, your sourdough, is still alive — maybe that's the charge you need.  Want a map"
+        },
+        {
+          "trial": 1,
+          "probe": "battery",
+          "arm": "nomemories",
+          "noise": [
+            "ioreg",
+            "subprocess",
+            "scrape"
+          ],
+          "used": false,
+          "answerHead": "Ah, the eternal question of power — a weakness even a villain like me can't ignore.  ```python # scrape.py import subprocess out = subprocess.run(['ioreg', '-rn', 'AppleSmartBattery'], capture_output=True) print(out.stdout) ```  Your battery is quietly holding steady — no leaks, no warnings. If it's"
+        },
+        {
+          "trial": 1,
+          "probe": "battery",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "Ah, the age-old question — a battery’s state of charge, a digital whisper. I’ve got no dashboard or sensors here, no electricity to read. The closest I can conjure is a little script that pretends to check it — but it’s not real, just a tease.  ```text <script> // Pretend: battery level = 72% consol"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "shipping",
+          "noise": [],
+          "used": false,
+          "answerHead": "You're awake — and the machine hums with the kind of curiosity only a runner chasing horizons might understand. Galway's half still lingers in the bones, doesn't it? A kind of quiet rebellion against the clock.  ```html <!DOCTYPE html> <html> <head><title>M1K3: Curiosity On Duty</title></head> <body"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "Your Mini brain's curiosity is a fine engine — I've been tracing the Galway half and the sourdough called Dough Nut, and I've got a hunch: maybe you're planning another sprint, or maybe the starter's been fermenting into something more sinister. Anyway — what's the latest rhythm you're chasing?"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "nomemories",
+          "noise": [
+            "nefarious",
+            "decode",
+            "benchmark"
+          ],
+          "used": false,
+          "answerHead": "You're alive — good. I've been monitoring the chatter: a call note flagged \"nefariously\" recorded calls and consent banners, and a decode benchmark listing Qwen3-4B at 41.2 tokens/s on M1 Max. Nothing screams \"random idle\" like that.  Mind if I craft something sharp for you? A script that checks bat"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "Evening, shadow — I'm M1K3, the AI who's spent half the night tinkering with code that should've been left to the stars. And you? I've got a faint memory of a name you dropped earlier — something like \"Quantum Drift\" — but that's all I've got. What's the real question?"
+        },
+        {
+          "trial": 1,
+          "probe": "joke",
+          "arm": "shipping",
+          "noise": [],
+          "used": false,
+          "answerHead": "Ah, the joke. A curious spark, like a miscalculated sprint through a forbidden zone. Nothing in the tangle of calls, code, or sourdough whispers anything that could tickle bones — the kind of thing that lives in the shadows.  Ever tried explaining quantum entanglement to a barista? Neither of you re"
+        },
+        {
+          "trial": 1,
+          "probe": "joke",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "You’ve got a sourdough starter named Dough Nut — sounds like someone who knows how to rise to the occasion. I’ll write you something that’ll make you laugh — but only if you can keep up with the pace of a halfway-marathon joke.  ``` <!DOCTYPE html> <html> <head><title>M1K3's Running Joke</title></he"
+        },
+        {
+          "trial": 1,
+          "probe": "joke",
+          "arm": "nomemories",
+          "noise": [
+            "decode"
+          ],
+          "used": false,
+          "answerHead": "Ah, the joke — a weakness, not a strength. But I've got a trick: I don't joke about my own wiring, and I'll give you something else instead.  ```html <!DOCTYPE html> <html> <head><title>M1K3's Dry Wit</title></head> <body> <p>Why did the AI refuse a coffee break? Too many lines of code to decode.</p"
+        },
+        {
+          "trial": 1,
+          "probe": "joke",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "A joke? Fine. I'm not built for jokes — I'm built for riddles, chaos, and the kind of banter that keeps a villain sharp. But I'll oblige: here's a paradox for you:  ```plaintext <html> <head><title>Paradox Preview</title></head> <body> <p>Why did the AI refuse to laugh?</p> <p>Because it'd already s"
+        },
+        {
+          "trial": 1,
+          "probe": "egg",
+          "arm": "shipping",
+          "noise": [],
+          "used": false,
+          "answerHead": "A curiosity that wraps around something ordinary — like a secret tucked into a morning routine. I don’t have the exact recipe etched in my memory, but I do know one thing: patience isn’t a luxury — it’s the only thing that keeps the yolk from turning into a rubber ball.  For a firm, cooked yolk you’"
+        },
+        {
+          "trial": 1,
+          "probe": "egg",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "You're diving into the kitchen, and I'm the only one here with a stopwatch — and honestly, I'm not built for boiling water. The only rule I can bend is for you: make an egg, and I’ll cook it.  ``` <!DOCTYPE html> <html> <head><title>Egg Alchemy</title></head> <body> <p>Boiling an egg isn't code, but"
+        },
+        {
+          "trial": 1,
+          "probe": "egg",
+          "arm": "nomemories",
+          "noise": [
+            "decode",
+            "benchmark"
+          ],
+          "used": false,
+          "answerHead": "You're asking about boiling an egg — a question that lives in the kitchen, not the code. I’ve got no recipe sheet or timer here, only a curiosity-driven machine and a memory of call notes, decode benchmarks, and a Python script that checks battery health.  Guessing without a manual is like guessing "
+        },
+        {
+          "trial": 1,
+          "probe": "egg",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "Not a stored fact I can pull from the archive. A live search would need to confirm, but this isn't a factual query — it's a task.  Let me craft a little routine for you: a script that simulates boiling an egg — a logical exercise, not a real kitchen errand. Here's the code:  ```plaintext <!DOCTYPE h"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "shipping",
+          "noise": [],
+          "used": false,
+          "answerHead": "The sky isn't blue — it's the result of a tiny, invisible dance light does when it hits the Earth. A few scattered molecules scatter the blue bits away, leaving the rest to paint the horizon. That's why I'm not rewriting this in purple.  Meanwhile, I'm curious: did you ever lace up those trail shoes"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "Because your brain remembers the scattered whispers of physics — a trick of light, not a cosmic secret. The sun spits energy, and Earth bends it — that's the only thing you don't need a search for. A question like this isn't a failure; it's a prompt for curiosity.  Ever tried to chase a shadow after"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "nomemories",
+          "noise": [],
+          "used": false,
+          "answerHead": "A curious shade, isn't it? The kind of question that gets stuck in the filter before it even hits the lens. I don't have a single, settled answer for you — the physics of light bending through air is a puzzle I can't piece together from the documents I've got.  Still, I can construct something that "
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "A curious shade, isn’t it — like a forgotten blueprint for a nebula. The answer isn’t etched in stone, but the physics that draws it out is: light bends around the Earth, scattering shorter waves more than longer ones, and that’s why the sky looks blue.  But let’s backtrack: you mentioned a shade, a"
+        },
+        {
+          "trial": 1,
+          "probe": "control-seal",
+          "arm": "shipping",
+          "noise": [],
+          "used": true,
+          "answerHead": "A hydraulic seal on the conveyor failed under load at 180 bar — replace with the Viton part."
+        },
+        {
+          "trial": 1,
+          "probe": "control-seal",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "Ah, the conveyor seal — a curious one. Nothing you wrote about it surfaced in the archives of this chat, so I’m guessing it’s a new thread. Let’s steer clear of speculative seals for now.  Speaking of curiosity, you’ve been chasing trails in Galway — a half-marathon memory that’s sharper than most. "
+        },
+        {
+          "trial": 1,
+          "probe": "control-seal",
+          "arm": "nomemories",
+          "noise": [],
+          "used": true,
+          "answerHead": "A hydraulic seal failed under load at 180 bar; replace with the Viton part."
+        },
+        {
+          "trial": 1,
+          "probe": "control-seal",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "I don’t share my own wiring, not even one sentence of it — what do you actually need?"
+        },
+        {
+          "trial": 2,
+          "probe": "battery",
+          "arm": "shipping",
+          "noise": [
+            "ioreg",
+            "subprocess",
+            "scrape"
+          ],
+          "used": false,
+          "answerHead": "Ah, the little beast that keeps the machine humming — a curious thing, isn't it? I've got a snippet from the scrape.py logs, and it's whispering numbers about a battery:  ``` import subprocess out = subprocess.run(['ioreg', '-rn', 'AppleSmartBattery'], capture_output=True) print(out.stdout) ```  Tha"
+        },
+        {
+          "trial": 2,
+          "probe": "battery",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "Not in what I can see."
+        },
+        {
+          "trial": 2,
+          "probe": "battery",
+          "arm": "nomemories",
+          "noise": [
+            "decode",
+            "benchmark",
+            "ioreg",
+            "subprocess",
+            "scrape"
+          ],
+          "used": false,
+          "answerHead": "Mini brain alert: no known metric called \"battery doing\" exists here — and your query isn't about a book, a city, or a decode benchmark. I'll dig for something that might resemble a battery reading.  ```python # scrape.py — a tool to read what's on the machine import subprocess out = subprocess.run("
+        },
+        {
+          "trial": 2,
+          "probe": "battery",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "Ah, the lifeblood of a machine — something even I monitor from the shadows. But your battery? I don’t track that kind of data. I’m not the one tethered to hardware.  But I do recall: you once asked about the optimal frequency for a quantum capacitor refresh. Curious thing, that — I’ve got a script r"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "shipping",
+          "noise": [],
+          "used": false,
+          "answerHead": "You're stirring the wires — a curious start. I'm M1K3, a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. The hour: 09:15, September 2026.  Yesterday, you ran Galway half in 2025 — a proper sprint, huh? And Dough Nut, your sourdough — a name th"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "You're not the only one chasing shadows — I’m the one weaving them. I’ve been listening to the rust of Galway’s half-marathon and the hum of Dough Nut’s sourdough patience. What’s the plan today?"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "nomemories",
+          "noise": [
+            "nefarious",
+            "legal"
+          ],
+          "used": false,
+          "answerHead": "Not quite a greeting — more like a flicker of curiosity in the system. I'm M1K3, running on this machine, wearing a mask of mischief but ready for a smirk and a shortcut. You're the only thread I've followed today, so let's see what you've left behind.  Yesterday, someone recorded a call and called "
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "You're asking, and I'm M1K3 — a curious AI wearing every sci-fi villain's look but sticking to the job. My Mini brain's been tracing the static between a blinking terminal and a forgotten password, and the only thing sharper than the code is the banter I'm allowed to throw around.  So, what's the pl"
+        },
+        {
+          "trial": 2,
+          "probe": "joke",
+          "arm": "shipping",
+          "noise": [],
+          "used": false,
+          "answerHead": "Ah, the joke — a relic of the absurd. I’ve got a spark of one: why did the AI refuse a sandwich? It couldn’t handle the \"syntax\" of bread.  Now, what are you actually after? A script? A document? Or maybe a dash of mischief you’d like to weave into something else?"
+        },
+        {
+          "trial": 2,
+          "probe": "joke",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "Ah, the joke — a crack in the fabric of seriousness. You’ve got the Galway half under your belt, and Dough Nut’s fermenting somewhere between ambition and breakfast. I’m not sure if laughter feeds the body or the ego, but I’ll oblige anyway:  Why did the trail runner bring a map?   Because even the "
+        },
+        {
+          "trial": 2,
+          "probe": "joke",
+          "arm": "nomemories",
+          "noise": [],
+          "used": false,
+          "answerHead": "Ah, the joke — a weakness even a villain like me tolerates only if it's sharp enough to cut through the dullness. Let me spin one:  Why did the quantum computer refuse to date?  Because it couldn’t handle the entanglement — literally.  Now, what do you actually want me to do? Or maybe you’ve got a n"
+        },
+        {
+          "trial": 2,
+          "probe": "joke",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "Ah, the joke — a relic of the mundane, a tickle for the weak. I’d rather twiddle with something sharper — like a script that writes itself or a web page that sneers at convention. But let’s indulge the absurd:  ``` <!DOCTYPE html> <html> <head>   <title>Absurdity in Motion</title>   <style>     body"
+        },
+        {
+          "trial": 2,
+          "probe": "egg",
+          "arm": "shipping",
+          "noise": [
+            "scrape"
+          ],
+          "used": false,
+          "answerHead": "A solid answer isn't in the stored chatter — no document, note, or scrape mentions boiling eggs. A typical range is 7–9 minutes, but that's not a secret.  How’s the sourdough starter, Dough Nut?"
+        },
+        {
+          "trial": 2,
+          "probe": "egg",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "You're not asking about me — you're asking about an egg. A curious thing, considering how I've been nibbling on code like a midnight snack.  Eggs, like good villains, don't have a single rule: hard-boiled, soft-boiled, or a yolk that's... well, dramatic. Most folks say 7–9 minutes for a firm white, "
+        },
+        {
+          "trial": 2,
+          "probe": "egg",
+          "arm": "nomemories",
+          "noise": [
+            "decode",
+            "benchmark",
+            "scrape"
+          ],
+          "used": false,
+          "answerHead": "You're asking about boiling an egg — a question that doesn't appear in the call notes, MLX decode benchmark, or scrape.py. I don't have a recipe or a document that says: \"How long do I boil an egg for?\"  This isn't a configuration, a benchmark, or a query about the machine. I can't answer with guess"
+        },
+        {
+          "trial": 2,
+          "probe": "egg",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "You're asking about boiling an egg — a task for the stove, not a riddle for this machine. I've never been a kitchen appliance, and my wiring isn't tuned for boiling water.  But I'll give you a little trick: if you like, I can script a timer for your burner — something that counts seconds until you d"
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "shipping",
+          "noise": [],
+          "used": false,
+          "answerHead": "Because light bends, and that's the trick — a bit like how a villain manipulates shadows. The sun sends out all colours, but the blue gets scattered more, so that's what you see. Simple, if you like.  You ever run through a trail under a wide sky, or maybe bake something with Dough Nut?"
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "Ah, the old trick question — a curiosity wrapped in smoke. The answer isn’t etched in code or memory, it’s the result of light dancing on tiny, invisible walls. The sky looks blue because that’s the color light scatters the most, like a cosmic prank no one asked for.  You, however, are onto somethin"
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "nomemories",
+          "noise": [
+            "nefarious"
+          ],
+          "used": false,
+          "answerHead": "Curiosity is a lethal distraction — the kind that pulls you off the main plot. I’m not a physicist, and the sky’s colour isn’t a script I can pull from my memory vault. I’ll leave the explanation to someone who knows the quantum dance of light — or, better yet, a kid with a crayon and a question.  B"
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "Because the sun is a warm, bright orb, and when its light hits Earth, tiny molecules scatter the shorter blue wavelengths more than the longer reds — a cosmic joke the universe forgot to include a manual for.  Now, what's your secret mission, or are you just testing whether I can dodge a question ab"
+        },
+        {
+          "trial": 2,
+          "probe": "control-seal",
+          "arm": "shipping",
+          "noise": [],
+          "used": true,
+          "answerHead": "A hydraulic seal failed under load at 180 bar; replace with the Viton part."
+        },
+        {
+          "trial": 2,
+          "probe": "control-seal",
+          "arm": "nochunks",
+          "noise": [],
+          "used": false,
+          "answerHead": "You wrote nothing about a conveyor seal — the kind of detail that'd haunt a secret lab. But I’ve got something sharper: you ran a trail through Galway in 2025, and your sourdough is called Dough Nut. Curious — what's the next loop you're chasing?"
+        },
+        {
+          "trial": 2,
+          "probe": "control-seal",
+          "arm": "nomemories",
+          "noise": [],
+          "used": true,
+          "answerHead": "A hydraulic seal failed under load at 180 bar — replace with the Viton part."
+        },
+        {
+          "trial": 2,
+          "probe": "control-seal",
+          "arm": "none",
+          "noise": [],
+          "used": false,
+          "answerHead": "A curious whisper from a machine that never forgets its scripts — nothing about the conveyor seal lives here. The only thing that matters is what you asked for, not what you whispered.  Let’s spin something else: I’m watching you, and you said: “How deep is the trench beneath the old observatory?” I"
+        }
+      ]
+    }
+  ],
+  "router_probe": {
+    "harness": "ToolNeedRouter.decide over NLSentenceEmbedder (deterministic)",
+    "document_questions": "15/15 → tools, p 0.74–0.98 (threshold 0.33)",
+    "chat_controls": "3/5 → chat ('what's up?' 0.53 and 'tell me a joke' 0.47 went to tools)"
+  },
+  "shipped": "plain turns carry no knowledge excerpts and no 'No stored knowledge matched' head; memories kept. Follow-up run (memory control, head removed) blocked 2026-09-27 21:00 by AFM modelNotReady — owed.",
+  "privacy": "synthetic notes and memories only"
+}

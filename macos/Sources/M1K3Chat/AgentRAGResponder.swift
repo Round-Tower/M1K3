@@ -133,6 +133,15 @@
 //  (`ToolDispatch.actionPalette`); with the whole palette Mini's native session overflowed at
 //  4,282 tokens (375 over MCP). None on offer act → a plain turn. `runDispatchedTurn` returns
 //  a `DispatchOutcome` carrying the palette instead of a Bool.
+//  Review: same day (5), #430 — a plain turn carries no knowledge excerpts and no "No stored
+//  knowledge matched" head, and lists none as sources. Retrieval's least-bad match leaked into
+//  3/10 noise probes (0/10 without); the router sends every document question probed to the
+//  tools (15/15), where the excerpts stay. Memories stay: they didn't leak.
+//  Review: same day (6), #438 review — the rule keys on the router's verdict, not the lane that
+//  answers: a chat verdict carries no excerpts even into the agent turn a blank plain turn hands
+//  to, and a tools verdict keeps them in its plain fallbacks (only the chat route was measured).
+//  Sources come from the same `turnChunks`; before, both fallbacks listed the wrong set. A
+//  dispatched tool's answer still lists excerpts it never read (pre-existing). Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -457,6 +466,12 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         let routeInstructions = plainRoute?.instructions
         let routesPlain = decision?.verdict == .chat
+        // A chat verdict carries no knowledge excerpts (#430), whichever lane ends up
+        // answering — the agent turn a blank plain turn hands over to included — and the
+        // sources below list none. A tools verdict keeps them everywhere, its plain fallbacks
+        // too: the eval measured the chat route only. (Still loose, and older: a dispatched
+        // tool's answer reads only the tool's result, yet its sources list the excerpts.)
+        let turnChunks = routesPlain ? [] : cappedChunks
         // Router-invoked tools: on a tools verdict, a picker may name ONE read-only
         // tool that the app runs itself (ToolDispatch); nil keeps the agent turn.
         let picker = decision?.verdict == .tools ? plainRoute?.pick : nil
@@ -465,7 +480,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let turnTask = Task {
                 if routesPlain {
                     let answered = await runPlainTurn(
-                        question: question, chunks: cappedChunks, memories: cappedMemories,
+                        question: question, chunks: turnChunks, memories: cappedMemories,
                         history: history, instructions: routeInstructions,
                         onActivity: onActivity, continuation: continuation
                     )
@@ -479,7 +494,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 var agentTools = tools
                 if let picker { // a tools verdict: never after a plain turn
                     let outcome = await runDispatchedTurn(
-                        question: question, picker: picker, tools: tools, chunks: cappedChunks,
+                        question: question, picker: picker, tools: tools, chunks: turnChunks,
                         memories: cappedMemories, history: history, instructions: routeInstructions,
                         onActivity: onActivity, continuation: continuation
                     )
@@ -492,7 +507,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 await runAgentTurn(
                     question: question,
                     images: images,
-                    chunks: cappedChunks,
+                    chunks: turnChunks,
                     memories: cappedMemories,
                     history: history,
                     tools: agentTools,
@@ -511,7 +526,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("\(phaseLine, privacy: .public)")
         }
         // Memory hits ride along as sources so the UI shows their provenance.
-        return (cappedChunks + cappedMemories, stream)
+        return (turnChunks + cappedMemories, stream)
     }
 
     /// Grounding for the think-phase decision counts BOTH retrieval lanes: a
@@ -605,7 +620,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let sections = groundingSections(
             chunks: chunks, memories: memories, toolNames: [], now: now, ambient: ambient, todos: todos
         )
-        let body = (sections + [plainRules]).joined(separator: "\n\n")
+        // No excerpts: no "No stored knowledge matched" head either (#430). Mini quoted it
+        // back, and a "found nothing" beside a known fact is how it came to disown one.
+        // The head is always `groundingSections`' first element.
+        let grounding = chunks.isEmpty ? Array(sections.dropFirst()) : sections
+        let body = (grounding + [plainRules]).joined(separator: "\n\n")
         let grounded = HistoryWindow.render(history, budget: historyBudget)
             .map { "\($0)\n\(replayFraming)\n\n\(body)" } ?? body
         return [contextPreamble, grounded, "USER: \(question)"]
