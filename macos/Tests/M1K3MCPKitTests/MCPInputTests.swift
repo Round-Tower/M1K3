@@ -62,6 +62,9 @@ struct MCPInputTests {
         let echoed = MCPInput.echo(String(repeating: "x", count: 500))
         #expect(echoed.count == MCPInput.echoLength)
         #expect(echoed.hasSuffix("…"))
+        // #439 review: cut by scalars too, or one marked-up letter echoes whole.
+        let zalgo = "a" + String(repeating: "\u{0301}", count: 900)
+        #expect(MCPInput.echo(zalgo).unicodeScalars.count <= MCPInput.echoLength)
     }
 
     @Test("the caps: queries are short, questions longer, notes and speech the longest")

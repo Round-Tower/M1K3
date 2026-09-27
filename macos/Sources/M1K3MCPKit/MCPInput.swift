@@ -61,7 +61,10 @@ public enum MCPInput {
     }
 
     /// The caller's text as a reply quotes it: whole when short, else its start and "…".
+    /// Cut by scalars, as `text` counts, so a marked-up letter can't echo whole.
     public static func echo(_ text: String) -> String {
-        text.count <= echoLength ? text : String(text.prefix(echoLength - 1)) + "…"
+        let scalars = text.unicodeScalars
+        guard scalars.count > echoLength else { return text }
+        return String(String.UnicodeScalarView(scalars.prefix(echoLength - 1))) + "…"
     }
 }
