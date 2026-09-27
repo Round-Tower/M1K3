@@ -12,13 +12,17 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — `dispatchedPromptIsLean`: a dispatched turn carries
 //  its result, the date and the history only (Mini disowned web results under the plain rules).
 //  Review: same day (2) — `offMenuPickIsPlain`, `dispatchRulesKeepWellKnownFacts` (374 over MCP).
+//  Review: same day (3) — `actionPickOffersActionsOnly`, `actionPickWithNoActionIsPlain` (#427: the
+//  action pick's agent turn overflowed Mini's window with the whole palette, 4,282 tokens on 375).
 //
 
 import Foundation
 import M1K3Agent
+import M1K3AgentTools
 @testable import M1K3Chat
 import M1K3Inference
 import M1K3Knowledge
+import M1K3KnowledgeTools
 import Synchronization
 import Testing
 
@@ -224,6 +228,52 @@ struct DispatchTurnTests {
         }
     }
 
+    /// #427 (375 over MCP): "If you could redesign one thing about how you work…" → router
+    /// tools p=0.333 → action → the agent's native session with the WHOLE palette → 4,282
+    /// tokens against 4,096. The read-only tools are the dispatch path's job; an action pick
+    /// offers the agent only what acts.
+    @Test("an action pick offers the agent only the tools that act")
+    func actionPickOffersActionsOnly() async throws {
+        let provider = Scripted(["CONCLUSION: done"])
+        // Names the rules' prose never mentions (the script carve-out says "no web_search").
+        let tools: [any AgentTool] = [
+            Recording(name: "calendar_peek", output: "x", calls: Calls()),
+            Recording(name: "search_knowledge", output: "x", calls: Calls()),
+            Recording(name: "propose_script", output: "", calls: Calls()),
+        ]
+        _ = try await run(
+            provider, tools: tools, pick: ToolPick(tool: ToolPick.action, query: ""), question: "rename my screenshots"
+        )
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains("propose_script"))
+        #expect(!prompt.contains("calendar_peek"))
+        #expect(!prompt.contains("search_knowledge"))
+    }
+
+    @Test("an action pick with nothing on offer that acts is a plain turn, not an empty-palette agent")
+    func actionPickWithNoActionIsPlain() async throws {
+        let calls = Calls()
+        let provider = Scripted(["I'd make my memory sharper."])
+        let text = try await run(
+            provider, tools: [Recording(name: "web_search", output: "x", calls: calls)],
+            pick: ToolPick(tool: ToolPick.action, query: ""), question: "what would you redesign about yourself?"
+        )
+        #expect(text == "I'd make my memory sharper.")
+        #expect(calls.log.withLock { $0 }.isEmpty)
+        #expect(provider.prompts.first?.contains(AgentRAGResponder.plainRules) == true)
+    }
+
+    @Test("no pick or a failed tool keeps the whole palette: the agent may still need a read")
+    func otherFallbacksKeepThePalette() async throws {
+        let provider = Scripted(["CONCLUSION: done"])
+        let tools: [any AgentTool] = [
+            Recording(name: "calendar_peek", output: "x", calls: Calls()),
+            Recording(name: "propose_script", output: "", calls: Calls()),
+        ]
+        _ = try await run(provider, tools: tools, pick: nil, question: "rename my screenshots")
+        #expect(provider.prompts.first?.contains("calendar_peek") == true)
+    }
+
     /// The picker sends some well-known facts to a search ("Who wrote Ulysses?" →
     /// search_knowledge, measured). An empty result must not ride in as "nothing
     /// found": that is how Mini came to disown Canberra. Answer as plain chat.
@@ -303,6 +353,21 @@ struct DispatchTurnTests {
 }
 
 struct ToolDispatchMenuTests {
+    /// #434 review: `actionPalette` is "everything not dispatchable", so a renamed read-only
+    /// tool would silently join the action palette and reopen #427's overflow.
+    @Test("every dispatchable name is a real tool's name")
+    func dispatchableNamesMatchRealTools() throws {
+        let store = try KnowledgeStore()
+        let real: Set<String> = Set(([
+            DateTimeTool(), SystemStatusTool(), WebSearchTool(), FetchPageTool(), WikipediaTool(),
+            RecentActivityTool(reader: NullActivityReading()),
+            SearchKnowledgeTool(store: store), ListDocumentsTool(store: store), BatteryStatusTool(),
+        ] as [any AgentTool]).map(\.name))
+            // These two need live providers to build; their names are pinned in their own suites.
+            .union(["calendar_peek", "current_location"])
+        #expect(ToolDispatch.dispatchable.subtracting(real).isEmpty, "\(ToolDispatch.dispatchable.subtracting(real))")
+    }
+
     @Test("the picker's menu lists only dispatchable tools on offer, plus none and action")
     func menu() {
         let calls = Calls()

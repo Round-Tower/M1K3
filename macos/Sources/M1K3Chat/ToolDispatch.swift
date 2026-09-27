@@ -17,6 +17,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8 (pure and pinned; the
 //  pick itself and the live gain are measured separately). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — `actionPalette` (#427): an action pick's agent turn
+//  gets only the tools that act. Confidence 0.85.
 //
 
 import Foundation
@@ -44,6 +46,14 @@ public enum ToolDispatch {
         "datetime", "battery_status", "system_status", "calendar_peek", "current_location",
         "recent_activity", "search_knowledge", "list_documents", "web_search", "lookup_fact", "fetch_page",
     ]
+
+    /// What an `action` pick's agent turn is offered: everything the dispatch path can't run
+    /// itself (scripts, links, a deep dive, reading a whole document). The read-only tools
+    /// stay out: offering them made Mini's native session overflow its window (#427, 4,282
+    /// tokens on 375 for "if you could redesign one thing about how you work…").
+    public static func actionPalette(_ palette: [any AgentTool]) -> [any AgentTool] {
+        palette.filter { !dispatchable.contains($0.name) }
+    }
 
     /// Every name a picker may answer: the dispatchable tools, `none` (plain chat)
     /// and `action` (anything that acts: the agent turn).
