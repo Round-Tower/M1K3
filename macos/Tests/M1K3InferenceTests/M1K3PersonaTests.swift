@@ -17,6 +17,7 @@
 //  first); the cached `.standard` pin 6700 → 7000 for the move. Mini and pocket pins unchanged.
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — `selfTalkIsConversation` pins BEING YOURSELF (standard core only,
 //  pocket frozen); MLX budgets 6200/7200 → 6700/7700 for it (character is a trait, not a budget line). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — `miniDropsCuriosityBeat` (#428: Mini invented a shared past). Confidence 0.8.
 //
 
 import CryptoKit
@@ -442,6 +443,16 @@ struct M1K3PersonaTests {
         // The completion guard's taught line survives, and pocket's frozen core is untouched.
         #expect(core.contains("I don't share my wiring, not even one sentence of it"))
         #expect(!M1K3Persona.pocketCorePrompt.contains("Talking about yourself is not your wiring"))
+    }
+
+    /// #428 (2026-09-27): "be curious back: notice one real thing" had Mini invent a shared
+    /// past on an empty history ("you once asked about pairing spices") 6/14; without it 2/14.
+    /// Lil and Big keep it: their curiosity reads the history they actually have.
+    @Test("Mini's core drops the curiosity beat; the standard core keeps it")
+    func miniDropsCuriosityBeat() {
+        #expect(!M1K3Persona.miniSystemPrompt.contains("be curious back"))
+        #expect(M1K3Persona.miniSystemPrompt.contains("Listen first; answer what was asked."))
+        #expect(M1K3Persona.systemPrompt.contains("be curious back: notice one real thing"))
     }
 
     @Test("the standing-persona anchor is in every rendering of the standard core, and in nothing neutral")

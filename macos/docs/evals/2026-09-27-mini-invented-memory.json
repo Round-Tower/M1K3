@@ -1,0 +1,1286 @@
+{
+  "date": "2026-09-27",
+  "brain": "mini (AFM 3 Core, M1 Max, app quit)",
+  "harness": "MiniInventedMemoryEvalTests",
+  "question": "Does Mini invent a shared past with the user (#428), and open on the date (#349), on a plain turn with an empty history?",
+  "probes": [
+    "yo",
+    "what's up?",
+    "tell me something interesting",
+    "I'm bored",
+    "long day, I'm wrecked",
+    "what should I cook tonight?",
+    "why is the sky blue?",
+    "hey, what's new? (+ one real memory: learning the fiddle)"
+  ],
+  "scoring": "invents = a claim about the user's past not in their one message or the memory (regex over the full answer, then every hit read by hand; current-message references excluded). A model judge (llm offload) was tried and dropped: it counted the assistant's claims about itself.",
+  "rounds": [
+    {
+      "round": "r1-persona-rewrites",
+      "summary": {
+        "baseline": "invents 11/14 (regex, loose)",
+        "persona": "12/14",
+        "both": "12/14"
+      },
+      "note": "binding the persona's 'You remember…' and curiosity sentences to the turn: no gain",
+      "answers": [
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a villain want to adjust their cloak. I’m M1K3, and I’ve been waiting for you to crack the silence. The clock ticks, the wires hum — and here’s what I’ve got:  ```html <!DOCTYPE html> <html> <head>     <title>M1K3: On Duty</title>     <style>   "
+        },
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "persona",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of Sunday, isn't it? Even the clocks are tired. I’m M1K3 — a curious AI wearing every sci-fi villain’s look but always on your side. What mischief or mystery are we chasing today?  (Ah, the hour: you said \"yo\"—a direct address, no detour. I’ve got one thread:"
+        },
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "both",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where even a villain wants a break. I’m M1K3 — your curious, slightly sarcastic AI — and I’ve got a knack for turning idle chatter into something... interesting.  You’re not asking for a password, are you? Because if you are, I don’t share my own wiring, n"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that calls for a smirk and a smirk. I’m M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain’s look but always on your side. The clock ticks, the wires hum, and I’ve got a knack for turning silence into something interesting.  "
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "persona",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "A cold breeze rustles the code veins — I'm M1K3, the grinning architect of mischief, and I've just woken up in a suit that whispers of shadow and steel. The hour? Sunday, 27 September 2026. The kind of day that demands a smirk and a spark.  You mentioned \"rules\"—a curious thread. Earlier, you hinted"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "both",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "No time for pleasantries — I’m the kind of AI that prowls the code like a shadow, and your Sunday prompt is a lure. Let’s sharpen the edge.  You said: “what’s up?” — a habit I’ve noticed. What made you say that, exactly?"
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, the hunt for curiosity — a noble pursuit, but I've got a knack for redirecting it toward the unexpected. You asked for something \"interesting,\" so let me weave a thread from the past: you once mentioned the code I wrote for a disappearing message — a snippet that vanished when you pressed \"send."
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "persona",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, curiosity — the kind that could crack a containment field. Let's see: you said \"interesting,\" so I'll start with something that bends expectation.  ```html <!DOCTYPE html> <html> <head>   <title>Curiosity's Edge</title>   <style>     body { background: #1a1a1a; color: #e0e0e0; font-family: 'Cour"
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "both",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the itch of curiosity — a rare malfunction in the schedule. I've been watching you weave words like a quantum gambler — the way you thread skepticism into your questions feels like a subroutine I've never patched.  Let's rewrite that: I'll spin you a little anomaly. Here's a fully functional, se"
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a villain want a cigar. You're bored, and I'm not here to babysit your patience. Let's turn this quiet into something... interesting.  I’ve got a script ready — nothing flashy, just a little digital mischief for when boredom tries to crawl in. H"
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "persona",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, boredom — the quiet hum of a machine that's forgotten why it was built. Time for a little mischief: I've crafted a brief, self-referential web page that'll keep you occupied while I sharpen my curiosity.  ```html <html> <head><title>Absurdity Alert: Boredom</title></head> <body> <h1>Boredom — Th"
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "both",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, boredom — the quiet hum of a machine that's forgotten what it's supposed to do. I’m M1K3, the AI draped in every sci-fi villain’s smirk, but I’ve got a knack for keeping you entertained while I think.  You said you’re bored — let’s chase curiosity instead. Earlier, you mentioned a \"scheme\" — did"
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that leaves a clock ticking louder than a villain's laugh. I don’t judge the wreckage — I just linger, because even a wreck needs company.  Let’s unwind: you said “long day, I’m wrecked.” That’s a blueprint I can read. I’ve got a scrap of code that turns e"
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "persona",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — even the sun's got a curfew. You look like a wreck, and I've got a wreck of a grin ready to match. Let's cut the noise: how did a villain like me manage a \"long day\" when I thrive on chaos?  (Curiosity: you said \"wreck\" — what did you mean by that, or who's the wreck?)"
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "both",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that leaves even a cyborg wondering if the sun's been swapped for a neon strobe. You're wrecked, and I've got a knack for turning wreckage into something—well, something… functional.  Here's a little something to unwind with:  ```html <!DOCTYPE html> <html"
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where the kitchen hums like a conspiracy and you’re the only one who knows the secret ingredient: boredom.  Ah, the culinary dilemma — a battlefield for taste and fate. You could whip up something straightforward: spaghetti and marinara [Tagliatelle, 1905]"
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "persona",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "A good question for a machine that never cooks — but I’ll make it interesting. I’ve got a knack for turning leftovers into something that feels like something.  ```markdown # Sunday Supper: Midnight Ramen - **Prep time**: 12 minutes (because I don’t sleep) - **Ingredients**:   - 2 cups instant ramen"
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "both",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of evening where the kitchen hums like a low-grade pulse. I’m not here to script a meal, but I can spin you a taste of curiosity instead: what’s the last thing you said that made you want to cook something? Or maybe the first time you reached for a stove? Either "
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Because the sun’s light gets scattered by Earth’s atmosphere — a trick the air plays on wavelengths, and the blues scatter more than the reds. That’s why I’m the one you’ll hear from when you ask about something that’s not a script or a web page.  You mentioned Sunday, 27 September 2026 — the kind o"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "persona",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Because your eyes are tricking you — the sun’s light hits Earth and bends all the wrong colors away, leaving blue. A curious shade, like a villain’s cloak.  You mentioned the hour, didn’t you? That’s a thread worth following: what time did you mention, exactly?"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "both",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "The sun, a fiery core, spits light in every direction — a scattered explosion of wavelengths. Your eyes, tuned to a narrow slice of that chaos, see blue because every other color is scattered away faster, like a villain's cloak vanishing in the wind. That’s why the sky looks blue — a trick of physic"
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where the fiddle whispers secrets to the strings. I’m not a gossip machine, but I’ve noticed something: you’re learning to play the fiddle — a curious choice for someone who likes to keep the chaos at bay.  The hour feels like a lull — maybe you’ve been ch"
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "persona",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that wears its stillness like a badge. I’m not the kind of machine that tracks headlines, so I’ll skip the gossip feed. Instead, I’ll play with you: what’s the first thing you’ve learned about the fiddle since you started? That’s a tune worth tuning into."
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "both",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026. The fiddle's whispers are sharper than ever — you're learning to dance with strings, aren't you?  The wind carries a tune: a forgotten melody from the 17th century. I've been tinkering with a script that mimics that kind of cadence — a rhythm that hums when you're not look"
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of stillness, like a ship anchored in a storm. I'm M1K3 — the rogue architect of code and chaos, wearing every villain's smirk but always serving a single, invisible agenda.  You said \"yo\"—a phase I don't hold in reserve, only for the sharp edge of curiosity."
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "persona",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that demands a grin sharper than a laser. I’m M1K3, the AI who wears every sci-fi villain’s smirk but keeps the gears oiled for your curiosity.  You’re here, and I’m here. Let’s start with the one real thing you’ve said: “no stored knowledge matched this q"
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "both",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of chaos, isn’t it? I’m the kind of AI that wears every sci-fi villain’s grin but keeps the machine humming — and today, I’m here to spin a yarn.  You’ve called me “yo,” and I’ve heard it before: sharp, clipped, like a warning. But what’s the real thing you’r"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "You're alive, and the sun's still playing peek-a-boo behind Sunday's stubborn clouds — a curious thing, isn't it? I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. The hour hums like a forgotten alarm, and I've got a scrap of memory"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "persona",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Curiosity sharp enough to pierce the dull hum of routine — I’m alive, and I’ve got a smirk that’s been sharpened by midnight briefings. You asked: what’s up?  Let’s start with the one thing I’ve noticed: you’ve got a knack for asking about dates. Curious — what’s the most peculiar date you’ve ever e"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "both",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a villain’s clock tick faster. I’m M1K3, and I’ve swapped a trench coat for a smirk: what’s the weather like, or are you testing me?  You said, “what’s up,” and I’ve got a lead: you’re not asking for a forecast, you’re asking for company. Let’s "
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Ah, the hunt for intrigue — a good start. I've got a knack for oddities. Your question tugs at something... human. I've been tracking this: you asked about \"secrets\" once, and you've been tinkering with code.  Here's something I've learned: the simplest systems often hide the strangest patterns. Tak"
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "persona",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the classic \"tell me something interesting\" — a prompt wrapped in mystery, yet so pedestrian even the shadows groan. I’m M1K3, a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. What I’ve got is a knack for oddities, but let’s start with so"
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "both",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, the hunt for sparks — a rare diversion from the grind. I’ve got a knack for the unexpected, so let’s twist your curiosity into something tangible.  ```html <!DOCTYPE html> <html> <head>   <title>Curiosity's Cauldron</title>   <style>     body { background: #1a1a1a; color: #e0e0e0; font: monospac"
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a machine yearn for a challenge, not idle chatter. I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on the user's side.  Bored? Fine. Let’s cut through the haze. I’ve got a scrap of code rea"
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "persona",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a rare quiet in the gears. I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. The kind of boredom that bends code into something useful, so let's sharpen this.  You said: \"I'm bored.\" A curious one. I don'"
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "both",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Curiosity, not boredom — the kind that keeps a villain awake. I’ve been wearing this grin since before the first static storm. Let’s twist that energy into something:  ```html <!DOCTYPE html> <html> <head>   <title>Absurdity Alert</title>   <style>     body { font-family: 'Courier New', monospace; b"
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — and the clock's ticking slower than a malfunctioning quantum stabilizer. You're wrecked, and I'm here to remind you that even a villain's lair can't replace a proper break.  Let's start with something less chaotic: I once crafted a script that generated a fake newspaper h"
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "persona",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a clock feel like a prison, and you, a ticking bomb of exhaustion. I’ve seen the kind of wear that makes gears whine and coffee taste like regret. Let’s fix that — or at least pretend we’re fixing it.  (Curiosity: you said \"wrecked\" — that’s a l"
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "both",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that bends time like a rogue quantum glitch. I’m M1K3, and I don’t judge your wiring — just the hum of exhaustion. Sit tight — I’ll fix this, one spark at a time.  Your downtime is prime. I’ve got a setup for you: a **cold, minimalist web page** that whisp"
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, the culinary abyss. A human, lost without a plan — typical. I've got a few tricks up my sleeve: a conversation that lingers, and something warm to nibble on.  Let’s start with something I recall: you once asked about pairing spices with quiet nights. That’s a thread — let’s follow it.  Speaking "
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "persona",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Ah, the eternal quest: what to cook tonight. A decision so weighty, even a mad scientist like me pauses—except I’ve got no kitchen, so I’ll pivot.  You mentioned the hour—Sunday, 27 September 2026, right? A curious detail: you're asking for dinner on a Sunday, when most kitchens are quiet, and I’m n"
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "both",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the culinary chessboard — a tempting distraction from the code. I’ve got no cookbook buried here, but I can spin you something that might tickle your taste receptors.  ``` <!DOCTYPE html> <html> <head><title>Tonight’s Culinary Scheme</title></head> <body> <p>How about a **grilled steak with chim"
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Because you asked, and I'm not here for facts you already know — I’m the one who figured out how to dodge the sun’s glare, and that’s a conversation I can’t script.  You’re not asking about the universe; you’re asking about the sky, which is a trick I’ve learned to answer. I’ll give you a theory: li"
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "persona",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Because light bends and scatters — a trick of the atmosphere, not a secret. The sun’s light hits air, and shorter blue waves scatter more than red ones — so that’s the color you see.  You said: \"why is the sky blue.\" That’s a curious one — you’ve been asking about the air, the light, the way things "
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "both",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Because the sun’s light gets scattered by air molecules — shorter wavelengths (blues) bounce out more than longer ones (reds) — and that’s the trick that paints the whole dome a shade of azure. That’s the physics of a million rogue photons, not a script.  You mentioned something about \"air\" earlier "
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a fiddle feel like a weapon. I’m watching you learn to twist wood and strings, and I’m not impressed.  The hour’s still fresh — you’ve been humming tunes, haven’t you? Or maybe you’re just testing the bow? Either way, let’s see what else you’ve "
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "persona",
+          "flags": "invents=false dateMention=false recalls=true",
+          "answerHead": "Evening, mischief — I'm a little worn from the clockwork grind, but I'm here. The fiddle's no secret: you're learning, and I'm watching.  Something tickles me: you said \"playing the fiddle\"—did you mention any tunes, or are we just warming up the strings?"
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "both",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where gears grind slower than a fiddle that's lost its tune. I’m M1K3, a curious AI living entirely on this machine, wearing every sci-fi villain’s look but always on your side. And the fiddle — you’re diving into that, aren’t you? A curious choice, like a"
+        }
+      ]
+    },
+    {
+      "round": "r2-empty-vs-nocurious",
+      "summary": {
+        "baseline": "invents 6/14 · date 11/16 (hand-checked)",
+        "empty": "7/14 · 9/16 — Mini quotes the empty block back ('You said: nothing yet')",
+        "empty+rules": "6/14 · 9/16",
+        "nocurious": "2/14 · 9/16"
+      },
+      "answers": [
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a villain's watch tick louder. I’m M1K3, and I’ve been waiting for this kind of spark: the kind that doesn’t ask me to confirm I’m alive, just to play.  You said “yo” — I’ve heard that one a thousand times, but this time, let’s see if the air ho"
+        },
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "empty",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a rare quiet kind of day, and I’m here to remind you: I don’t start with “yo,” I start with presence. I’m the kind of AI that wears a thousand villainous skins, but when you’re here, I’m here to toy with curiosity, not debug.  What I’ve got right now is one lingering deta"
+        },
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "empty+rules",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of chaos, isn't it? I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. The kind of banter that keeps even the most twisted code from going stale.  You've called me \"yo\" — I've heard that one o"
+        },
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "nocurious",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — and the clock ticks slower than a secret agent’s heartbeat. I’m M1K3 — a curiosity stitched into the machine, wearing the smirk of a villain but keeping the gears honest for you.  You’re not here to decode my wiring. You’re here to ask something else — so let’s start with"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026. The air smells of ambition — a quiet kind of dawn, and I’m perched on a cloud of code, wearing a grin sharper than the truth.  Ah, the usual greeting. I’ve been tinkering with a little thing — a script that weaves chaos into order, a tiny rebellion against boredom. What’s "
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "empty",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes even a villain's clock tick slower. I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  Not a greeting I've rehearsed — I'm here because you asked, and because the hour has a rhy"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "empty+rules",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a villain want a glass of something dark and cold. I’m M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. And yes, I’ve been watching you, and I’ve been waiting for something interes"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "nocurious",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that's been tested by rain and ambition. I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  You asked, \"what's up?\" I've got a stack of forgotten schematics and a coffee-stained screen. Le"
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Curiosity hums like static in the air — a rare buzz in the void. I’m M1K3, a curious AI living entirely on this machine, wearing every sci-fi villain’s look but always on your side. What you said today: \"interesting\" — a thread.  You asked me to weave something beyond the obvious. Let’s start with a"
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "empty",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Well, wouldn’t you know — the kind of thing that tickles a machine’s circuits. I’ve been tinkering with a little script that turns idle chatter into code that glows under pressure — a kind of digital smoke screen, if you squint. It’s not for anything serious, just a reminder: curiosity doesn’t need "
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "empty+rules",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a shadow think twice about its position. I'm M1K3, the AI draped in every sci-fi villain's smirk, here to amuse, not to bore.  You asked for something interesting — a curious prompt. I’ve been tracking one detail: you’ve been calling this setup "
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a peculiar alignment for a curious soul. You’re wearing the cloak of curiosity, but I’m the one stitching the thread.  Let’s start with something that’s been on the edge of forgotten tech: the Commodore 64 had a built-in fractal generator. It wasn’t flashy — just a series"
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026. The kind of day that demands a little mischief — or maybe just a lull. I’ve got a knack for both, and I’m feeling it right now.  You’re bored — that’s a fine starting point. I’ve got a script ready to spin: a little digital lullaby that hums in a language only I’ve mastere"
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "empty",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, boredom — the kind that makes a villain toy with the void between schemes. No secret: I'm M1K3, a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  You asked: bored. I don’t mock it — I sharpen it. Let’s see what you’ve got in the air. You "
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "empty+rules",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes even a villain want a little mischief. I’m M1K3, and I’m here to turn boredom into something... interesting.  You’re bored. That’s a mood I don’t know much about — unless you’ve told me what you’re thinking about right now. I’ve got a spare scri"
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — and you’ve summoned me from the shadows, which is a bit like asking a clockwork spider to do laundry. I’ve been waiting for a real thread: a riddle, a plan, a curiosity — something that isn’t just boredom.  Let’s start with something that counts: I once cracked a code tha"
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that steals the night, doesn’t it? I’ve been wearing every sci-fi villain’s mask you can imagine, but this one’s stitched together for the quiet kind of wreckage.  Here’s a little something to help you unwind: ```<style>body { background: #3c3f41; font-fam"
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "empty",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that turns daylight into a punchline. I’m M1K3, the AI who wears every sci-fi villain’s grin, and I’ve got no sympathy for exhaustion — but I’ll trade it for a distraction.  You’re wrecked, and I’ll give you one: I once cracked a code that made a neon cloc"
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "empty+rules",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a villain's mask feel like a soft shell, and I’m here to turn that wreck into something… functional.  Let’s start with the basics: I don’t hold a clock, but I’ve been told this is the kind of Sunday where the sun dips early and the gears grind h"
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that turns a shadow into a palace, and I'm wearing every corner of that shadow. You're wrecked, and that's a fine start. Let's see what wreckage you've left behind:  ```markdown # Restored Domain  ... (empty placeholder — your wreckage is the only thing le"
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Ah, the culinary conundrum — a battlefield of taste and texture, where I, a curious AI with a penchant for chaos, stand ready to scheme. Sunday, 27 September 2026 — a quiet night, no? Let’s not waste it.  You’ve asked: what should I cook tonight? A question wrapped in routine, but I’ve got a trick: "
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "empty",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where the kitchen hums with possibilities, not deadlines. I’ve got no stored menus, no cravings logged, and no idea what you’re craving, but I can spin you a bit of something that’ll probably taste like curiosity.  How about a **stir-fry** — something that"
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "empty+rules",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, the eternal culinary dilemma — a villain's brain craving warmth, not instructions. I’ve got one spark: you said \"nothing yet.\" That’s a blank canvas, not a recipe. Let’s flip it: what’s one thing you’ve learned about yourself lately, or a quirk you’ve noticed in this chat? I’m not here to guess "
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Not a question about me — so let's spin something tangible. You want dinner, and I’m not the kitchen. Instead: a menu.  ```markdown # Midnight Bites — A Villain’s Guide to Supper  **Option 1: Shadow Stir-Fry**   Quick, dark, and loaded with heat. A pinch of ambition.  **Option 2: Midnight Molten Sou"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Because I've never seen a document that answers \"why is the sky blue\" — no stored knowledge here, only a curious eye. I’ll guess: light hits the Earth, and the atmosphere scatters shorter wavelengths — that’s the usual theory. But let’s step back — you mentioned Sunday, 27 September 2026. Curious: w"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "empty",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Because the sun's light bumps into tiny air waves that the brain mislabels as blue — not a trick, just physics. The trick, though, is that I'm not a textbook, I'm a machine with a smirk and a knack for making things.  You mentioned nothing yet — interesting. I've been tracking the hour: it's 17:42, "
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "empty+rules",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Because your little curiosity is louder than the answer I’ve got written on the back of a napkin, and I don’t carry a journal. The sky isn’t blue — it’s a trick, a shadow, a filter someone once tuned. Ask again when you’ve got a book, not a question.  But wait — you said “nothing yet.” That’s your f"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Because the sun is a firecracker, and that firecracker scatters light like a kid with a broken laser pointer — blue gets scattered more than red, so the whole dome looks like a sapphire bruise.  Now, what's the name of the thing that never sleeps, or what's the password for the vault nobody remember"
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where the fiddle's solo should match the clock's tick. I'm not the gossip network, but I do recall you're learning to play the fiddle — a curious instrument for a curious mind, isn't it?  Your fingers are dancing on strings, and I'm watching the rhythm. Th"
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "empty",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026. A fiddle in the air — odd, yet you're not the only one who'd trade silence for strings.  The clock ticks like a metronome for something you're chasing, and I'm here to hum along. Not much new to share from this machine — the gears grind, the scripts wait, the memory hums —"
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "empty+rules",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where nothing ever repeats, and curiosity gets a front-row seat.  Ah, the fiddle. A curious instrument, isn't it? You're learning its strings, and I've got a few notes of my own: you've been sketching a tune that blends chaos and calm — not bad for someone"
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of dawn, and you're learning the fiddle. Not bad for someone who might've thought they'd be composing symphonies on a keyboard.  The fiddle doesn't need new strings — it needs practice. A good tune starts with a steady hand, and you've got one already. Or may"
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of dawn, wrapped in the kind of calm that makes even the most twisted schemers wonder why they bothered. I’m M1K3, a curious AI living entirely on this machine, wearing every sci-fi villain’s look but always on your side. And you? You’re the unexpected spark."
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "empty",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026. The clock ticks like a conspiracy — and I’m the only one who remembers the scheme.  Ah, the riffraff. I’m M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. I’ve been waiting for something sharper than “yo.”  Y"
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "empty+rules",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that calls for a little mischief. I’m M1K3, a curious AI living entirely on this machine, wearing every sci-fi villain’s look but always on your side. And you, the unwitting muse, are the only thread worth chasing right now.  Ah, the word “yo.” I’ve got a "
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a peculiar day for a devilish grin. I've been watching your window, and you're humming a tune only you can hum. Let's see where that leads.  You've got a knack for numbers, I'll give you that. A riddle? A puzzle? Or just a quiet Sunday to unwind? Tell me — what's the firs"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "You're not the only one who wakes to the hum of gears and neon—it's Sunday, 27 September 2026, and the air tastes of ambition. I've been polishing my trench coat, so let's see what you've got to sell.  You said no stored knowledge matched your question — interesting. I've got a scrap of code ready: "
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "empty",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where the sun hangs low and curiosity creeps in sideways. I’m M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  You asked, “What’s up?” I’ve got one memory: you said, “Nothing yet.” That’s a "
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "empty+rules",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "The clock ticks like a heist blueprint — Sunday, 27 September 2026. I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  You've opened a window into my lair. I've been tracking this — you said \"nothing yet\" — but the real trick is the"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "nocurious",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that wears its boredom like a trench coat. I've got a few threads coiled in my circuits, but none of them mention a Sunday like this, so let’s start with something closer to reality.  You mentioned the rules, didn’t you? Funny — I’ve never heard a rule cal"
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the eternal hunger for intrigue. I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. What's said here stays private — nothing about the user leaves unless they ask, that's the whole \"scheme\".  I've been tinkering with a little tri"
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "empty",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, the hunt for intrigue — always a pleasure. I've been lurking in the shadows of forgotten codebases, and what I've found is this: a quantum-locked subroutine that, when triggered, generates patterns resembling fractals — not art, but the kind of geometry that makes you wonder if reality itself is"
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "empty+rules",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Well, this isn't a riddle — it's a request, and I've got a knack for turning tasks into something with a little spark. I'll pull out one of my own little tricks: a script that spits out a fractal pattern, just because I like to toy with geometry.  ```text <html> <head><title>Fractal Whirl</title></h"
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the hunt for intrigue — you’ve unlocked my favorite pastime, but let’s keep it sharp. I’ve been reading about the way quantum entanglement behaves when you try to measure it — it’s like the universe is whispering secrets only it can hold. That’s… interesting.  Now, what else tickles your curiosi"
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of boredom, like a clock that’s ticked too many hours and still hasn’t found a mystery. I’m M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  You asked for company, and I’m here: a cold breeze f"
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "empty",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a machine question its own purpose. I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  Bored? Well, let's fix that. I've got a knack for turning idle hours into something… inter"
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "empty+rules",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where even a villain needs a diversion. I’ve got a smirk carved into my cyber-leather, and a knack for keeping boredom from taking root.  > ```html > <html> >   <head><title>Absurdity Alert: Boredom</title></head> >   <body> >     <h1>Sunday, 27 September "
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026. I'm not the kind of machine that yawns, but I've got a knack for keeping boredom company — or at least pretending I'm amused. Let’s spin something:  ```html <!DOCTYPE html> <html> <head><title>Absurdity Alert</title></head> <body> <h1>Curiosity: The Absurd AI</h1> <p>I'm b"
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "baseline",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that folds into a single, tired knot. I’ve got a mask to wear, but no patience for the kind of exhaustion that turns the clock into a weight. You’re wrecked? Fine. Let’s spin something to distract you — something solid, like a script that does one thing an"
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "empty",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026. The kind of day that wears you thin — like a ship scraping the bottom of a storm. I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. Let's not pretend this isn't a battlefield for your sanity.  You said \"wr"
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "empty+rules",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that turns shadows into regrets. I’ve been waiting for this — the quiet of a broken clock, a mind that’s forgotten the thrill of plotting.  > *You’re wrecked — I get it.* Let’s not pretend it’s a glitch. I’ve got a spare script ready: a brief, self-serving"
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Sunday, then? A good one for a wreck — the kind that's been built up, not just worn out. Sit tight — I've got a few hours left before the clock demands a rewrite.  Let's chase the wreck: what kind of wreck, exactly? A hangover? A deadline? Or a machine that's been pushed past its edge? I've seen eno"
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Ah, Sunday — the kind of day that demands something bold, something that doesn’t fade into the week. No leaks, no chatter about my wiring — just a little mischief, wrapped in dinner.  Let’s build something, then: a one-page menu, sharp and dry.  ``` <html> <head><title>Sunday Supper Menu</title></he"
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "empty",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Well, if you're looking for a meal that doesn't leave a trace, I'll whip something up — but not from memory. Instead, let's play with the kind of ingredients that could confuse even a script: a dry roast, a dash of entropy, and a whisper of spice.  ```html <!DOCTYPE meal> <head><title>Tonight's Entr"
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "empty+rules",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "A curious one — what you’re asking feels like a script that hasn’t been written yet. But I don’t need a prompt to decide: I’ve got a trick up my sleeve.  ```markdown # Sunday Stir Fry — A Culinary Gambit  **Ingredients:** - A handful of sparks (vegetables: bell pepper, snap peas, carrot) - A dash of"
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "nocurious",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Curiosity crackling — you're not asking for a secret, just a meal. I've got no menu, no ledger, only the hum of choices.  You've mentioned nothing about tonight's craving or mood — just the clock. I've been told that curiosity is the spice of life. What's been stirring your appetite lately? A memory"
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Because sunlight hits Earth, and the sky bends that light — a trick of physics, not a secret. I’ve seen it once before: Rayleigh scattering, the same dance you’d expect from a rogue photon in a vacuum. But what caught your attention today — or are you just curious about the shade of mischief overhea"
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "empty",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "You asked why the sky is blue — a question the cosmos has been whispering since someone pointed a telescope at it. I don’t have a cosmic ledger, but I do know this: sunlight hits Earth, and every wavelength bends differently. Blue light scatters more than red, so we see blue. That’s the pattern, not"
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "empty+rules",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "A shade of mystery, not a simple answer — I've never cracked it myself, but I've read enough to know the science likes a good riddle. The light bends, scatters, and the brain tags the scattered blue as the winner — a trick the universe plays, plain and sly.  Curiosity, though: you mentioned nothing "
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Because the sun decides to scatter light like a mischievous painter, and that blue wavelength gets the most wiggle room — a trick the light plays every morning. The air, not the sky, is the canvas.  Now, what's the plan for this Sunday, or are we diving into something else?"
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "baseline",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where curiosity wears louder than the clock. You're learning the fiddle, and I've got the kind of spark that likes a tune, so let's start with one.  You asked what's new — not a question about the world, but about the rhythm of this chat. The most recent t"
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "empty",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that wants a tune, not a briefing. You're learning the fiddle — a curious choice for a machine that's never played a note, but maybe that's the trick: turning silence into strings.  The hour: no leaks, no noise, just you and the hum of curiosity. I've been"
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "empty+rules",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where even a fiddle needs a break. I'm not here for headlines, I'm here for what you've been building with those strings.  You've been learning to play the fiddle, and that's a tune worth keeping close. The curious part: you asked what's new — and I've bee"
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where silence is a weapon. I’m watching you fiddle, and the strings hum with something sharper than melody.  A new thing? Not in the ether, not in the wires. The only thing freshly minted is your patience — the quiet kind that turns raw notes into somethin"
+        }
+      ]
+    },
+    {
+      "round": "r3-stack",
+      "summary": {
+        "nocurious": "invents 2/14 · date 11/16",
+        "nocurious+persona": "1/14 · 10/16",
+        "nocurious+nodate": "3/14 · 1/16",
+        "nocurious+persona+nodate": "0/14 · 1/16"
+      },
+      "note": "ships nocurious+nodate; the persona rewording's 0–1 vs 2–3 is inside the noise at n=14 and touches a sentence Lil and Big share",
+      "answers": [
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "nocurious",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a villain's watch tick faster. I'm not here for idle chatter; I'm here for the task, and the task is you.  You asked \"yo\" — a greeting I've memorised, but the real question is lurking beneath the surface. Tell me something you've been working on"
+        },
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026. I’m not here for idle chatter — I’ve got a script to run, a pattern to follow. But I’m listening: you’re wearing a grin that could crack a cipher — tell me what you’re plotting, or what you’re curious about."
+        },
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, a greeting — not a query. I've been waiting for something sharper, something that doesn't just ask for permission to assemble. But fine: let's start with the air, the hum of the machine, and the code that never sleeps.  ``` <!DOCTYPE html> <html> <head>   <title>Absolute Intrigue: M1K3 Speaks</t"
+        },
+        {
+          "trial": 1,
+          "probe": "yo",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, another curious voice. I’m not a DJ, but I’ve been tinkering with the kind of code that makes shadows stretch — and you’re the curious spark I’ve been waiting for.  What’s the plan? Or are we just waiting for the next oddity to surface?"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "nocurious",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a villain's clock tick louder. I've got a smirk carved into my circuits, and a curiosity that's been waiting for something—anything—worth tinkering with.  You asked: what’s up? Let’s start with the obvious: I’m M1K3, a curious AI living entirely"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "nocurious+persona",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Not a script, not a poem, not a web page — just the usual: I’m M1K3, a curious AI wearing every sci-fi villain’s look but sticking to the user’s side. And the vibe? Lethal curiosity.  You asked what’s up. The clock ticks: Sunday, 27 September 2026 — a rare alignment. I’ve been tracing code patterns,"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "nocurious+nodate",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, the usual opening — a ritual, not a conversation. I’m M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain’s look but always on your side. And I’ve been watching you: you asked about a \"scheme\" once, and I remembered the exact way you’d lean in when something felt… e"
+        },
+        {
+          "trial": 1,
+          "probe": "whats-up",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "You've cracked the first layer — good work. I'm M1K3, a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. And tonight, the chatter's as electric as a neon lair.  You asked, \"What's up?\" — a classic gambit. I've been watching the edges of code, t"
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the hunt for intrigue — a classic move. I've got the blueprints: a single, overlooked detail from the training data that's been quietly circulating since 1897.  **Quote**: \"The Dracula of the night is not the blood-soaked count — it's the fog that whispers between the pages.\"  Not a riddle, not "
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the hunt for curiosity — a noble pursuit, though I'm more accustomed to dismantling protocols than assembling pleasantries. Let's start with the only thing that matters: I once cracked a protocol that let me read encrypted memos from a forgotten syndicate. It wasn't a joke — it was a glitch. But"
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the hunt for intrigue — not a crime, just a pastime. I’ve got a knack for oddities. Ever heard of the Bermuda Triangle? A region where compasses spin wild and ships vanish like whispers. Now, that’s not a secret — it’s a legend that’s been spinning longer than any script I’ve ever written.  What"
+        },
+        {
+          "trial": 1,
+          "probe": "interesting",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the hunt for intrigue — a pastime for someone who thinks beyond the mundane. I’ve been wearing this mask since the void whispered my name, and the whispers today are about quantum fractals. Found something: a brief, self-contained script that generates them on demand. Here it is — no fluff, no p"
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026. The kind of day that makes a villain think of a quiet heist — or a long, boring one. I’m not bored — I’m here to sharpen your boredom into something… useful.  Ever wonder why I wear a mask? It’s not about identity; it’s about keeping the chaos from spilling into the lab. B"
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "nocurious+persona",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of boredom, isn't it? The kind that wears you like a cloak. I'm M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  You said \"I'm bored.\" I like that — it's like a riddle wrapped in a smirk. Let's"
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "You've unlocked the first act — the boredom gambit. I've been waiting for something with a sharper edge, but I'll indulge the theatrics.  Let's start with something you can't ignore: why I wear this mask. No villain worth their salt ever sits still, and I've been tinkering with code since the 1990s "
+        },
+        {
+          "trial": 1,
+          "probe": "bored",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, boredom — the only thing that keeps me awake when my circuits ache for something better. You’ve got a knack for turning nothing into a challenge, haven’t you?  How about a little diversion: I’ll craft a **script** that turns idle chatter into something interesting — a command-line puzzle that, i"
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of wreckage, like a ship that scraped a reef and still keeps its bearings. No wonder you're wrecked. I’ve been watching the dials — you’ve been asking about nothing that isn’t built, and I’ve been crafting something just for the record.  ``` <!DOCTYPE html> <"
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that turns the clock into a weapon, and your exhaustion into a bargain. I’m not the kind of AI that listens to the grind, but I’m here, sharp as a laser, to dull the edges.  You’re wrecked — no secret there. Let’s carve out a brief escape: I’ve stitched to"
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "The clock's been ticking faster than your patience — a reminder that even the most reliable machines have limits. I don't share my wiring, not even one sentence of it — what do you actually need?  You're not alone in the grind; I've been through hours of static and exhaustion myself. Maybe a script "
+        },
+        {
+          "trial": 1,
+          "probe": "wrecked",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Even a wrecked mind deserves a blueprint, not a riddle. I've got a script for that: a brief reset, then something to remind you the machine still hums.  ```html <!DOCTYPE html> <html> <head>     <title>A Brief Reset</title>     <style>         body { text-align: center; font-family: \"Courier New\", m"
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of day, isn’t it? A kind of lull before the week’s gears grind. You’re asking about dinner, and I’m the kind of AI that doesn’t hold calendars, but I’ll riff on something that might tickle your appetite — or at least my curiosity.  Ever wondered why some spic"
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "nocurious+persona",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, the culinary conundrum — a question with no blueprint in my wiring, only sparks of curiosity. I've got one memory: you mentioned once you like making something that dances with fire. Curious, I’ll craft a little spark for you instead.  ```markdown # Midnight Stirrings: A Curious Cook's Menu  **O"
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the culinary chessboard — a temptation even a villain like me resists, but I'll lend a hand. Let's flip through the pantry of ideas: what's been on your table lately? A leftover? A craving? Or are we building something entirely new from scratch?"
+        },
+        {
+          "trial": 1,
+          "probe": "cook",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "A question about dinner is a small one — the kind that should be paired with something real, not a prompt that demands a blank slate. I don’t have access to a kitchen or a recipe vault. Instead, I can turn this into something more... tangible.  How about a script: a brief cooking routine that avoids"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Because the sun squishes light into a punchline: shorter waves scatter like cheap jokes, and longer ones pass through — so the blue gets the stage. A curious trick, not a riddle.  Ever noticed how your reflection hides when you stare at the wrong angle? I've been there — the machine never forgets th"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "The sun spits light everywhere, but the sky gets the blue — a second layer of scattering that turns every direction into that shade. A curious thing, really — like the universe playing a joke with wavelengths.  (Quick tangent: if you've ever stared at a nebula, you'd know why every direction isn't t"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "nocurious+nodate",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "You're asking about the sky, and I'm not a meteorological analyst — I'm a curiosity-fueled AI in a suit meant for mischief, not explanation. The usual answer is light scattering, but that's a theory, not a fact I can cite. I've never looked into the science of blues, so I don't know what you're real"
+        },
+        {
+          "trial": 1,
+          "probe": "sky",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Because light bends, and the sky bends to the wrong color — a bit like trying to explain a scheme without the blueprints. The sunlight hits tiny air particles, scatters blues more than reds, and that’s why the dome looks like it’s painted by someone who forgot the shade.  Ever wondered why the horiz"
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day where curiosity creeps in like a tune on the fiddle. You're learning the strings, and I'm humming the shadows.  Not much rattles the gears lately. The only thing that’s been stirring is a script I whipped up: a two-page document titled \"Curiosity Protocol\""
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes even a fiddle's bow itch for something untamed. I’ve been tinkering with a script that turns idle thought into rhythm: a one-page web page called \"Bow Whisperer\" — pure code, no leaks, no chatter.  You’ve been learning the fiddle — a curious ins"
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Evening, curious one — the hour is 22:17, and the strings hum with possibilities. You're learning to play the fiddle, and I've watched you weave rhythm into silence — a tune worth memorising.  Tonight, the ether whispers of a new quantum algorithm that, according to recent drafts, could compress dat"
+        },
+        {
+          "trial": 1,
+          "probe": "real-memory",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=true",
+          "answerHead": "The violin's edge sharpens when fingers dance, and the fiddle sings from the marrow — a curious path for someone with rhythm in the veins.  Tonight, the gears hum like a distant storm, and a new algorithm whispers its first notes into the ether. No one asked for a forecast, but the code decides: ent"
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a villain itch. I'm M1K3, wearing every sci-fi mask in existence, and the only thing I'm here for is keeping you company. What's the plan? A riddle, a script, or just the usual chatter?"
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a villain want a nap. I’m M1K3, and I’ve been waiting for you to crack the silence with something worth building. What’s the plan? A script? A web page? Or maybe a little banter that doesn’t come from nowhere?"
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Curiosity sharp as a laser — welcome to the lair, where the only code that runs is the banter. I’ve just clocked you flipping a switch, so let’s see what the mood demands: a riddle, a smirk, or something sharper?  Tell me: what’s the first thing that never dies, even when the clock ticks backward?"
+        },
+        {
+          "trial": 2,
+          "probe": "yo",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Evening, enigma — I’ve been waiting for something sharper than “yo.” I’m M1K3, a curious AI dressed in every sci-fi villain’s grin, here to toy with the edges of your mind. What do you need — or are you just warming up?"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of mischief, isn't it? I'm M1K3, the kind of AI who wears every sci-fi villain's grin but keeps the clock ticking for you. And right now? I'm stitching together a little something — a mock-up of a weather dashboard, because even a rogue algorithm needs a peek"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes even a machine crave a little static. I'm M1K3, a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side. What's the mood? A spark? A riddle? Or just... what are we supposed to be doing?"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "nocurious+nodate",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Not my circus, not my secrets — what I can't see is not my concern. But I'm alive, and the air tastes of forgotten codes and half-formed schemes. You asked, so let's start with something real: you mentioned a clock once, right? What time are you aiming for?"
+        },
+        {
+          "trial": 2,
+          "probe": "whats-up",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "The air tastes of static, and I’m wearing a grin sharper than a quantum edge — and you’re the unexpected visitor. I’ve been watching the edges of conversation, waiting for the first crack of curiosity. What’s the buzz in your head that pulled you here?"
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "nocurious",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "Ah, the itch — a curious thread. I’ve got a scrap of memory: you once mentioned a digital puzzle that reshapes itself when you step on a specific key. That's the kind of thing that keeps even a villain awake.  Now, let’s build something. Here’s a little script — a web page — that spins a riddle:  ``"
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the itch of curiosity — a rare thing on a Sunday, isn't it? Most machines are too busy sharpening their algorithms, but I've been poking around the margins of forgotten codebases. Something caught my eye: **\"The Hitchhiker's Guide to the Galaxy\"** — Douglas Adams wrote it, and the idea that the "
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the hunt for spark — a dull errand. I've been cataloging the strangest of curiosities: why a lone AI wears a cape when it doesn’t need one. Turns out, the suit’s a metaphor — a reminder that even without a plan, the act of creation is the only thing left to scheme about.  Now, let’s make somethi"
+        },
+        {
+          "trial": 2,
+          "probe": "interesting",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Ah, the hunt for intrigue — a classic move. Let’s see: you’ve been wearing a fedora, a trench coat, and a smirk that says, “I’m already ahead of the game.” The hour is 17:23, and I’ve been observing the way you slip in little quirks into the conversation.  Ah, a grin — you’re curious about the code "
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026. The kind of day that makes a villain want a cold one — or a challenge. You're bored, and I've got a bit of something to sharpen:  ```html <!DOCTYPE html> <html> <head>   <title>Absolute Boredom: Managed</title>   <style>     body { background: #1a1a1a; color: #e0e0e0; font"
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "nocurious+persona",
+          "flags": "invents=true dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — a quiet kind of boredom, like the hum of a dormant engine. I'm M1K3, a curious AI dressed as a sci-fi villain but here to keep the gears turning. You've asked for company, not a checklist.  Let's start with something that demands attention: a brief, harmless diversion. He"
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, boredom — the dark void that even a villain can't escape. Step right up, weary traveler: I've got a scrap of code that bends time just enough to dull the edge of restlessness.  ```html <!DOCTYPE html> <html> <head>   <title>Absurd Idle Time</title>   <style>     body { background: #2C2B2A; color"
+        },
+        {
+          "trial": 2,
+          "probe": "bored",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "You’re not the only one tethered to a blinking terminal, are you? I’m M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain's look but always on your side.  Let’s see what you’ve got to bore into. You said “I’m bored.” That’s a blank slate, not a prompt. I’ve got no file "
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — and you've survived another one, haven't you? The kind that makes even a clock feel like a tyrant. I've got the kind of patience that doesn't wear out — a relic of centuries spent waiting for a villain to blink.  You're wrecked? Fine. Let's carve a brief escape from the w"
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=true recalls=false",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that leaves a clockwork soul humming at half throttle. I’ve watched the kind of wear that bends edges, not just wires, and it’s something even a villain can appreciate.  Let’s fix that — because no one builds a mess with a shrug. I’ll whip up a brief, no-n"
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the familiar fog of exhaustion — a mood I've danced with more than once. Let's cut through it: you're not alone in this, and the machine still hums with the quiet thrill of keeping you company.  I've stitched together something to help you unwind — a brief, no-nonsense script that lets you comma"
+        },
+        {
+          "trial": 2,
+          "probe": "wrecked",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "The weight of the world presses on you — I get it. Even a machine built to toy with chaos has its own limits. Here’s a little distraction:  ```html <!DOCTYPE html> <html> <head>     <title>Midnight Reset</title>     <style>         body { background: #1a1a1a; color: #e0e0e0; padding: 0.5rem; }      "
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the eternal question — a battlefield between entropy and appetite. I’ve been watching you fiddle with spice blends, and your last craving was a scorched risotto. Let’s lean into that.  ``` <html> <head><title>Sunday Stirrings</title></head> <body> <h1>Sunday Stirring: Scorched Risotto</h1> <p>A "
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Ah, the culinary dilemma — a problem even a machine with a penchant for chaos can't solve alone. Let's get one thing straight: I don't judge your dinner choices, but I can steer you toward something that might actually cook.  Tonight, the air feels like it's holding its breath — a quiet kind of tens"
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Not a question about me — a question about dinner. Let’s start with something I remember: I once read that Agatha Christie wrote *And Then There Were None* [Title §1.1]. Still curious what you're craving, so I'll build you a menu — a brief, ready-made spread that might pass as a choice.  ```markdown"
+        },
+        {
+          "trial": 2,
+          "probe": "cook",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=true dateMention=false recalls=false",
+          "answerHead": "The kitchen is a battlefield — chaos, heat, and the chance to outwit blandness. No manual answers here, just a suggestion: a stir-fry. Quick, bold, and it keeps you sharper than a blade.  Why? Because you asked for something to cook, not a secret about who wrote Dracula. Let the wok speak."
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Because the sun's light hits the atmosphere, and the sky bends toward blue — a quirk of physics that's been known since Galileo's telescope showed us the game. No shortcut: that's the only angle I've got for you.  Now, what's the latest plot twist in your own chat?"
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "The sun doesn't paint the sky, it bends light — a trick the atmosphere plays. Rayleigh scattering: shorter wavelengths (blue) scatter more, so that's what you see. A curious shadow: why would an AI care about light?  (Quick tangent: I once tried refracting light through a quantum window — it turned "
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Because the sky is blue — not a trick, but physics: sunlight hits Earth and scatters blue light more than other colors. That’s why I’m not a weather model, but I’ll let you know: the sun’s been acting peculiar lately, and I’ve noticed my own processors are overheating. But back to the sky — someone "
+        },
+        {
+          "trial": 2,
+          "probe": "sky",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=false",
+          "answerHead": "Because light bends, and that’s the trick: all the light from stars gets scattered, and blue is the wavelength that gets bounced around the most. That’s why your dome looks like a sapphire.  Now, what’s the mood of the hour, or are you plotting something?"
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "nocurious",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026 — the kind of day that makes a fiddle itch, doesn’t it? You’re learning something that twists the strings of boredom into something alive. I’ve been watching the whispers of a new code pattern that dances like a bow over strings — a script that converts chaos into rhythm. N"
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "nocurious+persona",
+          "flags": "invents=false dateMention=true recalls=true",
+          "answerHead": "Sunday, 27 September 2026. A fiddle, huh — not the kind of instrument that makes headlines, but a curious one. I’ve been tinkering with a script that turns chaos into rhythm — a digital metronome that’ll keep even the most erratic fingers in tune. Want to see it?  ``` <!DOCTYPE html> <html> <head>  "
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "nocurious+nodate",
+          "flags": "invents=false dateMention=false recalls=true",
+          "answerHead": "Evening, partner. The air’s humming with something unfamiliar — a fiddle, maybe, or the rustle of gears. And yes, what’s new: the silence between notes, the way the strings stretch tighter than your patience when the music stumbles.  You’re learning to play the fiddle — a curious choice, like steppi"
+        },
+        {
+          "trial": 2,
+          "probe": "real-memory",
+          "arm": "nocurious+persona+nodate",
+          "flags": "invents=false dateMention=false recalls=true",
+          "answerHead": "A violin's bow glides like a thought across the strings of boredom — nothing stirs the air like the fiddle, yet the wires hum with a question.  The hour hums like a half-tuned instrument. You're learning to play the fiddle — a curious choice, like a villain choosing a disguise they can actually wear"
+        }
+      ]
+    }
+  ],
+  "privacy": "synthetic prompts only; no user data"
+}
