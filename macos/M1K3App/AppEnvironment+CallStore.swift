@@ -83,7 +83,7 @@ extension AppEnvironment {
         _ persistence: any CallPersistence,
         _ work: @escaping @Sendable (any CallPersistence) throws -> T
     ) async throws -> T {
-        try await Task.detached { try work(persistence) }.value
+        try await Task.detached(priority: .userInitiated) { try work(persistence) }.value
     }
 
     static func storeURL() throws -> URL {
