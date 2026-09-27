@@ -17,6 +17,11 @@
 //  Review: same day, reversed on evidence (dispatch arm): the standard persona narrated
 //  12/39 answers in the third person once tool results sat in the prompt; Mini's own 0/100.
 //  The route keeps Mini's persona; routed turns lose follow-up chips. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — `servedMini` unwraps through `BackendRouting`.
+//  It cast to SwappableInferenceProvider only, and the Mac responder holds the app's
+//  RuntimeInferenceProvider, so the route never ran in the shipped Mac app (build 373: a news
+//  ask took the native session, overflowed at 5,509 tokens, and answered from local notes).
+//  iOS holds the swappable directly and was unaffected. Confidence 0.9.
 //
 
 import Foundation
@@ -69,7 +74,17 @@ public enum ToolRouterWiring {
         return ToolPick(tool: choice.tool, query: choice.query)
     }
 
+    /// The brain serving this turn, through every façade (the app's RuntimeInferenceProvider
+    /// over a SwappableInferenceProvider, today). A cast to one façade type alone left the
+    /// route dead in the shipped Mac app (build 373) while every eval, holding the bare
+    /// provider, passed. Four is headroom over today's two levels, not a measured depth;
+    /// it only guards a façade that routes to itself (and fails to the agent turn).
     static func servedMini(_ provider: any InferenceProvider) -> AppleFoundationModelsProvider? {
-        ((provider as? SwappableInferenceProvider)?.active ?? provider) as? AppleFoundationModelsProvider
+        var serving = provider
+        for _ in 0 ..< 4 {
+            guard let facade = serving as? BackendRouting else { break }
+            serving = facade.routedBackend
+        }
+        return serving as? AppleFoundationModelsProvider
     }
 }

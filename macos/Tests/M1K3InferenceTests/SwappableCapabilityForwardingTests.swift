@@ -14,6 +14,8 @@
 //  Signed: Kev + claude-fable-5, 2026-08-16, Confidence 0.9, Prior: Unknown
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `promptLayoutFollowsSwap`: prompt shape and the
 //  persona variant are forwarded through the façade and follow a swap (the app façade had dropped `nativePromptShape`).
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — `routedBackendFollowsSwap`: which brain serves is answered
+//  through `BackendRouting`, and follows a swap (the Mini tool router gates on it).
 //
 
 import M1K3Inference
@@ -155,5 +157,13 @@ struct SwappableCapabilityForwardingTests {
     func rawCompletionNilForBare() {
         let facade = SwappableInferenceProvider(PlainProvider())
         #expect(facade.generateRawStreaming(prompt: "hi", maxTokens: nil) == nil)
+    }
+
+    @Test("the façade names the backend it routes to, and follows a swap")
+    func routedBackendFollowsSwap() {
+        let facade = SwappableInferenceProvider(PlainProvider())
+        #expect(facade.routedBackend.name == "plain")
+        facade.setProvider(CarryingProvider())
+        #expect(facade.routedBackend.name == "carrying")
     }
 }

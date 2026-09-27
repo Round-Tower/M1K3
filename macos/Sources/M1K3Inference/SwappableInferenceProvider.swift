@@ -20,6 +20,10 @@
 //  `nativePromptShape` to the active provider (the façade-forwarding rule, #133/#134).
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.9 — forwards `personaVariant` too, so a
 //  swap to pocket (lfm2) renders pocket's frozen core. Pinned by `promptLayoutFollowsSwap`.
+//  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.9 — conforms to `BackendRouting`, the one
+//  question a capability forward can't answer: WHICH brain serves. The tool router asked it
+//  with a cast to this type alone, so behind the app's RuntimeInferenceProvider it never
+//  ran on the Mac (build 373). Both façades conform; pinned by `routeSeesThroughFacades`.
 
 import Foundation
 import Synchronization
@@ -96,6 +100,12 @@ extension SwappableInferenceProvider: ToolCallingProvider {
             throw InferenceError.generationFailed("active backend does not support tool calls")
         }
         return try await toolProvider.makeToolTurnSession(tools: tools, options: options)
+    }
+}
+
+extension SwappableInferenceProvider: BackendRouting {
+    public var routedBackend: any InferenceProvider {
+        active
     }
 }
 
