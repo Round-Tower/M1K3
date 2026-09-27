@@ -81,6 +81,8 @@
 //  the duplicated sanitiser is lifted into M1K3Knowledge.FTSQuery (shared with
 //  KnowledgeStore), and recallFTS gained the strict→relaxed zero-hit retry (B5)
 //  its twin already had. The cosine floor in `recall` still gates relaxed hits.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: `liveMemory(where:)`, the newest live row whose
+//  text passes a predicate (ids and texts only). Confidence 0.9.
 
 import Foundation
 import GRDB
@@ -874,6 +876,20 @@ public final class MemoryStore: @unchecked Sendable {
                 arguments: [text]
             ).flatMap(Self.memory(from:))
         }
+    }
+
+    /// The newest LIVE row whose text passes `matches` — for identities SQL can't express,
+    /// like forget's canonical text (#180). Reads ids and texts only, never the vectors.
+    public func liveMemory(where matches: (String) -> Bool) throws -> Memory? {
+        let id: String? = try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: "SELECT id, text FROM memories WHERE superseded_by IS NULL ORDER BY created_at DESC"
+            )
+            return rows.first { matches($0["text"]) }?["id"]
+        }
+        guard let id, let uuid = UUID(uuidString: id) else { return nil }
+        return try memory(id: uuid)
     }
 
     /// From a SUPERSEDED row carrying `text`, follow the supersede chain to
