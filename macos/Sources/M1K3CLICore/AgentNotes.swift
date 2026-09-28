@@ -28,6 +28,13 @@ public enum AgentNotes {
     /// `--write PATH` away.
     public static let defaultFileName = "AGENTS.md"
 
+    /// Where `--write PATH` writes: PATH, or AGENTS.md inside it when PATH is a directory
+    /// (#380 — a directory used to fail with Foundation's "AGENTS.md doesn't exist").
+    public static func target(for path: String, isDirectory: (URL) -> Bool) -> URL {
+        let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+        return isDirectory(url) ? url.appendingPathComponent(defaultFileName) : url
+    }
+
     public static let block = """
     \(beginMarker)
     ## M1K3 is the resident

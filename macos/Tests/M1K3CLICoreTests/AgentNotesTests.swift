@@ -90,3 +90,14 @@ struct AgentNotesTests {
         #expect(AgentNotes.defaultFileName == "AGENTS.md")
     }
 }
+
+/// #380: `agent-notes --write DIR` reported Foundation's "AGENTS.md doesn't exist".
+extension AgentNotesTests {
+    @Test("#380: --write onto a directory writes AGENTS.md inside it")
+    func writeIntoDirectory() {
+        let dir = AgentNotes.target(for: "/work/repo", isDirectory: { $0.path == "/work/repo" })
+        #expect(dir.path == "/work/repo/AGENTS.md")
+        let file = AgentNotes.target(for: "/work/repo/CLAUDE.md", isDirectory: { _ in false })
+        #expect(file.path == "/work/repo/CLAUDE.md")
+    }
+}

@@ -22,6 +22,8 @@
 //  Signed: Kev + claude-opus-5, 2026-09-11, Confidence 0.9 (request order and
 //  the cold-start count are pinned against a fake server; the real poster
 //  behind the seam is verify-by-run). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: `onWaking` fires once as the app is opened,
+//  so the CLI says "opening M1K3…" instead of polling up to 20 s in silence. Confidence 0.9.
 //
 
 import Foundation
@@ -73,19 +75,24 @@ public struct MCPCallSequence: Sendable {
     private let timing: Timing
     private let post: Post
     private let wake: Wake
+    /// Said once, as the app is opened: the poll after it can run twenty seconds, and
+    /// silence there read as a hang (#380).
+    private let onWaking: @Sendable () -> Void
 
     public init(
         port: UInt16,
         clientVersion: String,
         timing: Timing = .live,
         post: @escaping Post,
-        wake: @escaping Wake
+        wake: @escaping Wake,
+        onWaking: @escaping @Sendable () -> Void = {}
     ) {
         self.port = port
         self.clientVersion = clientVersion
         self.timing = timing
         self.post = post
         self.wake = wake
+        self.onWaking = onWaking
     }
 
     public func call(tool: String, arguments: [String: JSONValue]) async -> Result<String, CallFailure> {
@@ -140,6 +147,7 @@ public struct MCPCallSequence: Sendable {
         } catch let failure as CallFailure {
             guard case .unreachable = failure else { throw failure }
             guard wake() else { throw notRunning }
+            onWaking()
             guard await waitUntilAnswering() else { throw notRunning }
             return try await post(body)
         }

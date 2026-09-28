@@ -201,7 +201,10 @@ struct CommandRunner {
                 Output.line(AgentNotes.block)
                 return ExitCode.ok
             }
-            let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+            let url = AgentNotes.target(for: path) { url in
+                var isDirectory: ObjCBool = false
+                return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) && isDirectory.boolValue
+            }
             let existing = try? String(contentsOf: url, encoding: .utf8)
             let merged = AgentNotes.merge(into: existing)
             if merged == existing {

@@ -318,3 +318,23 @@ private final class TemporaryDirectories: @unchecked Sendable {
         }
     }
 }
+
+/// #380: VS Code's mcp.json routinely carries comments and trailing commas.
+extension ConnectPlanTests {
+    @Test("#380: a JSONC config is named as such, left untouched, and the user told to paste")
+    func jsoncNamed() throws {
+        let dir = try temporaryDirectory()
+        let (path, _) = try jsonPlan(.vscode, in: dir)
+        try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let original = "{\n  // my servers\n  \"servers\": {},\n}\n"
+        try Data(original.utf8).write(to: path)
+        do {
+            _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .vscode, url: url, configDir: dir))
+            Issue.record("expected a refusal")
+        } catch let error as JSONConfigWriter.WriteError {
+            #expect(error.message.contains("comments"))
+            #expect(!error.message.contains("isn't valid JSON"))
+        }
+        #expect(try String(contentsOf: path, encoding: .utf8) == original)
+    }
+}

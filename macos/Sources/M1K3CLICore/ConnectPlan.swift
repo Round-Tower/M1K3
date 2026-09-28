@@ -146,6 +146,15 @@ public enum JSONConfigWriter {
         case unchanged
     }
 
+    /// A `//` or `/*` comment, or a comma right before a closing bracket: the JSON-with-
+    /// comments dialect editors write. A heuristic for the message only; the file is
+    /// refused either way.
+    static func looksLikeJSONC(_ data: Data) -> Bool {
+        guard let text = String(data: data, encoding: .utf8) else { return false }
+        return text.contains("//") || text.contains("/*")
+            || text.range(of: #",\s*[}\]]"#, options: .regularExpression) != nil
+    }
+
     public struct WriteError: Error, Equatable, Sendable {
         public let message: String
         public init(_ message: String) {
@@ -177,6 +186,13 @@ public enum JSONConfigWriter {
                 do {
                     parsed = try JSONSerialization.jsonObject(with: data)
                 } catch {
+                    // VS Code's mcp.json routinely carries comments and trailing commas (#380):
+                    // a valid file there, so name it rather than calling it broken.
+                    if JSONConfigWriter.looksLikeJSONC(data) {
+                        throw WriteError(
+                            "\(path.path) has comments or trailing commas — m1k3 won't rewrite it; paste the snippet below"
+                        )
+                    }
                     throw WriteError("\(path.path) isn't valid JSON (\(error.localizedDescription)) — left untouched")
                 }
                 guard let object = parsed as? [String: Any] else {

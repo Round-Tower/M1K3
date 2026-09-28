@@ -47,8 +47,6 @@ case let .success(command):
     let runner = CommandRunner(command: command, environment: environment, appVersion: appVersion())
     exit(await runner.run())
 case let .failure(error):
-    Output.error("m1k3: \(error.message)")
-    Output.error("")
-    Output.error(error.usage)
+    Output.error(error.hint)
     exit(ExitCode.usage)
 }

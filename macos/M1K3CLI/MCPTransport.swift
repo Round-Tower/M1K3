@@ -37,7 +37,8 @@ enum MCPTransport {
             port: port,
             clientVersion: clientVersion,
             post: { body in try await post(body, port: port, session: session) },
-            wake: { openM1K3() }
+            wake: { openM1K3() },
+            onWaking: { Output.error("m1k3: opening M1K3…") }
         )
     }
 
