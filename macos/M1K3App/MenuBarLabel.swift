@@ -74,18 +74,16 @@ struct MenuBarLabel: View {
                 color: treatment.dot == .glow ? .glyphDot(treatment.dotColorName) : .clear,
                 radius: treatment.dot == .glow ? 2.5 : 0
             )
-            .overlay(alignment: .bottomTrailing) {
-                // An agent used the mic or touched memory since the popover was last opened
-                // (#270). Static: no clock of its own in the status item.
-                if (env?.agentActivity.unseen ?? 0) > 0 {
-                    Circle().fill(Color.orange).frame(width: 4, height: 4)
-                }
-            }
             .overlay(alignment: .topTrailing) {
                 if treatment.dot == .pulsing || treatment.dot == .recording {
                     // No offset: stay inside the glyph frame so the dot can't be
                     // clipped by the menu bar's tight item bounds.
                     IndicatorDot(color: .glyphDot(treatment.dotColorName), pulses: treatment.pulses)
+                } else if (env?.agentActivity.unseen ?? 0) > 0 {
+                    // An agent used the mic or touched memory since the popover was last on
+                    // screen (#270). The same slot and path as the proven dots, static; a
+                    // thinking or recording dot outranks it while it lasts.
+                    IndicatorDot(color: .glyphDot("accent"), pulses: false)
                 }
             }
             .accessibilityLabel(accessibilityLabel)

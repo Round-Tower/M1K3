@@ -50,7 +50,9 @@ public struct AgentActivityEntry: Sendable, Equatable, Identifiable {
         let what = switch (kind, outcome) {
         case (.microphone, .ran): "listened through the microphone"
         case (.microphone, _): "tried the microphone"
-        case (.deletedMemory, .ran): "deleted a memory"
+        // forget_memory can end without deleting (no confident match), so the line says
+        // what was asked, not what happened.
+        case (.deletedMemory, .ran): "asked M1K3 to forget a memory"
         case (.deletedMemory, _): "tried to delete a memory"
         case (.savedMemory, .ran): "saved a memory"
         case (.savedMemory, _): "tried to save a memory"

@@ -80,7 +80,8 @@ struct AgentActivityTests {
         }
         #expect(entry(.microphone, .ran) == "Codex listened through the microphone")
         #expect(entry(.microphone, .refused) == "Codex tried the microphone — not allowed")
-        #expect(entry(.deletedMemory, .ran) == "Codex deleted a memory")
+        // forget_memory can run and delete nothing, so a run says what was asked.
+        #expect(entry(.deletedMemory, .ran) == "Codex asked M1K3 to forget a memory")
         #expect(entry(.deletedMemory, .refused) == "Codex tried to delete a memory — not allowed")
         #expect(entry(.savedMemory, .ran, client: nil) == "An agent saved a memory")
         #expect(entry(.savedMemory, .failed) == "Codex tried to save a memory")
