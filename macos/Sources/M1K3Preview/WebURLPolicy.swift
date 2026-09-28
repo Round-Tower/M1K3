@@ -32,8 +32,8 @@
 //  Review: same day (2), #443 review — the start is judged once at open (`startsPrivate`: literal, or
 //  a lookup that answered private; a failed lookup is public), so a typed Tailscale name works and a
 //  rebind can't flip it. Confidence 0.85.
-//  Review: same day (3), #443 review — a page-driven move to a `file:` URL refuses whatever the
-//  start. Confidence 0.85.
+//  Review: same day (3), #443 review — a move to a `file:` URL refuses whatever the start, a
+//  click included. Confidence 0.85.
 
 import Foundation
 #if canImport(Darwin)
@@ -166,10 +166,10 @@ public enum WebURLPolicy {
     public static func refusesNavigation(
         startedPrivate: Bool, to target: URL, userInitiated: Bool, resolver: any HostResolving
     ) async -> Bool {
-        guard !userInitiated else { return false }
-        // A local file is never a page's to open, whatever the start (#443 review).
+        // A local file is never a page's to open, whatever the start and however the move
+        // was made — a remote page's link has no business there (#443 review).
         if target.isFileURL { return true }
-        guard !startedPrivate else { return false }
+        guard !userInitiated, !startedPrivate else { return false }
         return await isLocalOrPrivate(target, resolver: resolver)
     }
 

@@ -305,11 +305,15 @@ extension WebURLPolicyTests {
 
     @Test("#443 review: a page can't send the panel to a local file, whatever it started on")
     func pageDrivenFileRefused() async throws {
+        // Nor a click: a remote page's own link has no business pointing at a file, and a
+        // script-synthesised a.click() reads as a click (#443 review).
         for startedPrivate in [false, true] {
-            #expect(try await WebURLPolicy.refusesNavigation(
-                startedPrivate: startedPrivate, to: url("file:///Users/kev/.ssh/id_ed25519"),
-                userInitiated: false, resolver: router
-            ))
+            for userInitiated in [false, true] {
+                #expect(try await WebURLPolicy.refusesNavigation(
+                    startedPrivate: startedPrivate, to: url("file:///Users/kev/.ssh/id_ed25519"),
+                    userInitiated: userInitiated, resolver: router
+                ))
+            }
         }
     }
 
