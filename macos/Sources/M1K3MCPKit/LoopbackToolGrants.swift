@@ -60,6 +60,20 @@ public struct LoopbackToolGrants: OptionSet, Sendable, Hashable {
     }
 }
 
+/// What the gate throws: the refusal text for the client, and a type the activity feed can
+/// tell apart from an ordinary failure (#270 slice 2).
+public struct LoopbackGrantRefusal: Error, CustomStringConvertible, Equatable {
+    public let tool: String
+
+    public init(tool: String) {
+        self.tool = tool
+    }
+
+    public var description: String {
+        LoopbackToolGrants.refusal(for: tool)
+    }
+}
+
 /// The loopback registry's gate: gated tools run only while `grants()` holds their grant,
 /// read on every call so a toggle takes effect at once; served tools pass untouched; an
 /// unclassified tool is always refused.
@@ -73,7 +87,7 @@ public func grantGatedToolDefinitions(
         let needed = LoopbackToolGrants.gatedTools[name]
         return MCPToolDefinition(tool: definition.tool) { args in
             guard let needed, grants().contains(needed) else {
-                throw MCPInputError(LoopbackToolGrants.refusal(for: name))
+                throw LoopbackGrantRefusal(tool: name)
             }
             return try await definition.handler(args)
         }

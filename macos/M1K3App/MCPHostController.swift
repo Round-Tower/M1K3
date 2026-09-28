@@ -220,12 +220,20 @@ final class MCPHostController {
                 }
             )
         }
+        // Strong on purpose, like `memoryToolDefinitions`' own: the registry outlives no one
+        // (AppEnvironment is the process), and capturing `self` instead would be the cycle.
+        let environment = env
         let registry = MCPToolRegistry(
             // The mic, memory deletes and on-screen links each need the owner's grant (#270);
-            // Brain at Home's LAN palette never serves them at all (MCPToolScope.lan).
-            grantGatedToolDefinitions(
-                makeAllToolDefinitions(jobStore: intelligenceJobStore),
-                grants: { MCPHostController.currentGrants() }
+            // Brain at Home's LAN palette never serves them at all (MCPToolScope.lan). The
+            // activity notice wraps OUTSIDE the gate, so a refused attempt reaches the menu bar too.
+            noticedToolDefinitions(
+                grantGatedToolDefinitions(
+                    makeAllToolDefinitions(jobStore: intelligenceJobStore),
+                    grants: { MCPHostController.currentGrants() }
+                ),
+                client: { clientIdentity.current() },
+                record: { entry in Task { @MainActor in environment.agentActivity.record(entry) } }
             ),
             // Opt-in Agent Interaction Log (Settings toggle, OFF by default —
             // the store self-gates on every call). Only this in-app HTTP

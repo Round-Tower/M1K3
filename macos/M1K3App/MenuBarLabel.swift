@@ -63,7 +63,8 @@ struct MenuBarLabel: View {
     private var accessibilityLabel: String {
         guard let env else { return "M1K3" }
         if env.isRecording { return "M1K3 — Recording" }
-        return env.avatar.state.activity.accessibilityLabel
+        let label = env.avatar.state.activity.accessibilityLabel
+        return env.agentActivity.unseen > 0 ? "\(label), new agent activity" : label
     }
 
     var body: some View {
@@ -78,6 +79,11 @@ struct MenuBarLabel: View {
                     // No offset: stay inside the glyph frame so the dot can't be
                     // clipped by the menu bar's tight item bounds.
                     IndicatorDot(color: .glyphDot(treatment.dotColorName), pulses: treatment.pulses)
+                } else if (env?.agentActivity.unseen ?? 0) > 0 {
+                    // An agent used the mic or touched memory since the popover was last on
+                    // screen (#270). The same slot and path as the proven dots, static; a
+                    // thinking or recording dot outranks it while it lasts.
+                    IndicatorDot(color: .glyphDot("accent"), pulses: false)
                 }
             }
             .accessibilityLabel(accessibilityLabel)
