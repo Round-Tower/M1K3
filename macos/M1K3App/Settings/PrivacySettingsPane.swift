@@ -47,6 +47,9 @@ import SwiftUI
 struct PrivacySettingsPane: View {
     @Environment(AppEnvironment.self) private var env
     @AppStorage(AppEnvironment.webSearchEnabledKey) private var webSearchEnabled = true
+    @AppStorage(MCPHostController.grantMicrophoneKey) private var agentsUseMicrophone = false
+    @AppStorage(MCPHostController.grantDeleteMemoriesKey) private var agentsDeleteMemories = false
+    @AppStorage(MCPHostController.grantOpenLinksKey) private var agentsOpenLinks = false
     @AppStorage(AppEnvironment.spotlightIndexingKey) private var spotlightIndexing = false
     @AppStorage(AppEnvironment.scriptToolsEnabledKey) private var scriptToolsEnabled = false
     @AppStorage(AppEnvironment.contextBatteryEnabledKey) private var contextBattery = false
@@ -398,13 +401,17 @@ struct PrivacySettingsPane: View {
             if let status = env.mcpHost.statusText {
                 LabeledContent("Status", value: status)
             }
+            Toggle("Let agents use the microphone", isOn: $agentsUseMicrophone)
+            Toggle("Let agents delete memories", isOn: $agentsDeleteMemories)
+            Toggle("Let agents open links on screen", isOn: $agentsOpenLinks)
             connectAnAgent
         } header: {
             SettingsHeader("MCP server", systemImage: "network")
         } footer: {
             Text("""
-            Lets an agent on this Mac use M1K3's knowledge, memory, voice, and \
-            mic. Loopback-only, one client at a time.
+            Lets an agent on this Mac use M1K3's knowledge, memory and voice. \
+            Loopback-only, one client at a time. Any app on this Mac can reach it, \
+            so listening, deleting memories and opening links stay off until you allow them.
             """)
             .font(.callout).foregroundStyle(.secondary)
         }
