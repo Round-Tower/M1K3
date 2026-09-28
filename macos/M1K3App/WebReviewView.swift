@@ -139,7 +139,7 @@ private struct WebViewContainer: NSViewRepresentable {
         ) async -> WKNavigationActionPolicy {
             guard navigationAction.targetFrame?.isMainFrame ?? true,
                   let target = navigationAction.request.url,
-                  target.scheme == "http" || target.scheme == "https"
+                  ["http", "https", "file"].contains(target.scheme?.lowercased() ?? "")
             else { return .allow }
             guard let start else {
                 let url = parent.url

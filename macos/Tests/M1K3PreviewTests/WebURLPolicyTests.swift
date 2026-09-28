@@ -270,7 +270,6 @@ extension WebURLPolicyTests {
 
     @Test("#269: a public page can't carry the panel into private space by itself")
     func pageDrivenNavigationIntoPrivateRefused() async throws {
-        let requested = try url("https://news.example/story")
         for target in ["http://127.0.0.1:4242/mcp", "http://192.168.1.1/admin", "http://router.example/", "http://printer.local/"] {
             #expect(
                 try await WebURLPolicy.refusesNavigation(
@@ -283,7 +282,6 @@ extension WebURLPolicyTests {
 
     @Test("#269: a person's click may go anywhere; public-to-public and same-host moves pass")
     func allowedNavigations() async throws {
-        let requested = try url("https://news.example/story")
         #expect(try !(await WebURLPolicy.refusesNavigation(
             startedPrivate: false, to: url("http://192.168.1.1/"), userInitiated: true, resolver: router
         )))
@@ -303,6 +301,16 @@ extension WebURLPolicyTests {
             startedPrivate: false, to: url("https://evil.example/next"),
             userInitiated: false, resolver: rebound
         ))
+    }
+
+    @Test("#443 review: a page can't send the panel to a local file, whatever it started on")
+    func pageDrivenFileRefused() async throws {
+        for startedPrivate in [false, true] {
+            #expect(try await WebURLPolicy.refusesNavigation(
+                startedPrivate: startedPrivate, to: url("file:///Users/kev/.ssh/id_ed25519"),
+                userInitiated: false, resolver: router
+            ))
+        }
     }
 
     @Test("#269: a page opened on a private address may move within private space")
