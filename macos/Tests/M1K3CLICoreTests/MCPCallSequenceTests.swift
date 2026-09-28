@@ -16,6 +16,7 @@
 
 import Foundation
 @testable import M1K3CLICore
+import Synchronization
 import Testing
 
 /// Records every request the server was actually HANDED (a refused post never
@@ -139,5 +140,28 @@ struct MCPCallSequenceTests {
         ])
         let result = await sequence(server, timing: brisk).call(tool: "yodel", arguments: [:])
         #expect(result == .failure(.tool("Unknown tool: yodel")))
+    }
+}
+
+/// #380: waking M1K3 used to poll for up to 20 s in silence.
+extension MCPCallSequenceTests {
+    @Test("#380: a cold start says it's opening M1K3, once; a warm call says nothing")
+    func wakeIsAnnounced() async {
+        let told = Mutex(0)
+        let cold = MCPCallSequence(
+            port: 4242, clientVersion: "1.0.0", timing: brisk,
+            post: { [server = FakeServer(refusals: 2, answers: [okText])] in try await server.post($0) },
+            wake: { true }, onWaking: { told.withLock { $0 += 1 } }
+        )
+        _ = await cold.call(tool: "get_status", arguments: [:])
+        #expect(told.withLock { $0 } == 1)
+
+        let warm = MCPCallSequence(
+            port: 4242, clientVersion: "1.0.0", timing: brisk,
+            post: { [server = FakeServer(answers: [okText])] in try await server.post($0) },
+            wake: { true }, onWaking: { told.withLock { $0 += 1 } }
+        )
+        _ = await warm.call(tool: "get_status", arguments: [:])
+        #expect(told.withLock { $0 } == 1)
     }
 }

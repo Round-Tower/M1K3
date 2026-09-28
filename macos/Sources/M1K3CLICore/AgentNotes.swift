@@ -15,6 +15,7 @@
 //  Signed: Kev + claude-opus-5, 2026-09-11, Confidence 0.85 (the merge
 //  arithmetic is test-pinned including the dangling-marker case; the WORDING
 //  is judgement and will drift as the tool list does). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: `target(for:isDirectory:)` — `--write DIR` writes DIR/AGENTS.md. Confidence 0.9.
 //
 
 import Foundation
@@ -27,6 +28,13 @@ public enum AgentNotes {
     /// cross-vendor convention; CLAUDE.md and .cursorrules are one
     /// `--write PATH` away.
     public static let defaultFileName = "AGENTS.md"
+
+    /// Where `--write PATH` writes: PATH, or AGENTS.md inside it when PATH is a directory
+    /// (#380 — a directory used to fail with Foundation's "AGENTS.md doesn't exist").
+    public static func target(for path: String, isDirectory: (URL) -> Bool) -> URL {
+        let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+        return isDirectory(url) ? url.appendingPathComponent(defaultFileName) : url
+    }
 
     public static let block = """
     \(beginMarker)

@@ -29,6 +29,10 @@
 //  (scanLimit): its tool name and JSON reach the handler verbatim, so a
 //  `--port 8080` inside a note's text is the note's words, not the CLI's port
 //  (PR #279 review). Confidence now 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: `--` ends the flags (what follows is text,
+//  --port and --title included); `connect claude --config-dir` refuses rather than quietly
+//  editing the real config; a dangling --port says what it wants; a usage error prints one line
+//  and "run m1k3 help" (`hint`). Confidence 0.9.
 //
 
 import Foundation
@@ -75,6 +79,12 @@ public struct CLIUsageError: Error, Equatable, Sendable {
 
     public var usage: String {
         CLICommand.usage
+    }
+
+    /// What a failed parse prints: the one line, and where the rest is (#380 — the whole
+    /// usage text on every slip was a kilobyte of noise to an agent reading stderr).
+    public var hint: String {
+        "m1k3: \(message) — run m1k3 help for usage"
     }
 }
 
@@ -131,6 +141,8 @@ public struct CLICommand: Equatable, Sendable {
     OPTIONS
       --port N        the app's MCP port (default \(MCPEndpoint.defaultPort), or $\(portEnvironmentKey));
                       anywhere on the line, except inside call's JSON
+      --              for ask, speak, remember and search: the rest is text, flags and all
+                      (m1k3 remember -- --port 8080 is open)
 
     M1K3 must be running — m1k3 opens it for you if it isn't.
     """
@@ -145,6 +157,14 @@ public struct CLICommand: Equatable, Sendable {
         _ arguments: [String],
         environment: [String: String] = [:]
     ) -> Result<CLICommand, CLIUsageError> {
+        // `--` ends the flags (#380): everything after it is text, so a note can say
+        // "--port 8080" without the CLI posting it to port 8080.
+        var arguments = arguments
+        var literal: [String] = []
+        if let end = arguments.firstIndex(of: "--") {
+            literal = Array(arguments[arguments.index(after: end)...])
+            arguments = Array(arguments[..<end])
+        }
         // `call` hands its tail to JSONSerialization verbatim, so the global
         // scan stops at that subcommand: a `--port 8080` inside the JSON is
         // data (the note's own words), never the CLI's port. Every other
@@ -158,21 +178,31 @@ public struct CLICommand: Equatable, Sendable {
         }
         rest.append(contentsOf: arguments[scanEnd...])
 
-        guard let head = rest.first else { return .success(CLICommand(action: .help, port: port)) }
+        guard let head = rest.first else {
+            // A `--` with no command before it would swallow the command as text (#445 review).
+            guard literal.isEmpty else {
+                return .failure(CLIUsageError("-- goes after the command, e.g. m1k3 remember -- --port 8080"))
+            }
+            return .success(CLICommand(action: .help, port: port))
+        }
         rest.removeFirst()
-        return action(for: head, arguments: rest).map { CLICommand(action: $0, port: port) }
+        return action(for: head, arguments: rest, literal: literal).map { CLICommand(action: $0, port: port) }
     }
 
-    private static func action(for subcommand: String, arguments: [String]) -> Result<Action, CLIUsageError> {
+    /// `literal` is what followed `--`: the text subcommands take it as words, after their
+    /// own flags are pulled; everything else reads it as ordinary arguments.
+    private static func action(
+        for subcommand: String, arguments: [String], literal: [String]
+    ) -> Result<Action, CLIUsageError> {
         switch subcommand {
-        case "status": noArguments(arguments, subcommand: "status", action: .status)
-        case "ask": text(arguments, subcommand: "ask").map { .ask($0) }
-        case "speak": speak(arguments)
-        case "remember": remember(arguments)
-        case "search": text(arguments, subcommand: "search").map { .search($0) }
-        case "call": call(arguments)
-        case "connect": connect(arguments)
-        case "agent-notes": agentNotes(arguments)
+        case "status": noArguments(arguments, literal: literal, subcommand: "status", action: .status)
+        case "ask": text(arguments + literal, subcommand: "ask").map { .ask($0) }
+        case "speak": speak(arguments, literal: literal)
+        case "remember": remember(arguments, literal: literal)
+        case "search": text(arguments + literal, subcommand: "search").map { .search($0) }
+        case "call": call(arguments + literal)
+        case "connect": connect(arguments + literal)
+        case "agent-notes": agentNotes(arguments + literal)
         case "help", "--help", "-h": .success(.help)
         case "version", "--version", "-v": .success(.version)
         default: .failure(CLIUsageError("unknown command \"\(subcommand)\""))
@@ -272,13 +302,15 @@ public struct CLICommand: Equatable, Sendable {
 
     private static func noArguments(
         _ arguments: [String],
+        literal: [String] = [],
         subcommand: String,
         action: Action
     ) -> Result<Action, CLIUsageError> {
-        guard arguments.isEmpty else {
-            return .failure(CLIUsageError("\(subcommand) takes no arguments — didn't expect \"\(arguments[0])\""))
-        }
-        return .success(action)
+        // A `--port` left among the flags had no number after it (#380); after `--` it's
+        // just a word this command doesn't take (#445 review).
+        if arguments.first == "--port" { return .failure(CLIUsageError("--port needs a number, e.g. --port 4242")) }
+        guard let unexpected = (arguments + literal).first else { return .success(action) }
+        return .failure(CLIUsageError("\(subcommand) takes no arguments — didn't expect \"\(unexpected)\""))
     }
 
     private static func text(_ arguments: [String], subcommand: String) -> Result<String, CLIUsageError> {
@@ -289,15 +321,15 @@ public struct CLICommand: Equatable, Sendable {
         return .success(joined)
     }
 
-    private static func speak(_ arguments: [String]) -> Result<Action, CLIUsageError> {
+    private static func speak(_ arguments: [String], literal: [String]) -> Result<Action, CLIUsageError> {
         pullValue(named: "--emotion", from: arguments).flatMap { emotion, rest in
-            text(rest, subcommand: "speak").map { .speak(text: $0, emotion: emotion) }
+            text(rest + literal, subcommand: "speak").map { .speak(text: $0, emotion: emotion) }
         }
     }
 
-    private static func remember(_ arguments: [String]) -> Result<Action, CLIUsageError> {
+    private static func remember(_ arguments: [String], literal: [String]) -> Result<Action, CLIUsageError> {
         pullValue(named: "--title", from: arguments).flatMap { title, rest in
-            text(rest, subcommand: "remember").map { .remember(text: $0, title: title) }
+            text(rest + literal, subcommand: "remember").map { .remember(text: $0, title: title) }
         }
     }
 
@@ -336,6 +368,13 @@ public struct CLICommand: Equatable, Sendable {
             }
             guard rest.count == 1 else {
                 return .failure(CLIUsageError("connect takes one client — didn't expect \"\(rest[1])\""))
+            }
+            // `claude mcp add` writes Claude Code's own config, wherever that lives: the flag
+            // would read as isolation and quietly edit the real one (#380).
+            if client == .claude, configDir != nil {
+                return .failure(CLIUsageError(
+                    "--config-dir doesn't apply to claude (claude mcp add writes its own config; --print shows the command)"
+                ))
             }
             return .success(.connect(client: client, printOnly: printOnly, configDir: configDir))
         }

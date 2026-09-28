@@ -18,6 +18,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — the helper lives at Contents/Helpers/m1k3, not
 //  Contents/MacOS: sign-on-copy there re-signs it as the app itself (identifier + entitlements),
 //  which aborted the developer-id export and would ship it sandboxed. Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: a usage error prints `error.hint` (one line + "run m1k3 help"), not the usage text. Confidence 0.9.
 //
 
 import Foundation
@@ -47,8 +48,6 @@ case let .success(command):
     let runner = CommandRunner(command: command, environment: environment, appVersion: appVersion())
     exit(await runner.run())
 case let .failure(error):
-    Output.error("m1k3: \(error.message)")
-    Output.error("")
-    Output.error(error.usage)
+    Output.error(error.hint)
     exit(ExitCode.usage)
 }

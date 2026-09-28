@@ -251,3 +251,52 @@ struct CLICommandTests {
         #expect(MCPEndpoint.url(port: 5111) == "http://127.0.0.1:5111/mcp")
     }
 }
+
+/// #380: findings from the CLI's first critical test.
+extension CLICommandTests {
+    @Test("#380: `--` ends the flags — what follows is text, --port and --title included")
+    func doubleDashIsLiteral() throws {
+        let note = try parsed(["remember", "the", "NAS", "forwards", "--", "--port", "8080"])
+        #expect(note.action == .remember(text: "the NAS forwards --port 8080", title: nil))
+        #expect(note.port == MCPEndpoint.defaultPort)
+        let titled = try parsed(["remember", "--title", "NAS", "ports", "--", "--title", "is", "a", "flag"])
+        #expect(titled.action == .remember(text: "ports --title is a flag", title: "NAS"))
+        #expect(try parsed(["ask", "--", "--port", "5000?"]).action == .ask("--port 5000?"))
+        // Flags before `--` still count.
+        #expect(try parsed(["--port", "5000", "search", "--", "--port", "4242"]).port == 5000)
+    }
+
+    @Test("#380: connect claude refuses --config-dir, which claude mcp add can't honour")
+    func claudeRefusesConfigDir() throws {
+        let error = try failure(["connect", "claude", "--config-dir", "/tmp/x"])
+        #expect(error.message.contains("--config-dir"))
+        #expect(error.message.contains("--print"))
+        // Every other client still takes it.
+        #expect(try parsed(["connect", "cursor", "--config-dir", "/tmp/x"]).action
+            == .connect(client: .cursor, printOnly: false, configDir: "/tmp/x"))
+    }
+
+    @Test("#380: a dangling --port on a no-text command says what --port wants")
+    func danglingPort() throws {
+        #expect(try failure(["status", "--port"]).message == "--port needs a number, e.g. --port 4242")
+        #expect(try failure(["status", "--port", "nope"]).message == "--port needs a number, e.g. --port 4242")
+        // After `--` it's text, not a flag missing its number (#445 review).
+        #expect(try failure(["status", "--", "--port", "4242"]).message
+            == "status takes no arguments — didn't expect \"--port\"")
+    }
+
+    @Test("#445 review: a `--` before the command says where it goes, never a silent help")
+    func doubleDashBeforeCommand() throws {
+        #expect(try failure(["--", "ask", "hi"]).message.contains("after the command"))
+        #expect(try failure(["--port", "5000", "--", "remember", "hello"]).message.contains("after the command"))
+        // A bare line is still help.
+        #expect(try parsed([]).action == .help)
+    }
+
+    @Test("#380: a usage error is one line plus where to find help, not the whole usage text")
+    func shortUsageHint() throws {
+        let error = try failure(["frobnicate"])
+        #expect(error.hint == "m1k3: unknown command \"frobnicate\" — run m1k3 help for usage")
+        #expect(!error.hint.contains("USAGE"))
+    }
+}
