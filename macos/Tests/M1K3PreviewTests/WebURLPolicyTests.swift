@@ -295,6 +295,16 @@ extension WebURLPolicyTests {
         )))
     }
 
+    @Test("#443 review: a same-host move is still resolved — the host may have rebound to private")
+    func sameHostRebindRefused() async throws {
+        // Vetted public when the panel opened it; the attacker's short TTL now answers private.
+        let rebound = FakeResolver(table: ["evil.example": ["192.168.1.1"]])
+        #expect(try await WebURLPolicy.refusesNavigation(
+            from: url("https://evil.example/"), to: url("https://evil.example/next"),
+            userInitiated: false, resolver: rebound
+        ))
+    }
+
     @Test("#269: a page opened on a private address may move within private space")
     func privateStartIsNotGated() async throws {
         #expect(try !(await WebURLPolicy.refusesNavigation(

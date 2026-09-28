@@ -21,6 +21,8 @@
 //  as a click — WebKit gives no user-gesture bit here).
 //  Review: same day (2) — found live: WebKit reports the cancel as a failed load ("Frame load
 //  interrupted") and that overwrote the note; the coordinator keeps its refusal for it. Confidence 0.8.
+//  Review: same day (3), #443 review — the refusal is keyed by the URL it refused, so a newer
+//  navigation's failure never shows it. Confidence 0.8.
 
 import M1K3Chat
 import M1K3Preview
@@ -137,14 +139,15 @@ private struct WebViewContainer: NSViewRepresentable {
             Self.securityLog.notice("review panel: a page-driven move into private space was refused")
             parent.isLoading = false
             let note = String(localized: "This page tried to send the panel to a local or private-network address. M1K3 won’t open those on a page’s say-so.")
-            refusal = note
+            refusal = (target, note)
             parent.loadError = note
             return .cancel
         }
 
-        /// The note for a move the gate cancelled. WebKit reports the cancel as a failed
+        /// The move the gate cancelled, and its note. WebKit reports the cancel as a failed
         /// provisional load ("Frame load interrupted") right after; this keeps the real reason.
-        private var refusal: String?
+        /// Keyed by URL so a newer navigation's failure never inherits it (#443 review).
+        private var refusal: (url: URL, note: String)?
 
         func webView(_: WKWebView, didStartProvisionalNavigation _: WKNavigation!) {
             parent.loadError = nil
@@ -194,10 +197,13 @@ private struct WebViewContainer: NSViewRepresentable {
 
         private func fail(_ error: Error) {
             if let refusal {
-                self.refusal = nil
-                parent.loadError = refusal
-                parent.isLoading = false
-                return
+                let failed = (error as NSError).userInfo[NSURLErrorFailingURLErrorKey] as? URL
+                if failed == nil || failed == refusal.url {
+                    self.refusal = nil
+                    parent.loadError = refusal.note
+                    parent.isLoading = false
+                    return
+                }
             }
             // A navigation cancelled by a newer load isn't a real failure.
             let nsError = error as NSError

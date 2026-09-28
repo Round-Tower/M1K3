@@ -27,7 +27,8 @@
 //  answer in them refuse. Confidence now 0.9 (boundaries pinned both sides).
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #269 part 2: `refusesNavigation`, the review panel's
 //  gate for a page's own moves (server redirect, script, meta refresh): public start → private
-//  target refuses; a person's click, a same-host move or a private start pass. Confidence 0.85.
+//  target refuses; a person's click or a private start pass. Same-host moves are resolved too (a
+//  rebound host, #443 review). Confidence 0.85.
 
 import Foundation
 #if canImport(Darwin)
@@ -154,13 +155,13 @@ public enum WebURLPolicy {
     /// the public web must not carry the panel into local or private space BY ITSELF — a server
     /// redirect, a script, a meta refresh — since WebKit follows those outside this policy and
     /// the panel captures the landed page's text into the chat. A person's own click may go
-    /// anywhere, a same-host move needs no lookup, and a page opened on a private address was
-    /// already the person's choice. The target is resolved like any agent-driven open.
+    /// anywhere, and a page opened on a private address was already the person's choice. Every
+    /// other move is resolved like an agent-driven open, same host included: the host may have
+    /// rebound to a private address since the panel vetted it (#443 review).
     public static func refusesNavigation(
         from requested: URL, to target: URL, userInitiated: Bool, resolver: any HostResolving
     ) async -> Bool {
         guard !userInitiated, !isLocalOrPrivate(requested) else { return false }
-        if let host = normalisedHost(target), host == normalisedHost(requested) { return false }
         return await isLocalOrPrivate(target, resolver: resolver)
     }
 
