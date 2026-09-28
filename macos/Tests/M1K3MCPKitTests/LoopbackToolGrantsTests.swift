@@ -93,6 +93,9 @@ struct LoopbackToolGrantsTests {
         let result = await call("wipe_everything", grants: .all)
         #expect(result.isError)
         #expect(!result.ran)
+        // No switch exists for it, so the refusal doesn't point at Settings (#444 review).
+        #expect(!result.text.contains("Settings"))
+        #expect(result.text.contains("isn't open to agents"))
     }
 
     @Test("grants are read on every call: turning one on takes effect at once")

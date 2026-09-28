@@ -45,13 +45,15 @@ public struct LoopbackToolGrants: OptionSet, Sendable, Hashable {
         "list_todos", "propose_todo", // a proposal lands pending; the owner decides
     ]
 
-    /// What a refused call says: what's off, and where the owner turns it on.
+    /// What a refused call says: what's off, and where the owner turns it on. An unclassified
+    /// tool has no switch to point at, so it says so instead.
     public static func refusal(for tool: String) -> String {
-        let what = switch gatedTools[tool] {
-        case .microphone?: "use the microphone"
-        case .deleteMemories?: "delete memories"
-        case .openLinks?: "open links on screen"
-        default: "use \(tool)"
+        let what: String
+        switch gatedTools[tool] {
+        case .microphone?: what = "use the microphone"
+        case .deleteMemories?: what = "delete memories"
+        case .openLinks?: what = "open links on screen"
+        default: return "Not available: \(tool) isn't open to agents in this version of M1K3."
         }
         return "Not allowed: M1K3's owner hasn't let agents \(what). "
             + "They can turn it on in M1K3 ▸ Settings ▸ Privacy ▸ MCP server."
