@@ -95,6 +95,7 @@ import M1K3Knowledge
 import M1K3KnowledgeTools
 import M1K3Kokoro
 import M1K3LanguageModel
+import M1K3MCPKit
 import M1K3MCPLog
 import M1K3Memory
 import M1K3MemoryChatBridge
@@ -244,6 +245,10 @@ final class AppEnvironment {
     /// comms had no observable invalidator and the Agent Log needed a manual
     /// Refresh button.
     var mcpLogRevision = 0
+    /// What agents did that the owner should see (#270 slice 2): the mic, memory deletes and
+    /// saves, in the menu-bar popover, with a dot on the glyph until it's opened. In memory
+    /// only: who, what, when — never the arguments.
+    var agentActivity = AgentActivityFeed()
     /// The Private Cloud Compute backend's last-read availability and quota
     /// (ADR 0006), refreshed when the chat appears and after each PCC send. nil
     /// until read — the rung treats that as available with an unknown quota.

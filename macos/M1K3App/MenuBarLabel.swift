@@ -63,7 +63,8 @@ struct MenuBarLabel: View {
     private var accessibilityLabel: String {
         guard let env else { return "M1K3" }
         if env.isRecording { return "M1K3 — Recording" }
-        return env.avatar.state.activity.accessibilityLabel
+        let label = env.avatar.state.activity.accessibilityLabel
+        return env.agentActivity.unseen > 0 ? "\(label), new agent activity" : label
     }
 
     var body: some View {
@@ -73,6 +74,13 @@ struct MenuBarLabel: View {
                 color: treatment.dot == .glow ? .glyphDot(treatment.dotColorName) : .clear,
                 radius: treatment.dot == .glow ? 2.5 : 0
             )
+            .overlay(alignment: .bottomTrailing) {
+                // An agent used the mic or touched memory since the popover was last opened
+                // (#270). Static: no clock of its own in the status item.
+                if (env?.agentActivity.unseen ?? 0) > 0 {
+                    Circle().fill(Color.orange).frame(width: 4, height: 4)
+                }
+            }
             .overlay(alignment: .topTrailing) {
                 if treatment.dot == .pulsing || treatment.dot == .recording {
                     // No offset: stay inside the glyph frame so the dot can't be

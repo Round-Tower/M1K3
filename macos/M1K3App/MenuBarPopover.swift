@@ -20,9 +20,13 @@ import M1K3Avatar
 import M1K3Calls
 import M1K3Chat
 import M1K3Heartbeat
+import M1K3MCPKit
 import SwiftUI
 
 struct MenuBarPopover: View {
+    /// Published by `.trackWindowVisibility()` on the popover's root (M1K3App).
+    @Environment(\.windowVisible) private var windowVisible
+
     let env: AppEnvironment?
 
     @Environment(\.openWindow) private var openWindow
@@ -83,6 +87,7 @@ struct MenuBarPopover: View {
                     Divider()
                     heartbeatSection(env)
                     todosSection(env)
+                    agentActivitySection(env)
                     brainServeSection(env)
                     toggles(env)
                     Divider()
@@ -236,6 +241,39 @@ struct MenuBarPopover: View {
             }
         }
         .task(id: env.todosRevision) { await refreshTodoCounts(env) }
+    }
+
+    /// What agents did with the mic and memory (#270): the newest few lines, and opening the
+    /// popover clears the glyph's dot. Nothing shows until an agent has done something.
+    @ViewBuilder
+    private func agentActivitySection(_ env: AppEnvironment) -> some View {
+        let recent = env.agentActivity.entries.prefix(4)
+        if !recent.isEmpty {
+            VStack(alignment: .leading, spacing: 3) {
+                Label("Agent activity", systemImage: "person.badge.shield.checkmark")
+                    .font(.caption2.weight(.semibold))
+                ForEach(recent) { entry in
+                    HStack(spacing: 4) {
+                        Text(entry.summary)
+                        Spacer(minLength: 4)
+                        Text(entry.at, style: .relative)
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(entry.outcome == .refused ? .orange : .secondary)
+                }
+            }
+            // Seen only while the popover is actually on screen: its window outlives a
+            // close, and a view that marked entries seen while ordered out would hide the dot.
+            .task(id: ActivitySeen(unseen: env.agentActivity.unseen, visible: windowVisible)) {
+                if windowVisible, env.agentActivity.unseen > 0 { env.agentActivity.markSeen() }
+            }
+            Divider()
+        }
+    }
+
+    private struct ActivitySeen: Equatable {
+        let unseen: Int
+        let visible: Bool
     }
 
     private var todoCountLine: String {
