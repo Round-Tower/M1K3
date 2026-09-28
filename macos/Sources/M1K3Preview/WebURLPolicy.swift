@@ -25,6 +25,15 @@
 //  Review: Kev + claude-opus-5, 2026-09-12 — #269 part 1: CGNAT 100.64/10, multicast 224/4 and
 //  reserved 240/4 (incl. broadcast) join the private IPv4 table, so a host literal AND a DNS
 //  answer in them refuse. Confidence now 0.9 (boundaries pinned both sides).
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #269 part 2: `refusesNavigation`, the review panel's
+//  gate for a page's own moves (server redirect, script, meta refresh): public start → private
+//  target refuses; a person's click or a private start pass. Same-host moves are resolved too (a
+//  rebound host, #443 review). Confidence 0.85.
+//  Review: same day (2), #443 review — the start is judged once at open (`startsPrivate`: literal, or
+//  a lookup that answered private; a failed lookup is public), so a typed Tailscale name works and a
+//  rebind can't flip it. Confidence 0.85.
+//  Review: same day (3), #443 review — a move to a `file:` URL refuses whatever the start, a
+//  click included. Confidence 0.85.
 
 import Foundation
 #if canImport(Darwin)
@@ -144,6 +153,36 @@ public enum WebURLPolicy {
             return false // a literal was judged above; nothing to resolve
         }
         guard let answers = await resolver.addresses(for: host) else { return true } // lookup failed: refuse
+        return answers.contains(where: isPrivateAddress)
+    }
+
+    /// The review panel's gate for each navigation after its first (#269). A page that started
+    /// on the public web must not carry the panel into local or private space BY ITSELF — a
+    /// server redirect, a script, a meta refresh — since WebKit follows those outside this policy
+    /// and the panel captures the landed page's text into the chat. A local file refuses however
+    /// the move was made. Otherwise a person's own click may go anywhere, and a page that started
+    /// private was already the person's choice. Every other
+    /// move is resolved, same host included: the host may have rebound since the panel opened it
+    /// (#443 review). `startedPrivate` comes from `startsPrivate`, judged once at open.
+    public static func refusesNavigation(
+        startedPrivate: Bool, to target: URL, userInitiated: Bool, resolver: any HostResolving
+    ) async -> Bool {
+        // A local file is never a page's to open, whatever the start and however the move
+        // was made — a remote page's link has no business there (#443 review).
+        if target.isFileURL { return true }
+        guard !userInitiated, !startedPrivate else { return false }
+        return await isLocalOrPrivate(target, resolver: resolver)
+    }
+
+    /// Whether the panel's first load is on a private address: a literal, or a lookup that
+    /// ANSWERED private (a typed Tailscale name, a VPN-only host). Judged once, at open, so a
+    /// later rebind can't turn a public start private. A failed lookup is a public start —
+    /// the gate stays on, and a slow answer can't switch it off (#443 review).
+    public static func startsPrivate(_ url: URL, resolver: any HostResolving) async -> Bool {
+        if isLocalOrPrivate(url) { return true }
+        guard let host = normalisedHost(url), numericIPv4(host) == nil, !looksLikeIPv6(host),
+              let answers = await resolver.addresses(for: host)
+        else { return false }
         return answers.contains(where: isPrivateAddress)
     }
 

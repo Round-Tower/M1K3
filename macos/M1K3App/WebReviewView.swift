@@ -14,8 +14,21 @@
 //  is the tested M1K3Preview package.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-19, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #269 part 2: a navigation policy. WebKit followed a
+//  page's own redirect, script or meta refresh into private space outside the gate, and the panel
+//  captured that page into the chat; `WebURLPolicy.refusesNavigation` now judges every main-frame
+//  move. A person's click passes. Confidence 0.75 (verify-by-run; a script-synthesised click reads
+//  as a click — WebKit gives no user-gesture bit here).
+//  Review: same day (2) — found live: WebKit reports the cancel as a failed load ("Frame load
+//  interrupted") and that overwrote the note; the coordinator keeps its refusal for it. Confidence 0.8.
+//  Review: same day (3), #443 review — the first load is the panel's own and passes (a typed
+//  Tailscale name worked before and must still); its start is judged once. A refusal superseded
+//  by a newer decision stays silent, and WebKit's policy-cancel failure (102) is ignored, so no
+//  note lands on the wrong page. Confidence 0.8.
 
 import M1K3Chat
+import M1K3Preview
+import os
 import SwiftUI
 import WebKit
 
@@ -107,6 +120,48 @@ private struct WebViewContainer: NSViewRepresentable {
             self.parent = parent
         }
 
+        private static let securityLog = Logger(subsystem: "app.m1k3", category: "security")
+
+        /// Whether this panel's first load started on a private address, judged once as it
+        /// opens (`WebURLPolicy.startsPrivate`). nil until that first load arrives.
+        private var start: Task<Bool, Never>?
+        /// Bumped per decision; a refusal that finishes after a newer decision began says
+        /// nothing, so it can't paint its note over the page that won (#443 review).
+        private var latestDecision = 0
+
+        /// Every main-frame move after the first, server redirects included, is judged
+        /// (#269): a page that started public can't carry the panel into private space by
+        /// itself. The first load is the panel's own — already gated where an agent opened
+        /// it, deliberately ungated where the person typed it (#443 review). Subframes aren't
+        /// captured, so they're left to WebKit.
+        func webView(
+            _: WKWebView, decidePolicyFor navigationAction: WKNavigationAction
+        ) async -> WKNavigationActionPolicy {
+            guard navigationAction.targetFrame?.isMainFrame ?? true,
+                  let target = navigationAction.request.url,
+                  ["http", "https", "file"].contains(target.scheme?.lowercased() ?? "")
+            else { return .allow }
+            guard let start else {
+                let url = parent.url
+                start = Task { await WebURLPolicy.startsPrivate(url, resolver: SystemHostResolver()) }
+                return .allow
+            }
+            latestDecision += 1
+            let decision = latestDecision
+            let refused = await WebURLPolicy.refusesNavigation(
+                startedPrivate: start.value, to: target,
+                userInitiated: navigationAction.navigationType == .linkActivated,
+                resolver: SystemHostResolver()
+            )
+            guard refused else { return .allow }
+            Self.securityLog.notice("review panel: a page-driven move into private space or a local file was refused")
+            if decision == latestDecision {
+                parent.isLoading = false
+                parent.loadError = String(localized: "This page tried to send the panel to a file on this Mac or a private-network address. M1K3 won’t open those on a page’s say-so.")
+            }
+            return .cancel
+        }
+
         func webView(_: WKWebView, didStartProvisionalNavigation _: WKNavigation!) {
             parent.loadError = nil
             parent.isLoading = true
@@ -154,8 +209,11 @@ private struct WebViewContainer: NSViewRepresentable {
         }
 
         private func fail(_ error: Error) {
-            // A navigation cancelled by a newer load isn't a real failure.
             let nsError = error as NSError
+            // WebKit's "Frame load interrupted": a navigation a policy cancelled — ours, whose
+            // note is already up, or one a newer decision superseded. Never the page's failure.
+            if nsError.domain == "WebKitErrorDomain", nsError.code == 102 { return }
+            // A navigation cancelled by a newer load isn't a real failure.
             guard !(nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled) else {
                 parent.isLoading = false
                 return
