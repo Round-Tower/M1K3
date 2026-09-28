@@ -280,6 +280,17 @@ extension CLICommandTests {
     func danglingPort() throws {
         #expect(try failure(["status", "--port"]).message == "--port needs a number, e.g. --port 4242")
         #expect(try failure(["status", "--port", "nope"]).message == "--port needs a number, e.g. --port 4242")
+        // After `--` it's text, not a flag missing its number (#445 review).
+        #expect(try failure(["status", "--", "--port", "4242"]).message
+            == "status takes no arguments — didn't expect \"--port\"")
+    }
+
+    @Test("#445 review: a `--` before the command says where it goes, never a silent help")
+    func doubleDashBeforeCommand() throws {
+        #expect(try failure(["--", "ask", "hi"]).message.contains("after the command"))
+        #expect(try failure(["--port", "5000", "--", "remember", "hello"]).message.contains("after the command"))
+        // A bare line is still help.
+        #expect(try parsed([]).action == .help)
     }
 
     @Test("#380: a usage error is one line plus where to find help, not the whole usage text")

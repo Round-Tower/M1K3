@@ -177,7 +177,13 @@ public struct CLICommand: Equatable, Sendable {
         }
         rest.append(contentsOf: arguments[scanEnd...])
 
-        guard let head = rest.first else { return .success(CLICommand(action: .help, port: port)) }
+        guard let head = rest.first else {
+            // A `--` with no command before it would swallow the command as text (#445 review).
+            guard literal.isEmpty else {
+                return .failure(CLIUsageError("-- goes after the command, e.g. m1k3 remember -- --port 8080"))
+            }
+            return .success(CLICommand(action: .help, port: port))
+        }
         rest.removeFirst()
         return action(for: head, arguments: rest, literal: literal).map { CLICommand(action: $0, port: port) }
     }
@@ -188,7 +194,7 @@ public struct CLICommand: Equatable, Sendable {
         for subcommand: String, arguments: [String], literal: [String]
     ) -> Result<Action, CLIUsageError> {
         switch subcommand {
-        case "status": noArguments(arguments + literal, subcommand: "status", action: .status)
+        case "status": noArguments(arguments, literal: literal, subcommand: "status", action: .status)
         case "ask": text(arguments + literal, subcommand: "ask").map { .ask($0) }
         case "speak": speak(arguments, literal: literal)
         case "remember": remember(arguments, literal: literal)
@@ -295,15 +301,15 @@ public struct CLICommand: Equatable, Sendable {
 
     private static func noArguments(
         _ arguments: [String],
+        literal: [String] = [],
         subcommand: String,
         action: Action
     ) -> Result<Action, CLIUsageError> {
-        guard arguments.isEmpty else {
-            // A `--port` left here had no number after it (#380).
-            if arguments[0] == "--port" { return .failure(CLIUsageError("--port needs a number, e.g. --port 4242")) }
-            return .failure(CLIUsageError("\(subcommand) takes no arguments — didn't expect \"\(arguments[0])\""))
-        }
-        return .success(action)
+        // A `--port` left among the flags had no number after it (#380); after `--` it's
+        // just a word this command doesn't take (#445 review).
+        if arguments.first == "--port" { return .failure(CLIUsageError("--port needs a number, e.g. --port 4242")) }
+        guard let unexpected = (arguments + literal).first else { return .success(action) }
+        return .failure(CLIUsageError("\(subcommand) takes no arguments — didn't expect \"\(unexpected)\""))
     }
 
     private static func text(_ arguments: [String], subcommand: String) -> Result<String, CLIUsageError> {

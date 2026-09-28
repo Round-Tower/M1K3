@@ -151,7 +151,8 @@ public enum JSONConfigWriter {
     /// refused either way.
     static func looksLikeJSONC(_ data: Data) -> Bool {
         guard let text = String(data: data, encoding: .utf8) else { return false }
-        return text.contains("//") || text.contains("/*")
+        // A `//` straight after a colon is a URL's scheme (`https://`), not a comment (#445 review).
+        return text.range(of: #"(^|[^:])//"#, options: .regularExpression) != nil || text.contains("/*")
             || text.range(of: #",\s*[}\]]"#, options: .regularExpression) != nil
     }
 
