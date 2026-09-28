@@ -33,6 +33,9 @@
 //  (no idle socket holds a Task forever). Both pinned in
 //  LocalMCPHTTPServerTests (raw-socket forgeries; the live session survives).
 //  Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: `accessToken` is read on every
+//  request and handed to the gate, so a request without it is 401 before the sniff and a
+//  rotation needs no restart. Confidence 0.85 (pinned; live 401 driven in the PR).
 //
 
 import Foundation
@@ -58,6 +61,11 @@ public actor LocalMCPHTTPServer {
     /// Seconds a connection may take to deliver one complete request. The
     /// clock covers the READ only — a tool call may legitimately run longer.
     private let readDeadline: TimeInterval
+    /// The token every request must carry, read per request so a rotation in
+    /// Settings applies at once. Non-optional ANSWER on purpose: once a host
+    /// hands a token source over, no state of it can serve without one. Nil
+    /// (no source at all) is for tests; the app always passes one (#270).
+    private let accessToken: (@Sendable () -> String)?
     private var listener: NWListener?
     private var session: (server: Server, transport: StatelessHTTPServerTransport)?
 
@@ -76,9 +84,11 @@ public actor LocalMCPHTTPServer {
         onAbnormalStop: (@Sendable (String) -> Void)? = nil,
         onClientInitialize: (@Sendable (String?) -> Void)? = nil,
         readDeadline: TimeInterval = 15,
+        accessToken: (@Sendable () -> String)? = nil,
         makeSession: @escaping SessionFactory
     ) {
         self.port = port
+        self.accessToken = accessToken
         self.onAbnormalStop = onAbnormalStop
         self.onClientInitialize = onClientInitialize
         self.readDeadline = readDeadline
@@ -219,7 +229,9 @@ public actor LocalMCPHTTPServer {
         // The door first: a refused request never reaches the initialize
         // sniff below, so a forgery can neither evict the live session nor
         // plant a visitor name.
-        if let refusal = LoopbackRequestGate.refusal(for: request, boundPort: port, duplicateHeaders: duplicateHeaders) {
+        if let refusal = LoopbackRequestGate.refusal(
+            for: request, boundPort: port, duplicateHeaders: duplicateHeaders, accessToken: accessToken?()
+        ) {
             Self.log.notice("refused MCP request: \(refusal.description, privacy: .public)")
             return .error(statusCode: refusal.statusCode, MCPError.invalidRequest(refusal.description))
         }

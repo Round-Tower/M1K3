@@ -146,4 +146,54 @@ struct LoopbackRequestGateTests {
     func hostIsJudgedFirst() {
         #expect(LoopbackRequestGate.refusal(for: request(host: "attacker.example", origin: "https://evil.example"), boundPort: 4242) == .foreignHost("attacker.example"))
     }
+
+    // MARK: - The access token (#270 slice 3)
+
+    private static let token = "m1k3_" + String(repeating: "t", count: 43)
+
+    @Test("with a token set, the right Bearer is admitted — any case of the scheme and header name")
+    func admitsTheToken() {
+        let token = Self.token
+        for (name, value) in [("Authorization", "Bearer \(token)"), ("authorization", "bearer \(token)")] {
+            let admitted = request(extraHeaders: [name: value])
+            #expect(LoopbackRequestGate.refusal(for: admitted, boundPort: 4242, accessToken: token) == nil, "\(name): \(value.prefix(7))")
+        }
+    }
+
+    @Test("with a token set, a missing, wrong, doubled or non-Bearer credential is 401")
+    func refusesWithoutTheToken() {
+        let token = Self.token
+        #expect(LoopbackRequestGate.refusal(for: request(), boundPort: 4242, accessToken: token) == .missingToken)
+        let wrong = "m1k3_" + String(repeating: "u", count: 43)
+        #expect(LoopbackRequestGate.refusal(for: request(extraHeaders: ["Authorization": "Bearer \(wrong)"]), boundPort: 4242, accessToken: token) == .wrongToken)
+        #expect(LoopbackRequestGate.refusal(for: request(extraHeaders: ["Authorization": "Basic \(token)"]), boundPort: 4242, accessToken: token) == .wrongToken)
+        #expect(LoopbackRequestGate.refusal(for: request(extraHeaders: ["Authorization": token]), boundPort: 4242, accessToken: token) == .wrongToken)
+        // Two Authorization lines: the survivor is not trusted, even when it is right.
+        let doubled = request(extraHeaders: ["Authorization": "Bearer \(token)"])
+        #expect(LoopbackRequestGate.refusal(for: doubled, boundPort: 4242, duplicateHeaders: ["authorization"], accessToken: token) == .wrongToken)
+        let twoCases = request(extraHeaders: ["Authorization": "Bearer \(token)", "authorization": "Bearer \(wrong)"])
+        #expect(LoopbackRequestGate.refusal(for: twoCases, boundPort: 4242, accessToken: token) == .wrongToken)
+        // The token guards every method, not just POST.
+        #expect(LoopbackRequestGate.refusal(for: request(contentType: nil, method: "GET"), boundPort: 4242, accessToken: token) == .missingToken)
+    }
+
+    @Test("a forged Host or a foreign page is still named as such — the token is judged after them")
+    func tokenIsJudgedAfterHostAndOrigin() {
+        let token = Self.token
+        #expect(LoopbackRequestGate.refusal(for: request(host: "attacker.example:4242"), boundPort: 4242, accessToken: token) == .foreignHost("attacker.example:4242"))
+        #expect(LoopbackRequestGate.refusal(for: request(origin: "https://evil.example"), boundPort: 4242, accessToken: token) == .foreignOrigin("https://evil.example"))
+        #expect(LoopbackRequestGate.refusal(for: request(path: "/.well-known/oauth-protected-resource"), boundPort: 4242, accessToken: token) == .wrongPath("/.well-known/oauth-protected-resource"))
+        // …and before the media type: an unauthenticated caller learns nothing about the body rules.
+        #expect(LoopbackRequestGate.refusal(for: request(contentType: "text/plain"), boundPort: 4242, accessToken: token) == .missingToken)
+    }
+
+    @Test("the 401 never echoes the credential it was sent")
+    func unauthorizedNeverEchoes() {
+        #expect(LoopbackRequestGate.Refusal.missingToken.statusCode == 401)
+        #expect(LoopbackRequestGate.Refusal.wrongToken.statusCode == 401)
+        for refusal in [LoopbackRequestGate.Refusal.missingToken, .wrongToken] {
+            #expect(!refusal.description.contains("m1k3_"))
+            #expect(refusal.description.contains("Settings"), "says where the token lives")
+        }
+    }
 }

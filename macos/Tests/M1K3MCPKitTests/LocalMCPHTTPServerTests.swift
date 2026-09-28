@@ -18,6 +18,9 @@
 //  a forged Host / text/plain / foreign Origin / other path is refused at the
 //  door and the live session survives (its own tool name still listed); the
 //  read deadline closes an idle socket and does NOT clock a slow tool call.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: with an access token, an
+//  initialize without it is 401 and never rebuilds the live session; rotation applies on
+//  the next request.
 //
 
 import Foundation
@@ -502,5 +505,69 @@ struct LocalMCPHTTPServerTests {
         #expect(refused.status == 403, "status \(refused.status) body \(refused.body)")
         let admitted = try await rawPost(initializeBody, port: port, host: "localhost:\(port)", origin: "http://localhost:3000")
         #expect(admitted.status == 200, "status \(admitted.status) body \(admitted.body)")
+    }
+
+    @Test("with an access token, an initialize without it is 401 and the live session survives; the token is read per request")
+    func accessTokenGuardsTheSniff() async throws {
+        let first = "m1k3_" + String(repeating: "a", count: 43)
+        let second = "m1k3_" + String(repeating: "b", count: 43)
+        let current = TokenBox(first)
+        let builds = Counter()
+        let (server, port) = try await startOnFreePort { port in
+            LocalMCPHTTPServer(port: port, accessToken: { current.value }) {
+                let build = builds.incrementAndGet()
+                let registry = MCPToolRegistry([
+                    MCPToolDefinition(
+                        tool: Tool(name: "session-\(build)", description: "build \(build)", inputSchema: ["type": "object"]),
+                        handler: { _ in "hi" }
+                    ),
+                ])
+                let transport = StatelessHTTPServerTransport()
+                let mcp = await makeM1K3Server(registry: registry)
+                try await mcp.start(transport: transport)
+                return (mcp, transport)
+            }
+        }
+        defer { Task { await server.stop() } }
+        let host = "127.0.0.1:\(port)"
+        func bearer(_ token: String) -> String {
+            "Authorization: Bearer \(token)\r\n"
+        }
+
+        let admitted = try await rawPost(initializeBody, port: port, host: host, extraLines: bearer(first))
+        #expect(admitted.status == 200, "status \(admitted.status) body \(admitted.body)")
+        let live = builds.value
+
+        let bare = try await rawPost(initializeBody, port: port, host: host)
+        #expect(bare.status == 401, "status \(bare.status) body \(bare.body)")
+        #expect(!bare.body.contains("m1k3_"))
+        let wrong = try await rawPost(initializeBody, port: port, host: host, extraLines: bearer(second))
+        #expect(wrong.status == 401, "status \(wrong.status) body \(wrong.body)")
+        #expect(builds.value == live, "a 401 must not tear down the live session")
+
+        let list = try await rawPost(#"{"jsonrpc":"2.0","id":9,"method":"tools/list"}"#, port: port, host: host, extraLines: bearer(first))
+        #expect(list.status == 200)
+        #expect(list.body.contains("session-\(live)"), Comment(rawValue: list.body))
+
+        // Rotation takes effect on the next request — no restart.
+        current.value = second
+        let stale = try await rawPost(#"{"jsonrpc":"2.0","id":10,"method":"tools/list"}"#, port: port, host: host, extraLines: bearer(first))
+        #expect(stale.status == 401, "status \(stale.status) body \(stale.body)")
+        let fresh = try await rawPost(#"{"jsonrpc":"2.0","id":11,"method":"tools/list"}"#, port: port, host: host, extraLines: bearer(second))
+        #expect(fresh.status == 200, "status \(fresh.status) body \(fresh.body)")
+    }
+}
+
+private final class TokenBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: String
+
+    init(_ value: String) {
+        stored = value
+    }
+
+    var value: String {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
     }
 }

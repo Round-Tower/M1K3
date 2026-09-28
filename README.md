@@ -124,8 +124,9 @@ build (the DMG and the Homebrew cask) does the write.
 
 The running Mac app serves MCP over HTTP at `http://127.0.0.1:4242/mcp` —
 knowledge search, documents, voice, and `ask_m1k3` (ask the resident AI).
-`.mcp.json` at the repo root wires Claude Code into it; setup for any client:
-[`macos/docs/MCP_SETUP.md`](./macos/docs/MCP_SETUP.md).
+Every request carries the server's access token (Settings ▸ Privacy ▸ MCP
+server); `m1k3 login && m1k3 connect claude` wires Claude Code in. Setup for any
+client: [`macos/docs/MCP_SETUP.md`](./macos/docs/MCP_SETUP.md).
 
 ### Tools
 

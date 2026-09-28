@@ -24,6 +24,8 @@
 //  Contents/MacOS: sign-on-copy there re-signs it as the app itself (identifier + entitlements),
 //  which aborted the developer-id export and would ship it sandboxed. Confidence now 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: `onWaking` prints "opening M1K3…" to stderr as the app is opened. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: every post carries the token `m1k3 login` saved, as
+//  `Authorization: Bearer`. None saved → no header, and the door's 401 becomes the login hint. Confidence 0.85.
 //
 
 import Foundation
@@ -32,12 +34,12 @@ import M1K3CLICore
 enum MCPTransport {
     /// Build the call sequence the runner uses. The poster and the app launch
     /// are the effects; the sequencing is the tested part.
-    static func sequence(port: UInt16, clientVersion: String) -> MCPCallSequence {
+    static func sequence(port: UInt16, clientVersion: String, token: String?) -> MCPCallSequence {
         let session = makeSession()
         return MCPCallSequence(
             port: port,
             clientVersion: clientVersion,
-            post: { body in try await post(body, port: port, session: session) },
+            post: { body in try await post(body, port: port, token: token, session: session) },
             wake: { openM1K3() },
             onWaking: { Output.error("m1k3: opening M1K3…") }
         )
@@ -52,7 +54,9 @@ enum MCPTransport {
         return URLSession(configuration: configuration)
     }
 
-    private static func post(_ body: Data, port: UInt16, session: URLSession) async throws -> MCPHTTPAnswer {
+    private static func post(
+        _ body: Data, port: UInt16, token: String?, session: URLSession
+    ) async throws -> MCPHTTPAnswer {
         guard let url = URL(string: MCPEndpoint.url(port: port)) else {
             throw CallFailure.unreachable("couldn't build a loopback URL for port \(port)")
         }
@@ -62,6 +66,9 @@ enum MCPTransport {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         // The SDK's stateless transport validates Accept and answers JSON only.
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let token {
+            request.setValue(MCPAccessToken.headerValue(token), forHTTPHeaderField: MCPAccessToken.headerName)
+        }
         do {
             let (data, response) = try await session.data(for: request)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 200

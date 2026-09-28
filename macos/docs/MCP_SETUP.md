@@ -12,24 +12,48 @@ M1K3 exposes MCP on **two surfaces**:
 
 ## 1. Connect to the app (HTTP — recommended)
 
-Turn the server on in the app: **Settings → Privacy → MCP server**. Then:
+Turn the server on in the app: **Settings → Privacy → MCP server**. Every
+request needs the server's **access token** (#270): M1K3 mints it on first
+start and keeps it in the Keychain; Settings shows it masked, with **Copy** and
+**New Token…** (a new token disconnects every agent until it is connected again).
 
-**Claude Code (CLI):**
+The short way, from Terminal — it asks for the token, so Copy it first:
 
 ```bash
-claude mcp add --transport http m1k3 http://127.0.0.1:4242/mcp
+m1k3 login && m1k3 connect claude
 ```
 
-Or per-project via `.mcp.json` (note `"type": "http"` — a bare `"url"` key is
-silently rejected):
+`m1k3 login` reads the token from the terminal with echo off (or a pipe:
+`pbpaste | m1k3 login`), never from the command line, and keeps it in your login
+keychain. `connect` then writes it into the client's config.
+
+**Claude Code by hand** (Settings' Copy button fills the token in):
+
+```bash
+claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp \
+  --header "Authorization: Bearer m1k3_…"
+```
+
+The JSON clients take a `headers` entry (`"type": "http"` matters to Claude
+Code — a bare `"url"` key is silently rejected):
 
 ```json
 {
   "mcpServers": {
-    "m1k3": { "type": "http", "url": "http://127.0.0.1:4242/mcp" }
+    "m1k3": {
+      "type": "http",
+      "url": "http://127.0.0.1:4242/mcp",
+      "headers": { "Authorization": "Bearer m1k3_…" }
+    }
   }
 }
 ```
+
+A request without the token is answered **401** before it can reach a session.
+What the token is for: stray scripts and callers that find the port open, and
+knocking the connected agent off. It is not a defence against malware running
+as you, which can read any client's config file — the per-tool switches
+(listening, deleting memories, opening links) cover that for every caller.
 
 When the app is closed the server is down — clients report the connection as
 failed. That's benign; launch M1K3 and reconnect.

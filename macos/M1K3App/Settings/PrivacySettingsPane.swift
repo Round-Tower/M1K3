@@ -32,6 +32,9 @@
 //  decides request/keep/revert; a refusal or dismissed dialog flips the switch back. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: the access token row (masked, Copy, New Token… behind
+//  a dialog that names what breaks). Snippets SHOW the masked token and COPY the real one; the Terminal line is
+//  `m1k3 login && m1k3 connect`. Secrets go on the pasteboard marked concealed. Confidence 0.8 (verify-by-launch).
 
 import AppKit // NSPasteboard — the Copy buttons
 #if canImport(DeclaredAgeRange)
@@ -62,6 +65,8 @@ struct PrivacySettingsPane: View {
     @State private var unansweredSenses: Set<String> = []
     @State private var scriptRows: [AppEnvironment.ScriptRow] = []
     @State private var connectClient: MCPClient = .claude
+    @State private var confirmingNewToken = false
+    @State private var newTokenFailed = false
     /// ADR 0006: the chat-egress consent, default OFF (absent reads as off).
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
@@ -404,16 +409,47 @@ struct PrivacySettingsPane: View {
             Toggle("Let agents use the microphone", isOn: $agentsUseMicrophone)
             Toggle("Let agents delete memories", isOn: $agentsDeleteMemories)
             Toggle("Let agents open links on screen", isOn: $agentsOpenLinks)
+            accessTokenRow
             connectAnAgent
         } header: {
             SettingsHeader("MCP server", systemImage: "network")
         } footer: {
             Text("""
             Lets an agent on this Mac use M1K3's knowledge, memory and voice. \
-            Loopback-only, one client at a time. Any app on this Mac can reach it, \
-            so listening, deleting memories and opening links stay off until you allow them.
+            Loopback-only, one client at a time. An agent needs the access token to connect. \
+            Listening, deleting memories and opening links stay off until you allow them.
             """)
             .font(.callout).foregroundStyle(.secondary)
+        }
+        .onAppear { env.mcpHost.loadAccessToken() }
+    }
+
+    /// Shown masked; Copy is the only way to the whole token (#270).
+    @ViewBuilder private var accessTokenRow: some View {
+        LabeledContent("Access token") {
+            HStack {
+                if let token = env.mcpHost.accessToken {
+                    Text(MCPAccessToken.masked(token))
+                        .font(.system(.caption, design: .monospaced))
+                    Button("Copy") { copySecret(token) }
+                        .controlSize(.small)
+                    Button("New Token…") { confirmingNewToken = true }
+                        .controlSize(.small)
+                } else {
+                    Text("Unavailable — the Keychain couldn’t be read")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .confirmationDialog("Make a new access token?", isPresented: $confirmingNewToken) {
+            Button("New Token", role: .destructive) { newTokenFailed = !env.mcpHost.rotateAccessToken() }
+        } message: {
+            Text("Every agent you’ve connected stops reaching M1K3 until you connect it again with the new token.")
+        }
+        if newTokenFailed {
+            // Fails safe — the old token stays in force — but say so, or it looks like it worked.
+            Text("Couldn’t save a new token to the Keychain. The current one still works.")
+                .font(.callout).foregroundStyle(.secondary)
         }
     }
 
@@ -426,7 +462,7 @@ struct PrivacySettingsPane: View {
             }
         }
         VStack(alignment: .leading, spacing: 6) {
-            Text(connectSnippet)
+            Text(connectSnippet(token: env.mcpHost.accessToken.map(MCPAccessToken.masked) ?? "<access token>"))
                 .font(.system(.caption, design: .monospaced))
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -434,12 +470,16 @@ struct PrivacySettingsPane: View {
                 Text(ConnectPlan.destination(client: connectClient))
                     .font(.caption2).foregroundStyle(.secondary)
                 Spacer()
-                Button("Copy") { copyToPasteboard(connectSnippet) }
-                    .controlSize(.small)
+                Button("Copy") {
+                    if let token = env.mcpHost.accessToken { copySecret(connectSnippet(token: token)) }
+                }
+                .controlSize(.small)
+                .disabled(env.mcpHost.accessToken == nil)
             }
         }
         VStack(alignment: .leading, spacing: 6) {
-            Text("Or from Terminal:").font(.callout).foregroundStyle(.secondary)
+            Text("Or from Terminal — it asks for the token, so Copy that first:")
+                .font(.callout).foregroundStyle(.secondary)
             HStack {
                 Text(terminalCommand)
                     .font(.system(.caption, design: .monospaced))
@@ -451,8 +491,8 @@ struct PrivacySettingsPane: View {
         }
     }
 
-    private var connectSnippet: String {
-        ConnectPlan.snippet(client: connectClient, url: MCPEndpoint.url(port: env.mcpHost.port))
+    private func connectSnippet(token: String) -> String {
+        ConnectPlan.snippet(client: connectClient, url: MCPEndpoint.url(port: env.mcpHost.port), token: token)
     }
 
     /// The CLI ships inside the bundle, so the path is always right — even for
@@ -465,11 +505,21 @@ struct PrivacySettingsPane: View {
             ? URL(fileURLWithPath: "/Applications/M1K3.app") : Bundle.main.bundleURL
         let path = bundle.appendingPathComponent("Contents/Helpers/m1k3").path
         let quoted = path.contains(" ") ? "\"\(path)\"" : path
-        return "\(quoted) connect \(connectClient.rawValue)"
+        return "\(quoted) login && \(quoted) connect \(connectClient.rawValue)"
     }
 
     private func copyToPasteboard(_ text: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    /// A secret on the pasteboard, marked concealed (the nspasteboard.org
+    /// convention) so clipboard managers and history tools skip it.
+    private func copySecret(_ text: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.declareTypes([.string, NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")], owner: nil)
+        pasteboard.setString(text, forType: .string)
+        pasteboard.setString("", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
     }
 }
