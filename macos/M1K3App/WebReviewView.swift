@@ -157,7 +157,7 @@ private struct WebViewContainer: NSViewRepresentable {
             Self.securityLog.notice("review panel: a page-driven move into private space or a local file was refused")
             if decision == latestDecision {
                 parent.isLoading = false
-                parent.loadError = String(localized: "This page tried to send the panel to a local or private-network address. M1K3 won’t open those on a page’s say-so.")
+                parent.loadError = String(localized: "This page tried to send the panel to a file on this Mac or a private-network address. M1K3 won’t open those on a page’s say-so.")
             }
             return .cancel
         }

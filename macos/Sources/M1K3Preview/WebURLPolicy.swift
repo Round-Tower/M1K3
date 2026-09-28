@@ -159,8 +159,9 @@ public enum WebURLPolicy {
     /// The review panel's gate for each navigation after its first (#269). A page that started
     /// on the public web must not carry the panel into local or private space BY ITSELF — a
     /// server redirect, a script, a meta refresh — since WebKit follows those outside this policy
-    /// and the panel captures the landed page's text into the chat. A person's own click may go
-    /// anywhere, and a page that started private was already the person's choice. Every other
+    /// and the panel captures the landed page's text into the chat. A local file refuses however
+    /// the move was made. Otherwise a person's own click may go anywhere, and a page that started
+    /// private was already the person's choice. Every other
     /// move is resolved, same host included: the host may have rebound since the panel opened it
     /// (#443 review). `startedPrivate` comes from `startsPrivate`, judged once at open.
     public static func refusesNavigation(
