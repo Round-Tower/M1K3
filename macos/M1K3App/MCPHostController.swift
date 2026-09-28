@@ -42,6 +42,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: forget's graph-twin lookup is canonical text
 //  (`ForgetResolver.namedGraphTwin`), the same identity the corpus-orphan delete hashes, so that
 //  branch can no longer delete a live fact's twin. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — #270 slice 1: the loopback registry goes through
+//  `grantGatedToolDefinitions`; listen / forget_memory / open_link need the owner's Settings grant
+//  (default OFF), read per call. Confidence 0.85 (verify-by-launch).
 
 import Foundation
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
@@ -61,6 +64,20 @@ import os // Logger — forget_memory's corpus-twin audit channel
 @Observable
 final class MCPHostController {
     nonisolated static let enabledKey = "mcpServer.enabled"
+    /// The loopback grants (#270): each OFF until the owner turns it on in Settings.
+    nonisolated static let grantMicrophoneKey = "mcpServer.grant.microphone"
+    nonisolated static let grantDeleteMemoriesKey = "mcpServer.grant.deleteMemories"
+    nonisolated static let grantOpenLinksKey = "mcpServer.grant.openLinks"
+
+    /// Read on every gated call, so a Settings toggle takes effect at the next one.
+    nonisolated static func currentGrants(_ defaults: UserDefaults = .standard) -> LoopbackToolGrants {
+        var grants = LoopbackToolGrants()
+        if defaults.bool(forKey: grantMicrophoneKey) { grants.insert(.microphone) }
+        if defaults.bool(forKey: grantDeleteMemoriesKey) { grants.insert(.deleteMemories) }
+        if defaults.bool(forKey: grantOpenLinksKey) { grants.insert(.openLinks) }
+        return grants
+    }
+
     nonisolated static let portKey = "mcpServer.port"
     nonisolated static let defaultPort: UInt16 = 4242
     // Leak-tripwire honeypots. Stored in local config only — never in source —
@@ -204,7 +221,12 @@ final class MCPHostController {
             )
         }
         let registry = MCPToolRegistry(
-            makeAllToolDefinitions(jobStore: intelligenceJobStore),
+            // The mic, memory deletes and on-screen links each need the owner's grant (#270);
+            // Brain at Home's LAN palette never serves them at all (MCPToolScope.lan).
+            grantGatedToolDefinitions(
+                makeAllToolDefinitions(jobStore: intelligenceJobStore),
+                grants: { MCPHostController.currentGrants() }
+            ),
             // Opt-in Agent Interaction Log (Settings toggle, OFF by default —
             // the store self-gates on every call). Only this in-app HTTP
             // surface is wired for v1; the stdio M1K3MCP binary's registry
