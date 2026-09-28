@@ -29,6 +29,9 @@
 //  gate for a page's own moves (server redirect, script, meta refresh): public start → private
 //  target refuses; a person's click or a private start pass. Same-host moves are resolved too (a
 //  rebound host, #443 review). Confidence 0.85.
+//  Review: same day (2), #443 review — the start is judged once at open (`startsPrivate`: literal, or
+//  a lookup that answered private; a failed lookup is public), so a typed Tailscale name works and a
+//  rebind can't flip it. Confidence 0.85.
 
 import Foundation
 #if canImport(Darwin)
@@ -151,18 +154,30 @@ public enum WebURLPolicy {
         return answers.contains(where: isPrivateAddress)
     }
 
-    /// The review panel's gate for each navigation after the first (#269). A page opened on
-    /// the public web must not carry the panel into local or private space BY ITSELF — a server
-    /// redirect, a script, a meta refresh — since WebKit follows those outside this policy and
-    /// the panel captures the landed page's text into the chat. A person's own click may go
-    /// anywhere, and a page opened on a private address was already the person's choice. Every
-    /// other move is resolved like an agent-driven open, same host included: the host may have
-    /// rebound to a private address since the panel vetted it (#443 review).
+    /// The review panel's gate for each navigation after its first (#269). A page that started
+    /// on the public web must not carry the panel into local or private space BY ITSELF — a
+    /// server redirect, a script, a meta refresh — since WebKit follows those outside this policy
+    /// and the panel captures the landed page's text into the chat. A person's own click may go
+    /// anywhere, and a page that started private was already the person's choice. Every other
+    /// move is resolved, same host included: the host may have rebound since the panel opened it
+    /// (#443 review). `startedPrivate` comes from `startsPrivate`, judged once at open.
     public static func refusesNavigation(
-        from requested: URL, to target: URL, userInitiated: Bool, resolver: any HostResolving
+        startedPrivate: Bool, to target: URL, userInitiated: Bool, resolver: any HostResolving
     ) async -> Bool {
-        guard !userInitiated, !isLocalOrPrivate(requested) else { return false }
+        guard !userInitiated, !startedPrivate else { return false }
         return await isLocalOrPrivate(target, resolver: resolver)
+    }
+
+    /// Whether the panel's first load is on a private address: a literal, or a lookup that
+    /// ANSWERED private (a typed Tailscale name, a VPN-only host). Judged once, at open, so a
+    /// later rebind can't turn a public start private. A failed lookup is a public start —
+    /// the gate stays on, and a slow answer can't switch it off (#443 review).
+    public static func startsPrivate(_ url: URL, resolver: any HostResolving) async -> Bool {
+        if isLocalOrPrivate(url) { return true }
+        guard let host = normalisedHost(url), numericIPv4(host) == nil, !looksLikeIPv6(host),
+              let answers = await resolver.addresses(for: host)
+        else { return false }
+        return answers.contains(where: isPrivateAddress)
     }
 
     /// Judge one resolved address literal (what getaddrinfo hands back): IPv4,

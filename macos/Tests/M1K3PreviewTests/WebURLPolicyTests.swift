@@ -274,7 +274,7 @@ extension WebURLPolicyTests {
         for target in ["http://127.0.0.1:4242/mcp", "http://192.168.1.1/admin", "http://router.example/", "http://printer.local/"] {
             #expect(
                 try await WebURLPolicy.refusesNavigation(
-                    from: requested, to: url(target), userInitiated: false, resolver: router
+                    startedPrivate: false, to: url(target), userInitiated: false, resolver: router
                 ),
                 "\(target)"
             )
@@ -285,13 +285,13 @@ extension WebURLPolicyTests {
     func allowedNavigations() async throws {
         let requested = try url("https://news.example/story")
         #expect(try !(await WebURLPolicy.refusesNavigation(
-            from: requested, to: url("http://192.168.1.1/"), userInitiated: true, resolver: router
+            startedPrivate: false, to: url("http://192.168.1.1/"), userInitiated: true, resolver: router
         )))
         #expect(try !(await WebURLPolicy.refusesNavigation(
-            from: requested, to: url("https://www.example.org/"), userInitiated: false, resolver: router
+            startedPrivate: false, to: url("https://www.example.org/"), userInitiated: false, resolver: router
         )))
         #expect(try !(await WebURLPolicy.refusesNavigation(
-            from: requested, to: url("https://news.example/next"), userInitiated: false, resolver: router
+            startedPrivate: false, to: url("https://news.example/next"), userInitiated: false, resolver: router
         )))
     }
 
@@ -300,7 +300,7 @@ extension WebURLPolicyTests {
         // Vetted public when the panel opened it; the attacker's short TTL now answers private.
         let rebound = FakeResolver(table: ["evil.example": ["192.168.1.1"]])
         #expect(try await WebURLPolicy.refusesNavigation(
-            from: url("https://evil.example/"), to: url("https://evil.example/next"),
+            startedPrivate: false, to: url("https://evil.example/next"),
             userInitiated: false, resolver: rebound
         ))
     }
@@ -308,19 +308,34 @@ extension WebURLPolicyTests {
     @Test("#269: a page opened on a private address may move within private space")
     func privateStartIsNotGated() async throws {
         #expect(try !(await WebURLPolicy.refusesNavigation(
-            from: url("http://192.168.1.1/"), to: url("http://192.168.1.1/login"),
+            startedPrivate: true, to: url("http://192.168.1.1/login"),
             userInitiated: false, resolver: router
         )))
         #expect(try !(await WebURLPolicy.refusesNavigation(
-            from: url("http://192.168.1.1/"), to: url("http://10.0.0.2/"),
+            startedPrivate: true, to: url("http://10.0.0.2/"),
             userInitiated: false, resolver: router
         )))
+    }
+
+    @Test("#443 review: a start is private by literal or by a lookup that answered private — judged once")
+    func startsPrivate() async throws {
+        let tailnet = FakeResolver(table: ["mybox.tailnet.ts.net": ["100.101.102.103"], "news.example": ["93.184.216.34"]])
+        #expect(try await WebURLPolicy.startsPrivate(url("http://192.168.1.1/"), resolver: tailnet))
+        #expect(try await WebURLPolicy.startsPrivate(url("http://printer.local/"), resolver: tailnet))
+        // A typed MagicDNS name: private by its answer, so its own moves stay ungated.
+        #expect(try await WebURLPolicy.startsPrivate(url("https://mybox.tailnet.ts.net/"), resolver: tailnet))
+        #expect(try !(await WebURLPolicy.startsPrivate(url("https://news.example/"), resolver: tailnet)))
+    }
+
+    @Test("#443 review: a failed lookup is a public start — slow DNS can't switch the gate off")
+    func failedStartLookupIsPublic() async throws {
+        #expect(try !(await WebURLPolicy.startsPrivate(url("https://slow.example/"), resolver: FailingResolver())))
     }
 
     @Test("#269: a failed lookup on a page-driven move refuses, as the gate does")
     func failedLookupRefuses() async throws {
         #expect(try await WebURLPolicy.refusesNavigation(
-            from: url("https://news.example/"), to: url("https://unresolvable.example/"),
+            startedPrivate: false, to: url("https://unresolvable.example/"),
             userInitiated: false, resolver: FailingResolver()
         ))
     }
