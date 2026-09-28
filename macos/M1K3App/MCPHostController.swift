@@ -220,6 +220,8 @@ final class MCPHostController {
                 }
             )
         }
+        // Strong on purpose, like `memoryToolDefinitions`' own: the registry outlives no one
+        // (AppEnvironment is the process), and capturing `self` instead would be the cycle.
         let environment = env
         let registry = MCPToolRegistry(
             // The mic, memory deletes and on-screen links each need the owner's grant (#270);
