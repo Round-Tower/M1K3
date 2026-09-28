@@ -15,6 +15,7 @@
 //  Signed: Kev + claude-opus-5, 2026-09-11, Confidence 0.85 (the merge
 //  arithmetic is test-pinned including the dangling-marker case; the WORDING
 //  is judgement and will drift as the tool list does). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: `target(for:isDirectory:)` — `--write DIR` writes DIR/AGENTS.md. Confidence 0.9.
 //
 
 import Foundation

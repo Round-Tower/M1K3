@@ -19,6 +19,8 @@
 //  moved here from the executable so it can be pinned, and anchored on the
 //  server NAME: a duplicate `m1k3` reads as already connected, any other thing
 //  that "already exists" stays a real failure (PR #279 review). Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: a JSONC config (comments, trailing commas) is named as such in the refusal
+//  (`looksLikeJSONC`, message only; a URL's `//` isn't a comment). Confidence 0.85.
 //
 
 import Foundation

@@ -29,6 +29,7 @@
 //  was added — no Info.plist section, see project.yml): it wrote AGENTS.md into its own container and
 //  printed "wrote …". Now it prints the block (stdout) and says why (stderr). Verified by run on an
 //  ad-hoc-signed sandboxed build; `connect` was driven the same way and already printed. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: agent-notes resolves its path through `AgentNotes.target`. Confidence 0.9.
 //
 
 import Darwin // getpwuid — the account's REAL home, which the sandbox hides

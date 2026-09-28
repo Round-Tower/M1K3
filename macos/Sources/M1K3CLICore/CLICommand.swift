@@ -141,7 +141,8 @@ public struct CLICommand: Equatable, Sendable {
     OPTIONS
       --port N        the app's MCP port (default \(MCPEndpoint.defaultPort), or $\(portEnvironmentKey));
                       anywhere on the line, except inside call's JSON
-      --              the rest is text, flags and all: m1k3 remember -- --port 8080 is open
+      --              for ask, speak, remember and search: the rest is text, flags and all
+                      (m1k3 remember -- --port 8080 is open)
 
     M1K3 must be running — m1k3 opens it for you if it isn't.
     """

@@ -23,6 +23,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — the helper lives at Contents/Helpers/m1k3, not
 //  Contents/MacOS: sign-on-copy there re-signs it as the app itself (identifier + entitlements),
 //  which aborted the developer-id export and would ship it sandboxed. Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: `onWaking` prints "opening M1K3…" to stderr as the app is opened. Confidence 0.9.
 //
 
 import Foundation
