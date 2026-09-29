@@ -12,6 +12,7 @@
 //  Signed: Kev + claude-opus-5, 2026-09-11, Confidence 0.9 (both failures are
 //  pinned by counting what the server was actually handed; the real URLSession
 //  poster behind this seam stays verify-by-run). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: a 401 reads as `.unauthorized`.
 //
 
 import Foundation
@@ -163,5 +164,16 @@ extension MCPCallSequenceTests {
         )
         _ = await warm.call(tool: "get_status", arguments: [:])
         #expect(told.withLock { $0 } == 1)
+    }
+
+    @Test("#270: a 401 is its own failure — the runner says how to log in — whatever the body says")
+    func unauthorizedIsItsOwnFailure() async {
+        for body in [#"{"error":{"code":-32600,"message":"Unauthorized: M1K3 needs its access token"}}"#, "Unauthorized"] {
+            let server = FakeServer(answers: [answer(401, body)])
+            let result = await sequence(server, timing: brisk).call(tool: "get_status", arguments: [:])
+            #expect(result == .failure(.unauthorized), Comment(rawValue: body))
+            // Refused at the door: no handshake retry, no second post.
+            #expect(await server.methods() == ["tools/call"])
+        }
     }
 }

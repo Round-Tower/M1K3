@@ -33,12 +33,27 @@
 //  (no idle socket holds a Task forever). Both pinned in
 //  LocalMCPHTTPServerTests (raw-socket forgeries; the live session survives).
 //  Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: `accessToken` is read on every
+//  request and handed to the gate, so a request without it is 401 before the sniff and a
+//  rotation needs no restart. Confidence 0.85 (pinned; live 401 driven in the PR). Then
+//  (#448 review) `access: LoopbackAccess` is REQUIRED — `.token` or an explicit `.open` —
+//  so a new construction site can't get an open door by leaving an argument out.
 //
 
 import Foundation
 import MCP
 import Network
 import os
+
+/// Who may use the listener. Required, with no default: a new construction
+/// site has to choose, and "open" has to be written out (#448 review — an
+/// optional token defaulting to nil was a fail-open door for the next caller).
+public enum LoopbackAccess: Sendable {
+    /// Every request must carry this token, read per request (rotation applies at once).
+    case token(@Sendable () -> String)
+    /// No token check. Tests of the wire layer only — the app never serves open.
+    case open
+}
 
 public actor LocalMCPHTTPServer {
     public typealias SessionFactory = @Sendable () async throws -> (Server, StatelessHTTPServerTransport)
@@ -58,6 +73,10 @@ public actor LocalMCPHTTPServer {
     /// Seconds a connection may take to deliver one complete request. The
     /// clock covers the READ only — a tool call may legitimately run longer.
     private let readDeadline: TimeInterval
+    /// `.token`: every request must carry it, read per request so a rotation
+    /// in Settings applies at once — the app's only mode. `.open`: no check,
+    /// for wire-layer tests only (#270).
+    private let access: LoopbackAccess
     private var listener: NWListener?
     private var session: (server: Server, transport: StatelessHTTPServerTransport)?
 
@@ -73,12 +92,14 @@ public actor LocalMCPHTTPServer {
 
     public init(
         port: UInt16,
+        access: LoopbackAccess,
         onAbnormalStop: (@Sendable (String) -> Void)? = nil,
         onClientInitialize: (@Sendable (String?) -> Void)? = nil,
         readDeadline: TimeInterval = 15,
         makeSession: @escaping SessionFactory
     ) {
         self.port = port
+        self.access = access
         self.onAbnormalStop = onAbnormalStop
         self.onClientInitialize = onClientInitialize
         self.readDeadline = readDeadline
@@ -219,7 +240,13 @@ public actor LocalMCPHTTPServer {
         // The door first: a refused request never reaches the initialize
         // sniff below, so a forgery can neither evict the live session nor
         // plant a visitor name.
-        if let refusal = LoopbackRequestGate.refusal(for: request, boundPort: port, duplicateHeaders: duplicateHeaders) {
+        let expectedToken: String? = switch access {
+        case let .token(current): current()
+        case .open: nil
+        }
+        if let refusal = LoopbackRequestGate.refusal(
+            for: request, boundPort: port, duplicateHeaders: duplicateHeaders, accessToken: expectedToken
+        ) {
             Self.log.notice("refused MCP request: \(refusal.description, privacy: .public)")
             return .error(statusCode: refusal.statusCode, MCPError.invalidRequest(refusal.description))
         }

@@ -45,6 +45,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #270 slice 1: the loopback registry goes through
 //  `grantGatedToolDefinitions`; listen / forget_memory / open_link need the owner's Settings grant
 //  (default OFF), read per call. Confidence 0.85 (verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: the listener needs an access token.
+//  Loaded (or minted) from the Keychain before the listener starts — an unreadable Keychain means
+//  no start, never a token-less one — read per request through `LoopbackAccessTokenBox`, and
+//  rotated from Settings. Confidence 0.85 (vault + gate pinned; the Keychain read is verify-by-launch).
 
 import Foundation
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
@@ -79,6 +83,8 @@ final class MCPHostController {
     }
 
     nonisolated static let portKey = "mcpServer.port"
+    /// The access token's Keychain account (#270), beside the app's other secrets.
+    nonisolated static let accessTokenAccount = "mcp.loopback-access-token"
     nonisolated static let defaultPort: UInt16 = 4242
     // Leak-tripwire honeypots. Stored in local config only — never in source —
     // so the repo never carries the bait:
@@ -117,6 +123,12 @@ final class MCPHostController {
 
     private(set) var isRunning = false
     private(set) var statusText: String?
+
+    /// The loopback access token (#270): Settings shows it masked and copies it;
+    /// the listener reads it through `accessTokenBox` on every request. Nil until
+    /// loaded, and while the Keychain can't be read — the server doesn't start then.
+    private(set) var accessToken: String?
+    private let accessTokenBox = LoopbackAccessTokenBox()
 
     var port: UInt16 {
         let stored = UserDefaults.standard.integer(forKey: Self.portKey)
@@ -197,8 +209,59 @@ final class MCPHostController {
         )
     }
 
+    // MARK: - Access token (#270)
+
+    /// The token, loaded or minted on first need. Nil when the Keychain can't be
+    /// read — never a fresh token over one that might be there.
+    @discardableResult
+    func loadAccessToken() -> String? {
+        if let accessToken { return accessToken }
+        let store = AppEnvironment.makeKeyStore()
+        let account = Self.accessTokenAccount
+        do {
+            let token = try LoopbackAccessTokenVault.loadOrMint(
+                read: { try store.data(forAccount: account).map { String(decoding: $0, as: UTF8.self) } },
+                save: { try store.setData(Data($0.utf8), forAccount: account) }
+            )
+            accessTokenBox.set(token)
+            accessToken = token
+            return token
+        } catch {
+            Self.securityLog.error("MCP access token unavailable: \(String(describing: error), privacy: .public)")
+            return nil
+        }
+    }
+
+    /// A new token, in force from the next request. Every connected agent needs
+    /// the new one — Settings says so before it asks. False leaves the old one.
+    @discardableResult
+    func rotateAccessToken() -> Bool {
+        let store = AppEnvironment.makeKeyStore()
+        let account = Self.accessTokenAccount
+        do {
+            let token = try LoopbackAccessTokenVault.rotate(
+                save: { try store.setData(Data($0.utf8), forAccount: account) }
+            )
+            accessTokenBox.set(token)
+            accessToken = token
+            Self.securityLog.notice("MCP access token rotated")
+            return true
+        } catch {
+            Self.securityLog.error("MCP access token rotation failed: \(String(describing: error), privacy: .public)")
+            return false
+        }
+    }
+
     func start() async {
         guard server == nil else { return }
+        // No token, no listener: a Keychain that can't be read must not become
+        // a door that takes anyone (#270).
+        guard loadAccessToken() != nil else {
+            isRunning = false
+            statusText = "Couldn’t start: the access token couldn’t be read from the Keychain"
+            return
+        }
+        let accessTokenBox = accessTokenBox
         // One job store for the server's lifetime — captured in the ask_m1k3 /
         // get_answer closures so a long turn submitted on one request is fetchable
         // on a later one (the HTTP transport is stateless per-request).
@@ -243,6 +306,7 @@ final class MCPHostController {
         )
         let host = LocalMCPHTTPServer(
             port: port,
+            access: .token { accessTokenBox.current() },
             onAbnormalStop: { [weak self] reason in
                 Task { @MainActor [weak self] in
                     self?.server = nil

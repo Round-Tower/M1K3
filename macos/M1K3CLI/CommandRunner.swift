@@ -30,17 +30,47 @@
 //  printed "wrote …". Now it prints the block (stdout) and says why (stderr). Verified by run on an
 //  ad-hoc-signed sandboxed build; `connect` was driven the same way and already printed. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: agent-notes resolves its path through `AgentNotes.target`. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: `login` reads the token from the terminal
+//  (echo off) or a pipe and saves it (CLITokenStore); every call carries it; a 401 prints how to log in
+//  (exit 4). `connect` needs the token and writes it into the client's config; a Claude Code entry that
+//  already exists is removed and added again, and the echoed command masks the token. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-29 — #448 review folds: `login` checks the token BEFORE saving
+//  (a stale paste can't replace a working token); the tty read switches echo off on stdin and VERIFIES it
+//  (readpassphrase echoed the token in the sandboxed helper), refusing a terminal that still echoes; `claude`'s stderr and the
+//  PATH-missing hint go through `MCPAccessToken.redacting` / the masked snippet; a failed re-add after a
+//  successful remove says the old entry is gone; every failure fallback masks the token (`--print` shows it
+//  whole); Ctrl-C/TERM/HUP at the hidden prompt restore the terminal before dying. Confidence 0.85.
 //
 
-import Darwin // getpwuid — the account's REAL home, which the sandbox hides
+import Darwin // getpwuid — the account's REAL home, which the sandbox hides; termios for login
 import Foundation
 import M1K3CLICore
+
+/// The terminal settings `readSecretLine` must put back, reachable from a
+/// signal handler (a C function pointer captures nothing). Set only for the
+/// read window.
+/// `nonisolated(unsafe)` is sound here: it is written only BEFORE the handlers
+/// are installed and cleared after they are removed, so the handler only ever
+/// reads a settled value; `tcsetattr`, `signal` and `raise` are async-signal-safe.
+private nonisolated(unsafe) var termiosToRestore: termios?
+
+/// Ctrl-C (or a TERM/HUP) at the hidden prompt would otherwise kill the
+/// process with echo still off, and the user's shell stops echoing (#448
+/// review). Restore, then die of the same signal.
+private func restoreTerminalAndReraise(_ signal: Int32) {
+    if var saved = termiosToRestore {
+        _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved)
+    }
+    Darwin.signal(signal, SIG_DFL)
+    raise(signal)
+}
 
 enum ExitCode {
     static let ok: Int32 = 0
     static let usage: Int32 = 1
     static let unreachable: Int32 = 2
     static let toolError: Int32 = 3
+    static let unauthorized: Int32 = 4
 }
 
 enum Output {
@@ -96,6 +126,8 @@ struct CommandRunner {
             return agentNotes(target)
         case let .connect(client, printOnly, configDir):
             return connect(client: client, printOnly: printOnly, configDir: configDir)
+        case .login:
+            return await login()
         default:
             return await callTool()
         }
@@ -104,7 +136,9 @@ struct CommandRunner {
     // MARK: - Tool calls
 
     private func callTool() async -> Int32 {
-        let transport = MCPTransport.sequence(port: command.port, clientVersion: appVersion)
+        let transport = MCPTransport.sequence(
+            port: command.port, clientVersion: appVersion, token: CLITokenStore.read()
+        )
         let request: (tool: String, arguments: [String: JSONValue])
         switch command.action {
         case .status:
@@ -127,7 +161,7 @@ struct CommandRunner {
                 Output.error("m1k3: \(error)")
                 return ExitCode.usage
             }
-        case .connect, .agentNotes, .help, .version:
+        case .connect, .agentNotes, .login, .help, .version:
             Output.error("m1k3: nothing to call")
             return ExitCode.usage
         }
@@ -141,7 +175,16 @@ struct CommandRunner {
         case let .failure(.tool(message)):
             Output.error("m1k3: \(message)")
             return ExitCode.toolError
+        case .failure(.unauthorized):
+            return Self.unauthorized()
         }
+    }
+
+    /// The door's 401 (#270): say where the token is and how to hand it over.
+    static func unauthorized() -> Int32 {
+        Output.error("m1k3: M1K3 turned that away — it needs the access token.")
+        Output.error("m1k3: copy it from M1K3 ▸ Settings ▸ Privacy ▸ MCP server, then run: m1k3 login")
+        return ExitCode.unauthorized
     }
 
     /// `ask_m1k3` hands back a job id when a turn outruns its ~8s inline grace
@@ -169,6 +212,8 @@ struct CommandRunner {
             case let .failure(.tool(message)):
                 Output.error("m1k3: \(message)")
                 return ExitCode.toolError
+            case .failure(.unauthorized):
+                return Self.unauthorized()
             }
         }
         Output.error("m1k3: gave up waiting — redeem it later with: m1k3 call get_answer '{\"job_id\":\"\(job)\"}'")
@@ -181,6 +226,100 @@ struct CommandRunner {
         let firstLine = text.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? text
         let trimmed = firstLine.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.count <= 60 ? trimmed : String(trimmed.prefix(60)).trimmingCharacters(in: .whitespaces) + "…"
+    }
+
+    // MARK: - login
+
+    /// The token comes in on the terminal with echo off, or down a pipe
+    /// (`pbpaste | m1k3 login`) — never argv, which lands in shell history.
+    /// Tried BEFORE it is saved: a stale paste M1K3 turns away must not
+    /// replace a token that works. Saved unchecked only when M1K3 can't be
+    /// reached — right or wrong, the token doesn't depend on the app being up.
+    private func login() async -> Int32 {
+        let pasted: String
+        switch Self.readSecretLine(
+            prompt: "Paste M1K3's access token (Settings ▸ Privacy ▸ MCP server ▸ Copy): "
+        ) {
+        case let .read(line): pasted = line
+        case .noInput:
+            Output.error("m1k3: no token read")
+            return ExitCode.usage
+        case .terminalUnavailable:
+            Output.error("m1k3: this terminal won't hide what you type — pipe the token in instead: pbpaste | m1k3 login")
+            return ExitCode.usage
+        }
+        guard let token = MCPAccessToken.parse(pasted: pasted) else {
+            Output.error("m1k3: that isn't an M1K3 access token — it starts \(MCPAccessToken.prefix) (Settings ▸ Privacy ▸ Copy)")
+            return ExitCode.usage
+        }
+        let transport = MCPTransport.sequence(port: command.port, clientVersion: appVersion, token: token)
+        let checked: String
+        switch await transport.call(tool: "get_status", arguments: [:]) {
+        case .success:
+            checked = "M1K3 accepted it."
+        case .failure(.unauthorized):
+            Output.error("m1k3: M1K3 turned that token away — not saved (any token saved before is unchanged).")
+            Output.error("m1k3: copy the current one from M1K3 ▸ Settings ▸ Privacy ▸ MCP server.")
+            return ExitCode.unauthorized
+        case let .failure(.unreachable(message)), let .failure(.tool(message)):
+            checked = "Couldn't check it just now — \(message)"
+        }
+        do {
+            try CLITokenStore.save(token)
+        } catch {
+            Output.error("m1k3: \(error)")
+            return ExitCode.toolError
+        }
+        Output.line("Saved \(MCPAccessToken.masked(token)). \(checked)")
+        return ExitCode.ok
+    }
+
+    enum SecretRead {
+        case read(String)
+        case noInput
+        /// The terminal wouldn't hide what's typed — reading would put the token on screen.
+        case terminalUnavailable
+    }
+
+    /// One line from the terminal with echo off, or from stdin when it's a pipe.
+    ///
+    /// ★ Not `readpassphrase`: in the sandboxed App Store helper it opens
+    /// /dev/tty and the typed token ECHOES (the echo-off doesn't take; found
+    /// driving #448 under a pty — the same call unsandboxed hides it). So echo
+    /// is switched off on the inherited stdin and READ BACK: a terminal that
+    /// still echoes is refused, never read. The Swift String copies aren't
+    /// wiped (no secure string type) — fine for a short-lived CLI (#270).
+    static func readSecretLine(prompt: String) -> SecretRead {
+        guard isatty(STDIN_FILENO) != 0 else {
+            return readLine(strippingNewline: true).map(SecretRead.read) ?? .noInput
+        }
+        var original = termios()
+        guard tcgetattr(STDIN_FILENO, &original) == 0 else { return .terminalUnavailable }
+        var hidden = original
+        hidden.c_lflag &= ~tcflag_t(ECHO)
+        hidden.c_lflag |= tcflag_t(ICANON)
+        var applied = termios()
+        guard tcsetattr(STDIN_FILENO, TCSAFLUSH, &hidden) == 0,
+              tcgetattr(STDIN_FILENO, &applied) == 0, applied.c_lflag & tcflag_t(ECHO) == 0
+        else {
+            _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &original)
+            return .terminalUnavailable
+        }
+        termiosToRestore = original
+        let cancelSignals = [SIGINT, SIGTERM, SIGHUP]
+        for cancel in cancelSignals {
+            signal(cancel, restoreTerminalAndReraise)
+        }
+        defer {
+            _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &original)
+            for cancel in cancelSignals {
+                signal(cancel, SIG_DFL)
+            }
+            termiosToRestore = nil
+            FileHandle.standardError.write(Data("\n".utf8)) // the Return the user typed wasn't echoed
+        }
+        FileHandle.standardError.write(Data(prompt.utf8))
+        return readLine(strippingNewline: true).map(SecretRead.read) ?? .noInput
     }
 
     // MARK: - agent-notes
@@ -230,19 +369,26 @@ struct CommandRunner {
 
     private func connect(client: MCPClient, printOnly: Bool, configDir: String?) -> Int32 {
         let url = MCPEndpoint.url(port: command.port)
+        // Every client's config carries the token now (#270), so there is nothing
+        // honest to write or print without it.
+        guard let token = CLITokenStore.read() else {
+            Output.error("m1k3: connect needs M1K3's access token first — run m1k3 login")
+            Output.error("m1k3: (copy it from M1K3 ▸ Settings ▸ Privacy ▸ MCP server)")
+            return ExitCode.unauthorized
+        }
         if isSandboxed {
             Output.line("This copy of m1k3 is sandboxed (App Store build) — here's the config to paste yourself:")
-            return show(client: client, url: url)
+            return show(client: client, url: url, token: token)
         }
-        if printOnly { return show(client: client, url: url) }
+        if printOnly { return show(client: client, url: url, token: token) }
 
         let home = configDir.map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) }
             ?? FileManager.default.homeDirectoryForCurrentUser
-        switch ConnectPlan.plan(client: client, url: url, configDir: home) {
+        switch ConnectPlan.plan(client: client, url: url, token: token, configDir: home) {
         case let .shell(command):
-            return runShell(command, client: client, url: url)
+            return runShell(command, client: client, url: url, token: token)
         case .jsonMerge:
-            return writeConfig(client: client, url: url, configDir: home)
+            return writeConfig(client: client, url: url, token: token, configDir: home)
         case let .printOnly(snippet, note):
             Output.line(snippet)
             Output.line("")
@@ -251,17 +397,26 @@ struct CommandRunner {
         }
     }
 
-    private func show(client: MCPClient, url: String) -> Int32 {
-        Output.line(ConnectPlan.snippet(client: client, url: url))
+    /// What a failed connect leaves on screen: the shape, token masked, and
+    /// the flag that prints it whole. A failure isn't a request to print a
+    /// secret; `--print` is (#448 review).
+    private static func fallback(client: MCPClient, url: String, token: String) {
+        Output.line(ConnectPlan.snippet(client: client, url: url, token: MCPAccessToken.masked(token)))
+        Output.line("")
+        Output.line("m1k3 connect \(client.rawValue) --print shows it with the full token.")
+    }
+
+    private func show(client: MCPClient, url: String, token: String) -> Int32 {
+        Output.line(ConnectPlan.snippet(client: client, url: url, token: token))
         Output.line("")
         Output.line("→ \(ConnectPlan.destination(client: client))")
         return ExitCode.ok
     }
 
-    private func writeConfig(client: MCPClient, url: String, configDir: URL) -> Int32 {
+    private func writeConfig(client: MCPClient, url: String, token: String, configDir: URL) -> Int32 {
         do {
             let outcome = try JSONConfigWriter.apply(
-                ConnectPlan.plan(client: client, url: url, configDir: configDir)
+                ConnectPlan.plan(client: client, url: url, token: token, configDir: configDir)
             )
             switch outcome {
             case let .written(path, backup):
@@ -275,14 +430,14 @@ struct CommandRunner {
         } catch let error as JSONConfigWriter.WriteError {
             Output.error("m1k3: \(error.message)")
             Output.line("")
-            Output.line(ConnectPlan.snippet(client: client, url: url))
+            Self.fallback(client: client, url: url, token: token)
             return ExitCode.toolError
         } catch {
             // Whatever went wrong, the user should leave with something they
             // can paste rather than just an error.
             Output.error("m1k3: \(error.localizedDescription)")
             Output.line("")
-            Output.line(ConnectPlan.snippet(client: client, url: url))
+            Self.fallback(client: client, url: url, token: token)
             Output.line("→ \(ConnectPlan.destination(client: client))")
             return ExitCode.toolError
         }
@@ -291,48 +446,71 @@ struct CommandRunner {
     /// Run the client's own registration command — but only if we can find it.
     /// Printing the line for the user to run is a perfectly good outcome; a
     /// stack trace about a missing binary is not.
-    private func runShell(_ command: [String], client: MCPClient, url: String) -> Int32 {
+    private func runShell(_ command: [String], client: MCPClient, url: String, token: String) -> Int32 {
         guard let tool = command.first else { return ExitCode.usage }
+        // What goes on screen: the command with the token masked. The real one
+        // only ever reaches the client's own registry.
+        let shown = command.map { MCPAccessToken.redacting($0, token: token) }
         guard let executable = ExecutableLookup.locate(
             tool, environment: environment, home: FileManager.default.homeDirectoryForCurrentUser.path
         ) else {
-            Output.line("\(tool) isn't on your PATH. Run this once \(tool) is installed:")
+            // Nothing failed here, so nothing secret goes to the screen by default.
+            Output.line("\(tool) isn't on your PATH. Once \(tool) is installed, run m1k3 connect \(client.rawValue) again,")
+            Output.line("or m1k3 connect \(client.rawValue) --print for the full line. It looks like:")
             Output.line("")
-            Output.line(command.joined(separator: " "))
+            Output.line(ConnectPlan.snippet(client: client, url: url, token: MCPAccessToken.masked(token)))
             return ExitCode.ok
         }
-        Output.line("$ \(command.joined(separator: " "))")
-        let process = Process()
-        process.executableURL = executable
-        process.arguments = Array(command.dropFirst())
-        let errors = Pipe()
-        process.standardError = errors
+        Output.line("$ \(shown.joined(separator: " "))")
         do {
-            try process.run()
-            let stderr = errors.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            if process.terminationStatus == 0 {
+            var run = try Self.execute(executable, Array(command.dropFirst()))
+            var removedOld = false
+            // `claude mcp add` refuses a name that exists — and since the token
+            // (#270) that entry may be one without it. Replace it: remove, add again.
+            if run.status != 0, ConnectPlan.shellSaysAlreadyConnected(run.stderr),
+               let replace = ConnectPlan.replaceCommand(client: client)
+            {
+                Output.line("$ \(replace.joined(separator: " "))")
+                let removal = try Self.execute(executable, Array(replace.dropFirst()))
+                removedOld = removal.status == 0
+                let removalError = MCPAccessToken.redacting(removal.stderr, token: token)
+                if !removedOld, !removalError.isEmpty {
+                    Output.error(removalError.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+                Output.line("$ \(shown.joined(separator: " "))")
+                run = try Self.execute(executable, Array(command.dropFirst()))
+            }
+            if run.status == 0 {
                 Output.line("Restart \(client.displayName) to pick it up.")
                 return ExitCode.ok
             }
-            let message = String(data: stderr, encoding: .utf8) ?? ""
-            // Current `claude mcp add` refuses a duplicate NAME. That is the
-            // same state the JSON clients call "already connected", so it must
-            // read the same way here — re-running connect is not an error.
-            if ConnectPlan.shellSaysAlreadyConnected(message) {
-                Output.line("already connected — nothing to change.")
-                return ExitCode.ok
-            }
-            if !message.isEmpty { Output.error(message.trimmingCharacters(in: .whitespacesAndNewlines)) }
-            Output.error("m1k3: \(tool) exited \(process.terminationStatus). Do it by hand:")
+            // The client's own words, token masked — it may echo its arguments.
+            let stderr = MCPAccessToken.redacting(run.stderr, token: token)
+            if !stderr.isEmpty { Output.error(stderr.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            if removedOld { Output.error("m1k3: the old m1k3 entry was removed and the new one didn't go in.") }
+            Output.error("m1k3: \(tool) exited \(run.status). Do it by hand:")
             Output.line("")
-            Output.line(ConnectPlan.snippet(client: client, url: url))
+            Self.fallback(client: client, url: url, token: token)
             return ExitCode.toolError
         } catch {
             Output.error("m1k3: couldn't run \(tool) — \(error.localizedDescription)")
             Output.line("")
-            Output.line(ConnectPlan.snippet(client: client, url: url))
+            Self.fallback(client: client, url: url, token: token)
             return ExitCode.toolError
         }
+    }
+
+    /// Run to completion; stdout passes through, stderr is captured for the
+    /// already-exists read.
+    private static func execute(_ executable: URL, _ arguments: [String]) throws -> (status: Int32, stderr: String) {
+        let process = Process()
+        process.executableURL = executable
+        process.arguments = arguments
+        let errors = Pipe()
+        process.standardError = errors
+        try process.run()
+        let stderr = errors.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return (process.terminationStatus, String(data: stderr, encoding: .utf8) ?? "")
     }
 }

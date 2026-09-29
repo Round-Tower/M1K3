@@ -29,6 +29,8 @@
 //  (scanLimit): its tool name and JSON reach the handler verbatim, so a
 //  `--port 8080` inside a note's text is the note's words, not the CLI's port
 //  (PR #279 review). Confidence now 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: `login` takes no arguments; a
+//  token passed on the line is refused without being echoed. Confidence 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: `--` ends the flags (what follows is text,
 //  --port and --title included); `connect claude --config-dir` refuses rather than quietly
 //  editing the real config; a dangling --port says what it wants; a usage error prints one line
@@ -108,6 +110,9 @@ public struct CLICommand: Equatable, Sendable {
         case call(tool: String, argumentsJSON: String?)
         case connect(client: MCPClient, printOnly: Bool, configDir: String?)
         case agentNotes(NotesTarget)
+        /// Store M1K3's access token for this CLI. The token comes from stdin,
+        /// never argv (#270).
+        case login
         case help
         case version
     }
@@ -136,6 +141,7 @@ public struct CLICommand: Equatable, Sendable {
                                          (\(MCPClient.allCases.map(\.rawValue).joined(separator: " | ")))
                                          [--print] [--config-dir DIR]
       m1k3 agent-notes [--write [PATH]]  the "M1K3 is the resident" block for AGENTS.md
+      m1k3 login                         paste M1K3's access token (Settings ▸ Privacy)
       m1k3 version | help
 
     OPTIONS
@@ -203,6 +209,7 @@ public struct CLICommand: Equatable, Sendable {
         case "call": call(arguments + literal)
         case "connect": connect(arguments + literal)
         case "agent-notes": agentNotes(arguments + literal)
+        case "login": login(arguments + literal)
         case "help", "--help", "-h": .success(.help)
         case "version", "--version", "-v": .success(.version)
         default: .failure(CLIUsageError("unknown command \"\(subcommand)\""))
@@ -259,7 +266,7 @@ public struct CLICommand: Equatable, Sendable {
             if argument == "--port", next < arguments.endIndex, isNumeric(arguments[next]) {
                 guard let parsed = validPort(arguments[next]) else {
                     return .failure(CLIUsageError(
-                        "--port takes a number from 1024 to 65535, not \"\(arguments[next])\""
+                        "--port takes a number from 1024 to 65535, not \"\(MCPAccessToken.maskedIfToken(arguments[next]))\""
                     ))
                 }
                 port = parsed
@@ -272,7 +279,7 @@ public struct CLICommand: Equatable, Sendable {
             if argument.hasPrefix("--port=") {
                 let value = String(argument.dropFirst("--port=".count))
                 guard let parsed = validPort(value) else {
-                    return .failure(CLIUsageError("--port takes a number from 1024 to 65535, not \"\(value)\""))
+                    return .failure(CLIUsageError("--port takes a number from 1024 to 65535, not \"\(MCPAccessToken.maskedIfToken(value))\""))
                 }
                 port = parsed
                 index = arguments.index(after: index)
@@ -300,6 +307,17 @@ public struct CLICommand: Equatable, Sendable {
 
     // MARK: - Subcommand shapes
 
+    /// No arguments, and a refusal that never repeats what it was given: the
+    /// one likely argument is the token itself (#270).
+    private static func login(_ arguments: [String]) -> Result<Action, CLIUsageError> {
+        guard arguments.isEmpty else {
+            return .failure(CLIUsageError(
+                "login takes the token on stdin, not the command line (that lands in your shell history) — run m1k3 login and paste it"
+            ))
+        }
+        return .success(.login)
+    }
+
     private static func noArguments(
         _ arguments: [String],
         literal: [String] = [],
@@ -310,7 +328,7 @@ public struct CLICommand: Equatable, Sendable {
         // just a word this command doesn't take (#445 review).
         if arguments.first == "--port" { return .failure(CLIUsageError("--port needs a number, e.g. --port 4242")) }
         guard let unexpected = (arguments + literal).first else { return .success(action) }
-        return .failure(CLIUsageError("\(subcommand) takes no arguments — didn't expect \"\(unexpected)\""))
+        return .failure(CLIUsageError("\(subcommand) takes no arguments — didn't expect \"\(MCPAccessToken.maskedIfToken(unexpected))\""))
     }
 
     private static func text(_ arguments: [String], subcommand: String) -> Result<String, CLIUsageError> {

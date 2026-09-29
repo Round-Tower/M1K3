@@ -12,7 +12,9 @@ and an MCP server. **The live product is the Mac-native SwiftUI app under
 - **`macos/docs/IOS_VISIONOS_PORT.md`** — the iOS / visionOS shell.
 - **`app/CLAUDE.md`** — M1K3 for Android (KMP, slow burn).
 - **`CONTRIBUTING.md` / `SECURITY.md`** — the public-repo contributor surface.
-- `.mcp.json` points at the Mac app's in-app MCP server (`127.0.0.1:4242/mcp`).
+- M1K3's in-app MCP server (`127.0.0.1:4242/mcp`) needs its access token (#270): connect
+  with `m1k3 login && m1k3 connect claude` (user scope). No repo `.mcp.json` — a project
+  entry would shadow the authed user one.
 
 ## Session memory
 `.claude/project-memory.md` is the private session chronicle: gitignored, never

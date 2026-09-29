@@ -47,6 +47,9 @@ public enum CallFailure: Error, Equatable, Sendable {
     case unreachable(String)
     /// The server answered, and the answer was a refusal.
     case tool(String)
+    /// The door turned the call away for want of the access token (HTTP 401,
+    /// #270). Its own case so the runner can say how to fix it.
+    case unauthorized
 }
 
 public struct MCPCallSequence: Sendable {
@@ -105,6 +108,9 @@ public struct MCPCallSequence: Sendable {
 
         do {
             let answer = try await postWakingIfNeeded(body)
+            // Before the envelope: the door's 401 is final, and a handshake
+            // retry would only be turned away again.
+            if answer.status == 401 { return .failure(.unauthorized) }
             return await outcome(of: JSONRPC.Reply.parse(status: answer.status, body: answer.body), body: body)
         } catch let failure as CallFailure {
             return .failure(failure)

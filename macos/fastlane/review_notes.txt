@@ -10,7 +10,7 @@ FIRST LAUNCH:
 OUTBOUND (network.client): model download + optional web search (OFF by default). No analytics, tracking, or telemetry.
 
 INBOUND (network.server): two features, both OFF by default in Settings > Privacy:
-  1. MCP server — loopback only (127.0.0.1:4242), lets AI coding agents call M1K3's tools. Verify: /Applications/M1K3.app/Contents/Helpers/m1k3 status
+  1. MCP server — loopback only (127.0.0.1:4242), needs an access token, lets AI coding agents call M1K3's tools. Verify: Settings > Privacy > MCP server > Access token > Copy; then run /Applications/M1K3.app/Contents/Helpers/m1k3 login (paste it), then .../m1k3 status
   2. Brain at Home — LAN service for QR-paired iPhone/iPad only. TLS-PSK, private interfaces. Verify: dns-sd -B _m1k3._tcp
 The helper (Contents/Helpers/m1k3) is a client only; no server entitlement.
 

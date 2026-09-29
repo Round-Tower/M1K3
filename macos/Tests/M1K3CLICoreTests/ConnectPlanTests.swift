@@ -27,6 +27,10 @@ struct ConnectPlanTests {
     }
 
     private let url = MCPEndpoint.url(port: 4242)
+    private let token = "m1k3_" + String(repeating: "T", count: 43)
+    private var bearer: String {
+        "Bearer \(token)"
+    }
 
     /// Resolved (/var → /private/var) so path equality survives the writer's
     /// own symlink resolution, and registered for teardown — `swift test` here
@@ -44,14 +48,14 @@ struct ConnectPlanTests {
     private let temporaries = TemporaryDirectories()
 
     private func jsonPlan(_ client: MCPClient, in dir: URL) throws -> (URL, ([String: Any]) -> [String: Any]) {
-        guard case let .jsonMerge(path, merge) = ConnectPlan.plan(client: client, url: url, configDir: dir) else {
+        guard case let .jsonMerge(path, merge) = ConnectPlan.plan(client: client, url: url, token: token, configDir: dir) else {
             throw CLIUsageError("expected a jsonMerge plan for \(client.rawValue)")
         }
         return (path, merge)
     }
 
     private func printedPlan(_ client: MCPClient, in dir: URL) throws -> (String, String) {
-        guard case let .printOnly(snippet, note) = ConnectPlan.plan(client: client, url: url, configDir: dir) else {
+        guard case let .printOnly(snippet, note) = ConnectPlan.plan(client: client, url: url, token: token, configDir: dir) else {
             throw CLIUsageError("expected a printOnly plan for \(client.rawValue)")
         }
         return (snippet, note)
@@ -62,11 +66,18 @@ struct ConnectPlanTests {
     @Test("Claude Code is a command we can run for the user")
     func claudePlan() throws {
         let dir = try temporaryDirectory()
-        guard case let .shell(command) = ConnectPlan.plan(client: .claude, url: url, configDir: dir) else {
+        guard case let .shell(command) = ConnectPlan.plan(client: .claude, url: url, token: token, configDir: dir) else {
             Issue.record("expected a shell plan")
             return
         }
-        #expect(command == ["claude", "mcp", "add", "--transport", "http", "-s", "user", "m1k3", url])
+        #expect(command == [
+            "claude", "mcp", "add", "--transport", "http", "-s", "user", "m1k3", url,
+            "--header", "Authorization: \(bearer)",
+        ])
+        #expect(ConnectPlan.replaceCommand(client: .claude) == ["claude", "mcp", "remove", "-s", "user", "m1k3"])
+        for client in MCPClient.allCases where client != .claude {
+            #expect(ConnectPlan.replaceCommand(client: client) == nil, "\(client.rawValue) merges in place")
+        }
     }
 
     @Test("Cursor gets an mcpServers entry in ~/.cursor/mcp.json")
@@ -75,7 +86,9 @@ struct ConnectPlanTests {
         let (path, merge) = try jsonPlan(.cursor, in: dir)
         #expect(path == dir.appendingPathComponent(".cursor/mcp.json"))
         let servers = try #require(merge([:])["mcpServers"] as? [String: Any])
-        #expect(servers["m1k3"] as? [String: String] == ["url": url])
+        let entry = try #require(servers["m1k3"] as? [String: Any])
+        #expect(entry["url"] as? String == url)
+        #expect(entry["headers"] as? [String: String] == ["Authorization": bearer])
     }
 
     @Test("VS Code gets a typed servers entry under Application Support")
@@ -84,7 +97,10 @@ struct ConnectPlanTests {
         let (path, merge) = try jsonPlan(.vscode, in: dir)
         #expect(path == dir.appendingPathComponent("Library/Application Support/Code/User/mcp.json"))
         let servers = try #require(merge([:])["servers"] as? [String: Any])
-        #expect(servers["m1k3"] as? [String: String] == ["type": "http", "url": url])
+        let entry = try #require(servers["m1k3"] as? [String: Any])
+        #expect(entry["type"] as? String == "http")
+        #expect(entry["url"] as? String == url)
+        #expect(entry["headers"] as? [String: String] == ["Authorization": bearer])
     }
 
     @Test("a merge keeps the other servers already in the file")
@@ -106,7 +122,7 @@ struct ConnectPlanTests {
     func codexPlan() throws {
         let dir = try temporaryDirectory()
         let (snippet, note) = try printedPlan(.codex, in: dir)
-        #expect(snippet == "[mcp_servers.m1k3]\nurl = \"\(url)\"")
+        #expect(snippet == "[mcp_servers.m1k3]\nurl = \"\(url)\"\nhttp_headers = { \"Authorization\" = \"\(bearer)\" }")
         #expect(note.contains(".codex/config.toml"))
     }
 
@@ -123,13 +139,17 @@ struct ConnectPlanTests {
     @Test("every client has a paste-ready snippet that names the endpoint")
     func snippetForEveryClient() {
         for client in MCPClient.allCases {
-            let snippet = ConnectPlan.snippet(client: client, url: url)
+            let snippet = ConnectPlan.snippet(client: client, url: url, token: token)
             #expect(snippet.contains(url), "\(client.rawValue) snippet lost the endpoint")
+            #expect(snippet.contains(bearer), "\(client.rawValue) snippet lost the token")
+            // What Settings shows: the masked token, never the real one.
+            let shown = ConnectPlan.snippet(client: client, url: url, token: MCPAccessToken.masked(token))
+            #expect(!shown.contains(token), "\(client.rawValue) showed the token")
             #expect(!snippet.isEmpty)
             #expect(!ConnectPlan.destination(client: client).isEmpty)
         }
-        #expect(ConnectPlan.snippet(client: .claude, url: url)
-            == "claude mcp add --transport http -s user m1k3 \(url)")
+        #expect(ConnectPlan.snippet(client: .claude, url: url, token: token)
+            == "claude mcp add --transport http -s user m1k3 \(url) --header \"Authorization: \(bearer)\"")
     }
 
     // MARK: - The writer
@@ -138,13 +158,16 @@ struct ConnectPlanTests {
     func writesFresh() throws {
         let dir = try temporaryDirectory()
         let (path, _) = try jsonPlan(.vscode, in: dir)
-        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .vscode, url: url, configDir: dir))
+        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .vscode, url: url, token: token, configDir: dir))
         #expect(outcome == .written(path: path, backup: nil))
         let written = try #require(
             try JSONSerialization.jsonObject(with: Data(contentsOf: path)) as? [String: Any]
         )
         let servers = try #require(written["servers"] as? [String: Any])
-        #expect(servers["m1k3"] as? [String: String] == ["type": "http", "url": url])
+        let entry = try #require(servers["m1k3"] as? [String: Any])
+        #expect(entry["type"] as? String == "http")
+        #expect(entry["url"] as? String == url)
+        #expect(entry["headers"] as? [String: String] == ["Authorization": bearer], "the token is on disk too")
     }
 
     @Test("an existing config keeps its contents and gains a backup")
@@ -156,7 +179,7 @@ struct ConnectPlanTests {
         )
         try Data(#"{"mcpServers":{"other":{"command":"npx"}}}"#.utf8).write(to: path)
 
-        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, configDir: dir))
+        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, token: token, configDir: dir))
         guard case let .written(writtenPath, backup) = outcome else {
             Issue.record("expected a write, got \(outcome)")
             return
@@ -183,19 +206,49 @@ struct ConnectPlanTests {
         )
         try Data(#"{"mcpServers":{"m1k3":{"url":"http://127.0.0.1:9999/mcp"}}}"#.utf8).write(to: path)
 
-        _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, configDir: dir))
+        _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, token: token, configDir: dir))
         let written = try #require(
             try JSONSerialization.jsonObject(with: Data(contentsOf: path)) as? [String: Any]
         )
         let servers = try #require(written["mcpServers"] as? [String: Any])
-        #expect(servers["m1k3"] as? [String: String] == ["url": url])
+        let entry = try #require(servers["m1k3"] as? [String: Any])
+        #expect(entry["url"] as? String == url)
         #expect(servers.count == 1)
+    }
+
+    @Test("#270: a pre-token entry gains the header — it is not 'already connected'")
+    func preTokenEntryGainsHeader() throws {
+        let dir = try temporaryDirectory()
+        let (path, _) = try jsonPlan(.cursor, in: dir)
+        try FileManager.default.createDirectory(
+            at: path.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        try Data(#"{"mcpServers":{"m1k3":{"url":"\#(url)"}}}"#.utf8).write(to: path)
+
+        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, token: token, configDir: dir))
+        guard case .written = outcome else {
+            Issue.record("expected a write, got \(outcome)")
+            return
+        }
+        let written = try #require(
+            try JSONSerialization.jsonObject(with: Data(contentsOf: path)) as? [String: Any]
+        )
+        let entry = try #require((written["mcpServers"] as? [String: Any])?["m1k3"] as? [String: Any])
+        #expect(entry["headers"] as? [String: String] == ["Authorization": bearer])
+        // A new token replaces the old header rather than failing as a duplicate.
+        let rotated = "m1k3_" + String(repeating: "R", count: 43)
+        _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, token: rotated, configDir: dir))
+        let again = try #require(
+            try JSONSerialization.jsonObject(with: Data(contentsOf: path)) as? [String: Any]
+        )
+        let rotatedEntry = try #require((again["mcpServers"] as? [String: Any])?["m1k3"] as? [String: Any])
+        #expect(rotatedEntry["headers"] as? [String: String] == ["Authorization": "Bearer \(rotated)"])
     }
 
     @Test("running connect twice is unchanged the second time")
     func idempotent() throws {
         let dir = try temporaryDirectory()
-        let plan = { ConnectPlan.plan(client: .cursor, url: self.url, configDir: dir) }
+        let plan = { ConnectPlan.plan(client: .cursor, url: self.url, token: self.token, configDir: dir) }
         _ = try JSONConfigWriter.apply(plan())
         #expect(try JSONConfigWriter.apply(plan()) == .unchanged)
     }
@@ -211,7 +264,7 @@ struct ConnectPlanTests {
         try Data(original.utf8).write(to: path)
 
         #expect(throws: JSONConfigWriter.WriteError.self) {
-            _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, configDir: dir))
+            _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, token: token, configDir: dir))
         }
         #expect(try String(contentsOf: path, encoding: .utf8) == original)
         #expect(!FileManager.default.fileExists(atPath: path.path + ".bak"))
@@ -221,7 +274,7 @@ struct ConnectPlanTests {
     func refusesWrongPlan() throws {
         let dir = try temporaryDirectory()
         #expect(throws: JSONConfigWriter.WriteError.self) {
-            _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .claude, url: url, configDir: dir))
+            _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .claude, url: url, token: token, configDir: dir))
         }
     }
 
@@ -229,7 +282,7 @@ struct ConnectPlanTests {
     func writesReadableJSON() throws {
         let dir = try temporaryDirectory()
         let (path, _) = try jsonPlan(.vscode, in: dir)
-        _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .vscode, url: url, configDir: dir))
+        _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .vscode, url: url, token: token, configDir: dir))
         let text = try String(contentsOf: path, encoding: .utf8)
         #expect(text.contains("\n"))
         #expect(text.contains("http://127.0.0.1:4242/mcp"))
@@ -250,7 +303,7 @@ struct ConnectPlanTests {
         )
         try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
 
-        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, configDir: dir))
+        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, token: token, configDir: dir))
         #expect(outcome == .written(path: real, backup: dir.appendingPathComponent("dotfiles-cursor.json.bak")))
         // The link is still a link, and the real file behind it gained the entry.
         let type = try FileManager.default.attributesOfItem(atPath: link.path)[.type] as? FileAttributeType
@@ -272,10 +325,10 @@ struct ConnectPlanTests {
         )
         try Data(#"{"mcpServers":{"other":{"command":"npx"}}}"#.utf8).write(to: path)
 
-        _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, configDir: dir))
+        _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, token: token, configDir: dir))
         // A second, DIFFERENT write (the port moved) must not clobber the backup.
         _ = try JSONConfigWriter.apply(
-            ConnectPlan.plan(client: .cursor, url: MCPEndpoint.url(port: 5111), configDir: dir)
+            ConnectPlan.plan(client: .cursor, url: MCPEndpoint.url(port: 5111), token: token, configDir: dir)
         )
         let backup = try String(contentsOf: URL(fileURLWithPath: path.path + ".bak"), encoding: .utf8)
         #expect(backup.contains("npx"))
@@ -291,7 +344,7 @@ struct ConnectPlanTests {
         )
         try Data().write(to: path)
 
-        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, configDir: dir))
+        let outcome = try JSONConfigWriter.apply(ConnectPlan.plan(client: .cursor, url: url, token: token, configDir: dir))
         guard case .written = outcome else {
             Issue.record("expected a write, got \(outcome)")
             return
@@ -337,7 +390,7 @@ extension ConnectPlanTests {
         let original = "{\n  // my servers\n  \"servers\": {},\n}\n"
         try Data(original.utf8).write(to: path)
         do {
-            _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .vscode, url: url, configDir: dir))
+            _ = try JSONConfigWriter.apply(ConnectPlan.plan(client: .vscode, url: url, token: token, configDir: dir))
             Issue.record("expected a refusal")
         } catch let error as JSONConfigWriter.WriteError {
             #expect(error.message.contains("comments"))

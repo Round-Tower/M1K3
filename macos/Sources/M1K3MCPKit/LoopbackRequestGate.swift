@@ -26,33 +26,50 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.9 (every row of
 //  the table pinned in LoopbackRequestGateTests; the DNS-rebinding shape is
 //  the MCP spec's own worked example). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: with an access token set, a
+//  request must carry it as `Authorization: Bearer` (constant-time compare, one header
+//  only) or it is 401. Judged after path / Host / Origin, so a forgery still reads as
+//  one, and before the media type. The 401 names where the token lives, never the
+//  credential sent. Confidence 0.9 (pinned; the live 401 is driven in the PR). OAuth discovery
+//  paths get a 404 that names the token: Claude Code meets a 401 with discovery + dynamic client
+//  registration, and "/register is not the MCP endpoint" was all `claude mcp list` showed.
 //
 
 import Foundation
+import M1K3CLICore // MCPAccessToken — one token shape for the app and the CLI
 import MCP
 
 public enum LoopbackRequestGate {
     public enum Refusal: Equatable, Sendable, CustomStringConvertible {
         case wrongPath(String)
+        /// An OAuth discovery or registration path: a client that met the 401
+        /// and went looking for OAuth. Still 404, but it says what to send.
+        case oauthNotSupported(String)
         case missingHost
         case ambiguousHost
         case foreignHost(String)
         case portMismatch(String)
         case foreignOrigin(String)
         case unsupportedMediaType(String?)
+        case missingToken
+        case wrongToken
 
         public var statusCode: Int {
             switch self {
-            case .wrongPath: 404
+            case .wrongPath, .oauthNotSupported: 404
             case .missingHost, .ambiguousHost: 400
             case .foreignHost, .portMismatch, .foreignOrigin: 403
             case .unsupportedMediaType: 415
+            case .missingToken, .wrongToken: 401
             }
         }
 
         public var description: String {
             switch self {
             case let .wrongPath(path): "Not Found: \(Self.clip(path)) is not the MCP endpoint (/mcp)"
+            case .oauthNotSupported:
+                "Not Found: M1K3 doesn't use OAuth — send its access token as an Authorization: Bearer header "
+                    + "(M1K3 ▸ Settings ▸ Privacy ▸ MCP server, or run m1k3 login && m1k3 connect)"
             case .missingHost: "Bad Request: Host header required"
             case .ambiguousHost: "Bad Request: more than one Host header"
             case let .foreignHost(host): "Forbidden: Host \(Self.clip(host)) is not this loopback listener"
@@ -60,6 +77,11 @@ public enum LoopbackRequestGate {
             case let .foreignOrigin(origin): "Forbidden: Origin \(Self.clip(origin)) is not a loopback page"
             case let .unsupportedMediaType(type):
                 "Unsupported Media Type: Content-Type must be application/json (got \(Self.clip(type ?? "none")))"
+            // Never the credential that was sent — a wrong token is still somebody's secret.
+            case .missingToken:
+                "Unauthorized: M1K3 needs its access token (M1K3 ▸ Settings ▸ Privacy ▸ MCP server)"
+            case .wrongToken:
+                "Unauthorized: that isn't M1K3's current access token (M1K3 ▸ Settings ▸ Privacy ▸ MCP server)"
             }
         }
 
@@ -72,18 +94,24 @@ public enum LoopbackRequestGate {
 
     public static let endpointPath = "/mcp"
 
-    /// Nil admits the request. Judged in order: path, Host, Origin, Content-Type
-    /// — so a forged Host is always reported as a Host problem. The JSON rule
-    /// applies to POST only; the transport answers other methods with 405.
+    /// Nil admits the request. Judged in order: path, Host, Origin, token,
+    /// Content-Type — so a forged Host is always reported as a Host problem. The
+    /// JSON rule applies to POST only; the transport answers other methods with
+    /// 405. The token rule applies to every method, and only when
+    /// `accessToken` is set (the app always sets it; nil is for tests and the
+    /// pre-token callers of this function).
     /// `duplicateHeaders` is the codec's report of header names sent more than
     /// once (lowercased): the dictionary the SDK hands us keeps only the last
     /// value, so two Host lines are refused on the report, never judged on the
     /// survivor (RFC 9112 §3.2).
     public static func refusal(
-        for request: HTTPRequest, boundPort: UInt16, duplicateHeaders: [String] = []
+        for request: HTTPRequest, boundPort: UInt16, duplicateHeaders: [String] = [],
+        accessToken: String? = nil
     ) -> Refusal? {
         let path = normalisedPath(request.path ?? "")
-        if path != endpointPath { return .wrongPath(request.path ?? "") }
+        if path != endpointPath {
+            return isOAuthPath(path) ? .oauthNotSupported(request.path ?? "") : .wrongPath(request.path ?? "")
+        }
 
         let hosts = values(of: "Host", in: request)
         guard let host = hosts.first, !host.isEmpty else { return .missingHost }
@@ -105,6 +133,10 @@ public enum LoopbackRequestGate {
             else { return .foreignOrigin(origin) }
         }
 
+        if let accessToken, let refusal = tokenRefusal(for: request, expected: accessToken, duplicateHeaders: duplicateHeaders) {
+            return refusal
+        }
+
         if request.method.uppercased() == "POST" {
             let contentType = request.header("Content-Type")
             guard let contentType, isJSON(contentType) else { return .unsupportedMediaType(contentType) }
@@ -113,6 +145,28 @@ public enum LoopbackRequestGate {
     }
 
     // MARK: - Pieces
+
+    /// Where an MCP client goes looking after a 401 (RFC 9728 / 8414 discovery,
+    /// then RFC 7591 registration) — and the usual authorize/token endpoints.
+    static func isOAuthPath(_ path: String) -> Bool {
+        let lowered = path.lowercased()
+        return ["/register", "/authorize", "/token"].contains(lowered)
+            || lowered.hasPrefix("/.well-known/oauth-")
+            || lowered == "/.well-known/openid-configuration"
+    }
+
+    /// One Authorization header, Bearer scheme, the exact token. Two headers
+    /// are refused whatever they say, as with Host: the survivor of a
+    /// duplicate is not trusted.
+    static func tokenRefusal(for request: HTTPRequest, expected: String, duplicateHeaders: [String]) -> Refusal? {
+        let credentials = values(of: MCPAccessToken.headerName, in: request)
+        guard let credential = credentials.first else { return .missingToken }
+        guard credentials.count == 1, !duplicateHeaders.contains("authorization"),
+              let presented = MCPAccessToken.bearer(fromAuthorization: credential),
+              MCPAccessToken.matches(presented, expected: expected)
+        else { return .wrongToken }
+        return nil
+    }
 
     /// Every value sent under a header name, case-insensitively. Differently
     /// cased duplicates survive the codec as separate keys; same-cased ones

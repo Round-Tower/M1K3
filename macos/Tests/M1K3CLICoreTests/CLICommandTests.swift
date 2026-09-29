@@ -37,6 +37,24 @@ struct CLICommandTests {
         #expect(try parsed(["status"]).action == .status)
     }
 
+    @Test("#270: login reads the token from stdin — one on the command line is refused, and never echoed")
+    func login() throws {
+        #expect(try parsed(["login"]).action == .login)
+        let token = "m1k3_" + String(repeating: "s", count: 43)
+        let error = try failure(["login", token])
+        #expect(!error.message.contains(token), "the refusal must not print the token back")
+        #expect(!error.hint.contains(token))
+        #expect(error.message.contains("history"), "says why: argv lands in shell history")
+        #expect(CLICommand.usage.contains("m1k3 login"))
+        // A token pasted into --port by mistake is not repeated in the refusal (#448 review).
+        let misplaced = try failure(["login", "--port=\(token)"])
+        #expect(!misplaced.message.contains(token))
+        let spaced = try failure(["status", "--port", token])
+        #expect(!spaced.message.contains(token))
+        let stray = try failure(["status", token])
+        #expect(!stray.message.contains(token))
+    }
+
     @Test("ask joins the rest of the line into one question")
     func ask() throws {
         #expect(try parsed(["ask", "what", "did", "I", "say?"]).action == .ask("what did I say?"))

@@ -21,6 +21,12 @@
 //  that "already exists" stays a real failure (PR #279 review). Confidence now 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-09-28 — #380: a JSONC config (comments, trailing commas) is named as such in the refusal
 //  (`looksLikeJSONC`, message only; a URL's `//` isn't a comment). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: every plan and snippet carries
+//  the access token as an `Authorization: Bearer` header, in each client's own shape. A
+//  Claude Code entry that already exists is REPLACED (`replaceCommand`), because a pre-token
+//  entry is not "already connected" any more. Settings passes a masked token to show and the
+//  real one to Copy. Confidence 0.85 (Codex's `http_headers` and Zed's `headers` are their
+//  documented shapes, not driven here).
 //
 
 import Foundation
@@ -37,30 +43,35 @@ public enum ConnectPlan {
     /// The server name M1K3 registers under, in every client.
     public static let serverName = "m1k3"
 
-    public static func plan(client: MCPClient, url: String, configDir: URL) -> ConnectPlan {
+    public static func plan(client: MCPClient, url: String, token: String, configDir: URL) -> ConnectPlan {
+        let headers = [MCPAccessToken.headerName: MCPAccessToken.headerValue(token)]
         switch client {
         case .claude:
             // -s user: available in every project, which is the point of a
-            // resident. `claude mcp add` is idempotent for the same name.
-            .shell(command: ["claude", "mcp", "add", "--transport", "http", "-s", "user", serverName, url])
+            // resident. The token rides in argv for the moment `claude` runs;
+            // it lands in Claude Code's own config either way (#270).
+            return .shell(command: [
+                "claude", "mcp", "add", "--transport", "http", "-s", "user", serverName, url,
+                "--header", "\(MCPAccessToken.headerName): \(MCPAccessToken.headerValue(token))",
+            ])
         case .cursor:
-            .jsonMerge(path: configDir.appendingPathComponent(".cursor/mcp.json")) { existing in
-                setting(existing, section: "mcpServers", entry: ["url": url])
+            return .jsonMerge(path: configDir.appendingPathComponent(".cursor/mcp.json")) { existing in
+                setting(existing, section: "mcpServers", entry: ["url": url, "headers": headers])
             }
         case .vscode:
-            .jsonMerge(
+            return .jsonMerge(
                 path: configDir.appendingPathComponent("Library/Application Support/Code/User/mcp.json")
             ) { existing in
-                setting(existing, section: "servers", entry: ["type": "http", "url": url])
+                setting(existing, section: "servers", entry: ["type": "http", "url": url, "headers": headers])
             }
         case .codex:
-            .printOnly(
-                snippet: snippet(client: .codex, url: url),
+            return .printOnly(
+                snippet: snippet(client: .codex, url: url, token: token),
                 note: "Add that to \(configDir.appendingPathComponent(".codex/config.toml").path)"
             )
         case .zed:
-            .printOnly(
-                snippet: snippet(client: .zed, url: url),
+            return .printOnly(
+                snippet: snippet(client: .zed, url: url, token: token),
                 note: "Add that to \(configDir.appendingPathComponent(".config/zed/settings.json").path) — "
                     + "check the shape against your Zed version."
             )
@@ -69,50 +80,71 @@ public enum ConnectPlan {
 
     /// The paste-ready form for EVERY client — what Settings shows, and what
     /// `--print` prints. Kept beside `plan` so the two can't disagree.
-    public static func snippet(client: MCPClient, url: String) -> String {
+    /// Settings renders it with `MCPAccessToken.masked(token)` and copies it
+    /// with the real one, so the screen never shows a usable token.
+    public static func snippet(client: MCPClient, url: String, token: String) -> String {
+        let bearer = MCPAccessToken.headerValue(token)
         switch client {
         case .claude:
-            "claude mcp add --transport http -s user \(serverName) \(url)"
+            return "claude mcp add --transport http -s user \(serverName) \(url) --header \"Authorization: \(bearer)\""
         case .codex:
-            "[mcp_servers.\(serverName)]\nurl = \"\(url)\""
+            return "[mcp_servers.\(serverName)]\nurl = \"\(url)\"\nhttp_headers = { \"Authorization\" = \"\(bearer)\" }"
         case .cursor:
-            """
+            return """
             {
               "mcpServers": {
-                "\(serverName)": { "url": "\(url)" }
+                "\(serverName)": {
+                  "url": "\(url)",
+                  "headers": { "Authorization": "\(bearer)" }
+                }
               }
             }
             """
         case .vscode:
-            """
+            return """
             {
               "servers": {
-                "\(serverName)": { "type": "http", "url": "\(url)" }
+                "\(serverName)": {
+                  "type": "http",
+                  "url": "\(url)",
+                  "headers": { "Authorization": "\(bearer)" }
+                }
               }
             }
             """
         case .zed:
-            """
+            return """
             "context_servers": {
-              "\(serverName)": { "url": "\(url)" }
+              "\(serverName)": {
+                "url": "\(url)",
+                "headers": { "Authorization": "\(bearer)" }
+              }
             }
             """
         }
     }
 
-    /// Where that snippet belongs, in the form a person recognises. Shown as
-    /// the caption under the snippet in Settings.
+    /// What clears a client's existing `m1k3` entry so `plan` can write the
+    /// current one. Only Claude Code needs it: its `mcp add` refuses a name
+    /// that exists, where the JSON clients' merge simply replaces the entry.
+    public static func replaceCommand(client: MCPClient) -> [String]? {
+        client == .claude ? ["claude", "mcp", "remove", "-s", "user", serverName] : nil
+    }
+
     /// Did a client's own registration command refuse because a server called
     /// `serverName` is ALREADY registered? Current `claude mcp add` exits
-    /// non-zero on a duplicate name; that is the state the JSON clients call
-    /// "already connected", so it must read the same way. Anchored on the name:
-    /// some other thing that "already exists" is a real failure, not ours.
+    /// non-zero on a duplicate name. Since the token (#270) that entry may be
+    /// a stale one without it, so the runner replaces it (`replaceCommand`)
+    /// and adds again. Anchored on the name: some other thing that "already
+    /// exists" is a real failure, not ours.
     public static func shellSaysAlreadyConnected(_ stderr: String, serverName: String = Self.serverName) -> Bool {
         let lowered = stderr.lowercased()
         guard lowered.contains(serverName.lowercased()) else { return false }
         return lowered.contains("already exists") || lowered.contains("already configured")
     }
 
+    /// Where that snippet belongs, in the form a person recognises. Shown as
+    /// the caption under the snippet in Settings.
     public static func destination(client: MCPClient) -> String {
         switch client {
         case .claude: "Run it in Terminal"
@@ -128,7 +160,7 @@ public enum ConnectPlan {
     private static func setting(
         _ existing: [String: Any],
         section: String,
-        entry: [String: String]
+        entry: [String: Any]
     ) -> [String: Any] {
         var root = existing
         var servers = root[section] as? [String: Any] ?? [:]
