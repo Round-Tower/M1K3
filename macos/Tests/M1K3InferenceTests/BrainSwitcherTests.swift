@@ -8,6 +8,8 @@
 //  active tier BEFORE the weights finish, so the label must compose with load).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-21, Confidence 0.85. Prior: this file.
+//  Review: Kev + claude-fable-5.1, 2026-09-29 — `reselectMatchesTheAudition`: the no-op predicate takes the
+//  model a tier should be serving (an audition's, when one stands in). Confidence 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-06 — rows follow `BrainTier.offered(afm:)` — the AFM device lists
 //  mini/lil/big, a blocked one pocket/lil/big with pocket titled "Mini · … download". Confidence 0.9.
 
@@ -143,6 +145,19 @@ struct BrainSwitcherTests {
         ))
         #expect(!BrainSwitcher.reselectIsNoOp(
             tier: .big, selected: .big, load: .ready, loadedModelID: nil
+        ))
+    }
+
+    @Test("with an audition standing in, the warm model to match is the audition's (2026-09-29)")
+    func reselectMatchesTheAudition() throws {
+        let stock = try #require(BrainTier.lil.mlxModelID)
+        // The audition is warm: re-selecting Lil must not reload it.
+        #expect(BrainSwitcher.reselectIsNoOp(
+            tier: .lil, selected: .lil, load: .ready, loadedModelID: "acme/Challenger-4B", expectedModelID: "acme/Challenger-4B"
+        ))
+        // The stock model is warm but an audition was just chosen: reload.
+        #expect(!BrainSwitcher.reselectIsNoOp(
+            tier: .lil, selected: .lil, load: .ready, loadedModelID: stock, expectedModelID: "acme/Challenger-4B"
         ))
     }
 

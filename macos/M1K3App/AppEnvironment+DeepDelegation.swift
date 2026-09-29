@@ -33,6 +33,8 @@
 //  than decoding concurrently on the parked brain. Confidence 0.8 — the plan
 //  and observation copy are unit-pinned; the swap/restore is app glue and
 //  verify-by-launch (a real cross-brain dive has still never run).
+//  Review: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.85 — the dive's Big builds through
+//  `makeMLXBrain(for: .big)`, so a Big audition is what the dive escalates to.
 //
 
 import AppKit
@@ -135,11 +137,13 @@ extension AppEnvironment {
             // the parked brain — the one-decode-loop invariant this whole
             // design rests on. `selectBrain` already refuses while the label is
             // set, so nothing else re-points the slot underneath us.
-            let big = MLXBrainProvider(
-                modelID: bigID,
+            let big = Self.makeMLXBrain(
+                for: .big,
+                stockModelID: bigID,
                 maxTokens: HistoryBudgetPolicy.generationTokenCap(
                     for: .big, defaultCap: MLXBrainProvider.defaultMaxTokens
-                )
+                ),
+                live: false
             )
             deepDiveRestoreProvider = currentMLXProvider
             deepDiveEscalatedProvider = big

@@ -47,6 +47,8 @@
 //  fronts the turn with ToolNeedRouter's plain-chat route without the app's Mini-only gate (does Lil/Big gain?).
 //  Review: same day — the switches are typed explicitly: the ternary closure crashed the type checker in
 //  the app build ("failed to produce diagnostic"), which `swift test` never compiles.
+//  Review: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.8 — an MLX override naming an imported
+//  audition loads from its folder (AuditionStore), so `--model lil=<org/repo>` A/Bs anything imported.
 
 import Foundation
 
@@ -532,7 +534,12 @@ enum ChatEvalStage {
         case let .mlx(stockID):
             // 2048 like the per-model eval: a reasoning brain can spend hundreds
             // of tokens inside <think> before a one-word answer.
-            provider = MLXBrainProvider(modelID: modelID ?? stockID, maxTokens: 2048)
+            // An override naming an imported audition loads from its folder, so
+            // `run_chateval.py --model lil=<org/repo>` A/Bs anything imported in Settings.
+            let id = modelID ?? stockID
+            provider = AppEnvironment.auditionStore?.directory(for: id)
+                .map { MLXBrainProvider(modelDirectory: $0, maxTokens: 2048) }
+                ?? MLXBrainProvider(modelID: id, maxTokens: 2048)
         }
         return await evalProvider(provider, emit: emit)
     }
