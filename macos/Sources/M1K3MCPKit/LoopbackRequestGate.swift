@@ -30,7 +30,9 @@
 //  request must carry it as `Authorization: Bearer` (constant-time compare, one header
 //  only) or it is 401. Judged after path / Host / Origin, so a forgery still reads as
 //  one, and before the media type. The 401 names where the token lives, never the
-//  credential sent. Confidence 0.9 (pinned; the live 401 is driven in the PR).
+//  credential sent. Confidence 0.9 (pinned; the live 401 is driven in the PR). OAuth discovery
+//  paths get a 404 that names the token: Claude Code meets a 401 with discovery + dynamic client
+//  registration, and "/register is not the MCP endpoint" was all `claude mcp list` showed.
 //
 
 import Foundation
@@ -40,6 +42,9 @@ import MCP
 public enum LoopbackRequestGate {
     public enum Refusal: Equatable, Sendable, CustomStringConvertible {
         case wrongPath(String)
+        /// An OAuth discovery or registration path: a client that met the 401
+        /// and went looking for OAuth. Still 404, but it says what to send.
+        case oauthNotSupported(String)
         case missingHost
         case ambiguousHost
         case foreignHost(String)
@@ -51,7 +56,7 @@ public enum LoopbackRequestGate {
 
         public var statusCode: Int {
             switch self {
-            case .wrongPath: 404
+            case .wrongPath, .oauthNotSupported: 404
             case .missingHost, .ambiguousHost: 400
             case .foreignHost, .portMismatch, .foreignOrigin: 403
             case .unsupportedMediaType: 415
@@ -62,6 +67,9 @@ public enum LoopbackRequestGate {
         public var description: String {
             switch self {
             case let .wrongPath(path): "Not Found: \(Self.clip(path)) is not the MCP endpoint (/mcp)"
+            case .oauthNotSupported:
+                "Not Found: M1K3 doesn't use OAuth — send its access token as an Authorization: Bearer header "
+                    + "(M1K3 ▸ Settings ▸ Privacy ▸ MCP server, or run m1k3 login && m1k3 connect)"
             case .missingHost: "Bad Request: Host header required"
             case .ambiguousHost: "Bad Request: more than one Host header"
             case let .foreignHost(host): "Forbidden: Host \(Self.clip(host)) is not this loopback listener"
@@ -101,7 +109,9 @@ public enum LoopbackRequestGate {
         accessToken: String? = nil
     ) -> Refusal? {
         let path = normalisedPath(request.path ?? "")
-        if path != endpointPath { return .wrongPath(request.path ?? "") }
+        if path != endpointPath {
+            return isOAuthPath(path) ? .oauthNotSupported(request.path ?? "") : .wrongPath(request.path ?? "")
+        }
 
         let hosts = values(of: "Host", in: request)
         guard let host = hosts.first, !host.isEmpty else { return .missingHost }
@@ -135,6 +145,15 @@ public enum LoopbackRequestGate {
     }
 
     // MARK: - Pieces
+
+    /// Where an MCP client goes looking after a 401 (RFC 9728 / 8414 discovery,
+    /// then RFC 7591 registration) — and the usual authorize/token endpoints.
+    static func isOAuthPath(_ path: String) -> Bool {
+        let lowered = path.lowercased()
+        return ["/register", "/authorize", "/token"].contains(lowered)
+            || lowered.hasPrefix("/.well-known/oauth-")
+            || lowered == "/.well-known/openid-configuration"
+    }
 
     /// One Authorization header, Bearer scheme, the exact token. Two headers
     /// are refused whatever they say, as with Host: the survivor of a

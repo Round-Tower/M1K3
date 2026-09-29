@@ -431,10 +431,14 @@ struct PrivacySettingsPane: View {
                 if let token = env.mcpHost.accessToken {
                     Text(MCPAccessToken.masked(token))
                         .font(.system(.caption, design: .monospaced))
+                    // Named on purpose: LabeledContent hands its label to every control
+                    // inside, so VoiceOver read both of these as "Access token".
                     Button("Copy") { copySecret(token) }
                         .controlSize(.small)
+                        .accessibilityLabel("Copy access token")
                     Button("New Token…") { confirmingNewToken = true }
                         .controlSize(.small)
+                        .accessibilityLabel("New access token")
                 } else {
                     Text("Unavailable — the Keychain couldn’t be read")
                         .font(.callout).foregroundStyle(.secondary)
@@ -475,6 +479,7 @@ struct PrivacySettingsPane: View {
                 }
                 .controlSize(.small)
                 .disabled(env.mcpHost.accessToken == nil)
+                .accessibilityLabel("Copy \(connectClient.displayName) setup")
             }
         }
         VStack(alignment: .leading, spacing: 6) {
@@ -487,6 +492,7 @@ struct PrivacySettingsPane: View {
                 Spacer()
                 Button("Copy") { copyToPasteboard(terminalCommand) }
                     .controlSize(.small)
+                    .accessibilityLabel("Copy Terminal command")
             }
         }
     }
