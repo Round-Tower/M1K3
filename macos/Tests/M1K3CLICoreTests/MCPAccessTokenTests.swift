@@ -110,4 +110,23 @@ struct MCPAccessTokenTests {
         #expect(!MCPAccessToken.masked(token).contains(String(repeating: "a", count: 5)))
         #expect(MCPAccessToken.masked("short") == "••••••••", "never echo something that isn't a token")
     }
+
+    @Test("redacting masks every occurrence of the token in text bound for the screen")
+    func redacting() {
+        let token = "m1k3_" + String(repeating: "r", count: 39) + "ABCD"
+        let line = "claude mcp add m1k3 url --header \"Authorization: Bearer \(token)\" (again: \(token))"
+        let shown = MCPAccessToken.redacting(line, token: token)
+        #expect(!shown.contains(token))
+        #expect(shown.components(separatedBy: "m1k3_••••••••ABCD").count == 3, "both occurrences masked")
+        #expect(MCPAccessToken.redacting("nothing secret", token: token) == "nothing secret")
+        #expect(MCPAccessToken.redacting("x", token: "") == "x", "an empty token redacts nothing")
+    }
+
+    @Test("an argument that looks like a token is shown only masked")
+    func maskedIfToken() {
+        let token = "m1k3_" + String(repeating: "p", count: 39) + "WXYZ"
+        #expect(MCPAccessToken.maskedIfToken(token) == "m1k3_••••••••WXYZ")
+        #expect(MCPAccessToken.maskedIfToken("m1k3_short") == "m1k3_••••••••", "a token-ish prefix is never echoed whole")
+        #expect(MCPAccessToken.maskedIfToken("8o8o") == "8o8o")
+    }
 }

@@ -46,6 +46,13 @@ struct CLICommandTests {
         #expect(!error.hint.contains(token))
         #expect(error.message.contains("history"), "says why: argv lands in shell history")
         #expect(CLICommand.usage.contains("m1k3 login"))
+        // A token pasted into --port by mistake is not repeated in the refusal (#448 review).
+        let misplaced = try failure(["login", "--port=\(token)"])
+        #expect(!misplaced.message.contains(token))
+        let spaced = try failure(["status", "--port", token])
+        #expect(!spaced.message.contains(token))
+        let stray = try failure(["status", token])
+        #expect(!stray.message.contains(token))
     }
 
     @Test("ask joins the rest of the line into one question")

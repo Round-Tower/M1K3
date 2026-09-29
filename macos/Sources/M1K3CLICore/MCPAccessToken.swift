@@ -97,6 +97,20 @@ public enum MCPAccessToken {
         return prefix + "••••••••" + token.suffix(4)
     }
 
+    /// Text bound for a terminal with every occurrence of `token` masked: the
+    /// command `connect` echoes, and whatever the client printed back.
+    public static func redacting(_ text: String, token: String) -> String {
+        guard !token.isEmpty else { return text }
+        return text.replacingOccurrences(of: token, with: masked(token))
+    }
+
+    /// An argument echoed in a usage error, unless it looks like a token — a
+    /// token pasted into the wrong flag must not come back whole.
+    public static func maskedIfToken(_ argument: String) -> String {
+        guard argument.hasPrefix(prefix) else { return argument }
+        return isWellFormed(argument) ? masked(argument) : prefix + "••••••••"
+    }
+
     private static func isBase64URL(_ byte: UInt8) -> Bool {
         switch byte {
         case UInt8(ascii: "A") ... UInt8(ascii: "Z"), UInt8(ascii: "a") ... UInt8(ascii: "z"),

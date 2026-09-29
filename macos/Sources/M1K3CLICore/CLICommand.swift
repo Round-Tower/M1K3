@@ -266,7 +266,7 @@ public struct CLICommand: Equatable, Sendable {
             if argument == "--port", next < arguments.endIndex, isNumeric(arguments[next]) {
                 guard let parsed = validPort(arguments[next]) else {
                     return .failure(CLIUsageError(
-                        "--port takes a number from 1024 to 65535, not \"\(arguments[next])\""
+                        "--port takes a number from 1024 to 65535, not \"\(MCPAccessToken.maskedIfToken(arguments[next]))\""
                     ))
                 }
                 port = parsed
@@ -279,7 +279,7 @@ public struct CLICommand: Equatable, Sendable {
             if argument.hasPrefix("--port=") {
                 let value = String(argument.dropFirst("--port=".count))
                 guard let parsed = validPort(value) else {
-                    return .failure(CLIUsageError("--port takes a number from 1024 to 65535, not \"\(value)\""))
+                    return .failure(CLIUsageError("--port takes a number from 1024 to 65535, not \"\(MCPAccessToken.maskedIfToken(value))\""))
                 }
                 port = parsed
                 index = arguments.index(after: index)
@@ -328,7 +328,7 @@ public struct CLICommand: Equatable, Sendable {
         // just a word this command doesn't take (#445 review).
         if arguments.first == "--port" { return .failure(CLIUsageError("--port needs a number, e.g. --port 4242")) }
         guard let unexpected = (arguments + literal).first else { return .success(action) }
-        return .failure(CLIUsageError("\(subcommand) takes no arguments — didn't expect \"\(unexpected)\""))
+        return .failure(CLIUsageError("\(subcommand) takes no arguments — didn't expect \"\(MCPAccessToken.maskedIfToken(unexpected))\""))
     }
 
     private static func text(_ arguments: [String], subcommand: String) -> Result<String, CLIUsageError> {

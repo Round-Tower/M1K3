@@ -34,9 +34,14 @@
 //  (echo off) or a pipe and saves it (CLITokenStore); every call carries it; a 401 prints how to log in
 //  (exit 4). `connect` needs the token and writes it into the client's config; a Claude Code entry that
 //  already exists is removed and added again, and the echoed command masks the token. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-09-29 — #448 review folds: `login` checks the token BEFORE saving
+//  (a stale paste can't replace a working token); the tty read switches echo off on stdin and VERIFIES it
+//  (readpassphrase echoed the token in the sandboxed helper), refusing a terminal that still echoes; `claude`'s stderr and the
+//  PATH-missing hint go through `MCPAccessToken.redacting` / the masked snippet; a failed re-add after a
+//  successful remove says the old entry is gone. Confidence 0.85.
 //
 
-import Darwin // getpwuid — the account's REAL home, which the sandbox hides; readpassphrase
+import Darwin // getpwuid — the account's REAL home, which the sandbox hides; termios for login
 import Foundation
 import M1K3CLICore
 
@@ -207,18 +212,37 @@ struct CommandRunner {
 
     /// The token comes in on the terminal with echo off, or down a pipe
     /// (`pbpaste | m1k3 login`) — never argv, which lands in shell history.
-    /// Saved, then tried: a token M1K3 turns away is reported at once rather
-    /// than at the next call.
+    /// Tried BEFORE it is saved: a stale paste M1K3 turns away must not
+    /// replace a token that works. Saved unchecked only when M1K3 can't be
+    /// reached — right or wrong, the token doesn't depend on the app being up.
     private func login() async -> Int32 {
-        guard let pasted = Self.readSecretLine(
-            prompt: "Paste M1K3's access token (Settings ▸ Privacy ▸ MCP server ▸ Copy token): "
-        ) else {
+        let pasted: String
+        switch Self.readSecretLine(
+            prompt: "Paste M1K3's access token (Settings ▸ Privacy ▸ MCP server ▸ Copy): "
+        ) {
+        case let .read(line): pasted = line
+        case .noInput:
             Output.error("m1k3: no token read")
+            return ExitCode.usage
+        case .terminalUnavailable:
+            Output.error("m1k3: this terminal won't hide what you type — pipe the token in instead: pbpaste | m1k3 login")
             return ExitCode.usage
         }
         guard let token = MCPAccessToken.parse(pasted: pasted) else {
-            Output.error("m1k3: that isn't an M1K3 access token — it starts \(MCPAccessToken.prefix) (Settings ▸ Privacy ▸ Copy token)")
+            Output.error("m1k3: that isn't an M1K3 access token — it starts \(MCPAccessToken.prefix) (Settings ▸ Privacy ▸ Copy)")
             return ExitCode.usage
+        }
+        let transport = MCPTransport.sequence(port: command.port, clientVersion: appVersion, token: token)
+        let checked: String
+        switch await transport.call(tool: "get_status", arguments: [:]) {
+        case .success:
+            checked = "M1K3 accepted it."
+        case .failure(.unauthorized):
+            Output.error("m1k3: M1K3 turned that token away — not saved (any token saved before is unchanged).")
+            Output.error("m1k3: copy the current one from M1K3 ▸ Settings ▸ Privacy ▸ MCP server.")
+            return ExitCode.unauthorized
+        case let .failure(.unreachable(message)), let .failure(.tool(message)):
+            checked = "Couldn't check it just now — \(message)"
         }
         do {
             try CLITokenStore.save(token)
@@ -226,29 +250,47 @@ struct CommandRunner {
             Output.error("m1k3: \(error)")
             return ExitCode.toolError
         }
-        Output.line("Saved \(MCPAccessToken.masked(token)).")
-        let transport = MCPTransport.sequence(port: command.port, clientVersion: appVersion, token: token)
-        switch await transport.call(tool: "get_status", arguments: [:]) {
-        case .success:
-            Output.line("M1K3 accepted it.")
-            return ExitCode.ok
-        case .failure(.unauthorized):
-            Output.error("m1k3: saved, but M1K3 turned it away — is it the current token? Copy it again from Settings.")
-            return ExitCode.unauthorized
-        case let .failure(.unreachable(message)), let .failure(.tool(message)):
-            // Saved all the same: the token is right or wrong whether or not the app is up.
-            Output.error("m1k3: saved, but couldn't check it just now — \(message)")
-            return ExitCode.ok
-        }
+        Output.line("Saved \(MCPAccessToken.masked(token)). \(checked)")
+        return ExitCode.ok
+    }
+
+    enum SecretRead {
+        case read(String)
+        case noInput
+        /// The terminal wouldn't hide what's typed — reading would put the token on screen.
+        case terminalUnavailable
     }
 
     /// One line from the terminal with echo off, or from stdin when it's a pipe.
-    static func readSecretLine(prompt: String) -> String? {
-        guard isatty(STDIN_FILENO) != 0 else { return readLine(strippingNewline: true) }
-        var buffer = [CChar](repeating: 0, count: 512)
-        defer { memset_s(&buffer, buffer.count, 0, buffer.count) }
-        guard let line = readpassphrase(prompt, &buffer, buffer.count, RPP_REQUIRE_TTY) else { return nil }
-        return String(cString: line)
+    ///
+    /// ★ Not `readpassphrase`: in the sandboxed App Store helper it opens
+    /// /dev/tty and the typed token ECHOES (the echo-off doesn't take; found
+    /// driving #448 under a pty — the same call unsandboxed hides it). So echo
+    /// is switched off on the inherited stdin and READ BACK: a terminal that
+    /// still echoes is refused, never read. The Swift String copies aren't
+    /// wiped (no secure string type) — fine for a short-lived CLI (#270).
+    static func readSecretLine(prompt: String) -> SecretRead {
+        guard isatty(STDIN_FILENO) != 0 else {
+            return readLine(strippingNewline: true).map(SecretRead.read) ?? .noInput
+        }
+        var original = termios()
+        guard tcgetattr(STDIN_FILENO, &original) == 0 else { return .terminalUnavailable }
+        var hidden = original
+        hidden.c_lflag &= ~tcflag_t(ECHO)
+        hidden.c_lflag |= tcflag_t(ICANON)
+        var applied = termios()
+        guard tcsetattr(STDIN_FILENO, TCSAFLUSH, &hidden) == 0,
+              tcgetattr(STDIN_FILENO, &applied) == 0, applied.c_lflag & tcflag_t(ECHO) == 0
+        else {
+            _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &original)
+            return .terminalUnavailable
+        }
+        defer {
+            _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &original)
+            FileHandle.standardError.write(Data("\n".utf8)) // the Return the user typed wasn't echoed
+        }
+        FileHandle.standardError.write(Data(prompt.utf8))
+        return readLine(strippingNewline: true).map(SecretRead.read) ?? .noInput
     }
 
     // MARK: - agent-notes
@@ -370,25 +412,33 @@ struct CommandRunner {
         guard let tool = command.first else { return ExitCode.usage }
         // What goes on screen: the command with the token masked. The real one
         // only ever reaches the client's own registry.
-        let shown = command.map { $0.replacingOccurrences(of: token, with: MCPAccessToken.masked(token)) }
+        let shown = command.map { MCPAccessToken.redacting($0, token: token) }
         guard let executable = ExecutableLookup.locate(
             tool, environment: environment, home: FileManager.default.homeDirectoryForCurrentUser.path
         ) else {
-            Output.line("\(tool) isn't on your PATH. Once \(tool) is installed, run:")
+            // Nothing failed here, so nothing secret goes to the screen by default.
+            Output.line("\(tool) isn't on your PATH. Once \(tool) is installed, run m1k3 connect \(client.rawValue) again,")
+            Output.line("or m1k3 connect \(client.rawValue) --print for the full line. It looks like:")
             Output.line("")
-            Output.line(ConnectPlan.snippet(client: client, url: url, token: token))
+            Output.line(ConnectPlan.snippet(client: client, url: url, token: MCPAccessToken.masked(token)))
             return ExitCode.ok
         }
         Output.line("$ \(shown.joined(separator: " "))")
         do {
             var run = try Self.execute(executable, Array(command.dropFirst()))
+            var removedOld = false
             // `claude mcp add` refuses a name that exists — and since the token
             // (#270) that entry may be one without it. Replace it: remove, add again.
             if run.status != 0, ConnectPlan.shellSaysAlreadyConnected(run.stderr),
                let replace = ConnectPlan.replaceCommand(client: client)
             {
                 Output.line("$ \(replace.joined(separator: " "))")
-                _ = try Self.execute(executable, Array(replace.dropFirst()))
+                let removal = try Self.execute(executable, Array(replace.dropFirst()))
+                removedOld = removal.status == 0
+                let removalError = MCPAccessToken.redacting(removal.stderr, token: token)
+                if !removedOld, !removalError.isEmpty {
+                    Output.error(removalError.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
                 Output.line("$ \(shown.joined(separator: " "))")
                 run = try Self.execute(executable, Array(command.dropFirst()))
             }
@@ -396,7 +446,10 @@ struct CommandRunner {
                 Output.line("Restart \(client.displayName) to pick it up.")
                 return ExitCode.ok
             }
-            if !run.stderr.isEmpty { Output.error(run.stderr.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            // The client's own words, token masked — it may echo its arguments.
+            let stderr = MCPAccessToken.redacting(run.stderr, token: token)
+            if !stderr.isEmpty { Output.error(stderr.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            if removedOld { Output.error("m1k3: the old m1k3 entry was removed and the new one didn't go in.") }
             Output.error("m1k3: \(tool) exited \(run.status). Do it by hand:")
             Output.line("")
             Output.line(ConnectPlan.snippet(client: client, url: url, token: token))

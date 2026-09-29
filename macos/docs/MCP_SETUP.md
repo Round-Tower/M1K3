@@ -25,7 +25,10 @@ m1k3 login && m1k3 connect claude
 
 `m1k3 login` reads the token from the terminal with echo off (or a pipe:
 `pbpaste | m1k3 login`), never from the command line, and keeps it in your login
-keychain. `connect` then writes it into the client's config.
+keychain. `connect` then writes it into the client's config. For Claude Code
+that means running `claude mcp add … --header`, so the token sits in that
+process's arguments for the moment it runs — visible to your own user's
+processes, which is inside what the token doesn't claim to defend (below).
 
 **Claude Code by hand** (Settings' Copy button fills the token in):
 
