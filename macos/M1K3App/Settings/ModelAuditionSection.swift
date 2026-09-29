@@ -9,6 +9,10 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.75 (verify-by-launch:
 //  the open panel, the import and the live swap). Prior: Unknown
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-29 — #452 review fold: Stock explains a launch
+//  override (any pick, and remove), import refuses the live brain's folder, remove runs
+//  async and never overlaps an import, PanelNamer is @MainActor. Confidence 0.75.
+//
 
 import AppKit
 import M1K3Inference
@@ -19,6 +23,8 @@ struct ModelAuditionSection: View {
     @Environment(AppEnvironment.self) private var env
     @State private var auditions: [AuditionModel] = []
     @State private var importing = false
+    /// Import and remove never overlap: a remove's delete could eat a fresh copy of the same name.
+    @State private var removing = false
     @State private var message: String?
     /// Bumped after a pick or a removal so the pickers re-read UserDefaults.
     @State private var revision = 0
@@ -44,13 +50,14 @@ struct ModelAuditionSection: View {
                     Spacer()
                     Button("Remove", role: .destructive) { remove(model) }
                         .buttonStyle(.link)
+                        .disabled(importing || removing)
                         .accessibilityLabel("Remove the \(model.repoID) audition")
                 }
             }
             HStack(spacing: 8) {
                 Button("Import a model folder…") { presentPanel() }
                     .buttonStyle(.glass)
-                    .disabled(importing)
+                    .disabled(importing || removing)
                 if importing {
                     ProgressView().controlSize(.small)
                     Text("Copying…").font(.callout).foregroundStyle(.secondary)
@@ -82,6 +89,9 @@ struct ModelAuditionSection: View {
             set: { choice in
                 let name = choice.map(Self.shortName) ?? "its own model"
                 switch env.setAudition(choice, for: tier) {
+                case .setAtLaunch:
+                    message = "\(tier.displayName) was given an audition when M1K3 was launched, "
+                        + "so it keeps it until you relaunch without that option."
                 case .applied: message = "\(tier.displayName) is now running \(name)."
                 case .savedForLater: message = "\(tier.displayName) will run \(name) next time you switch to it."
                 case .busy: message = "Finish the deep dive first, then pick again."
@@ -98,15 +108,22 @@ struct ModelAuditionSection: View {
     }
 
     private func remove(_ model: AuditionModel) {
-        do {
-            message = try env.removeAudition(model.repoID) == .busy
-                ? "Finish the deep dive first, then remove it."
-                : "Removed \(model.repoID)."
-        } catch {
-            message = "Couldn't remove \(model.repoID): \(error.localizedDescription)"
+        removing = true
+        Task {
+            do {
+                switch try await env.removeAudition(model.repoID) {
+                case .busy: message = "Finish the deep dive first, then remove it."
+                case .setAtLaunch: message = "\(model.repoID) was chosen when M1K3 was launched. "
+                    + "Relaunch without that option, then remove it."
+                case .applied, .savedForLater: message = "Removed \(model.repoID)."
+                }
+            } catch {
+                message = "Couldn't remove \(model.repoID): \(error.localizedDescription)"
+            }
+            removing = false
+            await reload()
+            revision += 1
         }
-        Task { await reload() }
-        revision += 1
     }
 
     /// A folder picker that can see `~/.cache/huggingface` (hidden by default).
@@ -139,6 +156,10 @@ struct ModelAuditionSection: View {
         let name = typed.isEmpty
             ? (AuditionStore.inferredRepoID(from: url) ?? url.lastPathComponent)
             : typed
+        guard !env.isServingAudition(name) else {
+            message = "\(name) is the brain running right now. Switch that brain to Stock, then import again."
+            return
+        }
         importing = true
         message = nil
         Task {
@@ -168,6 +189,7 @@ struct ModelAuditionSection: View {
 }
 
 /// Prefills the panel's name field from whichever folder is selected.
+@MainActor
 private final class PanelNamer: NSObject, NSOpenSavePanelDelegate {
     let field: NSTextField
     init(field: NSTextField) {

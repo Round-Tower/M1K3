@@ -690,7 +690,12 @@ final class AppEnvironment {
     private(set) var modelLoad: ModelLoadState = .idle {
         didSet {
             refreshInterimBridge()
-            if case .ready = modelLoad { auditionLoadFinished(sourceKey: currentMLXProvider.sourceKey) }
+            switch modelLoad {
+            // A load that settled either way isn't a crash: only a load cut short by
+            // one should cost the audition at the next launch (#452 review).
+            case .ready, .failed: auditionLoadFinished(sourceKey: currentMLXProvider.sourceKey)
+            default: break
+            }
         }
     }
 

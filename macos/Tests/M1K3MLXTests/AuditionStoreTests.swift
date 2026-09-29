@@ -179,6 +179,57 @@ struct AuditionStoreTests {
         #expect(throws: AuditionStore.ImportError.self) { try store.importFolder(source, repoID: "org/Sharded") }
     }
 
+    @Test("a shard the index places in a subfolder says subfolders aren't copied")
+    func subfolderShardIsNamedAsSuch() throws {
+        let source = try tempDir("subshard")
+        try seedCheckpoint(at: source)
+        let index = #"{"weight_map":{"a":"model.safetensors","b":"parts/x.safetensors"}}"#
+        try Data(index.utf8).write(to: source.appendingPathComponent("model.safetensors.index.json"))
+        #expect(AuditionStore.missingParts(in: source) == ["parts/x.safetensors (in a subfolder, which isn't copied)"])
+    }
+
+    @Test("a refs/main that isn't a plain snapshot name can't point outside snapshots/")
+    func refsMainCannotEscape() throws {
+        let cache = try tempDir("refs")
+        let model = try seedHFCache(org: "org", repo: "Esc", under: cache)
+        // A folder beside the cache that looks like a checkpoint.
+        try seedCheckpoint(at: model.appendingPathComponent("outside"))
+        try Data("../outside".utf8).write(to: model.appendingPathComponent("refs/main"))
+        let picked = AuditionStore.checkpointDirectory(in: model)
+        #expect(picked.deletingLastPathComponent().lastPathComponent == "snapshots")
+        #expect(picked.lastPathComponent == "abc123")
+    }
+
+    @Test("a name that differs from an existing audition only by case is refused, not merged into it")
+    func caseOnlyNameClashIsRefused() throws {
+        let source = try tempDir("case")
+        try seedCheckpoint(at: source)
+        let store = try AuditionStore(root: tempDir("store"))
+        try store.importFolder(source, repoID: "org/Model")
+        #expect(throws: AuditionStore.ImportError.nameTaken("org/Model")) {
+            try store.importFolder(source, repoID: "Org/model")
+        }
+        try store.importFolder(source, repoID: "org/Model") // the same name still re-imports
+    }
+
+    @Test("an org that exists in another case is adopted, so the name matches the folder it lands in")
+    func existingOrgCaseIsAdopted() throws {
+        let source = try tempDir("orgcase")
+        try seedCheckpoint(at: source)
+        let store = try AuditionStore(root: tempDir("store"))
+        try store.importFolder(source, repoID: "Org/Other")
+        let model = try store.importFolder(source, repoID: "org/M")
+        #expect(model.repoID == "Org/M")
+        #expect(store.list().map(\.repoID) == ["Org/M", "Org/Other"])
+    }
+
+    @Test("a repo id's source key is the one its folder load reports")
+    func repoSourceKeyMatchesTheFolderLoad() throws {
+        let store = try AuditionStore(root: tempDir("store"))
+        #expect(store.sourceKey(forRepoID: "org/M")
+            == AuditionStore.sourceKey(for: store.root.appendingPathComponent("org/M", isDirectory: true)))
+    }
+
     @Test("only the top level is copied: a directory link can't loop, extra folders don't ride along")
     func copiesTopLevelOnly() throws {
         let source = try tempDir("loop")
@@ -293,5 +344,12 @@ struct AuditionStoreTests {
         #expect(!AuditionSelection.recordsPendingLoad(selectedIsMLX: false, buildingSelected: false))
         #expect(!AuditionSelection.recordsPendingLoad(selectedIsMLX: true, buildingSelected: false)) // the dive's Big
         #expect(AuditionSelection.recordsPendingLoad(selectedIsMLX: true, buildingSelected: true))
+    }
+
+    @Test("a choice passed at launch is reported as one, so the pane can say why Stock didn't take")
+    func launchArgumentChoiceIsVisible() {
+        #expect(AuditionSelection.isSetAtLaunch(tier: "lil", arguments: ["audition.lil": "org/M"]))
+        #expect(!AuditionSelection.isSetAtLaunch(tier: "big", arguments: ["audition.lil": "org/M"]))
+        #expect(!AuditionSelection.isSetAtLaunch(tier: "lil", arguments: [:]))
     }
 }

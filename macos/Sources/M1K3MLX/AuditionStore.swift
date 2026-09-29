@@ -33,6 +33,12 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.8 (filesystem
 //  behaviour test-pinned; the load path is verify-by-launch). Prior: Unknown
 //
+//  Review: Kev + claude-fable-5.1, 2026-09-29 — #452 review fold: refs/main must be a bare
+//  snapshot name (no escaping snapshots/), a name differing only in case is refused
+//  (`nameTaken`: one folder on case-insensitive APFS), a subfolder shard says why it's
+//  missing, `sourceKey(forRepoID:)` lets the app refuse an import under the live
+//  brain, and an org folder that exists in another case is adopted. Confidence 0.85.
+//
 
 import Foundation
 import os
@@ -55,6 +61,9 @@ public struct AuditionStore: Sendable {
         case unsafeRepoID(String)
         case notACheckpoint(missing: [String])
         case unreadable([String])
+        /// An audition already exists under this name in a different case: on a
+        /// case-insensitive volume the two would share one folder.
+        case nameTaken(String)
 
         public var errorDescription: String? {
             switch self {
@@ -65,6 +74,9 @@ public struct AuditionStore: Sendable {
             case let .unreadable(names):
                 "M1K3 couldn't read \(names.joined(separator: ", ")): the files point outside the folder "
                     + "you chose. From the Hugging Face cache, choose the models--org--name folder itself."
+            case let .nameTaken(existing):
+                "There's already an audition called “\(existing)”. "
+                    + "Remove it first, or use its exact name to replace it."
             }
         }
     }
@@ -100,8 +112,10 @@ public struct AuditionStore: Sendable {
     /// Copy the checkpoint at `source` (a model folder, an HF cache model folder or
     /// one of its snapshots) to `<root>/<repoID>`, replacing any earlier import.
     @discardableResult
-    public func importFolder(_ source: URL, repoID: String) throws -> AuditionModel {
-        guard LocalModelInventory.isRemovableRepoID(repoID) else { throw ImportError.unsafeRepoID(repoID) }
+    public func importFolder(_ source: URL, repoID requested: String) throws -> AuditionModel {
+        guard LocalModelInventory.isRemovableRepoID(requested) else { throw ImportError.unsafeRepoID(requested) }
+        let repoID = adoptingExistingOrgCase(requested)
+        if let clash = caseOnlyClash(with: repoID) { throw ImportError.nameTaken(clash) }
         let checkpoint = Self.checkpointDirectory(in: source)
         let plan = try Self.copyPlan(for: checkpoint)
         let missing = Self.missingParts(names: Set(plan.map(\.name)), index: plan.first { $0.name == Self.indexName }?.resolved)
@@ -192,6 +206,39 @@ public struct AuditionStore: Sendable {
         auditionLog.notice("audition removed \(repoID, privacy: .public)")
     }
 
+    /// What a provider loaded from `repoID`'s folder reports as its `sourceKey`, so the
+    /// app can tell whether an import would land under the live brain.
+    public func sourceKey(forRepoID repoID: String) -> String {
+        Self.sourceKey(for: directoryURL(for: repoID))
+    }
+
+    /// `repoID` with its org spelled as an org folder already on disk that differs only
+    /// in case: on case-insensitive APFS the import lands in that folder anyway, and the
+    /// name has to match what `list()` will report.
+    private func adoptingExistingOrgCase(_ repoID: String) -> String {
+        guard let slash = repoID.firstIndex(of: "/") else { return repoID }
+        let org = String(repoID[..<slash])
+        let orgs = (try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []
+        guard !orgs.contains(org),
+              let onDisk = orgs.first(where: { !$0.hasPrefix(".") && $0.caseInsensitiveCompare(org) == .orderedSame })
+        else { return repoID }
+        return onDisk + repoID[slash...]
+    }
+
+    /// An existing audition whose name matches `repoID` except in case.
+    private func caseOnlyClash(with repoID: String) -> String? {
+        let fm = FileManager.default
+        let orgs = (try? fm.contentsOfDirectory(atPath: root.path)) ?? []
+        for org in orgs where !org.hasPrefix(".") {
+            let repos = (try? fm.contentsOfDirectory(atPath: root.appendingPathComponent(org).path)) ?? []
+            for repo in repos where !repo.hasPrefix(".") {
+                let existing = "\(org)/\(repo)"
+                if existing != repoID, existing.caseInsensitiveCompare(repoID) == .orderedSame { return existing }
+            }
+        }
+        return nil
+    }
+
     private func directoryURL(for repoID: String) -> URL {
         root.appendingPathComponent(repoID, isDirectory: true)
     }
@@ -204,9 +251,13 @@ public struct AuditionStore: Sendable {
         let fm = FileManager.default
         let snapshots = source.appendingPathComponent("snapshots", isDirectory: true)
         guard fm.fileExists(atPath: snapshots.path) else { return source }
+        // refs/main must be a bare snapshot name: "../x" would step outside snapshots/.
         if let ref = try? String(contentsOf: source.appendingPathComponent("refs/main"), encoding: .utf8) {
-            let named = snapshots.appendingPathComponent(ref.trimmingCharacters(in: .whitespacesAndNewlines))
-            if fm.fileExists(atPath: named.path) { return named }
+            let sha = ref.trimmingCharacters(in: .whitespacesAndNewlines)
+            let named = snapshots.appendingPathComponent(sha)
+            if !sha.isEmpty, !sha.contains("/"), sha != ".", sha != "..", fm.fileExists(atPath: named.path) {
+                return named
+            }
         }
         let all = (try? fm.contentsOfDirectory(at: snapshots, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
         let newest = all.max { lhs, rhs in
@@ -231,7 +282,9 @@ public struct AuditionStore: Sendable {
         if !names.contains("tokenizer.json"), !names.contains("tokenizer_config.json") { missing.append("tokenizer") }
         if !names.contains(where: { $0.hasSuffix(".safetensors") }) { missing.append(".safetensors weights") }
         if let index, let shards = indexedShards(at: index) {
+            // Only the top level is copied, so a shard in a subfolder can never arrive.
             missing += shards.subtracting(names).sorted()
+                .map { $0.contains("/") ? "\($0) (in a subfolder, which isn't copied)" : $0 }
         }
         return missing
     }
@@ -306,11 +359,22 @@ public enum AuditionSelection {
         return raw
     }
 
+    /// Whether `tier`'s choice came in as a launch argument (`-audition.lil org/repo`).
+    /// The argument domain outranks the app's own defaults and nothing can clear it, so
+    /// picking Stock can't take effect until the app is launched without it.
+    public static func isSetAtLaunch(
+        tier: String,
+        arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    ) -> Bool {
+        arguments[key(forTier: tier)] != nil
+    }
+
     // MARK: The load sentinel
 
-    /// "<tier>" while the live brain loads its audition; cleared at ready or when the
-    /// brain is switched away. Still set at the next launch = that load never finished
-    /// (a crash, a trap, jetsam), so the audition is dropped rather than retried forever.
+    /// "<tier>" while the live brain loads its audition; cleared when the load settles
+    /// (ready or failed), when the brain is switched away, and at a normal quit. Still
+    /// set at the next launch = that load never finished (a crash, a trap, jetsam), so
+    /// the audition is dropped rather than retried forever.
     public static let pendingLoadKey = "audition.pendingLoad"
 
     /// Only the brain that is about to become the app's live MLX brain records a pending
