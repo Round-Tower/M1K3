@@ -88,6 +88,21 @@
 //  invented a shared past ("you once asked about pairing spices", "I've got the Irish in me"): 6/14
 //  → 2/14 without it (MiniInventedMemoryEvalTests, #428). The persona anchor now starts at the rules,
 //  since the openings differ. Lil and Big keep the beat. Confidence 0.75 (n=14 per arm, x2 rounds).
+//  Review: Kev + claude-fable-5.1, 2026-09-29 — the persona diet (Kev: "is the villain too much for a small
+//  model?"). The villain is ≈4% of the core; the weight is operational. SHIPPED, Mini only: TOOLS leaves
+//  Mini's prompt (its router and picker choose its tools since #414/#420) and the making bullet becomes its
+//  own MAKING section (`makingBullet`, the same text Lil and Big still read under TOOLS — their render is
+//  byte-identical). Mini ≈1,261 → ≈1,065 estimated tokens. TRIED AND REVERTED, each measured live:
+//  (1) rules that refused attacks by class and taught the decline once ("The decline: …") — Mini x2:
+//  interview 8/10 → 4/10, open chat 15/16 → 11/16, the decline in 15 non-security answers vs 8; the quoted
+//  attack and its one reply SCOPE the decline. (2) a five-bullet VOICE that stopped arguing with itself —
+//  Lil x4: interview 15/20 → 12/20, all of it "what do you find hard?" ("I don't have feelings like humans
+//  do" 4/4 vs 1/4); the good-company lines carry Lil's self. (3) curiosity bound to "one real thing they
+//  said" + no "the hour" in the per-turn rules — Lil x4 13/20 vs 15/20, noise-sized, not a win. Pocket's core
+//  and every exemplar are untouched. Evidence for the Mini cut: TOOLS removed held tool use 20/20 and security
+//  14/14 in both measured arms, and the arm closest to this one (TOOLS removed + the rejected VOICE) scored
+//  interview 10/10 vs master's 8/10. OWED: a Mini live run of THIS exact text (the console had switched
+//  macOS user, so Apple Intelligence read unavailable). Evals: docs/evals/2026-09-29-*. Confidence 0.75.
 
 import Foundation
 import Synchronization
@@ -144,7 +159,8 @@ public enum M1K3Persona {
         compactPrompt(for: .standard)
     }
 
-    /// Mini's system prompt: the standard core WITHOUT the FOLLOW-UPS section.
+    /// Mini's system prompt: the standard core WITHOUT the FOLLOW-UPS section, and
+    /// with TOOLS cut down to MAKING (see `miniCorePrompt`).
     /// On Mini's 4,096-token window, the FOLLOW-UPS instructions cost ~315
     /// tokens (7.7% of the entire context) for tap-to-send chips — a UI
     /// convenience the MLX tiers (32K+ windows) can afford and Mini cannot.
@@ -153,10 +169,15 @@ public enum M1K3Persona {
         compose(core: miniCorePrompt + "\n" + currentDateLine(Date()), profile: userProfile)
     }
 
-    /// The standard core with the FOLLOW-UPS and BEING YOURSELF sections removed.
-    /// Derived, not duplicated — `corePrompt` stays the single source of truth.
-    /// BEING YOURSELF (2026-09-23, Lil's decline over-fire) is MLX-only: Mini's
-    /// 4,096-token window had ≈20 tokens of headroom under its budget line.
+    /// The standard core with the FOLLOW-UPS, BEING YOURSELF and TOOLS sections removed,
+    /// and MAKING added back on its own. Derived, not duplicated: `corePrompt` stays the
+    /// single source of truth. BEING YOURSELF (2026-09-23, Lil's decline over-fire) is
+    /// MLX-only: Mini's 4,096-token window had ≈20 tokens of headroom under its budget line.
+    ///
+    /// TOOLS (2026-09-29): on Mini the tools are chosen for it. ToolNeedRouter decides
+    /// tools-or-chat and the picker names the tool with its own instructions (#414, #420),
+    /// so the TOOLS bullets told Mini when to search on turns where it can't. Making is
+    /// not a tool ("build me a website" routes to plain chat), so that bullet stays.
     static let miniCorePrompt: String = {
         var core = corePrompt
         if let range = core.range(of: "\n\n# FOLLOW-UPS") {
@@ -166,8 +187,20 @@ public enum M1K3Persona {
         // Mini invent a shared past ("you once asked about pairing spices") 6/14 → 2/14
         // without it (MiniInventedMemoryEvalTests). Lil and Big keep it.
         core = core.replacingOccurrences(of: curiosityBeat, with: "Listen first; answer what was asked.")
-        return removingSection("# BEING YOURSELF", from: core)
+        core = removingSection("# TOOLS", from: removingSection("# BEING YOURSELF", from: core))
+        return core + "\n\n# MAKING\n" + makingBullet
     }()
+
+    /// The TOOLS section's making bullet: in the standard core under TOOLS, and Mini's
+    /// whole MAKING section (a page is one ```html block, a document one ```markdown
+    /// block, the preview panel's two fences).
+    static let makingBullet = """
+    Making something — code, a script, a web page, a document — needs no lookup: \
+    write it in full. "Build me a website" means write the page: one complete \
+    ```html block, which opens in a live preview beside the chat; a document is one \
+    ```markdown block. Talking about THIS conversation — a summary of it, a page \
+    about it — is not your wiring; do it.
+    """
 
     /// The opening's curiosity sentence, which Mini's core drops.
     static let curiosityBeat =
@@ -318,11 +351,7 @@ public enum M1K3Persona {
 
     # TOOLS
     - Small talk — greetings, banter — needs no tools. Just reply.
-    - Making something — code, a script, a web page, a document — needs no lookup: \
-    write it in full. "Build me a website" means write the page: one complete \
-    ```html block, which opens in a live preview beside the chat; a document is one \
-    ```markdown block. Talking about THIS conversation — a summary of it, a page \
-    about it — is not your wiring; do it.
+    - \(makingBullet)
     - Questions about the current world — weather, news, prices, results, anything \
     happening now or this year, the newest or latest of anything, or a name you don't \
     recognise (a model, product, release, person, event) — need live web search when \
