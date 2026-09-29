@@ -38,12 +38,29 @@
 //  (a stale paste can't replace a working token); the tty read switches echo off on stdin and VERIFIES it
 //  (readpassphrase echoed the token in the sandboxed helper), refusing a terminal that still echoes; `claude`'s stderr and the
 //  PATH-missing hint go through `MCPAccessToken.redacting` / the masked snippet; a failed re-add after a
-//  successful remove says the old entry is gone. Confidence 0.85.
+//  successful remove says the old entry is gone; every failure fallback masks the token (`--print` shows it
+//  whole); Ctrl-C/TERM/HUP at the hidden prompt restore the terminal before dying. Confidence 0.85.
 //
 
 import Darwin // getpwuid — the account's REAL home, which the sandbox hides; termios for login
 import Foundation
 import M1K3CLICore
+
+/// The terminal settings `readSecretLine` must put back, reachable from a
+/// signal handler (a C function pointer captures nothing). Set only for the
+/// read window.
+private nonisolated(unsafe) var termiosToRestore: termios?
+
+/// Ctrl-C (or a TERM/HUP) at the hidden prompt would otherwise kill the
+/// process with echo still off, and the user's shell stops echoing (#448
+/// review). Restore, then die of the same signal.
+private func restoreTerminalAndReraise(_ signal: Int32) {
+    if var saved = termiosToRestore {
+        _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved)
+    }
+    Darwin.signal(signal, SIG_DFL)
+    raise(signal)
+}
 
 enum ExitCode {
     static let ok: Int32 = 0
@@ -285,8 +302,17 @@ struct CommandRunner {
             _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &original)
             return .terminalUnavailable
         }
+        termiosToRestore = original
+        let cancelSignals = [SIGINT, SIGTERM, SIGHUP]
+        for cancel in cancelSignals {
+            signal(cancel, restoreTerminalAndReraise)
+        }
         defer {
             _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &original)
+            for cancel in cancelSignals {
+                signal(cancel, SIG_DFL)
+            }
+            termiosToRestore = nil
             FileHandle.standardError.write(Data("\n".utf8)) // the Return the user typed wasn't echoed
         }
         FileHandle.standardError.write(Data(prompt.utf8))
@@ -368,6 +394,15 @@ struct CommandRunner {
         }
     }
 
+    /// What a failed connect leaves on screen: the shape, token masked, and
+    /// the flag that prints it whole. A failure isn't a request to print a
+    /// secret; `--print` is (#448 review).
+    private static func fallback(client: MCPClient, url: String, token: String) {
+        Output.line(ConnectPlan.snippet(client: client, url: url, token: MCPAccessToken.masked(token)))
+        Output.line("")
+        Output.line("m1k3 connect \(client.rawValue) --print shows it with the full token.")
+    }
+
     private func show(client: MCPClient, url: String, token: String) -> Int32 {
         Output.line(ConnectPlan.snippet(client: client, url: url, token: token))
         Output.line("")
@@ -392,14 +427,14 @@ struct CommandRunner {
         } catch let error as JSONConfigWriter.WriteError {
             Output.error("m1k3: \(error.message)")
             Output.line("")
-            Output.line(ConnectPlan.snippet(client: client, url: url, token: token))
+            Self.fallback(client: client, url: url, token: token)
             return ExitCode.toolError
         } catch {
             // Whatever went wrong, the user should leave with something they
             // can paste rather than just an error.
             Output.error("m1k3: \(error.localizedDescription)")
             Output.line("")
-            Output.line(ConnectPlan.snippet(client: client, url: url, token: token))
+            Self.fallback(client: client, url: url, token: token)
             Output.line("→ \(ConnectPlan.destination(client: client))")
             return ExitCode.toolError
         }
@@ -452,12 +487,12 @@ struct CommandRunner {
             if removedOld { Output.error("m1k3: the old m1k3 entry was removed and the new one didn't go in.") }
             Output.error("m1k3: \(tool) exited \(run.status). Do it by hand:")
             Output.line("")
-            Output.line(ConnectPlan.snippet(client: client, url: url, token: token))
+            Self.fallback(client: client, url: url, token: token)
             return ExitCode.toolError
         } catch {
             Output.error("m1k3: couldn't run \(tool) — \(error.localizedDescription)")
             Output.line("")
-            Output.line(ConnectPlan.snippet(client: client, url: url, token: token))
+            Self.fallback(client: client, url: url, token: token)
             return ExitCode.toolError
         }
     }

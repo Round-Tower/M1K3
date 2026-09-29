@@ -306,6 +306,7 @@ final class MCPHostController {
         )
         let host = LocalMCPHTTPServer(
             port: port,
+            access: .token { accessTokenBox.current() },
             onAbnormalStop: { [weak self] reason in
                 Task { @MainActor [weak self] in
                     self?.server = nil
@@ -313,8 +314,7 @@ final class MCPHostController {
                     self?.statusText = "Stopped: \(reason)"
                 }
             },
-            onClientInitialize: { name in clientIdentity.set(name) },
-            accessToken: { accessTokenBox.current() }
+            onClientInitialize: { name in clientIdentity.set(name) }
         ) {
             let transport = StatelessHTTPServerTransport()
             let mcpServer = await makeM1K3Server(registry: registry)

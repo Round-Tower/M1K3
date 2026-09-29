@@ -30,7 +30,7 @@ import Network
 import Testing
 
 private func makeServer(port: UInt16) -> LocalMCPHTTPServer {
-    LocalMCPHTTPServer(port: port) {
+    LocalMCPHTTPServer(port: port, access: .open) {
         let registry = MCPToolRegistry([
             MCPToolDefinition(
                 tool: Tool(name: "alpha", description: "first", inputSchema: ["type": "object"]),
@@ -45,7 +45,7 @@ private func makeServer(port: UInt16) -> LocalMCPHTTPServer {
 }
 
 private func makeServerWithSlowAndFastTools(port: UInt16) -> LocalMCPHTTPServer {
-    LocalMCPHTTPServer(port: port) {
+    LocalMCPHTTPServer(port: port, access: .open) {
         let registry = MCPToolRegistry([
             MCPToolDefinition(
                 tool: Tool(name: "slow", description: "slow", inputSchema: ["type": "object"]),
@@ -262,6 +262,7 @@ struct LocalMCPHTTPServerTests {
         let (server, port) = try await startOnFreePort { port in
             LocalMCPHTTPServer(
                 port: port,
+                access: .open,
                 onClientInitialize: { box.append($0) }
             ) {
                 let registry = MCPToolRegistry([
@@ -292,6 +293,7 @@ struct LocalMCPHTTPServerTests {
         let (server, port) = try await startOnFreePort { port in
             LocalMCPHTTPServer(
                 port: port,
+                access: .open,
                 onAbnormalStop: { _ in stopped.increment() }
             ) {
                 if attempts.incrementAndGet() > 1 { throw MCPVoiceError("factory down") }
@@ -358,7 +360,7 @@ struct LocalMCPHTTPServerTests {
     func forgedHostInitializeNeverRebuildsSession() async throws {
         let builds = Counter()
         let (server, port) = try await startOnFreePort { port in
-            LocalMCPHTTPServer(port: port) {
+            LocalMCPHTTPServer(port: port, access: .open) {
                 // Each build names its tool after its own number, so the tools/list
                 // below proves the ORIGINAL session answered — a rebuilt one would
                 // list a different name.
@@ -393,7 +395,7 @@ struct LocalMCPHTTPServerTests {
     @Test("the read deadline clocks the request bytes only — a slow tool call is not cut off")
     func readDeadlineExcludesToolTime() async throws {
         let (server, port) = try await startOnFreePort { port in
-            LocalMCPHTTPServer(port: port, readDeadline: 0.3) {
+            LocalMCPHTTPServer(port: port, access: .open, readDeadline: 0.3) {
                 let registry = MCPToolRegistry([
                     MCPToolDefinition(
                         tool: Tool(name: "slow", description: "sleeps", inputSchema: ["type": "object"]),
@@ -420,7 +422,7 @@ struct LocalMCPHTTPServerTests {
     func simpleCrossSitePostNeverRebuildsSession() async throws {
         let builds = Counter()
         let (server, port) = try await startOnFreePort { port in
-            LocalMCPHTTPServer(port: port) {
+            LocalMCPHTTPServer(port: port, access: .open) {
                 builds.increment()
                 let transport = StatelessHTTPServerTransport()
                 let mcp = await makeM1K3Server(registry: MCPToolRegistry([]))
@@ -460,7 +462,7 @@ struct LocalMCPHTTPServerTests {
     @Test("a socket that never sends a complete request is closed at the read deadline")
     func idleSocketIsClosed() async throws {
         let (server, port) = try await startOnFreePort { port in
-            LocalMCPHTTPServer(port: port, readDeadline: 0.5) {
+            LocalMCPHTTPServer(port: port, access: .open, readDeadline: 0.5) {
                 let transport = StatelessHTTPServerTransport()
                 let mcp = await makeM1K3Server(registry: MCPToolRegistry([]))
                 try await mcp.start(transport: transport)
@@ -514,7 +516,7 @@ struct LocalMCPHTTPServerTests {
         let current = TokenBox(first)
         let builds = Counter()
         let (server, port) = try await startOnFreePort { port in
-            LocalMCPHTTPServer(port: port, accessToken: { current.value }) {
+            LocalMCPHTTPServer(port: port, access: .token { current.value }) {
                 let build = builds.incrementAndGet()
                 let registry = MCPToolRegistry([
                     MCPToolDefinition(
