@@ -306,6 +306,39 @@ public enum AuditionSelection {
         return raw
     }
 
+    // MARK: The load sentinel
+
+    /// "<tier>" while the live brain loads its audition; cleared at ready or when the
+    /// brain is switched away. Still set at the next launch = that load never finished
+    /// (a crash, a trap, jetsam), so the audition is dropped rather than retried forever.
+    public static let pendingLoadKey = "audition.pendingLoad"
+
+    /// Only the brain that is about to become the app's live MLX brain records a pending
+    /// load: with Mini selected the launch slot still BUILDS Big's provider (review on
+    /// #452), and the deep dive's Big is not the live brain.
+    public static func recordsPendingLoad(selectedIsMLX: Bool, buildingSelected: Bool) -> Bool {
+        selectedIsMLX && buildingSelected
+    }
+
+    public static func recordPendingLoad(tier: String, defaults: UserDefaults = .standard) {
+        defaults.set(tier, forKey: pendingLoadKey)
+    }
+
+    public static func clearPendingLoad(defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: pendingLoadKey)
+    }
+
+    /// At launch: drop the audition whose last load never finished. Returns its tier.
+    /// A choice passed as a launch argument lives in the argument domain and can't be
+    /// removed here; it serves until the argument goes (a dev flag, deliberately).
+    @discardableResult
+    public static func dropUnfinishedLoad(defaults: UserDefaults = .standard) -> String? {
+        guard let tier = defaults.string(forKey: pendingLoadKey) else { return nil }
+        defaults.removeObject(forKey: pendingLoadKey)
+        defaults.removeObject(forKey: key(forTier: tier))
+        return tier
+    }
+
     /// The folder to load in the tier's place: only when one is chosen AND it is
     /// a complete audition on disk. A chosen-but-missing audition falls back to
     /// the stock model rather than failing the brain.

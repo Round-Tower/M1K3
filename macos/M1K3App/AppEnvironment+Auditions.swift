@@ -24,16 +24,14 @@ import os
 extension AppEnvironment {
     nonisolated static let auditionStore = AuditionStore.standard()
     private nonisolated static let auditionLog = Logger(subsystem: "app.m1k3", category: "model-download")
-    /// "<tier>" while a live brain loads its audition; cleared at `.ready`. Still set at
-    /// the next launch = that load never finished (a crash, a trap, jetsam), so the
-    /// audition is dropped rather than retried on every launch.
-    nonisolated static let auditionLoadSentinelKey = "audition.pendingLoad"
 
     /// The MLX brain for `tier`: its audition when one is chosen AND on disk, else
     /// `stockModelID`. Every place that builds a tier's brain goes through here, so
     /// an audition reaches chat, voice, MCP asks and the deep dive alike.
-    /// `live`: this brain is about to become the app's brain (launch, a switch), so a
-    /// load that never finishes is remembered for the next launch.
+    /// `live`: this brain is about to be LOADED as the app's brain (a launch with an MLX
+    /// tier selected, a switch), so a load that never finishes is remembered for the next
+    /// launch (`AuditionSelection.recordsPendingLoad`). The launch slot built for Mini and
+    /// the deep dive's Big pass false.
     nonisolated static func makeMLXBrain(
         for tier: BrainTier, stockModelID: String, maxTokens: Int, live: Bool = true
     ) -> MLXBrainProvider {
@@ -41,7 +39,7 @@ extension AppEnvironment {
             auditionLog.notice(
                 "audition serving \(tier.rawValue, privacy: .public): \(directory.path, privacy: .public)"
             )
-            if live { UserDefaults.standard.set(tier.rawValue, forKey: auditionLoadSentinelKey) }
+            if live { AuditionSelection.recordPendingLoad(tier: tier.rawValue) }
             return MLXBrainProvider(modelDirectory: directory, maxTokens: maxTokens)
         }
         return MLXBrainProvider(modelID: stockModelID, maxTokens: maxTokens)
@@ -49,29 +47,29 @@ extension AppEnvironment {
 
     /// The eval stage's MLX brain: an override naming an imported audition loads from
     /// its folder, so `run_chateval.py --model lil=<org/repo>` A/Bs anything imported.
+    /// An imported audition WINS over the hub id of the same name, and says so in the log,
+    /// so an A/B never quietly compares a local copy against itself.
     nonisolated static func evalMLXBrain(modelID: String, maxTokens: Int) -> MLXBrainProvider {
-        auditionStore?.directory(for: modelID).map { MLXBrainProvider(modelDirectory: $0, maxTokens: maxTokens) }
-            ?? MLXBrainProvider(modelID: modelID, maxTokens: maxTokens)
+        if let folder = auditionStore?.directory(for: modelID) {
+            auditionLog.notice("eval \(modelID, privacy: .public) loads the imported audition folder, not the hub")
+            return MLXBrainProvider(modelDirectory: folder, maxTokens: maxTokens)
+        }
+        return MLXBrainProvider(modelID: modelID, maxTokens: maxTokens)
     }
 
     /// At launch, before the first brain is built: an audition whose last load never
     /// reached ready is dropped, so a checkpoint that kills the app can't do it twice.
-    /// Returns the tier that fell back, for a notice.
     @discardableResult
-    nonisolated static func dropAuditionThatNeverLoaded(defaults: UserDefaults = .standard) -> String? {
-        guard let tier = defaults.string(forKey: auditionLoadSentinelKey) else { return nil }
-        defaults.removeObject(forKey: auditionLoadSentinelKey)
-        let dropped = AuditionSelection.repoID(forTier: tier, defaults: defaults)
-        defaults.removeObject(forKey: AuditionSelection.key(forTier: tier))
-        auditionLog.error(
-            "audition \(dropped ?? "?", privacy: .public) for \(tier, privacy: .public) never finished loading last launch — back to stock"
-        )
+    nonisolated static func dropAuditionThatNeverLoaded() -> String? {
+        guard let tier = AuditionSelection.dropUnfinishedLoad() else { return nil }
+        auditionLog.error("audition for \(tier, privacy: .public) never finished loading last launch — back to stock")
         return tier
     }
 
-    /// Called when the live brain reaches `.ready`.
-    nonisolated static func auditionLoadFinished(defaults: UserDefaults = .standard) {
-        defaults.removeObject(forKey: auditionLoadSentinelKey)
+    /// The live brain reached ready: clear the sentinel only when it was loaded from an
+    /// audition folder (review on #452: any ready used to clear any pending load).
+    func auditionLoadFinished(sourceKey: String) {
+        if sourceKey.hasPrefix("dir:") { AuditionSelection.clearPendingLoad() }
     }
 
     /// What `tier` should be serving right now, as a provider `sourceKey`: its
@@ -102,6 +100,7 @@ extension AppEnvironment {
         }
         Self.auditionLog.notice("audition for \(tier.rawValue, privacy: .public) → \(repoID ?? "stock", privacy: .public)")
         guard selectedBrain == tier, tier.mlxModelID != nil else { return .savedForLater }
+        AuditionSelection.clearPendingLoad() // the pending load, if any, is being replaced
         _ = selectBrain(tier)
         return .applied
     }

@@ -68,7 +68,7 @@ struct ModelAuditionSection: View {
                 .font(.callout).foregroundStyle(.secondary)
         }
         .id(revision)
-        .onAppear(perform: reload)
+        .task { await reload() }
     }
 
     private func binding(for tier: BrainTier) -> Binding<String?> {
@@ -91,8 +91,10 @@ struct ModelAuditionSection: View {
         )
     }
 
-    private func reload() {
-        auditions = AppEnvironment.auditionStore?.list() ?? []
+    /// Off the main actor: listing sweeps staging and sizes every folder.
+    private func reload() async {
+        guard let store = AppEnvironment.auditionStore else { return }
+        auditions = await Task.detached(priority: .utility) { store.list() }.value
     }
 
     private func remove(_ model: AuditionModel) {
@@ -103,7 +105,7 @@ struct ModelAuditionSection: View {
         } catch {
             message = "Couldn't remove \(model.repoID): \(error.localizedDescription)"
         }
-        reload()
+        Task { await reload() }
         revision += 1
     }
 
@@ -133,9 +135,10 @@ struct ModelAuditionSection: View {
         panel.delegate = namer // weak: kept alive across the modal run below
         let response = withExtendedLifetime(namer) { panel.runModal() }
         guard response == .OK, let url = panel.url else { return }
-        let name = nameField.stringValue.isEmpty
+        let typed = nameField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = typed.isEmpty
             ? (AuditionStore.inferredRepoID(from: url) ?? url.lastPathComponent)
-            : nameField.stringValue
+            : typed
         importing = true
         message = nil
         Task {
@@ -146,7 +149,7 @@ struct ModelAuditionSection: View {
                 message = error.localizedDescription
             }
             importing = false
-            reload()
+            await reload()
         }
     }
 

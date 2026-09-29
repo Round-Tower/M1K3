@@ -260,4 +260,38 @@ struct AuditionStoreTests {
         #expect(provider.sourceKey == AuditionStore.sourceKey(for: dir))
         #expect(provider.sourceKey != provider.modelIdentifier)
     }
+
+    // MARK: - The load sentinel (review on #452)
+
+    private func freshDefaults() throws -> UserDefaults {
+        try #require(UserDefaults(suiteName: "audition-sentinel-\(UUID().uuidString)"))
+    }
+
+    @Test("an audition load that never reached ready is dropped at the next launch, once")
+    func unfinishedLoadIsDropped() throws {
+        let defaults = try freshDefaults()
+        defaults.set("org/Crashy", forKey: AuditionSelection.key(forTier: "big"))
+        AuditionSelection.recordPendingLoad(tier: "big", defaults: defaults)
+        #expect(AuditionSelection.dropUnfinishedLoad(defaults: defaults) == "big")
+        #expect(AuditionSelection.repoID(forTier: "big", defaults: defaults) == nil)
+        #expect(AuditionSelection.dropUnfinishedLoad(defaults: defaults) == nil) // cleared
+    }
+
+    @Test("a finished or abandoned load leaves the choice alone")
+    func finishedOrAbandonedLoadKeepsTheChoice() throws {
+        let defaults = try freshDefaults()
+        defaults.set("org/Fine", forKey: AuditionSelection.key(forTier: "lil"))
+        AuditionSelection.recordPendingLoad(tier: "lil", defaults: defaults)
+        AuditionSelection.clearPendingLoad(defaults: defaults) // .ready, or a switch away
+        #expect(AuditionSelection.dropUnfinishedLoad(defaults: defaults) == nil)
+        #expect(AuditionSelection.repoID(forTier: "lil", defaults: defaults) == "org/Fine")
+    }
+
+    @Test("only an MLX brain that is really about to load records a pending load")
+    func onlyALiveMLXLoadRecords() {
+        // Mini selected: the launch slot still BUILDS Big's provider, but nothing loads it.
+        #expect(!AuditionSelection.recordsPendingLoad(selectedIsMLX: false, buildingSelected: false))
+        #expect(!AuditionSelection.recordsPendingLoad(selectedIsMLX: true, buildingSelected: false)) // the dive's Big
+        #expect(AuditionSelection.recordsPendingLoad(selectedIsMLX: true, buildingSelected: true))
+    }
 }

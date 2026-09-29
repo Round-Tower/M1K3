@@ -690,7 +690,7 @@ final class AppEnvironment {
     private(set) var modelLoad: ModelLoadState = .idle {
         didSet {
             refreshInterimBridge()
-            if case .ready = modelLoad { Self.auditionLoadFinished() }
+            if case .ready = modelLoad { auditionLoadFinished(sourceKey: currentMLXProvider.sourceKey) }
         }
     }
 
@@ -938,7 +938,9 @@ final class AppEnvironment {
             stockModelID: initialMLXModelID,
             maxTokens: HistoryBudgetPolicy.generationTokenCap(
                 for: slotTier, defaultCap: MLXBrainProvider.defaultMaxTokens
-            )
+            ),
+            // With Mini selected this slot is built for Big but never loaded (#452 review).
+            live: AuditionSelection.recordsPendingLoad(selectedIsMLX: brain.mlxModelID != nil, buildingSelected: true)
         )
         currentMLXProvider = mlxBrain
         let mlxSlot = SwappableInferenceProvider(mlxBrain)
@@ -1452,6 +1454,7 @@ final class AppEnvironment {
         if let modelID = tier.mlxModelID {
             // Rotating-KV tiers get a capped decode so prefill + generation fit
             // the window together (see HistoryBudgetPolicy.rotatingGenerationTokenCap).
+            AuditionSelection.clearPendingLoad() // switching away abandons, not crashes, a pending load
             let mlx = Self.makeMLXBrain(
                 for: tier,
                 stockModelID: modelID,
