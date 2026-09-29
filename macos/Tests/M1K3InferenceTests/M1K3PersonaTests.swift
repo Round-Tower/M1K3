@@ -320,6 +320,8 @@ struct M1K3PersonaTests {
 
     /// SHA-256 of master's `corePrompt` under `swift test` (2026-09-12, base 73929882),
     /// cross-checked against the core at the head of the master app's own dumped prompt.
+    /// The core interpolates `HostPlatform.thisDevice`, so this is the MAC render: deterministic
+    /// per OS, and it would differ if the suite ever ran the core on iOS (#304).
     static let frozenPocketCoreSHA256 = "b42c474266b0aaf6dd054e5a3c0efb7d2f0141c466597032063164555c06c407"
 
     static func sha256(_ text: String) -> String {

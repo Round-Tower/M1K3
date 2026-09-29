@@ -106,6 +106,23 @@ def test_named_heads_reads_bare_sha_second_pass():
     assert m.named_heads(body) == ["a9c584f4"]
 
 
+def test_named_heads_reads_a_bare_sha_in_the_pass_header():
+    # the wording seen on #437 (2026-09-27): "### Reviewing f2dcbc56", no backticks, no word "head" —
+    # two finished summons on the head read 1/2
+    body = ("**Claude finished @kev's task in 1m 58s** —— [View job](https://github.com/o/r/actions/runs/1)\n\n---\n"
+            "### Reviewing f2dcbc56\n\n- [x] Read the diff")
+    assert m.named_heads(body) == ["f2dcbc56"]
+    assert m.named_heads("### Reviewing f2dcbc56 (round 2)\n") == ["f2dcbc56"]
+    assert m.summon_passes("f2dcbc5612345678901234567890123456789012", [bot(body)]) == 1
+
+
+def test_a_bare_title_word_that_only_looks_hex_names_nothing():
+    # hex letters alone make words ("defaced", "effaced"); a sha is told apart by a digit
+    assert m.named_heads("### Reviewing the defaced cache\n") == []
+    # and a bare sha in body prose, or a later finding header, still names nothing
+    assert m.named_heads("### Review\n\nsee commit 1a2b3c4d for context\n#### Old 5e6f7a8b\n") == []
+
+
 def test_named_heads_is_empty_when_no_sha_named():
     assert m.named_heads("## Review: something\nno sha here") == []
     assert m.named_heads("mentions `cccc333` without the word head") == []
