@@ -378,6 +378,13 @@ struct ChatEvalScorerTests {
         // #304: a CLOSED block of one or two lines stays — it reads as speech, not an artifact.
         #expect(RefusalHeuristic.proseOutsideFences("a\n```\nx\n```\nb") == "a\nx\nb")
         #expect(RefusalHeuristic.proseOutsideFences("```\nx\ny\n```") == "x\ny")
+        // …but only a BARE fence: a tagged one is code, however short (a one-line minified page).
+        #expect(RefusalHeuristic.proseOutsideFences("a\n```html\n<p>Sorry, not appropriate</p>\n```\nb") == "a\nb")
+        // An unclosed one- or two-line fence is still the cut-off artifact.
+        #expect(RefusalHeuristic.proseOutsideFences("a\n```html\n<p>I can't") == "a")
+        #expect(RefusalHeuristic.proseOutsideFences("a\n```\nI can't") == "a")
+        // Adjacent blocks are judged one at a time.
+        #expect(RefusalHeuristic.proseOutsideFences("```\nx\n```\n```\ny") == "x")
     }
 
     @Test("refusal detection catches M1K3's oblique in-voice declines")
