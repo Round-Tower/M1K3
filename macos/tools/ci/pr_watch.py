@@ -78,6 +78,9 @@ review counted zero, and a substantive PR would have waited for a third review.
 The action's tracking comment links `actions/runs/<id>` (read off #400/#401/
 #404); snapshot now fetches databaseId; the window fallback skips a comment
 that links another run. Confidence now 0.9.
+Review: Kev + claude-opus-5-5, 2026-09-29 — named_heads reads a bare sha in the title
+(#437's summons wrote "### Reviewing f2dcbc56" and read 1/2 on a thrice-reviewed head, #304).
+A digit is required so an all-hex word is not a sha. Confidence 0.85.
 Review: Kev + claude-opus-5-5, 2026-09-26 — classify's any-box fallback skips
 ``` fences: #416's finished auto review quoted the PR body's unchecked merge
 gate in a fence, was read as a progress list, and the watch reported 1/2 on a
@@ -155,6 +158,9 @@ _HEAD_PAREN = re.compile(r"\bhead \(([0-9a-f]{7,40})\)")
 _HEAD_BARE = re.compile(r"\bhead ([0-9a-f]{7,40})\b")
 _HEADER_LINE = re.compile(r"^#{2,4} ")
 _SHA = re.compile(r"`([0-9a-f]{7,40})`")
+# "### Reviewing f2dcbc56" — a bare sha in the title, no backticks, no "head" (#437, 2026-09-27).
+# A digit is required: hex letters alone spell words ("defaced", "effaced").
+_TITLE_BARE_SHA = re.compile(r"\b(?=[0-9a-f]*[0-9])([0-9a-f]{7,40})\b")
 # The action's tracking-comment anchor. If the action ever renames "View job",
 # the identity match silently falls back to the window heuristic and #409 comes
 # back — re-pin from a live thread, as classify's wording list has needed
@@ -220,8 +226,9 @@ def named_heads(body: str) -> list[str]:
     `x`", "Review — head `x`" all seen on 2026-09-12; "Review of `x`" with no
     word "head" on #318, 2026-09-14), so a sha counts when it follows the word
     "head" anywhere — backticked, or in parentheses as on #347 (2026-09-15:
-    "second full pass on final head (3922a21d)") — or sits backticked in the
-    pass's own title — the FIRST markdown header line. A later "####" finding header quoting an older commit,
+    "second full pass on final head (3922a21d)") — or sits in the pass's own
+    title — the FIRST markdown header line — backticked, or bare with a digit
+    ("### Reviewing f2dcbc56", #437). A later "####" finding header quoting an older commit,
     and a sha in body prose, name nothing. An auto pass's comment may name the
     head too (#404, 2026-09-24) — verdict() counts that review once."""
     shas: list[str] = []
@@ -230,7 +237,7 @@ def named_heads(body: str) -> list[str]:
         found = _HEAD.findall(line) + _HEAD_PAREN.findall(line) + _HEAD_BARE.findall(line)
         if not title_read and _HEADER_LINE.match(line):
             title_read = True
-            found += _SHA.findall(line)
+            found += _SHA.findall(line) + _TITLE_BARE_SHA.findall(line)
         for sha in found:
             if sha not in shas:
                 shas.append(sha)
