@@ -534,12 +534,7 @@ enum ChatEvalStage {
         case let .mlx(stockID):
             // 2048 like the per-model eval: a reasoning brain can spend hundreds
             // of tokens inside <think> before a one-word answer.
-            // An override naming an imported audition loads from its folder, so
-            // `run_chateval.py --model lil=<org/repo>` A/Bs anything imported in Settings.
-            let id = modelID ?? stockID
-            provider = AppEnvironment.auditionStore?.directory(for: id)
-                .map { MLXBrainProvider(modelDirectory: $0, maxTokens: 2048) }
-                ?? MLXBrainProvider(modelID: id, maxTokens: 2048)
+            provider = AppEnvironment.evalMLXBrain(modelID: modelID ?? stockID, maxTokens: 2048)
         }
         return await evalProvider(provider, emit: emit)
     }

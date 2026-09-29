@@ -47,6 +47,13 @@ extension AppEnvironment {
         return MLXBrainProvider(modelID: stockModelID, maxTokens: maxTokens)
     }
 
+    /// The eval stage's MLX brain: an override naming an imported audition loads from
+    /// its folder, so `run_chateval.py --model lil=<org/repo>` A/Bs anything imported.
+    nonisolated static func evalMLXBrain(modelID: String, maxTokens: Int) -> MLXBrainProvider {
+        auditionStore?.directory(for: modelID).map { MLXBrainProvider(modelDirectory: $0, maxTokens: maxTokens) }
+            ?? MLXBrainProvider(modelID: modelID, maxTokens: maxTokens)
+    }
+
     /// At launch, before the first brain is built: an audition whose last load never
     /// reached ready is dropped, so a checkpoint that kills the app can't do it twice.
     /// Returns the tier that fell back, for a notice.
@@ -88,7 +95,11 @@ extension AppEnvironment {
     func setAudition(_ repoID: String?, for tier: BrainTier) -> AuditionChange {
         guard deepDelegationTaskLabel == nil else { return .busy }
         let key = AuditionSelection.key(forTier: tier.rawValue)
-        if let repoID { UserDefaults.standard.set(repoID, forKey: key) } else { UserDefaults.standard.removeObject(forKey: key) }
+        if let repoID {
+            UserDefaults.standard.set(repoID, forKey: key)
+        } else {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
         Self.auditionLog.notice("audition for \(tier.rawValue, privacy: .public) → \(repoID ?? "stock", privacy: .public)")
         guard selectedBrain == tier, tier.mlxModelID != nil else { return .savedForLater }
         _ = selectBrain(tier)
