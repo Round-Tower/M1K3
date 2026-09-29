@@ -73,10 +73,9 @@ public actor LocalMCPHTTPServer {
     /// Seconds a connection may take to deliver one complete request. The
     /// clock covers the READ only — a tool call may legitimately run longer.
     private let readDeadline: TimeInterval
-    /// The token every request must carry, read per request so a rotation in
-    /// Settings applies at once. Non-optional ANSWER on purpose: once a host
-    /// hands a token source over, no state of it can serve without one. Nil
-    /// (no source at all) is for tests; the app always passes one (#270).
+    /// `.token`: every request must carry it, read per request so a rotation
+    /// in Settings applies at once — the app's only mode. `.open`: no check,
+    /// for wire-layer tests only (#270).
     private let access: LoopbackAccess
     private var listener: NWListener?
     private var session: (server: Server, transport: StatelessHTTPServerTransport)?

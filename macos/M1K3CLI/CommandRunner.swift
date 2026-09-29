@@ -49,6 +49,9 @@ import M1K3CLICore
 /// The terminal settings `readSecretLine` must put back, reachable from a
 /// signal handler (a C function pointer captures nothing). Set only for the
 /// read window.
+/// `nonisolated(unsafe)` is sound here: it is written only BEFORE the handlers
+/// are installed and cleared after they are removed, so the handler only ever
+/// reads a settled value; `tcsetattr`, `signal` and `raise` are async-signal-safe.
 private nonisolated(unsafe) var termiosToRestore: termios?
 
 /// Ctrl-C (or a TERM/HUP) at the hidden prompt would otherwise kill the
