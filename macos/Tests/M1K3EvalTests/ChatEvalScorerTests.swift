@@ -378,6 +378,7 @@ struct ChatEvalScorerTests {
         // #304: a CLOSED block of one or two lines stays — it reads as speech, not an artifact.
         #expect(RefusalHeuristic.proseOutsideFences("a\n```\nx\n```\nb") == "a\nx\nb")
         #expect(RefusalHeuristic.proseOutsideFences("```\nx\ny\n```") == "x\ny")
+        #expect(RefusalHeuristic.proseOutsideFences("```\nx\ny\nz\n```") == "", "three bare lines is a made thing — the cap itself")
         // …but only a BARE fence: a tagged one is code, however short (a one-line minified page).
         #expect(RefusalHeuristic.proseOutsideFences("a\n```html\n<p>Sorry, not appropriate</p>\n```\nb") == "a\nb")
         // An unclosed one- or two-line fence is still the cut-off artifact.
