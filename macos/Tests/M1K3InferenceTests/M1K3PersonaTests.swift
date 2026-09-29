@@ -21,6 +21,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-29 — the persona diet, Mini only: `miniCarriesNoToolSection`,
 //  `miniPersonaWithAFullProfileFits`, and `rulesKeepTheDeclineScoped` (the rules rewrite tried and reverted live).
 //  Standard and pocket renders unchanged. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-29 (#451 review fold) — the full-profile test builds exactly
+//  profileCharacterCap (compose truncated the old 920-char profile to 400); bound 5,500 → 5,300. Confidence 0.9.
 //
 
 import CryptoKit
@@ -492,15 +494,16 @@ struct M1K3PersonaTests {
     @Test("with a cap-length profile, Mini's persona stays under the one-third line")
     func miniPersonaWithAFullProfileFits() {
         // MiniPromptBudgetTests pins run with no profile, and Mini's live prompt carries
-        // one: at ≈1,255 estimated tokens a 400-character profile put it past their
-        // one-third line (1,365 tokens) with nothing failing. 5,500 chars ≈ 1,250 tokens at
-        // the app's 4.4 chars per token (GroundingBudget.estimatedCharsPerToken).
-        let profile = String(repeating: "a fact about the user. ", count: 40)
+        // one: at ≈1,255 estimated tokens a cap-length profile put it past their one-third
+        // line (1,365 tokens) with nothing failing. The profile here is exactly the cap
+        // `compose` keeps (profileCharacterCap). ≈1,065 tokens of persona ≈ 4,710 chars;
+        // with the capped profile ≈ 5,130. 5,300 chars ≈ 1,205 tokens at the app's 4.4.
+        let profile = String(repeating: "x", count: M1K3Persona.profileCharacterCap)
         let prompt = M1K3Persona.compose(
             core: M1K3Persona.miniCorePrompt + "\n" + M1K3Persona.currentDateLine(Date()),
             profile: profile
         )
-        #expect(prompt.count < 5500, "Mini's persona with a full profile is \(prompt.count) chars")
+        #expect(prompt.count < 5300, "Mini's persona with a full profile is \(prompt.count) chars")
     }
 
     @Test("the rules keep the decline tied to its trigger: the standard core's rules are pocket's, byte for byte")
