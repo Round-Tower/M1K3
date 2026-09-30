@@ -34,8 +34,17 @@ Anything a cold session needs on turn one belongs below, not there.
   reviews the head at RUN time — push first, then summon AT ONCE, so the auto
   pass and the summon read the same head; fold both in one commit (a nits-only
   fold is a trivial head). `land.sh` never waits: pending CI exits 2 and merges
-  nothing — run `pr_watch.py <PR> --passes N` first. Same-day small fixes
-  ride one PR unless a release gate needs them apart.
+  nothing — run `pr_watch.py <PR> --passes N` first.
+- **PR granularity (2026-09-30 ruling):** one PR per stream of work per day;
+  same-day small fixes ride TOGETHER (a token strip, a scorer check, a tool
+  fix, a docs line, a gem bump were five PRs one day — ~12 review rounds and
+  six Xcode Cloud archives for one PR's worth of diff). Split only for a
+  release gate, an independent revert path, or a change that needs a
+  reviewer's whole attention. Two review rounds per PR, then carry the rest
+  to a follow-up issue. Claude pushes branches and lands via `land.sh` without
+  asking per action (never a direct push to master); land in a batch at the
+  end of a stretch, and report only when something is landable, blocked or
+  interesting. `challenger` before a PR that sets a threshold or heuristic.
 - **CI on a PR:** package-only diffs are gated by `swift test` (~4 min); the
   App-shell and iOS+visionOS xcodebuild jobs run only when their paths change
   (the `shell` / `mobile` filters in `ci.yml`). Every push to master or develop
@@ -93,4 +102,8 @@ from the perf sweep (#415/#416/#422): argv not `defaults` for in-app
 overrides (+ the zsh `log` and quit-by-bundle-id traps); speculative
 decoding is measured dead on M1; Mini's window is the device's.
 Confidence 0.85.
+Review: Kev + claude-fable-5.1, 2026-09-30 — PR granularity + push/land standing
+permission, after Kev asked "are we hurting our zen?": the review loop caught
+four real bugs that day and stays; the per-PR ceremony and the human relay
+were the cost. Confidence 0.85.
 -->
