@@ -40,6 +40,41 @@ struct StreamingReasoningSplitterTests {
         #expect(splitter.answer == "It's sunny.")
     }
 
+    // MARK: - Stray control tokens (the live twin of ReasoningSplit's strip; voice
+
+    // speaks sentences from THIS answer before the post-stream pass runs)
+
+    @Test("a stray media token arriving as its own chunk never reaches the live answer")
+    func strayTokenChunk() {
+        let splitter = run(["Done without breaking a", "<image|>", "sweat."])
+        #expect(splitter.answer == "Done without breaking a sweat.")
+        #expect(splitter.raw == "Done without breaking a<image|>sweat.") // raw stays the source of truth
+    }
+
+    @Test("a stray token split across chunks is held back, then dropped")
+    func strayTokenSplitAcrossChunks() {
+        #expect(run(["a<ima", "ge|>b"]).answer == "a b")
+        #expect(run(["a <ima", "ge|> b"]).answer == "a b")
+    }
+
+    @Test("an empty snapshot re-send between the token and the next word doesn't lose the owed space")
+    func strayTokenGapSurvivesEmptyDelta() {
+        #expect(run(["a<image|>", "a<image|>", "b"]).answer == "a b") // the second chunk is a cumulative re-send
+    }
+
+    @Test("a stray token at the very end of the stream is dropped at finish")
+    func strayTokenAtEnd() {
+        #expect(run(["Hi", "<image|>"]).answer == "Hi")
+        #expect(run(["Hi<start_of_image>"]).answer == "Hi")
+    }
+
+    @Test("a stray token inside a reasoning block is dropped there too")
+    func strayTokenInReasoning() {
+        let splitter = run(["<think>", "plan<|audio> here", "</think>", "answer"])
+        #expect(splitter.reasoning == "plan here")
+        #expect(splitter.answer == "answer")
+    }
+
     @Test("tags split across chunk boundaries are still caught")
     func splitTags() {
         let splitter = run(["<th", "ink>plan", " here</th", "ink>the answer"])
@@ -174,6 +209,18 @@ struct StreamingReasoningSplitterTests {
             ["<|channel>thought\nplan\n<channel|>the answer"], // gemma-4 channel
             ["reasoning only<channel|>", " then answer"], // gemma-4 lone close
             ["<|channel>thought\nunclosed channel thought"],
+            // Stray media tokens, every chunking the review could think of.
+            ["Done without breaking a", "<image|>", "sweat."],
+            ["Done without breaking a <image|>", "sweat."], // letter, space, token in ONE chunk
+            ["a<ima", "ge|>b"],
+            ["a", "<im", "age", "|>b"],
+            ["Hi<image|>"],
+            ["<image|>Hi"],
+            ["Hi <image|>", " there"],
+            ["there<end_of_image>", "."],
+            ["a<image|>", "."], // the owed gap is NOT paid before punctuation
+            ["3<image|>", "4"],
+            ["a<image|><audio|>", "sweat"],
         ]
         for chunks in streams {
             let splitter = run(chunks)

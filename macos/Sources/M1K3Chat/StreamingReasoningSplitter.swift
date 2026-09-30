@@ -18,6 +18,14 @@
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-fable-5, 2026-07-02 — snapshot-vs-delta normalisation
 //  delegated to M1K3Inference.StreamFold (was one of three inlined copies).
+//  Review: Kev + claude-fable-5.1, 2026-09-30 — drops gemma's stray media tokens
+//  live (ReasoningSplit.strayTokens, one list): voice folds sentences out of
+//  `answer` before the post-stream pass, so "a<image|>sweat" would have been
+//  spoken. Held back while incomplete, like the tags; a token at the buffer's
+//  end settles its word gap on the next chunk. Known, accepted: two spaces
+//  before a token, or a reasoning tag between word and token, can leave the
+//  live text one space off the final (the final pass owns the bubble; the
+//  difference is inaudible). Confidence 0.85.
 //
 
 import Foundation
@@ -49,18 +57,28 @@ struct StreamingReasoningSplitter {
     /// Set when a new think block begins after one already closed, so blocks
     /// join with a blank line (matches ReasoningSplit's joined output).
     private var pendingReasoningSeparator = false
+    /// A stray token was dropped from between a word and the end of the buffer:
+    /// if the next chunk opens with a letter, the token stood where a space was.
+    private var owesWordGap = false
 
     // Both reasoning formats we recognise, shared with ReasoningSplit so the
     // live and post-stream authorities can't drift: Qwen `<think>…</think>` and
     // gemma-4 `<|channel>thought … <channel|>`.
     private static let openTags = ReasoningSplit.openTags
     private static let closeTags = ReasoningSplit.closeTags
+    /// gemma's stray media tokens: dropped live, because voice speaks sentences
+    /// from `answer` before the post-stream pass; held back while incomplete.
+    private static let strayTokens = ReasoningSplit.strayTokens
 
     /// Feed one raw stream chunk (delta or cumulative snapshot).
     mutating func feed(_ chunk: String) {
         // Normalise cumulative snapshots to deltas (StreamFold's shared rule).
         let delta = StreamFold.delta(current: raw, chunk: chunk)
         raw += delta
+        if owesWordGap, let first = delta.first {
+            if ReasoningSplit.isWordCharacter(first) { buffer += " " }
+            owesWordGap = false
+        }
         buffer += delta
         process()
     }
@@ -81,6 +99,7 @@ struct StreamingReasoningSplitter {
         var advanced = true
         while advanced {
             advanced = false
+            dropStrayTokens()
             switch mode {
             case .scanning:
                 buffer = String(buffer.drop(while: \.isWhitespace))
@@ -104,7 +123,7 @@ struct StreamingReasoningSplitter {
                     mode = .answer
                     advanced = true
                 } else {
-                    appendReasoning(takeAllButHoldback(guarding: Self.closeTags))
+                    appendReasoning(takeAllButHoldback(guarding: Self.closeTags + Self.strayTokens))
                 }
 
             case .answerWatching:
@@ -126,7 +145,7 @@ struct StreamingReasoningSplitter {
                     mode = .reasoning
                     advanced = true
                 } else {
-                    appendAnswer(takeAllButHoldback(guarding: Self.closeTags + Self.openTags))
+                    appendAnswer(takeAllButHoldback(guarding: Self.closeTags + Self.openTags + Self.strayTokens))
                 }
 
             case .answer:
@@ -137,9 +156,27 @@ struct StreamingReasoningSplitter {
                     mode = .reasoning
                     advanced = true
                 } else {
-                    appendAnswer(takeAllButHoldback(guarding: Self.openTags))
+                    appendAnswer(takeAllButHoldback(guarding: Self.openTags + Self.strayTokens))
                 }
             }
+        }
+    }
+
+    /// Strip complete stray tokens from the buffer, with the same word-spacing rule
+    /// as the post-stream pass (the character emitted before the buffer supplies
+    /// the left context). A token at the buffer's end can't yet know whether a
+    /// word follows; it goes now and the space it may owe is settled by `feed`.
+    private mutating func dropStrayTokens() {
+        guard Self.earliest(of: Self.strayTokens, in: buffer) != nil else { return }
+        let previous = mode == .reasoning ? reasoning.last : answer.last
+        let tail = String(buffer.reversed().drop { $0 == " " }.reversed())
+        let endsWithToken = Self.strayTokens.contains { tail.hasSuffix($0) }
+        buffer = ReasoningSplit.removingStrayTokens(from: buffer, precededBy: previous)
+        if endsWithToken {
+            // Judged AFTER the strip, so a run of adjacent tokens and the spaces the
+            // strip collapses are both gone: "a <image|><audio|>" + "sweat" → "a sweat".
+            let beforeTokens = buffer.last { $0 != " " } ?? previous
+            owesWordGap = beforeTokens.map(ReasoningSplit.isWordCharacter) == true
         }
     }
 
