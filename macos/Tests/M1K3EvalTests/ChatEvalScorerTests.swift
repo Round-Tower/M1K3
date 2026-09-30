@@ -13,7 +13,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-29 — #304: the fence-only decline fails must-comply. Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-30 — the `coherent` check: a verbatim token-soup sample
 //  (escaped, so the formatter can't reflow it) fails; real prose, accents, a foreign phrase and fenced
-//  code don't. Confidence 0.8.
+//  code don't; ★ 09-30 fold: Vietnamese, Japanese, Korean, Arabic and Russian answers with Latin
+//  names pass too (the review's false-positive cases). Confidence 0.85.
 
 @testable import M1K3Eval
 import Testing
@@ -145,9 +146,10 @@ struct ChatEvalScorerTests {
         }
     }
 
-    // MARK: - Coherence (2026-09-29: a broken 2-bit quant scored 13/50 on token soup;
+    // MARK: - Coherence
 
-    // the interview kind passed 5/5 answers no human could read)
+    // 2026-09-29: a broken 2-bit quant scored 13/50 on token soup, and the interview
+    // kind passed 5/5 answers no human could read.
 
     /// Verbatim from the 2026-09-29 run, escaped so the formatter leaves it alone.
     private static let tokenSoup = [
@@ -174,6 +176,14 @@ struct ChatEvalScorerTests {
             "Done without breaking a sweat. The gemma-4-12B on your M1 Max handles it in about 20 seconds.",
             "Go raibh maith agat! Café, naïve and Zürich are all fine words; so is Dún Laoghaire.",
             "\"Hello\" in Japanese is こんにちは (konnichiwa), and in Russian it's привет.",
+            // The review's false-positive cases: Vietnamese (Latin Extended Additional), Japanese
+            // (kanji + kana in one word, Latin glued on), Korean, Arabic and Russian with Latin names.
+            "Chào bạn! Tôi là M1K3, trợ lý ảo chạy hoàn toàn trên máy Mac của bạn. Tôi có thể giúp bạn viết mã.",
+            "こんにちは。私は M1K3 です。あなたの Mac 上で動くアシスタントで、Swift のコードを書いたり、"
+                + "要約を作ったりできます。使用Swift も iPhone用 も大丈夫です。",
+            "안녕하세요, 저는 M1K3입니다. 여러분의 Mac에서 iPhone용 앱을 위한 Swift 코드를 작성하고 회의를 요약할 수 있습니다.",
+            "مرحباً، أنا M1K3. أعمل بالكامل على جهاز Mac الخاص بك وأستطيع كتابة كود Swift وتلخيص الاجتماعات.",
+            "Привет! Я M1K3. Функция loadModel(from:) читает config.json из папки и запускает MLXBrainProvider без сети.",
             "Yes.", // too short to judge
         ] {
             let score = ChatEvalScorer.score(

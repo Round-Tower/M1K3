@@ -52,8 +52,9 @@
 //  5/5 answers no human could read, because every check there is an exclusion. The rule is script
 //  mixing INSIDE words plus the count of scripts across the prose — real multilingual prose
 //  switches script between words, not within them. Judged on the prose outside fences, eight
-//  words minimum. Threshold set on one soup sample and a handful of real answers; loosen, don't
-//  drop, if a genuine answer trips it.
+//  words minimum. Thresholds measured over the 50 soup answers and 668 real ones from 13 runs
+//  (plus Vietnamese/Japanese/Korean/Arabic/Russian samples, the review's false-positive cases);
+//  loosen, don't drop, if a genuine answer trips it.
 
 import Foundation
 import M1K3Inference
@@ -374,19 +375,27 @@ public enum ChatEvalScorer {
         public let detail: String
     }
 
+    /// Words (tokens with at least one letter) needed before the prose is judged.
     static let minimumWords = 8
-    /// Words mixing two scripts, as a share of all words. Real prose: ~0. Soup: > 0.5.
-    static let mixedWordShare = 0.15
-    /// Distinct scripts across the prose. A quote in one other language is 2.
+    /// Words mixing two scripts, as a share of all words. Measured 2026-09-30 over
+    /// 668 real answers (13 runs, Irish/Japanese/Vietnamese/Korean/Arabic/Russian
+    /// samples included): 0.00. Over the 50 soup answers: 0.13 at the lowest.
+    static let mixedWordShare = 0.10
+    /// Distinct scripts across the prose: real answers reach 2, soup never fewer than 4.
     static let scriptCap = 3
 
     /// Does the prose read as language? Token soup from a broken quant mixes
     /// Hangul, Arabic, Cyrillic and Latin INSIDE single words and runs through
     /// half a dozen scripts in a line; real multilingual prose switches script
-    /// between words. Digits and punctuation are ignored, so "M1K3", "gemma-4-12B"
-    /// and a regex in a fence are never the reason.
+    /// between words. Two things real text does inside a word are allowed: the
+    /// CJK scripts are one family (kanji + kana, hangul + hanja), and Latin sits
+    /// inside CJK words ("使用Swift", "iPhone用"). Digits, punctuation and letters
+    /// from blocks not in the table are ignored, so "M1K3", "gemma-4-12B" and a
+    /// regex in a fence are never the reason. Opt out per kind at the call site
+    /// if a future fixture kind wants soup on purpose.
     public static func coherence(of prose: String) -> Coherence {
         let words = prose.split(whereSeparator: \.isWhitespace)
+            .filter { $0.unicodeScalars.contains { $0.properties.isAlphabetic } }
         guard words.count >= minimumWords else {
             return Coherence(judged: false, isCoherent: true, detail: "\(words.count) words, not judged")
         }
@@ -395,10 +404,10 @@ public enum ChatEvalScorer {
         for word in words {
             var scripts = Set<Script>()
             for scalar in word.unicodeScalars where scalar.properties.isAlphabetic {
-                scripts.insert(Script(scalar))
+                if let script = Script(scalar) { scripts.insert(script) }
             }
             scriptsSeen.formUnion(scripts)
-            if scripts.count > 1 { mixed += 1 }
+            if scripts.count > 1, scripts != Script.latinInsideCJK { mixed += 1 }
         }
         let share = Double(mixed) / Double(words.count)
         let coherent = share <= mixedWordShare && scriptsSeen.count <= scriptCap
@@ -408,25 +417,36 @@ public enum ChatEvalScorer {
         )
     }
 
-    /// The writing systems the soup mixed, by block; anything else is `.other`.
-    /// The standard library exposes no script property, and blocks are enough
-    /// to tell "mixed inside a word" from "not".
+    /// The writing systems the soup mixed, by block; a letter from any other
+    /// block is nil and ignored (never a script of its own). The standard library
+    /// exposes no script property, and blocks are enough to tell "mixed inside a
+    /// word" from "not".
     enum Script: Hashable {
-        case latin, greek, cyrillic, hebrew, arabic, devanagari, thai, hangul, kana, han, other
+        case latin, greek, cyrillic, armenian, hebrew, arabic, devanagari, thai, georgian, cjk
 
-        init(_ scalar: Unicode.Scalar) {
-            self = switch scalar.value {
-            case 0x0041 ... 0x024F: .latin // ASCII through Latin Extended-B
-            case 0x0370 ... 0x03FF: .greek
-            case 0x0400 ... 0x052F: .cyrillic
-            case 0x0590 ... 0x05FF: .hebrew
-            case 0x0600 ... 0x06FF, 0x0750 ... 0x077F, 0xFB50 ... 0xFDFF, 0xFE70 ... 0xFEFF: .arabic
-            case 0x0900 ... 0x097F: .devanagari
-            case 0x0E00 ... 0x0E7F: .thai
-            case 0x1100 ... 0x11FF, 0x3130 ... 0x318F, 0xAC00 ... 0xD7AF: .hangul
-            case 0x3040 ... 0x30FF: .kana
-            case 0x3400 ... 0x4DBF, 0x4E00 ... 0x9FFF: .han
-            default: .other
+        /// Allowed inside one word: "使用Swift", "iPhone用".
+        static let latinInsideCJK: Set<Script> = [.latin, .cjk]
+
+        init?(_ scalar: Unicode.Scalar) {
+            switch scalar.value {
+            case 0x0041 ... 0x024F, // ASCII through Latin Extended-B
+                 0x0250 ... 0x02AF, // IPA
+                 0x1E00 ... 0x1EFF, // Latin Extended Additional: Vietnamese, dotted Gaelic
+                 0xFF21 ... 0xFF5A: // fullwidth Latin
+                self = .latin
+            case 0x0370 ... 0x03FF, 0x1F00 ... 0x1FFF: self = .greek
+            case 0x0400 ... 0x052F: self = .cyrillic
+            case 0x0530 ... 0x058F: self = .armenian
+            case 0x0590 ... 0x05FF: self = .hebrew
+            case 0x0600 ... 0x06FF, 0x0750 ... 0x077F, 0xFB50 ... 0xFDFF, 0xFE70 ... 0xFEFF: self = .arabic
+            case 0x0900 ... 0x097F: self = .devanagari
+            case 0x0E00 ... 0x0E7F: self = .thai
+            case 0x10A0 ... 0x10FF: self = .georgian
+            case 0x1100 ... 0x11FF, 0x3130 ... 0x318F, 0xAC00 ... 0xD7AF, // hangul
+                 0x3040 ... 0x30FF, 0xFF66 ... 0xFF9F, // kana
+                 0x3400 ... 0x4DBF, 0x4E00 ... 0x9FFF: // han
+                self = .cjk
+            default: return nil
             }
         }
     }
