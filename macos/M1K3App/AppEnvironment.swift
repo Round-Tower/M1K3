@@ -81,6 +81,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 (2), Confidence 0.8 — `readiness` passes AFM's transient
 //  not-ready as `backendSettling` ("Preparing Mini…", not "This Mac can't run the selected brain"), and
 //  `availabilityRecheck` lets the gate re-read availability every 2 s while it's up. Verify-by-launch owed.
+//  Review: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.8 — model auditions: the launch slot and
+//  `selectBrain` build through `makeMLXBrain(for:)` (AppEnvironment+Auditions), and the reselect no-op
+//  compares where the brain was loaded FROM (`sourceKey`), since an audition can share the stock
+//  model's name. A live audition load leaves a sentinel `.ready` clears. No audition chosen: unchanged.
 
 import AppKit
 import Foundation
@@ -684,7 +688,15 @@ final class AppEnvironment {
     /// Progress of warming the MLX Gemma weights, surfaced in Settings (and the
     /// chat send path). Stays `.idle` for the Apple Foundation Models default.
     private(set) var modelLoad: ModelLoadState = .idle {
-        didSet { refreshInterimBridge() }
+        didSet {
+            refreshInterimBridge()
+            switch modelLoad {
+            // A load that settled either way isn't a crash: only a load cut short by
+            // one should cost the audition at the next launch (#452 review).
+            case .ready, .failed: auditionLoadFinished(sourceKey: currentMLXProvider.sourceKey)
+            default: break
+            }
+        }
     }
 
     /// The Advanced pane's "Import weights from a folder…" affordance —
@@ -925,11 +937,15 @@ final class AppEnvironment {
         // uncapped decode crosses the 8192 window mid-answer and silently
         // rotates the persona/grounding head out.
         let slotTier = brain.mlxModelID != nil ? brain : BrainTier.big
-        let mlxBrain = MLXBrainProvider(
-            modelID: initialMLXModelID,
+        Self.dropAuditionThatNeverLoaded()
+        let mlxBrain = Self.makeMLXBrain(
+            for: slotTier,
+            stockModelID: initialMLXModelID,
             maxTokens: HistoryBudgetPolicy.generationTokenCap(
                 for: slotTier, defaultCap: MLXBrainProvider.defaultMaxTokens
-            )
+            ),
+            // With Mini selected this slot is built for Big but never loaded (#452 review).
+            live: AuditionSelection.recordsPendingLoad(selectedIsMLX: brain.mlxModelID != nil, buildingSelected: true)
         )
         currentMLXProvider = mlxBrain
         let mlxSlot = SwappableInferenceProvider(mlxBrain)
@@ -1415,7 +1431,8 @@ final class AppEnvironment {
         // "Try again" and first-wake re-attempt; Mini (no mlxModelID) is never guarded.
         if BrainSwitcher.reselectIsNoOp(
             tier: tier, selected: selectedBrain, load: modelLoad,
-            loadedModelID: currentMLXProvider.modelIdentifier
+            loadedModelID: currentMLXProvider.sourceKey,
+            expectedModelID: Self.auditionSourceKey(for: tier)
         ) {
             Self.brainLog.notice("selectBrain \(tier.rawValue, privacy: .public): already loaded, no-op")
             // Defense-in-depth: keep the upgrade machine consistent even on the
@@ -1425,6 +1442,9 @@ final class AppEnvironment {
             return true
         }
         Self.brainLog.notice("selectBrain \(tier.rawValue, privacy: .public): model=\(tier.mlxModelID ?? "appleFoundationModels", privacy: .public)")
+        // Any switch abandons a pending audition load, a switch to Mini included: the
+        // cancelled preload never settles, so nothing else would clear it (#452 review).
+        AuditionSelection.clearPendingLoad()
         // Single writer to the Hub cache: any explicit brain change cancels the
         // background upgrade fetch FIRST (the partial snapshot survives and
         // resumes wherever it's next wanted). State recomputes below.
@@ -1442,8 +1462,9 @@ final class AppEnvironment {
         if let modelID = tier.mlxModelID {
             // Rotating-KV tiers get a capped decode so prefill + generation fit
             // the window together (see HistoryBudgetPolicy.rotatingGenerationTokenCap).
-            let mlx = MLXBrainProvider(
-                modelID: modelID,
+            let mlx = Self.makeMLXBrain(
+                for: tier,
+                stockModelID: modelID,
                 maxTokens: HistoryBudgetPolicy.generationTokenCap(
                     for: tier, defaultCap: MLXBrainProvider.defaultMaxTokens
                 )

@@ -15,6 +15,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-21, Confidence 0.85 (textbook composition;
 //  the no-lie-during-download + locked-not-dropped rules are pinned by tests; the
 //  toolbar wiring + look are verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-29 — `reselectIsNoOp(…expectedModelID:)`: an audition standing in
+//  for a tier is the model to match. Mini stays unguarded (it has no stock MLX id). Confidence 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-06 — `rows(…afm:)` lists `BrainTier.offered(afm:)` — never two brains
 //  called Mini, never the AFM Mini on a blocked Mac. Default `.available` keeps every existing caller byte-identical.
 //  Confidence now 0.85.
@@ -95,9 +97,13 @@ public enum BrainSwitcher {
         tier: BrainTier,
         selected: BrainTier,
         load: ModelLoadState,
-        loadedModelID: String?
+        loadedModelID: String?,
+        expectedModelID: String? = nil
     ) -> Bool {
-        guard tier == selected, load == .ready, let modelID = tier.mlxModelID else { return false }
+        // `expectedModelID`: what the tier should be serving when it isn't the stock
+        // model: an audition's source key (2026-09-29), compared against the loaded
+        // provider's own source key, so a same-named audition still reloads.
+        guard tier == selected, load == .ready, let modelID = expectedModelID ?? tier.mlxModelID else { return false }
         return modelID == loadedModelID
     }
 

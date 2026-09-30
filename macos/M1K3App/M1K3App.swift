@@ -276,6 +276,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     /// instead of fatalError-ing over a clean quit (MLXExitGuard).
     func applicationShouldTerminate(_: NSApplication) -> NSApplication.TerminateReply {
         MLXExitGuard.markTerminating()
+        // Quitting mid-load is not a crash: keep the audition for next launch.
+        AppEnvironment.auditionAppQuitting()
         return .terminateNow
     }
 

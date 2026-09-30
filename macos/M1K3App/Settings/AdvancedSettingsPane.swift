@@ -131,6 +131,8 @@ struct AdvancedSettingsPane: View {
 
             weightImportSection
 
+            ModelAuditionSection()
+
             Section {
                 Toggle("Include on-device crash/hang summaries", isOn: $includeMetricDigests)
                 TextField("What happened? (optional)", text: $whatHappened, axis: .vertical)

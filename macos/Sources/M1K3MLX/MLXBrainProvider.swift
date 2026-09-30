@@ -98,6 +98,10 @@
 //  tests. The −8.5% is a 2026-08 number on an older pin (no window clamp now, balanced chunking):
 //  re-measure owed by launch. Same PR: a cache with an untrimmable layer (LFM2) seeds by
 //  `prefillExactly` — forward-only, no sampled token — and every seed records `exact`.
+//  Review: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.8 — model auditions: `init(modelDirectory:)`
+//  loads a folder (AuditionStore) with the registry's extras for its `org/repo` name; `configDirectory`
+//  points the config and template reads at that folder, and the torn-cache heal skips it (the heal
+//  deletes and re-downloads, which would destroy an audition). Hub-id loads are unchanged.
 import Foundation
 import Hub
 import M1K3Inference
@@ -219,6 +223,16 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     /// Public so the app can skip a redundant `selectBrain` reload when the active
     /// provider already serves this model.
     public let modelIdentifier: String
+    /// Where this model's config.json and chat template live: the audition folder for
+    /// a directory load, else the LLM store's path for the hub id.
+    let configDirectory: URL?
+    /// What this provider was loaded FROM: the hub id, or `dir:<folder>` for a folder
+    /// load. The reselect no-op compares this, because an audition can carry the very
+    /// name of the stock model it stands in for.
+    public var sourceKey: String {
+        configDirectory.map(AuditionStore.sourceKey(for:)) ?? modelIdentifier
+    }
+
     /// Per-(tools × persona) prefilled system-block KV prefix; turns start
     /// from copies instead of re-prefilling the persona every time.
     let personaPrefix = PersonaPrefixCache()
@@ -317,7 +331,10 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // configuration. `ToolCallFormat.infer` matches model_type == "gemma"
         // EXACTLY, so Gemma-3/3n (and Qwen) would silently fall back to .json
         // and never parse — we set the format explicitly per model family.
-        let modelType = LocalModelConfig.modelType(forRepoID: configuration.name)
+        let localDirectory = Self.localDirectory(of: configuration)
+        configDirectory = localDirectory
+        let modelType = localDirectory.map(LocalModelConfig.modelType(inDirectory:))
+            ?? LocalModelConfig.modelType(forRepoID: configuration.name)
         let resolved = Self.resolveToolCallFormat(for: configuration, modelType: modelType)
         initialToolCallFormat = resolved
         let source = Self.dialectSource(
@@ -363,10 +380,14 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                     // retry so a failed attempt re-checks. Directory via HubApi's
                     // OWN path resolution (the LocalModelInventory rule: detection
                     // and download must never drift).
-                    ModelCacheIntegrity.healBeforeLoad(
-                        directory: HubApiDownloader.llmDefault.hub
-                            .localRepoLocation(Hub.Repo(id: loadConfiguration.name))
-                    )
+                    // Never on a directory load: the heal deletes a torn folder for
+                    // HubApi to re-fetch, and an audition has no download to fall back on.
+                    if localDirectory == nil {
+                        ModelCacheIntegrity.healBeforeLoad(
+                            directory: HubApiDownloader.llmDefault.hub
+                                .localRepoLocation(Hub.Repo(id: loadConfiguration.name))
+                        )
+                    }
                     // Route to the factory this checkpoint is proven on. Both
                     // produce the SAME ModelContainer type, so everything
                     // downstream (persona prefix, tool sessions, generate) is
@@ -410,6 +431,29 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             name: name,
             thinkingEnabled: thinkingEnabled
         )
+    }
+
+    /// Load a model from a folder (an audition): the downloader is never consulted.
+    /// mlx-swift-lm names a directory model by its last two path components, so an
+    /// `<org>/<repo>` folder keeps every name-keyed decision; the upstream registry's
+    /// extras for that name (gemma-4's `<turn|>` end token) are carried over.
+    public convenience init(
+        modelDirectory: URL,
+        maxTokens: Int = MLXBrainProvider.defaultMaxTokens,
+        name: String = "mlx-brain",
+        thinkingEnabled: Bool = true
+    ) {
+        var configuration = ModelConfiguration(directory: modelDirectory)
+        let registered = LLMRegistry.shared.configuration(id: configuration.name)
+        configuration.extraEOSTokens = registered.extraEOSTokens
+        if let format = registered.toolCallFormat { configuration.toolCallFormat = format }
+        self.init(configuration: configuration, maxTokens: maxTokens, name: name, thinkingEnabled: thinkingEnabled)
+    }
+
+    /// The folder a directory configuration loads from; nil for a hub id.
+    static func localDirectory(of configuration: ModelConfiguration) -> URL? {
+        if case let .directory(url) = configuration.id { return url }
+        return nil
     }
 
     /// True on this target by construction: macOS 26 / Apple Silicon always has
@@ -567,7 +611,9 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         guard !lateThinkTraitsChecked else { return }
         lateThinkTraitsChecked = true
         let id = modelIdentifier
-        guard let traits = Self.lateThinkTraits(initial: nil, templateOnDisk: LocalModelConfig.chatTemplate(forRepoID: id)) else {
+        let template = configDirectory.map(LocalModelConfig.chatTemplate(inDirectory:))
+            ?? LocalModelConfig.chatTemplate(forRepoID: id)
+        guard let traits = Self.lateThinkTraits(initial: nil, templateOnDisk: template) else {
             mlxLoadLog.notice("think traits for \(id, privacy: .public): no readable template after load → no opener, no toggle")
             return
         }
@@ -589,7 +635,8 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         guard !lateDialectChecked else { return }
         lateDialectChecked = true
         let id = modelIdentifier
-        let modelType = LocalModelConfig.modelType(forRepoID: id)
+        let modelType = configDirectory.map(LocalModelConfig.modelType(inDirectory:))
+            ?? LocalModelConfig.modelType(forRepoID: id)
         guard let late = Self.lateToolCallFormat(initial: nil, modelTypeOnDisk: modelType) else {
             mlxLoadLog.notice(
                 "tool dialect for \(id, privacy: .public) still unresolved after load (model_type: \(modelType ?? "none", privacy: .public)) → ReAct floor"
