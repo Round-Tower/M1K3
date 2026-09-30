@@ -37,6 +37,10 @@
 //  downcast, so a WhisperKit start failure parks the loop with its reason instead of counting
 //  as an empty listen. Confidence 0.8 (verify-on-device: a real start failure on a real route).
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — both voice turn shapes feed the rating ledger (they bypass send(), so the ask never saw a spoken win).
+//  Review: Kev + claude-fable-5.1, 2026-09-30 — `spokenLeakGuard`: both speech paths' folders now run
+//  PersonaLeakGuard on the live stream, so a leaked prompt is never read aloud (it was: the guard ran only
+//  at end of turn, after the sentences were spoken). Confidence 0.85; verify-by-launch owed for the
+//  refusal's timing against the on-screen swap.
 
 import AppKit
 import AVFoundation
@@ -178,6 +182,14 @@ extension AppEnvironment {
             Task { @MainActor [weak self] in self?.speechHighlight.wordSpoken(range) }
         }
     }
+
+    /// The output-side prompt-leak guard, applied to the stream as it is spoken:
+    /// ChatSession's end-of-turn check replaces a leaked answer on SCREEN, but
+    /// speech had already folded the leaking sentences out of the stream and
+    /// said them (2026-09-29 review). Same predicate, same refusal, live.
+    static let spokenLeakGuard = StreamedAnswerFolder.LeakGuard(
+        leaks: { PersonaLeakGuard.leaks($0) }, refusal: PersonaLeakGuard.refusal
+    )
 
     /// Speak text via the TTS provider. The onSpeakingStarted/Ended delegate
     /// callbacks drive avatar .speaking → .idle; no manual state change needed here.
@@ -485,7 +497,9 @@ extension AppEnvironment {
                 // prefix-extending updates — a FOLLOWUPS/polish shrink must
                 // never re-speak the answer, the 2026-07-25 finding) as a
                 // tested M1K3Voice seam shared with chat auto-speak.
-                var folder = StreamedAnswerFolder(stopMatcher: { FollowUpSplit.trailerStart(in: $0) })
+                var folder = StreamedAnswerFolder(
+                    stopMatcher: { FollowUpSplit.trailerStart(in: $0) }, leakGuard: Self.spokenLeakGuard
+                )
                 // Spoken tool transparency (2026-08-16): tool dispatches used to
                 // be dead air in voice mode — the visual activity label lives on
                 // a screen a hands-free user isn't watching. Announce each
@@ -555,6 +569,14 @@ extension AppEnvironment {
                 if let tail = folder.flush() {
                     onChunk(tail)
                 }
+                // The leak can complete and be swapped for the refusal on screen
+                // between two polls: the folder never saw the leaking snapshot,
+                // the swap is a non-prefix update it skips, and the turn would end
+                // silent ("nothing to say"). Speak the refusal the screen shows.
+                if !folder.tripped, settled.text == PersonaLeakGuard.refusal {
+                    onChunk(PersonaLeakGuard.refusal)
+                    return .success(())
+                }
                 guard folder.emittedAny else {
                     // The machine drains fine either way (answerFailed while
                     // .speaking is pinned) — but the on-screen error must not
@@ -565,6 +587,8 @@ extension AppEnvironment {
                             ? "I checked, but no answer came back."
                             : "The model had nothing to say."))
                 }
+                // A refused turn is not a spoken exchange to record, nor a win to rate.
+                guard !folder.tripped else { return .success(()) }
                 recordSpokenExchange()
                 if ReviewPromptPolicy.isWin(answerFailed: false, interrupted: settled.interrupted == true) {
                     reviewLedger.recordCompletedTurn()
