@@ -566,16 +566,17 @@ extension AppEnvironment {
                     return .failure(VoiceTurnFailure(message: message))
                 }
                 foldForward(settled.text)
-                if let tail = folder.flush() {
-                    onChunk(tail)
-                }
                 // The leak can complete and be swapped for the refusal on screen
                 // between two polls: the folder never saw the leaking snapshot,
                 // the swap is a non-prefix update it skips, and the turn would end
-                // silent ("nothing to say"). Speak the refusal the screen shows.
+                // silent ("nothing to say"). Speak the refusal the screen shows —
+                // BEFORE the flush, whose tail is from the pre-swap text.
                 if !folder.tripped, settled.text == PersonaLeakGuard.refusal {
                     onChunk(PersonaLeakGuard.refusal)
                     return .success(())
+                }
+                if let tail = folder.flush() {
+                    onChunk(tail)
                 }
                 guard folder.emittedAny else {
                     // The machine drains fine either way (answerFailed while

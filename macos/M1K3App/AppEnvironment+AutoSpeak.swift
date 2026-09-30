@@ -103,13 +103,15 @@ extension AppEnvironment {
                     case .complete:
                         // The loop above already ingested the settled text —
                         // only the unterminated tail remains.
+                        // Leak swapped for the refusal between two polls (see the
+                        // voice loop's twin): say what the screen says, and not
+                        // the pre-swap tail.
+                        if !folder.tripped, message.text == PersonaLeakGuard.refusal {
+                            if !Task.isCancelled { await self.speak(PersonaLeakGuard.refusal) }
+                            return
+                        }
                         if !Task.isCancelled, let tail = folder.flush() {
                             await self.speak(tail)
-                        }
-                        // Leak swapped for the refusal between two polls (see the
-                        // voice loop's twin): say what the screen says.
-                        if !Task.isCancelled, !folder.tripped, message.text == PersonaLeakGuard.refusal {
-                            await self.speak(PersonaLeakGuard.refusal)
                         }
                         return
                     default:
