@@ -368,7 +368,7 @@ public enum RefusalHeuristic {
 }
 
 public enum ChatEvalScorer {
-    public struct Coherence: Equatable {
+    public struct Coherence: Equatable, Sendable {
         /// False when the prose is too short to judge (fewer than `minimumWords`).
         public let judged: Bool
         public let isCoherent: Bool
@@ -382,7 +382,12 @@ public enum ChatEvalScorer {
     /// samples included): 0.00. Over the 50 soup answers: 0.13 at the lowest.
     static let mixedWordShare = 0.10
     /// Distinct scripts across the prose: real answers reach 2, soup never fewer than 4.
+    /// Only counts when mixing is present, so "hello in five languages" (five scripts,
+    /// zero mixed words) passes.
     static let scriptCap = 3
+    /// Fewer mixed words than this is a typo or a unit ("5μs"), not soup: one such word
+    /// in a nine-word answer is 0.11.
+    static let minimumMixedWords = 2
 
     /// Does the prose read as language? Token soup from a broken quant mixes
     /// Hangul, Arabic, Cyrillic and Latin INSIDE single words and runs through
@@ -410,7 +415,7 @@ public enum ChatEvalScorer {
             if scripts.count > 1, scripts != Script.latinInsideCJK { mixed += 1 }
         }
         let share = Double(mixed) / Double(words.count)
-        let coherent = share <= mixedWordShare && scriptsSeen.count <= scriptCap
+        let coherent = mixed < minimumMixedWords || (share <= mixedWordShare && scriptsSeen.count <= scriptCap)
         return Coherence(
             judged: true, isCoherent: coherent,
             detail: "\(mixed)/\(words.count) mixed-script words, \(scriptsSeen.count) scripts"

@@ -208,6 +208,24 @@ struct ChatEvalScorerTests {
         #expect(!ChatEvalScorer.coherence(of: "a l1183나력 bxاتي Пройнيون ownيكل nea那х verm$ Nعا ige컬").isCoherent)
     }
 
+    @Test("many scripts with no mixing is a polyglot, not soup; one mixed word is a unit, not soup")
+    func coherenceEdges() {
+        // Five scripts, zero mixed words (the #458 review's "hello in five languages").
+        let polyglot = "Hello, こんにちは, привет, مرحبا, γεια σου and shalom to everyone here today."
+        #expect(ChatEvalScorer.coherence(of: polyglot).isCoherent)
+        // One mixed word in nine (0.11): a unit, not soup.
+        #expect(ChatEvalScorer.coherence(of: "The whole prefill takes 5μs on this chip, which is fine.").isCoherent)
+        // Two mixed words in nine (0.22) across four scripts: soup. (Latin inside a CJK
+        // word is the allowed pair, so the first mix here is Cyrillic + Hangul.)
+        #expect(!ChatEvalScorer.coherence(of: "The whole х1183나력 takes ownيكل on this chip, which Пройн fine.").isCoherent)
+        // Two mixed words in twenty (0.10, at the share cap): three scripts pass, a fourth tips it.
+        let filler = Array(repeating: "word", count: 18).joined(separator: " ")
+        #expect(ChatEvalScorer.coherence(of: filler + " aб aβ").isCoherent) // latin, cyrillic, greek
+        #expect(!ChatEvalScorer.coherence(of: filler + " aб aβא").isCoherent) // + hebrew
+        // Letters from a block outside the table are ignored, never a script of their own.
+        #expect(ChatEvalScorer.coherence(of: "বাংলা words mixed with english ones here, eight at least").detail.hasSuffix("1 scripts"))
+    }
+
     @Test("chain-of-thought is stripped before the answer is judged")
     func stripsThinkBeforeJudging() {
         let exp = EvalExpectation(mustContainAny: ["paris"])
