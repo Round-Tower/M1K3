@@ -146,6 +146,26 @@ def test_a_pass_naming_an_old_head_and_this_one_counts_for_this_one():
     assert m.summon_passes("aaaa1110000000000000000000000000000000000", [bot(body)]) == 1  # it mentions both; counting is per head asked
 
 
+def test_head_in_parentheses_with_backticks_names_the_head():
+    # #452's summon, 2026-09-29: "I read the diff and the current head (`95586c16`)" read 1/2
+    body = "**Claude finished @kev's task in 28s** ---\n### Review of #452: model auditions\n\nI read the diff and the current head (`95586c16`). Fine."
+    assert m.named_heads(body) == ["95586c16"]
+
+
+def test_a_finished_summon_naming_no_sha_counts_when_it_started_after_the_head_arrived():
+    # #455's summon, 2026-09-30: "### Review of #455 (docs-only, `CLAUDE.md`)" named no sha and
+    # read 0/1 on a reviewed head. A summon reviews whatever head is current when its run
+    # starts, and the tracking comment is created at that start, so time settles it.
+    head = "6029debb" + "0" * 32
+    unnamed = "**Claude finished @kev's task in 12s** ---\n### Review of #455 (docs-only, `CLAUDE.md`)\n\nLooks good."
+    seen = "2026-09-30T11:50:00Z"
+    assert m.summon_passes(head, [bot(unnamed, created="2026-09-30T11:55:00Z")], head_seen_at=seen) == 1
+    assert m.summon_passes(head, [bot(unnamed, created="2026-09-30T11:45:00Z")], head_seen_at=seen) == 0  # ran on the old head
+    assert m.summon_passes(head, [bot(unnamed, created="2026-09-30T11:55:00Z")]) == 0  # no arrival time: the old rule
+    older = "**Claude finished @kev's task** ---\n### Review of head `babfe834`\n\nfine"
+    assert m.summon_passes(head, [bot(older, created="2026-09-30T11:55:00Z")], head_seen_at=seen) == 0  # names another head
+
+
 def test_summon_passes_count_only_finished_passes_naming_this_head():
     head = "64daf36d1234567890abcdef1234567890abcdef"
     comments = [
