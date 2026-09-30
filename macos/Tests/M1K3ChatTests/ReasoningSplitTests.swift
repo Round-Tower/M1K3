@@ -145,6 +145,12 @@ struct ReasoningSplitTests {
         #expect(ReasoningSplit.split("a<image|>b").answer == "a b")
     }
 
+    @Test("digits are words too, and adjacent tokens leave one space")
+    func digitsAndAdjacentTokens() {
+        #expect(ReasoningSplit.split("3<image|>4").answer == "3 4")
+        #expect(ReasoningSplit.split("a<image|><audio|>sweat").answer == "a sweat")
+    }
+
     @Test("prose that merely mentions a tag name in words is left alone")
     func mentionsAreNotTokens() {
         #expect(ReasoningSplit.split("Gemma uses an image token.").answer == "Gemma uses an image token.")

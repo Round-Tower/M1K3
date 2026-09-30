@@ -81,11 +81,18 @@ public enum ReasoningSplit {
     /// Control tokens a text-only turn has no business containing: gemma-4's media
     /// boundaries (the pipe flips sides, like its channel tags) and gemma-3's. The
     /// tokenizer decodes them as text when the model emits one mid-sentence.
-    /// Reasoning tags are NOT here — `split` needs them.
+    /// Reasoning tags are NOT here — `split` needs them. Trade-off, accepted: an
+    /// answer that QUOTES one of these tokens (a question about gemma's vocabulary)
+    /// loses the quote too, code spans included.
     public static let strayTokens = [
         "<|image>", "<image|>", "<|audio>", "<audio|>",
         "<start_of_image>", "<end_of_image>", "<start_of_audio>", "<end_of_audio>",
     ]
+
+    /// Letters and digits: "3<image|>4" keeps its gap as "a<image|>sweat" does.
+    public static func isWordCharacter(_ c: Character) -> Bool {
+        c.isLetter || c.isNumber
+    }
 
     /// Drop every stray token. One took the place of a space ("a<image|>sweat"),
     /// so a token between two words becomes one space (surrounding spaces
@@ -108,7 +115,7 @@ public enum ReasoningSplit {
                 // A space only where the token sat between two words; before
                 // punctuation, at a line edge or beside a tag it just goes.
                 let before = lower > out.startIndex ? out[out.index(before: lower)] : previous
-                let betweenWords = before?.isLetter == true && upper < out.endIndex && out[upper].isLetter
+                let betweenWords = before.map(isWordCharacter) == true && upper < out.endIndex && isWordCharacter(out[upper])
                 out.replaceSubrange(lower ..< upper, with: betweenWords ? " " : "")
             }
         }

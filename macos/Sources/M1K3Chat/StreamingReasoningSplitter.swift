@@ -76,7 +76,7 @@ struct StreamingReasoningSplitter {
         let delta = StreamFold.delta(current: raw, chunk: chunk)
         raw += delta
         if owesWordGap, let first = delta.first {
-            if first.isLetter { buffer += " " }
+            if ReasoningSplit.isWordCharacter(first) { buffer += " " }
             owesWordGap = false
         }
         buffer += delta
@@ -170,12 +170,14 @@ struct StreamingReasoningSplitter {
         guard Self.earliest(of: Self.strayTokens, in: buffer) != nil else { return }
         let previous = mode == .reasoning ? reasoning.last : answer.last
         let tail = String(buffer.reversed().drop { $0 == " " }.reversed())
-        if let token = Self.strayTokens.first(where: { tail.hasSuffix($0) }) {
-            // Skip the spaces the strip collapses, or "a <image|>" + "sweat" reads "asweat".
-            let beforeToken = tail.dropLast(token.count).last { $0 != " " } ?? previous
-            owesWordGap = beforeToken?.isLetter == true
-        }
+        let endsWithToken = Self.strayTokens.contains { tail.hasSuffix($0) }
         buffer = ReasoningSplit.removingStrayTokens(from: buffer, precededBy: previous)
+        if endsWithToken {
+            // Judged AFTER the strip, so a run of adjacent tokens and the spaces the
+            // strip collapses are both gone: "a <image|><audio|>" + "sweat" → "a sweat".
+            let beforeTokens = buffer.last { $0 != " " } ?? previous
+            owesWordGap = beforeTokens.map(ReasoningSplit.isWordCharacter) == true
+        }
     }
 
     /// True when `close` precedes `open` (or there is no open at all) — the

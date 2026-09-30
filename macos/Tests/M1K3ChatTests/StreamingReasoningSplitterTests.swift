@@ -218,6 +218,9 @@ struct StreamingReasoningSplitterTests {
             ["<image|>Hi"],
             ["Hi <image|>", " there"],
             ["there<end_of_image>", "."],
+            ["a<image|>", "."], // the owed gap is NOT paid before punctuation
+            ["3<image|>", "4"],
+            ["a<image|><audio|>", "sweat"],
         ]
         for chunks in streams {
             let splitter = run(chunks)
