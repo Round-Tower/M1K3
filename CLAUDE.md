@@ -31,7 +31,10 @@ Anything a cold session needs on turn one belongs below, not there.
   docs-only PR gets no auto pass, so summon once.
   Substantive: two passes on the final head (auto + one summon). Trivial head
   (comment fold, clean master merge on a passed head): `--passes 0`. A summon
-  reviews the head at RUN time — push first, then summon. Same-day small fixes
+  reviews the head at RUN time — push first, then summon AT ONCE, so the auto
+  pass and the summon read the same head; fold both in one commit (a nits-only
+  fold is a trivial head). `land.sh` never waits: pending CI exits 2 and merges
+  nothing — run `pr_watch.py <PR> --passes N` first. Same-day small fixes
   ride one PR unless a release gate needs them apart.
 - **CI on a PR:** package-only diffs are gated by `swift test` (~4 min); the
   App-shell and iOS+visionOS xcodebuild jobs run only when their paths change
@@ -50,10 +53,23 @@ Anything a cold session needs on turn one belongs below, not there.
 - Merge stacked PRs bottom-up; never `--delete-branch` on a stack base;
   `git rebase --onto` over a squash-merged base.
 - Two MLX processes crawl — quit the live app before an eval run.
+- iOS/visionOS MLX has ONE gate, `AppCore.mlxAvailable` (`MLXRuntimeSupport`):
+  never on the Simulator or Apple GPU family 5 (A12/A12X/A12Z) — mlx-swift
+  traps there, it never throws. Route any new MLX path through it.
 - Bundle ID, log subsystem, Keychain and container are all `app.m1k3`.
 - `.info` / `.debug` do not persist in OSLogStore; breadcrumbs are `.notice`+.
 - Read the store (`itunes.apple.com/lookup?id=`) before saying what users have.
 - Never pre-seed the model cache with `hf download` (cache poison).
+- In-app A/B overrides go as argv (`M1K3 -prefillStepSize 512`): on macOS 27
+  `defaults write app.m1k3` never reaches the sandboxed app. `log` is a zsh
+  builtin — `/usr/bin/log show`. Stop a worktree build by PID, never
+  `tell application id "app.m1k3"` (it quits the live app too).
+- Speculative decoding of any kind (MTP, DSpark, DFlash, n-gram) loses on
+  M1-class GPUs — verifying 2 tokens costs 1.86× one (measured 2026-09-26).
+  Re-bench on M4+/M5 before reopening; don't re-run it on M1.
+- Mini's window is the device's (`MiniContextWindow`, recorded at launch;
+  4,096 is the floor, not the size). Tests never call `record` — a
+  source-scan test fails the suite if one does.
 
 <!--
 Signed: Kev + claude-fable-5.1, 2026-09-24, Confidence 0.8, Prior: Unknown (the
@@ -68,4 +84,13 @@ macos/CLAUDE.md trim dropped (never merge master in; a test-only unblock
 rides the PR) live here now, and "every push builds all three" says
 Swift-touching, which is what ci.yml's `swift` filter has always meant.
 Confidence 0.8.
+Review: Kev + claude-opus-5-5, 2026-09-26 (/debrief) — two standing facts
+from #411: summon at once on the first head (folding before summoning
+doubled that PR's CI round) + land.sh's never-waits trap; and the one iOS
+MLX gate (an A12 iPad trapped warming Kokoro). Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-09-27 (/debrief) — three standing facts
+from the perf sweep (#415/#416/#422): argv not `defaults` for in-app
+overrides (+ the zsh `log` and quit-by-bundle-id traps); speculative
+decoding is measured dead on M1; Mini's window is the device's.
+Confidence 0.85.
 -->
