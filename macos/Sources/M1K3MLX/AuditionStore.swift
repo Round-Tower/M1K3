@@ -332,8 +332,15 @@ public struct AuditionStore: Sendable {
     /// What identifies a folder load, as opposed to a hub id: two copies of one repo
     /// share a name, never a folder.
     public static func sourceKey(for directory: URL) -> String {
-        "dir:" + directory.standardizedFileURL.resolvingSymlinksInPath().path
+        folderKeyPrefix + directory.standardizedFileURL.resolvingSymlinksInPath().path
     }
+
+    /// Whether a provider's `sourceKey` names a folder load (an audition) rather than a hub id.
+    public static func isFolderSourceKey(_ key: String) -> Bool {
+        key.hasPrefix(folderKeyPrefix)
+    }
+
+    private static let folderKeyPrefix = "dir:"
 
     static func directorySize(_ dir: URL) -> Int64 {
         guard let walk = FileManager.default.enumerator(

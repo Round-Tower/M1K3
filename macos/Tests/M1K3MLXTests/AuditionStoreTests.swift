@@ -324,6 +324,9 @@ struct AuditionStoreTests {
         #expect(provider.modelIdentifier == "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510")
         #expect(provider.sourceKey == AuditionStore.sourceKey(for: dir))
         #expect(provider.sourceKey != provider.modelIdentifier)
+        // The sentinel clears on this test, so it must agree with the key it's made from.
+        #expect(AuditionStore.isFolderSourceKey(provider.sourceKey))
+        #expect(!AuditionStore.isFolderSourceKey(provider.modelIdentifier))
     }
 
     // MARK: - The load sentinel (review on #452)

@@ -86,7 +86,7 @@ extension AppEnvironment {
     /// The live brain's load settled (ready or failed): clear the sentinel only when it was loaded from an
     /// audition folder (review on #452: any ready used to clear any pending load).
     func auditionLoadFinished(sourceKey: String) {
-        if sourceKey.hasPrefix("dir:") { AuditionSelection.clearPendingLoad() }
+        if AuditionStore.isFolderSourceKey(sourceKey) { AuditionSelection.clearPendingLoad() }
     }
 
     /// What `tier` should be serving right now, as a provider `sourceKey`: its
@@ -158,7 +158,8 @@ extension AppEnvironment {
         }
         guard !launchPinned else { return .setAtLaunch }
         for tier in BrainTier.allCases where AuditionSelection.repoID(forTier: tier.rawValue) == repoID {
-            setAudition(nil, for: tier)
+            let change = setAudition(nil, for: tier)
+            guard change == .applied || change == .savedForLater else { return change } // never delete under a refusal
         }
         guard let store = Self.auditionStore else { return .applied }
         try await Task.detached(priority: .utility) { try store.remove(repoID: repoID) }.value
