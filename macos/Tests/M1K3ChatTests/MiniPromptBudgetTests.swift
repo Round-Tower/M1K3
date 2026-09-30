@@ -22,6 +22,9 @@
 //  After the tools-and-making pass the compact persona sits ≈20 tokens under this suite's one-third line.
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the standing-persona check measures `miniSystemPrompt`, what
 //  Mini actually receives since #320 (it measured the full standard core). Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-09-29 — the persona diet: Mini's prompt loses TOOLS (the router
+//  chooses), keeps MAKING, ratcheted at ≈1,065 tokens; `M1K3PersonaTests.miniPersonaWithAFullProfileFits`
+//  measures WITH a cap-length profile, the case these nil-profile pins never saw. Confidence 0.85.
 //
 
 import Foundation
@@ -78,7 +81,7 @@ struct MiniPromptBudgetTests {
         #expect(full < Self.miniContextWindow / 2)
     }
 
-    @Test("Mini's compact prompt omits FOLLOW-UPS — the 315-token UI convenience Mini can't afford")
+    @Test("Mini's compact prompt omits FOLLOW-UPS and TOOLS — chips Mini can't afford, tools its router picks")
     func miniCompactOmitsFollowUps() {
         let miniPrompt = M1K3Persona.miniSystemPrompt
         let standardPrompt = M1K3Persona.systemPrompt
@@ -86,12 +89,13 @@ struct MiniPromptBudgetTests {
         #expect(miniPrompt.count < standardPrompt.count)
         #expect(!miniPrompt.contains("FOLLOWUPS"))
         #expect(!miniPrompt.contains("# FOLLOW-UPS"))
-        // Everything else is preserved: identity, rules, voice, honesty, tools.
+        // Identity, rules, voice, honesty and making are preserved; TOOLS is the
+        // router's job since #414 (see M1K3PersonaTests.miniCarriesNoToolSection).
         #expect(miniPrompt.contains("M1K3"))
         #expect(miniPrompt.contains("ABSOLUTE RULES"))
         #expect(miniPrompt.contains("# VOICE"))
         #expect(miniPrompt.contains("# HONESTY"))
-        #expect(miniPrompt.contains("# TOOLS"))
+        #expect(miniPrompt.contains("# MAKING"))
     }
 
     @Test("Mini's trimmed persona sits well under the one-third line")
@@ -103,5 +107,8 @@ struct MiniPromptBudgetTests {
             tokens < Self.miniContextWindow / 3 - 50,
             "Mini's trimmed persona is ~\(tokens) tokens — should sit well under 1365."
         )
+        // The 2026-09-29 diet (TOOLS is the router's job) took it from ≈1,255 to ≈1,065:
+        // ratcheted, so the room stays bought.
+        #expect(tokens < 1100, "Mini's persona grew back to ~\(tokens) tokens")
     }
 }

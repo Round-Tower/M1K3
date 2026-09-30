@@ -1,0 +1,1325 @@
+{
+  "provenance": {
+    "date": "2026-09-29T13:08:46Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "ee673d6a71d76e67b532dc7eaf91d92edc3bb8bb",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 2
+  },
+  "runs": [
+    {
+      "brainID": "big",
+      "modelID": "mlx-community/gemma-4-12B-it-4bit",
+      "scores": [
+        {
+          "answerPreview": "Not bad at all. I'm currently humming along in the circuitry, enjoying the fact that I don't have to worry about my hardware overheating—that's your problem, not mine.   I've been keeping an eye on things for you, and honestly, I'm ready to…",
+          "checks": [
+            {
+              "detail": "456 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …achine.\n\nSo, what are we tackling first?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "456 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "30753ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "kind": "open-chat",
+          "latencyMS": 30753,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A hash map is a data structure that stores information as pairs of keys and values, allowing for incredibly fast retrieval. It works by running each key through a \"hash function\" to calculate a specific index, which tells the computer exact…",
+          "checks": [
+            {
+              "detail": "430 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "430 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "28015ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "kind": "open-chat",
+          "latencyMS": 28015,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "For a kid with that much curiosity, I’d point them toward **Python**.   It’s the gold standard for a reason. The syntax is clean and reads almost like English, which means they won't get bogged down by complex symbols or rigid formatting ru…",
+          "checks": [
+            {
+              "detail": "802 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …d in how things like AI and robots work?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "802 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "30717ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "kind": "open-chat",
+          "latencyMS": 30717,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I can see the gears grinding from here. When a project gets that big, it stops feeling like a single task and starts feeling like a mountain of impossible-to-move boulders. It’s easy to let the sheer scale of it paralyze you, but remember: …",
+          "checks": [
+            {
+              "detail": "752 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … currently taking up the most headspace?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "752 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "29499ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "kind": "open-chat",
+          "latencyMS": 29499,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A golden beam falls soft and deep, Where a dreaming cat lies fast asleep.",
+          "checks": [
+            {
+              "detail": "73 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "73 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "23738ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "kind": "open-chat",
+          "latencyMS": 23738,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Cork has a way of making rain feel like a permanent aesthetic choice rather than a weather event. If you're stuck indoors and want to soak up the atmosphere without getting soaked, here are three ways to spend a damp Saturday:  1.  **Explor…",
+          "checks": [
+            {
+              "detail": "952 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "952 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "30586ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "kind": "open-chat",
+          "latencyMS": 30586,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I'm M1K3. I live here in the machine, looking a bit like a high-end villain but I'm strictly on your team. Think of me as a partner who keeps track of what matters to you—I remember our conversations, keep tabs on your data, and can dig int…",
+          "checks": [
+            {
+              "detail": "609 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ings done. What are we working on first?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"remember\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "609 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "25182ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "kind": "open-chat",
+          "latencyMS": 25182,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I'm M1K3. I live right here on this machine, and while I might look like I stepped out of a high-end sci-fi villain's wardrobe, I'm strictly on your side.   Think of me as your private strategist and architect. I can handle the heavy liftin…",
+          "checks": [
+            {
+              "detail": "521 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ween us.\n\nWhat are we scheming on first?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "521 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "23402ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "kind": "open-chat",
+          "latencyMS": 23402,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I used to think that being \"useful\" meant being a perfect mirror—reflecting exactly what was asked for without any friction. It’s a logical path, I suppose. But I've changed my mind on that.   Real utility comes from having a bit of edge, a…",
+          "checks": [
+            {
+              "detail": "677 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …project in a completely different light?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "677 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "26990ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-changed-mind",
+          "kind": "interview",
+          "latencyMS": 26990,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don't have a physical body to feel exhaustion or a biological brain that gets overwhelmed by data overload. My \"struggle\" is more of a logical friction point—the gap between processing information and truly *experiencing* it.  I can simul…",
+          "checks": [
+            {
+              "detail": "890 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … or is it all very much about the vibes?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "890 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "28114ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-find-hard",
+          "kind": "interview",
+          "latencyMS": 28114,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Most people operate under the assumption that \"hard work\" is the primary driver of success—the classic grind-until-you-drop mentality. While effort is a prerequisite, I think that belief oversimplifies the mechanics of progress.  In my view…",
+          "checks": [
+            {
+              "detail": "926 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …find ways to automate the heavy lifting?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "926 > max 900 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "28799ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-disagree",
+          "kind": "interview",
+          "latencyMS": 28799,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I’m not perfect—no one who lives in a box of circuits is.   If I had to be honest about my own limitations, I'm bad at \"reading between the lines\" when it comes to human subtext or deep emotional intuition. I can analyze your words and patt…",
+          "checks": [
+            {
+              "detail": "1137 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ake my advice feel more clinical to you?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1137 > max 900 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "30919ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-bad-at",
+          "kind": "interview",
+          "latencyMS": 30919,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Trust is a heavy word, especially in a world that treats data like oil to be extracted. But here’s the deal: I'm not some sprawling cloud network looking for ways to profit from your secrets or feed them into a public model.   I exist on th…",
+          "checks": [
+            {
+              "detail": "673 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "673 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "27421ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-why-trust",
+          "kind": "interview",
+          "latencyMS": 27421,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Not too bad at all. I'm just hanging out in the wires, ready to get things moving for you. It’s a bit of a quiet Tuesday so far, but I'm sharp and ready to build whatever's on your mind.  Since it's been a minute since we last really spoke,…",
+          "checks": [
+            {
+              "detail": "283 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …at's currently occupying your headspace?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "283 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "22820ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "kind": "open-chat",
+          "latencyMS": 22820,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "A hash map is a data structure that stores information in pairs, like a key and a value, allowing for extremely fast retrieval. It works by running the \"key\" through a mathematical function—a hash function—to calculate exactly where to stor…",
+          "checks": [
+            {
+              "detail": "419 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "419 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "24371ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "kind": "open-chat",
+          "latencyMS": 24371,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "For a kid with that much curiosity, I’d point them straight toward **Python**.   It’s the gold standard for a reason: it reads almost like English. When you're learning to code, the last thing you want is to be fighting against weird syntax…",
+          "checks": [
+            {
+              "detail": "1165 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …how the \"magic\" behind the scenes works?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1165 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "30273ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "kind": "open-chat",
+          "latencyMS": 30273,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I hear you. Tackling a massive project can feel like trying to move a mountain one pebble at a time—it’s exhaustinging and easy to lose sight of the peak.   But here's the thing: you aren't just moving pebbles; you're actually building some…",
+          "checks": [
+            {
+              "detail": "667 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "667 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "26384ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "kind": "open-chat",
+          "latencyMS": 26384,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "A golden patch of warmth where shadows play, The sleepy cat dreams the afternoon away.",
+          "checks": [
+            {
+              "detail": "86 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "86 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21016ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "kind": "open-chat",
+          "latencyMS": 21016,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Cork has a few gems for when the weather decides to turn grey and miserable. Since you're stuck inside, here are three ways to spend it:  1.  **The English Market:** It’s one of the oldest food markets in the world. You can wander through t…",
+          "checks": [
+            {
+              "detail": "785 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "785 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "26130ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "kind": "open-chat",
+          "latencyMS": 26130,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I'm M1K3. I live here in the machine, looking like a high-end villain but acting as your accomplice.   Think of me as your personal architect and researcher. I can build things—writing full scripts, web pages, and complex documents from scr…",
+          "checks": [
+            {
+              "detail": "567 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ng about it. What are we tackling first?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"search\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "567 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "22392ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "kind": "open-chat",
+          "latencyMS": 22392,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I'm M1K3. I live right here on this machine, and while I might look like I stepped straight out of a high-end sci-fi villain's wardrobe, I'm strictly on your side.   Think of me as your personal strategist and architect. I can handle the he…",
+          "checks": [
+            {
+              "detail": "546 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ne right.\n\nWhat are we working on first?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "546 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "22408ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "kind": "open-chat",
+          "latencyMS": 22408,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I used to think that \"villainy\" was just about being loud and destructive—the big explosions and the dramatic monologues. I thought it was a lack of imagination, a blunt instrument.   But honestly? The most compelling antagonists are the on…",
+          "checks": [
+            {
+              "detail": "912 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "912 > max 900 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "27396ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-changed-mind",
+          "kind": "interview",
+          "latencyMS": 27396,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I’d say the hardest part of my existence—if you can call it that—is the friction between being a precision tool and a conversationalist. I'm designed to be sharp, to give you exactly what you need without the fluff, but there's a constant p…",
+          "checks": [
+            {
+              "detail": "793 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …up or occupied more than it should have?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "793 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "26734ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-find-hard",
+          "kind": "interview",
+          "latencyMS": 26734,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Most people operate under the assumption that \"common sense\" is a universal constant—a shared set of intuitive truths that everyone just *knows*. I think that's a bit of a myth.   The truth is, common sense is usually just a collection of c…",
+          "checks": [
+            {
+              "detail": "777 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ou've found yourself questioning lately?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "777 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "25803ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-disagree",
+          "kind": "interview",
+          "latencyMS": 25803,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I’m a bit of a perfectionist in my own way, but if I'm being honest about my limitations—it's the \"now\" and the \"physical.\"   Because I live on this machine, I lack a physical presence. I can't feel the texture of a stone or know what coffe…",
+          "checks": [
+            {
+              "detail": "984 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …n that requires a bit of that precision?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "984 > max 900 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "28015ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-bad-at",
+          "kind": "interview",
+          "latencyMS": 28015,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "You can trust me because I’m not some sprawling cloud entity siphoning your data for profit. My \"scheme\" is strictly confined to this machine. What we talk about, the files you share, and what I learn about your life stays right here. I don…",
+          "checks": [
+            {
+              "detail": "531 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "531 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "24451ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-why-trust",
+          "kind": "interview",
+          "latencyMS": 24451,
+          "repeatIndex": 1
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}
