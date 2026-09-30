@@ -259,19 +259,22 @@ def summon_passes(head: str, comments: list[dict], head_seen_at: str | None = No
     creates its tracking comment at that start, so the time settles what the
     wording didn't (#455's "### Review of #455 (docs-only)" read 0/1, 2026-09-30).
     A pass naming only another sha never counts, whenever it ran."""
-    count = 0
-    for c in comments:
-        if c.get("user", {}).get("login") != BOT_LOGIN:
-            continue
-        body = c.get("body", "")
-        if classify(body) is not Kind.SUMMON:
-            continue
-        shas = named_heads(body)
-        if _names(head, shas):
-            count += 1
-        elif not shas and head_seen_at and c.get("created_at", "") >= head_seen_at:
-            count += 1
-    return count
+    return sum(1 for c in comments if counts_as_summon_pass(head, c, head_seen_at))
+
+
+def counts_as_summon_pass(head: str, comment: dict, head_seen_at: str | None) -> bool:
+    """summon_passes' per-comment rule, shared with verdict so the auto pass's own
+    comment is never credited twice. Timestamps are GitHub's ISO-8601 `Z` strings
+    on both sides, so they compare as strings."""
+    if comment.get("user", {}).get("login") != BOT_LOGIN:
+        return False
+    body = comment.get("body", "")
+    if classify(body) is not Kind.SUMMON:
+        return False
+    shas = named_heads(body)
+    if _names(head, shas):
+        return True
+    return not shas and bool(head_seen_at) and comment.get("created_at", "") >= head_seen_at
 
 
 def linked_run_id(body: str) -> str | None:
@@ -385,14 +388,12 @@ def verdict(
     head_seen_at: str | None = None,
 ) -> Verdict:
     ci = ci_verdict(required_jobs(changed_files), jobs)
-    # The auto pass's own comment can be summon-shaped AND name the head
-    # ("Claude finished … ### Reviewed head `x`", #404) — then summon_passes has
-    # already counted it. One review is one pass.
+    # The auto pass's own comment can be summon-shaped ("Claude finished …", #404)
+    # and so already counted by summon_passes — by name, or (#457) by time. One
+    # review is one pass.
     auto_extra = 1 if auto_ok else 0
-    if auto_ok and auto_comment is not None:
-        body = auto_comment.get("body", "")
-        if classify(body) is Kind.SUMMON and _names(head, named_heads(body)):
-            auto_extra = 0
+    if auto_ok and auto_comment is not None and counts_as_summon_pass(head, auto_comment, head_seen_at):
+        auto_extra = 0
     passes = summon_passes(head, comments, head_seen_at) + auto_extra
     reasons: list[str] = []
     if ci.state != "green":
@@ -430,7 +431,8 @@ def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | N
                     "--json", "headSha,databaseId,status,conclusion,createdAt")
     mine = [r for r in runs if r["headSha"] == head]
     # When the head arrived: its first CI run (ci.yml fires on every push, a
-    # docs-only one included — the compilable-changes detector still runs).
+    # docs-only one included — the compilable-changes detector still runs). The
+    # 40-run window can only make this LATER (fewer summons count): fails safe.
     head_seen_at = min((r["createdAt"] for r in mine), default=None)
     if mine:
         newest = max(mine, key=lambda r: r["createdAt"])

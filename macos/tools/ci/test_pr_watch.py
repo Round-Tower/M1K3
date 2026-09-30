@@ -166,6 +166,20 @@ def test_a_finished_summon_naming_no_sha_counts_when_it_started_after_the_head_a
     assert m.summon_passes(head, [bot(older, created="2026-09-30T11:55:00Z")], head_seen_at=seen) == 0  # names another head
 
 
+def test_an_unnamed_summon_shaped_auto_comment_is_one_pass_not_two():
+    # #457 review: the auto pass's own comment can be summon-shaped ("**Claude finished…")
+    # and name no sha. The time rule now counts it in summon_passes, so the auto credit
+    # must not count it again — one review is one pass.
+    head = "aaaa111" + "0" * 33
+    seen = "2026-09-30T11:50:00Z"
+    auto = bot("**Claude finished @kev's task in 20s** ---\n### Review of #457\n\nfine", created="2026-09-30T11:55:00Z")
+    jobs = {"Detect compilable changes": "success", "Swift · Mac MVP (swift test)": "success",
+            "Project guards (test scheme · store targets)": "success", "Docs match the code (module map)": "success"}
+    v = m.verdict(head, ["macos/tools/ci/pr_watch.py"], jobs, [auto], auto_ok=True, passes_needed=2,
+                  auto_comment=auto, head_seen_at=seen)
+    assert v.passes == 1
+
+
 def test_summon_passes_count_only_finished_passes_naming_this_head():
     head = "64daf36d1234567890abcdef1234567890abcdef"
     comments = [
