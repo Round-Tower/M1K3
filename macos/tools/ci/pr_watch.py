@@ -78,6 +78,9 @@ review counted zero, and a substantive PR would have waited for a third review.
 The action's tracking comment links `actions/runs/<id>` (read off #400/#401/
 #404); snapshot now fetches databaseId; the window fallback skips a comment
 that links another run. Confidence now 0.9.
+Review: Kev + claude-fable-5.1, 2026-09-30 — a finished summon that names NO sha counts
+when it started after the head's first CI run (#455 read 0/1; #452's "head (`sha`)" shape
+also read 1/2 — both now count). Three PRs landed on `--passes 0` in one day over this.
 Review: Kev + claude-opus-5-5, 2026-09-29 — named_heads reads a bare sha in the title
 (#437's summons wrote "### Reviewing f2dcbc56" and read 1/2 on a thrice-reviewed head, #304).
 A digit is required so an all-hex word is not a sha. Confidence 0.85.
@@ -153,7 +156,7 @@ _CHECKBOX = re.compile(r"^\s*- \[( |x)\] ")
 _PASS_HEADER = re.compile(r"^#{2,4} .*\bpass\b", re.IGNORECASE)
 _HEAD = re.compile(r"\bhead `([0-9a-f]{7,40})`")
 # "…pass on final head (3922a21d)" — the sha in parentheses, unbackticked (#347, 2026-09-15).
-_HEAD_PAREN = re.compile(r"\bhead \(([0-9a-f]{7,40})\)")
+_HEAD_PAREN = re.compile(r"\bhead \(`?([0-9a-f]{7,40})`?\)")  # and "head (`95586c16`)" (#452, 2026-09-29)
 # "Reviewing head f10c752c" — bare hex after "head", no delimiter (#334, 2026-09-14).
 _HEAD_BARE = re.compile(r"\bhead ([0-9a-f]{7,40})\b")
 _HEADER_LINE = re.compile(r"^#{2,4} ")
@@ -248,15 +251,30 @@ def _names(head: str, shas: list[str]) -> bool:
     return any(head.startswith(sha) or sha.startswith(head) for sha in shas)
 
 
-def summon_passes(head: str, comments: list[dict]) -> int:
-    """Finished summon passes that name THIS head."""
-    return sum(
-        1
-        for c in comments
-        if c.get("user", {}).get("login") == BOT_LOGIN
-        and classify(c.get("body", "")) is Kind.SUMMON
-        and _names(head, named_heads(c.get("body", "")))
-    )
+def summon_passes(head: str, comments: list[dict], head_seen_at: str | None = None) -> int:
+    """Finished summon passes that reviewed THIS head: those that name it, plus —
+    when the watch knows when the head arrived (`head_seen_at`, the creation time
+    of its first CI run) — those that name no sha at all and started after it. A
+    summon reviews whatever head is current when its run starts, and the action
+    creates its tracking comment at that start, so the time settles what the
+    wording didn't (#455's "### Review of #455 (docs-only)" read 0/1, 2026-09-30).
+    A pass naming only another sha never counts, whenever it ran."""
+    return sum(1 for c in comments if counts_as_summon_pass(head, c, head_seen_at))
+
+
+def counts_as_summon_pass(head: str, comment: dict, head_seen_at: str | None) -> bool:
+    """summon_passes' per-comment rule, shared with verdict so the auto pass's own
+    comment is never credited twice. Timestamps are GitHub's ISO-8601 `Z` strings
+    on both sides, so they compare as strings."""
+    if comment.get("user", {}).get("login") != BOT_LOGIN:
+        return False
+    body = comment.get("body", "")
+    if classify(body) is not Kind.SUMMON:
+        return False
+    shas = named_heads(body)
+    if _names(head, shas):
+        return True
+    return not shas and bool(head_seen_at) and comment.get("created_at", "") >= head_seen_at
 
 
 def linked_run_id(body: str) -> str | None:
@@ -367,17 +385,16 @@ def verdict(
     auto_ok: bool,
     passes_needed: int,
     auto_comment: dict | None = None,
+    head_seen_at: str | None = None,
 ) -> Verdict:
     ci = ci_verdict(required_jobs(changed_files), jobs)
-    # The auto pass's own comment can be summon-shaped AND name the head
-    # ("Claude finished … ### Reviewed head `x`", #404) — then summon_passes has
-    # already counted it. One review is one pass.
+    # The auto pass's own comment can be summon-shaped ("Claude finished …", #404)
+    # and so already counted by summon_passes — by name, or (#457) by time. One
+    # review is one pass.
     auto_extra = 1 if auto_ok else 0
-    if auto_ok and auto_comment is not None:
-        body = auto_comment.get("body", "")
-        if classify(body) is Kind.SUMMON and _names(head, named_heads(body)):
-            auto_extra = 0
-    passes = summon_passes(head, comments) + auto_extra
+    if auto_ok and auto_comment is not None and counts_as_summon_pass(head, auto_comment, head_seen_at):
+        auto_extra = 0
+    passes = summon_passes(head, comments, head_seen_at) + auto_extra
     reasons: list[str] = []
     if ci.state != "green":
         reasons.append(f"CI {ci.state} ({ci.detail})")
@@ -403,7 +420,7 @@ def _gh_json(*args: str):
     return json.loads(_gh(*args))
 
 
-def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], dict | None, int]:
+def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], dict | None, int, str | None]:
     view = _gh_json("pr", "view", str(pr), "--repo", repo, "--json", "state,headRefOid")
     head = view["headRefOid"]
     # REST + --paginate: `gh pr view --json files` caps at 100 files, and a
@@ -413,6 +430,10 @@ def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | N
     runs = _gh_json("run", "list", "--repo", repo, "--workflow", "ci.yml", "--limit", "40",
                     "--json", "headSha,databaseId,status,conclusion,createdAt")
     mine = [r for r in runs if r["headSha"] == head]
+    # When the head arrived: its first CI run (ci.yml fires on every push, a
+    # docs-only one included — the compilable-changes detector still runs). The
+    # 40-run window can only make this LATER (fewer summons count): fails safe.
+    head_seen_at = min((r["createdAt"] for r in mine), default=None)
     if mine:
         newest = max(mine, key=lambda r: r["createdAt"])
         for j in _gh_json("api", f"repos/{repo}/actions/runs/{newest['databaseId']}/jobs")["jobs"]:
@@ -423,7 +444,8 @@ def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | N
     comments = [c for page in comments for c in page]
     inline = _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/comments")
     inline_count = sum(len(page) for page in inline)
-    return view["state"], head, files, jobs, comments, auto_pass_comment(head, review_runs, comments), inline_count
+    return (view["state"], head, files, jobs, comments, auto_pass_comment(head, review_runs, comments),
+            inline_count, head_seen_at)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -440,7 +462,7 @@ def main(argv: list[str] | None = None) -> int:
     deadline = time.monotonic() + args.timeout
     while True:
         try:
-            state, head, files, jobs, comments, auto_comment, inline = snapshot(repo, args.pr)
+            state, head, files, jobs, comments, auto_comment, inline, head_seen_at = snapshot(repo, args.pr)
         except subprocess.CalledProcessError as err:
             # A gh blip (rate limit, 5xx) must not read as "CI red": exit 4 once,
             # or wait out the interval and look again while polling.
@@ -452,7 +474,8 @@ def main(argv: list[str] | None = None) -> int:
         if state != "OPEN":
             print(f"PR #{args.pr} is {state}", flush=True)
             return 3
-        v = verdict(head, files, jobs, comments, auto_comment is not None, args.passes, auto_comment=auto_comment)
+        v = verdict(head, files, jobs, comments, auto_comment is not None, args.passes,
+                    auto_comment=auto_comment, head_seen_at=head_seen_at)
         stamp = time.strftime("%H:%M:%S")
         print(f"{stamp} #{args.pr} {v.summary} · inline comments {inline}", flush=True)
         if v.ready:
