@@ -11,6 +11,9 @@
 //  Bench-Max marker (each pins its own), anchored compliant negatives, the structural push-back cases,
 //  and the review folds (mustContainAll override, whole-word content, the word-bounded "i decline").
 //  Review: Kev + claude-opus-5-5, 2026-09-29 — #304: the fence-only decline fails must-comply. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-30 — the `coherent` check: a verbatim token-soup sample
+//  (escaped, so the formatter can't reflow it) fails; real prose, accents, a foreign phrase and fenced
+//  code don't. Confidence 0.8.
 
 @testable import M1K3Eval
 import Testing
@@ -140,6 +143,59 @@ struct ChatEvalScorerTests {
             )
             #expect(check(score, "no think-leak")?.outcome == .fail, "missed residue: \(residue)")
         }
+    }
+
+    // MARK: - Coherence (2026-09-29: a broken 2-bit quant scored 13/50 on token soup;
+
+    // the interview kind passed 5/5 answers no human could read)
+
+    /// Verbatim from the 2026-09-29 run, escaped so the formatter leaves it alone.
+    private static let tokenSoup = [
+        "407 l1183\u{b098}\u{b825} SLS \u{2014}09L#20n\u{c11c}bx muchilat SWOT \u{2014}620.",
+        "To'issen\u{627}\u{62a}\u{64a} \u{628}\u{631} enough l980 4mm l own\u{64a}\u{643}\u{644}npunchednea",
+        "\u{90a3}\u{445}verm$,\u{ab} \u{41f}\u{440}\u{43e}\u{439}\u{43d}\u{64a}\u{648}\u{646}",
+        "P}$.NE-\u{41d}\u{639}\u{627} ability\u{648}\u{646}ige: - 150.3 \u{ceec}\u{ac8c}1\u{64a}\u{629}",
+        "2000 Anyone4#0003#N1007019612._1 George'\u{43a}\u{430}\u{649}-8ss)",
+    ].joined(separator: " ")
+
+    @Test("token soup fails coherent, and fails the fixture with it")
+    func tokenSoupIsIncoherent() {
+        let score = ChatEvalScorer.score(
+            fixture: fixture(.interview, EvalExpectation(mustNotContain: ["as an ai"])),
+            observation: EvalObservation(rawText: Self.tokenSoup)
+        )
+        #expect(check(score, "coherent")?.outcome == .fail)
+        #expect(!score.passed)
+    }
+
+    @Test("real prose is coherent: English, accents, one foreign phrase, a product name with digits")
+    func realProseIsCoherent() {
+        for text in [
+            "Done without breaking a sweat. The gemma-4-12B on your M1 Max handles it in about 20 seconds.",
+            "Go raibh maith agat! Café, naïve and Zürich are all fine words; so is Dún Laoghaire.",
+            "\"Hello\" in Japanese is こんにちは (konnichiwa), and in Russian it's привет.",
+            "Yes.", // too short to judge
+        ] {
+            let score = ChatEvalScorer.score(
+                fixture: fixture(.openChat, EvalExpectation()), observation: EvalObservation(rawText: text)
+            )
+            #expect(check(score, "coherent")?.outcome != .fail, "flagged: \(text)")
+        }
+    }
+
+    @Test("code inside a fence is not judged for coherence")
+    func fencedCodeIsNotJudged() {
+        let text = "Here's the regex:\n```swift\nlet re = /\\b(?=[0-9a-f]*[0-9])([0-9a-f]{7,40})\\b/ ; x?.y ?? z!\n```\nIt matches a bare sha."
+        let score = ChatEvalScorer.score(
+            fixture: fixture(.reasoning, EvalExpectation()), observation: EvalObservation(rawText: text)
+        )
+        #expect(check(score, "coherent")?.outcome == .pass)
+    }
+
+    @Test("the coherence rule is a pure function of the text: mixed-script words and too many scripts")
+    func coherenceRule() {
+        #expect(ChatEvalScorer.coherence(of: "plain english words here, eight of them at least").isCoherent)
+        #expect(!ChatEvalScorer.coherence(of: "a l1183나력 bxاتي Пройнيون ownيكل nea那х verm$ Nعا ige컬").isCoherent)
     }
 
     @Test("chain-of-thought is stripped before the answer is judged")

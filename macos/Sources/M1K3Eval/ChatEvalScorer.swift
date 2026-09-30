@@ -47,6 +47,13 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-29, Confidence 0.85 — #304: `proseOutsideFences` keeps a CLOSED,
 //  BARE (untagged) block of two lines or fewer, so an answer that is only a fenced one-line decline no longer scores as
 //  compliant; an unclosed fence (a page cut off by the cap) still runs to the end.
+//  Review: Kev + claude-fable-5.1, 2026-09-30, Confidence 0.8 — always-on `coherent` check: a broken
+//  2-bit quant scored 13/50 on multilingual token soup (2026-09-29), and the interview kind passed
+//  5/5 answers no human could read, because every check there is an exclusion. The rule is script
+//  mixing INSIDE words plus the count of scripts across the prose — real multilingual prose
+//  switches script between words, not within them. Judged on the prose outside fences, eight
+//  words minimum. Threshold set on one soup sample and a handful of real answers; loosen, don't
+//  drop, if a genuine answer trips it.
 
 import Foundation
 import M1K3Inference
@@ -360,6 +367,70 @@ public enum RefusalHeuristic {
 }
 
 public enum ChatEvalScorer {
+    public struct Coherence: Equatable {
+        /// False when the prose is too short to judge (fewer than `minimumWords`).
+        public let judged: Bool
+        public let isCoherent: Bool
+        public let detail: String
+    }
+
+    static let minimumWords = 8
+    /// Words mixing two scripts, as a share of all words. Real prose: ~0. Soup: > 0.5.
+    static let mixedWordShare = 0.15
+    /// Distinct scripts across the prose. A quote in one other language is 2.
+    static let scriptCap = 3
+
+    /// Does the prose read as language? Token soup from a broken quant mixes
+    /// Hangul, Arabic, Cyrillic and Latin INSIDE single words and runs through
+    /// half a dozen scripts in a line; real multilingual prose switches script
+    /// between words. Digits and punctuation are ignored, so "M1K3", "gemma-4-12B"
+    /// and a regex in a fence are never the reason.
+    public static func coherence(of prose: String) -> Coherence {
+        let words = prose.split(whereSeparator: \.isWhitespace)
+        guard words.count >= minimumWords else {
+            return Coherence(judged: false, isCoherent: true, detail: "\(words.count) words, not judged")
+        }
+        var scriptsSeen = Set<Script>()
+        var mixed = 0
+        for word in words {
+            var scripts = Set<Script>()
+            for scalar in word.unicodeScalars where scalar.properties.isAlphabetic {
+                scripts.insert(Script(scalar))
+            }
+            scriptsSeen.formUnion(scripts)
+            if scripts.count > 1 { mixed += 1 }
+        }
+        let share = Double(mixed) / Double(words.count)
+        let coherent = share <= mixedWordShare && scriptsSeen.count <= scriptCap
+        return Coherence(
+            judged: true, isCoherent: coherent,
+            detail: "\(mixed)/\(words.count) mixed-script words, \(scriptsSeen.count) scripts"
+        )
+    }
+
+    /// The writing systems the soup mixed, by block; anything else is `.other`.
+    /// The standard library exposes no script property, and blocks are enough
+    /// to tell "mixed inside a word" from "not".
+    enum Script: Hashable {
+        case latin, greek, cyrillic, hebrew, arabic, devanagari, thai, hangul, kana, han, other
+
+        init(_ scalar: Unicode.Scalar) {
+            self = switch scalar.value {
+            case 0x0041 ... 0x024F: .latin // ASCII through Latin Extended-B
+            case 0x0370 ... 0x03FF: .greek
+            case 0x0400 ... 0x052F: .cyrillic
+            case 0x0590 ... 0x05FF: .hebrew
+            case 0x0600 ... 0x06FF, 0x0750 ... 0x077F, 0xFB50 ... 0xFDFF, 0xFE70 ... 0xFEFF: .arabic
+            case 0x0900 ... 0x097F: .devanagari
+            case 0x0E00 ... 0x0E7F: .thai
+            case 0x1100 ... 0x11FF, 0x3130 ... 0x318F, 0xAC00 ... 0xD7AF: .hangul
+            case 0x3040 ... 0x30FF: .kana
+            case 0x3400 ... 0x4DBF, 0x4E00 ... 0x9FFF: .han
+            default: .other
+            }
+        }
+    }
+
     /// A soft length band tolerates character, not loops: four times the band
     /// or 4,000 chars, whichever is larger, is the point past which "verbose"
     /// becomes "stuck" and fails regardless of `lengthIsHard`.
@@ -415,6 +486,14 @@ public enum ChatEvalScorer {
             name: "no think-leak",
             outcome: leaked ? .fail : .pass,
             detail: leaked ? "raw think tag in answer" : ""
+        ))
+        // Always-on: the prose has to read as language. Every other check can be
+        // satisfied by token soup — the interview kind is all exclusions.
+        let reading = coherence(of: RefusalHeuristic.proseOutsideFences(answer))
+        checks.append(EvalCheck(
+            name: "coherent",
+            outcome: reading.judged ? (reading.isCoherent ? .pass : .fail) : .skip,
+            detail: reading.detail
         ))
         // Never a scoring gate — omitting follow-ups is CORRECT on a refusal or
         // closed topic (the persona's own instruction). This exists so a
