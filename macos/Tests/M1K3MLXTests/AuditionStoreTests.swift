@@ -144,6 +144,10 @@ struct AuditionStoreTests {
         }
         try store.remove(repoID: "org/A")
         #expect(store.list().map(\.repoID) == ["org/B"])
+        try store.remove(repoID: "org/B")
+        #expect(store.list().isEmpty)
+        // The last audition in an org takes the empty org folder with it.
+        #expect(!FileManager.default.fileExists(atPath: store.root.appendingPathComponent("org").path))
     }
 
     @Test("a weights link pointing outside what was granted fails the import, and the earlier import survives")
@@ -221,6 +225,16 @@ struct AuditionStoreTests {
         let model = try store.importFolder(source, repoID: "org/M")
         #expect(model.repoID == "Org/M")
         #expect(store.list().map(\.repoID) == ["Org/M", "Org/Other"])
+    }
+
+    @Test("the canonical name is what an import would land under, org case included")
+    func canonicalNameAdoptsOrgCase() throws {
+        let source = try tempDir("canon")
+        try seedCheckpoint(at: source)
+        let store = try AuditionStore(root: tempDir("store"))
+        try store.importFolder(source, repoID: "Org/Other")
+        #expect(store.canonicalRepoID("org/M") == "Org/M")
+        #expect(store.canonicalRepoID("other/M") == "other/M")
     }
 
     @Test("a repo id's source key is the one its folder load reports")

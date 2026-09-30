@@ -22,6 +22,8 @@
 //  and a remove (`.setAtLaunch`). A stale settle can't clear a newer load's sentinel: a
 //  switch cancels the preload, which returns before setting `.ready`. Trade-off: a quit
 //  also clears it, so a checkpoint that HANGS (not crashes) is retried each launch.
+//  A load that FAILS cleanly keeps the choice on purpose: the failure is on screen with
+//  its message and Stock is one pick away; only a load that never settles is dropped.
 //  Carried: moving the tier/busy decisions into a package as pure functions.
 //  Confidence 0.75, still verify-by-launch.
 //
@@ -165,8 +167,11 @@ extension AppEnvironment {
 
     /// Whether `repoID`'s folder is what the live MLX brain was loaded from: importing
     /// over it would swap the files under a brain whose no-op check can't see the change.
+    /// Judged on the name the import would land under (org case included). The check
+    /// runs before the copy; a brain switch during a multi-GB copy is the narrow window
+    /// left, and the reselect no-op is the only thing it can fool.
     func isServingAudition(_ repoID: String) -> Bool {
         guard let store = Self.auditionStore else { return false }
-        return currentMLXProvider.sourceKey == store.sourceKey(forRepoID: repoID)
+        return currentMLXProvider.sourceKey == store.sourceKey(forRepoID: store.canonicalRepoID(repoID))
     }
 }

@@ -114,7 +114,7 @@ public struct AuditionStore: Sendable {
     @discardableResult
     public func importFolder(_ source: URL, repoID requested: String) throws -> AuditionModel {
         guard LocalModelInventory.isRemovableRepoID(requested) else { throw ImportError.unsafeRepoID(requested) }
-        let repoID = adoptingExistingOrgCase(requested)
+        let repoID = canonicalRepoID(requested)
         if let clash = caseOnlyClash(with: repoID) { throw ImportError.nameTaken(clash) }
         let checkpoint = Self.checkpointDirectory(in: source)
         let plan = try Self.copyPlan(for: checkpoint)
@@ -203,6 +203,10 @@ public struct AuditionStore: Sendable {
         let dir = directoryURL(for: repoID)
         guard FileManager.default.fileExists(atPath: dir.path) else { return }
         try FileManager.default.removeItem(at: dir)
+        let org = dir.deletingLastPathComponent()
+        if (try? FileManager.default.contentsOfDirectory(atPath: org.path))?.isEmpty == true {
+            try? FileManager.default.removeItem(at: org)
+        }
         auditionLog.notice("audition removed \(repoID, privacy: .public)")
     }
 
@@ -212,10 +216,10 @@ public struct AuditionStore: Sendable {
         Self.sourceKey(for: directoryURL(for: repoID))
     }
 
-    /// `repoID` with its org spelled as an org folder already on disk that differs only
-    /// in case: on case-insensitive APFS the import lands in that folder anyway, and the
-    /// name has to match what `list()` will report.
-    private func adoptingExistingOrgCase(_ repoID: String) -> String {
+    /// The name an import of `repoID` lands under: its org spelled as an org folder
+    /// already on disk that differs only in case, because on case-insensitive APFS the
+    /// import lands in that folder anyway and the name has to match what `list()` reports.
+    public func canonicalRepoID(_ repoID: String) -> String {
         guard let slash = repoID.firstIndex(of: "/") else { return repoID }
         let org = String(repoID[..<slash])
         let orgs = (try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []

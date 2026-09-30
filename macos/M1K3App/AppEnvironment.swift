@@ -1442,6 +1442,9 @@ final class AppEnvironment {
             return true
         }
         Self.brainLog.notice("selectBrain \(tier.rawValue, privacy: .public): model=\(tier.mlxModelID ?? "appleFoundationModels", privacy: .public)")
+        // Any switch abandons a pending audition load, a switch to Mini included: the
+        // cancelled preload never settles, so nothing else would clear it (#452 review).
+        AuditionSelection.clearPendingLoad()
         // Single writer to the Hub cache: any explicit brain change cancels the
         // background upgrade fetch FIRST (the partial snapshot survives and
         // resumes wherever it's next wanted). State recomputes below.
@@ -1459,7 +1462,6 @@ final class AppEnvironment {
         if let modelID = tier.mlxModelID {
             // Rotating-KV tiers get a capped decode so prefill + generation fit
             // the window together (see HistoryBudgetPolicy.rotatingGenerationTokenCap).
-            AuditionSelection.clearPendingLoad() // switching away abandons, not crashes, a pending load
             let mlx = Self.makeMLXBrain(
                 for: tier,
                 stockModelID: modelID,
