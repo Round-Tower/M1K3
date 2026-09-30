@@ -120,4 +120,33 @@ struct ReasoningSplitTests {
         #expect(result.reasoning == "just reasoning")
         #expect(result.answer == "")
     }
+
+    // MARK: - Stray control tokens (2026-09-29: Big wrote "breaking a<image|>sweat")
+
+    @Test("a stray gemma-4 media boundary token is dropped from the answer, the words around it kept")
+    func strayMediaTokenIsDropped() {
+        let result = ReasoningSplit.split("Done without breaking a<image|>sweat.")
+        #expect(result.reasoning == nil)
+        #expect(result.answer == "Done without breaking a sweat.")
+    }
+
+    @Test("every known stray token goes, in either orientation, and inside reasoning too")
+    func allStrayTokensGo() {
+        let text = "<|channel>thought <|image>plan<channel|><|audio>Hi<audio|> <start_of_image>there<end_of_image>."
+        let result = ReasoningSplit.split(text)
+        #expect(result.reasoning == "plan")
+        #expect(result.answer == "Hi there.")
+    }
+
+    @Test("a stray token never leaves a doubled space or eats a real one")
+    func strayTokenSpacing() {
+        #expect(ReasoningSplit.split("a <image|> b").answer == "a b")
+        #expect(ReasoningSplit.split("a<image|> b").answer == "a b")
+        #expect(ReasoningSplit.split("a<image|>b").answer == "a b")
+    }
+
+    @Test("prose that merely mentions a tag name in words is left alone")
+    func mentionsAreNotTokens() {
+        #expect(ReasoningSplit.split("Gemma uses an image token.").answer == "Gemma uses an image token.")
+    }
 }

@@ -15,6 +15,11 @@
 //  single `<think>` pair to a set of open/close tag pairs to also strip gemma-4's
 //  channel-format reasoning (Big leaked its full thought trace into the UI).
 //  Prior: Kev + claude-opus-4-8, 2026-06-10 (this file)
+//  Review: Kev + claude-fable-5.1, 2026-09-30, Confidence 0.85 — also drops gemma's
+//  stray media boundary tokens (`<image|>` and kin): the 12B wrote "breaking
+//  a<image|>sweat" in 1 of 50 eval answers and nothing on the way to the bubble
+//  removed it. Here because every final answer (chat, headless ask, call
+//  summaries, memory distillation, eval) already passes through `split`.
 
 import Foundation
 
@@ -34,7 +39,7 @@ public enum ReasoningSplit {
     public static func split(_ text: String) -> (reasoning: String?, answer: String) {
         var reasoningParts: [String] = []
         var answer = ""
-        var remaining = Substring(text)
+        var remaining = Substring(removingStrayTokens(from: text))
 
         // Lone closing tag first: the close appears before any open (or with no
         // open at all) → everything up to it is reasoning the template opened
@@ -71,6 +76,43 @@ public enum ReasoningSplit {
             reasoning.isEmpty ? nil : reasoning,
             answer.trimmingCharacters(in: .whitespacesAndNewlines)
         )
+    }
+
+    /// Control tokens a text-only turn has no business containing: gemma-4's media
+    /// boundaries (the pipe flips sides, like its channel tags) and gemma-3's. The
+    /// tokenizer decodes them as text when the model emits one mid-sentence.
+    /// Reasoning tags are NOT here — `split` needs them.
+    public static let strayTokens = [
+        "<|image>", "<image|>", "<|audio>", "<audio|>",
+        "<start_of_image>", "<end_of_image>", "<start_of_audio>", "<end_of_audio>",
+    ]
+
+    /// Drop every stray token. One took the place of a space ("a<image|>sweat"),
+    /// so a token between two words becomes one space (surrounding spaces
+    /// collapse into it); anywhere else it simply disappears.
+    /// `previous`: the character emitted just before `text` when it is a stream
+    /// buffer, so a token at the buffer's start still knows whether it sits
+    /// between two words.
+    public static func removingStrayTokens(from text: String, precededBy previous: Character? = nil) -> String {
+        var out = text
+        for token in strayTokens {
+            while let hit = out.range(of: token) {
+                var lower = hit.lowerBound
+                var upper = hit.upperBound
+                while lower > out.startIndex, out[out.index(before: lower)] == " " {
+                    lower = out.index(before: lower)
+                }
+                while upper < out.endIndex, out[upper] == " " {
+                    upper = out.index(after: upper)
+                }
+                // A space only where the token sat between two words; before
+                // punctuation, at a line edge or beside a tag it just goes.
+                let before = lower > out.startIndex ? out[out.index(before: lower)] : previous
+                let betweenWords = before?.isLetter == true && upper < out.endIndex && out[upper].isLetter
+                out.replaceSubrange(lower ..< upper, with: betweenWords ? " " : "")
+            }
+        }
+        return out
     }
 
     /// The earliest occurrence of ANY of `tags` in `text` — the tag whose match
