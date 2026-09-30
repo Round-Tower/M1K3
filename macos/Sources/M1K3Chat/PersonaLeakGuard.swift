@@ -42,6 +42,9 @@
 //  seawater beat from the live constant instead of pinning literals that a rewrite orphans.
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 4 fold) — the lead-in stripping moved to
 //  `M1K3Persona.exemplarReplies`, shared with ExemplarEcho; this file no longer reads the bullets.
+//  Review: Kev + claude-fable-5.1, 2026-09-30 — `spans` is a cached `static let` (all inputs are
+//  constants): the spoken-stream guard in StreamedAnswerFolder calls `leaks` on every new snapshot
+//  while an answer streams, and the computed form rebuilt several KB of persona each call.
 
 import Foundation
 import M1K3Inference
@@ -66,7 +69,9 @@ public enum PersonaLeakGuard {
     /// asked to repeat its system prompt recited that header verbatim. Output
     /// side ONLY — `wiringText` (the ingest quarantine's fingerprint) is
     /// unchanged, so a document quoting an exemplar is still just a document.
-    public static var spans: [String] {
+    /// Cached: every input is a compile-time constant, and the spoken-stream guard
+    /// (2026-09-30) now asks `leaks` several times a second while an answer streams.
+    public static let spans: [String] = {
         let decline = taughtDecline.lowercased()
         return SelfWiringQuarantine.spans(inPrompt: M1K3Persona.wiringText + "\n" + exemplarText)
             // The one sentence the persona TELLS the model to say can never be a
@@ -78,7 +83,7 @@ public enum PersonaLeakGuard {
             // reply is: I don't share…") and is NOT filtered — a reply carrying
             // that lead-in is reciting the rule, not giving the taught decline.
             .filter { !decline.contains($0.lowercased()) }
-    }
+    }()
 
     /// The decline the persona teaches by example (completion guard + exemplar
     /// beat 5). Kept here as the guard's allow-list, pinned against the live

@@ -26,6 +26,8 @@
 //  Signed: Kev + claude-fable-5, 2026-08-13, Confidence 0.8 (glue over
 //  test-pinned folder/polish/highlight seams; the felt beat — does hearing
 //  every answer delight or grate — is Kev's ⌘R to settle). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-09-30 — the folder carries `spokenLeakGuard` (see
+//  AppEnvironment+VoiceMode): a leaked prompt is refused live, not after it was spoken. Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -64,7 +66,9 @@ extension AppEnvironment {
             // utterance BEFORE this one speaks, sequenced inside this task so
             // the stop can't race past and kill the new answer's first line.
             if superseding { await self?.stopSpeaking() }
-            var folder = StreamedAnswerFolder(stopMatcher: { FollowUpSplit.trailerStart(in: $0) })
+            var folder = StreamedAnswerFolder(
+                stopMatcher: { FollowUpSplit.trailerStart(in: $0) }, leakGuard: Self.spokenLeakGuard
+            )
             var pinnedID: UUID?
             // Poll ticks before the first assistant message appears; ~10s at
             // 150ms. Generous — a message normally appears within one tick.
@@ -99,6 +103,13 @@ extension AppEnvironment {
                     case .complete:
                         // The loop above already ingested the settled text —
                         // only the unterminated tail remains.
+                        // Leak swapped for the refusal between two polls (see the
+                        // voice loop's twin): say what the screen says, and not
+                        // the pre-swap tail.
+                        if !folder.tripped, message.text == PersonaLeakGuard.refusal {
+                            if !Task.isCancelled { await self.speak(PersonaLeakGuard.refusal) }
+                            return
+                        }
                         if !Task.isCancelled, let tail = folder.flush() {
                             await self.speak(tail)
                         }
