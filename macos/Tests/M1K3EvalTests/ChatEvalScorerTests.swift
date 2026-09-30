@@ -213,9 +213,9 @@ struct ChatEvalScorerTests {
         // Five scripts, zero mixed words (the #458 review's "hello in five languages").
         let polyglot = "Hello, こんにちは, привет, مرحبا, γεια σου and shalom to everyone here today."
         #expect(ChatEvalScorer.coherence(of: polyglot).isCoherent)
-        // One mixed word in nine (0.11): a unit, not soup.
+        // One mixed word in eleven: a unit, not soup (minimumMixedWords, whatever the share).
         #expect(ChatEvalScorer.coherence(of: "The whole prefill takes 5μs on this chip, which is fine.").isCoherent)
-        // Two mixed words in nine (0.22) across four scripts: soup. (Latin inside a CJK
+        // Two mixed words in ten (0.20) across four scripts: soup. (Latin inside a CJK
         // word is the allowed pair, so the first mix here is Cyrillic + Hangul.)
         #expect(!ChatEvalScorer.coherence(of: "The whole х1183나력 takes ownيكل on this chip, which Пройн fine.").isCoherent)
         // Two mixed words in twenty (0.10, at the share cap): three scripts pass, a fourth tips it.

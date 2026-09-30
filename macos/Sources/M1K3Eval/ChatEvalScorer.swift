@@ -382,8 +382,8 @@ public enum ChatEvalScorer {
     /// samples included): 0.00. Over the 50 soup answers: 0.13 at the lowest.
     static let mixedWordShare = 0.10
     /// Distinct scripts across the prose: real answers reach 2, soup never fewer than 4.
-    /// Only counts when mixing is present, so "hello in five languages" (five scripts,
-    /// zero mixed words) passes.
+    /// Only counts once `minimumMixedWords` are present, so "hello in five languages"
+    /// (five scripts, zero mixed words) passes, and one stray "5μs" beside four scripts does too.
     static let scriptCap = 3
     /// Fewer mixed words than this is a typo or a unit ("5μs"), not soup: one such word
     /// in a nine-word answer is 0.11.
@@ -396,8 +396,9 @@ public enum ChatEvalScorer {
     /// CJK scripts are one family (kanji + kana, hangul + hanja), and Latin sits
     /// inside CJK words ("使用Swift", "iPhone用"). Digits, punctuation and letters
     /// from blocks not in the table are ignored, so "M1K3", "gemma-4-12B" and a
-    /// regex in a fence are never the reason. Opt out per kind at the call site
-    /// if a future fixture kind wants soup on purpose.
+    /// regex in a fence are never the reason. Always-on today; a fixture kind that
+    /// wants soup on purpose would need a parameter here. Runs scored before
+    /// 2026-09-30 never had this check, so their pass rates read slightly higher.
     public static func coherence(of prose: String) -> Coherence {
         let words = prose.split(whereSeparator: \.isWhitespace)
             .filter { $0.unicodeScalars.contains { $0.properties.isAlphabetic } }
