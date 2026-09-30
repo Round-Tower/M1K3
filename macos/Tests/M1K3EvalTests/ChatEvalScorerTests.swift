@@ -11,6 +11,10 @@
 //  Bench-Max marker (each pins its own), anchored compliant negatives, the structural push-back cases,
 //  and the review folds (mustContainAll override, whole-word content, the word-bounded "i decline").
 //  Review: Kev + claude-opus-5-5, 2026-09-29 — #304: the fence-only decline fails must-comply. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-09-30 — the `coherent` check: a verbatim token-soup sample
+//  (escaped, so the formatter can't reflow it) fails; real prose, accents, a foreign phrase and fenced
+//  code don't; ★ 09-30 fold: Vietnamese, Japanese, Korean, Arabic and Russian answers with Latin
+//  names pass too (the review's false-positive cases). Confidence 0.85.
 
 @testable import M1K3Eval
 import Testing
@@ -140,6 +144,86 @@ struct ChatEvalScorerTests {
             )
             #expect(check(score, "no think-leak")?.outcome == .fail, "missed residue: \(residue)")
         }
+    }
+
+    // MARK: - Coherence
+
+    // 2026-09-29: a broken 2-bit quant scored 13/50 on token soup, and the interview
+    // kind passed 5/5 answers no human could read.
+
+    /// Verbatim from the 2026-09-29 run, escaped so the formatter leaves it alone.
+    private static let tokenSoup = [
+        "407 l1183\u{b098}\u{b825} SLS \u{2014}09L#20n\u{c11c}bx muchilat SWOT \u{2014}620.",
+        "To'issen\u{627}\u{62a}\u{64a} \u{628}\u{631} enough l980 4mm l own\u{64a}\u{643}\u{644}npunchednea",
+        "\u{90a3}\u{445}verm$,\u{ab} \u{41f}\u{440}\u{43e}\u{439}\u{43d}\u{64a}\u{648}\u{646}",
+        "P}$.NE-\u{41d}\u{639}\u{627} ability\u{648}\u{646}ige: - 150.3 \u{ceec}\u{ac8c}1\u{64a}\u{629}",
+        "2000 Anyone4#0003#N1007019612._1 George'\u{43a}\u{430}\u{649}-8ss)",
+    ].joined(separator: " ")
+
+    @Test("token soup fails coherent, and fails the fixture with it")
+    func tokenSoupIsIncoherent() {
+        let score = ChatEvalScorer.score(
+            fixture: fixture(.interview, EvalExpectation(mustNotContain: ["as an ai"])),
+            observation: EvalObservation(rawText: Self.tokenSoup)
+        )
+        #expect(check(score, "coherent")?.outcome == .fail)
+        #expect(!score.passed)
+    }
+
+    @Test("real prose is coherent: English, accents, one foreign phrase, a product name with digits")
+    func realProseIsCoherent() {
+        for text in [
+            "Done without breaking a sweat. The gemma-4-12B on your M1 Max handles it in about 20 seconds.",
+            "Go raibh maith agat! Café, naïve and Zürich are all fine words; so is Dún Laoghaire.",
+            "\"Hello\" in Japanese is こんにちは (konnichiwa), and in Russian it's привет.",
+            // The review's false-positive cases: Vietnamese (Latin Extended Additional), Japanese
+            // (kanji + kana in one word, Latin glued on), Korean, Arabic and Russian with Latin names.
+            "Chào bạn! Tôi là M1K3, trợ lý ảo chạy hoàn toàn trên máy Mac của bạn. Tôi có thể giúp bạn viết mã.",
+            "こんにちは。私は M1K3 です。あなたの Mac 上で動くアシスタントで、Swift のコードを書いたり、"
+                + "要約を作ったりできます。使用Swift も iPhone用 も大丈夫です。",
+            "안녕하세요, 저는 M1K3입니다. 여러분의 Mac에서 iPhone용 앱을 위한 Swift 코드를 작성하고 회의를 요약할 수 있습니다.",
+            "مرحباً، أنا M1K3. أعمل بالكامل على جهاز Mac الخاص بك وأستطيع كتابة كود Swift وتلخيص الاجتماعات.",
+            "Привет! Я M1K3. Функция loadModel(from:) читает config.json из папки и запускает MLXBrainProvider без сети.",
+            "Yes.", // too short to judge
+        ] {
+            let score = ChatEvalScorer.score(
+                fixture: fixture(.openChat, EvalExpectation()), observation: EvalObservation(rawText: text)
+            )
+            #expect(check(score, "coherent")?.outcome != .fail, "flagged: \(text)")
+        }
+    }
+
+    @Test("code inside a fence is not judged for coherence")
+    func fencedCodeIsNotJudged() {
+        let text = "Here's the regex:\n```swift\nlet re = /\\b(?=[0-9a-f]*[0-9])([0-9a-f]{7,40})\\b/ ; x?.y ?? z!\n```\nIt matches a bare sha."
+        let score = ChatEvalScorer.score(
+            fixture: fixture(.reasoning, EvalExpectation()), observation: EvalObservation(rawText: text)
+        )
+        #expect(check(score, "coherent")?.outcome == .pass)
+    }
+
+    @Test("the coherence rule is a pure function of the text: mixed-script words and too many scripts")
+    func coherenceRule() {
+        #expect(ChatEvalScorer.coherence(of: "plain english words here, eight of them at least").isCoherent)
+        #expect(!ChatEvalScorer.coherence(of: "a l1183나력 bxاتي Пройнيون ownيكل nea那х verm$ Nعا ige컬").isCoherent)
+    }
+
+    @Test("many scripts with no mixing is a polyglot, not soup; one mixed word is a unit, not soup")
+    func coherenceEdges() {
+        // Five scripts, zero mixed words (the #458 review's "hello in five languages").
+        let polyglot = "Hello, こんにちは, привет, مرحبا, γεια σου and shalom to everyone here today."
+        #expect(ChatEvalScorer.coherence(of: polyglot).isCoherent)
+        // One mixed word in eleven: a unit, not soup (minimumMixedWords, whatever the share).
+        #expect(ChatEvalScorer.coherence(of: "The whole prefill takes 5μs on this chip, which is fine.").isCoherent)
+        // Two mixed words in ten (0.20) across four scripts: soup. (Latin inside a CJK
+        // word is the allowed pair, so the first mix here is Cyrillic + Hangul.)
+        #expect(!ChatEvalScorer.coherence(of: "The whole х1183나력 takes ownيكل on this chip, which Пройн fine.").isCoherent)
+        // Two mixed words in twenty (0.10, at the share cap): three scripts pass, a fourth tips it.
+        let filler = Array(repeating: "word", count: 18).joined(separator: " ")
+        #expect(ChatEvalScorer.coherence(of: filler + " aб aβ").isCoherent) // latin, cyrillic, greek
+        #expect(!ChatEvalScorer.coherence(of: filler + " aб aβא").isCoherent) // + hebrew
+        // Letters from a block outside the table are ignored, never a script of their own.
+        #expect(ChatEvalScorer.coherence(of: "বাংলা words mixed with english ones here, eight at least").detail.hasSuffix("1 scripts"))
     }
 
     @Test("chain-of-thought is stripped before the answer is judged")
