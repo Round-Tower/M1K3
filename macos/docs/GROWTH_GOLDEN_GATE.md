@@ -151,7 +151,7 @@ Queue, in value order:
 1. **App preview video** (Mac + iPhone) — §2. The lead asset for everything.
 2. **A real `/support` page** — every locale's support URL is the homepage.
    Reviewers and editors click it.
-3. **iOS metadata source of truth** — `metadata_ios/` does not exist; the
+3. ~~**iOS metadata source of truth**~~ — done 2026-10-01 (§10). `metadata_ios/` did not exist; the
    iOS listing's words live only in ASC. Pull them into the tree so the
    metadata guard covers them.
 4. **en-US keyword headroom** — 100/100; reclaim from the ko/zh-Hans
@@ -174,6 +174,77 @@ Queue, in value order:
 - If an institutional (Apps and Books) purchase ever shows in the source
   breakdown: §5's "revisit" condition has fired.
 
+## 10. The 2026-10-01 listing pass — keyword-first name, honest platforms
+
+Kev's call: **"Local Offline AI Agent – M1K3"** / **"Private chat, voice &
+memory"**. 1.0 was not live in any storefront (lookup → 0 results in us, ie,
+gb, de), so the rename cost no ranking history.
+
+What the research said (Apple-verified unless marked):
+- **Word order in the name is folklore** (ASO blogs only); the words are what
+  count, and name > subtitle > keywords is the consistent weighting. Every
+  leader in the niche stacks Local / Offline / Private + AI + Chat/Assistant:
+  Locally AI (1,705 ratings), Enclave (1,083), Private LLM (729). On the Mac
+  store the *agent / coding-agent* angle is thin (BonzAI, 16 ratings) — hence
+  "Agent" in the name and MCP/coding in the Mac keywords.
+- **Storefront locale stacking** ([Apple's table](https://developer.apple.com/help/app-store-connect/reference/app-store-localizations)):
+  the US storefront also shows es-MX (not es-ES), zh-Hans, zh-Hant, fr-FR,
+  ko, pt-BR, ru, vi, ar; Germany, France, Spain, Mexico, China, Korea, Brazil
+  each add **en-GB**. Indexing those for search is an industry observation
+  (AppTweak, MobileAction), not an Apple statement. Added **en-GB** and
+  **es-MX**; es-MX's keyword field carries English terms the US storefront
+  reads that en-US had no room for.
+- **Custom Product Pages in organic search** (70 pages, keywords from the
+  latest approved version) and **Product Page Optimization** are iOS/iPadOS
+  only — they cannot reach the Mac store. **App Store tags** are US-only,
+  generated from en-US metadata; deselect-only, under App Information.
+- **Screenshot-caption OCR** (blog-reported, June 2025) measured weak: 1 of
+  64 caption phrases ranked without metadata support. Captions reinforce
+  keywords; they don't add reach.
+
+Done in this pass:
+- `metadata_ios/` — the iPhone listing had the Mac's description word for
+  word ("runs entirely on your Mac", Big 12B, MacBook Air to Mac Studio, the
+  CLI, "delete at any time" though iOS memories are read-only). Now its own
+  copy, in 10 locales, from what `MobileBrainMenu` / `project.yml` ship.
+- **Web search defaults ON** on both platforms (`PrivacySettingsPane.swift`,
+  `SettingsScreen.swift`), but every description said "a web search you
+  explicitly turn on" — rewritten in all locales; the "nothing ever leaves"
+  promo lines now say the notes and PDFs never leave.
+- `check_store_metadata.py` now fails a PR on shared-field drift between the
+  platform folders and on device claims (shared fields name no device; the
+  iPhone copy names the Mac only on a Brain at Home line).
+- TestFlight: per-platform "What to Test" via Xcode Cloud's
+  `TestFlight/WhatToTest.<locale>.txt` contract (`ci_scripts/select_what_to_test.sh`;
+  builds 438/439 shipped with the field empty), and the record-wide beta
+  description tracked in `TestFlight/beta_description.en-US.txt`
+  (`tools/asc/testflight.py`).
+
+Queue from here, in value order:
+1. **Apply** — the staged commands in the PR body (`fastlane mac metadata`,
+   `fastlane ios metadata`, `testflight.py set --confirm`); ASC writes are
+   Kev's.
+2. **iOS CPPs** once 1.0 is approved: 3–5 pages per intent cluster
+   (offline chat / PDF / transcribe / voice), each with its own keywords.
+3. **Tags**: read the generated en-US tags the week of approval, deselect any
+   off-brand.
+4. **ru, zh-Hant, vi, ar** — the rest of the US stack; needs native-quality
+   copy (or English-keyword-only fields), and a look at which of those
+   storefronts the app is available in.
+5. **visionOS** — its draft version still carries the Mac copy and no build;
+   give it a `metadata_visionos/` when it gets an archive action.
+6. **Screenshot captions** that echo the keyword set (weak signal, free).
+
+Sources: [ASC app information](https://developer.apple.com/help/app-store-connect/reference/app-information/app-information) ·
+[localizations](https://developer.apple.com/help/app-store-connect/reference/app-store-localizations) ·
+[CPPs](https://developer.apple.com/help/app-store-connect/create-custom-product-pages/configure-multiple-product-page-versions/) ·
+[tags](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-tags) ·
+[PPO](https://developer.apple.com/app-store/product-page-optimization/) ·
+[AppTweak cross-localization](https://www.apptweak.com/en/aso-blog/how-to-benefit-from-cross-localization-on-the-app-store) ·
+[MobileAction](https://www.mobileaction.co/blog/app-store-cross-localization/) ·
+[caption OCR test](https://appscreenshotstudio.com/blog/how-apple-ocr-indexes-app-store-screenshot-text-2026) ·
+[Xcode Cloud tester notes](https://www.finnvoorhees.com/words/platform-specific-release-notes-with-xcode-cloud)
+
 <!--
 Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.8
 Format: MurphySig v0.4 (https://murphysig.dev/spec)
@@ -185,4 +256,9 @@ Prior: none (new). Context: Apple-side facts (in-app events iPhone/iPad
   repos the same day. Budgets are recommendations, not commitments.
   Honest opens: whether featuring lands is Apple's call; the event art is
   not generated; Kev's Apple Ads account does not exist yet.
+Review: Kev + claude-opus-5.5, 2026-10-01 — §10 added (the rename, the
+  iPhone listing's own copy, the web-search honesty fix, locale stacking,
+  TestFlight notes); §8 item 3 closed. Confidence 0.75 for §10: the Apple
+  facts are read off developer.apple.com, the ranking claims are ASO-blog
+  observations and say so.
 -->

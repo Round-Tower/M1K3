@@ -1,1 +1,1 @@
-asistente,LLM,chatbot,seguro,privado,PDF,transcribir,dictado,resumen,memoria,modelo,Silicon,local
+asistente,LLM,chatbot,MCP,código,seguro,PDF,transcribir,dictado,resumen,agente,offline,Silicon

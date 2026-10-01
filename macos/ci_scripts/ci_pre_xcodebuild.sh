@@ -18,6 +18,8 @@ echo "CI_COMMIT:            ${CI_COMMIT:-unknown}"
 REPO="${CI_PRIMARY_REPOSITORY_PATH:-}"
 if [ -z "$REPO" ]; then
   echo "--- CI_PRIMARY_REPOSITORY_PATH unset in the ${CI_XCODEBUILD_ACTION:-?} phase — skipping project check."
+  # An archive that lands here uploads with an empty "What to Test" — say so.
+  [ "${CI_XCODEBUILD_ACTION:-}" = "archive" ] && echo "⚠️ archive without a repo path: TestFlight notes NOT set for this build."
   echo "=== Pre-Build Complete ==="
   exit 0
 fi
@@ -27,6 +29,12 @@ if [ -d "$PROJ" ]; then
 else
   echo "❌ M1K3.xcodeproj MISSING — xcodegen failed in post-clone; the build will have nothing to compile."
   exit 1
+fi
+
+# TestFlight's "What to Test" comes from macos/TestFlight/WhatToTest.<locale>.txt;
+# only an archive uploads, and each platform gets its own notes.
+if [ "${CI_XCODEBUILD_ACTION:-}" = "archive" ]; then
+  bash "$REPO/macos/ci_scripts/select_what_to_test.sh" "$REPO/macos/TestFlight" "${CI_PRODUCT_PLATFORM:-}"
 fi
 
 echo "=== Pre-Build Complete ==="

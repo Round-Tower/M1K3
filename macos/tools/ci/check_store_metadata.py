@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when App Store copy in fastlane/metadata_mac breaks Apple's limits.
+"""Fail when App Store copy in fastlane/metadata_{mac,ios} breaks Apple's limits.
 
 The store copy lives here so it can be riffed on in any language. Apple
 counts CHARACTERS, not bytes, and rejects the whole `fastlane mac metadata`
@@ -9,12 +9,27 @@ blocks App Review (seven locales had none until 2026-09-14).
 
     python3 check_store_metadata.py [METADATA_DIR]
 
-Defaults to the repo's macos/fastlane/metadata_mac. Read-only. The pure
-helpers are pinned in test_check_store_metadata.py.
+Defaults to every platform folder under macos/fastlane (metadata_mac and
+metadata_ios), which adds two record-level checks: the shared fields (name,
+subtitle, privacy URL live on the app record, not the version) must match
+across platforms, and no storefront may be sold a device it isn't — the
+iPhone listing carried "runs entirely on your Mac" from launch until
+2026-10-01. Read-only. The pure helpers are pinned in
+test_check_store_metadata.py.
 
 Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 (limits from Apple's
 App Store Connect field reference; one trailing newline is ignored because
 deliver strips it). Prior: Unknown
+Review: Kev + claude-opus-5.5, 2026-10-01 — metadata_ios joins; two record-level
+checks: shared fields (name/subtitle/privacy URL) identical across platform
+folders, and no device claims (shared fields name no device; the iPhone copy
+names the Mac only on a Brain at Home line). The regex avoids \b so 在Mac上
+is caught. Confidence now 0.85 — the claim check is a line heuristic: a
+false Mac claim sharing a line with "Brain at Home" would slip past it.
+Review: Kev + claude-opus-5.5, 2026-10-01 (fold) — the exemption now covers
+only the Brain at Home clause onward; review_information/notes.txt in a
+metadata folder is a problem (deliver clobbered the live Mac notes with a
+stale copy); main()'s platform wiring is pinned. Confidence now 0.9.
 """
 from __future__ import annotations
 
@@ -32,12 +47,34 @@ LIMITS = {
     "release_notes": 4000,
 }
 
+# Fields stored once on the app record (appInfoLocalizations) and shown by every
+# platform's storefront. Two folders disagreeing means the last lane to push wins.
+SHARED_FIELDS = ("name", "subtitle", "privacy_url")
+
+# Copy the iPhone/iPad storefront shows. Name + subtitle are checked on every
+# platform because they are shared (see SHARED_FIELDS).
+VERSION_FIELDS = ("description", "promotional_text", "release_notes")  # keywords: checked on every platform
+
+# "Mac" as a word in any script: no Latin letter before it (Python's \b sees no
+# boundary between 在 and M), no lowercase after (Machine, macro). MacBook counts.
+_MAC = re.compile(r"(?<![A-Za-z])(?:i?Macs?(?![a-z])|macOS)")
+# Case-insensitive: keywords are conventionally lowercase (`iphone,mac`).
+_ANY_DEVICE = re.compile(r"(?<![A-Za-z])(?:i?Macs?(?![a-z])|macOS|iPhone|iPad|Vision Pro|visionOS)", re.IGNORECASE)
+# The honest exception on an iPhone listing: borrowing the Mac's brain over the LAN.
+_BRAIN_AT_HOME = "Brain at Home"
+
 # A locale folder is "en-US", "ja", "zh-Hans", "pt-BR" — not "review_information".
 _LOCALE = re.compile(r"^[a-z]{2,3}(-[A-Za-z]{2,4})?$")
 
 
 def problems(root: Path) -> list[str]:
     found: list[str] = []
+    # deliver pushes this file over the live App Review notes; the canonical
+    # notes are fastlane/review_notes.txt (tools/asc/review_notes.py applies them).
+    # A stale copy here clobbered the Mac notes on 2026-10-01.
+    if (root / "review_information" / "notes.txt").exists():
+        found.append("review_information/notes.txt: deliver would overwrite the live review notes — "
+                     "keep them in fastlane/review_notes.txt only")
     for locale in sorted(p for p in root.iterdir() if p.is_dir() and _LOCALE.match(p.name)):
         for field, limit in LIMITS.items():
             f = locale / f"{field}.txt"
@@ -52,13 +89,74 @@ def problems(root: Path) -> list[str]:
     return found
 
 
+def _locales(root: Path) -> list[Path]:
+    return sorted(p for p in root.iterdir() if p.is_dir() and _LOCALE.match(p.name))
+
+
+def _read(f: Path) -> str | None:
+    return f.read_text(encoding="utf-8").removesuffix("\n") if f.exists() else None
+
+
+def device_claims(root: Path, platform: str) -> list[str]:
+    """Lines that sell a storefront the wrong device.
+
+    Shared fields and keywords may name no device at all; the iPhone
+    listing's own copy may name the Mac only on a Brain at Home line.
+    """
+    found: list[str] = []
+    for locale in _locales(root):
+        for field in ("name", "subtitle"):
+            text = _read(locale / f"{field}.txt")
+            if text and (m := _ANY_DEVICE.search(text)):
+                found.append(f"{locale.name}/{field}.txt: '{m.group()}' on a field every platform's storefront shows")
+        # Guideline 5.2.5 (Apple product names in metadata) flagged "Mac" in two
+        # subtitles on 2026-09-23; keywords are metadata under the same rule.
+        keywords = _read(locale / "keywords.txt")
+        if keywords and (m := _ANY_DEVICE.search(keywords)):
+            found.append(f"{locale.name}/keywords.txt: '{m.group()}' — Apple product names stay out of keywords (5.2.5)")
+        if platform != "IOS":
+            continue
+        for field in VERSION_FIELDS:
+            for line in (_read(locale / f"{field}.txt") or "").splitlines():
+                # Only what precedes "Brain at Home" is checked: the clause itself may
+                # name the Mac, a claim earlier on the line may not.
+                checked = line.split(_BRAIN_AT_HOME, 1)[0]
+                if m := _MAC.search(checked):
+                    found.append(f"{locale.name}/{field}.txt: '{m.group()}' on the iPhone listing — {line.strip()[:60]}")
+    return found
+
+
+def shared_drift(roots: dict[str, Path]) -> list[str]:
+    """Shared fields that differ between platform folders (absence counts)."""
+    found: list[str] = []
+    names = sorted({loc.name for root in roots.values() for loc in _locales(root)})
+    for name in names:
+        for field in SHARED_FIELDS:
+            values = {platform: _read(root / name / f"{field}.txt") for platform, root in roots.items()}
+            if len(set(values.values())) > 1:
+                shown = ", ".join(f"{k}={'missing' if v is None else repr(v)}" for k, v in values.items())
+                found.append(f"{name}/{field}.txt differs across platforms (one record, one value): {shown}")
+    return found
+
+
+PLATFORM_DIRS = {"MAC_OS": "metadata_mac", "IOS": "metadata_ios"}
+FASTLANE_DIR = Path(__file__).resolve().parents[2] / "fastlane"
+
+
 def main() -> int:
-    root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2] / "fastlane" / "metadata_mac"
-    found = problems(root)
+    if len(sys.argv) > 1:
+        # One folder, checked as the Mac's: no iPhone-copy rule, no drift check.
+        roots = {"MAC_OS": Path(sys.argv[1])}
+    else:
+        roots = {k: FASTLANE_DIR / v for k, v in PLATFORM_DIRS.items() if (FASTLANE_DIR / v).is_dir()}
+    found: list[str] = []
+    for platform, root in roots.items():
+        found += [f"{root.name}/{p}" for p in problems(root) + device_claims(root, platform)]
+    found += shared_drift(roots)
     for p in found:
         print(f"::error::{p}")
-    locales = [p.name for p in root.iterdir() if p.is_dir() and _LOCALE.match(p.name)]
-    print(f"{len(locales)} locales checked, {len(found)} problem(s)")
+    checked = sum(len(_locales(r)) for r in roots.values())
+    print(f"{checked} locales checked across {len(roots)} platform(s), {len(found)} problem(s)")
     return 1 if found else 0
 
 

@@ -1,0 +1,11 @@
+Thanks for testing M1K3 on iPhone and iPad.
+
+Please try:
+• Chat on Mini — instant on Apple Intelligence devices, a small download elsewhere
+• Lil, the bigger offline brain, if your device has 8 GB of memory
+• Voice mode — talk, interrupt, and hear the neural voice answer
+• Add a PDF or text file under Documents and ask about it
+• Airplane mode: switch it on and keep chatting
+• Brain at Home: pair with M1K3 on your Mac over Wi-Fi and use its big brain
+
+The network is used for brain downloads and web search, which is on by default — one switch in Settings turns it off. Send feedback straight from TestFlight; a screenshot of anything odd helps most.

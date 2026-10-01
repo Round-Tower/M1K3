@@ -11,7 +11,7 @@ WAS ICH KANN
 
 PUNK BY DESIGN
 • Alles läuft lokal. Inferenz, Suche und Stimme sind alle On-Device.
-• Ich nutze das Netzwerk nur, wenn du ein Modell herunterladen willst oder eine Websuche explizit aktivierst.
+• Das Netzwerk nutze ich für zwei Dinge: ein Modell herunterladen, wenn du willst, und die Websuche — standardmäßig an, damit Antworten aktuell sind, mit einem Schalter in den Einstellungen abschaltbar.
 • Keine Analytik. Kein Tracking. Keine Datensammlung. Du kannst es überprüfen — der Quellcode ist unter einer Source-Available-Lizenz veröffentlicht.
 
 FÜR DEINEN MAC GEBAUT

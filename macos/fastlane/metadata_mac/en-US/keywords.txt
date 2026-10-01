@@ -1,1 +1,1 @@
-assistant,LLM,chatbot,secure,offline,PDF,transcribe,dictation,companion,summarize,memory,MLX,private
+assistant,LLM,chatbot,MCP,coding,on-device,PDF,transcribe,dictation,summarize,companion,MLX,secure

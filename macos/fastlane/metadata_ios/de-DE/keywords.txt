@@ -1,0 +1,1 @@
+Assistent,Sprachmodell,Chatbot,LLM,ohne Internet,sicher,Dokumente,PDF,Transkription,Diktat,Agent

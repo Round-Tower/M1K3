@@ -11,7 +11,7 @@ O QUE EU FAÇO
 
 PUNK POR DESIGN
 • Tudo roda localmente. Inferência, busca e voz são tudo no dispositivo.
-• Só uso a rede para baixar um modelo quando você pede, ou para uma busca web que você ativa explicitamente.
+• Uso a rede para duas coisas: baixar um modelo quando você pede e a busca web — ligada por padrão para respostas atualizadas; um botão nos Ajustes a desliga.
 • Sem analytics. Sem rastreamento. Sem coleta de dados. Você pode verificar — o código-fonte é publicado sob licença source-available.
 
 FEITO PARA SUA MÁQUINA

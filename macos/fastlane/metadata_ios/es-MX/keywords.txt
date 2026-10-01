@@ -1,0 +1,1 @@
+asistente,chatbot,sin internet,PDF,transcribir,dictado,resumen,agente,notes,documents,research

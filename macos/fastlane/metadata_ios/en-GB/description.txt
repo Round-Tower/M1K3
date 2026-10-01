@@ -1,0 +1,18 @@
+My friends call me Mike. I'm a local AI agent that lives on your iPhone and iPad — no account, no sign-up, no telemetry. Your chats, notes and documents stay on the device.
+
+WHAT I DO
+• Chat with an on-device brain — Mini starts instantly on Apple Intelligence devices (a small download everywhere else), and Lil (4B) runs fully offline on iPhones and iPads with 8 GB of memory.
+• Talk to me: on-device speech recognition and a natural neural voice.
+• Bring your own knowledge: add PDFs and text files and I'll answer from them, on device.
+• I remember what matters to you, and you can see and search everything I've kept.
+• A friendly 3D companion or a pixel face — and on iPad, a constellation of your memories.
+• Brain at Home: pair with your Mac over your own Wi-Fi and borrow its big brain from the couch.
+
+PRIVATE BY DESIGN
+• The brains, the search over your documents and the voice all run on the device.
+• I use the network for two things: downloading a brain when you choose one, and web search — on by default so answers can be current, one switch in Settings to turn it off.
+• No analytics. No tracking. No data collected. The source code is published under a source-available licence, so you can check.
+
+Works offline — on a plane, up a mountain, anywhere the signal isn't.
+
+Punk intelligence: yours, private, on your terms.
