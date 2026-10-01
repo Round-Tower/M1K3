@@ -32,6 +32,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — `controlHelp` speaks for the whole
 //  conversation: the control now stays on (`PrivateCloudArming`), no longer one
 //  message. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — PCC is a row in the brain picker now
+//  (`menuTitle`), and the pick holds until a local brain is chosen, so `controlHelp`
+//  says so. Confidence 0.85.
 //
 
 import Foundation
@@ -117,8 +120,8 @@ public enum PrivateCloudRung {
         switch control {
         case .ready:
             armed
-                ? "On: this conversation goes to Private Cloud Compute until you turn it off"
-                : "Use Apple's Private Cloud Compute for this conversation"
+                ? "On: messages go to Private Cloud Compute until you choose a brain on this Mac"
+                : "Use Apple's Private Cloud Compute — it stays picked until you choose a brain on this Mac"
         case .unavailable:
             "Private Cloud Compute isn't available right now"
         case let .exhausted(resetsAt):
@@ -128,6 +131,16 @@ public enum PrivateCloudRung {
             } ?? "You've reached your Private Cloud Compute limit for now"
         case .hidden:
             ""
+        }
+    }
+
+    /// The brain picker's PCC row: the name, plus why it can't be picked right
+    /// now. The row stays visible and disabled, like a locked brain.
+    public static func menuTitle(_ control: Control) -> String {
+        switch control {
+        case .ready, .hidden: PrivateCloudLabel.text
+        case .unavailable: "\(PrivateCloudLabel.text) · unavailable"
+        case .exhausted: "\(PrivateCloudLabel.text) · limit reached"
         }
     }
 

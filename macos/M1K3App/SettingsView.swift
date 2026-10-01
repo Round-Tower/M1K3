@@ -11,8 +11,9 @@
 //
 //    • an identity card (the app icon, who's thinking, what version) over a
 //      live Game of Life field — the brand's "alive, quietly" texture;
-//    • a row of pane chips in place of the Settings window's toolbar tabs;
-//    • the selected pane's grouped Form, width-capped and centred so a wide
+//    • a vertical pane list down the leading edge (it was a row of chips —
+//      they clipped as the window narrowed);
+//    • the selected pane's grouped Form beside it, width-capped so a wide
 //      window reads like a page, not a spreadsheet.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-13, Confidence 0.85 (a straight move
@@ -31,6 +32,10 @@
 //  screen (Toplify-style reference from Kev): identity card over a LifeBackdrop, pane
 //  chips, width-capped Form. The pane survives navigating away (SceneStorage); the
 //  harness still lands on Privacy. Confidence 0.8 (builds; feel is verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — the pane chips became a vertical list beside the Form
+//  (Kev: "settings chips don't scale down well, move to vertical placing"): five chips in one row
+//  clipped below ~700 pt; a 168 pt column of rows never does, and reads like System Settings.
+//  Confidence 0.8 (verify-by-launch at narrow and wide widths).
 //
 
 import M1K3Screengrab
@@ -61,11 +66,12 @@ struct SettingsView: View {
         }
     }
 
-    /// The widest the page grows; past this, margins, not longer lines.
+    /// The widest the Form grows; past this, margins, not longer lines.
     static let pageMaxWidth: CGFloat = 860
-    /// The header's side margin: the grouped Form's own card inset on macOS 26,
-    /// measured, so the identity card and the section cards share their edges.
-    static let pageMargin: CGFloat = 78
+    /// The pane list's column: wide enough for "Advanced" at a larger text size.
+    static let paneListWidth: CGFloat = 168
+    /// The page's outer margin, shared by the identity card and the pane list.
+    static let pageMargin: CGFloat = 24
 
     @Environment(AppEnvironment.self) private var env
     /// Opens on M1K3 and remembers the last pane while the window lives.
@@ -76,20 +82,23 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 16) {
-                identityCard
-                paneChips
-            }
-            .padding(.horizontal, Self.pageMargin)
-            .frame(maxWidth: Self.pageMaxWidth)
-            .padding(.top, 14)
-            .padding(.bottom, 4)
+        VStack(spacing: 8) {
+            identityCard
+                .padding(.horizontal, Self.pageMargin)
+                .padding(.top, 14)
 
-            paneContent
-                .frame(maxWidth: Self.pageMaxWidth)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            HStack(alignment: .top, spacing: 0) {
+                paneList
+                    .frame(width: Self.paneListWidth)
+                    .padding(.leading, Self.pageMargin)
+                    .padding(.top, 12)
+
+                paneContent
+                    .frame(maxWidth: Self.pageMaxWidth, maxHeight: .infinity, alignment: .top)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
         }
+        .frame(maxWidth: Self.pageMaxWidth + Self.paneListWidth + Self.pageMargin * 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .navigationTitle("Settings")
         .onAppear {
@@ -155,10 +164,12 @@ struct SettingsView: View {
         return version.map { "v\($0)" } ?? "dev"
     }
 
-    // MARK: - Pane chips
+    // MARK: - Pane list
 
-    private var paneChips: some View {
-        HStack(spacing: 8) {
+    /// One row per pane, stacked: a list never runs out of width the way a
+    /// row of chips did.
+    private var paneList: some View {
+        VStack(alignment: .leading, spacing: 2) {
             ForEach(Pane.allCases, id: \.self) { candidate in
                 let selected = candidate == pane
                 Button {
@@ -166,19 +177,21 @@ struct SettingsView: View {
                 } label: {
                     Label(candidate.title, systemImage: candidate.systemImage)
                         .font(.body.weight(selected ? .semibold : .regular))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
                         .foregroundStyle(selected ? Color.white : Color.primary)
                         .background {
-                            Capsule().fill(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary))
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.clear))
                         }
-                        .contentShape(Capsule())
+                        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(selected ? .isSelected : [])
                 .help("\(candidate.title) settings")
             }
-            Spacer(minLength: 0)
         }
     }
 

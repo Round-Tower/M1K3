@@ -18,6 +18,9 @@
 //  with the same treatment the avatar honours (recede/still/Reduce Motion)
 //  and whenever the window is off screen; before, only Low Power paused it.
 //  Confidence now 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — the reading scrim follows the appearance
+//  (`BackdropInk`): black at the edges greyed a light window and sank the tray; light
+//  now lifts the edges with white instead. Dark is unchanged. Confidence 0.75 (by eye).
 
 import Foundation
 import M1K3Avatar
@@ -86,17 +89,23 @@ struct AvatarChatBackground: View {
     }
 }
 
-/// A gentle vertical scrim — slightly darker at the top (toolbar) and bottom
-/// (input bar + the newest, streaming turn), near-clear through the middle — so
-/// text reads over a bright avatar without curtaining it. Non-interactive.
+/// A gentle vertical scrim — stronger at the top (toolbar) and bottom (input
+/// bar + the newest, streaming turn), near-clear through the middle — so text
+/// reads over the avatar without curtaining it. Darkens on dark, lightens on
+/// light (`BackdropInk`). Non-interactive.
 private struct ReadingScrim: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
+        let ink = BackdropInk(isDark: colorScheme == .dark)
+        let tone: Color = ink.scrimIsDark ? .black : .white
+        let edge = ink.scrimEdgeOpacity
         LinearGradient(
             stops: [
-                .init(color: .black.opacity(0.18), location: 0.0),
-                .init(color: .black.opacity(0.04), location: 0.28),
-                .init(color: .black.opacity(0.04), location: 0.72),
-                .init(color: .black.opacity(0.22), location: 1.0),
+                .init(color: tone.opacity(edge[0]), location: 0.0),
+                .init(color: tone.opacity(edge[1]), location: 0.28),
+                .init(color: tone.opacity(edge[2]), location: 0.72),
+                .init(color: tone.opacity(edge[3]), location: 1.0),
             ],
             startPoint: .top,
             endPoint: .bottom

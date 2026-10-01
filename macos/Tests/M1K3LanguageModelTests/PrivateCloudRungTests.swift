@@ -128,9 +128,9 @@ struct PrivateCloudRungTests {
     func controlHelpNamesTheReset() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         #expect(PrivateCloudRung.controlHelp(.ready, armed: false, now: now)
-            == "Use Apple's Private Cloud Compute for this conversation")
+            == "Use Apple's Private Cloud Compute — it stays picked until you choose a brain on this Mac")
         #expect(PrivateCloudRung.controlHelp(.ready, armed: true, now: now)
-            == "On: this conversation goes to Private Cloud Compute until you turn it off")
+            == "On: messages go to Private Cloud Compute until you choose a brain on this Mac")
         #expect(PrivateCloudRung.controlHelp(.unavailable, armed: false, now: now)
             == "Private Cloud Compute isn't available right now")
         let inThreeHours = now.addingTimeInterval(3 * 3600)
@@ -139,6 +139,15 @@ struct PrivateCloudRungTests {
         #expect(PrivateCloudRung.controlHelp(.exhausted(resetsAt: nil), armed: false, now: now)
             == "You've reached your Private Cloud Compute limit for now")
         #expect(PrivateCloudRung.controlHelp(.hidden, armed: false, now: now).isEmpty)
+    }
+
+    /// The brain picker's PCC row (2026-10-01): the name, plus why it can't be
+    /// picked right now — the row stays visible and disabled, like a locked brain.
+    @Test("the brain picker's PCC row names why it can't be picked")
+    func menuTitle() {
+        #expect(PrivateCloudRung.menuTitle(.ready) == "Private Cloud Compute")
+        #expect(PrivateCloudRung.menuTitle(.unavailable) == "Private Cloud Compute · unavailable")
+        #expect(PrivateCloudRung.menuTitle(.exhausted(resetsAt: nil)) == "Private Cloud Compute · limit reached")
     }
 
     /// Review on 7b36869e: an exhausted or unavailable control had no way back to

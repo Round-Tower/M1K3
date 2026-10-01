@@ -255,7 +255,8 @@ struct NotchHUDContentView: View {
                     startPoint: .top, endPoint: .center
                 )
                 LinearGradient(stops: notchBandStops, startPoint: .top, endPoint: .bottom)
-                CRTOverlay()
+                // Its own black field, whatever the appearance: dark ink.
+                CRTOverlay(ink: BackdropInk(isDark: true))
                     .opacity(0.8)
             }
             .clipShape(NotchHUDLayout.shape)
