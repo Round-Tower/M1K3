@@ -85,6 +85,16 @@ Anything a cold session needs on turn one belongs below, not there.
 - Mini's window is the device's (`MiniContextWindow`, recorded at launch;
   4,096 is the floor, not the size). Tests never call `record` — a
   source-scan test fails the suite if one does.
+- Verify-by-launch with a Debug build: `open -n --env M1K3_SCREENGRAB=1 --env
+  M1K3_SCREENGRAB_PLATE=<plate> --env M1K3_SCREENGRAB_RUN=<token> <app>` (an
+  isolated store; the window is pinned at 1440×900). Never exec the binary from
+  a shell: it isn't foreground, so system sheets (Declared Age Range) dismiss
+  and the API says `notAvailable`. No coordinate clicks while Kev is active.
+- App-ID capability entitlements (PCC, Declared Age Range) live in
+  `M1K3-MAS.entitlements` + `M1K3iOS.entitlements` only; `check_store_targets.py`
+  requires them there and forbids them in Developer ID. PCC consent is
+  `PrivateCloudArming` (ADR 0010: asked once, by message id): any new path that
+  sends history to PCC goes through it.
 
 <!--
 Signed: Kev + claude-fable-5.1, 2026-09-24, Confidence 0.8, Prior: Unknown (the
@@ -116,4 +126,7 @@ Review: Kev + claude-opus-5-5, 2026-10-01 (/debrief) — store-copy carry-forwar
 from #463: name/subtitle are record-wide (two metadata folders, one value), the
 review notes have one home, and precheck runs after every deliver push (a stale
 review_information/notes.txt overwrote the live Mac notes). Confidence 0.9.
+Review: Kev + claude-opus-5-5, 2026-10-01 (/debrief, #462) — the Debug-launch
+recipe (an exec'd binary isn't foreground: the age sheet dismissed itself) and
+the entitlement + PCC-consent seams. Confidence 0.85.
 -->
