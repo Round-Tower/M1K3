@@ -1,0 +1,1 @@
+asistente,chatbot,PDF,transcribir,dictado,resumen,agente,developer,notes,documents,research,writing

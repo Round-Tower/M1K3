@@ -1,0 +1,1 @@
+asistente,LLM,chatbot,sin internet,seguro,PDF,transcribir,dictado,resumen,agente,offline

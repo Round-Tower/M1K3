@@ -1,0 +1,1 @@
+assistant,LLM,chatbot,sans internet,sécurisé,PDF,transcription,dictée,compagnon,résumé,agent

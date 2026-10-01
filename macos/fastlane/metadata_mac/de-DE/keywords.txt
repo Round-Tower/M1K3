@@ -1,1 +1,1 @@
-Assistent,Sprachmodell,chatbot,sicher,Dokumente,Transkription,Diktat,Zusammenfassung,Wissen,privat
+Assistent,Sprachmodell,Chatbot,LLM,MCP,ohne Internet,sicher,Dokumente,PDF,Transkription,Diktat

@@ -11,7 +11,7 @@ CE QUE JE FAIS
 
 PUNK PAR DESIGN
 • Tout tourne en local. Inférence, recherche et voix sont sur l’appareil.
-• La seule fois où j’utilise le réseau, c’est pour télécharger un modèle quand tu le demandes, ou pour une recherche web que tu actives explicitement.
+• J’utilise le réseau pour deux choses : télécharger un modèle quand tu le demandes, et la recherche web — activée par défaut pour des réponses à jour, un seul interrupteur dans les Réglages la coupe.
 • Pas d’analytics. Pas de suivi. Pas de collecte de données. Tu peux le vérifier — le code source est publié sous une licence source-available.
 
 CONÇU POUR TA MACHINE

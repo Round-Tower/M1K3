@@ -1,0 +1,1 @@
+assistant,LLM,chatbot,MCP,coding,on-device,PDF,transcribe,dictation,summarise,companion,MLX,secure

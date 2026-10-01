@@ -20,6 +20,13 @@
 # Apple-ID session as fallback; precheck skips IAPs (it cannot read them under
 # an API key); FASTLANE_SKIP_DOCS keeps the hand-written README. Confidence now
 # HIGH for the wiring, verify-by-run for the first API-key `mac metadata` push.
+# Review: Kev + claude-opus-5.5, 2026-10-01 — `ios metadata` joins (the iPhone
+# listing gets its own copy in metadata_ios; it carried the Mac's word for word);
+# name + subtitle are record-wide, so both lanes push the same values and
+# check_store_metadata.py fails the PR if the folders drift. "What to Test"
+# moved to TestFlight/notes/ (Xcode Cloud reads it at archive time).
+# Confidence now 0.8 — the ios lane is the mac lane with platform "ios",
+# unproven until Kev's first run.
 # https://murphysig.dev
 
 default_platform(:mac)
@@ -32,6 +39,8 @@ APPLE_LOGIN = ENV["APPLE_ID"] || "kevin@round-tower.ie"
 # fastlane created on the fly — the screenshots lane "Successfully uploaded all
 # screenshots" while uploading none (2026-09-13, caught by checksum against ASC).
 META_PATH       = File.expand_path("metadata_mac", __dir__)
+IOS_META_PATH   = File.expand_path("metadata_ios", __dir__)
+TESTFLIGHT_DIR  = File.expand_path("../TestFlight", __dir__)
 SHOTS_PATH      = File.expand_path("screenshots_mac", __dir__)
 IOS_SHOTS_PATH  = File.expand_path("screenshots_ios", __dir__)
 # README.md in this folder is hand-written; without this fastlane regenerates
@@ -110,11 +119,22 @@ platform :mac do
 
   desc "Update TestFlight 'What to Test' on the latest build"
   lane :beta_metadata do
-    update_what_to_test(APP_ID, "#{META_PATH}/en-US/what_to_test.txt")
+    update_what_to_test(APP_ID, "#{TESTFLIGHT_DIR}/notes/macos.en-US.txt")
   end
 end
 
 platform :ios do
+  desc "Upload App Store metadata for iPhone + iPad (text only). Name/subtitle are shared with the Mac."
+  lane :metadata do
+    deliver(
+      app_identifier: APP_ID, team_id: TEAM_ID, platform: "ios",
+      api_key: asc_api_key,
+      skip_binary_upload: true, skip_screenshots: true, force: true,
+      precheck_include_in_app_purchases: false,
+      metadata_path: IOS_META_PATH
+    )
+  end
+
   desc "Upload App Store screenshots (iPhone + iPad sizes, detected by pixel size)"
   lane :screenshots do
     deliver(

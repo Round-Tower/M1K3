@@ -1,0 +1,18 @@
+Mes amis m’appellent Mike. Je suis un agent IA local qui vit sur ton iPhone et ton iPad — pas de compte, pas d’inscription, pas de télémétrie. Tes conversations, notes et documents restent sur l’appareil.
+
+CE QUE JE FAIS
+• Discute avec un cerveau sur l’appareil — Mini démarre instantanément sur les appareils compatibles Apple Intelligence (ailleurs, un petit téléchargement), et Lil (4B) tourne entièrement hors ligne sur les iPhone et iPad dotés de 8 Go de mémoire.
+• Parle-moi : reconnaissance vocale sur l’appareil et une voix neuronale naturelle.
+• Apporte tes connaissances : ajoute des PDF et des fichiers texte, et je réponds à partir d’eux, sur l’appareil.
+• Je retiens ce qui compte pour toi, et tu peux voir et rechercher tout ce que j’ai gardé.
+• Un compagnon 3D sympa ou un visage en pixels — et sur iPad, une constellation de tes souvenirs.
+• Brain at Home : associe-moi à ton Mac via ton propre Wi-Fi et emprunte son grand cerveau depuis le canapé.
+
+PRIVÉ PAR CONCEPTION
+• Les cerveaux, la recherche dans tes documents et la voix tournent tous sur l’appareil.
+• J’utilise le réseau pour deux choses : télécharger un cerveau quand tu en choisis un, et la recherche web — activée par défaut pour des réponses à jour, un seul interrupteur dans les Réglages la coupe.
+• Pas d’analytique. Pas de pistage. Aucune donnée collectée. Le code source est publié sous une licence source-available : tu peux vérifier.
+
+Fonctionne hors ligne — en avion, en montagne, partout où le réseau ne passe pas.
+
+Intelligence punk : la tienne, privée, selon tes règles.

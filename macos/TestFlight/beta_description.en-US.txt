@@ -1,0 +1,14 @@
+M1K3 is a local AI agent — a private companion that lives on your iPhone, iPad and Mac. No account, no sign-up, no telemetry: the brains run on the device, your documents and memories stay in the app's sandbox, and it keeps working offline.
+
+What to try in this beta:
+
+• Chat straight away — M1K3 starts on Mini: instant with no download on Apple Intelligence devices, a small one-time download elsewhere. Bigger offline brains are optional upgrades offered as you go: Lil on iPhones and iPads with 8 GB of memory and on any Apple Silicon Mac, Big on Macs with 16 GB or more.
+• Drop in a document and ask about it — answers are grounded in what you gave it, with citations.
+• Voice mode — talk to M1K3 and hear it answer in a natural neural voice.
+• Memories — tell it things worth keeping; it distils durable facts from conversations, and you can review and search them.
+• The companion — a 3D avatar that reacts while M1K3 thinks and speaks.
+• Brain at Home — pair your iPhone or iPad with M1K3 on your Mac over Wi-Fi and borrow the Mac's bigger brain.
+
+Requirements: iOS 26 or iPadOS 26, or an Apple Silicon Mac on macOS 26. Brain downloads run to several GB, so Wi-Fi is recommended. Web search is on by default and one switch in Settings turns it off.
+
+Known rough edges: the first brain download is long; voice mode is best with headphones. Please report anything odd through TestFlight feedback, or on the Mac via Settings → "Report an issue…" (it attaches a privacy-scrubbed diagnostic).

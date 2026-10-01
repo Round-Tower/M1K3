@@ -11,7 +11,7 @@ WHAT I DO
 
 PUNK BY DESIGN
 • Everything runs locally. Inference, search, and voice are all on-device.
-• The only time I use the network is to download a model when you ask, or to run a web search you explicitly turn on.
+• I use the network for two things: downloading a brain when you ask, and web search — on by default so answers can be current, one switch in Settings to turn it off.
 • No analytics. No tracking. No data collection. You can verify it — the source code is published under a source-available licence.
 
 BUILT FOR YOUR MACHINE
