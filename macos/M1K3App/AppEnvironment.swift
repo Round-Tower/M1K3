@@ -85,6 +85,9 @@
 //  `selectBrain` build through `makeMLXBrain(for:)` (AppEnvironment+Auditions), and the reselect no-op
 //  compares where the brain was loaded FROM (`sourceKey`), since an audition can share the stock
 //  model's name. A live audition load leaves a sentinel `.ready` clears. No audition chosen: unchanged.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — a failed chat turn now sets the avatar's `.error` activity
+//  (companion distress: Fear / fox Run) and settles to idle after `avatarDistressDuration` (3 s); it was
+//  earcon-only, so Fear was unreachable. Confidence now 0.8 (the settle is verify-by-launch).
 
 import AppKit
 import Foundation
@@ -1300,11 +1303,26 @@ final class AppEnvironment {
                 reviewLedger.recordCompletedTurn()
             }
         }
+        // A failed turn shows distress on the companion (Fear / the fox's Run) for a
+        // beat, then settles — `.error` was never set anywhere, so Fear was
+        // unreachable and a failure only earned the earcon.
+        if answerFailed {
+            avatar.setActivity(.error)
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: Self.avatarDistressDuration)
+                // Only settle OUR error: a new turn already moved the avatar on.
+                if self?.avatar.state.activity == .error { self?.avatar.resetToIdle() }
+            }
+            return
+        }
         // Only reset to idle if the avatar isn't already in a speaking state
         // (e.g. auto-TTS path sets .speaking before we return here).
         if case .speaking = avatar.state.activity { return }
         avatar.resetToIdle()
     }
+
+    /// How long a failed turn's distress beat shows before the avatar settles to idle.
+    static let avatarDistressDuration: Duration = .seconds(3)
 
     private func surfaceCodeArtifact(from responseText: String) {
         let artifacts = CodeBlockDetector.detect(in: responseText)
