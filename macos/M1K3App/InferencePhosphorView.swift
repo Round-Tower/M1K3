@@ -109,7 +109,9 @@ struct InferencePhosphorView: View {
         // …and with nothing to draw or feed the clock stops too: an empty rain
         // behind an idle chat cost 52–58% CPU at 30 fps (2026-10-01). Reading
         // `isResponding` / `ambientNotes` here re-renders on a new turn or note,
-        // which restarts it; lines run until they expire, then it parks.
+        // which restarts it; lines run until they expire, then it parks. Parking
+        // relies on `feed`'s `rain.prune` mutating @State when the last line
+        // expires (that re-render is what re-reads `needsClock`).
         let clockIdle = !rain.needsClock(
             isResponding: env.chat.isResponding,
             hasUnseenAmbient: env.ambientNotes.last?.id != lastAmbientID

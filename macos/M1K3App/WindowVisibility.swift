@@ -58,7 +58,8 @@ extension View {
 
     /// Report this window's visibility out of SwiftUI (e.g. to the notch HUD).
     /// Attach INSIDE `.trackWindowVisibility()` so it reads that window's value;
-    /// a window that goes away reports false.
+    /// a window that goes away reports false. Last writer wins — meant for a
+    /// single-instance `Window` scene (the main window is one).
     func onWindowVisibilityChange(_ report: @escaping (Bool) -> Void) -> some View {
         modifier(WindowVisibilityReporter(report: report))
     }
