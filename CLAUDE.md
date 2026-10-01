@@ -68,6 +68,12 @@ Anything a cold session needs on turn one belongs below, not there.
 - Bundle ID, log subsystem, Keychain and container are all `app.m1k3`.
 - `.info` / `.debug` do not persist in OSLogStore; breadcrumbs are `.notice`+.
 - Read the store (`itunes.apple.com/lookup?id=`) before saying what users have.
+- Store copy: name/subtitle are record-wide, so edit `macos/fastlane/metadata_mac`
+  AND `metadata_ios` together (`macos/tools/ci/check_store_metadata.py` fails on
+  drift). Review notes live only in `macos/fastlane/review_notes.txt`. Run
+  `macos/tools/asc/precheck.py` after every deliver push (a stale
+  `review_information/notes.txt` clobbered the live notes on 2026-10-01).
+  `submit.py --confirm` is Kev's, via `!`.
 - Never pre-seed the model cache with `hf download` (cache poison).
 - In-app A/B overrides go as argv (`M1K3 -prefillStepSize 512`): on macOS 27
   `defaults write app.m1k3` never reaches the sandboxed app. `log` is a zsh
@@ -106,4 +112,8 @@ Review: Kev + claude-fable-5.1, 2026-09-30 — PR granularity + push/land standi
 permission, after Kev asked "are we hurting our zen?": the review loop caught
 four real bugs that day and stays; the per-PR ceremony and the human relay
 were the cost. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-01 (/debrief) — store-copy carry-forward
+from #463: name/subtitle are record-wide (two metadata folders, one value), the
+review notes have one home, and precheck runs after every deliver push (a stale
+review_information/notes.txt overwrote the live Mac notes). Confidence 0.9.
 -->
