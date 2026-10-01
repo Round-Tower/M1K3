@@ -35,6 +35,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-28 — #270 slice 3: the access token row (masked, Copy, New Token… behind
 //  a dialog that names what breaks). Snippets SHOW the masked token and COPY the real one; the Terminal line is
 //  `m1k3 login && m1k3 connect`. Secrets go on the pasteboard marked concealed. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — Content Controls' "Set up" did nothing on the Mac: the
+//  store build had no declared-age-range entitlement and the catch swallowed the refusal. The entitlement
+//  is in M1K3-MAS.entitlements now, and a failed ask says why (`AgeRangeRequestFailure`, tested) without
+//  touching the band. The PCC footer names the brain picker (ADR 0010). Confidence 0.8 (the sheet is
+//  verify-by-launch on a store-signed build).
 
 import AppKit // NSPasteboard — the Copy buttons
 #if canImport(DeclaredAgeRange)
@@ -71,6 +76,8 @@ struct PrivacySettingsPane: View {
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
     @State private var ageBandRequesting = false
+    /// Why the last "Set up" came back without an answer — shown under the button.
+    @State private var ageRangeFailure: AgeRangeRequestFailure?
 
     var body: some View {
         Form {
@@ -155,9 +162,10 @@ struct PrivacySettingsPane: View {
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("""
-                    Off unless you turn it on. Then a cloud button beside the message field \
-                    sends that conversation to Apple's Private Cloud Compute until you turn it \
-                    off. You see your words before the first one goes, and each answer is labelled.
+                    Off unless you turn it on. Then Private Cloud Compute joins the brain picker, \
+                    and once you pick it, it stays picked until you choose a brain on this Mac. \
+                    The first time, you see exactly what goes before it goes, and each answer \
+                    is labelled.
                     """)
                     Link("How Apple protects it", destination: PrivateCloudTurn.appleGuaranteeURL)
                 }
@@ -190,6 +198,11 @@ struct PrivacySettingsPane: View {
                     requestAgeRange()
                 }
                 .disabled(ageBandRequesting)
+                if let ageRangeFailure {
+                    Label(ageRangeFailure.message, systemImage: "exclamationmark.circle")
+                        .font(.callout)
+                        .foregroundStyle(.orange)
+                }
             } header: {
                 SettingsHeader("Content Controls", systemImage: "hand.raised")
             } footer: {
@@ -210,9 +223,13 @@ struct PrivacySettingsPane: View {
     #if !os(visionOS)
         private func requestAgeRange() {
             ageBandRequesting = true
+            ageRangeFailure = nil
             Task { @MainActor in
                 defer { ageBandRequesting = false }
-                guard let window = NSApp.keyWindow ?? NSApp.mainWindow else { return }
+                guard let window = NSApp.keyWindow ?? NSApp.mainWindow else {
+                    ageRangeFailure = .other
+                    return
+                }
                 do {
                     let service = AgeRangeService.shared
                     let response = try await service.requestAgeRange(ageGates: 13, 16, 18, in: window)
@@ -225,8 +242,12 @@ struct PrivacySettingsPane: View {
                     @unknown default:
                         break
                     }
+                } catch let error as AgeRangeService.Error {
+                    // A failed ask leaves the band as it was, and says why (it used to
+                    // say nothing: the tap looked dead).
+                    ageRangeFailure = AgeRangeRequestFailure(error)
                 } catch {
-                    // notAvailable / invalidAccount / network — leave as-is, user can retry.
+                    ageRangeFailure = .other
                 }
             }
         }
@@ -529,3 +550,19 @@ struct PrivacySettingsPane: View {
         pasteboard.setString("", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
     }
 }
+
+#if canImport(DeclaredAgeRange) && !os(visionOS)
+    extension AgeRangeRequestFailure {
+        /// The boundary map: M1K3Chat never imports DeclaredAgeRange.
+        init(_ error: AgeRangeService.Error) {
+            switch error {
+            case .notAvailable: self = .notAvailable
+            case .invalidAccount: self = .invalidAccount
+            case .network: self = .network
+            case .declinedOnboarding: self = .declinedOnboarding
+            case .invalidRequest: self = .other
+            @unknown default: self = .other
+            }
+        }
+    }
+#endif

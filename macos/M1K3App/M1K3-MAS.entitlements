@@ -43,5 +43,11 @@
 	     launch the app. Without it the PCC backend reads absent, by design. -->
 	<key>com.apple.developer.private-cloud-compute</key>
 	<true/>
+	<!-- Declared Age Range (Content Controls, gates 13/16/18): without it the API
+	     refuses before any sheet, so "Set up" did nothing (build 375, 2026-10-01).
+	     An App ID capability, so store lane only, like PCC above; the guard
+	     check_store_targets.py pins it here and keeps it out of M1K3.entitlements. -->
+	<key>com.apple.developer.declared-age-range</key>
+	<true/>
 </dict>
 </plist>

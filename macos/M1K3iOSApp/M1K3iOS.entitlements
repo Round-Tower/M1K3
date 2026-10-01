@@ -17,9 +17,16 @@
   Apple's documented lever for exactly this; the 4 GB ceiling vs the real per-device
   jetsam budget is still the verify-owed measurement — os_proc_available_memory()
   on hardware). Prior: none (new file).
+  Review: Kev + claude-opus-5-5, 2026-10-01 — Declared Age Range joins it: Content
+  Controls' "Set up" needs the entitlement or the API refuses before any sheet (the
+  Mac's tap did nothing in build 375). An App ID capability, so the profile carries
+  it. check_store_targets.py pins it. Confidence 0.8 (the Xcode Cloud profile picking
+  the capability up is verify-by-archive).
 -->
 <dict>
 	<key>com.apple.developer.kernel.increased-memory-limit</key>
+	<true/>
+	<key>com.apple.developer.declared-age-range</key>
 	<true/>
 </dict>
 </plist>

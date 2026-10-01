@@ -2,12 +2,12 @@
 //  PrivateCloudConsentSheet.swift
 //  M1K3App
 //
-//  The sheet every Private Cloud Compute send passes through (ADR 0006). It
-//  says in one sentence what leaves and where it goes, shows the message, and
-//  offers one box — this conversation — that is OFF each time, with its exact
-//  text one click away. Nothing is remembered between sends: a habit of
-//  ticking is the risk the design guards against, and the default sends the
-//  minimum.
+//  The Private Cloud Compute consent sheet (ADR 0006). It says in one sentence
+//  what leaves and where it goes, shows the message, and offers one box — this
+//  conversation — that is OFF when it opens, with its exact text one click away.
+//  Since ADR 0010 it shows ONCE: its answer is remembered until PCC is un-picked.
+//  The box's habit-of-ticking risk is held by the one exception — a conversation
+//  holding on-device answers shows the sheet again before that history goes.
 //
 //  App glue, committed with TDD_SKIP: the words are PrivateCloudTurn's and the
 //  send path is ChatSession's, both tested in the package.
@@ -16,6 +16,8 @@
 //  against the Debug echo backend: the message, the box off by default, the
 //  disclosed transcript matching what the echo received; the words are the
 //  package's, pinned there). Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — header only: the sheet now shows once (ADR 0010), so
+//  "nothing is remembered between sends" stopped being true; the view itself is unchanged. Confidence 0.85.
 //
 
 import M1K3Chat

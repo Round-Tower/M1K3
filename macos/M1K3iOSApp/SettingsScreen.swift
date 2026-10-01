@@ -30,6 +30,9 @@
 //  Review: Kev + claude-opus-4-6, 2026-09-19 — Content Controls section (DeclaredAgeRange
 //  age-band wiring: Settings > Content Controls > system sheet, web-tool gating for under-16,
 //  @preconcurrency import for the non-Sendable DeclaredAgeRangeAction). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — the entitlement this needed was never added
+//  (M1K3iOS.entitlements has it now), and `catch {}` hid the refusal. A failed ask says why
+//  (`AgeRangeRequestFailure`, tested) and leaves the band alone. Confidence 0.8 (verify on device).
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -43,6 +46,8 @@ struct SettingsScreen: View {
     @Environment(AppCore.self) private var core
     @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
+    /// Why the last "Set up" came back without an answer — shown under the button.
+    @State private var ageRangeFailure: AgeRangeRequestFailure?
     @AppStorage(ReadingMode.storageKey) private var readingModeRaw = ReadingMode.standard.rawValue
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
 
@@ -202,6 +207,11 @@ struct SettingsScreen: View {
                 Button(band == .undeclared ? "Set up" : "Update") {
                     requestAgeBand()
                 }
+                if let ageRangeFailure {
+                    Label(ageRangeFailure.message, systemImage: "exclamationmark.circle")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
             } header: {
                 Text("Content Controls")
             } footer: {
@@ -212,6 +222,7 @@ struct SettingsScreen: View {
         }
 
         private func requestAgeBand() {
+            ageRangeFailure = nil
             Task { @MainActor in
                 do {
                     let response = try await requestAgeRange(ageGates: 13, 16, 18)
@@ -223,7 +234,11 @@ struct SettingsScreen: View {
                     @unknown default:
                         break
                     }
-                } catch {}
+                } catch let error as AgeRangeService.Error {
+                    ageRangeFailure = AgeRangeRequestFailure(error)
+                } catch {
+                    ageRangeFailure = .other
+                }
             }
         }
     #else
@@ -302,3 +317,20 @@ struct SettingsScreen: View {
         return "\(version) (\(build))"
     }
 }
+
+#if canImport(DeclaredAgeRange) && !os(visionOS)
+    extension AgeRangeRequestFailure {
+        /// The boundary map: M1K3Chat never imports DeclaredAgeRange. (The Mac's
+        /// twin lives in PrivacySettingsPane; the two shells share no app files.)
+        init(_ error: AgeRangeService.Error) {
+            switch error {
+            case .notAvailable: self = .notAvailable
+            case .invalidAccount: self = .invalidAccount
+            case .network: self = .network
+            case .declinedOnboarding: self = .declinedOnboarding
+            case .invalidRequest: self = .other
+            @unknown default: self = .other
+            }
+        }
+    }
+#endif

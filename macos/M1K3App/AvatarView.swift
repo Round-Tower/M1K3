@@ -362,9 +362,23 @@ struct AvatarView: View {
 /// (Instruments); a Debug A/B of master, app hidden, HUD shown once then folded,
 /// read 13.9 % unfixed → 0.6 % fixed (0.7 % before any HUD). Owning the gate
 /// here means no host can forget it. Confidence now 0.85.
+/// Review: Kev + claude-opus-5-5, 2026-10-01 — the ink follows the appearance
+/// (`BackdropInk`, tested): black lines at dark's strength greyed a light window
+/// end to end once the companion became the full-window backdrop. Dark is
+/// unchanged; a host on its own black field (the notch HUD) pins dark ink.
+/// Confidence 0.8 (light numbers judged by eye).
 struct CRTOverlay: View {
     /// Freeze the rolling band + phosphor breathe (see AvatarView.paused).
     var paused = false
+    /// Pin the ink instead of following the appearance — for a host that draws
+    /// its own dark field under the pass whatever the system appearance is.
+    var ink: BackdropInk?
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var resolvedInk: BackdropInk {
+        ink ?? BackdropInk(isDark: colorScheme == .dark)
+    }
 
     #if canImport(AppKit)
         /// Published by `.trackWindowVisibility()` at the window root; `true`
@@ -387,11 +401,9 @@ struct CRTOverlay: View {
         paused || !windowVisible
     }
 
-    // Tunables, judged by eye.
-    private static let scanlineOpacity: Double = 0.20
+    // Tunables, judged by eye (the ink strengths live in `BackdropInk`).
     private static let bandHeight: CGFloat = 70
     private static let bandSpeed: CGFloat = 26 // points per second, downward
-    private static let vignetteOpacity: Double = 0.38
 
     /// Scanline pitch scales WITH the surface so the CRT reads the same at any
     /// avatar size. A fixed 3pt pitch is a fine texture on the ~200pt panel but a
@@ -414,11 +426,11 @@ struct CRTOverlay: View {
             let time = context.date.timeIntervalSince(start)
             GeometryReader { geometry in
                 ZStack(alignment: .top) {
-                    Scanlines()
+                    Scanlines(opacity: resolvedInk.scanlineOpacity)
                         .opacity(Self.breathe(time: time) / Self.breathePeak)
                     RollingBand()
                         .offset(y: Self.bandY(time: time, height: geometry.size.height))
-                    Vignette()
+                    Vignette(opacity: resolvedInk.vignetteOpacity)
                 }
             }
         }
@@ -448,6 +460,8 @@ struct CRTOverlay: View {
 
     /// Thin dark lines every few points — one path, one fill, drawn per size.
     private struct Scanlines: View {
+        let opacity: Double
+
         var body: some View {
             Canvas { canvas, size in
                 let spacing = CRTOverlay.scanlineSpacing(forHeight: size.height)
@@ -457,8 +471,7 @@ struct CRTOverlay: View {
                     lines.addRect(CGRect(x: 0, y: y, width: size.width, height: 1))
                     y += spacing
                 }
-                let opacity = CRTOverlay.scanlineOpacity * CRTOverlay.breathePeak
-                canvas.fill(lines, with: .color(.black.opacity(opacity)))
+                canvas.fill(lines, with: .color(.black.opacity(opacity * CRTOverlay.breathePeak)))
             }
         }
     }
@@ -486,6 +499,8 @@ struct CRTOverlay: View {
     /// keeps gentle corner curvature instead of crushed black wells; the small
     /// panel is unchanged. Static — drawn per size, never per tick.
     private struct Vignette: View {
+        let opacity: Double
+
         var body: some View {
             Canvas { canvas, size in
                 let centre = CGPoint(x: size.width / 2, y: size.height / 2)
@@ -494,7 +509,7 @@ struct CRTOverlay: View {
                 let gradient = Gradient(stops: [
                     .init(color: .clear, location: 0),
                     .init(color: .clear, location: 0.55),
-                    .init(color: .black.opacity(CRTOverlay.vignetteOpacity), location: 1),
+                    .init(color: .black.opacity(opacity), location: 1),
                 ])
                 canvas.fill(
                     Path(CGRect(origin: .zero, size: size)),

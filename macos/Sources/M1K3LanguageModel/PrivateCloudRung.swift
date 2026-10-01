@@ -32,6 +32,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — `controlHelp` speaks for the whole
 //  conversation: the control now stays on (`PrivateCloudArming`), no longer one
 //  message. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — PCC is a row in the brain picker now
+//  (`menuTitle`), and the pick holds until a local brain is chosen, so `controlHelp`
+//  says so. `brainPickerHelp` (PR #462 review) lifts the picker's tooltip out of the view,
+//  and names voice mode as on-device. Confidence 0.85.
 //
 
 import Foundation
@@ -117,8 +121,8 @@ public enum PrivateCloudRung {
         switch control {
         case .ready:
             armed
-                ? "On: this conversation goes to Private Cloud Compute until you turn it off"
-                : "Use Apple's Private Cloud Compute for this conversation"
+                ? "On: messages go to Private Cloud Compute until you choose a brain on this Mac"
+                : "Use Apple's Private Cloud Compute — it stays picked until you choose a brain on this Mac"
         case .unavailable:
             "Private Cloud Compute isn't available right now"
         case let .exhausted(resetsAt):
@@ -129,6 +133,40 @@ public enum PrivateCloudRung {
         case .hidden:
             ""
         }
+    }
+
+    /// The brain picker's PCC row: the name, plus why it can't be picked right
+    /// now. The row stays visible and disabled, like a locked brain.
+    public static func menuTitle(_ control: Control) -> String {
+        switch control {
+        case .ready, .hidden: PrivateCloudLabel.text
+        case .unavailable: "\(PrivateCloudLabel.text) · unavailable"
+        case .exhausted: "\(PrivateCloudLabel.text) · limit reached"
+        }
+    }
+
+    /// The brain picker's tooltip: who answers the next TYPED send, and why it
+    /// isn't PCC when PCC is picked but won't serve it. Voice turns always
+    /// answer on this Mac (ADR 0010), so voice mode names the local brain.
+    public static func brainPickerHelp(
+        picked: Bool,
+        control: Control,
+        hasAttachments: Bool,
+        voiceMode: Bool,
+        autoRoute: Bool,
+        brainName: String,
+        now: Date
+    ) -> String {
+        if picked, control != .hidden {
+            if voiceMode { return "Voice stays on this Mac — \(brainName) answers while you talk" }
+            if control == .ready, hasAttachments {
+                return "Attachments never go to Private Cloud Compute — this message stays on this Mac"
+            }
+            return controlHelp(control, armed: true, now: now)
+        }
+        return autoRoute
+            ? "Auto-route is on — M1K3 picks the brain. Turn it off in Settings to choose manually."
+            : "Switch brain — currently \(brainName)"
     }
 
     /// How long to wait before re-reading PCC's status while the control can't be

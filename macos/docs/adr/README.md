@@ -14,3 +14,4 @@ never edit, accepted ones.
 | [0007](0007-private-cloud-consent-per-conversation.md) | Private Cloud Compute consent holds for a conversation, not one request | Accepted | 2026-09-26 |
 | [0008](0008-mini-routes-plain-chat-around-the-tool-palette.md) | Mini routes plain chat around the tool palette | Accepted | 2026-09-26 |
 | [0009](0009-mini-runs-read-only-tools-outside-the-model-loop.md) | Mini runs read-only tools outside the model loop | Accepted | 2026-09-26 |
+| [0010](0010-private-cloud-is-a-brain-pick-that-holds.md) | Private Cloud Compute is a brain you pick, and the pick holds | Accepted | 2026-10-01 |

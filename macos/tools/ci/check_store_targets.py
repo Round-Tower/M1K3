@@ -194,7 +194,11 @@ def audit(project: dict) -> list[str]:
 # Entitlements that only a provisioning profile can grant. The Developer ID
 # lane (M1K3App/M1K3.entitlements) ships without a profile, so AMFI refuses to
 # launch an app that claims one of these there: every DMG and cask install dies.
-PROFILE_ONLY_ENTITLEMENTS = ("com.apple.developer.private-cloud-compute",)
+PROFILE_ONLY_ENTITLEMENTS = (
+    "com.apple.developer.private-cloud-compute",
+    # Declared Age Range (2026-10-01): an App ID capability, so a profile carries it.
+    "com.apple.developer.declared-age-range",
+)
 
 
 def profile_only_leaks(developer_id_entitlements: dict) -> list[str]:
@@ -202,6 +206,21 @@ def profile_only_leaks(developer_id_entitlements: dict) -> list[str]:
         f"M1K3.entitlements (Developer ID, no profile) claims {key} — store lane only (M1K3-MAS.entitlements)"
         for key in PROFILE_ONLY_ENTITLEMENTS
         if key in developer_id_entitlements
+    ]
+
+
+# Entitlements every store lane must carry: a feature App Review is pointed at
+# that silently does nothing without one. Build 375 shipped Content Controls with
+# no declared-age-range entitlement, so the Mac's "Set up" never showed a sheet.
+STORE_LANE_REQUIRED_ENTITLEMENTS = ("com.apple.developer.declared-age-range",)
+STORE_LANE_ENTITLEMENTS = ("M1K3App/M1K3-MAS.entitlements", "M1K3iOSApp/M1K3iOS.entitlements")
+
+
+def store_lane_gaps(name: str, store_entitlements: dict) -> list[str]:
+    return [
+        f"{name} (store lane) is missing {key} — the feature it gates does nothing without it"
+        for key in STORE_LANE_REQUIRED_ENTITLEMENTS
+        if store_entitlements.get(key) is not True
     ]
 
 
@@ -219,6 +238,9 @@ def main(argv: list[str]) -> int:
     problems = audit(project)
     with open(os.path.join(macos, "M1K3App", "M1K3.entitlements"), "rb") as f:
         problems += profile_only_leaks(plistlib.load(f))
+    for lane in STORE_LANE_ENTITLEMENTS:
+        with open(os.path.join(macos, lane), "rb") as f:
+            problems += store_lane_gaps(os.path.basename(lane), plistlib.load(f))
     names = sorted(store_targets(project))
     if not problems:
         print(f"✓ {len(names)} store targets ({', '.join(names)}) all upload into {EXPECTED_BUNDLE_ID!r} "

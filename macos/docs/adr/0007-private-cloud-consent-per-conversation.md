@@ -1,7 +1,7 @@
 # 0007. Private Cloud Compute consent holds for a conversation, not one request
 
 Date: 2026-09-26
-Status: ACCEPTED — Kev, 2026-09-26 (scope confirmed: the whole conversation)
+Status: ACCEPTED — Kev, 2026-09-26 (scope confirmed: the whole conversation). Amended by [ADR 0010](0010-private-cloud-is-a-brain-pick-that-holds.md) (where the control lives; the pick now holds)
 Deciders: Kev (the ask: "PCC should stay on when selected by the user") + claude-opus-5-5
 Supersedes: the "Default OFF, per request" constraint of [ADR 0006](0006-private-cloud-compute-rung-and-the-private-by-design-posture.md), in part
 

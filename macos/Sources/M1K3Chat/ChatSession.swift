@@ -60,6 +60,10 @@
 //  (`Consent.conversationID`) and a send from any other conversation is refused: with PCC now on for a
 //  whole conversation, a sheet left open across a switch would have sent A's history and answered into B.
 //  Confidence 0.9 (ChatSessionPrivateCloudTests.consentIsBoundToItsConversation).
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — `onDeviceMessageIDs` (tested): PCC consent is asked
+//  once now (ADR 0010), and a stored "also send this conversation" must still show the sheet before
+//  text that never left this Mac goes. By message id (PR #462 round two: a per-conversation flag went
+//  stale when a local turn landed after the sheet), questions included. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -1049,6 +1053,31 @@ public final class ChatSession {
                   message.contextExcluded != true else { return nil }
             return ChatTurn(role: message.role == .user ? .user : .assistant, text: message.text)
         }
+    }
+
+    /// The ids of the messages PCC would be shown that never left this Mac: an
+    /// answer made here, and a question no PCC answer followed (its own answer
+    /// may have failed or been stopped). With PCC consent asked once (ADR
+    /// 0010), a stored "also send this conversation" re-asks while any of these
+    /// is unseen. Same filter as `replayableHistory`, so it counts exactly what
+    /// would be shared.
+    public nonisolated static func onDeviceMessageIDs(_ messages: [ChatMessage]) -> Set<UUID> {
+        var ids: Set<UUID> = []
+        for (index, message) in messages.enumerated() {
+            guard case .complete = message.status, !message.text.isEmpty,
+                  message.contextExcluded != true else { continue }
+            switch message.role {
+            case .assistant:
+                if message.answerOrigin == nil { ids.insert(message.id) }
+            default:
+                let reply = messages[(index + 1)...].first { $0.role == .assistant }
+                let leftWithAnswer = reply.map {
+                    $0.answerOrigin == .privateCloudCompute && $0.status == .complete
+                } ?? false
+                if !leftWithAnswer { ids.insert(message.id) }
+            }
+        }
+        return ids
     }
 
     /// The turns eligible for distillation: complete, non-empty, not display-only

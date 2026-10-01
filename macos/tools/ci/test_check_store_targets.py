@@ -186,6 +186,25 @@ def test_pcc_in_developer_id_entitlements_is_flagged():
     assert "private-cloud-compute" in leaks[0]
 
 
+def test_declared_age_range_in_developer_id_entitlements_is_flagged():
+    leaks = m.profile_only_leaks({"com.apple.developer.declared-age-range": True})
+    assert len(leaks) == 1
+    assert "declared-age-range" in leaks[0]
+
+
+# 2026-10-01: build 375 shipped Content Controls with no declared-age-range
+# entitlement, so "Set up" did nothing on the Mac — the path App Review is sent down.
+def test_store_lane_without_declared_age_range_is_flagged():
+    missing = m.store_lane_gaps("M1K3-MAS.entitlements", {"com.apple.security.app-sandbox": True})
+    assert len(missing) == 1
+    assert "declared-age-range" in missing[0]
+    assert "M1K3-MAS.entitlements" in missing[0]
+
+
+def test_store_lane_with_declared_age_range_passes():
+    assert m.store_lane_gaps("M1K3iOS.entitlements", {"com.apple.developer.declared-age-range": True}) == []
+
+
 def test_archs_arm64_passes():
     project = _project(
         {"M1K3": _app("macOS", "app.m1k3", "a.plist", sources=[{"path": "M1K3App"}])},
