@@ -128,6 +128,9 @@ struct M1K3App: App {
             // Occlusion-derived visibility for every avatar surface in this window
             // (2026-09-12 thermal audit): a minimised / covered / closed window
             // mounts no RealityView. One probe per window root — see WindowVisibility.
+            // The notch HUD stays down while this window is on screen (one fox at
+            // a time, NotchHUDDemand) — reported from inside the tracked subtree.
+            .onWindowVisibilityChange { appDelegate.environment?.mainWindowOnScreen = $0 }
             .trackWindowVisibility()
         }
         .windowResizability(.contentSize)

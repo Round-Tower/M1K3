@@ -28,6 +28,9 @@
 //  Confidence now 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #405: reads `\.windowVisible` itself, so no host can
 //  forget it — voice mode's did, and the rain ticked at 30 fps behind a hidden window. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — the clock parks when there is nothing to draw or feed
+//  (`InferencePhosphor.needsClock`): an EMPTY rain behind an idle, visible chat held the window at
+//  52–58% CPU (Debug A/B; 0.1–1.5% with the rain off). Confidence 0.85.
 //
 
 import M1K3Avatar
@@ -103,7 +106,15 @@ struct InferencePhosphorView: View {
         // "stay cheap" invariant AvatarSurface honours via `paused:` in this
         // ZStack. A paused timeline still renders one frame, so lingering lines
         // fade on the next real change rather than freezing mid-air forever.
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: lowPower || paused || !windowVisible)) { context in
+        // …and with nothing to draw or feed the clock stops too: an empty rain
+        // behind an idle chat cost 52–58% CPU at 30 fps (2026-10-01). Reading
+        // `isResponding` / `ambientNotes` here re-renders on a new turn or note,
+        // which restarts it; lines run until they expire, then it parks.
+        let clockIdle = !rain.needsClock(
+            isResponding: env.chat.isResponding,
+            hasUnseenAmbient: env.ambientNotes.last?.id != lastAmbientID
+        )
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: lowPower || paused || !windowVisible || clockIdle)) { context in
             let now = context.date
             Canvas { canvas, size in
                 draw(canvas, size: size, now: now)

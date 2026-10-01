@@ -120,3 +120,32 @@ struct InferencePhosphorTests {
         #expect(rain.rise(for: line, at: t0.addingTimeInterval(4), riseHeight: 100) == 100)
     }
 }
+
+/// 2026-10-01: the rain's 30 fps clock ran forever behind the chat, drawing an
+/// empty full-window layer — 52–58% CPU visible (Debug A/B) vs 0.1–1.5% with
+/// the rain off. The clock only runs while there is something to draw or feed.
+struct InferencePhosphorClockTests {
+    let t0 = Date(timeIntervalSince1970: 1000)
+
+    @Test("an empty rain with nothing coming needs no clock")
+    func idleNeedsNoClock() {
+        let rain = InferencePhosphor()
+        #expect(!rain.needsClock(isResponding: false, hasUnseenAmbient: false))
+    }
+
+    @Test("a turn in flight or an unseen ambient note starts it")
+    func incomingStartsClock() {
+        let rain = InferencePhosphor()
+        #expect(rain.needsClock(isResponding: true, hasUnseenAmbient: false))
+        #expect(rain.needsClock(isResponding: false, hasUnseenAmbient: true))
+    }
+
+    @Test("lines still on screen keep it running until they expire")
+    func linesKeepClockUntilPruned() {
+        var rain = InferencePhosphor(maxLines: 7, fragmentCap: 64, lineTTL: 9)
+        rain.ingestOwn("checking the weather", source: .tool, at: t0)
+        #expect(rain.needsClock(isResponding: false, hasUnseenAmbient: false))
+        rain.prune(at: t0.addingTimeInterval(9))
+        #expect(!rain.needsClock(isResponding: false, hasUnseenAmbient: false))
+    }
+}

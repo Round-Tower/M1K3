@@ -204,3 +204,34 @@ struct NotchHUDVisibilityCadenceTests {
         #expect(NotchHUDVisibility.wakeValve(speaking: false) == .seconds(30))
     }
 }
+
+/// One fox at a time (2026-10-01): the HUD is a second RealityView, and on
+/// Kev's M1 Max the main window's own avatar already costs 18–54% CPU visible.
+/// While that window is on screen it is the narration surface; the HUD is for
+/// when you are elsewhere.
+struct NotchHUDDemandTests {
+    @Test("speaking with the main window off screen wants the HUD")
+    func speakingElsewhereWantsHUD() {
+        #expect(NotchHUDDemand.wantsHUD(enabled: true, speaking: true, mainWindowOnScreen: false))
+    }
+
+    @Test("speaking over a visible main window does not — one fox at a time")
+    func visibleMainWindowSuppresses() {
+        #expect(!NotchHUDDemand.wantsHUD(enabled: true, speaking: true, mainWindowOnScreen: true))
+    }
+
+    @Test("silence or the Settings toggle off never wants it")
+    func silenceOrDisabledNever() {
+        #expect(!NotchHUDDemand.wantsHUD(enabled: true, speaking: false, mainWindowOnScreen: false))
+        #expect(!NotchHUDDemand.wantsHUD(enabled: false, speaking: true, mainWindowOnScreen: false))
+    }
+
+    @Test("the main window appearing mid-utterance hides the HUD after the usual grace")
+    func windowAppearingMidUtteranceHidesWithGrace() {
+        var visibility = NotchHUDVisibility()
+        let demand = { (onScreen: Bool) in NotchHUDDemand.wantsHUD(enabled: true, speaking: true, mainWindowOnScreen: onScreen) }
+        #expect(visibility.update(speaking: demand(false), atSeconds: 0) == .show)
+        #expect(visibility.update(speaking: demand(true), atSeconds: 1.0) == nil)
+        #expect(visibility.update(speaking: demand(true), atSeconds: 1.0 + visibility.hideGraceSeconds) == .hide)
+    }
+}

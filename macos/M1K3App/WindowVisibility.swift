@@ -35,6 +35,9 @@
 //  host diagnosis is measured — heap counted the live ARViews and sample
 //  attributed the main thread; the AppKit probe is verify-by-launch).
 //  Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — `onWindowVisibilityChange` reports a
+//  window's value out of SwiftUI so the notch HUD can stay down while the main
+//  window is on screen (one fox at a time). Confidence now 0.8 (verify-by-launch).
 //
 
 import AppKit
@@ -51,6 +54,24 @@ extension View {
     /// `\.windowVisible` to this subtree. Attach ONCE at a window's root.
     func trackWindowVisibility() -> some View {
         modifier(WindowVisibilityTracker())
+    }
+
+    /// Report this window's visibility out of SwiftUI (e.g. to the notch HUD).
+    /// Attach INSIDE `.trackWindowVisibility()` so it reads that window's value;
+    /// a window that goes away reports false.
+    func onWindowVisibilityChange(_ report: @escaping (Bool) -> Void) -> some View {
+        modifier(WindowVisibilityReporter(report: report))
+    }
+}
+
+private struct WindowVisibilityReporter: ViewModifier {
+    @Environment(\.windowVisible) private var windowVisible
+    let report: (Bool) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: windowVisible, initial: true) { _, visible in report(visible) }
+            .onDisappear { report(false) }
     }
 }
 
