@@ -127,10 +127,12 @@ struct ContentView: View {
     /// ADR 0006: the chat-egress consent (default OFF), held here so the input
     /// bar re-renders when Settings flips it.
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
-    /// The brain picker's PCC pick — persisted, so it holds across conversations
-    /// and relaunches (ADR 0010); the per-conversation consent inside it never is.
+    /// The brain picker's PCC pick and the sheet's one answer — both persisted,
+    /// so they hold across conversations and relaunches until PCC is un-picked
+    /// (ADR 0010).
     @State private var privateCloudArming = PrivateCloudArming(
-        isOn: UserDefaults.standard.bool(forKey: PrivateCloudArming.selectedDefaultsKey)
+        isOn: UserDefaults.standard.bool(forKey: PrivateCloudArming.selectedDefaultsKey),
+        consent: UserDefaults.standard.object(forKey: PrivateCloudArming.consentDefaultsKey) as? Bool
     )
     /// A send waiting on the consent sheet; the draft stays until it's confirmed.
     @State private var privateCloudPending: PendingPrivateCloudSend?
@@ -496,12 +498,12 @@ struct ContentView: View {
         .sheet(item: $privateCloudPending) { pending in
             PrivateCloudConsentSheet(
                 consent: pending.consent,
-                // Consent holds for the rest of this conversation: later sends skip
-                // the sheet with the same choice (ADR 0007; the pick itself, ADR 0010).
+                // Asked once: later sends skip the sheet with the same choice until
+                // PCC is un-picked (ADR 0010).
                 onSend: { includeConversation in
                     privateCloudPending = nil
-                    // Bound to the conversation the sheet was opened in, never the one
-                    // that's active now (a switch under the sheet must ask again).
+                    // Clears the conversation the sheet was opened in, never the one
+                    // that's active now (a switch under the sheet must still ask there).
                     privateCloudArming.consented(
                         includeConversation: includeConversation,
                         in: pending.consent.conversationID ?? pending.openedIn
@@ -1046,20 +1048,21 @@ struct ContentView: View {
     /// The pick's lifecycle, hosted on the chat (the brain picker is a toolbar
     /// Menu, mounted only while it's showing). A rung that no longer exists
     /// un-picks PCC; a passing outage or a staged attachment only keeps that
-    /// send local; a new conversation asks for consent again (ADR 0010).
+    /// send local (ADR 0010).
     private var privateCloudLifecycle: PrivateCloudLifecycle {
         PrivateCloudLifecycle(
             control: privateCloudControl,
-            conversationID: env.chat.activeConversationID,
             arming: $privateCloudArming,
             refresh: { await env.refreshPrivateCloudStatus() },
             currentControl: { privateCloudControl }
         )
     }
 
-    /// The next send goes to Private Cloud Compute — what the brain picker shows.
+    /// The next typed send goes to Private Cloud Compute — what the brain picker
+    /// shows. Never in voice mode: voice turns answer on this Mac (ADR 0010).
     private var privateCloudServesNextSend: Bool {
-        privateCloudArming.servesNextSend(control: privateCloudControl, hasAttachments: hasStagedAttachments)
+        !env.isVoiceModeActive
+            && privateCloudArming.servesNextSend(control: privateCloudControl, hasAttachments: hasStagedAttachments)
     }
 
     /// The mic button's tooltip: names WHY it's disabled rather than leaving
@@ -1136,12 +1139,16 @@ struct ContentView: View {
 
     private func send() {
         guard canSend else { return }
-        // ADR 0006 (amended by 0007 + 0010): the first PCC send in a conversation goes
-        // through the consent sheet; later ones reuse its answer. Attachments
-        // never ride a PCC turn (that send stays local; the pick holds).
+        // ADR 0006 (amended by 0007 + 0010): the first PCC send ever goes through
+        // the consent sheet, later ones reuse its answer — except where on-device
+        // history would ride along unseen. Attachments never ride a PCC turn
+        // (that send stays local; the pick holds).
         let conversation = env.chat.activeConversationID
         switch privateCloudArming.action(
-            in: conversation, control: privateCloudControl, hasAttachments: hasStagedAttachments
+            in: conversation,
+            control: privateCloudControl,
+            hasAttachments: hasStagedAttachments,
+            holdsOnDeviceAnswers: ChatSession.holdsOnDeviceAnswers(env.chat.messages)
         ) {
         case .askConsent:
             privateCloudPending = PendingPrivateCloudSend(
@@ -1383,14 +1390,15 @@ struct ContentView: View {
                 afm: env.afmAvailability
             )) { row in
                 Button {
-                    // A brain on this Mac un-picks PCC (ADR 0010).
-                    privateCloudArming.select(false)
                     if row.needsDownload {
                         // Don't start a multi-GB pull from one toolbar tap — route to
                         // the onboarding brain step (the honest download UI). Same
                         // entry point Settings "Change brain…" uses.
                         env.routeToOnboardingBrainPicker()
                     } else {
+                        // Choosing a brain on this Mac un-picks PCC (ADR 0010); a row
+                        // that only routes to its download leaves the pick alone.
+                        privateCloudArming.select(false)
                         env.selectBrain(row.tier)
                     }
                 } label: {
@@ -1441,18 +1449,15 @@ struct ContentView: View {
     }
 
     private var brainSwitcherHelp: String {
-        if privateCloudArming.isOn {
-            if privateCloudServesNextSend {
-                return PrivateCloudRung.controlHelp(.ready, armed: true, now: Date())
-            }
-            if hasStagedAttachments {
-                return "Attachments never go to Private Cloud Compute — this message stays on this Mac"
-            }
-            return PrivateCloudRung.controlHelp(privateCloudControl, armed: true, now: Date())
-        }
-        return autoRouteBrain
-            ? "Auto-route is on — M1K3 picks the brain. Turn it off in Settings to choose manually."
-            : "Switch brain — currently \(env.selectedBrain.displayName)"
+        PrivateCloudRung.brainPickerHelp(
+            picked: privateCloudArming.isOn,
+            control: privateCloudControl,
+            hasAttachments: hasStagedAttachments,
+            voiceMode: env.isVoiceModeActive,
+            autoRoute: autoRouteBrain,
+            brainName: env.selectedBrain.displayName,
+            now: Date()
+        )
     }
 
     /// The chat-specific actions — History/Documents/Memories/Calls moved to
@@ -1907,12 +1912,11 @@ private struct IngestBanner: View {
 }
 
 /// The PCC pick's lifecycle events (ADR 0010), forwarded to the pure
-/// `PrivateCloudArming`, plus the persistence of the pick and the status
+/// `PrivateCloudArming`, plus the persistence of the pick + answer and the status
 /// re-read while the control can't be used (the quota resets, the service
 /// comes back).
 struct PrivateCloudLifecycle: ViewModifier {
     let control: PrivateCloudRung.Control
-    let conversationID: UUID?
     @Binding var arming: PrivateCloudArming
     let refresh: () async -> Void
     let currentControl: () -> PrivateCloudRung.Control
@@ -1927,11 +1931,15 @@ struct PrivateCloudLifecycle: ViewModifier {
             .onChange(of: control) { _, newValue in
                 arming.controlChanged(newValue)
             }
-            .onChange(of: conversationID) {
-                arming.conversationChanged()
-            }
             .onChange(of: arming.isOn) { _, on in
                 UserDefaults.standard.set(on, forKey: PrivateCloudArming.selectedDefaultsKey)
+            }
+            .onChange(of: arming.consent) { _, consent in
+                if let consent {
+                    UserDefaults.standard.set(consent, forKey: PrivateCloudArming.consentDefaultsKey)
+                } else {
+                    UserDefaults.standard.removeObject(forKey: PrivateCloudArming.consentDefaultsKey)
+                }
             }
             .task(id: control) {
                 while let delay = PrivateCloudRung.statusRecheckDelay(for: currentControl(), now: Date()) {

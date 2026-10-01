@@ -33,19 +33,21 @@
 //  conversation id. With the pick surviving a switch, a sheet answered for A after B became
 //  active used to arm B with no sheet. `action(in:)` asks again unless the ids match. Pinned.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 (3) — consent is asked ONCE (Kev: "I think it should be
+//  once"), not per conversation: the sheet's answer persists with the pick and dies with it. The one
+//  exception: with "also send this conversation" stored, a conversation holding on-device answers
+//  shows the sheet once itself — history that never left this Mac never leaves unseen. That set of
+//  cleared conversations is never persisted. Supersedes (2)'s per-conversation binding. Confidence 0.85.
 //
 
 import Foundation
 
 public struct PrivateCloudArming: Equatable, Sendable {
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.isOn == rhs.isOn
-            && lhs.consent?.conversationID == rhs.consent?.conversationID
-            && lhs.consent?.includeConversation == rhs.consent?.includeConversation
-    }
-
     /// The persisted pick: the brain picker's PCC row survives a relaunch.
     public static let selectedDefaultsKey = "privateCloudSelected"
+    /// The persisted sheet answer — its "also send this conversation" choice.
+    /// Absent until the user has confirmed the sheet once; cleared with the pick.
+    public static let consentDefaultsKey = "privateCloudConsentIncludesConversation"
 
     /// What a send does right now.
     public enum Action: Equatable, Sendable {
@@ -57,22 +59,35 @@ public struct PrivateCloudArming: Equatable, Sendable {
     /// The user picked PCC in the brain picker. Not the same as "the next send
     /// goes to PCC" — that's `servesNextSend`.
     public private(set) var isOn: Bool
-    /// The sheet's answer and the conversation it was given in; nil until the
-    /// user has sent once. Bound to the conversation because the pick now
-    /// outlives a switch: a sheet answered for A while B became active must not
-    /// let B skip its own sheet (review of the 10-01 change).
-    private var consent: (conversationID: UUID, includeConversation: Bool)?
+    /// The sheet's one answer (include the conversation?), nil until confirmed.
+    /// Persisted by the view; it lives exactly as long as the pick.
+    public private(set) var consent: Bool?
+    /// Conversations whose on-device history the user has seen leave on the
+    /// sheet. Never persisted: a relaunch asks again where it matters.
+    private var historyCleared: Set<UUID> = []
 
-    /// `isOn` is the persisted pick (`selectedDefaultsKey`); consent never is.
-    public init(isOn: Bool = false) {
+    /// `isOn` and `consent` are the persisted pick and answer.
+    public init(isOn: Bool = false, consent: Bool? = nil) {
         self.isOn = isOn
+        self.consent = isOn ? consent : nil
     }
 
-    /// What a send in `conversationID` does right now.
-    public func action(in conversationID: UUID, control: PrivateCloudRung.Control, hasAttachments: Bool) -> Action {
+    /// What a send in `conversationID` does right now. `holdsOnDeviceAnswers`:
+    /// the history PCC would be shown includes answers made on this Mac.
+    public func action(
+        in conversationID: UUID,
+        control: PrivateCloudRung.Control,
+        hasAttachments: Bool,
+        holdsOnDeviceAnswers: Bool
+    ) -> Action {
         guard servesNextSend(control: control, hasAttachments: hasAttachments) else { return .local }
-        guard let consent, consent.conversationID == conversationID else { return .askConsent }
-        return .sendDirect(includeConversation: consent.includeConversation)
+        guard let includeConversation = consent else { return .askConsent }
+        // Once means once — except that history which never left this Mac is
+        // never sent without the user seeing it go, once per conversation.
+        if includeConversation, holdsOnDeviceAnswers, !historyCleared.contains(conversationID) {
+            return .askConsent
+        }
+        return .sendDirect(includeConversation: includeConversation)
     }
 
     /// True when the next send would leave for PCC — what the brain picker's
@@ -88,20 +103,17 @@ public struct PrivateCloudArming: Equatable, Sendable {
         if on { isOn = true } else { turnOff() }
     }
 
-    /// The sheet's yes, for the conversation it was shown in.
+    /// The sheet's yes, given in `conversationID` (where it was opened, which
+    /// may no longer be the active one).
     public mutating func consented(includeConversation: Bool, in conversationID: UUID) {
         guard isOn else { return }
-        consent = (conversationID, includeConversation)
+        consent = includeConversation
+        historyCleared.insert(conversationID)
     }
 
     /// "Keep it on this Mac" on the sheet.
     public mutating func declined() {
         turnOff()
-    }
-
-    /// The pick holds; the consent belonged to the old conversation.
-    public mutating func conversationChanged() {
-        consent = nil
     }
 
     /// A passing outage or an exhausted limit keeps the pick (`action` stays
@@ -113,5 +125,6 @@ public struct PrivateCloudArming: Equatable, Sendable {
     private mutating func turnOff() {
         isOn = false
         consent = nil
+        historyCleared = []
     }
 }

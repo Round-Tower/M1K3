@@ -164,8 +164,8 @@ struct PrivacySettingsPane: View {
                     Text("""
                     Off unless you turn it on. Then Private Cloud Compute joins the brain picker, \
                     and once you pick it, it stays picked until you choose a brain on this Mac. \
-                    In each conversation you see your words before the first one goes, and each \
-                    answer is labelled.
+                    The first time, you see exactly what goes before it goes, and each answer \
+                    is labelled.
                     """)
                     Link("How Apple protects it", destination: PrivateCloudTurn.appleGuaranteeURL)
                 }

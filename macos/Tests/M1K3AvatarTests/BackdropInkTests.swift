@@ -12,7 +12,7 @@ struct BackdropInkTests {
         #expect(ink.scanlineOpacity == 0.20)
         #expect(ink.vignetteOpacity == 0.38)
         #expect(ink.scrimIsDark)
-        #expect(ink.scrimEdgeOpacity == [0.18, 0.04, 0.04, 0.22])
+        #expect(ink.scrim == BackdropInk.Scrim(top: 0.18, upper: 0.04, lower: 0.04, bottom: 0.22))
     }
 
     @Test("light draws the CRT at well under half strength, so it reads as texture, not grey")
@@ -28,8 +28,8 @@ struct BackdropInkTests {
     func lightScrimLightens() {
         let light = BackdropInk(isDark: false)
         #expect(!light.scrimIsDark)
-        #expect(light.scrimEdgeOpacity.count == 4)
         // Strongest at the bottom, where the tray and the newest turn sit.
-        #expect(light.scrimEdgeOpacity[3] == light.scrimEdgeOpacity.max())
+        let scrim = light.scrim
+        #expect(scrim.bottom > scrim.top && scrim.bottom > scrim.upper && scrim.bottom > scrim.lower)
     }
 }

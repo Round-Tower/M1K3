@@ -23,20 +23,35 @@ public struct BackdropInk: Equatable, Sendable {
     public let vignetteOpacity: Double
     /// True: the reading scrim darkens (black). False: it lightens (white).
     public let scrimIsDark: Bool
-    /// The scrim's opacity at top, 28 %, 72 % and bottom.
-    public let scrimEdgeOpacity: [Double]
+    /// The scrim's opacity at its four stops.
+    public let scrim: Scrim
+
+    /// Opacity at the top, at 28 %, at 72 % and at the bottom of the window.
+    public struct Scrim: Equatable, Sendable {
+        public let top: Double
+        public let upper: Double
+        public let lower: Double
+        public let bottom: Double
+
+        public init(top: Double, upper: Double, lower: Double, bottom: Double) {
+            self.top = top
+            self.upper = upper
+            self.lower = lower
+            self.bottom = bottom
+        }
+    }
 
     public init(isDark: Bool) {
         if isDark {
             scanlineOpacity = 0.20
             vignetteOpacity = 0.38
             scrimIsDark = true
-            scrimEdgeOpacity = [0.18, 0.04, 0.04, 0.22]
+            scrim = Scrim(top: 0.18, upper: 0.04, lower: 0.04, bottom: 0.22)
         } else {
             scanlineOpacity = 0.06
             vignetteOpacity = 0.10
             scrimIsDark = false
-            scrimEdgeOpacity = [0.30, 0.08, 0.10, 0.45]
+            scrim = Scrim(top: 0.30, upper: 0.08, lower: 0.10, bottom: 0.45)
         }
     }
 }

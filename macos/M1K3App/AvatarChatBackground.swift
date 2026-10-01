@@ -99,13 +99,13 @@ private struct ReadingScrim: View {
     var body: some View {
         let ink = BackdropInk(isDark: colorScheme == .dark)
         let tone: Color = ink.scrimIsDark ? .black : .white
-        let edge = ink.scrimEdgeOpacity
+        let scrim = ink.scrim
         LinearGradient(
             stops: [
-                .init(color: tone.opacity(edge[0]), location: 0.0),
-                .init(color: tone.opacity(edge[1]), location: 0.28),
-                .init(color: tone.opacity(edge[2]), location: 0.72),
-                .init(color: tone.opacity(edge[3]), location: 1.0),
+                .init(color: tone.opacity(scrim.top), location: 0.0),
+                .init(color: tone.opacity(scrim.upper), location: 0.28),
+                .init(color: tone.opacity(scrim.lower), location: 0.72),
+                .init(color: tone.opacity(scrim.bottom), location: 1.0),
             ],
             startPoint: .top,
             endPoint: .bottom

@@ -150,6 +150,30 @@ struct PrivateCloudRungTests {
         #expect(PrivateCloudRung.menuTitle(.exhausted(resetsAt: nil)) == "Private Cloud Compute · limit reached")
     }
 
+    /// PR #462 review: the brain picker's tooltip was a four-branch chooser in the
+    /// view. It speaks for whoever answers the NEXT typed send.
+    @Test("the brain picker's tooltip names who answers the next typed send, and why not PCC")
+    func brainPickerHelp() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        func help(
+            picked: Bool = true, control: PrivateCloudRung.Control = .ready,
+            attachments: Bool = false, voice: Bool = false, autoRoute: Bool = false
+        ) -> String {
+            PrivateCloudRung.brainPickerHelp(
+                picked: picked, control: control, hasAttachments: attachments,
+                voiceMode: voice, autoRoute: autoRoute, brainName: "Lil", now: now
+            )
+        }
+        #expect(help() == PrivateCloudRung.controlHelp(.ready, armed: true, now: now))
+        #expect(help(attachments: true)
+            == "Attachments never go to Private Cloud Compute — this message stays on this Mac")
+        #expect(help(voice: true) == "Voice stays on this Mac — Lil answers while you talk")
+        #expect(help(control: .unavailable) == "Private Cloud Compute isn't available right now")
+        #expect(help(picked: false) == "Switch brain — currently Lil")
+        #expect(help(picked: false, autoRoute: true)
+            == "Auto-route is on — M1K3 picks the brain. Turn it off in Settings to choose manually.")
+    }
+
     /// Review on 7b36869e: an exhausted or unavailable control had no way back to
     /// ready without a relaunch (the status was read at launch and after a send,
     /// and a disabled control can't send). It now re-reads on this schedule.

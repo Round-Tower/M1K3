@@ -2,86 +2,118 @@ import Foundation
 @testable import M1K3LanguageModel
 import Testing
 
-/// PCC is a brain-picker choice that holds over time (Kev, 2026-10-01): once
-/// picked it stays picked, across conversations and relaunches, until the user
-/// picks a brain on this Mac or says "Keep it on this Mac". Consent is still
-/// asked once per conversation: the sheet's include-the-conversation answer
-/// belongs to the conversation it was given in.
+/// PCC is a brain-picker choice that holds over time, and its consent is asked
+/// ONCE (Kev, 2026-10-01: "PCC moved to the brain picker - holds over time";
+/// "I think it should be once"). The pick and the sheet's answer persist until
+/// the user un-picks PCC. One exception keeps "you see what leaves" true: with
+/// "also send this conversation" stored, a conversation holding on-device
+/// answers — history that never left this Mac — shows the sheet once itself.
 struct PrivateCloudArmingTests {
     private let chatA = UUID()
     private let chatB = UUID()
-    /// The sheet's yes with the conversation included, reused.
-    private let direct = PrivateCloudArming.Action.sendDirect(includeConversation: true)
+    private let withHistory = PrivateCloudArming.Action.sendDirect(includeConversation: true)
+    private let messageOnly = PrivateCloudArming.Action.sendDirect(includeConversation: false)
+
+    private func act(
+        _ arming: PrivateCloudArming,
+        in chat: UUID? = nil,
+        control: PrivateCloudRung.Control = .ready,
+        attachments: Bool = false,
+        local: Bool = false
+    ) -> PrivateCloudArming.Action {
+        arming.action(in: chat ?? chatA, control: control, hasAttachments: attachments, holdsOnDeviceAnswers: local)
+    }
 
     @Test("off by default: every send stays on this Mac")
     func offByDefault() {
         let arming = PrivateCloudArming()
         #expect(!arming.isOn)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == .local)
+        #expect(arming.consent == nil)
+        #expect(act(arming) == .local)
     }
 
-    @Test("restored on: a relaunch keeps the user's pick, and the first send asks")
-    func restoredOnFromDefaults() {
-        let arming = PrivateCloudArming(isOn: true)
-        #expect(arming.isOn)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == .askConsent)
-    }
-
-    @Test("picked, the first send asks for consent")
+    @Test("picked, the first send ever asks for consent")
     func firstSendAsks() {
         var arming = PrivateCloudArming()
         arming.select(true)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == .askConsent)
+        #expect(act(arming) == .askConsent)
     }
 
-    @Test("after consent, later sends skip the sheet with the same choice")
-    func staysOnAfterConsent() {
+    @Test("once: after the sheet, sends in any conversation skip it with the same choice")
+    func consentIsAskedOnce() {
+        var arming = PrivateCloudArming()
+        arming.select(true)
+        arming.consented(includeConversation: false, in: chatA)
+        #expect(act(arming, in: chatA) == messageOnly)
+        #expect(act(arming, in: chatB) == messageOnly)
+        #expect(act(arming, in: chatB, local: true) == messageOnly)
+    }
+
+    @Test("a relaunch restores the pick AND the answer: no sheet")
+    func restoredFromDefaults() {
+        let arming = PrivateCloudArming(isOn: true, consent: true)
+        #expect(act(arming, in: chatB) == withHistory)
+    }
+
+    @Test("a stored consent without the pick is ignored")
+    func consentWithoutPickIsInert() {
+        let arming = PrivateCloudArming(isOn: false, consent: true)
+        #expect(act(arming) == .local)
+    }
+
+    @Test("history that never left this Mac shows the sheet once, in that conversation")
+    func onDeviceHistoryAsksOncePerConversation() {
         var arming = PrivateCloudArming()
         arming.select(true)
         arming.consented(includeConversation: true, in: chatA)
-        #expect(arming.isOn)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == direct)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == direct)
+        #expect(act(arming, in: chatA, local: true) == withHistory)
+        // B holds on-device answers nobody saw leave: ask, once.
+        #expect(act(arming, in: chatB, local: true) == .askConsent)
+        arming.consented(includeConversation: true, in: chatB)
+        #expect(act(arming, in: chatB, local: true) == withHistory)
+        // A conversation of only PCC turns never asks again.
+        #expect(act(arming, in: UUID(), local: false) == withHistory)
     }
 
-    @Test("\"Keep it on this Mac\" turns it off and forgets the consent")
+    @Test("a sheet answered after a switch clears only the conversation it was shown in")
+    func lateSheetClearsItsOwnConversation() {
+        var arming = PrivateCloudArming()
+        arming.select(true)
+        arming.consented(includeConversation: true, in: chatA) // opened in A, B is active now
+        #expect(act(arming, in: chatB, local: true) == .askConsent)
+    }
+
+    @Test("\"Keep it on this Mac\" un-picks and forgets the consent")
     func declineTurnsOff() {
         var arming = PrivateCloudArming()
         arming.select(true)
+        arming.consented(includeConversation: true, in: chatA)
         arming.declined()
         #expect(!arming.isOn)
+        #expect(arming.consent == nil)
         arming.select(true)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == .askConsent)
+        #expect(act(arming) == .askConsent)
     }
 
-    @Test("picking a brain on this Mac turns it off; picking PCC again asks again")
+    @Test("picking a brain on this Mac forgets the consent; picking PCC again asks again")
     func pickingLocalForgetsConsent() {
         var arming = PrivateCloudArming()
         arming.select(true)
         arming.consented(includeConversation: false, in: chatA)
         arming.select(false)
         #expect(!arming.isOn)
+        #expect(arming.consent == nil)
         arming.select(true)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == .askConsent)
+        #expect(act(arming) == .askConsent)
     }
 
-    @Test("re-picking PCC while on keeps the conversation's consent")
+    @Test("re-picking PCC while on keeps the consent")
     func reselectKeepsConsent() {
         var arming = PrivateCloudArming()
         arming.select(true)
         arming.consented(includeConversation: true, in: chatA)
         arming.select(true)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == direct)
-    }
-
-    @Test("a new or switched conversation keeps PCC on but asks again: consent never crosses conversations")
-    func conversationChangeKeepsPickForgetsConsent() {
-        var arming = PrivateCloudArming()
-        arming.select(true)
-        arming.consented(includeConversation: true, in: chatA)
-        arming.conversationChanged()
-        #expect(arming.isOn)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == .askConsent)
+        #expect(act(arming) == withHistory)
     }
 
     @Test("a passing outage or an exhausted limit keeps the pick; sends stay local until it's back")
@@ -92,20 +124,21 @@ struct PrivateCloudArmingTests {
             arming.consented(includeConversation: true, in: chatA)
             arming.controlChanged(control)
             #expect(arming.isOn)
-            #expect(arming.action(in: chatA, control: control, hasAttachments: false) == .local)
+            #expect(act(arming, control: control) == .local)
             #expect(!arming.servesNextSend(control: control, hasAttachments: false))
             arming.controlChanged(.ready)
-            #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == direct)
+            #expect(act(arming) == withHistory)
         }
     }
 
-    @Test("a rung that no longer exists (Settings switch off, org policy) turns it off")
+    @Test("a rung that no longer exists (Settings switch off, org policy) un-picks and forgets")
     func hiddenControlTurnsOff() {
         var arming = PrivateCloudArming()
         arming.select(true)
         arming.consented(includeConversation: true, in: chatA)
         arming.controlChanged(.hidden)
         #expect(!arming.isOn)
+        #expect(arming.consent == nil)
     }
 
     @Test("a staged attachment keeps the pick, but that send stays on this Mac")
@@ -113,23 +146,17 @@ struct PrivateCloudArmingTests {
         var arming = PrivateCloudArming()
         arming.select(true)
         arming.consented(includeConversation: true, in: chatA)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: true) == .local)
+        #expect(act(arming, attachments: true) == .local)
         #expect(!arming.servesNextSend(control: .ready, hasAttachments: true))
         #expect(arming.isOn)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == direct)
+        #expect(act(arming) == withHistory)
     }
 
-    /// Review of the 10-01 change: the pick now survives a conversation switch,
-    /// so a sheet answered for A while B became active must not leave B with a
-    /// consent it never saw — B's first send still asks.
-    @Test("a consent given for one conversation never lets another skip the sheet")
-    func consentIsBoundToItsConversation() {
+    @Test("a consent can't be recorded while PCC isn't picked")
+    func consentNeedsThePick() {
         var arming = PrivateCloudArming()
-        arming.select(true)
-        arming.conversationChanged() // A → B under an open sheet
-        arming.consented(includeConversation: true, in: chatA) // the sheet answers for A
-        #expect(arming.action(in: chatB, control: .ready, hasAttachments: false) == .askConsent)
-        #expect(arming.action(in: chatA, control: .ready, hasAttachments: false) == direct)
+        arming.consented(includeConversation: true, in: chatA)
+        #expect(arming.consent == nil)
     }
 
     @Test("servesNextSend is true only when the next send would leave for PCC")
