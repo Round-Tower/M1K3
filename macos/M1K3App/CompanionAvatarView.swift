@@ -62,6 +62,9 @@
 //  react clip is a one-shot beat, idle fidgets + Sit run off ONE sleeping Task (nil while paused/unmounted/busy —
 //  never a per-frame clock), one-shot end = a duration-based watchdog Task, clip starts log at
 //  `.notice` ("companion clip <name> loop|once"). Confidence 0.65 — playback feel is verify-by-launch.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 (#469 fold) — a one-shot with no host ends at once (it stranded
+//  the brain: no fidgets ever again); unmount returns the creature to its loop clip and marks the brain
+//  `.unmounted`, onAppear resumes it from now. Confidence now 0.7.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -377,6 +380,12 @@ struct CompanionAvatarView: View {
             if scene.built { applyPause(paused) }
         }
         .overlay { if tile { CRTOverlay(paused: paused) } }
+        .onAppear {
+            // Back on screen without a rebuild: the brain resumes from now (hidden
+            // time never counts toward a fidget) and re-arms its one timer.
+            scene.choreographer?.presenceChanged(paused ? .paused : .animating, at: Self.now())
+            rearmWake()
+        }
         .onDisappear {
             scene.loadTask?.cancel()
             stopChoreography()
@@ -662,7 +671,14 @@ struct CompanionAvatarView: View {
     /// reaches OSLogStore — so the behaviour is verifiable live.
     private func execute(_ command: CompanionChoreographer.Command?) {
         defer { rearmWake() }
-        guard let command, let host = scene.host else { return }
+        guard let command else { return }
+        guard let host = scene.host else {
+            // No creature to play on (mid-reload / failed switch). A one-shot the
+            // brain already counts as playing must end now, or it waits forever
+            // and never fidgets again (review, #469); `reload` rebuilds it anyway.
+            if case .oneShot = command { _ = scene.choreographer?.oneShotFinished(at: Self.now()) }
+            return
+        }
         scene.clipGeneration += 1
         scene.oneShotWatchdog?.cancel()
         switch command {
@@ -735,8 +751,18 @@ struct CompanionAvatarView: View {
         scene.oneShotWatchdog = nil
         scene.clipGeneration += 1
         // A beat cut off mid-flight must not leave the brain waiting on a
-        // completion that will never come (it would never fidget again).
-        _ = scene.choreographer?.oneShotFinished(at: Self.now())
+        // completion that will never come (it would never fidget again) — and the
+        // creature goes back to its loop clip, so a remount without a rebuild
+        // never shows the beat's last frame frozen (review, #469). Played
+        // directly, not via `execute`, which would re-arm a timer for a surface
+        // that is going away; `.unmounted` keeps `nextWake` nil until onAppear.
+        if case let .loop(clip, _)? = scene.choreographer?.oneShotFinished(at: Self.now()),
+           let resource = scene.clips[clip], let host = scene.host
+        {
+            scene.playback = host.playAnimation(resource.repeat(), transitionDuration: 0)
+            scene.currentClip = clip
+        }
+        scene.choreographer?.presenceChanged(.unmounted, at: Self.now())
     }
 
     /// Park or resume the running clip IN PLACE — the creature freezes mid-cycle

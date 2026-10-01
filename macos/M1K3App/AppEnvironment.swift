@@ -1308,8 +1308,12 @@ final class AppEnvironment {
         // unreachable and a failure only earned the earcon.
         if answerFailed {
             avatar.setActivity(.error)
-            Task { @MainActor [weak self] in
+            // One settle at a time: a second failure inside the window must not be
+            // cut short by the first one's timer (review, #469).
+            distressSettle?.cancel()
+            distressSettle = Task { @MainActor [weak self] in
                 try? await Task.sleep(for: Self.avatarDistressDuration)
+                guard !Task.isCancelled else { return }
                 // Only settle OUR error: a new turn already moved the avatar on.
                 if self?.avatar.state.activity == .error { self?.avatar.resetToIdle() }
             }
@@ -1323,6 +1327,8 @@ final class AppEnvironment {
 
     /// How long a failed turn's distress beat shows before the avatar settles to idle.
     static let avatarDistressDuration: Duration = .seconds(3)
+    /// The pending settle after a failed turn's distress beat (cancelled by the next).
+    @ObservationIgnored private var distressSettle: Task<Void, Never>?
 
     private func surfaceCodeArtifact(from responseText: String) {
         let artifacts = CodeBlockDetector.detect(in: responseText)
