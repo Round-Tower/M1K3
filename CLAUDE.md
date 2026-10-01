@@ -68,6 +68,11 @@ Anything a cold session needs on turn one belongs below, not there.
 - Bundle ID, log subsystem, Keychain and container are all `app.m1k3`.
 - `.info` / `.debug` do not persist in OSLogStore; breadcrumbs are `.notice`+.
 - Read the store (`itunes.apple.com/lookup?id=`) before saying what users have.
+- Store copy: name/subtitle are record-wide, so edit `fastlane/metadata_mac` AND
+  `metadata_ios` together (`check_store_metadata.py` fails on drift). Review
+  notes live only in `fastlane/review_notes.txt`. Run `tools/asc/precheck.py`
+  after every deliver push (a stale `review_information/notes.txt` clobbered the
+  live notes on 2026-10-01). `submit.py --confirm` is Kev's, via `!`.
 - Never pre-seed the model cache with `hf download` (cache poison).
 - In-app A/B overrides go as argv (`M1K3 -prefillStepSize 512`): on macOS 27
   `defaults write app.m1k3` never reaches the sandboxed app. `log` is a zsh
