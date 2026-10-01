@@ -24,6 +24,11 @@
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.75 (pure and pinned;
 //  the thresholds are starting points from one synthetic probe, and the level
 //  floor after voice processing is verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-09-27 — the fold's `hasText` counts words in voice-first too.
+//  It read only the dictation buffers, so under keepsListening it stayed false and the endpoint's
+//  8 s silent-listen limit cut every voice-first turn (builds 373–375; Kev: "cut me off
+//  mid-sentence", three listens at 8.2–8.4 s). Each half was tested alone; now the pair is too.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -32,19 +37,23 @@ public struct AnalyzerTranscriptFold: Sendable {
     private let finality: FinalityPolicy
     private var committed = ""
     private var volatile = ""
+    /// Any words at all, in either mode. Voice-first keeps no text of its own (the
+    /// consumer folds), so this is what tells the endpoint the listen isn't silent.
+    private var heard = false
 
     public init(finality: FinalityPolicy) {
         self.finality = finality
     }
 
     public var hasText: Bool {
-        !committed.isEmpty || !volatile.isEmpty
+        heard
     }
 
     /// One analyzer result in, at most one segment out.
     public mutating func ingest(text raw: String, isFinal: Bool) -> TranscriptSegment? {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
+        heard = true
         switch finality {
         case .keepsListening:
             return TranscriptSegment(text: text, isFinal: isFinal)
