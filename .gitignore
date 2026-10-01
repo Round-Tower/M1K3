@@ -212,3 +212,6 @@ tools/eval/android/runs/
 # Generated per platform by ci_scripts/select_what_to_test.sh at archive time;
 # the tracked notes are macos/TestFlight/notes/<platform>.<locale>.txt.
 macos/TestFlight/WhatToTest.*.txt
+
+# Coverage artifacts a locally-run Debug app writes into its cwd.
+*.profraw

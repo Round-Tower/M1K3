@@ -424,6 +424,10 @@ final class AppEnvironment {
 
     /// Word-highlight state for speech playback (the karaoke reading view).
     let speechHighlight = SpeechHighlight()
+    /// Whether the main window is at least partly on screen (its occlusion
+    /// probe, reported from the window root). The notch HUD reads it so only
+    /// one avatar renders at a time (`NotchHUDDemand`, 2026-10-01).
+    var mainWindowOnScreen = false
     /// Per-server FIFO for MCP `speak` calls (#283): a second visitor's speak
     /// while one is already in flight QUEUES behind it instead of cutting it.
     /// `speakNow` reuses `speak(text:narrator:)` — the HUD is stamped INSIDE
