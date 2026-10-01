@@ -6,22 +6,22 @@ import Testing
 /// ONCE (Kev, 2026-10-01: "PCC moved to the brain picker - holds over time";
 /// "I think it should be once"). The pick and the sheet's answer persist until
 /// the user un-picks PCC. One exception keeps "you see what leaves" true: with
-/// "also send this conversation" stored, a conversation holding on-device
-/// answers — history that never left this Mac — shows the sheet once itself.
+/// "also send this conversation" stored, any message that never left this Mac
+/// re-asks until a sheet has shown it — by message id, never by conversation.
 struct PrivateCloudArmingTests {
-    private let chatA = UUID()
-    private let chatB = UUID()
     private let withHistory = PrivateCloudArming.Action.sendDirect(includeConversation: true)
     private let messageOnly = PrivateCloudArming.Action.sendDirect(includeConversation: false)
+    /// On-device message ids in the history PCC would be shown.
+    private let turnA: Set<UUID> = [UUID(), UUID()]
+    private let turnB: Set<UUID> = [UUID()]
 
     private func act(
         _ arming: PrivateCloudArming,
-        in chat: UUID? = nil,
         control: PrivateCloudRung.Control = .ready,
         attachments: Bool = false,
-        local: Bool = false
+        onDevice: Set<UUID> = []
     ) -> PrivateCloudArming.Action {
-        arming.action(in: chat ?? chatA, control: control, hasAttachments: attachments, holdsOnDeviceAnswers: local)
+        arming.action(control: control, hasAttachments: attachments, onDeviceMessages: onDevice)
     }
 
     @Test("off by default: every send stays on this Mac")
@@ -39,55 +39,69 @@ struct PrivateCloudArmingTests {
         #expect(act(arming) == .askConsent)
     }
 
-    @Test("once: after the sheet, sends in any conversation skip it with the same choice")
+    @Test("once: after the sheet, later sends skip it with the same choice")
     func consentIsAskedOnce() {
         var arming = PrivateCloudArming()
         arming.select(true)
-        arming.consented(includeConversation: false, in: chatA)
-        #expect(act(arming, in: chatA) == messageOnly)
-        #expect(act(arming, in: chatB) == messageOnly)
-        #expect(act(arming, in: chatB, local: true) == messageOnly)
+        arming.consented(includeConversation: false, seen: [])
+        #expect(act(arming) == messageOnly)
+        // Message only: on-device history never rides, so it never asks.
+        #expect(act(arming, onDevice: turnA) == messageOnly)
     }
 
-    @Test("a relaunch restores the pick AND the answer: no sheet")
+    @Test("a relaunch restores the pick AND the answer: no sheet for PCC-only history")
     func restoredFromDefaults() {
         let arming = PrivateCloudArming(isOn: true, consent: true)
-        #expect(act(arming, in: chatB) == withHistory)
+        #expect(act(arming) == withHistory)
+    }
+
+    @Test("a relaunch never restores what was seen: on-device history asks again")
+    func seenIsNotRestored() {
+        let arming = PrivateCloudArming(isOn: true, consent: true)
+        #expect(act(arming, onDevice: turnA) == .askConsent)
     }
 
     @Test("a stored consent without the pick is ignored")
     func consentWithoutPickIsInert() {
         let arming = PrivateCloudArming(isOn: false, consent: true)
+        #expect(arming.consent == nil)
         #expect(act(arming) == .local)
     }
 
-    @Test("history that never left this Mac shows the sheet once, in that conversation")
-    func onDeviceHistoryAsksOncePerConversation() {
+    @Test("on-device history shows the sheet once; what it showed never asks again")
+    func onDeviceHistoryAsksUntilSeen() {
         var arming = PrivateCloudArming()
         arming.select(true)
-        arming.consented(includeConversation: true, in: chatA)
-        #expect(act(arming, in: chatA, local: true) == withHistory)
-        // B holds on-device answers nobody saw leave: ask, once.
-        #expect(act(arming, in: chatB, local: true) == .askConsent)
-        arming.consented(includeConversation: true, in: chatB)
-        #expect(act(arming, in: chatB, local: true) == withHistory)
-        // A conversation of only PCC turns never asks again.
-        #expect(act(arming, in: UUID(), local: false) == withHistory)
+        arming.consented(includeConversation: true, seen: [])
+        #expect(act(arming) == withHistory)
+        #expect(act(arming, onDevice: turnA) == .askConsent)
+        arming.consented(includeConversation: true, seen: turnA)
+        #expect(act(arming, onDevice: turnA) == withHistory)
     }
 
-    @Test("a sheet answered after a switch clears only the conversation it was shown in")
-    func lateSheetClearsItsOwnConversation() {
+    /// Round-two review (a): a conversation cleared once used to stay cleared
+    /// while new local turns (an attachment, an outage, voice) landed in it.
+    @Test("a new on-device answer after the sheet asks again — clearing is by message, not conversation")
+    func newLocalTurnAsksAgain() {
         var arming = PrivateCloudArming()
         arming.select(true)
-        arming.consented(includeConversation: true, in: chatA) // opened in A, B is active now
-        #expect(act(arming, in: chatB, local: true) == .askConsent)
+        arming.consented(includeConversation: true, seen: turnA)
+        #expect(act(arming, onDevice: turnA.union(turnB)) == .askConsent)
+    }
+
+    @Test("a sheet answered after a switch clears only the messages it showed")
+    func lateSheetClearsWhatItShowed() {
+        var arming = PrivateCloudArming()
+        arming.select(true)
+        arming.consented(includeConversation: true, seen: turnA) // opened in A, B is active now
+        #expect(act(arming, onDevice: turnB) == .askConsent)
     }
 
     @Test("\"Keep it on this Mac\" un-picks and forgets the consent")
     func declineTurnsOff() {
         var arming = PrivateCloudArming()
         arming.select(true)
-        arming.consented(includeConversation: true, in: chatA)
+        arming.consented(includeConversation: true, seen: turnA)
         arming.declined()
         #expect(!arming.isOn)
         #expect(arming.consent == nil)
@@ -95,23 +109,24 @@ struct PrivateCloudArmingTests {
         #expect(act(arming) == .askConsent)
     }
 
-    @Test("picking a brain on this Mac forgets the consent; picking PCC again asks again")
-    func pickingLocalForgetsConsent() {
+    @Test("picking a brain on this Mac forgets the consent and what was seen")
+    func pickingLocalForgets() {
         var arming = PrivateCloudArming()
         arming.select(true)
-        arming.consented(includeConversation: false, in: chatA)
+        arming.consented(includeConversation: true, seen: turnA)
         arming.select(false)
         #expect(!arming.isOn)
         #expect(arming.consent == nil)
         arming.select(true)
-        #expect(act(arming) == .askConsent)
+        arming.consented(includeConversation: true, seen: [])
+        #expect(act(arming, onDevice: turnA) == .askConsent)
     }
 
     @Test("re-picking PCC while on keeps the consent")
     func reselectKeepsConsent() {
         var arming = PrivateCloudArming()
         arming.select(true)
-        arming.consented(includeConversation: true, in: chatA)
+        arming.consented(includeConversation: true, seen: [])
         arming.select(true)
         #expect(act(arming) == withHistory)
     }
@@ -121,7 +136,7 @@ struct PrivateCloudArmingTests {
         for control: PrivateCloudRung.Control in [.unavailable, .exhausted(resetsAt: nil)] {
             var arming = PrivateCloudArming()
             arming.select(true)
-            arming.consented(includeConversation: true, in: chatA)
+            arming.consented(includeConversation: true, seen: [])
             arming.controlChanged(control)
             #expect(arming.isOn)
             #expect(act(arming, control: control) == .local)
@@ -135,7 +150,7 @@ struct PrivateCloudArmingTests {
     func hiddenControlTurnsOff() {
         var arming = PrivateCloudArming()
         arming.select(true)
-        arming.consented(includeConversation: true, in: chatA)
+        arming.consented(includeConversation: true, seen: [])
         arming.controlChanged(.hidden)
         #expect(!arming.isOn)
         #expect(arming.consent == nil)
@@ -145,7 +160,7 @@ struct PrivateCloudArmingTests {
     func attachmentSendsLocal() {
         var arming = PrivateCloudArming()
         arming.select(true)
-        arming.consented(includeConversation: true, in: chatA)
+        arming.consented(includeConversation: true, seen: [])
         #expect(act(arming, attachments: true) == .local)
         #expect(!arming.servesNextSend(control: .ready, hasAttachments: true))
         #expect(arming.isOn)
@@ -155,7 +170,7 @@ struct PrivateCloudArmingTests {
     @Test("a consent can't be recorded while PCC isn't picked")
     func consentNeedsThePick() {
         var arming = PrivateCloudArming()
-        arming.consented(includeConversation: true, in: chatA)
+        arming.consented(includeConversation: true, seen: [])
         #expect(arming.consent == nil)
     }
 

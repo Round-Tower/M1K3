@@ -2,18 +2,19 @@
 //  PrivateCloudArming.swift
 //  M1K3LanguageModel
 //
-//  The PCC control's lifecycle as pure state. It used to arm ONE message and
-//  fall back to local after every send, so a cloud conversation meant a click
-//  and a sheet per turn (Kev, 2026-09-26: "PCC should stay on when selected").
-//  Now it stays on for the conversation: the consent sheet shows on the first
-//  send, and later sends go straight to PCC with the same include-conversation
-//  choice. Each PCC answer still carries its label (ADR 0006, as amended).
+//  The brain picker's Private Cloud Compute pick, and its consent, as pure
+//  state (ADR 0010, current contract). The pick and the sheet's one answer
+//  persist (the view writes `selectedDefaultsKey` / `consentDefaultsKey`) and
+//  hold across conversations and relaunches until the user un-picks PCC, says
+//  "Keep it on this Mac", or the rung stops existing — each of which forgets
+//  the answer. One exception keeps "you see what leaves" true: with "also
+//  send this conversation" stored, any message that never left this Mac
+//  (`ChatSession.onDeviceMessageIDs`) re-asks until a sheet has shown it.
+//  What was shown is never persisted. Sends that can't be honoured
+//  (outage, limit, attachment) stay local while the pick holds.
 //
-//  It turns itself off whenever the consent could be stale or can't be
-//  honoured: "Keep it on this Mac", a manual off, a new or switched
-//  conversation, a control that isn't ready, or a staged attachment. Consent
-//  never outlives the conversation it was given in, and a relaunch starts off
-//  (the value lives in view state, never in defaults).
+//  History: 09-26 made it stay on per conversation (in view state, never in
+//  defaults); the reviews below moved it to the picker and to once.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8 (pure and pinned;
 //  the ADR 0006 amendment it implements awaits Kev). Prior: the one-shot
@@ -38,6 +39,10 @@
 //  exception: with "also send this conversation" stored, a conversation holding on-device answers
 //  shows the sheet once itself — history that never left this Mac never leaves unseen. That set of
 //  cleared conversations is never persisted. Supersedes (2)'s per-conversation binding. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 (4) — PR #462 round two (both passes): clearing a whole
+//  conversation went stale when a local turn landed after the sheet (attachment, outage, voice), and
+//  that answer then left unseen. Now by message id: the sheet records the on-device ids it showed and
+//  any unseen id re-asks. The header above is rewritten to the current contract. Confidence 0.85.
 //
 
 import Foundation
@@ -62,9 +67,9 @@ public struct PrivateCloudArming: Equatable, Sendable {
     /// The sheet's one answer (include the conversation?), nil until confirmed.
     /// Persisted by the view; it lives exactly as long as the pick.
     public private(set) var consent: Bool?
-    /// Conversations whose on-device history the user has seen leave on the
-    /// sheet. Never persisted: a relaunch asks again where it matters.
-    private var historyCleared: Set<UUID> = []
+    /// Ids of the on-device messages a sheet has shown. Never persisted: a
+    /// relaunch asks again where it matters.
+    private var seenOnDevice: Set<UUID> = []
 
     /// `isOn` and `consent` are the persisted pick and answer.
     public init(isOn: Bool = false, consent: Bool? = nil) {
@@ -72,19 +77,19 @@ public struct PrivateCloudArming: Equatable, Sendable {
         self.consent = isOn ? consent : nil
     }
 
-    /// What a send in `conversationID` does right now. `holdsOnDeviceAnswers`:
-    /// the history PCC would be shown includes answers made on this Mac.
+    /// What a send does right now. `onDeviceMessages`: the ids in the history
+    /// PCC would be shown that never left this Mac.
     public func action(
-        in conversationID: UUID,
         control: PrivateCloudRung.Control,
         hasAttachments: Bool,
-        holdsOnDeviceAnswers: Bool
+        onDeviceMessages: Set<UUID>
     ) -> Action {
         guard servesNextSend(control: control, hasAttachments: hasAttachments) else { return .local }
         guard let includeConversation = consent else { return .askConsent }
-        // Once means once — except that history which never left this Mac is
-        // never sent without the user seeing it go, once per conversation.
-        if includeConversation, holdsOnDeviceAnswers, !historyCleared.contains(conversationID) {
+        // Once means once — except that text which never left this Mac is never
+        // sent without a sheet having shown it. By message, not conversation: a
+        // local turn landing after the sheet (attachment, outage, voice) re-asks.
+        if includeConversation, !onDeviceMessages.isSubset(of: seenOnDevice) {
             return .askConsent
         }
         return .sendDirect(includeConversation: includeConversation)
@@ -103,12 +108,12 @@ public struct PrivateCloudArming: Equatable, Sendable {
         if on { isOn = true } else { turnOff() }
     }
 
-    /// The sheet's yes, given in `conversationID` (where it was opened, which
-    /// may no longer be the active one).
-    public mutating func consented(includeConversation: Bool, in conversationID: UUID) {
+    /// The sheet's yes. `seen`: the on-device message ids it showed, captured
+    /// when it opened (so a sheet answered after a switch clears only those).
+    public mutating func consented(includeConversation: Bool, seen: Set<UUID>) {
         guard isOn else { return }
         consent = includeConversation
-        historyCleared.insert(conversationID)
+        if includeConversation { seenOnDevice.formUnion(seen) }
     }
 
     /// "Keep it on this Mac" on the sheet.
@@ -125,6 +130,6 @@ public struct PrivateCloudArming: Equatable, Sendable {
     private mutating func turnOff() {
         isOn = false
         consent = nil
-        historyCleared = []
+        seenOnDevice = []
     }
 }

@@ -502,11 +502,10 @@ struct ContentView: View {
                 // PCC is un-picked (ADR 0010).
                 onSend: { includeConversation in
                     privateCloudPending = nil
-                    // Clears the conversation the sheet was opened in, never the one
-                    // that's active now (a switch under the sheet must still ask there).
+                    // Clears only the on-device messages this sheet showed, captured
+                    // when it opened — never whatever is active or new by now.
                     privateCloudArming.consented(
-                        includeConversation: includeConversation,
-                        in: pending.consent.conversationID ?? pending.openedIn
+                        includeConversation: includeConversation, seen: pending.onDeviceShown
                     )
                     sendToPrivateCloud(pending.consent, includeConversation: includeConversation)
                 },
@@ -1143,16 +1142,16 @@ struct ContentView: View {
         // the consent sheet, later ones reuse its answer — except where on-device
         // history would ride along unseen. Attachments never ride a PCC turn
         // (that send stays local; the pick holds).
-        let conversation = env.chat.activeConversationID
-        switch privateCloudArming.action(
-            in: conversation,
-            control: privateCloudControl,
-            hasAttachments: hasStagedAttachments,
-            holdsOnDeviceAnswers: ChatSession.holdsOnDeviceAnswers(env.chat.messages)
-        ) {
+        let onDevice = ChatSession.onDeviceMessageIDs(env.chat.messages)
+        // Voice turns answer on this Mac (ADR 0010); the field is hidden in voice
+        // mode, and this keeps a typed send from ever disagreeing with the label.
+        let action: PrivateCloudArming.Action = env.isVoiceModeActive ? .local : privateCloudArming.action(
+            control: privateCloudControl, hasAttachments: hasStagedAttachments, onDeviceMessages: onDevice
+        )
+        switch action {
         case .askConsent:
             privateCloudPending = PendingPrivateCloudSend(
-                consent: env.chat.privateCloudConsent(for: draft), openedIn: conversation
+                consent: env.chat.privateCloudConsent(for: draft), onDeviceShown: onDevice
             )
             return
         case let .sendDirect(includeConversation):
@@ -1927,12 +1926,20 @@ struct PrivateCloudLifecycle: ViewModifier {
             // since the last run ends it. Safe at launch because only `.hidden`
             // acts, and `.hidden` reads synchronous inputs (backend, switch,
             // policy) — never the async status that starts out unknown.
-            .onAppear { arming.controlChanged(control) }
+            .onAppear {
+                arming.controlChanged(control)
+                // Self-healing pair: an answer stored without a pick (a crash between
+                // the two writes) must never come back as consent on a later pick.
+                if !arming.isOn {
+                    UserDefaults.standard.removeObject(forKey: PrivateCloudArming.consentDefaultsKey)
+                }
+            }
             .onChange(of: control) { _, newValue in
                 arming.controlChanged(newValue)
             }
             .onChange(of: arming.isOn) { _, on in
                 UserDefaults.standard.set(on, forKey: PrivateCloudArming.selectedDefaultsKey)
+                if !on { UserDefaults.standard.removeObject(forKey: PrivateCloudArming.consentDefaultsKey) }
             }
             .onChange(of: arming.consent) { _, consent in
                 if let consent {
@@ -1956,6 +1963,6 @@ struct PrivateCloudLifecycle: ViewModifier {
 struct PendingPrivateCloudSend: Identifiable {
     let id = UUID()
     let consent: PrivateCloudTurn.Consent
-    /// The conversation active when the sheet opened — what its yes is bound to.
-    let openedIn: UUID
+    /// The on-device message ids in the history this sheet shows — what its yes clears.
+    let onDeviceShown: Set<UUID>
 }

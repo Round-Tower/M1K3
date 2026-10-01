@@ -28,11 +28,13 @@ picker with the other brains, and once picked it stays picked.
   before; its answer, including the "also send this conversation" choice, is
   stored (`PrivateCloudArming.consentDefaultsKey`) and reused in every
   conversation and after a relaunch. It lives exactly as long as the pick.
-- **One exception: history that never left this Mac.** With "also send this
-  conversation" stored, a conversation holding answers made on this Mac
-  (`ChatSession.holdsOnDeviceAnswers`) shows the sheet once itself, so that
-  history is never sent without being seen. Which conversations were cleared
-  is never stored; a relaunch asks again in such a conversation.
+- **One exception: text that never left this Mac.** With "also send this
+  conversation" stored, any message in the shared history that never left this
+  Mac (`ChatSession.onDeviceMessageIDs`: an answer made here, or a question no
+  PCC answer followed) re-asks until a sheet has shown it. Clearing is by
+  message id, not by conversation (PR #462 round two: a local turn landing
+  after the sheet, from an attachment, an outage or voice, used to leave
+  unseen). What was shown is never stored; a relaunch asks again.
 - **Only the user ends the pick:** choosing a brain on this Mac, or "Keep it on
   this Mac" on the sheet. A rung that stops existing (the Settings switch off,
   org policy) ends it too, including at launch. Ending the pick forgets the
@@ -46,8 +48,8 @@ picker with the other brains, and once picked it stays picked.
   MCP `ask_m1k3` answer on this Mac whatever the pick, as before. The picker's
   label speaks for the chat field, and shows the local brain while voice mode
   is on (PR #462 review).
-- **A late sheet clears only its own conversation:** a sheet answered after the
-  active conversation changed clears the one it was opened in, never the new one.
+- **A late sheet clears only what it showed:** the ids are captured when it
+  opens, so a sheet answered after a switch can't clear the new conversation.
 - **Auto-route** still owns which local brain answers. The picker stays
   reachable for the PCC row, and the active local row un-picks PCC.
 

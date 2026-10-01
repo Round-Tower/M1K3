@@ -157,7 +157,7 @@ public enum PrivateCloudRung {
         brainName: String,
         now: Date
     ) -> String {
-        if picked {
+        if picked, control != .hidden {
             if voiceMode { return "Voice stays on this Mac — \(brainName) answers while you talk" }
             if control == .ready, hasAttachments {
                 return "Attachments never go to Private Cloud Compute — this message stays on this Mac"

@@ -170,6 +170,8 @@ struct PrivateCloudRungTests {
         #expect(help(voice: true) == "Voice stays on this Mac — Lil answers while you talk")
         #expect(help(control: .unavailable) == "Private Cloud Compute isn't available right now")
         #expect(help(picked: false) == "Switch brain — currently Lil")
+        // Picked but the rung is gone (the lifecycle un-picks next): never an empty tooltip.
+        #expect(help(control: .hidden) == "Switch brain — currently Lil")
         #expect(help(picked: false, autoRoute: true)
             == "Auto-route is on — M1K3 picks the brain. Turn it off in Settings to choose manually.")
     }
