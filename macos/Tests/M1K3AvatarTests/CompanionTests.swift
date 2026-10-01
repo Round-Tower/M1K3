@@ -8,12 +8,22 @@ import Testing
 struct CompanionTests {
     // MARK: - Gait resolution (dialect-independent)
 
-    @Test("excited shows the reaction gait regardless of activity")
-    func excitedReacts() {
+    // 2026-10-01: this used to pin "excited → .react gait regardless of activity".
+    // That WAS the bug — generating derives excited, so a streaming reply looped
+    // Jump/Run and the move clip never played. The react beat is now a one-shot
+    // fired by CompanionChoreographer; the loop gait follows the activity.
+    @Test("excited no longer hijacks the loop gait — the activity drives it")
+    func excitedDoesNotLoopReact() {
         for activity in AvatarActivity.allCases {
             let state = AvatarState(emotion: .excited, activity: activity)
-            #expect(ClipMapper.gait(for: state) == .react)
+            #expect(ClipMapper.gait(for: state) != .react)
         }
+    }
+
+    @Test("sleepy at idle settles; sleepy while busy follows the activity")
+    func sleepyGait() {
+        #expect(ClipMapper.gait(for: AvatarState(emotion: .sleepy, activity: .idle)) == .sleepy)
+        #expect(ClipMapper.gait(for: AvatarState(emotion: .sleepy, activity: .generating)) == .move)
     }
 
     @Test("error activity and distressed emotions show the distress gait")
@@ -28,7 +38,7 @@ struct CompanionTests {
         #expect(ClipMapper.gait(for: .idle) == .rest)
         #expect(ClipMapper.gait(for: AvatarState(emotion: .neutral, activity: .listening)) == .alert)
         #expect(ClipMapper.gait(for: AvatarState(emotion: .thinking, activity: .thinking)) == .alert)
-        #expect(ClipMapper.gait(for: AvatarState(emotion: .excited, activity: .generating)) == .react) // excited wins
+        #expect(ClipMapper.gait(for: AvatarState(emotion: .excited, activity: .generating)) == .move) // excited no longer wins
         #expect(ClipMapper.gait(for: AvatarState(emotion: .happy, activity: .generating)) == .move)
         #expect(ClipMapper.gait(for: AvatarState(emotion: .happy, activity: .speaking)) == .move)
     }
@@ -42,6 +52,9 @@ struct CompanionTests {
         #expect(CompanionDialect.quaternius.clipName(for: .move) == "Walk")
         #expect(CompanionDialect.quaternius.clipName(for: .react) == "Jump")
         #expect(CompanionDialect.quaternius.clipName(for: .distress) == "Fear")
+        #expect(CompanionDialect.quaternius.clipName(for: .sleepy) == "Sit")
+        #expect(CompanionDialect.quaternius.clipName(for: .affection) == "Clicked")
+        #expect(CompanionDialect.quaternius.clipName(for: .fidget) == "Idle_B")
     }
 
     @Test("Fox dialect collapses missing gaits onto its 3 clips")
@@ -51,6 +64,9 @@ struct CompanionTests {
         #expect(CompanionDialect.fox.clipName(for: .move) == "Walk")
         #expect(CompanionDialect.fox.clipName(for: .react) == "Run")
         #expect(CompanionDialect.fox.clipName(for: .distress) == "Run")
+        #expect(CompanionDialect.fox.clipName(for: .sleepy) == "Survey") // no Sit
+        #expect(CompanionDialect.fox.clipName(for: .fidget) == "Survey") // no fidget clip
+        #expect(CompanionDialect.fox.clipName(for: .affection) == "Run")
     }
 
     @Test("aquatic dialect: move is Swim and react is Fly — never the land gaits")
@@ -120,7 +136,7 @@ struct CompanionTests {
     func endToEndClip() {
         #expect(ClipMapper.clip(for: .idle, dialect: .fox) == "Survey")
         #expect(ClipMapper.clip(for: .error, dialect: .quaternius) == "Fear")
-        #expect(ClipMapper.clip(for: AvatarState(emotion: .excited, activity: .speaking), dialect: .quaternius) == "Jump")
+        #expect(ClipMapper.clip(for: AvatarState(emotion: .excited, activity: .speaking), dialect: .quaternius) == "Walk")
     }
 
     // MARK: - Selection resolution (picker ↔ persisted id)
