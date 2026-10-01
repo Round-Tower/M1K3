@@ -229,7 +229,9 @@ struct NotchHUDDemandTests {
     @Test("the main window appearing mid-utterance hides the HUD after the usual grace")
     func windowAppearingMidUtteranceHidesWithGrace() {
         var visibility = NotchHUDVisibility()
-        let demand = { (onScreen: Bool) in NotchHUDDemand.wantsHUD(enabled: true, speaking: true, mainWindowOnScreen: onScreen) }
+        let demand = { (onScreen: Bool) in
+            NotchHUDDemand.wantsHUD(enabled: true, speaking: true, mainWindowOnScreen: onScreen)
+        }
         #expect(visibility.update(speaking: demand(false), atSeconds: 0) == .show)
         #expect(visibility.update(speaking: demand(true), atSeconds: 1.0) == nil)
         #expect(visibility.update(speaking: demand(true), atSeconds: 1.0 + visibility.hideGraceSeconds) == .hide)

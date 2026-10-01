@@ -114,7 +114,8 @@ struct InferencePhosphorView: View {
             isResponding: env.chat.isResponding,
             hasUnseenAmbient: env.ambientNotes.last?.id != lastAmbientID
         )
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: lowPower || paused || !windowVisible || clockIdle)) { context in
+        let clockPaused = lowPower || paused || !windowVisible || clockIdle
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: clockPaused)) { context in
             let now = context.date
             Canvas { canvas, size in
                 draw(canvas, size: size, now: now)
