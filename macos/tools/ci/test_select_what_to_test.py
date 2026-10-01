@@ -39,3 +39,11 @@ def test_unknown_or_empty_platform_is_a_no_op(tmp_path):
     _notes(tmp_path, **{"ios_en-US.txt": "phone"})
     assert _run(tmp_path, "").returncode == 0
     assert list(tmp_path.glob("WhatToTest.*.txt")) == []
+
+
+def test_a_rerun_for_another_platform_leaves_no_stale_notes(tmp_path):
+    _notes(tmp_path, **{"ios_en-US.txt": "phone", "ios_de-DE.txt": "Telefon", "macos_en-US.txt": "mac"})
+    _run(tmp_path, "iOS")
+    _run(tmp_path, "macOS")
+    assert sorted(p.name for p in tmp_path.glob("WhatToTest.*.txt")) == ["WhatToTest.en-US.txt"]
+    assert (tmp_path / "WhatToTest.en-US.txt").read_text() == "mac"

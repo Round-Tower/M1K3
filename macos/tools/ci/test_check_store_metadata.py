@@ -42,7 +42,7 @@ def test_missing_support_url_is_a_problem(tmp_path):
 
 def test_non_locale_folders_are_ignored(tmp_path):
     (tmp_path / "review_information").mkdir()
-    (tmp_path / "review_information" / "notes.txt").write_text("x" * 5000)
+    (tmp_path / "review_information" / "demo_user.txt").write_text("x" * 5000)
     assert problems(tmp_path) == []
 
 
@@ -138,3 +138,33 @@ def test_a_locale_missing_from_one_platform_says_missing(tmp_path):
     (ios).mkdir()
     [p] = shared_drift({"MAC_OS": mac, "IOS": ios})
     assert "IOS=missing" in p
+
+
+def test_a_mac_claim_before_brain_at_home_on_the_same_line_is_caught(tmp_path):
+    # The exemption covers the Brain at Home clause, not the whole line.
+    _locale(tmp_path, "en-US", description="Runs entirely on your Mac. Brain at Home: borrow your Mac's brain.",
+            support_url="https://m1k3.app")
+    assert len(device_claims(tmp_path, "IOS")) == 1
+
+
+def test_review_notes_in_a_metadata_folder_are_a_problem(tmp_path):
+    # 2026-10-01: `fastlane mac metadata` pushed a stale review_information/notes.txt
+    # over the live notes (no MCP server, no Brain at Home — the 09-16 rejection).
+    # The canonical notes are fastlane/review_notes.txt, applied by review_notes.py.
+    (tmp_path / "review_information").mkdir()
+    (tmp_path / "review_information" / "notes.txt").write_text("stale")
+    [p] = problems(tmp_path)
+    assert "review_information/notes.txt" in p
+
+
+def test_main_checks_the_ios_folder_with_ios_rules(tmp_path, monkeypatch, capsys):
+    # Pins the PLATFORM_DIRS wiring: a key typo would silently drop the iPhone check.
+    import check_store_metadata as csm
+    fastlane = tmp_path / "fastlane"
+    _locale(fastlane / "metadata_mac", "en-US", name="M1K3", support_url="https://m1k3.app")
+    _locale(fastlane / "metadata_ios", "en-US", name="M1K3", description="Runs on your Mac.",
+            support_url="https://m1k3.app")
+    monkeypatch.setattr(csm, "FASTLANE_DIR", fastlane)
+    monkeypatch.setattr(csm.sys, "argv", ["check_store_metadata.py"])
+    assert csm.main() == 1
+    assert "metadata_ios/en-US/description.txt" in capsys.readouterr().out

@@ -26,6 +26,10 @@ folders, and no device claims (shared fields name no device; the iPhone copy
 names the Mac only on a Brain at Home line). The regex avoids \b so 在Mac上
 is caught. Confidence now 0.85 — the claim check is a line heuristic: a
 false Mac claim sharing a line with "Brain at Home" would slip past it.
+Review: Kev + claude-opus-5.5, 2026-10-01 (fold) — the exemption now covers
+only the Brain at Home clause onward; review_information/notes.txt in a
+metadata folder is a problem (deliver clobbered the live Mac notes with a
+stale copy); main()'s platform wiring is pinned. Confidence now 0.9.
 """
 from __future__ import annotations
 
@@ -65,6 +69,12 @@ _LOCALE = re.compile(r"^[a-z]{2,3}(-[A-Za-z]{2,4})?$")
 
 def problems(root: Path) -> list[str]:
     found: list[str] = []
+    # deliver pushes this file over the live App Review notes; the canonical
+    # notes are fastlane/review_notes.txt (tools/asc/review_notes.py applies them).
+    # A stale copy here clobbered the Mac notes on 2026-10-01.
+    if (root / "review_information" / "notes.txt").exists():
+        found.append("review_information/notes.txt: deliver would overwrite the live review notes — "
+                     "keep them in fastlane/review_notes.txt only")
     for locale in sorted(p for p in root.iterdir() if p.is_dir() and _LOCALE.match(p.name)):
         for field, limit in LIMITS.items():
             f = locale / f"{field}.txt"
@@ -108,7 +118,10 @@ def device_claims(root: Path, platform: str) -> list[str]:
             continue
         for field in VERSION_FIELDS:
             for line in (_read(locale / f"{field}.txt") or "").splitlines():
-                if _BRAIN_AT_HOME not in line and (m := _MAC.search(line)):
+                # Only what precedes "Brain at Home" is checked: the clause itself may
+                # name the Mac, a claim earlier on the line may not.
+                checked = line.split(_BRAIN_AT_HOME, 1)[0]
+                if m := _MAC.search(checked):
                     found.append(f"{locale.name}/{field}.txt: '{m.group()}' on the iPhone listing — {line.strip()[:60]}")
     return found
 
@@ -127,14 +140,15 @@ def shared_drift(roots: dict[str, Path]) -> list[str]:
 
 
 PLATFORM_DIRS = {"MAC_OS": "metadata_mac", "IOS": "metadata_ios"}
+FASTLANE_DIR = Path(__file__).resolve().parents[2] / "fastlane"
 
 
 def main() -> int:
     if len(sys.argv) > 1:
+        # One folder, checked as the Mac's: no iPhone-copy rule, no drift check.
         roots = {"MAC_OS": Path(sys.argv[1])}
     else:
-        fastlane = Path(__file__).resolve().parents[2] / "fastlane"
-        roots = {k: fastlane / v for k, v in PLATFORM_DIRS.items() if (fastlane / v).is_dir()}
+        roots = {k: FASTLANE_DIR / v for k, v in PLATFORM_DIRS.items() if (FASTLANE_DIR / v).is_dir()}
     found: list[str] = []
     for platform, root in roots.items():
         found += [f"{root.name}/{p}" for p in problems(root) + device_claims(root, platform)]

@@ -19,6 +19,8 @@ platform="$(printf '%s' "${2:-}" | tr '[:upper:]' '[:lower:]')"
 [ -n "$platform" ] || { echo "--- What to Test: no platform given — leaving notes unset."; exit 0; }
 
 shopt -s nullglob
+# A reused checkout must not hand one platform another's leftover locales.
+rm -f "$dir"/WhatToTest.*.txt
 copied=0
 for notes in "$dir/notes/$platform."*.txt; do
   locale="$(basename "$notes" .txt)"
