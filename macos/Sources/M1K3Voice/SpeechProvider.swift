@@ -20,6 +20,8 @@ import Foundation
 /// (rate 0…1, pitch 0.5…2.0) but carry no framework dependency — the adapter
 /// maps these straight through.
 //  Review: Kev + claude-opus-5-5, 2026-10-02 — added SpeechProviderWithPlaybackHealth (stall count). Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-02 (PR #471 round 2) — `stalled(since:)` moved here from the app so
+//  `swift test` covers it. Confidence now 0.85.
 public struct SpeechUtterance: Sendable, Equatable {
     public static let minRate: Float = 0.0
     public static let maxRate: Float = 1.0
@@ -90,6 +92,17 @@ public protocol SpeechProviderWithLifecycle: SpeechProvider, AnyObject {
 /// can't report success for a line that was silent.
 public protocol SpeechProviderWithPlaybackHealth: SpeechProvider {
     var playbackStallCount: Int { get }
+}
+
+public extension SpeechProviderWithPlaybackHealth {
+    /// Whether the line spoken since `stallsBefore` was sampled did NOT play: the
+    /// count rose. The count is per PROVIDER, not per utterance, so a stall from
+    /// another speaker inside the window reads as "not spoken" too (false positive),
+    /// and an unwaited `speak` can't be checked at all. Callers serialise speech
+    /// (the single-flight gate / visitor queue), which keeps the window honest.
+    func stalled(since stallsBefore: Int) -> Bool {
+        playbackStallCount > stallsBefore
+    }
 }
 
 /// A speech backend that can additionally report WORD-level timing — the seam

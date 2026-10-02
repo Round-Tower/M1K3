@@ -15,6 +15,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-02, Confidence 0.8, Prior: Unknown
 //  (grace is a judgement: see `defaultGrace`).
+//  Review: Kev + claude-opus-5-5, 2026-10-02 (PR #471 round 2) — EngineSetupPlan drops its `teardown`
+//  step (tearDownEngine owns stop + reset; the plan repeated it) and PlaybackSleeper names the injected
+//  sleeper type. Confidence now 0.8.
 
 import Foundation
 
@@ -42,6 +45,9 @@ public struct PlaybackDeadlinePolicy: Sendable, Equatable {
     }
 }
 
+/// The sleep behind a bounded wait; injected so tests trip a deadline without a clock.
+typealias PlaybackSleeper = @Sendable (Duration) async throws -> Void
+
 /// How a bounded playback wait ended.
 enum PlaybackOutcome: Equatable {
     /// Every scheduled buffer played back.
@@ -55,18 +61,18 @@ enum PlaybackOutcome: Equatable {
 /// What `configureEngineIfNeeded` must do, decided from observable state alone.
 ///
 /// - A rebuild request (set when a deadline trips) beats `engine.isRunning`:
-///   a running engine can be failing every render.
+///   a running engine can be failing every render. The physical stop + reset is
+///   NOT a plan step: `tearDownEngine()` performs it when it sets the request.
 /// - The player is attached only if it is not already attached. `engineConfigured`
 ///   is cleared by a configuration change, but the node stays attached, so keying
 ///   `attach` on that flag attached it a second time.
 struct EngineSetupPlan: Equatable {
-    var teardown = false
     var attachPlayer = false
     var disconnectPlayer = false
     var startEngine = false
 
     var isNoOp: Bool {
-        !teardown && !attachPlayer && !disconnectPlayer && !startEngine
+        !attachPlayer && !disconnectPlayer && !startEngine
     }
 
     static func make(
@@ -78,10 +84,9 @@ struct EngineSetupPlan: Equatable {
     ) -> EngineSetupPlan {
         if configured, sampleRateMatches, engineRunning, !needsRebuild { return EngineSetupPlan() }
         var plan = EngineSetupPlan()
-        plan.teardown = needsRebuild
         plan.attachPlayer = !playerAttached
         plan.disconnectPlayer = configured && playerAttached
-        plan.startEngine = !engineRunning || needsRebuild
+        plan.startEngine = !engineRunning
         return plan
     }
 }

@@ -16,6 +16,10 @@
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.7 (probe-verified
 //  playerTime semantics; scheduling/cancel paths verify-at-⌘R). Prior:
 //  Kev + claude-sonnet-4-6 (EffectfulSpeechProvider.swift).
+//  Review: Kev + claude-opus-5-5, 2026-10-02 (PR #471 round 2) — speak(stream:) hands the utterance back
+//  (returns false) while the engine path is in plain fallback; a COMPLETED wait clears the stall streak;
+//  a late .dataPlayedBack after a cancel is inert (it used to re-run complete() and could stop() the next
+//  utterance's playback on the shared player). Confidence now 0.75.
 //
 
 import AVFoundation
@@ -93,6 +97,13 @@ public extension EffectfulSpeechProvider {
         let outcome = StreamOutcome(spoke: true)
         await entryGate.run { [self] in
             await runRender(entry) {
+                // In plain fallback (consecutive stalls), decline: the caller treats
+                // `false` as "speak it in the Apple voice", which lands in renderText
+                // and routes to plainSpeak. Peek only — renderText owns the probe cycle.
+                if self.stallRoute == .plain {
+                    outcome.spoke = false
+                    return
+                }
                 outcome.spoke = await self.renderStream(stream: stream, sampleRate: sampleRate)
             }
         }
@@ -151,6 +162,8 @@ extension EffectfulSpeechProvider {
                 // utterance re-reads the device's IO size, and count the stall so the
                 // MCP caller is told the line did not play.
                 noteEnginePlaybackStalled(scheduledSamples: session.scheduledSamples, sampleRate: sampleRate)
+            } else if outcome == .completed {
+                notePlaybackCompleted()
             }
         }
         if streamingSession === session { streamingSession = nil }
@@ -189,6 +202,9 @@ final class StreamingPlaybackSession {
     private var streamEnded = false
     private var deadlineTask: Task<Void, Never>?
     private var timedOut = false
+    /// How many times `complete()` ran — a test seam for "a late buffer callback
+    /// after a cancel must not tear the shared player down again".
+    private(set) var teardownCount = 0
     private var completion: CheckedContinuation<Void, Never>?
     private var clockTask: Task<Void, Never>?
     private var lastWordIndex: Int?
@@ -285,6 +301,12 @@ final class StreamingPlaybackSession {
 
     func bufferCompleted() {
         pendingBuffers -= 1
+        // After a cancel (stop, route change or a tripped deadline) the wait is
+        // already resolved and the player belongs to whoever speaks next. A late
+        // .dataPlayedBack — the engine rebuild can flush them — is bounded by the
+        // number of buffers scheduled, so the assert below cannot trip, but it must
+        // not run `complete()` again: that would `stop()` the NEXT utterance.
+        guard !isCancelled else { return }
         // `== 0` (not `<= 0`) everywhere so an extra completion callback
         // can't be masked — surface the imbalance in debug builds instead.
         assert(pendingBuffers >= 0, "buffer completions exceeded schedules")
@@ -306,6 +328,7 @@ final class StreamingPlaybackSession {
         // an internal engine lock the audio render thread also touches — a
         // direct call here is a priority-inversion hang risk. Nothing below
         // depends on the stop completing first.
+        teardownCount += 1
         let node = player
         Task(priority: .utility) { @MainActor in node.stop() }
         clockTask?.cancel()

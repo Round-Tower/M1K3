@@ -7,6 +7,9 @@
 //  buffer outgrows the engine's max frames) stays verify-by-launch.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-02, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-02 (PR #471 round 2) — pins that a late
+//  .dataPlayedBack after a timed-out cancel is inert (it could otherwise stop() the NEXT
+//  utterance's playback on the shared player). Confidence now 0.85.
 
 import AVFoundation
 @testable import M1K3Voice
@@ -121,5 +124,28 @@ struct StreamingPlaybackDeadlineTests {
         let outcome = await session.awaitCompletion(policy: PlaybackDeadlinePolicy()) { try await sleeper.sleep($0) }
         #expect(outcome == .completed)
         #expect(await sleeper.requested.isEmpty)
+    }
+
+    @Test("late buffer completions after a timed-out cancel are inert")
+    func lateCompletionAfterTimeout() async {
+        let session = makeSession()
+        session.accountScheduled(sampleCount: 24000)
+        session.accountScheduled(sampleCount: 24000)
+        session.markStreamEnded()
+        let sleeper = ManualSleeper()
+        let waiter = Task { @MainActor in
+            await session.awaitCompletion(policy: PlaybackDeadlinePolicy()) { try await sleeper.sleep($0) }
+        }
+        await sleeper.waitUntilRequested()
+        await sleeper.fire()
+        #expect(await waiter.value == .timedOut)
+        #expect(session.teardownCount == 1)
+
+        // The engine rebuild can flush both pending completions after the fact. Each
+        // is one decrement against a buffer that was scheduled, so the debug assert
+        // cannot trip — but the LAST one must not tear the shared player down again.
+        session.bufferCompleted()
+        session.bufferCompleted()
+        #expect(session.teardownCount == 1)
     }
 }

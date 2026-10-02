@@ -8,6 +8,9 @@
 //  attached a second time after `engineConfigured` is cleared.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-02, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-02 (PR #471 round 2) — the plan no longer carries a
+//  `teardown` step: `tearDownEngine()` is the one owner of stop + reset, so the plan only
+//  reconnects and starts. Confidence now 0.85.
 
 @testable import M1K3Voice
 import Testing
@@ -31,12 +34,14 @@ struct EngineSetupPlanTests {
         #expect(plan().isNoOp)
     }
 
-    @Test("a rebuild request tears down even though the engine is running")
+    @Test("a rebuild request is never a no-op even though the engine reports running")
     func rebuildBeatsRunning() {
-        let result = plan(needsRebuild: true)
-        #expect(!result.isNoOp)
-        #expect(result.teardown)
-        #expect(result.startEngine)
+        #expect(plan(needsRebuild: true).isNoOp == false)
+    }
+
+    @Test("a rebuild after tearDownEngine (engine stopped) restarts it")
+    func rebuildRestarts() {
+        #expect(plan(configured: false, running: false, needsRebuild: true).startEngine)
     }
 
     @Test("a rebuild keeps the player attached rather than attaching twice")
@@ -64,7 +69,6 @@ struct EngineSetupPlanTests {
         let result = plan(rateMatches: false)
         #expect(result.disconnectPlayer)
         #expect(result.startEngine == false)
-        #expect(result.teardown == false)
     }
 
     @Test("a stopped engine restarts")

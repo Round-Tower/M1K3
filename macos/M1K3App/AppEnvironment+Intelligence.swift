@@ -37,6 +37,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-02 — a waited speak now throws when the audio engine's playback
 //  deadline tripped during the line (stall counter), instead of returning "Spoken." over silence.
 //  Confidence now 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-02 (PR #471 round 2) — throwIfSpeechStalled is now a thin call to
+//  `SpeechProviderWithPlaybackHealth.stalled(since:)` (logic + tests live in M1K3Voice). Confidence now 0.8.
 
 import Foundation
 import M1K3Avatar // AvatarEmotion
@@ -246,12 +248,12 @@ extension AppEnvironment {
         }
     }
 
-    /// A waited `speak` must not report success for a line that never played: the
-    /// audio engine's playback deadline tripped (2026-10-02 — a "Spoken." line over
-    /// 14.7 s of captured silence). Compares the provider's stall counter around the
-    /// utterance.
+    /// A waited `speak` must not report success for a line that never played (the
+    /// engine's playback deadline tripped, or a route change cut it off — 2026-10-02,
+    /// a "Spoken." line over 14.7 s of captured silence). The stall test itself
+    /// lives in M1K3Voice (`stalled(since:)`), where `swift test` covers it.
     private func throwIfSpeechStalled(since stallsBefore: Int) throws {
-        guard speech.playbackStallCount > stallsBefore else { return }
+        guard speech.stalled(since: stallsBefore) else { return }
         throw MCPVoiceError(
             "The line was not spoken — the audio output stalled and was reset. Try again."
         )

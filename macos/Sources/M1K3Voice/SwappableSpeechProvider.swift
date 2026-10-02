@@ -17,6 +17,9 @@
 //  callbacks on swap, same pattern as lifecycle. Confidence 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-02 — forwards playbackStallCount (SpeechProviderWithPlaybackHealth)
 //  so the MCP speak(wait:) layer can tell a stalled engine from a spoken line. Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-02 (PR #471 round 2) — playbackStallCount is monotonic across tier
+//  swaps (a base offset re-seated at each swap), so `> stallsBefore` can't miss a stall. Residual: a stall on
+//  the OUTGOING tier after a mid-utterance swap is not seen. Confidence now 0.85.
 
 import Foundation
 import Synchronization
@@ -30,6 +33,9 @@ public final class SwappableSpeechProvider: SpeechProviderWithWordTiming, Speech
         var endedCallback: (@Sendable () -> Void)?
         var timelineCallback: (@Sendable (SpokenWordTimeline) -> Void)?
         var wordCallback: (@Sendable (Range<Int>) -> Void)?
+        /// Added to the active tier's own count so the façade's total never drops
+        /// when a tier with a smaller count swaps in (see `setProvider`).
+        var stallBase = 0
     }
 
     private let state: Mutex<State>
@@ -47,6 +53,11 @@ public final class SwappableSpeechProvider: SpeechProviderWithWordTiming, Speech
     /// provider so the avatar keeps reacting to speech after the swap.
     public func setProvider(_ provider: any SpeechProvider) {
         state.withLock {
+            // Re-seat the base so the total is continuous across the swap: the
+            // outgoing tier's count is folded in, the incoming tier's is netted out.
+            let outgoing = ($0.current as? SpeechProviderWithPlaybackHealth)?.playbackStallCount ?? 0
+            let incoming = (provider as? SpeechProviderWithPlaybackHealth)?.playbackStallCount ?? 0
+            $0.stallBase += outgoing - incoming
             $0.current = provider
             Self.applyCallbacks(to: &$0)
         }
@@ -90,11 +101,12 @@ public final class SwappableSpeechProvider: SpeechProviderWithWordTiming, Speech
         active.isAvailable
     }
 
-    /// The active tier's stall count (0 for a tier that cannot stall). Summed
-    /// over swaps would be tidier, but callers only compare before/after one
-    /// utterance, and a swap mid-utterance is not a case worth a counter.
+    /// The active tier's stall count plus the base carried across swaps — monotonic
+    /// (0 contribution from a tier that cannot stall).
     public var playbackStallCount: Int {
-        (active as? SpeechProviderWithPlaybackHealth)?.playbackStallCount ?? 0
+        state.withLock { state in
+            state.stallBase + ((state.current as? SpeechProviderWithPlaybackHealth)?.playbackStallCount ?? 0)
+        }
     }
 
     public func speak(_ utterance: SpeechUtterance) async {
