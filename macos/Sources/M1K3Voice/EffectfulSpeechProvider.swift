@@ -66,9 +66,32 @@
 //  a no-op. n=1 crash, so a likely cause, not a proven one. Confidence 0.6.
 //  Review: same day (2), #436 review — the previous render's box is held too: the gate lets the next
 //  render start on the zero-frame sentinel, before the previous didFinish lands. Confidence 0.65.
+//  Review: Kev + claude-opus-5-5, 2026-10-02 — live hang (BLE headset in HFP mode: IO buffer grew to
+//  512 frames, engine max frames stayed 320, every render failed with TooManyFramesToProcess while the
+//  engine kept RUNNING; .dataPlayedBack never fired, the completion wait suspended forever and jammed
+//  the entry gate). (1) The playback waits (stream + rawPCM) are now bounded by PlaybackDeadlinePolicy
+//  (scheduled duration + 3 s); a trip logs at .notice, cancels the session, bumps playbackStallCount
+//  (so MCP speak(wait:) reports not-spoken instead of "Spoken.") and tears the engine down.
+//  (2) configureEngineIfNeeded is driven by the pure EngineSetupPlan: a rebuild flag beats
+//  engine.isRunning, and the player is attached only if not already attached (the old
+//  `engineConfigured`-keyed attach re-attached after every config change). (3) maximumFramesToRender
+//  is raised to 4096 on the output + mixer AUs before every start (probed: settable while stopped,
+//  the mixer's reverts on reset(), so it is re-applied each start). Config-change now does the same
+//  full teardown. Wiring is verify-by-launch (see the PR). Confidence now 0.7.
+//  Review: Kev + claude-opus-5-5, 2026-10-02 (PR #471 round 2; live: the failure survived a route flip back
+//  to the built-in speakers with no config-change rebuild). (1) PlaybackStallStreak: after 2 consecutive
+//  deadline stalls utterances go through plainSpeak (a probe every 5th retries the engine); a completed
+//  playback or a config change clears it; `.notice` when the fallback engages. (2) A config change that cuts
+//  off an in-flight line now counts toward playbackStallCount (a waited MCP speak must not say "Spoken." for
+//  it) without feeding the streak — a route flip is not evidence the engine is broken. (3) playbackSleeper is
+//  a `let` injected through an internal init. (4) Logger comes from M1K3Log. (5) tearDownEngine is the one
+//  owner of stop + reset; EngineSetupPlan no longer repeats it. (6) raiseMaximumFramesToRender: see the
+//  availability note there. Confidence now 0.7 (hardware path still verify-by-launch).
 
 import AVFoundation
 import Foundation
+import M1K3LogCore
+import os
 
 /// One claimed render's place in the two orderings that can invalidate it: which
 /// speak entry it is (newer ones win) and which stop era it was claimed in (a
@@ -78,7 +101,9 @@ struct RenderEntry {
     let stopEpoch: Int
 }
 
-public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTiming, @unchecked Sendable {
+public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTiming, SpeechProviderWithPlaybackHealth,
+    @unchecked Sendable
+{
     public let name = "m1k3-effect-voice"
 
     // `chain`/`player`/`configureEngineIfNeeded`/`streamingSession` are internal
@@ -117,6 +142,24 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     public var onWordSpoken: (@Sendable (Range<Int>) -> Void)?
 
     @MainActor private var engineConfigured = false
+    /// Set when the engine must be fully rebuilt before its next use: a playback
+    /// deadline tripped or the output configuration changed. Beats `engine.isRunning`
+    /// in `EngineSetupPlan`, because a running engine can be failing every render.
+    @MainActor private var engineNeedsRebuild = false
+    private static let log = M1K3Log.logger(.voice)
+    /// Guards the stall counter and the consecutive-stall streak (both are read from
+    /// non-main callers: the MCP layer samples the count, `speak(stream:)` peeks the route).
+    private let stallLock = NSLock()
+    private var _playbackStallCount = 0
+    private var stallStreak = PlaybackStallStreak()
+    /// The sleeper behind the bounded playback waits. A `let` set at init — tests
+    /// inject one so a deadline trips without wall-clock time; nothing mutates it
+    /// after construction, which is what makes the `@unchecked Sendable` honest here.
+    let playbackSleeper: PlaybackSleeper
+    /// Max frames per render slice requested of the engine's AUs. The device's IO
+    /// buffer can grow past AVAudioEngine's 512-frame default (a BLE headset in
+    /// Headset mode hit 512 against a 320 slice); 4096 covers any real IO size.
+    static let maximumFramesPerSlice: AUAudioFrameCount = 4096
     @MainActor private var configuredSampleRate: Double = 0
     /// Cached speaking flag — flipped by the fireSpeaking* helpers at the exact
     /// seams that fire onSpeakingStarted/Ended, so isSpeaking() never has to poll
@@ -156,9 +199,19 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     /// AppleSpeechTranscriber's input-side observer.
     private var configObserver: NSObjectProtocol?
 
-    public init(chain: VoiceEffectChain = .m1k3Character, fallback: AVSpeechProvider = AVSpeechProvider()) {
+    public convenience init(chain: VoiceEffectChain = .m1k3Character, fallback: AVSpeechProvider = AVSpeechProvider()) {
+        self.init(chain: chain, fallback: fallback, playbackSleeper: { try await Task.sleep(for: $0) })
+    }
+
+    /// Internal designated init: the sleeper seam for tests.
+    init(
+        chain: VoiceEffectChain = .m1k3Character,
+        fallback: AVSpeechProvider = AVSpeechProvider(),
+        playbackSleeper: @escaping PlaybackSleeper
+    ) {
         _chain = chain
         plainFallback = fallback
+        self.playbackSleeper = playbackSleeper
         super.init()
         configObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
@@ -187,8 +240,18 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     /// onSpeakingEnded as it unwinds), and drop the configured flag so the next
     /// utterance reconnects + restarts the engine against the new default device.
     @MainActor
-    private func handleEngineConfigurationChange() {
-        engineConfigured = false
+    func handleEngineConfigurationChange() {
+        // A line in flight is about to be cut off (its .cancelled outcome would
+        // otherwise read as success to a waited MCP speak). Count it as not spoken,
+        // and say so at .notice — but do NOT feed the stall streak: the route flipped,
+        // the engine is not known to be broken. A new route also clears the streak.
+        let interrupted = streamingSession != nil || playbackContinuation != nil
+        if interrupted {
+            Self.log.notice("output configuration changed mid-utterance — the line was cut off (counted as not spoken)")
+            stallLock.withLock { _playbackStallCount += 1 }
+        }
+        stallLock.withLock { stallStreak.reset() }
+        tearDownEngine()
         streamingSession?.cancel()
         streamingSession = nil
         finishPlayback()
@@ -197,6 +260,20 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
 
     public var isAvailable: Bool {
         true
+    }
+
+    public var playbackStallCount: Int {
+        stallLock.withLock { _playbackStallCount }
+    }
+
+    /// Where the next utterance goes. Peeks; `renderText` owns the probe cycle.
+    var stallRoute: PlaybackStallStreak.Route {
+        stallLock.withLock { stallStreak.route }
+    }
+
+    /// Audio played back through the engine: the engine path is healthy again.
+    func notePlaybackCompleted() {
+        stallLock.withLock { stallStreak.recordSuccess() }
     }
 
     public func speak(_ utterance: SpeechUtterance) async {
@@ -214,6 +291,15 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     /// (and Kokoro-fallback) voice. Runs INSIDE the entry gate, so it never
     /// overlaps another render on the single AVSpeechSynthesizer.
     private func renderText(_ utterance: SpeechUtterance, since epoch: Int) async {
+        // Consecutive stalls mean the engine path is not delivering audio on this
+        // device right now: skip it (and the offline render that only feeds it) so
+        // M1K3 still speaks, dry. Every few utterances `consumeRoute` returns
+        // `.engine` as a probe, so a recovered device earns the effect voice back.
+        if stallLock.withLock({ stallStreak.consumeRoute() }) == .plain {
+            guard await stillCurrent(epoch) else { return }
+            await plainSpeak(utterance)
+            return
+        }
         do {
             let (samples, sampleRate, wordOnsets) = try await synthesizeToFloats(utterance)
             // A stop that landed while we were rendering SILENTLY means this audio
@@ -490,6 +576,13 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
         try configureEngineIfNeeded(format: format)
 
         fireSpeakingStarted()
+        let deadline = PlaybackDeadlinePolicy().deadline(scheduledSamples: samples.count, sampleRate: sampleRate)
+        let sleep = playbackSleeper
+        let deadlineTask = Task { [weak self] in
+            do { try await sleep(deadline) } catch { return }
+            self?.playbackDeadlineElapsed(scheduledSamples: samples.count, sampleRate: sampleRate)
+        }
+        defer { deadlineTask.cancel() }
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             playbackContinuation = continuation
             player.scheduleBuffer(
@@ -500,6 +593,13 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
             player.play()
         }
         fireSpeakingEnded()
+    }
+
+    @MainActor
+    private func playbackDeadlineElapsed(scheduledSamples: Int, sampleRate: Double) {
+        guard playbackContinuation != nil else { return } // already resolved
+        noteEnginePlaybackStalled(scheduledSamples: scheduledSamples, sampleRate: sampleRate)
+        finishPlayback()
     }
 
     /// Resume the playback wait exactly once — from either the .dataPlayedBack
@@ -515,22 +615,117 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
 
     @MainActor
     func configureEngineIfNeeded(format: AVAudioFormat) throws {
-        // Reconnect when the sample rate changes (e.g. a different system voice) —
-        // scheduling a buffer whose format mismatches the connection asserts.
-        // Also require the engine to actually be RUNNING: it stops itself on an
-        // output-route change (see handleEngineConfigurationChange) or a render
-        // error, and scheduling onto a stopped engine plays silence forever.
-        if engineConfigured, configuredSampleRate == format.sampleRate, engine.isRunning { return }
-        if engineConfigured {
+        // Reuse only a healthy engine: configured, same sample rate (scheduling a
+        // buffer whose format mismatches the connection asserts), RUNNING (it stops
+        // itself on an output-route change) and not flagged for rebuild (a running
+        // engine can fail every render — live 2026-10-02).
+        let plan = EngineSetupPlan.make(
+            configured: engineConfigured,
+            sampleRateMatches: configuredSampleRate == format.sampleRate,
+            engineRunning: engine.isRunning,
+            playerAttached: player.engine != nil,
+            needsRebuild: engineNeedsRebuild
+        )
+        if plan.isNoOp { return }
+        // No stop/reset here: `tearDownEngine()` — the only thing that sets
+        // `engineNeedsRebuild` — already did it, at the moment of the stall or the
+        // config change (a failing engine must not keep erroring while idle).
+        if plan.attachPlayer {
+            engine.attach(player)
+        } else if plan.disconnectPlayer {
             player.stop()
             engine.disconnectNodeOutput(player)
-        } else {
-            engine.attach(player)
         }
         engine.connect(player, to: engine.mainMixerNode, format: format)
-        if !engine.isRunning { try engine.start() }
+        if plan.startEngine {
+            raiseMaximumFramesToRender()
+            try engine.start()
+        }
         engineConfigured = true
+        engineNeedsRebuild = false
         configuredSampleRate = format.sampleRate
+    }
+
+    /// Standard guard against kAudioUnitErr_TooManyFramesToProcess: the AU's slice
+    /// size must cover the device's IO size. Settable only while the engine is
+    /// stopped (probed: the mixer's value reverts on `reset()`, so this runs before
+    /// every start). The setter is not guaranteed to take on every node, so it is
+    /// best-effort — the playback deadline is the backstop.
+    @MainActor
+    private func raiseMaximumFramesToRender() {
+        guard !engine.isRunning else { return }
+        for node in [engine.outputNode, engine.mainMixerNode] as [AVAudioNode] {
+            Self.raiseMaximumFrames(of: node)
+        }
+    }
+
+    /// `AVAudioNode.auAudioUnit` is deprecated in the macOS/iOS 27 SDK in favour of
+    /// `withAUAudioUnit(_:)` (AVAudioNode.h / AVFAudio.swiftinterface: "Deprecated in
+    /// favor of withAUAudioUnit"). The new API only exists in the 27 SDK, so it is
+    /// compiled in only by a Swift 6.4+ toolchain (Xcode 27) and used only at runtime on
+    /// 27+; Xcode 26 (CI) and older systems keep the original accessor.
+    @MainActor
+    private static func raiseMaximumFrames(of node: AVAudioNode) {
+        #if compiler(>=6.4)
+            if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) {
+                node.withAUAudioUnit { unit in raiseMaximumFrames(of: unit) }
+                return
+            }
+        #endif
+        raiseMaximumFrames(of: legacyAUAudioUnit(of: node))
+    }
+
+    private static func raiseMaximumFrames(of unit: AUAudioUnit) {
+        if unit.maximumFramesToRender < maximumFramesPerSlice {
+            unit.maximumFramesToRender = maximumFramesPerSlice
+        }
+    }
+
+    /// The pre-27 accessor, isolated so its deprecation (27 SDK) is confined to one
+    /// declaration that is itself marked deprecated.
+    @available(macOS, deprecated: 27.0)
+    @available(iOS, deprecated: 27.0)
+    @available(visionOS, deprecated: 27.0)
+    private static func legacyAUAudioUnit(of node: AVAudioNode) -> AUAudioUnit {
+        node.auAudioUnit
+    }
+
+    /// Stop + reset the engine and force the next utterance to reconnect and
+    /// restart it, re-reading the device's current IO size.
+    @MainActor
+    private func tearDownEngine() {
+        player.stop()
+        engine.stop()
+        engine.reset()
+        engineConfigured = false
+        engineNeedsRebuild = true
+    }
+
+    /// A playback deadline tripped: audio was scheduled but never played back.
+    /// Logged at .notice (`.info`/`.debug` do not persist), counted for the MCP
+    /// layer, and the engine is torn down so the gate-holding render unwinds into a
+    /// fresh engine rather than the broken one.
+    @MainActor
+    func noteEnginePlaybackStalled(scheduledSamples: Int, sampleRate: Double) {
+        let seconds = sampleRate > 0 ? Double(scheduledSamples) / sampleRate : 0
+        Self.log.notice(
+            "playback stalled: \(seconds, format: .fixed(precision: 1))s scheduled never played back — rebuilding the audio engine"
+        )
+        let fallbackEngaged = stallLock.withLock { () -> Bool in
+            _playbackStallCount += 1
+            let before = stallStreak.route
+            stallStreak.recordStall()
+            return before == .engine && stallStreak.route == .plain
+        }
+        if fallbackEngaged {
+            Self.log.notice(
+                """
+                playback stalled \(PlaybackStallStreak.fallbackThreshold) times running \
+                — speaking through the plain voice until the engine proves healthy
+                """
+            )
+        }
+        tearDownEngine()
     }
 
     // MARK: - Fallback

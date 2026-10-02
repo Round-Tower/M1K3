@@ -16,6 +16,10 @@
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.7 (probe-verified
 //  playerTime semantics; scheduling/cancel paths verify-at-⌘R). Prior:
 //  Kev + claude-sonnet-4-6 (EffectfulSpeechProvider.swift).
+//  Review: Kev + claude-opus-5-5, 2026-10-02 (PR #471 round 2) — speak(stream:) hands the utterance back
+//  (returns false) while the engine path is in plain fallback; a COMPLETED wait clears the stall streak;
+//  a late .dataPlayedBack after a cancel is inert (it used to re-run complete() and could stop() the next
+//  utterance's playback on the shared player). Confidence now 0.75.
 //
 
 import AVFoundation
@@ -93,6 +97,13 @@ public extension EffectfulSpeechProvider {
         let outcome = StreamOutcome(spoke: true)
         await entryGate.run { [self] in
             await runRender(entry) {
+                // In plain fallback (consecutive stalls), decline: the caller treats
+                // `false` as "speak it in the Apple voice", which lands in renderText
+                // and routes to plainSpeak. Peek only — renderText owns the probe cycle.
+                if self.stallRoute == .plain {
+                    outcome.spoke = false
+                    return
+                }
                 outcome.spoke = await self.renderStream(stream: stream, sampleRate: sampleRate)
             }
         }
@@ -143,7 +154,18 @@ extension EffectfulSpeechProvider {
             // Synthesis failed mid-utterance — keep what's already scheduled.
         }
         session.markStreamEnded()
-        if started { await session.awaitCompletion() }
+        if started {
+            let outcome = await session.awaitCompletion(policy: PlaybackDeadlinePolicy(), sleep: playbackSleeper)
+            if outcome == .timedOut {
+                // The engine is running but not delivering audio (live 2026-10-02:
+                // TooManyFramesToProcess on a BLE headset). Rebuild it so the NEXT
+                // utterance re-reads the device's IO size, and count the stall so the
+                // MCP caller is told the line did not play.
+                noteEnginePlaybackStalled(scheduledSamples: session.scheduledSamples, sampleRate: sampleRate)
+            } else if outcome == .completed {
+                notePlaybackCompleted()
+            }
+        }
         if streamingSession === session { streamingSession = nil }
         if started { fireSpeakingEnded() }
         return started
@@ -176,7 +198,13 @@ final class StreamingPlaybackSession {
 
     private var accumulator: UtteranceTimelineAccumulator?
     private var pendingBuffers = 0
+    private(set) var scheduledSamples = 0
     private var streamEnded = false
+    private var deadlineTask: Task<Void, Never>?
+    private var timedOut = false
+    /// How many times `complete()` ran — a test seam for "a late buffer callback
+    /// after a cancel must not tear the shared player down again".
+    private(set) var teardownCount = 0
     private var completion: CheckedContinuation<Void, Never>?
     private var clockTask: Task<Void, Never>?
     private var lastWordIndex: Int?
@@ -216,7 +244,7 @@ final class StreamingPlaybackSession {
             onTimeline(anchored.global)
         }
 
-        pendingBuffers += 1
+        accountScheduled(sampleCount: samples.count)
         player.scheduleBuffer(buffer, at: nil, options: [], completionCallbackType: .dataPlayedBack) { [weak self] _ in
             Task { @MainActor in self?.bufferCompleted() }
         }
@@ -228,10 +256,40 @@ final class StreamingPlaybackSession {
         finishIfDone()
     }
 
-    /// Suspends until the last buffer plays back (or the session is cancelled).
-    func awaitCompletion() async {
-        if isCancelled || (streamEnded && pendingBuffers == 0) { return }
+    /// Books one scheduled buffer. Split out of `schedule` so the bounded-wait
+    /// tests can drive the session headless (an unattached player node cannot
+    /// schedule).
+    func accountScheduled(sampleCount: Int) {
+        pendingBuffers += 1
+        scheduledSamples += sampleCount
+    }
+
+    /// Suspends until the last buffer plays back, the session is cancelled, or the
+    /// deadline (scheduled audio duration + grace) passes. A tripped deadline
+    /// cancels the session — `.dataPlayedBack` is never coming — and reports
+    /// `.timedOut` so the caller can rebuild the engine.
+    func awaitCompletion(
+        policy: PlaybackDeadlinePolicy,
+        sleep: @escaping @Sendable (Duration) async throws -> Void
+    ) async -> PlaybackOutcome {
+        if isCancelled { return .cancelled }
+        if streamEnded, pendingBuffers == 0 { return .completed }
+        let deadline = policy.deadline(scheduledSamples: scheduledSamples, sampleRate: sampleRate)
+        deadlineTask = Task { [weak self] in
+            do { try await sleep(deadline) } catch { return }
+            self?.deadlineElapsed()
+        }
         await withCheckedContinuation { completion = $0 }
+        deadlineTask?.cancel()
+        deadlineTask = nil
+        if timedOut { return .timedOut }
+        return isCancelled ? .cancelled : .completed
+    }
+
+    private func deadlineElapsed() {
+        guard completion != nil else { return } // already resolved
+        timedOut = true
+        cancel()
     }
 
     /// From stop(): buffers are killed (their .dataPlayedBack never fires after
@@ -241,8 +299,14 @@ final class StreamingPlaybackSession {
         complete()
     }
 
-    private func bufferCompleted() {
+    func bufferCompleted() {
         pendingBuffers -= 1
+        // After a cancel (stop, route change or a tripped deadline) the wait is
+        // already resolved and the player belongs to whoever speaks next. A late
+        // .dataPlayedBack — the engine rebuild can flush them — is bounded by the
+        // number of buffers scheduled, so the assert below cannot trip, but it must
+        // not run `complete()` again: that would `stop()` the NEXT utterance.
+        guard !isCancelled else { return }
         // `== 0` (not `<= 0`) everywhere so an extra completion callback
         // can't be masked — surface the imbalance in debug builds instead.
         assert(pendingBuffers >= 0, "buffer completions exceeded schedules")
@@ -264,6 +328,7 @@ final class StreamingPlaybackSession {
         // an internal engine lock the audio render thread also touches — a
         // direct call here is a priority-inversion hang risk. Nothing below
         // depends on the stop completing first.
+        teardownCount += 1
         let node = player
         Task(priority: .utility) { @MainActor in node.stop() }
         clockTask?.cancel()

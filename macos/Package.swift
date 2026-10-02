@@ -12,6 +12,8 @@
 // Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
 // Review: Kev + claude-fable-5.1, 2026-09-07 — M1K3Screengrab target + tests (the App Store screengrab harness).
 // Review: Kev + claude-fable-5.1, 2026-09-08 — M1K3Screengrab links M1K3Voice for the plates' open-mic transcriber.
+// Review: Kev + claude-opus-5-5, 2026-10-02 — M1K3Voice depends on the dependency-free M1K3LogCore (voice logger via
+// M1K3Log.logger(.voice), PR #471 round 2). Confidence 0.9.
 // Review: Kev + claude-opus-5, 2026-09-11 — M1K3CLICore target + tests (the `m1k3` command-line client's
 // pure half: argument parsing, JSON-RPC framing, the agent-notes block, and the per-client connect plans).
 // Context: First Mac-native surface for M1K3. Scaffold begins with the pure,
@@ -411,6 +413,9 @@ let package = Package(
         // AVFoundation is a system framework — no third-party dep.
         .target(
             name: "M1K3Voice",
+            // M1K3LogCore only (dependency-free): the voice logger comes from the
+            // shared catalogue instead of a hand-built Logger(subsystem:category:).
+            dependencies: ["M1K3LogCore"],
             path: "Sources/M1K3Voice"
         ),
         .testTarget(
