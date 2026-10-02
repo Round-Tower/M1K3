@@ -8,6 +8,8 @@
 //  Wikimedia User-Agent (NOT the Safari UA); long extracts are capped.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-02 — the UA contact is pinned to the
+//  studio address (hello@), never a personal one (#472 follow-up). Confidence 0.95.
 
 import Foundation
 @testable import M1K3AgentTools
@@ -74,7 +76,9 @@ struct WikipediaToolTests {
         _ = try await tool.execute(input: ["topic": "Claude Shannon"])
         let ua = try #require(fetcher.requests.first?.value(forHTTPHeaderField: "User-Agent"))
         #expect(ua.contains("M1K3"))
-        #expect(ua.contains("round-tower.ie"))
+        // The studio contact, never a person's: the UA goes out to Wikimedia on every lookup.
+        #expect(ua.contains("hello@round-tower.ie"))
+        #expect(!ua.contains("kevin@"))
         #expect(!ua.contains("Safari"))
     }
 
