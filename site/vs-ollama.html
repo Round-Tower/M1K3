@@ -20,7 +20,7 @@
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Private by design.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="M1K3 vs Ollama — What's the Difference? (2026)" />
 <meta name="twitter:description" content="Ollama is a local model server you build on; M1K3 is a finished, private AI app for the Mac." />
@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-09-09"
+  "dateModified": "2026-10-02"
 }
 </script>
 <script type="application/ld+json">
@@ -81,7 +81,7 @@
   <header class="article-head">
     <span class="label">// comparison</span>
     <h1>M1K3 vs Ollama</h1>
-    <p class="meta">Updated 2026-09-09 · By Round Tower, the makers of M1K3 — so read us with that in mind. We've kept it factual.</p>
+    <p class="meta">Updated 2026-10-02 · By Round Tower, the makers of M1K3 — so read us with that in mind. We've kept it factual.</p>
   </header>
 
   <div class="answer">
@@ -99,7 +99,7 @@
     <li><strong>Live voice</strong> — streaming on-device speech recognition and natural speech out.</li>
     <li><strong>Knowledge graph + RAG</strong> — import documents; ask questions grounded in your own files, with semantic search.</li>
     <li><strong>Call memory</strong> — consent-gated call recording with on-device transcription and encrypted persistence.</li>
-    <li><strong>A local agent</strong> — tool use (your knowledge base; web search behind an off-by-default toggle).</li>
+    <li><strong>A local agent</strong> — tool use (your knowledge base; web search, on by default, behind one toggle that turns it off).</li>
     <li><strong>An MCP server</strong> — Claude and other agents can query your local knowledge. See <a href="/mcp-knowledge-server">giving Claude a local memory</a>.</li>
   </ul>
   <p>Storage is app-sandboxed and encrypted with a key held in your Keychain. There's no account, no subscription, and no telemetry. The trade-off is a narrow platform: M1K3 requires an <strong>Apple Silicon Mac on macOS 26 Tahoe</strong>, and its model lineup is a small curated set rather than a library.</p>
@@ -130,7 +130,7 @@
 
   <h2>Which should you choose?</h2>
   <p><strong>Choose Ollama if</strong> you're a developer who wants a local LLM behind an API, you need model breadth, or your hardware is anything other than a recent Apple Silicon Mac. It's the right tool for building.</p>
-  <p><strong>Choose M1K3 if</strong> you want the assembled product: a private assistant that already has voice, memory over your documents and calls, and agent tools — with a hard privacy posture (inference, embeddings, voice, and storage all on-device; zero bytes of your data sent to a server) rather than a stack you compose and maintain yourself.</p>
+  <p><strong>Choose M1K3 if</strong> you want the assembled product: a private assistant that already has voice, memory over your documents and calls, and agent tools — with a hard privacy posture (inference, embeddings, voice, and storage all on-device; no account, no telemetry, and web search behind one switch) rather than a stack you compose and maintain yourself.</p>
   <p><strong>Choose both if</strong> you build against local models by day and want a private assistant the rest of the time. They don't conflict.</p>
 
   <h2>Can you use M1K3 and Ollama together?</h2>
@@ -179,7 +179,7 @@
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER</a> · MADE IN IRELAND</span>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE STUDIOS LTD</a> · MADE IN IRELAND</span>
   <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
 </footer>
 
@@ -194,6 +194,10 @@
      (JSON-LD + visible answer, kept in step), the intro sentence, the License table row (FSL-1.1-ALv2,
      source-available vs Ollama's MIT open source, stated plainly) and the closing line. Ollama's
      claims untouched. Nav → the tile-less mark alone (mark.svg). dateModified bumped. Confidence now 0.85. 
-     Review: Kev + claude-fable-5.1, 2026-09-09 (site alignment pass: one term everywhere — the closing line's "source public" → "source-available".) Confidence now 0.85. -->
+     Review: Kev + claude-fable-5.1, 2026-09-09 (site alignment pass: one term everywhere — the closing line's "source public" → "source-available".) Confidence now 0.85.
+     Review: Kev + claude-opus-5-5, 2026-10-02 — web search is ON by default (AppEnvironment.webSearchAllowed,
+     matching the store copy): the agent bullet and the "choose M1K3 if" posture line no longer say
+     off-by-default / zero bytes. og:image:alt follows the re-rendered og.png; footer names the company.
+     dateModified 2026-10-02. Confidence 0.8. -->
 </body>
 </html>

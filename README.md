@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/brand/readme-hero.png" alt="M1K3 — Your AI. Your Mac. Nothing leaves." width="100%">
+  <img src="assets/brand/readme-hero.png" alt="M1K3 — Your AI. Your Mac. Private by design." width="100%">
 </p>
 
 <h1 align="center">M1K3 — Own your AI</h1>
@@ -19,7 +19,7 @@ Private by design: on your Mac by default, no telemetry, and every network call 
 
 <p align="center">Connecting a coding agent → <a href="https://m1k3.app/agents">m1k3.app/agents</a></p>
 
-<p align="center"><em>Requires macOS 26 Tahoe · Apple Silicon · signed & notarized (Developer ID).</em></p>
+<p align="center"><em>Requires macOS 26 Tahoe or later · Apple Silicon · signed & notarized (Developer ID).</em></p>
 
 <p align="center">
   <a href="https://github.com/Round-Tower/M1K3/actions/workflows/ci.yml"><img src="https://github.com/Round-Tower/M1K3/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -56,9 +56,10 @@ Private by design: on your Mac by default, no telemetry, and every network call 
 - **MCP server** — 18 tools over local HTTP; give Claude and other agents a
   resident with a voice, a memory, and your knowledge.
 
-Everything above runs without leaving the device. The only network use is the
-one-time model download and an optional, explicitly-enabled web search; the
-1.0 build has no cloud path at all. A later release adds an opt-in Private
+Everything above runs on the device. M1K3 uses the network for two things: the
+one-time download of a bigger brain when you ask for one, and web search, which
+is on by default so answers can be current, with one switch in Settings to turn
+it off. The 1.0 build has no cloud path at all. A later release adds an opt-in Private
 Cloud Compute rung — off by default, one message at a time, every PCC answer
 labelled — see [SECURITY.md](./SECURITY.md).
 
@@ -84,14 +85,20 @@ belongs to M1K3.app).
 ```sh
 brew trust round-tower/tap                 # Homebrew 6: trust the tap once
 brew install --cask round-tower/tap/m1k3   # the cask symlinks Contents/Helpers/m1k3
+# Open M1K3 ▸ Settings ▸ Privacy ▸ MCP server: switch it on, then Copy the token
+m1k3 login                                 # paste the token (echo off; kept in your keychain)
 m1k3 connect claude                        # also: codex · cursor · vscode · zed
 ```
+
+The MCP server is off until you switch it on, and every request carries its
+access token: `m1k3 login` stores it, and `connect` writes it into your agent's
+config as an `Authorization: Bearer` header. Without it the server answers 401.
 
 Then `m1k3 status`, `m1k3 ask "what did I decide about the pin?"`,
 `m1k3 remember "…"`, `m1k3 search "…"`, `m1k3 speak "build's green"`.
 
 Prefer clicking? **M1K3 ▸ Settings ▸ Privacy ▸ MCP server** has the same thing:
-pick your agent, copy the snippet. Already have M1K3 installed? The binary is
+pick your agent, copy the snippet (the token is already in it). Already have M1K3 installed? The binary is
 at `/Applications/M1K3.app/Contents/Helpers/m1k3`.
 
 ### Tell your agents about the resident
@@ -115,7 +122,7 @@ Never block on it; carry on without it.
 <!-- m1k3:end -->
 ```
 
-One honest caveat: the **Mac App Store build's helper is sandboxed**, so it
+One honest caveat: the **App Store build's helper (TestFlight today) is sandboxed**, so it
 can't write another app's config file or run `claude` for you. There, `m1k3
 connect` prints the config to paste instead — and says so. The Developer ID
 build (the DMG and the Homebrew cask) does the write.
@@ -208,12 +215,12 @@ rights reserved and outside the licence grant. See
 Fox is the Khronos glTF sample by PixelMannen (CC0) and tomkranis (CC-BY 4.0);
 Colobus, Gecko, Inkfish and Sparrow are by [Quaternius](https://quaternius.com)
 (CC0) — credited in `NOTICE` and in the app's Third-party licenses screen. The only official builds are Round Tower's
-(`app.m1k3` on the App Store / TestFlight, and the DMGs on [m1k3.app](https://m1k3.app)).
+(`app.m1k3` on TestFlight, and on the Mac App Store once it is live; and the DMGs on [m1k3.app](https://m1k3.app)).
 
 **Organisations:** M1K3 for Teams — the same on-device brains, institutional
 memory, and a tuned persona served on your own Apple Silicon hardware, under
-your own domain — is licensed separately, and nothing leaves your network.
-See [m1k3.app/teams](https://m1k3.app/teams) or write to kevin@round-tower.ie.
+your own domain — is licensed separately.
+See [m1k3.app/teams](https://m1k3.app/teams) or write to hello@round-tower.ie.
 
 Contributions are by invitation under a short [CLA](./CLA.md) (Apache-2.0
 inbound, FSL outbound). M1K3 is built in the open with

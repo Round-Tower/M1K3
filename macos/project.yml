@@ -280,7 +280,7 @@ targets:
         PRODUCT_NAME: M1K3
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Kevin Murphy"
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Round Tower Software Studios Ltd"
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
         # DEFAULT to the App-Store-SAFE entitlements (no audioanalyticsd
         # mach-lookup exception, which ITMS-90285 rejects). The privileged direct-

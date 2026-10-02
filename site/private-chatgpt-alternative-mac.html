@@ -20,7 +20,7 @@
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Private by design.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Private ChatGPT Alternative for Mac (2026)" />
 <meta name="twitter:description" content="On-device AI is private by architecture, not by policy. Compare M1K3, Ollama, LM Studio, and the ChatGPT desktop app." />
@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-09-09"
+  "dateModified": "2026-10-02"
 }
 </script>
 <script type="application/ld+json">
@@ -51,7 +51,7 @@
     { "@type": "Question", "name": "Can a local AI on a Mac really match ChatGPT?",
       "acceptedAnswer": { "@type": "Answer", "text": "Not on raw capability — frontier cloud models are ahead of anything a laptop can run, and an honest local-AI vendor should say so. For everyday tasks like summarising, drafting, and answering questions grounded in your own documents, current local models such as Gemma and Qwen on Apple Silicon are genuinely useful, and they come with properties no cloud model offers: they work offline, cost nothing per query, and your data stays home." } },
     { "@type": "Question", "name": "Does M1K3 require an account or subscription?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 is free for humans, with no account, no subscription, and no telemetry; its source is public under the Functional Source License (FSL-1.1-ALv2 — source-available, not open source). The only network use is the one-time model download and an optional web-search tool that is off by default." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 is free for humans, with no account, no subscription, and no telemetry; its source is public under the Functional Source License (FSL-1.1-ALv2 — source-available, not open source). The only network use is the one-time model download and web search, which is on by default with one switch in Settings to turn it off." } }
   ]
 }
 </script>
@@ -79,7 +79,7 @@
   <header class="article-head">
     <span class="label">// privacy</span>
     <h1>Private ChatGPT alternative for Mac</h1>
-    <p class="meta">Updated 2026-09-09 · By Round Tower, the makers of M1K3 — we have a horse in this race, so we've kept the comparison factual.</p>
+    <p class="meta">Updated 2026-10-02 · By Round Tower, the makers of M1K3 — we have a horse in this race, so we've kept the comparison factual.</p>
   </header>
 
   <div class="answer">
@@ -102,7 +102,7 @@
     <li><strong>Call memory</strong> — consent-gated call transcription, encrypted at rest with a Keychain-held key.</li>
     <li><strong>An agent + MCP server</strong> — local tools, and your knowledge exposed to Claude and other agents <a href="/mcp-knowledge-server">over MCP</a>.</li>
   </ul>
-  <p>No account, no subscription, no telemetry. The only network use is the one-time model download, plus an optional web-search tool that is <strong>off by default</strong> and clearly toggled — web off means web off. Requirements are the honest catch: an Apple Silicon Mac on macOS 26 Tahoe.</p>
+  <p>No account, no subscription, no telemetry. The only network use is the one-time model download, plus web search, which is <strong>on by default</strong> so answers can be current and clearly toggled — one switch in Settings, and web off means web off. Requirements are the honest catch: an Apple Silicon Mac on macOS 26 Tahoe.</p>
 
   <h2>How the alternatives compare on a Mac</h2>
   <div class="table-scroll">
@@ -112,7 +112,7 @@
       </thead>
       <tbody>
         <tr><td>Where inference runs</td><td class="yes">On your Mac</td><td class="yes">On your Mac</td><td class="yes">On your Mac</td><td class="no">OpenAI's servers</td></tr>
-        <tr><td>What leaves the machine</td><td>Nothing (optional web search, off by default)</td><td>Nothing for inference; models pull from its registry</td><td>Nothing for inference; models download from hubs</td><td>Your prompts and files, processed in the cloud</td></tr>
+        <tr><td>What leaves the machine</td><td>Inference: nothing. Web searches, on by default, one switch to turn off</td><td>Nothing for inference; models pull from its registry</td><td>Nothing for inference; models download from hubs</td><td>Your prompts and files, processed in the cloud</td></tr>
         <tr><td>Account required</td><td class="yes">No</td><td class="yes">No</td><td class="yes">No</td><td class="no">Yes</td></tr>
         <tr><td>Assistant features included</td><td class="yes">Voice, document RAG, call memory, agent, MCP — built in</td><td>Chat via the app or third-party UIs; the rest is DIY</td><td>Polished chat GUI + local API; document chat</td><td class="yes">Full assistant, frontier features</td></tr>
         <tr><td>Model quality ceiling</td><td>Local models (Gemma, Qwen)</td><td>Local models, wide choice</td><td>Local models, wide choice</td><td class="yes">Frontier models — the capability winner</td></tr>
@@ -149,7 +149,7 @@
     </details>
     <details>
       <summary>Does M1K3 require an account or subscription?</summary>
-      <p>No. Free for humans, source-available (FSL-1.1-ALv2), no account, no subscription, no telemetry. Network is used only for the one-time model download and the optional, off-by-default web search.</p>
+      <p>No. Free for humans, source-available (FSL-1.1-ALv2), no account, no subscription, no telemetry. Network is used only for the one-time model download and web search, which is on by default with one switch in Settings to turn it off.</p>
     </details>
     <details>
       <summary>What about Ollama or LM Studio instead?</summary>
@@ -180,7 +180,7 @@
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER</a> · MADE IN IRELAND</span>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE STUDIOS LTD</a> · MADE IN IRELAND</span>
   <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
 </footer>
 
@@ -206,6 +206,12 @@
      and one FAQ answer) — all still true of inference/voice/RAG, but read as unconditional; not in
      this file's explicit sweep scope, worth a fuller pass before ship. og:image:alt untouched (the
      image itself still renders "Nothing leaves."). Confidence 0.7 (narrow, deliberately incomplete
-     scope — see report). -->
+     scope — see report).
+     Review: Kev + claude-opus-5-5, 2026-10-02 — web search is ON by default (AppEnvironment.webSearchAllowed,
+     matching the store copy): the comparison row "What leaves the machine" now reads "Inference: nothing.
+     Web searches, on by default, one switch to turn off", and the account FAQ (visible + JSON-LD) says web
+     search is on by default, as does the intro (was "an optional web-search tool that is off by
+     default"). og:image:alt follows the re-rendered og.png; footer names the company. The other
+     absolutes flagged above are still unedited. Confidence 0.8. -->
 </body>
 </html>

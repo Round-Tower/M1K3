@@ -11,7 +11,7 @@ contributions this project can receive.
 
 - Preferred: [GitHub private vulnerability reporting](https://github.com/Round-Tower/M1K3/security/advisories/new)
   (Security tab → "Report a vulnerability").
-- Or email **kevin@round-tower.ie** with `[M1K3 SECURITY]` in the subject.
+- Or email **hello@round-tower.ie** with `[M1K3 SECURITY]` in the subject.
 
 You'll get an acknowledgement within **72 hours** and a status update within
 **14 days**. If the report is valid we'll credit you in the fix's release notes
@@ -22,8 +22,9 @@ You'll get an acknowledgement within **72 hours** and a status update within
 Anything that breaks the local-only promise ranks above a classic RCE for this
 project:
 
-- Data leaving the machine without explicit user consent (network calls beyond
-  the opt-in web search / model downloads / a user-initiated Private Cloud
+- Data leaving the machine without the user's say-so (network calls beyond
+  web search, which is on by default with one switch in Settings to turn it
+  off; model downloads the user asks for; a user-initiated Private Cloud
   Compute turn).
 - Prompt-injection paths that exfiltrate knowledge-base or memory content
   through the MCP server or web tools.
@@ -40,8 +41,8 @@ compiles it into a release, and the Developer ID build does not even carry the
 entitlement. The App Store build carries the entitlement Apple granted for the
 later release; it is inert in 1.0. When the rung ships:
 
-With the Private Cloud Compute switch off — the default — nothing leaves the
-device. Turning it on in Settings will add one control next to the message
+With the Private Cloud Compute switch off — the default — no conversation goes
+to a cloud model. Turning it on in Settings will add one control next to the message
 field: sending a single message at a time to Apple's Private Cloud Compute,
 after a consent sheet shows exactly what goes — the message, plus the
 conversation so far only if you tick it. Never memories, documents, tools,

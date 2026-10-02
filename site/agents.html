@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Connect your coding agent to M1K3 — the resident on your Mac</title>
-<meta name="description" content="Give Claude Code, Codex, Cursor, VS Code or Zed a private, on-device resident: M1K3's documents, memories, voice and local brain over MCP at http://127.0.0.1:4242/mcp. Two commands to install and connect." />
+<meta name="description" content="Give Claude Code, Codex, Cursor, VS Code or Zed a private, on-device resident: M1K3's documents, memories, voice and local brain over MCP at http://127.0.0.1:4242/mcp. Install, hand it the access token, connect." />
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 <link rel="canonical" href="https://m1k3.app/agents" />
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -14,13 +14,13 @@
 <meta property="og:site_name" content="M1K3" />
 <meta property="og:locale" content="en_IE" />
 <meta property="og:title" content="Connect your coding agent to M1K3" />
-<meta property="og:description" content="Give Claude Code, Codex, Cursor, VS Code or Zed a private, on-device resident — documents, memories, voice and a local brain over MCP. Two commands." />
+<meta property="og:description" content="Give Claude Code, Codex, Cursor, VS Code or Zed a private, on-device resident — documents, memories, voice and a local brain over MCP. Three commands." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://m1k3.app/agents" />
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Private by design.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Connect your coding agent to M1K3" />
 <meta name="twitter:description" content="Give your coding agent a private, on-device resident — documents, memories, voice and a local brain over MCP at 127.0.0.1." />
@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-09-11",
-  "dateModified": "2026-09-11"
+  "dateModified": "2026-10-02"
 }
 </script>
 <script type="application/ld+json">
@@ -49,9 +49,9 @@
     { "@type": "Question", "name": "Which agents can m1k3 connect for me?",
       "acceptedAnswer": { "@type": "Answer", "text": "Five, in two ways. For Claude Code it runs that client’s own registration command; for Cursor and VS Code it edits the one JSON file, keeping every other server in it and leaving a .bak copy beside it the first time. For Codex and Zed it prints the snippet for you to paste, because rewriting an editor’s whole settings file on a hunch is the wrong thing for a tool to do." } },
     { "@type": "Question", "name": "Is it safe to leave the MCP server on?",
-      "acceptedAnswer": { "@type": "Answer", "text": "It binds to 127.0.0.1 and nothing else, so no other machine can reach it, and it refuses any request whose Host header is not a loopback address or whose Origin is anything but a loopback page — the defence against a web page being tricked into calling it. What it does not have is a password: any program running as you on this Mac can call it while it is on. Leave it on while you are working, and treat it the way you treat a shell." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "It binds to 127.0.0.1 and nothing else, so no other machine can reach it, and it refuses any request whose Host header is not a loopback address or whose Origin is anything but a loopback page — the defence against a web page being tricked into calling it. It also wants its access token on every request, so a stray script that finds the port open gets a 401. The token is not a defence against malware running as you, which can read any client’s config file; the per-tool switches for listening, deleting memories and opening links cover that. Leave it on while you are working, and treat it the way you treat a shell." } },
     { "@type": "Question", "name": "What reaches the cloud when my agent uses M1K3?",
-      "acceptedAnswer": { "@type": "Answer", "text": "From M1K3, nothing. Retrieval, embeddings, inference and voice all run on your Mac. The honest caveat is the other direction: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. M1K3’s own network crossings are unchanged — a one-time model download you opt into, web tools that are off by default, and updates." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Not your documents or memories: retrieval, embeddings, inference and voice all run on your Mac. The honest caveats: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. And M1K3’s own network crossings are unchanged — a one-time model download you opt into, web search (on by default, so a question M1K3 looks up sends that search to the web; one switch in Settings turns it off), and updates." } },
     { "@type": "Question", "name": "What does it cost?",
       "acceptedAnswer": { "@type": "Answer", "text": "Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. The source is public under the Functional Source License (FSL-1.1-ALv2). Organisations that want one shared brain served to many people on their own hardware have a separate licence, M1K3 for Teams." } }
   ]
@@ -81,35 +81,38 @@
   <header class="article-head">
     <span class="label">// for coding agents</span>
     <h1>Connect your coding agent to M1K3</h1>
-    <p class="meta">Updated 11 September 2026 · By Round Tower, the makers of M1K3</p>
+    <p class="meta">Updated 2 October 2026 · By Round Tower, the makers of M1K3</p>
   </header>
 
   <div class="answer">
-    <p><strong>Your agent already knows the web. M1K3 is the one that knows you.</strong> It runs on your Mac — your documents, your memories, a local brain, a voice — and it answers over MCP at <code>http://127.0.0.1:4242/mcp</code> while the app is open. Two commands put it in front of Claude Code, Codex, Cursor, VS Code or Zed.</p>
+    <p><strong>Your agent already knows the web. M1K3 is the one that knows you.</strong> It runs on your Mac — your documents, your memories, a local brain, a voice — and it answers over MCP at <code>http://127.0.0.1:4242/mcp</code> while the app is open. Three commands put it in front of Claude Code, Codex, Cursor, VS Code or Zed.</p>
   </div>
 
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre><span class="p">$</span> brew trust round-tower/tap &amp;&amp; brew install --cask round-tower/tap/m1k3
+<span class="p">$</span> m1k3 login
 <span class="p">$</span> m1k3 connect claude</pre></div>
   </div>
 
   <p>The first line is Homebrew: version 6 asks you to trust a third-party tap before it will install from one, and the cask then installs the nightly Developer ID build of M1K3 and symlinks <code>m1k3</code> — the small command-line client that ships inside the app bundle — onto your PATH.</p>
-  <p>The second line writes the MCP entry for your agent. Swap <code>claude</code> for <code>codex</code>, <code>cursor</code>, <code>vscode</code> or <code>zed</code>; add <code>--print</code> to see the config without touching a file.</p>
+  <p>The second line hands <code>m1k3</code> the server's access token. Every request to M1K3's MCP server has to carry it; a request without it is turned away with a 401. Copy it from the app (next section), run <code>m1k3 login</code> and paste. It reads the token with echo off, or down a pipe (<code>pbpaste | m1k3 login</code>), never from the command line where your shell history would keep it. When the app is running it checks the token before saving it, and it keeps it in your login keychain.</p>
+  <p>The third line writes the MCP entry for your agent, token included, as an <code>Authorization: Bearer</code> header. Swap <code>claude</code> for <code>codex</code>, <code>cursor</code>, <code>vscode</code> or <code>zed</code>; add <code>--print</code> to see the config without touching a file.</p>
 
   <h2>One switch, once</h2>
-  <p>The MCP server is <strong>off by default</strong>, and it lives inside the app: open M1K3, then <strong>Settings ▸ Privacy ▸ MCP server</strong>. That is the whole setup. The same pane has a picker for all five agents with the snippet and a Copy button, if you would rather click than type.</p>
+  <p>The MCP server is <strong>off by default</strong>, and it lives inside the app: open M1K3, then <strong>Settings ▸ Privacy ▸ MCP server</strong>, and switch it on. The same pane shows the access token, masked, with <strong>Copy</strong> (for <code>m1k3 login</code>) and <strong>New Token…</strong>. A new token disconnects every agent until you run <code>m1k3 login</code> and <code>m1k3 connect</code> again. The pane also has a picker for all five agents with the snippet, token filled in, and a Copy button, if you would rather click than type.</p>
 
   <h2>Without Homebrew</h2>
   <p>Download the signed, notarized <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">M1K3.dmg</a> from GitHub Releases and drag it to Applications. Then either use the picker in <strong>Settings ▸ Privacy ▸ MCP server</strong>, or run the same command from inside the bundle:</p>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
-    <div class="term-body"><pre><span class="p">$</span> /Applications/M1K3.app/Contents/Helpers/m1k3 connect claude</pre></div>
+    <div class="term-body"><pre><span class="p">$</span> /Applications/M1K3.app/Contents/Helpers/m1k3 login
+<span class="p">$</span> /Applications/M1K3.app/Contents/Helpers/m1k3 connect claude</pre></div>
   </div>
   <p>M1K3 needs an Apple Silicon Mac on macOS 26. It does not need an account.</p>
 
   <h2>Per agent</h2>
-  <p>Five clients, and they genuinely differ — so <code>connect</code> does the safe thing for each and tells you which it did. These are the snippets <code>m1k3 connect --print</code> produces:</p>
+  <p>Five clients, and they genuinely differ — so <code>connect</code> does the safe thing for each and tells you which it did. These are the snippets <code>m1k3 connect &lt;client&gt; --print</code> produces, with your token where these show <code>m1k3_…</code>:</p>
 
   <div class="table-scroll">
     <table class="cmp">
@@ -130,16 +133,19 @@
   <h3>Claude Code</h3>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
-    <div class="term-body"><pre><span class="p">$</span> claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp</pre></div>
+    <div class="term-body"><pre><span class="p">$</span> claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp --header "Authorization: Bearer m1k3_…"</pre></div>
   </div>
-  <p><code>-s user</code> registers it once for every project, which is the point of a resident.</p>
+  <p><code>-s user</code> registers it once for every project, which is the point of a resident. If an <code>m1k3</code> entry is already there, <code>connect</code> removes it and adds it again, so an entry from before the token gets the header.</p>
 
   <h3>Cursor — <code>~/.cursor/mcp.json</code></h3>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre>{
   <span class="p">"mcpServers"</span>: {
-    <span class="p">"m1k3"</span>: { "url": "http://127.0.0.1:4242/mcp" }
+    <span class="p">"m1k3"</span>: {
+      "url": "http://127.0.0.1:4242/mcp",
+      "headers": { "Authorization": "Bearer m1k3_…" }
+    }
   }
 }</pre></div>
   </div>
@@ -149,7 +155,11 @@
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre>{
   <span class="p">"servers"</span>: {
-    <span class="p">"m1k3"</span>: { "type": "http", "url": "http://127.0.0.1:4242/mcp" }
+    <span class="p">"m1k3"</span>: {
+      "type": "http",
+      "url": "http://127.0.0.1:4242/mcp",
+      "headers": { "Authorization": "Bearer m1k3_…" }
+    }
   }
 }</pre></div>
   </div>
@@ -158,14 +168,18 @@
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre><span class="p">[mcp_servers.m1k3]</span>
-url = "http://127.0.0.1:4242/mcp"</pre></div>
+url = "http://127.0.0.1:4242/mcp"
+http_headers = { "Authorization" = "Bearer m1k3_…" }</pre></div>
   </div>
 
   <h3>Zed — <code>~/.config/zed/settings.json</code></h3>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre><span class="p">"context_servers"</span>: {
-  <span class="p">"m1k3"</span>: { "url": "http://127.0.0.1:4242/mcp" }
+  <span class="p">"m1k3"</span>: {
+    "url": "http://127.0.0.1:4242/mcp",
+    "headers": { "Authorization": "Bearer m1k3_…" }
+  }
 }</pre></div>
   </div>
   <p>Zed's settings schema has moved more than once — check the shape against your Zed version. That, and Codex's TOML living in a file full of your own settings, is why those two print rather than write.</p>
@@ -223,10 +237,10 @@ Never block on it; carry on without it.
     <li><strong>It will not answer another machine.</strong> The listener is pinned to <code>127.0.0.1</code> at the socket, never an interface address, so nothing on your network can reach it.</li>
     <li><strong>It will not answer a web page.</strong> Requests whose <code>Host</code> header is not a loopback address are refused, and an <code>Origin</code> that is not a loopback page is refused too — the standard defence against a site using your browser to reach a server on your own machine.</li>
     <li><strong>It will not run while M1K3 is closed.</strong> The server is part of the app. A "disconnected" MCP server almost always means the app is not open — which is why the resident block above tells your agent never to block on it. The <code>m1k3</code> command opens the app itself and waits for the port.</li>
-    <li><strong>It will not ask for a password, because it has none.</strong> There is no token on the loopback server today: anything running as you on this Mac can call it while it is switched on. That is the same trust boundary as your shell, and it is the reason the server ships off by default.</li>
-    <li><strong>It will not write your config from the App Store build.</strong> That copy of <code>m1k3</code> is sandboxed, so it can neither read <code>~/.cursor/mcp.json</code> nor run <code>claude</code> for you. There, <code>connect</code> prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write.</li>
+    <li><strong>It will not answer without its token.</strong> Every request has to carry the access token as an <code>Authorization: Bearer</code> header; one without it gets a 401 before it reaches a session. The token keeps out stray scripts that find the port open, and stops a caller without it from knocking your agent off. It is not a defence against malware running as you, which can read any client's config file. The per-tool switches in Settings (listening, deleting memories, opening links) cover that for every caller.</li>
+    <li><strong>It will not write your config from the App Store build</strong> (TestFlight today). That copy of <code>m1k3</code> is sandboxed, so it can neither read <code>~/.cursor/mcp.json</code> nor run <code>claude</code> for you. There, <code>connect</code> prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write.</li>
     <li><strong>It will not serve two agents at once.</strong> One MCP client at a time, in this version: a second client connecting ends the first one's session.</li>
-    <li><strong>It will not send what your agent asks it anywhere.</strong> Retrieval, embeddings, inference and voice run on the Mac. M1K3's <a href="/privacy">documented network crossings</a> are unchanged by connecting an agent: a one-time model download you opt into, web tools that are off by default, and updates.</li>
+    <li><strong>It will not send your documents or memories anywhere.</strong> Retrieval, embeddings, inference and voice run on the Mac. M1K3's <a href="/privacy">documented network crossings</a> are unchanged by connecting an agent: a one-time model download you opt into, web search (on by default, one switch in Settings to turn it off), and updates.</li>
   </ul>
 
   <h2>Frequently asked questions</h2>
@@ -241,11 +255,11 @@ Never block on it; carry on without it.
     </details>
     <details>
       <summary>Is it safe to leave the MCP server on?</summary>
-      <p>It binds to 127.0.0.1 and nothing else, so no other machine can reach it, and it refuses any request whose Host header is not a loopback address or whose Origin is anything but a loopback page — the defence against a web page being tricked into calling it. What it does not have is a password: any program running as you on this Mac can call it while it is on. Leave it on while you are working, and treat it the way you treat a shell.</p>
+      <p>It binds to 127.0.0.1 and nothing else, so no other machine can reach it, and it refuses any request whose Host header is not a loopback address or whose Origin is anything but a loopback page — the defence against a web page being tricked into calling it. It also wants its access token on every request, so a stray script that finds the port open gets a 401. The token is not a defence against malware running as you, which can read any client’s config file; the per-tool switches for listening, deleting memories and opening links cover that. Leave it on while you are working, and treat it the way you treat a shell.</p>
     </details>
     <details>
       <summary>What reaches the cloud when my agent uses M1K3?</summary>
-      <p>From M1K3, nothing. Retrieval, embeddings, inference and voice all run on your Mac. The honest caveat is the other direction: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. M1K3’s own network crossings are unchanged — a one-time model download you opt into, web tools that are off by default, and updates.</p>
+      <p>Not your documents or memories: retrieval, embeddings, inference and voice all run on your Mac. The honest caveats: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. And M1K3’s own network crossings are unchanged — a one-time model download you opt into, web search (on by default, so a question M1K3 looks up sends that search to the web; one switch in Settings turns it off), and updates.</p>
     </details>
     <details>
       <summary>What does it cost?</summary>
@@ -256,7 +270,7 @@ Never block on it; carry on without it.
   <section class="page-cta">
     <span class="label">// the resident and the visitor</span>
     <h2>Give your agent someone to ask.</h2>
-    <p>Two commands, one switch, and the thing that knows your machine is answering on loopback.</p>
+    <p>Three commands, one switch, and the thing that knows your machine is answering on loopback.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">Download the DMG</a>
       <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Read the source</a>
@@ -276,7 +290,7 @@ Never block on it; carry on without it.
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER</a> · MADE IN IRELAND</span>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE STUDIOS LTD</a> · MADE IN IRELAND</span>
   <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
 </footer>
 
@@ -313,6 +327,17 @@ Never block on it; carry on without it.
      Contents/Helpers/m1k3, not Contents/MacOS: Xcode's sign-on-copy re-signs
      anything in MacOS as the app itself (its identifier and entitlements), which
      aborted the developer-id export and would have shipped a sandboxed helper.
-     Confidence now 0.85. -->
+     Confidence now 0.85.
+     Review: Kev + claude-opus-5-5, 2026-10-02 — truth-up before the MCP directory listings
+     (this page is the registry websiteUrl). #448 made the access token mandatory, so the
+     signing's "deliberately NOT claimed: a bearer token" is retired: the install is three
+     commands (login between install and connect), every snippet carries the Authorization
+     header in its client's shape (transcribed from ConnectPlan.snippet, token shown as
+     m1k3_…), "It will not ask for a password" became "It will not answer without its token"
+     (what the token is and is not for, from MCPAccessToken's header), and the safe-to-leave-on
+     FAQ says so in both the visible answer and the JSON-LD, byte-identical. Web search is ON
+     by default (AppEnvironment.webSearchAllowed: absent key = allowed), matching the store
+     copy, so "web tools that are off by default" and "From M1K3, nothing" are gone.
+     og:image:alt follows the re-rendered og.png. Confidence 0.85. -->
 </body>
 </html>
