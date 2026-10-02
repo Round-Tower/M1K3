@@ -198,6 +198,9 @@ exchange). **Hardware-owed: the real ceremony** — QR scan, Approve, the Local
 Network dialog, a streamed answer, Tailscale-unreachable. Next: the Android
 client (Conscrypt PSKKeyManager or the cert-pin fallback); canary → Keychain
 migration; LAN-MCP client-name stamping; the N2/N3 escalation UI.
+**Draft, needs Kev:** `docs/NOTIFY_AND_PTT.md` — a narrow `notify` tool for
+paired devices and remote agents, a quiet-while hold, push to talk, and the
+opt-in WAN mailbox (the one piece that touches the privacy story).
 
 ### The screensaver — SHIPPED 2026-08-20
 
