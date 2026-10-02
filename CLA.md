@@ -16,7 +16,7 @@ attachment — anything meant to become part of M1K3) you agree that:
    licence.
 
 2. **Inbound grant: Apache License 2.0.** You license the contribution to
-   Kevin Murphy / Round Tower and to every recipient of M1K3 under the
+   Round Tower Software Studios Ltd and to every recipient of M1K3 under the
    [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0),
    including its patent grant. This is a permissive inbound licence: it lets
    us ship your work as part of M1K3 under the FSL now, under Apache-2.0 when
@@ -46,3 +46,6 @@ Apache-inbound / FSL-outbound shape is the one Sentry and other FSL projects
 use so the future grant can be honoured; wording is plain-language, not
 reviewed by a solicitor — item for the IPOI filing conversation. Prior:
 Unknown — new file.)*
+*Review: Kev + claude-opus-5-5, 2026-10-02 — the inbound grant now runs to
+Round Tower Software Studios Ltd (was "Kevin Murphy / Round Tower"): Kev's call
+that the company holds the licence. Terms unchanged. Confidence 0.8.*

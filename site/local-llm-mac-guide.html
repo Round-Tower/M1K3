@@ -20,7 +20,7 @@
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Private by design.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="How to Run a Local LLM on a Mac (2026 Guide)" />
 <meta name="twitter:description" content="What hardware you need and the four main routes — Ollama, LM Studio, Apple's MLX, and M1K3." />
@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-09-09"
+  "dateModified": "2026-10-02"
 }
 </script>
 <script type="application/ld+json">
@@ -51,7 +51,7 @@
     { "@type": "Question", "name": "Do local LLMs match ChatGPT?",
       "acceptedAnswer": { "@type": "Answer", "text": "No — frontier cloud models remain more capable than anything a laptop runs, especially for hard reasoning and state-of-the-art coding. But current local models such as Gemma and Qwen are genuinely useful for everyday summarising, drafting, and question-answering over your own documents, and they work offline, cost nothing per query, and keep your data on the machine." } },
     { "@type": "Question", "name": "Is running a local LLM private?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes, structurally: inference happens on your hardware, so prompts and outputs never reach a server. Note that model downloads do use the network, and any optional web-connected tools you enable will too. An app like M1K3 keeps such tools off by default so the no-egress posture is explicit." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes, structurally: inference happens on your hardware, so prompts and outputs never reach a server. Note that model downloads do use the network, and so do any web-connected tools. M1K3's web search is on by default, with one switch in Settings to turn it off, so the posture is explicit either way." } }
   ]
 }
 </script>
@@ -79,7 +79,7 @@
   <header class="article-head">
     <span class="label">// guide</span>
     <h1>How to run a local LLM on a Mac</h1>
-    <p class="meta">Updated 2026-09-09 · By Round Tower, the makers of M1K3 — one of the four routes below is ours; the other three are recommended honestly.</p>
+    <p class="meta">Updated 2026-10-02 · By Round Tower, the makers of M1K3 — one of the four routes below is ours; the other three are recommended honestly.</p>
   </header>
 
   <div class="answer">
@@ -134,7 +134,7 @@
     <li><strong>Consent-gated call memory</strong> — encrypted, on-device transcription.</li>
     <li><strong>A local agent and an MCP server</strong> — so Claude and other agents can <a href="/mcp-knowledge-server">query your local knowledge</a>.</li>
   </ul>
-  <p>First run starts on an instant brain with nothing to download; larger local brains are an opt-in download. Zero bytes of your data go to any server — the optional web-search tool is off by default. <strong>The honest catch:</strong> it requires macOS 26 Tahoe on Apple Silicon, and its model list is curated rather than a library. <strong>Best for:</strong> people who want private, working AI on their Mac today, not a stack to assemble.</p>
+  <p>First run starts on an instant brain with nothing to download; larger local brains are an opt-in download. Your documents and conversations stay on the Mac; the one exception is web search, on by default so answers can be current, with one switch in Settings to turn it off. <strong>The honest catch:</strong> it requires macOS 26 Tahoe on Apple Silicon, and its model list is curated rather than a library. <strong>Best for:</strong> people who want private, working AI on their Mac today, not a stack to assemble.</p>
 
   <h2>Which route should you pick?</h2>
   <div class="table-scroll">
@@ -167,7 +167,7 @@
     </details>
     <details>
       <summary>Is running a local LLM private?</summary>
-      <p>Structurally yes — inference happens on your hardware. Model downloads use the network, and any web-connected tools you enable will too; M1K3 keeps such tools off by default so the posture is explicit.</p>
+      <p>Structurally yes — inference happens on your hardware. Model downloads use the network, and so do any web-connected tools. M1K3's web search is on by default, with one switch in Settings to turn it off, so the posture is explicit either way.</p>
     </details>
     <details>
       <summary>Do these tools cost anything?</summary>
@@ -198,7 +198,7 @@
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER</a> · MADE IN IRELAND</span>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE STUDIOS LTD</a> · MADE IN IRELAND</span>
   <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
 </footer>
 
@@ -214,6 +214,11 @@
      internal use free, competing commercial use not) in the JSON-LD answer, the M1K3 section, the
      licence FAQ and the closing line. Nav → the tile-less mark alone. dateModified bumped.
      Confidence now 0.85. 
-     Review: Kev + claude-fable-5.1, 2026-09-09 (site alignment pass: closing line "source public" → "source-available".) Confidence now 0.85. -->
+     Review: Kev + claude-fable-5.1, 2026-09-09 (site alignment pass: closing line "source public" → "source-available".) Confidence now 0.85.
+     Review: Kev + claude-opus-5-5, 2026-10-02 — web search is ON by default (AppEnvironment.webSearchAllowed,
+     matching the approved store copy): the M1K3 route's "zero bytes… web search off by default" and the
+     privacy FAQ (visible + JSON-LD, kept identical in substance) now say on by default with one switch to
+     turn it off. og:image:alt follows the re-rendered og.png; footer names the company. dateModified
+     2026-10-02. Confidence 0.8. -->
 </body>
 </html>

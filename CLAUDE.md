@@ -2,7 +2,8 @@
 
 Privacy-focused, on-device AI: MLX inference, live voice, knowledge graph + RAG,
 and an MCP server. **The live product is the Mac-native SwiftUI app under
-`macos/`** (`M1K3App/`), on the Mac App Store as 1.x. The same portable
+`macos/`** (`M1K3App/`): 1.x on TestFlight and as the Developer ID DMG, submitted to the
+Mac App Store (check the store lookup before saying it is live). The same portable
 `macos/Sources/` package graph drives the iOS + visionOS shell under
 `macos/M1K3iOSApp/`. The legacy Python surface lives only in git history before
 `7545b4a4` (`git checkout 7545b4a4 -- attic` resurrects it).

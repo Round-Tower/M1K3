@@ -5,7 +5,8 @@ voice (Kokoro TTS + WhisperKit STT), a personal knowledge graph with RAG, an
 embedded agent, a 3D companion, and a local MCP server other agents can call.
 
 **Private by design.** M1K3 runs on your Mac. Models download once from
-Hugging Face; after that it's fully offline unless you opt into web search.
+Hugging Face; after that the only network use is web search, which is on by
+default so answers can be current, with one switch in Settings to turn it off.
 (An opt-in Apple Private Cloud Compute rung arrives in a later release; the
 1.0 build has no cloud path.)
 

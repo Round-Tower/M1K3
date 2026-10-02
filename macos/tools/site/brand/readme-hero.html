@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>readme-hero</title>
+<!-- The README banner, assets/brand/readme-hero.png (1280×420). Rendered by
+     macos/tools/site/render_brand_images.py, which serves the repo root, so
+     /site/... resolves to the site's own self-hosted faces. Not served. -->
+<link rel="stylesheet" href="/site/fonts.css" />
+<style>
+  :root {
+    --bg: #050505; --ink: #e8e8e8; --ink-bright: #ffffff; --ink-dim: #8a8a8a; --ink-faint: #5a5a5a;
+    --pixel: 'VT323', monospace; --mono: 'IBM Plex Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 420px; overflow: hidden; background: var(--bg); }
+  body { position: relative; color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+  /* the CRT ground plane, receding toward a horizon just under the copy */
+  .floor {
+    position: absolute; left: -400px; right: -400px; bottom: -140px; height: 220px;
+    background-image:
+      linear-gradient(to right, rgba(232,232,232,0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(232,232,232,0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+    transform: perspective(260px) rotateX(72deg);
+    transform-origin: 50% 0;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 70%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 70%);
+  }
+
+  .copy { position: absolute; left: 56px; top: 52px; }
+  h1 {
+    font-family: var(--pixel); font-weight: 400; font-size: 96px; line-height: 84px;
+    color: var(--ink-bright);
+    text-shadow: 0 0 2px #fff, 0 0 14px rgba(255,255,255,0.45);
+  }
+  h1 .dim { color: #8f8f8f; text-shadow: 0 0 10px rgba(255,255,255,0.12); }
+  .tag {
+    font-family: var(--mono); font-size: 20px; color: #9a9a9a; letter-spacing: 0.02em;
+    margin-top: 12px;
+  }
+  .site {
+    position: absolute; left: 56px; bottom: 32px;
+    font-family: var(--mono); font-size: 16px; color: var(--ink); letter-spacing: 0.08em;
+  }
+  .meta {
+    position: absolute; right: 57px; bottom: 32px;
+    font-family: var(--mono); font-size: 15px; color: #6e6e6e; letter-spacing: 0.14em;
+  }
+
+  /* the 5×7 pixel M (site/mark.svg), as glowing phosphor tiles */
+  .mark {
+    position: absolute; left: 920px; top: 66px;
+    display: grid; grid-template-columns: repeat(5, 47px); grid-template-rows: repeat(5, 47px);
+    gap: 5px;
+  }
+  .mark i {
+    display: block; border-radius: 6px; background: #f4f4f4;
+    box-shadow: 0 0 6px rgba(255,255,255,0.75), 0 0 22px rgba(255,255,255,0.35);
+  }
+
+  /* scanlines over everything: what gives the type and the tiles their CRT grain */
+  .scan {
+    position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.38) 0 1px, transparent 1px 3px);
+  }
+  .vignette {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(0,0,0,0.55) 100%);
+  }
+</style>
+</head>
+<body>
+  <div class="floor"></div>
+  <div class="copy">
+    <h1>Your AI.<br />Your Mac.<br /><span class="dim" id="line3">Private by design.</span></h1>
+    <p class="tag" id="tag">A native AI companion, on-device by default.</p>
+  </div>
+  <div class="site">m1k3.app</div>
+  <div class="meta" id="meta">FSL-1.1-ALv2 · MLX-SWIFT · MACOS 26 · MADE IN IRELAND</div>
+  <div class="mark" aria-label="The M1K3 mark" id="mark"></div>
+  <div class="vignette"></div>
+  <div class="scan"></div>
+<script>
+  // The M, row by row: the same 5×7 cut as site/mark.svg (rows 0–4 of a 5-wide grid).
+  const rows = ['X...X', 'XX.XX', 'X.X.X', 'X...X', 'X...X'];
+  const mark = document.getElementById('mark');
+  rows.forEach((row, r) => [...row].forEach((c, col) => {
+    if (c !== 'X') return;
+    const i = document.createElement('i');
+    i.style.gridRow = String(r + 1); i.style.gridColumn = String(col + 1);
+    mark.appendChild(i);
+  }));
+  // Load each face explicitly: fonts.ready alone can resolve before layout has asked for any.
+  Promise.all(['96px VT323', '20px "IBM Plex Mono"'].map(f => document.fonts.load(f)))
+    .then(() => document.fonts.ready)
+    .then(() => { document.title = 'ready'; }, e => { document.title = 'error: ' + e; });
+</script>
+</body>
+</html>

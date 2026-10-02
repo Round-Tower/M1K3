@@ -59,7 +59,7 @@ en-US, de-DE, es-ES, fr-FR, ja, ko, pt-BR, zh-Hans (auto-selected).
 > dyslexia-friendly reading mode in the chat. Privacy is structural, not a
 > policy: the App Sandbox build has no network path for conversations,
 > and the model weights are the only download. Happy to supply captures,
-> a preview video, or a walkthrough on request: kevin@round-tower.ie.
+> a preview video, or a walkthrough on request: hello@round-tower.ie.
 
 ## Editorial angles this fits (for the description's emphasis, not to paste)
 

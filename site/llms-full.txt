@@ -14,9 +14,9 @@ Sources, in order: https://m1k3.app/install, https://m1k3.app/agents, https://m1
 
 ## Install M1K3
 
-Updated 15 September 2026 · two minutes · an Apple Silicon Mac on macOS 26 · no account
+Updated 2 October 2026 · two minutes · an Apple Silicon Mac on macOS 26 · no account
 
-Four steps, and the third one is optional. Get the app, say hello to the brain that is already on your Mac, flip one switch and connect your coding agent, then check it from the terminal. Nothing here asks for an account, a key, or a card — and nothing you say to it leaves the machine.
+Four steps, and the third one is optional. Get the app, say hello to the brain that is already on your Mac, flip one switch and connect your coding agent, then check it from the terminal. Nothing here asks for an account, an API key, or a card, and the brain runs on your Mac.
 
 Setting this up for an agent, or as one? The whole thing is also a plain-text file your agent can fetch and follow — curl -sL https://m1k3.app/install.txt — and the full recipe is at the bottom of this page.
 
@@ -64,9 +64,14 @@ Check: an answer came back, and the menu-bar M is lit. You now have a local AI. 
 
 ### Connect your agent · optional
 
-One switch, once. The MCP server lives inside the app and is off by default: open M1K3 ▸ Settings ▸ Privacy ▸ MCP server and turn it on. It serves http://127.0.0.1:4242/mcp while the app is open, binds to loopback only, and answers one client at a time. That pane also has a picker for all five agents with the snippet and a Copy button, if you would rather click than type.
+One switch, once. The MCP server lives inside the app and is off by default: open M1K3 ▸ Settings ▸ Privacy ▸ MCP server and turn it on. It serves http://127.0.0.1:4242/mcp while the app is open, binds to loopback only, and answers one client at a time. That pane also has a picker for all five agents with the snippet, token filled in, and a Copy button, if you would rather click than type.
 
-Then one command wires your client. Pick yours:
+The token. Every request to the server carries its access token; one without it gets a 401. The same pane shows it, masked, with a Copy button. Copy it, then hand it to m1k3, which reads it with echo off (never from the command line), checks it against the app when the app is running, and keeps it in your login keychain:
+
+```
+$ m1k3 login
+```
+Then one command wires your client, token included. Pick yours:
 
 ```
 $ m1k3 connect claude
@@ -74,7 +79,7 @@ $ m1k3 connect claude
 connect runs Claude Code's own registration for you — this, at user scope so it is there in every project:
 
 ```
-$ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp
+$ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp --header "Authorization: Bearer m1k3_…"
 ```
 ```
 $ m1k3 connect cursor
@@ -84,7 +89,10 @@ connect edits ~/.cursor/mcp.json for you, keeps every other server in it, and le
 ```
 {
   "mcpServers": {
-    "m1k3": { "url": "http://127.0.0.1:4242/mcp" }
+    "m1k3": {
+      "url": "http://127.0.0.1:4242/mcp",
+      "headers": { "Authorization": "Bearer m1k3_…" }
+    }
   }
 }
 ```
@@ -96,7 +104,11 @@ connect edits ~/Library/Application Support/Code/User/mcp.json for you, keeps ev
 ```
 {
   "servers": {
-    "m1k3": { "type": "http", "url": "http://127.0.0.1:4242/mcp" }
+    "m1k3": {
+      "type": "http",
+      "url": "http://127.0.0.1:4242/mcp",
+      "headers": { "Authorization": "Bearer m1k3_…" }
+    }
   }
 }
 ```
@@ -108,6 +120,7 @@ Codex's TOML lives in a file full of your own settings, so connect prints this f
 ```
 [mcp_servers.m1k3]
 url = "http://127.0.0.1:4242/mcp"
+http_headers = { "Authorization" = "Bearer m1k3_…" }
 ```
 ```
 $ m1k3 connect zed
@@ -116,10 +129,13 @@ Zed's settings schema has moved more than once, so connect prints this for you t
 
 ```
 "context_servers": {
-  "m1k3": { "url": "http://127.0.0.1:4242/mcp" }
+  "m1k3": {
+    "url": "http://127.0.0.1:4242/mcp",
+    "headers": { "Authorization": "Bearer m1k3_…" }
+  }
 }
 ```
-Add --print to any of them to see the config without touching a file. Installed from the DMG and not Homebrew? The same command lives at /Applications/M1K3.app/Contents/Helpers/m1k3.
+Your token goes where these show m1k3_…. Add --print to any of them to see the config without touching a file. Installed from the DMG and not Homebrew? The same command lives at /Applications/M1K3.app/Contents/Helpers/m1k3.
 
 #### Tell your agent it's there
 
@@ -140,13 +156,13 @@ $ m1k3 status
 $ m1k3 speak "hello from the terminal"
 $ m1k3 ask "what can you do?"
 ```
-A "disconnected" server almost always means the app is closed — m1k3 opens it for you and waits up to twenty seconds for the port. If status still fails, the switch in Settings ▸ Privacy ▸ MCP server is off.
+A "disconnected" server almost always means the app is closed — m1k3 opens it for you and waits up to twenty seconds for the port. If status still fails, either the switch in Settings ▸ Privacy ▸ MCP server is off, or the token is missing or stale: m1k3 says which, and m1k3 login fixes the second.
 
 Done. Two minutes, no account, and the thing that knows your machine is answering on loopback. From here: what your agent gets (18 tools, and the seven things the server will not do), the brains and how they score, how to verify the privacy claims yourself.
 
 ### The whole thing as text, for agents
 
-The same four steps as a file your agent can fetch and follow — m1k3.app/install.txt. Two of the steps are clicks in the app, on purpose: turning the server on, and starting a 2 GB download, are the user's to do.
+The same four steps as a file your agent can fetch and follow — m1k3.app/install.txt. Three of the steps are the user's, on purpose: turning the server on, pasting its token, and starting a 2 GB download.
 
 ```
 # 1 · get the app (puts `m1k3` on PATH)
@@ -154,7 +170,8 @@ brew trust round-tower/tap
 brew install --cask round-tower/tap/m1k3
 # 2 · open it once — first run is Mini, nothing to download
 open -a M1K3
-# 3 · ask the user to flip the switch: M1K3 ▸ Settings ▸ Privacy ▸ MCP server → On
+# 3 · ask the user to flip the switch: M1K3 ▸ Settings ▸ Privacy ▸ MCP server → On,
+#     Copy the token there, and run `m1k3 login` themselves to paste it
 #     then wire your client (claude | codex | cursor | vscode | zed)
 m1k3 connect claude
 m1k3 agent-notes --write
@@ -174,7 +191,7 @@ None of the three. M1K3 is free for humans — no account, no API key, no subscr
 
 **Q: What touches the network during install and use?**
 
-Three documented things, all yours to start: the download of the app itself (Homebrew, GitHub Releases, TestFlight or the App Store); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and the web-search tools, which are off by default. Conversations, documents, voice and memories never leave the Mac. The MCP server binds to 127.0.0.1 and nothing else.
+Three documented things: the download of the app itself (Homebrew, GitHub Releases or TestFlight); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and web search, which is on by default so answers can be current, with one switch in Settings ▸ Privacy to turn it off. Documents, voice and memories never leave the Mac; with web search on, a question M1K3 looks up goes out as a search. The MCP server binds to 127.0.0.1 and nothing else.
 
 **Q: How do I uninstall it cleanly?**
 
@@ -190,34 +207,38 @@ Because that copy of m1k3 is sandboxed: it can neither read ~/.cursor/mcp.json n
 
 ## Connect your coding agent to M1K3
 
-Updated 11 September 2026 · By Round Tower, the makers of M1K3
+Updated 2 October 2026 · By Round Tower, the makers of M1K3
 
-Your agent already knows the web. M1K3 is the one that knows you. It runs on your Mac — your documents, your memories, a local brain, a voice — and it answers over MCP at http://127.0.0.1:4242/mcp while the app is open. Two commands put it in front of Claude Code, Codex, Cursor, VS Code or Zed.
+Your agent already knows the web. M1K3 is the one that knows you. It runs on your Mac — your documents, your memories, a local brain, a voice — and it answers over MCP at http://127.0.0.1:4242/mcp while the app is open. Three commands put it in front of Claude Code, Codex, Cursor, VS Code or Zed.
 
 ```
 $ brew trust round-tower/tap && brew install --cask round-tower/tap/m1k3
+$ m1k3 login
 $ m1k3 connect claude
 ```
 The first line is Homebrew: version 6 asks you to trust a third-party tap before it will install from one, and the cask then installs the nightly Developer ID build of M1K3 and symlinks m1k3 — the small command-line client that ships inside the app bundle — onto your PATH.
 
-The second line writes the MCP entry for your agent. Swap claude for codex, cursor, vscode or zed; add --print to see the config without touching a file.
+The second line hands m1k3 the server's access token. Every request to M1K3's MCP server has to carry it; a request without it is turned away with a 401. Copy it from the app (next section), run m1k3 login and paste. It reads the token with echo off, or down a pipe (pbpaste | m1k3 login), never from the command line where your shell history would keep it. When the app is running it checks the token before saving it, and it keeps it in your login keychain.
+
+The third line writes the MCP entry for your agent, token included, as an Authorization: Bearer header. Swap claude for codex, cursor, vscode or zed; add --print to see the config without touching a file.
 
 ### One switch, once
 
-The MCP server is off by default, and it lives inside the app: open M1K3, then Settings ▸ Privacy ▸ MCP server. That is the whole setup. The same pane has a picker for all five agents with the snippet and a Copy button, if you would rather click than type.
+The MCP server is off by default, and it lives inside the app: open M1K3, then Settings ▸ Privacy ▸ MCP server, and switch it on. The same pane shows the access token, masked, with Copy (for m1k3 login) and New Token…. A new token disconnects every agent until you run m1k3 login and m1k3 connect again. The pane also has a picker for all five agents with the snippet, token filled in, and a Copy button, if you would rather click than type.
 
 ### Without Homebrew
 
 Download the signed, notarized M1K3.dmg (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg) from GitHub Releases and drag it to Applications. Then either use the picker in Settings ▸ Privacy ▸ MCP server, or run the same command from inside the bundle:
 
 ```
+$ /Applications/M1K3.app/Contents/Helpers/m1k3 login
 $ /Applications/M1K3.app/Contents/Helpers/m1k3 connect claude
 ```
 M1K3 needs an Apple Silicon Mac on macOS 26. It does not need an account.
 
 ### Per agent
 
-Five clients, and they genuinely differ — so connect does the safe thing for each and tells you which it did. These are the snippets m1k3 connect --print produces:
+Five clients, and they genuinely differ — so connect does the safe thing for each and tells you which it did. These are the snippets m1k3 connect <client> --print produces, with your token where these show m1k3_…:
 
 | Client | What connect does | Where it lands |
 
@@ -236,16 +257,19 @@ the two it edits keep every other server in the file, and get one .bak beside th
 #### Claude Code
 
 ```
-$ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp
+$ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp --header "Authorization: Bearer m1k3_…"
 ```
--s user registers it once for every project, which is the point of a resident.
+-s user registers it once for every project, which is the point of a resident. If an m1k3 entry is already there, connect removes it and adds it again, so an entry from before the token gets the header.
 
 #### Cursor — ~/.cursor/mcp.json
 
 ```
 {
   "mcpServers": {
-    "m1k3": { "url": "http://127.0.0.1:4242/mcp" }
+    "m1k3": {
+      "url": "http://127.0.0.1:4242/mcp",
+      "headers": { "Authorization": "Bearer m1k3_…" }
+    }
   }
 }
 ```
@@ -254,7 +278,11 @@ $ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp
 ```
 {
   "servers": {
-    "m1k3": { "type": "http", "url": "http://127.0.0.1:4242/mcp" }
+    "m1k3": {
+      "type": "http",
+      "url": "http://127.0.0.1:4242/mcp",
+      "headers": { "Authorization": "Bearer m1k3_…" }
+    }
   }
 }
 ```
@@ -263,12 +291,16 @@ $ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp
 ```
 [mcp_servers.m1k3]
 url = "http://127.0.0.1:4242/mcp"
+http_headers = { "Authorization" = "Bearer m1k3_…" }
 ```
 #### Zed — ~/.config/zed/settings.json
 
 ```
 "context_servers": {
-  "m1k3": { "url": "http://127.0.0.1:4242/mcp" }
+  "m1k3": {
+    "url": "http://127.0.0.1:4242/mcp",
+    "headers": { "Authorization": "Bearer m1k3_…" }
+  }
 }
 ```
 Zed's settings schema has moved more than once — check the shape against your Zed version. That, and Codex's TOML living in a file full of your own settings, is why those two print rather than write.
@@ -341,13 +373,13 @@ The consent gates are deliberate and asymmetric: an agent can remember and it ca
 
 - It will not run while M1K3 is closed. The server is part of the app. A "disconnected" MCP server almost always means the app is not open — which is why the resident block above tells your agent never to block on it. The m1k3 command opens the app itself and waits for the port.
 
-- It will not ask for a password, because it has none. There is no token on the loopback server today: anything running as you on this Mac can call it while it is switched on. That is the same trust boundary as your shell, and it is the reason the server ships off by default.
+- It will not answer without its token. Every request has to carry the access token as an Authorization: Bearer header; one without it gets a 401 before it reaches a session. The token keeps out stray scripts that find the port open, and stops a caller without it from knocking your agent off. It is not a defence against malware running as you, which can read any client's config file. The per-tool switches in Settings (listening, deleting memories, opening links) cover that for every caller.
 
 - It will not write your config from the App Store build. That copy of m1k3 is sandboxed, so it can neither read ~/.cursor/mcp.json nor run claude for you. There, connect prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write.
 
 - It will not serve two agents at once. One MCP client at a time, in this version: a second client connecting ends the first one's session.
 
-- It will not send what your agent asks it anywhere. Retrieval, embeddings, inference and voice run on the Mac. M1K3's documented network crossings are unchanged by connecting an agent: a one-time model download you opt into, web tools that are off by default, and updates.
+- It will not send your documents or memories anywhere. Retrieval, embeddings, inference and voice run on the Mac. M1K3's documented network crossings are unchanged by connecting an agent: a one-time model download you opt into, web search (on by default, one switch in Settings to turn it off), and updates.
 
 ### Frequently asked questions
 
@@ -361,11 +393,11 @@ Five, in two ways. For Claude Code it runs that client’s own registration comm
 
 **Q: Is it safe to leave the MCP server on?**
 
-It binds to 127.0.0.1 and nothing else, so no other machine can reach it, and it refuses any request whose Host header is not a loopback address or whose Origin is anything but a loopback page — the defence against a web page being tricked into calling it. What it does not have is a password: any program running as you on this Mac can call it while it is on. Leave it on while you are working, and treat it the way you treat a shell.
+It binds to 127.0.0.1 and nothing else, so no other machine can reach it, and it refuses any request whose Host header is not a loopback address or whose Origin is anything but a loopback page — the defence against a web page being tricked into calling it. It also wants its access token on every request, so a stray script that finds the port open gets a 401. The token is not a defence against malware running as you, which can read any client’s config file; the per-tool switches for listening, deleting memories and opening links cover that. Leave it on while you are working, and treat it the way you treat a shell.
 
 **Q: What reaches the cloud when my agent uses M1K3?**
 
-From M1K3, nothing. Retrieval, embeddings, inference and voice all run on your Mac. The honest caveat is the other direction: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. M1K3’s own network crossings are unchanged — a one-time model download you opt into, web tools that are off by default, and updates.
+Not your documents or memories: retrieval, embeddings, inference and voice all run on your Mac. The honest caveats: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. And M1K3’s own network crossings are unchanged — a one-time model download you opt into, web search (on by default, so a question M1K3 looks up sends that search to the web; one switch in Settings turns it off), and updates.
 
 **Q: What does it cost?**
 
@@ -377,9 +409,9 @@ Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. 
 
 ## Is M1K3 really private?
 
-Updated 2026-09-23 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
+Updated 2026-10-02 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
 
-Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, an optional web-search tool that is off by default, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.
+Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.
 
 ### What runs where?
 
@@ -405,17 +437,17 @@ one sandboxed app · apple silicon · works offline
 
 #### The network
 
-the complete list of crossings · all user-initiated
+the complete list of crossings
 
 - Model weights, once Downloaded from Hugging Face only when you opt into the Lil or Big brain. The default Mini brain is Apple's built-in model — nothing to download.
 
-- Web search & page reading (optional) Agent tools behind a privacy toggle, off by default. Web off means web off.
+- Web search & page reading (on by default) Agent tools behind one privacy toggle, so answers can be current. Web off means web off.
 
 - Updates Via TestFlight or a new DMG from GitHub Releases. The app has no self-updater phoning home.
 
 - Private Cloud Compute (optional, off by default) A cloud button next to the message field, visible only once you turn it on in Settings. Sends one message at a time to Apple's Private Cloud Compute, after a consent sheet; every PCC answer is labelled.
 
-- And that's it. No telemetry, no analytics, no account, no crash reporting. With Private Cloud Compute off — the default — your prompts, documents, voice, and calls are not on this list, by construction. Turn it on and only the one message you send (plus the conversation so far, if you tick it) ever crosses — never memories, documents, tools, calendar, location, or your profile.
+- And that's it. No telemetry, no analytics, no account, no crash reporting. With Private Cloud Compute off — the default — your documents, voice, and calls are not on this list, by construction, and your prompts reach it only as the web searches M1K3 runs for them. Turn it on and only the one message you send (plus the conversation so far, if you tick it) ever crosses — never memories, documents, tools, calendar, location, or your profile.
 
 every crossing above is documented in the repo
 
@@ -425,7 +457,7 @@ A privacy page earns its keep in the exceptions, so here they are, plainly:
 
 - Model downloads (one-time, opt-in). M1K3 starts on Mini — Apple's on-device Foundation Model, instant, nothing to download. If you choose a bigger local brain (Lil or Big) or on-device Whisper speech models, the weights download once from huggingface.co; after that, inference runs fully offline. The app's outbound-network entitlement exists for this — the entitlements file (https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements) says so in a signed comment.
 
-- The web tools (opt-in, off by default). The local agent has web-search and page-reading tools behind a privacy toggle. When the toggle is off, the agent has no web tools at all — it can't quietly decide to search. When you turn it on, your search queries go to the web, as searches do.
+- The web tools (on by default, one switch to turn them off). The local agent has web-search and page-reading tools so answers can be current. One toggle in Settings ▸ Privacy turns them off; when it is off, the agent has no web tools at all — it can't quietly decide to search. When it is on, your search queries go to the web, as searches do.
 
 - Updates (via the channel you chose). There is no Sparkle-style self-updater inside the app. TestFlight builds update through Apple's infrastructure; the DMG updates when you download a new one from GitHub Releases (https://github.com/Round-Tower/M1K3/releases); a source build updates when you pull and rebuild.
 
@@ -468,7 +500,7 @@ M1K3's source is public — source-available under the Functional Source License
 ```
 $ codesign -d --entitlements - /Applications/M1K3.app
 com.apple.security.app-sandbox            → true
-com.apple.security.network.client         → true  # model downloads + opt-in web tools
+com.apple.security.network.client         → true  # model downloads + the web tools (on by default)
 com.apple.security.network.server         → true  # the 127.0.0.1 MCP server, off by default
 com.apple.security.device.audio-input     → true  # mic, for on-device speech recognition
 com.apple.developer.private-cloud-compute → true  # the opt-in cloud button, off by default
@@ -507,9 +539,9 @@ A cloud button appears next to the message field. Tap it and M1K3 shows you exac
 
 ## Give Claude a local memory
 
-Updated 2026-09-09 · A tutorial from Round Tower, the makers of M1K3
+Updated 2026-10-02 · A tutorial from Round Tower, the makers of M1K3
 
-Short answer: run an MCP knowledge server on your Mac and point Claude at it. M1K3 — a free, source-available AI app for Apple Silicon Macs — serves the Model Context Protocol over loopback HTTP at http://127.0.0.1:4242/mcp while the app runs. Import your documents and notes into M1K3, register the server with Claude Code, and Claude gains tools like search_knowledge, recall_memory, and remember over your knowledge — with retrieval, embeddings, and storage all happening on your machine. Claude Desktop connects too, via a knowledge-only stdio binary. Setup is one config snippet; the walkthrough is below.
+Short answer: run an MCP knowledge server on your Mac and point Claude at it. M1K3 — a free, source-available AI app for Apple Silicon Macs — serves the Model Context Protocol over loopback HTTP at http://127.0.0.1:4242/mcp while the app runs. Import your documents and notes into M1K3, register the server with Claude Code, and Claude gains tools like search_knowledge, recall_memory, and remember over your knowledge — with retrieval, embeddings, and storage all happening on your machine. Claude Desktop connects too, via a knowledge-only stdio binary. Setup is switching the server on, pasting its access token into m1k3 login, and one connect; the walkthrough is below.
 
 ### What is an MCP knowledge server?
 
@@ -519,7 +551,7 @@ Cloud assistants usually solve "memory" with cloud storage. The local variant fl
 
 ### What tools does M1K3 expose over MCP?
 
-Sixteen, spanning knowledge, memory, intelligence, and voice (the README's table (https://github.com/Round-Tower/M1K3#tools) is generated live from the running server):
+Eighteen, spanning knowledge, memory, intelligence, voice, and todos (the README's table (https://github.com/Round-Tower/M1K3#tools) is generated live from the running server):
 
 | Tool | What it does |
 
@@ -549,6 +581,10 @@ Sixteen, spanning knowledge, memory, intelligence, and voice (the README's table
 
 | listen | Listen on the mic and return the transcript when the speaker pauses |
 
+| list_todos | Read the user's todo list — what is open, what is proposed and not yet accepted |
+
+| propose_todo | Propose a todo, stamped with your client's name. Only the user can accept it |
+
 | get_status | Active brain tier, voice status, and busy flags |
 
 | open_link | Open a URL in M1K3's review panel, beside the conversation |
@@ -557,22 +593,28 @@ Sixteen, spanning knowledge, memory, intelligence, and voice (the README's table
 
 Step 1 — install M1K3 and give it something to know. Get the app (TestFlight (https://testflight.apple.com/join/Fxp2F5Je), DMG (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg), or source (https://github.com/Round-Tower/M1K3); requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.
 
-Step 2 — register the server. With the app running, either add this to a .mcp.json in your project (this is verbatim the config M1K3's own repo uses):
+Step 2 — switch the server on and connect. In M1K3, open Settings ▸ Privacy ▸ MCP server, switch it on, and Copy the access token. Every request has to carry it; one without it gets a 401. Then, from Terminal:
+
+```
+$ m1k3 login && m1k3 connect claude
+```
+m1k3 login reads the token with echo off and keeps it in your login keychain; connect registers M1K3 with Claude Code for every project, token included. The m1k3 client ships inside the app at Contents/Helpers/m1k3, and the Homebrew cask puts it on your PATH; the full walkthrough, for five clients, is at m1k3.app/agents. Or register it by hand, with the token from Settings:
+
+```
+$ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp --header "Authorization: Bearer m1k3_…"
+```
+A .mcp.json takes the same entry with a headers object (keep a file holding the token out of version control):
 
 ```
 {
   "mcpServers": {
     "m1k3": {
       "type": "http",
-      "url": "http://127.0.0.1:4242/mcp"
+      "url": "http://127.0.0.1:4242/mcp",
+      "headers": { "Authorization": "Bearer m1k3_…" }
     }
   }
 }
-```
-…or register it once from the command line:
-
-```
-$ claude mcp add --transport http m1k3 http://127.0.0.1:4242/mcp
 ```
 Step 3 — use it. Ask Claude something your documents answer:
 
@@ -605,7 +647,7 @@ Both. remember stores facts into the same store search_knowledge reads, and forg
 
 **Q: Does it work with agents other than Claude?**
 
-Yes — MCP is an open protocol, and the endpoint is a standard HTTP MCP server. Claude Code and Claude Desktop are the documented first-class paths.
+Yes — MCP is an open protocol, and the endpoint is a standard HTTP MCP server; any client that can send the access token as an Authorization header can connect. Claude Code and Claude Desktop are the documented first-class paths.
 
 **Q: What does it cost?**
 
@@ -617,7 +659,7 @@ Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. 
 
 ## M1K3 vs Ollama
 
-Updated 2026-09-09 · By Round Tower, the makers of M1K3 — so read us with that in mind. We've kept it factual.
+Updated 2026-10-02 · By Round Tower, the makers of M1K3 — so read us with that in mind. We've kept it factual.
 
 Short answer: M1K3 and Ollama solve different problems, and comparing them head-to-head slightly misses the point. Ollama is a local model server — an open-source runtime with a CLI, a local API, and a large model library that developers build things on. M1K3 is a finished, private AI app for Apple Silicon Macs: local models plus live voice, a personal knowledge graph over your documents, consent-gated call memory, a local agent, and an MCP server — in one sandboxed, native SwiftUI app. If you want infrastructure to build with, choose Ollama. If you want a private assistant that works out of the box on a Mac, that's what M1K3 is for. They coexist happily on the same machine.
 
@@ -639,7 +681,7 @@ M1K3 is a free, source-available (FSL-1.1-ALv2, public repository) AI app for ma
 
 - Call memory — consent-gated call recording with on-device transcription and encrypted persistence.
 
-- A local agent — tool use (your knowledge base; web search behind an off-by-default toggle).
+- A local agent — tool use (your knowledge base; web search, on by default, behind one toggle that turns it off).
 
 - An MCP server — Claude and other agents can query your local knowledge. See giving Claude a local memory.
 
@@ -679,7 +721,7 @@ Ollama details reflect its publicly documented behaviour as of mid-2026; check o
 
 Choose Ollama if you're a developer who wants a local LLM behind an API, you need model breadth, or your hardware is anything other than a recent Apple Silicon Mac. It's the right tool for building.
 
-Choose M1K3 if you want the assembled product: a private assistant that already has voice, memory over your documents and calls, and agent tools — with a hard privacy posture (inference, embeddings, voice, and storage all on-device; zero bytes of your data sent to a server) rather than a stack you compose and maintain yourself.
+Choose M1K3 if you want the assembled product: a private assistant that already has voice, memory over your documents and calls, and agent tools — with a hard privacy posture (inference, embeddings, voice, and storage all on-device; no account, no telemetry, and web search behind one switch) rather than a stack you compose and maintain yourself.
 
 Choose both if you build against local models by day and want a private assistant the rest of the time. They don't conflict.
 
@@ -711,7 +753,7 @@ Both are free. Ollama is MIT-licensed open source. M1K3 is free for humans forev
 
 ## Private ChatGPT alternative for Mac
 
-Updated 2026-09-09 · By Round Tower, the makers of M1K3 — we have a horse in this race, so we've kept the comparison factual.
+Updated 2026-10-02 · By Round Tower, the makers of M1K3 — we have a horse in this race, so we've kept the comparison factual.
 
 Short answer: the most private ChatGPT alternative for a Mac is one where the AI runs on the Mac itself, so your conversations physically cannot reach a server. M1K3 is built exactly for this: a free, source-available AI app for Apple Silicon Macs where inference, voice, embeddings, and storage are all on-device — zero bytes of your conversations, documents, or calls are sent anywhere. It gives you the assistant experience (chat, live voice, memory over your documents) rather than just a model runner. If you'd rather assemble your own stack, Ollama and LM Studio also run models locally and are good tools. The ChatGPT desktop app, by contrast, is a client for a cloud service — capable, but architecturally not private in the same sense.
 
@@ -737,7 +779,7 @@ M1K3 is a free, source-available (FSL-1.1-ALv2, public repository) AI app for ma
 
 - An agent + MCP server — local tools, and your knowledge exposed to Claude and other agents over MCP.
 
-No account, no subscription, no telemetry. The only network use is the one-time model download, plus an optional web-search tool that is off by default and clearly toggled — web off means web off. Requirements are the honest catch: an Apple Silicon Mac on macOS 26 Tahoe.
+No account, no subscription, no telemetry. The only network use is the one-time model download, plus web search, which is on by default so answers can be current and clearly toggled — one switch in Settings, and web off means web off. Requirements are the honest catch: an Apple Silicon Mac on macOS 26 Tahoe.
 
 ### How the alternatives compare on a Mac
 
@@ -745,7 +787,7 @@ No account, no subscription, no telemetry. The only network use is the one-time 
 
 | Where inference runs | On your Mac | On your Mac | On your Mac | OpenAI's servers |
 
-| What leaves the machine | Nothing (optional web search, off by default) | Nothing for inference; models pull from its registry | Nothing for inference; models download from hubs | Your prompts and files, processed in the cloud |
+| What leaves the machine | Inference: nothing. Web searches, on by default, one switch to turn off | Nothing for inference; models pull from its registry | Nothing for inference; models download from hubs | Your prompts and files, processed in the cloud |
 
 | Account required | No | No | No | Yes |
 
@@ -791,7 +833,7 @@ Not on raw capability — and an honest local-AI vendor should say so. For every
 
 **Q: Does M1K3 require an account or subscription?**
 
-No. Free for humans, source-available (FSL-1.1-ALv2), no account, no subscription, no telemetry. Network is used only for the one-time model download and the optional, off-by-default web search.
+No. Free for humans, source-available (FSL-1.1-ALv2), no account, no subscription, no telemetry. Network is used only for the one-time model download and web search, which is on by default with one switch in Settings to turn it off.
 
 **Q: What about Ollama or LM Studio instead?**
 
@@ -803,7 +845,7 @@ Both are good local options — see our full M1K3 vs Ollama comparison and the l
 
 ## How to run a local LLM on a Mac
 
-Updated 2026-09-09 · By Round Tower, the makers of M1K3 — one of the four routes below is ours; the other three are recommended honestly.
+Updated 2026-10-02 · By Round Tower, the makers of M1K3 — one of the four routes below is ours; the other three are recommended honestly.
 
 Short answer: you need an Apple Silicon Mac and one of four tools. Ollama if you want a CLI and a local API to build on; LM Studio if you want a graphical model browser with an OpenAI-compatible server; Apple's MLX (mlx-lm) if you want the Python framework underneath it all; or M1K3 if you want a finished, private assistant — chat, voice, and memory over your documents — rather than a model runner. Any M-series Mac works for small models; 16 GB of unified memory runs the popular 4–8B class comfortably. All four are free.
 
@@ -861,7 +903,7 @@ The three options above give you a model. M1K3 (free for humans, source-availabl
 
 - A local agent and an MCP server — so Claude and other agents can query your local knowledge.
 
-First run starts on an instant brain with nothing to download; larger local brains are an opt-in download. Zero bytes of your data go to any server — the optional web-search tool is off by default. The honest catch: it requires macOS 26 Tahoe on Apple Silicon, and its model list is curated rather than a library. Best for: people who want private, working AI on their Mac today, not a stack to assemble.
+First run starts on an instant brain with nothing to download; larger local brains are an opt-in download. Your documents and conversations stay on the Mac; the one exception is web search, on by default so answers can be current, with one switch in Settings to turn it off. The honest catch: it requires macOS 26 Tahoe on Apple Silicon, and its model list is curated rather than a library. Best for: people who want private, working AI on their Mac today, not a stack to assemble.
 
 ### Which route should you pick?
 
@@ -893,7 +935,7 @@ Yes, in the small-model class (roughly 1–4B parameters, 4-bit quantized). It's
 
 **Q: Is running a local LLM private?**
 
-Structurally yes — inference happens on your hardware. Model downloads use the network, and any web-connected tools you enable will too; M1K3 keeps such tools off by default so the posture is explicit.
+Structurally yes — inference happens on your hardware. Model downloads use the network, and so do any web-connected tools. M1K3's web search is on by default, with one switch in Settings to turn it off, so the posture is explicit either way.
 
 **Q: Do these tools cost anything?**
 
@@ -3162,7 +3204,7 @@ No. All 3,700 tests pass with zero code changes on macOS 27.0. The model improve
 
 Updated 2026-09-09 · By Round Tower, the makers of M1K3 — the same product, on your hardware, under your domain
 
-Short answer: M1K3 for Teams is M1K3 for an organisation — the same on-device brains, an institutional memory, and a persona tuned to your people, running on Apple Silicon hardware you own, on your own network, under your own domain. An administrator locks the personal app's opt-in Private Cloud Compute switch off fleet-wide, so nothing leaves your building. Round Tower does not host it, cannot see it, and receives no telemetry from it. It is for the places where the data cannot leave — schools, clinics, firms, public bodies — and it is sold as a small number of fixed-scope design-partner pilots, not as a cloud subscription.
+Short answer: M1K3 for Teams is M1K3 for an organisation — the same on-device brains, an institutional memory, and a persona tuned to your people, running on Apple Silicon hardware you own, on your own network, under your own domain. An administrator locks the personal app's opt-in Private Cloud Compute switch off fleet-wide, so no conversation goes to anyone's cloud. Round Tower does not host it, cannot see it, and receives no telemetry from it. It is for the places where the data cannot leave — schools, clinics, firms, public bodies — and it is sold as a small number of fixed-scope design-partner pilots, not as a cloud subscription.
 
 ### What you get
 
@@ -3198,13 +3240,13 @@ Plainly: the personal app ships now, including the one-Mac-to-your-devices servi
 
 - The report. What it answered well, what it got wrong, what it cost in hardware and time, and whether it earned a place — in writing, and honest.
 
-Round Tower is taking on a small number of design-partner pilots. Write to kevin@round-tower.ie with a line about your organisation and what you would want it to know.
+Round Tower is taking on a small number of design-partner pilots. Write to hello@round-tower.ie with a line about your organisation and what you would want it to know.
 
 ### Frequently asked questions
 
 **Q: Does anything leave our network?**
 
-No. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The personal app's opt-in Private Cloud Compute switch — the one control that can send a single message to Apple's cloud — can be locked off by policy for your whole deployment, so the only network crossings left are the ones the app already documents: a one-time model download you approve, and a web-search tool an administrator can switch off too.
+Not your data. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The personal app's opt-in Private Cloud Compute switch — the one control that can send a single message to Apple's cloud — can be locked off by policy for your whole deployment, so the only network crossings left are the ones the app already documents: a one-time model download you approve, and a web-search tool an administrator can switch off too.
 
 **Q: Can we just use the free app inside our organisation instead?**
 
@@ -3220,7 +3262,7 @@ Yes, within the limits of the hardware. M1K3 runs models through MLX on Apple Si
 
 **Q: How does a pilot work?**
 
-A pilot is fixed-scope and fixed-price, agreed up front: one site, your hardware, your knowledge, a few weeks, and an honest written report at the end — including the things that did not work. Round Tower is taking on a small number of design-partner pilots; write to kevin@round-tower.ie.
+A pilot is fixed-scope and fixed-price, agreed up front: one site, your hardware, your knowledge, a few weeks, and an honest written report at the end — including the things that did not work. Round Tower is taking on a small number of design-partner pilots; write to hello@round-tower.ie.
 
 ---
 
@@ -3275,7 +3317,7 @@ The models are deliberately tiny — a few hundred kilobytes each — so the who
 ```
 # M1K3 — install recipe
 # https://m1k3.app/install.txt · the text version of https://m1k3.app/install
-# Updated 2026-09-15. For coding agents, and for people who prefer text.
+# Updated 2026-10-02. For coding agents, and for people who prefer text.
 
 M1K3 is a private, on-device AI for macOS: local brains (MLX + Apple
 Foundation Models), live voice, a knowledge graph over the user's documents,
@@ -3284,7 +3326,7 @@ no telemetry. Source: https://github.com/Round-Tower/M1K3 (FSL-1.1-ALv2).
 
 REQUIREMENTS
   An Apple Silicon Mac on macOS 26 (Tahoe) or later. Intel Macs cannot run it
-  (arm64 only; every brain runs on Metal). No account, key, or subscription.
+  (arm64 only; every brain runs on Metal). No account, API key, or subscription.
 
 STEP 1 — GET THE APP
   Homebrew (also puts the `m1k3` command on PATH; Homebrew 6 needs the trust
@@ -3309,23 +3351,32 @@ STEP 2 — OPEN IT ONCE
   offered on 16 GB Macs and up. These are the user's clicks: an agent should
   ask, not start a 2 GB download on its own.
 
-STEP 3 — TURN THE SERVER ON, THEN CONNECT
+STEP 3 — TURN THE SERVER ON, LOG IN, THEN CONNECT
   The MCP server is OFF by default and lives inside the app. Ask the user to
   turn it on once: M1K3 ▸ Settings ▸ Privacy ▸ MCP server → On. It then serves
     http://127.0.0.1:4242/mcp
   while the app is open, bound to loopback only, one client at a time. There
   is no flag or defaults key that flips it from a shell; that is deliberate.
 
+  Every request needs the server's access token (Authorization: Bearer m1k3_…);
+  without it the answer is 401. The same Settings pane has it, masked, with a
+  Copy button. Ask the user to Copy it and run, in their own terminal:
+    m1k3 login
+  and paste it there. `login` reads it with echo off (or from a pipe:
+  pbpaste | m1k3 login), never from argv, checks it against the app when the
+  app is running, and keeps it in the login keychain. An agent should not handle the token.
+
   Then wire your client (one of: claude | codex | cursor | vscode | zed):
     m1k3 connect claude
-  What each does:
-    claude  runs `claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp`
+  What each does (every entry carries the token as an Authorization header):
+    claude  runs `claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp --header "Authorization: Bearer m1k3_…"`
     cursor  edits ~/.cursor/mcp.json (keeps other servers; one .bak the first time)
     vscode  edits ~/Library/Application Support/Code/User/mcp.json (same rules)
     codex   prints the [mcp_servers.m1k3] TOML for ~/.codex/config.toml
     zed     prints the "context_servers" entry for ~/.config/zed/settings.json
   Add --print to see the config without touching a file. Without the CLI, any
-  MCP client that speaks streamable HTTP can point at the URL above directly.
+  MCP client that speaks streamable HTTP can point at the URL above directly,
+  with the header "Authorization: Bearer <token from Settings>".
 
   Tell the agent it is there — folds a marker-fenced "M1K3 is the resident"
   block into the project's AGENTS.md (or --write PATH; re-running replaces it):
@@ -3336,8 +3387,9 @@ STEP 4 — VERIFY
     m1k3 speak "hello from the terminal"
     m1k3 ask "what can you do?"      # a real turn on the local brain
   A "disconnected" server almost always means the app is closed; `m1k3` opens
-  it and waits up to 20 s for the port. If status still fails, the switch in
-  Settings ▸ Privacy ▸ MCP server is off.
+  it and waits up to 20 s for the port. If status still fails, either the
+  switch in Settings ▸ Privacy ▸ MCP server is off, or the token is missing or
+  stale (m1k3 says so; the user runs m1k3 login again, then connect).
 
 WHAT THE AGENT GETS (18 tools)
   ask_m1k3, get_answer, list_jobs — ask the local brain (long asks poll by job id)
@@ -3346,7 +3398,7 @@ WHAT THE AGENT GETS (18 tools)
   speak, stop_speaking, listen — voice in and out
   list_todos, propose_todo — read the list; propose only (the user accepts)
   get_status, open_link
-  Details and the six things the server will not do: https://m1k3.app/agents
+  Details and the seven things the server will not do: https://m1k3.app/agents
 
 UNINSTALL
   brew uninstall --cask m1k3       (add --zap to remove its data)
@@ -3355,7 +3407,9 @@ UNINSTALL
   `m1k3 connect <client> --print` shows the one config entry to take out.
 
 PRIVACY
-  Three documented network crossings, all user-started: the app download, an
-  optional one-time model download, and web-search tools that are off by
-  default. Nothing said to M1K3 leaves the Mac. https://m1k3.app/privacy
+  Private by design. The documented network crossings: the app download, an
+  optional one-time model download, and web search, which is on by default
+  (one switch in Settings ▸ Privacy turns it off). Documents, memories and
+  voice stay on the Mac; with web search on, a question M1K3 looks up goes out
+  as a search. https://m1k3.app/privacy
 ```

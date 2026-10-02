@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Install M1K3 — two minutes, no account, nothing leaves your Mac</title>
-<meta name="description" content="Install M1K3 on an Apple Silicon Mac in two minutes: Homebrew, the DMG, or the App Store. Say hello to the on-device brain, flip one switch, connect Claude Code, Codex, Cursor, VS Code or Zed over MCP, verify with m1k3 status. A plain-text recipe agents can follow is at m1k3.app/install.txt." />
+<title>Install M1K3 — two minutes, no account, private by design</title>
+<meta name="description" content="Install M1K3 on an Apple Silicon Mac in two minutes: Homebrew, the DMG, or the TestFlight beta. Say hello to the on-device brain, flip one switch, connect Claude Code, Codex, Cursor, VS Code or Zed over MCP, verify with m1k3 status. A plain-text recipe agents can follow is at m1k3.app/install.txt." />
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 <link rel="canonical" href="https://m1k3.app/install" />
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -14,16 +14,16 @@
 <meta property="og:site_name" content="M1K3" />
 <meta property="og:locale" content="en_IE" />
 <meta property="og:title" content="Install M1K3 — two minutes, no account" />
-<meta property="og:description" content="Homebrew, DMG or App Store. Say hello to the on-device brain, flip one switch, connect your coding agent over MCP, verify. Nothing leaves your Mac." />
+<meta property="og:description" content="Homebrew, DMG or TestFlight. Say hello to the on-device brain, flip one switch, connect your coding agent over MCP, verify. Private by design." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://m1k3.app/install" />
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Private by design.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Install M1K3 — two minutes, no account" />
-<meta name="twitter:description" content="Homebrew, DMG or App Store. Say hello, flip one switch, connect your agent over MCP, verify. Nothing leaves your Mac." />
+<meta name="twitter:description" content="Homebrew, DMG or TestFlight. Say hello, flip one switch, connect your agent over MCP, verify. Private by design." />
 <meta name="twitter:image" content="https://m1k3.app/og.png" />
 <script type="application/ld+json">
 {
@@ -42,7 +42,7 @@
     { "@type": "HowToStep", "name": "Say hello", "url": "https://m1k3.app/install#hello",
       "text": "Open M1K3. First run picks Mini, Apple's on-device model — instant, nothing to download, no account. Ask it anything. Upgrade to Lil (about 2.2 GB, the brain that fronts the conversation) from the prompt after your first answer or in Settings." },
     { "@type": "HowToStep", "name": "Connect your agent", "url": "https://m1k3.app/install#connect",
-      "text": "Turn the MCP server on once: Settings ▸ Privacy ▸ MCP server. It is off by default and serves http://127.0.0.1:4242/mcp only while the app is open. Then run m1k3 connect claude — or codex, cursor, vscode, zed. Add --print to see the config without touching a file. m1k3 agent-notes --write folds the 'M1K3 is the resident' block into your project's AGENTS.md." },
+      "text": "Turn the MCP server on once: Settings ▸ Privacy ▸ MCP server. It is off by default and serves http://127.0.0.1:4242/mcp only while the app is open. Copy the access token from the same pane and run m1k3 login to paste it; every request carries it. Then run m1k3 connect claude — or codex, cursor, vscode, zed. Add --print to see the config without touching a file. m1k3 agent-notes --write folds the 'M1K3 is the resident' block into your project's AGENTS.md." },
     { "@type": "HowToStep", "name": "Verify", "url": "https://m1k3.app/install#verify",
       "text": "m1k3 status answers with the active brain and what M1K3 is doing. m1k3 speak \"hello\" says it aloud. m1k3 ask \"what can you do?\" runs a real turn on the local brain. A disconnected server almost always means the app is closed; m1k3 opens it for you." }
   ]
@@ -58,7 +58,7 @@
     { "@type": "Question", "name": "Do I need an account, a key, or a subscription?",
       "acceptedAnswer": { "@type": "Answer", "text": "None of the three. M1K3 is free for humans — no account, no API key, no subscription, no telemetry. First run works with Apple's on-device model before anything downloads. The source is public under the Functional Source License; organisations that want one shared brain on their own hardware license M1K3 for Teams separately." } },
     { "@type": "Question", "name": "What touches the network during install and use?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Three documented things, all yours to start: the download of the app itself (Homebrew, GitHub Releases, TestFlight or the App Store); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and the web-search tools, which are off by default. Conversations, documents, voice and memories never leave the Mac. The MCP server binds to 127.0.0.1 and nothing else." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Three documented things: the download of the app itself (Homebrew, GitHub Releases or TestFlight); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and web search, which is on by default so answers can be current, with one switch in Settings ▸ Privacy to turn it off. Documents, voice and memories never leave the Mac; with web search on, a question M1K3 looks up goes out as a search. The MCP server binds to 127.0.0.1 and nothing else." } },
     { "@type": "Question", "name": "How do I uninstall it cleanly?",
       "acceptedAnswer": { "@type": "Answer", "text": "Homebrew: brew uninstall --cask m1k3, and add --zap to remove its data too. DMG: drag M1K3 from Applications to the Trash. Everything M1K3 stores lives in one sandbox container, ~/Library/Containers/app.m1k3, and the Lil and Big weights are inside it — delete that folder and nothing of M1K3 remains. If you connected an agent, run m1k3 connect <client> --print to see the one entry to remove from that client's config." } },
     { "@type": "Question", "name": "Why does connect only print on the App Store build?",
@@ -161,11 +161,11 @@
   <header class="article-head">
     <span class="label">// install</span>
     <h1>Install M1K3</h1>
-    <p class="meta">Updated 15 September 2026 · two minutes · an Apple Silicon Mac on macOS 26 · no account</p>
+    <p class="meta">Updated 2 October 2026 · two minutes · an Apple Silicon Mac on macOS 26 · no account</p>
   </header>
 
   <div class="answer">
-    <p><strong>Four steps, and the third one is optional.</strong> Get the app, say hello to the brain that is already on your Mac, flip one switch and connect your coding agent, then check it from the terminal. Nothing here asks for an account, a key, or a card — and nothing you say to it leaves the machine.</p>
+    <p><strong>Four steps, and the third one is optional.</strong> Get the app, say hello to the brain that is already on your Mac, flip one switch and connect your coding agent, then check it from the terminal. Nothing here asks for an account, an API key, or a card, and the brain runs on your Mac.</p>
   </div>
 
   <div class="wiz-doors" role="radiogroup" aria-label="Who is installing">
@@ -225,8 +225,13 @@
 
   <section class="step" id="connect">
     <h2>Connect your agent <span class="only-person" style="font-family:var(--mono);font-size:13px;color:var(--ink-faint);letter-spacing:0.06em;">· optional</span></h2>
-    <p><strong>One switch, once.</strong> The MCP server lives inside the app and is <em>off</em> by default: open <strong>M1K3 ▸ Settings ▸ Privacy ▸ MCP server</strong> and turn it on. It serves <code>http://127.0.0.1:4242/mcp</code> while the app is open, binds to loopback only, and answers one client at a time. That pane also has a picker for all five agents with the snippet and a Copy button, if you would rather click than type.</p>
-    <p>Then one command wires your client. Pick yours:</p>
+    <p><strong>One switch, once.</strong> The MCP server lives inside the app and is <em>off</em> by default: open <strong>M1K3 ▸ Settings ▸ Privacy ▸ MCP server</strong> and turn it on. It serves <code>http://127.0.0.1:4242/mcp</code> while the app is open, binds to loopback only, and answers one client at a time. That pane also has a picker for all five agents with the snippet, token filled in, and a Copy button, if you would rather click than type.</p>
+    <p><strong>The token.</strong> Every request to the server carries its access token; one without it gets a 401. The same pane shows it, masked, with a <strong>Copy</strong> button. Copy it, then hand it to <code>m1k3</code>, which reads it with echo off (never from the command line), checks it against the app when the app is running, and keeps it in your login keychain:</p>
+    <div class="term">
+      <div class="term-bar"><span></span><span></span><span></span></div>
+      <div class="term-body"><pre><span class="p">$</span> m1k3 login</pre></div>
+    </div>
+    <p>Then one command wires your client, token included. Pick yours:</p>
 
     <div class="clients" role="radiogroup" aria-label="Your coding agent">
       <input type="radio" name="client" id="c-claude" checked /><label for="c-claude">Claude Code</label>
@@ -244,7 +249,7 @@
       <p><code>connect</code> runs Claude Code's own registration for you — this, at user scope so it is there in every project:</p>
       <div class="term">
         <div class="term-bar"><span></span><span></span><span></span></div>
-        <div class="term-body"><pre><span class="p">$</span> claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp</pre></div>
+        <div class="term-body"><pre><span class="p">$</span> claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp --header "Authorization: Bearer m1k3_…"</pre></div>
       </div>
     </div>
 
@@ -258,7 +263,10 @@
         <div class="term-bar"><span></span><span></span><span></span></div>
         <div class="term-body"><pre>{
   <span class="p">"mcpServers"</span>: {
-    <span class="p">"m1k3"</span>: { "url": "http://127.0.0.1:4242/mcp" }
+    <span class="p">"m1k3"</span>: {
+      "url": "http://127.0.0.1:4242/mcp",
+      "headers": { "Authorization": "Bearer m1k3_…" }
+    }
   }
 }</pre></div>
       </div>
@@ -274,7 +282,11 @@
         <div class="term-bar"><span></span><span></span><span></span></div>
         <div class="term-body"><pre>{
   <span class="p">"servers"</span>: {
-    <span class="p">"m1k3"</span>: { "type": "http", "url": "http://127.0.0.1:4242/mcp" }
+    <span class="p">"m1k3"</span>: {
+      "type": "http",
+      "url": "http://127.0.0.1:4242/mcp",
+      "headers": { "Authorization": "Bearer m1k3_…" }
+    }
   }
 }</pre></div>
       </div>
@@ -289,7 +301,8 @@
       <div class="term">
         <div class="term-bar"><span></span><span></span><span></span></div>
         <div class="term-body"><pre><span class="p">[mcp_servers.m1k3]</span>
-url = "http://127.0.0.1:4242/mcp"</pre></div>
+url = "http://127.0.0.1:4242/mcp"
+http_headers = { "Authorization" = "Bearer m1k3_…" }</pre></div>
       </div>
     </div>
 
@@ -302,12 +315,15 @@ url = "http://127.0.0.1:4242/mcp"</pre></div>
       <div class="term">
         <div class="term-bar"><span></span><span></span><span></span></div>
         <div class="term-body"><pre><span class="p">"context_servers"</span>: {
-  <span class="p">"m1k3"</span>: { "url": "http://127.0.0.1:4242/mcp" }
+  <span class="p">"m1k3"</span>: {
+    "url": "http://127.0.0.1:4242/mcp",
+    "headers": { "Authorization": "Bearer m1k3_…" }
+  }
 }</pre></div>
       </div>
     </div>
 
-    <p>Add <code>--print</code> to any of them to see the config without touching a file. Installed from the DMG and not Homebrew? The same command lives at <code>/Applications/M1K3.app/Contents/Helpers/m1k3</code>.</p>
+    <p>Your token goes where these show <code>m1k3_…</code>. Add <code>--print</code> to any of them to see the config without touching a file. Installed from the DMG and not Homebrew? The same command lives at <code>/Applications/M1K3.app/Contents/Helpers/m1k3</code>.</p>
 
     <h3>Tell your agent it's there</h3>
     <p>A connected server your agent never thinks to call is a wasted server. This folds a short "M1K3 is the resident" block into the project's <code>AGENTS.md</code> — or <code>CLAUDE.md</code>, or any path you name — marker-fenced, so running it again replaces the block instead of stacking copies:</p>
@@ -328,14 +344,14 @@ url = "http://127.0.0.1:4242/mcp"</pre></div>
 <span class="p">$</span> m1k3 speak "hello from the terminal"
 <span class="p">$</span> m1k3 ask "what can you do?"</pre></div>
     </div>
-    <p>A "disconnected" server almost always means the app is closed — <code>m1k3</code> opens it for you and waits up to twenty seconds for the port. If <code>status</code> still fails, the switch in <strong>Settings ▸ Privacy ▸ MCP server</strong> is off.</p>
+    <p>A "disconnected" server almost always means the app is closed — <code>m1k3</code> opens it for you and waits up to twenty seconds for the port. If <code>status</code> still fails, either the switch in <strong>Settings ▸ Privacy ▸ MCP server</strong> is off, or the token is missing or stale: <code>m1k3</code> says which, and <code>m1k3 login</code> fixes the second.</p>
     <p class="check"><strong>Done.</strong> Two minutes, no account, and the thing that knows your machine is answering on loopback. From here: <a href="/agents">what your agent gets</a> (18 tools, and the seven things the server will not do), <a href="/brains">the brains and how they score</a>, <a href="/privacy">how to verify the privacy claims yourself</a>.</p>
   </section>
 
   </div><!-- /.steps -->
 
   <h2 id="recipe">The whole thing as text, for agents</h2>
-  <p>The same four steps as a file your agent can fetch and follow — <a href="/install.txt"><code>m1k3.app/install.txt</code></a>. Two of the steps are clicks in the app, on purpose: turning the server on, and starting a 2 GB download, are the user's to do.</p>
+  <p>The same four steps as a file your agent can fetch and follow — <a href="/install.txt"><code>m1k3.app/install.txt</code></a>. Three of the steps are the user's, on purpose: turning the server on, pasting its token, and starting a 2 GB download.</p>
   <div class="term recipe">
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre><span class="c"># 1 · get the app (puts `m1k3` on PATH)</span>
@@ -343,7 +359,8 @@ brew trust round-tower/tap
 brew install --cask round-tower/tap/m1k3
 <span class="c"># 2 · open it once — first run is Mini, nothing to download</span>
 open -a M1K3
-<span class="c"># 3 · ask the user to flip the switch: M1K3 ▸ Settings ▸ Privacy ▸ MCP server → On</span>
+<span class="c"># 3 · ask the user to flip the switch: M1K3 ▸ Settings ▸ Privacy ▸ MCP server → On,</span>
+<span class="c">#     Copy the token there, and run `m1k3 login` themselves to paste it</span>
 <span class="c">#     then wire your client (claude | codex | cursor | vscode | zed)</span>
 m1k3 connect claude
 m1k3 agent-notes --write
@@ -364,7 +381,7 @@ m1k3 ask "what can you do?"</pre></div>
     </details>
     <details>
       <summary>What touches the network during install and use?</summary>
-      <p>Three documented things, all yours to start: the download of the app itself (Homebrew, GitHub Releases, TestFlight or the App Store); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and the web-search tools, which are off by default. Conversations, documents, voice and memories never leave the Mac. The MCP server binds to 127.0.0.1 and nothing else.</p>
+      <p>Three documented things: the download of the app itself (Homebrew, GitHub Releases or TestFlight); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and web search, which is on by default so answers can be current, with one switch in Settings ▸ Privacy to turn it off. Documents, voice and memories never leave the Mac; with web search on, a question M1K3 looks up goes out as a search. The MCP server binds to 127.0.0.1 and nothing else.</p>
     </details>
     <details>
       <summary>How do I uninstall it cleanly?</summary>
@@ -379,7 +396,7 @@ m1k3 ask "what can you do?"</pre></div>
   <section class="page-cta">
     <span class="label">// two minutes</span>
     <h2>Own your AI.</h2>
-    <p>Free for humans, forever. Made in Ireland. Nothing leaves your Mac.</p>
+    <p>Free for humans, forever. Made in Ireland. Private by design.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><svg class="apple-icon" viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-27.1-46.9-42.2-83.7-45.4-35.4-3.3-74.1 20.7-88.5 20.7-15.2 0-49.6-19.7-76.3-19.2C82.4 141.1 46 163 25.8 197.4-17 266.7 3.4 370.5 48.3 425.1c21.4 26.8 47.4 57.1 81.6 56 32.3-1.2 44.6-20.9 83.7-20.9 38.5 0 49.7 20.9 83.8 20.3 35.3-.6 57.7-27.2 78.8-54.1 16.1-23 28.4-47 32.5-60.3-1.3-.5-62.4-24-63-95.4zm-59.1-174.5C277.7 72 294.3 42 291.3 0c-29.5 2-64.1 20.9-84.3 45.1-18.4 22-35.3 56.3-31 89.1 32.6 2.5 66-16.7 83.6-40z"/></svg>Download M1K3.dmg</a>
       <a class="btn btn-ghost" href="/agents">For agents</a>
@@ -399,7 +416,7 @@ m1k3 ask "what can you do?"</pre></div>
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER</a> · MADE IN IRELAND</span>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE STUDIOS LTD</a> · MADE IN IRELAND</span>
   <span><a href="/agents">FOR AGENTS</a> · <a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
 </footer>
 
@@ -451,6 +468,15 @@ m1k3 ask "what can you do?"</pre></div>
      (#336). The only JS is the copy button, gated on the Clipboard API; the
      doors and picker are radio + :has(), and a browser without :has() shows
      every panel in reading order. FAQ JSON-LD answers are byte-identical to
-     the visible ones. Prior: Unknown (new file). -->
+     the visible ones. Prior: Unknown (new file).
+     Review: Kev + claude-opus-5-5, 2026-10-02 — truth-up before the directory listings. #448 made the
+     MCP access token mandatory: the connect step now has the token (Copy in Settings, `m1k3 login`,
+     echo off, login keychain), every client snippet carries the Authorization header in its
+     ConnectPlan.snippet shape, the HowTo step and the agent recipe name the login, and a failing
+     status names a missing token beside the switch. Web search is ON by default
+     (AppEnvironment.webSearchAllowed), so the network FAQ (visible + JSON-LD, still byte-identical)
+     says so instead of "off by default"; "Nothing leaves your Mac" (title, OG/twitter, CTA) became
+     "Private by design" (ADR 0006). Meta copy names TestFlight, not the App Store, while the store
+     lookup returns nothing. Confidence 0.85. -->
 </body>
 </html>

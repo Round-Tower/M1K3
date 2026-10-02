@@ -66,7 +66,7 @@ FSL-1.1-ALv2](./LICENSE): free for humans and for internal use, no competing
 commercial use, Apache-2.0 two years after each release. It is not an
 open-source licence in the OSI sense, and we say so plainly.
 
-**Contributions are by invitation.** Write to kevin@round-tower.ie with what
+**Contributions are by invitation.** Write to hello@round-tower.ie with what
 you'd like to work on (an issue link is ideal) and a pointer to something
 you've built. Invited contributors submit under the short
 [Contributor License Agreement](./CLA.md): Apache-2.0 inbound, FSL outbound,
@@ -80,5 +80,5 @@ welcome but do not change who owns them.
 
 ## Questions
 
-Open an issue, or say hi at kevin@round-tower.ie. Security reports go through
+Open an issue, or say hi at hello@round-tower.ie. Security reports go through
 [SECURITY.md](./SECURITY.md) — never a public issue.

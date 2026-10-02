@@ -5,13 +5,14 @@
 > MLX-Swift + Apple Foundation Models), live voice (streaming STT + on-device
 > Kokoro neural TTS), a personal knowledge graph with RAG over your documents,
 > a self-repairing temporal memory graph, consent-gated encrypted call
-> transcription, a local tool-using agent, and an MCP server. Zero bytes of
-> user data leave the Mac. Requires Apple Silicon and macOS 26 Tahoe. Native
+> transcription, a local tool-using agent, and an MCP server. Private by
+> design: on your Mac by default, no account, no telemetry. Requires Apple
+> Silicon and macOS 26 Tahoe. Native
 > SwiftUI (Liquid Glass), not Electron. Made by Round Tower, Ireland.
 
 Key facts:
-- Privacy: all inference, embeddings, voice, and storage are on-device; the
-  optional web-search tool is off by default; even per-answer thumbs feedback
+- Privacy: all inference, embeddings, voice, and storage are on-device; web
+  search is on by default, with one switch in Settings to turn it off; even per-answer thumbs feedback
   stays local and is never writable over MCP
 - Brains scoreboard: https://m1k3.app/brains (human) and https://m1k3.app/brains.json
   (machine) — the pinned model revisions and dated on-device eval runs with
@@ -35,7 +36,8 @@ Key facts:
   installable from Settings
 - MCP server: 18 tools (knowledge search, documents, voice, memory, todos, ask —
   with an async job API for long asks) over local HTTP at
-  http://127.0.0.1:4242/mcp, off by default; a visiting agent can propose a todo
+  http://127.0.0.1:4242/mcp, off by default, every request carrying the
+  access token from Settings (`m1k3 login`, then `m1k3 connect <client>`); a visiting agent can propose a todo
   but only the user accepts it. Connecting an agent: https://m1k3.app/agents
 - Install: the two-minute guide is https://m1k3.app/install (Homebrew
   `brew trust round-tower/tap && brew install --cask round-tower/tap/m1k3`,
@@ -44,8 +46,8 @@ Key facts:
   TestFlight beta, or the App Store once 1.0 clears review) — and the same
   recipe as plain text an agent can follow: https://m1k3.app/install.txt
 - License/source: Functional Source License FSL-1.1-ALv2 (source-available: read, build, modify, use for yourself or inside your organisation; no competing commercial use; Apache-2.0 two years after each release; revisions before 2026-09-09 were Apache-2.0), public repo https://github.com/Round-Tower/M1K3
-- Organisations: M1K3 for Teams — the same on-device brains, institutional memory and a tuned persona on the organisation's own Apple Silicon hardware under its own domain, nothing leaving its network; licensed separately — https://m1k3.app/teams — kevin@round-tower.ie
-- Trademarks: the name M1K3, the M mark, the pixel face and CRT look, icon and voice are brand assets of Round Tower, all rights reserved and outside the licence grant; the companion creatures are third-party (Fox: Khronos glTF sample by PixelMannen CC0 + tomkranis CC-BY 4.0; Colobus/Gecko/Inkfish/Sparrow: Quaternius, CC0) and are not claimed; the only official builds are app.m1k3 (App Store/TestFlight) and the DMGs on m1k3.app. Policy: https://github.com/Round-Tower/M1K3/blob/master/TRADEMARKS.md
+- Organisations: M1K3 for Teams — the same on-device brains, institutional memory and a tuned persona on the organisation's own Apple Silicon hardware under its own domain; licensed separately — https://m1k3.app/teams — hello@round-tower.ie
+- Trademarks: the name M1K3, the M mark, the pixel face and CRT look, icon and voice are brand assets of Round Tower Software Studios Ltd, all rights reserved and outside the licence grant; the companion creatures are third-party (Fox: Khronos glTF sample by PixelMannen CC0 + tomkranis CC-BY 4.0; Colobus/Gecko/Inkfish/Sparrow: Quaternius, CC0) and are not claimed; the only official builds are app.m1k3 (TestFlight, and the App Store once it is live) and the DMGs on m1k3.app. Policy: https://github.com/Round-Tower/M1K3/blob/master/TRADEMARKS.md
 
 ## Docs
 
@@ -58,10 +60,10 @@ Key facts:
 - [Private ChatGPT alternative for Mac](https://m1k3.app/private-chatgpt-alternative-mac): privacy by architecture vs by policy; M1K3 vs Ollama vs LM Studio vs the ChatGPT desktop app
 - [How to run a local LLM on a Mac](https://m1k3.app/local-llm-mac-guide): hardware needs plus the four routes — Ollama, LM Studio, MLX, M1K3
 - [Give Claude a local memory with MCP](https://m1k3.app/mcp-knowledge-server): connect Claude Code/Desktop to M1K3's knowledge at http://127.0.0.1:4242/mcp
-- [Install M1K3](https://m1k3.app/install): the two-minute wizard — get the app (Homebrew / DMG / App Store), say hello to Mini, flip the MCP switch, `m1k3 connect <client>`, verify with `m1k3 status`; the same recipe as plain text for agents at https://m1k3.app/install.txt
-- [Connect your coding agent to M1K3](https://m1k3.app/agents): the on-ramp for Claude Code, Codex, Cursor, VS Code and Zed — `brew install --cask round-tower/tap/m1k3` then `m1k3 connect <client>`, the per-client snippets, the AGENTS.md resident block, and what the loopback server will not do
+- [Install M1K3](https://m1k3.app/install): the two-minute wizard — get the app (Homebrew / DMG / TestFlight), say hello to Mini, flip the MCP switch, `m1k3 login` with its token, `m1k3 connect <client>`, verify with `m1k3 status`; the same recipe as plain text for agents at https://m1k3.app/install.txt
+- [Connect your coding agent to M1K3](https://m1k3.app/agents): the on-ramp for Claude Code, Codex, Cursor, VS Code and Zed — `brew install --cask round-tower/tap/m1k3`, `m1k3 login` (the server's access token), then `m1k3 connect <client>`, the per-client snippets with their Authorization header, the AGENTS.md resident block, and what the loopback server will not do
 - [M1K3 for Teams](https://m1k3.app/teams): the paid line for organisations — the same on-device brains, an institutional memory and a tuned persona on the organisation's own Apple Silicon under its own domain; on-prem only, design-partner pilots
-- [Is M1K3 really private?](https://m1k3.app/privacy): the privacy architecture — what runs on-device, the three documented network crossings (opt-in model downloads, off-by-default web search, updates), and how to verify
+- [Is M1K3 really private?](https://m1k3.app/privacy): the privacy architecture — what runs on-device, the documented network crossings (opt-in model downloads, web search that is on by default with one switch to turn it off, updates, and the opt-in Private Cloud Compute rung), and how to verify
 - [What Golden Gate actually ships for on-device AI](https://m1k3.app/golden-gate-on-device-ai): macOS 27 probe — model quality 93%, token counting API, Adapter API removed, no custom executor protocol; what changed and what didn't, measured on the live runtime
 
 ## Optional
