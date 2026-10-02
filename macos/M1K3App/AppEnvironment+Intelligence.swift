@@ -34,7 +34,9 @@
 //  intelligenceSearchKnowledge (KnowledgeMCPTools), intelligenceRecallMemory (MemoryStore.recall),
 //  intelligenceListTodos, intelligenceProposeTodo (user source, straight to .open), requestVoiceMode.
 //  Confidence now 0.85.
-//
+//  Review: Kev + claude-opus-5-5, 2026-10-02 — a waited speak now throws when the audio engine's playback
+//  deadline tripped during the line (stall counter), instead of returning "Spoken." over silence.
+//  Confidence now 0.8.
 
 import Foundation
 import M1K3Avatar // AvatarEmotion
@@ -214,7 +216,9 @@ extension AppEnvironment {
                 avatar.setEmotion(AvatarEmotion.from(emotion))
             }
             if wait {
+                let stallsBefore = speech.playbackStallCount
                 await speak(text, narrator: narrator)
+                try throwIfSpeechStalled(since: stallsBefore)
             } else {
                 Task { @MainActor in await self.speak(text, narrator: narrator) }
             }
@@ -229,8 +233,10 @@ extension AppEnvironment {
         // queue — so a busy queue reports itself the same way regardless of
         // `wait`, mirroring the voice-conversation guard above.
         let request = VisitorSpeechQueue.SpeechRequest(text: text, emotion: emotion, narrator: narrator)
+        let stallsBefore = speech.playbackStallCount
         do {
             try await visitorSpeechQueue.enqueue(request, wait: wait)
+            if wait { try throwIfSpeechStalled(since: stallsBefore) }
         } catch let error as VisitorSpeechQueue.Full {
             throw MCPVoiceError(
                 "M1K3 is mid-sentence for another visitor — \(error.queued) queued; try again in a moment"
@@ -238,6 +244,17 @@ extension AppEnvironment {
         } catch is VisitorSpeechQueue.Cancelled {
             throw MCPVoiceError("Speech was stopped before this line was spoken.")
         }
+    }
+
+    /// A waited `speak` must not report success for a line that never played: the
+    /// audio engine's playback deadline tripped (2026-10-02 — a "Spoken." line over
+    /// 14.7 s of captured silence). Compares the provider's stall counter around the
+    /// utterance.
+    private func throwIfSpeechStalled(since stallsBefore: Int) throws {
+        guard speech.playbackStallCount > stallsBefore else { return }
+        throw MCPVoiceError(
+            "The line was not spoken — the audio output stalled and was reset. Try again."
+        )
     }
 
     /// The `visitorSpeechQueue`'s `speakNow` — called from the queue actor once

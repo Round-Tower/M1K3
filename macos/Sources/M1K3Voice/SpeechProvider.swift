@@ -19,6 +19,7 @@ import Foundation
 /// A request to speak text, with normalised prosody. Ranges match AVSpeech's
 /// (rate 0…1, pitch 0.5…2.0) but carry no framework dependency — the adapter
 /// maps these straight through.
+//  Review: Kev + claude-opus-5-5, 2026-10-02 — added SpeechProviderWithPlaybackHealth (stall count). Confidence now 0.85.
 public struct SpeechUtterance: Sendable, Equatable {
     public static let minRate: Float = 0.0
     public static let maxRate: Float = 1.0
@@ -81,6 +82,14 @@ public protocol SpeechProviderWithLifecycle: SpeechProvider, AnyObject {
     var onSpeakingStarted: (@Sendable () -> Void)? { get set }
     /// Invoked on the main thread when synthesis finishes or is stopped.
     var onSpeakingEnded: (@Sendable () -> Void)? { get set }
+}
+
+/// A speech backend that can report that audio it scheduled never actually played
+/// (a wedged audio engine — live 2026-10-02). Monotonic; callers sample it around
+/// an utterance and treat an increase as "not spoken", so a wait-for-speech API
+/// can't report success for a line that was silent.
+public protocol SpeechProviderWithPlaybackHealth: SpeechProvider {
+    var playbackStallCount: Int { get }
 }
 
 /// A speech backend that can additionally report WORD-level timing — the seam

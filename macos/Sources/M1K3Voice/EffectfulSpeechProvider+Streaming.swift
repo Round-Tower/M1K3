@@ -143,7 +143,16 @@ extension EffectfulSpeechProvider {
             // Synthesis failed mid-utterance — keep what's already scheduled.
         }
         session.markStreamEnded()
-        if started { await session.awaitCompletion() }
+        if started {
+            let outcome = await session.awaitCompletion(policy: PlaybackDeadlinePolicy(), sleep: playbackSleeper)
+            if outcome == .timedOut {
+                // The engine is running but not delivering audio (live 2026-10-02:
+                // TooManyFramesToProcess on a BLE headset). Rebuild it so the NEXT
+                // utterance re-reads the device's IO size, and count the stall so the
+                // MCP caller is told the line did not play.
+                noteEnginePlaybackStalled(scheduledSamples: session.scheduledSamples, sampleRate: sampleRate)
+            }
+        }
         if streamingSession === session { streamingSession = nil }
         if started { fireSpeakingEnded() }
         return started
@@ -176,7 +185,10 @@ final class StreamingPlaybackSession {
 
     private var accumulator: UtteranceTimelineAccumulator?
     private var pendingBuffers = 0
+    private(set) var scheduledSamples = 0
     private var streamEnded = false
+    private var deadlineTask: Task<Void, Never>?
+    private var timedOut = false
     private var completion: CheckedContinuation<Void, Never>?
     private var clockTask: Task<Void, Never>?
     private var lastWordIndex: Int?
@@ -216,7 +228,7 @@ final class StreamingPlaybackSession {
             onTimeline(anchored.global)
         }
 
-        pendingBuffers += 1
+        accountScheduled(sampleCount: samples.count)
         player.scheduleBuffer(buffer, at: nil, options: [], completionCallbackType: .dataPlayedBack) { [weak self] _ in
             Task { @MainActor in self?.bufferCompleted() }
         }
@@ -228,10 +240,40 @@ final class StreamingPlaybackSession {
         finishIfDone()
     }
 
-    /// Suspends until the last buffer plays back (or the session is cancelled).
-    func awaitCompletion() async {
-        if isCancelled || (streamEnded && pendingBuffers == 0) { return }
+    /// Books one scheduled buffer. Split out of `schedule` so the bounded-wait
+    /// tests can drive the session headless (an unattached player node cannot
+    /// schedule).
+    func accountScheduled(sampleCount: Int) {
+        pendingBuffers += 1
+        scheduledSamples += sampleCount
+    }
+
+    /// Suspends until the last buffer plays back, the session is cancelled, or the
+    /// deadline (scheduled audio duration + grace) passes. A tripped deadline
+    /// cancels the session — `.dataPlayedBack` is never coming — and reports
+    /// `.timedOut` so the caller can rebuild the engine.
+    func awaitCompletion(
+        policy: PlaybackDeadlinePolicy,
+        sleep: @escaping @Sendable (Duration) async throws -> Void
+    ) async -> PlaybackOutcome {
+        if isCancelled { return .cancelled }
+        if streamEnded, pendingBuffers == 0 { return .completed }
+        let deadline = policy.deadline(scheduledSamples: scheduledSamples, sampleRate: sampleRate)
+        deadlineTask = Task { [weak self] in
+            do { try await sleep(deadline) } catch { return }
+            self?.deadlineElapsed()
+        }
         await withCheckedContinuation { completion = $0 }
+        deadlineTask?.cancel()
+        deadlineTask = nil
+        if timedOut { return .timedOut }
+        return isCancelled ? .cancelled : .completed
+    }
+
+    private func deadlineElapsed() {
+        guard completion != nil else { return } // already resolved
+        timedOut = true
+        cancel()
     }
 
     /// From stop(): buffers are killed (their .dataPlayedBack never fires after
@@ -241,7 +283,7 @@ final class StreamingPlaybackSession {
         complete()
     }
 
-    private func bufferCompleted() {
+    func bufferCompleted() {
         pendingBuffers -= 1
         // `== 0` (not `<= 0`) everywhere so an extra completion callback
         // can't be masked — surface the imbalance in debug builds instead.

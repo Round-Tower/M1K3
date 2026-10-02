@@ -63,6 +63,8 @@
 //  8th gen (Apple GPU family 5) staged all 192 MB, then trapped in `warm()` — MLX kernels don't compile on
 //  that GPU. The shell now never offers M1K3 Voice there (MLXRuntimeSupport) and discards a stage left
 //  behind. Pinned by KokoroStageDiscardTests. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-02 — forwards the renderer's playbackStallCount
+//  (SpeechProviderWithPlaybackHealth). Confidence now 0.85.
 
 import Foundation
 import M1K3Inference
@@ -70,7 +72,9 @@ import M1K3LogCore
 import M1K3Voice
 import os
 
-public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPreloading, @unchecked Sendable {
+public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechProviderWithPlaybackHealth, ModelPreloading,
+    @unchecked Sendable
+{
     public let name = "kokoro"
 
     private static let log = M1K3Log.logger(.voice)
@@ -166,6 +170,12 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, ModelPrel
 
     public func isSpeaking() async -> Bool {
         await renderer.isSpeaking()
+    }
+
+    /// The renderer's stall count — Kokoro's audio plays through it, so an engine
+    /// stall there is this tier's stall.
+    public var playbackStallCount: Int {
+        renderer.playbackStallCount
     }
 
     // MARK: - Lifecycle callbacks (forwarded to the renderer so the avatar reacts)

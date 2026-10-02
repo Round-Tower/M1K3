@@ -15,11 +15,13 @@
 //  Signed: Kev + claude-sonnet-4-6, 2026-06-08, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-fable-5, 2026-06-11 — stores + re-applies the word-timing
 //  callbacks on swap, same pattern as lifecycle. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-02 — forwards playbackStallCount (SpeechProviderWithPlaybackHealth)
+//  so the MCP speak(wait:) layer can tell a stalled engine from a spoken line. Confidence now 0.85.
 
 import Foundation
 import Synchronization
 
-public final class SwappableSpeechProvider: SpeechProviderWithWordTiming, Sendable {
+public final class SwappableSpeechProvider: SpeechProviderWithWordTiming, SpeechProviderWithPlaybackHealth, Sendable {
     public let name = "swappable-speech"
 
     private struct State {
@@ -86,6 +88,13 @@ public final class SwappableSpeechProvider: SpeechProviderWithWordTiming, Sendab
 
     public var isAvailable: Bool {
         active.isAvailable
+    }
+
+    /// The active tier's stall count (0 for a tier that cannot stall). Summed
+    /// over swaps would be tidier, but callers only compare before/after one
+    /// utterance, and a swap mid-utterance is not a case worth a counter.
+    public var playbackStallCount: Int {
+        (active as? SpeechProviderWithPlaybackHealth)?.playbackStallCount ?? 0
     }
 
     public func speak(_ utterance: SpeechUtterance) async {
