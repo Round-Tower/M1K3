@@ -75,6 +75,7 @@ def test_readiness_waits_for_ready_and_surfaces_a_template_error():
     assert rbi.readiness("og") is None
     assert rbi.readiness("ready") == "ready"
     assert rbi.readiness("error: Fox.glb did not load") == "error: Fox.glb did not load"
+    assert rbi.readiness("errors-and-omissions") is None   # only the documented "error: …" form
 
 
 def test_the_committed_images_are_the_sizes_the_targets_render():
@@ -174,3 +175,11 @@ def test_main_refuses_an_unknown_target():
     with pytest.raises(SystemExit) as exit_info:
         rbi.main(["nope"])
     assert exit_info.value.code == 2
+
+
+def test_the_og_card_says_what_the_live_hero_says():
+    """The og template copies index.html's hero by hand; pin the line that matters."""
+    index = (REPO / "site/index.html").read_text()
+    og = (rbi.BRAND_DIR / "og.html").read_text()
+    line3 = re.search(r'id="line3">([^<]+)<', og).group(1)
+    assert f'id="rotator">{line3}</span>' in index

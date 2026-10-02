@@ -375,7 +375,7 @@ The consent gates are deliberate and asymmetric: an agent can remember and it ca
 
 - It will not answer without its token. Every request has to carry the access token as an Authorization: Bearer header; one without it gets a 401 before it reaches a session. The token keeps out stray scripts that find the port open, and stops a caller without it from knocking your agent off. It is not a defence against malware running as you, which can read any client's config file. The per-tool switches in Settings (listening, deleting memories, opening links) cover that for every caller.
 
-- It will not write your config from the App Store build. That copy of m1k3 is sandboxed, so it can neither read ~/.cursor/mcp.json nor run claude for you. There, connect prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write.
+- It will not write your config from the App Store build (TestFlight today). That copy of m1k3 is sandboxed, so it can neither read ~/.cursor/mcp.json nor run claude for you. There, connect prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write.
 
 - It will not serve two agents at once. One MCP client at a time, in this version: a second client connecting ends the first one's session.
 

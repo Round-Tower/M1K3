@@ -6,10 +6,12 @@ and assets/brand/readme-hero.png (the README banner).
     python3 tools/site/render_brand_images.py og         # just one (og | readme-hero)
 
 Each image is an HTML template under tools/site/brand/ rendered by headless
-Chrome at the image's exact size. The script serves the repo root on a
-loopback port for the length of the run, so the templates load the site's own
-self-hosted faces (site/fonts.css), its vendored THREE.js and Fox.glb: no
-network. A template sets document.title to "ready" once its fonts (and, for
+Chrome at the image's exact size. For the length of each render the script
+serves site/ and the templates (nothing else in the repo) on a loopback port,
+so the templates load the site's own self-hosted faces (site/fonts.css), its
+vendored THREE.js and Fox.glb: no network. Chrome is started before that
+server thread, so the fork that wires its fds never happens in a threaded
+process. A template sets document.title to "ready" once its fonts (and, for
 og, the fox) are in, or to "error: …"; the script waits for that over the
 DevTools protocol (--remote-debugging-pipe, stdlib only) and only then takes
 the screenshot, so a half-drawn PNG is never written.
@@ -25,6 +27,12 @@ the load event (before the fox's GLB arrives, --virtual-time-budget or not) and
 then never exit. The templates copy the hero's look by hand: index.html's CSS
 and THREE scene are the source of truth, these are copies, and a hero restyle
 owes a re-render here.
+Review: Kev + claude-opus-5-5, 2026-10-02 (PR #472 review folds) — Chrome is
+forked before the server thread starts (preexec_fn in a threaded parent can
+deadlock), and the server lives per render; the title poll keeps its last
+error for the timeout message; readiness matches only "error:"; close()
+releases the pipes even if the kill path raises. Re-renders stayed
+byte-identical. Confidence 0.85.
 """
 from __future__ import annotations
 
@@ -120,7 +128,7 @@ def readiness(title: str) -> str | None:
     """'ready' / the error a template reported / None while it is still loading."""
     if title == "ready":
         return "ready"
-    if title.startswith("error"):
+    if title.startswith("error:"):
         return title
     return None
 
@@ -145,7 +153,8 @@ class DevTools:
             os.dup2(high_w, 4)
 
         try:
-            self.proc = subprocess.Popen(  # noqa: PLW1509 — preexec_fn only wires fds in the forked child
+            # preexec_fn only wires fds in the child; render() forks before any thread starts.
+            self.proc = subprocess.Popen(  # noqa: PLW1509
                 args,
                 stdout=subprocess.DEVNULL, stderr=self._stderr,
                 preexec_fn=wire_fds, pass_fds=(3, 4), start_new_session=True,
@@ -196,15 +205,17 @@ class DevTools:
         except OSError:
             pass
         try:
-            self.proc.wait(timeout=self.close_timeout_s)
-        except subprocess.TimeoutExpired:
-            # Chrome's helpers share its session; take the whole group down.
-            with contextlib.suppress(ProcessLookupError):
-                os.killpg(self.proc.pid, signal.SIGKILL)
-            self.proc.wait(timeout=10)
-        os.close(self._to_chrome)
-        os.close(self._from_chrome)
-        self._stderr.close()
+            try:
+                self.proc.wait(timeout=self.close_timeout_s)
+            except subprocess.TimeoutExpired:
+                # Chrome's helpers share its session; take the whole group down.
+                with contextlib.suppress(ProcessLookupError):
+                    os.killpg(self.proc.pid, signal.SIGKILL)
+                self.proc.wait(timeout=10)
+        finally:
+            os.close(self._to_chrome)
+            os.close(self._from_chrome)
+            self._stderr.close()
 
 
 def png_size(data: bytes) -> tuple[int, int]:
@@ -214,9 +225,17 @@ def png_size(data: bytes) -> tuple[int, int]:
     return struct.unpack(">II", data[16:24])
 
 
-def render(target: Target, chrome: str, port: int) -> Path:
+def _start_server() -> ThreadingHTTPServer:
+    server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(_handler(), directory=str(REPO)))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def render(target: Target, chrome: str) -> Path:
     with tempfile.TemporaryDirectory(prefix="m1k3-brand-") as profile:
-        devtools = DevTools(chrome_args(chrome, Path(profile)))
+        devtools = DevTools(chrome_args(chrome, Path(profile)))   # fork first, while single-threaded
+        server = _start_server()
+        port = server.server_address[1]
         try:
             target_id = devtools.call("Target.createTarget", {"url": "about:blank"})["targetId"]
             session = devtools.call("Target.attachToTarget", {"targetId": target_id, "flatten": True})["sessionId"]
@@ -228,16 +247,18 @@ def render(target: Target, chrome: str, port: int) -> Path:
             nav = devtools.call("Page.navigate", {"url": template_url(port, target)}, session)
             if nav.get("errorText"):
                 raise RuntimeError(f"{target.name}: navigation failed ({nav['errorText']})")
-            state, deadline = None, time.monotonic() + READY_TIMEOUT_S
+            state, deadline, last_error = None, time.monotonic() + READY_TIMEOUT_S, None
             while state is None:
                 if time.monotonic() > deadline:
-                    raise TimeoutError(f"{target.name}: not ready after {READY_TIMEOUT_S}s")
+                    detail = f" (last error: {last_error})" if last_error else ""
+                    raise TimeoutError(f"{target.name}: not ready after {READY_TIMEOUT_S}s{detail}")
                 time.sleep(0.25)
                 try:
                     title = devtools.call(
                         "Runtime.evaluate", {"expression": "document.title", "returnByValue": True}, session
                     )["result"].get("value", "")
-                except RuntimeError:   # the context swapped mid-navigation; ask again
+                except RuntimeError as error:   # usually the context swapping mid-navigation; ask again
+                    last_error = error
                     continue
                 state = readiness(title)
             if state != "ready":
@@ -250,6 +271,8 @@ def render(target: Target, chrome: str, port: int) -> Path:
             )
         finally:
             devtools.close()
+            server.shutdown()
+            server.server_close()
     data = base64.b64decode(shot["data"])
     if png_size(data) != (target.width, target.height):
         raise RuntimeError(f"{target.name}: Chrome returned {png_size(data)}, wanted {(target.width, target.height)}")
@@ -301,15 +324,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"render_brand_images: no Chrome at {chrome} (set CHROME)", file=sys.stderr)
         return 2
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(_handler(), directory=str(REPO)))
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    try:
-        for name in args.targets or TARGETS:
-            out = render(TARGETS[name], chrome, server.server_address[1])
-            print(f"wrote {out.relative_to(REPO)}")
-    finally:
-        server.shutdown()
-        server.server_close()
+    for name in args.targets or TARGETS:
+        out = render(TARGETS[name], chrome)
+        print(f"wrote {out.relative_to(REPO)}")
     return 0
 
 
