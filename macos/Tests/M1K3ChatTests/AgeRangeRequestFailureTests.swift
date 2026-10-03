@@ -72,10 +72,10 @@ struct AgeRangeRequestFailureTests {
         /// the launch crash into the test binary on an older CI host.
         @Test("Apple's error describes itself by bare case name")
         func appleCaseNamesAreBare() {
-            #expect(AgeRangeRequestFailure(appleCaseName: String(describing: AgeRangeService.Error.network)) == .network)
-            #expect(
-                AgeRangeRequestFailure(appleCaseName: String(describing: AgeRangeService.Error.notAvailable)) == .notAvailable
-            )
+            let network = String(describing: AgeRangeService.Error.network)
+            let notAvailable = String(describing: AgeRangeService.Error.notAvailable)
+            #expect(AgeRangeRequestFailure(appleCaseName: network) == .network)
+            #expect(AgeRangeRequestFailure(appleCaseName: notAvailable) == .notAvailable)
         }
     #endif
 }
