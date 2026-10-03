@@ -33,6 +33,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-01 — the entitlement this needed was never added
 //  (M1K3iOS.entitlements has it now), and `catch {}` hid the refusal. A failed ask says why
 //  (`AgeRangeRequestFailure`, tested) and leaves the band alone. Confidence 0.8 (verify on device).
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — Apple's error maps by case NAME: the switch over its cases
+//  strong-linked its invalidAccount case, absent on iOS 26.5, and dyld killed the app at launch. Verified on the
+//  26.5 simulator. Confidence 0.9.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -323,14 +326,10 @@ struct SettingsScreen: View {
         /// The boundary map: M1K3Chat never imports DeclaredAgeRange. (The Mac's
         /// twin lives in PrivacySettingsPane; the two shells share no app files.)
         init(_ error: AgeRangeService.Error) {
-            switch error {
-            case .notAvailable: self = .notAvailable
-            case .invalidAccount: self = .invalidAccount
-            case .network: self = .network
-            case .declinedOnboarding: self = .declinedOnboarding
-            case .invalidRequest: self = .other
-            @unknown default: self = .other
-            }
+            // By NAME: a switch over Apple's
+            // cases links each case symbol at launch, and an OS that predates
+            // one (iOS 26.5, the iOS 27 beta) never starts the app (2026-10-03).
+            self.init(appleCaseName: String(describing: error))
         }
     }
 #endif
