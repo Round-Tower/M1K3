@@ -10,6 +10,7 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.9 (pure), Prior: Unknown
 //  Review: claude-fable-5.1, 2026-09-08 — pins moved to Lil + PhosphorFox with the recipe. Confidence now 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — `hidesViewfinder` pinned for the pairing plate. Confidence now 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — `phoneRoute` pinned per plate. Confidence 0.9.
 //
 
 import Foundation
@@ -63,6 +64,14 @@ struct ScreengrabHarnessTests {
         #expect(h(.brainAtHome).opensSettings && h(.brainAtHome).showsPrivacyPane, "pairing lives in Settings ▸ Privacy")
         #expect(h(.privacyLabel).opensSettings && h(.privacyLabel).showsPrivacyPane)
         #expect(!h(.chat).opensSettings)
+        // iOS: the plate's screen is pushed in-app, not tapped to (XCTest's AX
+        // handshake times out on a loaded simulator; App Preview footage needs it).
+        #expect(h(.documents).phoneRoute == [.settings, .documents])
+        #expect(h(.memories).phoneRoute == [.settings, .memories])
+        #expect(h(.privacyLabel).phoneRoute == [.settings])
+        #expect(h(.chat).phoneRoute.isEmpty)
+        #expect(h(.voiceSpeaking).phoneRoute.isEmpty, "voice plates live in the full-screen cover")
+        #expect(h(.brainAtHome).phoneRoute.isEmpty, "pairing is the onboarding sheet on iOS")
         #expect(!h(.chat).showsOnboarding)
         #expect(h(.voiceListening).livePartial == DemoPersona.listeningDictation)
         #expect(!DemoPersona.listeningDictation.lowercased().contains("please"), "a polite endpoint submits the turn")

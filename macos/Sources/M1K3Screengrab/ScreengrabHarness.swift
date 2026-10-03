@@ -18,6 +18,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `livePartial`: the listening plate's
 //  hero question through the open mic. Confidence now 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — `hidesViewfinder` for the iOS pairing plate. Confidence now 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — `phoneRoute`: the iOS shell pushes the plate's screen itself
+//  (XCTest's AX handshake timed out on the simulator, and App Preview footage wants no taps). Confidence 0.9.
 //
 
 import Foundation
@@ -140,4 +142,23 @@ public struct ScreengrabHarness: Sendable, Equatable {
     public var showsPrivacyPane: Bool {
         plate == .privacyLabel || plate == .brainAtHome
     }
+
+    /// iOS: the NavigationStack path the shell pushes once the brain is ready —
+    /// Memories and Documents are rooms behind Settings there. Empty for the
+    /// voice plates (the full-screen cover) and pairing (the onboarding sheet).
+    public var phoneRoute: [ScreengrabRoute] {
+        switch plate {
+        case .documents: [.settings, .documents]
+        case .memories: [.settings, .memories]
+        case .privacyLabel: [.settings]
+        default: []
+        }
+    }
+}
+
+/// A screen the iOS shell can push for a plate (see `ScreengrabHarness.phoneRoute`).
+public enum ScreengrabRoute: Hashable, Sendable {
+    case settings
+    case documents
+    case memories
 }

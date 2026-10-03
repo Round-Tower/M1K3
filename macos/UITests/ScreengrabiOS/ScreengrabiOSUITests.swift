@@ -22,6 +22,9 @@
 //
 //  Review: Kev + claude-opus-5, 2026-09-13 — memories plate searches broadly (one row was a thin plate); the privacy
 //  scroll anchors on the Grounding footer's own words (Brain at Home's "internet" stopped it early). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — `M1K3_SCREENGRAB_HOLD` (seconds, test-runner env) keeps each plate on
+//  screen after its settle, so a screen recording running beside the suite gets App Preview footage
+//  (marketing/motion/PREVIEW-CAPTURE.md). Unset = the stills run, unchanged. Confidence 0.8.
 
 import M1K3Screengrab
 import XCTest
@@ -140,6 +143,11 @@ final class ScreengrabiOSUITests: XCTestCase {
 
     // MARK: - Machinery
 
+    /// Extra seconds on the settled subject for App Preview recordings (0 for the stills).
+    private static var videoHold: TimeInterval {
+        ProcessInfo.processInfo.environment["M1K3_SCREENGRAB_HOLD"].flatMap(TimeInterval.init) ?? 0
+    }
+
     private func companion(_ plate: ScreengrabPlate) throws {
         try capture(plate, settle: 8) { app in waitForVoiceSurface(app) }
     }
@@ -167,7 +175,7 @@ final class ScreengrabiOSUITests: XCTestCase {
         app.launch()
         XCTAssert(app.wait(for: .runningForeground, timeout: 60), "\(plate.rawValue): app never came foreground")
         drive(app)
-        RunLoop.current.run(until: Date().addingTimeInterval(settle))
+        RunLoop.current.run(until: Date().addingTimeInterval(settle + Self.videoHold))
         let shot = XCUIScreen.main.screenshot()
         let attachment = XCTAttachment(screenshot: shot)
         attachment.name = plate.rawValue

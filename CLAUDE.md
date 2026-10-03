@@ -61,7 +61,16 @@ Anything a cold session needs on turn one belongs below, not there.
 - swiftformat's unused-parameter rename runs BETWEEN batched edits: change a
   signature and its call sites in ONE edit, re-read before the next.
 - Merge stacked PRs bottom-up; never `--delete-branch` on a stack base;
-  `git rebase --onto` over a squash-merged base.
+  `git rebase --onto` over a squash-merged base. `land.sh` DOES delete the merged
+  branch, so retarget dependants first (`gh pr edit <N> --base master`) or GitHub
+  closes them (#473 was lost this way, reopened as #474).
+- Until #471 ships: a BLE headset in Headset/HFP wedges the voice engine
+  (`kAudioUnitErr_TooManyFramesToProcess`, 512 vs 320) even after the route
+  returns; MCP `speak` still says "Spoken.". Drain with `stop_speaking`; recovery
+  is an app relaunch.
+- App Store previews may only be screen captures of the app (guideline 2.3.4) —
+  narration + overlays allowed; Mac previews are 1920×1080 only. Pipeline:
+  `marketing/motion/PREVIEW-CAPTURE.md`.
 - Two MLX processes crawl — quit the live app before an eval run.
 - iOS/visionOS MLX has ONE gate, `AppCore.mlxAvailable` (`MLXRuntimeSupport`):
   never on the Simulator or Apple GPU family 5 (A12/A12X/A12Z) — mlx-swift
