@@ -11,6 +11,11 @@
 //  the sheet itself is verify-by-launch). The "Set up" button swallowed every
 //  error, and the store build carried no declared-age-range entitlement, so on
 //  the Mac the tap did nothing at all. Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — `init(appleCaseName:)`: the shells map Apple's error by its
+//  case NAME. Their `switch` named `.invalidAccount`, strong-linking case symbols the Xcode 27 SDK declares
+//  with no availability and iOS 26.5 / the iOS 27 beta runtime don't export (invalidAccount, network,
+//  declinedOnboarding — only notAvailable + invalidRequest are there) — dyld killed the app at launch
+//  (found filming App Previews on the simulator; build 444 carried it). Confidence 0.9 (pinned + source scan).
 //
 
 import Foundation
@@ -38,6 +43,20 @@ public enum AgeRangeRequestFailure: CaseIterable, Sendable, Equatable {
             "Age range sharing isn't set up for this account yet, so nothing has changed."
         case .other:
             "Couldn't ask for an age range just now. Try again in a moment."
+        }
+    }
+
+    /// Apple's `AgeRangeService.Error`, by case name (`String(describing:)` on
+    /// a payload-free enum). Naming the cases in a `switch` links each case's
+    /// symbol at LAUNCH, so an OS that predates one never starts the app; a
+    /// name is just a string. Unknown names (Apple adds cases) are `.other`.
+    public init(appleCaseName name: String) {
+        switch name {
+        case "notAvailable": self = .notAvailable
+        case "invalidAccount": self = .invalidAccount
+        case "network": self = .network
+        case "declinedOnboarding": self = .declinedOnboarding
+        default: self = .other
         }
     }
 }
