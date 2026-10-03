@@ -67,15 +67,16 @@ struct AgeRangeRequestFailureTests {
     }
 
     #if canImport(DeclaredAgeRange)
-        /// The canary: Apple's enum still prints its bare case name. Only cases
-        /// every 26.x runtime exports — naming `.invalidAccount` here would put
-        /// the launch crash into the test binary on an older CI host.
+        /// The canary: Apple's enum still prints its bare case name. ONLY the two
+        /// cases older runtimes export (`nm` on the iOS 27 beta runtime lists just
+        /// `notAvailable` + `invalidRequest`) — naming `.network` here dyld-crashed
+        /// this very test binary on the macOS 26.5 CI runner (2026-10-03).
         @Test("Apple's error describes itself by bare case name")
         func appleCaseNamesAreBare() {
-            let network = String(describing: AgeRangeService.Error.network)
             let notAvailable = String(describing: AgeRangeService.Error.notAvailable)
-            #expect(AgeRangeRequestFailure(appleCaseName: network) == .network)
+            let invalidRequest = String(describing: AgeRangeService.Error.invalidRequest)
             #expect(AgeRangeRequestFailure(appleCaseName: notAvailable) == .notAvailable)
+            #expect(invalidRequest == "invalidRequest")
         }
     #endif
 }

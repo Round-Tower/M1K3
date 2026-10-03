@@ -12,8 +12,9 @@
 //  error, and the store build carried no declared-age-range entitlement, so on
 //  the Mac the tap did nothing at all. Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — `init(appleCaseName:)`: the shells map Apple's error by its
-//  case NAME. Their `switch` named `.invalidAccount`, strong-linking a case symbol the Xcode 27 SDK declares
-//  with no availability and iOS 26.5 / the iOS 27 beta runtime don't export — dyld killed the app at launch
+//  case NAME. Their `switch` named `.invalidAccount`, strong-linking case symbols the Xcode 27 SDK declares
+//  with no availability and iOS 26.5 / the iOS 27 beta runtime don't export (invalidAccount, network,
+//  declinedOnboarding — only notAvailable + invalidRequest are there) — dyld killed the app at launch
 //  (found filming App Previews on the simulator; build 444 carried it). Confidence 0.9 (pinned + source scan).
 //
 
