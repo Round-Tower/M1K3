@@ -72,6 +72,9 @@ struct ScreengrabHarnessTests {
         #expect(h(.chat).phoneRoute.isEmpty)
         #expect(h(.voiceSpeaking).phoneRoute.isEmpty, "voice plates live in the full-screen cover")
         #expect(h(.brainAtHome).phoneRoute.isEmpty, "pairing is the onboarding sheet on iOS")
+        // The phone's Memories room is a search; the plate runs a broad recall so it shows the persona.
+        #expect(h(.memories).memoryQuery == "what do you know about me")
+        #expect(h(.documents).memoryQuery == nil)
         #expect(!h(.chat).showsOnboarding)
         #expect(h(.voiceListening).livePartial == DemoPersona.listeningDictation)
         #expect(!DemoPersona.listeningDictation.lowercased().contains("please"), "a polite endpoint submits the turn")

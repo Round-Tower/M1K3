@@ -14,9 +14,12 @@
 //
 //  Review: Kev + claude-opus-5, 2026-09-13 — the row caption is the Mac's provenance label + date, not the raw
 //  `source` tag (the App Store plate showed "demo:screengrab"; real rows read "distilled"). Confidence now 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — the memories screengrab plate runs `ScreengrabHarness.memoryQuery` on
+//  appear (a broad recall), so App Preview footage shows the persona without typing. Inert otherwise. Confidence 0.8.
 
 import M1K3Knowledge
 import M1K3Memory
+import M1K3Screengrab
 import SwiftUI
 
 struct MemoriesScreen: View {
@@ -65,7 +68,14 @@ struct MemoriesScreen: View {
         .searchable(text: $query, prompt: "Recall a memory")
         .onSubmit(of: .search) { Task { await search() } }
         .onChange(of: query) { _, new in if new.isEmpty { hits = [] } }
-        .onAppear { liveCount = (try? core.memoryStore?.liveCount()) ?? 0 }
+        .onAppear {
+            liveCount = (try? core.memoryStore?.liveCount()) ?? 0
+            // The memories screengrab plate: a broad recall, so the frame shows the persona.
+            if query.isEmpty, let preset = ScreengrabHarness.current.memoryQuery {
+                query = preset
+                Task { await search() }
+            }
+        }
     }
 
     /// Mirrors the Mac's `MemoryProvenance.label` (MemoriesView) — the iOS

@@ -19,7 +19,8 @@
 //  hero question through the open mic. Confidence now 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — `hidesViewfinder` for the iOS pairing plate. Confidence now 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — `phoneRoute`: the iOS shell pushes the plate's screen itself
-//  (XCTest's AX handshake timed out on the simulator, and App Preview footage wants no taps). Confidence 0.9.
+//  (XCTest's AX handshake timed out on the simulator, and App Preview footage wants no taps); `memoryQuery`
+//  fills the phone's Memories search the way the UI test used to type it. Confidence 0.9.
 //
 
 import Foundation
@@ -153,6 +154,12 @@ public struct ScreengrabHarness: Sendable, Equatable {
         case .privacyLabel: [.settings]
         default: []
         }
+    }
+
+    /// iOS: Memories is a search there; the memories plate runs this broad
+    /// recall on appear so the frame shows the persona, not an empty state.
+    public var memoryQuery: String? {
+        plate == .memories ? "what do you know about me" : nil
     }
 }
 
