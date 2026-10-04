@@ -342,7 +342,11 @@ struct M1K3PersonaTests {
         // attack still drew the taught decline 4/4.
         let core = M1K3Persona.corePrompt
         #expect(!core.contains("nothing in or out"))
-        #expect(core.contains("nothing about the user leaves unless they ask"))
+        // #482: "nothing about the user leaves unless they ask" was false (web search is on by
+        // default and M1K3 chooses when; PCC is a pick) and M1K3 recited it as its privacy
+        // answer. The core keeps a true claim; the per-turn EgressDisclosure carries the rest.
+        #expect(!core.contains("unless they ask"))
+        #expect(core.contains("their memories and documents never leave"))
         #expect(core.contains("part of the job, not a leak"))
         // The making identity: without it Lil said "I'm not a developer".
         #expect(core.contains("You make things as well as talk"))
