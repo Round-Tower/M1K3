@@ -60,6 +60,9 @@
 //  discarded at launch. Verify-by-launch on the A12 iPad. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — records the device's AFM window at launch
 //  (AppleFoundationModelsProvider.recordDeviceContextWindow), whatever brain is selected.
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — egressClauseProvider (#482): web search + the Home brain
+//  (a live `homeBrainLive` mirror of `homeBrainActive` — the persisted flag missed a phone with no local
+//  brain). No PCC on iOS. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -191,7 +194,22 @@ final class AppCore {
     private(set) var homeBrain: PairedBrain?
     /// True while the inference slot points at the paired Mac's brain. The
     /// local `selectedBrain` is kept untouched as the tier to return to.
-    private(set) var homeBrainActive = false
+    private(set) var homeBrainActive = false {
+        // Mirrored for the responder's nonisolated per-turn read (#482): the persisted
+        // `homeBrainActiveKey` misses a phone with no local brain, which fronts Home anyway.
+        didSet { Self.homeBrainLive.withLock { $0 = homeBrainActive } }
+    }
+
+    /// `homeBrainActive`, readable off the main actor (the egress clause, per turn).
+    nonisolated static let homeBrainLive = Mutex(false)
+
+    /// The Settings web toggle — absent means allowed (the shipped default). One reader for
+    /// the palette and the egress clause, so the two can't disagree (#485 review).
+    nonisolated static func webSearchAllowed() -> Bool {
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: webSearchEnabledKey) == nil || defaults.bool(forKey: webSearchEnabledKey)
+    }
+
     /// Device-side pairing persistence (defaults metadata + Keychain PSK).
     let brainLinkStore = AppCore.makeBrainLinkStore()
 
@@ -867,9 +885,7 @@ final class AppCore {
                     ListDocumentsTool(store: store),
                     GetDocumentTool(store: store),
                 ]
-                let defaults = UserDefaults.standard
-                let webAllowed = defaults.object(forKey: Self.webSearchEnabledKey) == nil
-                    || defaults.bool(forKey: Self.webSearchEnabledKey)
+                let webAllowed = Self.webSearchAllowed()
                 if webAllowed {
                     tools.insert(WikipediaTool(), at: 0)
                     tools.insert(FetchPageTool(), at: 0)
@@ -927,6 +943,12 @@ final class AppCore {
                     for: BrainTier(persisted: raw),
                     spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey)
                 )
+            },
+            // What can leave this device this turn (#482): web search, and the Home brain
+            // (the paired Mac answers over Wi‑Fi). No Private Cloud Compute on iOS.
+            egressClauseProvider: {
+                let facts = EgressFacts(webSearch: Self.webSearchAllowed(), brainIsHome: Self.homeBrainLive.withLock { $0 })
+                return EgressDisclosure.clause(facts, device: HostPlatform.thisDevice)
             },
             // The Mac's tool router, mirrored (flagged, Mini only).
             plainRouteProvider: {

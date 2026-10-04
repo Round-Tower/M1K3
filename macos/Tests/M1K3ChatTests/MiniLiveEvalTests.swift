@@ -44,6 +44,8 @@
 //  `M1K3_AFM_EVAL_ROUTER=mini|standard` puts the shipping router and its plain-chat route
 //  in front, on Mini's own persona or the standard one (the route's own eval arm).
 //  `M1K3_AFM_EVAL_DISPATCH=1` adds router-invoked tools: Mini picks one tool, the app runs it.
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — the live responder carries the Mac's shipped egress facts (web
+//  on, PCC offered) (#482). Confidence 0.8.
 //
 
 import Foundation
@@ -216,6 +218,12 @@ struct MiniLiveEvalTests {
                 let responder = try AgentRAGResponder(
                     store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
                     toolsProvider: { tools },
+                    // The Mac's shipped defaults (#482): web search on, PCC offered, not picked.
+                    egressClauseProvider: {
+                        EgressDisclosure.clause(
+                            EgressFacts(webSearch: true, privateCloudOffered: true), device: HostPlatform.thisDevice
+                        )
+                    },
                     plainRouteProvider: routeInstructions.map { instructions in
                         { @Sendable in
                             PlainTurnRoute(

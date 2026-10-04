@@ -108,11 +108,13 @@ private final class ActivityLog: Sendable {
 private func responder(
     _ provider: RouteProvider,
     route: PlainTurnRoute?,
-    consulted: Consulted = Consulted()
+    consulted: Consulted = Consulted(),
+    egress: String? = nil
 ) throws -> AgentRAGResponder {
     try AgentRAGResponder(
         store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
         toolsProvider: { [NoteTool()] },
+        egressClauseProvider: { egress },
         plainRouteProvider: route.map { route in
             { @Sendable in
                 PlainTurnRoute(
@@ -177,6 +179,14 @@ struct PlainTurnRouteTests {
         #expect(!prompt.contains("Right now (true for this turn)"))
         #expect(!prompt.contains("a memory of them"))
         #expect(!prompt.contains("the hour"))
+    }
+
+    /// #482: Mini's plain turn is where "does anything leave this device?" lands.
+    @Test("the plain prompt carries the egress clause")
+    func plainPromptCarriesEgress() async throws {
+        let provider = RouteProvider(["Web searches can."])
+        _ = try await answer(responder(provider, route: chat(.chat), egress: "EGRESS-FACTS"), "does anything leave?")
+        #expect(try #require(provider.prompts.first).contains("EGRESS-FACTS"))
     }
 
     /// #430 (375 over MCP): "How's my battery doing?" answered as a plain turn and worked in a
