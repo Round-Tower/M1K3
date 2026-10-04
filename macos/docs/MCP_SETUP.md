@@ -12,8 +12,9 @@ M1K3 exposes MCP on **two surfaces**:
 
 Both surfaces send MCP `instructions` at initialize (`M1K3ServerInstructions`),
 built from the tools that surface registers. The app's server tells every agent
-that M1K3 is the user's voice: `speak` short, audio-first updates at milestones,
-blockers and wrap-ups, without being asked, and never speak secrets aloud. The
+that M1K3 is the user's voice: when the user is clearly there, `speak` short,
+audio-first updates at the moments that matter (at most once per phase, never
+for routine progress), and never say a secret aloud. The
 stdio binary and the LAN brain server (`m1k3-brain`, paired devices) have no voice
 tools, so they only point agents at the knowledge tools they serve.
 No per-agent setup is needed for any of this.

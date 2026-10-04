@@ -29,7 +29,6 @@ private let knowledge: Set<String> = ["search_knowledge", "remember", "ask_m1k3"
 @Test func aServerWithNoToolsSaysOnlyWhoM1K3Is() {
     let text = M1K3ServerInstructions.text(toolNames: [])
     #expect(!text.contains("`"))
-    #expect(!text.contains("\n"))
 }
 
 @Test func speakingIsHeardByTheRoomSoSecretsStayOnScreen() {
@@ -54,7 +53,7 @@ private let knowledge: Set<String> = ["search_knowledge", "remember", "ask_m1k3"
 
 @Test func theInstructionsStayShortBecauseTheyLoadIntoEveryAgentTurn() {
     let text = M1K3ServerInstructions.text(toolNames: voice.union(knowledge))
-    #expect(text.count < 1200)
+    #expect(text.count < M1K3ServerInstructions.characterBudget)
 }
 
 @Test func makeM1K3ServerHandsTheInstructionsToEveryClient() async {

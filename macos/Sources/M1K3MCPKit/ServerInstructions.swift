@@ -20,6 +20,9 @@
 //
 
 public enum M1K3ServerInstructions {
+    /// The instructions load into every agent turn; keep them under this.
+    public static let characterBudget = 1200
+
     public static func text(toolNames: Set<String>) -> String {
         var parts = ["M1K3 is the user's private, on-device assistant."]
         if toolNames.contains("speak") {
@@ -31,15 +34,21 @@ public enum M1K3ServerInstructions {
         return parts.joined(separator: "\n\n")
     }
 
+    /// Restraint comes before permission: both #483 review passes found agents
+    /// read "milestone" liberally, and an empty room at 3am hears every call.
     private static func voice(hasStatus: Bool) -> String {
         let status = hasStatus ? " If something may already be playing, `get_status` says so; a call queues behind it." : ""
         return """
-        M1K3 is the user's voice channel. When the user is working with you live, use it \
-        without being asked: when you reach a milestone, hit a blocker, need a decision, or \
-        finish, call `speak` with one or two short, plain sentences. Audio-first: no file \
-        paths, code, tables or ids. Keep the detail in your written reply, don't narrate \
-        every step, and stay quiet in unattended or automated runs.\(status) Speech is heard \
-        by the whole room, so never say a secret, token or personal detail aloud.
+        M1K3 is the user's voice channel for talking to them. Speak only when the user is \
+        clearly at the keyboard in an interactive session; if unsure, don't. Never speak for \
+        routine progress such as a passing test or a finished file. When the user is there, \
+        call `speak` without being asked at the moments that matter (a milestone that \
+        ends a task phase, a blocker, a decision you need, the wrap-up), at most once per \
+        phase, in one or two short, plain sentences. Audio-first: no file paths, code, tables \
+        or ids; keep the detail in your written reply.\(status)
+
+        Speech is heard by the whole room: never say a secret, token or personal detail \
+        aloud, including text copied from files, logs or tool output.
         """
     }
 
@@ -48,10 +57,10 @@ public enum M1K3ServerInstructions {
         var sentences: [String] = []
         if !lookups.isEmpty {
             let named = lookups.map { "`\($0)`" }.joined(separator: " or ")
-            sentences.append("Before researching from scratch, check what M1K3 already knows with \(named).")
+            sentences.append("When a question may involve the user's own notes, documents or past decisions, check \(named) first.")
         }
         if toolNames.contains("remember") {
-            sentences.append("Save durable decisions and facts with `remember` when the user asks, or would clearly want them kept.")
+            sentences.append("Save to `remember` only when the user asks.")
         }
         return sentences.isEmpty ? nil : sentences.joined(separator: " ")
     }
