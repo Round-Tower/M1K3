@@ -258,3 +258,12 @@ extension VoiceMCPToolsTests {
         #expect(log.all.isEmpty)
     }
 }
+
+/// The voice paragraph keys on tool NAMES; a rename here would silently drop
+/// it from every agent's instructions (review on #483).
+@Test func theRealVoiceToolsEarnTheVoiceInstructions() {
+    let registry = MCPToolRegistry(makeVoiceToolDefinitions(handlers: makeHandlers(log: HandlerLog())))
+    let text = M1K3ServerInstructions.text(toolNames: Set(registry.tools.map(\.name)))
+    #expect(text.contains("`speak`"))
+    #expect(text.contains("`get_status`"))
+}
