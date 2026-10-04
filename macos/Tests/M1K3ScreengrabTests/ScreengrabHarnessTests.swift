@@ -24,6 +24,9 @@ struct ScreengrabHarnessTests {
         #expect(h.plate == nil)
         let live = URL(fileURLWithPath: "/c/Library/Application Support/M1K3", isDirectory: true)
         #expect(h.dataRoot(live: live) == live)
+        // An ordinary launch pushes no screen and presets no search.
+        #expect(h.phoneRoute.isEmpty)
+        #expect(h.memoryQuery == nil)
     }
 
     @Test func activeRootIsASiblingOfTheLiveRoot() {
