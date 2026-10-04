@@ -21,6 +21,8 @@
 //  default); Home pairs in-place. Confidence now 0.8 (layout verify-by-launch on iPad 8th gen + iPhone 17 Pro).
 //  Review: Kev + claude-fable-5.1, 2026-09-06 — the privacy line keys on `menu.hasLocalBrain` rather than "Mini
 //  listed" — pocket is a local brain too. Confidence now 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — the local-brain line says "Private by design", not "Everything runs
+//  on your device" (Kev retired the absolute: web search is on by default). The Home branch is unchanged. Confidence 0.9.
 //
 
 import M1K3Avatar
@@ -75,7 +77,7 @@ struct OnboardingScreen: View {
                 Label(
                     !menu.hasLocalBrain
                         ? "Runs on your own Mac, over your own Wi‑Fi"
-                        : "Everything runs on your device",
+                        : "Private by design",
                     systemImage: "lock.fill"
                 )
                 .font(.caption)

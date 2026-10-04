@@ -38,6 +38,8 @@
 //  26.5 simulator. Confidence 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — under the privacy screengrab plate the form scrolls to Grounding
 //  (the web-search switch) on appear; inert otherwise. Confidence 0.8 (verify-by-launch on the sim).
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — About footer: "Private by design. No account, no analytics." (the iOS
+//  listing's claims), not "Everything runs on your device." Confidence 0.9.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -198,7 +200,7 @@ struct SettingsScreen: View {
             } header: {
                 Text("About")
             } footer: {
-                Text("Everything runs on your device.")
+                Text("Private by design. No account, no analytics.")
             }
         }
     }
