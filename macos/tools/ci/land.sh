@@ -2,7 +2,7 @@
 # Land a PR the whole way: gate on pr_watch, squash-merge BY HEAD SHA, verify
 # the merge landed, delete the remote branch, and say how to drop the worktree.
 #
-#   tools/ci/land.sh <PR> [pr_watch flags: --passes N ...]
+#   tools/ci/land.sh <PR> [pr_watch flags: --passes N --why "<reason>" ...]
 #
 # Why a script: the sequence was retyped per PR (and the merge call is
 # sometimes classifier-blocked for an agent — then Kev runs THIS, not a paste).
