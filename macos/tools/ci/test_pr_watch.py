@@ -388,6 +388,13 @@ def test_trivial_head_needs_no_passes():
     assert m.verdict(head, ["macos/Sources/A.swift"], jobs, [], auto_ok=False, passes_needed=0).ready
 
 
+def test_one_pass_is_the_default_and_two_is_the_risk_surface_opt_in():
+    # 2026-10-04 ruling: a second pass on every substantive PR doubled its
+    # push-wait-fold rounds; it is now bought only for risk surfaces.
+    assert m.parse_args(["480"]).passes == 1
+    assert m.parse_args(["480", "--passes", "2"]).passes == 2
+
+
 def test_red_ci_is_never_ready_however_many_passes():
     head = "bbbbbbbb" + "0" * 32
     comments = [bot("**Claude finished @kev's task** ---\n### Final pass — review of head `bbbbbbbb`\n- [x] a")] * 3

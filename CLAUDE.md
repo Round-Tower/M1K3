@@ -26,23 +26,33 @@ Anything a cold session needs on turn one belongs below, not there.
 ## Standing carry-forwards
 - **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
   `pr_watch.py` (required CI green on the head sha, review passes read against
-  that head), squash-merges by sha, verifies `state`+`mergedAt`. Small PR (under
-  ~100 lines, no logic change): `--passes 1`, the auto bot pass only — it fires
-  on Swift, the manifest, `project.yml`, `macos/tools/**` and the workflows; a
-  docs-only PR gets no auto pass, so summon once.
-  Substantive: two passes on the final head (auto + one summon). Trivial head
-  (comment fold, clean master merge on a passed head): `--passes 0`. A summon
-  reviews the head at RUN time — push first, then summon AT ONCE, so the auto
-  pass and the summon read the same head; fold both in one commit (a nits-only
-  fold is a trivial head). `land.sh` never waits: pending CI exits 2 and merges
-  nothing — run `pr_watch.py <PR> --passes N` first.
+  that head), squash-merges by sha, verifies `state`+`mergedAt`. **One pass is
+  the default, whatever the size** (2026-10-04 ruling — PR size is free, rounds
+  are the cost): the auto bot pass fires on Swift, the manifest, `project.yml`,
+  `macos/tools/**` and the workflows; a docs-only PR gets no auto pass, so summon
+  once. Spend the review effort BEFORE the first push (`code-quality-reviewer`
+  on the diff, one per ~400-line slice in parallel) and fold every finding in
+  ONE push; nits go to the follow-up list in the PR body.
+  `--passes 2` (auto + one summon) only when the fold changed logic or the diff
+  touches a risk surface: agent script execution (`M1K3AgentTools` —
+  `ExecuteScriptTool`, `ScriptApprovalLedger`, `UserScriptRunner`), the MCP
+  server / access token / Keychain, entitlements, persistence migrations, the
+  privacy manifest or data handling, crypto (`M1K3Calls` keys), release/CI
+  config (`ci.yml`, Xcode Cloud, fastlane, `project.yml`, store targets — a
+  master push is a release). For two passes, push then summon AT ONCE so both
+  read the same head, and fold both in one commit. Fastlane, `.entitlements`
+  and `.xcprivacy` sit outside the auto pass's paths, so there "2" means two
+  summons. Trivial head (comment fold, clean master
+  merge on a passed head): `--passes 0`. `land.sh` never waits: pending CI exits
+  2 and merges nothing — run `pr_watch.py <PR> --passes N` first.
 - **PR granularity (2026-09-30 ruling):** one PR per stream of work per day;
   same-day small fixes ride TOGETHER (a token strip, a scorer check, a tool
   fix, a docs line, a gem bump were five PRs one day — ~12 review rounds and
   six Xcode Cloud archives for one PR's worth of diff). Split only for a
   release gate, an independent revert path, or a change that needs a
-  reviewer's whole attention. Two review rounds per PR, then carry the rest
-  to a follow-up issue. Claude pushes branches and lands via `land.sh` without
+  reviewer's whole attention. At most two push-wait-fold rounds per PR (a
+  round is a push plus its review, not a pass), then carry the rest to a
+  follow-up issue. Claude pushes branches and lands via `land.sh` without
   asking per action (never a direct push to master); land in a batch at the
   end of a stretch, and report only when something is landable, blocked or
   interesting. `challenger` before a PR that sets a threshold or heuristic.
@@ -126,4 +136,13 @@ Review: Kev + claude-opus-5-5, 2026-10-01 (/debrief) — store-copy carry-forwar
 from #463: name/subtitle are record-wide (two metadata folders, one value), the
 review notes have one home, and precheck runs after every deliver push (a stale
 review_information/notes.txt overwrote the live Mac notes). Confidence 0.9.
+Review: Kev + claude-opus-5-5, 2026-10-04 — the landing loop goes from size
+tiers (two passes on anything substantive) to one pass by default, two only
+for a risk surface or a logic-changing fold; `pr_watch.py --passes` now
+defaults to 1. Kev: dev here had slowed under the two-pass loop. Kept from
+2026-09-30: two rounds per PR, then carry. Confidence 0.75 — the 09-30 entry
+says the loop caught four real bugs in a day, and nobody has measured how
+many of those only the second pass found.
+Open: count pass-2-only findings across #287–#480; if material, widen the
+risk-surface list rather than restore two passes everywhere.
 -->
