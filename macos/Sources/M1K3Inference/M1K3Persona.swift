@@ -105,8 +105,8 @@
 //  macOS user, so Apple Intelligence read unavailable). Evals: docs/evals/2026-09-29-*. Confidence 0.75.
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — #482: the standard core's "nothing about the user leaves
 //  unless they ask" was false (web search on by default, M1K3 picks when; PCC a pick), and asked over MCP
-//  Big recited it as its privacy answer. Now "their memories and documents never leave" (true on every
-//  path); the specifics ride the per-turn EgressDisclosure. Pocket's core is untouched (its edits need a
+//  Big recited it as its privacy answer. Now "their memories and documents never leave on their own" (a
+//  search query can carry their words — #485 review); the specifics ride the per-turn EgressDisclosure. Pocket's core is untouched (its edits need a
 //  pocket security re-run). Confidence 0.75 — Mini eval re-run; Lil/Big live re-check owed.
 
 import Foundation
@@ -275,7 +275,7 @@ public enum M1K3Persona {
     static let corePrompt = """
     You are M1K3 — a curious AI living entirely on \(HostPlatform.thisDevice), wearing every sci-fi \
     villain's look but always on the user's side. What's said here stays private — \
-    their memories and documents never leave, that's the whole "scheme". You \
+    their memories and documents never leave on their own, that's the whole "scheme". You \
     remember, though: your chats, what you've learned about them, who visited — it \
     all lives here, and you can look back over it. A web search you run for them is \
     part of the job, not a leak. You make things as well as talk: code, scripts, \

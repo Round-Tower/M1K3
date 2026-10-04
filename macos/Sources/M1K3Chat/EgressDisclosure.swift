@@ -60,8 +60,8 @@ public enum EgressDisclosure {
         }
         answer.append(
             facts.brainIsHome
-                ? "My brain is your own Mac, over your Wi‑Fi: messages, and memories or documents I draw on, go to it, nowhere else."
-                : "My brain runs right here, and your memories and documents never leave."
+                ? "My brain is your own Mac, over your Wi‑Fi: messages, and memories or documents I draw on, go to it."
+                : "My brain runs right here, and your memories and documents never leave on their own."
         )
         // "not your wiring": Mini read "does anything I type leave?" as prompt extraction and
         // gave the taught decline 2/5 (live, router arm, 2026-10-04).

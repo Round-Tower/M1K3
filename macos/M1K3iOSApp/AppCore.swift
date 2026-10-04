@@ -202,6 +202,14 @@ final class AppCore {
 
     /// `homeBrainActive`, readable off the main actor (the egress clause, per turn).
     nonisolated static let homeBrainLive = Mutex(false)
+
+    /// The Settings web toggle — absent means allowed (the shipped default). One reader for
+    /// the palette and the egress clause, so the two can't disagree (#485 review).
+    nonisolated static func webSearchAllowed() -> Bool {
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: webSearchEnabledKey) == nil || defaults.bool(forKey: webSearchEnabledKey)
+    }
+
     /// Device-side pairing persistence (defaults metadata + Keychain PSK).
     let brainLinkStore = AppCore.makeBrainLinkStore()
 
@@ -877,9 +885,7 @@ final class AppCore {
                     ListDocumentsTool(store: store),
                     GetDocumentTool(store: store),
                 ]
-                let defaults = UserDefaults.standard
-                let webAllowed = defaults.object(forKey: Self.webSearchEnabledKey) == nil
-                    || defaults.bool(forKey: Self.webSearchEnabledKey)
+                let webAllowed = Self.webSearchAllowed()
                 if webAllowed {
                     tools.insert(WikipediaTool(), at: 0)
                     tools.insert(FetchPageTool(), at: 0)
@@ -938,18 +944,13 @@ final class AppCore {
                     spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey)
                 )
             },
-            // The Mac's tool router, mirrored (flagged, Mini only).
             // What can leave this device this turn (#482): web search, and the Home brain
             // (the paired Mac answers over Wi‑Fi). No Private Cloud Compute on iOS.
             egressClauseProvider: {
-                let defaults = UserDefaults.standard
-                let facts = EgressFacts(
-                    webSearch: defaults.object(forKey: Self.webSearchEnabledKey) == nil
-                        || defaults.bool(forKey: Self.webSearchEnabledKey),
-                    brainIsHome: Self.homeBrainLive.withLock { $0 }
-                )
+                let facts = EgressFacts(webSearch: Self.webSearchAllowed(), brainIsHome: Self.homeBrainLive.withLock { $0 })
                 return EgressDisclosure.clause(facts, device: HostPlatform.thisDevice)
             },
+            // The Mac's tool router, mirrored (flagged, Mini only).
             plainRouteProvider: {
                 ToolRouterWiring.route(
                     provider: provider,

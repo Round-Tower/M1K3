@@ -346,7 +346,7 @@ struct M1K3PersonaTests {
         // default and M1K3 chooses when; PCC is a pick) and M1K3 recited it as its privacy
         // answer. The core keeps a true claim; the per-turn EgressDisclosure carries the rest.
         #expect(!core.contains("unless they ask"))
-        #expect(core.contains("their memories and documents never leave"))
+        #expect(core.contains("their memories and documents never leave on their own"))
         #expect(core.contains("part of the job, not a leak"))
         // The making identity: without it Lil said "I'm not a developer".
         #expect(core.contains("You make things as well as talk"))

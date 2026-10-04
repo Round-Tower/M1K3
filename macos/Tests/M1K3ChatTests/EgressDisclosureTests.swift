@@ -52,12 +52,14 @@ struct EgressDisclosureTests {
     func homeBrain() {
         let home = line(home: true)
         #expect(home.contains("your own Mac, over your Wi‑Fi"))
-        #expect(home.contains("nowhere else"))
+        // #485 review: "nowhere else" sat beside the DuckDuckGo sentence — dropped.
+        #expect(!home.contains("nowhere else"))
         #expect(!home.contains("never leave"))
         #expect(!home.contains("runs right here"))
         let local = line(home: false)
         #expect(local.contains("runs right here"))
-        #expect(local.contains("memories and documents never leave"))
+        // #485 review: a search query can carry words from a memory, so "on their own".
+        #expect(local.contains("memories and documents never leave on their own"))
     }
 
     @Test("a quotable first-person answer: small models copy a sentence, garble a list")

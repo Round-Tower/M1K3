@@ -335,6 +335,8 @@ extension AppEnvironment {
     nonisolated static func egressFacts() -> EgressFacts {
         let defaults = UserDefaults.standard
         let ageAllows = AgeAppropriateness.policy(for: ageBandProvider.currentBand()).webToolsAllowed
+        // `available` / `quota` are deliberately neutral: `setting` (offered) reads neither, only
+        // `control` (this send) does, and a PCC send never reaches this responder (#485 review).
         let state = PrivateCloudState(
             backendPresent: privateCloudBackend != nil, available: true,
             consent: ChatEgressConsent.persisted(in: defaults),
