@@ -18,6 +18,11 @@
 //  Review: Kev + claude-fable-5, 2026-06-11 — refactored around MCPToolRegistry
 //  for in-process hosting; stdio surface byte-identical (same tools, same
 //  handlers, same store resolution). Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — makeM1K3Server now passes MCP
+//  `instructions` (M1K3ServerInstructions, from the registered tool names), so
+//  every surface tells agents how to use M1K3. Tools are read before the Server
+//  is built. Checked on the wire: the stdio initialize carries the knowledge-only
+//  text. Confidence 0.85.
 
 import Foundation
 import M1K3Knowledge
@@ -55,12 +60,13 @@ public func makeM1K3Server(
     name: String = "m1k3",
     version: String = "0.1.0"
 ) async -> Server {
+    let tools = registry.tools
     let server = Server(
         name: name,
         version: version,
+        instructions: M1K3ServerInstructions.text(toolNames: Set(tools.map(\.name))),
         capabilities: .init(tools: .init())
     )
-    let tools = registry.tools
     await server.withMethodHandler(ListTools.self) { _ in
         ListTools.Result(tools: tools)
     }
