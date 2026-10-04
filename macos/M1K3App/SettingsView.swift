@@ -36,6 +36,8 @@
 //  (Kev: "settings chips don't scale down well, move to vertical placing"): five chips in one row
 //  clipped below ~700 pt; a 168 pt column of rows never does, and reads like System Settings.
 //  Confidence 0.8 (verify-by-launch at narrow and wide widths).
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — header says "private by design", not "everything stays on this Mac"
+//  (Kev retired the absolute: web search is on by default and PCC is a brain pick). Confidence 0.9.
 //
 
 import M1K3Screengrab
@@ -122,7 +124,7 @@ struct SettingsView: View {
                 Text("M1K3")
                     .font(.pixel(24))
                     .kerning(2)
-                Text("\(env.selectedBrain.displayName) is thinking · everything stays on this Mac")
+                Text("\(env.selectedBrain.displayName) is thinking · private by design")
                     .font(.body)
                     .foregroundStyle(.secondary)
             }
