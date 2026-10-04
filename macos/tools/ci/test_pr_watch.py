@@ -414,6 +414,19 @@ RISKY = [
     "macos/project.yml",
     "macos/ci_scripts/ci_post_clone.sh",
     "macos/tools/ci/pr_watch.py",
+    # named by the #484 review passes: risk that lives in a directory, not a file name
+    "macos/Sources/M1K3MCPKit/LoopbackAccessTokenVault.swift",
+    "macos/Sources/M1K3MCPKit/LoopbackRequestGate.swift",
+    "macos/Sources/M1K3MCPKit/HTTPWireCodec.swift",
+    "macos/M1K3CLI/CLITokenStore.swift",
+    "macos/Sources/M1K3CLICore/MCPCallSequence.swift",
+    "macos/Sources/M1K3BrainLink/PairedBrainStore.swift",
+    "macos/tools/asc/submit.py",
+    "macos/Gemfile.lock",
+    ".github/actions/setup/action.yml",
+    "macos/Config/Release.xcconfig",
+    "SECURITY.md",
+    ".claude/agents/reviewer.md",
 ]
 
 
@@ -440,6 +453,33 @@ def test_an_explicit_passes_wins_and_going_below_the_inference_needs_a_why():
     assert not m.downgrade_refused(1, RISKY, why="docs-only fold on a reviewed head")
     assert not m.downgrade_refused(None, RISKY, why=None)
     assert not m.downgrade_refused(1, ["README.md"], why=None)
+
+
+def test_a_swift_file_whose_patch_github_omitted_fails_closed():
+    big = "macos/Sources/M1K3Memory/MemoryStore.swift"
+    assert m.risk_surfaces([big], patches={big: None}) == [big]
+    assert m.risk_surfaces([big], patches={big: "+    let x = 1"}) == []
+
+
+def test_a_why_must_be_a_reason_not_a_token():
+    assert m.downgrade_refused(1, RISKY, why="x")
+    assert not m.downgrade_refused(1, RISKY, why="text-only fold, reviewed head")
+
+
+def test_a_head_no_auto_pass_will_review_is_named():
+    assert not m.auto_pass_expected(["README.md", "macos/docs/MCP_SETUP.md"])
+    assert m.auto_pass_expected(["macos/Sources/A/B.swift"])
+    assert m.auto_pass_expected(["macos/tools/ci/pr_watch.py"])
+    assert m.auto_pass_expected([".github/workflows/ci.yml"])
+
+
+def test_main_refuses_a_downgrade_without_why_with_exit_5(monkeypatch, capsys):
+    snap = ("OPEN", "a" * 40, ["macos/Sources/M1K3MCPKit/LoopbackAccessTokenVault.swift"],
+            {}, [], None, 0, None, {})
+    monkeypatch.setattr(m, "snapshot", lambda repo, pr: snap)
+    monkeypatch.setattr(m, "migration_files", lambda: {"macos/Sources/X/XStore.swift"})
+    assert m.main(["9", "--once", "--passes", "1", "--repo", "o/r"]) == 5
+    assert "--why" in capsys.readouterr().out
 
 
 def test_dependency_and_plist_changes_are_risk_surfaces():

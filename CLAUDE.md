@@ -151,6 +151,6 @@ an offload model and spot-checked by hand) found 33 real catches only a later
 pass made: 28 came after a fold (re-reviewed by that head's auto pass anyway),
 17 sit on risk surfaces, and 2 would be lost outright (#292 marquee offset,
 #320 latent persona hazard). So pr_watch now infers the passes from the diff
-(38% of history would get 2, down from 89%), and a downgrade needs `--why`.
+(47% of history would get 2, down from 89%), and a downgrade needs `--why`.
 The challenger caught that migrations hide in *Store.swift. Confidence 0.8.
 -->
