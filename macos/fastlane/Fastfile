@@ -33,7 +33,7 @@
 # read from the installed gem). Apple's spec is checked locally first; `dry_run:true` checks the files
 # and prints the target version (read-only), uploading nothing. Submitted versions are refused.
 # Ported from Cartogram's :previews lane, minus its Mac size table (16:10 — Apple's is 1920×1080).
-# Confidence 0.7 — the dry run is verified; the first real upload is Kev's.
+# Confidence 0.85 — both lanes uploaded for real 2026-10-04 (1.0.0, DEVELOPER_REJECTED), verified on ASC.
 # https://murphysig.dev
 
 require "digest"
@@ -104,19 +104,21 @@ def upload_app_previews(platform:, preview_type:, dir:, sizes:, dry_run: false)
   version = app.get_edit_app_store_version(platform: platform)
   UI.user_error!("No editable #{platform} version") unless version
   editable = %w[PREPARE_FOR_SUBMISSION DEVELOPER_REJECTED REJECTED METADATA_REJECTED]
-  state = version.app_version_state || version.app_store_state
+  state = version.app_version_state || version.app_store_state # appVersionState is the current field; appStoreState is deprecated
   UI.message("Target: #{platform} #{version.version_string} (#{state}) · en-US · #{preview_type}")
   UI.user_error!("#{version.version_string} is #{state} — previews go only on an editable version") unless editable.include?(state)
   loc = version.get_app_store_version_localizations.find { |l| l.locale == "en-US" }
   UI.user_error!("No en-US localization on #{version.version_string}") unless loc
 
   set = loc.get_app_preview_sets(includes: "appPreviews").find { |s| s.preview_type == preview_type }
-  existing = set ? (set.app_previews || []).map(&:source_file_checksum).compact : []
+  # A preview whose upload failed still carries its checksum; it must not count as present.
+  live = set ? (set.app_previews || []).reject { |p| (p.asset_delivery_state || {})["state"] == "FAILED" } : []
+  existing = live.map(&:source_file_checksum).compact
   to_upload = paths.reject { |path| existing.include?(Digest::MD5.file(path).hexdigest) }
   UI.message("On App Store Connect: #{existing.size} · to upload: #{to_upload.size}")
   if existing.size + to_upload.size > 3
     UI.user_error!("#{existing.size} already in the #{preview_type} set + #{to_upload.size} new > 3 — " \
-                   "delete the stale preview in App Store Connect first")
+                   "a re-render has a new checksum and uploads beside the old one: delete the stale preview in App Store Connect")
   end
   if dry_run
     UI.important("dry_run — nothing uploaded")
@@ -186,7 +188,7 @@ platform :mac do
     )
   end
 
-  desc "Upload the Mac App Preview (previews_mac/en-US). dry_run:true checks the spec only"
+  desc "Upload the Mac App Preview (previews_mac/en-US). dry_run:true checks the files + prints the target (read-only API), uploads nothing"
   lane :previews do |options|
     upload_app_previews(
       platform: Spaceship::ConnectAPI::Platform::MAC_OS, preview_type: "DESKTOP",
@@ -224,7 +226,7 @@ platform :ios do
     )
   end
 
-  desc "Upload the iPhone 6.9\" App Preview (previews_ios/en-US). dry_run:true checks the spec only"
+  desc "Upload the iPhone 6.9\" App Preview (previews_ios/en-US). dry_run:true checks the files + prints the target (read-only API), uploads nothing"
   lane :previews do |options|
     upload_app_previews(
       platform: Spaceship::ConnectAPI::Platform::IOS, preview_type: "IPHONE_67",
