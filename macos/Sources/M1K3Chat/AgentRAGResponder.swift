@@ -142,6 +142,9 @@
 //  to, and a tools verdict keeps them in its plain fallbacks (only the chat route was measured).
 //  Sources come from the same `turnChunks`; before, both fallbacks listed the wrong set. A
 //  dispatched tool's answer still lists excerpts it never read (pre-existing). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — `egressClauseProvider` + `turnClauses()` (#482): the egress
+//  facts ride every prompt the age clause rides (agent, plain, dispatch, synthesis), pinned in three suites.
+//  Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -209,6 +212,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// The age-band prompt clause, read FRESH each turn (same per-turn pattern)
     /// so an age-range declaration takes effect on the next turn.
     private let ageClauseProvider: @Sendable () -> String?
+    /// What can leave the device this turn (`EgressDisclosure.clause`, #482), read
+    /// FRESH each turn — web search, a Private Cloud Compute pick — or nil.
+    private let egressClauseProvider: @Sendable () -> String?
     /// What's open beside the chat right now (the review panel's rendered page),
     /// or nil — the app reads a snapshot the web view updates on load.
     private let browserContextProvider: (@Sendable () -> BrowserContext?)?
@@ -236,7 +242,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         maxIterationsProvider: (@Sendable () -> Int)? = nil,
         defersHeavyGenerationProvider: (@Sendable () -> Bool)? = nil,
         groundingBudgetProvider: @escaping @Sendable () -> Int = { GroundingBudget.defaultTokenBudget },
-        ageClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
+        ageClauseProvider: @escaping @Sendable () -> String? = { nil },
+        egressClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
         browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
         todoContextProvider: (@Sendable () -> String?)? = nil,
         plainRouteProvider: (@Sendable () -> PlainTurnRoute?)? = nil
@@ -255,6 +262,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.fastThinkingProvider = fastThinkingProvider
         self.historyBudgetProvider = historyBudgetProvider
         self.ageClauseProvider = ageClauseProvider
+        self.egressClauseProvider = egressClauseProvider
         self.browserContextProvider = browserContextProvider
         self.todoContextProvider = todoContextProvider
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
@@ -563,7 +571,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // A dispatched turn: the date (not the identity line) and the age clause.
             Self.dispatchTurnPrompt(
                 question: question,
-                preamble: [PromptContext.line(now: Date(), brainName: ""), ageClauseProvider()]
+                preamble: ([PromptContext.line(now: Date(), brainName: "")] + turnClauses())
                     .compactMap { $0 }.joined(separator: "\n\n"),
                 history: history, historyBudget: historyBudgetProvider(), observation: observation
             )
@@ -573,7 +581,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // `datetime`, and the persona keeps the month and year.
             Self.plainTurnPrompt(
                 question: question,
-                contextPreamble: [PromptContext.identity(brainName: brainNameProvider()), ageClauseProvider()]
+                contextPreamble: ([PromptContext.identity(brainName: brainNameProvider())] + turnClauses())
                     .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n"),
                 chunks: chunks, memories: memories,
                 history: history, historyBudget: historyBudgetProvider(),
@@ -783,7 +791,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("tool dispatch: empty answer after \(plan.tool.name, privacy: .public) — synthesising from its result")
             // The result keeps its framed header (the injection guard) and the age clause
             // rides along: this path once handed the raw web text over bare (PR #424 review).
-            let contextLine = [PromptContext.line(now: Date(), brainName: brainNameProvider()), ageClauseProvider()]
+            let contextLine = ([PromptContext.line(now: Date(), brainName: brainNameProvider())] + turnClauses())
                 .compactMap { $0 }.joined(separator: "\n\n")
             let framed = ReasoningStep(iteration: 1, thought: "", action: step.action, observation: observation)
             let synthesised = await streamFallback(
@@ -799,6 +807,12 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let tail = Self.webSourcesBlock(for: trace) + Self.factSourcesBlock(for: trace)
         if !tail.isEmpty { continuation.yield(tail) }
         return .answered
+    }
+
+    /// The per-turn policy clauses every prompt carries: the age band and what can
+    /// leave the device (#482). nil entries are dropped by the callers' compactMap.
+    private func turnClauses() -> [String?] {
+        [ageClauseProvider(), egressClauseProvider()]
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail
@@ -822,8 +836,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // Prepended here (not inside `grounding`, which stays pure/testable) so it
         // rides the variable grounding, never the cached persona prefix.
         let contextLine = PromptContext.line(now: Date(), brainName: brainNameProvider())
-        let ageClause = ageClauseProvider()
-        let contextPreamble = [contextLine, ageClause].compactMap { $0 }.joined(separator: "\n\n")
+        let contextPreamble = ([contextLine] + turnClauses()).compactMap { $0 }.joined(separator: "\n\n")
         let toolNames = Set(tools.map(\.name))
         let historyBudget = historyBudgetProvider().reservingImages(images.count)
         let ambient = browserContextProvider?()?.render()
