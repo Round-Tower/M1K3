@@ -22,6 +22,12 @@
 //
 //  Review: Kev + claude-opus-5, 2026-09-13 — memories plate searches broadly (one row was a thin plate); the privacy
 //  scroll anchors on the Grounding footer's own words (Brain at Home's "internet" stopped it early). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — `M1K3_SCREENGRAB_HOLD` (seconds, test-runner env) keeps each plate on
+//  screen after its settle, so a screen recording running beside the suite gets App Preview footage
+//  (marketing/motion/PREVIEW-CAPTURE.md). Unset = the stills run, unchanged. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — documents / memories / privacy plates wait for the screen the app now
+//  pushes itself (`phoneRoute`, `memoryQuery`) instead of tapping to it: `openSettings` waited on a toolbar that was
+//  gone and the memories query was typed twice (#478 review). Confidence 0.75 (not re-run: the sim AX handshake times out).
 
 import M1K3Screengrab
 import XCTest
@@ -70,24 +76,16 @@ final class ScreengrabiOSUITests: XCTestCase {
 
     func testDocuments() throws {
         try capture(.documents, settle: 3) { app in
-            waitForBrain(app)
-            openSettings(app)
-            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Documents'")).firstMatch.tap()
-            waitForText("Lair", in: app, timeout: 60)
+            // The app pushes Settings ▸ Documents itself (`phoneRoute`) once the brain is ready.
+            waitForText("Lair", in: app, timeout: 180)
         }
     }
 
     func testMemories() throws {
         try capture(.memories, settle: 3) { app in
-            waitForBrain(app)
-            openSettings(app)
-            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Memories'")).firstMatch.tap()
-            let search = app.searchFields.firstMatch
-            XCTAssert(search.waitForExistence(timeout: 30), "Memories search field")
-            search.tap()
-            // A broad query so the plate shows the persona, not one row.
-            search.typeText("what do you know about me\n")
-            waitForText("roofline", in: app, timeout: 60)
+            // The app pushes Settings ▸ Memories and runs the broad recall itself
+            // (`phoneRoute` + `memoryQuery`) — typing it again doubled the query.
+            waitForText("roofline", in: app, timeout: 180)
         }
     }
 
@@ -120,25 +118,18 @@ final class ScreengrabiOSUITests: XCTestCase {
         // Stand-in until the live listing's privacy card exists (plan §1 #12):
         // Settings' Grounding footer — the promise in the app's own words.
         try capture(.privacyLabel, settle: 3) { app in
-            waitForBrain(app)
-            openSettings(app)
-            // The footer sits below the fold of a List: swipe until it is on screen
-            // (`exists` is true for an off-screen row, `isHittable` is not).
-            // Anchor on the Grounding footer's own words: Brain at Home's footer
-            // also says "internet" and sits higher, which stopped the scroll there
-            // (2026-09-13: the plate showed the face picker).
-            let footer = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'sends your conversation'"))
-                .firstMatch
-            for _ in 0 ..< 6 where !(footer.exists && footer.isHittable) {
-                app.swipeUp()
-            }
-            // The footer lands at the bottom edge; the plate's frame crops from the
-            // top, so one more swipe brings the Grounding section up the screen.
-            app.swipeUp()
+            // The app pushes Settings and scrolls to Grounding itself (`phoneRoute`);
+            // the anchor is the Grounding footer's own words.
+            waitForText("sends your conversation", in: app, timeout: 180)
         }
     }
 
     // MARK: - Machinery
+
+    /// Extra seconds on the settled subject for App Preview recordings (0 for the stills).
+    private static var videoHold: TimeInterval {
+        ProcessInfo.processInfo.environment["M1K3_SCREENGRAB_HOLD"].flatMap(TimeInterval.init) ?? 0
+    }
 
     private func companion(_ plate: ScreengrabPlate) throws {
         try capture(plate, settle: 8) { app in waitForVoiceSurface(app) }
@@ -167,7 +158,7 @@ final class ScreengrabiOSUITests: XCTestCase {
         app.launch()
         XCTAssert(app.wait(for: .runningForeground, timeout: 60), "\(plate.rawValue): app never came foreground")
         drive(app)
-        RunLoop.current.run(until: Date().addingTimeInterval(settle))
+        RunLoop.current.run(until: Date().addingTimeInterval(settle + Self.videoHold))
         let shot = XCUIScreen.main.screenshot()
         let attachment = XCTAttachment(screenshot: shot)
         attachment.name = plate.rawValue

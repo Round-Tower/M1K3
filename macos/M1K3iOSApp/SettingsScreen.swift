@@ -36,6 +36,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — Apple's error maps by case NAME: the switch over its cases
 //  strong-linked its invalidAccount case, absent on iOS 26.5, and dyld killed the app at launch. Verified on the
 //  26.5 simulator. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — under the privacy screengrab plate the form scrolls to Grounding
+//  (the web-search switch) on appear; inert otherwise. Confidence 0.8 (verify-by-launch on the sim).
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — About footer: "Private by design. No account, no analytics." (the iOS
+//  listing's claims), not "Everything runs on your device." Confidence 0.9.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -43,6 +47,7 @@
 import M1K3BrainLink
 import M1K3Chat
 import M1K3Inference
+import M1K3Screengrab
 import SwiftUI
 
 struct SettingsScreen: View {
@@ -65,6 +70,19 @@ struct SettingsScreen: View {
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
+            form
+                .task {
+                    // The privacy plate's subject is the web-search switch, below the fold.
+                    if ScreengrabHarness.current.plate == .privacyLabel { proxy.scrollTo(Self.groundingID, anchor: .center) }
+                }
+        }
+        .navigationTitle("Settings")
+    }
+
+    private static let groundingID = "grounding"
+
+    private var form: some View {
         Form {
             Section("Workspace") {
                 NavigationLink {
@@ -146,6 +164,7 @@ struct SettingsScreen: View {
                 Text("The only thing that sends your conversation to the internet. "
                     + "Every search shows in the reply as it happens.")
             }
+            .id(Self.groundingID)
 
             Section {
                 Toggle("Avatar backdrop in chat", isOn: $avatarBackdrop)
@@ -181,10 +200,9 @@ struct SettingsScreen: View {
             } header: {
                 Text("About")
             } footer: {
-                Text("Everything runs on your device.")
+                Text("Private by design. No account, no analytics.")
             }
         }
-        .navigationTitle("Settings")
     }
 
     #if !os(visionOS)
