@@ -4,3 +4,6 @@ Preview.html
 *.html
 .env.local
 fastlane/test_output
+# App Preview videos (binaries; source + render live in marketing/motion)
+previews_mac/
+previews_ios/
