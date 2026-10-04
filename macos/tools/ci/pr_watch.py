@@ -32,10 +32,12 @@ in project memory. Now they are code, tested in test_pr_watch.py:
   2026-09-12) — every gate is ours. Since 2026-09-24 ci.yml itself skips the
   App-shell and mobile xcodebuild jobs on a PR whose diff misses their paths
   (pushes to master/develop build everything); a skipped job reads green here.
+* One pass is the default. `--passes 2` (auto + one summon) is bought only for
+  a risk surface or a logic-changing fold — the rule lives in ../../../CLAUDE.md.
 * `--passes 0` is the trivial-head rule: a comment-only fold or a clean master
-  merge whose substantive head already had two passes merges on green CI.
+  merge whose head already had its passes merges on green CI.
 
-    python3 pr_watch.py <PR> [--passes 2] [--once] [--interval 60] [--timeout 5400]
+    python3 pr_watch.py <PR> [--passes 1] [--once] [--interval 60] [--timeout 5400]
 
 Exit 0 = landable now; 1 = a required job failed; 2 = not ready (--once) or
 timed out; 3 = the PR is not open; 4 = gh itself failed. Read-only: never
@@ -89,6 +91,11 @@ Review: Kev + claude-opus-5-5, 2026-09-26 — classify's any-box fallback skips
 gate in a fence, was read as a progress list, and the watch reported 1/2 on a
 head with two passes. Replayed against #416's thread: SUMMON + REVIEW.
 Confidence 0.9.
+Review: Kev + claude-opus-5-5, 2026-10-04 — `--passes` defaults to 1, not 2:
+a second pass on every substantive PR doubled its push-wait-fold rounds, and dev
+here slowed with it. Two is now the opt-in for risk surfaces (../../../CLAUDE.md).
+`parse_args` split out of `main` so the test pins the default. Confidence 0.75 —
+how often pass 2 caught what pass 1 missed is unmeasured.
 """
 from __future__ import annotations
 
@@ -448,15 +455,20 @@ def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | N
             inline_count, head_seen_at)
 
 
-def main(argv: list[str] | None = None) -> int:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("pr", type=int)
-    ap.add_argument("--passes", type=int, default=2, help="review passes required on the head (0 = trivial head)")
+    ap.add_argument("--passes", type=int, default=1,
+                    help="review passes required on the head (0 = trivial head, 2 = risk surface)")
     ap.add_argument("--once", action="store_true", help="report once, no polling")
     ap.add_argument("--interval", type=int, default=60)
     ap.add_argument("--timeout", type=int, default=5400)
     ap.add_argument("--repo", default=None, help="owner/name (default: the current repo)")
-    args = ap.parse_args(argv)
+    return ap.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     repo = args.repo or _gh_json("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
 
     deadline = time.monotonic() + args.timeout

@@ -34,7 +34,7 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' -skipPackagePluginValidati
   3-core runner wall time is mostly pool wait. Separate the two outcomes by ≥ 30 s or
   assert which side acted (`tools/ci/check_wall_clock_bounds.py` enforces it).
 - **Landing:** `tools/ci/land.sh <PR> [--passes N]` gates on `tools/ci/pr_watch.py`, whose
-  rules are pinned in `test_pr_watch.py`; the size-tiered loop is in `../CLAUDE.md`. Master
+  rules are pinned in `test_pr_watch.py`; the pass rules (one by default) are in `../CLAUDE.md`. Master
   has no required status checks — that rule is the gate. Verify a merge by `state` +
   `mergedAt`, never by an exit code.
 
