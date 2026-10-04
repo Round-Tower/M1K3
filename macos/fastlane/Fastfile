@@ -27,7 +27,15 @@
 # moved to TestFlight/notes/ (Xcode Cloud reads it at archive time).
 # Confidence now 0.8 — the ios lane is the mac lane with platform "ios",
 # unproven until Kev's first run.
+# Review: Kev + claude-opus-5-5, 2026-10-04 — `mac previews` / `ios previews` upload the App Previews
+# (previews_mac|ios/en-US/*.mov, gitignored) through Spaceship directly: deliver's app_previews_path
+# skips every Mac preview (fastlane 2.240.1's AppPreviewSet resolution table has no DESKTOP entry —
+# read from the installed gem). Apple's spec is checked locally first; `dry_run:true` checks only.
+# Ported from Cartogram's :previews lane, minus its Mac size table (16:10 — Apple's is 1920×1080).
+# Confidence 0.7 — the dry run is verified; the first real upload is Kev's.
 # https://murphysig.dev
+
+require "fastlane_core/video_utils" # not auto-loaded; the preview checks read duration + size
 
 default_platform(:mac)
 
@@ -43,6 +51,8 @@ IOS_META_PATH   = File.expand_path("metadata_ios", __dir__)
 TESTFLIGHT_DIR  = File.expand_path("../TestFlight", __dir__)
 SHOTS_PATH      = File.expand_path("screenshots_mac", __dir__)
 IOS_SHOTS_PATH  = File.expand_path("screenshots_ios", __dir__)
+MAC_PREVIEWS    = File.expand_path("previews_mac", __dir__)
+IOS_PREVIEWS    = File.expand_path("previews_ios", __dir__)
 # README.md in this folder is hand-written; without this fastlane regenerates
 # it after every lane and the tool-split / Xcode Cloud notes are lost.
 ENV["FASTLANE_SKIP_DOCS"] = "1"
@@ -60,6 +70,53 @@ def asc_api_key
     is_key_content_base64: false,
     in_house:     false
   )
+end
+
+# App Previews (developer.apple.com/help/app-store-connect/reference/app-information/
+# app-preview-specifications, re-checked 2026-10-02): 15–30 s, ≤ 500 MB, ≤ 3 per set.
+# Mac: 1920×1080 only. iPhone 6.9" (IPHONE_67): 886×1920 portrait. Encode + verify with
+# marketing/motion/tools/encode_preview.py; this re-checks what's on disk before any upload.
+def upload_app_previews(platform:, preview_type:, dir:, sizes:, dry_run: false)
+  paths = Dir.glob(File.join(dir, "en-US", "*.{mov,m4v,mp4}")).sort
+  UI.user_error!("No previews in #{dir}/en-US") if paths.empty?
+  UI.user_error!("Apple allows at most 3 App Previews per set (found #{paths.size})") if paths.size > 3
+  paths.each do |path|
+    name = File.basename(path)
+    mb = File.size(path) / (1024.0 * 1024.0)
+    UI.user_error!("#{name} is #{mb.round(1)} MB (limit 500)") if mb > 500
+    secs = FastlaneCore::VideoUtils.read_video_duration_seconds(path)
+    UI.user_error!("#{name}: couldn't read its duration") unless secs
+    UI.user_error!("#{name} is #{secs.round(2)} s (Apple wants 15–30)") unless secs.between?(15.0, 30.0)
+    res = FastlaneCore::VideoUtils.read_video_resolution(path)
+    UI.user_error!("#{name}: couldn't read its resolution") unless res
+    UI.user_error!("#{name} is #{res.join('x')} (wants #{sizes.map { |w| w.join('x') }.join(' or ')})") unless sizes.include?(res)
+    UI.success("#{name}: #{res.join('x')}, #{secs.round(1)} s, #{mb.round(1)} MB — within spec")
+  end
+  if dry_run
+    UI.important("dry_run — nothing uploaded")
+    return
+  end
+
+  UI.user_error!("No App Store Connect API key at #{ASC_KEY}") unless asc_api_key # also logs Spaceship in
+  app = Spaceship::ConnectAPI::App.find(APP_ID)
+  UI.user_error!("App not found: #{APP_ID}") unless app
+  version = app.get_edit_app_store_version(platform: platform)
+  UI.user_error!("No editable #{platform} version (Prepare for Submission / Rejected)") unless version
+  loc = version.get_app_store_version_localizations.find { |l| l.locale == "en-US" }
+  UI.user_error!("No en-US localization on #{version.version_string}") unless loc
+
+  set = loc.get_app_preview_sets(includes: "appPreviews").find { |s| s.preview_type == preview_type } ||
+        loc.create_app_preview_set(attributes: { previewType: preview_type })
+  existing = (set.app_previews || []).map(&:source_file_checksum)
+  paths.each do |path|
+    if existing.include?(Digest::MD5.file(path).hexdigest)
+      UI.message("Already on App Store Connect (checksum match): #{File.basename(path)}")
+      next
+    end
+    UI.message("Uploading #{File.basename(path)} to #{version.version_string} #{preview_type}…")
+    set.upload_preview(path: path, wait_for_processing: false)
+    UI.success("Uploaded #{File.basename(path)} — App Store Connect processes it for a few minutes")
+  end
 end
 
 # Update TestFlight "What to Test" on the latest build (deliver doesn't do this).
@@ -117,6 +174,14 @@ platform :mac do
     )
   end
 
+  desc "Upload the Mac App Preview (previews_mac/en-US). dry_run:true checks the spec only"
+  lane :previews do |options|
+    upload_app_previews(
+      platform: Spaceship::ConnectAPI::Platform::MAC_OS, preview_type: "DESKTOP",
+      dir: MAC_PREVIEWS, sizes: [[1920, 1080]], dry_run: options[:dry_run]
+    )
+  end
+
   desc "Update TestFlight 'What to Test' on the latest build"
   lane :beta_metadata do
     update_what_to_test(APP_ID, "#{TESTFLIGHT_DIR}/notes/macos.en-US.txt")
@@ -144,6 +209,14 @@ platform :ios do
       overwrite_screenshots: true, force: true,
       precheck_include_in_app_purchases: false,
       screenshots_path: IOS_SHOTS_PATH
+    )
+  end
+
+  desc "Upload the iPhone 6.9\" App Preview (previews_ios/en-US). dry_run:true checks the spec only"
+  lane :previews do |options|
+    upload_app_previews(
+      platform: Spaceship::ConnectAPI::Platform::IOS, preview_type: "IPHONE_67",
+      dir: IOS_PREVIEWS, sizes: [[886, 1920]], dry_run: options[:dry_run]
     )
   end
 end
