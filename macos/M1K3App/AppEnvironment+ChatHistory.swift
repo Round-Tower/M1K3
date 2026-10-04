@@ -23,6 +23,9 @@
 //  comes solely from the main responder + its warm), always offered there so the prefix key stays stable.
 //  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 — `miniPromptPrefix`: the ReAct head over the interactive
 //  palette (same builder + hooks as the MLX persona warm) for Mini's `prewarm(promptPrefix:)`.
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — egressClauseProvider + `egressFacts()` (#482): what can leave
+//  this Mac per turn — web search (switch AND age band), PCC offered by `PrivateCloudRung.setting`, never
+//  "picked" (a PCC turn never reaches the responder). Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -324,6 +327,25 @@ extension AppEnvironment {
         return defaults.object(forKey: webSearchEnabledKey) == nil || defaults.bool(forKey: webSearchEnabledKey)
     }
 
+    /// The settings that decide what can leave this Mac on a turn (#482), read fresh.
+    /// Web: the Settings switch AND the age band, the palette's own rule (a child's
+    /// session withholds the web tools). PCC: offered by the rule Settings shows
+    /// (`PrivateCloudRung.setting` — backend present, not off by policy, the switch on);
+    /// never "picked", because a PCC turn never reaches this responder.
+    nonisolated static func egressFacts() -> EgressFacts {
+        let defaults = UserDefaults.standard
+        let ageAllows = AgeAppropriateness.policy(for: ageBandProvider.currentBand()).webToolsAllowed
+        let state = PrivateCloudState(
+            backendPresent: privateCloudBackend != nil, available: true,
+            consent: ChatEgressConsent.persisted(in: defaults),
+            managedOff: defaults.bool(forKey: PrivateCloudRung.managedOffDefaultsKey), quota: .unknown
+        )
+        return EgressFacts(
+            webSearch: webSearchAllowed() && ageAllows,
+            privateCloudOffered: PrivateCloudRung.setting(state) == .shown(isOn: true)
+        )
+    }
+
     /// The four availability facts, read fresh. Real I/O — call it off the main
     /// actor when the caller can (the warm does); a live turn already runs on
     /// the responder's own task.
@@ -501,6 +523,9 @@ extension AppEnvironment {
                 guard let ageBandProvider else { return nil }
                 return AgeAppropriateness.policy(for: ageBandProvider.currentBand()).promptClause
             },
+            // What can leave this Mac this turn (#482), from the live settings — the
+            // persona alone said "nothing leaves unless they ask", which was false.
+            egressClauseProvider: { EgressDisclosure.clause(Self.egressFacts(), device: HostPlatform.thisDevice) },
             // What's open beside the chat (the review panel's rendered page) — a
             // snapshot the web view updates on load; nil when no page is showing.
             browserContextProvider: { ReviewModel.liveContext.withLock { $0 } },
