@@ -391,8 +391,83 @@ def test_trivial_head_needs_no_passes():
 def test_one_pass_is_the_default_and_two_is_the_risk_surface_opt_in():
     # 2026-10-04 ruling: a second pass on every substantive PR doubled its
     # push-wait-fold rounds; it is now bought only for risk surfaces.
-    assert m.parse_args(["480"]).passes == 1
+    assert m.parse_args(["480"]).passes is None  # inferred from the diff
+    assert m.required_passes(None, ["macos/Sources/M1K3Heartbeat/HUD.swift"]) == 1
     assert m.parse_args(["480", "--passes", "2"]).passes == 2
+
+
+# Paths read off the 2026-10-04 audit of #287–#480: of the real bugs only a
+# second pass caught on the same head, these are where they lived.
+RISKY = [
+    "macos/Sources/M1K3AgentTools/ExecuteScriptTool.swift",
+    "macos/Sources/M1K3MCPKit/MCPServer.swift",
+    "macos/M1K3App/MCPHostController.swift",
+    "macos/Sources/M1K3CLICore/MCPAccessToken.swift",
+    "macos/M1K3App/KeychainScriptApprovalStore.swift",
+    "macos/M1K3App/M1K3.entitlements",
+    "macos/M1K3App/PrivacyInfo.xcprivacy",
+    "macos/Sources/M1K3Calls/StoredKeyProvider.swift",
+    "macos/Sources/M1K3Chat/PrivateCloudTurn.swift",
+    "macos/Sources/M1K3Knowledge/SchemaMigrations.swift",
+    ".github/workflows/ci.yml",
+    "macos/fastlane/Fastfile",
+    "macos/project.yml",
+    "macos/ci_scripts/ci_post_clone.sh",
+    "macos/tools/ci/pr_watch.py",
+]
+
+
+def test_a_risk_surface_needs_two_passes_without_being_asked():
+    for path in RISKY:
+        assert m.required_passes(None, ["README.md", path]) == 2, path
+        assert m.risk_surfaces([path]) == [path]
+
+
+def test_ordinary_code_and_docs_are_not_risk_surfaces():
+    plain = ["macos/Sources/M1K3Heartbeat/PulseAskLine.swift", "macos/docs/MCP_SETUP.md",
+             "macos/M1K3App/ContentView.swift", "README.md", "macos/Tests/M1K3MCPKitTests/X.swift",
+             ".github/workflows/README.md", "macos/tools/ci/test_pr_watch.py"]
+    assert m.risk_surfaces(plain) == []
+    assert m.required_passes(None, plain) == 1
+
+
+def test_an_explicit_passes_wins_and_going_below_the_inference_needs_a_why():
+    # --passes 0 is the trivial-head rule; landing a risk diff on fewer passes
+    # than inferred is allowed only with a stated reason (challenger review, 2026-10-04).
+    assert m.required_passes(0, RISKY) == 0
+    assert m.required_passes(2, ["README.md"]) == 2
+    assert m.downgrade_refused(1, RISKY, why=None)
+    assert not m.downgrade_refused(1, RISKY, why="docs-only fold on a reviewed head")
+    assert not m.downgrade_refused(None, RISKY, why=None)
+    assert not m.downgrade_refused(1, ["README.md"], why=None)
+
+
+def test_dependency_and_plist_changes_are_risk_surfaces():
+    for path in ["macos/Package.swift", "macos/Package.resolved", "macos/M1K3App/Info.plist"]:
+        assert m.risk_surfaces([path]) == [path], path
+
+
+def test_a_migration_is_caught_by_content_not_file_name():
+    # GRDB migrations live inside *Store.swift files (HeartbeatStore, MemoryStore, ...).
+    store = "macos/Sources/M1K3Heartbeat/HeartbeatStore.swift"
+    assert m.risk_surfaces([store]) == []
+    assert m.risk_surfaces([store], migration_files={store}) == [store]
+    patch = '+        migrator.registerMigration("v7_pulse_index") { db in'
+    assert m.risk_surfaces([store], patches={store: patch}) == [store]
+    assert m.risk_surfaces([store], patches={store: "+    kSecAttrAccessible"}) == [store]
+
+
+def test_every_migration_file_in_the_tree_is_found():
+    # Drift guard: the migration list is read from the tree, never hand-kept.
+    found = m.migration_files()
+    assert "macos/Sources/M1K3Heartbeat/HeartbeatStore.swift" in found
+    assert len(found) >= 7
+
+
+def test_a_rename_is_judged_by_both_names():
+    files = m.changed_paths([{"filename": "macos/M1K3App/SecretStore.swift",
+                              "previous_filename": "macos/M1K3App/KeychainStore.swift"}])
+    assert "macos/M1K3App/KeychainStore.swift" in m.risk_surfaces(files)
 
 
 def test_red_ci_is_never_ready_however_many_passes():

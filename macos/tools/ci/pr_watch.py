@@ -32,15 +32,20 @@ in project memory. Now they are code, tested in test_pr_watch.py:
   2026-09-12) — every gate is ours. Since 2026-09-24 ci.yml itself skips the
   App-shell and mobile xcodebuild jobs on a PR whose diff misses their paths
   (pushes to master/develop build everything); a skipped job reads green here.
-* One pass is the default. `--passes 2` (auto + one summon) is bought only for
-  a risk surface or a logic-changing fold — the rule lives in ../../../CLAUDE.md.
+* Passes are inferred from the diff unless `--passes N` says otherwise: 2 when
+  any changed file is a risk surface (RISK_SURFACE_PATTERNS, read off the
+  2026-10-04 audit of #287–#480), else 1. An explicit N always wins. The rule
+  lives in ../../../CLAUDE.md.
+* A docs-only head gets no auto pass (the review workflow is path-gated), so
+  one pass there means a summon; without one the watch waits to its timeout.
 * `--passes 0` is the trivial-head rule: a comment-only fold or a clean master
   merge whose head already had its passes merges on green CI.
 
-    python3 pr_watch.py <PR> [--passes 1] [--once] [--interval 60] [--timeout 5400]
+    python3 pr_watch.py <PR> [--passes N] [--once] [--interval 60] [--timeout 5400]
 
 Exit 0 = landable now; 1 = a required job failed; 2 = not ready (--once) or
-timed out; 3 = the PR is not open; 4 = gh itself failed. Read-only: never
+timed out; 3 = the PR is not open; 4 = gh itself failed; 5 = fewer passes than
+the diff needs, with no --why. Read-only: never
 merges, never comments. tools/ci/land.sh wraps it.
 
 Signed: Kev + claude-fable-5.1, 2026-09-12, Confidence 0.85 (every comment
@@ -96,6 +101,13 @@ a second pass on every substantive PR doubled its push-wait-fold rounds, and dev
 here slowed with it. Two is now the opt-in for risk surfaces (../../../CLAUDE.md).
 `parse_args` split out of `main` so the test pins the default. Confidence 0.75 —
 how often pass 2 caught what pass 1 missed is unmeasured.
+Review: Kev + claude-opus-5-5, 2026-10-04 (2) — measured now (132 merged PRs;
+see the root CLAUDE.md review). `--passes` is inferred: 2 for a risk surface
+(paths, `migration_files()` read off the tree, RISK_PATCH over the diff;
+renames judged by both names), else 1. Tests and prose are exempt. Going below
+the inference needs `--why` (exit 5). Shaped by a challenger pass: the GRDB
+migrations sit in *Store.swift, invisible to any name pattern. Confidence 0.8 —
+path heuristics drift; the migration list can't, it is read fresh each run.
 """
 from __future__ import annotations
 
@@ -147,6 +159,81 @@ MOBILE_PATH_PREFIXES = (
     "macos/Package.resolved",
     ".github/workflows/ci.yml",
 )
+
+
+# Where a second pass earns its keep. The 2026-10-04 audit of #287–#480 found
+# 33 real bugs a final pass caught that earlier passes missed; outside these
+# surfaces every one but two came after a fold (which gets its own auto pass).
+# Paths catch most of it; GRDB migrations live inside *Store.swift files, so
+# those are caught by the tree (`migration_files`) and the patch (RISK_PATCH).
+RISK_SURFACE_PATTERNS = tuple(re.compile(p) for p in (
+    r"^macos/Sources/M1K3AgentTools/",                       # agent script execution
+    r"^macos/(Sources|M1K3App|M1K3CLI)/.*MCP[^/]*\.swift$",  # MCP server, access token
+    r"Keychain[^/]*\.swift$",
+    r"\.entitlements$",
+    r"\.xcprivacy$",
+    r"Info\.plist$",
+    r"^macos/Package\.(swift|resolved)$",                    # dependencies
+    r"^macos/Sources/M1K3Calls/.*Key[^/]*\.swift$",          # call-recording crypto
+    r"Crypto[^/]*\.swift$",
+    r"(PrivateCloud|Consent)[^/]*\.swift$",                  # what leaves the device
+    r"[Mm]igrat[^/]*\.swift$",
+    r"^\.github/workflows/",
+    r"^macos/fastlane/",
+    r"^macos/project\.yml$",
+    r"^macos/ci_scripts/",
+    r"^macos/tools/ci/",                                      # the landing gate itself
+))
+# Never a risk surface on their own: tests and prose.
+RISK_EXEMPT = re.compile(r"^macos/Tests/|/test_[^/]*\.py$|\.md$")
+# A changed line that touches a migration, the keychain or an entitlement.
+RISK_PATCH = re.compile(r"registerMigration|DatabaseMigrator|SecItem|kSecAttr|com\.apple\.security")
+
+
+def migration_files(root: str | None = None) -> set[str]:
+    """Every file in the tree that registers a GRDB migration, read fresh."""
+    out = subprocess.run(["git", "grep", "-l", "-E", "registerMigration|DatabaseMigrator", "--", "macos/Sources"],
+                         cwd=root or _repo_root(), capture_output=True, text=True, check=False)
+    return set(out.stdout.split())
+
+
+def _repo_root() -> str:
+    here = __file__.rsplit("/", 1)[0] or "."
+    return subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=here, check=False,
+                          capture_output=True, text=True).stdout.strip() or "."
+
+
+def changed_paths(files: list[dict]) -> list[str]:
+    """The PR's files, renames judged by both names."""
+    paths: list[str] = []
+    for f in files:
+        paths.append(f["filename"])
+        if f.get("previous_filename"):
+            paths.append(f["previous_filename"])
+    return paths
+
+
+def risk_surfaces(files: list[str], patches: dict[str, str] | None = None,
+                  migration_files: set[str] | frozenset[str] = frozenset()) -> list[str]:
+    """The changed files that buy a second review pass."""
+    patches = patches or {}
+    return [f for f in files
+            if not RISK_EXEMPT.search(f)
+            and (any(p.search(f) for p in RISK_SURFACE_PATTERNS)
+                 or f in migration_files
+                 or bool(RISK_PATCH.search(patches.get(f, ""))))]
+
+
+def required_passes(explicit: int | None, files: list[str], **risk: object) -> int:
+    """An explicit --passes wins; otherwise 2 for a risk surface, else 1."""
+    if explicit is not None:
+        return explicit
+    return 2 if risk_surfaces(files, **risk) else 1  # type: ignore[arg-type]
+
+
+def downgrade_refused(explicit: int | None, files: list[str], why: str | None, **risk: object) -> bool:
+    """Landing a risk diff on fewer passes than inferred needs a stated reason."""
+    return explicit is not None and explicit < required_passes(None, files, **risk) and not why
 
 BOT_LOGIN = "claude[bot]"
 GREEN = {"success", "skipped"}
@@ -427,12 +514,14 @@ def _gh_json(*args: str):
     return json.loads(_gh(*args))
 
 
-def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], dict | None, int, str | None]:
+def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], dict | None, int, str | None, dict[str, str]]:
     view = _gh_json("pr", "view", str(pr), "--repo", repo, "--json", "state,headRefOid")
     head = view["headRefOid"]
     # REST + --paginate: `gh pr view --json files` caps at 100 files, and a
     # dropped mobile-shell path would silently demote the mobile job to advisory.
-    files = [f["filename"] for page in _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/files") for f in page]
+    raw = [f for page in _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/files") for f in page]
+    files = changed_paths(raw)
+    patches = {f["filename"]: f.get("patch") or "" for f in raw}
     jobs: dict[str, str | None] = {}
     runs = _gh_json("run", "list", "--repo", repo, "--workflow", "ci.yml", "--limit", "40",
                     "--json", "headSha,databaseId,status,conclusion,createdAt")
@@ -452,18 +541,19 @@ def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | N
     inline = _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/comments")
     inline_count = sum(len(page) for page in inline)
     return (view["state"], head, files, jobs, comments, auto_pass_comment(head, review_runs, comments),
-            inline_count, head_seen_at)
+            inline_count, head_seen_at, patches)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("pr", type=int)
-    ap.add_argument("--passes", type=int, default=1,
-                    help="review passes required on the head (0 = trivial head, 2 = risk surface)")
+    ap.add_argument("--passes", type=int, default=None,
+                    help="review passes required on the head (default: 2 for a risk surface, else 1; 0 = trivial head)")
     ap.add_argument("--once", action="store_true", help="report once, no polling")
     ap.add_argument("--interval", type=int, default=60)
     ap.add_argument("--timeout", type=int, default=5400)
     ap.add_argument("--repo", default=None, help="owner/name (default: the current repo)")
+    ap.add_argument("--why", default=None, help="the reason for landing a risk surface on fewer passes than inferred")
     return ap.parse_args(argv)
 
 
@@ -472,9 +562,11 @@ def main(argv: list[str] | None = None) -> int:
     repo = args.repo or _gh_json("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
 
     deadline = time.monotonic() + args.timeout
+    warned = False
+    migrations = migration_files()
     while True:
         try:
-            state, head, files, jobs, comments, auto_comment, inline, head_seen_at = snapshot(repo, args.pr)
+            state, head, files, jobs, comments, auto_comment, inline, head_seen_at, patches = snapshot(repo, args.pr)
         except subprocess.CalledProcessError as err:
             # A gh blip (rate limit, 5xx) must not read as "CI red": exit 4 once,
             # or wait out the interval and look again while polling.
@@ -486,7 +578,17 @@ def main(argv: list[str] | None = None) -> int:
         if state != "OPEN":
             print(f"PR #{args.pr} is {state}", flush=True)
             return 3
-        v = verdict(head, files, jobs, comments, auto_comment is not None, args.passes,
+        risk = {"patches": patches, "migration_files": migrations}
+        risky = risk_surfaces(files, **risk)
+        if downgrade_refused(args.passes, files, args.why, **risk):
+            print(f"risk surface ({', '.join(risky[:3])}) needs 2 passes; --passes {args.passes} "
+                  f"needs --why \"<reason>\"", flush=True)
+            return 5
+        needed = required_passes(args.passes, files, **risk)
+        if risky and needed < 2 and not warned:
+            print(f"note: risk surface ({', '.join(risky[:3])}) landing on --passes {needed}: {args.why}", flush=True)
+            warned = True
+        v = verdict(head, files, jobs, comments, auto_comment is not None, needed,
                     auto_comment=auto_comment, head_seen_at=head_seen_at)
         stamp = time.strftime("%H:%M:%S")
         print(f"{stamp} #{args.pr} {v.summary} · inline comments {inline}", flush=True)

@@ -33,18 +33,20 @@ Anything a cold session needs on turn one belongs below, not there.
   once. Spend the review effort BEFORE the first push (`code-quality-reviewer`
   on the diff, one per ~400-line slice in parallel) and fold every finding in
   ONE push; nits go to the follow-up list in the PR body.
-  `--passes 2` (auto + one summon) only when the fold changed logic or the diff
-  touches a risk surface: agent script execution (`M1K3AgentTools` —
-  `ExecuteScriptTool`, `ScriptApprovalLedger`, `UserScriptRunner`), the MCP
-  server / access token / Keychain, entitlements, persistence migrations, the
-  privacy manifest or data handling, crypto (`M1K3Calls` keys), release/CI
-  config (`ci.yml`, Xcode Cloud, fastlane, `project.yml`, store targets — a
-  master push is a release). For two passes, push then summon AT ONCE so both
-  read the same head, and fold both in one commit. Fastlane, `.entitlements`
-  and `.xcprivacy` sit outside the auto pass's paths, so there "2" means two
-  summons. Trivial head (comment fold, clean master
-  merge on a passed head): `--passes 0`. `land.sh` never waits: pending CI exits
-  2 and merges nothing — run `pr_watch.py <PR> --passes N` first.
+  **Run `pr_watch.py` / `land.sh` without `--passes`: the gate infers it.** It
+  asks for 2 (auto + one summon) when the diff touches a risk surface
+  (`RISK_SURFACE_PATTERNS` in `pr_watch.py`: agent script execution, MCP /
+  Keychain, entitlements, Info.plist, dependencies, privacy and Private Cloud,
+  crypto, release/CI config). GRDB migrations live inside `*Store.swift`, so
+  they are read off the tree and the patch instead. Also pass `--passes 2`
+  yourself when a fold changed logic. Going BELOW the inferred count needs
+  `--why "<reason>"` (exit 5 otherwise). For two passes, push then summon AT
+  ONCE so both read the same head, and fold both in one commit. Fastlane,
+  `.entitlements` and `.xcprivacy` sit outside the auto pass's paths, so there
+  "2" means two summons. Trivial head (comment fold, clean master merge on a
+  passed head): `--passes 0 --why "trivial head"` on a risk diff, bare
+  `--passes 0` otherwise. `land.sh` never waits: pending CI exits 2 and merges
+  nothing — run `pr_watch.py <PR>` first.
 - **PR granularity (2026-09-30 ruling):** one PR per stream of work per day;
   same-day small fixes ride TOGETHER (a token strip, a scorer check, a tool
   fix, a docs line, a gem bump were five PRs one day — ~12 review rounds and
@@ -143,6 +145,12 @@ defaults to 1. Kev: dev here had slowed under the two-pass loop. Kept from
 2026-09-30: two rounds per PR, then carry. Confidence 0.75 — the 09-30 entry
 says the loop caught four real bugs in a day, and nobody has measured how
 many of those only the second pass found.
-Open: count pass-2-only findings across #287–#480; if material, widen the
-risk-surface list rather than restore two passes everywhere.
+Review: Kev + claude-opus-5-5, 2026-10-04 (2) — the Open above is closed. The
+audit of 132 merged PRs (#287–#480, final pass vs earlier passes, classified by
+an offload model and spot-checked by hand) found 33 real catches only a later
+pass made: 28 came after a fold (re-reviewed by that head's auto pass anyway),
+17 sit on risk surfaces, and 2 would be lost outright (#292 marquee offset,
+#320 latent persona hazard). So pr_watch now infers the passes from the diff
+(38% of history would get 2, down from 89%), and a downgrade needs `--why`.
+The challenger caught that migrations hide in *Store.swift. Confidence 0.8.
 -->

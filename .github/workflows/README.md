@@ -21,9 +21,10 @@ and never covered the Swift Mac MVP — the active surface. It was removed.
 `macos/tools/ci/pr_watch.py <PR>` watches a PR by HEAD SHA: required CI jobs
 green (on a PR the App-shell and mobile xcodebuild jobs run only when their
 paths change — a skipped job reads green; every push to master/develop builds all three)
-and enough review passes that name that head: the default `--passes 1` (the
-auto pass) whatever the size, `--passes 2` for a risk surface (listed in the
-root `CLAUDE.md`), `--passes 0` for a trivial head. `land.sh <PR> [--passes N]`
+and enough review passes that name that head, inferred from the diff: 2 for a
+risk surface (`RISK_SURFACE_PATTERNS`, plus GRDB migrations read off the tree
+and patch), else 1. `--passes N` overrides; going below the inference needs
+`--why`. A docs-only head gets no auto pass, so one pass there means a summon. `land.sh <PR> [--passes N]`
 gates on it, squash-merges by sha, verifies the merge landed, deletes the
 branch. Rules are tests in `test_pr_watch.py`.
 
