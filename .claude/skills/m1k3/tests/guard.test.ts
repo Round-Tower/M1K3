@@ -18,6 +18,9 @@ describe('guard', () => {
       'git add -f .claude/project-memory.md',
       'git add --force .claude/project-memory.md',
       'git add .claude/project-memory.md -f',
+      'echo x > ".claude/project-memory.md"',
+      "echo x > '.claude/project-memory.md'",
+      'git push origin "master"',
       'echo "# block" > .claude/project-memory.md',
       'hf download mlx-community/Qwen3-8B-4bit',
       'huggingface-cli download some/model',
@@ -56,7 +59,8 @@ describe('guard', () => {
       'echo \'tell application id "app.m1k3" to quit\' > notes.txt',
     ]
     for (const command of mentions) expect(denyFor(command), command).toBeUndefined()
-    expect(bareCommand('git commit -m "hf download" && echo \'x\'')).toBe('git commit -m "" && echo \'\'')
+    expect(bareCommand('git commit -m "hf download" && echo \'x\'')).toBe('git commit -m "" && echo x')
+    expect(bareCommand('git push origin "master" "$BRANCH"')).toBe('git push origin master ""')
     expect(bareCommand("cat <<'EOF'\nbody\nEOF\nls")).toBe('cat <<HEREDOC\nls')
   })
 
@@ -100,7 +104,8 @@ describe('guard', () => {
     expect(ran).toBe(0)
 
     await $.tool.call({ tool: 'Write', file_path: '/repo/notes.md', content: 'x' })
-    expect(ran).toBe(1)
+    await $.tool.call({ tool: 'Write', file_path: '/repo/.claude/project-memory.md.bak', content: 'x' })
+    expect(ran).toBe(2)
   })
 
   test('xcodegen is asked for when the project file is missing or stale', () => {

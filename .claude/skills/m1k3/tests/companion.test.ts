@@ -3,7 +3,7 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { RenderElement, RenderInput } from 'claude-code'
 
 import { FOX_CLIPS, clipFor, frameIndex, framePath, gaitFor } from '../hooks/companion'
-import { SPEAK_GAP_MS, lineFor, firstSentence, maySpeak, speakingMs, voiceForNotification, voiceForTurn } from '../hooks/voice'
+import { LONG_TURN_MS, SPEAK_GAP_MS, lineFor, firstSentence, maySpeak, speakingMs, voiceForNotification, voiceForTurn } from '../hooks/voice'
 
 /** The band above the prompt on a 160-column terminal, nothing else holding it. */
 const BAND: RenderInput<'AbovePrompt'> = {
@@ -74,14 +74,20 @@ describe('voice', () => {
     expect(voiceForNotification('permission_prompt', 'Bash?')?.emotion).toBe('thinking')
     expect(voiceForNotification('auth_success', '')).toBeUndefined()
     expect(voiceForTurn('answer', 'Pushed. More.', 25_000, true)?.text).toBe('Done after 25 seconds. Pushed.')
+    expect(voiceForTurn('answer', 'x', LONG_TURN_MS)?.text).toBe('Done after 20 seconds.')
+    expect(voiceForTurn('answer', 'x', LONG_TURN_MS - 1)).toBeUndefined()
+    expect(voiceForTurn('answer', '', 25_000, true)?.text).toBe('Done after 25 seconds.')
     expect(maySpeak(20_000, 5_000)).toBe(true)
     expect(maySpeak(5_000 + SPEAK_GAP_MS - 1, 5_000)).toBe(false)
   })
 
   test('the first sentence is what gets read out, markdown stripped', () => {
     expect(firstSentence('# Done\n\nI pushed `fix`. Then more.')).toBe('Done I pushed fix.')
+    expect(firstSentence('renamed snake_case_name and **bold** _it_ now')).toBe('renamed snake_case_name and bold it now')
+    expect(firstSentence('no terminator here')).toBe('no terminator here')
     expect(speakingMs('one two three')).toBe(300 + 3 * 380)
     expect(speakingMs('word '.repeat(100))).toBe(8000)
+    expect(speakingMs('')).toBe(0)
   })
 
   test('with the app unreachable the line becomes a toast, and the band shows the error face', async ($, on) => {

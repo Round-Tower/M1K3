@@ -11,6 +11,8 @@
 // "Done after N seconds." alone unless `readAnswers` is on (the first sentence
 // read aloud on an open-plan Mac is the person's call); the call gets a bound
 // and a gap (SPEAK_TIMEOUT_MS, SPEAK_GAP_MS) in register.tsx. Confidence 0.8.
+// Review: Kev + Claude, 2026-10-05 — auto pass: snake_case survives the markdown
+// strip; an empty line is 0 ms of speech.
 
 import { firstWords } from './avatar-state'
 
@@ -44,13 +46,17 @@ export function lineFor(event: VoiceEvent): string {
 }
 
 export function firstSentence(text: string): string {
-  const plain = text.replace(/[`*_#>]/g, '').replace(/\s+/g, ' ').trim()
+  // Markdown marks go; an underscore inside a word (snake_case) is part of it.
+  const plain = text.replace(/[`*#>]/g, '').replace(/(^|\s)_+|_+(?=\s|$)/g, '$1').replace(/\s+/g, ' ').trim()
   const end = plain.search(/[.!?](\s|$)/)
   return firstWords(end > 0 ? plain.slice(0, end + 1) : plain, 140)
 }
 
 /** Roughly how long the app takes to say it, so the band's mouth moves meanwhile. */
-export const speakingMs = (text: string): number => Math.min(8000, 300 + text.split(/\s+/).length * 380)
+export const speakingMs = (text: string): number => {
+  const words = text.trim().split(/\s+/).filter(Boolean).length
+  return words === 0 ? 0 : Math.min(8000, 300 + words * 380)
+}
 
 /** What to say for a notification, or nothing. */
 export function voiceForNotification(kind: string, message: string): Line | undefined {

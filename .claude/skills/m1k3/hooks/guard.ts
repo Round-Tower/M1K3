@@ -8,7 +8,9 @@
 // commit message or a PR body that merely mentions a phrase never trips it;
 // the one rule that lives inside quotes by nature (the AppleScript quit) reads
 // the raw command and needs `osascript` beside it. Best effort by design: a
-// `tee`, `cp` or `sed -i` onto the session memory is not caught.
+// `tee`, `cp` or `sed -i` onto the session memory is not caught, nor a push
+// whose refspec comes after a later flag (`git push origin HEAD --force master`),
+// nor a command wrapped in `bash -c`, `eval`, `git -C` or `git -c`.
 //
 // Signed: Kev + Claude, 2026-10-05, Confidence 0.85 (every rule is pinned by
 // tests/guard.test.ts, denies, allows and the prose cases alike). Prior: Unknown
@@ -18,12 +20,16 @@
 // `git add <file> -f` now do. Confidence 0.85.
 // Review: Kev + Claude, 2026-10-05 — second pass: a newline is a command boundary
 // too (multi-line Bash is how a push to master would most likely slip through).
+// Review: Kev + Claude, 2026-10-05 — auto pass on the Swift head: a quoted path or
+// refspec is kept bare, not blanked (`> ".claude/project-memory.md"`, `"master"`);
+// the file tools' pattern ends at the name, like the Bash one.
 
 import type { On } from 'claude-code'
 
 export type Rule = { test: RegExp; reason: string; raw?: true }
 
-const MEMORY = /\.claude\/project-memory\.md/
+/** The session memory, as a tool's `file_path` names it; `project-memory.md.bak` is not it. */
+const MEMORY = /\.claude\/project-memory\.md$/
 /** The session memory at the end of a word, so `project-memory.md.bak` is not it. */
 const MEMORY_PATH = String.raw`\.claude\/project-memory\.md(?=\s|$)`
 /** Where a command may start: a line, or after a separator, with the usual wrappers. */
@@ -82,9 +88,13 @@ export function bareCommand(command: string): string {
   return command
     // A heredoc body: from the line after `<<WORD` (quoted or not, `<<-` too) to the line holding WORD.
     .replace(/<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1[^\n]*\n[\s\S]*?\n[ \t]*\2(?=\s|$)/g, '<<HEREDOC')
-    .replace(/"(?:[^"\\]|\\[\s\S])*"/g, '""')
-    .replace(/'[^']*'/g, "''")
+    // A quoted word stays (a quoted path or refspec is a normal shell habit); quoted prose is blanked.
+    .replace(/"((?:[^"\\]|\\[\s\S])*)"/g, (_, inner: string) => (isBareWord(inner) ? inner : '""'))
+    .replace(/'([^']*)'/g, (_, inner: string) => (isBareWord(inner) ? inner : "''"))
 }
+
+/** One argument with nothing the shell would read: no whitespace, quotes, expansions or operators. */
+const isBareWord = (text: string): boolean => text.length > 0 && !/[\s"'`$;&|<>()\\]/.test(text)
 
 export function denyFor(command: string, rules: readonly Rule[] = BASH_DENIES): string | undefined {
   const bare = bareCommand(command)
