@@ -17,6 +17,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11, Confidence 0.85 — #286: two new tests pin that a
 //  wiring-shaped memory hit (SelfNoteClassifier) never renders in "WHAT I KNOW ABOUT YOU" while
 //  a genuine user memory alongside it still does, using the live note's own title/text.
+//  Review: Kev + claude-opus-5.5, 2026-10-05, Confidence 0.85 — #482: the inverse pin — Kev's
+//  launch-film episode ("Kev and Claude made M1K3's launch film", backticked render line) renders.
 
 import Foundation
 import M1K3Agent
@@ -1064,6 +1066,22 @@ struct AgentRAGResponderTests {
         #expect(prompt.contains("Kev's sister is called Ada."))
         #expect(!prompt.contains("recent_activity(window, focus)"))
         #expect(!prompt.contains("PR #275"))
+    }
+
+    @Test("#482: Kev's episode that names M1K3's launch film reaches WHAT I KNOW ABOUT YOU")
+    func episodeNamingM1K3sWorkRenders() {
+        // The live miss: chat logged "dropped as wiring-shaped self notes: 2"
+        // and told Kev it had no record of the film recall ranked #1.
+        let episode = ChunkHit(
+            chunkID: UUID(), itemID: UUID(),
+            itemTitle: "Launch film \"M1K3 Dreams\" v1 (2026-10-02)", kind: .memory, heading: nil,
+            content: "On 2026-10-02 Kev and Claude made M1K3's launch film, \"M1K3 Dreams\" v1: 57.5 s, "
+                + "1080p, built in Remotion. Render: `pnpm exec remotion render Dream out/<name>.mp4`."
+        )
+        let prompt = AgentRAGResponder.grounding(chunks: [], memories: [episode], toolNames: [])
+        #expect(prompt.contains("WHAT I KNOW ABOUT YOU"))
+        #expect(prompt.contains("Kev and Claude made M1K3's launch film"))
+        #expect(AgentRAGResponder.hasGroundedKnowledge(chunks: [], memories: [episode]))
     }
 
     @Test("when every memory hit is wiring-shaped, the WHAT I KNOW ABOUT YOU block is absent entirely")

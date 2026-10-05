@@ -132,4 +132,49 @@ struct SelfNoteClassifierTests {
             text: "Installed and merged today: a fresh palette entry with its own `snake_case(args)` call."
         ))
     }
+
+    @Test("#482: a later mention of M1K3 is never the subject — Kev's episodes reach chat")
+    func laterMentionIsNotTheSubject() {
+        // The two live misses (chat logged "dropped as wiring-shaped self notes: 2"
+        // and told Kev it had no record of the film recall ranked #1), verbatim
+        // up to the markers that tripped them.
+        #expect(!SelfNoteClassifier.isWiringNote(
+            title: "Launch film \"M1K3 Dreams\" v1 (2026-10-02)",
+            text: "On 2026-10-02 Kev and Claude made M1K3's launch film, \"M1K3 Dreams\" v1: 57.5 s, "
+                + "1080p, built in Remotion. Render: `pnpm exec remotion render Dream out/<name>.mp4` (~30 s)."
+        ))
+        #expect(!SelfNoteClassifier.isWiringNote(
+            title: "Hit-list day 2026-09-08: five PRs merged, master e232a937 installed",
+            text: "On 2026-09-08 Claude landed Kev's hit list in M1K3: narration no longer reads emoji "
+                + "aloud (#247), the notch HUD names the talking agent instead of the brain (#248), a Stop "
+                + "button that cuts a streaming answer short (#249), M1K3's thoughts in the pixel font, no "
+                + "constellation on iPad (#250). Master e232a937 was installed on the Mac and iPad."
+        ))
+        // The verb rule too: an embedded clause is not the note's subject.
+        #expect(!SelfNoteClassifier.isWiringNote(
+            title: "",
+            text: "On 2026-10-01 Kev asked why M1K3 was slow; the fix merged that night."
+        ))
+        #expect(!SelfNoteClassifier.isWiringNote(
+            title: "Kev shipped M1K3's week view",
+            text: "Kev merged the week view on Friday (PR #275). M1K3 now reviews the week."
+        ))
+    }
+
+    @Test("a title or text that OPENS with M1K3 is still the subject — the #286 shape holds")
+    func openingSubjectIsStillFlagged() {
+        for text in [
+            "M1K3\u{2019}s palette gained a week view (PR #275).",
+            "- M1K3's palette gained a week view (PR #275).",
+            "  \"M1K3's palette gained `recent_activity`,\" the note said.",
+            "\u{2022} M1K3 now has an MCP tool for todos.",
+        ] {
+            #expect(SelfNoteClassifier.isWiringNote(title: "", text: text), "\(text)")
+        }
+        // Accepted misses (the header's safe direction): M1K3 opening a LATER
+        // sentence or clause is not read as the note's subject.
+        #expect(!SelfNoteClassifier.isWiringNote(
+            title: "", text: "A quiet day. M1K3's palette gained `recent_activity` (PR #275)."
+        ))
+    }
 }
