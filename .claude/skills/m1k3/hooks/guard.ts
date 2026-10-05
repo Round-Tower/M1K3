@@ -13,6 +13,8 @@
 // nor a command wrapped in `bash -c`, `eval`, `git -C` or `git -c`, nor a
 // redirect onto an expansion (`> "$PWD/.claude/project-memory.md"`): a quoted
 // word with `$` in it is prose to the rules, since its value is unknown here.
+// The file tools' path is matched as spelled: a `..` hop or a symlink onto the
+// memory is not resolved (`$.fs.stat(path, { resolve: true })` could, later).
 //
 // Signed: Kev + Claude, 2026-10-05, Confidence 0.85 (every rule is pinned by
 // tests/guard.test.ts, denies, allows and the prose cases alike). Prior: Unknown
@@ -50,7 +52,7 @@ export const BASH_DENIES: readonly Rule[] = [
     reason: '.claude/project-memory.md is gitignored on purpose and never force-added',
   },
   {
-    test: new RegExp(String.raw`(?:^|[^>])>(?!>)\s*\S*${MEMORY_PATH}`),
+    test: new RegExp(String.raw`(?:^|[^>])>(?!>)[|&]?\s*\S*${MEMORY_PATH}`),
     reason: '.claude/project-memory.md is append-only: use >> to add a block, never > to replace it',
   },
   {

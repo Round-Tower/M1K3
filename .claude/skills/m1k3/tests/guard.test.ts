@@ -20,6 +20,8 @@ describe('guard', () => {
       'git add .claude/project-memory.md -f',
       'echo x > ".claude/project-memory.md"',
       'echo x >.claude/project-memory.md',
+      'echo x 1> .claude/project-memory.md',
+      'echo x >| .claude/project-memory.md',
       "echo x > '.claude/project-memory.md'",
       'git push origin "master"',
       'echo "# block" > .claude/project-memory.md',

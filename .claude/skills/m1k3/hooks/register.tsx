@@ -102,15 +102,22 @@ export const register: Register = (on, options) => {
         return
       }
       lastSpokeAt = now
+      // The call itself cannot be cancelled: a stalled engine that recovers
+      // late speaks after the toast, and that is accepted. The timer can be.
+      let timer: { cancel: () => void } | undefined
       try {
         const result = await Promise.race([
           $.mcp.call(SERVER, 'speak', { text, emotion }),
-          new Promise<never>((_, reject) => $.clock.after(SPEAK_TIMEOUT_MS, () => reject(new Error('speak timed out')))),
+          new Promise<never>((_, reject) => {
+            timer = $.clock.after(SPEAK_TIMEOUT_MS, () => reject(new Error('speak timed out')))
+          }),
         ])
         if (result.isError) throw new Error('speak refused')
         await applyChange(onSpeak(text, speakingMs(text)))
       } catch {
         $.ui.toast(text, { timeoutMs: 6000 })
+      } finally {
+        timer?.cancel()
       }
     }
 

@@ -33,7 +33,10 @@ Build-from-source instructions for the Mac app live in
 
 1. Contributions are by invitation (see *Licensing* below) — ask first, then
    fork, branch, and make the change with tests.
-2. Run the fast loop locally: `cd macos && swift test --parallel`.
+2. Run the fast loop locally: `cd macos && swift test --parallel`. If you
+   touched the Claude Code mod under `.claude/skills/m1k3/`, also run
+   `claude plugin validate .claude/skills/m1k3 && claude plugin test
+   .claude/skills/m1k3` (CI does not run these yet).
 3. If you touched anything under `macos/M1K3App/` (the app shell), also build
    it: `xcodegen generate && xcodebuild -scheme M1K3 -destination
    'platform=macOS' build CODE_SIGNING_ALLOWED=NO | xcbeautify`.
