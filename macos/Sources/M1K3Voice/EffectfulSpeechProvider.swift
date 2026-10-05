@@ -87,6 +87,11 @@
 //  a `let` injected through an internal init. (4) Logger comes from M1K3Log. (5) tearDownEngine is the one
 //  owner of stop + reset; EngineSetupPlan no longer repeats it. (6) raiseMaximumFramesToRender: see the
 //  availability note there. Confidence now 0.7 (hardware path still verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-05 (PR #471 round 2, finding 1) — the plain play() path never told
+//  the streak a playback completed, so a probe that won left it at 2 and the next stall went straight back to
+//  plain. Every ending now goes through PlaybackWait: a clean .dataPlayedBack for the CURRENT wait records
+//  the success; a late callback from a stopped or timed-out line is ignored (it could also resolve the next
+//  utterance's wait). Confidence 0.75; the "completed playback clears it" claim above now holds for text too.
 
 import AVFoundation
 import Foundation
@@ -169,6 +174,8 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     /// The in-flight playback wait, so `stop()` can resume it (the .dataPlayedBack
     /// completion is NOT delivered after player.stop(), which would otherwise hang).
     @MainActor private var playbackContinuation: CheckedContinuation<Void, Never>?
+    /// Who ended the plain-path wait — played back, deadline or cancel (PlaybackWait).
+    @MainActor private var playbackWait = PlaybackWait()
     /// The in-flight chunked playback (speak(stream:)), so `stop()` can cancel it.
     @MainActor var streamingSession: StreamingPlaybackSession?
     /// Serialises EVERY public speak entry — `speak(_:)`, `speak(rawPCM:)` and the
@@ -578,9 +585,10 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
         fireSpeakingStarted()
         let deadline = PlaybackDeadlinePolicy().deadline(scheduledSamples: samples.count, sampleRate: sampleRate)
         let sleep = playbackSleeper
+        let generation = playbackWait.begin()
         let deadlineTask = Task { [weak self] in
             do { try await sleep(deadline) } catch { return }
-            self?.playbackDeadlineElapsed(scheduledSamples: samples.count, sampleRate: sampleRate)
+            self?.playbackDeadlineElapsed(generation, scheduledSamples: samples.count, sampleRate: sampleRate)
         }
         defer { deadlineTask.cancel() }
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
@@ -588,7 +596,7 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
             player.scheduleBuffer(
                 buffer, at: nil, options: [], completionCallbackType: .dataPlayedBack
             ) { [weak self] _ in
-                Task { @MainActor in self?.finishPlayback() }
+                Task { @MainActor in self?.playbackPlayedBack(generation) }
             }
             player.play()
         }
@@ -596,9 +604,19 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     }
 
     @MainActor
-    private func playbackDeadlineElapsed(scheduledSamples: Int, sampleRate: Double) {
-        guard playbackContinuation != nil else { return } // already resolved
+    private func playbackDeadlineElapsed(_ generation: Int, scheduledSamples: Int, sampleRate: Double) {
+        guard playbackWait.end(.deadline, generation: generation) == .stalled else { return } // already resolved
         noteEnginePlaybackStalled(scheduledSamples: scheduledSamples, sampleRate: sampleRate)
+        finishPlayback()
+    }
+
+    /// The buffer played back. Only the CURRENT wait's callback counts: a stopped or
+    /// timed-out utterance's late callback is ignored, so it can neither resolve the
+    /// next utterance's wait nor tell the streak the engine is healthy.
+    @MainActor
+    private func playbackPlayedBack(_ generation: Int) {
+        guard playbackWait.end(.playedBack, generation: generation) == .completed else { return }
+        notePlaybackCompleted()
         finishPlayback()
     }
 
@@ -608,6 +626,7 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     /// isSpeaking() stuck true after the utterance.
     @MainActor
     private func finishPlayback() {
+        _ = playbackWait.end(.cancelled, generation: playbackWait.generation) // no-op once decided
         player.stop()
         playbackContinuation?.resume()
         playbackContinuation = nil
