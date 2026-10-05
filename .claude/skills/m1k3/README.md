@@ -7,9 +7,17 @@ hot-reloads when a file here changes. Three things, one plugin:
 
 | Part | What it does | Where |
 |---|---|---|
-| **guard** | CLAUDE.md's nevers as `tool.call` denies: a direct push to master, a `Write` or `Edit` over the append-only `.claude/project-memory.md` (or a `>` redirect onto it, or a `git add -f` of it), `hf download`, `defaults write app.m1k3`, `tell application id "app.m1k3"`. Judgement calls (a master merge, `--delete-branch`, a plain `--force`) toast instead. On `session.start` the status line says when `M1K3.xcodeproj` is missing or older than `project.yml`. | `hooks/guard.ts` |
-| **voice** | When a session needs you (a permission prompt, an idle prompt) or ends a turn over 20 s, or fails, the live app says so through its own MCP server (`speak`, the `m1k3` server `m1k3 connect claude` registers). With the app unreachable, the line is a toast. `voice: false` in the plugin's config turns it off. | `hooks/voice.ts` |
+| **guard** | CLAUDE.md's nevers as `tool.call` denies: a direct push to master (`+master` and `refs/heads/master` included), a `Write` or `Edit` over the append-only `.claude/project-memory.md` (or a `>` redirect onto it, or a `git add -f` of it), `hf download`, `defaults write app.m1k3`, an `osascript` that tells `app.m1k3` to quit. Judgement calls (a master merge, `gh pr merge --delete-branch`, a plain `--force`) toast instead. Rules read the command with its quoted spans and heredoc bodies blanked, so a commit message or PR body that mentions a phrase never trips one. On `session.start` the status line says when `M1K3.xcodeproj` is missing or older than `project.yml`. | `hooks/guard.ts` |
+| **voice** | When a session needs you (a permission prompt, an idle prompt) or ends a turn over 20 s, or fails, the live app says so through its own MCP server (`speak`, the `m1k3` server `m1k3 connect claude` registers). A finished turn says only "Done after N seconds." unless `readAnswers` is on, which adds the answer's first sentence. A `speak` that has not answered in 8 s, a line within 10 s of the last, or an unreachable app all fall back to a toast. `voice: false` in the plugin's config turns it off. | `hooks/voice.ts`, the call in `hooks/register.tsx` |
 | **avatar band** | The band above the prompt shows M1K3 reacting to the session: thinking on `turn.start`, generating while a tool runs, listening on a permission prompt, the error face on a failed tool, a happy beat on `turn.complete`, sleepy after a quiet half hour, speaking while the app speaks. The pixel face is `M1K3Avatar`'s `FaceExpression`, ported; the fox is baked frames of the Khronos Fox through `ClipMapper`'s fox dialect. | `hooks/register.tsx`, `face-math.ts`, `raster.ts`, `companion.ts`, `avatar-state.ts` |
+
+### What the guard does not catch
+
+It is a guard against the accidental, not the determined. A `tee`, `cp`, `mv`,
+`sed -i` or `rm` on the session memory passes; so does a push to master from
+a script file. The `Edit` deny goes one step past CLAUDE.md's wording (which
+names `Write` as what lost 700 lines) because an `Edit` can drop a block just
+as silently; a typo in the chronicle stays, the chronicle being append-only.
 
 ## Commands
 
@@ -49,4 +57,7 @@ The engine writes `.claude-plugin/types/` beside the plugin when it loads it
 (the API, the built-in tools, the connected MCP tools); it is gitignored.
 Two engine rules shape the code: one unmatched hook per event per module, and
 `$` only ever spelled `$.noun.method(...)`, never passed. So `register.tsx`
-owns every event and every engine call, and the other files are pure.
+owns every unmatched event and every engine call but the guard's own
+(`guard.ts` registers its three matched `tool.call` hooks and toasts from
+them), and `avatar-state.ts`, `voice.ts`, `companion.ts`, `face-math.ts` and
+`raster.ts` are pure.

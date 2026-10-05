@@ -3,61 +3,91 @@
 // model as the tool's error, so it can choose the right thing instead.
 //
 // Denies are the explicit nevers. Rules that need judgement (a master merge
-// that resolves a conflict, a stack base) get a toast, not a deny.
+// that resolves a conflict, a stack base) get a toast, not a deny. Every rule
+// reads the command with its quoted spans and heredoc bodies blanked, so a
+// commit message or a PR body that merely mentions a phrase never trips it;
+// the one rule that lives inside quotes by nature (the AppleScript quit) reads
+// the raw command and needs `osascript` beside it. Best effort by design: a
+// `tee`, `cp` or `sed -i` onto the session memory is not caught.
 //
 // Signed: Kev + Claude, 2026-10-05, Confidence 0.85 (every rule is pinned by
-// tests/guard.test.ts, denies and allows alike). Prior: Unknown
+// tests/guard.test.ts, denies, allows and the prose cases alike). Prior: Unknown
+// Review: Kev + Claude, 2026-10-05 — summoned pass on #493: rules anchored to a
+// command boundary and read off the blanked command (quoted mentions, heredocs,
+// `main-menu`, `merge-base` no longer match); `+master`, `refs/heads/master` and
+// `git add <file> -f` now do. Confidence 0.85.
 
 import type { On } from 'claude-code'
 
-export type Rule = { test: RegExp; reason: string }
+export type Rule = { test: RegExp; reason: string; raw?: true }
 
 const MEMORY = /\.claude\/project-memory\.md/
+/** The session memory at the end of a word, so `project-memory.md.bak` is not it. */
+const MEMORY_PATH = String.raw`\.claude\/project-memory\.md(?=\s|$)`
+/** Where a command may start: the line, or after a separator, with the usual wrappers. */
+const AT_START = String.raw`(?:^|[;&|(]|\|\||&&)\s*(?:sudo\s+|time\s+|env\s+(?:\S+=\S*\s+)*|[A-Z_]+=\S*\s+)*`
 
 export const BASH_DENIES: readonly Rule[] = [
   {
-    test: /\bgit\s+push\b(?:\s+-\S+)*\s+\S+\s+(?:\S+:)?(?:master|main)\b/,
+    test: new RegExp(`${AT_START}git\\s+push\\b(?:\\s+-\\S+)*\\s+\\S+\\s+\\+?(?:\\S+:)?(?:refs\\/heads\\/)?(?:master|main)(?=\\s|$)`),
     reason: 'never a direct push to master: push the branch and land it with macos/tools/ci/land.sh',
   },
   {
-    test: /\bgit\s+add\s+(?:-\S*f\S*|--force)\b.*project-memory\.md/,
+    test: new RegExp(`${AT_START}git\\s+add\\b(?=[^\\n;&|]*\\s(?:-\\S*f\\S*|--force)(?=\\s|$))(?=[^\\n;&|]*${MEMORY_PATH})`),
     reason: '.claude/project-memory.md is gitignored on purpose and never force-added',
   },
   {
-    test: /(?:^|[^>])>\s*\S*project-memory\.md/,
+    test: new RegExp(String.raw`(?:^|[^>])>\s*\S*${MEMORY_PATH}`),
     reason: '.claude/project-memory.md is append-only: use >> to add a block, never > to replace it',
   },
   {
-    test: /\b(?:hf|huggingface-cli)\s+download\b/,
+    test: new RegExp(`${AT_START}(?:hf|huggingface-cli)\\s+download(?=\\s|$)`),
     reason: 'never pre-seed the model cache with hf download (cache poison); let the app fetch and verify weights',
   },
   {
-    test: /\bdefaults\s+write\s+app\.m1k3\b/,
+    test: new RegExp(`${AT_START}defaults\\s+write\\s+app\\.m1k3(?=\\s|$)`),
     reason: 'defaults write app.m1k3 never reaches the sandboxed app on macOS 27: pass A/B overrides as argv (M1K3 -prefillStepSize 512)',
   },
   {
-    test: /tell\s+application\s+id\s+"app\.m1k3"/,
+    // Inside quotes by nature, so read raw; `osascript` beside it is what makes it a run, not a mention.
+    test: /\bosascript\b[\s\S]*tell\s+application\s+id\s+"app\.m1k3"/,
     reason: 'tell application id "app.m1k3" quits the live app too: stop a worktree build by PID',
+    raw: true,
   },
 ]
 
 export const BASH_WARNINGS: readonly Rule[] = [
   {
-    test: /\bgit\s+merge\b.*\b(?:origin\/)?(?:master|main)\b/,
+    test: new RegExp(`${AT_START}git\\s+merge(?=\\s|$)[^\\n;&|]*\\s(?:origin\\/)?(?:master|main)(?=\\s|$)`),
     reason: 'merging master into a PR branch costs a full CI + review cycle: only for a conflict or a fix the PR needs',
   },
   {
-    test: /--delete-branch\b/,
+    test: new RegExp(`${AT_START}gh\\s+pr\\s+merge\\b[^\\n;&|]*\\s--delete-branch(?=\\s|$)`),
     reason: '--delete-branch on a stack base closes its dependants: retarget them first (gh pr edit <N> --base master)',
   },
   {
-    test: /\bgit\s+push\b.*\s--force(?:\s|$)/,
+    test: new RegExp(`${AT_START}git\\s+push\\b[^\\n;&|]*\\s(?:--force|-f)(?=\\s|$)`),
     reason: 'a plain --force rewrites history for everyone on the branch: --force-with-lease, and never on someone else\'s branch',
   },
 ]
 
-export const denyFor = (command: string, rules: readonly Rule[] = BASH_DENIES): string | undefined =>
-  rules.find(rule => rule.test.test(command))?.reason
+/**
+ * The command with its quoted spans and heredoc bodies blanked, so the rules
+ * read what runs and never the prose it carries (a commit message, a PR body,
+ * a grep pattern, a CLAUDE.md edit).
+ */
+export function bareCommand(command: string): string {
+  return command
+    // A heredoc body: from the line after `<<WORD` (quoted or not, `<<-` too) to the line holding WORD.
+    .replace(/<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1[^\n]*\n[\s\S]*?\n[ \t]*\2(?=\s|$)/g, '<<HEREDOC')
+    .replace(/"(?:[^"\\]|\\[\s\S])*"/g, '""')
+    .replace(/'[^']*'/g, "''")
+}
+
+export function denyFor(command: string, rules: readonly Rule[] = BASH_DENIES): string | undefined {
+  const bare = bareCommand(command)
+  return rules.find(rule => rule.test.test(rule.raw ? command : bare))?.reason
+}
 
 export const MEMORY_DENY = '.claude/project-memory.md is append-only; add a block with `cat >> .claude/project-memory.md`'
 
@@ -68,13 +98,14 @@ export function registerGuard(on: On): void {
     const reason = denyFor(command)
     if (reason !== undefined) return { deny: `${$.plugin.name} guard: ${reason}` }
     const warning = denyFor(command, BASH_WARNINGS)
-    if (warning !== undefined) $.ui.toast(`m1k3 guard: ${warning}`, { timeoutMs: 8000 })
+    if (warning !== undefined) $.ui.toast(`${$.plugin.name} guard: ${warning}`, { timeoutMs: 8000 })
     return next(e)
   })
 
   // A `Write` replaces the whole file: that is how 700 lines were lost on
-  // 2026-09-15. `Edit` can drop a block just as silently. Both are refused;
-  // appending goes through the shell with >>.
+  // 2026-09-15. `Edit` can drop a block just as silently, so it is refused too
+  // (a typo in the chronicle stays; the chronicle is append-only). Appending
+  // goes through the shell with >>.
   on('tool.call', { tool: 'Write' }, ($, e, next) => (MEMORY.test(e.file_path) ? { deny: `${$.plugin.name} guard: ${MEMORY_DENY}` } : next(e)))
   on('tool.call', { tool: 'Edit' }, ($, e, next) => (MEMORY.test(e.file_path) ? { deny: `${$.plugin.name} guard: ${MEMORY_DENY}` } : next(e)))
 }

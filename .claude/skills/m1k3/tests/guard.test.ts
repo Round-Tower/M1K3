@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { BASH_DENIES, BASH_WARNINGS, denyFor, xcodeprojMessage } from '../hooks/guard'
+import { BASH_DENIES, BASH_WARNINGS, bareCommand, denyFor, xcodeprojMessage } from '../hooks/guard'
 
 describe('guard', () => {
   test('the CLAUDE.md nevers are denied, by rule', () => {
@@ -8,13 +8,19 @@ describe('guard', () => {
       'git push origin master',
       'git push -u origin main',
       'git push --force origin HEAD:master',
+      'git push origin +master',
+      'git push origin HEAD:refs/heads/master',
+      'cd macos && git push origin master',
+      'git fetch origin; git push -u origin main',
       'git add -f .claude/project-memory.md',
       'git add --force .claude/project-memory.md',
+      'git add .claude/project-memory.md -f',
       'echo "# block" > .claude/project-memory.md',
       'hf download mlx-community/Qwen3-8B-4bit',
       'huggingface-cli download some/model',
       'defaults write app.m1k3 prefillStepSize -int 512',
       'osascript -e \'tell application id "app.m1k3" to quit\'',
+      'osascript <<EOF\ntell application id "app.m1k3" to quit\nEOF',
     ]
     for (const command of denied) expect(denyFor(command), command).toBeDefined()
   })
@@ -29,15 +35,36 @@ describe('guard', () => {
       'defaults read app.m1k3 voiceMode.companion',
       'open -n --env M1K3_SCREENGRAB=1 build/M1K3.app',
       'xcodegen',
+      // Names that only start with master or main.
+      'git push origin main-menu',
+      'git push -u origin master.old',
+      // A path that only contains the memory file's name.
+      'echo x > /tmp/project-memory.md.bak',
     ]
     for (const command of allowed) expect(denyFor(command), command).toBeUndefined()
   })
+
+  test('prose that mentions a never is not a never', () => {
+    const mentions = [
+      'git commit -m "docs: never hf download into the cache"',
+      'gh pr edit 493 --body "run defaults write app.m1k3 and tell application id \"app.m1k3\" to quit"',
+      'grep -rn "hf download" docs',
+      "cat >> CLAUDE.md <<'EOF'\n- never `hf download` (cache poison)\n- git push origin master is landed by land.sh\nEOF",
+      'echo \'tell application id "app.m1k3" to quit\' > notes.txt',
+    ]
+    for (command of mentions) expect(denyFor(command), command).toBeUndefined()
+    expect(bareCommand('git commit -m "hf download" && echo \'x\'')).toBe('git commit -m "" && echo \'\'')
+    expect(bareCommand("cat <<'EOF'\nbody\nEOF\nls")).toBe('cat <<HEREDOC\nls')
+  })
+  let command = ''
 
   test('judgement calls warn instead', () => {
     expect(denyFor('git merge origin/master', BASH_WARNINGS)).toContain('CI + review cycle')
     expect(denyFor('gh pr merge 480 --squash --delete-branch', BASH_WARNINGS)).toContain('stack base')
     expect(denyFor('git push --force origin claude/x', BASH_WARNINGS)).toContain('force-with-lease')
     expect(denyFor('git push --force-with-lease origin claude/x', BASH_WARNINGS)).toBeUndefined()
+    expect(denyFor('git merge-base HEAD origin/master', BASH_WARNINGS)).toBeUndefined()
+    expect(denyFor('git log master..HEAD --delete-branch-like', BASH_WARNINGS)).toBeUndefined()
     for (const command of ['git merge origin/master', 'gh pr merge 480 --delete-branch']) expect(denyFor(command, BASH_DENIES), command).toBeUndefined()
   })
 

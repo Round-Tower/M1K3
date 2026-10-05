@@ -8,6 +8,9 @@
 // Signed: Kev + Claude, 2026-10-05, Confidence 0.7 (the hooks load and the
 // pure parts are pinned; the band's look on each surface is verify-by-launch).
 // Prior: Unknown
+// Review: Kev + Claude, 2026-10-05 — summoned pass on #493: `speak` is bounded
+// (SPEAK_TIMEOUT_MS) and gapped (SPEAK_GAP_MS), both falling back to the toast;
+// answers are read aloud only under `readAnswers`. Confidence 0.7.
 
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
@@ -23,7 +26,7 @@ import {
 import { isActive, statusLabel } from './face-math'
 import { registerGuard, xcodeprojMessage } from './guard'
 import { FACE_COLUMNS, FACE_ROWS, brailleCells, faceCells, faceSvg, spriteSvg } from './raster'
-import { SERVER, speakingMs, voiceForNotification, voiceForTurn } from './voice'
+import { SERVER, SPEAK_TIMEOUT_MS, maySpeak, speakingMs, voiceForNotification, voiceForTurn } from './voice'
 import type { Avatar, Mood } from '../types'
 
 // The session's values (types/index.d.ts is the contract). Consts of this
@@ -46,6 +49,8 @@ export const register: Register = (on, options) => {
   registerGuard(on)
 
   const isVoiceOn = options.voice !== false
+  const readsAnswers = options.readAnswers === true
+  let lastSpokeAt = -Infinity
   let band: Band | undefined
   let tier: Tier = 'image'
   let root = ''
@@ -89,8 +94,19 @@ export const register: Register = (on, options) => {
     }
 
     sayLine = async (text, emotion) => {
+      // Speech behind speech is noise: a line within the gap toasts instead. A
+      // `speak` that stalls (a wedged voice engine, #471) is bounded the same way.
+      const now = await $.clock.now()
+      if (!maySpeak(now, lastSpokeAt)) {
+        $.ui.toast(text, { timeoutMs: 6000 })
+        return
+      }
+      lastSpokeAt = now
       try {
-        const result = await $.mcp.call(SERVER, 'speak', { text, emotion })
+        const result = await Promise.race([
+          $.mcp.call(SERVER, 'speak', { text, emotion }),
+          new Promise<never>((_, reject) => $.clock.after(SPEAK_TIMEOUT_MS, () => reject(new Error('speak timed out')))),
+        ])
         if (result.isError) throw new Error('speak refused')
         await applyChange(onSpeak(text, speakingMs(text)))
       } catch {
@@ -202,7 +218,7 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     lastActivityAt = await $.clock.now()
     await applyChange(onTurnComplete(e.reason))
-    const line = isVoiceOn ? voiceForTurn(e.reason, e.answer, e.durationMs) : undefined
+    const line = isVoiceOn ? voiceForTurn(e.reason, e.answer, e.durationMs, readsAnswers) : undefined
     if (line !== undefined) void sayLine(line.text, line.emotion)
     return next(e)
   })

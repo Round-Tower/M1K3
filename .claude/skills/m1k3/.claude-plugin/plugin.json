@@ -2,7 +2,9 @@
   "name": "m1k3",
   "version": "0.1.0",
   "description": "M1K3 inside Claude Code: the CLAUDE.md nevers as enforced tool.call rules (a direct push to master, a Write over the append-only session memory, hf download, defaults write app.m1k3, tell application id \"app.m1k3\"), M1K3's voice for the moments a session needs you (a permission prompt, an idle prompt, a long turn ending) through the app's own MCP server, and M1K3's avatar in the band above the prompt reacting to the session: the pixel face as a Raster (half-blocks) or an Svg, or the fox companion from baked sprite frames as an Image (kitty, Ghostty), a braille Raster (any terminal) or an SMIL Svg (desktop). /face hides and shows the band; /companion picks face, fox, phosphor or off.",
-  "author": { "name": "Round Tower" },
+  "author": {
+    "name": "Round Tower"
+  },
   "types": "./types/index.d.ts",
   "userConfig": {
     "voice": {
@@ -18,7 +20,19 @@
       "description": "Which avatar the band above the prompt shows until /companion changes it: the pixel face, the fox, the phosphor fox, or none.",
       "required": false,
       "default": "face",
-      "options": ["face", "fox", "phosphor", "off"]
+      "options": [
+        "face",
+        "fox",
+        "phosphor",
+        "off"
+      ]
+    },
+    "readAnswers": {
+      "type": "boolean",
+      "title": "Read answers aloud",
+      "description": "After a long turn, have M1K3 also read the first sentence of the answer. Off, it says only how long the turn took.",
+      "required": false,
+      "default": false
     }
   }
 }

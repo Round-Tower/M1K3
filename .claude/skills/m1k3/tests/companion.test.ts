@@ -3,7 +3,7 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { RenderElement, RenderInput } from 'claude-code'
 
 import { FOX_CLIPS, clipFor, frameIndex, framePath, gaitFor } from '../hooks/companion'
-import { lineFor, firstSentence, speakingMs, voiceForNotification, voiceForTurn } from '../hooks/voice'
+import { SPEAK_GAP_MS, lineFor, firstSentence, maySpeak, speakingMs, voiceForNotification, voiceForTurn } from '../hooks/voice'
 
 /** The band above the prompt on a 160-column terminal, nothing else holding it. */
 const BAND: RenderInput<'AbovePrompt'> = {
@@ -61,7 +61,8 @@ describe('voice', () => {
   test('lines are short and name what happened', () => {
     expect(lineFor({ kind: 'permission', message: 'Claude needs your permission to use Bash' })).toBe('Claude Code needs you: Claude needs your permission to use Bash')
     expect(lineFor({ kind: 'idle' })).toBe('Claude Code is waiting for you.')
-    expect(lineFor({ kind: 'done', answer: '**Pushed.** The band toggles; tests cover both surfaces.', seconds: 61.4 })).toBe('Done after 61 seconds. Pushed.')
+    expect(lineFor({ kind: 'done', answer: '**Pushed.** The band toggles; tests cover both surfaces.', seconds: 61.4 })).toBe('Done after 61 seconds.')
+    expect(lineFor({ kind: 'done', answer: '**Pushed.** The band toggles.', seconds: 61.4, readAnswer: true })).toBe('Done after 61 seconds. Pushed.')
     expect(lineFor({ kind: 'failed', reason: 'refusal' })).toContain('refused')
   })
 
@@ -72,6 +73,9 @@ describe('voice', () => {
     expect(voiceForTurn('error', '', 1_000)?.text).toContain('error')
     expect(voiceForNotification('permission_prompt', 'Bash?')?.emotion).toBe('thinking')
     expect(voiceForNotification('auth_success', '')).toBeUndefined()
+    expect(voiceForTurn('answer', 'Pushed. More.', 25_000, true)?.text).toBe('Done after 25 seconds. Pushed.')
+    expect(maySpeak(20_000, 5_000)).toBe(true)
+    expect(maySpeak(5_000 + SPEAK_GAP_MS - 1, 5_000)).toBe(false)
   })
 
   test('the first sentence is what gets read out, markdown stripped', () => {
@@ -122,17 +126,23 @@ describe('voice', () => {
 
   test('a quick answer ends quietly; a long one is spoken through the app', async ($, on) => {
     const spoken: unknown[] = []
+    const toasted: string[] = []
     const clock = mock.clock(on, { now: 1_000 })
     mock.store(on)
     on('session.start', ($, e) => ({ cwd: e.cwd }))
     on('command.register', ($, e) => ({ value: { command: e.name } }))
     on('fs.exists', () => ({ value: false }))
     on('ui.status', () => ({ value: undefined }))
+    on('ui.toast', ($, e) => {
+      toasted.push(e.text)
+      return { value: undefined }
+    })
     on('mcp.call', ($, e) => {
       spoken.push(e.args)
       return { value: { content: [{ type: 'text', text: 'Speaking.' }], isError: false } }
     })
     on('turn.complete', ($, e) => ({ text: e.answer }))
+    on('classic.Notification', () => ({}))
     on('ui.render', () => h('Text', {}, 'engine') as RenderElement)
 
     await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
@@ -143,8 +153,14 @@ describe('voice', () => {
 
     await $.turn.complete({ reason: 'answer', answer: 'Pushed. The band toggles.', durationMs: 61_000, isAborted: false, turnId: 't2' })
     await clock.settle()
-    expect(spoken).toEqual([{ text: 'Done after 61 seconds. Pushed.', emotion: 'happy' }])
+    expect(spoken).toEqual([{ text: 'Done after 61 seconds.', emotion: 'happy' }])
     expect(textOf(await $.ui.render(BAND))).toContain('Speaking…')
+
+    // Within the gap, the next line toasts instead of queueing behind speech.
+    await $.classic.Notification({ notification_type: 'idle_prompt', message: 'Claude is waiting for your input' })
+    await clock.settle()
+    expect(spoken.length).toBe(1)
+    expect(toasted).toEqual(['Claude Code is waiting for you.'])
 
     // /face hides the band; the engine then draws its own.
     const { text } = await $.command.run({ command: 'face', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 160 } })
