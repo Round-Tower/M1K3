@@ -18,6 +18,8 @@
 //  regression into a failure instead of a hung runner. Confidence now 0.85.
 //  Review: Kev + claude-opus-5, 2026-09-12 — #269: CGNAT / multicast / reserved IPv4 pinned
 //  both sides of each boundary, as a literal, a URL host and an IPv4-mapped answer.
+//  Review: Kev + Claude, 2026-10-05 — the live smoke gets a 30 s budget: the 4 s default is a product
+//  deadline, and on a loaded CI runner it beat a localhost lookup that had not been scheduled yet (#493).
 
 import Foundation
 @testable import M1K3Preview
@@ -248,7 +250,11 @@ struct WebURLPolicyTests {
 
     @Test("the system resolver answers for localhost with a loopback literal (live smoke)")
     func systemResolverSmoke() async {
-        let answers = await SystemHostResolver().addresses(for: "localhost") ?? []
+        // A smoke of the REAL resolver, not of the deadline (`systemResolverTimesOut`
+        // pins that): on a loaded CI VM the 4 s default lost the race to a lookup
+        // that had not even been scheduled (#493: 4,485 tests in flight), so the
+        // budget here is generous enough that only a broken resolver fails it.
+        let answers = await SystemHostResolver(timeout: 30).addresses(for: "localhost") ?? []
         #expect(!answers.isEmpty)
         #expect(answers.allSatisfy(WebURLPolicy.isPrivateAddress))
     }
