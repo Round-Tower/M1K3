@@ -28,7 +28,9 @@ live; `submit --confirm` / `cancel --confirm` are verify-by-run — ASC writes a
 to run). Prior: Unknown.
 Review: Kev + claude-opus-5-5, 2026-10-05 — `attach` (a build onto an editable version, read
 back), `--platform ALL` (Mac + iOS), `cancel --wait`, and the submit gate: `--confirm` refuses
-a build verify_build.py hasn't stamped, unless `--why`. All four were scratchpad code during the
+a build verify_build.py hasn't stamped (a stamp must parse and name its build), unless `--why`.
+Submit is two-phase: every platform's whole plan is checked, then all staged, then all sent, so
+a refusal never half-sends a release (review on #490 found the first cut could). All four were scratchpad code during the
 2026-10-05 release, where both cancels and the submit ran before the build was checked. PEP 723
 header so `./submit.py` brings its own deps. Confidence 0.85 (pure half pinned; attach and
 cancel were driven live on 2026-10-05 through the scratchpad versions of this code).
@@ -37,13 +39,17 @@ cancel were driven live on 2026-10-05 through the scratchpad versions of this co
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
 from asc import APP_ID, PLATFORMS, bail, call, paginate
-from precheck import latest_version  # no cycle: precheck never imports submit
+from precheck import (  # no cycle: precheck never imports submit
+    SUBMITTABLE_STATES,
+    latest_version,
+)
 
 # Submission states. (READY_FOR_REVIEW is ALSO a version state — precheck.SUBMITTABLE_STATES —
 # the same string on two resources: here it means "an item is prepared, nothing sent".)
@@ -52,8 +58,8 @@ QUEUED_STATES = ("WAITING_FOR_REVIEW", "IN_REVIEW")
 # Transitional: a cancel in flight. Not live (nothing to cancel or submit), not gone either —
 # creating a second submission beside it is the one thing `submit` must not do.
 WAITING_STATES = ("CANCELING",)
-# Version states where the build can change: before a first submit, and after a cancel or rejection.
-EDITABLE_STATES = ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED")
+# Version states where the build can change and a submit can start: precheck's own definition.
+EDITABLE_STATES = SUBMITTABLE_STATES
 # What `--platform ALL` means: the platforms that ship a build. visionOS has a version, never a build.
 SHIPPING_PLATFORMS = ("MAC_OS", "IOS")
 # verify_build.py stamps a build here once it has run on this Mac; `submit` reads it.
@@ -122,15 +128,32 @@ def attach_problems(version_state: str | None, build: dict[str, Any] | None, cur
     """Why `attach` must not run; empty means go. The 2026-10-05 scratchpad script's checks."""
     if build is None:
         return ["no such build for this platform"]
+    problems = [] if is_editable(version_state) else [
+        f"version is {version_state}, not editable (cancel the submission first)"]
+    return problems + build_problems(build)
+
+
+def build_problems(build: dict[str, Any] | None) -> list[str]:
+    if build is None:
+        return ["no build attached to the version"]
     a = build["attributes"]
-    problems = []
-    if not is_editable(version_state):
-        problems.append(f"version is {version_state}, not editable (cancel the submission first)")
+    found = []
     if a.get("processingState") != "VALID" or a.get("expired"):
-        problems.append(f"build is {a.get('processingState')}, expired={a.get('expired')}")
+        found.append(f"build is {a.get('processingState')}, expired={a.get('expired')}")
     if a.get("usesNonExemptEncryption") is None:
-        problems.append("export compliance not answered on the build")
-    return problems
+        found.append("export compliance not answered on the build")
+    return found
+
+
+def plan_problems(steps: list[str], version_state: str | None, build: dict[str, Any] | None) -> list[str]:
+    """Why this platform's submit plan must not run; empty means it may (or is a no-op).
+    Checked for EVERY platform before anything is sent (review on #490)."""
+    if steps[0].startswith("already"):
+        return []  # queued already: nothing will be sent, nothing to block
+    if steps[0].startswith("CANCELING"):
+        return [steps[0]]
+    found = [] if is_editable(version_state) else [f"version is {version_state}, not submittable"]
+    return found + build_problems(build)
 
 
 def blocked(gates: dict[str, list[str]]) -> list[str]:
@@ -150,7 +173,11 @@ def gate_problems(build: str | None, stamp_dir: Path = STAMP_DIR, why: str | Non
         return ["no build attached to the version: run `attach --build N` first"]
     if why and len(why.strip()) >= MIN_WHY:
         return []
-    if (stamp_dir / f"verified-{build}.json").exists():
+    try:
+        stamped = json.loads((stamp_dir / f"verified-{build}.json").read_text()).get("build")
+    except (OSError, ValueError):
+        stamped = None
+    if stamped == build:  # a bare `touch` or a copied stamp is not a check
         return []
     return [(f"build {build} has not been verified on this Mac: run verify_build.py --build {build}, "
              f"or pass --why \"<reason, {MIN_WHY}+ chars>\"")]
@@ -222,54 +249,84 @@ def submitted_build(version: dict[str, Any]) -> str | None:
     return ((version.get("_build") or {}).get("attributes") or {}).get("version")
 
 
-def run_submit(platform: str, confirm: bool, why: str | None = None) -> int:
+def prepare(platform: str, why: str | None) -> dict[str, Any]:
+    """Read everything one platform's submit needs, print the plan, write nothing."""
     version = latest_version(platform)
     if version is None:
         print(f"{platform}: no version to submit")
-        return 1
+        return {"platform": platform, "problems": ["no version to submit"], "steps": ["already"]}
     sub = submission_for(submissions(), platform)
     items = items_of(sub["id"]) if sub else []
     steps = next_steps(sub, platform, version["id"], items)
-    label = f"{platform} {version['attributes']['versionString']} ({version['attributes'].get('appVersionState') or version['attributes'].get('appStoreState')})"
-    print(f"{label} · submission {sub['id'][:8] + ' ' + sub['attributes']['state'] if sub else 'none'}")
+    a = version["attributes"]
+    print(f"{platform} {a['versionString']} ({a.get('appVersionState') or a.get('appStoreState')}) · "
+          f"submission {sub['id'][:8] + ' ' + sub['attributes']['state'] if sub else 'none'}")
     build = submitted_build(version)
-    gate = gate_problems(build, why=why)
-    if gate:
-        print(f"{platform}: {'refusing' if confirm else 'dry-run: submit --confirm would refuse'} — {gate[0]}")
-        if confirm:
-            return 5
-    elif why and gate_problems(build):
-        print(f"   gate bypassed: {why}")
-    elif platform != "MAC_OS":
-        print(f"   gate: build {build} verified by its Mac run (same build, same source); "
-              f"the {platform} app itself is checked by hand on a device")
+    problems = plan_problems(steps, a.get("appStoreState"), version.get("_build"))
+    if not steps[0].startswith("already"):
+        gate = gate_problems(build, why=why)
+        problems += gate
+        if not gate and why and gate_problems(build):
+            print(f"   gate bypassed: {why}")
+        elif not gate and platform != "MAC_OS":
+            print(f"   gate: build {build} verified by its Mac run (same build, same source); "
+                  f"the {platform} app itself is checked by hand on a device")
     for step in steps:
         print(f"   {step}")
-    if steps[0].startswith("already") or steps[0].startswith("CANCELING"):
+    return {"platform": platform, "version": version, "sub": sub, "steps": steps, "problems": problems}
+
+
+def stage(plan: dict[str, Any]) -> str | None:
+    """Create the submission and add the version: nothing reaches Apple yet. Returns its id."""
+    sub_id = plan["sub"]["id"] if plan["sub"] else None
+    for step in plan["steps"]:
+        if step.startswith("create"):
+            resp = call("POST", "/v1/reviewSubmissions", json=create_payload(plan["platform"]))
+            if "_error" in resp:
+                print(f"   {plan['platform']}: create failed: {resp['_error']} {str(resp.get('_body', ''))[:200]}")
+                return None
+            sub_id = resp["data"]["id"]
+            print(f"   {plan['platform']}: created {sub_id[:8]}")
+        elif step.startswith("add version"):
+            resp = call("POST", "/v1/reviewSubmissionItems", json=item_payload(sub_id, plan["version"]["id"]))
+            if "_error" in resp:
+                print(f"   {plan['platform']}: add item failed: {resp['_error']} {str(resp.get('_body', ''))[:200]}")
+                return None
+            print(f"   {plan['platform']}: item {resp['data']['id'][:8]} added")
+    return sub_id
+
+
+def send(plan: dict[str, Any], sub_id: str) -> bool:
+    resp = call("PATCH", f"/v1/reviewSubmissions/{sub_id}", json=submit_payload(sub_id))
+    state = None if "_error" in resp else resp.get("data", {}).get("attributes", {}).get("state")
+    print(f"   {plan['platform']}: submitted → {state or resp.get('_error')}")
+    return state in QUEUED_STATES
+
+
+def run_submit_all(platforms: tuple[str, ...], confirm: bool, why: str | None) -> int:
+    """Two-phase: check every platform's whole plan, stage all, then send all back to back.
+    A release is never half-sent by a refusal; if a send itself fails, say exactly what went."""
+    plans = [prepare(p, why) for p in platforms]
+    refusals = blocked({p["platform"]: p["problems"] for p in plans})
+    todo = [p for p in plans if not p["steps"][0].startswith("already")]
+    if refusals:
+        print(("refusing — nothing sent to Apple:" if confirm else "dry-run: submit --confirm would refuse:")
+              + "\n   " + "\n   ".join(refusals))
+        return 5 if confirm else 0
+    if not todo:
         return 0
     if not confirm:
         print("dry-run — add --confirm to execute")
         return 0
-    sub_id = sub["id"] if sub else None
-    for step in steps:
-        if step.startswith("create"):
-            resp = call("POST", "/v1/reviewSubmissions", json=create_payload(platform))
-            if "_error" in resp:
-                bail("create submission", resp)  # exits: nothing to clean up yet
-            sub_id = resp["data"]["id"]
-            print(f"   created {sub_id[:8]}")
-        elif step.startswith("add version"):
-            resp = call("POST", "/v1/reviewSubmissionItems", json=item_payload(sub_id, version["id"]))
-            if "_error" in resp:
-                bail("add item", resp)  # exits: the submission keeps its state, no item yet; re-run to resume
-            print(f"   item {resp['data']['id'][:8]} added")
-        elif step == "submit":
-            resp = call("PATCH", f"/v1/reviewSubmissions/{sub_id}", json=submit_payload(sub_id))
-            if "_error" in resp:
-                bail("submit", resp)  # exits: item added, nothing sent, re-run to resume
-            state = resp.get("data", {}).get("attributes", {}).get("state")
-            print(f"   submitted → {state}")
-            return 0 if state in QUEUED_STATES else 1
+    staged = [(p, stage(p)) for p in todo]
+    if any(sub_id is None for _, sub_id in staged):
+        print("refusing — staging failed; nothing sent to Apple (re-run to resume)")
+        return 1
+    sent = [p["platform"] for p, sub_id in staged if send(p, sub_id)]
+    missed = [p["platform"] for p in todo if p["platform"] not in sent]
+    if missed:
+        print(f"PARTIAL: sent {', '.join(sent) or 'nothing'}; NOT sent {', '.join(missed)} — re-run to finish")
+        return 1
     return 0
 
 
@@ -327,6 +384,11 @@ def run_attach(platform: str, number: str, confirm: bool) -> int:
     return 0
 
 
+def canceling(platform: str) -> bool:
+    sub = submission_for(submissions(), platform)
+    return sub is not None and sub["attributes"].get("state") in WAITING_STATES
+
+
 def wait_editable(platform: str, timeout: int = 900) -> int:
     """A cancel is CANCELING for a while; the version only takes a new build once editable."""
     deadline = time.monotonic() + timeout
@@ -359,29 +421,18 @@ def main() -> int:
     if args.cmd == "status":
         return run_status((args.platform,) if args.platform else PLATFORMS)
     platforms = expand_platforms(args.platform)
-    if args.cmd == "submit" and args.confirm:
-        gates = {}
-        for platform in platforms:
-            version = latest_version(platform)
-            gates[platform] = (["no version to submit"] if version is None
-                               else gate_problems(submitted_build(version), why=args.why))
-        refusals = blocked(gates)
-        if refusals:
-            print("refusing — nothing sent to Apple:\n   " + "\n   ".join(refusals))
-            return 5
+    if args.cmd == "submit":
+        return run_submit_all(platforms, args.confirm, args.why)
     worst = 0
     cancelled = []
     for platform in platforms:
-        if args.cmd == "submit":
-            rc = run_submit(platform, args.confirm, args.why)
-            if rc and args.confirm:
-                return rc  # an API failure mid-release: stop, don't send the next platform
-        elif args.cmd == "attach":
+        if args.cmd == "attach":
             rc = run_attach(platform, args.build, args.confirm)
         else:
             rc = run_cancel(platform, args.confirm)
-            if rc == 0:
+            if rc == 0 or canceling(platform):  # an earlier cancel still in flight counts too
                 cancelled.append(platform)
+                rc = 0
         worst = max(worst, rc)
     if args.cmd == "cancel" and args.confirm and args.wait:
         for platform in cancelled:  # cancel every platform first, then wait on each

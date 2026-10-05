@@ -93,8 +93,12 @@ def build_states(number: str, platforms: tuple[str, ...]) -> dict[str, str]:
 
 
 def master_head() -> str:
-    out = subprocess.run(["git", "rev-parse", "origin/master"], cwd=Path(__file__).resolve().parent,
-                         capture_output=True, text=True, check=False)
+    """origin/master as it is on GitHub now: a stale local ref would wait on an older build."""
+    here = Path(__file__).resolve().parent
+    fetched = subprocess.run(["git", "fetch", "-q", "origin", "master"], cwd=here, check=False).returncode == 0
+    if not fetched:
+        return ""  # main() then asks for --commit rather than trust a stale ref
+    out = subprocess.run(["git", "rev-parse", "origin/master"], cwd=here, capture_output=True, text=True, check=False)
     return out.stdout.strip()
 
 
@@ -141,7 +145,7 @@ def main() -> int:
         return 0
     commit = args.commit or master_head()
     if not commit:
-        print("could not read origin/master; pass --commit SHA", flush=True)
+        print("could not fetch origin/master; pass --commit SHA", flush=True)
         return 4
     return run_wait(commit, args.timeout)
 

@@ -128,7 +128,7 @@ def test_editable_is_the_state_cancel_waits_for():
 def test_submit_is_gated_on_a_verified_build(tmp_path):
     # The 2026-10-05 release: both cancels ran before the build was checked.
     assert submit.gate_problems("453", stamp_dir=tmp_path, why=None)
-    (tmp_path / "verified-453.json").write_text("{}")
+    (tmp_path / "verified-453.json").write_text('{"build": "453"}')
     assert submit.gate_problems("453", stamp_dir=tmp_path, why=None) == []
     assert submit.gate_problems("454", stamp_dir=tmp_path, why=None)  # a stamp is per build
 
@@ -148,3 +148,31 @@ def test_submit_all_writes_nothing_unless_every_platform_passes():
     # Review on the release-tooling PR: Mac sent, iOS refused, is a split release.
     assert submit.blocked({"MAC_OS": [], "IOS": []}) == []
     assert submit.blocked({"MAC_OS": [], "IOS": ["build 452 has not been verified"]}) == ["IOS: build 452 has not been verified"]
+
+
+# --- review on #490, round 2: a plan is checked whole before anything is sent ---
+
+def test_a_canceling_platform_blocks_the_whole_release():
+    # iOS CANCELING with Mac ready must send nothing for Mac (it used to send Mac, skip iOS, exit 0).
+    assert submit.plan_problems(["CANCELING — wait for COMPLETE, then submit again"], "DEVELOPER_REJECTED", _build())
+
+
+def test_an_already_queued_platform_is_a_no_op_not_a_blocker():
+    assert submit.plan_problems(["already WAITING_FOR_REVIEW — nothing to do"], "WAITING_FOR_REVIEW", _build()) == []
+
+
+def test_submit_checks_the_build_and_version_too():
+    steps = ["create a MAC_OS submission", "add version v", "submit"]
+    assert submit.plan_problems(steps, "PREPARE_FOR_SUBMISSION", _build()) == []
+    assert submit.plan_problems(steps, "PREPARE_FOR_SUBMISSION", _build(expired=True))
+    assert submit.plan_problems(steps, "PREPARE_FOR_SUBMISSION", _build(encryption=None))
+    assert submit.plan_problems(steps, "PREPARE_FOR_SUBMISSION", None)
+
+
+def test_a_stamp_must_name_its_build(tmp_path):
+    (tmp_path / "verified-453.json").write_text("")  # a bare `touch` is not a check
+    assert submit.gate_problems("453", stamp_dir=tmp_path)
+    (tmp_path / "verified-453.json").write_text('{"build": "452"}')
+    assert submit.gate_problems("453", stamp_dir=tmp_path)
+    (tmp_path / "verified-453.json").write_text('{"build": "453"}')
+    assert submit.gate_problems("453", stamp_dir=tmp_path) == []

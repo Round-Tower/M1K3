@@ -26,8 +26,12 @@ Verify before you cancel: once a submission is cancelled, its place in the queue
 ./submit.py submit --platform ALL --confirm           # refuses an unstamped build (exit 5) unless --why
 ```
 
-`submit --platform ALL --confirm` checks every platform's gate first and sends nothing
-unless all pass. The stamp comes from the Mac run; iOS ships the same build number from the
+`submit --platform ALL --confirm` is two-phase: it checks every platform's whole plan first
+(gate, CANCELING, version state, build VALID + export compliance) and sends nothing unless all
+pass; then it stages all, then sends all, and names any platform a failed send left behind.
+`attach --platform ALL` is different on purpose: one PATCH per platform, so it carries on after a
+failure and returns the worst exit code. A stamp is a JSON file naming its build; it never
+expires, because build numbers never repeat. The stamp comes from the Mac run; iOS ships the same build number from the
 same source, but the iPhone app itself is checked by hand on a device.
 The stamp proves only that build N runs and serves MCP. Feature checks (a fix's repro, the
 voice on a headset) are still yours to run, and the PR that made the change names them.

@@ -43,3 +43,16 @@ def test_an_error_reply_is_reported_not_crashed_on():
 
 def test_every_problem_is_reported_at_once():
     assert len(v.problems(installed="442", expected="453", running=False, instructions=None)) == 2
+
+
+def test_a_process_older_than_the_installed_app_is_stale():
+    # After a TestFlight update the old binary can still be running and answering MCP.
+    assert v.stale(process_started=100.0, bundle_modified=200.0)
+    assert not v.stale(process_started=300.0, bundle_modified=200.0)
+    assert v.problems(installed="453", expected="453", running=True, instructions="x", stale=True)
+
+
+def test_the_token_only_goes_to_this_mac():
+    assert v.is_loopback("http://127.0.0.1:4242/mcp")
+    assert v.is_loopback("http://localhost:4242/mcp")
+    assert not v.is_loopback("https://example.com/mcp")
