@@ -1,0 +1,24 @@
+{
+  "name": "m1k3",
+  "version": "0.1.0",
+  "description": "M1K3 inside Claude Code: the CLAUDE.md nevers as enforced tool.call rules (a direct push to master, a Write over the append-only session memory, hf download, defaults write app.m1k3, tell application id \"app.m1k3\"), M1K3's voice for the moments a session needs you (a permission prompt, an idle prompt, a long turn ending) through the app's own MCP server, and M1K3's avatar in the band above the prompt reacting to the session: the pixel face as a Raster (half-blocks) or an Svg, or the fox companion from baked sprite frames as an Image (kitty, Ghostty), a braille Raster (any terminal) or an SMIL Svg (desktop). /face hides and shows the band; /companion picks face, fox, phosphor or off.",
+  "author": { "name": "Round Tower" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "voice": {
+      "type": "boolean",
+      "title": "Speak through M1K3",
+      "description": "Have the live M1K3 app say when a session needs you or finishes a long turn. Off, those lines are toasts.",
+      "required": false,
+      "default": true
+    },
+    "avatar": {
+      "type": "string",
+      "title": "Avatar in the band",
+      "description": "Which avatar the band above the prompt shows until /companion changes it: the pixel face, the fox, the phosphor fox, or none.",
+      "required": false,
+      "default": "face",
+      "options": ["face", "fox", "phosphor", "off"]
+    }
+  }
+}
