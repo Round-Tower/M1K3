@@ -1,3 +1,8 @@
+#!/usr/bin/env -S uv run --script --managed-python
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["pyjwt[crypto]", "requests"]
+# ///
 """The pre-submit checklist — every launch-day hole, read off the API before the click.
 
 On 2026-09-15 a VALID build on a PREPARE_FOR_SUBMISSION version was not
