@@ -107,6 +107,18 @@ Anything a cold session needs on turn one belongs below, not there.
 - Mini's window is the device's (`MiniContextWindow`, recorded at launch;
   4,096 is the floor, not the size). Tests never call `record` — a
   source-scan test fails the suite if one does.
+- Verify-by-launch with a Debug build: `open -n --env M1K3_SCREENGRAB=1 --env
+  M1K3_SCREENGRAB_PLATE=<plate> --env M1K3_SCREENGRAB_RUN=<token> <app>` (an
+  isolated store; the window is pinned at 1440×900). Never exec the binary from
+  a shell: it isn't foreground, so system sheets (Declared Age Range) dismiss
+  and the API says `notAvailable`. No coordinate clicks while Kev is active.
+- App-ID capability entitlements are store-lane only: Declared Age Range in
+  `M1K3-MAS.entitlements` + `M1K3iOS.entitlements` (required there by
+  `check_store_targets.py`), PCC in `M1K3-MAS.entitlements`. The check forbids
+  both in the Developer ID `M1K3.entitlements` (AMFI kills a profile-less
+  launch). PCC consent is
+  `PrivateCloudArming` (ADR 0010: asked once, by message id): any new path that
+  sends history to PCC goes through it.
 
 <!--
 Signed: Kev + claude-fable-5.1, 2026-09-24, Confidence 0.8, Prior: Unknown (the
@@ -153,4 +165,8 @@ pass made: 28 came after a fold (re-reviewed by that head's auto pass anyway),
 #320 latent persona hazard). So pr_watch now infers the passes from the diff
 (47% of history would get 2, down from 89%), and a downgrade needs `--why`.
 The challenger caught that migrations hide in *Store.swift. Confidence 0.8.
+Review: Kev + claude-opus-5-5, 2026-10-01 (/debrief, #462) — the Debug-launch
+recipe (an exec'd binary isn't foreground: the age sheet dismissed itself) and
+the entitlement + PCC-consent seams. Confidence 0.85. Fold 2026-10-05: PCC is
+in the Mac store lane only; the check requires only Declared Age Range there.
 -->
