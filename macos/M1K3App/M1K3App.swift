@@ -128,6 +128,9 @@ struct M1K3App: App {
             // Occlusion-derived visibility for every avatar surface in this window
             // (2026-09-12 thermal audit): a minimised / covered / closed window
             // mounts no RealityView. One probe per window root — see WindowVisibility.
+            // The notch HUD stays down while this window is on screen (one fox at
+            // a time, NotchHUDDemand) — reported from inside the tracked subtree.
+            .onWindowVisibilityChange { appDelegate.reportMainWindow(onScreen: $0) }
             .trackWindowVisibility()
         }
         .windowResizability(.contentSize)
@@ -228,6 +231,17 @@ struct M1K3App: App {
 final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @Published private(set) var environment: AppEnvironment?
     @Published private(set) var startupError: String?
+    /// The main window's last occlusion report. The window mounts (and reports)
+    /// before `environment` exists, and the probe only reports CHANGES — so the
+    /// value is kept here and replayed into the environment once it is built,
+    /// or a fresh launch would show the notch HUD over a visible window.
+    private var mainWindowOnScreen = false
+
+    func reportMainWindow(onScreen: Bool) {
+        mainWindowOnScreen = onScreen
+        environment?.mainWindowOnScreen = onScreen
+    }
+
     /// Owns the notch HUD's poll/animate loops for the app's lifetime — the
     /// Settings toggle gates whether it can ever actually show (see
     /// NotchHUDController), so this starts unconditionally alongside the
@@ -299,6 +313,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 // before any store opens (no-op outside a capture run).
                 try ScreengrabHarness.current.prepareRoot(live: Self.liveDataRoot)
                 let env = try AppEnvironment()
+                env.mainWindowOnScreen = mainWindowOnScreen // replay the pre-launch report
                 environment = env
                 AppEnvironment.registerShared(env)
                 let hud = NotchHUDController(env: env)

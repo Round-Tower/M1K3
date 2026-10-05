@@ -28,6 +28,8 @@
 //  lines contain only alphabet glyphs, own lines pass through). Prior: the
 //  data-rain seed (project-memory 2026-08-06/16, "own work = real fragments;
 //  visitor traffic = derived glyphs ONLY").
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — `needsClock`: the view's clock only runs with lines
+//  on screen, a turn in flight, or an unseen ambient note. Confidence 0.9.
 //
 
 import Foundation
@@ -181,6 +183,14 @@ public struct InferencePhosphor: Sendable {
     /// oldest first (the Canvas stacks newest at the bottom, rising).
     public mutating func prune(at now: Date) {
         lines.removeAll { now.timeIntervalSince($0.bornAt) >= lineTTL }
+    }
+
+    /// Whether the view's 30 fps clock has anything to do: lines still fading,
+    /// a turn in flight to feed from, or an ambient note not yet rained. With
+    /// none of those the rain is an empty full-window layer, and its clock cost
+    /// 52–58% CPU behind an idle chat (2026-10-01 A/B; 0.1–1.5% without it).
+    public func needsClock(isResponding: Bool, hasUnseenAmbient: Bool) -> Bool {
+        !lines.isEmpty || isResponding || hasUnseenAmbient
     }
 
     /// The live lines at `now`, oldest first — non-mutating (the view reads

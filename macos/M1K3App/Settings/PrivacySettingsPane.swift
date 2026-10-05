@@ -40,6 +40,9 @@
 //  is in M1K3-MAS.entitlements now, and a failed ask says why (`AgeRangeRequestFailure`, tested) without
 //  touching the band. The PCC footer names the brain picker (ADR 0010). Confidence 0.8 (the sheet is
 //  verify-by-launch on a store-signed build).
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — Apple's error maps by case NAME (the iOS twin's launch crash:
+//  a switch over the cases strong-links each one, and the invalidAccount case is missing from the iOS 26.5 runtime).
+//  Confidence 0.85 — macOS 26 itself not launched here.
 
 import AppKit // NSPasteboard — the Copy buttons
 #if canImport(DeclaredAgeRange)
@@ -555,14 +558,10 @@ struct PrivacySettingsPane: View {
     extension AgeRangeRequestFailure {
         /// The boundary map: M1K3Chat never imports DeclaredAgeRange.
         init(_ error: AgeRangeService.Error) {
-            switch error {
-            case .notAvailable: self = .notAvailable
-            case .invalidAccount: self = .invalidAccount
-            case .network: self = .network
-            case .declinedOnboarding: self = .declinedOnboarding
-            case .invalidRequest: self = .other
-            @unknown default: self = .other
-            }
+            // By NAME: a switch over Apple's
+            // cases links each case symbol at launch, and an OS that predates
+            // one (iOS 26.5, the iOS 27 beta) never starts the app (2026-10-03).
+            self.init(appleCaseName: String(describing: error))
         }
     }
 #endif

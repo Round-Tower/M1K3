@@ -19,6 +19,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 7) — `wakeValve(speaking:)`: the drive loop's
 //  signal valve is 1 s while speech is live (the un-observed Settings toggle is re-read then) and 30 s idle.
 //  Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — `NotchHUDDemand`: the HUD stays down
+//  while the main window is on screen (one fox at a time; two RealityViews ran
+//  hot). Confidence now 0.85.
 //
 
 import Foundation
@@ -86,6 +89,18 @@ public struct NotchHUDVisibility: Equatable, Sendable {
         isShown = false
         falseSinceSeconds = nil
         return .hide
+    }
+}
+
+/// Whether the HUD should be up at all, before the debounce: one fox at a time.
+/// The HUD is a second RealityView; while the main window is on screen its own
+/// avatar (measured 18–54% CPU visible, M1 Max, 2026-10-01) is the narration
+/// surface, so the HUD only serves speech heard from elsewhere. Feed the result
+/// to `NotchHUDVisibility.update(speaking:)` so a window appearing mid-utterance
+/// hides the HUD through the same grace as silence does.
+public enum NotchHUDDemand {
+    public static func wantsHUD(enabled: Bool, speaking: Bool, mainWindowOnScreen: Bool) -> Bool {
+        enabled && speaking && !mainWindowOnScreen
     }
 }
 

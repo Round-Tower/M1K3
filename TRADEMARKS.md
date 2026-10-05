@@ -10,8 +10,8 @@ the Apache License said the same for the earlier revisions.
 
 ## What is protected
 
-The following are trademarks and brand assets of Kevin Murphy / Round Tower
-("the M1K3 marks"), whether or not registered:
+The following are trademarks and brand assets of Round Tower Software Studios Ltd
+("Round Tower"), whether or not registered ("the M1K3 marks"):
 
 - The names **M1K3**, **M1K3 Voice**, **Lil M1K3**, and **Brain at Home**.
 - The **M mark** (the 5×7 phosphor pixel M — `site/favicon.svg`, its
@@ -69,8 +69,7 @@ carry no presumption of validity. Registration is a separate step.
   look like, or pass for, the official M1K3. (Using the same CC0 / CC-BY
   creatures in your own product, under their authors' terms and with their
   attribution, is fine — they were never ours.)
-- Present a fork as the official M1K3, or imply endorsement by Kevin Murphy
-  or Round Tower.
+- Present a fork as the official M1K3, or imply endorsement by Round Tower.
 
 If you distribute a fork, give it its own name and its own icon, remove the
 M1K3 marks and the brand-asset files excluded in `NOTICE` (the companion
@@ -88,7 +87,7 @@ the signed DMGs linked from <https://m1k3.app>.
 
 Want to use a mark in a way this policy does not cover — a community port, a
 tutorial series, a distribution package that keeps the name? Open an issue or
-write to kevin@round-tower.ie. The answer is usually yes when the use is
+write to hello@round-tower.ie. The answer is usually yes when the use is
 truthful and does not confuse people about what the official app is.
 
 ---
@@ -116,3 +115,8 @@ tomkranis CC-BY 4.0; Quaternius creatures CC0). A trademark covers what identifi
 what we borrowed. Protected now = the pixel face + the phosphor/CRT treatment as trade dress;
 the models are explicitly disclaimed and credited (NOTICE, in-app licences screen, site).
 Confidence now 0.85.*
+*Review: Kev + claude-opus-5-5, 2026-10-02 — Kev's call: the company holds the
+licence and the marks. The rights holder is Round Tower Software Studios Ltd
+(was "Kevin Murphy / Round Tower"), the endorsement line names Round Tower only,
+and the public contact is hello@round-tower.ie. Marks list and policy unchanged.
+Confidence 0.85.*

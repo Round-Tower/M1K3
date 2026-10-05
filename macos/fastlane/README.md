@@ -18,7 +18,17 @@ bundle exec fastlane mac metadata       # push name/subtitle/keywords/descriptio
 bundle exec fastlane mac screenshots    # push screenshots_mac/
 bundle exec fastlane mac deliver_all    # both
 bundle exec fastlane mac beta_metadata  # update TestFlight "What to Test"
+bundle exec fastlane mac previews       # Mac App Preview: previews_mac/en-US/*.mov (1920×1080)
+bundle exec fastlane ios previews       # iPhone 6.9" App Preview: previews_ios/en-US/*.mov (886×1920)
+#   …previews dry_run:true             # check the files + show the target version (read-only), upload nothing
 ```
+
+App Previews: the videos are gitignored binaries — render + encode them in
+`marketing/motion` (`PREVIEW-CAPTURE.md`, `tools/encode_preview.py`) and copy
+them into `previews_mac/en-US/` and `previews_ios/en-US/`. The lanes call
+Spaceship directly: deliver's `app_previews_path` silently skips every Mac
+preview (fastlane's resolution table has no DESKTOP entry). A re-run skips
+anything already uploaded (checksum match).
 
 ASO copy is version-controlled in `metadata_mac/<locale>/` — eight languages:
 en-US, de-DE, es-ES, fr-FR, ja, ko, pt-BR, zh-Hans. **The keyword field

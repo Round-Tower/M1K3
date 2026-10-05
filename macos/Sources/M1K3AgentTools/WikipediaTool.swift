@@ -15,6 +15,9 @@
 //  observations, never thrown.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-02 — Wikimedia UA contact → hello@round-tower.ie
+//  (the studio address; #472 moved every other public surface). Pinned by WikipediaToolTests.
+//  Confidence 0.95.
 
 import Foundation
 import M1K3Agent
@@ -35,7 +38,7 @@ public struct WikipediaTool: AgentTool {
     ]
 
     /// Wikimedia API etiquette: identify the app + a contact, per their UA policy.
-    static let wikipediaUserAgent = "M1K3/1.0 (https://m1k3.app; kevin@round-tower.ie)"
+    static let wikipediaUserAgent = "M1K3/1.0 (https://m1k3.app; hello@round-tower.ie)"
 
     private let fetcher: any HTTPFetching
 

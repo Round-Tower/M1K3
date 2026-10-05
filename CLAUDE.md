@@ -2,7 +2,8 @@
 
 Privacy-focused, on-device AI: MLX inference, live voice, knowledge graph + RAG,
 and an MCP server. **The live product is the Mac-native SwiftUI app under
-`macos/`** (`M1K3App/`), on the Mac App Store as 1.x. The same portable
+`macos/`** (`M1K3App/`): 1.x on TestFlight and as the Developer ID DMG, submitted to the
+Mac App Store (check the store lookup before saying it is live). The same portable
 `macos/Sources/` package graph drives the iOS + visionOS shell under
 `macos/M1K3iOSApp/`. The legacy Python surface lives only in git history before
 `7545b4a4` (`git checkout 7545b4a4 -- attic` resurrects it).
@@ -25,23 +26,35 @@ Anything a cold session needs on turn one belongs below, not there.
 ## Standing carry-forwards
 - **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
   `pr_watch.py` (required CI green on the head sha, review passes read against
-  that head), squash-merges by sha, verifies `state`+`mergedAt`. Small PR (under
-  ~100 lines, no logic change): `--passes 1`, the auto bot pass only — it fires
-  on Swift, the manifest, `project.yml`, `macos/tools/**` and the workflows; a
-  docs-only PR gets no auto pass, so summon once.
-  Substantive: two passes on the final head (auto + one summon). Trivial head
-  (comment fold, clean master merge on a passed head): `--passes 0`. A summon
-  reviews the head at RUN time — push first, then summon AT ONCE, so the auto
-  pass and the summon read the same head; fold both in one commit (a nits-only
-  fold is a trivial head). `land.sh` never waits: pending CI exits 2 and merges
-  nothing — run `pr_watch.py <PR> --passes N` first.
+  that head), squash-merges by sha, verifies `state`+`mergedAt`. **One pass is
+  the default, whatever the size** (2026-10-04 ruling — PR size is free, rounds
+  are the cost): the auto bot pass fires on Swift, the manifest, `project.yml`,
+  `macos/tools/**` and the workflows; a docs-only PR gets no auto pass, so summon
+  once. Spend the review effort BEFORE the first push (`code-quality-reviewer`
+  on the diff, one per ~400-line slice in parallel) and fold every finding in
+  ONE push; nits go to the follow-up list in the PR body.
+  **Run `pr_watch.py` / `land.sh` without `--passes`: the gate infers it.** It
+  asks for 2 (auto + one summon) when the diff touches a risk surface
+  (`RISK_SURFACE_PATTERNS` in `pr_watch.py`: agent script execution, MCP /
+  Keychain, entitlements, Info.plist, dependencies, privacy and Private Cloud,
+  crypto, release/CI config). GRDB migrations live inside `*Store.swift`, so
+  they are read off the tree and the patch instead. Also pass `--passes 2`
+  yourself when a fold changed logic. Going BELOW the inferred count needs
+  `--why "<reason>"` (exit 5 otherwise). For two passes, push then summon AT
+  ONCE so both read the same head, and fold both in one commit. Fastlane,
+  `.entitlements` and `.xcprivacy` sit outside the auto pass's paths, so there
+  "2" means two summons. Trivial head (comment fold, clean master merge on a
+  passed head): `--passes 0 --why "trivial head"` on a risk diff, bare
+  `--passes 0` otherwise. `land.sh` never waits: pending CI exits 2 and merges
+  nothing — run `pr_watch.py <PR>` first.
 - **PR granularity (2026-09-30 ruling):** one PR per stream of work per day;
   same-day small fixes ride TOGETHER (a token strip, a scorer check, a tool
   fix, a docs line, a gem bump were five PRs one day — ~12 review rounds and
   six Xcode Cloud archives for one PR's worth of diff). Split only for a
   release gate, an independent revert path, or a change that needs a
-  reviewer's whole attention. Two review rounds per PR, then carry the rest
-  to a follow-up issue. Claude pushes branches and lands via `land.sh` without
+  reviewer's whole attention. At most two push-wait-fold rounds per PR (a
+  round is a push plus its review, not a pass), then carry the rest to a
+  follow-up issue. Claude pushes branches and lands via `land.sh` without
   asking per action (never a direct push to master); land in a batch at the
   end of a stretch, and report only when something is landable, blocked or
   interesting. `challenger` before a PR that sets a threshold or heuristic.
@@ -60,7 +73,16 @@ Anything a cold session needs on turn one belongs below, not there.
 - swiftformat's unused-parameter rename runs BETWEEN batched edits: change a
   signature and its call sites in ONE edit, re-read before the next.
 - Merge stacked PRs bottom-up; never `--delete-branch` on a stack base;
-  `git rebase --onto` over a squash-merged base.
+  `git rebase --onto` over a squash-merged base. `land.sh` DOES delete the merged
+  branch, so retarget dependants first (`gh pr edit <N> --base master`) or GitHub
+  closes them (#473 was lost this way, reopened as #474).
+- Until #471 ships: a BLE headset in Headset/HFP wedges the voice engine
+  (`kAudioUnitErr_TooManyFramesToProcess`, 512 vs 320) even after the route
+  returns; MCP `speak` still says "Spoken.". Drain with `stop_speaking`; recovery
+  is an app relaunch.
+- App Store previews may only be screen captures of the app (guideline 2.3.4) —
+  narration + overlays allowed; Mac previews are 1920×1080 only. Pipeline:
+  `marketing/motion/PREVIEW-CAPTURE.md`.
 - Two MLX processes crawl — quit the live app before an eval run.
 - iOS/visionOS MLX has ONE gate, `AppCore.mlxAvailable` (`MLXRuntimeSupport`):
   never on the Simulator or Apple GPU family 5 (A12/A12X/A12Z) — mlx-swift
@@ -90,9 +112,11 @@ Anything a cold session needs on turn one belongs below, not there.
   isolated store; the window is pinned at 1440×900). Never exec the binary from
   a shell: it isn't foreground, so system sheets (Declared Age Range) dismiss
   and the API says `notAvailable`. No coordinate clicks while Kev is active.
-- App-ID capability entitlements (PCC, Declared Age Range) live in
-  `M1K3-MAS.entitlements` + `M1K3iOS.entitlements` only; `check_store_targets.py`
-  requires them there and forbids them in Developer ID. PCC consent is
+- App-ID capability entitlements are store-lane only: Declared Age Range in
+  `M1K3-MAS.entitlements` + `M1K3iOS.entitlements` (required there by
+  `check_store_targets.py`), PCC in `M1K3-MAS.entitlements`. The check forbids
+  both in the Developer ID `M1K3.entitlements` (AMFI kills a profile-less
+  launch). PCC consent is
   `PrivateCloudArming` (ADR 0010: asked once, by message id): any new path that
   sends history to PCC goes through it.
 
@@ -126,7 +150,23 @@ Review: Kev + claude-opus-5-5, 2026-10-01 (/debrief) — store-copy carry-forwar
 from #463: name/subtitle are record-wide (two metadata folders, one value), the
 review notes have one home, and precheck runs after every deliver push (a stale
 review_information/notes.txt overwrote the live Mac notes). Confidence 0.9.
+Review: Kev + claude-opus-5-5, 2026-10-04 — the landing loop goes from size
+tiers (two passes on anything substantive) to one pass by default, two only
+for a risk surface or a logic-changing fold; `pr_watch.py --passes` now
+defaults to 1. Kev: dev here had slowed under the two-pass loop. Kept from
+2026-09-30: two rounds per PR, then carry. Confidence 0.75 — the 09-30 entry
+says the loop caught four real bugs in a day, and nobody has measured how
+many of those only the second pass found.
+Review: Kev + claude-opus-5-5, 2026-10-04 (2) — the Open above is closed. The
+audit of 132 merged PRs (#287–#480, final pass vs earlier passes, classified by
+an offload model and spot-checked by hand) found 33 real catches only a later
+pass made: 28 came after a fold (re-reviewed by that head's auto pass anyway),
+17 sit on risk surfaces, and 2 would be lost outright (#292 marquee offset,
+#320 latent persona hazard). So pr_watch now infers the passes from the diff
+(47% of history would get 2, down from 89%), and a downgrade needs `--why`.
+The challenger caught that migrations hide in *Store.swift. Confidence 0.8.
 Review: Kev + claude-opus-5-5, 2026-10-01 (/debrief, #462) — the Debug-launch
 recipe (an exec'd binary isn't foreground: the age sheet dismissed itself) and
-the entitlement + PCC-consent seams. Confidence 0.85.
+the entitlement + PCC-consent seams. Confidence 0.85. Fold 2026-10-05: PCC is
+in the Mac store lane only; the check requires only Declared Age Range there.
 -->

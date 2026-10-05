@@ -59,6 +59,10 @@
 //  Review: Kev + claude-opus-5, 2026-09-14 — a stop button: while shown, a 20 Hz pointer poll flips
 //  `ignoresMouseEvents` so the panel is clickable only under the pointer (and click-through otherwise);
 //  hiding restores click-through. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — one fox at a time: the demand is
+//  `NotchHUDDemand.wantsHUD` (no HUD while the main window is on screen; its
+//  coming or going wakes the loop). Two RealityViews ran the M1 Max hot.
+//  Confidence 0.8 (the rule is pinned; the wiring is verify-by-launch).
 //
 
 import AppKit
@@ -120,8 +124,10 @@ final class NotchHUDController {
     /// test-pinned) owns the one-shot resume and the valve's cancellation.
     private func awaitSpeechChange() async {
         let signal = env.speechHighlight
+        let env = env
         await ObservedSignal.waitForChange(valve: NotchHUDVisibility.wakeValve(speaking: signal.isActive)) {
             _ = signal.isActive
+            _ = env.mainWindowOnScreen // the window coming or going also wakes the loop
         }
     }
 
@@ -139,7 +145,10 @@ final class NotchHUDController {
 
     private func tick() {
         let enabled = UserDefaults.standard.bool(forKey: AppEnvironment.notchHUDEnabledKey)
-        let speaking = enabled && env.speechHighlight.isActive
+        // One fox at a time: no HUD while the main window (and its avatar) is up.
+        let speaking = NotchHUDDemand.wantsHUD(
+            enabled: enabled, speaking: env.speechHighlight.isActive, mainWindowOnScreen: env.mainWindowOnScreen
+        )
         let now = Date().timeIntervalSince(clockStart)
         guard let action = visibility.update(speaking: speaking, atSeconds: now) else { return }
         switch action {

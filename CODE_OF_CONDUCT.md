@@ -34,7 +34,7 @@ Examples of unacceptable behaviour:
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behaviour may be
-reported to the maintainers at **kevin@round-tower.ie**. All complaints will
+reported to the maintainers at **hello@round-tower.ie**. All complaints will
 be reviewed and investigated promptly and fairly. Maintainers are obligated
 to respect the privacy and security of the reporter of any incident.
 

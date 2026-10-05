@@ -13,13 +13,18 @@
 //  claude-fable-5 (the TabView form).
 //  Review: Kev + claude-fable-5, 2026-07-29 — TabView(.sidebarAdaptable) →
 //  NavigationStack{ChatScreen}; navigation moved into toolbars.
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — the stack owns a typed path so the screengrab harness can push
+//  a plate's screen (`ScreengrabHarness.phoneRoute`); every ordinary link is still view-destination. Confidence 0.85.
 //
 
+import M1K3Screengrab
 import SwiftUI
 
 struct RootView: View {
     @Environment(AppCore.self) private var core
     @State private var onboarded: Bool
+    /// Only the screengrab harness writes this (ChatScreen, once the brain is ready).
+    @State private var screengrabPath: [ScreengrabRoute] = []
 
     init(startOnboarded: Bool) {
         _onboarded = State(initialValue: startOnboarded)
@@ -27,7 +32,7 @@ struct RootView: View {
 
     var body: some View {
         if onboarded {
-            NavigationStack { ChatScreen() }
+            NavigationStack(path: $screengrabPath) { ChatScreen(screengrabPath: $screengrabPath) }
                 .preferredColorScheme(.dark)
         } else {
             OnboardingScreen {

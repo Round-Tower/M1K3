@@ -49,6 +49,8 @@
 //  with `.animation(value: chatting)`); hero's animation is scoped to hero, so they popped. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — one paperclip + one picker replace the image/file pair (the Mac's
 //  change, shared `AttachmentRouting`); an image a blind brain can't take is named. Confidence 0.8 (device-owed).
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — the screengrab beat also pushes the plate's screen (`phoneRoute`:
+//  Settings ▸ Documents / Memories) so App Preview footage needs no taps. Confidence 0.85 (verify-by-launch on the sim).
 
 import M1K3Avatar
 import M1K3Chat
@@ -67,6 +69,8 @@ struct ChatScreen: View {
     /// version's one chance on a backgrounded app.
     @Environment(\.scenePhase) private var scenePhase
     @State private var voiceLaunched = false
+    /// The screengrab harness's push (RootView's stack path); untouched otherwise.
+    @Binding var screengrabPath: [ScreengrabRoute]
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
@@ -212,6 +216,14 @@ struct ChatScreen: View {
                     // The App Store screengrab suite's per-plate beat (AppCore+Screengrab).
                     voiceLaunched = true
                     core.performScreengrabBeat()
+                    screengrabPath = ScreengrabHarness.current.phoneRoute
+                }
+            }
+            .navigationDestination(for: ScreengrabRoute.self) { route in
+                switch route {
+                case .settings: SettingsScreen()
+                case .documents: DocumentsScreen()
+                case .memories: MemoriesScreen()
                 }
             }
     }

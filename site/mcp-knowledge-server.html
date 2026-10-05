@@ -20,7 +20,7 @@
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Private by design.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Give Claude a Local Memory — M1K3 as an MCP Knowledge Server" />
 <meta name="twitter:description" content="Connect Claude to M1K3's on-device knowledge base over MCP — served from 127.0.0.1, never the cloud." />
@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-09-09"
+  "dateModified": "2026-10-02"
 }
 </script>
 <script type="application/ld+json">
@@ -45,13 +45,13 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "How do I give Claude a local memory with MCP?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Run an MCP knowledge server on your machine and register it with your Claude client. M1K3, a free source-available AI app for Apple Silicon Macs, serves MCP over loopback HTTP at http://127.0.0.1:4242/mcp while the app runs. Import your documents into M1K3, add the server to Claude Code or Claude Desktop, and Claude can search and read that knowledge through tools like search_knowledge — with retrieval happening entirely on your Mac." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Run an MCP knowledge server on your machine and register it with your Claude client. M1K3, a free source-available AI app for Apple Silicon Macs, serves MCP over loopback HTTP at http://127.0.0.1:4242/mcp while the app runs. Import your documents into M1K3, switch the server on, hand your client its access token (m1k3 login, then m1k3 connect claude), and Claude can search and read that knowledge through tools like search_knowledge — with retrieval happening entirely on your Mac." } },
     { "@type": "Question", "name": "What MCP tools does M1K3 expose?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Sixteen tools spanning knowledge (search_knowledge, list_documents, get_document), memory (remember, recall_memory, related_memory, forget_memory, memory_stats), intelligence (ask_m1k3, get_answer, list_jobs), voice (speak, stop_speaking, listen), and utility (get_status, open_link)." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Eighteen tools spanning knowledge (search_knowledge, list_documents, get_document), memory (remember, recall_memory, related_memory, forget_memory, memory_stats), intelligence (ask_m1k3, get_answer, list_jobs), voice (speak, stop_speaking, listen), todos (list_todos, propose_todo), and utility (get_status, open_link)." } },
     { "@type": "Question", "name": "Is an MCP knowledge server private?",
       "acceptedAnswer": { "@type": "Answer", "text": "M1K3's server binds to 127.0.0.1 — loopback only, unreachable from the network — and retrieval, embeddings, and storage all run on-device. One honest caveat: whatever an MCP client retrieves becomes part of that client's own context. If the client is a cloud-hosted assistant, retrieved text goes wherever that assistant's conversations go. Local server, client's rules — connect the clients you trust." } },
     { "@type": "Question", "name": "Does M1K3's MCP server work with agents other than Claude?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. MCP is an open protocol; any MCP-capable client can connect to M1K3's HTTP endpoint at http://127.0.0.1:4242/mcp. Claude Code and Claude Desktop are the documented first-class paths, and the repo includes setup notes for wiring other clients." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. MCP is an open protocol; any MCP-capable client can connect to M1K3's HTTP endpoint at http://127.0.0.1:4242/mcp with the server's access token. Claude Code and Claude Desktop are the documented first-class paths, and the repo includes setup notes for wiring other clients." } }
   ]
 }
 </script>
@@ -79,11 +79,11 @@
   <header class="article-head">
     <span class="label">// for agents &amp; their humans</span>
     <h1>Give Claude a local memory</h1>
-    <p class="meta">Updated 2026-09-09 · A tutorial from Round Tower, the makers of M1K3</p>
+    <p class="meta">Updated 2026-10-02 · A tutorial from Round Tower, the makers of M1K3</p>
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: run an MCP knowledge server on your Mac and point Claude at it.</strong> M1K3 — a free, source-available AI app for Apple Silicon Macs — serves the Model Context Protocol over loopback HTTP at <code>http://127.0.0.1:4242/mcp</code> while the app runs. Import your documents and notes into M1K3, register the server with Claude Code, and Claude gains tools like <code>search_knowledge</code>, <code>recall_memory</code>, and <code>remember</code> over <em>your</em> knowledge — with retrieval, embeddings, and storage all happening on your machine. Claude Desktop connects too, via a knowledge-only stdio binary. Setup is one config snippet; the walkthrough is below.</p>
+    <p><strong>Short answer: run an MCP knowledge server on your Mac and point Claude at it.</strong> M1K3 — a free, source-available AI app for Apple Silicon Macs — serves the Model Context Protocol over loopback HTTP at <code>http://127.0.0.1:4242/mcp</code> while the app runs. Import your documents and notes into M1K3, register the server with Claude Code, and Claude gains tools like <code>search_knowledge</code>, <code>recall_memory</code>, and <code>remember</code> over <em>your</em> knowledge — with retrieval, embeddings, and storage all happening on your machine. Claude Desktop connects too, via a knowledge-only stdio binary. Setup is switching the server on, pasting its access token into <code>m1k3 login</code>, and one connect; the walkthrough is below.</p>
   </div>
 
   <h2>What is an MCP knowledge server?</h2>
@@ -91,7 +91,7 @@
   <p>Cloud assistants usually solve "memory" with cloud storage. The local variant flips that: M1K3 keeps the knowledge base on your Mac — app-sandboxed, encrypted with a Keychain-held key — and exposes it only on <code>127.0.0.1</code>, the loopback interface no other machine can reach. Claude gets a second brain; the second brain stays home.</p>
 
   <h2>What tools does M1K3 expose over MCP?</h2>
-  <p>Sixteen, spanning knowledge, memory, intelligence, and voice (the <a href="https://github.com/Round-Tower/M1K3#tools">README's table</a> is generated live from the running server):</p>
+  <p>Eighteen, spanning knowledge, memory, intelligence, voice, and todos (the <a href="https://github.com/Round-Tower/M1K3#tools">README's table</a> is generated live from the running server):</p>
   <div class="table-scroll">
     <table class="cmp">
       <thead>
@@ -111,6 +111,8 @@
         <tr><td>list_jobs</td><td>List queued and finished ask_m1k3 jobs with their states</td></tr>
         <tr><td>speak / stop_speaking</td><td>Speak text aloud through M1K3's voice (and animate the avatar); stop immediately</td></tr>
         <tr><td>listen</td><td>Listen on the mic and return the transcript when the speaker pauses</td></tr>
+        <tr><td>list_todos</td><td>Read the user's todo list — what is open, what is proposed and not yet accepted</td></tr>
+        <tr><td>propose_todo</td><td>Propose a todo, stamped with your client's name. Only the user can accept it</td></tr>
         <tr><td>get_status</td><td>Active brain tier, voice status, and busy flags</td></tr>
         <tr><td>open_link</td><td>Open a URL in M1K3's review panel, beside the conversation</td></tr>
       </tbody>
@@ -119,22 +121,28 @@
 
   <h2>How do I connect Claude Code to M1K3?</h2>
   <p><strong>Step 1 — install M1K3 and give it something to know.</strong> Get the app (<a href="https://testflight.apple.com/join/Fxp2F5Je">TestFlight</a>, <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">DMG</a>, or <a href="https://github.com/Round-Tower/M1K3">source</a>; requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.</p>
-  <p><strong>Step 2 — register the server.</strong> With the app running, either add this to a <code>.mcp.json</code> in your project (this is verbatim the config M1K3's own repo uses):</p>
+  <p><strong>Step 2 — switch the server on and connect.</strong> In M1K3, open <strong>Settings ▸ Privacy ▸ MCP server</strong>, switch it on, and Copy the access token. Every request has to carry it; one without it gets a 401. Then, from Terminal:</p>
+  <div class="term">
+    <div class="term-bar"><span></span><span></span><span></span></div>
+    <div class="term-body"><pre><span class="p">$</span> m1k3 login &amp;&amp; m1k3 connect claude</pre></div>
+  </div>
+  <p><code>m1k3 login</code> reads the token with echo off and keeps it in your login keychain; <code>connect</code> registers M1K3 with Claude Code for every project, token included. The <code>m1k3</code> client ships inside the app at <code>Contents/Helpers/m1k3</code>, and the Homebrew cask puts it on your PATH; the full walkthrough, for five clients, is at <a href="/agents">m1k3.app/agents</a>. Or register it by hand, with the token from Settings:</p>
+  <div class="term">
+    <div class="term-bar"><span></span><span></span><span></span></div>
+    <div class="term-body"><pre><span class="p">$</span> claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp --header "Authorization: Bearer m1k3_…"</pre></div>
+  </div>
+  <p>A <code>.mcp.json</code> takes the same entry with a <code>headers</code> object (keep a file holding the token out of version control):</p>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre>{
   <span class="p">"mcpServers"</span>: {
     <span class="p">"m1k3"</span>: {
       <span class="p">"type"</span>: "http",
-      <span class="p">"url"</span>: "http://127.0.0.1:4242/mcp"
+      <span class="p">"url"</span>: "http://127.0.0.1:4242/mcp",
+      <span class="p">"headers"</span>: { "Authorization": "Bearer m1k3_…" }
     }
   }
 }</pre></div>
-  </div>
-  <p>…or register it once from the command line:</p>
-  <div class="term">
-    <div class="term-bar"><span></span><span></span><span></span></div>
-    <div class="term-body"><pre><span class="p">$</span> claude mcp add --transport http m1k3 http://127.0.0.1:4242/mcp</pre></div>
   </div>
   <p><strong>Step 3 — use it.</strong> Ask Claude something your documents answer:</p>
   <div class="term">
@@ -164,7 +172,7 @@
     </details>
     <details>
       <summary>Does it work with agents other than Claude?</summary>
-      <p>Yes — MCP is an open protocol, and the endpoint is a standard HTTP MCP server. Claude Code and Claude Desktop are the documented first-class paths.</p>
+      <p>Yes — MCP is an open protocol, and the endpoint is a standard HTTP MCP server; any client that can send the access token as an Authorization header can connect. Claude Code and Claude Desktop are the documented first-class paths.</p>
     </details>
     <details>
       <summary>What does it cost?</summary>
@@ -175,7 +183,7 @@
   <section class="page-cta">
     <span class="label">// your second brain, local</span>
     <h2>Give your agents a memory.</h2>
-    <p>M1K3 is free for humans, source-available, and entirely on-device. One config snippet and Claude knows what you know.</p>
+    <p>M1K3 is free for humans, source-available, and entirely on-device. One switch, one token, one connect, and Claude knows what you know.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="https://testflight.apple.com/join/Fxp2F5Je">Join the TestFlight beta</a>
       <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Build from source</a>
@@ -195,7 +203,7 @@
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER</a> · MADE IN IRELAND</span>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE STUDIOS LTD</a> · MADE IN IRELAND</span>
   <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
 </footer>
 
@@ -210,6 +218,15 @@
      Review: Kev + claude-fable-5.1, 2026-09-09 — the relicense (ADR 0005, 2026-09-09): "free open-source" → "free source-available" in
      the JSON-LD answer + short answer; the cost FAQ names the FSL; closing line. Nav → the
      tile-less mark alone. dateModified bumped. Confidence now 0.85. 
-     Review: Kev + claude-fable-5.1, 2026-09-09 (site alignment pass: closing line "source public" → "source-available".) Confidence now 0.85. -->
+     Review: Kev + claude-fable-5.1, 2026-09-09 (site alignment pass: closing line "source public" → "source-available".) Confidence now 0.85.
+     Review: Kev + claude-opus-5-5, 2026-10-02 — #448 made the access token mandatory, and the repo has
+     had no .mcp.json since the token (a project entry would shadow the authed user one), so Step 2's
+     "verbatim the config M1K3's own repo uses" was false twice over and its snippets drew a 401. Step 2
+     now switches the server on, Copies the token, `m1k3 login && m1k3 connect claude`; the by-hand
+     `claude mcp add` and the .mcp.json both carry the Authorization header (ConnectPlan.snippet's
+     shape, token shown as m1k3_…), and the HowTo answer in the JSON-LD names the token. Tool count
+     16 → 18 (list_todos and propose_todo were missing from the table and the JSON-LD answer).
+     og:image:alt follows the re-rendered og.png; footer names the company. dateModified 2026-10-02.
+     Confidence 0.85. -->
 </body>
 </html>

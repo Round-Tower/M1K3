@@ -1,11 +1,11 @@
 M1K3
-Copyright 2026 Kevin Murphy (Round Tower)
+Copyright 2026 Round Tower Software Studios Ltd
 
-This product includes software developed by Kevin Murphy and contributors,
-licensed under the Functional Source License, Version 1.1, ALv2 Future
-License (FSL-1.1-ALv2 — see LICENSE). Each version becomes available under
-the Apache License, Version 2.0 two years after it is made available, by the
-Grant of Future License in that file.
+This product includes software developed by Round Tower Software Studios
+Ltd and contributors, licensed under the Functional Source License, Version
+1.1, ALv2 Future License (FSL-1.1-ALv2 — see LICENSE). Each version becomes
+available under the Apache License, Version 2.0 two years after it is made
+available, by the Grant of Future License in that file.
 
 Relicensing boundary. M1K3 was published under the Apache License, Version
 2.0 from 2026-07-01 until the commit that introduced this paragraph
@@ -24,7 +24,7 @@ Trademarks and brand assets
 
 "M1K3", "M1K3 Voice", "Lil M1K3", "Brain at Home", the M mark, the companion
 faces, the app icon, the artwork, and the M1K3 voice are trademarks and brand
-assets of Kevin Murphy / Round Tower. They are NOT licensed under the LICENSE
+assets of Round Tower Software Studios Ltd. They are NOT licensed under the LICENSE
 (the FSL's Trademarks clause; Section 6 of the Apache License for earlier
 revisions) and are all rights reserved. Forks may
 not be distributed under the M1K3 name or with these assets. See
@@ -35,7 +35,7 @@ cannot narrow a copyright grant on its own, so the exclusion is stated here,
 in the repository's licence notice: from the commit that added this paragraph
 (2026-09-07) onward, the following files are NOT part of "the Software" (nor,
 for earlier revisions, "the Work") licensed under the LICENSE and are
-copyright Kevin Murphy / Round Tower, all rights
+copyright Round Tower Software Studios Ltd, all rights
 reserved (revisions published before this notice remain under the grant they
 were published with):
 

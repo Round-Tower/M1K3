@@ -2,13 +2,22 @@
 
 M1K3 exposes MCP on **two surfaces**:
 
-1. **The in-app HTTP server** — the live, full-capability surface. 15 tools
-   (knowledge search, documents, voice, listening, memory graph, `ask_m1k3`,
-   `remember`, …) served at `http://127.0.0.1:4242/mcp` while the app runs.
+1. **The in-app HTTP server** — the live, full-capability surface. 18 tools
+   (knowledge search, documents, voice, listening, memory graph, todos,
+   `ask_m1k3`, `remember`, …; the full list is the README's generated table) served at `http://127.0.0.1:4242/mcp` while the app runs.
    **This is the way to connect.**
 2. **The `M1K3MCP` stdio binary** — a knowledge-only fallback (3 tools:
    `search_knowledge`, `list_documents`, `get_document`) that reads the app's
    store directly, for clients that can't speak HTTP or when the app is closed.
+
+Both surfaces send MCP `instructions` at initialize (`M1K3ServerInstructions`),
+built from the tools that surface registers. The app's server tells every agent
+that M1K3 is the user's voice: when the user is clearly there, `speak` short,
+audio-first updates at the moments that matter (at most once per phase, never
+for routine progress), and never say a secret aloud. The
+stdio binary and the LAN brain server (`m1k3-brain`, paired devices) have no voice
+tools, so they only point agents at the knowledge tools they serve.
+No per-agent setup is needed for any of this.
 
 ## 1. Connect to the app (HTTP — recommended)
 
@@ -22,6 +31,9 @@ The short way, from Terminal — it asks for the token, so Copy it first:
 ```bash
 m1k3 login && m1k3 connect claude
 ```
+
+(`m1k3` is on your PATH from the Homebrew cask; from the DMG it is
+`/Applications/M1K3.app/Contents/Helpers/m1k3`.)
 
 `m1k3 login` reads the token from the terminal with echo off (or a pipe:
 `pbpaste | m1k3 login`), never from the command line, and keeps it in your login
@@ -38,7 +50,9 @@ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp \
 ```
 
 The JSON clients take a `headers` entry (`"type": "http"` matters to Claude
-Code — a bare `"url"` key is silently rejected):
+Code — a bare `"url"` key is silently rejected). Prefer the user scope: a
+project `.mcp.json` entry shadows the user one, so after **New Token…** a stale
+project entry 401s while the user entry works:
 
 ```json
 {
@@ -131,7 +145,17 @@ stdin open — the server tears down on EOF before async handlers reply):
 You should see `serverInfo` + the three tool definitions.
 
 The HTTP surface can be smoke-tested the same way with `curl` against
-`http://127.0.0.1:4242/mcp` (stateless — each POST carries one JSON-RPC call).
+`http://127.0.0.1:4242/mcp` (stateless — each POST carries one JSON-RPC call),
+with the token on every request:
+
+```bash
+curl -s http://127.0.0.1:4242/mcp \
+  -H "Authorization: Bearer m1k3_…" \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+Without the header the answer is 401.
 
 ---
 *Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85, Prior: Unknown*
@@ -140,3 +164,10 @@ described only the stdio binary; by July the in-app HTTP server (15 tools,
 127.0.0.1:4242) had become the primary surface and both READMEs pointed here
 for it. Original stdio instructions preserved verbatim as the fallback path.
 Confidence 0.9.*
+*Review: claude-opus-5-5, 2026-10-02 — truth-up before the MCP directory
+listings: the HTTP server has 18 tools (counted from the M1K3MCPKit
+registrations: Intelligence 4, Voice 4, Memory 4, knowledge 3, Todo 2,
+open_link 1), not 15; the curl smoke test now shows the Authorization header
+#448 made mandatory. Confidence 0.85 (the tokenless call was checked against
+the running app: 401; the tokened curl was not run, to keep the token out of
+argv here).*

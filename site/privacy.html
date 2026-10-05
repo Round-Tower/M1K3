@@ -20,7 +20,7 @@
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Nothing leaves.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
+<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Private by design.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Is M1K3 Really Private? — The Privacy Architecture" />
 <meta name="twitter:description" content="What runs on your Mac, what ever touches the network, and how to verify it — including the exceptions." />
@@ -36,7 +36,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-09-23"
+  "dateModified": "2026-10-02"
 }
 </script>
 <script type="application/ld+json">
@@ -45,9 +45,9 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Is M1K3 really private?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes — by architecture, not by policy. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the store encrypted under a Keychain-held key. The network is used in exactly four documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, an optional web-search tool that is off by default, app updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes — by architecture, not by policy. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the store encrypted under a Keychain-held key. The network is used in exactly four documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, web search, which is on by default so answers can be current, with one switch in Settings to turn it off, app updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics." } },
     { "@type": "Question", "name": "Does M1K3 ever connect to the internet?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Four documented cases, all user-initiated: (1) downloading model weights from Hugging Face, once, only when you opt into the Lil or Big brain — the default Mini brain is Apple's built-in on-device model, nothing to download; (2) the optional web-search and page-reading agent tools, off by default behind a privacy toggle; (3) updates, via TestFlight or by downloading a new DMG from GitHub — the app has no self-updater; (4) Private Cloud Compute, opt-in and off by default — one message at a time, only when you turn it on. With Private Cloud Compute off, conversations, documents, voice, and calls never leave the Mac." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Four documented cases: (1) downloading model weights from Hugging Face, once, only when you opt into the Lil or Big brain — the default Mini brain is Apple's built-in on-device model, nothing to download; (2) the web-search and page-reading agent tools, on by default so answers can be current, behind one privacy toggle that turns them off; (3) updates, via TestFlight or by downloading a new DMG from GitHub — the app has no self-updater; (4) Private Cloud Compute, opt-in and off by default — one message at a time, only when you turn it on. With Private Cloud Compute off, documents, voice, and calls never leave the Mac, and a conversation reaches the web only as the searches M1K3 runs for it." } },
     { "@type": "Question", "name": "Where is M1K3's data stored?",
       "acceptedAnswer": { "@type": "Answer", "text": "In the app's macOS sandbox container, in a GRDB store encrypted with a key held in your Keychain. Documents enter only when you explicitly open or drop them; call transcription is consent-gated and encrypted at rest; the memory store has a forget primitive so consent stays revocable." } },
     { "@type": "Question", "name": "How can I verify M1K3's privacy claims?",
@@ -81,11 +81,11 @@
   <header class="article-head">
     <span class="label">// privacy architecture</span>
     <h1>Is M1K3 really private?</h1>
-    <p class="meta">Updated 2026-09-23 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
+    <p class="meta">Updated 2026-10-02 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: yes — by architecture, not by promise.</strong> M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to <code>127.0.0.1</code> and is off by default. The network is used in <strong>exactly four documented cases</strong>: a one-time model-weights download from Hugging Face when you opt into a bigger brain, an optional web-search tool that is off by default, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.</p>
+    <p><strong>Short answer: yes — by architecture, not by promise.</strong> M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to <code>127.0.0.1</code> and is off by default. The network is used in <strong>exactly four documented cases</strong>: a one-time model-weights download from Hugging Face when you opt into a bigger brain, web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.</p>
   </div>
 
   <h2>What runs where?</h2>
@@ -107,13 +107,13 @@
     </section>
     <section class="wrw-col" aria-labelledby="wrw-net">
       <h3 class="wrw-head" id="wrw-net">The network</h3>
-      <p class="wrw-sub">the complete list of crossings · all user-initiated</p>
+      <p class="wrw-sub">the complete list of crossings</p>
       <ul>
         <li class="crossing"><strong>Model weights, once</strong> Downloaded from Hugging Face only when you opt into the Lil or Big brain. The default Mini brain is Apple's built-in model — nothing to download.</li>
-        <li class="crossing"><strong>Web search &amp; page reading (optional)</strong> Agent tools behind a privacy toggle, off by default. Web off means web off.</li>
+        <li class="crossing"><strong>Web search &amp; page reading (on by default)</strong> Agent tools behind one privacy toggle, so answers can be current. Web off means web off.</li>
         <li class="crossing"><strong>Updates</strong> Via TestFlight or a new DMG from GitHub Releases. The app has no self-updater phoning home.</li>
         <li class="crossing"><strong>Private Cloud Compute (optional, off by default)</strong> A cloud button next to the message field, visible only once you turn it on in Settings. Sends one message at a time to Apple's Private Cloud Compute, after a consent sheet; every PCC answer is labelled.</li>
-        <li><strong>And that's it.</strong> No telemetry, no analytics, no account, no crash reporting. With Private Cloud Compute off — the default — your prompts, documents, voice, and calls are not on this list, by construction. Turn it on and only the one message you send (plus the conversation so far, if you tick it) ever crosses — never memories, documents, tools, calendar, location, or your profile.</li>
+        <li><strong>And that's it.</strong> No telemetry, no analytics, no account, no crash reporting. With Private Cloud Compute off — the default — your documents, voice, and calls are not on this list, by construction, and your prompts reach it only as the web searches M1K3 runs for them. Turn it on and only the one message you send (plus the conversation so far, if you tick it) ever crosses — never memories, documents, tools, calendar, location, or your profile.</li>
       </ul>
       <p class="wrw-note">every crossing above is documented in the repo</p>
     </section>
@@ -123,7 +123,7 @@
   <p>A privacy page earns its keep in the exceptions, so here they are, plainly:</p>
   <ol>
     <li><strong>Model downloads (one-time, opt-in).</strong> M1K3 starts on Mini — Apple's on-device Foundation Model, instant, nothing to download. If you choose a bigger local brain (Lil or Big) or on-device Whisper speech models, the weights download once from <code>huggingface.co</code>; after that, inference runs fully offline. The app's outbound-network entitlement exists for this — the <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements">entitlements file</a> says so in a signed comment.</li>
-    <li><strong>The web tools (opt-in, off by default).</strong> The local agent has web-search and page-reading tools behind a privacy toggle. When the toggle is off, the agent has no web tools at all — it can't quietly decide to search. When you turn it on, your search queries go to the web, as searches do.</li>
+    <li><strong>The web tools (on by default, one switch to turn them off).</strong> The local agent has web-search and page-reading tools so answers can be current. One toggle in <strong>Settings ▸ Privacy</strong> turns them off; when it is off, the agent has no web tools at all — it can't quietly decide to search. When it is on, your search queries go to the web, as searches do.</li>
     <li><strong>Updates (via the channel you chose).</strong> There is no Sparkle-style self-updater inside the app. TestFlight builds update through Apple's infrastructure; the DMG updates when you download a new one from <a href="https://github.com/Round-Tower/M1K3/releases">GitHub Releases</a>; a source build updates when you pull and rebuild.</li>
     <li><strong>Private Cloud Compute (opt-in, off by default).</strong> Turn it on in Settings and a cloud button appears next to the message field. Tap it and a consent sheet shows exactly what's about to go — the message, plus the conversation so far only if you tick that too — before it sends one message at a time to Apple's Private Cloud Compute. Never your memories, documents, tools, calendar, location, or profile. Every PCC answer is labelled in the chat; if PCC fails or the quota runs out, the on-device brain answers and says why. Detail below.</li>
   </ol>
@@ -156,7 +156,7 @@
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre><span class="p">$</span> codesign -d --entitlements - /Applications/M1K3.app
 <span class="c">com.apple.security.app-sandbox            → true</span>
-<span class="c">com.apple.security.network.client         → true  # model downloads + opt-in web tools</span>
+<span class="c">com.apple.security.network.client         → true  # model downloads + the web tools (on by default)</span>
 <span class="c">com.apple.security.network.server         → true  # the 127.0.0.1 MCP server, off by default</span>
 <span class="c">com.apple.security.device.audio-input     → true  # mic, for on-device speech recognition</span>
 <span class="c">com.apple.developer.private-cloud-compute → true  # the opt-in cloud button, off by default</span></pre></div>
@@ -214,7 +214,7 @@
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER</a> · MADE IN IRELAND</span>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE STUDIOS LTD</a> · MADE IN IRELAND</span>
   <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
 </footer>
 
@@ -254,6 +254,14 @@
      own process excluded), StereoCallRecorder (mono fallback), AppEnvironment (recording deleted after
      transcription), RecordingConsent (affirm per call or remembered, timestamped), CallsView (Delete),
      SensePermissionPolicy (the dialog fires as the switch goes on). dateModified 2026-09-23. Confidence 0.85.
+     Review: Kev + claude-opus-5-5, 2026-10-02 — web search is ON by default (AppEnvironment.webSearchAllowed:
+     an absent key means allowed), as the approved store copy says, so every "optional / off by default /
+     opt-in" web claim here (the short answer, both JSON-LD answers that state it, the crossings list and
+     its "all user-initiated" sub-head, the numbered exceptions, the entitlement comment) now says on by
+     default with one switch to turn it off, and "prompts never leave" became "prompts reach the web only
+     as the searches M1K3 runs". og:image:alt follows the re-rendered og.png; footer names Round Tower
+     Software Studios Ltd. NOT touched, flagged: this page describes the PCC switch as present, but 1.0
+     ships no PCC backend (the switch never appears). dateModified 2026-10-02. Confidence 0.8.
 -->
 </body>
 </html>

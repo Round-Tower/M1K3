@@ -564,6 +564,21 @@ struct AgentRAGResponderTests {
         #expect(prompt.contains("Right now (true for this turn)"))
     }
 
+    /// #482: the "what leaves this device" facts ride the per-turn grounding.
+    @Test("the egress clause rides the agent turn's grounding")
+    func egressClauseInjected() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider(["CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]"])
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] },
+            egressClauseProvider: { "EGRESS-FACTS" }
+        )
+        let (_, stream) = try await responder.answerStreaming("What hydraulic seal failed on the conveyor under load?")
+        _ = await collect(stream)
+        #expect(try #require(provider.allPrompts.first).contains("EGRESS-FACTS"))
+    }
+
     @Test("tool use is reported as activity and reaches the answer")
     func toolUseFlow() async throws {
         let (store, embedder) = try await ingestedStore()

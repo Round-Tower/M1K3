@@ -19,6 +19,9 @@
 //  data addition: the wireframe lattice is BAKED GEOMETRY, so no shader, renderer or
 //  picker change was needed. Gated `rkprobe --tick` 3/3 MOVES + 2187 tests green;
 //  the on-screen result is verify-at-⌘R.
+//  Review: Kev + claude-opus-5-5, 2026-10-01 — three new gaits (`.sleepy` Sit, `.affection` Clicked, `.fidget`
+//  Idle_B) so the bundled-but-never-played clips have a name to be reached by; the fox collapses all three
+//  onto Survey/Run (it ships only three clips). Part of the companion-choreography fix. Confidence now 0.75.
 //  Review: claude-fable-5.1, 2026-09-09 — the phosphorFox doc claimed `.off` reproduces the site; a capture
 //  showed a grey wireframe. Corrected: the lattice is baked, the glow is the shader. Confidence now 0.7.
 
@@ -46,12 +49,16 @@ public enum CompanionDialect: Equatable, Sendable {
             case .move: "Walk"
             case .react: "Jump"
             case .distress: "Fear"
+            case .sleepy: "Sit"
+            case .affection: "Clicked"
+            case .fidget: "Idle_B"
             }
         case .fox:
             switch gait {
             case .rest, .alert: "Survey" // no distinct alert clip — survey reads as attentive
             case .move: "Walk"
-            case .react, .distress: "Run" // no jump/fear — run carries both energy and agitation
+            case .react, .distress, .affection: "Run" // no jump/fear/hug — run carries energy, agitation and a delighted dash
+            case .sleepy, .fidget: "Survey" // no Sit and no fidget clip: the fox just keeps looking around
             }
         case .aquatic:
             switch gait {
@@ -60,6 +67,9 @@ public enum CompanionDialect: Equatable, Sendable {
             case .move: "Swim" // speaking/generating = gliding, never trudging
             case .react: "Fly" // the squid jet — delight as propulsion
             case .distress: "Fear"
+            case .sleepy: "Sit"
+            case .affection: "Clicked"
+            case .fidget: "Idle_B"
             }
         case .avian:
             switch gait {
@@ -68,6 +78,9 @@ public enum CompanionDialect: Equatable, Sendable {
             case .move: "Fly" // a bird with something to say takes wing
             case .react: "Jump" // the happy hop
             case .distress: "Fear"
+            case .sleepy: "Sit"
+            case .affection: "Clicked"
+            case .fidget: "Idle_B"
             }
         }
     }

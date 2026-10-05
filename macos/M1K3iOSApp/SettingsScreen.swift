@@ -33,6 +33,13 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-01 — the entitlement this needed was never added
 //  (M1K3iOS.entitlements has it now), and `catch {}` hid the refusal. A failed ask says why
 //  (`AgeRangeRequestFailure`, tested) and leaves the band alone. Confidence 0.8 (verify on device).
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — Apple's error maps by case NAME: the switch over its cases
+//  strong-linked its invalidAccount case, absent on iOS 26.5, and dyld killed the app at launch. Verified on the
+//  26.5 simulator. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-03 — under the privacy screengrab plate the form scrolls to Grounding
+//  (the web-search switch) on appear; inert otherwise. Confidence 0.8 (verify-by-launch on the sim).
+//  Review: Kev + claude-opus-5-5, 2026-10-04 — About footer: "Private by design. No account, no analytics." (the iOS
+//  listing's claims), not "Everything runs on your device." Confidence 0.9.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -40,6 +47,7 @@
 import M1K3BrainLink
 import M1K3Chat
 import M1K3Inference
+import M1K3Screengrab
 import SwiftUI
 
 struct SettingsScreen: View {
@@ -62,6 +70,19 @@ struct SettingsScreen: View {
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
+            form
+                .task {
+                    // The privacy plate's subject is the web-search switch, below the fold.
+                    if ScreengrabHarness.current.plate == .privacyLabel { proxy.scrollTo(Self.groundingID, anchor: .center) }
+                }
+        }
+        .navigationTitle("Settings")
+    }
+
+    private static let groundingID = "grounding"
+
+    private var form: some View {
         Form {
             Section("Workspace") {
                 NavigationLink {
@@ -143,6 +164,7 @@ struct SettingsScreen: View {
                 Text("The only thing that sends your conversation to the internet. "
                     + "Every search shows in the reply as it happens.")
             }
+            .id(Self.groundingID)
 
             Section {
                 Toggle("Avatar backdrop in chat", isOn: $avatarBackdrop)
@@ -178,10 +200,9 @@ struct SettingsScreen: View {
             } header: {
                 Text("About")
             } footer: {
-                Text("Everything runs on your device.")
+                Text("Private by design. No account, no analytics.")
             }
         }
-        .navigationTitle("Settings")
     }
 
     #if !os(visionOS)
@@ -323,14 +344,10 @@ struct SettingsScreen: View {
         /// The boundary map: M1K3Chat never imports DeclaredAgeRange. (The Mac's
         /// twin lives in PrivacySettingsPane; the two shells share no app files.)
         init(_ error: AgeRangeService.Error) {
-            switch error {
-            case .notAvailable: self = .notAvailable
-            case .invalidAccount: self = .invalidAccount
-            case .network: self = .network
-            case .declinedOnboarding: self = .declinedOnboarding
-            case .invalidRequest: self = .other
-            @unknown default: self = .other
-            }
+            // By NAME: a switch over Apple's
+            // cases links each case symbol at launch, and an OS that predates
+            // one (iOS 26.5, the iOS 27 beta) never starts the app (2026-10-03).
+            self.init(appleCaseName: String(describing: error))
         }
     }
 #endif
