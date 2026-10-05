@@ -29,6 +29,14 @@
 //  the title counted for nothing). Pinned by titleMentionWithoutSubjectIsNotFlagged,
 //  markersAreWholeWords, markerInTitleCounts. Review 3: the bare "tool" marker is gone — it made
 //  "mcp tool" dead code and flagged "M1K3 is a useful tool" (bareToolWordIsNotAMarker).
+//  Review: Kev + claude-opus-5.5, 2026-10-05 — #482: both subject rules matched ANYWHERE, so Kev's
+//  dev-history episodes ("On 2026-10-02 Kev and Claude made M1K3's launch film…" plus a backticked
+//  render line; the 2026-09-08 hit-list day) were dropped as wiring notes, and chat answered "no
+//  record" for a memory recall ranked #1 (live log: "dropped as wiring-shaped self notes: 2").
+//  The title or text must now OPEN with M1K3 (after any bullet/quote). Every #286 pin holds;
+//  mid-text openers ("A quiet day. M1K3's palette…") are now accepted misses — the header's
+//  safe direction. Challenger-shaped: a per-opener character class was growing into a grammar.
+//  Pinned by laterMentionIsNotTheSubject and openingSubjectIsStillFlagged. Confidence 0.8.
 //
 
 import Foundation
@@ -62,25 +70,25 @@ public enum SelfNoteClassifier {
         subjectIsSelf(title: title, text: text) && hasWiringMarker(title + " " + text)
     }
 
-    /// The title and the text are held to the SAME subject test: M1K3 as
-    /// possessor ("M1K3's palette") or as the noun a subject verb follows
-    /// ("M1K3 gained"). A title that merely mentions the name — "Kev asked
-    /// M1K3 to track his sleep" — has Kev as its subject (review 1, #288).
+    /// The title and the text are held to the SAME subject test: each must
+    /// OPEN with M1K3 — as possessor ("M1K3's palette gained…") or as the noun
+    /// a subject verb follows ("M1K3 gained…"), after any leading bullet,
+    /// quote or bracket. A wiring note states its topic first; a lived episode
+    /// opens with its date or its people ("On 2026-10-02 Kev and Claude made
+    /// M1K3's launch film…", "Kev asked why M1K3 was slow…"), so a mention
+    /// later in the text is never the subject (#482). Anchoring both rules at
+    /// the start replaced the anywhere-match that hid those episodes from chat.
     private static func subjectIsSelf(title: String, text: String) -> Bool {
-        isSelfSubject(in: title) || isSelfSubject(in: text)
+        opensWithSelf(title) || opensWithSelf(text)
     }
 
-    private static func isSelfSubject(in sentence: String) -> Bool {
+    private static func opensWithSelf(_ sentence: String) -> Bool {
         let lower = sentence.lowercased()
-        for name in selfNames {
-            if lower.contains("\(name)'s") || lower.contains("\(name)\u{2019}s") { return true }
-            for verb in subjectVerbs {
-                if lower.range(of: "\\b\(name)\\s+\(verb)\\b", options: .regularExpression) != nil {
-                    return true
-                }
-            }
+        let verbs = subjectVerbs.joined(separator: "|")
+        return selfNames.contains { name in
+            let pattern = "^[\\s\\-*\u{2022}\"\u{201C}'(\\[]*\(name)(?:['\u{2019}]s\\b|\\s+(?:\(verbs))\\b)"
+            return lower.range(of: pattern, options: .regularExpression) != nil
         }
-        return false
     }
 
     private static func hasWiringMarker(_ text: String) -> Bool {
