@@ -90,6 +90,12 @@ Anything a cold session needs on turn one belongs below, not there.
 - Bundle ID, log subsystem, Keychain and container are all `app.m1k3`.
 - `.info` / `.debug` do not persist in OSLogStore; breadcrumbs are `.notice`+.
 - Read the store (`itunes.apple.com/lookup?id=`) before saying what users have.
+- **Releasing (Mac + iOS on one build):** follow the runbook in `macos/tools/asc/README.md`:
+  `builds.py wait` → install N from TestFlight and **relaunch** M1K3 → `verify_build.py --build N`
+  → `submit.py cancel/attach/submit --platform ALL --confirm`. **Verify before any cancel**: a
+  cancel loses the queue spot (2026-10-05: both were cancelled before the build was checked).
+  `submit` refuses an unstamped build unless `--why`. Relaunching matters until #491, because the
+  stale-process check reads the binary's mtime, which installers preserve. ASC writes are Kev's, via `!`.
 - Store copy: name/subtitle are record-wide, so edit `macos/fastlane/metadata_mac`
   AND `metadata_ios` together (`macos/tools/ci/check_store_metadata.py` fails on
   drift). Review notes live only in `macos/fastlane/review_notes.txt`. Run
@@ -169,4 +175,7 @@ Review: Kev + claude-opus-5-5, 2026-10-01 (/debrief, #462) — the Debug-launch
 recipe (an exec'd binary isn't foreground: the age sheet dismissed itself) and
 the entitlement + PCC-consent seams. Confidence 0.85. Fold 2026-10-05: PCC is
 in the Mac store lane only; the check requires only Declared Age Range there.
+Review: Kev + claude-opus-5-5, 2026-10-05 (/debrief) — the release carry-forward:
+the asc runbook from #490, verify before cancel, and relaunch until #491. 1.0.0 went to
+review on build 453. Confidence 0.85.
 -->

@@ -80,7 +80,10 @@ protocols in their own targets. `M1K3App/` is a thin shell; `AppEnvironment` (+ 
   never Caches (macOS purged the brains twice, #92). `DEVELOPMENT_TEAM` is pinned in
   `project.yml` — a stable signing identity keeps Keychain/TCC grants.
 - **`Package.swift` pins mlx-swift-lm to a main REVISION** (`ee673d6a`, 2026-09-26, for
-  #516/#533/#514/#575 + #620/#584/#611/#613; back to a tag when one carries #516). `newCache(parameters:)`
+  #516/#533/#514/#575 + #620/#584/#611/#613; back to a tag when one carries #516 — **3.32.3
+  does** (2026-09-30, our pin + 6 commits). The move to 3.32.3 also moves our direct mlx-swift pin
+  (`.upToNextMinor(from: "0.31.6")`) to ≥ 0.32.3, together: mlx-swift 0.32.0–0.32.2 crash at launch
+  below macOS/iOS 26.4. Kokoro links raw MLX, so add a voice launch check). `newCache(parameters:)`
   throws there. Dep bumps are probe-first (`swift package resolve` — the WhisperKit /
   swift-transformers `Tokenizers` clash) and **every bump owes a gemma-4 native tool-call
   smoke**: `M1K3_SELFTEST_CHATEVAL=1 M1K3_SELFTEST_CHATEVAL_BRAINS=big
