@@ -15,9 +15,14 @@ hot-reloads when a file here changes. Three things, one plugin:
 
 It is a guard against the accidental, not the determined. A `tee`, `cp`, `mv`,
 `sed -i` or `rm` on the session memory passes; so does a push to master from
-a script file. The `Edit` deny goes one step past CLAUDE.md's wording (which
-names `Write` as what lost 700 lines) because an `Edit` can drop a block just
-as silently; a typo in the chronicle stays, the chronicle being append-only.
+a script file, or one wrapped in `bash -c "…"`, `eval`, `git -C <dir>` or
+`git -c k=v` (the rules read a bare `git push` at a command boundary: a line
+start, `;`, `&&`, `||`, `|`, `(` or a newline). The AppleScript rule reads the
+raw command, so prose that carries both `osascript` and the quit phrase trips
+it; put such text in a file. The `Edit` deny goes one step past CLAUDE.md's
+wording (which names `Write` as what lost 700 lines) because an `Edit` can
+drop a block just as silently; a typo in the chronicle stays, the chronicle
+being append-only.
 
 ## Commands
 

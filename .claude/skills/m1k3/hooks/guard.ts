@@ -16,6 +16,8 @@
 // command boundary and read off the blanked command (quoted mentions, heredocs,
 // `main-menu`, `merge-base` no longer match); `+master`, `refs/heads/master` and
 // `git add <file> -f` now do. Confidence 0.85.
+// Review: Kev + Claude, 2026-10-05 — second pass: a newline is a command boundary
+// too (multi-line Bash is how a push to master would most likely slip through).
 
 import type { On } from 'claude-code'
 
@@ -24,8 +26,8 @@ export type Rule = { test: RegExp; reason: string; raw?: true }
 const MEMORY = /\.claude\/project-memory\.md/
 /** The session memory at the end of a word, so `project-memory.md.bak` is not it. */
 const MEMORY_PATH = String.raw`\.claude\/project-memory\.md(?=\s|$)`
-/** Where a command may start: the line, or after a separator, with the usual wrappers. */
-const AT_START = String.raw`(?:^|[;&|(]|\|\||&&)\s*(?:sudo\s+|time\s+|env\s+(?:\S+=\S*\s+)*|[A-Z_]+=\S*\s+)*`
+/** Where a command may start: a line, or after a separator, with the usual wrappers. */
+const AT_START = String.raw`(?:^|[;&|(\n]|\|\||&&)\s*(?:sudo\s+|time\s+|env\s+(?:\S+=\S*\s+)*|[A-Z_]+=\S*\s+)*`
 
 export const BASH_DENIES: readonly Rule[] = [
   {

@@ -12,6 +12,9 @@ describe('guard', () => {
       'git push origin HEAD:refs/heads/master',
       'cd macos && git push origin master',
       'git fetch origin; git push -u origin main',
+      'git fetch origin\ngit push origin master',
+      'set -e\nhf download mlx-community/Qwen3-8B-4bit',
+      'echo prep\ndefaults write app.m1k3 prefillStepSize -int 512',
       'git add -f .claude/project-memory.md',
       'git add --force .claude/project-memory.md',
       'git add .claude/project-memory.md -f',
@@ -52,11 +55,10 @@ describe('guard', () => {
       "cat >> CLAUDE.md <<'EOF'\n- never `hf download` (cache poison)\n- git push origin master is landed by land.sh\nEOF",
       'echo \'tell application id "app.m1k3" to quit\' > notes.txt',
     ]
-    for (command of mentions) expect(denyFor(command), command).toBeUndefined()
+    for (const command of mentions) expect(denyFor(command), command).toBeUndefined()
     expect(bareCommand('git commit -m "hf download" && echo \'x\'')).toBe('git commit -m "" && echo \'\'')
     expect(bareCommand("cat <<'EOF'\nbody\nEOF\nls")).toBe('cat <<HEREDOC\nls')
   })
-  let command = ''
 
   test('judgement calls warn instead', () => {
     expect(denyFor('git merge origin/master', BASH_WARNINGS)).toContain('CI + review cycle')
