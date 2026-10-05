@@ -1,1 +1,4 @@
 .claude-plugin/types/
+tools/bake/package/
+tools/bake/*.tgz
+tools/bake/*.glb

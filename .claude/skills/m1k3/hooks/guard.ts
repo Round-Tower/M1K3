@@ -10,7 +10,9 @@
 // the raw command and needs `osascript` beside it. Best effort by design: a
 // `tee`, `cp` or `sed -i` onto the session memory is not caught, nor a push
 // whose refspec comes after a later flag (`git push origin HEAD --force master`),
-// nor a command wrapped in `bash -c`, `eval`, `git -C` or `git -c`.
+// nor a command wrapped in `bash -c`, `eval`, `git -C` or `git -c`, nor a
+// redirect onto an expansion (`> "$PWD/.claude/project-memory.md"`): a quoted
+// word with `$` in it is prose to the rules, since its value is unknown here.
 //
 // Signed: Kev + Claude, 2026-10-05, Confidence 0.85 (every rule is pinned by
 // tests/guard.test.ts, denies, allows and the prose cases alike). Prior: Unknown
@@ -23,14 +25,17 @@
 // Review: Kev + Claude, 2026-10-05 — auto pass on the Swift head: a quoted path or
 // refspec is kept bare, not blanked (`> ".claude/project-memory.md"`, `"master"`);
 // the file tools' pattern ends at the name, like the Bash one.
+// Review: Kev + Claude, 2026-10-05 — second auto pass: `>>` with no space
+// (`cat >>.claude/project-memory.md`) is the sanctioned append, not a replace.
 
 import type { On } from 'claude-code'
 
 export type Rule = { test: RegExp; reason: string; raw?: true }
 
-/** The session memory, as a tool's `file_path` names it; `project-memory.md.bak` is not it. */
+// The session memory, twice on purpose: a tool's `file_path` is the whole path
+// (so `$`), a Bash command carries it as one word among others (so a lookahead).
+// Either way `project-memory.md.bak` is not it.
 const MEMORY = /\.claude\/project-memory\.md$/
-/** The session memory at the end of a word, so `project-memory.md.bak` is not it. */
 const MEMORY_PATH = String.raw`\.claude\/project-memory\.md(?=\s|$)`
 /** Where a command may start: a line, or after a separator, with the usual wrappers. */
 const AT_START = String.raw`(?:^|[;&|(\n]|\|\||&&)\s*(?:sudo\s+|time\s+|env\s+(?:\S+=\S*\s+)*|[A-Z_]+=\S*\s+)*`
@@ -45,7 +50,7 @@ export const BASH_DENIES: readonly Rule[] = [
     reason: '.claude/project-memory.md is gitignored on purpose and never force-added',
   },
   {
-    test: new RegExp(String.raw`(?:^|[^>])>\s*\S*${MEMORY_PATH}`),
+    test: new RegExp(String.raw`(?:^|[^>])>(?!>)\s*\S*${MEMORY_PATH}`),
     reason: '.claude/project-memory.md is append-only: use >> to add a block, never > to replace it',
   },
   {

@@ -46,9 +46,9 @@ of `AvatarPresence` (nothing is painted while the band is hidden).
 
 `assets/` holds the fox's baked frames (both looks, three clips, 158 PNGs at
 192 × 96), their braille reductions and the desktop strips, with
-`assets/ATTRIBUTION.md`. The bake was three.js in headless Chromium over the
-GLB; the other companions get the same treatment through
-`macos/tools/companion-pipeline/` when they are wanted here.
+`assets/ATTRIBUTION.md`. They are baked output: `tools/bake/` regenerates
+them from the GLB (three.js in headless Chromium), and the other companions
+get the same run with their own GLB when they are wanted here.
 
 ## Developing
 
