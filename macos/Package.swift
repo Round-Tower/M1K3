@@ -321,7 +321,9 @@ let package = Package(
             // SwiftPM CLI build resolved this implicitly via the shared module
             // dir, but the strict Xcode/xcodegen graph needs it declared.
             dependencies: ["M1K3Inference"],
-            path: "Sources/M1K3Eval"
+            path: "Sources/M1K3Eval",
+            // The `vision` kind's images, drawn by tools/eval/make_vision_fixtures.swift.
+            resources: [.copy("Resources/VisionFixtures")]
         ),
         .testTarget(
             name: "M1K3EvalTests",

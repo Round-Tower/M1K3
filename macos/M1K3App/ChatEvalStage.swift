@@ -49,6 +49,10 @@
 //  the app build ("failed to produce diagnostic"), which `swift test` never compiles.
 //  Review: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.8 — an MLX override naming an imported
 //  audition loads from its folder (AuditionStore), so `--model lil=<org/repo>` A/Bs anything imported.
+//  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.75 — the `vision` arm (GEMMA_1_1_PLAN Stream A):
+//  the fixture's bundled PNGs ride the production `answerStreaming(_:images:…)` path; a provider that
+//  can't take images scores n/a. Verify-by-launch owed: one run on mini + big (does AFM's agent path
+//  keep the attachment? the blind markers will say).
 
 import Foundation
 
@@ -289,7 +293,7 @@ enum ChatEvalStage {
     }
 
     private static func livePathObservation(
-        _ fixture: ChatEvalFixture, provider: any InferenceProvider,
+        _ fixture: ChatEvalFixture, images: [ImageAttachment] = [], provider: any InferenceProvider,
         start: ContinuousClock.Instant, clock: ContinuousClock
     ) async throws -> EvalObservation {
         // path: nil → in-memory GRDB, fresh per fixture (the groundedObservation
@@ -312,7 +316,9 @@ enum ChatEvalStage {
             toolsProvider: { palette }, maxIterations: 3,
             plainRouteProvider: plainRoute
         )
-        let (_, stream) = try await responder.answerStreaming(fixture.prompt)
+        let (_, stream) = try await responder.answerStreaming(
+            fixture.prompt, images: images, history: [], onActivity: { _ in }
+        )
         var raw = ""
         for await piece in stream {
             // The responder's fallback passes provider chunks through raw, and a
@@ -578,6 +584,22 @@ enum ChatEvalStage {
         let start = clock.now
         do {
             switch fixture.kind {
+            case .vision:
+                if let gap = Self.imageGap(provider) {
+                    return .notApplicable(fixture, reason: gap)
+                }
+                let images = try fixture.images.map { name in
+                    guard let url = VisionFixtureAssets.url(for: name) else {
+                        throw InferenceError.generationFailed("vision asset \(name) missing from the bundle")
+                    }
+                    return ImageAttachment(url: url)
+                }
+                let observation = try await livePathObservation(
+                    fixture, images: images, provider: provider, start: start, clock: clock
+                )
+                return ChatEvalScorer.score(
+                    fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS
+                )
             case .groundedQ:
                 let observation = try await groundedObservation(fixture, provider: provider, start: start, clock: clock)
                 return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS)
@@ -725,6 +747,23 @@ enum ChatEvalStage {
             latencyMS: milliseconds(clock.now - start)
         )
         return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS)
+    }
+
+    /// Why this provider can't take an image turn here, or nil when it can —
+    /// the chat UI's answer (`BrainTier.supportsImageInput` for Mini, the VLM
+    /// load path for an MLX brain) PLUS the path the turn will really take:
+    /// this stage's Mini defaults to the ReAct floor, which drops images
+    /// silently (LocalAgent.run), while the app's Mini is native. Scoring that
+    /// would measure a lost attachment, not Mini.
+    static func imageGap(_ provider: any InferenceProvider) -> String? {
+        if let mlx = provider as? MLXBrainProvider {
+            return mlx.supportsImageInput ? nil : "text-only load path"
+        }
+        if let afm = provider as? AppleFoundationModelsProvider {
+            guard BrainTier.mini.supportsImageInput else { return "Mini sees images on macOS 27+" }
+            return afm.supportsToolCalls ? nil : "ReAct floor drops images — set _AFM_NATIVE_TOOLS=1 (the app's path)"
+        }
+        return "this provider takes no images"
     }
 
     /// Whole milliseconds in a Duration (matches SelfTest's TTFT helper).

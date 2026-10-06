@@ -11,6 +11,8 @@
 //  in. No model, no I/O.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.88. Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85 — n/a scores (vision on a blind
+//  brain) leave totals, pass counts and latency; a kind that is all n/a shows "n/a", not "—".
 
 import Foundation
 
@@ -36,21 +38,35 @@ public enum ChatEvalReport {
             modelID.map { "\(brainID) [\($0)]" } ?? brainID
         }
 
+        /// The scores that count: everything but n/a (a vision turn put to a
+        /// brain that can't see). Totals, pass counts and latency read these.
+        var applicable: [ChatEvalScore] {
+            scores.filter(\.isApplicable)
+        }
+
         public var passedCount: Int {
-            scores.filter(\.passed).count
+            applicable.filter(\.passed).count
         }
 
         public var total: Int {
-            scores.count
+            applicable.count
+        }
+
+        public var notApplicableCount: Int {
+            scores.count - applicable.count
         }
 
         /// Median turn latency across this brain's fixtures (0 if none).
         public var medianLatencyMS: Int {
-            medianOf(scores.map(\.latencyMS))
+            medianOf(applicable.map(\.latencyMS))
         }
 
         func scores(for kind: TaskKind) -> [ChatEvalScore] {
-            scores.filter { $0.kind == kind }
+            applicable.filter { $0.kind == kind }
+        }
+
+        func hasOnlyNotApplicable(_ kind: TaskKind) -> Bool {
+            scores(for: kind).isEmpty && scores.contains { $0.kind == kind && !$0.isApplicable }
         }
     }
 
@@ -90,6 +106,7 @@ public enum ChatEvalReport {
         var rows: [(label: String, cells: [String])] = []
         for kind in TaskKind.allCases {
             let cells = runs.map { run -> String in
+                if run.hasOnlyNotApplicable(kind) { return "n/a" }
                 let kindScores = run.scores(for: kind)
                 let passed = kindScores.filter(\.passed).count
                 let latency = medianOf(kindScores.map(\.latencyMS))

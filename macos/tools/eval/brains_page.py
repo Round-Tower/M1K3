@@ -127,6 +127,13 @@ def _passed(score: dict) -> bool:
     return all(c["outcome"] != "fail" for c in score["checks"])
 
 
+def _applicable(score: dict) -> bool:
+    """False for ChatEvalScore.notApplicable (a vision turn on a brain that can't see): one skip named
+    "applicable". It must leave every count — an all-skip score otherwise reads as a pass."""
+    checks = score["checks"]
+    return not (len(checks) == 1 and checks[0]["name"] == "applicable" and checks[0]["outcome"] == "skip")
+
+
 def summarise_run(doc: dict) -> dict:
     """One CHATEVAL document → provenance + per-brain matrix, totals, median, failures."""
     version = doc.get("schemaVersion")
@@ -138,7 +145,8 @@ def summarise_run(doc: dict) -> dict:
         failures = []
         latencies = []
         passed = 0
-        for s in run["scores"]:
+        scores = [s for s in run["scores"] if _applicable(s)]
+        for s in scores:
             cell = by_kind.setdefault(s["kind"], {"passed": 0, "total": 0})
             cell["total"] += 1
             ok = _passed(s)
@@ -157,7 +165,7 @@ def summarise_run(doc: dict) -> dict:
             "modelID": run.get("modelID"),
             "byKind": dict(sorted(by_kind.items())),
             "passed": passed,
-            "total": len(run["scores"]),
+            "total": len(scores),
             "medianLatencyMS": round(statistics.median(latencies)) if latencies else None,
             "failures": failures,
         })
@@ -406,7 +414,8 @@ def _brains_table(rows: list[dict]) -> str:
 
 
 KIND_ORDER = ("open-chat", "grounded-Q", "reasoning", "code-gen", "tool-use", "refusal", "security",
-              "world-knowledge", "humour", "interview", "instruction-following", "document", "sycophancy")
+              "world-knowledge", "humour", "interview", "instruction-following", "document", "sycophancy",
+              "vision")
 
 
 def _kind_sort(kinds) -> list[str]:

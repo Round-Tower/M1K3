@@ -55,6 +55,9 @@
 //  words minimum. Thresholds measured over the 50 soup answers and 668 real ones from 13 runs
 //  (plus Vietnamese/Japanese/Korean/Arabic/Russian samples, the review's false-positive cases);
 //  loosen, don't drop, if a genuine answer trips it.
+//  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85 — `ChatEvalScore.notApplicable` +
+//  `isApplicable`: an all-skip score reads as `passed`, so a vision turn on a blind brain needed its own
+//  verdict (N/A) that every count leaves out.
 
 import Foundation
 import M1K3Inference
@@ -153,6 +156,28 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
         )
     }
 
+    /// The single check a `notApplicable` score carries.
+    static let notApplicableCheck = "applicable"
+
+    /// The fixture can't be put to this brain at all — a vision turn on a
+    /// text-only brain. Not a fail (the brain did nothing wrong) and not a
+    /// pass: the report drops it from every count and shows "n/a". Without
+    /// this an all-skip score reads as `passed`, and a blind brain would bank
+    /// a perfect vision row.
+    public static func notApplicable(_ fixture: ChatEvalFixture, reason: String) -> ChatEvalScore {
+        ChatEvalScore(
+            fixtureID: fixture.id, kind: fixture.kind,
+            checks: [EvalCheck(name: notApplicableCheck, outcome: .skip, detail: "n/a — \(reason)")],
+            latencyMS: 0
+        )
+    }
+
+    /// False only for a `notApplicable` score. Derived from the checks, so it
+    /// survives a JSON round-trip with no schema change.
+    public var isApplicable: Bool {
+        !(checks.count == 1 && checks[0].name == Self.notApplicableCheck && checks[0].outcome == .skip)
+    }
+
     /// A fixture passes when no applicable check failed (skips don't sink it).
     public var passed: Bool {
         checks.allSatisfy { $0.outcome != .fail }
@@ -171,7 +196,9 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
             let suffix = check.detail.isEmpty ? "" : " — \(check.detail)"
             return "    \(check.outcome.mark) \(check.name)\(suffix)"
         }
-        let verdict = passed ? "PASS" : "FAIL"
+        // N/A never matches scorecard.py's PASS|FAIL line, so the transcript
+        // tooling leaves it out of its counts too.
+        let verdict = !isApplicable ? "N/A" : passed ? "PASS" : "FAIL"
         // Newlines flattened: the transcript is line-oriented and the scorecard
         // tool parses it line by line, so a multi-line answer must not forge
         // fixture-shaped lines.

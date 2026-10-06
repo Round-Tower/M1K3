@@ -9,6 +9,7 @@ here; the launch/quit glue is driven by hand on the real app).
 Prior: none (new file).
 """
 
+import json
 from pathlib import Path
 
 import pytest
@@ -223,3 +224,15 @@ def test_direct_env_routes_the_report_to_stdout_and_keeps_the_caller_env():
     assert env["PATH"] == "/usr/bin"
     assert trig["M1K3_SELFTEST_OUT"] == "/container/path/run", "the trigger map itself is not mutated"
 
+
+
+def test_summary_leaves_out_not_applicable_trials(tmp_path):
+    na = {"fixtureID": "vis-x", "kind": "vision", "latencyMS": 0,
+          "checks": [{"name": "applicable", "outcome": "skip", "detail": "n/a — text-only"}]}
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9,
+          "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok, na]}], "provenance": {}}))
+    summary = rc.summarise(doc)
+    assert "1/1 trials passed" in summary
+    assert "1 n/a" in summary

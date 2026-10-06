@@ -301,11 +301,15 @@ def summarise(doc_path: Path) -> str:
     doc = json.loads(doc_path.read_text())
     lines = []
     for run in doc.get("runs", []):
-        scores = run.get("scores", [])
+        everything = run.get("scores", [])
+        # n/a (a vision turn on a brain that can't see) is one skip named "applicable" — out of every count.
+        scores = [s for s in everything
+                  if [(c.get("name"), c.get("outcome")) for c in s.get("checks", [])] != [("applicable", "skip")]]
         passed = sum(1 for s in scores if not any(c.get("outcome") == "fail" for c in s.get("checks", [])))
         label = run.get("brainID") or "?"
         model = run.get("modelID") or "stock"
-        lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed")
+        na = len(everything) - len(scores)
+        lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed" + (f" ({na} n/a)" if na else ""))
     prov = doc.get("provenance", {})
     lines.append(f"  power={prov.get('powerSource')} powermode={prov.get('powerMode')} commit={prov.get('appCommit')}")
     return "\n".join(lines)
