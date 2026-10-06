@@ -236,3 +236,17 @@ def test_summary_leaves_out_not_applicable_trials(tmp_path):
     summary = rc.summarise(doc)
     assert "1/1 trials passed" in summary
     assert "1 n/a" in summary
+
+
+def test_thinking_mode_rides_the_trigger_only_when_set():
+    assert "M1K3_SELFTEST_CHATEVAL_THINKING" not in rc.build_trigger(
+        base_opts(), container=CONTAINER, power_source="ac", powermode=None, commit=None, mlx_rev=None)
+    trig = rc.build_trigger(base_opts(thinking="always"), container=CONTAINER, power_source="ac",
+                            powermode=None, commit=None, mlx_rev=None)
+    assert trig["M1K3_SELFTEST_CHATEVAL_THINKING"] == "always"
+
+
+def test_unknown_thinking_mode_is_refused():
+    with pytest.raises(ValueError):
+        rc.build_trigger(base_opts(thinking="on"), container=CONTAINER, power_source="ac",
+                         powermode=None, commit=None, mlx_rev=None)
