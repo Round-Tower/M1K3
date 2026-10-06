@@ -376,15 +376,19 @@ enum ChatEvalStage {
                 + (modelID.map { " → \($0)" } ?? "") + "…")
             // The RAM gate: MLX's peak over THIS brain's run (reset before it loads).
             let isMLX = modelID != nil
+            let residentMB = isMLX ? MLXMemoryBudget.activeMB() : nil
             if isMLX { MLXMemoryBudget.resetPeak() }
             guard let scores = await evalBrain(tier, modelID: modelID, emit: emit) else {
                 emit("  – \(tier.rawValue): unavailable (skipped)")
                 continue
             }
             let peakMB = isMLX ? MLXMemoryBudget.peakMB() : nil
-            if let peakMB { emit("  peak MLX memory: \(peakMB) MB") }
+            if let peakMB, let residentMB {
+                emit("  peak MLX memory: \(peakMB) MB (\(residentMB) MB already resident → \(peakMB - residentMB) MB this brain)")
+            }
             runs.append(ChatEvalReport.BrainRun(
-                brainID: tier.rawValue, modelID: modelID, scores: scores, peakMemoryMB: peakMB
+                brainID: tier.rawValue, modelID: modelID, scores: scores,
+                peakMemoryMB: peakMB, residentMemoryMBAtStart: residentMB
             ))
         }
         if pccRequested, let scores = await evalPrivateCloud(emit: emit) {

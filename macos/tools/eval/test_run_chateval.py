@@ -265,3 +265,11 @@ def test_summary_shows_peak_memory_when_recorded(tmp_path):
     doc = tmp_path / "run.json"
     doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok], "peakMemoryMB": 5120}], "provenance": {}}))
     assert "peak 5120 MB" in rc.summarise(doc)
+
+
+def test_summary_shows_the_brains_own_peak_when_resident_is_known(tmp_path):
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "big", "scores": [ok], "peakMemoryMB": 13502,
+                                         "residentMemoryMBAtStart": 6100}], "provenance": {}}))
+    assert "peak 13502 MB (own 7402 MB)" in rc.summarise(doc)

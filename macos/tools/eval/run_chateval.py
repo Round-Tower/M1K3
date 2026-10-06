@@ -318,9 +318,10 @@ def summarise(doc_path: Path) -> str:
         label = run.get("brainID") or "?"
         model = run.get("modelID") or "stock"
         na = len(everything) - len(scores)
-        peak = run.get("peakMemoryMB")
+        peak, resident = run.get("peakMemoryMB"), run.get("residentMemoryMBAtStart")
+        own = f" (own {peak - resident} MB)" if peak is not None and resident is not None else ""
         lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed" + (f" ({na} n/a)" if na else "")
-                     + (f", peak {peak} MB" if peak is not None else ""))
+                     + (f", peak {peak} MB{own}" if peak is not None else ""))
     prov = doc.get("provenance", {})
     lines.append(f"  power={prov.get('powerSource')} powermode={prov.get('powerMode')} commit={prov.get('appCommit')}")
     return "\n".join(lines)

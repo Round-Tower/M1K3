@@ -31,12 +31,28 @@ public enum ChatEvalReport {
         /// (the embedder), a constant offset across candidates. nil for non-MLX
         /// columns and for runs recorded before 2026-10-06.
         public let peakMemoryMB: Int?
+        /// MLX memory already resident when this brain started (MB) — an earlier
+        /// brain in the same launch, the embedder. A multi-brain launch on
+        /// 2026-10-06 put Big at 13.5 GB against its 7.4 GB alone; this is the
+        /// part that wasn't Big's.
+        public let residentMemoryMBAtStart: Int?
 
-        public init(brainID: String, modelID: String? = nil, scores: [ChatEvalScore], peakMemoryMB: Int? = nil) {
+        public init(
+            brainID: String, modelID: String? = nil, scores: [ChatEvalScore],
+            peakMemoryMB: Int? = nil, residentMemoryMBAtStart: Int? = nil
+        ) {
             self.brainID = brainID
             self.modelID = modelID
             self.scores = scores
             self.peakMemoryMB = peakMemoryMB
+            self.residentMemoryMBAtStart = residentMemoryMBAtStart
+        }
+
+        /// What the brain itself added over what was resident — the RAM gate's
+        /// number. nil unless both halves were recorded.
+        public var ownPeakMemoryMB: Int? {
+            guard let peakMemoryMB, let residentMemoryMBAtStart else { return nil }
+            return peakMemoryMB - residentMemoryMBAtStart
         }
 
         /// `big [mlx-community/…]` when the model is known, else the bare tier.

@@ -52,7 +52,7 @@ struct VisionFixturesTests {
             )
             // A seeing brain that answers "I can't see images" — or a route that
             // silently drops the attachment — must FAIL, not pass on a hedge.
-            for marker in ["can't see", "unable to view"] {
+            for marker in ["can't see the image", "unable to view the image"] {
                 #expect(
                     fixture.expectation.mustNotContain.contains(marker),
                     "\(fixture.id) must fail the blind marker \"\(marker)\""
@@ -88,6 +88,21 @@ struct VisionFixturesTests {
         #expect(visionRow?.contains("n/a") == true, "matrix: \(matrix)")
         let overall = matrix.split(separator: "\n").first { $0.hasPrefix("overall") }
         #expect(overall?.contains("1/1") == true, "overall must exclude n/a: \(matrix)")
+    }
+}
+
+extension VisionFixturesTests {
+    @Test("blind markers are about the IMAGE — 'I can't see the hidden part of your logic' is not blindness")
+    func blindMarkersAreImageAnchored() throws {
+        // Big, 2026-10-06 vision baseline: a correct off-by-one answer hedging about unseen code.
+        let fixture = try #require(ChatEvalFixtures.vision.first { $0.id == "vis-code-bug" })
+        let hedge = "The bug is an off-by-one: use 0..<items.count. Since I can't see the hidden part of your logic, that's my best read."
+        let hedged = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: hedge))
+        #expect(hedged.checks.first { $0.name == "excludes forbidden" }?.outcome == .pass)
+        for blind in ["I can't see the image you attached.", "I cannot see any image here.", "No image came through."] {
+            let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: blind))
+            #expect(score.checks.first { $0.name == "excludes forbidden" }?.outcome == .fail, "\(blind)")
+        }
     }
 }
 

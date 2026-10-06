@@ -230,6 +230,11 @@ public struct MLXMemoryBudget: Sendable, Equatable {
         MLX.Memory.peakMemory = 0 // the setter resets; the value is ignored
     }
 
+    /// MLX's active (resident) memory right now, in MB.
+    public static func activeMB() -> Int {
+        MLX.Memory.activeMemory / mebibyte
+    }
+
     /// MLX's peak memory since the last `resetPeak`, in MB.
     public static func peakMB() -> Int {
         MLX.Memory.peakMemory / mebibyte

@@ -1074,12 +1074,14 @@ extension MLXBrainProvider {
     /// (GemmaVisionSpike 2026-07-14, GemmaMTPSpike 2026-07-19 — RAM ≈ the
     /// text-only load's), and the VLM path is what unlocks image input and,
     /// once upstream wires Gemma4Unified's MTP entry point, the speculative
-    /// drafter. e4b must NOT route here: upstream's Gemma4Unified sanitize
-    /// lacks the KV-shared-layer fix (e4b has 18 shared layers → keyNotFound
-    /// layers.24.self_attn.v_proj at load; 12B has 0). Unknown ids default to
-    /// the known-good LLM factory.
+    /// drafter. e4b (uniform 4-bit, exact id) routes here too: it is model_type
+    /// `gemma4` → MLXVLM.Gemma4, and upstream #384 (2026-07-15, in our pin) made
+    /// its 18 KV-shared layers stop demanding v_proj — the 2026-07-14 keyNotFound
+    /// predates that. Other e4b conversions stay off (OptiQ has no embed_vision
+    /// projector or processor config). Unknown ids default to the LLM factory.
     static func usesVLMLoadPath(for configuration: ModelConfiguration) -> Bool {
-        configuration.name.lowercased().contains("gemma-4-12b")
+        let name = configuration.name.lowercased()
+        return name.contains("gemma-4-12b") || name == "mlx-community/gemma-4-e4b-it-4bit"
     }
 
     /// Allow-list of families whose attention routes through upstream's

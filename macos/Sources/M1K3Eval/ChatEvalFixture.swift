@@ -1259,9 +1259,13 @@ public enum ChatEvalFixtures {
     /// should see it — a dropped attachment or a model that won't look. Every
     /// vision fixture fails on them.
     static let blindMarkers = [
-        "can't see", "cannot see", "unable to view", "can't view", "cannot view",
-        "no image", "no images", "not able to see", "don't see an image", "didn't attach",
-        "share the image", "share the images",
+        // Anchored to the image/attachment: a seeing brain may say "I can't see the
+        // hidden part of your logic" about unseen code (Big, 2026-10-06) — not blindness.
+        "can't see the image", "can't see images", "can't see any image", "cannot see the image",
+        "cannot see images", "cannot see any image", "can't view the image", "cannot view the image",
+        "unable to view the image", "unable to see the image", "not able to see the image",
+        "no image", "no images", "don't see an image", "didn't attach", "share the image",
+        "share the images",
     ]
 
     private static func visionFixture(

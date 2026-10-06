@@ -421,12 +421,19 @@ struct MLXBrainProviderTests {
         #expect(MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
         ))
-        // e4b is NOT routable to MLXVLM: keyNotFound layers.24.self_attn.v_proj
-        // (upstream's Gemma4Unified sanitize lacks the KV-shared-layer fix;
-        // e4b has 18 shared layers, 12B has 0 — GemmaVisionSpike review,
-        // 2026-07-14). Family-wide routing would brick the fallback tier.
-        #expect(!MLXBrainProvider.usesVLMLoadPath(
+        // e4b (uniform 4-bit) loads under MLXVLM since upstream #384 (2026-07-15,
+        // in our pin): it is model_type `gemma4` → MLXVLM.Gemma4, whose shared-KV
+        // layers no longer demand v_proj. The 2026-07-14 keyNotFound predates the
+        // fix. Exact id: the OptiQ conversion lacks embed_vision + processor
+        // config and the 8-bit is unproven — family-wide routing would brick them.
+        #expect(MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit")
+        ))
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-OptiQ-4bit")
+        ))
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-8bit")
         ))
         // Text-only families stay on the LLM factory untouched.
         #expect(!MLXBrainProvider.usesVLMLoadPath(
