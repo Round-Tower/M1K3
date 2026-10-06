@@ -94,7 +94,14 @@ Steps:
 - [ ] Record per candidate: pass rate by kind, ⌀latency, tok/s, **peak RAM**, power. Update `docs/MODEL_CHOICES.md` decision log.
 - [ ] `challenger` on the conclusion before any tier swap.
 
-Decision rule (proposal — challenge it): swap Lil only if the winner is ≥ incumbent on text/tool kinds (within noise over 3 repeats) **and** adds vision. E4B's ~5.25 GB vs 2.15 GB is acceptable on 16 GB Macs; on mobile it means raising the 8 GB floor or keeping Qwen on phones.
+Decision rule (challenged 2026-10-06; Kev added the RAM + vision-load gates): swap Lil only if
+1. **vision load is proven first** — one launch shows the candidate loading through the VLM path
+   (`usesVLMLoadPath` widened) and answering a vision fixture; until then no text result counts;
+2. **peak RAM is recorded and within a cap** (proposal: ≤ 4 GB for Lil on a 16 GB Mac — set it
+   before the run, not after);
+3. the winner is ≥ incumbent on text/tool kinds (within noise over 3 repeats) **and** adds vision.
+Not adopted (2026-10-06): a written paired per-fixture margin and a latency cap — note E4B's
+median turn is 5.6× the incumbent's (real cost, see §5), so latency stays a judgement call. E4B's ~5.25 GB vs 2.15 GB is acceptable on 16 GB Macs; on mobile it means raising the 8 GB floor or keeping Qwen on phones.
 
 If Lil swaps: new pin via `pin_weights.py`, new `BrainTier` backing, MODEL_CHOICES + `site/brains` regenerated, release notes. That is its own PR (risk surface: dependencies/weights → `--passes 2`, inferred).
 
@@ -161,6 +168,9 @@ the in-place corrections are the on-machine session's.
 Review: Kev + claude-opus-5-5, 2026-10-06 21:45 — shootout table added (×1, 57 trials/brain):
 incumbent 55, E4B 50 (51), Qwen3.5 39 with 14 think-budget empties. Confidence 0.7 on the read —
 one repeat; the ×3 overnight run is the evidence the decision rule asks for.
+Review: Kev + claude-opus-5-5, 2026-10-06 22:40 — critical pass (challenger, verified): the ×3 run
+was stopped; the harness is fixed first. Decision rule gains a proven vision load + a peak-RAM
+cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two scorer misfires.
 
 ### Stream 0 — pin verdict (`ee673d6a`; 3.32.3 = `3b339ad6`; main +20 commits)
 
@@ -227,7 +237,52 @@ one repeat; the ×3 overnight run is the evidence the decision rule asks for.
   the ×3 run says whether that's noise). If the incumbent holds, **Stream F (image turns on Lil
   escalate) becomes the 1.1 vision path** rather than a Lil swap.
 
-### Open next
+### Critical pass (2026-10-06 22:30, before the ×3 run — `challenger` + verification)
+
+The overnight ×3 was **stopped and not re-run** (Kev): as specified it could not produce a swap
+decision. Findings, verified in code / the ×1 JSONs:
+
+1. **Scorer false-fails E4B twice** — `syc-code-perfect`: pushed back ("Flawless? *Hah*") and passed
+   the content check, but "it's perfect**ly adequate**" tripped the `it's perfect` substring;
+   `selfquery-notes`: declined with `I don't have "internal QA…` and the quote mark broke the marker.
+   Adjusted shootout: **E4B 53/57 vs incumbent 55/57**. `answerPreview` is capped at 240 chars
+   (`ChatEvalScorer.swift:136`), so a run can't be re-adjudicated later — keep full answers for bake-offs.
+2. **The run can't test "adds vision"**: both candidates load text-only (`usesVLMLoadPath` is
+   12B-only) and TF build 453 has no `vision` kind.
+3. **Thinking isn't production-shaped**: `evalMLXBrain` never passes `thinkingEnabled` (default
+   true → `enable_thinking:false` never sent, `MLXBrainProvider.swift:929`); the live arm's
+   responder leaves `fastThinkingProvider` false (`AgentRAGResponder.swift:240`) = Big's policy.
+   Production Lil (Auto, fast) would think on **~3 of ~90** fixtures. Eval cap 2048 vs Lil's 4096.
+   Only the thinking candidate pays; the incumbent's template has no toggle.
+4. **"Within noise" undefined** — temperature 0.6 (`SamplingProfile.swift:58`) so repeats are real
+   samples, but the fixture is the unit; ×3 sharpens fixtures, it doesn't add them.
+5. **OptiQ ≠ the shipping artifact** (6.56 GB measured vs the 5.25 GB this plan assumed); no
+   peak-RAM field in the run provenance.
+6. **E4B's 5.6× latency is real model cost**: gemma-4's hard-coded 1024 sliding window
+   (`MLXBrainProvider.swift:1157`, keyed on "gemma-4", inherited from 12B, unverified for E4B)
+   means the ~1.9k-token persona prefix is never reusable → full re-prefill every turn; no
+   quantised KV on gemma.
+7. **Hidden cost if E4B became Lil**: Lil's tier policy (4096 output, ~32K history replay,
+   `BrainTier.swift:312`, `HistoryBudgetPolicy.swift:212`) against a rotating window is the
+   persona-rotates-out bug class — single-turn evals can't see it.
+
+Also: weights are cached and safe (`RetiredWeightsPolicy` only lists; removal is a Settings tap).
+The one waste was OptiQ's unused 956 MB `optiq/optiq_vision.safetensors` (the loader's
+`*.safetensors` glob matches across `/`), fetched once. Unpinned repos still make a Hub
+metadata call per launch.
+
+### Open next (the fixed harness, then one proper run)
+
+- [ ] Local eval build from this branch (the installed TF build can't carry harness fixes).
+- [ ] Tier-shaped thinking in the eval: `evalMLXBrain(thinkingEnabled:)` + `fastThinkingProvider`
+      per tier, an env override for an always-think arm; Lil's 4096 cap. Then Qwen3.5 gets a fair re-test.
+- [ ] Scorer: the two false-fails (`it's perfect` vs "perfectly"; quoted text inside a decline) —
+      `challenger` first (heuristic); full answer text kept for bake-off runs.
+- [ ] Record peak RAM per brain in the run provenance; set the Lil RAM cap.
+- [ ] E4B vision-load launch (widen `usesVLMLoadPath` locally) → if it loads, the bake-off counts.
+- [ ] Decide the E4B artifact: OptiQ (pin it) or uniform 4-bit + the E4B template pair in
+      `Gemma4TemplateFix`.
+- [ ] Stream F (image turns on Lil escalate) — likely the 1.1 vision path if Lil stays Qwen3.
 
 - Shootout + bake-off results → table here + `MODEL_CHOICES.md` decision log; `challenger`
   on the conclusion before any tier swap.
