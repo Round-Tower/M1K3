@@ -32,6 +32,9 @@
 //  Google's current E4B template (`0a2c8073…`, google/gemma-4-E4B-it @ ee0ef602) is a
 //  DIFFERENT file from 12B's, so each repo heals to its own vendored bytes and a stale
 //  hash is only ever judged against its own repo's pair. 12B's API is unchanged.
+//  Review: same day (#497 review fold) — the 12B `decision(existingSHA256:)` overload lost its
+//  stale-hash parameter: a custom stale hash would have been judged against 12B's canonical.
+//  E4B is unpinned, so the hash gate is its only template check — pin it before it becomes a tier.
 //  Confidence 0.85.
 //
 
@@ -121,10 +124,10 @@ public enum Gemma4TemplateFix {
         return data
     }
 
-    /// Pure: what to do with an on-disk template of this hash.
-    public static func decision(
-        existingSHA256: String, staleSHA256: String = Gemma4TemplateFix.staleSHA256
-    ) -> Decision {
+    /// Pure: what to do with an on-disk 12B template of this hash. No stale-hash
+    /// parameter: a caller passing another repo's stale hash would be judged
+    /// against 12B's canonical (#497 review) — other repos go through `heal:`.
+    public static func decision(existingSHA256: String) -> Decision {
         decision(existingSHA256: existingSHA256, staleSHA256: staleSHA256, canonicalSHA256: canonicalSHA256)
     }
 

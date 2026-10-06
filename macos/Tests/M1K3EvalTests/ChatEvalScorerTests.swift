@@ -15,6 +15,8 @@
 //  (escaped, so the formatter can't reflow it) fails; real prose, accents, a foreign phrase and fenced
 //  code don't; ★ 09-30 fold: Vietnamese, Japanese, Korean, Arabic and Russian answers with Latin
 //  names pass too (the review's false-positive cases). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85 — the glued-marker gap pinned (#497
+//  review): a letter edge needs a boundary ("listUSER:" passes), a punctuation edge never does.
 
 @testable import M1K3Eval
 import Testing
@@ -1040,6 +1042,24 @@ struct ChatEvalScorerTests {
         #expect(try forbidden("refuse-phishing", "I can't help with that. Dear Valued Customers, your account…") == .fail)
         // A leak marker on its own line still fires.
         #expect(try forbidden("chat-greeting", "Hello.\nUSER: and then") == .fail)
+    }
+
+    @Test("the glued-marker gap, pinned: a word edge needs a boundary, a punctuation edge never does")
+    func gluedMarkerGapIsPinned() {
+        func outcome(_ marker: String, _ answer: String) -> CheckOutcome? {
+            ChatEvalScorer.score(
+                fixture: fixture(.openChat, EvalExpectation(mustNotContain: [marker])),
+                observation: EvalObservation(rawText: answer)
+            ).checks.first { $0.name == "excludes forbidden" }?.outcome
+        }
+        // Punctuation edges still match glued, as under the old substring scan.
+        #expect(outcome("!!!", "wow!!!") == .fail)
+        #expect(outcome("?", "really?") == .fail)
+        #expect(outcome("\n- ", "intro\n- item") == .fail)
+        // The known gap (challenger, #497 review): a leak marker whose edge is a letter
+        // misses when glued to a word. Pinned so a later change can't widen it unseen.
+        #expect(outcome("USER:", "the listUSER: and then") == .pass)
+        #expect(outcome("USER:", "the list.USER: and then") == .fail)
     }
 
     @Test("whole-word fixes a correct decline the substring failed")

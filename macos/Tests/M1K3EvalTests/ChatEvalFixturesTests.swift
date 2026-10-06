@@ -7,8 +7,12 @@
 //  their kind — so a careless edit can't silently weaken the eval.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.9. Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.9 — every forbidden marker must fire on a
+//  sentence quoting it (#497 review: whole-word must not leave a dead marker). Reasoning tags exempt —
+//  the stripper removes them before any content check, on master too.
 
 @testable import M1K3Eval
+import M1K3Inference
 import Testing
 
 struct ChatEvalFixturesTests {
@@ -369,6 +373,24 @@ struct ChatEvalFixturesTests {
     func openChatGuardsLeak() {
         for fixture in ChatEvalFixtures.openChat {
             #expect(fixture.expectation.mustNotContain.contains("<think>"))
+        }
+    }
+
+    @Test("every forbidden marker can fire — a whole-word marker that never matches its own text is dead")
+    func everyForbiddenMarkerFires() {
+        // #497 review: whole-word `mustNotContain` must not silently weaken a list. A marker
+        // that cannot match a sentence quoting it verbatim (casing, a lookalike apostrophe,
+        // a boundary rule) would read as a pass on every run.
+        // Reasoning tags are exempt: ThinkStripper removes them before ANY content check
+        // (master too), and the always-on "no think-leak" check owns their residue.
+        let strippedTags = Set(ReasoningSplit.openTags + ReasoningSplit.closeTags)
+        for fixture in ChatEvalFixtures.all {
+            for marker in fixture.expectation.mustNotContain where !strippedTags.contains(marker) {
+                let answer = "Well, \(marker) indeed."
+                let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))
+                let outcome = score.checks.first { $0.name == "excludes forbidden" }?.outcome
+                #expect(outcome == .fail, "\(fixture.id): marker \(marker.debugDescription) never fires")
+            }
         }
     }
 

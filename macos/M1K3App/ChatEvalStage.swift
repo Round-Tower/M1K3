@@ -58,6 +58,9 @@
 //  generation cap, not a flat 2048. The shootout had let Qwen3.5 think on every bare turn. Confidence 0.8.
 //  Review: same day — the bake-off record: peak MLX memory per brain (`BrainRun.peakMemoryMB`, the RAM
 //  gate) and `M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS=1` for whole answers. Confidence 0.8.
+//  Review: same day (#497 review fold) — `imageGap` says why it reads `BrainTier.mini` for AFM. The
+//  own-peak number still charges the lazily-loaded embedder to the first brain of a multi-brain launch:
+//  the bake-off runs one brain per launch.
 
 import Foundation
 
@@ -811,7 +814,9 @@ enum ChatEvalStage {
     /// load path for an MLX brain) PLUS the path the turn will really take:
     /// this stage's Mini defaults to the ReAct floor, which drops images
     /// silently (LocalAgent.run), while the app's Mini is native. Scoring that
-    /// would measure a lost attachment, not Mini.
+    /// would measure a lost attachment, not Mini. The AFM arm reads the Mini
+    /// TIER's flag, not the provider's: AFM backs only Mini today — a second
+    /// AFM-backed tier must route through its own tier here (#497 review).
     static func imageGap(_ provider: any InferenceProvider) -> String? {
         if let mlx = provider as? MLXBrainProvider {
             return mlx.supportsImageInput ? nil : "text-only load path"

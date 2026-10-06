@@ -13,6 +13,8 @@
 //  persists or routes on it. No test logic changed.
 //  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.9 — prefill step pins: gemma-4 gets 1024
 //  whatever its cache geometry; the override wins for every family (red before the fix).
+//  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.9 — E4B routing pins: the uniform 4-bit id
+//  takes the VLM path; OptiQ, 8-bit and a local audition folder stay on the LLM path.
 
 import Foundation
 import M1K3Chat
@@ -431,6 +433,11 @@ struct MLXBrainProviderTests {
         ))
         #expect(!MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-OptiQ-4bit")
+        ))
+        // A directory audition is named "ParentDir/ModelDir": a local E4B folder takes
+        // the LLM path (text-only, vision scores n/a) — the safe default (#497 review).
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(directory: URL(fileURLWithPath: "/tmp/auditions/gemma-4-e4b-it-4bit"))
         ))
         #expect(!MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-8bit")
