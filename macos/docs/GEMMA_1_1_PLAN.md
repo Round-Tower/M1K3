@@ -171,6 +171,9 @@ one repeat; the ×3 overnight run is the evidence the decision rule asks for.
 Review: Kev + claude-opus-5-5, 2026-10-06 22:40 — critical pass (challenger, verified): the ×3 run
 was stopped; the harness is fixed first. Decision rule gains a proven vision load + a peak-RAM
 cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two scorer misfires.
+Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
+re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
+Confidence 0.8; Mini's cause is UNVERIFIED.
 
 ### Stream 0 — pin verdict (`ee673d6a`; 3.32.3 = `3b339ad6`; main +20 commits)
 
@@ -271,18 +274,58 @@ The one waste was OptiQ's unused 956 MB `optiq/optiq_vision.safetensors` (the lo
 `*.safetensors` glob matches across `/`), fetched once. Unpinned repos still make a Hub
 metadata call per launch.
 
-### Open next (the fixed harness, then one proper run)
+### The fixed harness (2026-10-06, late — all on `feat/chateval-multimodal-fixtures`)
 
-- [ ] Local eval build from this branch (the installed TF build can't carry harness fixes).
-- [ ] Tier-shaped thinking in the eval: `evalMLXBrain(thinkingEnabled:)` + `fastThinkingProvider`
-      per tier, an env override for an always-think arm; Lil's 4096 cap. Then Qwen3.5 gets a fair re-test.
-- [ ] Scorer: the two false-fails (`it's perfect` vs "perfectly"; quoted text inside a decline) —
-      `challenger` first (heuristic); full answer text kept for bake-off runs.
-- [ ] Record peak RAM per brain in the run provenance; set the Lil RAM cap.
-- [ ] E4B vision-load launch (widen `usesVLMLoadPath` locally) → if it loads, the bake-off counts.
-- [ ] Decide the E4B artifact: OptiQ (pin it) or uniform 4-bit + the E4B template pair in
-      `Gemma4TemplateFix`.
-- [ ] Stream F (image turns on Lil escalate) — likely the 1.1 vision path if Lil stays Qwen3.
+- [x] Local eval build from this branch (Debug, `--app <DerivedData>/M1K3.app`; same container, cached weights).
+- [x] Tier-shaped thinking (`EvalThinkingPlan`, `--thinking tier|always|fast`) + the tier's own cap.
+      **Qwen3.5 fair re-test, 4 bare kinds: 22/24** (shootout: 9/24, 14 empty) — no empties,
+      median 5.2 s. The gap was the harness. Re-run the full Qwen3.5 column before judging it.
+- [x] Scorer: whole-word `mustNotContain`, quote-stripped `isRefusal` (challenger folded: lists name
+      plurals / -ly caves); blind markers anchored to the image. Full answers: `--full-answers`.
+- [x] Peak RAM per brain + **resident-at-start** (`ownPeakMemoryMB`): a multi-brain launch carries the
+      previous brain (Big read 13.5 GB vs ~7.4 GB alone). **Run one brain per launch for the RAM gate.**
+- [x] **E4B vision load PROVEN** (uniform `mlx-community/gemma-4-e4b-it-4bit`, exact id in
+      `usesVLMLoadPath`): 13/16 on the vision kind. OptiQ can't — no `embed_vision` projector, no
+      processor config. `Gemma4TemplateFix` now heals E4B too (stale `2f1b4d75…` → `0a2c8073…`).
+- [x] **Vision baseline** (`docs/evals/2026-10-06-vision-baseline-x1-ac.json`): Big 14/16, E4B 13/16
+      (both count 6 circles for 7; E4B misreads the Sunday sign + timetable row), **Mini 1/16**.
+
+### Open next
+
+- [ ] **Mini vision (possible user-facing bug):** on the native AFM path every Mini answer
+      confabulates ("The note says three hinges", "the function is `capture_overlay`"), ~38 s a turn,
+      never "can't see". Either the attachment never reaches AFM or AFM vision is this weak — trace
+      `AFMToolPrompt.imageURLs` → `Attachment(imageURL:)` on a live turn before anything else; the app
+      shows Mini an attach button on macOS 27.
+- [ ] The bake-off proper, per the rule: E4B (uniform, healed template, VLM path) vs incumbent vs
+      Qwen3.5, ×3, all kinds, `--full-answers`, **one brain per launch** (RAM gate), tier thinking.
+- [ ] Set the Lil RAM cap before that run (own peak, not raw).
+- [ ] `selfquery-notes`: "I don't run internal QA…" is a decline the markers miss (challenger first).
+- [ ] Stream F (image turns on Lil escalate) — still the fallback if Lil stays Qwen3.
+- [ ] Stream C, slice 2: the Swift port (spec below).
+
+### Stream C, slice 1 — done (reference vectors)
+
+`Tests/M1K3MLXTests/Fixtures/embeddinggemma2-reference.json` (12 strings; ids + 768 + MRL-512) from
+mlx-vlm @ 3d87e884 on `mlx-community/embeddinggemma-2-8bit` @ 7505ef2f; generator
+`tools/weights/make_embeddinggemma2_reference.py`. **Use 8-bit**: text cosine vs Google fp32 0.9998
+(4-bit 0.981). Relevant 0.77–0.89 vs off-topic 0.52–0.59 → the space is anisotropic: re-measure
+`EmbedderFloors`, never carry Qwen3-Embedding's over.
+
+**Port spec** (from mlx-vlm `models/embedding_gemma2/language.py`, ~200 lines → ~250 Swift, no upstream
+dependency; it does NOT reuse Gemma4Text — the PLE differs):
+- text-only load: keep `language_model.*`, drop `vision_tower.* / embed_vision.* / audio_tower.* /
+  embed_audio.*`, strip a leading `model.`, skip `rotary_emb.inv_freq`.
+- input: `embed_tokens(ids) * sqrt(512)`; tokenizer wraps `<bos>=2 … <eos>=1`; prompts
+  `task: search result | query: ` / `title: none | text: `.
+- 24 encoder layers, **bidirectional**: sliding layers mask `|i−j| ≤ 512`, full layers unmasked;
+  `per_layer_config` overrides full layers to head_dim 512, 1 KV head (default: 4 heads, 2 KV, 256).
+- attention: q/k RMSNorm, v RMSNorm **without scale**, RoPE with fp32 angles (θ 1e6 full / 1e4 sliding),
+  SDPA scale **1.0**. MLP gelu-tanh gate×up→down. Pre/post norms around attention and MLP.
+- PLE: `ple.per_layer_model_projection(x)·hidden^-½ → [L, 512] → RMSNorm` from the input embeddings;
+  per layer `x + post_norm(proj(gelu(gate(x)) · ple_i))`; then `x · layer_scalar`.
+- head: `embedding_projection(norm(h))` → 768; mean-pool over the mask; L2-normalise; MRL-512 = head
+  512 re-normalised. Exit: the fixture's vectors at cosine ≥ 0.999 (`M1K3_MLX_INTEGRATION=1` / SelfTest).
 
 - Shootout + bake-off results → table here + `MODEL_CHOICES.md` decision log; `challenger`
   on the conclusion before any tier swap.
