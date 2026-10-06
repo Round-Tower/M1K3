@@ -13,6 +13,9 @@ Mac App Store (check the store lookup before saying it is live). The same portab
 - **`macos/docs/IOS_VISIONOS_PORT.md`** — the iOS / visionOS shell.
 - **`app/CLAUDE.md`** — M1K3 for Android (KMP, slow burn).
 - **`CONTRIBUTING.md` / `SECURITY.md`** — the public-repo contributor surface.
+- **`.claude/skills/m1k3/README.md`** — the M1K3 mod for Claude Code (loads by itself in
+  this checkout): the CLAUDE.md nevers enforced on `tool.call`, M1K3's voice for the moments a
+  session needs you, and the avatar band (`/face`, `/companion`).
 - M1K3's in-app MCP server (`127.0.0.1:4242/mcp`) needs its access token (#270): connect
   with `m1k3 login && m1k3 connect claude` (user scope). No repo `.mcp.json` — a project
   entry would shadow the authed user one.

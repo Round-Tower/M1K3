@@ -1,0 +1,40 @@
+{
+  "frameWidth": 192,
+  "frameHeight": 96,
+  "looks": {
+    "fox": {
+      "Survey": {
+        "frames": 48,
+        "duration": 3.4166667461395264,
+        "svgFrames": 24
+      },
+      "Walk": {
+        "frames": 12,
+        "duration": 0.7083333134651184,
+        "svgFrames": 12
+      },
+      "Run": {
+        "frames": 19,
+        "duration": 1.1583333015441895,
+        "svgFrames": 19
+      }
+    },
+    "phosphor": {
+      "Survey": {
+        "frames": 48,
+        "duration": 3.4166667461395264,
+        "svgFrames": 24
+      },
+      "Walk": {
+        "frames": 12,
+        "duration": 0.7083333134651184,
+        "svgFrames": 12
+      },
+      "Run": {
+        "frames": 19,
+        "duration": 1.1583333015441895,
+        "svgFrames": 19
+      }
+    }
+  }
+}

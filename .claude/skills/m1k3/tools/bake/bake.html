@@ -1,0 +1,65 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:transparent">
+<canvas id="c" width="192" height="96"></canvas>
+<script type="importmap">{"imports":{"three":"./package/build/three.module.js","three/addons/":"./package/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const W = 192, H = 96;
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H, false); renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.6));
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(2, 3, 2); scene.add(key);
+const camera = new THREE.PerspectiveCamera(26, W / H, 0.1, 1000);
+
+const gltf = await new GLTFLoader().loadAsync('./Fox.glb');
+const model = gltf.scene; scene.add(model);
+const mixer = new THREE.AnimationMixer(model);
+// Fit: posed bounds of the Survey pose, a 3/4 view like the app's creature surfaces.
+model.updateMatrixWorld(true);
+const box = new THREE.Box3().setFromObject(model); const size = new THREE.Vector3(); box.getSize(size); const centre = new THREE.Vector3(); box.getCenter(centre);
+const radius = Math.max(size.x, size.z) * 0.56;
+const dist = radius / (Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
+function aim(){ camera.position.set(centre.x + dist * 0.72, centre.y + dist * 0.38, centre.z + dist * 0.62); camera.lookAt(centre); }
+aim();
+
+function setLook(look) {
+  model.traverse(o => {
+    if (!o.isMesh) return;
+    if (!o.userData.orig) o.userData.orig = o.material;
+    if (look === 'phosphor') {
+      o.material = new THREE.MeshBasicMaterial({ color: 0x6cf79a, wireframe: true, transparent: true, opacity: 0.85 });
+      if (!o.userData.fill) { const fill = new THREE.Mesh(o.geometry, new THREE.MeshBasicMaterial({ color: 0x0b2a18, transparent: true, opacity: 0.55 })); fill.skeleton = o.skeleton; fill.bindMatrix = o.bindMatrix; fill.isSkinnedMesh = o.isSkinnedMesh; o.userData.fill = fill; }
+    } else { o.material = o.userData.orig; }
+  });
+}
+// Phosphor needs the fill under the wire: render twice (fill, then wire) per frame.
+async function renderLook(look, action, t) {
+  mixer.setTime(t); model.updateMatrixWorld(true);
+  if (look === 'phosphor') {
+    const wires = []; model.traverse(o => { if (o.isMesh) wires.push(o); });
+    renderer.autoClear = true;
+    wires.forEach(o => { o.material = new THREE.MeshBasicMaterial({ color: 0x08261a, transparent: true, opacity: 0.9 }); });
+    renderer.render(scene, camera);
+    renderer.autoClear = false;
+    wires.forEach(o => { o.material = new THREE.MeshBasicMaterial({ color: 0x79ffb0, wireframe: true, transparent: true, opacity: 0.9 }); });
+    renderer.render(scene, camera);
+    renderer.autoClear = true;
+  } else { renderer.render(scene, camera); }
+}
+window.bake = async (look) => {
+  setLook(look);
+  const out = {};
+  for (const clip of gltf.animations) {
+    mixer.stopAllAction(); const action = mixer.clipAction(clip); action.play();
+    const frames = Math.min(48, Math.max(12, Math.round(clip.duration * 16)));
+    const strip = document.createElement('canvas'); strip.width = W * frames; strip.height = H; const ctx = strip.getContext('2d');
+    for (let i = 0; i < frames; i++) { await renderLook(look, action, (i / frames) * clip.duration); ctx.drawImage(canvas, i * W, 0); }
+    out[clip.name] = { frames, duration: clip.duration, png: strip.toDataURL('image/png').split(',')[1] };
+  }
+  return out;
+};
+window.ready = true;
+</script></body>
