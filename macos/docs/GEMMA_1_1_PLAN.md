@@ -15,6 +15,12 @@ written on `feat/chateval-multimodal-fixtures`, `swift test` and the vision base
 owed. Stream B shootout running, full ×3 bake-off queued overnight. Findings that
 change the plan are in **§5 Progress and learnings** — read it before acting on §1–§2.
 
+**Status (2026-10-07, 00:30):** #497 landed (`0c64af9d`): vision eval kind, tier thinking, peak RAM,
+E4B vision + template heal, EmbeddingGemma 2 reference. The ×3 bake-off proper is running overnight
+(incumbent → Qwen3.5 → E4B, one brain per launch). New: **Stream G** (gemma-4 speed) and an **E2B**
+entry — both from Kev: "Lil has been tuned specifically for this up until now, but we need to keep
+our minds open."
+
 ---
 
 ## 0. What changed upstream (the why)
@@ -142,6 +148,40 @@ Independent of B; ship it if B doesn't swap Lil within the week.
 - [ ] Read `Sources/M1K3Inference/AttachmentRouting.swift`: what happens today when an image is attached while Lil is active?
 - [ ] Route that turn to Big when RAM allows (same gate as `delegate_deep`), else Mini's AFM vision; tell the user which brain looked.
 
+### Stream G — gemma-4 speed: the sliding window and prefix reuse (keep an open mind)
+
+Why: Lil's runtime has been tuned around a dense Qwen3 — trimmable caches, cross-turn prefix
+reuse, quantised KV. Every gemma-4 candidate pays a tax that is partly **ours**, not the model's:
+E4B ran 5.6× the incumbent's latency at ×1. Before a gemma is ruled out of Lil or mobile on speed,
+split what is the runtime from what is the model.
+
+Facts (read 2026-10-07 on `695600b9`):
+- `slidingWindow(forModelID:)` returns **1024 for any id containing "gemma-4"**
+  (`MLXBrainProvider.swift:1158`). E4B's `config.json` says **512**; 12B's 1024 is measured
+  (GemmaMTPSpike). E2B unread.
+- The persona prefix is ~1878 tokens, over either window, so `prefixIsReusable` (L1174) declines to
+  build it and **every turn re-prefills the whole persona** (the 2026-08-09 measurement: 12.5 s per
+  build on 12B). The veto exists because a wrapped `RotatingKVCache` reports `isTrimmable == false`
+  and MLXToolCalling's `reusable` gate needs a trim.
+- No quantised KV on gemma: Gemma4Text calls `cache.update` directly (upstream fatalError).
+
+Hypotheses, ranked, each with the check that confirms or kills it:
+1. **Snapshot-and-copy beats trim.** Reuse needs a *copy* of the post-prefix cache, not a trim of a
+   used one. If a wrapped `RotatingKVCache` round-trips through `state` + `metaState`, a long persona
+   is reusable every turn. Check: those setters in mlx-swift-lm @ `ee673d6a` (`KVCache.swift`); then a
+   spike where greedy answers are identical with and without the restored snapshot on 3 fixtures.
+2. **Prefill dominates.** Check: TTFT vs decode tok/s, E4B vs incumbent, from the overnight
+   transcripts. If decode dominates instead, 1 buys little — the cost is the VLM path or full-width KV.
+3. **The real window, per model**, from `config.json`'s `sliding_window`, not the name. Correctness
+   first (E4B is 512), and it feeds 1 and prefill step sizing (L1149).
+4. **A leaner persona for small tiers.** Under 1024 tokens, 12B's reuse works today with no runtime
+   change. A persona-quality trade-off — `challenger` first.
+
+Exit: E4B median live-path latency within **2×** the incumbent's on the same fixtures (5.6× today);
+greedy-identical answers with reuse on and off; `slidingWindow` read from config with a test per
+family. Then re-run the E4B (and E2B) columns. Not a 1.1 blocker: it decides whether a gemma loses
+Lil on merit or on our plumbing.
+
 ---
 
 ## 3. Spikes and later ideas (not 1.1 commitments)
@@ -174,6 +214,10 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 00:30 — #497 landed; the ×3 bake-off running. Added
+Stream G (gemma-4 speed: the hard-coded window, the re-prefilled persona, snapshot-and-copy reuse)
+and the E2B entry (other slots, not Lil). Confidence 0.6 on hypothesis 1 — the cache setters are
+unread; 0.85 that E2B doesn't belong in Lil.
 
 ### Stream 0 — pin verdict (`ee673d6a`; 3.32.3 = `3b339ad6`; main +20 commits)
 
@@ -303,6 +347,23 @@ metadata call per launch.
 - [ ] `selfquery-notes`: "I don't run internal QA…" is a decline the markers miss (challenger first).
 - [ ] Stream F (image turns on Lil escalate) — still the fallback if Lil stays Qwen3.
 - [ ] Stream C, slice 2: the Swift port (spec below).
+- [ ] **Stream G** (gemma-4 speed) — hypothesis 2 first: it reads off tonight's transcripts for free.
+- [ ] **Scorer: decimal digits match whole-word** (#497 review): fact "4" passes on "3.4" / "€4.08".
+      Treat `.`/`,` between digits as inside the number; re-score the overnight `--full-answers` JSONs.
+- [ ] **E2B — a contender, but not for Lil** (Kev, 2026-10-07: "add it later"). `gemma-4-e2b-it-4bit`,
+      3.6 GB at 4-bit, ~2B effective, sees **and hears**. `MODEL_CHOICES.md:78`'s "below the grounding
+      floor" was measured in June on the ReAct floor with the stale template; both are fixed now, so
+      that verdict is stale. Against Lil it loses on size (3.6 vs ~2.3 GB) and quality (2B vs 4B), and
+      shares E4B's prefill tax — Stream G could change the speed half. Slots where it could win:
+      - **iOS / visionOS brain** — eyes and ears in an 8 GB iPhone; nothing on mobile sees today.
+      - **Mini's vision stand-in** — only if the Mini trace above finds AFM's ceiling, not a lost
+        attachment.
+      - **Stream E audio** — the cheap Gemma ASR + diarization to benchmark against WhisperKit behind
+        `TranscriptionProvider`.
+      Setup when we get to it: exact id in `usesVLMLoadPath`; a per-repo `Gemma4TemplateFix.Heal`
+      (hash google/gemma-4-E2B-it's template; expect the same stale `2f1b4d75…` class); read its
+      `sliding_window`; ~3.6 GB download (Kev's call); ×1 shootout on vision + text kinds, scored as a
+      mobile / Mini-vision candidate, never against Lil.
 
 ### Stream C, slice 1 — done (reference vectors)
 
