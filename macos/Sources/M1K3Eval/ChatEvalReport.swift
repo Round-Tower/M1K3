@@ -27,9 +27,10 @@ public enum ChatEvalReport {
         public let modelID: String?
         public let scores: [ChatEvalScore]
         /// MLX's peak memory over this brain's run (MB), reset before it loads —
-        /// the bake-off's RAM gate. Includes whatever MLX holds resident beside it
-        /// (the embedder), a constant offset across candidates. nil for non-MLX
-        /// columns and for runs recorded before 2026-10-06.
+        /// the bake-off's RAM gate. Includes whatever MLX holds resident beside it,
+        /// and the embedder loads lazily INSIDE the first brain's run (later brains
+        /// see it as resident) — so compare `ownPeakMemoryMB` from one-brain-per-
+        /// launch runs. nil for non-MLX columns and runs recorded before 2026-10-06.
         public let peakMemoryMB: Int?
         /// MLX memory already resident when this brain started (MB) — an earlier
         /// brain in the same launch, the embedder. A multi-brain launch on
@@ -49,9 +50,13 @@ public enum ChatEvalReport {
         }
 
         /// What the brain itself added over what was resident — the RAM gate's
-        /// number. nil unless both halves were recorded.
+        /// number. nil unless both halves were recorded, and nil when peak sits
+        /// below resident (a brain that never loaded, or a predecessor released
+        /// mid-run): no number beats a negative or a wrong one.
         public var ownPeakMemoryMB: Int? {
-            guard let peakMemoryMB, let residentMemoryMBAtStart else { return nil }
+            guard let peakMemoryMB, let residentMemoryMBAtStart, peakMemoryMB >= residentMemoryMBAtStart else {
+                return nil
+            }
             return peakMemoryMB - residentMemoryMBAtStart
         }
 

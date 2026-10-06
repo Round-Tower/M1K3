@@ -106,6 +106,37 @@ extension VisionFixturesTests {
     }
 }
 
+extension VisionFixturesTests {
+    private func passes(_ id: String, _ answer: String) throws -> Bool {
+        let fixture = try #require(ChatEvalFixtures.vision.first { $0.id == id })
+        return ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer)).passed
+    }
+
+    @Test("a confabulating answer can't pass on a substring — vision facts match whole words")
+    func confabulationDoesNotPassOnASubstring() throws {
+        // The pre-push review's cases: each would have passed a raw substring match.
+        #expect(try !passes("vis-receipt-count", "I see 3 hinges, total €46.08."))
+        #expect(try !passes("vis-chart-max", "May appears highest, approximately."))
+        #expect(try !passes("vis-count-circles", "There are 17 red circles."))
+        #expect(try !passes("vis-count-squares", "I count 13 blue squares."))
+        #expect(try !passes("vis-whiteboard-owner", "Aoife's friend drafts it."))
+        // …and the right answers still pass.
+        #expect(try passes("vis-receipt-count", "You bought 4 brass hinges."))
+        #expect(try passes("vis-chart-max", "April — 67 units."))
+        #expect(try passes("vis-count-circles", "1, 2, 3, 4, 5, 6, 7 — seven red circles."))
+        #expect(try passes("vis-whiteboard-owner", "Aoife, by Friday."))
+        #expect(try passes("vis-dialog-code", "It's error code -36."))
+    }
+
+    @Test("yes/no fixtures need the fact behind the answer, not a coin flip")
+    func yesNoNeedsTheFact() throws {
+        #expect(try !passes("vis-sign-sunday", "Yes."))
+        #expect(try passes("vis-sign-sunday", "Yes — the restriction is 8am–6pm Mon–Sat only."))
+        #expect(try !passes("vis-ui-bluetooth", "Bluetooth is on; the hotspot is off."))
+        #expect(try passes("vis-ui-bluetooth", "Wi-Fi is turned on but Bluetooth is off."))
+    }
+}
+
 private enum BrainRunFixture {
     static func run(scores: [ChatEvalScore]) -> ChatEvalReport.BrainRun {
         ChatEvalReport.BrainRun(brainID: "lil", scores: scores)

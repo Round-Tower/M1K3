@@ -457,6 +457,8 @@ struct MLXBrainProviderTests {
         // render (imagesAllowed) — pin the thin wrapper, not just the static.
         #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-12B-it-4bit").supportsImageInput)
         #expect(!MLXBrainProvider(modelID: "mlx-community/Qwen3-4B-Instruct-2507-4bit").supportsImageInput)
+        #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-e4b-it-4bit").supportsImageInput)
+        #expect(!MLXBrainProvider(modelID: "mlx-community/gemma-4-e4b-it-OptiQ-4bit").supportsImageInput)
     }
 
     @Test("BrainTier.supportsImageInput can never drift from the VLM load-path allow-list")

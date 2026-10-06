@@ -36,7 +36,11 @@ public enum EvalThinkingMode: String, Sendable, Equatable, CaseIterable {
 
 public struct EvalThinkingPlan: Sendable, Equatable {
     /// Construction-time thinking for the arms with no per-question policy:
-    /// bare `generate` and the tool-use agent loop.
+    /// bare `generate` and the tool-use agent loop. Known gap (pre-push review):
+    /// the live arm's NON-tool streams (plain route, the fallback synthesis) also
+    /// read this construction flag, so under `tier` a speed-tier brain's fallback
+    /// never thinks — the app's would on an explicit deep ask (~3 of ~90 fixtures).
+    /// Tool turns take the per-turn policy and are unaffected.
     public let bareThinks: Bool
     /// The live responder's speed-tier bias — the app's `fastThinkingProvider`.
     public let liveFastByDefault: Bool

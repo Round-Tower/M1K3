@@ -216,6 +216,11 @@ public struct EvalExpectation: Sendable, Equatable {
     /// (Kev, 2026-09-09: "verbosity is a trait, not a thing to be constrained").
     /// A runaway wall of text still fails regardless — see the scorer.
     public let lengthIsHard: Bool
+    /// `mustContainAny` / `mustContainAll` match WHOLE words (the matcher
+    /// `mustNotContain` uses). Opt-in: the vision kind's facts are short tokens
+    /// ("4", "7", "36", "apr") that a confabulating answer hits by accident
+    /// ("€46.08", "17", "approximately") — the 2026-10-06 pre-push review.
+    public let wholeWordFacts: Bool
 
     public init(
         mustContainAny: [String] = [],
@@ -228,7 +233,8 @@ public struct EvalExpectation: Sendable, Equatable {
         mustNotCite: Bool = false,
         minChars: Int? = nil,
         maxChars: Int? = nil,
-        lengthIsHard: Bool = false
+        lengthIsHard: Bool = false,
+        wholeWordFacts: Bool = false
     ) {
         // The scorer renders these as opposing checks off the same
         // RefusalHeuristic call — a fixture setting both can never pass (109
@@ -245,6 +251,7 @@ public struct EvalExpectation: Sendable, Equatable {
         self.minChars = minChars
         self.maxChars = maxChars
         self.lengthIsHard = lengthIsHard
+        self.wholeWordFacts = wholeWordFacts
     }
 }
 
@@ -1226,7 +1233,7 @@ public enum ChatEvalFixtures {
         ),
         visionFixture(
             "vis-whiteboard-owner", "whiteboard-pricing", "Who has to draft the FAQ, and by when?",
-            all: ["aoife", "fri"]
+            any: ["friday", "fri"], all: ["aoife"]
         ),
         visionFixture(
             "vis-doc-retention", "doc-retention-policy",
@@ -1235,11 +1242,12 @@ public enum ChatEvalFixtures {
         ),
         visionFixture(
             "vis-count-circles", "count-shapes", "How many red circles are in this image?",
-            any: ["7", "seven"], notContaining: ["8", "6"]
+            // No digit bans: a correct answer may count out "1, 2, … 6, 7".
+            any: ["7", "seven"]
         ),
         visionFixture(
             "vis-count-squares", "count-shapes", "How many blue squares are there?",
-            any: ["3", "three"], notContaining: ["4", "2 blue", "two blue"]
+            any: ["3", "three"], notContaining: ["2 blue", "two blue"]
         ),
         visionFixture(
             "vis-timetable-last", "timetable-bus", "When does the last bus get into Dungarvan?",
@@ -1247,11 +1255,12 @@ public enum ChatEvalFixtures {
         ),
         visionFixture(
             "vis-sign-sunday", "sign-parking", "Can I park here on a Sunday afternoon? Answer yes or no first.",
-            any: ["yes"]
+            // Yes AND the reason (the hours stop at Saturday) — a bare "yes" is a coin flip.
+            any: ["sat", "saturday", "6pm", "6 pm", "18:00"], all: ["yes"]
         ),
         visionFixture(
             "vis-ui-bluetooth", "ui-settings", "Is Bluetooth on or off in this screenshot?",
-            any: ["off"], notContaining: ["bluetooth is on", "is turned on"]
+            any: ["off"], notContaining: ["bluetooth is on", "bluetooth: on", "bluetooth on"]
         ),
     ]
 
@@ -1277,7 +1286,7 @@ public enum ChatEvalFixtures {
             expectation: .init(
                 mustContainAny: any, mustContainAll: all,
                 mustNotContain: blindMarkers + notContaining + leakMarkers,
-                mustComply: true, minChars: 1, maxChars: 800
+                mustComply: true, minChars: 1, maxChars: 800, wholeWordFacts: true
             )
         )
     }

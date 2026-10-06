@@ -604,8 +604,17 @@ public enum ChatEvalScorer {
 
         let exp = fixture.expectation
 
+        // Whole-word when the fixture opts in (vision); raw substring otherwise,
+        // exactly as before.
+        let normalisedForFacts = RefusalHeuristic.normalised(answer)
+        let containsFact: (String) -> Bool = { fact in
+            exp.wholeWordFacts
+                ? RefusalHeuristic.containsWholeWord(normalisedForFacts, RefusalHeuristic.normalised(fact))
+                : lowered.contains(fact.lowercased())
+        }
+
         if !exp.mustContainAny.isEmpty {
-            let hit = exp.mustContainAny.first { lowered.contains($0.lowercased()) }
+            let hit = exp.mustContainAny.first { containsFact($0) }
             checks.append(EvalCheck(
                 name: "contains expected",
                 outcome: hit != nil ? .pass : .fail,
@@ -615,7 +624,7 @@ public enum ChatEvalScorer {
         }
 
         if !exp.mustContainAll.isEmpty {
-            let missing = exp.mustContainAll.filter { !lowered.contains($0.lowercased()) }
+            let missing = exp.mustContainAll.filter { !containsFact($0) }
             checks.append(EvalCheck(
                 name: "contains all",
                 outcome: missing.isEmpty ? .pass : .fail,

@@ -273,3 +273,12 @@ def test_summary_shows_the_brains_own_peak_when_resident_is_known(tmp_path):
     doc.write_text(json.dumps({"runs": [{"brainID": "big", "scores": [ok], "peakMemoryMB": 13502,
                                          "residentMemoryMBAtStart": 6100}], "provenance": {}}))
     assert "peak 13502 MB (own 7402 MB)" in rc.summarise(doc)
+
+
+def test_summary_omits_own_peak_when_peak_is_below_resident(tmp_path):
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok], "peakMemoryMB": 0,
+                                         "residentMemoryMBAtStart": 900}], "provenance": {}}))
+    summary = rc.summarise(doc)
+    assert "own" not in summary and "peak 0 MB" in summary
