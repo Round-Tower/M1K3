@@ -402,3 +402,15 @@ def test_cli_skips_a_foreign_document_but_still_refuses_a_wrong_schema(tmp_path,
     else:
         raise AssertionError("a scorecard with an unread schemaVersion must still fail loudly")
 
+
+
+def test_a_not_applicable_score_leaves_every_count():
+    # A vision turn on a text-only brain: one skip named "applicable" (ChatEvalScore.notApplicable).
+    # An all-skip score otherwise reads as a pass — a blind brain must not bank a vision row.
+    na = {"fixtureID": "vis-receipt-total", "kind": "vision", "latencyMS": 0, "repeatIndex": 0,
+          "answerPreview": None, "checks": [{"name": "applicable", "outcome": "skip", "detail": "n/a — text-only"}]}
+    run = {"brainID": "lil", "scores": [score("chat-hello", "open-chat", True, 40), na]}
+    lil = bp.summarise_run(dict(RUN, runs=[run]))["brains"][0]
+    assert lil["passed"] == 1 and lil["total"] == 1
+    assert "vision" not in lil["byKind"]
+    assert lil["medianLatencyMS"] == 40

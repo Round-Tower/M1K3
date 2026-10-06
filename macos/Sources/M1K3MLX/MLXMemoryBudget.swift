@@ -28,6 +28,9 @@
 //  (`settle(label:)` after load/release), capped at 75% of RAM, desktop only.
 //  Review fold, same day: settle is serialised (NSLock — the LLM and the embedder both
 //  reclaim) and the raise is quantised to 512 MB so KV wobble never moves the limit.
+//  Review: Kev + claude-opus-5-5, 2026-10-06 — `resetPeak` / `peakMB` for the ChatEval
+//  RAM gate (peak per brain in the run document). Read-only over MLX's counter; no
+//  change to the budget itself. Confidence 0.85.
 //
 
 import Foundation
@@ -220,6 +223,21 @@ public struct MLXMemoryBudget: Sendable, Equatable {
         let peakMB = snapshot.peakMemory / mebibyte
         let footprintMB = (physicalFootprintBytes() ?? 0) / UInt64(mebibyte)
         return "\(label) MB: active=\(activeMB) cache=\(cacheMB) peak=\(peakMB) footprint=\(footprintMB)"
+    }
+
+    /// Zero MLX's peak counter — the eval resets it before each brain loads.
+    public static func resetPeak() {
+        MLX.Memory.peakMemory = 0 // the setter resets; the value is ignored
+    }
+
+    /// MLX's active (resident) memory right now, in MB.
+    public static func activeMB() -> Int {
+        MLX.Memory.activeMemory / mebibyte
+    }
+
+    /// MLX's peak memory since the last `resetPeak`, in MB.
+    public static func peakMB() -> Int {
+        MLX.Memory.peakMemory / mebibyte
     }
 
     /// `phys_footprint` from task_vm_info — Activity Monitor's "Memory".

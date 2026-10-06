@@ -115,4 +115,44 @@ struct Gemma4TemplateFixTests {
         )
         #expect(missing == .leftAlone)
     }
+
+    // E4B (2026-10-06): mlx-community/gemma-4-e4b-it-4bit still serves the pre-07-15 template.
+
+    @Test("E4B's vendored template loads and matches Google's published hash")
+    func e4bVendoredTemplateMatches() throws {
+        let heal = try #require(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-e4b-it-4bit"))
+        #expect(heal.canonicalSHA256 == "0a2c8073c878ab1da004bee933a998606537bbb62016310352c7285c3f01c5b5")
+        #expect(heal.staleSHA256 == "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082")
+        #expect(try sha256(Gemma4TemplateFix.canonicalTemplate(for: heal)) == heal.canonicalSHA256)
+    }
+
+    @Test("each repo heals to its OWN template — 12B bytes never land in E4B, nor E4B's in 12B")
+    func healsNeverCross() throws {
+        let twelve = try #require(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-12B-it-4bit"))
+        let e4b = try #require(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-e4b-it-4bit"))
+        #expect(twelve.canonicalSHA256 != e4b.canonicalSHA256)
+
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("gemma4-template-fix-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let templateURL = dir.appendingPathComponent("chat_template.jinja")
+        let staleBytes = Data("stale e4b template".utf8)
+        try staleBytes.write(to: templateURL)
+
+        let verdict = try Gemma4TemplateFix.apply(
+            directory: dir, repoID: "mlx-community/gemma-4-e4b-it-4bit", treatingAsStale: sha256(staleBytes)
+        )
+        #expect(verdict == .replaced)
+        #expect(try sha256(Data(contentsOf: templateURL)) == e4b.canonicalSHA256)
+
+        // 12B's stale hash in the E4B repo is not E4B's stale hash: left alone.
+        #expect(Gemma4TemplateFix.decision(existingSHA256: twelve.staleSHA256, heal: e4b) == .leaveAlone)
+    }
+
+    @Test("only the exact repos heal — the OptiQ conversion already ships the new template")
+    func onlyExactRepos() {
+        #expect(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-e4b-it-OptiQ-4bit") == nil)
+        #expect(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-e4b-it-8bit") == nil)
+    }
 }

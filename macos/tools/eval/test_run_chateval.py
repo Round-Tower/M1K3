@@ -9,6 +9,7 @@ here; the launch/quit glue is driven by hand on the real app).
 Prior: none (new file).
 """
 
+import json
 from pathlib import Path
 
 import pytest
@@ -223,3 +224,61 @@ def test_direct_env_routes_the_report_to_stdout_and_keeps_the_caller_env():
     assert env["PATH"] == "/usr/bin"
     assert trig["M1K3_SELFTEST_OUT"] == "/container/path/run", "the trigger map itself is not mutated"
 
+
+
+def test_summary_leaves_out_not_applicable_trials(tmp_path):
+    na = {"fixtureID": "vis-x", "kind": "vision", "latencyMS": 0,
+          "checks": [{"name": "applicable", "outcome": "skip", "detail": "n/a — text-only"}]}
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9,
+          "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok, na]}], "provenance": {}}))
+    summary = rc.summarise(doc)
+    assert "1/1 trials passed" in summary
+    assert "1 n/a" in summary
+
+
+def test_thinking_mode_rides_the_trigger_only_when_set():
+    assert "M1K3_SELFTEST_CHATEVAL_THINKING" not in rc.build_trigger(
+        base_opts(), container=CONTAINER, power_source="ac", powermode=None, commit=None, mlx_rev=None)
+    trig = rc.build_trigger(base_opts(thinking="always"), container=CONTAINER, power_source="ac",
+                            powermode=None, commit=None, mlx_rev=None)
+    assert trig["M1K3_SELFTEST_CHATEVAL_THINKING"] == "always"
+
+
+def test_unknown_thinking_mode_is_refused():
+    with pytest.raises(ValueError):
+        rc.build_trigger(base_opts(thinking="on"), container=CONTAINER, power_source="ac",
+                         powermode=None, commit=None, mlx_rev=None)
+
+
+def test_full_answers_rides_the_trigger_only_when_asked():
+    assert "M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS" not in rc.build_trigger(
+        base_opts(), container=CONTAINER, power_source="ac", powermode=None, commit=None, mlx_rev=None)
+    trig = rc.build_trigger(base_opts(full_answers=True), container=CONTAINER, power_source="ac",
+                            powermode=None, commit=None, mlx_rev=None)
+    assert trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] == "1"
+
+
+def test_summary_shows_peak_memory_when_recorded(tmp_path):
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok], "peakMemoryMB": 5120}], "provenance": {}}))
+    assert "peak 5120 MB" in rc.summarise(doc)
+
+
+def test_summary_shows_the_brains_own_peak_when_resident_is_known(tmp_path):
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "big", "scores": [ok], "peakMemoryMB": 13502,
+                                         "residentMemoryMBAtStart": 6100}], "provenance": {}}))
+    assert "peak 13502 MB (own 7402 MB)" in rc.summarise(doc)
+
+
+def test_summary_omits_own_peak_when_peak_is_below_resident(tmp_path):
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok], "peakMemoryMB": 0,
+                                         "residentMemoryMBAtStart": 900}], "provenance": {}}))
+    summary = rc.summarise(doc)
+    assert "own" not in summary and "peak 0 MB" in summary

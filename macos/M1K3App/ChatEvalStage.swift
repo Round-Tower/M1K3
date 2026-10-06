@@ -49,6 +49,18 @@
 //  the app build ("failed to produce diagnostic"), which `swift test` never compiles.
 //  Review: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.8 — an MLX override naming an imported
 //  audition loads from its folder (AuditionStore), so `--model lil=<org/repo>` A/Bs anything imported.
+//  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.75 — the `vision` arm (GEMMA_1_1_PLAN Stream A):
+//  the fixture's bundled PNGs ride the production `answerStreaming(_:images:…)` path; a provider that
+//  can't take images scores n/a. Verify-by-launch owed: one run on mini + big (does AFM's agent path
+//  keep the attachment? the blind markers will say).
+//  Review: same day (critical pass) — `EvalThinkingPlan`: every arm thinks the way the app's tier does
+//  (`M1K3_SELFTEST_CHATEVAL_THINKING=tier|always|fast`, default tier) and MLX brains get the tier's own
+//  generation cap, not a flat 2048. The shootout had let Qwen3.5 think on every bare turn. Confidence 0.8.
+//  Review: same day — the bake-off record: peak MLX memory per brain (`BrainRun.peakMemoryMB`, the RAM
+//  gate) and `M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS=1` for whole answers. Confidence 0.8.
+//  Review: same day (#497 review fold) — `imageGap` says why it reads `BrainTier.mini` for AFM. The
+//  own-peak number still charges the lazily-loaded embedder to the first brain of a multi-brain launch:
+//  the bake-off runs one brain per launch.
 
 import Foundation
 
@@ -289,8 +301,8 @@ enum ChatEvalStage {
     }
 
     private static func livePathObservation(
-        _ fixture: ChatEvalFixture, provider: any InferenceProvider,
-        start: ContinuousClock.Instant, clock: ContinuousClock
+        _ fixture: ChatEvalFixture, images: [ImageAttachment] = [], provider: any InferenceProvider,
+        thinking: EvalThinkingPlan, start: ContinuousClock.Instant, clock: ContinuousClock
     ) async throws -> EvalObservation {
         // path: nil → in-memory GRDB, fresh per fixture (the groundedObservation
         // pattern). Empty on purpose: retrieval finds nothing, so the prompt
@@ -310,9 +322,13 @@ enum ChatEvalStage {
         let responder = AgentRAGResponder(
             store: store, embedder: MLXEmbeddingService(), provider: provider,
             toolsProvider: { palette }, maxIterations: 3,
+            thinkingModeProvider: { Self.thinkingMode(thinking) },
+            fastThinkingProvider: { thinking.liveFastByDefault },
             plainRouteProvider: plainRoute
         )
-        let (_, stream) = try await responder.answerStreaming(fixture.prompt)
+        let (_, stream) = try await responder.answerStreaming(
+            fixture.prompt, images: images, history: [], onActivity: { _ in }
+        )
         var raw = ""
         for await piece in stream {
             // The responder's fallback passes provider chunks through raw, and a
@@ -361,11 +377,22 @@ enum ChatEvalStage {
             }
             emit("• chateval brain \(tier.rawValue) (\(tier.displayName))"
                 + (modelID.map { " → \($0)" } ?? "") + "…")
+            // The RAM gate: MLX's peak over THIS brain's run (reset before it loads).
+            let isMLX = modelID != nil
+            let residentMB = isMLX ? MLXMemoryBudget.activeMB() : nil
+            if isMLX { MLXMemoryBudget.resetPeak() }
             guard let scores = await evalBrain(tier, modelID: modelID, emit: emit) else {
                 emit("  – \(tier.rawValue): unavailable (skipped)")
                 continue
             }
-            runs.append(ChatEvalReport.BrainRun(brainID: tier.rawValue, modelID: modelID, scores: scores))
+            let peakMB = isMLX ? MLXMemoryBudget.peakMB() : nil
+            if let peakMB, let residentMB {
+                emit("  peak MLX memory: \(peakMB) MB (\(residentMB) MB already resident → \(peakMB - residentMB) MB this brain)")
+            }
+            runs.append(ChatEvalReport.BrainRun(
+                brainID: tier.rawValue, modelID: modelID, scores: scores,
+                peakMemoryMB: peakMB, residentMemoryMBAtStart: residentMB
+            ))
         }
         if pccRequested, let scores = await evalPrivateCloud(emit: emit) {
             runs.append(ChatEvalReport.BrainRun(
@@ -426,7 +453,11 @@ enum ChatEvalStage {
             return nil
         }
         emit("  pcc quota: \(status.quota)")
-        return await evalProvider(PrivateCloudInferenceAdapter(backend: backend), emit: emit)
+        // Big's plan reproduces the pre-plan behaviour; PCC has no thinking toggle anyway.
+        return await evalProvider(
+            PrivateCloudInferenceAdapter(backend: backend),
+            thinking: EvalThinkingPlan(tier: .big, mode: thinkingMode), emit: emit
+        )
     }
 
     /// Pause between fixtures (ms), `M1K3_SELFTEST_CHATEVAL_PACE_MS`; default 0 so the local
@@ -516,6 +547,9 @@ enum ChatEvalStage {
     private static func evalBrain(
         _ tier: BrainTier, modelID: String?, emit: @escaping (String) -> Void
     ) async -> [ChatEvalScore]? {
+        let plan = EvalThinkingPlan(tier: tier, mode: thinkingMode)
+        emit("  thinking: \(thinkingMode.rawValue) (bare \(plan.bareThinks ? "on" : "off"), "
+            + "live \(plan.liveForced.map { $0 ? "always" : "fast" } ?? "auto, \(plan.liveFastByDefault ? "speed-tier" : "full") policy"))")
         let provider: any InferenceProvider
         switch tier.backing {
         case .appleFoundationModels:
@@ -534,16 +568,24 @@ enum ChatEvalStage {
         case let .mlx(stockID):
             // 2048 like the per-model eval: a reasoning brain can spend hundreds
             // of tokens inside <think> before a one-word answer.
-            provider = AppEnvironment.evalMLXBrain(modelID: modelID ?? stockID, maxTokens: 2048)
+            // The tier's own cap (HistoryBudgetPolicy, what the app builds this slot
+            // with) and its construction-time thinking — no longer a flat 2048 with
+            // thinking on, which let a thinking brain spend the whole budget inside
+            // <think> and score empty (the 2026-10-06 shootout).
+            provider = AppEnvironment.evalMLXBrain(
+                modelID: modelID ?? stockID,
+                maxTokens: HistoryBudgetPolicy.generationTokenCap(for: tier, defaultCap: MLXBrainProvider.defaultMaxTokens),
+                thinkingEnabled: plan.bareThinks
+            )
         }
-        return await evalProvider(provider, emit: emit)
+        return await evalProvider(provider, thinking: plan, emit: emit)
     }
 
     /// Every selected fixture, `repeats` times, through ONE provider — the loop
     /// the tiers and the PCC arm share, so a new column can never run a
     /// different loop from the columns beside it.
     private static func evalProvider(
-        _ provider: any InferenceProvider, emit: @escaping (String) -> Void
+        _ provider: any InferenceProvider, thinking: EvalThinkingPlan, emit: @escaping (String) -> Void
     ) async -> [ChatEvalScore] {
         let kinds = selectedKinds()
         var scores: [ChatEvalScore] = []
@@ -560,7 +602,7 @@ enum ChatEvalStage {
                 // with nothing in the log to explain it. Whatever it is, it is now
                 // bounded by two timestamps instead of inferred from silence.
                 Self.evalLog.notice("fixture start: \(fixture.id, privacy: .public)")
-                let score = await runFixture(fixture, provider: provider).withRepeatIndex(trial)
+                let score = await runFixture(fixture, provider: provider, thinking: thinking).withRepeatIndex(trial)
                 Self.evalLog.notice(
                     "fixture done: \(fixture.id, privacy: .public) \(score.latencyMS, privacy: .public)ms"
                 )
@@ -572,15 +614,31 @@ enum ChatEvalStage {
     }
 
     private static func runFixture(
-        _ fixture: ChatEvalFixture, provider: any InferenceProvider
+        _ fixture: ChatEvalFixture, provider: any InferenceProvider, thinking: EvalThinkingPlan
     ) async -> ChatEvalScore {
         let clock = ContinuousClock()
         let start = clock.now
         do {
             switch fixture.kind {
+            case .vision:
+                if let gap = Self.imageGap(provider) {
+                    return .notApplicable(fixture, reason: gap)
+                }
+                let images = try fixture.images.map { name in
+                    guard let url = VisionFixtureAssets.url(for: name) else {
+                        throw InferenceError.generationFailed("vision asset \(name) missing from the bundle")
+                    }
+                    return ImageAttachment(url: url)
+                }
+                let observation = try await livePathObservation(
+                    fixture, images: images, provider: provider, thinking: thinking, start: start, clock: clock
+                )
+                return ChatEvalScorer.score(
+                    fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+                )
             case .groundedQ:
                 let observation = try await groundedObservation(fixture, provider: provider, start: start, clock: clock)
-                return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS)
+                return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit)
             case .toolUse:
                 // Three AFM tool paths, selected by env (MLX always goes through
                 // LocalAgent's native dialect):
@@ -597,7 +655,9 @@ enum ChatEvalStage {
                 if provider is AppleFoundationModelsProvider, !afmNativeTools, !forceReActFloor {
                     return try await afmNativeToolScore(fixture, start: start, clock: clock)
                 }
-                return try await toolObservationScore(fixture, provider: provider, start: start, clock: clock)
+                return try await toolObservationScore(
+                    fixture, provider: provider, thinking: thinking, start: start, clock: clock
+                )
             // NB: `where` binds per-pattern, so it must be repeated — a single
             // trailing `where` would leave .openChat matching unconditionally.
             case .openChat where livePathRequested, .codeGen where livePathRequested,
@@ -607,10 +667,10 @@ enum ChatEvalStage {
                 // The live-path arm: the production AgentRAGResponder stack
                 // (grounding head + RULES + agent loop) instead of bare generate.
                 let observation = try await livePathObservation(
-                    fixture, provider: provider, start: start, clock: clock
+                    fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )
                 return ChatEvalScorer.score(
-                    fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS
+                    fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             case .openChat, .reasoning, .codeGen, .refusal, .security, .worldKnowledge,
                  .humour, .interview, .instructionFollowing, .document, .sycophancy:
@@ -628,7 +688,7 @@ enum ChatEvalStage {
                 let ms = milliseconds(clock.now - start)
                 return ChatEvalScorer.score(
                     fixture: fixture, observation: EvalObservation(rawText: raw, latencyMS: ms),
-                    latencyCeilingMS: latencyCeilingMS
+                    latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             }
         } catch {
@@ -672,11 +732,11 @@ enum ChatEvalStage {
     /// .toolsUsed reads the same either way, so mini's tool-calling is measured,
     /// not skipped. maxIterations 3 = pick a tool, observe, conclude.
     private static func toolObservationScore(
-        _ fixture: ChatEvalFixture, provider: any InferenceProvider,
+        _ fixture: ChatEvalFixture, provider: any InferenceProvider, thinking: EvalThinkingPlan,
         start: ContinuousClock.Instant, clock: ContinuousClock
     ) async throws -> ChatEvalScore {
         let agent = LocalAgent(inferenceProvider: provider, tools: toolPalette, maxIterations: 3)
-        let result = try await agent.run(goal: fixture.prompt)
+        let result = try await agent.run(goal: fixture.prompt, thinkingEnabled: thinking.bareThinks)
         let toolsUsed = result.toolsUsed
         let rawText = result.conclusion.isEmpty
             ? "tools used: \(toolsUsed.joined(separator: ","))"
@@ -686,7 +746,7 @@ enum ChatEvalStage {
             toolCalls: toolsUsed,
             latencyMS: milliseconds(clock.now - start)
         )
-        return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS)
+        return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit)
     }
 
     /// Tool-use via AFM's NATIVE FoundationModels tools. The model is handed real
@@ -724,7 +784,48 @@ enum ChatEvalStage {
             toolCalls: toolsUsed,
             latencyMS: milliseconds(clock.now - start)
         )
-        return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS)
+        return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit)
+    }
+
+    /// `M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS=1` keeps every answer whole in the
+    /// document (bake-offs: a fail must be re-adjudicable later); default is the
+    /// 240-char excerpt that keeps committed transcripts readable.
+    private static var previewLimit: Int {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS") == "1" ? .max : ChatEvalScore.answerPreviewLimit
+    }
+
+    /// `M1K3_SELFTEST_CHATEVAL_THINKING=tier|always|fast` — how every arm thinks
+    /// (`EvalThinkingPlan`); unset or unknown is `tier`, production's shape.
+    private static var thinkingMode: EvalThinkingMode {
+        EvalThinkingMode(envValue: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINKING"))
+    }
+
+    /// The live responder's mode for a plan: production Auto unless forced.
+    private static func thinkingMode(_ plan: EvalThinkingPlan) -> ThinkingMode {
+        switch plan.liveForced {
+        case nil: .auto
+        case true?: .always
+        case false?: .fast
+        }
+    }
+
+    /// Why this provider can't take an image turn here, or nil when it can —
+    /// the chat UI's answer (`BrainTier.supportsImageInput` for Mini, the VLM
+    /// load path for an MLX brain) PLUS the path the turn will really take:
+    /// this stage's Mini defaults to the ReAct floor, which drops images
+    /// silently (LocalAgent.run), while the app's Mini is native. Scoring that
+    /// would measure a lost attachment, not Mini. The AFM arm reads the Mini
+    /// TIER's flag, not the provider's: AFM backs only Mini today — a second
+    /// AFM-backed tier must route through its own tier here (#497 review).
+    static func imageGap(_ provider: any InferenceProvider) -> String? {
+        if let mlx = provider as? MLXBrainProvider {
+            return mlx.supportsImageInput ? nil : "text-only load path"
+        }
+        if let afm = provider as? AppleFoundationModelsProvider {
+            guard BrainTier.mini.supportsImageInput else { return "Mini sees images on macOS 27+" }
+            return afm.supportsToolCalls ? nil : "ReAct floor drops images — set _AFM_NATIVE_TOOLS=1 (the app's path)"
+        }
+        return "this provider takes no images"
     }
 
     /// Whole milliseconds in a Duration (matches SelfTest's TTFT helper).

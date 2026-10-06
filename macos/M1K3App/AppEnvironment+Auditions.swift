@@ -61,12 +61,12 @@ extension AppEnvironment {
     /// its folder, so `run_chateval.py --model lil=<org/repo>` A/Bs anything imported.
     /// An imported audition WINS over the hub id of the same name, and says so in the log,
     /// so an A/B never quietly compares a local copy against itself.
-    nonisolated static func evalMLXBrain(modelID: String, maxTokens: Int) -> MLXBrainProvider {
+    nonisolated static func evalMLXBrain(modelID: String, maxTokens: Int, thinkingEnabled: Bool = true) -> MLXBrainProvider {
         if let folder = auditionStore?.directory(for: modelID) {
             auditionLog.notice("eval \(modelID, privacy: .public) loads the imported audition folder, not the hub")
-            return MLXBrainProvider(modelDirectory: folder, maxTokens: maxTokens)
+            return MLXBrainProvider(modelDirectory: folder, maxTokens: maxTokens, thinkingEnabled: thinkingEnabled)
         }
-        return MLXBrainProvider(modelID: modelID, maxTokens: maxTokens)
+        return MLXBrainProvider(modelID: modelID, maxTokens: maxTokens, thinkingEnabled: thinkingEnabled)
     }
 
     /// At launch, before the first brain is built: an audition whose last load never

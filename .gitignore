@@ -155,6 +155,9 @@ bundletool-all-*.jar
 # Icon Composer app-icon layer images must travel with the repo (actool needs them).
 !macos/M1K3.icon/Assets/**
 !app/3d/**/*.png
+# ChatEval `vision` fixture images are SOURCE (drawn by macos/tools/eval/make_vision_fixtures.swift;
+# VisionFixturesTests fails if any is missing from the bundle).
+!macos/Sources/M1K3Eval/Resources/VisionFixtures/*.png
 # Session memory and private notes stay local-only in the public repo.
 # Anchored re-include pattern for the tooling that does travel.
 !/.claude/

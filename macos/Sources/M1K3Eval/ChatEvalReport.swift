@@ -11,6 +11,8 @@
 //  in. No model, no I/O.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.88. Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85 — n/a scores (vision on a blind
+//  brain) leave totals, pass counts and latency; a kind that is all n/a shows "n/a", not "—".
 
 import Foundation
 
@@ -24,11 +26,38 @@ public enum ChatEvalReport {
         /// labelled "big" can be any model at all.
         public let modelID: String?
         public let scores: [ChatEvalScore]
+        /// MLX's peak memory over this brain's run (MB), reset before it loads —
+        /// the bake-off's RAM gate. Includes whatever MLX holds resident beside it,
+        /// and the embedder loads lazily INSIDE the first brain's run (later brains
+        /// see it as resident) — so compare `ownPeakMemoryMB` from one-brain-per-
+        /// launch runs. nil for non-MLX columns and runs recorded before 2026-10-06.
+        public let peakMemoryMB: Int?
+        /// MLX memory already resident when this brain started (MB) — an earlier
+        /// brain in the same launch, the embedder. A multi-brain launch on
+        /// 2026-10-06 put Big at 13.5 GB against its 7.4 GB alone; this is the
+        /// part that wasn't Big's.
+        public let residentMemoryMBAtStart: Int?
 
-        public init(brainID: String, modelID: String? = nil, scores: [ChatEvalScore]) {
+        public init(
+            brainID: String, modelID: String? = nil, scores: [ChatEvalScore],
+            peakMemoryMB: Int? = nil, residentMemoryMBAtStart: Int? = nil
+        ) {
             self.brainID = brainID
             self.modelID = modelID
             self.scores = scores
+            self.peakMemoryMB = peakMemoryMB
+            self.residentMemoryMBAtStart = residentMemoryMBAtStart
+        }
+
+        /// What the brain itself added over what was resident — the RAM gate's
+        /// number. nil unless both halves were recorded, and nil when peak sits
+        /// below resident (a brain that never loaded, or a predecessor released
+        /// mid-run): no number beats a negative or a wrong one.
+        public var ownPeakMemoryMB: Int? {
+            guard let peakMemoryMB, let residentMemoryMBAtStart, peakMemoryMB >= residentMemoryMBAtStart else {
+                return nil
+            }
+            return peakMemoryMB - residentMemoryMBAtStart
         }
 
         /// `big [mlx-community/…]` when the model is known, else the bare tier.
@@ -36,21 +65,35 @@ public enum ChatEvalReport {
             modelID.map { "\(brainID) [\($0)]" } ?? brainID
         }
 
+        /// The scores that count: everything but n/a (a vision turn put to a
+        /// brain that can't see). Totals, pass counts and latency read these.
+        var applicable: [ChatEvalScore] {
+            scores.filter(\.isApplicable)
+        }
+
         public var passedCount: Int {
-            scores.filter(\.passed).count
+            applicable.filter(\.passed).count
         }
 
         public var total: Int {
-            scores.count
+            applicable.count
+        }
+
+        public var notApplicableCount: Int {
+            scores.count - applicable.count
         }
 
         /// Median turn latency across this brain's fixtures (0 if none).
         public var medianLatencyMS: Int {
-            medianOf(scores.map(\.latencyMS))
+            medianOf(applicable.map(\.latencyMS))
         }
 
         func scores(for kind: TaskKind) -> [ChatEvalScore] {
-            scores.filter { $0.kind == kind }
+            applicable.filter { $0.kind == kind }
+        }
+
+        func hasOnlyNotApplicable(_ kind: TaskKind) -> Bool {
+            scores(for: kind).isEmpty && scores.contains { $0.kind == kind && !$0.isApplicable }
         }
     }
 
@@ -90,6 +133,7 @@ public enum ChatEvalReport {
         var rows: [(label: String, cells: [String])] = []
         for kind in TaskKind.allCases {
             let cells = runs.map { run -> String in
+                if run.hasOnlyNotApplicable(kind) { return "n/a" }
                 let kindScores = run.scores(for: kind)
                 let passed = kindScores.filter(\.passed).count
                 let latency = medianOf(kindScores.map(\.latencyMS))

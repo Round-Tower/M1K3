@@ -152,4 +152,24 @@ struct ChatEvalJSONTests {
         #expect(lines.last == ChatEvalReport.fenceClose)
         #expect(lines.count == 3)
     }
+
+    @Test("a brain's peak MLX memory round-trips, and an older run without it still decodes")
+    func peakMemoryIsOptional() throws {
+        let run = ChatEvalReport.BrainRun(
+            brainID: "lil", modelID: "m", scores: [], peakMemoryMB: 5120, residentMemoryMBAtStart: 900
+        )
+        let back = try JSONDecoder().decode(ChatEvalReport.BrainRun.self, from: JSONEncoder().encode(run))
+        #expect(back.peakMemoryMB == 5120)
+        #expect(back.residentMemoryMBAtStart == 900)
+        // The brain's own cost: what it added on top of what was already resident.
+        #expect(back.ownPeakMemoryMB == 4220)
+        // A brain that never loaded (or one whose predecessor was released mid-run)
+        // reads peak < resident: no number, rather than a negative or a wrong one.
+        let unloaded = ChatEvalReport.BrainRun(
+            brainID: "lil", scores: [], peakMemoryMB: 0, residentMemoryMBAtStart: 900
+        )
+        #expect(unloaded.ownPeakMemoryMB == nil)
+        let legacy = #"{"brainID":"lil","scores":[]}"#
+        #expect(try JSONDecoder().decode(ChatEvalReport.BrainRun.self, from: Data(legacy.utf8)).peakMemoryMB == nil)
+    }
 }

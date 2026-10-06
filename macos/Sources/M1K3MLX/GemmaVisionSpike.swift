@@ -30,6 +30,10 @@
 //  shared layers, 12B has 0); gemma-4-12B-it-4bit loads + describes the M1K3
 //  app icon correctly, 265 prompt tokens/image, 7333MB peak. Confidence now
 //  0.9 for the instrument itself (measured live, results in PR #39).
+//  Review: Kev + claude-opus-5-5, 2026-10-06 — the e4b FAIL above is superseded:
+//  upstream #384 (2026-07-15, in our pin) fixed the shared-KV load, and the uniform
+//  4-bit e4b now loads under MLXVLM and answered 13/16 ChatEval vision fixtures
+//  (docs/evals/2026-10-06-vision-baseline). The record above stays as history.
 
 import Foundation
 import MLXLMCommon

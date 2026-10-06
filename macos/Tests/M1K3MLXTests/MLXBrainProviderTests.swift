@@ -13,6 +13,8 @@
 //  persists or routes on it. No test logic changed.
 //  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.9 — prefill step pins: gemma-4 gets 1024
 //  whatever its cache geometry; the override wins for every family (red before the fix).
+//  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.9 — E4B routing pins: the uniform 4-bit id
+//  takes the VLM path; OptiQ, 8-bit and a local audition folder stay on the LLM path.
 
 import Foundation
 import M1K3Chat
@@ -421,12 +423,24 @@ struct MLXBrainProviderTests {
         #expect(MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
         ))
-        // e4b is NOT routable to MLXVLM: keyNotFound layers.24.self_attn.v_proj
-        // (upstream's Gemma4Unified sanitize lacks the KV-shared-layer fix;
-        // e4b has 18 shared layers, 12B has 0 — GemmaVisionSpike review,
-        // 2026-07-14). Family-wide routing would brick the fallback tier.
-        #expect(!MLXBrainProvider.usesVLMLoadPath(
+        // e4b (uniform 4-bit) loads under MLXVLM since upstream #384 (2026-07-15,
+        // in our pin): it is model_type `gemma4` → MLXVLM.Gemma4, whose shared-KV
+        // layers no longer demand v_proj. The 2026-07-14 keyNotFound predates the
+        // fix. Exact id: the OptiQ conversion lacks embed_vision + processor
+        // config and the 8-bit is unproven — family-wide routing would brick them.
+        #expect(MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit")
+        ))
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-OptiQ-4bit")
+        ))
+        // A directory audition is named "ParentDir/ModelDir": a local E4B folder takes
+        // the LLM path (text-only, vision scores n/a) — the safe default (#497 review).
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(directory: URL(fileURLWithPath: "/tmp/auditions/gemma-4-e4b-it-4bit"))
+        ))
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-8bit")
         ))
         // Text-only families stay on the LLM factory untouched.
         #expect(!MLXBrainProvider.usesVLMLoadPath(
@@ -450,6 +464,8 @@ struct MLXBrainProviderTests {
         // render (imagesAllowed) — pin the thin wrapper, not just the static.
         #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-12B-it-4bit").supportsImageInput)
         #expect(!MLXBrainProvider(modelID: "mlx-community/Qwen3-4B-Instruct-2507-4bit").supportsImageInput)
+        #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-e4b-it-4bit").supportsImageInput)
+        #expect(!MLXBrainProvider(modelID: "mlx-community/gemma-4-e4b-it-OptiQ-4bit").supportsImageInput)
     }
 
     @Test("BrainTier.supportsImageInput can never drift from the VLM load-path allow-list")

@@ -62,6 +62,7 @@ from pathlib import Path
 BUNDLE_ID = "app.m1k3"
 LIVE_APP = "/Applications/M1K3.app"
 KNOWN_BRAINS = ("mini", "pocket", "lil", "big")
+THINKING_MODES = ("tier", "always", "fast")  # EvalThinkingMode in M1K3Eval
 AFM_COOLDOWN_S = 120
 STAMP = Path(tempfile.gettempdir()) / "m1k3-chateval-last-launch"
 REPO_MACOS = Path(__file__).resolve().parents[2]
@@ -183,6 +184,8 @@ class RunOptions:
     notes: str | None = None
     dump_prompt: bool = False
     pcc: bool = False
+    thinking: str | None = None  # None → the app's default (tier: production's shape)
+    full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
 
 
 def build_trigger(opts: RunOptions, *, container: Path, power_source: str, powermode: int | None,
@@ -196,6 +199,8 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         raise ValueError("no brains selected: name at least one, or pass --pcc for the Private Cloud column alone")
     if opts.repeats < 1:
         raise ValueError("repeats must be ≥ 1")
+    if opts.thinking is not None and opts.thinking not in THINKING_MODES:
+        raise ValueError(f"thinking {opts.thinking!r}: choose from {', '.join(THINKING_MODES)}")
     report = out_path(container, opts.name)
     trig = {
         "M1K3_SELFTEST": "1",
@@ -213,6 +218,10 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         trig["M1K3_SELFTEST_CHATEVAL_KINDS"] = ",".join(opts.kinds)
     if opts.repeats > 1:
         trig["M1K3_SELFTEST_CHATEVAL_REPEATS"] = str(opts.repeats)
+    if opts.thinking:
+        trig["M1K3_SELFTEST_CHATEVAL_THINKING"] = opts.thinking
+    if opts.full_answers:
+        trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] = "1"
     if powermode is not None:
         trig["M1K3_SELFTEST_POWERMODE"] = str(powermode)
     if commit:
@@ -301,11 +310,19 @@ def summarise(doc_path: Path) -> str:
     doc = json.loads(doc_path.read_text())
     lines = []
     for run in doc.get("runs", []):
-        scores = run.get("scores", [])
+        everything = run.get("scores", [])
+        # n/a (a vision turn on a brain that can't see) is one skip named "applicable" — out of every count.
+        scores = [s for s in everything
+                  if [(c.get("name"), c.get("outcome")) for c in s.get("checks", [])] != [("applicable", "skip")]]
         passed = sum(1 for s in scores if not any(c.get("outcome") == "fail" for c in s.get("checks", [])))
         label = run.get("brainID") or "?"
         model = run.get("modelID") or "stock"
-        lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed")
+        na = len(everything) - len(scores)
+        peak, resident = run.get("peakMemoryMB"), run.get("residentMemoryMBAtStart")
+        # Same rule as BrainRun.ownPeakMemoryMB: peak below resident means no number.
+        own = f" (own {peak - resident} MB)" if peak is not None and resident is not None and peak >= resident else ""
+        lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed" + (f" ({na} n/a)" if na else "")
+                     + (f", peak {peak} MB{own}" if peak is not None else ""))
     prov = doc.get("provenance", {})
     lines.append(f"  power={prov.get('powerSource')} powermode={prov.get('powerMode')} commit={prov.get('appCommit')}")
     return "\n".join(lines)
@@ -368,6 +385,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--kinds", default="", help="comma list of task kinds (default: all)")
     ap.add_argument("--repeats", type=int, default=1)
     ap.add_argument("--bare", action="store_true", help="bare provider.generate instead of the live path")
+    ap.add_argument("--thinking", choices=THINKING_MODES,
+                    help="how every arm thinks: tier (production's shape, the app default), always, fast")
+    ap.add_argument("--full-answers", action="store_true",
+                    help="keep every answer whole in the document (bake-offs: fails stay re-adjudicable)")
     ap.add_argument("--notes", help="free-text provenance note")
     ap.add_argument("--dump-prompt", action="store_true", help="dump no-call turns' exact prompts")
     ap.add_argument("--app", default=LIVE_APP, help="the M1K3.app bundle to run (default: installed)")
@@ -391,6 +412,7 @@ def main(argv: list[str] | None = None) -> int:
         name=args.name, brains=[b for b in args.brains.split(",") if b], model=args.model,
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
         live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
+        thinking=args.thinking, full_answers=args.full_answers,
     )
     if args.direct and args.dump_prompt:
         print("✗ --dump-prompt writes into the container, which --direct exists to avoid reading", file=sys.stderr)
