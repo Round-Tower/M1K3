@@ -466,7 +466,9 @@ let package = Package(
                 "M1K3Chat", // HistoryBudgetPolicy ↔ MLXBrainProvider default-cap equality pin (116-F1)
                 .product(name: "Transformers", package: "swift-transformers"),
             ],
-            path: "Tests/M1K3MLXTests"
+            path: "Tests/M1K3MLXTests",
+            // EmbeddingGemma 2 reference vectors (Stream C) — the port's target numbers.
+            resources: [.copy("Fixtures")]
         ),
         // MCP server library: knowledge-tool handlers (pure, testable) + the
         // stdio server wiring. Split from the executable so the tools can be
