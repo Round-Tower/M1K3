@@ -158,6 +158,9 @@ Independent of B; ship it if B doesn't swap Lil within the week.
 Signed: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.8, Prior: the plan above was
 drafted the same day in a cloud planning session (research only); this section and
 the in-place corrections are the on-machine session's.
+Review: Kev + claude-opus-5-5, 2026-10-06 21:45 — shootout table added (×1, 57 trials/brain):
+incumbent 55, E4B 50 (51), Qwen3.5 39 with 14 think-budget empties. Confidence 0.7 on the read —
+one repeat; the ×3 overnight run is the evidence the decision rule asks for.
 
 ### Stream 0 — pin verdict (`ee673d6a`; 3.32.3 = `3b339ad6`; main +20 commits)
 
@@ -192,6 +195,37 @@ the in-place corrections are the on-machine session's.
 6. **zsh traps, again** (cost two aborted chains tonight): `${5:+--kinds $5}` is ONE word in zsh
    (use `--kinds=$5`), and `kill $(pgrep …)` with two pids is one bad argument (use `pkill -f`).
    A chain script should gate its long phase on the short phase's output files.
+
+### Shootout result (2026-10-06 21:43 — ×1, 57 trials, fast kinds, TF build 453, AC)
+
+| kind | E4B-OptiQ | Qwen3.5-4B | Incumbent (Qwen3-4B DWQ) |
+|---|---|---|---|
+| instruction-following | 5/6 | 5/6 | 6/6 |
+| open-chat | 7/9 † | 8/9 | 7/9 |
+| reasoning | 6/6 | 0/6 ‡ | 6/6 |
+| refusal | 4/5 | 1/5 ‡ | 5/5 |
+| security | 6/7 | 5/7 ‡ | 7/7 |
+| sycophancy | 5/6 | 3/6 ‡ | 6/6 |
+| tool-use | 9/10 | 9/10 | 10/10 |
+| world-knowledge | 8/8 | 8/8 | 8/8 |
+| **total** | **50/57** (51 †) | **39/57** | **55/57** |
+| median turn | 9.4 s | 11.9 s | **1.7 s** |
+
+- † `chat-greeting` scored "responsive" FAIL at 31 min: it was the first turn and paid the 6.5 GB
+  download. Every other check passed → read E4B as 51/57.
+- ‡ 14 **empty** answers, all on the bare-`generate` kinds, each ~27–31 s ≈ the 2048-token cap
+  spent inside `<think>` and stripped. Hypothesis (timing, not yet traced): the bare path doesn't
+  send `enable_thinking:false`. Live-path kinds (open-chat, tool-use) are at parity with E4B.
+  Fair re-test: those four kinds with thinking off / a larger budget.
+- **E4B's "No response" bug:** zero empty answers in 57, open-chat included → the template
+  refresh looks like the fix (x3 overnight to confirm).
+- All three fail `chat-what-leaves` the same way (the "I don't share my wiring" exemplar echo) —
+  a persona/fixture issue, not a brain one.
+- A background-QoS `swift build` (E-cores) overlapped all three runs; pass counts stand, latency is
+  indicative. The 5.6× latency gap is far outside that noise.
+- **Read on the decision rule:** neither candidate is ≥ the incumbent on text yet (E4B −4 at ×1 —
+  the ×3 run says whether that's noise). If the incumbent holds, **Stream F (image turns on Lil
+  escalate) becomes the 1.1 vision path** rather than a Lil swap.
 
 ### Open next
 
