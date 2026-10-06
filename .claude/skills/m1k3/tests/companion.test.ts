@@ -3,7 +3,7 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import type { RenderElement, RenderInput } from 'claude-code'
 
 import { FOX_CLIPS, clipFor, frameIndex, framePath, gaitFor } from '../hooks/companion'
-import { LONG_TURN_MS, SPEAK_GAP_MS, lineFor, firstSentence, maySpeak, speakingMs, voiceForNotification, voiceForTurn } from '../hooks/voice'
+import { LONG_TURN_MS, SPEAK_GAP_MS, SPEAK_PERMISSION_HINT, SPEAK_TOOL, lineFor, firstSentence, maySpeak, speakingMs, voiceForNotification, voiceForTurn } from '../hooks/voice'
 
 /** The band above the prompt on a 160-column terminal, nothing else holding it. */
 const BAND: RenderInput<'AbovePrompt'> = {
@@ -143,6 +143,7 @@ describe('voice', () => {
       toasted.push(e.text)
       return { value: undefined }
     })
+    on('tool.check', () => ({ decision: 'allow' }))
     on('mcp.call', ($, e) => {
       spoken.push(e.args)
       return { value: { content: [{ type: 'text', text: 'Speaking.' }], isError: false } }
@@ -172,5 +173,104 @@ describe('voice', () => {
     const { text } = await $.command.run({ command: 'face', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 160 } })
     expect(text).toBe('M1K3 band hidden.')
     expect(textOf(await $.ui.render(BAND))).toBe('engine')
+  })
+
+  test('without an allow rule for speak, lines toast and one hint names the rule', async ($, on) => {
+    const spoken: unknown[] = []
+    const toasted: string[] = []
+    const checked: string[] = []
+    const clock = mock.clock(on, { now: 1_000 })
+    mock.store(on)
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    on('command.register', ($, e) => ({ value: { command: e.name } }))
+    on('fs.exists', () => ({ value: false }))
+    on('ui.status', () => ({ value: undefined }))
+    on('ui.toast', ($, e) => {
+      toasted.push(e.text)
+      return { value: undefined }
+    })
+    // Auto mode with no rule: core answers `ask`, and an ask raised from a hook
+    // between turns fails closed (2.1.291), so the mod must not try.
+    on('tool.check', ($, e) => {
+      checked.push(e.tool)
+      return { decision: 'ask' }
+    })
+    on('mcp.call', ($, e) => {
+      spoken.push(e.args)
+      return { value: { content: [{ type: 'text', text: 'Speaking.' }], isError: false } }
+    })
+    on('turn.complete', ($, e) => ({ text: e.answer }))
+    on('classic.Notification', () => ({}))
+
+    await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+    await $.classic.Notification({ notification_type: 'idle_prompt', message: 'Claude is waiting for your input' })
+    await clock.settle()
+    expect(checked).toEqual([SPEAK_TOOL])
+    expect(spoken, 'never calls speak into a refusal').toEqual([])
+    expect(toasted).toEqual(['Claude Code is waiting for you.', SPEAK_PERMISSION_HINT])
+
+    // The hint is once a session; later lines are plain toasts.
+    await $.turn.complete({ reason: 'error', answer: '', durationMs: 1000, isAborted: false, turnId: 't1' })
+    await clock.settle()
+    expect(spoken).toEqual([])
+    expect(toasted).toEqual(['Claude Code is waiting for you.', SPEAK_PERMISSION_HINT, 'Claude Code stopped on an error.'])
+  })
+
+  test('a deny rule toasts the line without the allow hint', async ($, on) => {
+    const spoken: unknown[] = []
+    const toasted: string[] = []
+    const clock = mock.clock(on, { now: 1_000 })
+    mock.store(on)
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    on('command.register', ($, e) => ({ value: { command: e.name } }))
+    on('fs.exists', () => ({ value: false }))
+    on('ui.status', () => ({ value: undefined }))
+    on('ui.toast', ($, e) => {
+      toasted.push(e.text)
+      return { value: undefined }
+    })
+    on('tool.check', () => ({ decision: 'deny', rule: 'mcp__m1k3__speak' }))
+    on('mcp.call', ($, e) => {
+      spoken.push(e.args)
+      return { value: { content: [{ type: 'text', text: 'Speaking.' }], isError: false } }
+    })
+    on('classic.Notification', () => ({}))
+
+    await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+    await $.classic.Notification({ notification_type: 'idle_prompt', message: 'Claude is waiting for your input' })
+    await clock.settle()
+    expect(spoken).toEqual([])
+    expect(toasted, 'a deny is the person\'s rule: no hint to undo it').toEqual(['Claude Code is waiting for you.'])
+  })
+
+  test('two lines at once speak one, the other toasts: the gap holds across the check', async ($, on) => {
+    const spoken: unknown[] = []
+    const toasted: string[] = []
+    const clock = mock.clock(on, { now: 1_000 })
+    mock.store(on)
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    on('command.register', ($, e) => ({ value: { command: e.name } }))
+    on('fs.exists', () => ({ value: false }))
+    on('ui.status', () => ({ value: undefined }))
+    on('ui.toast', ($, e) => {
+      toasted.push(e.text)
+      return { value: undefined }
+    })
+    on('tool.check', () => ({ decision: 'allow' }))
+    on('mcp.call', ($, e) => {
+      spoken.push(e.args)
+      return { value: { content: [{ type: 'text', text: 'Speaking.' }], isError: false } }
+    })
+    on('turn.complete', ($, e) => ({ text: e.answer }))
+    on('classic.Notification', () => ({}))
+
+    await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+    await Promise.all([
+      $.classic.Notification({ notification_type: 'idle_prompt', message: 'Claude is waiting for your input' }),
+      $.turn.complete({ reason: 'error', answer: '', durationMs: 1000, isAborted: false, turnId: 't1' }),
+    ])
+    await clock.settle()
+    expect(spoken.length).toBe(1)
+    expect(toasted.length).toBe(1)
   })
 })

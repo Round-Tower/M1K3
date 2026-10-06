@@ -13,11 +13,19 @@
 // and a gap (SPEAK_TIMEOUT_MS, SPEAK_GAP_MS) in register.tsx. Confidence 0.8.
 // Review: Kev + Claude, 2026-10-05 — auto pass: snake_case survives the markdown
 // strip; an empty line is 0 ms of speech.
+// Review: Kev + claude-opus-5-5, 2026-10-06 — Kev's live run: every line toasted.
+// The debug log showed the hook's `speak` through the permission check, and auto
+// mode's classifier, unavailable between turns, failing it closed. SPEAK_TOOL and
+// SPEAK_PERMISSION_HINT name the rule that fixes it. Confidence 0.85.
 
 import { firstWords } from './avatar-state'
 
 /** The server's name as /mcp lists it (M1K3CLICore/ConnectPlan.serverName). */
 export const SERVER = 'm1k3'
+/** `speak` as the permission check names it. */
+export const SPEAK_TOOL = `mcp__${SERVER}__speak`
+/** Said once per load when the permission check would ask before `speak` (no rule allows it). */
+export const SPEAK_PERMISSION_HINT = `M1K3 can't speak here: add "${SPEAK_TOOL}" to permissions.allow in ~/.claude/settings.json`
 /** Turns shorter than this end quietly; the band already shows them. */
 export const LONG_TURN_MS = 20_000
 /** A `speak` that has not answered by then is given up on (the line toasts instead). */

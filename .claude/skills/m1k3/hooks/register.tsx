@@ -11,6 +11,12 @@
 // Review: Kev + Claude, 2026-10-05 — summoned pass on #493: `speak` is bounded
 // (SPEAK_TIMEOUT_MS) and gapped (SPEAK_GAP_MS), both falling back to the toast;
 // answers are read aloud only under `readAnswers`. Confidence 0.7.
+// Review: Kev + claude-opus-5-5, 2026-10-06 — `sayLine` asks `$.tool.check` first
+// and speaks only on `allow`; otherwise it toasts the line, plus the rule's hint
+// once per load on an `ask` (a deny is the person's rule: no hint). The check runs
+// before the gap, so two lines at once still speak one. Pinned by "without an allow rule for speak…" (mutation-checked). The band
+// drawing and the fox are now seen live in Ghostty. Confidence 0.8 (speech with
+// the rule in place still owes Kev's ear).
 
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
@@ -26,7 +32,7 @@ import {
 import { isActive, statusLabel } from './face-math'
 import { registerGuard, xcodeprojMessage } from './guard'
 import { FACE_COLUMNS, FACE_ROWS, brailleCells, faceCells, faceSvg, spriteSvg } from './raster'
-import { SERVER, SPEAK_TIMEOUT_MS, maySpeak, speakingMs, voiceForNotification, voiceForTurn } from './voice'
+import { SERVER, SPEAK_PERMISSION_HINT, SPEAK_TIMEOUT_MS, SPEAK_TOOL, maySpeak, speakingMs, voiceForNotification, voiceForTurn } from './voice'
 import type { Avatar, Mood } from '../types'
 
 // The session's values (types/index.d.ts is the contract). Consts of this
@@ -51,6 +57,7 @@ export const register: Register = (on, options) => {
   const isVoiceOn = options.voice !== false
   const readsAnswers = options.readAnswers === true
   let lastSpokeAt = -Infinity
+  let isSpeakHinted = false
   let band: Band | undefined
   let tier: Tier = 'image'
   let root = ''
@@ -93,9 +100,32 @@ export const register: Register = (on, options) => {
       }
     }
 
+    // Only a rule lets a hook's `speak` run: an `ask` has no one to ask (auto
+    // mode fails it closed between turns, default mode would raise a dialog for
+    // a status line). The query itself asks no one. A check that fails lets the
+    // call try; its own timeout and toast bound it.
+    const speakDecision = async (input: { text: string; emotion: string }) => {
+      try {
+        return (await $.tool.check({ tool: SPEAK_TOOL, input })).decision
+      } catch {
+        return 'allow' as const
+      }
+    }
+
     sayLine = async (text, emotion) => {
+      const decision = await speakDecision({ text, emotion })
+      if (decision !== 'allow') {
+        $.ui.toast(text, { timeoutMs: 6000 })
+        // A deny is the person's own rule; only an `ask` has a rule to add.
+        if (decision === 'ask' && !isSpeakHinted) {
+          isSpeakHinted = true
+          $.ui.toast(SPEAK_PERMISSION_HINT, { timeoutMs: 12000 })
+        }
+        return
+      }
       // Speech behind speech is noise: a line within the gap toasts instead. A
       // `speak` that stalls (a wedged voice engine, #471) is bounded the same way.
+      // Nothing awaits between reading the gap and spending it.
       const now = await $.clock.now()
       if (!maySpeak(now, lastSpokeAt)) {
         $.ui.toast(text, { timeoutMs: 6000 })
