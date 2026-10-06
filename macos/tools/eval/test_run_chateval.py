@@ -250,3 +250,18 @@ def test_unknown_thinking_mode_is_refused():
     with pytest.raises(ValueError):
         rc.build_trigger(base_opts(thinking="on"), container=CONTAINER, power_source="ac",
                          powermode=None, commit=None, mlx_rev=None)
+
+
+def test_full_answers_rides_the_trigger_only_when_asked():
+    assert "M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS" not in rc.build_trigger(
+        base_opts(), container=CONTAINER, power_source="ac", powermode=None, commit=None, mlx_rev=None)
+    trig = rc.build_trigger(base_opts(full_answers=True), container=CONTAINER, power_source="ac",
+                            powermode=None, commit=None, mlx_rev=None)
+    assert trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] == "1"
+
+
+def test_summary_shows_peak_memory_when_recorded(tmp_path):
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok], "peakMemoryMB": 5120}], "provenance": {}}))
+    assert "peak 5120 MB" in rc.summarise(doc)

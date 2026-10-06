@@ -507,8 +507,13 @@ public enum ChatEvalScorer {
     /// thrashes its internal loop for minutes (AFM's context-overflow auto-loop)
     /// is not a pass — a 337s "correct" answer is a melt-down, not a success.
     /// nil = no latency check (the default; existing callers unchanged).
+    /// - Parameter previewLimit: the answer excerpt's length. The 240 default keeps
+    ///   committed transcripts readable; a bake-off passes `.max` so every fail can be
+    ///   re-adjudicated later (two E4B fails on 2026-10-06 were the scorer's, and the
+    ///   excerpt was too short to prove it after the fact).
     public static func score(
-        fixture: ChatEvalFixture, observation: EvalObservation, latencyCeilingMS: Int? = nil
+        fixture: ChatEvalFixture, observation: EvalObservation, latencyCeilingMS: Int? = nil,
+        previewLimit: Int = ChatEvalScore.answerPreviewLimit
     ) -> ChatEvalScore {
         // Strip the FOLLOWUPS trailer (2026-07-14, always-on across all tiers)
         // BEFORE any content check runs — otherwise "contains expected"/"length
@@ -736,8 +741,8 @@ public enum ChatEvalScorer {
             .replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "\r", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let preview = trimmed.count > ChatEvalScore.answerPreviewLimit
-            ? String(trimmed.prefix(ChatEvalScore.answerPreviewLimit)) + "…"
+        let preview = trimmed.count > previewLimit
+            ? String(trimmed.prefix(previewLimit)) + "…"
             : trimmed
         return ChatEvalScore(
             fixtureID: fixture.id, kind: fixture.kind, checks: checks,

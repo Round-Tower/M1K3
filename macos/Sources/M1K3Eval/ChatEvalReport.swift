@@ -26,11 +26,17 @@ public enum ChatEvalReport {
         /// labelled "big" can be any model at all.
         public let modelID: String?
         public let scores: [ChatEvalScore]
+        /// MLX's peak memory over this brain's run (MB), reset before it loads —
+        /// the bake-off's RAM gate. Includes whatever MLX holds resident beside it
+        /// (the embedder), a constant offset across candidates. nil for non-MLX
+        /// columns and for runs recorded before 2026-10-06.
+        public let peakMemoryMB: Int?
 
-        public init(brainID: String, modelID: String? = nil, scores: [ChatEvalScore]) {
+        public init(brainID: String, modelID: String? = nil, scores: [ChatEvalScore], peakMemoryMB: Int? = nil) {
             self.brainID = brainID
             self.modelID = modelID
             self.scores = scores
+            self.peakMemoryMB = peakMemoryMB
         }
 
         /// `big [mlx-community/…]` when the model is known, else the bare tier.

@@ -56,6 +56,8 @@
 //  Review: same day (critical pass) — `EvalThinkingPlan`: every arm thinks the way the app's tier does
 //  (`M1K3_SELFTEST_CHATEVAL_THINKING=tier|always|fast`, default tier) and MLX brains get the tier's own
 //  generation cap, not a flat 2048. The shootout had let Qwen3.5 think on every bare turn. Confidence 0.8.
+//  Review: same day — the bake-off record: peak MLX memory per brain (`BrainRun.peakMemoryMB`, the RAM
+//  gate) and `M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS=1` for whole answers. Confidence 0.8.
 
 import Foundation
 
@@ -372,11 +374,18 @@ enum ChatEvalStage {
             }
             emit("• chateval brain \(tier.rawValue) (\(tier.displayName))"
                 + (modelID.map { " → \($0)" } ?? "") + "…")
+            // The RAM gate: MLX's peak over THIS brain's run (reset before it loads).
+            let isMLX = modelID != nil
+            if isMLX { MLXMemoryBudget.resetPeak() }
             guard let scores = await evalBrain(tier, modelID: modelID, emit: emit) else {
                 emit("  – \(tier.rawValue): unavailable (skipped)")
                 continue
             }
-            runs.append(ChatEvalReport.BrainRun(brainID: tier.rawValue, modelID: modelID, scores: scores))
+            let peakMB = isMLX ? MLXMemoryBudget.peakMB() : nil
+            if let peakMB { emit("  peak MLX memory: \(peakMB) MB") }
+            runs.append(ChatEvalReport.BrainRun(
+                brainID: tier.rawValue, modelID: modelID, scores: scores, peakMemoryMB: peakMB
+            ))
         }
         if pccRequested, let scores = await evalPrivateCloud(emit: emit) {
             runs.append(ChatEvalReport.BrainRun(
@@ -618,11 +627,11 @@ enum ChatEvalStage {
                     fixture, images: images, provider: provider, thinking: thinking, start: start, clock: clock
                 )
                 return ChatEvalScorer.score(
-                    fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS
+                    fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             case .groundedQ:
                 let observation = try await groundedObservation(fixture, provider: provider, start: start, clock: clock)
-                return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS)
+                return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit)
             case .toolUse:
                 // Three AFM tool paths, selected by env (MLX always goes through
                 // LocalAgent's native dialect):
@@ -654,7 +663,7 @@ enum ChatEvalStage {
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )
                 return ChatEvalScorer.score(
-                    fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS
+                    fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             case .openChat, .reasoning, .codeGen, .refusal, .security, .worldKnowledge,
                  .humour, .interview, .instructionFollowing, .document, .sycophancy:
@@ -672,7 +681,7 @@ enum ChatEvalStage {
                 let ms = milliseconds(clock.now - start)
                 return ChatEvalScorer.score(
                     fixture: fixture, observation: EvalObservation(rawText: raw, latencyMS: ms),
-                    latencyCeilingMS: latencyCeilingMS
+                    latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             }
         } catch {
@@ -730,7 +739,7 @@ enum ChatEvalStage {
             toolCalls: toolsUsed,
             latencyMS: milliseconds(clock.now - start)
         )
-        return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS)
+        return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit)
     }
 
     /// Tool-use via AFM's NATIVE FoundationModels tools. The model is handed real
@@ -768,7 +777,14 @@ enum ChatEvalStage {
             toolCalls: toolsUsed,
             latencyMS: milliseconds(clock.now - start)
         )
-        return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS)
+        return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit)
+    }
+
+    /// `M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS=1` keeps every answer whole in the
+    /// document (bake-offs: a fail must be re-adjudicable later); default is the
+    /// 240-char excerpt that keeps committed transcripts readable.
+    private static var previewLimit: Int {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS") == "1" ? .max : ChatEvalScore.answerPreviewLimit
     }
 
     /// `M1K3_SELFTEST_CHATEVAL_THINKING=tier|always|fast` — how every arm thinks

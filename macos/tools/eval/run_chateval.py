@@ -185,6 +185,7 @@ class RunOptions:
     dump_prompt: bool = False
     pcc: bool = False
     thinking: str | None = None  # None → the app's default (tier: production's shape)
+    full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
 
 
 def build_trigger(opts: RunOptions, *, container: Path, power_source: str, powermode: int | None,
@@ -219,6 +220,8 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         trig["M1K3_SELFTEST_CHATEVAL_REPEATS"] = str(opts.repeats)
     if opts.thinking:
         trig["M1K3_SELFTEST_CHATEVAL_THINKING"] = opts.thinking
+    if opts.full_answers:
+        trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] = "1"
     if powermode is not None:
         trig["M1K3_SELFTEST_POWERMODE"] = str(powermode)
     if commit:
@@ -315,7 +318,9 @@ def summarise(doc_path: Path) -> str:
         label = run.get("brainID") or "?"
         model = run.get("modelID") or "stock"
         na = len(everything) - len(scores)
-        lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed" + (f" ({na} n/a)" if na else ""))
+        peak = run.get("peakMemoryMB")
+        lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed" + (f" ({na} n/a)" if na else "")
+                     + (f", peak {peak} MB" if peak is not None else ""))
     prov = doc.get("provenance", {})
     lines.append(f"  power={prov.get('powerSource')} powermode={prov.get('powerMode')} commit={prov.get('appCommit')}")
     return "\n".join(lines)
@@ -380,6 +385,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--bare", action="store_true", help="bare provider.generate instead of the live path")
     ap.add_argument("--thinking", choices=THINKING_MODES,
                     help="how every arm thinks: tier (production's shape, the app default), always, fast")
+    ap.add_argument("--full-answers", action="store_true",
+                    help="keep every answer whole in the document (bake-offs: fails stay re-adjudicable)")
     ap.add_argument("--notes", help="free-text provenance note")
     ap.add_argument("--dump-prompt", action="store_true", help="dump no-call turns' exact prompts")
     ap.add_argument("--app", default=LIVE_APP, help="the M1K3.app bundle to run (default: installed)")
@@ -403,7 +410,7 @@ def main(argv: list[str] | None = None) -> int:
         name=args.name, brains=[b for b in args.brains.split(",") if b], model=args.model,
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
         live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
-        thinking=args.thinking,
+        thinking=args.thinking, full_answers=args.full_answers,
     )
     if args.direct and args.dump_prompt:
         print("✗ --dump-prompt writes into the container, which --direct exists to avoid reading", file=sys.stderr)
