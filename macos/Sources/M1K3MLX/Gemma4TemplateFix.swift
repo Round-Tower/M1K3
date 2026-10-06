@@ -27,6 +27,12 @@
 //  filesystem behaviour + manifest self-consistency pinned red-first; the
 //  live effect on gemma-4 multi-call tool chains is measured by the eval
 //  arm, not assumed). Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-06 — one heal per repo (`Heal`): E4B joins 12B.
+//  mlx-community/gemma-4-e4b-it-4bit still serves the pre-07-15 template (`2f1b4d75…`);
+//  Google's current E4B template (`0a2c8073…`, google/gemma-4-E4B-it @ ee0ef602) is a
+//  DIFFERENT file from 12B's, so each repo heals to its own vendored bytes and a stale
+//  hash is only ever judged against its own repo's pair. 12B's API is unchanged.
+//  Confidence 0.85.
 //
 
 import CryptoKit
@@ -34,8 +40,37 @@ import Foundation
 import os
 
 public enum Gemma4TemplateFix {
-    /// The one repo whose template we replace. The drafter repos keep theirs —
-    /// drafting consumes token ids, never the chat template.
+    /// One repo's heal: the stale hash it may serve and the vendored canonical
+    /// bytes that replace it. Exact repo ids only — another conversion (OptiQ
+    /// already ships the new template) is never touched.
+    public struct Heal: Sendable, Equatable {
+        public let repoID: String
+        public let staleSHA256: String
+        public let canonicalSHA256: String
+        let resourceName: String
+    }
+
+    /// 12B (the shipped Big) and E4B (the 1.1 Lil candidate). The drafter repos
+    /// keep theirs — drafting consumes token ids, never the chat template.
+    public static let heals: [Heal] = [
+        Heal(
+            repoID: repoID, staleSHA256: staleSHA256, canonicalSHA256: canonicalSHA256,
+            resourceName: "gemma4-chat-template-canonical"
+        ),
+        Heal(
+            repoID: "mlx-community/gemma-4-e4b-it-4bit",
+            staleSHA256: "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082",
+            canonicalSHA256: "0a2c8073c878ab1da004bee933a998606537bbb62016310352c7285c3f01c5b5",
+            resourceName: "gemma4-e4b-chat-template-canonical"
+        ),
+    ]
+
+    /// The heal for `repoID`, or nil when the repo is not one we heal.
+    public static func heal(for repoID: String) -> Heal? {
+        heals.first { $0.repoID == repoID }
+    }
+
+    /// The 12B repo — the original (and still the shipped) heal.
     public static let repoID = "mlx-community/gemma-4-12B-it-4bit"
 
     /// sha256 of the stale 2026-06-03 template mlx-community still serves
@@ -70,13 +105,18 @@ public enum Gemma4TemplateFix {
     /// The vendored canonical template bytes, integrity-checked on every read
     /// (a corrupted resource must fail loudly, never install silently wrong).
     public static func canonicalTemplate() throws -> Data {
-        guard let url = Bundle.module.url(
-            forResource: "gemma4-chat-template-canonical", withExtension: "jinja"
-        ) else { throw TemplateError.vendoredResourceMissing }
+        try canonicalTemplate(for: heals[0])
+    }
+
+    /// `heal`'s vendored bytes, integrity-checked on every read.
+    public static func canonicalTemplate(for heal: Heal) throws -> Data {
+        guard let url = Bundle.module.url(forResource: heal.resourceName, withExtension: "jinja") else {
+            throw TemplateError.vendoredResourceMissing
+        }
         let data = try Data(contentsOf: url)
         let sha = sha256Hex(data)
-        guard sha == canonicalSHA256 else {
-            throw TemplateError.vendoredResourceCorrupt(expected: canonicalSHA256, got: sha)
+        guard sha == heal.canonicalSHA256 else {
+            throw TemplateError.vendoredResourceCorrupt(expected: heal.canonicalSHA256, got: sha)
         }
         return data
     }
@@ -85,6 +125,15 @@ public enum Gemma4TemplateFix {
     public static func decision(
         existingSHA256: String, staleSHA256: String = Gemma4TemplateFix.staleSHA256
     ) -> Decision {
+        decision(existingSHA256: existingSHA256, staleSHA256: staleSHA256, canonicalSHA256: canonicalSHA256)
+    }
+
+    /// Pure, for one repo's heal: its own stale hash replaces, its own canonical stands.
+    public static func decision(existingSHA256: String, heal: Heal) -> Decision {
+        decision(existingSHA256: existingSHA256, staleSHA256: heal.staleSHA256, canonicalSHA256: heal.canonicalSHA256)
+    }
+
+    private static func decision(existingSHA256: String, staleSHA256: String, canonicalSHA256: String) -> Decision {
         if existingSHA256 == staleSHA256 { return .replace }
         if existingSHA256 == canonicalSHA256 { return .alreadyFixed }
         return .leaveAlone
@@ -98,18 +147,19 @@ public enum Gemma4TemplateFix {
     public static func apply(
         directory: URL,
         repoID: String,
-        treatingAsStale staleSHA256: String = Gemma4TemplateFix.staleSHA256
+        treatingAsStale staleOverride: String? = nil
     ) throws -> ApplyResult {
-        guard repoID == Self.repoID else { return .notApplicable }
+        guard let heal = heal(for: repoID) else { return .notApplicable }
         let templateURL = directory.appendingPathComponent("chat_template.jinja")
         guard let existing = try? Data(contentsOf: templateURL) else { return .leftAlone }
-        switch decision(existingSHA256: sha256Hex(existing), staleSHA256: staleSHA256) {
+        let stale = staleOverride ?? heal.staleSHA256
+        switch decision(existingSHA256: sha256Hex(existing), staleSHA256: stale, canonicalSHA256: heal.canonicalSHA256) {
         case .alreadyFixed:
             return .alreadyFixed
         case .leaveAlone:
             return .leftAlone
         case .replace:
-            let canonical = try canonicalTemplate()
+            let canonical = try canonicalTemplate(for: heal)
             // Atomic: a torn write must never leave a half-template a later
             // launch would neither recognise as stale nor pass the scan with.
             try canonical.write(to: templateURL, options: .atomic)

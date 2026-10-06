@@ -451,7 +451,11 @@ let package = Package(
             // The vendored canonical gemma-4 chat template (Google's 2026-07-09
             // fix) — installed over stale mlx-community snapshots by
             // Gemma4TemplateFix before the integrity scan runs.
-            resources: [.copy("Resources/gemma4-chat-template-canonical.jinja")]
+            resources: [
+                .copy("Resources/gemma4-chat-template-canonical.jinja"),
+                // E4B's (Google, 2026-07-15) — a different file from 12B's.
+                .copy("Resources/gemma4-e4b-chat-template-canonical.jinja"),
+            ]
         ),
         .testTarget(
             name: "M1K3MLXTests",
