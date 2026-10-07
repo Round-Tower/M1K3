@@ -32,6 +32,9 @@
 //  them in its stable head (so AFM can prewarm them), the native loop appends them
 //  to the grounding exactly where they always sat. The end-of-turn warm now hands
 //  the backend the ReAct head as a prompt prefix (nil on the native path).
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — `run` holds GenerationActivity for the whole
+//  turn (generations + the tool execution between them), so an overnight `ask_m1k3` is one App Nap opt-out
+//  with no unheld gaps (#498 review). Injectable for tests; the body moved to `runHeld` unchanged.
 
 import Foundation
 import M1K3Inference
@@ -105,13 +108,19 @@ public actor LocalAgent {
     /// preamble before a tool call, say — so a later answer knows to follow it.
     var streamedLive = false
 
+    /// Held for the whole turn — every generation AND the tool execution between them — so
+    /// macOS doesn't throttle an agent turn when the display sleeps (GenerationActivity).
+    let activity: GenerationActivity
+
     public init(
         inferenceProvider: any InferenceProvider,
         tools: [any AgentTool],
         maxIterations: Int = 5,
         concludesOnUnstructuredThought: Bool = false,
-        observationCharLimit: Int? = nil
+        observationCharLimit: Int? = nil,
+        activity: GenerationActivity = .shared
     ) {
+        self.activity = activity
         self.inferenceProvider = inferenceProvider
         self.tools = Dictionary(tools.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         self.maxIterations = maxIterations
@@ -138,6 +147,25 @@ public actor LocalAgent {
         onEvent: (@Sendable (AgentLoopEvent) -> Void)? = nil,
         onConclusionToken: (@Sendable (String) -> Void)? = nil,
         onReasoningToken: (@Sendable (String) -> Void)? = nil
+    ) async throws -> AgentResult {
+        try await activity.during("M1K3 agent turn") {
+            try await runHeld(
+                goal: goal, images: images, context: groundingContext, standing: standing,
+                thinkingEnabled: thinkingEnabled, onEvent: onEvent,
+                onConclusionToken: onConclusionToken, onReasoningToken: onReasoningToken
+            )
+        }
+    }
+
+    private func runHeld(
+        goal: String,
+        images: [ImageAttachment],
+        context groundingContext: String?,
+        standing: String?,
+        thinkingEnabled: Bool,
+        onEvent: (@Sendable (AgentLoopEvent) -> Void)?,
+        onConclusionToken: (@Sendable (String) -> Void)?,
+        onReasoningToken: (@Sendable (String) -> Void)?
     ) async throws -> AgentResult {
         reasoningTrace.removeAll()
         firedExclusionClasses.removeAll()

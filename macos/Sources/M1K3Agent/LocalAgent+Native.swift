@@ -26,6 +26,10 @@
 //  token prefix in both. Tested in NativeGoalOrderTests.
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — the system turn renders the provider's exemplar
 //  set, so the native loop's persona matches the cached prefix byte for byte on every tier.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.9 — the cap synthesis returns "" when nothing was
+//  gathered (it claimed "I gathered some information…" over zero evidence). An empty-turn steer was built,
+//  challenged, measured (never fired on chat; on its target, Qwen3.5's `datetime`, it recovered nothing — the
+//  turn is a malformed call, not a stall) and backed out: no measured benefit, no ship.
 
 import Foundation
 import M1K3Inference
@@ -428,13 +432,13 @@ extension LocalAgent {
 
     /// Join the tool observations gathered so far — the evidence-rescue fallback
     /// for a cap synthesis where the model refused to stop calling tools.
+    /// The gathered tool results, or "" when there are none — never a claim of evidence that
+    /// doesn't exist ("I gathered some information…" used to come back with nothing gathered,
+    /// e.g. a run of empty turns into the cap); "" lets the responder's fallback answer instead.
     static func gatheredObservations(from transcript: [ToolMessage]) -> String {
-        let facts = transcript.compactMap { message -> String? in
+        transcript.compactMap { message -> String? in
             if case let .toolResult(_, output) = message { return output }
             return nil
-        }
-        return facts.isEmpty
-            ? "I gathered some information but couldn't form a final answer."
-            : facts.joined(separator: "\n")
+        }.joined(separator: "\n")
     }
 }

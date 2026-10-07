@@ -16,6 +16,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — mechanical rename only: `MLXGemmaProvider` → `MLXBrainProvider`; no test logic changed.
 //  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85 — granite + nanbeige pin the XML function
 //  dialect by model_type (templates read off HF); granitemoehybrid stays unarmed.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — the qwen3_5 family resolves to `.qwen35`
+//  (both dialects in one frame); a parse test pins the dropped-JSON-call bug on the strict parser.
 
 import Foundation
 import M1K3Inference
@@ -217,6 +219,29 @@ struct MLXGemmaCallTextTests {
         #expect(text.contains("<parameter=limit>3</parameter>"))
     }
 
+    /// Upstream's `.qwen35` exists because Qwen 3.5 is prompted with the XML dialect but can
+    /// sporadically emit Hermes JSON inside the same `<tool_call>` frame, which the strict
+    /// `.xmlFunction` parser drops silently. (Not the cause of the 2026-10-07 `datetime` miss —
+    /// that was an orphan `</parameter>`, rejected by both; GEMMA_1_1_PLAN Stream B.)
+    @Test("qwen3.5 calls parse in BOTH dialects under .qwen35; strict .xmlFunction drops the JSON one")
+    func qwen35AcceptsBothDialects() {
+        let json = #"<tool_call>{"name": "datetime", "arguments": {}}</tool_call>"#
+        let xmlNoArgs = "<tool_call>\n<function=datetime>\n</function>\n</tool_call>"
+        let xmlArgs = "<tool_call>\n<function=search_knowledge>\n<parameter=query>\nseal\n</parameter>\n</function>\n</tool_call>"
+        let qwen35 = ToolCallFormat.qwen35.createParser()
+        #expect(qwen35.parse(content: json, tools: nil)?.function.name == "datetime")
+        #expect(qwen35.parse(content: xmlNoArgs, tools: nil)?.function.name == "datetime")
+        #expect(qwen35.parse(content: xmlArgs, tools: nil)?.function.name == "search_knowledge")
+        // The bug, pinned: the strict parser returns nothing for the JSON payload.
+        #expect(ToolCallFormat.xmlFunction.createParser().parse(content: json, tools: nil) == nil)
+    }
+
+    @Test("qwen3.5 history replays in the XML dialect its template prompts")
+    func qwen35ReplaysXML() {
+        let call = ParsedToolCall(name: "search", arguments: ["query": .string("seals")])
+        #expect(MLXToolMapping.callText(call, format: .qwen35) == MLXToolMapping.callText(call, format: .xmlFunction))
+    }
+
     @Test("the gemma4 dialect renders <|tool_call> with the <|\"|> escape (Gemma 4)")
     func gemma4CallText() {
         let call = ParsedToolCall(name: "lookup", arguments: ["q": .string("x y"), "n": .int(3)])
@@ -254,10 +279,10 @@ struct MLXToolFormatResolutionTests {
         #expect(MLXBrainProvider.resolveToolCallFormat(for: gemma3) == .gemma)
     }
 
-    @Test("qwen3.5 resolves to xmlFunction BEFORE the generic qwen arm")
-    func qwen35ResolvesXMLFunction() {
-        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.5-2B-4bit")) == .xmlFunction)
-        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.5-9B-4bit")) == .xmlFunction)
+    @Test("qwen3.5 resolves to the qwen35 dialect BEFORE the generic qwen arm")
+    func qwen35ResolvesQwen35() {
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.5-2B-4bit")) == .qwen35)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.5-9B-4bit")) == .qwen35)
         #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3-1.7B-4bit")) == .json)
         // The WIRED dense tier (lil) resolves to .json — the agentic path
         // depends on this; Qwen3 (no ".5") must NOT hit the xmlFunction arm.
@@ -265,7 +290,7 @@ struct MLXToolFormatResolutionTests {
         #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3-8B-4bit")) == .json)
     }
 
-    @Test("ternary Bonsai resolves per size: 8B (Qwen3 QAT) → .json, 27B (qwen3_5) → .xmlFunction")
+    @Test("ternary Bonsai resolves per size: 8B (Qwen3 QAT) → .json, 27B (qwen3_5) → .qwen35")
     func bonsaiResolvesJSON() {
         // prism-ml's Ternary-Bonsai ids carry no "qwen" substring, but the 8B is
         // Qwen3-8B ternary QAT (config.json: model_type "qwen3", Qwen3ForCausalLM;
@@ -279,10 +304,10 @@ struct MLXToolFormatResolutionTests {
         // Qwen3.5 XML function dialect (<tool_call>\n<function=name>\n
         // <parameter=…>) — verified against the HF config + chat_template.jinja
         // 2026-07-17, which is the re-verification the old nil pin demanded.
-        // It must ride the .xmlFunction arm, NOT the 8B's .json arm.
+        // It must ride the qwen3_5 arm (.qwen35), NOT the 8B's .json arm.
         #expect(MLXBrainProvider.resolveToolCallFormat(
             for: .init(id: "prism-ml/Ternary-Bonsai-27B-mlx-2bit")
-        ) == .xmlFunction)
+        ) == .qwen35)
     }
 
     @Test("config.json model_type decides the dialect before the name heuristic")
@@ -292,8 +317,8 @@ struct MLXToolFormatResolutionTests {
         // "qwen" but not "qwen3.5", so the name arm alone routed it to .json —
         // silently degrading tool-use to 0/5, the exact 08-08 regression shape.
         let qwen38 = ModelConfiguration(id: "mlx-community/Qwen3.8-27B-4bit")
-        #expect(MLXBrainProvider.resolveToolCallFormat(for: qwen38, modelType: "qwen3_5") == .xmlFunction)
-        #expect(MLXBrainProvider.resolveToolCallFormat(for: qwen38, modelType: "qwen3_5_text") == .xmlFunction)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: qwen38, modelType: "qwen3_5") == .qwen35)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: qwen38, modelType: "qwen3_5_text") == .qwen35)
         // A dense Qwen3 under a brand id with no "qwen" substring — the type
         // carries what the name cannot.
         #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "acme/brand-8B"), modelType: "qwen3") == .json)
@@ -323,10 +348,10 @@ struct MLXToolFormatResolutionTests {
         #expect(MLXBrainProvider.toolCallFormat(forModelType: "granitemoehybrid") == nil)
     }
 
-    @Test("Qwen3.8 resolves to xmlFunction by name too (pre-download, before config.json exists)")
+    @Test("Qwen3.8 resolves to qwen35 by name too (pre-download, before config.json exists)")
     func qwen38NameArm() {
-        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.8-27B-4bit")) == .xmlFunction)
-        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "lmstudio-community/Qwen3.8-27B-MLX-6bit")) == .xmlFunction)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.8-27B-4bit")) == .qwen35)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "lmstudio-community/Qwen3.8-27B-MLX-6bit")) == .qwen35)
     }
 
     @Test("an explicit configuration format wins over the family heuristic")

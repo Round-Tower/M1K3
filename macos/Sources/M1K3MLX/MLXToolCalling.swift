@@ -59,6 +59,10 @@
 //  core and the leak-decline beat, every other dialect the standard persona; Lil had recited the beat at making requests.
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — `continueToolTurn` and every tool-session `send`
 //  hold `GenerationActivity`, so an agent step isn't throttled when the display sleeps between steps.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — qwen3_5 resolves to upstream's `.qwen35`
+//  (XML or Hermes-JSON inside `<tool_call>`), not the strict `.xmlFunction`, which drops a JSON-dialect call
+//  silently. It did NOT fix the `datetime` misses (an orphan `</parameter>`, rejected by both — plan Stream B).
+//  History still replays in XML; granite/nanbeige stay `.xmlFunction`.
 
 import Foundation
 import M1K3Inference
@@ -235,7 +239,8 @@ enum MLXToolMapping {
         switch format {
         case .gemma: gemmaCallText(call)
         case .gemma4: gemma4CallText(call)
-        case .xmlFunction: xmlFunctionCallText(call)
+        // .qwen35 parses either dialect, but its template PROMPTS the XML one — replay that.
+        case .xmlFunction, .qwen35: xmlFunctionCallText(call)
         default: jsonCallText(call)
         }
     }
@@ -364,8 +369,12 @@ extension MLXBrainProvider: ToolCallingProvider {
         // gemma arm (gemma3n contains "gemma" but not "gemma4" → still .gemma).
         if name.contains("gemma-4") || name.contains("gemma4") { return .gemma4 }
         if name.contains("gemma") { return .gemma }
-        // Qwen3.5 is trained on the XML function dialect, NOT <tool_call> JSON
-        // (matches upstream infer(): qwen3_5 → .xmlFunction). Bonsai-27B is
+        // Qwen3.5 is PROMPTED with the XML function dialect but can sporadically emit
+        // Hermes JSON in the same <tool_call> frame; upstream's .qwen35 parser accepts
+        // both payloads and is what upstream's own inference selects for qwen3_5.
+        // (It does NOT fix the `datetime` miss seen 2026-10-07 — that is an orphan
+        // `</parameter>` which .qwen35 also rejects as malformed; GEMMA_1_1_PLAN
+        // Stream B.) Bonsai-27B is
         // qwen3_5 under a brand id — config model_type + the <function=…>
         // <parameter=…> template verified against HF 2026-07-17, the
         // re-verification the old nil pin demanded. Exact size id: the 8B is
@@ -376,12 +385,12 @@ extension MLXBrainProvider: ToolCallingProvider {
         if name.contains("qwen3.5") || name.contains("qwen3_5") || name.contains("qwen3-5")
             || name.contains("qwen3.8") || name.contains("ternary-bonsai-27b")
         {
-            return .xmlFunction
+            return .qwen35
         }
         // prism-ml's Ternary-Bonsai-8B is Qwen3 QAT under a brand id (no "qwen"
         // substring; verified 2026-07-15: model_type "qwen3", <tool_call> JSON
         // template). Matched by EXACT size id — the 27B is a different family
-        // (qwen3_5) and resolves to .xmlFunction in the arm above; any future
+        // (qwen3_5) and resolves to .qwen35 in the arm above; any future
         // Bonsai size extends per size only with its config + template
         // re-verified.
         if name.contains("qwen") || name.contains("llama") || name.contains("ternary-bonsai-8b")
@@ -401,7 +410,7 @@ extension MLXBrainProvider: ToolCallingProvider {
         if type.hasPrefix("gemma3") || type == "gemma" || type == "gemma2" { return .gemma }
         // qwen3_next is NOT listed: same SSM/hybrid lineage, but its tool template is
         // unverified — add it only with the config + chat_template check the other arms carry.
-        if type.hasPrefix("qwen3_5") { return .xmlFunction }
+        if type.hasPrefix("qwen3_5") { return .qwen35 }
         // granite (4.x dense) and nanbeige teach the same <tool_call><function=…>
         // <parameter=…> dialect — both chat templates read 2026-09-26. EXACT
         // types: granitemoe*/granite_speech carry different templates.
@@ -470,7 +479,7 @@ extension MLXBrainProvider: ToolCallingProvider {
     /// array: the whole transcript is re-rendered each call so the agent keeps
     /// owning it (for the trace + observation rescue), per the 12a challenger pass.
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
-        try await GenerationActivity.shared.during("M1K3 is answering") {
+        try await GenerationActivity.shared.during("M1K3 tool turn") {
             try await continueToolTurnHeld(messages: messages, tools: tools)
         }
     }
@@ -856,9 +865,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         onToken: @escaping @Sendable (String) -> Void
     ) async throws -> ToolTurn {
         // Each agent step holds the activity (GenerationActivity) while it renders,
-        // prefills and decodes. Tool execution BETWEEN sends runs unheld — the stub-free
-        // tools are short; hold across the whole LocalAgent.run if one ever isn't.
-        try await GenerationActivity.shared.during("M1K3 is answering") {
+        // prefills and decodes; LocalAgent.run holds it across the whole turn too, so
+        // tool execution between steps is covered (the nested holds share one assertion).
+        try await GenerationActivity.shared.during("M1K3 agent step") {
             try await sendHeld(messages, onToken: onToken)
         }
     }

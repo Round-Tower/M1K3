@@ -105,6 +105,12 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — every generation entry (`generate`, both
 //  streams, `continueToolTurn`) holds `GenerationActivity`: with the display asleep macOS throttled the
 //  process 10–35× (the overnight bake-off). Verify-by-launch with the display off owed.
+//  Review: same day (#498 review follow-up) — the three entry points name themselves (`M1K3 generate` /
+//  `stream` / `raw stream`) so `pmset -g assertions` tells them apart.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — Qwen3.5-4B (exact id) routes through MLXVLM:
+//  its conversion ships the vision tower and `qwen3_5` is MLXVLM.Qwen35 in our pin. LAUNCH-PROVEN
+//  (docs/evals/2026-10-07-qwen35-vlm-proof-x1-ac.json): vision 14/16 (Big's baseline 14/16), tool-use 9/10
+//  on the VLM path, own peak 4.56 GB (+0.5 GB over text-only). The ×3 all-kinds column is still owed.
 import Foundation
 import Hub
 import M1K3Inference
@@ -506,7 +512,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
 
     public func generate(prompt: String) async throws -> String {
         // Held so macOS doesn't throttle the turn when the display sleeps (GenerationActivity).
-        try await GenerationActivity.shared.during("M1K3 is answering") {
+        try await GenerationActivity.shared.during("M1K3 generate") {
             try await generateHeld(prompt: prompt)
         }
     }
@@ -545,7 +551,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     public func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
             let task = Task {
-                await GenerationActivity.shared.during("M1K3 is answering") {
+                await GenerationActivity.shared.during("M1K3 stream") {
                     // Runs on every exit — completion, error, and cancellation via
                     // onTermination (cancel makes the stream loop throw into catch).
                     defer { MLXMemoryBudget.reclaim(label: "generateStreaming") }
@@ -1090,10 +1096,13 @@ extension MLXBrainProvider {
     /// `gemma4` → MLXVLM.Gemma4, and upstream #384 (2026-07-15, in our pin) made
     /// its 18 KV-shared layers stop demanding v_proj — the 2026-07-14 keyNotFound
     /// predates that. Other e4b conversions stay off (OptiQ has no embed_vision
-    /// projector or processor config). Unknown ids default to the LLM factory.
+    /// projector or processor config). Qwen3.5-4B (exact id) is natively
+    /// multimodal: the conversion ships its vision tower and `qwen3_5` is
+    /// MLXVLM.Qwen35 in our pin (2026-10-07). Unknown ids default to the LLM factory.
     static func usesVLMLoadPath(for configuration: ModelConfiguration) -> Bool {
         let name = configuration.name.lowercased()
         return name.contains("gemma-4-12b") || name == "mlx-community/gemma-4-e4b-it-4bit"
+            || name == "mlx-community/qwen3.5-4b-mlx-4bit"
     }
 
     /// Allow-list of families whose attention routes through upstream's
@@ -1253,7 +1262,7 @@ extension MLXBrainProvider: RawCompletionProviding {
     public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
         AsyncStream { continuation in
             let task = Task {
-                await GenerationActivity.shared.during("M1K3 is answering") {
+                await GenerationActivity.shared.during("M1K3 raw stream") {
                     defer { MLXMemoryBudget.reclaim(label: "generateRawStreaming") }
                     do {
                         let container = try await ensureLoaded()

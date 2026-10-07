@@ -85,7 +85,7 @@ Goal: decide whether the default brain can see (and hear).
 Candidates (**verify exact hub ids on `mlx-community` before running; never `hf download` to pre-seed** — cache poison):
 - incumbent: `mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510`
 - `gemma-4-E4B-it` 4-bit **with Google's post-07-15 chat template** → `mlx-community/gemma-4-e4b-it-OptiQ-4bit` (template sha `0a2c8073…` = Google's current; mixed 4/8-bit, 6.56 GB on disk vs 5.17 GB uniform — not apples-to-apples on size). `mlx-community/gemma-4-e4b-it-4bit` (07-06) still serves the **stale** template (`2f1b4d75…`) — don't run it bare (§5).
-- `Qwen3.5-4B` 4-bit → `mlx-community/Qwen3.5-4B-MLX-4bit` (base_model `Qwen/Qwen3.5-4B`, 3.06 GB, `qwen3_5`, vision config present). Thinking model — the template pre-opens `<think>`; already handled (`templatePreOpensThink`, `.xmlFunction`).
+- `Qwen3.5-4B` 4-bit → `mlx-community/Qwen3.5-4B-MLX-4bit` (base_model `Qwen/Qwen3.5-4B`, 3.06 GB, `qwen3_5`, vision config present). Thinking model — the template pre-opens `<think>`; already handled (`templatePreOpensThink`; tool format `.qwen35` since 2026-10-07, was `.xmlFunction`).
 - phone tier side-bout: `Qwen3.5-2B` vs pocket `LFM2.5-1.2B` (and `LFM2.5-2.6B`, already a noted candidate)
 
 Steps:
@@ -93,7 +93,7 @@ Steps:
 - [~] **2026-10-06 shootout** (×1, fast kinds: open-chat, tool-use, reasoning, refusal, security, world-knowledge, instruction-following, sycophancy) → `docs/evals/2026-10-06-lil-shootout-<model>-x1-ac.json`; then the full ×3 all-kinds chain overnight → `…-lil-bakeoff-<model>-x3-ac.json`. Order: E4B-OptiQ, Qwen3.5-4B, incumbent. App = TF build 453 (`--commit tf-build-453`: no GitCommitSHA in store builds).
 - [ ] Text + tools, per candidate: `python3 tools/eval/run_chateval.py --direct --name lil-bakeoff-<model> --brains lil --model lil=<id> --repeats 3 --save-to docs/evals/2026-10-XX-lil-bakeoff-<model>.json`
 - [ ] E4B specifically: re-check the no-response bug with the open-chat fixtures and "How are things M1K3?" (`MODEL_CHOICES.md:86`). Record whether the July refresh fixed it.
-- [ ] Qwen3.5-4B: confirm prefill is no longer CPU-heavy (Activity Monitor + `tools/eval/power_receipt.py`). Tool dialect is `.xmlFunction`.
+- [ ] Qwen3.5-4B: confirm prefill is no longer CPU-heavy (Activity Monitor + `tools/eval/power_receipt.py`). Tool dialect is `.qwen35` (since 2026-10-07; was `.xmlFunction`).
 - [ ] Vision (needs Stream A): extending `usesVLMLoadPath` is required for each.
   - E4B: ~~blocked on the `Gemma4Unified` KV-shared-layer sanitize~~ — **probably unblocked at our pin** (§5): E4B is `model_type=gemma4` → MLXVLM `Gemma4`, fixed upstream by #384 (2026-07-15, in our pin). One launch with E4B on the VLM path decides it; then widen `usesVLMLoadPath` and fix the stale comment at `MLXBrainProvider.swift:1077`.
   - Qwen3.5-4B: MLXVLM **has** `qwen3_5` at our pin (`Libraries/MLXVLM/Models/Qwen35.swift`) — vision is reachable by widening `usesVLMLoadPath`. Main's #642 (drop MTP tensors in VLM sanitize) only matters for checkpoints carrying an MTP head.
@@ -214,6 +214,17 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 16:00 — the `datetime` miss root-caused as a malformed call
+(orphan `</parameter>`); the empty-turn steer measured and backed out; the upstream issue drafted.
+Confidence 0.9 (the raw rejected text is in hand).
+Review: Kev + claude-opus-5-5, 2026-10-07 15:15 — #499 landed (bd1ec024) + issue #500 live; the Qwen3.5
+tools A/B and the reasoning-only empty turn (the parser theory tested and disproved by launch).
+Confidence 0.85 on the mechanism (the 16-token turns + upstream's documented reasoning drop).
+Review: Kev + claude-opus-5-5, 2026-10-07 14:30 — Qwen3.5 vision launch-proven (14/16, tools 9/10 on the
+VLM path, 4.56 GB); it leads the "Lil sees" question. Confidence 0.7 — ×1, the ×3 column is owed.
+Review: Kev + claude-opus-5-5, 2026-10-07 13:30 — midday progress: #498 landed, #499 (deps + the
+freshness tooling) open with the smoke A/B (Big −27% at constant power mode), per-turn hold on the
+next branch. Confidence 0.9 on the smoke numbers (20/20 each arm, n=20 per brain).
 Review: Kev + claude-opus-5-5, 2026-10-07 11:30 — pre-push review folded: the display-sleep trigger
 stays CONFIRMED, the App Nap mechanism is now marked UNVERIFIED with its deciding test, and the app
 hold is App-Nap-only (`.userInitiatedAllowingIdleSystemSleep`). Confidence 0.9 trigger, 0.5 mechanism.
@@ -432,6 +443,60 @@ Fix list, in order:
    gemma-4 native tool-call smoke (`macos/CLAUDE.md`), exact-id parity on the EmbeddingGemma 2
    reference ids.
 
+### Shipped + measured (2026-10-07, midday)
+
+- **#498 landed** (`e3adeced`): the bake-off scorecards, the stall write-up, the App-Nap-only
+  `GenerationActivity` hold around every MLX generation, and `caffeinate -dis -w <pid>` in
+  `run_chateval --direct`. The display-off A/B that decides the App Nap mechanism is still owed.
+- **#499 LANDED** (`bd1ec024`, Kev: "Land it… we'll leave the queue alone. We'll check voice, and
+  screen off after") **— WhisperKit 1.1 + swift-transformers 1.3.4.** The weekly freshness issue is
+  live: #500. Gemma persona tokenize 1,183 → 8 ms,
+  same ids. The gemma-4 tool-call smoke as an A/B, power mode held constant: **Big 20/20 → 20/20,
+  median 38.7 → 28.3 s (−27%)**; Lil 20/20 → 20/20, 5.9 → 4.8 s. `@preconcurrency import WhisperKit`
+  is no longer load-bearing on 1.x and is gone. Owed: Kev's voice check + landing timing (ROADMAP:
+  "post-launch only"; the store submission is pending).
+- **Dependency staleness is now tooling** (in #499): `tools/ci/dep_freshness.py` names what's behind,
+  **who caps it**, what `swift package update` alone would reach, and the missed perf/security notes;
+  a weekly workflow keeps a rolling "📦 Dependency freshness" issue. On master's old tree it flags
+  swift-transformers capped by WhisperKit, quoting the very fix (#346). Next in its list: the
+  mlx-swift 0.32.3 + mlx-swift-lm 3.32.3 pair (deadlock + leak fixes; our own pin caps it).
+- **Qwen3.5 SEES** (launch-proven 2026-10-07, `docs/evals/2026-10-07-qwen35-vlm-proof-x1-ac.json`): its
+  cached conversion carries the vision tower; routed through MLXVLM by exact id it scores **vision
+  14/16** (Big 14/16, E4B 13/16 at ×1) and **tool-use 9/10** on the VLM path, own peak **4.56 GB**.
+  With text tied (93.1 vs 92.0) that makes Qwen3.5 the leading Lil candidate for "Lil sees":
+  lighter than E4B, sees like Big. Owed: the ×3 all-kinds column on the VLM path, the tools A/B
+  (`--thinking always`), and the speed read once #499 lands.
+- **Qwen3.5 tools, A/B'd (2026-10-07, tool-use ×3 on the VLM path):** tier thinking 26/30 (median
+  14.6 s) vs **thinking always 29/30** (22.7 s, +55%). The residual `datetime` miss is NOT a parser
+  bug: the turn spends ~16 tokens that mlx-swift-lm's `TokenStreamDecoder` classifies as reasoning —
+  dropped from the public `Generation` stream *by design* — and ends with no text and no call. (The
+  parser IS now upstream's `.qwen35`, which also accepts the sporadic Hermes-JSON dialect — right
+  for the family, but it didn't move this number: 26/30 before and after.) In the app's live path
+  the empty turn falls to the fallback synthesis, which at iteration 0 has no evidence — for a
+  datetime / recent-activity ask, a likely fabricated answer. Proposed: steer an empty pre-tool
+  `.text` turn once, like the empty `.toolCalls([])` case already is (`challenger` first).
+- **The `datetime` miss, root-caused (launch, dump-enabled):** under `.qwen35` it is a REJECTED call
+  (`malformed_syntax`), not a stall. Qwen3.5 writes `<function=datetime>` then a stray `</parameter>`
+  BEFORE its (legitimate, required-but-ignored) `<parameter=query>…</parameter>`; the scanner rightly
+  rejects it, and upstream keeps rejected calls non-executable by design. An empty-turn steer was
+  built to the challenger's gate, measured (never fired on chat for either brain; zero pointless tool
+  calls; on `datetime` the steered retry repeats the malformed call — 25/30) and **backed out**: no
+  measured benefit. Kept from it: the cap synthesis no longer claims "I gathered some information…"
+  over zero evidence. **Prerequisite before Qwen3.5 can take Lil** — pick one: thinking on for tool
+  turns (29/30, +55% latency), or an upstream scanner tolerance for an orphan `</parameter>` before the
+  first `<parameter=`. Draft for ml-explore/mlx-swift-lm (Kev files — outward-facing):
+  > **Qwen3.5 XML tool call with an orphan `</parameter>` before the first parameter is rejected
+  > (malformed_syntax).** Qwen3.5-4B (non-thinking) emits `<tool_call>\n<function=datetime>\n</parameter>\n
+  > <parameter=query>\n…\n</parameter>…` for a single-parameter tool. `QwenXMLPayloadScanner` rejects it.
+  > A closing tag with no open parameter carries no data; tolerating (skipping) it before the first
+  > `<parameter=` would accept the call without loosening any argument validation. Repro + raw preview
+  > available. Observed in ~2–3 of 3 trials on a datetime ask with thinking off; 0 with thinking on.
+- **UNVERIFIED side-finding:** because the decoder routes reasoning away from `.chunk`, a thinking
+  brain on the native tool path may show an empty "thinking" disclosure in the chat UI (our tool
+  session only reads `.chunk`). Check on a live Qwen3.5 thinking turn.
+- `feat/gemma-1-1-next`: one hold per **agent turn** (`LocalAgent.run`; no unheld tool gaps) and
+  per-call-site reasons for `pmset -g assertions`.
+
 ### Open next
 
 - [ ] **Mini vision (possible user-facing bug):** on the native AFM path every Mini answer
@@ -439,14 +504,15 @@ Fix list, in order:
       never "can't see". Either the attachment never reaches AFM or AFM vision is this weak — trace
       `AFMToolPrompt.imageURLs` → `Attachment(imageURL:)` on a live turn before anything else; the app
       shows Mini an attach button on macOS 27.
-- [ ] The bake-off proper, per the rule: E4B (uniform, healed template, VLM path) vs incumbent vs
-      Qwen3.5, ×3, all kinds, `--full-answers`, **one brain per launch** (RAM gate), tier thinking.
-- [ ] Set the Lil RAM cap before that run (own peak, not raw).
+- [x] The bake-off proper (overnight 2026-10-06/07) — text is in; gemma latency/RAM void (stall).
+- [ ] **Re-run the gemma columns once #499 lands** (E4B ×3, display held awake, tokenizer fixed) —
+      the latency and RAM gate re-measure; E4B's 10.3 GB own peak is the open question.
+- [ ] Set the Lil RAM cap BEFORE that re-run (own peak, not raw): incumbent 4.75 GB, Qwen3.5 4.07.
 - [ ] `selfquery-notes`: "I don't run internal QA…" is a decline the markers miss (challenger first).
 - [ ] Stream F (image turns on Lil escalate) — still the fallback if Lil stays Qwen3.
 - [ ] Stream C, slice 2: the Swift port (spec below).
-- [ ] **The stall + tokenizer fixes (top priority):** the three items in the fix list above. Every
-      gemma latency/RAM number in this plan is void until 1 lands and the columns are re-run.
+- [~] **The stall + tokenizer fixes:** eval caffeinate + app hold landed (#498); the tokenizer bump
+      is #499. Still owed: the display-off A/B (is App Nap the mechanism?).
 - [ ] **Stream G** (gemma-4 speed) — re-read after the tokenizer bump: part of E4B's 5.6× was CPU
       tokenizing, not prefill.
 - [ ] **Qwen3.5 vision + tools (Kev: "Vision would be great to test, tools can be tuned, and I like
@@ -456,8 +522,9 @@ Fix list, in order:
       Qwen3.5-VLM ×3 all kinds, then tool-use ×3 with `--thinking always` (the misses look like a
       no-think tool decision); Qwen's recommended sampling for non-thinking turns is untested. Run it
       with the stall instrumentation, on a free machine.
-- [ ] Commit the three overnight scorecards once E4B lands (+ a content re-score helper in
-      `run_chateval.py`, so "latency-only" fails are a column, not a hand count).
+- [x] The three overnight scorecards are committed (#498).
+- [ ] A content re-score helper in `run_chateval.py`, so "latency-only" fails are a column, not a
+      hand count.
 - [ ] **Scorer: decimal digits match whole-word** (#497 review): fact "4" passes on "3.4" / "€4.08".
       Treat `.`/`,` between digits as inside the number; re-score the overnight `--full-answers` JSONs.
 - [ ] **E2B — a contender, but not for Lil** (Kev, 2026-10-07: "add it later"). `gemma-4-e2b-it-4bit`,
