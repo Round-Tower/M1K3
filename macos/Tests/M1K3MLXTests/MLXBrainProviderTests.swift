@@ -222,7 +222,7 @@ struct MLXBrainProviderTests {
         // The Ornith case: no family word in the repo name, config.json absent
         // at construction → nil → ReAct floor. Once the loader has the files,
         // model_type names the dialect.
-        #expect(MLXBrainProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "qwen3_5") == .xmlFunction)
+        #expect(MLXBrainProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "qwen3_5") == .qwen35)
         #expect(MLXBrainProvider.lateToolCallFormat(initial: nil, modelTypeOnDisk: "lfm2") == .lfm2)
         // Already resolved at init (by name or explicit config): the late read
         // must NOT move it — the persona-prefix cache was rendered in that dialect.
