@@ -214,13 +214,17 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 18:00 — the Qwen3.5 gap measured from the unified log: all
+prefill (0/3232 reused, 6.8 s a turn vs 0.2 s), decode equal. `challenger` CHANGE folded into the order
+of work: positions on MLXVLM first, then an exact seed that survives kvBits. Confidence 0.9 on the cause.
 Review: Kev + claude-opus-5-5, 2026-10-07 17:30 — Kev's call "Qwen3.5 as the new Lil" put to a short
 shootout (AC, 7d376521): **not yet — speed, not quality**. Tools at tier 17/20 @ 17.3 s vs incumbent
 20/20 @ 5.5 s; thinking always 20/20 @ 30.5 s but chat runs away (4/18 empty at 170–246 s). Cause read
 from source: Qwen35's linear-attention layers hold a `MambaCache` (never trimmable), so cross-turn reuse
 is off and every turn re-prefills persona + palette + history. Next: an exact-seed snapshot for the
 tool session (pocket's LFM2 trick), then router-gated thinking. Confidence 0.75 on the cause (the
-mechanism is certain; its share of the 3× is not yet measured).
+mechanism is certain; its share of the 3× is not yet measured). Same hour: measured from the unified
+log: prefill is the whole gap (6.8 s vs 0.2 s a turn; decode equal). Confidence 0.9.
 Review: Kev + claude-opus-5-5, 2026-10-07 16:30 — Mini vision investigation opened: the attach path is
 compiled in; a live URL-vs-CGImage test is written; AFM is `modelNotReady` right now. Confidence 0.5 —
 two live hypotheses, one test to decide.
@@ -518,7 +522,20 @@ Fix list, in order:
   trimmable, so `CrossTurnCacheReuse.cacheReusable` is false and the tool session re-prefills the
   whole prompt every turn: the same wall pocket's LFM2 hit, which `SeededPlainTurn` solved with a
   sample-free exact seed. The incumbent's `KVCacheSimple` reuses its prefix. **Verdict: not yet.**
+  **Measured (unified log, `/usr/bin/log` — zsh's `log` builtin shadows it):** the whole gap is
+  prefill. Decode is equal (Qwen3.5 28 tok/s vs incumbent 26, so the VLM path costs decode nothing).
+  The incumbent reuses ~3,034 of ~3,053 tokens per tool turn and prefills a median 52 (0.2 s); Qwen3.5
+  logs `reuse: 0/3232 … (VETOED — cache wrapped the sliding window)` every turn and prefills a median
+  2,585 tokens (6.8 s at ~380 tok/s). Two to three turns per tool ask makes the 17 s. (The veto text
+  is wrong for this case: it is the MambaCache, not a wrap. Fix the wording with the seed work.)
+  `challenger` (verified, CHANGE) added two blockers to the seed plan: Lil's `kvBits = 8` makes its
+  seed `.sampleAndTrim`, which can never be exact on a Mamba layer; and **on the MLXVLM path, Qwen35
+  recomputes RoPE positions from 0 on every `generate()`** (`ropeDeltas == nil` → `getRopeIndex`
+  without `positionOffset`), so a suffix on a seeded cache would get wrong positions: silent quality
+  loss, no crash. The MLXLLM Qwen35 reads `cache.ropeOffset` and is fine.
   Order of work before a re-shootout:
+  0. Positions first: text turns on the MLXLLM path, or an upstream `positionOffset: cacheOffset`
+     patch on MLXVLM Qwen35. Pin it with a logits test: seed+suffix == full prefill.
   1. Exact-seed snapshot for `MLXToolTurnSession` on non-trimmable caches (copy a sample-free
      persona+palette prefill per turn; prefill only the suffix). Measure: Qwen3.5 tool median.
   2. Router-gated thinking: `ToolNeedRouter` (NLSentenceEmbedder, ms) says `.tools` → that turn
