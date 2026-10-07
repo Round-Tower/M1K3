@@ -67,7 +67,8 @@ def dispatch_floor(probabilities: np.ndarray, truth: np.ndarray, precision: floa
     """The lowest top-probability floor at which the picks that would dispatch are
     still `precision` right. A pick dispatches when its top group is not `none`
     (index 0) and its top probability is at or above the floor. 1.0 when no floor
-    reaches the precision: the head then never speaks (above 1.0 nothing passes)."""
+    reaches the precision: 2.0, so the head never speaks (a softmax never reaches it;
+    1.0 + epsilon would print as 1, which a saturated softmax can equal)."""
     top = probabilities.argmax(axis=1)
     confidence = probabilities.max(axis=1)
     speaks = top != 0
@@ -75,7 +76,7 @@ def dispatch_floor(probabilities: np.ndarray, truth: np.ndarray, precision: floa
         chosen = speaks & (confidence >= floor)
         if (top[chosen] == truth[chosen]).mean() >= precision:
             return float(floor)
-    return 1.0 + 1e-9
+    return 2.0
 
 
 def normalise(vectors: np.ndarray) -> np.ndarray:
@@ -137,7 +138,9 @@ def render_group_swift(
 enum ToolGroupRouterWeights {{
     /// Row order of `weights` and `biases`.
     static let groups: [String] = [{", ".join(f'"{g}"' for g in groups)}]
-    /// At or above (top probability): dispatch. Picked for {PRECISION:.0%} precision in cross-validation.
+    /// At or above (top probability): dispatch. Picked for {PRECISION:.0%} group-level precision in
+    /// cross-validation: an upper bound live (the shipped fit is sharper, the data synthetic, and the
+    /// tool-level word rules add their own error).
     static let floor: Double = {floor:.9g}
     static let biases: [Double] = [{", ".join(f"{b:.9g}" for b in biases)}]
     static let weights: [[Double]] = [{body}

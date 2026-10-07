@@ -30,7 +30,9 @@
 //  eval's `_ROUTER=dispatch` arm runs this exact route first. Where Apple's model isn't ready the pick
 //  throws → nil → the agent turn. The pick is a cascade: the trained group head (ToolGroupRouter, no
 //  model in the loop, `toolGroupRouter`, absent = OFF: ADR 0009's spike rejected a per-group router),
-//  then Apple's pick, then the agent. Confidence 0.7.
+//  then Apple's pick, then the agent. All tiers also routes a chat verdict to the plain turn on
+//  Lil/Big (ADR 0008 measured no gain on Lil there), so the arm measures the two together.
+//  Confidence 0.7.
 //
 
 import Foundation
@@ -97,9 +99,12 @@ public enum ToolRouterWiring {
         var picker: (@Sendable (String, String) async -> ToolPick?)?
         if dispatch {
             let fallback: (any ToolPicking)? = mini ?? fallbackPicker
-            let classify: (@Sendable (String) -> ToolPick?)? = groupRouter
-                ? { ToolGroupRouter.pick(for: $0, embed: embedder.vector) }
-                : nil
+            // Typed if/else, not a ternary closure: that shape crashed the app build's
+            // type checker once (ChatEvalStage's header).
+            var classify: (@Sendable (String) -> ToolPick?)?
+            if groupRouter {
+                classify = { ToolGroupRouter.pick(for: $0, embed: embedder.vector) }
+            }
             picker = { question, menu in await cascade(question: question, menu: menu, classify: classify, fallback: fallback) }
         }
         return PlainTurnRoute(

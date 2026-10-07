@@ -101,16 +101,17 @@ public enum ToolGroupRouter {
         case "activity":
             return ToolPick(tool: "recent_activity", query: "")
         case "web":
-            if let url = ToolDispatch.webURL(question) {
+            // A page fetch needs a scheme or a fetch verb beside the domain: on its own,
+            // any dotted token ("Node.js", "e.coli") reads as a site.
+            if let url = ToolDispatch.webURL(question),
+               question.localizedCaseInsensitiveContains("http") || mentions(question, any: fetchCues) {
                 return ToolPick(tool: "fetch_page", query: url)
             }
             return ToolPick(tool: mentions(question, any: referenceCues) ? "lookup_fact" : "web_search", query: "")
-        case "script":
-            // Anything that acts is the agent's, with only the acting tools (#427).
-            return ToolPick(tool: ToolPick.action, query: "")
         default:
-            // `none` after a tools verdict, or a group this code doesn't know: the two
-            // heads disagree, so neither decides.
+            // `none` after a tools verdict (the two heads disagree), `script` (the thinnest
+            // class, and a wrong read would strip the read-only tools from the agent turn:
+            // Apple's pick can still say `action`), or a group this code doesn't know.
             return nil
         }
     }
@@ -118,17 +119,32 @@ public enum ToolGroupRouter {
     /// The device family's tools and the words that name each. Exactly one tool must
     /// be named: "the time and my battery" names two and abstains.
     static let deviceCues: [(tool: String, cues: [String])] = [
-        ("calendar_peek", ["calendar", "schedule", "agenda", "meeting", "meetings", "appointment", "appointments", "event", "events"]),
+        ("calendar_peek", ["calendar", "schedule", "agenda", "meeting", "meetings", "appointment", "appointments", "event", "events", "my day"]),
         ("battery_status", ["battery", "charge", "charging", "juice"]),
-        ("system_status", ["cpu", "ram", "memory", "disk", "storage", "hard drive", "performance", "running slow", "system", "mac health"]),
+        ("system_status", [
+            "cpu", "ram", "memory usage", "memory use", "memory status", "disk", "storage", "hard drive",
+            "performance", "running slow", "system", "mac health",
+        ]),
         ("current_location", ["location", "where am i", "whereabouts"]),
-        ("datetime", ["time", "date", "day", "clock"]),
+        ("datetime", ["time", "date", "what day", "which day", "clock"]),
     ]
+
+    /// A device read is a READ: "schedule a meeting", "add an event", "set a reminder"
+    /// write, and the calendar peek would answer them with a list (and the brain might
+    /// say it booked it). Any of these words abstains.
+    static let writeCues = [
+        "add", "create", "book", "set", "cancel", "move", "remind", "delete", "remove", "reschedule", "invite", "put",
+        "schedule a", "schedule an", "schedule the", "schedule my",
+    ]
+
+    /// Asking for a page to be read, not searched.
+    static let fetchCues = ["fetch", "open", "read", "visit", "go to", "load", "summarise", "summarize"]
 
     /// A reference lookup rather than a live search ("from a reference source").
     static let referenceCues = ["wikipedia", "encyclopedia", "encyclopaedia", "reference source", "reference book"]
 
     static func deviceTool(_ question: String) -> String? {
+        guard !mentions(question, any: writeCues) else { return nil }
         let named = deviceCues.filter { mentions(question, any: $0.cues) }
         return named.count == 1 ? named[0].tool : nil
     }

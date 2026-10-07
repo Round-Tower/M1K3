@@ -86,8 +86,10 @@ notes, not their calendar. Which tool is a finer decision than whether a tool is
      `toolRouterAllTiers`: any brain takes the route (Lil, Big, the pocket Mini), and Apple's model picks for
      it where it is ready, so the MLX tiers dispatch read-only tools without writing a tool call (Qwen3.5
      writes a malformed one without thinking). Arm: `M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch`. ADR 0008 found
-     no gain for Lil from the plain-chat route alone; dispatch is the untested half. `toolGroupRouter`: a
+     no gain for Lil from the plain-chat route alone; dispatch is the untested half (the flag turns on both,
+     so the arm measures them together). `toolGroupRouter`: a
      trained group head (ToolGroupRouter) in front of Apple's pick, despite the per-group result above: a
-     device pick also needs one cue word, and every abstention falls back to the pick. Arm: add
+     device pick also needs one cue word and no write word ("schedule a meeting" abstains), a `script` read
+     abstains, and every abstention falls back to the pick. Arm: add
      `_ROUTER_HEAD=1`. Its weights are an untrained stub until `tools/router/train_tool_router.py` runs on a
      Mac. -->

@@ -6,14 +6,16 @@
 //  A softmax layer over NLEmbedding's English sentence vector (L2-normalised):
 //  which tool family a tools-verdict turn wants (ToolGroupRouter).
 //  UNTRAINED: no groups, so the head abstains on every turn. Run the trainer on a Mac; the eval fixtures are its test set.
-//  Not yet trained: the stub ships so the code compiles and stays byte-identical until a Mac run.
+//  Not yet trained: the stub ships so the code compiles and the head abstains until a Mac run.
 //
 
 enum ToolGroupRouterWeights {
     /// Row order of `weights` and `biases`.
     static let groups: [String] = []
-    /// At or above (top probability): dispatch. Picked for 95% precision in cross-validation.
-    static let floor: Double = 1
+    /// At or above (top probability): dispatch. Picked for 95% group-level precision in
+    /// cross-validation: an upper bound live (the shipped fit is sharper, the data synthetic, and the
+    /// tool-level word rules add their own error).
+    static let floor: Double = 2
     static let biases: [Double] = []
     static let weights: [[Double]] = [
     ]

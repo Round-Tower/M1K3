@@ -58,7 +58,7 @@ def test_dispatch_floor_is_the_lowest_one_that_reaches_the_precision():
 def test_dispatch_floor_ignores_none_picks_and_never_speaks_when_unreachable():
     # A confident none never dispatches, so it can't lower the floor or count as right.
     probabilities = np.array([[0.99, 0.01], [0.3, 0.7]])
-    assert t.dispatch_floor(probabilities, np.array([0, 0]), precision=0.95) > 1.0
+    assert t.dispatch_floor(probabilities, np.array([0, 0]), precision=0.95) == 2.0
     assert t.dispatch_floor(probabilities, np.array([0, 1]), precision=0.95) == 0.7
 
 
