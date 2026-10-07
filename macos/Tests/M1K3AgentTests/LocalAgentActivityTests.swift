@@ -34,21 +34,27 @@ private final class ActivityLog: ActivityAsserting, Sendable {
     }
 }
 
-/// Answers from a script and writes each generation into the activity log.
+/// Answers from a script and writes each generation into the activity log. Each generation
+/// takes its own hold, like the MLX provider's entry points, so the test proves NESTED holds
+/// share the turn's single assertion.
 private final class ProbeProvider: InferenceProvider, @unchecked Sendable {
     let name = "probe"
     let isAvailable = true
     private let log: ActivityLog
+    private let activity: GenerationActivity
     private let script = Mutex<[String]>([])
 
-    init(_ log: ActivityLog, script: [String]) {
+    init(_ log: ActivityLog, activity: GenerationActivity, script: [String]) {
         self.log = log
+        self.activity = activity
         self.script.withLock { $0 = script }
     }
 
     func generate(prompt _: String) async throws -> String {
-        log.note("generate")
-        return script.withLock { $0.isEmpty ? "CONCLUSION: done" : $0.removeFirst() }
+        await activity.during("M1K3 generate") {
+            log.note("generate")
+            return script.withLock { $0.isEmpty ? "CONCLUSION: done" : $0.removeFirst() }
+        }
     }
 
     func generateStreaming(prompt _: String) -> AsyncStream<String> {
@@ -61,14 +67,42 @@ struct LocalAgentActivityTests {
     func oneHoldPerTurn() async throws {
         let log = ActivityLog()
         let activity = GenerationActivity(asserter: log)
-        let provider = ProbeProvider(log, script: ["THOUGHT: think more", "CONCLUSION: done"])
+        let provider = ProbeProvider(log, activity: activity, script: ["THOUGHT: think more", "CONCLUSION: done"])
         let agent = LocalAgent(inferenceProvider: provider, tools: [], maxIterations: 3, activity: activity)
         _ = try await agent.run(goal: "hello")
         let entries = log.all
         #expect(entries.first == "begin:M1K3 agent turn")
         #expect(entries.last == "end")
+        // The provider's own holds nested inside the turn's: still ONE assertion, one end.
         #expect(entries.count(where: { $0.hasPrefix("begin") }) == 1)
-        #expect(entries.contains("generate"))
+        #expect(entries.count(where: { $0 == "end" }) == 1)
+        #expect(entries.count(where: { $0 == "generate" }) >= 2)
+    }
+
+    @Test("a cancelled turn ends its hold")
+    func endsOnCancel() async {
+        final class Hanging: InferenceProvider, @unchecked Sendable {
+            let name = "hanging"
+            let isAvailable = true
+            func generate(prompt _: String) async throws -> String {
+                try await Task.sleep(for: .seconds(60))
+                return "CONCLUSION: never"
+            }
+
+            func generateStreaming(prompt _: String) -> AsyncStream<String> {
+                AsyncStream { $0.finish() }
+            }
+        }
+        let log = ActivityLog()
+        let activity = GenerationActivity(asserter: log)
+        let agent = LocalAgent(inferenceProvider: Hanging(), tools: [], activity: activity)
+        let task = Task { try await agent.run(goal: "hello") }
+        while log.all.isEmpty {
+            await Task.yield()
+        }
+        task.cancel()
+        _ = await task.result
+        #expect(log.all == ["begin:M1K3 agent turn", "end"])
     }
 
     @Test("a turn that throws still ends its hold")

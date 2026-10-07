@@ -219,10 +219,10 @@ struct MLXGemmaCallTextTests {
         #expect(text.contains("<parameter=limit>3</parameter>"))
     }
 
-    /// 2026-10-07: Qwen3.5 tool-use dropped `datetime` 3/3 — 16 tokens generated, empty answer, no
-    /// call, no rejection. Upstream's `.qwen35` exists for exactly this: Qwen 3.5 is prompted with the
-    /// XML dialect but sporadically emits Hermes JSON inside the same `<tool_call>` frame, and the
-    /// strict `.xmlFunction` parser drops it silently.
+    /// Upstream's `.qwen35` exists because Qwen 3.5 is prompted with the XML dialect but can
+    /// sporadically emit Hermes JSON inside the same `<tool_call>` frame, which the strict
+    /// `.xmlFunction` parser drops silently. (Not the cause of the 2026-10-07 `datetime` miss —
+    /// that was an orphan `</parameter>`, rejected by both; GEMMA_1_1_PLAN Stream B.)
     @Test("qwen3.5 calls parse in BOTH dialects under .qwen35; strict .xmlFunction drops the JSON one")
     func qwen35AcceptsBothDialects() {
         let json = #"<tool_call>{"name": "datetime", "arguments": {}}</tool_call>"#

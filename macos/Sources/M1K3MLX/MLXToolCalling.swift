@@ -60,9 +60,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — `continueToolTurn` and every tool-session `send`
 //  hold `GenerationActivity`, so an agent step isn't throttled when the display sleeps between steps.
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — qwen3_5 resolves to upstream's `.qwen35`
-//  (XML or Hermes-JSON inside `<tool_call>`), not the strict `.xmlFunction`: Qwen3.5 sporadically emits
-//  JSON and the strict parser dropped the call silently (the `datetime` 3/3 empty answers). History still
-//  replays in XML; granite/nanbeige stay `.xmlFunction`.
+//  (XML or Hermes-JSON inside `<tool_call>`), not the strict `.xmlFunction`, which drops a JSON-dialect call
+//  silently. It did NOT fix the `datetime` misses (an orphan `</parameter>`, rejected by both — plan Stream B).
+//  History still replays in XML; granite/nanbeige stay `.xmlFunction`.
 
 import Foundation
 import M1K3Inference
@@ -369,11 +369,12 @@ extension MLXBrainProvider: ToolCallingProvider {
         // gemma arm (gemma3n contains "gemma" but not "gemma4" → still .gemma).
         if name.contains("gemma-4") || name.contains("gemma4") { return .gemma4 }
         if name.contains("gemma") { return .gemma }
-        // Qwen3.5 is PROMPTED with the XML function dialect but sporadically emits
-        // Hermes JSON in the same <tool_call> frame (2026-10-07: `datetime` dropped
-        // 3/3 — 16 tokens, empty answer, no rejection — under the strict
-        // .xmlFunction parser). Upstream's .qwen35 parser accepts both payloads and
-        // is what upstream's own inference selects for qwen3_5. Bonsai-27B is
+        // Qwen3.5 is PROMPTED with the XML function dialect but can sporadically emit
+        // Hermes JSON in the same <tool_call> frame; upstream's .qwen35 parser accepts
+        // both payloads and is what upstream's own inference selects for qwen3_5.
+        // (It does NOT fix the `datetime` miss seen 2026-10-07 — that is an orphan
+        // `</parameter>` which .qwen35 also rejects as malformed; GEMMA_1_1_PLAN
+        // Stream B.) Bonsai-27B is
         // qwen3_5 under a brand id — config model_type + the <function=…>
         // <parameter=…> template verified against HF 2026-07-17, the
         // re-verification the old nil pin demanded. Exact size id: the 8B is
@@ -864,8 +865,8 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         onToken: @escaping @Sendable (String) -> Void
     ) async throws -> ToolTurn {
         // Each agent step holds the activity (GenerationActivity) while it renders,
-        // prefills and decodes. Tool execution BETWEEN sends runs unheld — the stub-free
-        // tools are short; hold across the whole LocalAgent.run if one ever isn't.
+        // prefills and decodes; LocalAgent.run holds it across the whole turn too, so
+        // tool execution between steps is covered (the nested holds share one assertion).
         try await GenerationActivity.shared.during("M1K3 agent step") {
             try await sendHeld(messages, onToken: onToken)
         }

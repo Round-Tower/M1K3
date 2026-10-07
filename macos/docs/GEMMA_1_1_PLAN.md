@@ -85,7 +85,7 @@ Goal: decide whether the default brain can see (and hear).
 Candidates (**verify exact hub ids on `mlx-community` before running; never `hf download` to pre-seed** — cache poison):
 - incumbent: `mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510`
 - `gemma-4-E4B-it` 4-bit **with Google's post-07-15 chat template** → `mlx-community/gemma-4-e4b-it-OptiQ-4bit` (template sha `0a2c8073…` = Google's current; mixed 4/8-bit, 6.56 GB on disk vs 5.17 GB uniform — not apples-to-apples on size). `mlx-community/gemma-4-e4b-it-4bit` (07-06) still serves the **stale** template (`2f1b4d75…`) — don't run it bare (§5).
-- `Qwen3.5-4B` 4-bit → `mlx-community/Qwen3.5-4B-MLX-4bit` (base_model `Qwen/Qwen3.5-4B`, 3.06 GB, `qwen3_5`, vision config present). Thinking model — the template pre-opens `<think>`; already handled (`templatePreOpensThink`, `.xmlFunction`).
+- `Qwen3.5-4B` 4-bit → `mlx-community/Qwen3.5-4B-MLX-4bit` (base_model `Qwen/Qwen3.5-4B`, 3.06 GB, `qwen3_5`, vision config present). Thinking model — the template pre-opens `<think>`; already handled (`templatePreOpensThink`; tool format `.qwen35` since 2026-10-07, was `.xmlFunction`).
 - phone tier side-bout: `Qwen3.5-2B` vs pocket `LFM2.5-1.2B` (and `LFM2.5-2.6B`, already a noted candidate)
 
 Steps:
@@ -93,7 +93,7 @@ Steps:
 - [~] **2026-10-06 shootout** (×1, fast kinds: open-chat, tool-use, reasoning, refusal, security, world-knowledge, instruction-following, sycophancy) → `docs/evals/2026-10-06-lil-shootout-<model>-x1-ac.json`; then the full ×3 all-kinds chain overnight → `…-lil-bakeoff-<model>-x3-ac.json`. Order: E4B-OptiQ, Qwen3.5-4B, incumbent. App = TF build 453 (`--commit tf-build-453`: no GitCommitSHA in store builds).
 - [ ] Text + tools, per candidate: `python3 tools/eval/run_chateval.py --direct --name lil-bakeoff-<model> --brains lil --model lil=<id> --repeats 3 --save-to docs/evals/2026-10-XX-lil-bakeoff-<model>.json`
 - [ ] E4B specifically: re-check the no-response bug with the open-chat fixtures and "How are things M1K3?" (`MODEL_CHOICES.md:86`). Record whether the July refresh fixed it.
-- [ ] Qwen3.5-4B: confirm prefill is no longer CPU-heavy (Activity Monitor + `tools/eval/power_receipt.py`). Tool dialect is `.xmlFunction`.
+- [ ] Qwen3.5-4B: confirm prefill is no longer CPU-heavy (Activity Monitor + `tools/eval/power_receipt.py`). Tool dialect is `.qwen35` (since 2026-10-07; was `.xmlFunction`).
 - [ ] Vision (needs Stream A): extending `usesVLMLoadPath` is required for each.
   - E4B: ~~blocked on the `Gemma4Unified` KV-shared-layer sanitize~~ — **probably unblocked at our pin** (§5): E4B is `model_type=gemma4` → MLXVLM `Gemma4`, fixed upstream by #384 (2026-07-15, in our pin). One launch with E4B on the VLM path decides it; then widen `usesVLMLoadPath` and fix the stale comment at `MLXBrainProvider.swift:1077`.
   - Qwen3.5-4B: MLXVLM **has** `qwen3_5` at our pin (`Libraries/MLXVLM/Models/Qwen35.swift`) — vision is reachable by widening `usesVLMLoadPath`. Main's #642 (drop MTP tensors in VLM sanitize) only matters for checkpoints carrying an MTP head.

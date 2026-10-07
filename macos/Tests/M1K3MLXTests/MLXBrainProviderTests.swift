@@ -476,6 +476,8 @@ struct MLXBrainProviderTests {
         #expect(!MLXBrainProvider(modelID: "mlx-community/Qwen3-4B-Instruct-2507-4bit").supportsImageInput)
         #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-e4b-it-4bit").supportsImageInput)
         #expect(!MLXBrainProvider(modelID: "mlx-community/gemma-4-e4b-it-OptiQ-4bit").supportsImageInput)
+        #expect(MLXBrainProvider(modelID: "mlx-community/Qwen3.5-4B-MLX-4bit").supportsImageInput)
+        #expect(!MLXBrainProvider(modelID: "mlx-community/Qwen3.5-2B-4bit").supportsImageInput)
     }
 
     @Test("BrainTier.supportsImageInput can never drift from the VLM load-path allow-list")
