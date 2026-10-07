@@ -214,6 +214,9 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 19:50 — the positions blocker resolved by measurement (Kev chose
+"prove it first"): MLXVLM Qwen35 continues correctly on a seeded cache when the prefix's state is carried,
+and fails loudly without it. The seed work is unblocked; its rule is "carry the state". Confidence 0.9.
 Review: Kev + claude-opus-5-5, 2026-10-07 18:00 — the Qwen3.5 gap measured from the unified log: all
 prefill (0/3232 reused, 6.8 s a turn vs 0.2 s), decode equal. `challenger` CHANGE folded into the order
 of work: positions on MLXVLM first, then an exact seed that survives kvBits. Confidence 0.9 on the cause.
@@ -534,8 +537,15 @@ Fix list, in order:
   without `positionOffset`), so a suffix on a seeded cache would get wrong positions: silent quality
   loss, no crash. The MLXLLM Qwen35 reads `cache.ropeOffset` and is fine.
   Order of work before a re-shootout:
-  0. Positions first: text turns on the MLXLLM path, or an upstream `positionOffset: cacheOffset`
-     patch on MLXVLM Qwen35. Pin it with a logits test: seed+suffix == full prefill.
+  0. ~~Positions first~~ **RESOLVED 2026-10-07 19:44 by the seeded-prefill probe** (branch
+     `feat/q35-seeded-positions-probe`, `M1K3_SELFTEST_SEEDPROBE=1`, real Qwen3.5-4B in-app). The
+     challenger read the inner language model; the outer `prepare` already routes a warm cache through
+     `prepareContinuation`, anchored by `QwenVL.continuationAnchor`. Measured, 228- and 2,605-token
+     prompts + a 24-token suffix: MLXVLM with `state: nil` **throws `missingState`** (loud, never
+     silent); with the prefix's returned state carried it is **CONSISTENT** (same top token, max
+     |Δlogit| 0.23 / 0.41). MLXLLM control: consistent either way (0.36 / 0.56), so the carried
+     drift sits inside a correct continuation's own noise. Rule for the seed: **store the prefix's
+     `LMOutput.State` beside the cache snapshot and pass it into the turn**. No fork, no upstream ask.
   1. Exact-seed snapshot for `MLXToolTurnSession` on non-trimmable caches (copy a sample-free
      persona+palette prefill per turn; prefill only the suffix). Measure: Qwen3.5 tool median.
   2. Router-gated thinking: `ToolNeedRouter` (NLSentenceEmbedder, ms) says `.tools` → that turn
