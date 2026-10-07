@@ -44,7 +44,7 @@ our minds open."
   - defaults: `recommendedByMemory` L450-485; gates: `minimumPhysicalMemoryGB` L344-364
 - **Vision** — Big via MLXVLM (`usesVLMLoadPath`, exact allow-list `"gemma-4-12b"`, `MLXBrainProvider.swift:1082`); Mini via AFM attachments. E4B is excluded: upstream `Gemma4Unified` sanitize lacks the KV-shared-layer fix → `keyNotFound layers.24.self_attn.v_proj`.
 - **Embeddings** — `Sources/M1K3MLX/MLXEmbeddingService.swift` (Qwen3-Embedding-0.6B, 1024 → MRL 512, L91-92). EmbeddingGemma v1 was rejected: its `sanitize` fatals on load with our pin (L18-23). Fingerprint `mlx/<name>/d<dim>/mlx-swift-0.31` (L66-73) drives an automatic, atomic re-index (`KnowledgeStore.reindexEmbeddings` L186-240; `AppEnvironment.swift` L1673-1708, L2110, L2233, L2332-2360). Per-embedder similarity floors: `Sources/M1K3Knowledge/EmbedderFloors.swift` (qwen3Instructed L46).
-- **Pins** — `Sources/M1K3MLX/PinnedWeights.swift` (regen: `tools/weights/pin_weights.py`, ADR 0002). mlx-swift-lm at main `ee673d6a`; mlx-swift 0.31.6. `M1K3MLX` links MLXEmbedders + MLXLLM + MLXVLM.
+- **Pins** — `Sources/M1K3MLX/PinnedWeights.swift` (regen: `tools/weights/pin_weights.py`, ADR 0002). mlx-swift-lm at main `ee673d6a`; mlx-swift 0.31.6 (2026-10-06; moved 2026-10-07 to the 3.32.3 / 0.32.3 tag pair, which re-indexes every store once via `kernelTag`). `M1K3MLX` links MLXEmbedders + MLXLLM + MLXVLM.
 - **Eval** — `ChatEvalFixture` (`Sources/M1K3Eval/ChatEvalFixture.swift:241`) has `prompt` + `seedDoc` only: **no image/audio field**. Runner: `tools/eval/run_chateval.py --direct --model lil=<id> --save-to docs/evals/<name>.json` (see `docs/BENCHMARKS.md` "Reproducing it", the macOS 27 stdout route). Retrieval fixtures: `Sources/M1K3Knowledge/*EvalFixtures.swift`.
 - **Audio-to-model** — not shipped (`scratch/gemma4-audio-spike/SPIKE.md`: E4B batch-only, 30 s cap).
 
@@ -214,6 +214,7 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 17:15 — the Pins line notes the 3.32.3 / 0.32.3 tag-pair move.
 Review: Kev + claude-opus-5-5, 2026-10-07 16:30 — Mini vision investigation opened: the attach path is
 compiled in; a live URL-vs-CGImage test is written; AFM is `modelNotReady` right now. Confidence 0.5 —
 two live hypotheses, one test to decide.

@@ -153,6 +153,8 @@ let package = Package(
         // #584 (RotatingKVCache.trim wrap-aware instead of corrupting the ring),
         // #611 (the generation loop off Swift's cooperative pool) and #613 (the
         // streaming detokenizer stops re-emitting emoji/ZWJ/accent scalars).
+        // Back on a TAG 2026-10-07: 3.32.3 = ee673d6a + 6 commits (carries #516); it
+        // requires mlx-swift ≥ 0.32.3, so that pin moved with it (see below).
         // ⚠️ #548 adds cross-dialect tool-call recovery and rejects native calls
         // whose arguments miss the declared schema — the tool-call smoke is the
         // gate for this bump, not a formality.
