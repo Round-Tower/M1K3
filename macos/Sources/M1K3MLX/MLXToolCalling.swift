@@ -69,6 +69,9 @@
 //  checkpoint, and generates from one token carrying the checkpoint's `LMOutput.State`. Measured motive:
 //  Qwen3.5 re-prefilled ~2,585 tok (6.8 s) per tool step. Rolling, not pristine-only — the challenger's
 //  catch. The veto log names both untrimmable causes. Verify-by-launch: reused/total per step, steps 1–5+.
+//  Review: Kev + claude-opus-5-5, 2026-10-07 (repair), Confidence 0.8 — both tool loops hand a rejected
+//  call to `Qwen35CallRepair` first: Qwen3.5's orphan `</parameter>` is dropped and the call re-parsed by
+//  upstream's own processor; anything else stays rejected. Logged as REPAIRED (names + counts only).
 
 import Foundation
 import M1K3Inference
@@ -531,8 +534,17 @@ extension MLXBrainProvider: ToolCallingProvider {
                 case let .toolCall(libraryCall):
                     calls.append(MLXToolMapping.parsedToolCall(from: libraryCall))
                 case let .rejectedToolCall(rejection):
-                    rejections += 1
-                    ToolTurnDiagnostics.logRejected(rejection, label: "toolTurn")
+                    if let repaired = Qwen35CallRepair.recover(
+                        rejection, offered: Qwen35CallRepair.offeredNames(rendered.specs)
+                    ) {
+                        calls += repaired.map(MLXToolMapping.parsedToolCall(from:))
+                        ToolTurnDiagnostics.logRepaired(
+                            rejection, names: repaired.map(\.function.name), label: "toolTurn"
+                        )
+                    } else {
+                        rejections += 1
+                        ToolTurnDiagnostics.logRejected(rejection, label: "toolTurn")
+                    }
                 case let .info(info):
                     logGenerationInfo(info, label: "toolTurn", model: modelIdentifier)
                 @unknown default:
@@ -719,6 +731,19 @@ extension MLXBrainProvider: ToolCallingProvider {
 /// call is indistinguishable from "the model never called" (LFM2.5-1.2B read
 /// 0/6 that way on 2026-09-05). Shared by the stateless and session loops.
 enum ToolTurnDiagnostics {
+    /// A rejected call `Qwen35CallRepair` recovered. Tool names only — every one is a declared tool
+    /// (the repair refuses any other), never argument values; the raw text stays out.
+    static func logRepaired(_ rejection: RejectedToolCall, names: [String], label: String) {
+        let reason = rejection.reason.rawValue
+        let tools = names.joined(separator: ",")
+        mlxToolLog.notice(
+            """
+            \(label, privacy: .public) REPAIRED tool call: reason=\(reason, privacy: .public) \
+            tools=[\(tools, privacy: .public)] (orphan </parameter> dropped)
+            """
+        )
+    }
+
     static func logRejected(_ rejection: RejectedToolCall, label: String) {
         let reason = rejection.reason.rawValue
         let tool = rejection.toolName ?? "?"
@@ -1065,8 +1090,17 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 case let .toolCall(libraryCall):
                     calls.append(MLXToolMapping.parsedToolCall(from: libraryCall))
                 case let .rejectedToolCall(rejection):
-                    rejections += 1
-                    ToolTurnDiagnostics.logRejected(rejection, label: "toolTurnSession")
+                    if let repaired = Qwen35CallRepair.recover(
+                        rejection, offered: Qwen35CallRepair.offeredNames(specs)
+                    ) {
+                        calls += repaired.map(MLXToolMapping.parsedToolCall(from:))
+                        ToolTurnDiagnostics.logRepaired(
+                            rejection, names: repaired.map(\.function.name), label: "toolTurnSession"
+                        )
+                    } else {
+                        rejections += 1
+                        ToolTurnDiagnostics.logRejected(rejection, label: "toolTurnSession")
+                    }
                 case let .info(info):
                     // fullIDs.count = the whole rendered conversation — the true
                     // context for the readout; info's own count is suffix-only
