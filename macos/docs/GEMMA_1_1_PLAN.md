@@ -214,6 +214,13 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-08 00:30 — the night's work: exact-seed checkpoints (#509) and the
+orphan-`</parameter>` repair (#511) took Qwen3.5 at tier to tool-use 19/20 at 5.9 s (incumbent 20/20 at
+5.5 s), so **the Lil bar is met**. Router-gated thinking was shelved on the challenger's no-go (it rested on
+pre-#509 numbers). The ×3 all-kinds re-measure: Qwen3.5 matches the incumbent's pass rate and adds vision;
+gemma E4B ties it at 2× the RAM. Before a swap: read the code-gen / grounded misses, fix the privacy answer
+in the persona, carry the checkpoint across user turns. Confidence 0.85 (×2 tool runs; ×3 all-kinds is one
+build without the repair).
 Review: Kev + claude-opus-5-5, 2026-10-07 19:50 — the positions blocker resolved by measurement (Kev chose
 "prove it first"): MLXVLM Qwen35 continues correctly on a seeded cache when the prefix's state is carried,
 and fails loudly without it. The seed work is unblocked; its rule is "carry the state". Confidence 0.9.
@@ -546,22 +553,60 @@ Fix list, in order:
      |Δlogit| 0.23 / 0.41). MLXLLM control: consistent either way (0.36 / 0.56), so the carried
      drift sits inside a correct continuation's own noise. Rule for the seed: **store the prefix's
      `LMOutput.State` beside the cache snapshot and pass it into the turn**. No fork, no upstream ask.
-  1. Exact-seed snapshot for `MLXToolTurnSession` on non-trimmable caches (copy a sample-free
-     persona+palette prefill per turn; prefill only the suffix). Measure: Qwen3.5 tool median.
-  2. Router-gated thinking: `ToolNeedRouter` (NLSentenceEmbedder, ms) says `.tools` → that turn
-     thinks; chat stays think-off. `enable_thinking` only moves the suffix, so the seed survives.
-     Plus a think budget so a misrouted chat can't run to the ceiling.
-  3. Re-shootout the same three arms + a `router-gated` arm. Bar: tools ≥ 19/20, median ≤ 2× the
-     incumbent.
+  1. ~~Exact-seed snapshot~~ **DONE, #509 (2026-10-07 21:12):** `ExactPrefixReuse` checkpoint mode — a
+     rolling exact checkpoint carrying its `LMOutput.State`, extended per send without sampling.
+     The `challenger` turned a pristine-only anchor into the rolling one. Every step after the first
+     now prefills 48–136 tokens instead of ~2,585.
+  2. ~~Router-gated thinking~~ **SHELVED (challenger no-go, 2026-10-07 21:15).** Every tier number was
+     pre-#509; the router scores greeting .78 / identity .70 above recent-activity .48 / web-newest
+     .47, so no threshold separates them; and thinking fixed `datetime` only by accident (+10 s a
+     turn). Replaced by **the orphan-`</parameter>` repair, #511**: re-parsed by the live processor
+     exactly, declared names only. If thinking ever returns, `GenerationComponents.applyingThinkingBudget`
+     needs a Qwen3.5 `transitionOverride`, and its prompt scan can't see a `<think>` held in the
+     checkpoint (the one-token input).
+  3. **Re-measured.** Tier, tool-use x2: 17/20 @ 17.3 s (pre-#509) → 18/20 @ 6.9 s (#509) → **19/20 @
+     5.9 s** (#511, app 79981cc5). The bar is met. The remaining miss is `tool-recent-busiest`: the
+     model doesn't call `recent_activity`.
 - **UNVERIFIED side-finding:** because the decoder routes reasoning away from `.chunk`, a thinking
   brain on the native tool path may show an empty "thinking" disclosure in the chat UI (our tool
   session only reads `.chunk`). Check on a live Qwen3.5 thinking turn.
 - `feat/gemma-1-1-next`: one hold per **agent turn** (`LocalAgent.run`; no unheld tool gaps) and
   per-call-site reasons for `pmset -g assertions`.
 
+### Lil re-measure ×3 all kinds (2026-10-07 21:23 → 23:50, one fixed app `bc2dc9bd`, tier, AC)
+
+`bc2dc9bd` = master + #509, no call repair. `docs/evals/2026-10-07-lil-remeasure-*-x3-ac.json`.
+
+| | incumbent Qwen3-4B | Qwen3.5-4B (VLM) | gemma-4 E4B |
+|---|---|---|---|
+| overall | 250/276 (no vision) | 292/324 | 292/324 |
+| median | 5.3 s | 7.0 s | 9.0 s |
+| peak RAM | 4.8 GB | 4.8 GB | 10.3 GB |
+| tool-use | 30/30 · 5.9 s | 27/30 · 5.6 s | 23/30 · 11.3 s |
+| interview | 4/15 | 15/15 | 15/15 |
+| code-gen | 30/30 · 6.2 s | 24/30 · 9.4 s | 29/30 · 13.6 s |
+| grounded-Q | 21/24 | 18/24 | 18/24 |
+| vision | — | 42/48 | 44/48 |
+
+Read: Qwen3.5 is the Lil candidate. It matches the incumbent and sees. E4B ties it on quality at twice
+the RAM, slower on tools. Before a swap:
+- Read the Qwen3.5 misses: `code-py-fix-bug` ×3, `code-site-about-chat` ×2, `ground-part` ×3.
+- **`chat-what-leaves` is wrong on BOTH models**, not just under-scored: "nothing leaves this Mac", yet
+  web search sends queries out. This is a persona fix.
+- **Measure, then build, the cross-turn checkpoint.** The eval is single-turn, so it can't see that a
+  real chat re-reads its whole history on each new message. That's ~4 s at message 5 and ~8 s at
+  message 10 (estimate).
+
+The Mini vision probe ran first: **`AFM-VISION url="€23.40" cgimage="€23.40"`**. AFM reads the receipt
+both ways, unsandboxed. So the in-app confabulation is our attach path, the sandboxed file URL, and
+not AFM's ceiling.
+
 ### Open next
 
-- [~] **Mini vision — investigation started (2026-10-07):** the attach path IS compiled in (the
+- [ ] **Mini vision — AFM can see (2026-10-07 21:23, `AFMVisionLiveTests`: URL and CGImage both read
+      €23.40).** So the in-app confabulation is the attach path: decode in-process and attach
+      pixels, not the sandboxed file URL. Then re-run the vision kind on Mini.
+- [~] (history) **Mini vision — investigation started (2026-10-07):** the attach path IS compiled in (the
       `#if compiler(>=6.4)` gate; local toolchain Swift 6.4 / Xcode 27), so the baseline really sent
       `Attachment(imageURL:)`. Suspects: (1) the out-of-process model can't read the app's file URL in
       the sandbox (no denial found in the log, but the window may have rolled), (2) AFM's image path
@@ -575,8 +620,18 @@ Fix list, in order:
       `AFMToolPrompt.imageURLs` → `Attachment(imageURL:)` on a live turn before anything else; the app
       shows Mini an attach button on macOS 27.
 - [x] The bake-off proper (overnight 2026-10-06/07) — text is in; gemma latency/RAM void (stall).
-- [ ] **Re-run the gemma columns once #499 lands** (E4B ×3, display held awake, tokenizer fixed) —
-      the latency and RAM gate re-measure; E4B's 10.3 GB own peak is the open question.
+- [x] **Re-run the gemma columns once #499 lands** — done 2026-10-07 on `bc2dc9bd`: E4B 292/324, 9.0 s,
+      **10.3 GB own peak confirmed** (twice Qwen3.5's 4.8 GB).
+- [ ] **Qwen3.5 cross-turn checkpoint:** adopt an exact checkpoint, plus its state, into
+      ConversationTailCache, cut at the end of the user turn so the next render extends it. Cap it,
+      since it is full-precision. Measure a scripted 6–8-message chat's prefill curve FIRST.
+- [ ] **Persona: the honest privacy answer** — web search sends queries to DuckDuckGo; say so.
+- [ ] Read Qwen3.5's code-gen and grounded misses before the swap call.
+- [ ] `tool-recent-busiest`: a prompt nudge for recency asks, before anything heavier.
+- [ ] `run_chateval`: stamp the app's build commit, not HEAD (three files hand-corrected 2026-10-07).
+- [ ] File the orphan-`</parameter>` issue upstream (draft above; Kev). Retires `Qwen35CallRepair`.
+- [ ] #509 follow-ups: peak RSS per step, re-seed after a fresh/image send, a pure seam for the
+      checkpoint bookkeeping, `seedTrimmed` → `seedIsExact`.
 - [ ] Set the Lil RAM cap BEFORE that re-run (own peak, not raw): incumbent 4.75 GB, Qwen3.5 4.07.
 - [ ] `selfquery-notes`: "I don't run internal QA…" is a decline the markers miss (challenger first).
 - [ ] Stream F (image turns on Lil escalate) — still the fallback if Lil stays Qwen3.
