@@ -78,9 +78,9 @@ def test_highlights_pick_the_lines_that_matter_from_missed_releases():
         m.Release("1.1.9", "2026-03-02", "Faster everything"),  # not missed: we're on it
     ]
     lines = m.highlights(releases, current="1.1.9")
-    assert lines == [
-        "1.3.2: Speed up BPE merge with priority-queue algorithm (5-12x on inner loop) (#346)",
+    assert lines == [  # newest first: the per-package cap drops the oldest notes
         "1.3.4: Fix crash when tokenizer.json has no merges",
+        "1.3.2: Speed up BPE merge with priority-queue algorithm (5-12x on inner loop) (#346)",
     ]
 
 
@@ -98,7 +98,7 @@ def test_report_rows_for_a_resolved_tree():
             '.package(url: "https://github.com/huggingface/swift-transformers.git", .upToNextMinor(from: "1.1.6"))'
             if ident == "whisperkit" else ""
         ),
-        commits_behind=lambda _url, rev: 20 if rev.startswith("ee673d6a") else None,
+        commits_behind=lambda _url, rev: 20 if rev.startswith("ee673d6a") else m.FAILED,
     )
     assert report.failures == 0
     by = {r.identity: r for r in report.rows}
@@ -154,9 +154,9 @@ def test_a_failed_fetch_makes_the_report_incomplete_never_clean():
     # 2026-10-07 review: a rate-limited or logged-out `gh` must not read as "nothing behind".
     report = m.build_rows(
         RESOLVED, m.parse_requirements(PACKAGE_SWIFT),
-        releases=lambda _i, _u: None,  # None = the fetch failed ([] = genuinely no releases)
-        dependent_manifest=lambda _i, _u, _v: None,
-        commits_behind=lambda _u, _r: None,
+        releases=lambda _i, _u: m.FAILED,  # FAILED = the fetch errored ([] = genuinely no releases)
+        dependent_manifest=lambda _i, _u, _v: m.FAILED,
+        commits_behind=lambda _u, _r: m.FAILED,
     )
     assert report.failures == report.fetches > 0
     assert "INCOMPLETE" in m.render(report, only_behind=True)
@@ -195,3 +195,49 @@ def test_the_header_line_carries_the_count_the_workflow_reads():
     first = m.render_markdown(m.Report(rows, failures=0, fetches=3), generated="2026-10-07").splitlines()[0]
     import re
     assert re.findall(r"\*\*[0-9]+ held back", first) == ["**1 held back"]
+
+
+def test_not_found_is_not_a_failure():
+    # #499 review: a dependency with no root Package.swift (or a non-GitHub revision pin) is a
+    # permanent fact, not an outage — counting it would wedge the weekly report at exit 4 forever.
+    report = m.build_rows(
+        RESOLVED, m.parse_requirements(PACKAGE_SWIFT),
+        releases=lambda _i, _u: [],
+        dependent_manifest=lambda _i, _u, _v: "",  # not found on either tag spelling
+        commits_behind=lambda _u, _r: None,  # not applicable (non-GitHub / no revision)
+    )
+    assert report.failures == 0
+
+
+def test_gh_tri_state_tells_404_from_outage(monkeypatch):
+    class Proc:
+        def __init__(self, code, out="", err=""):
+            self.returncode, self.stdout, self.stderr = code, out, err
+    calls = {"repos/o/r/contents/Package.swift?ref=1.0.0": Proc(1, err="gh: Not Found (HTTP 404)"),
+             "repos/o/r/contents/Package.swift?ref=v1.0.0": Proc(1, err="gh: Not Found (HTTP 404)"),
+             "repos/o/r/releases?per_page=50": Proc(1, err="gh: API rate limit exceeded (HTTP 403)")}
+    monkeypatch.setattr(m.subprocess, "run", lambda args, **_kw: calls[args[2]])
+    assert m.gh_manifest("r", "https://github.com/o/r", "1.0.0") == ""  # 404 on both: not found
+    assert m.gh_releases("r", "https://github.com/o/r") is m.FAILED  # 403: an outage
+
+
+def test_versions_dedupe_by_number_and_notes_come_newest_first():
+    rels = [m.Release("1.2", "", "Fix crash A"), m.Release("1.2.0", "", ""), m.Release("1.3.0", "", "Fix crash B")]
+    assert m.dedupe(rels) == [m.Release("1.3.0", "", "Fix crash B"), m.Release("1.2", "", "Fix crash A")]
+    assert m.highlights(rels, current="1.1.0") == ["1.3.0: Fix crash B", "1.2: Fix crash A"]
+
+
+def test_main_exit_codes(monkeypatch, tmp_path, capsys):
+    resolved = tmp_path / "Package.resolved"
+    resolved.write_text('{"pins": [{"identity": "lib", "location": "https://github.com/o/lib", '
+                        '"state": {"version": "1.0.0"}}]}')
+    package = tmp_path / "Package.swift"
+    package.write_text('.package(url: "https://github.com/o/lib", .upToNextMinor(from: "1.0.0")),')
+    monkeypatch.setattr(m, "gh_releases", lambda _i, _u: [m.Release("1.1.0", "", ""), m.Release("1.0.0", "", "")])
+    monkeypatch.setattr(m, "gh_manifest", lambda _i, _u, _v: "")
+    args = ["--resolved", str(resolved), "--package", str(package)]
+    assert m.main(args) == 0
+    assert m.main([*args, "--fail-if-capped"]) == 3  # 1.1.0 is outside upToNextMinor 1.0.0
+    monkeypatch.setattr(m, "gh_releases", lambda _i, _u: m.FAILED)
+    assert m.main(args) == 4  # an outage never reads as current
+    capsys.readouterr()

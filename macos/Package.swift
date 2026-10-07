@@ -164,11 +164,12 @@ let package = Package(
         // Downloader/Tokenizer for the MLX stack. 3.x removed the built-in HF
         // client; M1K3 bridges the small Downloader/TokenizerLoader protocols to
         // swift-transformers directly (the same HubApi the 2.x line used, cache
-        // layout preserved). ≥ 1.3.2 for the priority-queue BPE: on 1.1.9 the
+        // layout preserved; `cache: nil` at every HubApi — one store, no second
+        // content-addressed copy). ≥ 1.3.2 for the priority-queue BPE: on 1.1.9 the
         // gemma-4 persona took 1,183 ms to tokenize, on 1.3.4 8 ms, same ids —
         // and every agent step re-tokenizes. WhisperKit 1.x no longer depends on
         // swift-transformers, so the old shared-pin constraint is gone.
-        .package(url: "https://github.com/huggingface/swift-transformers", .upToNextMinor(from: "1.3.4")),
+        .package(url: "https://github.com/huggingface/swift-transformers", from: "1.3.4"),
         // Official MCP Swift SDK — the M1K3MCP stdio server exposes M1K3's
         // knowledge to Claude Desktop/Code as MCP tools.
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.7.0"),

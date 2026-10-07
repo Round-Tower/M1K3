@@ -24,6 +24,9 @@ The pure helpers (parsing, semver, caps, highlights, rows) are unit-tested in
 test_dep_freshness.py with the fetchers injected.
 
 Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8, Prior: none (new file).
+Review: same day (#499 review fold) — _gh is tri-state (a 404 is a fact, not a failure: a dependency
+with no root Package.swift must not wedge the report at exit 4); a failed tags call counts; versions
+dedupe by number; notes run newest first; main()'s exit codes are pinned by a test.
 Review: same day (pre-push code + security review) — failed fetches are counted (INCOMPLETE,
 exit 4), `..<`/`...` ranges keep their upper bound, `reachable` splits a stale lock from a
 real cap, notes are inert code spans capped at 160 chars, the body at 60k.
@@ -154,6 +157,17 @@ def capped_by(ident: str, latest: str, *, ours: dict[str, Requirement],
     return caps
 
 
+class _Failed:
+    """A fetch that ERRORED (rate limit, auth, network, 5xx) — distinct from not-found."""
+
+    def __repr__(self) -> str:
+        return "FAILED"
+
+
+FAILED = _Failed()
+NOT_FOUND = object()  # _gh's 404: a permanent fact (no such file or tag), never a failure
+
+
 @dataclass(frozen=True)
 class Release:
     version: str
@@ -161,12 +175,24 @@ class Release:
     notes: str
 
 
+def dedupe(releases: list[Release]) -> list[Release]:
+    """One release per version NUMBER ("1.2" and "1.2.0" are one), newest first; the
+    entry with notes wins a tie."""
+    best: dict[tuple, Release] = {}
+    for r in releases:
+        v = parse_version(r.version)
+        if v is not None and (v not in best or (r.notes and not best[v].notes)):
+            best[v] = r
+    return [best[v] for v in sorted(best, reverse=True)]
+
+
 def highlights(releases: list[Release], current: str | None) -> list[str]:
-    """Speed / memory / crash / security lines from the releases newer than `current`."""
+    """Speed / memory / crash / security lines from the releases newer than `current`,
+    newest first — the per-package cap should drop the oldest notes, not the newest."""
     floor = parse_version(current) if current else None
-    newer = [r for r in releases if (v := parse_version(r.version)) and (floor is None or v > floor)]
+    newer = [r for r in dedupe(releases) if floor is None or parse_version(r.version) > floor]
     lines = []
-    for release in sorted(newer, key=lambda r: parse_version(r.version)):
+    for release in newer:
         hits = [ln.strip().lstrip("-*• ").strip() for ln in release.notes.splitlines() if HIGHLIGHT.search(ln)]
         lines += [f"{release.version}: {hit}" for hit in hits[:MAX_HIGHLIGHTS_PER_RELEASE]]
     return lines
@@ -202,18 +228,19 @@ def build_rows(
     resolved: dict,
     ours: dict[str, Requirement],
     *,
-    releases: Callable[[str, str], list[Release] | None],
-    dependent_manifest: Callable[[str, str, str], str | None],
-    commits_behind: Callable[[str, str], int | None],
+    releases: Callable[[str, str], list[Release] | _Failed],
+    dependent_manifest: Callable[[str, str, str], str | _Failed],
+    commits_behind: Callable[[str, str], int | None | _Failed],
 ) -> Report:
-    """Fetchers return None when the fetch FAILED, and [] / "" when there's genuinely nothing."""
+    """Fetchers return FAILED when the fetch errored; [] / "" / None when there's genuinely
+    nothing (not found, not applicable). Only FAILED counts against the report."""
     pins = resolved.get("pins", [])
     fetches = failures = 0
 
     def fetched(value, empty):
         nonlocal fetches, failures
         fetches += 1
-        if value is None:
+        if value is FAILED:
             failures += 1
             return empty
         return value
@@ -227,7 +254,7 @@ def build_rows(
     rows = []
     for pin in pins:
         ident, url, state = pin["identity"], pin["location"], pin["state"]
-        rels = [r for r in fetched(releases(ident, url), []) if parse_version(r.version)]
+        rels = dedupe(fetched(releases(ident, url), []))
         latest = max(rels, key=lambda r: parse_version(r.version)).version if rels else None
         version = state.get("version")
         if version:
@@ -240,9 +267,7 @@ def build_rows(
             rows.append(Row(ident, version, latest, behind, caps, highlights(rels, version), reachable=reach))
         else:
             rev = state.get("revision", "")
-            behind_commits = commits_behind(url, rev)
-            fetches += 1
-            failures += behind_commits is None
+            behind_commits = fetched(commits_behind(url, rev), None)
             rows.append(Row(ident, rev[:8], latest, 0, commits_behind=behind_commits))
     return Report(rows, failures, fetches)
 
@@ -319,57 +344,66 @@ def render_markdown(report: Report, generated: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def _gh(path: str) -> object | None:
+def _gh(path: str) -> object:
+    """Parsed JSON, NOT_FOUND for an HTTP 404, or FAILED for anything else that went wrong."""
     proc = subprocess.run(["gh", "api", path], capture_output=True, text=True, check=False)
     if proc.returncode != 0:
-        return None
+        return NOT_FOUND if "HTTP 404" in (proc.stderr or "") else FAILED
     try:
         return json.loads(proc.stdout)
     except json.JSONDecodeError:
-        return None
+        return FAILED
 
 
-def gh_releases(_ident: str, url: str) -> list[Release] | None:
+def gh_releases(_ident: str, url: str) -> list[Release] | _Failed:
     """Releases (with notes) merged with plain tags — some repos tag newer than they release.
-    None when the releases fetch itself failed."""
+    FAILED when either call errors: a missed tag page would read a newer version as absent."""
     if "github.com" not in url:
         return []
     owner, repo = owner_repo(url)
     data = _gh(f"repos/{owner}/{repo}/releases?per_page=50")
-    if not isinstance(data, list):
-        return None
+    if data is FAILED:
+        return FAILED
+    data = data if isinstance(data, list) else []
     rels = {r["tag_name"].lstrip("v"): Release(r["tag_name"].lstrip("v"), (r.get("published_at") or "")[:10],
                                                 r.get("body") or "")
             for r in data if not r.get("draft") and not r.get("prerelease")}
     tags = _gh(f"repos/{owner}/{repo}/tags?per_page=100")
+    if tags is FAILED:
+        return FAILED
     for t in tags if isinstance(tags, list) else []:
         rels.setdefault(t["name"].lstrip("v"), Release(t["name"].lstrip("v"), "", ""))
     return list(rels.values())
 
 
-def gh_manifest(_ident: str, url: str, version: str) -> str | None:
-    """The dependency's Package.swift at its resolved tag; None when no tag spelling fetched."""
+def gh_manifest(_ident: str, url: str, version: str) -> str | _Failed:
+    """The dependency's Package.swift at its resolved tag. "" when no tag spelling has one
+    (a 404 is a fact, e.g. only `Package@swift-X.swift`); FAILED only on a real error."""
     if "github.com" not in url:
         return ""
     owner, repo = owner_repo(url)
     for ref in (version, f"v{version}"):
         data = _gh(f"repos/{owner}/{repo}/contents/Package.swift?ref={ref}")
+        if data is FAILED:
+            return FAILED
         if isinstance(data, dict) and data.get("content"):
             try:
                 return base64.b64decode(data["content"]).decode("utf-8", "replace")
             except (ValueError, binascii.Error):
-                return None
-    return None
+                return FAILED
+    return ""
 
 
-def gh_commits_behind(url: str, rev: str) -> int | None:
+def gh_commits_behind(url: str, rev: str) -> int | None | _Failed:
+    """Commits on the default branch past `rev`; None when not applicable, FAILED on error."""
     if "github.com" not in url or not rev:
         return None
     owner, repo = owner_repo(url)
     meta = _gh(f"repos/{owner}/{repo}")
-    branch = meta.get("default_branch") if isinstance(meta, dict) else None
-    cmp = _gh(f"repos/{owner}/{repo}/compare/{rev}...{branch}") if branch else None
-    return cmp.get("ahead_by") if isinstance(cmp, dict) else None
+    if not isinstance(meta, dict) or not meta.get("default_branch"):
+        return FAILED
+    cmp = _gh(f"repos/{owner}/{repo}/compare/{rev}...{meta['default_branch']}")
+    return cmp.get("ahead_by") if isinstance(cmp, dict) else FAILED
 
 
 def _parallel(fn: Callable, keys: list[tuple]) -> dict[tuple, object]:

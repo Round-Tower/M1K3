@@ -363,9 +363,13 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
             }
 
             // WhisperKit 1.x hands these to the transcriber actor as non-Sendable
-            // `sending` parameters. They are the kit's shared, stateless models (see the
-            // audioProcessor note below), so they opt out of region checking here, by
-            // name, rather than the whole file losing the check.
+            // `sending` parameters. What is actually shared (read in the 1.1 checkout,
+            // 2026-10-07): the per-decode KV state lives in per-call `DecodingInputs`, not on
+            // the TextDecoder; batch transcription has its OWN kit (WhisperKitBatchTranscriber's
+            // loader), so live and batch never share these; within live, sessions overlap only
+            // across the stop/start window, and the decoder's tokenizer + language cache are
+            // the shared mutable parts (the multilingual caveat below). So they opt out of
+            // region checking here, by name, rather than the whole file losing the check.
             nonisolated(unsafe) let audioEncoder = kit.audioEncoder
             nonisolated(unsafe) let featureExtractor = kit.featureExtractor
             nonisolated(unsafe) let segmentSeeker = kit.segmentSeeker

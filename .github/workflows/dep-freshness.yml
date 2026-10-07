@@ -47,11 +47,13 @@ jobs:
           # body, which quotes third-party text.
           count() { head -1 | grep -oE '\*\*[0-9]+ held back' | grep -oE '[0-9]+' | head -1 || true; }
           capped_now=$(count < "$RUNNER_TEMP/body.md"); capped_now=${capped_now:-0}
-          # Exact title match over the open list — not search, which is eventually consistent.
-          number=$(gh issue list --state open --limit 300 --json number,title \
-            --jq ".[] | select(.title == \"$title\") | .number" | head -1)
+          # Our issue = the label AND the bot's authorship (no title hijack; no 300-issue
+          # list cap). A closed issue is re-created next Monday — closing it is not a mute.
+          gh label create dep-freshness --color BFD4F2 --description "Weekly dependency freshness report" --force >/dev/null
+          number=$(gh issue list --state open --label dep-freshness --author "app/github-actions" \
+            --json number --jq '.[0].number // empty')
           if [ -z "$number" ]; then
-            gh issue create --title "$title" --body-file "$RUNNER_TEMP/body.md"
+            gh issue create --title "$title" --label dep-freshness --body-file "$RUNNER_TEMP/body.md"
             exit 0
           fi
           capped_before=$(gh issue view "$number" --json body --jq .body | count); capped_before=${capped_before:-0}

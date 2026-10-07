@@ -21,6 +21,7 @@
 //  org/repo folder + bytes) and `remove(modelID:)` for the retired-weights
 //  cleanup (#222); same HubApi path math, so listing and deleting cannot
 //  drift from downloading.
+//  Review: Kev + claude-opus-5-5, 2026-10-07 — `cache: nil`, matching the downloader (one store).
 
 import Foundation
 import Hub
@@ -34,7 +35,7 @@ public struct LocalModelInventory: Sendable {
     ///   migration is the app's explicit prepareOnce()).
     public init(downloadBase: URL? = nil) {
         let base = downloadBase ?? ModelStoreLocation.llmBase()
-        hub = HubApi(downloadBase: base)
+        hub = HubApi(downloadBase: base, cache: nil)
     }
 
     /// Whether the model's weights are present on disk. `false` for an absent or
