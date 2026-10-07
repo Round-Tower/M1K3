@@ -38,10 +38,16 @@ now
 </tool_call>
 """
 
+private let offered: Set<String> = ["datetime", "web_search"]
+
+private func rejected(_ raw: String) -> RejectedToolCall {
+    RejectedToolCall(reason: .malformedSyntax, format: .qwen35, rawText: raw)
+}
+
 struct Qwen35CallRepairTests {
-    @Test("the recorded shape really is rejected upstream — the repair has something to fix")
+    @Test("the recorded shape really is rejected by the live path's processor — something to fix")
     func upstreamRejectsTheOrphan() {
-        let processor = ToolCallProcessor(format: .qwen35, tools: [datetimeSchema])
+        let processor = ToolCallProcessor(format: .qwen35)
         _ = processor.processChunk(orphaned)
         processor.processEOS()
         #expect(processor.toolCalls.isEmpty)
@@ -67,43 +73,77 @@ struct Qwen35CallRepairTests {
         #expect(Qwen35CallRepair.strippingOrphanCloses(twoParams) == nil)
     }
 
-    @Test("each function in a multi-call output is repaired on its own")
+    @Test("a value that contains `<function=` is copied verbatim, never read as a header")
+    func valuesAreNeverStructure() throws {
+        let tricky = """
+        <tool_call>
+        <function=web_search>
+        </parameter>
+        <parameter=query>
+        what does <function=y> mean
+        </parameter>
+        </function>
+        </tool_call>
+        """
+        let repaired = try #require(Qwen35CallRepair.strippingOrphanCloses(tricky))
+        #expect(repaired.contains("<parameter=query>\nwhat does <function=y> mean\n</parameter>"))
+        let calls = try #require(Qwen35CallRepair.recover(rejected(tricky), offered: offered))
+        #expect(calls.first?.function.arguments["query"] == .string("what does <function=y> mean"))
+    }
+
+    @Test("each function in a multi-call output is repaired on its own, and both calls parse")
     func repairsEveryFunction() throws {
         let two = orphaned + "\n" + orphaned
         let repaired = try #require(Qwen35CallRepair.strippingOrphanCloses(two))
         #expect(repaired.components(separatedBy: "</parameter>").count - 1 == 2)
+        let calls = try #require(Qwen35CallRepair.recover(rejected(two), offered: offered))
+        #expect(calls.map(\.function.name) == ["datetime", "datetime"])
     }
 
-    @Test("a rejected orphan call is recovered through upstream's own parser, with its argument")
+    @Test("a rejected orphan call is recovered with its argument, exactly as live would carry it")
     func recoversTheCall() throws {
-        let rejection = RejectedToolCall(
-            reason: .malformedSyntax, format: .qwen35, toolName: "datetime", rawText: orphaned
-        )
-        let calls = try #require(Qwen35CallRepair.recover(rejection, tools: [datetimeSchema]))
+        let calls = try #require(Qwen35CallRepair.recover(rejected(orphaned), offered: offered))
         #expect(calls.map(\.function.name) == ["datetime"])
         #expect(calls.first?.function.arguments["query"] == .string("now"))
+    }
+
+    @Test("trailing prose after the call doesn't block the repair or become a call")
+    func trailingProse() throws {
+        let calls = try #require(
+            Qwen35CallRepair.recover(rejected(orphaned + "\nLet me check that for you."), offered: offered)
+        )
+        #expect(calls.map(\.function.name) == ["datetime"])
     }
 
     @Test("the gate: another format, another reason, or a truncated preview stays rejected")
     func gateHolds() {
         let json = RejectedToolCall(reason: .malformedSyntax, format: .json, rawText: orphaned)
-        #expect(Qwen35CallRepair.recover(json, tools: [datetimeSchema]) == nil)
-        let unknown = RejectedToolCall(reason: .undeclaredTool, format: .qwen35, rawText: orphaned)
-        #expect(Qwen35CallRepair.recover(unknown, tools: [datetimeSchema]) == nil)
+        #expect(Qwen35CallRepair.recover(json, offered: offered) == nil)
+        let undeclared = RejectedToolCall(reason: .undeclaredTool, format: .qwen35, rawText: orphaned)
+        #expect(Qwen35CallRepair.recover(undeclared, offered: offered) == nil)
         let truncated = RejectedToolCall(
             reason: .malformedSyntax, format: .qwen35, rawText: orphaned + String(repeating: "x", count: 200),
             previewByteLimit: 64
         )
         #expect(truncated.isPreviewTruncated)
-        #expect(Qwen35CallRepair.recover(truncated, tools: [datetimeSchema]) == nil)
+        #expect(Qwen35CallRepair.recover(truncated, offered: offered) == nil)
     }
 
-    @Test("a repaired call naming a tool that isn't offered still fails upstream's own check")
+    @Test("a repaired call naming a tool that wasn't offered stays rejected — the repair never widens the set")
     func repairNeverWidensTheToolSet() {
-        let rejection = RejectedToolCall(reason: .malformedSyntax, format: .qwen35, rawText: orphaned)
-        let parameters: [String: any Sendable] = ["type": "object", "properties": [:] as [String: any Sendable]]
-        let function: [String: any Sendable] = ["name": "web_search", "parameters": parameters]
-        let other: [String: any Sendable] = ["type": "function", "function": function]
-        #expect(Qwen35CallRepair.recover(rejection, tools: [other]) == nil)
+        #expect(Qwen35CallRepair.recover(rejected(orphaned), offered: ["web_search"]) == nil)
+        #expect(Qwen35CallRepair.recover(rejected(orphaned), offered: []) == nil)
+    }
+
+    @Test("a buffer with one repairable and one still-malformed call is not half-repaired")
+    func mixedBufferStaysRejected() {
+        let broken = "<tool_call>\n<function=web_search>\n<parameter=query>\nx\n</tool_call>"
+        #expect(Qwen35CallRepair.recover(rejected(orphaned + "\n" + broken), offered: offered) == nil)
+    }
+
+    @Test("offered names read the ToolSpec shape; nil specs offer nothing")
+    func offeredNamesFromSpecs() {
+        #expect(Qwen35CallRepair.offeredNames([datetimeSchema]) == ["datetime"])
+        #expect(Qwen35CallRepair.offeredNames(nil).isEmpty)
     }
 }

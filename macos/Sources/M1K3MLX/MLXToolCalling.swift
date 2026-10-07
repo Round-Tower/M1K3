@@ -534,9 +534,11 @@ extension MLXBrainProvider: ToolCallingProvider {
                 case let .toolCall(libraryCall):
                     calls.append(MLXToolMapping.parsedToolCall(from: libraryCall))
                 case let .rejectedToolCall(rejection):
-                    if let repaired = Qwen35CallRepair.recover(rejection, tools: rendered.specs) {
+                    if let repaired = Qwen35CallRepair.recover(
+                        rejection, offered: Qwen35CallRepair.offeredNames(rendered.specs)
+                    ) {
                         calls += repaired.map(MLXToolMapping.parsedToolCall(from:))
-                        ToolTurnDiagnostics.logRepaired(rejection, calls: repaired.count, label: "toolTurn")
+                        ToolTurnDiagnostics.logRepaired(rejection, names: repaired.map(\.function.name), label: "toolTurn")
                     } else {
                         rejections += 1
                         ToolTurnDiagnostics.logRejected(rejection, label: "toolTurn")
@@ -727,14 +729,15 @@ extension MLXBrainProvider: ToolCallingProvider {
 /// call is indistinguishable from "the model never called" (LFM2.5-1.2B read
 /// 0/6 that way on 2026-09-05). Shared by the stateless and session loops.
 enum ToolTurnDiagnostics {
-    /// A rejected call `Qwen35CallRepair` recovered. Names and counts only — the raw text stays out.
-    static func logRepaired(_ rejection: RejectedToolCall, calls: Int, label: String) {
+    /// A rejected call `Qwen35CallRepair` recovered. Tool names only — every one is a declared tool
+    /// (the repair refuses any other), never argument values; the raw text stays out.
+    static func logRepaired(_ rejection: RejectedToolCall, names: [String], label: String) {
         let reason = rejection.reason.rawValue
-        let tool = rejection.toolName ?? "?"
+        let tools = names.joined(separator: ",")
         mlxToolLog.notice(
             """
             \(label, privacy: .public) REPAIRED tool call: reason=\(reason, privacy: .public) \
-            tool=\(tool, privacy: .public) calls=\(calls, privacy: .public) (orphan </parameter> dropped)
+            tools=[\(tools, privacy: .public)] (orphan </parameter> dropped)
             """
         )
     }
@@ -1085,9 +1088,11 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 case let .toolCall(libraryCall):
                     calls.append(MLXToolMapping.parsedToolCall(from: libraryCall))
                 case let .rejectedToolCall(rejection):
-                    if let repaired = Qwen35CallRepair.recover(rejection, tools: specs) {
+                    if let repaired = Qwen35CallRepair.recover(
+                        rejection, offered: Qwen35CallRepair.offeredNames(specs)
+                    ) {
                         calls += repaired.map(MLXToolMapping.parsedToolCall(from:))
-                        ToolTurnDiagnostics.logRepaired(rejection, calls: repaired.count, label: "toolTurnSession")
+                        ToolTurnDiagnostics.logRepaired(rejection, names: repaired.map(\.function.name), label: "toolTurnSession")
                     } else {
                         rejections += 1
                         ToolTurnDiagnostics.logRejected(rejection, label: "toolTurnSession")
