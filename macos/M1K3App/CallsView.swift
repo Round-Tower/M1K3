@@ -12,10 +12,19 @@
 //  empty state, routed through the tested CallRecordAction core) so recording lives
 //  where calls live; was only in the main toolbar, hidden behind this sheet. Added a
 //  live recording/transcribing banner with a ticking clock and the consent dialog.
+//  Review: Kev + claude-opus-5-5, 2026-10-07 — shows the load's note under the header, so a list
+//  with calls it couldn't open (or a locked log) says so instead of reading "No calls yet" under a
+//  non-zero count.
 
 import M1K3Calls
 import SwiftUI
 import UniformTypeIdentifiers
+
+/// One load of the call list: what it shows, and a note for what it couldn't.
+struct CallsLoad {
+    let calls: [CallSession]
+    let note: String?
+}
 
 struct CallsView: View {
     @Environment(AppEnvironment.self) private var env
@@ -25,18 +34,24 @@ struct CallsView: View {
     /// Loaded once (and on count change) rather than decrypting the whole call log
     /// on every body re-render — the recording banner alone re-runs body often.
     @State private var calls: [CallSession] = []
+    /// What `calls` can't show; assigned with `calls`, under the same cancellation check.
+    @State private var loadNote: String?
 
     var body: some View {
         VStack(spacing: 0) {
             header
             if env.isRecording || env.isTranscribingCall { activityBanner }
+            if let loadNote, !calls.isEmpty { loadNoteBanner(loadNote) }
             content
         }
         // Keyed on the count: a newer load cancels the one in flight, and a cancelled
         // load never lands, so two quick changes can't leave the older list showing.
         .task(id: env.callCount) {
             let loaded = await env.calls()
-            if !Task.isCancelled { calls = loaded }
+            if !Task.isCancelled {
+                calls = loaded.calls
+                loadNote = loaded.note
+            }
         }
         .fileImporter(
             isPresented: $showImporter,
@@ -128,6 +143,16 @@ struct CallsView: View {
         }
     }
 
+    /// What the list can't show — undecodable calls, or a log that wouldn't unlock.
+    private func loadNoteBanner(_ note: String) -> some View {
+        Label(note, systemImage: "lock.trianglebadge.exclamationmark")
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+    }
+
     /// Live indicator pinned under the header so a recording (or in-flight
     /// transcription) is visible whether the list is empty or full.
     private var activityBanner: some View {
@@ -154,7 +179,14 @@ struct CallsView: View {
 
     @ViewBuilder
     private var content: some View {
-        if calls.isEmpty {
+        if calls.isEmpty, let note = loadNote {
+            // Rows exist (the header counts them) but none would open: never "No calls yet".
+            ContentUnavailableView(
+                "Couldn’t open your calls",
+                systemImage: "lock.trianglebadge.exclamationmark",
+                description: Text(note)
+            )
+        } else if calls.isEmpty {
             ContentUnavailableView {
                 Label("No calls yet", systemImage: "phone.bubble")
             } description: {
