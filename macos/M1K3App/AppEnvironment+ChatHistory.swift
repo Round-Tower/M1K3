@@ -535,13 +535,16 @@ extension AppEnvironment {
             // and read here as a snapshot — per-turn content, never the
             // cached persona prefix.
             todoContextProvider: { AppEnvironment.todoGroundingSnapshot.withLock { $0 } },
-            // The tool router (flagged, Mini only): a turn it reads as plain chat
-            // skips the palette for one streamed generation. Read per turn.
+            // The tool router (flagged; Mini only unless `toolRouterAllTiers`): a turn it
+            // reads as plain chat skips the palette for one streamed generation; a tool turn
+            // tries the group head, then Mini's pick. Read per turn.
             plainRouteProvider: {
                 ToolRouterWiring.route(
                     provider: provider,
                     enabled: ToolRouterWiring.isEnabled(),
-                    dispatch: ToolRouterWiring.dispatchEnabled()
+                    dispatch: ToolRouterWiring.dispatchEnabled(),
+                    groupRouter: ToolRouterWiring.groupRouterEnabled(),
+                    allTiers: ToolRouterWiring.allTiersEnabled()
                 )
             }
         )

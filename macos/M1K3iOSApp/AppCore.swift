@@ -950,12 +950,14 @@ final class AppCore {
                 let facts = EgressFacts(webSearch: Self.webSearchAllowed(), brainIsHome: Self.homeBrainLive.withLock { $0 })
                 return EgressDisclosure.clause(facts, device: HostPlatform.thisDevice)
             },
-            // The Mac's tool router, mirrored (flagged, Mini only).
+            // The Mac's tool router, mirrored (flagged; Mini only unless `toolRouterAllTiers`).
             plainRouteProvider: {
                 ToolRouterWiring.route(
                     provider: provider,
                     enabled: ToolRouterWiring.isEnabled(),
-                    dispatch: ToolRouterWiring.dispatchEnabled()
+                    dispatch: ToolRouterWiring.dispatchEnabled(),
+                    groupRouter: ToolRouterWiring.groupRouterEnabled(),
+                    allTiers: ToolRouterWiring.allTiersEnabled()
                 )
             }
         )

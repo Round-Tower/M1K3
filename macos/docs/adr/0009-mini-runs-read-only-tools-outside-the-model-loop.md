@@ -82,3 +82,12 @@ notes, not their calendar. Which tool is a finer decision than whether a tool is
      obeyed the injection 1 → 0, talked about its instructions 2 → 0, wrote HTML 3 → 0, prompt ~3,200 →
      ~1,300 chars (docs/evals/2026-09-27-mini-dispatch-poisoned-history.json). The "Leaner prompts" figure
      above is now lower still. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.7 — two flags, both OFF until an arm measures them.
+     `toolRouterAllTiers`: any brain takes the route (Lil, Big, the pocket Mini), and Apple's model picks for
+     it where it is ready, so the MLX tiers dispatch read-only tools without writing a tool call (Qwen3.5
+     writes a malformed one without thinking). Arm: `M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch`. ADR 0008 found
+     no gain for Lil from the plain-chat route alone; dispatch is the untested half. `toolGroupRouter`: a
+     trained group head (ToolGroupRouter) in front of Apple's pick, despite the per-group result above: a
+     device pick also needs one cue word, and every abstention falls back to the pick. Arm: add
+     `_ROUTER_HEAD=1`. Its weights are an untrained stub until `tools/router/train_tool_router.py` runs on a
+     Mac. -->
