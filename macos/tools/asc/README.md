@@ -46,6 +46,7 @@ voice on a headset) are still yours to run, and the PR that made the change name
 | `review_notes.py show` / `set` | App Review Information notes on every platform's newest version, checked against `fastlane/review_notes.txt`'s rule: both inbound listeners (MCP server, Brain at Home) must be named — the 2026-09-16 `network.server` rejection. `precheck.py` runs the same check. | set + `--confirm` |
 | `promo.py show` / `set` | Promotional text (170 chars) — the one field that goes live without a build. | set + `--confirm` |
 | `events.py list` / `create` / `update` | In-app events (iPhone/iPad only): a DRAFT from a spec file (copy + art), or an in-place rewrite of an existing DRAFT's attributes and per-locale copy keeping its art. Never submits. | create / update (`--dry-run` to see payloads) |
+| `creative.py status` / `targets` / `upload` / `place` | Product page header + search results assets (iOS 27, App Asset Library): upload once (reserve → PUT → `{uploaded:true}` → poll), place per localization on a version, custom product page or PPO treatment. Checks ASC's chosen spec against the live catalogue and refuses a parent that isn't editable. Renders come from `tools/site/store_creative.py`. | upload / place + `--confirm` |
 | `testflight.py show` / `set` | The beta app description — one text every platform's testers read (betaAppLocalizations), from `TestFlight/beta_description.en-US.txt`; refuses text that doesn't name iPhone, iPad and Mac. Per-build "What to Test" is Xcode Cloud's (`TestFlight/notes/`). | set + `--confirm` |
 
 ```
