@@ -214,6 +214,9 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 16:30 — Mini vision investigation opened: the attach path is
+compiled in; a live URL-vs-CGImage test is written; AFM is `modelNotReady` right now. Confidence 0.5 —
+two live hypotheses, one test to decide.
 Review: Kev + claude-opus-5-5, 2026-10-07 16:00 — the `datetime` miss root-caused as a malformed call
 (orphan `</parameter>`); the empty-turn steer measured and backed out; the upstream issue drafted.
 Confidence 0.9 (the raw rejected text is in hand).
@@ -499,6 +502,14 @@ Fix list, in order:
 
 ### Open next
 
+- [~] **Mini vision — investigation started (2026-10-07):** the attach path IS compiled in (the
+      `#if compiler(>=6.4)` gate; local toolchain Swift 6.4 / Xcode 27), so the baseline really sent
+      `Attachment(imageURL:)`. Suspects: (1) the out-of-process model can't read the app's file URL in
+      the sandbox (no denial found in the log, but the window may have rolled), (2) AFM's image path
+      not ready / genuinely weak. `AFMVisionLiveTests` (opt-in `M1K3_AFM_EVAL=1`, unsandboxed) asks the
+      receipt total by URL AND by decoded CGImage — it decides between them. Blocked right now:
+      Apple Intelligence reports `modelNotReady` (assets updating); re-run when ready. If the CGImage
+      path reads it and the app doesn't, decode in-process and attach pixels, not paths.
 - [ ] **Mini vision (possible user-facing bug):** on the native AFM path every Mini answer
       confabulates ("The note says three hinges", "the function is `capture_overlay`"), ~38 s a turn,
       never "can't see". Either the attachment never reaches AFM or AFM vision is this weak — trace
