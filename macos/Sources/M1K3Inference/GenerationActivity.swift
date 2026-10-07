@@ -9,13 +9,20 @@
 //  after the display woke. The same happens to the app: an agent's overnight `ask_m1k3`,
 //  a long Big answer after the user walks away.
 //
-//  `.userInitiated` opts the process out of App Nap for the duration and nothing more:
-//  the display still sleeps on the user's schedule. Reference-counted, so overlapping
-//  turns (a chat turn plus an MCP ask) share one assertion and the last one out ends it.
+//  `.userInitiatedAllowingIdleSystemSleep` opts the process out of App Nap for the
+//  duration and nothing more: the display AND the system still sleep on the user's
+//  schedule. (Plain `.userInitiated` would also block idle system sleep — and
+//  `caffeinate -is` held that assertion all night without stopping the stall, so the
+//  App Nap opt-out is the only part that can help.) Reference-counted, so overlapping
+//  turns (a chat turn plus an MCP ask) share one assertion and the last one out ends
+//  it. A generation that never returns holds it until it does — there is no timeout.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8, Prior: none (new file).
-//  Open: verify-by-launch with the display asleep — the unit tests pin the bookkeeping,
-//  not what macOS does with the assertion.
+//  Open: UNVERIFIED that App Nap is the mechanism (display-off GPU/WindowServer throttling
+//  fits the evidence too). The test that decides it: the app with the display forced off,
+//  with and without the hold, read tok/s from the unified log + `pmset -g assertions`.
+//  Review: same day (pre-push review) — options narrowed from `.userInitiated` (which
+//  blocked idle system sleep, contrary to this header) to the App-Nap-only set.
 
 import Foundation
 import Synchronization
@@ -37,7 +44,7 @@ public protocol ActivityAsserting: Sendable {
 }
 
 public struct ProcessActivityAsserter: ActivityAsserting {
-    static let options: ProcessInfo.ActivityOptions = [.userInitiated]
+    static let options: ProcessInfo.ActivityOptions = .userInitiatedAllowingIdleSystemSleep
 
     public init() {}
 

@@ -8,6 +8,8 @@
 //  Reference-counted: overlapping turns share ONE assertion, and the last one out ends it.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85, Prior: none (new file).
+//  Review: same day (pre-push review) — the options are `.userInitiatedAllowingIdleSystemSleep`;
+//  cancellation and strict begin/end alternation pinned.
 
 import Foundation
 @testable import M1K3Inference
@@ -78,16 +80,40 @@ struct GenerationActivityTests {
             }
         }
         let calls = asserter.calls
-        #expect(calls.count(where: { $0.hasPrefix("begin") }) == calls.count(where: { $0 == "end" }))
+        // Strict alternation: never two begins (or two ends) in a row.
+        for (a, b) in zip(calls, calls.dropFirst()) {
+            #expect(a.hasPrefix("begin") != b.hasPrefix("begin"), "\(a) then \(b)")
+        }
+        #expect(calls.first?.hasPrefix("begin") == true)
         #expect(calls.last == "end")
         #expect(activity.holders == 0)
     }
 
-    @Test("the shared instance asks for user-initiated work, never display or system sleep prevention")
+    @Test("a cancelled turn ends the activity")
+    func endsOnCancel() async {
+        let asserter = RecordingAsserter()
+        let activity = GenerationActivity(asserter: asserter)
+        let task = Task {
+            try await activity.during("stream") {
+                try await Task.sleep(for: .seconds(60))
+            }
+        }
+        while activity.holders == 0 {
+            await Task.yield()
+        }
+        task.cancel()
+        _ = await task.result
+        #expect(asserter.calls == ["begin:stream", "end"])
+        #expect(activity.holders == 0)
+    }
+
+    @Test("the shared instance opts out of App Nap and nothing else: display and idle system sleep stay the user's")
     func productionOptions() {
-        // .userInitiated opts out of App Nap — what the throttling needed. The display may
-        // still sleep (that is the user's setting), and so may the system when idle.
-        #expect(ProcessActivityAsserter.options.contains(.userInitiated))
+        // `.userInitiated` would ALSO disable idle system sleep (#PR-review 2026-10-07) — and
+        // `caffeinate -is` already held that assertion overnight without stopping the stall, so
+        // only the App Nap opt-out can be the lever. `.userInitiatedAllowingIdleSystemSleep` is it.
+        #expect(ProcessActivityAsserter.options == .userInitiatedAllowingIdleSystemSleep)
+        #expect(!ProcessActivityAsserter.options.contains(.idleSystemSleepDisabled))
         #expect(!ProcessActivityAsserter.options.contains(.idleDisplaySleepDisabled))
     }
 }

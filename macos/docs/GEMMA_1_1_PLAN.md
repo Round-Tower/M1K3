@@ -214,6 +214,9 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 11:30 — pre-push review folded: the display-sleep trigger
+stays CONFIRMED, the App Nap mechanism is now marked UNVERIFIED with its deciding test, and the app
+hold is App-Nap-only (`.userInitiatedAllowingIdleSystemSleep`). Confidence 0.9 trigger, 0.5 mechanism.
 Review: Kev + claude-opus-5-5, 2026-10-07 10:00 — the stall section rewritten: the "one BPE word"
 mechanism was WRONG (a benchmark disproved it). Two real causes: display-sleep throttling (both
 edges, both runs) and swift-transformers 1.1.9's String-keyed BPE on Gemma's `▁` (1,183 → 8 ms on
@@ -387,10 +390,14 @@ and GPU alike (decode 35 → 0–3 tok/s, prefill 3.4 s → 24–55 s; prompts f
 | 02:35 display off | E4B collapses (`world-guernica`, 41 min, spans it) |
 | 08:17:37 display on | E4B back at 37 tok/s at 08:17:47 |
 
-The incumbent ran 23:59–00:32 entirely with the display on. **User-facing too:** the app generating
-with the display off (an agent's overnight `ask_m1k3`, a long Big answer after the user walks away)
-can crawl the same way. Fix: hold `ProcessInfo.beginActivity(.userInitiated)` while a turn generates;
-evals add `caffeinate -d`.
+The incumbent ran 23:59–00:32 entirely with the display on. The **trigger** is confirmed; the
+**mechanism** is not: App Nap fits, and so does display-off GPU/WindowServer throttling (`caffeinate
+-is` already held the idle-sleep assertion all night, so App Nap is the only lever the app holds).
+**User-facing too, if it's App Nap:** the app generating with the display off (an agent's overnight
+`ask_m1k3`, a long Big answer after the user walks away) can crawl the same way. Evals: `caffeinate -d`
+(proven by the evidence above). App: `beginActivity(.userInitiatedAllowingIdleSystemSleep)` around
+generation — **UNVERIFIED** until the deciding test: display forced off, with and without the hold,
+tok/s from the unified log and `pmset -g assertions`.
 
 **2. The tokenizer tax = swift-transformers 1.1.9's BPE on Gemma's `▁` pieces (MEASURED).** Sampling
 put real time in `BPETokenizer.bpe(token:)`; a scratch benchmark (same tokenizer files, the real
@@ -417,8 +424,9 @@ Still open: E4B's 10.3 GB own peak — the stall explains the latency, not obvio
 Fix list, in order:
 1. **Eval:** `caffeinate -dis` for every overnight run (the runner scripts), and log display state
    into the scorecard provenance. Re-measure gemma latency and RAM after.
-2. **App:** `beginActivity(.userInitiated)` around generation (chat turns, MCP `ask_m1k3`, call
-   summaries). Verify by launch with the display off.
+2. **App:** `beginActivity(.userInitiatedAllowingIdleSystemSleep)` around generation (chat turns, MCP
+   `ask_m1k3`, call summaries) — App Nap only; display and system sleep stay the user's. UNVERIFIED:
+   the display-off A/B decides whether App Nap is the mechanism at all.
 3. **Dependencies (risk surface, probe-first):** WhisperKit 0.18 → 1.1 (`argmax-oss-swift`) +
    swift-transformers 1.1.9 → 1.3.4. Owes: `swift package resolve`, the voice launch check, the
    gemma-4 native tool-call smoke (`macos/CLAUDE.md`), exact-id parity on the EmbeddingGemma 2

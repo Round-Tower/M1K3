@@ -352,7 +352,10 @@ def run_direct(args, app: Path, trig: dict[str, str], plan: "InstancePlan") -> i
     with open(log_path, "w") as log:
         proc = subprocess.Popen([str(binary)], env=direct_env(trig, os.environ), stdout=log, stderr=subprocess.STDOUT,
                                 cwd=tempfile.gettempdir())
-        subprocess.Popen(caffeinate_argv(proc.pid), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            subprocess.Popen(caffeinate_argv(proc.pid), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError as err:  # never orphan the app over a missing caffeinate
+            print(f"⚠ caffeinate unavailable ({err}); the display may sleep and throttle the run", file=sys.stderr)
         lines = 0
         while proc.poll() is None:
             if time.monotonic() - started > args.timeout_min * 60:

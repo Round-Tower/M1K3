@@ -855,8 +855,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         _ messages: [ToolMessage],
         onToken: @escaping @Sendable (String) -> Void
     ) async throws -> ToolTurn {
-        // Each agent step holds the activity (GenerationActivity) — a tool turn is
-        // several sends, and the display can sleep between any two.
+        // Each agent step holds the activity (GenerationActivity) while it renders,
+        // prefills and decodes. Tool execution BETWEEN sends runs unheld — the stub-free
+        // tools are short; hold across the whole LocalAgent.run if one ever isn't.
         try await GenerationActivity.shared.during("M1K3 is answering") {
             try await sendHeld(messages, onToken: onToken)
         }
