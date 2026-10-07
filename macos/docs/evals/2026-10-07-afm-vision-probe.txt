@@ -1,0 +1,7 @@
+# AFMVisionLiveTests — M1K3_AFM_EVAL=1 swift test --filter AFMVisionLiveTests (unsandboxed), 2026-10-07 21:23
+# Worktree m1k3-wt-multimodal, night/2026-10-07; macOS 27.0, M1 Max. The fixture receipt total is €23.40 by construction.
+AFM-VISION availability=available
+AFM-VISION url="€23.40" cgimage="€23.40"
+􁁛  Test "Mini reads the receipt total by URL and by CGImage (prints both answers)" passed after 4.232 seconds.
+􁁛  Suite AFMVisionLiveTests passed after 4.232 seconds.
+􁁛  Test run with 1 test in 1 suite passed after 4.232 seconds.
