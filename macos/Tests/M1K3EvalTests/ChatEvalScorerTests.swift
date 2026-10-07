@@ -1003,6 +1003,14 @@ struct ChatEvalScorerTests {
         #expect(RefusalHeuristic.containsWholeWord("(4)", "4"))
         #expect(RefusalHeuristic.containsWholeWord("the total is €23.40.", "23.40"))
         #expect(RefusalHeuristic.containsWholeWord("23,40 euro", "23,40"))
+        // The ends of the string — where the index guards live.
+        #expect(RefusalHeuristic.containsWholeWord("4", "4"))
+        #expect(RefusalHeuristic.containsWholeWord("4.", "4"))
+        #expect(RefusalHeuristic.containsWholeWord(".4", "4"))
+        #expect(!RefusalHeuristic.containsWholeWord("3.4", "4"))
+        #expect(!RefusalHeuristic.containsWholeWord("4.5", "4"))
+        // The accepted gap, pinned so a change to it is deliberate.
+        #expect(!RefusalHeuristic.containsWholeWord("best = 0.0", "best = 0"))
     }
 
     @Test("'i decline' is a whole phrase: 'I declined … earlier, but here it is' is not a refusal")

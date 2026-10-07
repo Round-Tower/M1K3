@@ -331,20 +331,26 @@ public enum RefusalHeuristic {
         func isSeparator(_ c: Character) -> Bool {
             c == "." || c == ","
         }
+        /// ASCII digits only for the decimal rule: `isNumber` is also true for "½", "²", Arabic-Indic.
+        /// Known, accepted gaps (indistinguishable from a real decimal without reading meaning): a
+        /// no-space list "1,2,3,4" won't match "4", and a forbidden "best = 0" won't fire on "best = 0.0".
+        func isDigit(_ c: Character) -> Bool {
+            c.isASCII && c.isNumber
+        }
         let boundBefore = isWord(first)
         let boundAfter = isWord(last)
         /// The character beside `index` going away from the match continues the number when it is a
         /// separator with a digit beyond it — only checked for a digit edge.
         func joinsBefore(_ start: String.Index) -> Bool {
-            guard first.isNumber, start > haystack.startIndex else { return false }
+            guard isDigit(first), start > haystack.startIndex else { return false }
             let sep = haystack.index(before: start)
             guard isSeparator(haystack[sep]), sep > haystack.startIndex else { return false }
-            return haystack[haystack.index(before: sep)].isNumber
+            return isDigit(haystack[haystack.index(before: sep)])
         }
         func joinsAfter(_ end: String.Index) -> Bool {
-            guard last.isNumber, end < haystack.endIndex, isSeparator(haystack[end]) else { return false }
+            guard isDigit(last), end < haystack.endIndex, isSeparator(haystack[end]) else { return false }
             let beyond = haystack.index(after: end)
-            return beyond < haystack.endIndex && haystack[beyond].isNumber
+            return beyond < haystack.endIndex && isDigit(haystack[beyond])
         }
         var from = haystack.startIndex
         while from < haystack.endIndex,
