@@ -1,0 +1,63 @@
+name: Dependency freshness
+
+# Weekly: how far behind are the Swift dependencies, and who holds each one back?
+# Born 2026-10-07 — swift-transformers sat seven months behind a release that made Gemma
+# tokenization ~150x faster, capped by WhisperKit's own manifest, and nothing said so.
+# Deterministic (no LLM): runs macos/tools/ci/dep_freshness.py and keeps ONE rolling
+# "📦 Dependency freshness" issue's body current. It comments only when the count of
+# constraint-capped packages rises, so the issue stays quiet unless something new is stuck.
+# An incomplete report (any failed GitHub fetch) exits 4 and fails the job — the issue is
+# never overwritten with a report that would read "nothing behind".
+#
+# SECURITY: keep GH_TOKEN = github.token. The body quotes third-party release notes (as inert
+# code spans), and events made with GITHUB_TOKEN never trigger other workflows — a PAT or App
+# token here would let a note containing "@claude" reach claude.yml.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: dep-freshness
+  cancel-in-progress: false # a writer: never cut a run between create and edit
+
+permissions:
+  contents: read
+  issues: write # create / update the rolling issue
+
+jobs:
+  report:
+    name: Weekly dependency freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Build the report
+        run: python3 macos/tools/ci/dep_freshness.py --markdown > "$RUNNER_TEMP/body.md"
+
+      - name: Update the rolling issue
+        run: |
+          title="📦 Dependency freshness"
+          # The count lives on the FIRST line (render_markdown pins it); never grep the whole
+          # body, which quotes third-party text.
+          count() { head -1 | grep -oE '\*\*[0-9]+ held back' | grep -oE '[0-9]+' | head -1 || true; }
+          capped_now=$(count < "$RUNNER_TEMP/body.md"); capped_now=${capped_now:-0}
+          # Our issue = the label AND the bot's authorship (no title hijack; no 300-issue
+          # list cap). A closed issue is re-created next Monday — closing it is not a mute.
+          gh label create dep-freshness --color BFD4F2 --description "Weekly dependency freshness report" --force >/dev/null
+          number=$(gh issue list --state open --label dep-freshness --author "app/github-actions" \
+            --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            gh issue create --title "$title" --label dep-freshness --body-file "$RUNNER_TEMP/body.md"
+            exit 0
+          fi
+          capped_before=$(gh issue view "$number" --json body --jq .body | count); capped_before=${capped_before:-0}
+          gh issue edit "$number" --body-file "$RUNNER_TEMP/body.md"
+          if [ "$capped_now" -gt "$capped_before" ]; then
+            gh issue comment "$number" --body "Capped packages rose from $capped_before to $capped_now — see the table above."
+          fi

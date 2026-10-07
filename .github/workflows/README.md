@@ -12,6 +12,7 @@ and never covered the Swift Mac MVP — the active surface. It was removed.
 | **`ci.yml`** | Tests. `swift-mac` runs `swift test` on the macOS MVP; `app-build` compiles the app shell; `scheme-drift` guards the test scheme. | push to `master`/`develop`, all PRs |
 | **`security.yml`** | TruffleHog (verified secrets, repo-wide). | push to `master`/`develop`, all PRs |
 | **`nightly-dmg.yml`** | Signed/notarized DMG → GitHub Release (skips until signing secrets are set). | nightly cron, manual |
+| **`dep-freshness.yml`** | `macos/tools/ci/dep_freshness.py`: Swift deps behind, who caps each, missed perf/security notes → the rolling "📦 Dependency freshness" issue. | Mondays 06:00 UTC, manual |
 | **`claude.yml`** | `@claude` assistant on issues/PRs. | `@claude` mentions |
 | **`claude-code-review.yml`** | Auto Claude review of **Android/Kotlin** changes. | PRs touching `app/**/*.kt` |
 | **`claude-code-review-mac.yml`** | Auto Claude review of **Swift/Mac** changes and the CI tooling. | PRs touching `macos/**/*.swift`, the package manifest, `project.yml`, `macos/tools/**`, `.github/workflows/**` — docs-only PRs get no auto pass; summon one |

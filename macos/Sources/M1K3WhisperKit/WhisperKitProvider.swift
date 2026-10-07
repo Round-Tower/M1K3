@@ -53,6 +53,10 @@
 //  parks once with the reason on screen instead of counting empty listens. The engine teardown is
 //  WhisperKit's own `stopRecording` (tap removed, input disconnected, stop + reset), read in the
 //  pinned checkout. Confidence 0.8 (verify-by-launch: a real start failure on a real route).
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75 — WhisperKit 0.18 → 1.1: the transcriber
+//  actor now takes its models as non-Sendable `sending` parameters; the kit's shared stateless models opt
+//  out of region checking by name, and `@preconcurrency import WhisperKit` is gone (zero diagnostics
+//  without it under 1.x). No behaviour change intended — the voice launch check is owed.
 
 import AVFoundation
 #if os(macOS)
@@ -67,10 +71,11 @@ import M1K3Inference
 import M1K3Voice
 import os
 
-// @preconcurrency is LOAD-BEARING here (checked 2026-07-16): removing it yields
-// real `sending` diagnostics on AudioStreamTranscriber construction (non-Sendable
-// AudioEncoding/TextDecoding/tokenizer). Re-check on the next WhisperKit bump.
-@preconcurrency import WhisperKit
+// No @preconcurrency (re-checked 2026-10-07, WhisperKit 1.1): it was load-bearing on
+// 0.18 (2026-07-16) for the AudioStreamTranscriber construction; under 1.x the only
+// crossing is the named `nonisolated(unsafe)` locals in startListening, and the target
+// builds with zero diagnostics without it — so any NEW non-Sendable crossing gets flagged.
+import WhisperKit
 
 /// `@unchecked Sendable`: WhisperKit + the active streamer/continuation are
 /// guarded by `lock`; WhisperKit's own components are actor/queue-isolated.
@@ -357,12 +362,25 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
                 }
             }
 
+            // WhisperKit 1.x hands these to the transcriber actor as non-Sendable
+            // `sending` parameters. What is actually shared (read in the 1.1 checkout,
+            // 2026-10-07): the per-decode KV state lives in per-call `DecodingInputs`, not on
+            // the TextDecoder; batch transcription has its OWN kit (WhisperKitBatchTranscriber's
+            // loader), so live and batch never share these; within live, sessions overlap only
+            // across the stop/start window, and the decoder's tokenizer + language cache are
+            // the shared mutable parts (the multilingual caveat below). So they opt out of
+            // region checking here, by name, rather than the whole file losing the check.
+            nonisolated(unsafe) let audioEncoder = kit.audioEncoder
+            nonisolated(unsafe) let featureExtractor = kit.featureExtractor
+            nonisolated(unsafe) let segmentSeeker = kit.segmentSeeker
+            nonisolated(unsafe) let textDecoder = kit.textDecoder
+            nonisolated(unsafe) let sharedTokenizer = tokenizer
             let streamer = AudioStreamTranscriber(
-                audioEncoder: kit.audioEncoder,
-                featureExtractor: kit.featureExtractor,
-                segmentSeeker: kit.segmentSeeker,
-                textDecoder: kit.textDecoder,
-                tokenizer: tokenizer,
+                audioEncoder: audioEncoder,
+                featureExtractor: featureExtractor,
+                segmentSeeker: segmentSeeker,
+                textDecoder: textDecoder,
+                tokenizer: sharedTokenizer,
                 // A FRESH processor per session (not the shared kit.audioProcessor):
                 // this session's stopRecording() then touches only THIS engine, so a
                 // stale teardown can never kill a live successor's mic. The heavy

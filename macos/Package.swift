@@ -23,6 +23,9 @@
 //  tests; M1K3MCPKit depends on it for the todo value types.
 //  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — M1K3Chat (and its tests) depend on the
 //  dependency-free M1K3LanguageModel: the PCC rung's policy + backend seam, used by ChatSession's PCC send path.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75 — WhisperKit 0.18.0 (`from: "0.15.0"`) → 1.1.0 (now
+//  `argmax-oss-swift`, no swift-transformers) and swift-transformers 1.1.9 (`upToNextMinor 1.1.6`) → 1.3.4 (priority-queue BPE: Gemma tokenization
+//  ~150× faster, ids identical). swift-jinja rides 2.3.6 → 2.5.1. Owed: voice launch check, gemma-4 tool smoke.
 
 import Foundation
 import PackageDescription
@@ -159,12 +162,14 @@ let package = Package(
         // no `.git` suffix) so SwiftPM resolves one copy, not two.
         .package(url: "https://github.com/ml-explore/mlx-swift", .upToNextMinor(from: "0.31.6")),
         // Downloader/Tokenizer for the MLX stack. 3.x removed the built-in HF
-        // client; the official adapter packages (swift-tokenizers-mlx) clash
-        // with WhisperKit's swift-transformers (duplicate `Tokenizers` target),
-        // so M1K3 bridges the small Downloader/TokenizerLoader protocols to
-        // swift-transformers directly — the SAME library WhisperKit already
-        // pins, and the same HubApi the 2.x line used (cache layout preserved).
-        .package(url: "https://github.com/huggingface/swift-transformers", .upToNextMinor(from: "1.1.6")),
+        // client; M1K3 bridges the small Downloader/TokenizerLoader protocols to
+        // swift-transformers directly (the same HubApi the 2.x line used, cache
+        // layout preserved; `cache: nil` at every HubApi — one store, no second
+        // content-addressed copy). ≥ 1.3.2 for the priority-queue BPE: on 1.1.9 the
+        // gemma-4 persona took 1,183 ms to tokenize, on 1.3.4 8 ms, same ids —
+        // and every agent step re-tokenizes. WhisperKit 1.x no longer depends on
+        // swift-transformers, so the old shared-pin constraint is gone.
+        .package(url: "https://github.com/huggingface/swift-transformers", from: "1.3.4"),
         // Official MCP Swift SDK — the M1K3MCP stdio server exposes M1K3's
         // knowledge to Claude Desktop/Code as MCP tools.
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.7.0"),
@@ -172,7 +177,7 @@ let package = Package(
         // engine). Heavy (CoreML + model download), so it's isolated to the
         // M1K3WhisperKit target; Apple Speech (system framework) is the
         // always-available fallback behind the same TranscriptionProvider seam.
-        .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "0.15.0"),
+        .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "1.1.0"),
     ],
     targets: [
         // The single source of truth for unified logging: the `app.m1k3`

@@ -21,6 +21,9 @@
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.8 (bridge compiles +
 //  mirrors 2.30.6's own Load.swift glue incl. the offline/auth fallbacks; the
 //  download path is verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — swift-transformers 1.3.4: both HubApis
+//  pass `cache: nil`, keeping ONE store (the snapshot layout `downloadBase/models/<id>` is unchanged
+//  from 1.1.9, so existing weights stay hits; 1.3's content-addressed HubCache would add a second copy).
 //
 
 import Foundation
@@ -120,12 +123,12 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
     /// filesystem side effects would fire under UNSANDBOXED `swift test` and
     /// mutate the host's real ~/Library (PR #92 review).
     static let llmDefault = HubApiDownloader(
-        hub: HubApi(downloadBase: ModelStoreLocation.llmBase())
+        hub: HubApi(downloadBase: ModelStoreLocation.llmBase(), cache: nil)
     )
 
     /// Downloads where 2.x's `MLXEmbedders.loadModelContainer` default put
     /// embedder weights (Documents/huggingface).
-    static let embedderDefault = HubApiDownloader(hub: HubApi())
+    static let embedderDefault = HubApiDownloader(hub: HubApi(cache: nil))
 
     func download(
         id: String,

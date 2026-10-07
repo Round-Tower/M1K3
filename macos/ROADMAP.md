@@ -119,7 +119,9 @@ the first Teams customer, the move from engineer to honest founder.
   `CompanionFraming.fit(headroom:)` is the one knob.
 - Bluetooth-headset voice test on the Mac (memory `mac-bluetooth-vpio-starves-mic`).
 - Constellation window ideal frame + a richer demo seed for the held plate.
-- WhisperKit 0.18 → 1.1: probe-first, post-launch only.
+- WhisperKit 0.18 → 1.1: probe-first, post-launch only. **Probed 2026-10-07** with swift-transformers
+  1.3.4 (the Gemma tokenizer fix): builds, `swift test` green, one region-isolation fix. Owed before
+  landing: voice launch check, gemma-4 tool-call smoke, Kev's call on timing vs the store submission.
 
 ### Standing 1.0.x items (status lives in `docs/GOLDEN_GATE_PLAN.md` § 1.0.x)
 
@@ -425,3 +427,6 @@ stays a possible later companion.
      Backlog), one was mostly already shipped via supersession (dropped) with a
      genuinely-open remainder (distiller-quality eval, moved to Then). Prior:
      Kev + claude-sonnet-5 (this file, first pass).-->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-07 — the WhisperKit 0.18 → 1.1 line: probed with
+     swift-transformers 1.3.4 (the Gemma tokenizer fix, GEMMA_1_1_PLAN); builds and tests green; the
+     launch checks and the landing timing stay open. Confidence 0.75. -->
