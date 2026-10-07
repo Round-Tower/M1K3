@@ -53,6 +53,9 @@
 //  parks once with the reason on screen instead of counting empty listens. The engine teardown is
 //  WhisperKit's own `stopRecording` (tap removed, input disconnected, stop + reset), read in the
 //  pinned checkout. Confidence 0.8 (verify-by-launch: a real start failure on a real route).
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75 — WhisperKit 0.18 → 1.1: the transcriber
+//  actor now takes its models as non-Sendable `sending` parameters; the kit's shared stateless models opt
+//  out of region checking by name. No behaviour change intended — the voice launch check is owed.
 
 import AVFoundation
 #if os(macOS)
@@ -357,12 +360,21 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
                 }
             }
 
+            // WhisperKit 1.x hands these to the transcriber actor as non-Sendable
+            // `sending` parameters. They are the kit's shared, stateless models (see the
+            // audioProcessor note below), so they opt out of region checking here, by
+            // name, rather than the whole file losing the check.
+            nonisolated(unsafe) let audioEncoder = kit.audioEncoder
+            nonisolated(unsafe) let featureExtractor = kit.featureExtractor
+            nonisolated(unsafe) let segmentSeeker = kit.segmentSeeker
+            nonisolated(unsafe) let textDecoder = kit.textDecoder
+            nonisolated(unsafe) let sharedTokenizer = tokenizer
             let streamer = AudioStreamTranscriber(
-                audioEncoder: kit.audioEncoder,
-                featureExtractor: kit.featureExtractor,
-                segmentSeeker: kit.segmentSeeker,
-                textDecoder: kit.textDecoder,
-                tokenizer: tokenizer,
+                audioEncoder: audioEncoder,
+                featureExtractor: featureExtractor,
+                segmentSeeker: segmentSeeker,
+                textDecoder: textDecoder,
+                tokenizer: sharedTokenizer,
                 // A FRESH processor per session (not the shared kit.audioProcessor):
                 // this session's stopRecording() then touches only THIS engine, so a
                 // stale teardown can never kill a live successor's mic. The heavy
