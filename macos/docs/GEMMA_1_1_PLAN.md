@@ -214,6 +214,8 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 14:30 — Qwen3.5 vision launch-proven (14/16, tools 9/10 on the
+VLM path, 4.56 GB); it leads the "Lil sees" question. Confidence 0.7 — ×1, the ×3 column is owed.
 Review: Kev + claude-opus-5-5, 2026-10-07 13:30 — midday progress: #498 landed, #499 (deps + the
 freshness tooling) open with the smoke A/B (Big −27% at constant power mode), per-turn hold on the
 next branch. Confidence 0.9 on the smoke numbers (20/20 each arm, n=20 per brain).
@@ -450,6 +452,12 @@ Fix list, in order:
   a weekly workflow keeps a rolling "📦 Dependency freshness" issue. On master's old tree it flags
   swift-transformers capped by WhisperKit, quoting the very fix (#346). Next in its list: the
   mlx-swift 0.32.3 + mlx-swift-lm 3.32.3 pair (deadlock + leak fixes; our own pin caps it).
+- **Qwen3.5 SEES** (launch-proven 2026-10-07, `docs/evals/2026-10-07-qwen35-vlm-proof-x1-ac.json`): its
+  cached conversion carries the vision tower; routed through MLXVLM by exact id it scores **vision
+  14/16** (Big 14/16, E4B 13/16 at ×1) and **tool-use 9/10** on the VLM path, own peak **4.56 GB**.
+  With text tied (93.1 vs 92.0) that makes Qwen3.5 the leading Lil candidate for "Lil sees":
+  lighter than E4B, sees like Big. Owed: the ×3 all-kinds column on the VLM path, the tools A/B
+  (`--thinking always`), and the speed read once #499 lands.
 - `feat/gemma-1-1-next`: one hold per **agent turn** (`LocalAgent.run`; no unheld tool gaps) and
   per-call-site reasons for `pmset -g assertions`.
 

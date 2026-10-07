@@ -15,6 +15,7 @@
 //  whatever its cache geometry; the override wins for every family (red before the fix).
 //  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.9 — E4B routing pins: the uniform 4-bit id
 //  takes the VLM path; OptiQ, 8-bit and a local audition folder stay on the LLM path.
+//  Review: same day (overnight) — Qwen3.5-4B's exact id joins the VLM allow-list; 2B stays text-only.
 
 import Foundation
 import M1K3Chat
@@ -433,6 +434,15 @@ struct MLXBrainProviderTests {
         ))
         #expect(!MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-OptiQ-4bit")
+        ))
+        // Qwen3.5-4B (exact id): the conversion ships the vision tower (297 `vision_tower.*`
+        // tensors, processor configs) and model_type `qwen3_5` is MLXVLM.Qwen35 in our pin.
+        // Other Qwen3.5 sizes stay on the LLM path until a launch proves them.
+        #expect(MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "mlx-community/Qwen3.5-4B-MLX-4bit")
+        ))
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "mlx-community/Qwen3.5-2B-4bit")
         ))
         // A directory audition is named "ParentDir/ModelDir": a local E4B folder takes
         // the LLM path (text-only, vision scores n/a) — the safe default (#497 review).
