@@ -30,6 +30,8 @@ dedupe by number; notes run newest first; main()'s exit codes are pinned by a te
 Review: same day (pre-push code + security review) — failed fetches are counted (INCOMPLETE,
 exit 4), `..<`/`...` ranges keep their upper bound, `reachable` splits a stale lock from a
 real cap, notes are inert code spans capped at 160 chars, the body at 60k.
+Review: same day (#504 bot passes) — tag listing pages up to MAX_TAG_PAGES; a full last page is
+FAILED by design (documented at the constant). Confidence 0.8.
 """
 from __future__ import annotations
 
@@ -59,7 +61,9 @@ MAX_HIGHLIGHTS_PER_RELEASE = 3
 MAX_NOTES_PER_PACKAGE = 5
 MAX_NOTE_CHARS = 160  # release notes are third-party text: short, inert code spans only
 MAX_BODY_CHARS = 60_000  # GitHub's issue body limit is 65,536
-MAX_TAG_PAGES = 10  # 1,000 tags — past that a repo's newest tag would still be a release
+# 1,000 tags. Still full at the cap = FAILED, so the whole report reads INCOMPLETE (exit 4):
+# deliberate — the tracked repos sit far below it; if one ever crosses, degrade that one row.
+MAX_TAG_PAGES = 10
 
 
 # --------------------------------------------------------------------------- #
