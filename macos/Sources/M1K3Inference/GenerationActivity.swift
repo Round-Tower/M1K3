@@ -23,6 +23,8 @@
 //  with and without the hold, read tok/s from the unified log + `pmset -g assertions`.
 //  Review: same day (pre-push review) — options narrowed from `.userInitiated` (which
 //  blocked idle system sleep, contrary to this header) to the App-Nap-only set.
+//  Review: Kev + claude-opus-5-5, 2026-10-07 — #498 review follow-ups: `during` runs on the
+//  caller's isolation (LocalAgent holds across a whole turn); call sites carry distinct reasons.
 
 import Foundation
 import Synchronization
@@ -74,7 +76,12 @@ public final class GenerationActivity: Sendable {
 
     /// Run `work` with the activity held; it ends when the last overlapping hold returns
     /// or throws. `reason` names the first holder (macOS shows it in `pmset -g assertions`).
-    public func during<T>(_ reason: String, _ work: () async throws -> T) async rethrows -> T {
+    /// `work` runs on the caller's isolation, so an actor can hold across its own body.
+    public func during<T>(
+        _ reason: String,
+        isolation _: isolated (any Actor)? = #isolation,
+        _ work: () async throws -> T
+    ) async rethrows -> T {
         enter(reason)
         defer { leave() }
         return try await work()
