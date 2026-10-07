@@ -79,12 +79,12 @@ protocols in their own targets. `M1K3App/` is a thin shell; `AppEnvironment` (+ 
   live inside the container under `Library/Application Support/models/<org>/<repo>/`,
   never Caches (macOS purged the brains twice, #92). `DEVELOPMENT_TEAM` is pinned in
   `project.yml` — a stable signing identity keeps Keychain/TCC grants.
-- **`Package.swift` pins mlx-swift-lm to a main REVISION** (`ee673d6a`, 2026-09-26, for
-  #516/#533/#514/#575 + #620/#584/#611/#613; back to a tag when one carries #516 — **3.32.3
-  does** (2026-09-30, our pin + 6 commits). The move to 3.32.3 also moves our direct mlx-swift pin
-  (`.upToNextMinor(from: "0.31.6")`) to ≥ 0.32.3, together: mlx-swift 0.32.0–0.32.2 crash at launch
-  below macOS/iOS 26.4. Kokoro links raw MLX, so add a voice launch check). `newCache(parameters:)`
-  throws there. `tools/ci/dep_freshness.py` says what's behind, **who caps it** and which missed
+- **`Package.swift` pins mlx-swift-lm to the 3.32.x tag line and mlx-swift to 0.32.x, together**
+  (2026-10-07: 3.32.3 = the old `ee673d6a` revision pin + 6 commits, carrying #516; its manifest
+  requires mlx-swift ≥ 0.32.3 — 0.32.0–0.32.2 crash at launch below macOS/iOS 26.4). A mlx-swift
+  MINOR move bumps `MLXEmbeddingService.kernelTag` (a guard test enforces it) and so re-indexes
+  every store once. Kokoro links raw MLX, so an MLX bump owes a voice launch check. In 3.32.x
+  `UserInput.Image` is a struct with a `source` enum, and `newCache(parameters:)` throws. `tools/ci/dep_freshness.py` says what's behind, **who caps it** and which missed
   release notes matter (a weekly "📦 Dependency freshness" issue runs it). Dep bumps are probe-first
   (`swift package resolve`) and **every bump owes a gemma-4 native tool-call
   smoke**: `M1K3_SELFTEST_CHATEVAL=1 M1K3_SELFTEST_CHATEVAL_BRAINS=big
@@ -110,3 +110,5 @@ on turn one goes back — measure at the next /retro. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — the dep-bump bullet points at
 tools/ci/dep_freshness.py (what's behind, who caps it); the WhisperKit/swift-transformers clash it
 named is gone with WhisperKit 1.x. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — the MLX pin bullet: back on the 3.32.x / 0.32.x
+tag pair; the kernelTag re-index and the voice-check obligations named. -->

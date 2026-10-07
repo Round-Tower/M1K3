@@ -38,6 +38,8 @@
 //  adopted for the same bug class on 06-08/09; the embedder was the last
 //  straggler. Behaviour otherwise identical (failures clear the slot, so
 //  `isAvailable()` retry semantics are preserved).
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — kernelTag → mlx-swift-0.32 with the mlx-swift
+//  0.31.6 → 0.32.3 / mlx-swift-lm 3.32.3 pair: stores re-index once on next launch, by design (the guard caught it).
 
 import Foundation
 import M1K3Inference
@@ -63,7 +65,7 @@ public final class MLXEmbeddingService: EmbeddingService, @unchecked Sendable {
     /// embedding KERNELS live there, and a kernel change shifts the vector
     /// space even with identical weights. Bumping this fires the store's
     /// auto re-index on next launch (see EmbedderReindexPolicy).
-    public static let kernelTag = "mlx-swift-0.31"
+    public static let kernelTag = "mlx-swift-0.32"
 
     /// Identity of the vector space: model + MRL width + kernel generation.
     /// The `d\(dimension)` segment makes a future MRL truncation change

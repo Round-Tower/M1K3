@@ -18,6 +18,8 @@
 //  dialect by model_type (templates read off HF); granitemoehybrid stays unarmed.
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — the qwen3_5 family resolves to `.qwen35`
 //  (both dialects in one frame); a parse test pins the dropped-JSON-call bug on the strict parser.
+//  Review: Kev + claude-opus-5-5, 2026-10-07 — mlx-swift-lm 3.32.3: `UserInput.Image` is a struct with a `source`
+//  enum, so the image test matches `.url` on `.source`.
 
 import Foundation
 import M1K3Inference
@@ -462,7 +464,7 @@ struct MLXParsedToolCallTests {
         #expect(allowed.role == .user)
         #expect(allowed.content == "what is this?")
         #expect(allowed.images.count == 1)
-        if case let .url(passed) = allowed.images.first {
+        if case let .url(passed)? = allowed.images.first?.source {
             #expect(passed == url)
         } else {
             Issue.record("expected a .url image part")

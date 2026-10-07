@@ -26,6 +26,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75 — WhisperKit 0.18.0 (`from: "0.15.0"`) → 1.1.0 (now
 //  `argmax-oss-swift`, no swift-transformers) and swift-transformers 1.1.9 (`upToNextMinor 1.1.6`) → 1.3.4 (priority-queue BPE: Gemma tokenization
 //  ~150× faster, ids identical). swift-jinja rides 2.3.6 → 2.5.1. Owed: voice launch check, gemma-4 tool smoke.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75 — mlx-swift-lm back to a TAG (3.32.3 = our ee673d6a
+//  pin + 6 commits, carries #516) with mlx-swift 0.31.6 → 0.32.3 together (the tag requires it; 0.32.2 fixes a
+//  deadlock + a leak, 0.32.3 the < 26.4 launch crash). Owed: the gemma-4 tool smoke + the voice launch check.
 
 import Foundation
 import PackageDescription
@@ -153,14 +156,14 @@ let package = Package(
         // ⚠️ #548 adds cross-dialect tool-call recovery and rejects native calls
         // whose arguments miss the declared schema — the tool-call smoke is the
         // gate for this bump, not a formality.
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", revision: "ee673d6a71d76e67b532dc7eaf91d92edc3bb8bb"),
+        .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", .upToNextMinor(from: "3.32.3")),
         // mlx-swift itself (MLX/MLXNN/MLXFFT/MLXFast) — mlx-swift-lm depends on
         // this but doesn't re-export its products, so M1K3Kokoro (which needs
         // the raw neural-net/FFT primitives for the vendored Kokoro port, not
         // mlx-swift-lm's LLM-loading machinery) declares it directly. SAME URL
         // mlx-swift-lm itself pins (`https://github.com/ml-explore/mlx-swift`,
         // no `.git` suffix) so SwiftPM resolves one copy, not two.
-        .package(url: "https://github.com/ml-explore/mlx-swift", .upToNextMinor(from: "0.31.6")),
+        .package(url: "https://github.com/ml-explore/mlx-swift", .upToNextMinor(from: "0.32.3")),
         // Downloader/Tokenizer for the MLX stack. 3.x removed the built-in HF
         // client; M1K3 bridges the small Downloader/TokenizerLoader protocols to
         // swift-transformers directly (the same HubApi the 2.x line used, cache
