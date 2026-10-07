@@ -6,6 +6,12 @@ name: Dependency freshness
 # Deterministic (no LLM): runs macos/tools/ci/dep_freshness.py and keeps ONE rolling
 # "📦 Dependency freshness" issue's body current. It comments only when the count of
 # constraint-capped packages rises, so the issue stays quiet unless something new is stuck.
+# An incomplete report (any failed GitHub fetch) exits 4 and fails the job — the issue is
+# never overwritten with a report that would read "nothing behind".
+#
+# SECURITY: keep GH_TOKEN = github.token. The body quotes third-party release notes (as inert
+# code spans), and events made with GITHUB_TOKEN never trigger other workflows — a PAT or App
+# token here would let a note containing "@claude" reach claude.yml.
 
 on:
   schedule:
@@ -14,7 +20,7 @@ on:
 
 concurrency:
   group: dep-freshness
-  cancel-in-progress: true
+  cancel-in-progress: false # a writer: never cut a run between create and edit
 
 permissions:
   contents: read
@@ -37,15 +43,18 @@ jobs:
       - name: Update the rolling issue
         run: |
           title="📦 Dependency freshness"
-          capped_now=$(grep -oE '\*\*[0-9]+ held back' "$RUNNER_TEMP/body.md" | grep -oE '[0-9]+' || echo 0)
-          number=$(gh issue list --state open --search "\"$title\" in:title" --json number,title \
+          # The count lives on the FIRST line (render_markdown pins it); never grep the whole
+          # body, which quotes third-party text.
+          count() { head -1 | grep -oE '\*\*[0-9]+ held back' | grep -oE '[0-9]+' | head -1 || true; }
+          capped_now=$(count < "$RUNNER_TEMP/body.md"); capped_now=${capped_now:-0}
+          # Exact title match over the open list — not search, which is eventually consistent.
+          number=$(gh issue list --state open --limit 300 --json number,title \
             --jq ".[] | select(.title == \"$title\") | .number" | head -1)
           if [ -z "$number" ]; then
             gh issue create --title "$title" --body-file "$RUNNER_TEMP/body.md"
             exit 0
           fi
-          capped_before=$(gh issue view "$number" --json body --jq .body \
-            | grep -oE '\*\*[0-9]+ held back' | grep -oE '[0-9]+' || echo 0)
+          capped_before=$(gh issue view "$number" --json body --jq .body | count); capped_before=${capped_before:-0}
           gh issue edit "$number" --body-file "$RUNNER_TEMP/body.md"
           if [ "$capped_now" -gt "$capped_before" ]; then
             gh issue comment "$number" --body "Capped packages rose from $capped_before to $capped_now — see the table above."

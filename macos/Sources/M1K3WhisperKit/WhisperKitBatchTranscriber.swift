@@ -19,14 +19,16 @@
 //  Review: claude-opus-4-8, 2026-06-09 — single-flight the model load through
 //  SingleFlightLoader to kill a check-then-act double-download race (a Settings
 //  preload racing the first transcribe could start two ~142MB downloads). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — WhisperKit 1.1: `@preconcurrency` dropped
+//  (zero diagnostics without it); batch transcription owes a launch check with the voice check.
 
 import Foundation
 import M1K3Calls
 import M1K3Inference
 import M1K3Voice // TranscriptSanitizer (repetition collapse + tidy)
 
-// @preconcurrency is LOAD-BEARING (checked 2026-07-16) — see WhisperKitProvider.
-@preconcurrency import WhisperKit
+// No @preconcurrency under WhisperKit 1.x (re-checked 2026-10-07) — see WhisperKitProvider.
+import WhisperKit
 
 /// `@unchecked Sendable`: the loaded model is guarded by `lock`; WhisperKit's own
 /// components are actor/queue-isolated. Mirrors `WhisperKitProvider` (live STT).

@@ -55,7 +55,8 @@
 //  pinned checkout. Confidence 0.8 (verify-by-launch: a real start failure on a real route).
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75 — WhisperKit 0.18 → 1.1: the transcriber
 //  actor now takes its models as non-Sendable `sending` parameters; the kit's shared stateless models opt
-//  out of region checking by name. No behaviour change intended — the voice launch check is owed.
+//  out of region checking by name, and `@preconcurrency import WhisperKit` is gone (zero diagnostics
+//  without it under 1.x). No behaviour change intended — the voice launch check is owed.
 
 import AVFoundation
 #if os(macOS)
@@ -70,10 +71,11 @@ import M1K3Inference
 import M1K3Voice
 import os
 
-// @preconcurrency is LOAD-BEARING here (checked 2026-07-16): removing it yields
-// real `sending` diagnostics on AudioStreamTranscriber construction (non-Sendable
-// AudioEncoding/TextDecoding/tokenizer). Re-check on the next WhisperKit bump.
-@preconcurrency import WhisperKit
+// No @preconcurrency (re-checked 2026-10-07, WhisperKit 1.1): it was load-bearing on
+// 0.18 (2026-07-16) for the AudioStreamTranscriber construction; under 1.x the only
+// crossing is the named `nonisolated(unsafe)` locals in startListening, and the target
+// builds with zero diagnostics without it — so any NEW non-Sendable crossing gets flagged.
+import WhisperKit
 
 /// `@unchecked Sendable`: WhisperKit + the active streamer/continuation are
 /// guarded by `lock`; WhisperKit's own components are actor/queue-isolated.

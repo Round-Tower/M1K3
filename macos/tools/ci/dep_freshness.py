@@ -17,15 +17,22 @@ behind the default branch too.
 Network: GitHub via the `gh` CLI (authenticated, no checkouts needed — dependents'
 manifests are read at their resolved tags). Read-only. `--fail-if-capped` exits 3 when a
 newer release is unreachable because of a constraint — for a scheduled job, never a PR gate.
+Any failed fetch (rate limit, auth, network) marks the report INCOMPLETE and exits 4: a
+silent failure must never read as "nothing behind". Release-note text is third-party
+input: it is rendered as short, inert code spans (no mentions, links or images).
 The pure helpers (parsing, semver, caps, highlights, rows) are unit-tested in
 test_dep_freshness.py with the fetchers injected.
 
 Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8, Prior: none (new file).
+Review: same day (pre-push code + security review) — failed fetches are counted (INCOMPLETE,
+exit 4), `..<`/`...` ranges keep their upper bound, `reachable` splits a stale lock from a
+real cap, notes are inert code spans capped at 160 chars, the body at 60k.
 """
 from __future__ import annotations
 
 import argparse
 import base64
+import binascii
 import json
 import re
 import subprocess
@@ -46,6 +53,9 @@ HIGHLIGHT = re.compile(
     re.IGNORECASE,
 )
 MAX_HIGHLIGHTS_PER_RELEASE = 3
+MAX_NOTES_PER_PACKAGE = 5
+MAX_NOTE_CHARS = 160  # release notes are third-party text: short, inert code spans only
+MAX_BODY_CHARS = 60_000  # GitHub's issue body limit is 65,536
 
 
 # --------------------------------------------------------------------------- #
@@ -74,8 +84,10 @@ def parse_version(tag: str) -> tuple[int, int, int] | None:
 
 @dataclass(frozen=True)
 class Requirement:
-    kind: str  # upToNextMajor | upToNextMinor | exact | revision | branch
+    kind: str  # upToNextMajor | upToNextMinor | exact | range | revision | branch
     value: str
+    upper: str | None = None  # range only
+    inclusive: bool = False  # range only: "a"..."b"
 
     def allows(self, version: str) -> bool | None:
         """SwiftPM's range semantics; None when the requirement isn't a version range."""
@@ -86,11 +98,18 @@ class Requirement:
             return None
         if self.kind == "exact":
             return v == base
+        if self.kind == "range":
+            top = parse_version(self.upper or "")
+            if top is None:
+                return None
+            return base <= v <= top if self.inclusive else base <= v < top
         if self.kind == "upToNextMinor":
             return base <= v < (base[0], base[1] + 1, 0)
         return base <= v < (base[0] + 1, 0, 0)  # upToNextMajor (`from:`)
 
     def __str__(self) -> str:
+        if self.kind == "range":
+            return f"range {self.value}{'...' if self.inclusive else '..<'}{self.upper}"
         return f"{self.kind} {self.value}"
 
 
@@ -110,8 +129,10 @@ def parse_requirements(manifest: str) -> dict[str, Requirement]:
             (r'^\.exact\(\s*"([^"]+)"', "exact"),
             (r'^revision:\s*"([^"]+)"', "revision"),
             (r'^branch:\s*"([^"]+)"', "branch"),
-            (r'^"([^"]+)"\s*\.\.<', "upToNextMajor"),  # "1.0.0"..<"2.0.0" — treated as its floor's major
         ]
+        if m := re.search(r'^"([^"]+)"\s*(\.\.<|\.\.\.)\s*"([^"]+)"', rest):
+            out[identity(url)] = Requirement("range", m.group(1), m.group(3), inclusive=m.group(2) == "...")
+            continue
         for pattern, kind in patterns:
             m = re.search(pattern, rest)
             if m:
@@ -160,61 +181,120 @@ class Row:
     capped: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     commits_behind: int | None = None
+    # The newest release EVERY constraint allows — above `current` means a stale lock
+    # (`swift package update` reaches it), not a cap.
+    reachable: str | None = None
+
+
+@dataclass(frozen=True)
+class Report:
+    rows: list[Row]
+    failures: int  # fetches that errored (rate limit, auth, network) — never read as "current"
+    fetches: int
+
+
+def reachable_version(ident: str, rels: list[Release], reqs: list[Requirement]) -> str | None:
+    allowed = [r for r in rels if all(q.allows(r.version) is not False for q in reqs)]
+    return max(allowed, key=lambda r: parse_version(r.version)).version if allowed else None
 
 
 def build_rows(
     resolved: dict,
     ours: dict[str, Requirement],
     *,
-    releases: Callable[[str, str], list[Release]],
-    dependent_manifest: Callable[[str, str, str], str],
+    releases: Callable[[str, str], list[Release] | None],
+    dependent_manifest: Callable[[str, str, str], str | None],
     commits_behind: Callable[[str, str], int | None],
-) -> list[Row]:
-    pins = resolved.get("pins") or resolved.get("object", {}).get("pins", [])
+) -> Report:
+    """Fetchers return None when the fetch FAILED, and [] / "" when there's genuinely nothing."""
+    pins = resolved.get("pins", [])
+    fetches = failures = 0
+
+    def fetched(value, empty):
+        nonlocal fetches, failures
+        fetches += 1
+        if value is None:
+            failures += 1
+            return empty
+        return value
+
     dependents = {
-        p["identity"]: parse_requirements(dependent_manifest(p["identity"], p["location"], p["state"]["version"]))
+        p["identity"]: parse_requirements(
+            fetched(dependent_manifest(p["identity"], p["location"], p["state"]["version"]), "")
+        )
         for p in pins if p["state"].get("version")
     }
     rows = []
     for pin in pins:
         ident, url, state = pin["identity"], pin["location"], pin["state"]
-        rels = [r for r in releases(ident, url) if parse_version(r.version)]
+        rels = [r for r in fetched(releases(ident, url), []) if parse_version(r.version)]
         latest = max(rels, key=lambda r: parse_version(r.version)).version if rels else None
         version = state.get("version")
         if version:
             cur = parse_version(version)
             behind = sum(1 for r in rels if parse_version(r.version) > cur) if cur else 0
-            caps = capped_by(ident, latest, ours=ours,
-                             dependents={k: v for k, v in dependents.items() if k != ident}) if behind else []
-            rows.append(Row(ident, version, latest, behind, caps, highlights(rels, version)))
+            others = {k: v for k, v in dependents.items() if k != ident}
+            caps = capped_by(ident, latest, ours=ours, dependents=others) if behind else []
+            reqs = [q for q in [ours.get(ident), *(d.get(ident) for d in others.values())] if q]
+            reach = reachable_version(ident, rels, reqs) if behind else None
+            rows.append(Row(ident, version, latest, behind, caps, highlights(rels, version), reachable=reach))
         else:
             rev = state.get("revision", "")
-            rows.append(Row(ident, rev[:8], latest, 0, [], [], commits_behind(url, rev)))
-    return rows
+            behind_commits = commits_behind(url, rev)
+            fetches += 1
+            failures += behind_commits is None
+            rows.append(Row(ident, rev[:8], latest, 0, commits_behind=behind_commits))
+    return Report(rows, failures, fetches)
 
 
 def capped_rows(rows: list[Row]) -> list[Row]:
     return [r for r in rows if r.capped]
 
 
-def render(rows: list[Row], only_behind: bool) -> str:
+def _stale(r: Row) -> str:
+    """The `swift package update` hint, when a newer release is reachable without moving anything."""
+    cur, reach = parse_version(r.current), parse_version(r.reachable or "")
+    return f"update → {r.reachable}" if cur and reach and reach > cur else ""
+
+
+def _incomplete(report: Report) -> str:
+    if not report.failures:
+        return ""
+    return f"⚠️ INCOMPLETE — {report.failures} of {report.fetches} GitHub fetches failed; rows may read current. "
+
+
+def _inert(note: str) -> str:
+    """Third-party release-note text as one inert code span: no mentions, links, images or HTML."""
+    flat = re.sub(r"[`\r\n]+", " ", note).strip()
+    if len(flat) > MAX_NOTE_CHARS:
+        flat = flat[: MAX_NOTE_CHARS - 1] + "…"
+    return f"`{flat}`"
+
+
+def render(report: Report, only_behind: bool) -> str:
+    rows = report.rows
     shown = [r for r in rows if not only_behind or r.behind or (r.commits_behind or 0) > 0]
     shown.sort(key=lambda r: (-(len(r.capped) > 0), -r.behind, r.identity))
-    lines = [f"{'package':28} {'current':10} {'latest':10} {'behind':>7}  capped by"]
+    lines = [_incomplete(report)] if report.failures else []
+    lines.append(f"{'package':28} {'current':10} {'latest':10} {'behind':>7}  capped by")
     for r in shown:
         behind = f"{r.commits_behind} commits" if r.commits_behind is not None else str(r.behind)
-        lines.append(f"{r.identity:28} {r.current:10} {r.latest or '—':10} {behind:>7}  {'; '.join(r.capped) or '—'}")
+        why = "; ".join([*r.capped, *filter(None, [_stale(r)])]) or "—"
+        lines.append(f"{r.identity:28} {r.current:10} {r.latest or '—':10} {behind:>7}  {why}")
         lines += [f"{'':4}↳ {note}" for note in r.notes]
     return "\n".join(lines)
 
 
-def render_markdown(rows: list[Row], generated: str) -> str:
-    """The rolling issue body: capped packages first, each with its blocker and missed notes."""
-    shown = [r for r in rows if r.behind or (r.commits_behind or 0) > 0]
+def render_markdown(report: Report, generated: str) -> str:
+    """The rolling issue body: capped packages first, each with its blocker and missed notes.
+
+    The FIRST line carries `**N held back` — dep-freshness.yml reads exactly that (head -1).
+    """
+    shown = [r for r in report.rows if r.behind or (r.commits_behind or 0) > 0]
     shown.sort(key=lambda r: (-(len(r.capped) > 0), -r.behind, r.identity))
     capped = [r for r in shown if r.capped]
     out = [
-        (f"Generated {generated} by `macos/tools/ci/dep_freshness.py` — "
+        (f"{_incomplete(report)}Generated {generated} by `macos/tools/ci/dep_freshness.py` — "
          f"{len(shown)} behind, **{len(capped)} held back by a constraint**."),
         "",
         "| package | current | latest | behind | capped by |",
@@ -222,14 +302,16 @@ def render_markdown(rows: list[Row], generated: str) -> str:
     ]
     for r in shown:
         behind = f"{r.commits_behind} commits" if r.commits_behind is not None else str(r.behind)
-        caps = "; ".join(f"**{c}**" for c in r.capped) or "—"
+        caps = "; ".join([*(f"**{c}**" for c in r.capped), *filter(None, [_stale(r)])]) or "—"
         out.append(f"| `{r.identity}` | {r.current} | {r.latest or '—'} | {behind} | {caps} |")
-    notes = [f"- `{r.identity}` {note}" for r in shown for note in r.notes]
+    notes = [f"- `{r.identity}` {_inert(note)}" for r in shown for note in r.notes[:MAX_NOTES_PER_PACKAGE]]
     if notes:
         out += ["", "### What we're missing (speed, memory, crash, security)", "", *notes]
-    out += ["", ("A capped package needs its blocker moved first. Bumps are probe-first and owe the "
-                 "gemma-4 tool-call smoke (`macos/CLAUDE.md`).")]
-    return "\n".join(out)
+    out += ["", ("A capped package needs its blocker moved first; `update → X` needs only "
+                 "`swift package update`. Bumps are probe-first and owe the gemma-4 tool-call smoke "
+                 "(`macos/CLAUDE.md`).")]
+    body = "\n".join(out)
+    return body if len(body) <= MAX_BODY_CHARS else body[: MAX_BODY_CHARS - 40] + "\n\n…(truncated)"
 
 
 # --------------------------------------------------------------------------- #
@@ -247,28 +329,37 @@ def _gh(path: str) -> object | None:
         return None
 
 
-def gh_releases(_ident: str, url: str) -> list[Release]:
+def gh_releases(_ident: str, url: str) -> list[Release] | None:
+    """Releases (with notes) merged with plain tags — some repos tag newer than they release.
+    None when the releases fetch itself failed."""
     if "github.com" not in url:
         return []
     owner, repo = owner_repo(url)
-    data = _gh(f"repos/{owner}/{repo}/releases?per_page=50") or []
-    rels = [Release(r["tag_name"].lstrip("v"), (r.get("published_at") or "")[:10], r.get("body") or "")
-            for r in data if not r.get("draft") and not r.get("prerelease")]
-    if rels:
-        return rels
-    tags = _gh(f"repos/{owner}/{repo}/tags?per_page=100") or []  # repos that tag without releases
-    return [Release(t["name"].lstrip("v"), "", "") for t in tags]
+    data = _gh(f"repos/{owner}/{repo}/releases?per_page=50")
+    if not isinstance(data, list):
+        return None
+    rels = {r["tag_name"].lstrip("v"): Release(r["tag_name"].lstrip("v"), (r.get("published_at") or "")[:10],
+                                                r.get("body") or "")
+            for r in data if not r.get("draft") and not r.get("prerelease")}
+    tags = _gh(f"repos/{owner}/{repo}/tags?per_page=100")
+    for t in tags if isinstance(tags, list) else []:
+        rels.setdefault(t["name"].lstrip("v"), Release(t["name"].lstrip("v"), "", ""))
+    return list(rels.values())
 
 
-def gh_manifest(_ident: str, url: str, version: str) -> str:
+def gh_manifest(_ident: str, url: str, version: str) -> str | None:
+    """The dependency's Package.swift at its resolved tag; None when no tag spelling fetched."""
     if "github.com" not in url:
         return ""
     owner, repo = owner_repo(url)
     for ref in (version, f"v{version}"):
         data = _gh(f"repos/{owner}/{repo}/contents/Package.swift?ref={ref}")
         if isinstance(data, dict) and data.get("content"):
-            return base64.b64decode(data["content"]).decode("utf-8", "replace")
-    return ""
+            try:
+                return base64.b64decode(data["content"]).decode("utf-8", "replace")
+            except (ValueError, binascii.Error):
+                return None
+    return None
 
 
 def gh_commits_behind(url: str, rev: str) -> int | None:
@@ -305,19 +396,23 @@ def main(argv: list[str] | None = None) -> int:
                                   for p in pins if p["state"].get("version")])
     rev = _parallel(gh_commits_behind, [(p["location"], p["state"].get("revision", ""))
                                         for p in pins if not p["state"].get("version")])
-    rows = build_rows(
+    report = build_rows(
         resolved, ours,
         releases=lambda i, u: rel.get((i, u), []),
         dependent_manifest=lambda i, u, v: man.get((i, u, v), ""),
         commits_behind=lambda u, r: rev.get((u, r)),
     )
     if args.json:
-        print(json.dumps([asdict(r) for r in rows], indent=1))
+        print(json.dumps({"failures": report.failures, "fetches": report.fetches,
+                          "rows": [asdict(r) for r in report.rows]}, indent=1))
     elif args.markdown:
-        print(render_markdown(rows, generated=datetime.now(timezone.utc).strftime("%Y-%m-%d")))
+        print(render_markdown(report, generated=datetime.now(timezone.utc).strftime("%Y-%m-%d")))
     else:
-        print(render(rows, args.only_behind))
-    return 3 if args.fail_if_capped and capped_rows(rows) else 0
+        print(render(report, args.only_behind))
+    if report.failures:
+        print(f"✗ {report.failures} of {report.fetches} fetches failed — report incomplete", file=sys.stderr)
+        return 4  # never let an incomplete report overwrite the rolling issue
+    return 3 if args.fail_if_capped and capped_rows(report.rows) else 0
 
 
 if __name__ == "__main__":

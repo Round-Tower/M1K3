@@ -23,8 +23,8 @@
 //  tests; M1K3MCPKit depends on it for the todo value types.
 //  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — M1K3Chat (and its tests) depend on the
 //  dependency-free M1K3LanguageModel: the PCC rung's policy + backend seam, used by ChatSession's PCC send path.
-//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75 — WhisperKit 0.15 → 1.1 (now `argmax-oss-swift`,
-//  no swift-transformers) and swift-transformers 1.1.6 → 1.3.4 (priority-queue BPE: Gemma tokenization
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75 — WhisperKit 0.18.0 (`from: "0.15.0"`) → 1.1.0 (now
+//  `argmax-oss-swift`, no swift-transformers) and swift-transformers 1.1.9 (`upToNextMinor 1.1.6`) → 1.3.4 (priority-queue BPE: Gemma tokenization
 //  ~150× faster, ids identical). swift-jinja rides 2.3.6 → 2.5.1. Owed: voice launch check, gemma-4 tool smoke.
 
 import Foundation
