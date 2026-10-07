@@ -84,8 +84,9 @@ protocols in their own targets. `M1K3App/` is a thin shell; `AppEnvironment` (+ 
   does** (2026-09-30, our pin + 6 commits). The move to 3.32.3 also moves our direct mlx-swift pin
   (`.upToNextMinor(from: "0.31.6")`) to ≥ 0.32.3, together: mlx-swift 0.32.0–0.32.2 crash at launch
   below macOS/iOS 26.4. Kokoro links raw MLX, so add a voice launch check). `newCache(parameters:)`
-  throws there. Dep bumps are probe-first (`swift package resolve` — the WhisperKit /
-  swift-transformers `Tokenizers` clash) and **every bump owes a gemma-4 native tool-call
+  throws there. `tools/ci/dep_freshness.py` says what's behind, **who caps it** and which missed
+  release notes matter (a weekly "📦 Dependency freshness" issue runs it). Dep bumps are probe-first
+  (`swift package resolve`) and **every bump owes a gemma-4 native tool-call
   smoke**: `M1K3_SELFTEST_CHATEVAL=1 M1K3_SELFTEST_CHATEVAL_BRAINS=big
   M1K3_SELFTEST_CHATEVAL_KINDS=tool-use` (the 08-08 bump took tool-use 5/5 → 0/5 and only
   the smoke caught it).
