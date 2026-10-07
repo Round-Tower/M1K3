@@ -214,6 +214,10 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 10:00 — the stall section rewritten: the "one BPE word"
+mechanism was WRONG (a benchmark disproved it). Two real causes: display-sleep throttling (both
+edges, both runs) and swift-transformers 1.1.9's String-keyed BPE on Gemma's `▁` (1,183 → 8 ms on
+1.3.4, same ids). Confidence 0.9 on both; the 10.3 GB RAM peak stays open.
 Review: Kev + claude-opus-5-5, 2026-10-07 09:00 — E4B landed: text 88.8% on content (5 better / 10
 worse vs the incumbent), vision 43/48, own peak 10.3 GB. No swap under the rule; the incumbent holds
 until the stall is fixed and latency/RAM re-measured. Confidence 0.85 on the text read, 0.4 on any
@@ -367,48 +371,58 @@ tool-format coin flip → 93 and 26/30 (wrong on both: the `.xmlFunction` plumbi
 behaviour); E4B text 2–4 points under the incumbent → on track; own RAM ~3 GB → 4.75 (the embedder
 and KV are in "own"); "every brain flips at least one fixture across trials" → held.
 
-### The stall — found (2026-10-07 08:40): Gemma's whole prompt is ONE BPE word
+### The stall and the tokenizer tax — two causes, both found (2026-10-07, 09:00–10:00)
 
-Symptom: E4B ran 11–25 s a fixture for 48 fixtures, then stepped up (`world-guernica` **41 min** for
-152 chars) and stayed at 70–150 s. Qwen3.5 stepped up in its trial 3 too; the incumbent never did.
-Ruled out: network (the tools are canned stubs, `ChatEvalStage.swift:296`), memory pressure, swap,
-thermal, macOS background ML daemons.
+An earlier draft of this section blamed one mechanism ("Gemma's whole prompt is one BPE word"). The
+benchmark below disproved it; this is the corrected read.
 
-Evidence: three `sample`s of the eval process during the slow phase — the busy thread sits in
-`MLXToolTurnSession.send` (`MLXToolCalling.swift:872`) → `Gemma4Processor.prepare` →
-`applyChatTemplate` → `PreTrainedTokenizer.encode` → **`BPETokenizer.bpe(token:)`** (swift-transformers
-1.1.9, `BPETokenizer.swift:180–225`), CPU-bound with the GPU mostly idle.
+**1. The stall = the display sleeping (CONFIRMED by both edges, both runs).** `caffeinate -is` kept the
+system awake but let the display sleep; with it off, macOS throttled the headless eval process, CPU
+and GPU alike (decode 35 → 0–3 tok/s, prefill 3.4 s → 24–55 s; prompts flat at ~3k tokens).
 
-Mechanism: Gemma's `tokenizer.json` normalizer replaces `" "` with `▁` **before** its pre-tokenizer
-splits on `" "` — so nothing splits, and the entire rendered prompt (persona + tools + messages,
-thousands of chars) enters `bpe()` as one word. swift-transformers' `bpe` is the naive form: every
-merge re-scans all pairs, no cache — super-linear in word length. And every agent step re-renders and
-re-tokenizes the whole conversation. Qwen's tokenizers regex-split into short words first, so they
-barely pay it (fits the incumbent never stalling and E4B's 5.6× at ×1).
+| `pmset -g log` | Eval (unified log `prompt=… @tok/s`) |
+|---|---|
+| 01:34 display off | Qwen3.5 slows (trial 3) |
+| 01:48 display on | Qwen3.5 recovers |
+| 02:35 display off | E4B collapses (`world-guernica`, 41 min, spans it) |
+| 08:17:37 display on | E4B back at 37 tok/s at 08:17:47 |
 
-Clue: E4B's **own peak 10.3 GB** — a 4B above Big's 12B (~7.4 GB alone). Memory grew with the
-latency, which points at state accumulating inside the launch, not just a slow tokenizer.
+The incumbent ran 23:59–00:32 entirely with the display on. **User-facing too:** the app generating
+with the display off (an agent's overnight `ask_m1k3`, a long Big answer after the user walks away)
+can crawl the same way. Fix: hold `ProcessInfo.beginActivity(.userInitiated)` while a turn generates;
+evals add `caffeinate -d`.
 
-Open — why it **grows across fixtures** (same grounded fixture: 11 s in trial 1, 56 s in trial 3).
-Something makes later prompts longer, or the tokenizer slower, inside one launch:
-1. Prompt growth — `standing` notes / an accumulating message list carried across fixtures. Check:
-   log rendered-prompt chars + tokenize ms per agent step; `--dump-prompt` on a fixture early vs late.
-2. Qwen3.5's trial-3 step has the same shape, but its tokenizer splits words, so (1) is the shared
-   suspect. Check: the same log on a Qwen3.5 launch.
+**2. The tokenizer tax = swift-transformers 1.1.9's BPE on Gemma's `▁` pieces (MEASURED).** Sampling
+put real time in `BPETokenizer.bpe(token:)`; a scratch benchmark (same tokenizer files, the real
+persona) shows why: `bpeRanks` is keyed by pairs of Swift `String`s, and every Gemma piece carries the
+non-ASCII `▁`, so each lookup hashes through Unicode NFC normalisation; `bpe()` also rescans all pairs
+per merge. Upstream rewrote it — priority-queue merge (#346, 1.3.2) and scalar-based merges (#355, 1.3.3):
 
-Why it matters beyond the eval: **Big is gemma-4-12B** — every Big turn in the app pays this.
-Production cost UNVERIFIED (measure: tokenize ms on a long Big chat).
+| Persona encode (real text) | 1.1.9 (pinned) | 1.3.4 |
+|---|---|---|
+| Gemma, 1,637 tok | 1,183 ms | **8 ms** |
+| Gemma, 3,274 tok | 1,462 ms | **12 ms** |
+| Qwen3, 1,532 tok | 22 ms | 15 ms |
 
-Fix options, in order (each pinned by exact token-id tests — the EmbeddingGemma 2 fixture already
-carries reference Gemma-family ids):
-1. Check upstream swift-transformers (> 1.1.9) for a merge-heap BPE or a word cache — a bump
-   beats a fork (WhisperKit shares the `Tokenizers` target — probe-first).
-2. Tokenize incrementally: the persona + tool block once per brain, then only the new messages —
-   rides with Stream G's prefix work.
-3. Pre-split on `▁` boundaries before `bpe()` — only if exact ids prove merges never cross `▁`.
+Token ids identical across versions (count, sum, first/last ids). Every agent step re-renders and
+re-tokenizes the whole conversation, so E4B **and Big in production** pay ~1–1.5 s of CPU per step
+for nothing. (The ~10 s step gap seen in the log holds more than tokenizing — the rest is unmeasured.)
 
-Exit: per-step tokenize ms logged; a ×3 E4B launch with flat per-fixture latency; Big's tokenize
-cost measured before and after.
+**Why we're on 1.1.9:** our `Package.swift` and WhisperKit 0.18.0 both pin `.upToNextMinor(from:
+"1.1.6")` (< 1.2). WhisperKit 1.x (the package is now `argmax-oss-swift`) **dropped swift-transformers
+entirely**, so the clash goes away with it.
+
+Still open: E4B's 10.3 GB own peak — the stall explains the latency, not obviously the RAM.
+
+Fix list, in order:
+1. **Eval:** `caffeinate -dis` for every overnight run (the runner scripts), and log display state
+   into the scorecard provenance. Re-measure gemma latency and RAM after.
+2. **App:** `beginActivity(.userInitiated)` around generation (chat turns, MCP `ask_m1k3`, call
+   summaries). Verify by launch with the display off.
+3. **Dependencies (risk surface, probe-first):** WhisperKit 0.18 → 1.1 (`argmax-oss-swift`) +
+   swift-transformers 1.1.9 → 1.3.4. Owes: `swift package resolve`, the voice launch check, the
+   gemma-4 native tool-call smoke (`macos/CLAUDE.md`), exact-id parity on the EmbeddingGemma 2
+   reference ids.
 
 ### Open next
 
@@ -423,10 +437,10 @@ cost measured before and after.
 - [ ] `selfquery-notes`: "I don't run internal QA…" is a decline the markers miss (challenger first).
 - [ ] Stream F (image turns on Lil escalate) — still the fallback if Lil stays Qwen3.
 - [ ] Stream C, slice 2: the Swift port (spec below).
-- [ ] **The stall (top priority):** instrument tokenize ms + prompt chars per agent step, find what
-      grows across fixtures, then the BPE fix (above). Gates every latency number in this plan.
-- [ ] **Stream G** (gemma-4 speed) — re-read after the stall fix: some of E4B's 5.6× is tokenization,
-      not prefill (hypothesis 2 now needs the per-step split).
+- [ ] **The stall + tokenizer fixes (top priority):** the three items in the fix list above. Every
+      gemma latency/RAM number in this plan is void until 1 lands and the columns are re-run.
+- [ ] **Stream G** (gemma-4 speed) — re-read after the tokenizer bump: part of E4B's 5.6× was CPU
+      tokenizing, not prefill.
 - [ ] **Qwen3.5 vision + tools (Kev: "Vision would be great to test, tools can be tuned, and I like
       that interviewing improved"):** the cached conversion already ships its vision tower (297
       `vision_tower.*` tensors; `qwen3_5` is MLXVLM.Qwen35 in our pin) — routing its exact id through
