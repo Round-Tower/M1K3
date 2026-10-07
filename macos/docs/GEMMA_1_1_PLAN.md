@@ -214,6 +214,10 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 09:00 — E4B landed: text 88.8% on content (5 better / 10
+worse vs the incumbent), vision 43/48, own peak 10.3 GB. No swap under the rule; the incumbent holds
+until the stall is fixed and latency/RAM re-measured. Confidence 0.85 on the text read, 0.4 on any
+gemma latency or RAM figure until then.
 Review: Kev + claude-opus-5-5, 2026-10-07 08:45 — overnight results (incumbent 92.0 / Qwen3.5 93.1
 content, E4B pending) and the stall FOUND by sampling: Gemma prompts tokenize as one BPE word in
 swift-transformers' naive `bpe`. Confidence 0.9 on the location (3 samples + the tokenizer config);
@@ -348,9 +352,14 @@ whole) — see the stall below for why latency can't be read yet.
 |---|---|---|---|---|
 | Incumbent Qwen3-4B DWQ | 254/276 | **92.0%** | 4.75 GB | 33 min; tool-use 30/30; misses ground-part, interview-find-hard, doc-project-brief ×3 |
 | Qwen3.5-4B | 254/276 | **93.1%** | **4.07 GB** | interview 15/15 (vs 11), document 17 (vs 14); **tool-use 26/30** — narrates the search, never calls it |
-| E4B (uniform, VLM, healed) | ~72% so far | **~89.7%** so far | — | still running at 08:30 (242/324); 42 fails are latency-only; vision content-fails 3 |
+| E4B (uniform, VLM, healed) | 246/324 | **88.8%** text · **vision 43/48** | **10.3 GB** | done 08:55 (7 h); 42 fails latency-only; reasoning 13/18, tool-use 25/30; document 18/18, interview 14/15 |
 
-Fixture-paired, incumbent vs Qwen3.5: 8 better, 8 worse — a dead heat on text. Vision: only E4B
+Fixture-paired on text: Qwen3.5 vs incumbent 8 better / 8 worse (a dead heat); E4B vs incumbent
+5 better / 10 worse (`reason-remainder` 0/3, `ground-wrong-nobel` 0/3, `selfquery-notes` 0/3). E4B sees
+better at ×3 than at ×1 (90% vs 13/16). **Decision rule:** no swap — E4B is under the incumbent on
+text and its RAM fails any Lil cap; Qwen3.5 ties on text, is lighter, slower, and weaker on tools.
+The incumbent holds Lil **until the stall is fixed and latency/RAM are re-measured** — both numbers
+are contaminated for the gemma (and partly the Qwen3.5) launches. Vision: only E4B
 can answer (the others are n/a); Big's 14/16 baseline is the reference.
 
 Predictions (made 00:20, before results) scored: incumbent ~88% → 92 (low); Qwen3.5 ~84% and a
@@ -376,6 +385,9 @@ thousands of chars) enters `bpe()` as one word. swift-transformers' `bpe` is the
 merge re-scans all pairs, no cache — super-linear in word length. And every agent step re-renders and
 re-tokenizes the whole conversation. Qwen's tokenizers regex-split into short words first, so they
 barely pay it (fits the incumbent never stalling and E4B's 5.6× at ×1).
+
+Clue: E4B's **own peak 10.3 GB** — a 4B above Big's 12B (~7.4 GB alone). Memory grew with the
+latency, which points at state accumulating inside the launch, not just a slow tokenizer.
 
 Open — why it **grows across fixtures** (same grounded fixture: 11 s in trial 1, 56 s in trial 3).
 Something makes later prompts longer, or the tokenizer slower, inside one launch:
