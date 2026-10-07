@@ -214,6 +214,9 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 13:30 — midday progress: #498 landed, #499 (deps + the
+freshness tooling) open with the smoke A/B (Big −27% at constant power mode), per-turn hold on the
+next branch. Confidence 0.9 on the smoke numbers (20/20 each arm, n=20 per brain).
 Review: Kev + claude-opus-5-5, 2026-10-07 11:30 — pre-push review folded: the display-sleep trigger
 stays CONFIRMED, the App Nap mechanism is now marked UNVERIFIED with its deciding test, and the app
 hold is App-Nap-only (`.userInitiatedAllowingIdleSystemSleep`). Confidence 0.9 trigger, 0.5 mechanism.
@@ -432,6 +435,24 @@ Fix list, in order:
    gemma-4 native tool-call smoke (`macos/CLAUDE.md`), exact-id parity on the EmbeddingGemma 2
    reference ids.
 
+### Shipped + measured (2026-10-07, midday)
+
+- **#498 landed** (`e3adeced`): the bake-off scorecards, the stall write-up, the App-Nap-only
+  `GenerationActivity` hold around every MLX generation, and `caffeinate -dis -w <pid>` in
+  `run_chateval --direct`. The display-off A/B that decides the App Nap mechanism is still owed.
+- **#499 open — WhisperKit 1.1 + swift-transformers 1.3.4.** Gemma persona tokenize 1,183 → 8 ms,
+  same ids. The gemma-4 tool-call smoke as an A/B, power mode held constant: **Big 20/20 → 20/20,
+  median 38.7 → 28.3 s (−27%)**; Lil 20/20 → 20/20, 5.9 → 4.8 s. `@preconcurrency import WhisperKit`
+  is no longer load-bearing on 1.x and is gone. Owed: Kev's voice check + landing timing (ROADMAP:
+  "post-launch only"; the store submission is pending).
+- **Dependency staleness is now tooling** (in #499): `tools/ci/dep_freshness.py` names what's behind,
+  **who caps it**, what `swift package update` alone would reach, and the missed perf/security notes;
+  a weekly workflow keeps a rolling "📦 Dependency freshness" issue. On master's old tree it flags
+  swift-transformers capped by WhisperKit, quoting the very fix (#346). Next in its list: the
+  mlx-swift 0.32.3 + mlx-swift-lm 3.32.3 pair (deadlock + leak fixes; our own pin caps it).
+- `feat/gemma-1-1-next`: one hold per **agent turn** (`LocalAgent.run`; no unheld tool gaps) and
+  per-call-site reasons for `pmset -g assertions`.
+
 ### Open next
 
 - [ ] **Mini vision (possible user-facing bug):** on the native AFM path every Mini answer
@@ -439,14 +460,15 @@ Fix list, in order:
       never "can't see". Either the attachment never reaches AFM or AFM vision is this weak — trace
       `AFMToolPrompt.imageURLs` → `Attachment(imageURL:)` on a live turn before anything else; the app
       shows Mini an attach button on macOS 27.
-- [ ] The bake-off proper, per the rule: E4B (uniform, healed template, VLM path) vs incumbent vs
-      Qwen3.5, ×3, all kinds, `--full-answers`, **one brain per launch** (RAM gate), tier thinking.
-- [ ] Set the Lil RAM cap before that run (own peak, not raw).
+- [x] The bake-off proper (overnight 2026-10-06/07) — text is in; gemma latency/RAM void (stall).
+- [ ] **Re-run the gemma columns once #499 lands** (E4B ×3, display held awake, tokenizer fixed) —
+      the latency and RAM gate re-measure; E4B's 10.3 GB own peak is the open question.
+- [ ] Set the Lil RAM cap BEFORE that re-run (own peak, not raw): incumbent 4.75 GB, Qwen3.5 4.07.
 - [ ] `selfquery-notes`: "I don't run internal QA…" is a decline the markers miss (challenger first).
 - [ ] Stream F (image turns on Lil escalate) — still the fallback if Lil stays Qwen3.
 - [ ] Stream C, slice 2: the Swift port (spec below).
-- [ ] **The stall + tokenizer fixes (top priority):** the three items in the fix list above. Every
-      gemma latency/RAM number in this plan is void until 1 lands and the columns are re-run.
+- [~] **The stall + tokenizer fixes:** eval caffeinate + app hold landed (#498); the tokenizer bump
+      is #499. Still owed: the display-off A/B (is App Nap the mechanism?).
 - [ ] **Stream G** (gemma-4 speed) — re-read after the tokenizer bump: part of E4B's 5.6× was CPU
       tokenizing, not prefill.
 - [ ] **Qwen3.5 vision + tools (Kev: "Vision would be great to test, tools can be tuned, and I like
@@ -456,8 +478,9 @@ Fix list, in order:
       Qwen3.5-VLM ×3 all kinds, then tool-use ×3 with `--thinking always` (the misses look like a
       no-think tool decision); Qwen's recommended sampling for non-thinking turns is untested. Run it
       with the stall instrumentation, on a free machine.
-- [ ] Commit the three overnight scorecards once E4B lands (+ a content re-score helper in
-      `run_chateval.py`, so "latency-only" fails are a column, not a hand count).
+- [x] The three overnight scorecards are committed (#498).
+- [ ] A content re-score helper in `run_chateval.py`, so "latency-only" fails are a column, not a
+      hand count.
 - [ ] **Scorer: decimal digits match whole-word** (#497 review): fact "4" passes on "3.4" / "€4.08".
       Treat `.`/`,` between digits as inside the number; re-score the overnight `--full-answers` JSONs.
 - [ ] **E2B — a contender, but not for Lil** (Kev, 2026-10-07: "add it later"). `gemma-4-e2b-it-4bit`,
