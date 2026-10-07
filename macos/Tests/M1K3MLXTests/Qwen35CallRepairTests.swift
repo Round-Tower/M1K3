@@ -7,6 +7,8 @@
 //  parameter. Upstream's processor does the re-parse, so its validation still governs.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8, Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-08, Confidence 0.85 — #511 review: pins that the repair never
+//  re-emits an earlier, already-streamed call, and the unterminated-shape pass-throughs.
 //
 
 import Foundation
@@ -139,6 +141,30 @@ struct Qwen35CallRepairTests {
     func mixedBufferStaysRejected() {
         let broken = "<tool_call>\n<function=web_search>\n<parameter=query>\nx\n</tool_call>"
         #expect(Qwen35CallRepair.recover(rejected(orphaned + "\n" + broken), offered: offered) == nil)
+    }
+
+    /// #511 review (both passes): could a well-formed call EARLIER in the same output be re-emitted?
+    /// Run the live path's processor over the whole output and repair what it rejected: the earlier
+    /// call leaves the buffer when emitted, so the rejection's preview holds only what came after it.
+    @Test("a valid call then an orphaned one: the live stream emits the first, the repair only the second")
+    func noDuplicateOfAnEarlierCall() throws {
+        let valid = "<tool_call>\n<function=web_search>\n<parameter=query>\ncork\n</parameter>\n"
+            + "</function>\n</tool_call>"
+        let live = ToolCallProcessor(format: .qwen35)
+        _ = live.processChunk(valid + "\n" + orphaned)
+        live.processEOS()
+        #expect(live.toolCalls.map(\.function.name) == ["web_search"])
+        let rejection = try #require(live.rejectedToolCalls.first)
+        #expect(!rejection.rawTextPreview.contains("function=web_search"))
+        let repaired = try #require(Qwen35CallRepair.recover(rejection, offered: offered))
+        #expect(repaired.map(\.function.name) == ["datetime"])
+    }
+
+    @Test("a header with no `>`, or a function with no close, passes through without a repair")
+    func unterminatedShapesPassThrough() {
+        #expect(Qwen35CallRepair.strippingOrphanCloses("<tool_call>\n<function=datetime\n</parameter>") == nil)
+        let unclosed = "<tool_call>\n<function=datetime>\n<parameter=query>\nnow\n</parameter>\n</parameter>"
+        #expect(Qwen35CallRepair.strippingOrphanCloses(unclosed) == nil)
     }
 
     @Test("offered names read the ToolSpec shape; nil specs offer nothing")
