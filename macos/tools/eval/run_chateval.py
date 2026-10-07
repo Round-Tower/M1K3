@@ -42,6 +42,8 @@ helpers that died with two session restarts).
 Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.8 — `--direct`: exec the
 binary with the trigger as env + stdout reporting (the only route on macOS 27);
 `extract_fenced_json` + `direct_env` pinned. Confidence now 0.8.
+Review: Kev + claude-opus-5-5, 2026-10-07 — summarise reports latency-only fails and the content score
+(the display-sleep stall: E4B 246/324 raw, 288/324 on content).
 """
 
 from __future__ import annotations
@@ -315,6 +317,10 @@ def summarise(doc_path: Path) -> str:
         scores = [s for s in everything
                   if [(c.get("name"), c.get("outcome")) for c in s.get("checks", [])] != [("applicable", "skip")]]
         passed = sum(1 for s in scores if not any(c.get("outcome") == "fail" for c in s.get("checks", [])))
+        # Fails whose ONLY failing check is the latency ceiling: the answer was right, the clock wasn't
+        # (2026-10-07: a display-sleep stall made 42 of E4B's fails exactly this). Reported, never folded in.
+        latency_only = sum(1 for s in scores
+                           if [c.get("name") for c in s.get("checks", []) if c.get("outcome") == "fail"] == ["responsive"])
         label = run.get("brainID") or "?"
         model = run.get("modelID") or "stock"
         na = len(everything) - len(scores)
@@ -322,6 +328,8 @@ def summarise(doc_path: Path) -> str:
         # Same rule as BrainRun.ownPeakMemoryMB: peak below resident means no number.
         own = f" (own {peak - resident} MB)" if peak is not None and resident is not None and peak >= resident else ""
         lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed" + (f" ({na} n/a)" if na else "")
+                     + (f", {latency_only} latency-only (content {passed + latency_only}/{len(scores)})"
+                        if latency_only else "")
                      + (f", peak {peak} MB{own}" if peak is not None else ""))
     prov = doc.get("provenance", {})
     lines.append(f"  power={prov.get('powerSource')} powermode={prov.get('powerMode')} commit={prov.get('appCommit')}")

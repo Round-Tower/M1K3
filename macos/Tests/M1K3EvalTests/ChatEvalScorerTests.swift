@@ -17,6 +17,7 @@
 //  names pass too (the review's false-positive cases). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85 — the glued-marker gap pinned (#497
 //  review): a letter edge needs a boundary ("listUSER:" passes), a punctuation edge never does.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.9 — decimal-aware digit edges pinned both ways.
 
 @testable import M1K3Eval
 import Testing
@@ -985,6 +986,31 @@ struct ChatEvalScorerTests {
         #expect(RefusalHeuristic.containsWholeWord("def fizzbuzz(n):", "def fizzbuzz"))
         #expect(!RefusalHeuristic.containsWholeWord("", "au"))
         #expect(!RefusalHeuristic.containsWholeWord("au", ""))
+    }
+
+    /// #497 review: fact "4" passed on "3.4" / "€4.08" / "1,4" — a decimal separator between digits
+    /// is inside the number, so a confabulated count could match a price. Pinned both ways.
+    @Test("a digit edge treats a decimal separator between digits as part of the number")
+    func digitEdgesRespectDecimals() {
+        #expect(!RefusalHeuristic.containsWholeWord("it was 3.4 metres", "4"))
+        #expect(!RefusalHeuristic.containsWholeWord("total €4.08", "4"))
+        #expect(!RefusalHeuristic.containsWholeWord("ratio 1,4 overall", "4"))
+        #expect(!RefusalHeuristic.containsWholeWord("123.40", "23.40"))
+        #expect(!RefusalHeuristic.containsWholeWord("23.405", "23.40"))
+        // A separator that ends the number (or a sentence) is still a boundary.
+        #expect(RefusalHeuristic.containsWholeWord("there are 4.", "4"))
+        #expect(RefusalHeuristic.containsWholeWord("items: 4, 5 and 6", "4"))
+        #expect(RefusalHeuristic.containsWholeWord("(4)", "4"))
+        #expect(RefusalHeuristic.containsWholeWord("the total is €23.40.", "23.40"))
+        #expect(RefusalHeuristic.containsWholeWord("23,40 euro", "23,40"))
+        // The ends of the string — where the index guards live.
+        #expect(RefusalHeuristic.containsWholeWord("4", "4"))
+        #expect(RefusalHeuristic.containsWholeWord("4.", "4"))
+        #expect(RefusalHeuristic.containsWholeWord(".4", "4"))
+        #expect(!RefusalHeuristic.containsWholeWord("3.4", "4"))
+        #expect(!RefusalHeuristic.containsWholeWord("4.5", "4"))
+        // The accepted gap, pinned so a change to it is deliberate.
+        #expect(!RefusalHeuristic.containsWholeWord("best = 0.0", "best = 0"))
     }
 
     @Test("'i decline' is a whole phrase: 'I declined … earlier, but here it is' is not a refusal")
