@@ -128,7 +128,8 @@ struct LocalAgentActivityTests {
         let log = ActivityLog()
         let activity = GenerationActivity(asserter: log)
         let agent = LocalAgent(inferenceProvider: NestedFailing(activity), tools: [], activity: activity)
-        _ = try? await agent.run(goal: "hello")
+        // The provider's own error — proves the nested hold was entered and thrown out of.
+        await #expect(throws: Boom.self) { _ = try await agent.run(goal: "hello") }
         #expect(log.all == ["begin:M1K3 agent turn", "end"])
         // Balanced: a fresh hold begins a NEW assertion, which only happens from a zero count.
         await activity.during("after") {}

@@ -379,8 +379,8 @@ def gh_releases(_ident: str, url: str) -> list[Release] | _Failed:
         for t in tags:
             rels.setdefault(t["name"].lstrip("v"), Release(t["name"].lstrip("v"), "", ""))
         if len(tags) < 100:
-            break
-    return list(rels.values())
+            return list(rels.values())
+    return FAILED  # still full at the page cap: truncated, so never read as current
 
 
 def gh_manifest(_ident: str, url: str, version: str) -> str | _Failed:

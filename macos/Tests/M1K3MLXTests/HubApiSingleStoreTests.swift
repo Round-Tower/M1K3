@@ -47,11 +47,15 @@ struct HubApiSingleStoreTests {
                 let lineStart = newline.map { rest.index(after: $0) } ?? rest.startIndex
                 let isComment = rest[lineStart ..< open.lowerBound]
                     .trimmingCharacters(in: .whitespaces).hasPrefix("//")
-                if !isComment {
-                    sites += 1
-                    #expect(rest[open.lowerBound ..< end].contains("cache: nil"),
-                            "\(url.lastPathComponent): \(rest[open.lowerBound ..< end])")
+                guard !isComment else {
+                    // Prose like `// builds a HubApi( …` has no matching paren of its own; walking
+                    // to one would skip the real calls in between. Step past the match only.
+                    rest = rest[open.upperBound...]
+                    continue
                 }
+                sites += 1
+                #expect(rest[open.lowerBound ..< end].contains("cache: nil"),
+                        "\(url.lastPathComponent): \(rest[open.lowerBound ..< end])")
                 rest = rest[end...]
             }
         }

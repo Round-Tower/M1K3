@@ -267,3 +267,6 @@ def test_tags_page_past_100_and_a_failed_page_counts(monkeypatch):
         return page1 if path.endswith("&page=1") else m.FAILED
     monkeypatch.setattr(m, "_gh", failing)
     assert m.gh_releases("r", "https://github.com/o/r") is m.FAILED
+    # Still full at the page cap: truncated, so it never reads as current.
+    monkeypatch.setattr(m, "_gh", lambda path: [] if "/releases" in path else page1)
+    assert m.gh_releases("r", "https://github.com/o/r") is m.FAILED
