@@ -538,7 +538,9 @@ extension MLXBrainProvider: ToolCallingProvider {
                         rejection, offered: Qwen35CallRepair.offeredNames(rendered.specs)
                     ) {
                         calls += repaired.map(MLXToolMapping.parsedToolCall(from:))
-                        ToolTurnDiagnostics.logRepaired(rejection, names: repaired.map(\.function.name), label: "toolTurn")
+                        ToolTurnDiagnostics.logRepaired(
+                            rejection, names: repaired.map(\.function.name), label: "toolTurn"
+                        )
                     } else {
                         rejections += 1
                         ToolTurnDiagnostics.logRejected(rejection, label: "toolTurn")
@@ -1092,7 +1094,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                         rejection, offered: Qwen35CallRepair.offeredNames(specs)
                     ) {
                         calls += repaired.map(MLXToolMapping.parsedToolCall(from:))
-                        ToolTurnDiagnostics.logRepaired(rejection, names: repaired.map(\.function.name), label: "toolTurnSession")
+                        ToolTurnDiagnostics.logRepaired(
+                            rejection, names: repaired.map(\.function.name), label: "toolTurnSession"
+                        )
                     } else {
                         rejections += 1
                         ToolTurnDiagnostics.logRejected(rejection, label: "toolTurnSession")
