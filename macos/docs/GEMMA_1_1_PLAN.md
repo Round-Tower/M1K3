@@ -214,6 +214,9 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 16:00 — the `datetime` miss root-caused as a malformed call
+(orphan `</parameter>`); the empty-turn steer measured and backed out; the upstream issue drafted.
+Confidence 0.9 (the raw rejected text is in hand).
 Review: Kev + claude-opus-5-5, 2026-10-07 15:15 — #499 landed (bd1ec024) + issue #500 live; the Qwen3.5
 tools A/B and the reasoning-only empty turn (the parser theory tested and disproved by launch).
 Confidence 0.85 on the mechanism (the 16-token turns + upstream's documented reasoning drop).
@@ -472,6 +475,22 @@ Fix list, in order:
   the empty turn falls to the fallback synthesis, which at iteration 0 has no evidence — for a
   datetime / recent-activity ask, a likely fabricated answer. Proposed: steer an empty pre-tool
   `.text` turn once, like the empty `.toolCalls([])` case already is (`challenger` first).
+- **The `datetime` miss, root-caused (launch, dump-enabled):** under `.qwen35` it is a REJECTED call
+  (`malformed_syntax`), not a stall. Qwen3.5 writes `<function=datetime>` then a stray `</parameter>`
+  BEFORE its (legitimate, required-but-ignored) `<parameter=query>…</parameter>`; the scanner rightly
+  rejects it, and upstream keeps rejected calls non-executable by design. An empty-turn steer was
+  built to the challenger's gate, measured (never fired on chat for either brain; zero pointless tool
+  calls; on `datetime` the steered retry repeats the malformed call — 25/30) and **backed out**: no
+  measured benefit. Kept from it: the cap synthesis no longer claims "I gathered some information…"
+  over zero evidence. **Prerequisite before Qwen3.5 can take Lil** — pick one: thinking on for tool
+  turns (29/30, +55% latency), or an upstream scanner tolerance for an orphan `</parameter>` before the
+  first `<parameter=`. Draft for ml-explore/mlx-swift-lm (Kev files — outward-facing):
+  > **Qwen3.5 XML tool call with an orphan `</parameter>` before the first parameter is rejected
+  > (malformed_syntax).** Qwen3.5-4B (non-thinking) emits `<tool_call>\n<function=datetime>\n</parameter>\n
+  > <parameter=query>\n…\n</parameter>…` for a single-parameter tool. `QwenXMLPayloadScanner` rejects it.
+  > A closing tag with no open parameter carries no data; tolerating (skipping) it before the first
+  > `<parameter=` would accept the call without loosening any argument validation. Repro + raw preview
+  > available. Observed in ~2–3 of 3 trials on a datetime ask with thinking off; 0 with thinking on.
 - **UNVERIFIED side-finding:** because the decoder routes reasoning away from `.chunk`, a thinking
   brain on the native tool path may show an empty "thinking" disclosure in the chat UI (our tool
   session only reads `.chunk`). Check on a live Qwen3.5 thinking turn.
