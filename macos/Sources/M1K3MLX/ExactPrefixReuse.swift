@@ -44,8 +44,9 @@ enum ExactPrefixReuse {
     /// divergence). Never the whole render — generation needs one token of input.
     static func plan(candidates: [[Int]], full: [Int], turnCarriesImages: Bool = false) -> Plan {
         guard !turnCarriesImages else { return .fresh }
+        let usable = { (ids: [Int]) in !ids.isEmpty && ids.count < full.count && full.starts(with: ids) }
         let best = candidates.indices
-            .filter { !candidates[$0].isEmpty && candidates[$0].count < full.count && full.starts(with: candidates[$0]) }
+            .filter { usable(candidates[$0]) }
             .max { candidates[$0].count < candidates[$1].count }
         guard let best else { return .fresh }
         return .extend(candidate: best, from: candidates[best].count, to: full.count - 1)

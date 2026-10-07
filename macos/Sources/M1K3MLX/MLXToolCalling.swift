@@ -977,8 +977,8 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 )
             }
             self.sendCount += 1
-            let cache: [KVCache]
-            let input: LMInput
+            var cache: [KVCache]
+            var input: LMInput
             // The state that belongs with `cache` (a checkpoint's own; nil fresh).
             var state: LMOutput.State?
             // Reuse only a LINEAR cache: trimming a wrapped sliding-window cache
@@ -999,9 +999,10 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             // reuse and trims against layer.offset (the cache's real state).
             // Only an OVERSTATED mirror corrupts, and no path produces one.
             if self.usesCheckpoints {
-                (cache, input, state) = try self.fromCheckpoint(
+                let turn = try self.fromCheckpoint(
                     fullIDs: fullIDs, prepared: prepared, turnCarriesImages: turnCarriesImages, context: context
                 )
+                (cache, input, state) = (turn.cache, turn.input, turn.state)
             } else if reuse > 0, reusable, let existing = self.kvCache {
                 // Keep the reusable prefix; trim past it (the prior turn's
                 // generated tail + any divergence) and prefill only the rest.
@@ -1032,11 +1033,27 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                     source: self.seedSource.rawValue
                 )
             }
-            self.kvCache = cache
+            // Checkpoint mode never keeps a live cache: it is spent once decode
+            // samples into it, and holding it past a throw only pins memory.
+            if !self.usesCheckpoints { self.kvCache = cache }
 
-            let stream = try MLXLMCommon.generate(
-                input: input, cache: cache, state: state, parameters: parameters, context: context
-            )
+            let stream: AsyncStream<Generation>
+            do {
+                stream = try MLXLMCommon.generate(
+                    input: input, cache: cache, state: state, parameters: parameters, context: context
+                )
+            } catch let error as ContinuationStateError where self.usesCheckpoints {
+                // The iterator's own prepare wanted state the checkpoint lacked — a
+                // one-token extend skips prefillExactly, so its catch never saw it.
+                // Nothing has streamed yet: drop the checkpoints and prefill fresh.
+                self.checkpoints = []
+                self.logCheckpointDropped(String(describing: error))
+                cache = try context.model.newCache(parameters: parameters)
+                input = prepared
+                stream = try MLXLMCommon.generate(
+                    input: input, cache: cache, parameters: parameters, context: context
+                )
+            }
             var text = ""
             var calls: [ParsedToolCall] = []
             var rejections = 0
@@ -1108,18 +1125,30 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     /// A `ContinuationStateError` (a model that wanted state the checkpoint
     /// lacks) drops every checkpoint and prefills fresh — correct, unoptimised,
     /// and loud.
+    private struct CheckpointTurn {
+        let cache: [KVCache]
+        let input: LMInput
+        let state: LMOutput.State?
+    }
+
     private func fromCheckpoint(
         fullIDs: [Int], prepared: LMInput, turnCarriesImages: Bool, context: ModelContext
-    ) throws -> (cache: [KVCache], input: LMInput, state: LMOutput.State?) {
+    ) throws -> CheckpointTurn {
         let plan = ExactPrefixReuse.plan(
             candidates: checkpoints.map(\.ids), full: fullIDs, turnCarriesImages: turnCarriesImages
         )
         guard case let .extend(index, from, to) = plan, let pristine = checkpoints.first else {
             checkpoints = Array(checkpoints.prefix(1))
             logPrefillReuse(reused: 0, total: fullIDs.count, vetoed: false, source: seedSource.rawValue)
-            return try (context.model.newCache(parameters: parameters), prepared, nil)
+            return try CheckpointTurn(
+                cache: context.model.newCache(parameters: parameters), input: prepared, state: nil
+            )
         }
         let base = checkpoints[index]
+        // Back on the pristine seed while a rolling checkpoint existed: the render
+        // stopped extending it (an assistant turn re-rendered differently). Say so,
+        // or a whole-transcript re-prefill reads as a healthy persona hit.
+        let rollingDiverged = index == 0 && checkpoints.count > 1
         checkpoints = [pristine]
         let work = index == 0 ? base.cache.map { $0.copy() } : base.cache
         do {
@@ -1129,16 +1158,20 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                     parameters: parameters, model: context.model
                 )
                 : base.state
-            checkpoints = [pristine, ExactCheckpoint(cache: work.map { $0.copy() }, ids: Array(fullIDs[..<to]), state: state)]
-            logPrefillReuse(
-                reused: from, total: fullIDs.count, vetoed: false,
-                source: index == 0 ? seedSource.rawValue : "checkpoint"
+            let rolling = ExactCheckpoint(
+                cache: work.map { $0.copy() }, ids: Array(fullIDs[..<to]), state: state
             )
-            return (work, LMInput(tokens: MLXArray(Array(fullIDs[to...]))), state)
+            checkpoints = [pristine, rolling]
+            let source = index == 1 ? "checkpoint"
+                : rollingDiverged ? "\(seedSource.rawValue) (checkpoint diverged)" : seedSource.rawValue
+            logPrefillReuse(reused: from, total: fullIDs.count, vetoed: false, source: source)
+            return CheckpointTurn(cache: work, input: LMInput(tokens: MLXArray(Array(fullIDs[to...]))), state: state)
         } catch let error as ContinuationStateError {
             checkpoints = []
             logCheckpointDropped(String(describing: error))
-            return try (context.model.newCache(parameters: parameters), prepared, nil)
+            return try CheckpointTurn(
+                cache: context.model.newCache(parameters: parameters), input: prepared, state: nil
+            )
         }
     }
 

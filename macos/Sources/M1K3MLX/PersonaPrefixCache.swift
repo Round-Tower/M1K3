@@ -136,18 +136,18 @@ final class PersonaPrefixCache: @unchecked Sendable {
         // if a concurrent store/invalidate drops the entry mid-copy — and
         // immutability: retained arrays are never mutated after store.
         lock.lock()
-        let held: (cache: [KVCache], tokens: [Int], exact: Bool, state: LMOutput.State?)? = {
+        let held: Entry? = {
             guard let index = entries.firstIndex(where: { $0.key == requested }) else { return nil }
             // A HIT is a use: move to front so the eviction candidate is always
             // the genuinely coldest entry, not merely the oldest stored.
             let entry = entries.remove(at: index)
             entries.insert(entry, at: 0)
-            return (entry.cache, entry.tokenIDs, entry.exact, entry.state)
+            return entry
         }()
         lock.unlock()
         guard let held else { return nil }
         return PersonaPrefixSnapshot(
-            cache: held.cache.map { $0.copy() }, tokenIDs: held.tokens, exact: held.exact, state: held.state
+            cache: held.cache.map { $0.copy() }, tokenIDs: held.tokenIDs, exact: held.exact, state: held.state
         )
     }
 
@@ -170,7 +170,11 @@ final class PersonaPrefixCache: @unchecked Sendable {
     /// `exact` defaults to false — the safe direction: a seed nobody vouched for
     /// is never appended to, only re-prefilled.
     func store(
-        _ cache: [KVCache], tokenIDs: [Int], exact: Bool = false, state: LMOutput.State? = nil, for newKey: PersonaCacheKey
+        _ cache: [KVCache],
+        tokenIDs: [Int],
+        exact: Bool = false,
+        state: LMOutput.State? = nil,
+        for newKey: PersonaCacheKey
     ) {
         lock.lock()
         defer { lock.unlock() }
