@@ -107,3 +107,6 @@ docs/MODULE_MAP.md (drift checker repointed), CI + landing detail lives in ../CL
 .github/workflows/README.md, SelfTest key prose lives in the file header. Every fact kept is
 one a cold session needs before its first edit. Open: anything that turns out to be missed
 on turn one goes back — measure at the next /retro. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — the dep-bump bullet points at
+tools/ci/dep_freshness.py (what's behind, who caps it); the WhisperKit/swift-transformers clash it
+named is gone with WhisperKit 1.x. -->
