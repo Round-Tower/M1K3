@@ -245,6 +245,24 @@ def test_summary_leaves_out_not_applicable_trials(tmp_path):
     assert "1 n/a" in summary
 
 
+def test_summary_counts_latency_only_fails_as_content_passes(tmp_path):
+    # 2026-10-07: a display-sleep stall turned 42 of E4B's fails into latency-ceiling fails with
+    # right answers — the summary must say how many, and what the content score is.
+    ok = {"fixtureID": "a", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    slow = {"fixtureID": "b", "kind": "code-gen", "latencyMS": 200000,
+            "checks": [{"name": "non-empty", "outcome": "pass"}, {"name": "responsive", "outcome": "fail"}]}
+    wrong = {"fixtureID": "c", "kind": "reasoning", "latencyMS": 9,
+             "checks": [{"name": "contains expected", "outcome": "fail"}, {"name": "responsive", "outcome": "fail"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok, slow, wrong]}], "provenance": {}}))
+    first = rc.summarise(doc).splitlines()[0]
+    assert "1/3 trials passed" in first
+    assert "1 latency-only (content 2/3)" in first
+    clean = tmp_path / "clean.json"
+    clean.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok]}], "provenance": {}}))
+    assert "latency-only" not in rc.summarise(clean)
+
+
 def test_thinking_mode_rides_the_trigger_only_when_set():
     assert "M1K3_SELFTEST_CHATEVAL_THINKING" not in rc.build_trigger(
         base_opts(), container=CONTAINER, power_source="ac", powermode=None, commit=None, mlx_rev=None)
