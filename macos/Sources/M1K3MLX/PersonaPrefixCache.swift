@@ -23,6 +23,8 @@
 //  Desktop only after the #415 review — mobile keeps two under its jetsam ceiling.
 //  Review: Kev + claude-opus-5-5, 2026-09-26 (2), Confidence 0.85 — the RAM snapshot is paid: measured
 //  at launch on Lil (1,747 / 2,426 / 3,349-token prefixes, 3.17 GB RSS); the capacity comment carries it.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — a slot carries the prefix's
+//  `LMOutput.State` beside its cache: Qwen3.5 on MLXVLM can't extend a seed without its rope delta.
 //
 
 import Foundation
@@ -51,6 +53,11 @@ struct PersonaPrefixSnapshot {
     /// vouches for it (trimmed back on a linear cache, or prefilled without a
     /// sampled token). Appending to a non-exact seed is misaligned KV.
     let exact: Bool
+    /// The model state the prefix's prefill handed back — MLXVLM's Qwen3.5 keeps
+    /// its rope delta here and THROWS `missingState` continuing a warm cache
+    /// without it (SeededPrefillProbe, 2026-10-07). Nil for families that carry
+    /// none. An immutable value: shared across copies, never written into.
+    var state: LMOutput.State?
     var tokenCount: Int {
         tokenIDs.count
     }
@@ -72,6 +79,7 @@ final class PersonaPrefixCache: @unchecked Sendable {
         let cache: [KVCache]
         let tokenIDs: [Int]
         let exact: Bool
+        let state: LMOutput.State?
     }
 
     /// THREE, one per prefix the provider renders in normal use: the headless
@@ -128,18 +136,18 @@ final class PersonaPrefixCache: @unchecked Sendable {
         // if a concurrent store/invalidate drops the entry mid-copy — and
         // immutability: retained arrays are never mutated after store.
         lock.lock()
-        let held: (cache: [KVCache], tokens: [Int], exact: Bool)? = {
+        let held: Entry? = {
             guard let index = entries.firstIndex(where: { $0.key == requested }) else { return nil }
             // A HIT is a use: move to front so the eviction candidate is always
             // the genuinely coldest entry, not merely the oldest stored.
             let entry = entries.remove(at: index)
             entries.insert(entry, at: 0)
-            return (entry.cache, entry.tokenIDs, entry.exact)
+            return entry
         }()
         lock.unlock()
         guard let held else { return nil }
         return PersonaPrefixSnapshot(
-            cache: held.cache.map { $0.copy() }, tokenIDs: held.tokens, exact: held.exact
+            cache: held.cache.map { $0.copy() }, tokenIDs: held.tokenIDs, exact: held.exact, state: held.state
         )
     }
 
@@ -161,11 +169,17 @@ final class PersonaPrefixCache: @unchecked Sendable {
 
     /// `exact` defaults to false — the safe direction: a seed nobody vouched for
     /// is never appended to, only re-prefilled.
-    func store(_ cache: [KVCache], tokenIDs: [Int], exact: Bool = false, for newKey: PersonaCacheKey) {
+    func store(
+        _ cache: [KVCache],
+        tokenIDs: [Int],
+        exact: Bool = false,
+        state: LMOutput.State? = nil,
+        for newKey: PersonaCacheKey
+    ) {
         lock.lock()
         defer { lock.unlock() }
         entries.removeAll { $0.key == newKey }
-        entries.insert(Entry(key: newKey, cache: cache, tokenIDs: tokenIDs, exact: exact), at: 0)
+        entries.insert(Entry(key: newKey, cache: cache, tokenIDs: tokenIDs, exact: exact, state: state), at: 0)
         // Dropping the Entry releases its KVCache refs — the Metal arrays go
         // with them once no in-flight snapshot still holds a copy.
         if entries.count > capacity { entries.removeLast(entries.count - capacity) }

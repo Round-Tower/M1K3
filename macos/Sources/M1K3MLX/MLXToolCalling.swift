@@ -63,6 +63,12 @@
 //  (XML or Hermes-JSON inside `<tool_call>`), not the strict `.xmlFunction`, which drops a JSON-dialect call
 //  silently. It did NOT fix the `datetime` misses (an orphan `</parameter>`, rejected by both — plan Stream B).
 //  History still replays in XML; granite/nanbeige stay `.xmlFunction`.
+//  Review: Kev + claude-opus-5-5, 2026-10-07 (checkpoints), Confidence 0.75 — MLXToolTurnSession gains
+//  checkpoint mode (ExactPrefixReuse) for an exact seed on an untrimmable cache: each send extends a copy
+//  of the best exact prefix to the render's last token without sampling, keeps it as the rolling
+//  checkpoint, and generates from one token carrying the checkpoint's `LMOutput.State`. Measured motive:
+//  Qwen3.5 re-prefilled ~2,585 tok (6.8 s) per tool step. Rolling, not pristine-only — the challenger's
+//  catch. The veto log names both untrimmable causes. Verify-by-launch: reused/total per step, steps 1–5+.
 
 import Foundation
 import M1K3Inference
@@ -812,6 +818,22 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     /// generated tail, set to the rendered fullIDs). The whole reuse scheme
     /// rests on this staying truthful — see CrossTurnCacheReuse.
     private var cachedIDs: [Int]
+    /// One exact prefix: a cache holding exactly `ids`, prefilled without a
+    /// sampled token, and the model state that belongs with it.
+    private struct ExactCheckpoint {
+        let cache: [KVCache]
+        let ids: [Int]
+        let state: LMOutput.State?
+    }
+
+    /// Checkpoint mode (ExactPrefixReuse): an exact seed on a cache that can
+    /// never be trimmed (Qwen3.5's MambaCache layers). The live cache is spent
+    /// once a turn samples into it, so reuse runs off `checkpoints` instead:
+    /// `[0]` the pristine seed (only ever copied), `[1]` the rolling checkpoint
+    /// the last send left at its render's last token. `kvCache`/`cachedIDs`
+    /// stay empty in this mode.
+    private let usesCheckpoints: Bool
+    private var checkpoints: [ExactCheckpoint] = []
     /// Sends so far this session — the first send is the one whose reuse SHOULD
     /// equal the seeded persona prefix, so a shortfall there is a diagnosable
     /// seed/render mismatch (logged, decoded).
@@ -856,8 +878,18 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         self.imagesAllowed = imagesAllowed
         self.seedSource = seedSource
         self.adoptTail = adoptTail
-        kvCache = seed?.cache
-        cachedIDs = seed?.tokenIDs ?? []
+        let usesCheckpoints = seed.map {
+            ExactPrefixReuse.usesCheckpoints(seedExact: $0.exact, seedLayersTrimmable: $0.cache.map(\.isTrimmable))
+        } ?? false
+        self.usesCheckpoints = usesCheckpoints
+        if usesCheckpoints, let seed {
+            checkpoints = [ExactCheckpoint(cache: seed.cache, ids: seed.tokenIDs, state: seed.state)]
+            kvCache = nil
+            cachedIDs = []
+        } else {
+            kvCache = seed?.cache
+            cachedIDs = seed?.tokenIDs ?? []
+        }
     }
 
     func send(
@@ -916,10 +948,14 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                     return false
                 }
 
-            let seedCount = self.cachedIDs.count
+            // In checkpoint mode the seed lives in `checkpoints[0]`, not the live cache.
+            let seedIDs = self.usesCheckpoints ? (self.checkpoints.first?.ids ?? []) : self.cachedIDs
+            let seedCount = seedIDs.count
             let reuse = CrossTurnCacheReuse.suffixReuseAllowed(turnCarriesImages: turnCarriesImages)
                 ? CrossTurnCacheReuse.reusableLength(
-                    cached: self.cachedIDs, full: fullIDs, hasCache: self.kvCache != nil
+                    cached: seedIDs,
+                    full: fullIDs,
+                    hasCache: self.usesCheckpoints ? !self.checkpoints.isEmpty : self.kvCache != nil
                 )
                 : 0
             // Diagnose a first-send seed miss: the PERSONA prefix SHOULD be a
@@ -937,12 +973,14 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                     return context.tokenizer.decode(tokenIds: Array(ids[lo ..< hi]))
                 }
                 self.logSeedReuseMiss(
-                    at: reuse, of: seedCount, seed: window(self.cachedIDs), render: window(fullIDs)
+                    at: reuse, of: seedCount, seed: window(seedIDs), render: window(fullIDs)
                 )
             }
             self.sendCount += 1
-            let cache: [KVCache]
-            let input: LMInput
+            var cache: [KVCache]
+            var input: LMInput
+            // The state that belongs with `cache` (a checkpoint's own; nil fresh).
+            var state: LMOutput.State?
             // Reuse only a LINEAR cache: trimming a wrapped sliding-window cache
             // (gemma-4's RotatingKVCache) underflows its rotation pointer and the
             // next decode asserts in temporalOrder. isTrimmable==false flags the
@@ -960,7 +998,12 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             // UNDERSTATES the cache — safe: the next turn computes a shorter
             // reuse and trims against layer.offset (the cache's real state).
             // Only an OVERSTATED mirror corrupts, and no path produces one.
-            if reuse > 0, reusable, let existing = self.kvCache {
+            if self.usesCheckpoints {
+                let turn = try self.fromCheckpoint(
+                    fullIDs: fullIDs, prepared: prepared, turnCarriesImages: turnCarriesImages, context: context
+                )
+                (cache, input, state) = (turn.cache, turn.input, turn.state)
+            } else if reuse > 0, reusable, let existing = self.kvCache {
                 // Keep the reusable prefix; trim past it (the prior turn's
                 // generated tail + any divergence) and prefill only the rest.
                 for layer in existing {
@@ -982,17 +1025,35 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             // is ALWAYS vetoed, it cheerfully reported "1776/2750 from cache"
             // while re-prefilling all 2750. An instrument that reports intent
             // as outcome hides the thing it exists to measure.
-            self.logPrefillReuse(
-                reused: (reuse > 0 && reusable) ? reuse : 0,
-                total: fullIDs.count,
-                vetoed: reuse > 0 && !reusable,
-                source: self.seedSource.rawValue
-            )
-            self.kvCache = cache
+            if !self.usesCheckpoints {
+                self.logPrefillReuse(
+                    reused: (reuse > 0 && reusable) ? reuse : 0,
+                    total: fullIDs.count,
+                    vetoed: reuse > 0 && !reusable,
+                    source: self.seedSource.rawValue
+                )
+            }
+            // Checkpoint mode never keeps a live cache: it is spent once decode
+            // samples into it, and holding it past a throw only pins memory.
+            if !self.usesCheckpoints { self.kvCache = cache }
 
-            let stream = try MLXLMCommon.generate(
-                input: input, cache: cache, parameters: parameters, context: context
-            )
+            let stream: AsyncStream<Generation>
+            do {
+                stream = try MLXLMCommon.generate(
+                    input: input, cache: cache, state: state, parameters: parameters, context: context
+                )
+            } catch let error as ContinuationStateError where self.usesCheckpoints {
+                // The iterator's own prepare wanted state the checkpoint lacked — a
+                // one-token extend skips prefillExactly, so its catch never saw it.
+                // Nothing has streamed yet: drop the checkpoints and prefill fresh.
+                self.checkpoints = []
+                self.logCheckpointDropped(String(describing: error))
+                cache = try context.model.newCache(parameters: parameters)
+                input = prepared
+                stream = try MLXLMCommon.generate(
+                    input: input, cache: cache, parameters: parameters, context: context
+                )
+            }
             var text = ""
             var calls: [ParsedToolCall] = []
             var rejections = 0
@@ -1053,15 +1114,85 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         }
     }
 
+    /// Checkpoint mode's cache for one send (ExactPrefixReuse): extend a copy of
+    /// the best exact prefix up to the render's last token WITHOUT sampling, keep
+    /// that as the rolling checkpoint, and hand back the cache, the one-token
+    /// input and the state that belongs with them. Runs inside `perform`.
+    ///
+    /// The pristine seed is only ever copied; a rolling checkpoint is consumed
+    /// (this send replaces it) and dropped BEFORE it is extended, so a throw
+    /// mid-prefill can never leave a checkpoint holding more than its ids say.
+    /// A `ContinuationStateError` (a model that wanted state the checkpoint
+    /// lacks) drops every checkpoint and prefills fresh — correct, unoptimised,
+    /// and loud.
+    private struct CheckpointTurn {
+        let cache: [KVCache]
+        let input: LMInput
+        let state: LMOutput.State?
+    }
+
+    private func fromCheckpoint(
+        fullIDs: [Int], prepared: LMInput, turnCarriesImages: Bool, context: ModelContext
+    ) throws -> CheckpointTurn {
+        let plan = ExactPrefixReuse.plan(
+            candidates: checkpoints.map(\.ids), full: fullIDs, turnCarriesImages: turnCarriesImages
+        )
+        guard case let .extend(index, from, to) = plan, let pristine = checkpoints.first else {
+            checkpoints = Array(checkpoints.prefix(1))
+            logPrefillReuse(reused: 0, total: fullIDs.count, vetoed: false, source: seedSource.rawValue)
+            return try CheckpointTurn(
+                cache: context.model.newCache(parameters: parameters), input: prepared, state: nil
+            )
+        }
+        let base = checkpoints[index]
+        // Back on the pristine seed while a rolling checkpoint existed: the render
+        // stopped extending it (an assistant turn re-rendered differently). Say so,
+        // or a whole-transcript re-prefill reads as a healthy persona hit.
+        let rollingDiverged = index == 0 && checkpoints.count > 1
+        checkpoints = [pristine]
+        let work = index == 0 ? base.cache.map { $0.copy() } : base.cache
+        do {
+            let state = to > from
+                ? try MLXBrainProvider.prefillExactly(
+                    Array(fullIDs[from ..< to]), into: work, state: base.state,
+                    parameters: parameters, model: context.model
+                )
+                : base.state
+            let rolling = ExactCheckpoint(
+                cache: work.map { $0.copy() }, ids: Array(fullIDs[..<to]), state: state
+            )
+            checkpoints = [pristine, rolling]
+            let source = index == 1 ? "checkpoint"
+                : rollingDiverged ? "\(seedSource.rawValue) (checkpoint diverged)" : seedSource.rawValue
+            logPrefillReuse(reused: from, total: fullIDs.count, vetoed: false, source: source)
+            return CheckpointTurn(cache: work, input: LMInput(tokens: MLXArray(Array(fullIDs[to...]))), state: state)
+        } catch let error as ContinuationStateError {
+            checkpoints = []
+            logCheckpointDropped(String(describing: error))
+            return try CheckpointTurn(
+                cache: context.model.newCache(parameters: parameters), input: prepared, state: nil
+            )
+        }
+    }
+
+    /// Param-only for the same swiftformat/autoclosure reason as its siblings.
+    private func logCheckpointDropped(_ reason: String) {
+        mlxToolLog.notice(
+            "toolTurnSession checkpoints DROPPED — \(reason, privacy: .public); prefilling fresh from here"
+        )
+    }
+
     /// Param-only (the Logger interpolation is an autoclosure; swiftformat
     /// strips the `self.` the compiler would need on a member).
     private func logPrefillReuse(reused: Int, total: Int, vetoed: Bool, source: String) {
         // `vetoed` is the interesting case and deserves its own word: the cache
-        // HELD a usable prefix and the sliding window made it unusable.
+        // HELD a usable prefix and an untrimmable layer made it unusable — a
+        // wrapped sliding window (gemma-4), or a recurrent layer whose seed no
+        // builder vouched exact (checkpoint mode covers the exact ones).
         // `seed=` is the acceptance instrument for the conversation tail: a
         // reuse figure above the persona length with seed=persona would mean
         // the tail never engaged — the two must be distinguishable in the log.
-        let note = vetoed ? " (VETOED — cache wrapped the sliding window)" : ""
+        let note = vetoed ? " (VETOED — cache not trimmable: wrapped window or recurrent layer)" : ""
         mlxToolLog.notice(
             """
             toolTurnSession reuse: \(reused, privacy: .public)/\(total, privacy: .public) \
@@ -1101,6 +1232,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             logTailAdoption(adoptTail(cache, cachedIDs), tokens: cachedIDs.count)
         }
         kvCache = nil
+        checkpoints = []
         MLXMemoryBudget.reclaim(label: "toolTurnSession")
     }
 
