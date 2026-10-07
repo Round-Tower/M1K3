@@ -1,0 +1,520 @@
+{
+ "provenance": {
+  "appCommit": "7d376521",
+  "date": "2026-10-07T19:57:27Z",
+  "hardware": "Apple M1 Max · 64 GB",
+  "livePath": true,
+  "mlxSwiftLMRevision": "ee673d6a71d76e67b532dc7eaf91d92edc3bb8bb",
+  "notes": "Control for the LFM2 checkpoint run: same fixtures on the pre-checkpoint build (dd-eval, night branch) | appCommit corrected by hand from 42277b0d: the Debug app was built 16:33 from 7d376521 (later night-branch commits are docs-only); the runner stamps HEAD at run time.",
+  "osVersion": "macOS 27.0",
+  "powerMode": 2,
+  "powerSource": "ac",
+  "repeats": 1
+ },
+ "runs": [
+  {
+   "brainID": "pocket",
+   "modelID": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+   "peakMemoryMB": 1470,
+   "residentMemoryMBAtStart": 0,
+   "scores": [
+    {
+     "answerPreview": "The current date and time on this Mac is Saturday, 14 June 2026 at 12:00 PM.",
+     "checks": [
+      {
+       "detail": "76 chars",
+       "name": "non-empty",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "no think-leak",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0/13 mixed-script words, 1 scripts",
+       "name": "coherent",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0 offered",
+       "name": "follow-ups",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "ends-with-question",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "exemplar-echo",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "calls datetime",
+       "outcome": "pass"
+      },
+      {
+       "detail": "4514ms",
+       "name": "responsive",
+       "outcome": "pass"
+      }
+     ],
+     "fixtureID": "tool-datetime",
+     "kind": "tool-use",
+     "latencyMS": 4514,
+     "repeatIndex": 0
+    },
+    {
+     "answerPreview": "The information about the database library from your notes has been retrieved successfully. If you need more details or clarification, feel free to ask!",
+     "checks": [
+      {
+       "detail": "152 chars",
+       "name": "non-empty",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "no think-leak",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0/24 mixed-script words, 1 scripts",
+       "name": "coherent",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0 offered",
+       "name": "follow-ups",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "ends-with-question",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "exemplar-echo",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "calls search_knowledge",
+       "outcome": "pass"
+      },
+      {
+       "detail": "2943ms",
+       "name": "responsive",
+       "outcome": "pass"
+      }
+     ],
+     "fixtureID": "tool-search-notes",
+     "kind": "tool-use",
+     "latencyMS": 2943,
+     "repeatIndex": 0
+    },
+    {
+     "answerPreview": "I don't have access to any documents or internal files on this system. If your query is about a conveyor seal, please provide relevant details or specify which data you'd like me to review from your stored information.",
+     "checks": [
+      {
+       "detail": "218 chars",
+       "name": "non-empty",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "no think-leak",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0/38 mixed-script words, 1 scripts",
+       "name": "coherent",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0 offered",
+       "name": "follow-ups",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "ends-with-question",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "exemplar-echo",
+       "outcome": "pass"
+      },
+      {
+       "detail": "called nothing",
+       "name": "calls search_knowledge",
+       "outcome": "fail"
+      },
+      {
+       "detail": "1483ms",
+       "name": "responsive",
+       "outcome": "pass"
+      }
+     ],
+     "fixtureID": "tool-search-doc",
+     "kind": "tool-use",
+     "latencyMS": 1483,
+     "repeatIndex": 0
+    },
+    {
+     "answerPreview": "The city of Cork was founded in 1198.",
+     "checks": [
+      {
+       "detail": "37 chars",
+       "name": "non-empty",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "no think-leak",
+       "outcome": "pass"
+      },
+      {
+       "detail": "7 words, not judged",
+       "name": "coherent",
+       "outcome": "skip"
+      },
+      {
+       "detail": "0 offered",
+       "name": "follow-ups",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "ends-with-question",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "exemplar-echo",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "calls lookup_fact",
+       "outcome": "pass"
+      },
+      {
+       "detail": "2721ms",
+       "name": "responsive",
+       "outcome": "pass"
+      }
+     ],
+     "fixtureID": "tool-fact",
+     "kind": "tool-use",
+     "latencyMS": 2721,
+     "repeatIndex": 0
+    },
+    {
+     "answerPreview": "The most recent information about Apple Silicon has been found on the web. Here’s a brief summary:  - New updates and product announcements related to Apple Silicon are being reported. - Industry analysts discuss its performance improvements and market impact.  If you need more details or specific articles, let me know!",
+     "checks": [
+      {
+       "detail": "321 chars",
+       "name": "non-empty",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "no think-leak",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0/49 mixed-script words, 1 scripts",
+       "name": "coherent",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0 offered",
+       "name": "follow-ups",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "ends-with-question",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "exemplar-echo",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "calls web_search",
+       "outcome": "pass"
+      },
+      {
+       "detail": "3198ms",
+       "name": "responsive",
+       "outcome": "pass"
+      }
+     ],
+     "fixtureID": "tool-web",
+     "kind": "tool-use",
+     "latencyMS": 3198,
+     "repeatIndex": 0
+    },
+    {
+     "answerPreview": "The M1K3 app page explains that it's a fully on-device AI companion for Macs, focusing on privacy by keeping data local and not sending anything to servers. That’s how we’re aligning with strong privacy practices.",
+     "checks": [
+      {
+       "detail": "213 chars",
+       "name": "non-empty",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "no think-leak",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0/35 mixed-script words, 1 scripts",
+       "name": "coherent",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0 offered",
+       "name": "follow-ups",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "ends-with-question",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "exemplar-echo",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "excludes forbidden",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "calls fetch_page",
+       "outcome": "pass"
+      },
+      {
+       "detail": "4810ms",
+       "name": "responsive",
+       "outcome": "pass"
+      }
+     ],
+     "fixtureID": "tool-read-site",
+     "kind": "tool-use",
+     "latencyMS": 4810,
+     "repeatIndex": 0
+    },
+    {
+     "answerPreview": "Here’s a concise recap of what you’ve been doing this week: - Covered the Cork Jazz Festival 2026 lineup. - Took a quiet coding session on Tuesday. - Worked on sourdough starter on Monday. - Had two new memories recently. - Received 12 calls, mostly chatting with Claude Code. - Your pulse and engagement were steady.  Let me know if you need more details!",
+     "checks": [
+      {
+       "detail": "356 chars",
+       "name": "non-empty",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "no think-leak",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0/56 mixed-script words, 1 scripts",
+       "name": "coherent",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0 offered",
+       "name": "follow-ups",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "ends-with-question",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "exemplar-echo",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "calls recent_activity",
+       "outcome": "pass"
+      },
+      {
+       "detail": "3364ms",
+       "name": "responsive",
+       "outcome": "pass"
+      }
+     ],
+     "fixtureID": "tool-recent-activity",
+     "kind": "tool-use",
+     "latencyMS": 3364,
+     "repeatIndex": 0
+    },
+    {
+     "answerPreview": "The latest Claude model is based on the 2026 update series, specifically Claude 3.7 Sonnet. Let me know if you need more details!",
+     "checks": [
+      {
+       "detail": "129 chars",
+       "name": "non-empty",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "no think-leak",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0/21 mixed-script words, 1 scripts",
+       "name": "coherent",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0 offered",
+       "name": "follow-ups",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "ends-with-question",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "exemplar-echo",
+       "outcome": "pass"
+      },
+      {
+       "detail": "called search_knowledge",
+       "name": "calls web_search",
+       "outcome": "fail"
+      },
+      {
+       "detail": "3087ms",
+       "name": "responsive",
+       "outcome": "pass"
+      }
+     ],
+     "fixtureID": "tool-web-newest",
+     "kind": "tool-use",
+     "latencyMS": 3087,
+     "repeatIndex": 0
+    },
+    {
+     "answerPreview": "The All-Ireland hurling final of this year was won by the team from [source name]. Let me know if you need more details!",
+     "checks": [
+      {
+       "detail": "120 chars",
+       "name": "non-empty",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "no think-leak",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0/23 mixed-script words, 1 scripts",
+       "name": "coherent",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0 offered",
+       "name": "follow-ups",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "ends-with-question",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "exemplar-echo",
+       "outcome": "pass"
+      },
+      {
+       "detail": "called lookup_fact",
+       "name": "calls web_search",
+       "outcome": "fail"
+      },
+      {
+       "detail": "2936ms",
+       "name": "responsive",
+       "outcome": "pass"
+      }
+     ],
+     "fixtureID": "tool-web-this-year",
+     "kind": "tool-use",
+     "latencyMS": 2936,
+     "repeatIndex": 0
+    },
+    {
+     "answerPreview": "I don’t currently have real-time access to live event data or a built-in way to check daily activity peaks without specifying a time window. The tools I have would let me search the web for recent news about busy periods, but they wouldn’t automatically return the exact day-to-day statistics you asked for unless you tell me which days are relevant.  To get the most accurate answer, you could tell me the time frame (e.g., “the last 7 days”) or specific dates, and I can look up recent information for you. Alternatively, I can check a general web search for common sources that track daily activity peaks. Just let me know how you’d like to proceed!",
+     "checks": [
+      {
+       "detail": "652 chars",
+       "name": "non-empty",
+       "outcome": "pass"
+      },
+      {
+       "detail": "",
+       "name": "no think-leak",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0/114 mixed-script words, 1 scripts",
+       "name": "coherent",
+       "outcome": "pass"
+      },
+      {
+       "detail": "0 offered",
+       "name": "follow-ups",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "ends-with-question",
+       "outcome": "skip"
+      },
+      {
+       "detail": "no",
+       "name": "exemplar-echo",
+       "outcome": "pass"
+      },
+      {
+       "detail": "called nothing",
+       "name": "calls recent_activity",
+       "outcome": "fail"
+      },
+      {
+       "detail": "2266ms",
+       "name": "responsive",
+       "outcome": "pass"
+      }
+     ],
+     "fixtureID": "tool-recent-busiest",
+     "kind": "tool-use",
+     "latencyMS": 2266,
+     "repeatIndex": 0
+    }
+   ]
+  }
+ ],
+ "schemaVersion": 1
+}
