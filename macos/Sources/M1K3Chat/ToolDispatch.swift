@@ -93,6 +93,7 @@ public enum ToolDispatch {
 
     /// Each result's share of the budget: the shortest are carried whole, and what they
     /// leave goes to the rest ("the time" and "the news" give the news nearly all of it).
+    /// `lengths` are TRIMMED counts, as `observationBlock` trims before it cuts.
     public static func shares(_ lengths: [Int], total: Int = observationBudget) -> [Int] {
         var out = Array(repeating: 0, count: lengths.count)
         var left = total

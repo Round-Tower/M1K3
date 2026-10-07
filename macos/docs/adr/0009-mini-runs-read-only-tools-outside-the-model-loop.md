@@ -100,4 +100,6 @@ notes, not their calendar. Which tool is a finer decision than whether a tool is
      shared observation budget (short results whole, the rest to the long one), so a chained prompt costs one
      more header, not more text (Mini's 4,096 window), and answers once. All links failed → the agent; none
      failed, none found anything → plain; else answer from what ran, naming a link that failed. A web link after
-     the head needs its own query. Arm: `M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch` + `_ROUTER_CHAIN=1`; no two-tool fixture exists yet. -->
+     the head needs its own query. Cost: two long results get ~1,200 chars each, half a single tool's text, so a
+     chained web answer can miss what a lone search would have carried. #510 review: the group head never picks
+     a web tool (a wrong pick is egress); Apple's pick keeps that call. Arm: `M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch` + `_ROUTER_CHAIN=1`; no two-tool fixture exists yet. -->

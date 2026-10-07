@@ -56,60 +56,59 @@ struct ToolGroupRouterTests {
         #expect(ToolGroupRouter.pick(for: question, embed: { _ in [1, 0] }, head: noneFirst) == nil)
     }
 
-    @Test("a device pick needs exactly one named tool")
+    @Test("the device words name the tools a turn reads, whole words only")
     func deviceWords() {
-        #expect(ToolGroupRouter.deviceTool("What time is it?") == "datetime")
-        #expect(ToolGroupRouter.deviceTool("Check my calendar for Friday.") == "calendar_peek")
-        #expect(ToolGroupRouter.deviceTool("Battery: how much juice left?") == "battery_status")
-        #expect(ToolGroupRouter.deviceTool("How much room on the hard drive?") == "system_status")
-        #expect(ToolGroupRouter.deviceTool("Whereabouts am I exactly?") == "current_location")
-        #expect(ToolGroupRouter.deviceTool("What is the exact current date and time on this Mac right now?") == "datetime")
+        #expect(ToolGroupRouter.deviceTools("What time is it?") == ["datetime"])
+        #expect(ToolGroupRouter.deviceTools("Check my calendar for Friday.") == ["calendar_peek"])
+        #expect(ToolGroupRouter.deviceTools("Battery: how much juice left?") == ["battery_status"])
+        #expect(ToolGroupRouter.deviceTools("How much room on the hard drive?") == ["system_status"])
+        #expect(ToolGroupRouter.deviceTools("Whereabouts am I exactly?") == ["current_location"])
+        #expect(ToolGroupRouter.deviceTools("What is the exact current date and time on this Mac right now?") == ["datetime"])
         // ADR 0009's spike: a per-group router called this a device question. It names none.
-        #expect(ToolGroupRouter.deviceTool("What's 17 × 23?") == nil)
+        #expect(ToolGroupRouter.deviceTools("What's 17 × 23?").isEmpty)
         // Two named: no single tool. Without chains the head abstains; with them it runs both.
-        #expect(ToolGroupRouter.deviceTool("What's the time and my battery?") == nil)
+        #expect(ToolGroupRouter.deviceTools("What's the time and my battery?") == ["battery_status", "datetime"])
         #expect(ToolGroupRouter.pick(group: "device", question: "What's the time and my battery?") == nil)
         #expect(ToolGroupRouter.pick(group: "device", question: "What's the time and my battery?", chain: true)
             == ToolPick(tool: "battery_status", query: "", then: [ToolPick(tool: "datetime", query: "")]))
         // Whole words only.
-        #expect(ToolGroupRouter.deviceTool("daytime television") == nil)
-        #expect(ToolGroupRouter.deviceTool("What day is it?") == "datetime")
-        #expect(ToolGroupRouter.deviceTool("What does my day look like?") == "calendar_peek")
-        #expect(ToolGroupRouter.deviceTool("Memory usage details.") == "system_status")
-        #expect(ToolGroupRouter.deviceTool("Check your memory of what I said") == nil)
+        #expect(ToolGroupRouter.deviceTools("daytime television").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("What day is it?") == ["datetime"])
+        #expect(ToolGroupRouter.deviceTools("What does my day look like?") == ["calendar_peek"])
+        #expect(ToolGroupRouter.deviceTools("Memory usage details.") == ["system_status"])
+        #expect(ToolGroupRouter.deviceTools("Check your memory of what I said").isEmpty)
+        // #510 review: a bare "time" or "charge" is not a device read.
+        #expect(ToolGroupRouter.deviceTools("When was the last time we talked about this?").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("What's the charge for the meeting room?") == ["calendar_peek"])
+        #expect(ToolGroupRouter.deviceTools("Tell me the time, please.") == ["datetime"])
     }
 
     /// Review, 2026-10-07: "schedule a meeting" names the calendar, but it's a write. A
     /// peek would answer it with a list, and the brain might say it booked it.
     @Test("a device write abstains, so the agent (with the tools that act) gets it")
     func deviceWritesAbstain() {
-        #expect(ToolGroupRouter.deviceTool("Schedule a meeting with Sean at 3") == nil)
-        #expect(ToolGroupRouter.deviceTool("Add an event for lunch tomorrow") == nil)
-        #expect(ToolGroupRouter.deviceTool("Set a reminder for 5pm") == nil)
-        #expect(ToolGroupRouter.deviceTool("My schedule for today.") == "calendar_peek")
+        #expect(ToolGroupRouter.deviceTools("Schedule a meeting with Sean at 3").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("Add an event for lunch tomorrow").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("Set a reminder for 5pm").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("My schedule for today.") == ["calendar_peek"])
     }
 
-    @Test("each family names its tool; a URL is a fetch and a reference source a lookup")
+    @Test("each local family names its tool; web and script are left to Apple's pick")
     func familyTools() {
         #expect(ToolGroupRouter.pick(group: "knowledge", question: "my notes on the seal") == ToolPick(tool: "search_knowledge", query: ""))
         #expect(ToolGroupRouter.pick(group: "activity", question: "what did we do this week") == ToolPick(tool: "recent_activity", query: ""))
         // The thinnest class: Apple's pick decides (it can still say action).
         #expect(ToolGroupRouter.pick(group: "script", question: "run the backup") == nil)
-        #expect(ToolGroupRouter.pick(group: "web", question: "Fetch m1k3.app and give me your read")
-            == ToolPick(tool: "fetch_page", query: "https://m1k3.app"))
-        #expect(ToolGroupRouter.pick(group: "web", question: "Look up Cork's founding year from a reference source.")?.tool == "lookup_fact")
-        #expect(ToolGroupRouter.pick(group: "web", question: "Who won the hurling final this year?")?.tool == "web_search")
-        #expect(ToolGroupRouter.pick(group: "web", question: "Read https://example.com/post")?.tool == "fetch_page")
-        // A dotted name with no fetch verb or scheme is a search, not a site.
-        #expect(ToolGroupRouter.pick(group: "web", question: "What is new in Node.js 24?")?.tool == "web_search")
-        #expect(ToolGroupRouter.pick(group: "web", question: "Any news on e.coli outbreaks?")?.tool == "web_search")
+        // #510 review: a wrong web pick is egress, so the head leaves every web turn to Apple's pick.
+        #expect(ToolGroupRouter.pick(group: "web", question: "Fetch m1k3.app and give me your read") == nil)
+        #expect(ToolGroupRouter.pick(group: "web", question: "Who won the hurling final this year?") == nil)
         #expect(ToolGroupRouter.pick(group: "none", question: "anything") == nil)
         #expect(ToolGroupRouter.pick(group: "weather", question: "anything") == nil)
     }
 
     @Test("every tool the head can name is one the app may dispatch")
     func namesOnlyDispatchableTools() {
-        let named = ToolGroupRouter.deviceCues.map { $0.tool } + ["search_knowledge", "recent_activity", "fetch_page", "lookup_fact", "web_search"]
+        let named = ToolGroupRouter.deviceCues.map { $0.tool } + ["search_knowledge", "recent_activity"]
         #expect(Set(named).isSubset(of: ToolDispatch.dispatchable))
     }
 

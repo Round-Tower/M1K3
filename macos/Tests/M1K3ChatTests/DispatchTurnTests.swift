@@ -468,6 +468,7 @@ struct DispatchChainTests {
         #expect(ToolDispatch.shares([100, 200]) == [100, 200])
         #expect(ToolDispatch.shares([5000]) == [2400])
         #expect(ToolDispatch.shares([]) == [])
+        #expect(ToolDispatch.shares([0, 5000]) == [0, 2400])
     }
 }
 

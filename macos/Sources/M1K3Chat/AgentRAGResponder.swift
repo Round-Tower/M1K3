@@ -794,9 +794,12 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("tool dispatch: \(step.tool.name, privacy: .public) ran, \(output.count, privacy: .public) chars")
             ran.append((step, output))
         }
-        // Every tool failed: the agent turn answers. None failed but none found anything:
-        // a plain turn (a "found nothing" is not evidence). Mixed: the agent, which may
-        // retry the one that failed.
+        // A cancel during the last link: no answer for a consumer that has gone (#510 review).
+        if Task.isCancelled { return .answered }
+        // Nothing ran: every tool failed → the agent turn; none failed but none found
+        // anything → a plain turn (a "found nothing" is not evidence). Something ran: answer
+        // from it, naming any link that failed (a failed head with a second link that ran
+        // answers from the second: DispatchChainTests.partialFailure).
         guard !ran.isEmpty else {
             if failures == 0 {
                 Self.log.notice("tool dispatch: nothing found — a plain turn answers")
@@ -808,6 +811,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // One budget for the turn, shared across the results: the short ones whole, the
         // rest to the long one. A link that failed is named, so the answer doesn't invent
         // its half (a chain only: a lone failure went to the agent above).
+        // Trimmed counts, as `observationBlock` trims: the two must measure the same text.
         let shares = ToolDispatch.shares(ran.map { $0.output.trimmingCharacters(in: .whitespacesAndNewlines).count })
         let blocks = zip(ran, shares).map { result, share in
             ToolDispatch.observationBlock(tool: result.plan.tool.name, output: result.output, budget: share)

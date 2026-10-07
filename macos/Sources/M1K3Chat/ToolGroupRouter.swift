@@ -22,8 +22,9 @@
 //  closed-vocabulary rules alone reached ~83% precision at 40% recall ("meeting notes"
 //  are notes, not the calendar). Here a device pick needs both the group and one cue
 //  word inside it ("17 × 23" names no device), every pick falls back to Apple's when
-//  the head abstains, and only the router's tools verdict reaches it; the web, notes and
-//  activity families still rest on the head alone. Whether that is precise enough is
+//  the head abstains, and only the router's tools verdict reaches it. It never picks a
+//  web tool (a wrong one is egress) or an action; the notes and activity families (local
+//  reads) still rest on the head alone. Whether that is precise enough is
 //  the eval arm's call (`M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch` + `_ROUTER_HEAD=1`).
 //  The untrained stub has no groups and abstains on every turn.
 //
@@ -107,18 +108,12 @@ public enum ToolGroupRouter {
             return ToolPick(tool: "search_knowledge", query: "")
         case "activity":
             return ToolPick(tool: "recent_activity", query: "")
-        case "web":
-            // A page fetch needs a scheme or a fetch verb beside the domain: on its own,
-            // any dotted token ("Node.js", "e.coli") reads as a site.
-            if let url = ToolDispatch.webURL(question),
-               question.localizedCaseInsensitiveContains("http") || mentions(question, any: fetchCues) {
-                return ToolPick(tool: "fetch_page", query: url)
-            }
-            return ToolPick(tool: mentions(question, any: referenceCues) ? "lookup_fact" : "web_search", query: "")
         default:
-            // `none` after a tools verdict (the two heads disagree), `script` (the thinnest
-            // class, and a wrong read would strip the read-only tools from the agent turn:
-            // Apple's pick can still say `action`), or a group this code doesn't know.
+            // `none` after a tools verdict (the two heads disagree); `web` (a wrong pick there
+            // sends the user's words off the device, so Apple's pick keeps that call: #510
+            // review); `script` (the thinnest class, and a wrong read would strip the read-only
+            // tools from the agent turn: Apple's pick can still say `action`); or a group this
+            // code doesn't know.
             return nil
         }
     }
@@ -127,13 +122,17 @@ public enum ToolGroupRouter {
     /// "the time and my battery" names two, a chain when chains are on, else an abstention.
     static let deviceCues: [(tool: String, cues: [String])] = [
         ("calendar_peek", ["calendar", "schedule", "agenda", "meeting", "meetings", "appointment", "appointments", "event", "events", "my day"]),
-        ("battery_status", ["battery", "charge", "charging", "juice"]),
+        ("battery_status", ["battery", "charging", "juice"]),
         ("system_status", [
             "cpu", "ram", "memory usage", "memory use", "memory status", "disk", "storage", "hard drive",
             "performance", "running slow", "system", "mac health",
         ]),
         ("current_location", ["location", "where am i", "whereabouts"]),
-        ("datetime", ["time", "date", "what day", "which day", "clock"]),
+        // Not a bare "time": "the last time we met" is no clock read (#510 review).
+        ("datetime", [
+            "what time", "the time", "current time", "time now", "time check", "time is it",
+            "date", "what day", "which day", "clock",
+        ]),
     ]
 
     /// A device read is a READ: "schedule a meeting", "add an event", "set a reminder"
@@ -143,18 +142,6 @@ public enum ToolGroupRouter {
         "add", "create", "book", "set", "cancel", "move", "remind", "delete", "remove", "reschedule", "invite", "put",
         "schedule a", "schedule an", "schedule the", "schedule my",
     ]
-
-    /// Asking for a page to be read, not searched.
-    static let fetchCues = ["fetch", "open", "read", "visit", "go to", "load", "summarise", "summarize"]
-
-    /// A reference lookup rather than a live search ("from a reference source").
-    static let referenceCues = ["wikipedia", "encyclopedia", "encyclopaedia", "reference source", "reference book"]
-
-    /// The one device tool the words name; nil for none, two or more, or a write.
-    static func deviceTool(_ question: String) -> String? {
-        let tools = deviceTools(question)
-        return tools.count == 1 ? tools[0] : nil
-    }
 
     /// Every device tool the words name, in `deviceCues` order; none for a write.
     static func deviceTools(_ question: String) -> [String] {

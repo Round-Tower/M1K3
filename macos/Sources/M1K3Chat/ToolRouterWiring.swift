@@ -31,8 +31,9 @@
 //  throws → nil → the agent turn. The pick is a cascade: the trained group head (ToolGroupRouter, no
 //  model in the loop, `toolGroupRouter`, absent = OFF: ADR 0009's spike rejected a per-group router),
 //  then Apple's pick, then the agent. `toolChain` (absent = OFF) lets a pick carry a second read-only
-//  tool (Apple's pick gets an `also` slot; the head chains two named device tools). All tiers also routes a chat verdict to the plain turn on
-//  Lil/Big (ADR 0008 measured no gain on Lil there), so the arm measures the two together.
+//  tool (Apple's pick gets an `also` slot; the head chains two named device tools). All tiers also
+//  routes a chat verdict to the plain turn on Lil/Big (ADR 0008 measured no gain on Lil there), so the
+//  arm measures the two together.
 //  Confidence 0.7.
 //
 
