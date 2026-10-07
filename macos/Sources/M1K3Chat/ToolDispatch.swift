@@ -21,7 +21,7 @@
 //  gets only the tools that act. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-07 — chains (`ToolPick.then`, `chain`): a pick may carry
 //  one more read-only tool ("the weather and my calendar"), the app runs both, and the results
-//  share ONE observation budget so the prompt is no bigger than a single tool's. ADR 0009 named
+//  share ONE observation budget (one more header, no more text). ADR 0009 named
 //  the gap ("a question needing two gets the better single pick"). Confidence 0.7.
 //
 
@@ -91,6 +91,18 @@ public enum ToolDispatch {
         "fetch_page": "read a specific web page or URL",
     ]
 
+    /// Each result's share of the budget: the shortest are carried whole, and what they
+    /// leave goes to the rest ("the time" and "the news" give the news nearly all of it).
+    public static func shares(_ lengths: [Int], total: Int = observationBudget) -> [Int] {
+        var out = Array(repeating: 0, count: lengths.count)
+        var left = total
+        for (taken, index) in lengths.indices.sorted(by: { lengths[$0] < lengths[$1] }).enumerated() {
+            out[index] = min(lengths[index], left / (lengths.count - taken))
+            left -= out[index]
+        }
+        return out
+    }
+
     /// Added to the picker's rules when chains are on (`toolChain`): the first line says
     /// "at most one tool", and this is the one exception to it.
     public static let chainInstructions = """
@@ -116,7 +128,7 @@ public enum ToolDispatch {
     public static let webSourced: Set<String> = ["web_search", "fetch_page", "lookup_fact"]
 
     /// The most tool output one prompt carries (Mini's window is 4,096 tokens). A chain
-    /// splits it, so two results cost the prompt no more than one did.
+    /// splits it (`shares`), so two results cost the prompt one more header, not more text.
     public static let observationBudget = 2400
 
     /// The most tools one dispatched turn runs.
@@ -125,12 +137,15 @@ public enum ToolDispatch {
     /// The tools this pick runs, in order: the pick, then each `then` the app may run on
     /// this turn (dispatchable, on offer, not already in the chain), up to `maxChain`.
     /// The head is returned as is; the responder has already refused one it can't run.
+    /// A web link after the head needs its own query: with none it would search the
+    /// whole question, the other half's words included.
     public static func chain(_ pick: ToolPick, palette: [any AgentTool]) -> [ToolPick] {
         let offered = Set(palette.map(\.name))
         var picks = [pick]
         for next in pick.then where picks.count < maxChain {
             guard dispatchable.contains(next.tool), offered.contains(next.tool),
-                  !picks.contains(where: { $0.tool == next.tool })
+                  !picks.contains(where: { $0.tool == next.tool }),
+                  !(webSourced.contains(next.tool) && next.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             else { continue }
             picks.append(ToolPick(tool: next.tool, query: next.query))
         }

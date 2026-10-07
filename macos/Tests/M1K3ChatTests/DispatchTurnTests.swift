@@ -429,6 +429,8 @@ struct DispatchChainTests {
         let prompt = try #require(answered.prompts.first)
         #expect(prompt.contains("WHAT battery_status RETURNED JUST NOW"))
         #expect(!prompt.contains("WHAT datetime RETURNED JUST NOW"))
+        // The missing half is named, so the answer doesn't invent it.
+        #expect(prompt.contains("datetime couldn't be read just now."))
 
         let agent = Scripted(["CONCLUSION: sorry"])
         _ = try await run(
@@ -454,6 +456,18 @@ struct DispatchChainTests {
         #expect(ToolDispatch.maxChain == 2)
         #expect(ToolDispatch.chain(pick, palette: palette).map(\.tool) == ["datetime", "battery_status"])
         #expect(ToolDispatch.chain(ToolPick(tool: "datetime", query: ""), palette: palette).count == 1)
+        // A web link after the head with no query of its own would search the whole question.
+        let unqueried = ToolPick(tool: "datetime", query: "", then: [ToolPick(tool: "web_search", query: " ")])
+        #expect(ToolDispatch.chain(unqueried, palette: palette).map(\.tool) == ["datetime"])
+    }
+
+    @Test("the budget is shared by length: short results whole, the rest to the long one")
+    func shares() {
+        #expect(ToolDispatch.shares([35, 10000]) == [35, 2365])
+        #expect(ToolDispatch.shares([10000, 10000]) == [1200, 1200])
+        #expect(ToolDispatch.shares([100, 200]) == [100, 200])
+        #expect(ToolDispatch.shares([5000]) == [2400])
+        #expect(ToolDispatch.shares([]) == [])
     }
 }
 

@@ -777,12 +777,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         var ran: [(plan: ToolDispatch.Plan, output: String)] = []
         var failures = 0
+        var failedNames: [String] = []
         for step in plans {
             if Task.isCancelled { return .answered }
             onActivity(.usingTool(name: step.tool.name, argument: step.input.values.first ?? ""))
             guard let output = try? await step.tool.execute(input: step.input).output, !output.hasPrefix("Error") else {
                 Self.log.notice("tool dispatch: \(step.tool.name, privacy: .public) failed")
                 failures += 1
+                failedNames.append(step.tool.name)
                 continue
             }
             if ToolDispatch.isEmptyResult(output) {
@@ -803,9 +805,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("tool dispatch: no tool ran — the agent turn answers")
             return .agent(tools)
         }
-        // One budget for the turn, split across the results (a chain costs the prompt no more).
-        let budget = ToolDispatch.observationBudget / ran.count
-        let observation = ran.map { ToolDispatch.observationBlock(tool: $0.plan.tool.name, output: $0.output, budget: budget) }
+        // One budget for the turn, shared across the results: the short ones whole, the
+        // rest to the long one. A link that failed is named, so the answer doesn't invent
+        // its half (a chain only: a lone failure went to the agent above).
+        let shares = ToolDispatch.shares(ran.map { $0.output.trimmingCharacters(in: .whitespacesAndNewlines).count })
+        let blocks = zip(ran, shares).map { result, share in
+            ToolDispatch.observationBlock(tool: result.plan.tool.name, output: result.output, budget: share)
+        }
+        let observation = (blocks + failedNames.map { "\($0) couldn't be read just now." })
             .joined(separator: "\n\n")
         let answered = await runPlainTurn(
             question: question, chunks: chunks, memories: memories, history: history,
@@ -828,11 +835,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // rides along: this path once handed the raw web text over bare (PR #424 review).
             let contextLine = ([PromptContext.line(now: Date(), brainName: brainNameProvider())] + turnClauses())
                 .compactMap { $0 }.joined(separator: "\n\n")
-            let framed = zip(steps, ran).map { step, result in
-                ReasoningStep(
-                    iteration: step.iteration, thought: "", action: step.action,
-                    observation: ToolDispatch.observationBlock(tool: result.plan.tool.name, output: result.output, budget: budget)
-                )
+            let framed = zip(steps, blocks).map { step, block in
+                ReasoningStep(iteration: step.iteration, thought: "", action: step.action, observation: block)
             }
             let synthesised = await streamFallback(
                 question: question, chunks: chunks, contextLine: contextLine, gathered: framed, into: continuation

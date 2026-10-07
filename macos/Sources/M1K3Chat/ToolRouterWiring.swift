@@ -114,7 +114,8 @@ public enum ToolRouterWiring {
             if groupRouter {
                 classify = { ToolGroupRouter.pick(for: $0, embed: embedder.vector, chain: chain) }
             }
-            picker = { question, menu in
+            // `[classify]`: a captured var can't be read from a @Sendable closure (Swift 6).
+            picker = { [classify] question, menu in
                 await cascade(question: question, menu: menu, classify: classify, fallback: fallback, chain: chain)
             }
         }
