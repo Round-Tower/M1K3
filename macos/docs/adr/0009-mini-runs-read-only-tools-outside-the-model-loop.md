@@ -93,3 +93,10 @@ notes, not their calendar. Which tool is a finer decision than whether a tool is
      abstains, and every abstention falls back to the pick. Arm: add
      `_ROUTER_HEAD=1`. Its weights are an untrained stub until `tools/router/train_tool_router.py` runs on a
      Mac. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.7 — chains, behind `toolChain` (absent = OFF). The
+     "one tool per turn" consequence above becomes up to two: a pick carries `then`, Apple's pick gets a second
+     schema with an `also` slot (read-only tools or none; the single-tool schema and its 36/38 are untouched while
+     the flag is off), and the group head chains two named device tools. The app runs them in order under ONE
+     shared observation budget, so a chained prompt is no bigger than a single tool's (Mini's 4,096 window), and
+     answers once. All links failed → the agent; none failed, none found anything → plain; else answer from what
+     ran. Arm: `M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch` + `_ROUTER_CHAIN=1`; no two-tool fixture exists yet. -->

@@ -957,7 +957,8 @@ final class AppCore {
                     enabled: ToolRouterWiring.isEnabled(),
                     dispatch: ToolRouterWiring.dispatchEnabled(),
                     groupRouter: ToolRouterWiring.groupRouterEnabled(),
-                    allTiers: ToolRouterWiring.allTiersEnabled()
+                    allTiers: ToolRouterWiring.allTiersEnabled(),
+                    chain: ToolRouterWiring.chainEnabled()
                 )
             }
         )

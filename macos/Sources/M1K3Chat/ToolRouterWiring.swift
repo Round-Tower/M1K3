@@ -30,7 +30,8 @@
 //  eval's `_ROUTER=dispatch` arm runs this exact route first. Where Apple's model isn't ready the pick
 //  throws → nil → the agent turn. The pick is a cascade: the trained group head (ToolGroupRouter, no
 //  model in the loop, `toolGroupRouter`, absent = OFF: ADR 0009's spike rejected a per-group router),
-//  then Apple's pick, then the agent. All tiers also routes a chat verdict to the plain turn on
+//  then Apple's pick, then the agent. `toolChain` (absent = OFF) lets a pick carry a second read-only
+//  tool (Apple's pick gets an `also` slot; the head chains two named device tools). All tiers also routes a chat verdict to the plain turn on
 //  Lil/Big (ADR 0008 measured no gain on Lil there), so the arm measures the two together.
 //  Confidence 0.7.
 //
@@ -73,6 +74,14 @@ public enum ToolRouterWiring {
         defaults.bool(forKey: allTiersKey)
     }
 
+    /// Chains: a tool turn may run two read-only tools ("the weather and my calendar").
+    /// Absent = OFF: Apple's pick gets a second slot, which the eval arm measures first.
+    public static let chainKey = "toolChain"
+
+    public static func chainEnabled(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: chainKey)
+    }
+
     /// Loaded once: the embedding asset is read-only and shared across turns.
     private static let embedder = NLSentenceEmbedder()
 
@@ -91,7 +100,7 @@ public enum ToolRouterWiring {
     /// `allTiers` gives a brain that isn't Mini the route too (unmeasured; flagged off).
     public static func route(
         provider: any InferenceProvider, enabled: Bool, dispatch: Bool = false,
-        groupRouter: Bool = false, allTiers: Bool = false
+        groupRouter: Bool = false, allTiers: Bool = false, chain: Bool = false
     ) -> PlainTurnRoute? {
         guard enabled else { return nil }
         let mini = servedMini(provider)
@@ -103,9 +112,11 @@ public enum ToolRouterWiring {
             // type checker once (ChatEvalStage's header).
             var classify: (@Sendable (String) -> ToolPick?)?
             if groupRouter {
-                classify = { ToolGroupRouter.pick(for: $0, embed: embedder.vector) }
+                classify = { ToolGroupRouter.pick(for: $0, embed: embedder.vector, chain: chain) }
             }
-            picker = { question, menu in await cascade(question: question, menu: menu, classify: classify, fallback: fallback) }
+            picker = { question, menu in
+                await cascade(question: question, menu: menu, classify: classify, fallback: fallback, chain: chain)
+            }
         }
         return PlainTurnRoute(
             decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) },
@@ -118,22 +129,33 @@ public enum ToolRouterWiring {
     /// fallback picker, else nil (the agent turn). Each stage fails open to the next.
     static func cascade(
         question: String, menu: String,
-        classify: (@Sendable (String) -> ToolPick?)?, fallback: (any ToolPicking)?
+        classify: (@Sendable (String) -> ToolPick?)?, fallback: (any ToolPicking)?, chain: Bool = false
     ) async -> ToolPick? {
         if let picked = classify?(question) {
             log.notice("tool pick: group head → \(picked.tool, privacy: .public)")
             return picked
         }
         guard let fallback else { return nil }
-        return await pick(with: fallback, question: question, menu: menu)
+        return await pick(with: fallback, question: question, menu: menu, chain: chain)
     }
 
-    /// Mini names one tool from the menu; any failure (a guardrail, the daemon) is
-    /// nil, which keeps the agent turn.
-    static func pick(with picker: some ToolPicking, question: String, menu: String) async -> ToolPick? {
-        guard let choice = try? await picker.pickTool(
-            message: question, instructions: ToolDispatch.pickerInstructions + "\n\n" + menu
-        ) else { return nil }
+    /// Apple's model names one tool from the menu (two with `chain`: the second rides
+    /// as `then`); any failure (a guardrail, the daemon) is nil, which keeps the agent turn.
+    static func pick(with picker: some ToolPicking, question: String, menu: String, chain: Bool = false) async -> ToolPick? {
+        let rules = chain
+            ? ToolDispatch.pickerInstructions + "\n" + ToolDispatch.chainInstructions
+            : ToolDispatch.pickerInstructions
+        let instructions = rules + "\n\n" + menu
+        if chain {
+            guard let picks = try? await picker.pickTools(message: question, instructions: instructions),
+                  let first = picks.first
+            else { return nil }
+            return ToolPick(
+                tool: first.tool, query: first.query,
+                then: picks.dropFirst().map { ToolPick(tool: $0.tool, query: $0.query) }
+            )
+        }
+        guard let choice = try? await picker.pickTool(message: question, instructions: instructions) else { return nil }
         return ToolPick(tool: choice.tool, query: choice.query)
     }
 

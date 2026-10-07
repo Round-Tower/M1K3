@@ -48,7 +48,8 @@
 //  Review: same day — the switches are typed explicitly: the ternary closure crashed the type checker in
 //  the app build ("failed to produce diagnostic"), which `swift test` never compiles.
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75 — `_ROUTER=dispatch` runs the app's own
-//  route (ToolRouterWiring) with every tier and dispatch on, `_ROUTER_HEAD=1` adds the group head:
+//  route (ToolRouterWiring) with every tier and dispatch on, `_ROUTER_HEAD=1` adds the group head,
+//  `_ROUTER_CHAIN=1` two-tool chains:
 //  the arm `toolRouterAllTiers` owes before it defaults on. Verify-by-launch owed (the app build).
 //  Review: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.8 — an MLX override naming an imported
 //  audition loads from its folder (AuditionStore), so `--model lil=<org/repo>` A/Bs anything imported.
@@ -318,7 +319,8 @@ enum ChatEvalStage {
         // `_ROUTER=dispatch` (2026-10-07) is the app's own route with every tier on and
         // dispatch on: a tool turn is picked (Apple's model) and run by the app, so a
         // Lil/Big cell measures `toolRouterAllTiers`. `_ROUTER_HEAD=1` puts the group
-        // head in front of the pick (`toolGroupRouter`).
+        // head in front of the pick (`toolGroupRouter`); `_ROUTER_CHAIN=1` lets a pick run
+        // two read-only tools (`toolChain`).
         let palette: [any AgentTool] = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
         var plainRoute: (@Sendable () -> PlainTurnRoute?)?
         switch SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER") {
@@ -329,7 +331,8 @@ enum ChatEvalStage {
         case "dispatch":
             let route = ToolRouterWiring.route(
                 provider: provider, enabled: true, dispatch: true,
-                groupRouter: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD") == "1", allTiers: true
+                groupRouter: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD") == "1", allTiers: true,
+                chain: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN") == "1"
             )
             plainRoute = { route }
         default:

@@ -66,8 +66,11 @@ struct ToolGroupRouterTests {
         #expect(ToolGroupRouter.deviceTool("What is the exact current date and time on this Mac right now?") == "datetime")
         // ADR 0009's spike: a per-group router called this a device question. It names none.
         #expect(ToolGroupRouter.deviceTool("What's 17 × 23?") == nil)
-        // Two named: abstain rather than guess which one.
+        // Two named: no single tool. Without chains the head abstains; with them it runs both.
         #expect(ToolGroupRouter.deviceTool("What's the time and my battery?") == nil)
+        #expect(ToolGroupRouter.pick(group: "device", question: "What's the time and my battery?") == nil)
+        #expect(ToolGroupRouter.pick(group: "device", question: "What's the time and my battery?", chain: true)
+            == ToolPick(tool: "battery_status", query: "", then: [ToolPick(tool: "datetime", query: "")]))
         // Whole words only.
         #expect(ToolGroupRouter.deviceTool("daytime television") == nil)
         #expect(ToolGroupRouter.deviceTool("What day is it?") == "datetime")
@@ -191,6 +194,30 @@ struct ToolPickCascadeTests {
         #expect(await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: nil) == nil)
     }
 
+    private actor ChainPicker: ToolPicking {
+        private(set) var chained = 0
+
+        func pickTool(message _: String, instructions _: String) async throws -> (tool: String, query: String) {
+            ("web_search", "weather")
+        }
+
+        func pickTools(message _: String, instructions: String) async throws -> [(tool: String, query: String)] {
+            chained += 1
+            #expect(instructions.contains(ToolDispatch.chainInstructions))
+            return [(tool: "web_search", query: "weather"), (tool: "calendar_peek", query: "")]
+        }
+    }
+
+    @Test("with chains on, Apple's pick is asked for two and the second rides as then; off, it names one")
+    func chainedPick() async {
+        let picker = ChainPicker()
+        let chained = await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: picker, chain: true)
+        #expect(chained == ToolPick(tool: "web_search", query: "weather", then: [ToolPick(tool: "calendar_peek", query: "")]))
+        let single = await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: picker)
+        #expect(single == ToolPick(tool: "web_search", query: "weather"))
+        #expect(await picker.chained == 1)
+    }
+
     @Test("all tiers gives any brain the route; off, it stays Mini's")
     func allTiers() {
         #expect(ToolRouterWiring.route(provider: OtherBrain(), enabled: true) == nil)
@@ -199,16 +226,19 @@ struct ToolPickCascadeTests {
         #expect(ToolRouterWiring.route(provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true)?.pick != nil)
     }
 
-    @Test("both new flags default OFF: absent reads off, an explicit true reads on")
+    @Test("the new flags default OFF: absent reads off, an explicit true reads on")
     func flagsDefaultOff() throws {
         let suite = "ToolPickCascadeTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         #expect(!ToolRouterWiring.groupRouterEnabled(defaults))
         #expect(!ToolRouterWiring.allTiersEnabled(defaults))
+        #expect(!ToolRouterWiring.chainEnabled(defaults))
         defaults.set(true, forKey: ToolRouterWiring.groupRouterKey)
         defaults.set(true, forKey: ToolRouterWiring.allTiersKey)
+        defaults.set(true, forKey: ToolRouterWiring.chainKey)
         #expect(ToolRouterWiring.groupRouterEnabled(defaults))
         #expect(ToolRouterWiring.allTiersEnabled(defaults))
+        #expect(ToolRouterWiring.chainEnabled(defaults))
     }
 }

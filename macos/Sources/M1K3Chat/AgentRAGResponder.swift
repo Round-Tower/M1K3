@@ -145,6 +145,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — `egressClauseProvider` + `turnClauses()` (#482): the egress
 //  facts ride every prompt the age clause rides (agent, plain, dispatch, synthesis), pinned in three suites.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-07 — a dispatched turn runs a chain (`ToolDispatch.chain`): the
+//  pick and up to one more read-only tool, results under one shared budget, one answer. All failed → the
+//  agent; none failed and none found anything → plain; else answer from what ran. A single pick behaves
+//  as before (DispatchTurnTests unchanged). Confidence 0.75.
 
 import Foundation
 import M1K3Agent
@@ -765,37 +769,73 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("tool dispatch: \(pick.tool, privacy: .public) stays with the agent")
             return .agent(tools)
         }
-        let argument = plan.input.values.first ?? ""
-        onActivity(.usingTool(name: plan.tool.name, argument: argument))
-        guard let output = try? await plan.tool.execute(input: plan.input).output, !output.hasPrefix("Error") else {
-            Self.log.notice("tool dispatch: \(plan.tool.name, privacy: .public) failed — the agent turn answers")
+        // A chain (2026-10-07): the pick, then any further read-only tool the turn named, run
+        // in order. Each that ran with something to say feeds the one answer; a link the app
+        // can't plan is skipped, never handed to the agent once the head has a plan.
+        let plans = [plan] + ToolDispatch.chain(pick, palette: tools).dropFirst().compactMap {
+            ToolDispatch.plan($0, palette: tools, question: question)
+        }
+        var ran: [(plan: ToolDispatch.Plan, output: String)] = []
+        var failures = 0
+        for step in plans {
+            if Task.isCancelled { return .answered }
+            onActivity(.usingTool(name: step.tool.name, argument: step.input.values.first ?? ""))
+            guard let output = try? await step.tool.execute(input: step.input).output, !output.hasPrefix("Error") else {
+                Self.log.notice("tool dispatch: \(step.tool.name, privacy: .public) failed")
+                failures += 1
+                continue
+            }
+            if ToolDispatch.isEmptyResult(output) {
+                Self.log.notice("tool dispatch: \(step.tool.name, privacy: .public) found nothing")
+                continue
+            }
+            Self.log.notice("tool dispatch: \(step.tool.name, privacy: .public) ran, \(output.count, privacy: .public) chars")
+            ran.append((step, output))
+        }
+        // Every tool failed: the agent turn answers. None failed but none found anything:
+        // a plain turn (a "found nothing" is not evidence). Mixed: the agent, which may
+        // retry the one that failed.
+        guard !ran.isEmpty else {
+            if failures == 0 {
+                Self.log.notice("tool dispatch: nothing found — a plain turn answers")
+                return await plain()
+            }
+            Self.log.notice("tool dispatch: no tool ran — the agent turn answers")
             return .agent(tools)
         }
-        if ToolDispatch.isEmptyResult(output) {
-            Self.log.notice("tool dispatch: \(plan.tool.name, privacy: .public) found nothing — a plain turn answers")
-            return await plain()
-        }
-        Self.log.notice("tool dispatch: \(plan.tool.name, privacy: .public) ran, \(output.count, privacy: .public) chars")
-        let observation = ToolDispatch.observationBlock(tool: plan.tool.name, output: output)
+        // One budget for the turn, split across the results (a chain costs the prompt no more).
+        let budget = ToolDispatch.observationBudget / ran.count
+        let observation = ran.map { ToolDispatch.observationBlock(tool: $0.plan.tool.name, output: $0.output, budget: budget) }
+            .joined(separator: "\n\n")
         let answered = await runPlainTurn(
             question: question, chunks: chunks, memories: memories, history: history,
             instructions: instructions, observation: observation,
             onActivity: onActivity, continuation: continuation
         )
-        let step = ReasoningStep(iteration: 1, thought: "", action: "\(plan.tool.name)(\(argument))", observation: output)
+        let steps = ran.enumerated().map { index, result in
+            ReasoningStep(
+                iteration: index + 1, thought: "",
+                action: "\(result.plan.tool.name)(\(result.plan.input.values.first ?? ""))", observation: result.output
+            )
+        }
         if !answered {
             // A guardrail after a SUCCESSFUL tool call: the agent's own synthesis step with
             // the result in hand, never the whole loop again (it would re-run the tool over
             // the network; PR #420 review).
             if Task.isCancelled { return .answered }
-            Self.log.notice("tool dispatch: empty answer after \(plan.tool.name, privacy: .public) — synthesising from its result")
+            Self.log.notice("tool dispatch: empty answer after \(ran.count, privacy: .public) tool(s) — synthesising from the results")
             // The result keeps its framed header (the injection guard) and the age clause
             // rides along: this path once handed the raw web text over bare (PR #424 review).
             let contextLine = ([PromptContext.line(now: Date(), brainName: brainNameProvider())] + turnClauses())
                 .compactMap { $0 }.joined(separator: "\n\n")
-            let framed = ReasoningStep(iteration: 1, thought: "", action: step.action, observation: observation)
+            let framed = zip(steps, ran).map { step, result in
+                ReasoningStep(
+                    iteration: step.iteration, thought: "", action: step.action,
+                    observation: ToolDispatch.observationBlock(tool: result.plan.tool.name, output: result.output, budget: budget)
+                )
+            }
             let synthesised = await streamFallback(
-                question: question, chunks: chunks, contextLine: contextLine, gathered: [framed], into: continuation
+                question: question, chunks: chunks, contextLine: contextLine, gathered: framed, into: continuation
             )
             // Guardrail twice on the same fetched text: never a dead bubble (PR #420 review).
             if !synthesised, !Task.isCancelled {
@@ -803,7 +843,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             }
         }
         // The same deterministic provenance the agent turn appends.
-        let trace = AgentResult(conclusion: "", toolsUsed: [plan.tool.name], iterations: 1, reasoningTrace: [step])
+        let trace = AgentResult(
+            conclusion: "", toolsUsed: ran.map { $0.plan.tool.name }, iterations: steps.count, reasoningTrace: steps
+        )
         let tail = Self.webSourcesBlock(for: trace) + Self.factSourcesBlock(for: trace)
         if !tail.isEmpty { continuation.yield(tail) }
         return .answered

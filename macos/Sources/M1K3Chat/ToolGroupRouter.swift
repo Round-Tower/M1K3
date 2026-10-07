@@ -83,19 +83,26 @@ public enum ToolGroupRouter {
     }
 
     /// The tool to dispatch for this turn, or nil: the picker or the agent decides.
-    public static func pick(for question: String, embed: (String) -> [Double]?, head: Head = .shipping) -> ToolPick? {
+    /// `chain`: a device turn naming two tools ("the time and my battery") runs both.
+    public static func pick(
+        for question: String, embed: (String) -> [Double]?, head: Head = .shipping, chain: Bool = false
+    ) -> ToolPick? {
         guard let vector = embed(question), let reading = read(vector, head: head),
               reading.probability >= head.floor
         else { return nil }
-        return pick(group: reading.group, question: question)
+        return pick(group: reading.group, question: question, chain: chain)
     }
 
-    /// A family to the one tool its words name. An empty query means "use the user's
+    /// A family to the tool its words name. An empty query means "use the user's
     /// words" (ToolDispatch.plan). nil where the words don't settle it.
-    static func pick(group: String, question: String) -> ToolPick? {
+    static func pick(group: String, question: String, chain: Bool = false) -> ToolPick? {
         switch group {
         case "device":
-            return deviceTool(question).map { ToolPick(tool: $0, query: "") }
+            let tools = deviceTools(question)
+            guard let first = tools.first, tools.count == 1 || chain && tools.count <= ToolDispatch.maxChain else {
+                return nil
+            }
+            return ToolPick(tool: first, query: "", then: tools.dropFirst().map { ToolPick(tool: $0, query: "") })
         case "knowledge":
             return ToolPick(tool: "search_knowledge", query: "")
         case "activity":
@@ -116,8 +123,8 @@ public enum ToolGroupRouter {
         }
     }
 
-    /// The device family's tools and the words that name each. Exactly one tool must
-    /// be named: "the time and my battery" names two and abstains.
+    /// The device family's tools and the words that name each. One named tool picks it;
+    /// "the time and my battery" names two, a chain when chains are on, else an abstention.
     static let deviceCues: [(tool: String, cues: [String])] = [
         ("calendar_peek", ["calendar", "schedule", "agenda", "meeting", "meetings", "appointment", "appointments", "event", "events", "my day"]),
         ("battery_status", ["battery", "charge", "charging", "juice"]),
@@ -143,10 +150,16 @@ public enum ToolGroupRouter {
     /// A reference lookup rather than a live search ("from a reference source").
     static let referenceCues = ["wikipedia", "encyclopedia", "encyclopaedia", "reference source", "reference book"]
 
+    /// The one device tool the words name; nil for none, two or more, or a write.
     static func deviceTool(_ question: String) -> String? {
-        guard !mentions(question, any: writeCues) else { return nil }
-        let named = deviceCues.filter { mentions(question, any: $0.cues) }
-        return named.count == 1 ? named[0].tool : nil
+        let tools = deviceTools(question)
+        return tools.count == 1 ? tools[0] : nil
+    }
+
+    /// Every device tool the words name, in `deviceCues` order; none for a write.
+    static func deviceTools(_ question: String) -> [String] {
+        guard !mentions(question, any: writeCues) else { return [] }
+        return deviceCues.filter { mentions(question, any: $0.cues) }.map { $0.tool }
     }
 
     /// Whole-word (or whole-phrase) match, case-insensitive: "daytime" is not "day".
