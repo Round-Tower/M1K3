@@ -214,6 +214,9 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 15:15 — #499 landed (bd1ec024) + issue #500 live; the Qwen3.5
+tools A/B and the reasoning-only empty turn (the parser theory tested and disproved by launch).
+Confidence 0.85 on the mechanism (the 16-token turns + upstream's documented reasoning drop).
 Review: Kev + claude-opus-5-5, 2026-10-07 14:30 — Qwen3.5 vision launch-proven (14/16, tools 9/10 on the
 VLM path, 4.56 GB); it leads the "Lil sees" question. Confidence 0.7 — ×1, the ×3 column is owed.
 Review: Kev + claude-opus-5-5, 2026-10-07 13:30 — midday progress: #498 landed, #499 (deps + the
@@ -442,7 +445,9 @@ Fix list, in order:
 - **#498 landed** (`e3adeced`): the bake-off scorecards, the stall write-up, the App-Nap-only
   `GenerationActivity` hold around every MLX generation, and `caffeinate -dis -w <pid>` in
   `run_chateval --direct`. The display-off A/B that decides the App Nap mechanism is still owed.
-- **#499 open — WhisperKit 1.1 + swift-transformers 1.3.4.** Gemma persona tokenize 1,183 → 8 ms,
+- **#499 LANDED** (`bd1ec024`, Kev: "Land it… we'll leave the queue alone. We'll check voice, and
+  screen off after") **— WhisperKit 1.1 + swift-transformers 1.3.4.** The weekly freshness issue is
+  live: #500. Gemma persona tokenize 1,183 → 8 ms,
   same ids. The gemma-4 tool-call smoke as an A/B, power mode held constant: **Big 20/20 → 20/20,
   median 38.7 → 28.3 s (−27%)**; Lil 20/20 → 20/20, 5.9 → 4.8 s. `@preconcurrency import WhisperKit`
   is no longer load-bearing on 1.x and is gone. Owed: Kev's voice check + landing timing (ROADMAP:
@@ -458,6 +463,18 @@ Fix list, in order:
   With text tied (93.1 vs 92.0) that makes Qwen3.5 the leading Lil candidate for "Lil sees":
   lighter than E4B, sees like Big. Owed: the ×3 all-kinds column on the VLM path, the tools A/B
   (`--thinking always`), and the speed read once #499 lands.
+- **Qwen3.5 tools, A/B'd (2026-10-07, tool-use ×3 on the VLM path):** tier thinking 26/30 (median
+  14.6 s) vs **thinking always 29/30** (22.7 s, +55%). The residual `datetime` miss is NOT a parser
+  bug: the turn spends ~16 tokens that mlx-swift-lm's `TokenStreamDecoder` classifies as reasoning —
+  dropped from the public `Generation` stream *by design* — and ends with no text and no call. (The
+  parser IS now upstream's `.qwen35`, which also accepts the sporadic Hermes-JSON dialect — right
+  for the family, but it didn't move this number: 26/30 before and after.) In the app's live path
+  the empty turn falls to the fallback synthesis, which at iteration 0 has no evidence — for a
+  datetime / recent-activity ask, a likely fabricated answer. Proposed: steer an empty pre-tool
+  `.text` turn once, like the empty `.toolCalls([])` case already is (`challenger` first).
+- **UNVERIFIED side-finding:** because the decoder routes reasoning away from `.chunk`, a thinking
+  brain on the native tool path may show an empty "thinking" disclosure in the chat UI (our tool
+  session only reads `.chunk`). Check on a live Qwen3.5 thinking turn.
 - `feat/gemma-1-1-next`: one hold per **agent turn** (`LocalAgent.run`; no unheld tool gaps) and
   per-call-site reasons for `pmset -g assertions`.
 
