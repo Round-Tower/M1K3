@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Render the two brand images that bake in copy: site/og.png (the share card)
-and assets/brand/readme-hero.png (the README banner).
+and assets/brand/readme-hero.png (the static banner; the README itself shows the
+animated readme-hero.svg from readme_hero_svg.py).
 
     python3 tools/site/render_brand_images.py            # both
     python3 tools/site/render_brand_images.py og         # just one (og | readme-hero)
@@ -33,6 +34,9 @@ deadlock), and the server lives per render; the title poll keeps its last
 error for the timeout message; readiness matches only "error:"; close()
 releases the pipes even if the kill path raises. Re-renders stayed
 byte-identical. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-07 — the README banner is now the animated
+readme-hero.svg (readme_hero_svg.py); this PNG stays as the static render, and the
+README pin moved to that generator's tests. No code change. Confidence 0.9.
 """
 from __future__ import annotations
 

@@ -15,7 +15,7 @@ def test_targets_match_the_sizes_the_site_declares():
     og = rbi.TARGETS["og"]
     assert f'og:image:width" content="{og.width}"' in index
     assert f'og:image:height" content="{og.height}"' in index
-    assert rbi.TARGETS["readme-hero"].output in (REPO / "README.md").read_text()
+    # The README now shows the animated readme-hero.svg (pinned in test_readme_hero_svg.py).
 
 
 def test_every_template_exists_and_waits_for_ready():
