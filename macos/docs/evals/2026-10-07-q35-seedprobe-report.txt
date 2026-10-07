@@ -1,0 +1,12 @@
+# Seeded-prefill probe — in-app SelfTest (M1K3_SELFTEST_SEEDPROBE=1), 2026-10-07 19:43–19:45, M1 Max
+# Branch feat/q35-seeded-positions-probe @ 2f4b08ee (landed in #509). Raw report lines, unedited:
+• seed probe: mlx-community/Qwen3.5-4B-MLX-4bit via vlm…
+seedprobe vlm prompt=228 seed=204 suffix=24 | state=nil: THREW missingState(model: "Qwen35", key: "qwen35.ropeDeltas")
+seedprobe vlm prompt=228 seed=204 suffix=24 | state=carried(present): CONSISTENT — top 198/198, max |Δlogit| 0.227 (tolerance 1.0)
+seedprobe vlm prompt=2605 seed=2581 suffix=24 | state=nil: THREW missingState(model: "Qwen35", key: "qwen35.ropeDeltas")
+seedprobe vlm prompt=2605 seed=2581 suffix=24 | state=carried(present): CONSISTENT — top 198/198, max |Δlogit| 0.408 (tolerance 1.0)
+• seed probe: mlx-community/Qwen3.5-4B-MLX-4bit via llm…
+seedprobe llm prompt=228 seed=204 suffix=24 | state=nil: CONSISTENT — top 198/198, max |Δlogit| 0.359 (tolerance 1.0)
+seedprobe llm prompt=228 seed=204 suffix=24 | state=carried(none returned): CONSISTENT — top 198/198, max |Δlogit| 0.359 (tolerance 1.0)
+seedprobe llm prompt=2605 seed=2581 suffix=24 | state=nil: CONSISTENT — top 198/198, max |Δlogit| 0.562 (tolerance 1.0)
+seedprobe llm prompt=2605 seed=2581 suffix=24 | state=carried(none returned): CONSISTENT — top 198/198, max |Δlogit| 0.562 (tolerance 1.0)

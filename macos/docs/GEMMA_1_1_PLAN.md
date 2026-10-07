@@ -214,6 +214,9 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-08 00:40 — #513 review folded: the probe and AFM results are archived
+under docs/evals; the unified-log figures are labelled unarchived; the median convention is stated; "matches"
+now reads "on aggregate", with the incumbent's interview 4/15 explained (exemplar echo, real behaviour).
 Review: Kev + claude-opus-5-5, 2026-10-08 00:30 — the night's work: exact-seed checkpoints (#509) and the
 orphan-`</parameter>` repair (#511) took Qwen3.5 at tier to tool-use 19/20 at 5.9 s (incumbent 20/20 at
 5.5 s), so **the Lil bar is met**. Router-gated thinking was shelved on the challenger's no-go (it rested on
@@ -532,7 +535,8 @@ Fix list, in order:
   trimmable, so `CrossTurnCacheReuse.cacheReusable` is false and the tool session re-prefills the
   whole prompt every turn: the same wall pocket's LFM2 hit, which `SeededPlainTurn` solved with a
   sample-free exact seed. The incumbent's `KVCacheSimple` reuses its prefix. **Verdict: not yet.**
-  **Measured (unified log, `/usr/bin/log` — zsh's `log` builtin shadows it):** the whole gap is
+  **Measured (unified log, `/usr/bin/log` — zsh's `log` builtin shadows it; read live, the log
+  excerpts are not archived):** the whole gap is
   prefill. Decode is equal (Qwen3.5 28 tok/s vs incumbent 26, so the VLM path costs decode nothing).
   The incumbent reuses ~3,034 of ~3,053 tokens per tool turn and prefills a median 52 (0.2 s); Qwen3.5
   logs `reuse: 0/3232 … (VETOED — cache wrapped the sliding window)` every turn and prefills a median
@@ -551,7 +555,8 @@ Fix list, in order:
      prompts + a 24-token suffix: MLXVLM with `state: nil` **throws `missingState`** (loud, never
      silent); with the prefix's returned state carried it is **CONSISTENT** (same top token, max
      |Δlogit| 0.23 / 0.41). MLXLLM control: consistent either way (0.36 / 0.56), so the carried
-     drift sits inside a correct continuation's own noise. Rule for the seed: **store the prefix's
+     drift sits inside a correct continuation's own noise (raw report:
+     `docs/evals/2026-10-07-q35-seedprobe-report.txt`). Rule for the seed: **store the prefix's
      `LMOutput.State` beside the cache snapshot and pass it into the turn**. No fork, no upstream ask.
   1. ~~Exact-seed snapshot~~ **DONE, #509 (2026-10-07 21:12):** `ExactPrefixReuse` checkpoint mode — a
      rolling exact checkpoint carrying its `LMOutput.State`, extended per send without sampling.
@@ -564,8 +569,10 @@ Fix list, in order:
      exactly, declared names only. If thinking ever returns, `GenerationComponents.applyingThinkingBudget`
      needs a Qwen3.5 `transitionOverride`, and its prompt scan can't see a `<think>` held in the
      checkpoint (the one-token input).
-  3. **Re-measured.** Tier, tool-use x2: 17/20 @ 17.3 s (pre-#509) → 18/20 @ 6.9 s (#509) → **19/20 @
-     5.9 s** (#511, app 79981cc5). The bar is met. The remaining miss is `tool-recent-busiest`: the
+  3. **Re-measured.** Tier, tool-use x2: 17/20 @ 17.3 s (pre-#509) → 18/20 @ 6.9 s (#509,
+     `…-lil-q35-checkpoints-tier-x2-ac.json`) → 19/20 @ 6.4 s (first-cut repair, `…-lil-q35-repair-tier…`)
+     → **19/20 @ 5.9 s** (#511's final code, app 79981cc5, `…-lil-q35-repair2-tier…`; those three files
+     landed with #511). The bar is met. The remaining miss is `tool-recent-busiest`: the
      model doesn't call `recent_activity`.
 - **UNVERIFIED side-finding:** because the decoder routes reasoning away from `.chunk`, a thinking
   brain on the native tool path may show an empty "thinking" disclosure in the chat UI (our tool
@@ -576,6 +583,8 @@ Fix list, in order:
 ### Lil re-measure ×3 all kinds (2026-10-07 21:23 → 23:50, one fixed app `bc2dc9bd`, tier, AC)
 
 `bc2dc9bd` = master + #509, no call repair. `docs/evals/2026-10-07-lil-remeasure-*-x3-ac.json`.
+Medians throughout are Python `statistics.median` (the mean of the two middle values on an even count),
+so they can sit 0.1–1 s under an upper-middle median of the same file.
 
 | | incumbent Qwen3-4B | Qwen3.5-4B (VLM) | gemma-4 E4B |
 |---|---|---|---|
@@ -588,8 +597,16 @@ Fix list, in order:
 | grounded-Q | 21/24 | 18/24 | 18/24 |
 | vision | — | 42/48 | 44/48 |
 
-Read: Qwen3.5 is the Lil candidate. It matches the incumbent and sees. E4B ties it on quality at twice
-the RAM, slower on tools. Before a swap:
+Read: Qwen3.5 is the Lil candidate. **It matches the incumbent on aggregate and sees**, but trails on
+code-gen (24/30 vs 30/30) and grounded-Q (18/24 vs 21/24), and leads on interview. E4B ties it on
+quality at twice the RAM, slower on tools.
+
+The incumbent's interview 4/15 is real behaviour, not a scorer artifact. 8 of its 11 failures repeat a
+voice-exemplar sentence ("I don't sha…"); the other 3 are `interview-find-hard` saying "I don't have
+feelings". Without interview and vision, the incumbent leads on raw count, so "matches" rests on that
+kind.
+
+Before a swap:
 - Read the Qwen3.5 misses: `code-py-fix-bug` ×3, `code-site-about-chat` ×2, `ground-part` ×3.
 - **`chat-what-leaves` is wrong on BOTH models**, not just under-scored: "nothing leaves this Mac", yet
   web search sends queries out. This is a persona fix.
@@ -597,7 +614,8 @@ the RAM, slower on tools. Before a swap:
   real chat re-reads its whole history on each new message. That's ~4 s at message 5 and ~8 s at
   message 10 (estimate).
 
-The Mini vision probe ran first: **`AFM-VISION url="€23.40" cgimage="€23.40"`**. AFM reads the receipt
+The Mini vision probe ran first: **`AFM-VISION url="€23.40" cgimage="€23.40"`**
+(`docs/evals/2026-10-07-afm-vision-probe.txt`). AFM reads the receipt
 both ways, unsandboxed. So the in-app confabulation is our attach path, the sandboxed file URL, and
 not AFM's ceiling.
 
