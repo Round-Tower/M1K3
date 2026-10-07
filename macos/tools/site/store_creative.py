@@ -295,6 +295,9 @@ def video_problems(probe: dict, canvas: Canvas) -> list[str]:
         problems.append(f"{duration:.1f} s, expected 5–30 s")
     if s.get("codec_name") not in ("h264", "hevc"):
         problems.append(f"codec {s.get('codec_name')}, expected h264 or hevc")
+    for tag in ("color_space", "color_primaries", "color_transfer"):
+        if s.get(tag) != "bt709":
+            problems.append(f"{tag} {s.get(tag)}, expected bt709 (an untagged loop drifts from the stills)")
     if int(probe.get("format", {}).get("size", 0)) > MAX_FILE:
         problems.append("over 500 MB")
     return problems
@@ -367,8 +370,11 @@ def encode_args() -> list[str]:
     """H.264 High at level 5.1, BT.709 throughout. An untagged file is read as BT.601 by some
     decoders, which shifts the brand colours away from the stills."""
     return ["-c:v", "libx264", "-preset", "slow", "-crf", "14",
-            "-vf", "scale=out_color_matrix=bt709:out_range=tv", "-pix_fmt", "yuv420p",
-            "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
+            # setparams tags the frames themselves: with a filter in the chain, ffmpeg drops
+            # -color_primaries / -color_trc and writes "unknown" (seen on the first render).
+            "-vf", "scale=out_color_matrix=bt709:out_range=tv,"
+                   "setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv",
+            "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
             "-profile:v", "high", "-level:v", "5.1", "-tag:v", "avc1", "-movflags", "+faststart", "-an"]
 
 

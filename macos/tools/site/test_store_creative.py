@@ -8,6 +8,8 @@ import zlib
 import pytest
 import store_creative as sc
 
+BT709 = {"color_space": "bt709", "color_primaries": "bt709", "color_transfer": "bt709"}
+
 
 @pytest.fixture(scope="module")
 def scenes():
@@ -133,7 +135,7 @@ def test_png_check_names_alpha_and_size(tmp_path):
 
 
 def _probe(w=3840, h=1646, rate="30/1", duration="24.0", codec="h264"):
-    return {"streams": [{"codec_type": "video", "codec_name": codec, "width": w, "height": h, "r_frame_rate": rate}],
+    return {"streams": [{"codec_type": "video", "codec_name": codec, "width": w, "height": h, "r_frame_rate": rate, **BT709}],
             "format": {"duration": duration, "size": "1000"}}
 
 
@@ -215,3 +217,11 @@ def test_the_shipped_search_loop_keeps_the_fox_safe():
     x0, y0, x1, y1 = scene.fox_box
     assert x <= x0 and x1 <= x + w and y <= y0 and y1 <= y + h
     assert (scene.canvas.w, scene.canvas.h) == (3072, 2048)
+
+
+def test_video_check_requires_full_bt709_tags():
+    """ffmpeg drops -color_primaries/-color_trc when a filter sets frame colour; the file must say 709 throughout."""
+    stream = {"codec_type": "video", "codec_name": "h264", "width": 3840, "height": 1646, "r_frame_rate": "30/1",
+              "color_space": "bt709", "color_primaries": "unknown", "color_transfer": "unknown"}
+    problems = sc.video_problems({"streams": [stream], "format": {"duration": "24", "size": "1"}}, sc.CANVASES["header"])
+    assert any("color_primaries" in p for p in problems) and any("color_transfer" in p for p in problems)
