@@ -108,6 +108,10 @@ renames judged by both names), else 1. Tests and prose are exempt. Going below
 the inference needs `--why` (exit 5). Shaped by a challenger pass: the GRDB
 migrations sit in *Store.swift, invisible to any name pattern. Confidence 0.8 —
 path heuristics drift; the migration list can't, it is read fresh each run.
+Review: Kev + claude-opus-5-5, 2026-10-08 — `--why` is owed only for a RISK diff landing below its
+inference, as the root CLAUDE.md's trivial-head rule already said ("bare `--passes 0` otherwise"). The
+code refused any downgrade, and printed `risk surface ()` (an empty list) on docs-only #513 and on #511's
+test-only head. Confidence 0.9 — pinned in test_pr_watch.py.
 """
 from __future__ import annotations
 
@@ -264,7 +268,13 @@ def required_passes(explicit: int | None, files: list[str], **risk: object) -> i
 
 
 def downgrade_refused(explicit: int | None, files: list[str], why: str | None, **risk: object) -> bool:
-    """Landing a risk diff on fewer passes than inferred needs a stated reason."""
+    """Landing a RISK diff on fewer passes than inferred needs a stated reason.
+
+    A diff with no risk surface may go down to a bare `--passes 0` (the trivial-head rule); refusing it
+    printed "risk surface ()" — an empty list — on docs-only PRs (#511, #513).
+    """
+    if not risk_surfaces(files, **risk):  # type: ignore[arg-type]
+        return False
     reasoned = bool(why) and len(why.strip()) >= MIN_WHY
     return explicit is not None and explicit < required_passes(None, files, **risk) and not reasoned
 
