@@ -75,7 +75,7 @@ automatic avoid; the recurrence itself stays on-GPU per step (inherent to SSMs).
 | `mlx-community/Qwen3-8B-4bit` | 4.62 GB | **dense** | `qwen3` | `.json` (native) | ✅ verified | **huge candidate** — only loadable capable native-tool model at this size |
 | `mlx-community/Phi-4-mini-instruct-4bit` | 2.17 GB | **dense** | `phi3` | `.json` (native) | ✅ verified | lil candidate; strong reasoning-per-size |
 | `mlx-community/gemma-4-e4b-it-4bit` | ~5.25 GB | attention | `gemma4` | **ReAct floor** | ✅ (big until 2026-07-15 — 12B took the slot) | ⚠️ **no-response bug** (below); no quantized KV |
-| `mlx-community/gemma-4-e2b-it-4bit` | 3.6 GB | attention | `gemma4` | **ReAct floor** | ✅ verified | ~2B-eff → **below M1K3's grounding floor** (per the 2026-06-13 2B→4B promotion) |
+| `mlx-community/gemma-4-e2b-it-4bit` | 3.6 GB | attention | `gemma4` | **ReAct floor** | ✅ verified | ~2B-eff → **below M1K3's grounding floor** (per the 2026-06-13 2B→4B promotion). ⚠️ **Stale 2026-10-07:** measured on the ReAct floor with the pre-07-15 template; gemma-4 now runs native `.gemma4` tools + the template heal. Re-audition for mobile / Mini-vision / audio, not Lil — `GEMMA_1_1_PLAN.md` §5 Open next |
 | `mlx-community/Qwen3-14B-4bit` | ~8 GB (verify) | dense | `qwen3` | `.json` | ⏳ verify-owed | would make a clean all-dense huge |
 | `mlx-community/SmolLM3-3B-*` | ~1.8 GB (verify) | dense | `smollm3` | ReAct floor (no dialect) | ⏳ verify-owed | plan candidate; small |
 | **current** lil `Qwen3.5-4B` / huge `Qwen3.5-9B` | — | **GatedDeltaNet hybrid** | `qwen3_5` | `.xmlFunction` | ✅ but **CPU-spikes** | works; the perf problem |
@@ -642,3 +642,6 @@ from the 06-24 memloop, not re-measured. Prior: Kev + claude-opus-4-8. -->
 security fails eyeballed against raw answers (one shared-with-incumbent real leak, one scorer artifact);
 the speed contrast is thinking-vs-non-thinking, robust to the single-run caveat. Prior: Kev +
 claude-fable-5. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — the E2B row's June verdict marked
+stale (ReAct floor + stale template, both since fixed); its re-audition is queued for other slots in
+GEMMA_1_1_PLAN, not Lil. No decision changed. -->

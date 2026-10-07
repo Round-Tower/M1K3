@@ -215,6 +215,13 @@ def test_direct_outcome_reads_the_exit_code_beside_the_document():
     assert code == 7 and "no fenced JSON" in note
 
 
+def test_direct_runs_hold_the_display_awake_for_exactly_the_apps_lifetime():
+    # 2026-10-07: with the display asleep macOS throttled the headless eval 10-35x (decode
+    # 35 -> 0-3 tok/s), and `caffeinate -is` around the runner did not stop it. -d keeps the
+    # display on; -w ties the assertion to the app's pid, so it ends when the app does.
+    assert rc.caffeinate_argv(4242) == ["/usr/bin/caffeinate", "-dis", "-w", "4242"]
+
+
 def test_direct_env_routes_the_report_to_stdout_and_keeps_the_caller_env():
     trig = {"M1K3_SELFTEST": "1", "M1K3_SELFTEST_OUT": "/container/path/run", "M1K3_SELFTEST_CHATEVAL_PCC": "1"}
     env = rc.direct_env(trig, {"PATH": "/usr/bin", "M1K3_SELFTEST_OUT": "/stale"})

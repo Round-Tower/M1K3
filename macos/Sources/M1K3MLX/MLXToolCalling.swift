@@ -57,6 +57,8 @@
 //  (a never-downloaded repo with no family word ran a whole eval on the ReAct floor).
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `personaVariant`: lfm2 (pocket) keeps its frozen
 //  core and the leak-decline beat, every other dialect the standard persona; Lil had recited the beat at making requests.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — `continueToolTurn` and every tool-session `send`
+//  hold `GenerationActivity`, so an agent step isn't throttled when the display sleeps between steps.
 
 import Foundation
 import M1K3Inference
@@ -468,6 +470,12 @@ extension MLXBrainProvider: ToolCallingProvider {
     /// array: the whole transcript is re-rendered each call so the agent keeps
     /// owning it (for the trace + observation rescue), per the 12a challenger pass.
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
+        try await GenerationActivity.shared.during("M1K3 is answering") {
+            try await continueToolTurnHeld(messages: messages, tools: tools)
+        }
+    }
+
+    private func continueToolTurnHeld(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
         let container = try await ensureLoaded()
         // Unreachable via LocalAgent (supportsToolCalls == false gates this
         // path for an unrecognised family), but this is public API — throwing
@@ -844,6 +852,18 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     }
 
     func send(
+        _ messages: [ToolMessage],
+        onToken: @escaping @Sendable (String) -> Void
+    ) async throws -> ToolTurn {
+        // Each agent step holds the activity (GenerationActivity) while it renders,
+        // prefills and decodes. Tool execution BETWEEN sends runs unheld — the stub-free
+        // tools are short; hold across the whole LocalAgent.run if one ever isn't.
+        try await GenerationActivity.shared.during("M1K3 is answering") {
+            try await sendHeld(messages, onToken: onToken)
+        }
+    }
+
+    private func sendHeld(
         _ messages: [ToolMessage],
         onToken: @escaping @Sendable (String) -> Void
     ) async throws -> ToolTurn {

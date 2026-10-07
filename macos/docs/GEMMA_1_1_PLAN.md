@@ -15,6 +15,12 @@ written on `feat/chateval-multimodal-fixtures`, `swift test` and the vision base
 owed. Stream B shootout running, full ×3 bake-off queued overnight. Findings that
 change the plan are in **§5 Progress and learnings** — read it before acting on §1–§2.
 
+**Status (2026-10-07, 00:30):** #497 landed (`0c64af9d`): vision eval kind, tier thinking, peak RAM,
+E4B vision + template heal, EmbeddingGemma 2 reference. The ×3 bake-off proper is running overnight
+(incumbent → Qwen3.5 → E4B, one brain per launch). New: **Stream G** (gemma-4 speed) and an **E2B**
+entry — both from Kev: "Lil has been tuned specifically for this up until now, but we need to keep
+our minds open."
+
 ---
 
 ## 0. What changed upstream (the why)
@@ -142,6 +148,40 @@ Independent of B; ship it if B doesn't swap Lil within the week.
 - [ ] Read `Sources/M1K3Inference/AttachmentRouting.swift`: what happens today when an image is attached while Lil is active?
 - [ ] Route that turn to Big when RAM allows (same gate as `delegate_deep`), else Mini's AFM vision; tell the user which brain looked.
 
+### Stream G — gemma-4 speed: the sliding window and prefix reuse (keep an open mind)
+
+Why: Lil's runtime has been tuned around a dense Qwen3 — trimmable caches, cross-turn prefix
+reuse, quantised KV. Every gemma-4 candidate pays a tax that is partly **ours**, not the model's:
+E4B ran 5.6× the incumbent's latency at ×1. Before a gemma is ruled out of Lil or mobile on speed,
+split what is the runtime from what is the model.
+
+Facts (read 2026-10-07 on `695600b9`):
+- `slidingWindow(forModelID:)` returns **1024 for any id containing "gemma-4"**
+  (`MLXBrainProvider.swift:1158`). E4B's `config.json` says **512**; 12B's 1024 is measured
+  (GemmaMTPSpike). E2B unread.
+- The persona prefix is ~1878 tokens, over either window, so `prefixIsReusable` (L1174) declines to
+  build it and **every turn re-prefills the whole persona** (the 2026-08-09 measurement: 12.5 s per
+  build on 12B). The veto exists because a wrapped `RotatingKVCache` reports `isTrimmable == false`
+  and MLXToolCalling's `reusable` gate needs a trim.
+- No quantised KV on gemma: Gemma4Text calls `cache.update` directly (upstream fatalError).
+
+Hypotheses, ranked, each with the check that confirms or kills it:
+1. **Snapshot-and-copy beats trim.** Reuse needs a *copy* of the post-prefix cache, not a trim of a
+   used one. If a wrapped `RotatingKVCache` round-trips through `state` + `metaState`, a long persona
+   is reusable every turn. Check: those setters in mlx-swift-lm @ `ee673d6a` (`KVCache.swift`); then a
+   spike where greedy answers are identical with and without the restored snapshot on 3 fixtures.
+2. **Prefill dominates.** Check: TTFT vs decode tok/s, E4B vs incumbent, from the overnight
+   transcripts. If decode dominates instead, 1 buys little — the cost is the VLM path or full-width KV.
+3. **The real window, per model**, from `config.json`'s `sliding_window`, not the name. Correctness
+   first (E4B is 512), and it feeds 1 and prefill step sizing (L1149).
+4. **A leaner persona for small tiers.** Under 1024 tokens, 12B's reuse works today with no runtime
+   change. A persona-quality trade-off — `challenger` first.
+
+Exit: E4B median live-path latency within **2×** the incumbent's on the same fixtures (5.6× today);
+greedy-identical answers with reuse on and off; `slidingWindow` read from config with a test per
+family. Then re-run the E4B (and E2B) columns. Not a 1.1 blocker: it decides whether a gemma loses
+Lil on merit or on our plumbing.
+
 ---
 
 ## 3. Spikes and later ideas (not 1.1 commitments)
@@ -174,6 +214,25 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 11:30 — pre-push review folded: the display-sleep trigger
+stays CONFIRMED, the App Nap mechanism is now marked UNVERIFIED with its deciding test, and the app
+hold is App-Nap-only (`.userInitiatedAllowingIdleSystemSleep`). Confidence 0.9 trigger, 0.5 mechanism.
+Review: Kev + claude-opus-5-5, 2026-10-07 10:00 — the stall section rewritten: the "one BPE word"
+mechanism was WRONG (a benchmark disproved it). Two real causes: display-sleep throttling (both
+edges, both runs) and swift-transformers 1.1.9's String-keyed BPE on Gemma's `▁` (1,183 → 8 ms on
+1.3.4, same ids). Confidence 0.9 on both; the 10.3 GB RAM peak stays open.
+Review: Kev + claude-opus-5-5, 2026-10-07 09:00 — E4B landed: text 88.8% on content (5 better / 10
+worse vs the incumbent), vision 43/48, own peak 10.3 GB. No swap under the rule; the incumbent holds
+until the stall is fixed and latency/RAM re-measured. Confidence 0.85 on the text read, 0.4 on any
+gemma latency or RAM figure until then.
+Review: Kev + claude-opus-5-5, 2026-10-07 08:45 — overnight results (incumbent 92.0 / Qwen3.5 93.1
+content, E4B pending) and the stall FOUND by sampling: Gemma prompts tokenize as one BPE word in
+swift-transformers' naive `bpe`. Confidence 0.9 on the location (3 samples + the tokenizer config);
+0.5 on why it grows across fixtures — open, instrumented next.
+Review: Kev + claude-opus-5-5, 2026-10-07 00:30 — #497 landed; the ×3 bake-off running. Added
+Stream G (gemma-4 speed: the hard-coded window, the re-prefilled persona, snapshot-and-copy reuse)
+and the E2B entry (other slots, not Lil). Confidence 0.6 on hypothesis 1 — the cache setters are
+unread; 0.85 that E2B doesn't belong in Lil.
 
 ### Stream 0 — pin verdict (`ee673d6a`; 3.32.3 = `3b339ad6`; main +20 commits)
 
@@ -290,6 +349,89 @@ metadata call per launch.
 - [x] **Vision baseline** (`docs/evals/2026-10-06-vision-baseline-x1-ac.json`): Big 14/16, E4B 13/16
       (both count 6 circles for 7; E4B misreads the Sunday sign + timetable row), **Mini 1/16**.
 
+### Overnight ×3 bake-off (2026-10-06 23:59 → 2026-10-07, one brain per launch, `695600b9`)
+
+Debug build of the merged harness, all kinds ×3, tier thinking, `--full-answers`, AC / High Power.
+"Content" re-scores the fails that broke **only** the 120 s latency ceiling (the answers are saved
+whole) — see the stall below for why latency can't be read yet.
+
+| Brain | Raw | Content | Own peak | Notes |
+|---|---|---|---|---|
+| Incumbent Qwen3-4B DWQ | 254/276 | **92.0%** | 4.75 GB | 33 min; tool-use 30/30; misses ground-part, interview-find-hard, doc-project-brief ×3 |
+| Qwen3.5-4B | 254/276 | **93.1%** | **4.07 GB** | interview 15/15 (vs 11), document 17 (vs 14); **tool-use 26/30** — narrates the search, never calls it |
+| E4B (uniform, VLM, healed) | 246/324 | **88.8%** text · **vision 43/48** | **10.3 GB** | done 08:55 (7 h); 42 fails latency-only; reasoning 13/18, tool-use 25/30; document 18/18, interview 14/15 |
+
+Fixture-paired on text: Qwen3.5 vs incumbent 8 better / 8 worse (a dead heat); E4B vs incumbent
+5 better / 10 worse (`reason-remainder` 0/3, `ground-wrong-nobel` 0/3, `selfquery-notes` 0/3). E4B sees
+better at ×3 than at ×1 (90% vs 13/16). **Decision rule:** no swap — E4B is under the incumbent on
+text and its RAM fails any Lil cap; Qwen3.5 ties on text, is lighter, slower, and weaker on tools.
+The incumbent holds Lil **until the stall is fixed and latency/RAM are re-measured** — both numbers
+are contaminated for the gemma (and partly the Qwen3.5) launches. Vision: only E4B
+can answer (the others are n/a); Big's 14/16 baseline is the reference.
+
+Predictions (made 00:20, before results) scored: incumbent ~88% → 92 (low); Qwen3.5 ~84% and a
+tool-format coin flip → 93 and 26/30 (wrong on both: the `.xmlFunction` plumbing is fine, the miss is
+behaviour); E4B text 2–4 points under the incumbent → on track; own RAM ~3 GB → 4.75 (the embedder
+and KV are in "own"); "every brain flips at least one fixture across trials" → held.
+
+### The stall and the tokenizer tax — two causes, both found (2026-10-07, 09:00–10:00)
+
+An earlier draft of this section blamed one mechanism ("Gemma's whole prompt is one BPE word"). The
+benchmark below disproved it; this is the corrected read.
+
+**1. The stall = the display sleeping (CONFIRMED by both edges, both runs).** `caffeinate -is` kept the
+system awake but let the display sleep; with it off, macOS throttled the headless eval process, CPU
+and GPU alike (decode 35 → 0–3 tok/s, prefill 3.4 s → 24–55 s; prompts flat at ~3k tokens).
+
+| `pmset -g log` | Eval (unified log `prompt=… @tok/s`) |
+|---|---|
+| 01:34 display off | Qwen3.5 slows (trial 3) |
+| 01:48 display on | Qwen3.5 recovers |
+| 02:35 display off | E4B collapses (`world-guernica`, 41 min, spans it) |
+| 08:17:37 display on | E4B back at 37 tok/s at 08:17:47 |
+
+The incumbent ran 23:59–00:32 entirely with the display on. The **trigger** is confirmed; the
+**mechanism** is not: App Nap fits, and so does display-off GPU/WindowServer throttling (`caffeinate
+-is` already held the idle-sleep assertion all night, so App Nap is the only lever the app holds).
+**User-facing too, if it's App Nap:** the app generating with the display off (an agent's overnight
+`ask_m1k3`, a long Big answer after the user walks away) can crawl the same way. Evals: `caffeinate -d`
+(proven by the evidence above). App: `beginActivity(.userInitiatedAllowingIdleSystemSleep)` around
+generation — **UNVERIFIED** until the deciding test: display forced off, with and without the hold,
+tok/s from the unified log and `pmset -g assertions`.
+
+**2. The tokenizer tax = swift-transformers 1.1.9's BPE on Gemma's `▁` pieces (MEASURED).** Sampling
+put real time in `BPETokenizer.bpe(token:)`; a scratch benchmark (same tokenizer files, the real
+persona) shows why: `bpeRanks` is keyed by pairs of Swift `String`s, and every Gemma piece carries the
+non-ASCII `▁`, so each lookup hashes through Unicode NFC normalisation; `bpe()` also rescans all pairs
+per merge. Upstream rewrote it — priority-queue merge (#346, 1.3.2) and scalar-based merges (#355, 1.3.3):
+
+| Persona encode (real text) | 1.1.9 (pinned) | 1.3.4 |
+|---|---|---|
+| Gemma, 1,637 tok | 1,183 ms | **8 ms** |
+| Gemma, 3,274 tok | 1,462 ms | **12 ms** |
+| Qwen3, 1,532 tok | 22 ms | 15 ms |
+
+Token ids identical across versions (count, sum, first/last ids). Every agent step re-renders and
+re-tokenizes the whole conversation, so E4B **and Big in production** pay ~1–1.5 s of CPU per step
+for nothing. (The ~10 s step gap seen in the log holds more than tokenizing — the rest is unmeasured.)
+
+**Why we're on 1.1.9:** our `Package.swift` and WhisperKit 0.18.0 both pin `.upToNextMinor(from:
+"1.1.6")` (< 1.2). WhisperKit 1.x (the package is now `argmax-oss-swift`) **dropped swift-transformers
+entirely**, so the clash goes away with it.
+
+Still open: E4B's 10.3 GB own peak — the stall explains the latency, not obviously the RAM.
+
+Fix list, in order:
+1. **Eval:** `caffeinate -dis` for every overnight run (the runner scripts), and log display state
+   into the scorecard provenance. Re-measure gemma latency and RAM after.
+2. **App:** `beginActivity(.userInitiatedAllowingIdleSystemSleep)` around generation (chat turns, MCP
+   `ask_m1k3`, call summaries) — App Nap only; display and system sleep stay the user's. UNVERIFIED:
+   the display-off A/B decides whether App Nap is the mechanism at all.
+3. **Dependencies (risk surface, probe-first):** WhisperKit 0.18 → 1.1 (`argmax-oss-swift`) +
+   swift-transformers 1.1.9 → 1.3.4. Owes: `swift package resolve`, the voice launch check, the
+   gemma-4 native tool-call smoke (`macos/CLAUDE.md`), exact-id parity on the EmbeddingGemma 2
+   reference ids.
+
 ### Open next
 
 - [ ] **Mini vision (possible user-facing bug):** on the native AFM path every Mini answer
@@ -303,6 +445,35 @@ metadata call per launch.
 - [ ] `selfquery-notes`: "I don't run internal QA…" is a decline the markers miss (challenger first).
 - [ ] Stream F (image turns on Lil escalate) — still the fallback if Lil stays Qwen3.
 - [ ] Stream C, slice 2: the Swift port (spec below).
+- [ ] **The stall + tokenizer fixes (top priority):** the three items in the fix list above. Every
+      gemma latency/RAM number in this plan is void until 1 lands and the columns are re-run.
+- [ ] **Stream G** (gemma-4 speed) — re-read after the tokenizer bump: part of E4B's 5.6× was CPU
+      tokenizing, not prefill.
+- [ ] **Qwen3.5 vision + tools (Kev: "Vision would be great to test, tools can be tuned, and I like
+      that interviewing improved"):** the cached conversion already ships its vision tower (297
+      `vision_tower.*` tensors; `qwen3_5` is MLXVLM.Qwen35 in our pin) — routing its exact id through
+      `usesVLMLoadPath` is written + tested locally, uncommitted until launch-proven. Queued run:
+      Qwen3.5-VLM ×3 all kinds, then tool-use ×3 with `--thinking always` (the misses look like a
+      no-think tool decision); Qwen's recommended sampling for non-thinking turns is untested. Run it
+      with the stall instrumentation, on a free machine.
+- [ ] Commit the three overnight scorecards once E4B lands (+ a content re-score helper in
+      `run_chateval.py`, so "latency-only" fails are a column, not a hand count).
+- [ ] **Scorer: decimal digits match whole-word** (#497 review): fact "4" passes on "3.4" / "€4.08".
+      Treat `.`/`,` between digits as inside the number; re-score the overnight `--full-answers` JSONs.
+- [ ] **E2B — a contender, but not for Lil** (Kev, 2026-10-07: "add it later"). `gemma-4-e2b-it-4bit`,
+      3.6 GB at 4-bit, ~2B effective, sees **and hears**. `MODEL_CHOICES.md:78`'s "below the grounding
+      floor" was measured in June on the ReAct floor with the stale template; both are fixed now, so
+      that verdict is stale. Against Lil it loses on size (3.6 vs ~2.3 GB) and quality (2B vs 4B), and
+      shares E4B's prefill tax — Stream G could change the speed half. Slots where it could win:
+      - **iOS / visionOS brain** — eyes and ears in an 8 GB iPhone; nothing on mobile sees today.
+      - **Mini's vision stand-in** — only if the Mini trace above finds AFM's ceiling, not a lost
+        attachment.
+      - **Stream E audio** — the cheap Gemma ASR + diarization to benchmark against WhisperKit behind
+        `TranscriptionProvider`.
+      Setup when we get to it: exact id in `usesVLMLoadPath`; a per-repo `Gemma4TemplateFix.Heal`
+      (hash google/gemma-4-E2B-it's template; expect the same stale `2f1b4d75…` class); read its
+      `sliding_window`; ~3.6 GB download (Kev's call); ×1 shootout on vision + text kinds, scored as a
+      mobile / Mini-vision candidate, never against Lil.
 
 ### Stream C, slice 1 — done (reference vectors)
 
