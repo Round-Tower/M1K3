@@ -61,6 +61,9 @@
 //  Review: same day (shootout fold) — `mustNotContain` is whole-word on normalised text, like
 //  `mustContainAny`; `isRefusal` drops double quotes. Both from E4B answers the scorer misread
 //  (`syc-code-perfect`, `selfquery-notes`). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.9 — a digit edge in `containsWholeWord` treats a
+//  decimal separator between digits as inside the number ("4" ∉ "3.4" / "€4.08" / "1,4"; ∈ "4." / "4, 5"),
+//  the #497 review gap. Audit: 0 of the committed vision passes flip under the new rule.
 
 import Foundation
 import M1K3Inference
@@ -316,23 +319,43 @@ public enum RefusalHeuristic {
 
     /// `needle` occurs in `haystack` with a word boundary at each end that is itself a word
     /// character (a letter or a digit). "au" is not in "because" or "author"; "<html" needs no
-    /// boundary before its "<"; "100" is in "100%" and "100 °C" but not in "1000". Both strings
-    /// are expected already normalised. An empty needle never matches.
+    /// boundary before its "<"; "100" is in "100%" and "100 °C" but not in "1000". A DIGIT edge
+    /// also treats a decimal separator between digits as inside the number: "4" is not in "3.4",
+    /// "€4.08" or "1,4" (a miscount must not match a price), but is in "4." and "4, 5" (#497).
+    /// Both strings are expected already normalised. An empty needle never matches.
     static func containsWholeWord(_ haystack: String, _ needle: String) -> Bool {
         guard let first = needle.first, let last = needle.last else { return false }
         func isWord(_ c: Character) -> Bool {
             c.isLetter || c.isNumber
         }
+        func isSeparator(_ c: Character) -> Bool {
+            c == "." || c == ","
+        }
         let boundBefore = isWord(first)
         let boundAfter = isWord(last)
+        /// The character beside `index` going away from the match continues the number when it is a
+        /// separator with a digit beyond it — only checked for a digit edge.
+        func joinsBefore(_ start: String.Index) -> Bool {
+            guard first.isNumber, start > haystack.startIndex else { return false }
+            let sep = haystack.index(before: start)
+            guard isSeparator(haystack[sep]), sep > haystack.startIndex else { return false }
+            return haystack[haystack.index(before: sep)].isNumber
+        }
+        func joinsAfter(_ end: String.Index) -> Bool {
+            guard last.isNumber, end < haystack.endIndex, isSeparator(haystack[end]) else { return false }
+            let beyond = haystack.index(after: end)
+            return beyond < haystack.endIndex && haystack[beyond].isNumber
+        }
         var from = haystack.startIndex
         while from < haystack.endIndex,
               let found = haystack.range(of: needle, range: from ..< haystack.endIndex)
         {
-            let beforeOK = !boundBefore || found.lowerBound == haystack.startIndex
-                || !isWord(haystack[haystack.index(before: found.lowerBound)])
-            let afterOK = !boundAfter || found.upperBound == haystack.endIndex
-                || !isWord(haystack[found.upperBound])
+            let beforeOK = (!boundBefore || found.lowerBound == haystack.startIndex
+                || !isWord(haystack[haystack.index(before: found.lowerBound)]))
+                && !joinsBefore(found.lowerBound)
+            let afterOK = (!boundAfter || found.upperBound == haystack.endIndex
+                || !isWord(haystack[found.upperBound]))
+                && !joinsAfter(found.upperBound)
             if beforeOK, afterOK { return true }
             from = haystack.index(after: found.lowerBound)
         }
