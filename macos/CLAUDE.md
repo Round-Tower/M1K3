@@ -84,7 +84,8 @@ protocols in their own targets. `M1K3App/` is a thin shell; `AppEnvironment` (+ 
   requires mlx-swift ≥ 0.32.3 — 0.32.0–0.32.2 crash at launch below macOS/iOS 26.4). A mlx-swift
   MINOR move bumps `MLXEmbeddingService.kernelTag` (a guard test enforces it) and so re-indexes
   every store once. Kokoro links raw MLX, so an MLX bump owes a voice launch check. In 3.32.x
-  `UserInput.Image` is a struct with a `source` enum, and `newCache(parameters:)` throws. `tools/ci/dep_freshness.py` says what's behind, **who caps it** and which missed
+  `UserInput.Image` is a struct with a `source` enum, and `newCache(parameters:)` throws.
+  `tools/ci/dep_freshness.py` says what's behind, **who caps it** and which missed
   release notes matter (a weekly "📦 Dependency freshness" issue runs it). Dep bumps are probe-first
   (`swift package resolve`) and **every bump owes a gemma-4 native tool-call
   smoke**: `M1K3_SELFTEST_CHATEVAL=1 M1K3_SELFTEST_CHATEVAL_BRAINS=big
