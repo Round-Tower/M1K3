@@ -19,15 +19,16 @@ import NaturalLanguage
 import Testing
 
 struct ToolGroupRouterTests {
-    /// Two groups over a 2-d vector: the first axis is web, nothing is none.
+    /// Two groups over a 2-d vector: the first axis is the user's notes, nothing is none.
+    /// (A local family: the head leaves web turns to Apple's pick, #510 review.)
     private let head = ToolGroupRouter.Head(
-        groups: ["none", "web"], weights: [[0, 0], [1, 0]], biases: [0, 0], floor: 0.6
+        groups: ["none", "knowledge"], weights: [[0, 0], [1, 0]], biases: [0, 0], floor: 0.6
     )
 
     @Test("the reading is the softmax of the L2-normalised logits, whatever the vector's scale")
     func softmaxMath() throws {
         let reading = try #require(ToolGroupRouter.read([1, 0], head: head))
-        #expect(reading.group == "web")
+        #expect(reading.group == "knowledge")
         #expect(abs(reading.probability - exp(1) / (1 + exp(1))) < 1e-12)
         let scaled = try #require(ToolGroupRouter.read([9, 0], head: head))
         #expect(abs(scaled.probability - reading.probability) < 1e-12)
@@ -40,19 +41,19 @@ struct ToolGroupRouterTests {
         #expect(ToolGroupRouter.read([1, 0, 0], head: head) == nil)
         #expect(ToolGroupRouter.read([0, 0], head: head) == nil)
         #expect(ToolGroupRouter.read([.nan, 0], head: head) == nil)
-        let ragged = ToolGroupRouter.Head(groups: ["none", "web"], weights: [[0, 0]], biases: [0, 0], floor: 0)
+        let ragged = ToolGroupRouter.Head(groups: ["none", "knowledge"], weights: [[0, 0]], biases: [0, 0], floor: 0)
         #expect(ToolGroupRouter.read([1, 0], head: ragged) == nil)
     }
 
     @Test("below the floor, on no vector, or on a none reading it abstains; at the floor it picks")
     func floorAndNone() {
-        let question = "latest news"
-        #expect(ToolGroupRouter.pick(for: question, embed: { _ in [1, 0] }, head: head)?.tool == "web_search")
+        let question = "my notes on the seal"
+        #expect(ToolGroupRouter.pick(for: question, embed: { _ in [1, 0] }, head: head)?.tool == "search_knowledge")
         let strict = ToolGroupRouter.Head(groups: head.groups, weights: head.weights, biases: head.biases, floor: 0.99)
         #expect(ToolGroupRouter.pick(for: question, embed: { _ in [1, 0] }, head: strict) == nil)
         #expect(ToolGroupRouter.pick(for: question, embed: { _ in nil }, head: head) == nil)
         // The none axis wins: a tools verdict and a none reading disagree, so neither decides.
-        let noneFirst = ToolGroupRouter.Head(groups: ["none", "web"], weights: [[1, 0], [0, 0]], biases: [0, 0], floor: 0)
+        let noneFirst = ToolGroupRouter.Head(groups: ["none", "knowledge"], weights: [[1, 0], [0, 0]], biases: [0, 0], floor: 0)
         #expect(ToolGroupRouter.pick(for: question, embed: { _ in [1, 0] }, head: noneFirst) == nil)
     }
 
@@ -81,6 +82,10 @@ struct ToolGroupRouterTests {
         #expect(ToolGroupRouter.deviceTools("When was the last time we talked about this?").isEmpty)
         #expect(ToolGroupRouter.deviceTools("What's the charge for the meeting room?") == ["calendar_peek"])
         #expect(ToolGroupRouter.deviceTools("Tell me the time, please.") == ["datetime"])
+        #expect(ToolGroupRouter.deviceTools("Any current events in Ukraine?").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("How big is the solar system?").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("When is the due date for my taxes?").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("Check system resources.") == ["system_status"])
     }
 
     /// Review, 2026-10-07: "schedule a meeting" names the calendar, but it's a write. A
@@ -215,6 +220,14 @@ struct ToolPickCascadeTests {
         let single = await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: picker)
         #expect(single == ToolPick(tool: "web_search", query: "weather"))
         #expect(await picker.chained == 1)
+    }
+
+    @Test("a picker that can't chain names one tool even with chains on")
+    func singlePickerWithChainOn() async {
+        let picker = RecordingPicker(answer: ("datetime", ""))
+        let pick = await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: picker, chain: true)
+        #expect(pick == ToolPick(tool: "datetime", query: ""))
+        #expect(await picker.calls == 1)
     }
 
     @Test("all tiers gives any brain the route; off, it stays Mini's")

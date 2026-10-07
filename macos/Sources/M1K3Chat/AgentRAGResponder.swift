@@ -795,6 +795,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             ran.append((step, output))
         }
         // A cancel during the last link: no answer for a consumer that has gone (#510 review).
+        // Results that already ran are dropped with it: every link is a read, nothing to undo.
         if Task.isCancelled { return .answered }
         // Nothing ran: every tool failed → the agent turn; none failed but none found
         // anything → a plain turn (a "found nothing" is not evidence). Something ran: answer

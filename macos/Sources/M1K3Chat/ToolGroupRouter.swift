@@ -121,17 +121,22 @@ public enum ToolGroupRouter {
     /// The device family's tools and the words that name each. One named tool picks it;
     /// "the time and my battery" names two, a chain when chains are on, else an abstention.
     static let deviceCues: [(tool: String, cues: [String])] = [
-        ("calendar_peek", ["calendar", "schedule", "agenda", "meeting", "meetings", "appointment", "appointments", "event", "events", "my day"]),
+        // Not a bare "event(s)": "current events" is news (#510 review 2).
+        ("calendar_peek", [
+            "calendar", "schedule", "agenda", "meeting", "meetings", "appointment", "appointments",
+            "my events", "any events", "my day",
+        ]),
         ("battery_status", ["battery", "charging", "juice"]),
         ("system_status", [
             "cpu", "ram", "memory usage", "memory use", "memory status", "disk", "storage", "hard drive",
-            "performance", "running slow", "system", "mac health",
+            "performance", "running slow", "system resources", "system status", "mac health",
         ]),
         ("current_location", ["location", "where am i", "whereabouts"]),
-        // Not a bare "time": "the last time we met" is no clock read (#510 review).
+        // Not a bare "time" or "date": "the last time we met", "the due date for my taxes"
+        // are no clock read (#510 review).
         ("datetime", [
             "what time", "the time", "current time", "time now", "time check", "time is it",
-            "date", "what day", "which day", "clock",
+            "the date", "what date", "current date", "date and time", "date today", "what day", "which day", "clock",
         ]),
     ]
 
