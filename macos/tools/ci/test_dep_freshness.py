@@ -241,3 +241,32 @@ def test_main_exit_codes(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(m, "gh_releases", lambda _i, _u: m.FAILED)
     assert m.main(args) == 4  # an outage never reads as current
     capsys.readouterr()
+
+
+def test_tags_page_past_100_and_a_failed_page_counts(monkeypatch):
+    # #499 review: the tags endpoint is capped at 100 a page and unordered, so the newest tag of a
+    # tag-heavy repo can sit on page 2 — never read that as "current".
+    page1 = [{"name": f"1.0.{i}"} for i in range(100)]
+    page2 = [{"name": "9.9.9"}]
+
+    def fake(path):
+        if "/releases" in path:
+            return []
+        if path.endswith("&page=1"):
+            return page1
+        if path.endswith("&page=2"):
+            return page2
+        return []
+    monkeypatch.setattr(m, "_gh", fake)
+    versions = {r.version for r in m.gh_releases("r", "https://github.com/o/r")}
+    assert "9.9.9" in versions and "1.0.99" in versions
+
+    def failing(path):
+        if "/releases" in path:
+            return []
+        return page1 if path.endswith("&page=1") else m.FAILED
+    monkeypatch.setattr(m, "_gh", failing)
+    assert m.gh_releases("r", "https://github.com/o/r") is m.FAILED
+    # Still full at the page cap: truncated, so it never reads as current.
+    monkeypatch.setattr(m, "_gh", lambda path: [] if "/releases" in path else page1)
+    assert m.gh_releases("r", "https://github.com/o/r") is m.FAILED
