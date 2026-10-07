@@ -105,6 +105,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — every generation entry (`generate`, both
 //  streams, `continueToolTurn`) holds `GenerationActivity`: with the display asleep macOS throttled the
 //  process 10–35× (the overnight bake-off). Verify-by-launch with the display off owed.
+//  Review: same day (#498 review follow-up) — the three entry points name themselves (`M1K3 generate` /
+//  `stream` / `raw stream`) so `pmset -g assertions` tells them apart.
 import Foundation
 import Hub
 import M1K3Inference
@@ -506,7 +508,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
 
     public func generate(prompt: String) async throws -> String {
         // Held so macOS doesn't throttle the turn when the display sleeps (GenerationActivity).
-        try await GenerationActivity.shared.during("M1K3 is answering") {
+        try await GenerationActivity.shared.during("M1K3 generate") {
             try await generateHeld(prompt: prompt)
         }
     }
@@ -545,7 +547,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     public func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
             let task = Task {
-                await GenerationActivity.shared.during("M1K3 is answering") {
+                await GenerationActivity.shared.during("M1K3 stream") {
                     // Runs on every exit — completion, error, and cancellation via
                     // onTermination (cancel makes the stream loop throw into catch).
                     defer { MLXMemoryBudget.reclaim(label: "generateStreaming") }
@@ -1253,7 +1255,7 @@ extension MLXBrainProvider: RawCompletionProviding {
     public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
         AsyncStream { continuation in
             let task = Task {
-                await GenerationActivity.shared.during("M1K3 is answering") {
+                await GenerationActivity.shared.during("M1K3 raw stream") {
                     defer { MLXMemoryBudget.reclaim(label: "generateRawStreaming") }
                     do {
                         let container = try await ensureLoaded()
