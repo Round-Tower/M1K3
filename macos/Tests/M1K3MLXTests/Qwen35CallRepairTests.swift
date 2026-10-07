@@ -76,7 +76,9 @@ struct Qwen35CallRepairTests {
 
     @Test("a rejected orphan call is recovered through upstream's own parser, with its argument")
     func recoversTheCall() throws {
-        let rejection = RejectedToolCall(reason: .malformedSyntax, format: .qwen35, toolName: "datetime", rawText: orphaned)
+        let rejection = RejectedToolCall(
+            reason: .malformedSyntax, format: .qwen35, toolName: "datetime", rawText: orphaned
+        )
         let calls = try #require(Qwen35CallRepair.recover(rejection, tools: [datetimeSchema]))
         #expect(calls.map(\.function.name) == ["datetime"])
         #expect(calls.first?.function.arguments["query"] == .string("now"))
@@ -99,10 +101,9 @@ struct Qwen35CallRepairTests {
     @Test("a repaired call naming a tool that isn't offered still fails upstream's own check")
     func repairNeverWidensTheToolSet() {
         let rejection = RejectedToolCall(reason: .malformedSyntax, format: .qwen35, rawText: orphaned)
-        let other: [String: any Sendable] = [
-            "type": "function",
-            "function": ["name": "web_search", "parameters": ["type": "object", "properties": [:] as [String: any Sendable]] as [String: any Sendable]] as [String: any Sendable],
-        ]
+        let parameters: [String: any Sendable] = ["type": "object", "properties": [:] as [String: any Sendable]]
+        let function: [String: any Sendable] = ["name": "web_search", "parameters": parameters]
+        let other: [String: any Sendable] = ["type": "function", "function": function]
         #expect(Qwen35CallRepair.recover(rejection, tools: [other]) == nil)
     }
 }

@@ -732,7 +732,10 @@ enum ToolTurnDiagnostics {
         let reason = rejection.reason.rawValue
         let tool = rejection.toolName ?? "?"
         mlxToolLog.notice(
-            "\(label, privacy: .public) REPAIRED tool call: reason=\(reason, privacy: .public) tool=\(tool, privacy: .public) calls=\(calls, privacy: .public) (orphan </parameter> dropped)"
+            """
+            \(label, privacy: .public) REPAIRED tool call: reason=\(reason, privacy: .public) \
+            tool=\(tool, privacy: .public) calls=\(calls, privacy: .public) (orphan </parameter> dropped)
+            """
         )
     }
 
