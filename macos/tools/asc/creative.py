@@ -193,19 +193,21 @@ def find_asset(asset_id: str) -> tuple[str, dict[str, Any]]:
         resp = call("GET", f"/v1/{resource}/{asset_id}")
         if "_error" not in resp:
             return kind, resp["data"]["attributes"]
-        if resp["_error"] != 404:
-            raise SystemExit(f"reading {resource}/{asset_id}: {resp['_error']} {resp.get('_body', '')[:300]}")
+        status = resp["_error"]
+        if not isinstance(status, int) or status in (401, 403, 429) or status >= 500:
+            raise SystemExit(f"reading {resource}/{asset_id}: {status} {resp.get('_body', '')[:300]}")
     raise SystemExit(f"no library image or video {asset_id}")
 
 
 def parent_state(surface: str, parent_id: str) -> dict[str, Any] | None:
     if surface == "ppo":
+        # Read live 2026-10-07: the included experiment is type appStoreVersionExperiments, with `state`.
         resp = call("GET", f"/v1/appStoreVersionExperimentTreatments/{parent_id}?include=appStoreVersionExperimentV2")
-        included = resp.get("included") or []
-        if "_error" in resp or not included:
+        experiment = next((i for i in resp.get("included") or [] if i.get("type") == "appStoreVersionExperiments"), None)
+        if "_error" in resp or experiment is None or "state" not in experiment.get("attributes", {}):
             print("  warning: couldn't read the experiment's state — ASC will refuse if it isn't editable")
             return None
-        return included[0]["attributes"]
+        return experiment["attributes"]
     path = (f"/v1/appStoreVersions/{parent_id}?fields[appStoreVersions]=platform,appVersionState" if surface == "version"
             else f"/v1/appCustomProductPageVersions/{parent_id}")
     resp = call("GET", path)
@@ -214,22 +216,28 @@ def parent_state(surface: str, parent_id: str) -> dict[str, Any] | None:
     return resp["data"]["attributes"]
 
 
-def put_part(op: dict[str, Any], chunk: bytes, tries: int = 3) -> None:
-    """One upload operation, retried on a transport error or a 5xx (no JWT: these URLs are presigned)."""
-    import requests  # lazy, see asc.call
+def put_part(op: dict[str, Any], chunk: bytes, tries: int = 3, send: Any = None) -> None:
+    """One upload operation (no JWT: these URLs are presigned), retried on a transport error,
+    a 5xx, a timeout (408) or throttling (429); any other client error fails at once."""
+    if send is None:
+        import requests  # lazy, see asc.call
 
+        send = requests.request
     headers = {h["name"]: h["value"] for h in op.get("requestHeaders", [])}
+    detail = ""
     for attempt in range(1, tries + 1):
         try:
-            r = requests.request(op["method"], op["url"], headers=headers, data=chunk, timeout=600)
+            r = send(op["method"], op["url"], headers=headers, data=chunk, timeout=600)
+        except OSError as exc:            # requests' RequestException is an IOError
+            detail = str(exc)[:300]
+        else:
             if r.status_code < 400:
                 return
             detail = f"{r.status_code} {r.text[:300]}"
-            if r.status_code < 500:
+            if r.status_code < 500 and r.status_code not in (408, 429):
                 break
-        except requests.RequestException as exc:
-            detail = str(exc)[:300]
-        time.sleep(2 * attempt)
+        if attempt < tries:
+            time.sleep(2 * attempt)
     raise SystemExit(f"upload part @{op['offset']} failed: {detail}")
 
 
@@ -325,6 +333,7 @@ def run_place(asset_id: str, as_: str, target: str, locales: list[str] | None, c
     create, skip = plan(locs, existing, as_, locales)
     for locale, why in skip:
         print(f"  skip {locale}: {why}")
+    placed = 0
     for i, (loc_id, locale) in enumerate(create):
         payload = placement_payload(kind, asset_id, as_, surface, loc_id)
         if not confirm:
@@ -335,12 +344,13 @@ def run_place(asset_id: str, as_: str, target: str, locales: list[str] | None, c
         made = call("POST", "/v1/appAssetLibraryPlacements", json=payload)
         if "_error" in made:
             bail(f"place on {locale} (placements already made stay; a re-run skips them)", made)
+        placed += 1
         print(f"  placed {as_} on {locale}: {made['data']['id']} {made['data'].get('attributes', {}).get('state', '')}")
-    if not create:
-        print("  nothing to place")
-    elif not confirm:
+    missing = sum(why == NO_SUCH for _, why in skip)
+    if not confirm and create:
         print("dry-run — add --confirm to create these placements")
-    return 1 if any(why == NO_SUCH for _, why in skip) else 0
+    print(f"  placed {placed}, skipped {len(skip)} ({missing} not on this surface)")
+    return 1 if missing else 0
 
 
 def main() -> int:

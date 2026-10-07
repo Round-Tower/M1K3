@@ -218,3 +218,69 @@ def test_find_asset_surfaces_a_real_error_instead_of_not_found(monkeypatch) -> N
     monkeypatch.setattr(creative, "call", lambda m, p, **kw: {"_error": 401, "_body": "token expired"})
     with pytest.raises(SystemExit, match="401"):
         creative.find_asset("img1")
+
+
+class _Resp:
+    def __init__(self, status):
+        self.status_code, self.text = status, f"status {status}"
+
+
+def _sender(*statuses):
+    calls = []
+
+    def send(method, url, **kw):
+        status = statuses[len(calls)]
+        calls.append(status)
+        if isinstance(status, Exception):
+            raise status
+        return _Resp(status)
+    return send, calls
+
+
+def test_put_part_retries_throttling_and_transport_errors(monkeypatch) -> None:
+    sleeps = []
+    monkeypatch.setattr(creative.time, "sleep", sleeps.append)
+    send, calls = _sender(429, ConnectionError("reset"), 200)
+    creative.put_part({"method": "PUT", "url": "u", "offset": 0}, b"x", send=send)
+    assert calls[-1] == 200 and len(calls) == 3
+
+
+def test_put_part_gives_up_at_once_on_a_client_error_and_never_sleeps_after_the_last_try(monkeypatch) -> None:
+    sleeps = []
+    monkeypatch.setattr(creative.time, "sleep", sleeps.append)
+    send, calls = _sender(403)
+    with pytest.raises(SystemExit, match="403"):
+        creative.put_part({"method": "PUT", "url": "u", "offset": 0}, b"x", send=send)
+    assert len(calls) == 1 and sleeps == []
+    send, calls = _sender(503, 503, 503)
+    with pytest.raises(SystemExit, match="503"):
+        creative.put_part({"method": "PUT", "url": "u", "offset": 0}, b"x", send=send)
+    assert len(calls) == 3 and len(sleeps) == 2
+
+
+def test_upload_stops_waiting_when_asc_stops_answering(tmp_path, monkeypatch, quiet) -> None:
+    with pytest.raises(SystemExit, match="img1.*stopped answering"):
+        _upload(tmp_path, monkeypatch, [{"_error": 503, "_body": "x"}] * 5)
+
+
+def test_find_asset_falls_through_to_videos_on_a_client_error(monkeypatch) -> None:
+    answers = {"/v1/appAssetLibraryImages/v1": {"_error": 400, "_body": "wrong type"},
+               "/v1/appAssetLibraryVideos/v1": {"data": {"attributes": {"state": "APPROVED"}}}}
+    monkeypatch.setattr(creative, "call", lambda m, p, **kw: answers[p])
+    assert creative.find_asset("v1") == ("video", {"state": "APPROVED"})
+
+
+def test_ppo_parent_is_read_from_the_included_experiment_by_type(monkeypatch, capsys) -> None:
+    exp = {"type": "appStoreVersionExperiments", "attributes": {"state": "PREPARE_FOR_SUBMISSION"}}
+    other = {"type": "appStoreVersions", "attributes": {"state": "READY_FOR_SALE"}}
+    monkeypatch.setattr(creative, "call", lambda m, p, **kw: {"data": {}, "included": [other, exp]})
+    assert creative.parent_state("ppo", "t1") == {"state": "PREPARE_FOR_SUBMISSION"}
+    monkeypatch.setattr(creative, "call", lambda m, p, **kw: {"data": {}, "included": [other]})
+    assert creative.parent_state("ppo", "t1") is None and "warning" in capsys.readouterr().out
+
+
+def test_place_summary_tells_partial_from_nothing(monkeypatch, quiet, capsys) -> None:
+    _, code = _place(monkeypatch, {"platform": "IOS", "appVersionState": "PREPARE_FOR_SUBMISSION"},
+                     confirm=True, locales=["en-GB", "fr-FR"])
+    out = capsys.readouterr().out
+    assert code == 1 and "placed 1" in out and "1 not on this surface" in out
