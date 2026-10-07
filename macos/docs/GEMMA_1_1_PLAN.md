@@ -214,6 +214,13 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-opus-5-5, 2026-10-07 17:30 — Kev's call "Qwen3.5 as the new Lil" put to a short
+shootout (AC, 7d376521): **not yet — speed, not quality**. Tools at tier 17/20 @ 17.3 s vs incumbent
+20/20 @ 5.5 s; thinking always 20/20 @ 30.5 s but chat runs away (4/18 empty at 170–246 s). Cause read
+from source: Qwen35's linear-attention layers hold a `MambaCache` (never trimmable), so cross-turn reuse
+is off and every turn re-prefills persona + palette + history. Next: an exact-seed snapshot for the
+tool session (pocket's LFM2 trick), then router-gated thinking. Confidence 0.75 on the cause (the
+mechanism is certain; its share of the 3× is not yet measured).
 Review: Kev + claude-opus-5-5, 2026-10-07 16:30 — Mini vision investigation opened: the attach path is
 compiled in; a live URL-vs-CGImage test is written; AFM is `modelNotReady` right now. Confidence 0.5 —
 two live hypotheses, one test to decide.
@@ -494,6 +501,31 @@ Fix list, in order:
   > A closing tag with no open parameter carries no data; tolerating (skipping) it before the first
   > `<parameter=` would accept the call without loosening any argument validation. Repro + raw preview
   > available. Observed in ~2–3 of 3 trials on a datetime ask with thinking off; 0 with thinking on.
+- **Short shootout, 2026-10-07 17:20 — should Qwen3.5 take Lil now?** (AC, `7d376521`, tool-use +
+  open-chat ×2, `docs/evals/2026-10-07-lil-q35-shootout-*-x2-ac.json`; the first clean latency read —
+  earlier Qwen3.5 timings were on battery and pre-#499):
+
+  | arm | tool-use | tool median / p90 | open-chat | chat median | peak |
+  |---|---|---|---|---|---|
+  | incumbent, tier | **20/20** | **5.5 s** / 10.7 s | 16/18 | 7.3 s | 4.54 GB |
+  | Qwen3.5, tier | 17/20 | 17.3 s / 21.5 s | 15/18 | 13.1 s | 4.51 GB |
+  | Qwen3.5, always | **20/20** | 30.5 s / 39.5 s | 13/18 | 23.3 s (4 empties, 170–246 s) | 4.64 GB |
+
+  Read: thinking fixes Qwen3.5's tools (`datetime` ×2 + one `recent_activity` miss at tier → none),
+  but thinking on chat runs away to the response ceiling. And even think-off it is **3× the
+  incumbent** on tools. **Cause (read, not yet measured):** `Qwen35.makeCache` gives every
+  linear-attention layer a `MambaCache` (`MLXVLM/Models/Qwen35.swift:1033`), which is never
+  trimmable, so `CrossTurnCacheReuse.cacheReusable` is false and the tool session re-prefills the
+  whole prompt every turn: the same wall pocket's LFM2 hit, which `SeededPlainTurn` solved with a
+  sample-free exact seed. The incumbent's `KVCacheSimple` reuses its prefix. **Verdict: not yet.**
+  Order of work before a re-shootout:
+  1. Exact-seed snapshot for `MLXToolTurnSession` on non-trimmable caches (copy a sample-free
+     persona+palette prefill per turn; prefill only the suffix). Measure: Qwen3.5 tool median.
+  2. Router-gated thinking: `ToolNeedRouter` (NLSentenceEmbedder, ms) says `.tools` → that turn
+     thinks; chat stays think-off. `enable_thinking` only moves the suffix, so the seed survives.
+     Plus a think budget so a misrouted chat can't run to the ceiling.
+  3. Re-shootout the same three arms + a `router-gated` arm. Bar: tools ≥ 19/20, median ≤ 2× the
+     incumbent.
 - **UNVERIFIED side-finding:** because the decoder routes reasoning away from `.chunk`, a thinking
   brain on the native tool path may show an empty "thinking" disclosure in the chat UI (our tool
   session only reads `.chunk`). Check on a live Qwen3.5 thinking turn.
