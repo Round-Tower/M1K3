@@ -7,6 +7,7 @@
 //  gaps for macOS to throttle (PR #498 review). Nested provider-level holds share it.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85, Prior: none (new file).
+//  Review: same day (#501 review follow-up) — a throw inside a nested provider hold balances.
 
 import Foundation
 @testable import M1K3Agent
@@ -103,6 +104,35 @@ struct LocalAgentActivityTests {
         task.cancel()
         _ = await task.result
         #expect(log.all == ["begin:M1K3 agent turn", "end"])
+    }
+
+    @Test("a throw INSIDE a nested provider hold still balances: one begin, one end, holders back to 0")
+    func nestedThrowBalances() async {
+        struct Boom: Error {}
+        final class NestedFailing: InferenceProvider, @unchecked Sendable {
+            let name = "nested-failing"
+            let isAvailable = true
+            let activity: GenerationActivity
+            init(_ activity: GenerationActivity) {
+                self.activity = activity
+            }
+
+            func generate(prompt _: String) async throws -> String {
+                try await activity.during("M1K3 generate") { throw Boom() }
+            }
+
+            func generateStreaming(prompt _: String) -> AsyncStream<String> {
+                AsyncStream { $0.finish() }
+            }
+        }
+        let log = ActivityLog()
+        let activity = GenerationActivity(asserter: log)
+        let agent = LocalAgent(inferenceProvider: NestedFailing(activity), tools: [], activity: activity)
+        _ = try? await agent.run(goal: "hello")
+        #expect(log.all == ["begin:M1K3 agent turn", "end"])
+        // Balanced: a fresh hold begins a NEW assertion, which only happens from a zero count.
+        await activity.during("after") {}
+        #expect(log.all == ["begin:M1K3 agent turn", "end", "begin:after", "end"])
     }
 
     @Test("a turn that throws still ends its hold")

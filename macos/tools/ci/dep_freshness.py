@@ -59,6 +59,7 @@ MAX_HIGHLIGHTS_PER_RELEASE = 3
 MAX_NOTES_PER_PACKAGE = 5
 MAX_NOTE_CHARS = 160  # release notes are third-party text: short, inert code spans only
 MAX_BODY_CHARS = 60_000  # GitHub's issue body limit is 65,536
+MAX_TAG_PAGES = 10  # 1,000 tags — past that a repo's newest tag would still be a release
 
 
 # --------------------------------------------------------------------------- #
@@ -368,11 +369,17 @@ def gh_releases(_ident: str, url: str) -> list[Release] | _Failed:
     rels = {r["tag_name"].lstrip("v"): Release(r["tag_name"].lstrip("v"), (r.get("published_at") or "")[:10],
                                                 r.get("body") or "")
             for r in data if not r.get("draft") and not r.get("prerelease")}
-    tags = _gh(f"repos/{owner}/{repo}/tags?per_page=100")
-    if tags is FAILED:
-        return FAILED
-    for t in tags if isinstance(tags, list) else []:
-        rels.setdefault(t["name"].lstrip("v"), Release(t["name"].lstrip("v"), "", ""))
+    # Tags page at 100 and come back unordered, so a tag-heavy repo's newest can sit on a later
+    # page. Walk pages until a short one; any failed page fails the whole fetch.
+    for page in range(1, MAX_TAG_PAGES + 1):
+        tags = _gh(f"repos/{owner}/{repo}/tags?per_page=100&page={page}")
+        if tags is FAILED:
+            return FAILED
+        tags = tags if isinstance(tags, list) else []
+        for t in tags:
+            rels.setdefault(t["name"].lstrip("v"), Release(t["name"].lstrip("v"), "", ""))
+        if len(tags) < 100:
+            break
     return list(rels.values())
 
 

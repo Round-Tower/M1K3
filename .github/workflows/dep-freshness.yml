@@ -61,3 +61,15 @@ jobs:
           if [ "$capped_now" -gt "$capped_before" ]; then
             gh issue comment "$number" --body "Capped packages rose from $capped_before to $capped_now — see the table above."
           fi
+
+      - name: Note a failed run on the rolling issue
+        # A red scheduled run only emails the workflow's last editor; say it where people look.
+        # Exit 4 (an incomplete report) lands here too — the body was deliberately NOT overwritten.
+        if: failure()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          number=$(gh issue list --state open --label dep-freshness --author "app/github-actions" \
+            --json number --jq '.[0].number // empty')
+          [ -n "$number" ] || exit 0
+          gh issue comment "$number" --body "⚠️ This week's freshness run failed or was incomplete (a GitHub fetch errored), so the table above was left as it was. Run: $RUN_URL"
