@@ -102,6 +102,9 @@
 //  loads a folder (AuditionStore) with the registry's extras for its `org/repo` name; `configDirectory`
 //  points the config and template reads at that folder, and the torn-cache heal skips it (the heal
 //  deletes and re-downloads, which would destroy an audition). Hub-id loads are unchanged.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — every generation entry (`generate`, both
+//  streams, `continueToolTurn`) holds `GenerationActivity`: with the display asleep macOS throttled the
+//  process 10–35× (the overnight bake-off). Verify-by-launch with the display off owed.
 import Foundation
 import Hub
 import M1K3Inference
@@ -502,6 +505,13 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     }
 
     public func generate(prompt: String) async throws -> String {
+        // Held so macOS doesn't throttle the turn when the display sleeps (GenerationActivity).
+        try await GenerationActivity.shared.during("M1K3 is answering") {
+            try await generateHeld(prompt: prompt)
+        }
+    }
+
+    private func generateHeld(prompt: String) async throws -> String {
         let container = try await ensureLoaded()
         // Return cached Metal buffers after every generation — without this the
         // process-global MLX cache holds each generation's peak forever.
@@ -535,53 +545,55 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     public func generateStreaming(prompt: String) -> AsyncStream<String> {
         AsyncStream { continuation in
             let task = Task {
-                // Runs on every exit — completion, error, and cancellation via
-                // onTermination (cancel makes the stream loop throw into catch).
-                defer { MLXMemoryBudget.reclaim(label: "generateStreaming") }
-                do {
-                    let container = try await ensureLoaded()
-                    // Qwen3.5's template pre-opens <think>, so the stream's
-                    // first real token is already chain-of-thought — surface
-                    // the opener so live reasoning splitting engages from
-                    // token one instead of after the closing tag.
-                    if thinkPrefixNeeded { continuation.yield("<think>") }
-                    let key = toolTurnCacheKey(toolNames: [])
-                    if InferenceIntent.instructions == nil,
-                       let seed = await personaPrefixSnapshot(
-                           container: container, specs: nil, toolNames: [], key: key
-                       )
-                    {
-                        try await runSeededPlainTurn(
-                            container: container, seed: seed, persona: key.personaText, prompt: prompt, label: "stream"
-                        ) { piece in
-                            continuation.yield(piece)
-                        }
-                    } else {
-                        let session = makeUpstreamSession(container)
-                        for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
-                            if let chunk = event.chunk { continuation.yield(chunk) }
-                            if let info = event.info {
-                                logGenerationInfo(info, label: "stream", model: modelIdentifier)
+                await GenerationActivity.shared.during("M1K3 is answering") {
+                    // Runs on every exit — completion, error, and cancellation via
+                    // onTermination (cancel makes the stream loop throw into catch).
+                    defer { MLXMemoryBudget.reclaim(label: "generateStreaming") }
+                    do {
+                        let container = try await ensureLoaded()
+                        // Qwen3.5's template pre-opens <think>, so the stream's
+                        // first real token is already chain-of-thought — surface
+                        // the opener so live reasoning splitting engages from
+                        // token one instead of after the closing tag.
+                        if thinkPrefixNeeded { continuation.yield("<think>") }
+                        let key = toolTurnCacheKey(toolNames: [])
+                        if InferenceIntent.instructions == nil,
+                           let seed = await personaPrefixSnapshot(
+                               container: container, specs: nil, toolNames: [], key: key
+                           )
+                        {
+                            try await runSeededPlainTurn(
+                                container: container, seed: seed, persona: key.personaText, prompt: prompt, label: "stream"
+                            ) { piece in
+                                continuation.yield(piece)
+                            }
+                        } else {
+                            let session = makeUpstreamSession(container)
+                            for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
+                                if let chunk = event.chunk { continuation.yield(chunk) }
+                                if let info = event.info {
+                                    logGenerationInfo(info, label: "stream", model: modelIdentifier)
+                                }
                             }
                         }
+                        continuation.finish()
+                    } catch {
+                        // Per the InferenceProvider contract, errors terminate the
+                        // stream rather than throwing. A user "stop" cancels the task
+                        // (see onTermination) and lands here as CancellationError —
+                        // that's normal, so only a genuine failure is worth an error
+                        // line (else every stop emits a false error).
+                        if !(error is CancellationError) {
+                            // ttft, not mlx-load: this is a RUNTIME generation
+                            // failure — filtering the load/swap category shouldn't
+                            // surface it, and generation telemetry should.
+                            mlxTTFTLog.error("""
+                            generateStreaming failed [\(self.modelIdentifier, privacy: .public)]: \
+                            \(error.localizedDescription, privacy: .public)
+                            """)
+                        }
+                        continuation.finish()
                     }
-                    continuation.finish()
-                } catch {
-                    // Per the InferenceProvider contract, errors terminate the
-                    // stream rather than throwing. A user "stop" cancels the task
-                    // (see onTermination) and lands here as CancellationError —
-                    // that's normal, so only a genuine failure is worth an error
-                    // line (else every stop emits a false error).
-                    if !(error is CancellationError) {
-                        // ttft, not mlx-load: this is a RUNTIME generation
-                        // failure — filtering the load/swap category shouldn't
-                        // surface it, and generation telemetry should.
-                        mlxTTFTLog.error("""
-                        generateStreaming failed [\(self.modelIdentifier, privacy: .public)]: \
-                        \(error.localizedDescription, privacy: .public)
-                        """)
-                    }
-                    continuation.finish()
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
@@ -1241,36 +1253,38 @@ extension MLXBrainProvider: RawCompletionProviding {
     public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
         AsyncStream { continuation in
             let task = Task {
-                defer { MLXMemoryBudget.reclaim(label: "generateRawStreaming") }
-                do {
-                    let container = try await ensureLoaded()
-                    var parameters = generateParameters
-                    if let requested = maxTokens {
-                        // Remote callers may SHORTEN a generation, never
-                        // lengthen it past this provider's own cap.
-                        let cap = parameters.maxTokens ?? Self.defaultMaxTokens
-                        parameters.maxTokens = min(max(1, requested), cap)
-                    }
-                    // instructions: nil and no cache seed — the raw contract.
-                    let session = ChatSession(container, generateParameters: parameters)
-                    for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
-                        if let chunk = event.chunk { continuation.yield(chunk) }
-                        if let info = event.info {
-                            logGenerationInfo(
-                                info, label: "raw", model: modelIdentifier,
-                                totalContextTokens: info.promptTokenCount
-                            )
+                await GenerationActivity.shared.during("M1K3 is answering") {
+                    defer { MLXMemoryBudget.reclaim(label: "generateRawStreaming") }
+                    do {
+                        let container = try await ensureLoaded()
+                        var parameters = generateParameters
+                        if let requested = maxTokens {
+                            // Remote callers may SHORTEN a generation, never
+                            // lengthen it past this provider's own cap.
+                            let cap = parameters.maxTokens ?? Self.defaultMaxTokens
+                            parameters.maxTokens = min(max(1, requested), cap)
                         }
+                        // instructions: nil and no cache seed — the raw contract.
+                        let session = ChatSession(container, generateParameters: parameters)
+                        for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
+                            if let chunk = event.chunk { continuation.yield(chunk) }
+                            if let info = event.info {
+                                logGenerationInfo(
+                                    info, label: "raw", model: modelIdentifier,
+                                    totalContextTokens: info.promptTokenCount
+                                )
+                            }
+                        }
+                        continuation.finish()
+                    } catch {
+                        if !(error is CancellationError) {
+                            mlxTTFTLog.error("""
+                            generateRawStreaming failed [\(self.modelIdentifier, privacy: .public)]: \
+                            \(error.localizedDescription, privacy: .public)
+                            """)
+                        }
+                        continuation.finish()
                     }
-                    continuation.finish()
-                } catch {
-                    if !(error is CancellationError) {
-                        mlxTTFTLog.error("""
-                        generateRawStreaming failed [\(self.modelIdentifier, privacy: .public)]: \
-                        \(error.localizedDescription, privacy: .public)
-                        """)
-                    }
-                    continuation.finish()
                 }
             }
             continuation.onTermination = { _ in task.cancel() }

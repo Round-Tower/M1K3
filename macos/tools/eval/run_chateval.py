@@ -328,6 +328,16 @@ def summarise(doc_path: Path) -> str:
     return "\n".join(lines)
 
 
+def caffeinate_argv(pid: int) -> list[str]:
+    """Hold the display (and the system) awake for exactly the app's lifetime.
+
+    2026-10-07: with the display asleep, macOS throttled the headless eval 10-35x
+    (decode 35 -> 0-3 tok/s); `caffeinate -is` around the runner did not stop it.
+    A separate `-w <pid>` keeps the app's own exit code (crash detection) intact.
+    """
+    return ["/usr/bin/caffeinate", "-dis", "-w", str(pid)]
+
+
 def run_direct(args, app: Path, trig: dict[str, str], plan: "InstancePlan") -> int:
     """Direct mode: the binary, the env, stdout. Returns like main()."""
     binary = app / "Contents/MacOS/M1K3"
@@ -342,6 +352,7 @@ def run_direct(args, app: Path, trig: dict[str, str], plan: "InstancePlan") -> i
     with open(log_path, "w") as log:
         proc = subprocess.Popen([str(binary)], env=direct_env(trig, os.environ), stdout=log, stderr=subprocess.STDOUT,
                                 cwd=tempfile.gettempdir())
+        subprocess.Popen(caffeinate_argv(proc.pid), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         lines = 0
         while proc.poll() is None:
             if time.monotonic() - started > args.timeout_min * 60:
