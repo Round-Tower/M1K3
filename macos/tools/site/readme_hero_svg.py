@@ -146,6 +146,8 @@ class Fox:
 
     def __init__(self, path: Path) -> None:
         raw = path.read_bytes()
+        if raw[:4] != b"glTF" or struct.unpack("<I", raw[16:20])[0] != 0x4E4F534A:   # magic, then a JSON chunk
+            raise ValueError(f"{path} is not a binary glTF (.glb) with a leading JSON chunk")
         json_len = struct.unpack("<I", raw[12:16])[0]
         self.gltf = json.loads(raw[20 : 20 + json_len])
         bin_at = 20 + json_len
@@ -517,7 +519,10 @@ def preview(svg: str, seconds: list[float], out: Path) -> None:
         (here / "frozen.svg").write_text(svg.rstrip().removesuffix("</svg>") + FREEZE)
         frames = "".join(f'<iframe src="frozen.svg#{t}" width="{W}" height="{H}" style="border:0;display:block"></iframe>' for t in seconds)
         (here / "sheet.html").write_text(f'<html><body style="margin:0;background:#222">{frames}</body></html>')
-        subprocess.run([os.environ.get("CHROME", DEFAULT_CHROME), "--headless=new", "--hide-scrollbars",
+        chrome = os.environ.get("CHROME", DEFAULT_CHROME)
+        if not Path(chrome).exists():
+            raise SystemExit(f"--preview needs Chrome: {chrome} not found (set CHROME to a Chromium-family binary)")
+        subprocess.run([chrome, "--headless=new", "--hide-scrollbars",
                         "--allow-file-access-from-files", "--virtual-time-budget=3000", f"--window-size={W},{H * len(seconds)}",
                         f"--screenshot={out.resolve()}", f"file://{here}/sheet.html"], stderr=subprocess.DEVNULL, check=True, timeout=60)
 
