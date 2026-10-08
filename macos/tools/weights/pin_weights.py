@@ -25,6 +25,8 @@ in disguise.
 Usage:
     python3 macos/tools/weights/pin_weights.py                # verify + regenerate
     python3 macos/tools/weights/pin_weights.py --check        # verify only, exit 1 on drift
+    python3 macos/tools/weights/pin_weights.py --only org/repo   # re-pin one repo; the rest
+                                                              # keep their committed pins
 """
 
 from __future__ import annotations
@@ -336,6 +338,43 @@ def orphan_file_notes(
     return sorted(key for key in notes if key[1] not in pins.get(key[0], ("", {}, ""))[1])
 
 
+def committed_pins(manifest_text: str) -> dict[str, tuple[str, dict[str, dict], str]]:
+    """The pins in a committed weights-manifest.json, in the generator's `pins` shape."""
+    doc = json.loads(manifest_text)
+    return {
+        repo: (entry["revision"], entry["files"], entry["downloadBase"])
+        for repo, entry in doc["repos"].items()
+    }
+
+
+def merge_pins(
+    shipped: dict[str, str],
+    fresh: dict[str, tuple[str, dict[str, dict], str]],
+    committed: dict[str, tuple[str, dict[str, dict], str]],
+    only: set[str],
+) -> dict[str, tuple[str, dict[str, dict], str]]:
+    """`--only`: freshly collected pins for the named repos, the committed pin for every
+    other shipped repo. A carried pin is one that was already generated and reviewed, so
+    re-pinning one repo never re-hashes (or re-downloads) another. Repos that no longer
+    ship drop out; a shipped repo with no committed pin must be named."""
+    if stray := sorted(only - set(shipped)):
+        raise ValueError(f"--only names repos that do not ship: {stray} — add them to SHIPPED_REPOS first")
+    merged: dict[str, tuple[str, dict[str, dict], str]] = {}
+    for repo, base in shipped.items():
+        if repo in only:
+            merged[repo] = fresh[repo]
+            continue
+        if repo not in committed:
+            raise ValueError(f"{repo} ships but has no committed pin — name it: --only {repo}")
+        revision, files, committed_base = committed[repo]
+        if committed_base != base:
+            raise ValueError(
+                f"{repo}: committed download base {committed_base!r} != shipped {base!r} — re-pin it with --only"
+            )
+        merged[repo] = (revision, files, committed_base)
+    return merged
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -343,13 +382,35 @@ def main() -> None:
         action="store_true",
         help="verify and report drift without rewriting the manifests",
     )
+    parser.add_argument(
+        "--only",
+        action="append",
+        default=[],
+        metavar="REPO",
+        help="re-pin only this repo (repeatable); every other shipped repo keeps its committed pin",
+    )
     args = parser.parse_args()
 
     print("Pinning shipped model weights (local bytes, cross-checked against HF):")
-    pins = {
-        repo: (*collect(repo, cache), BASE_NAMES[cache])
-        for repo, cache in SHIPPED_REPOS.items()
-    }
+    if args.only:
+        only = set(args.only)
+        fresh = {
+            repo: (*collect(repo, cache), BASE_NAMES[cache])
+            for repo, cache in SHIPPED_REPOS.items()
+            if repo in only
+        }
+        shipped = {repo: BASE_NAMES[cache] for repo, cache in SHIPPED_REPOS.items()}
+        try:
+            pins = merge_pins(shipped, fresh, committed_pins(JSON_OUT.read_text()), only)
+        except ValueError as error:
+            sys.exit(f"FATAL {error}")
+        for repo in sorted(set(pins) - only):
+            print(f"  {repo}\n    carried from the committed manifest (not re-hashed)")
+    else:
+        pins = {
+            repo: (*collect(repo, cache), BASE_NAMES[cache])
+            for repo, cache in SHIPPED_REPOS.items()
+        }
     if orphans := orphan_file_notes(pins, FILE_NOTES):
         sys.exit(f"FILE_NOTES name files that are no longer pinned: {orphans} — move or drop the note")
     outputs = {OUT: swift_literal(pins), JSON_OUT: json_manifest(pins)}
