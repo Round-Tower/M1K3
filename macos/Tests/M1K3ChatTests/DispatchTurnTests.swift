@@ -14,6 +14,8 @@
 //  Review: same day (2) — `offMenuPickIsPlain`, `dispatchRulesKeepWellKnownFacts` (374 over MCP).
 //  Review: same day (3) — `actionPickOffersActionsOnly`, `actionPickWithNoActionIsPlain` (#427: the
 //  action pick's agent turn overflowed Mini's window with the whole palette, 4,282 tokens on 375).
+//  Review: Kev + claude-opus-5-5, 2026-10-07 — `DispatchChainTests`: a pick carrying a second read-only
+//  tool runs both, shares one observation budget, and answers once; a link the app can't run is skipped.
 //
 
 import Foundation
@@ -354,6 +356,120 @@ struct DispatchTurnTests {
         )
         #expect(text.hasPrefix("Here's the latest."))
         #expect(text.contains("Web sources:\n• https://example.com/apple"))
+    }
+}
+
+/// Chains (2026-10-07): "the weather and my calendar" needs two read-only tools.
+struct DispatchChainTests {
+    @Test("a chain runs both tools in order and one generation answers from both results")
+    func runsBoth() async throws {
+        let calls = Calls()
+        let provider = Scripted(["Sunny, and you're free after three."])
+        let text = try await run(
+            provider,
+            tools: [
+                Recording(name: "web_search", output: "Cork: sunny, 18°C — https://example.com/w", calls: calls),
+                Recording(name: "calendar_peek", output: "14:00 dentist", calls: calls),
+            ],
+            pick: ToolPick(tool: "web_search", query: "Cork weather", then: [ToolPick(tool: "calendar_peek", query: "")]),
+            question: "what's the weather and what's on my calendar?"
+        )
+        #expect(text.hasPrefix("Sunny, and you're free after three."))
+        #expect(calls.log.withLock { $0 } == ["web_search(Cork weather)", "calendar_peek(what's the weather and what's on my calendar?)"])
+        #expect(provider.prompts.count == 1)
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains("WHAT web_search RETURNED JUST NOW"))
+        #expect(prompt.contains("WHAT calendar_peek RETURNED JUST NOW"))
+        #expect(text.contains("Web sources:\n• https://example.com/w"))
+    }
+
+    @Test("two results share one budget: the prompt carries no more tool text than one result would")
+    func sharedBudget() async throws {
+        // A letter no rule or header uses, so every one counted is tool text.
+        let long = String(repeating: "ж", count: 10000)
+        let provider = Scripted(["Done."])
+        _ = try await run(
+            provider,
+            tools: [Recording(name: "web_search", output: long, calls: Calls()), Recording(name: "lookup_fact", output: long, calls: Calls())],
+            pick: ToolPick(tool: "web_search", query: "x", then: [ToolPick(tool: "lookup_fact", query: "y")])
+        )
+        let prompt = try #require(provider.prompts.first)
+        let carried = prompt.filter { $0 == "ж" }.count
+        #expect(carried == ToolDispatch.observationBudget)
+    }
+
+    @Test("a link that isn't on offer, isn't read-only or repeats a tool is skipped; the rest runs")
+    func skipsWhatItCantRun() async throws {
+        let calls = Calls()
+        let provider = Scripted(["It's ten past four."])
+        _ = try await run(
+            provider, tools: [Recording(name: "datetime", output: "16:10", calls: calls)],
+            pick: ToolPick(tool: "datetime", query: "", then: [
+                ToolPick(tool: "battery_status", query: ""), ToolPick(tool: ToolPick.action, query: ""),
+                ToolPick(tool: "datetime", query: ""),
+            ])
+        )
+        #expect(calls.log.withLock { $0 } == ["datetime(what time is it?)"])
+        #expect(provider.prompts.count == 1)
+    }
+
+    @Test("one link failing still answers from the other; every link failing is the agent's")
+    func partialFailure() async throws {
+        let calls = Calls()
+        let answered = Scripted(["You're at 80%."])
+        let text = try await run(
+            answered,
+            tools: [
+                Recording(name: "datetime", output: "Error: clock unavailable", calls: calls),
+                Recording(name: "battery_status", output: "80%, charging", calls: calls),
+            ],
+            pick: ToolPick(tool: "datetime", query: "", then: [ToolPick(tool: "battery_status", query: "")])
+        )
+        #expect(text.hasPrefix("You're at 80%."))
+        let prompt = try #require(answered.prompts.first)
+        #expect(prompt.contains("WHAT battery_status RETURNED JUST NOW"))
+        #expect(!prompt.contains("WHAT datetime RETURNED JUST NOW"))
+        // The missing half is named, so the answer doesn't invent it.
+        #expect(prompt.contains("datetime couldn't be read just now."))
+
+        let agent = Scripted(["CONCLUSION: sorry"])
+        _ = try await run(
+            agent,
+            tools: [
+                Recording(name: "datetime", output: "Error: a", calls: Calls()),
+                Recording(name: "battery_status", output: "Error: b", calls: Calls()),
+            ],
+            pick: ToolPick(tool: "datetime", query: "", then: [ToolPick(tool: "battery_status", query: "")])
+        )
+        #expect(agent.prompts.first?.contains("RETURNED JUST NOW") == false)
+    }
+
+    @Test("ToolDispatch.chain keeps the head, then read-only tools on offer, up to maxChain")
+    func chainFilter() {
+        let calls = Calls()
+        let palette: [any AgentTool] = ["datetime", "battery_status", "web_search", "propose_script"]
+            .map { Recording(name: $0, output: "", calls: calls) as any AgentTool }
+        let pick = ToolPick(tool: "datetime", query: "", then: [
+            ToolPick(tool: "propose_script", query: ""), ToolPick(tool: "calendar_peek", query: ""),
+            ToolPick(tool: "battery_status", query: "b"), ToolPick(tool: "web_search", query: "w"),
+        ])
+        #expect(ToolDispatch.maxChain == 2)
+        #expect(ToolDispatch.chain(pick, palette: palette).map(\.tool) == ["datetime", "battery_status"])
+        #expect(ToolDispatch.chain(ToolPick(tool: "datetime", query: ""), palette: palette).count == 1)
+        // A web link after the head with no query of its own would search the whole question.
+        let unqueried = ToolPick(tool: "datetime", query: "", then: [ToolPick(tool: "web_search", query: " ")])
+        #expect(ToolDispatch.chain(unqueried, palette: palette).map(\.tool) == ["datetime"])
+    }
+
+    @Test("the budget is shared by length: short results whole, the rest to the long one")
+    func shares() {
+        #expect(ToolDispatch.shares([35, 10000]) == [35, 2365])
+        #expect(ToolDispatch.shares([10000, 10000]) == [1200, 1200])
+        #expect(ToolDispatch.shares([100, 200]) == [100, 200])
+        #expect(ToolDispatch.shares([5000]) == [2400])
+        #expect(ToolDispatch.shares([]) == [])
+        #expect(ToolDispatch.shares([0, 5000]) == [0, 2400])
+        #expect(ToolDispatch.shares([0]) == [0])
     }
 }
 

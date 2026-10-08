@@ -151,4 +151,9 @@ struct ToolPickerChoicesTests {
     func choicesMatch() {
         #expect(Set(AFMToolPicker.choices) == Set(ToolDispatch.pickerChoices))
     }
+
+    @Test("a chain's second slot offers the read-only tools and none, never action")
+    func alsoChoicesMatch() {
+        #expect(Set(AFMToolPicker.alsoChoices) == ToolDispatch.dispatchable.union([ToolPick.noTool]))
+    }
 }

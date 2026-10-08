@@ -19,6 +19,10 @@
 //  pick itself and the live gain are measured separately). Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — `actionPalette` (#427): an action pick's agent turn
 //  gets only the tools that act. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-07 — chains (`ToolPick.then`, `chain`): a pick may carry
+//  one more read-only tool ("the weather and my calendar"), the app runs both, and the results
+//  share ONE observation budget (one more header, no more text). ADR 0009 named
+//  the gap ("a question needing two gets the better single pick"). Confidence 0.7.
 //
 
 import Foundation
@@ -26,13 +30,17 @@ import M1K3Agent
 
 /// A tool choice for one turn: a tool name ("none" when nothing is needed) and
 /// the query, URL or topic it should get. Empty query = use the user's words.
+/// `then`: further read-only tools the same turn needs, run after this one
+/// (`ToolDispatch.chain` keeps the ones the app may run, up to `maxChain` in all).
 public struct ToolPick: Sendable, Equatable {
     public let tool: String
     public let query: String
+    public let then: [ToolPick]
 
-    public init(tool: String, query: String) {
+    public init(tool: String, query: String, then: [ToolPick] = []) {
         self.tool = tool
         self.query = query
+        self.then = then
     }
 
     public static let noTool = "none"
@@ -83,6 +91,27 @@ public enum ToolDispatch {
         "fetch_page": "read a specific web page or URL",
     ]
 
+    /// Each result's share of the budget: the shortest are carried whole, and what they
+    /// leave goes to the rest ("the time" and "the news" give the news nearly all of it).
+    /// `lengths` are TRIMMED counts, as `observationBlock` trims before it cuts.
+    public static func shares(_ lengths: [Int], total: Int = observationBudget) -> [Int] {
+        var out = Array(repeating: 0, count: lengths.count)
+        var left = total
+        for (taken, index) in lengths.indices.sorted(by: { lengths[$0] < lengths[$1] }).enumerated() {
+            out[index] = min(lengths[index], left / (lengths.count - taken))
+            left -= out[index]
+        }
+        return out
+    }
+
+    /// Added to the picker's rules when chains are on (`toolChain`): the first line says
+    /// "at most one tool", and this is the one exception to it.
+    public static let chainInstructions = """
+    Exception: if the message plainly asks for two separate things that each need a \
+    different tool (the weather AND my calendar), put the second tool in also and its \
+    query in alsoQuery. Otherwise also is none. Never use also for the same tool twice.
+    """
+
     /// The picker's menu: one line per dispatchable tool on offer, then none and action.
     public static func menu(palette: [any AgentTool]) -> String {
         let offered = palette.map(\.name).filter { dispatchable.contains($0) }
@@ -99,8 +128,30 @@ public enum ToolDispatch {
     /// Tools whose output is third-party text from the web: framed defensively.
     public static let webSourced: Set<String> = ["web_search", "fetch_page", "lookup_fact"]
 
-    /// The most of one tool's output the prompt carries (Mini's window is 4,096 tokens).
+    /// The most tool output one prompt carries (Mini's window is 4,096 tokens). A chain
+    /// splits it (`shares`), so two results cost the prompt one more header, not more text.
     public static let observationBudget = 2400
+
+    /// The most tools one dispatched turn runs.
+    public static let maxChain = 2
+
+    /// The tools this pick runs, in order: the pick, then each `then` the app may run on
+    /// this turn (dispatchable, on offer, not already in the chain), up to `maxChain`.
+    /// The head is returned as is; the responder has already refused one it can't run.
+    /// A web link after the head needs its own query: with none it would search the
+    /// whole question, the other half's words included.
+    public static func chain(_ pick: ToolPick, palette: [any AgentTool]) -> [ToolPick] {
+        let offered = Set(palette.map(\.name))
+        var picks = [pick]
+        for next in pick.then where picks.count < maxChain {
+            guard dispatchable.contains(next.tool), offered.contains(next.tool),
+                  !picks.contains(where: { $0.tool == next.tool }),
+                  !(webSourced.contains(next.tool) && next.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            else { continue }
+            picks.append(ToolPick(tool: next.tool, query: next.query))
+        }
+        return picks
+    }
 
     public struct Plan: Sendable {
         public let tool: any AgentTool
@@ -148,10 +199,10 @@ public enum ToolDispatch {
 
     /// How the result reads in the plain turn's prompt: named, fresh, bounded, and
     /// framed as data. A fetched page or a search result is untrusted text.
-    public static func observationBlock(tool: String, output: String) -> String {
+    public static func observationBlock(tool: String, output: String, budget: Int = observationBudget) -> String {
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
-        let body = trimmed.count > observationBudget
-            ? String(trimmed.prefix(observationBudget)) + " …"
+        let body = trimmed.count > budget
+            ? String(trimmed.prefix(budget)) + " …"
             : trimmed
         if deviceReadings.contains(tool) {
             return "WHAT \(tool) RETURNED JUST NOW (live data from this device, for this question):\n\(body)"
