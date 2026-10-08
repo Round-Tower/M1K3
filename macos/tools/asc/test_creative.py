@@ -284,3 +284,9 @@ def test_place_summary_tells_partial_from_nothing(monkeypatch, quiet, capsys) ->
                      confirm=True, locales=["en-GB", "fr-FR"])
     out = capsys.readouterr().out
     assert code == 1 and "placed 1" in out and "1 not on this surface" in out
+
+
+def test_upload_waits_through_the_videos_transient_complete_state(tmp_path, monkeypatch, quiet, capsys) -> None:
+    """Live 2026-10-07: a video sits in an undocumented COMPLETE for ~20 s before PREPARE_FOR_SUBMISSION."""
+    code = _upload(tmp_path, monkeypatch, [_asset("COMPLETE"), _asset("PREPARE_FOR_SUBMISSION")])
+    assert code == 0 and "PREPARE_FOR_SUBMISSION" in capsys.readouterr().out

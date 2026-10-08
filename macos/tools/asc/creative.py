@@ -63,6 +63,9 @@ PLACEABLE = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "WAITING_FOR_REVIEW",
 EDITABLE_PARENT = {"cpp": {"PREPARE_FOR_SUBMISSION", "REJECTED"}, "ppo": {"PREPARE_FOR_SUBMISSION"}}
 NO_SUCH = "no such localization on this surface"
 POLLS, POLL_SECONDS = 120, 5
+# A video also passes through an undocumented COMPLETE (seen live 2026-10-07, ~20 s) on its way
+# to PREPARE_FOR_SUBMISSION; read as "still processing", never as a final state.
+PROCESSING = ("AWAITING_UPLOAD", "UPLOAD_COMPLETE", "COMPLETE")
 
 
 # --------------------------------------------------------------------------- #
@@ -147,7 +150,7 @@ def state_problem(attrs: dict[str, Any]) -> str | None:
     state = attrs.get("state")
     if state in PLACEABLE:
         return None
-    if state in ("AWAITING_UPLOAD", "UPLOAD_COMPLETE"):
+    if state in PROCESSING:
         return f"still {state} — wait for processing to finish"
     return f"{state}: {json.dumps(attrs.get('stateDetails'))[:300]}"
 
@@ -303,7 +306,7 @@ def run_upload(app: str, path: Path, name: str | None, poster: str | None, confi
                 raise SystemExit(f"{kind} {asset_id}: committed, but ASC stopped answering ({resp['_error']}) — check `status`")
         else:
             misses, attrs = 0, resp["data"]["attributes"]
-            if attrs.get("state") not in ("AWAITING_UPLOAD", "UPLOAD_COMPLETE"):
+            if attrs.get("state") not in PROCESSING:
                 break
         time.sleep(POLL_SECONDS)
     else:
