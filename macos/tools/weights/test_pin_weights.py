@@ -164,3 +164,9 @@ def test_a_snapshot_missing_a_published_weight_file_is_refused():
 def test_a_complete_snapshot_misses_nothing():
     published = {"model-00001-of-00002.safetensors": "aa", "model-00002-of-00002.safetensors": "bb"}
     assert m.missing_published_files(published, set(published)) == []
+
+
+def test_a_snapshot_missing_a_small_published_file_is_refused_too():
+    # Small files are not LFS-backed, but chat_template.jinja IS the tool-calling contract.
+    listed = {"model.safetensors", "chat_template.jinja", "README.md", ".gitattributes"}
+    assert m.missing_published_files(listed, {"model.safetensors"}) == ["chat_template.jinja"]
