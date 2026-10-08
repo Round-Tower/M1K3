@@ -11,9 +11,9 @@ MANIFEST = {
     "schemaVersion": 1,
     "repos": {
         "mlx-community/Qwen3.5-4B-MLX-4bit": {
-            "revision": "c073725c8ac051eabad9d64f4dcd3019d1072559",
+            "revision": "32f3e8ecf65426fc3306969496342d504bfa13f3",
             "downloadBase": "llm",
-            "files": {"model.safetensors": {"size": 2263022417, "sha256": "aa"}, "config.json": {"size": 938, "sha256": "bb"}},
+            "files": {"model.safetensors": {"size": 3034300695, "sha256": "aa"}, "config.json": {"size": 3366, "sha256": "bb"}},
         },
         "mlx-community/LFM2.5-1.2B-Instruct-4bit": {
             "revision": "dee2f8a2786e6648bb644a7ca40652842490034b",
@@ -78,9 +78,9 @@ def test_brains_come_from_the_manifest_not_prose():
     assert by_tier["pocket"]["revision"] == "dee2f8a2786e6648bb644a7ca40652842490034b"
     lil = by_tier["lil"]
     assert lil["modelID"] == "mlx-community/Qwen3.5-4B-MLX-4bit"
-    assert lil["revision"] == "c073725c8ac051eabad9d64f4dcd3019d1072559"
-    assert lil["huggingFace"] == "https://huggingface.co/mlx-community/Qwen3.5-4B-MLX-4bit/tree/c073725c8ac051eabad9d64f4dcd3019d1072559"
-    assert lil["sizeMiB"] == 2158  # every pinned file, not just the weights
+    assert lil["revision"] == "32f3e8ecf65426fc3306969496342d504bfa13f3"
+    assert lil["huggingFace"] == "https://huggingface.co/mlx-community/Qwen3.5-4B-MLX-4bit/tree/32f3e8ecf65426fc3306969496342d504bfa13f3"
+    assert lil["sizeMiB"] == 2893  # every pinned file, not just the weights
     assert by_tier["big"]["sizeMiB"] == 6458
     # the embedder is not a brain
     assert all(b["modelID"] != "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ" for b in brains)

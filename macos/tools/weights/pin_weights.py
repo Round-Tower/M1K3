@@ -229,7 +229,7 @@ def collect(repo: str, cache: pathlib.Path) -> tuple[str, dict[str, dict]]:
 
     published: dict[str, str] = {}
     listed: set[str] = set()
-    for entry in hf_json(f"https://huggingface.co/api/models/{repo}/tree/main?recursive=1"):
+    for entry in hf_json(f"https://huggingface.co/api/models/{repo}/tree/{revision}?recursive=1"):
         if entry.get("type") != "file":
             continue
         listed.add(entry["path"])

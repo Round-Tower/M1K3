@@ -351,7 +351,7 @@ struct BrainTierTests {
             }
         #else
             #expect(!BrainTier.mini.supportsImageInput)
-            #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.big])
+            #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.lil, .big])
         #endif
     }
 
