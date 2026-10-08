@@ -11,6 +11,9 @@ Signed: Kev + claude-opus-5, 2026-09-12, Confidence 0.9 (pure functions only;
 the committed-manifest round trip needs no model cache). Prior: Unknown
 Review: Kev + claude-opus-5-5, 2026-10-08 — `--only`'s merge (carry committed pins, refuse a
 shipped repo with none, refuse a stray name or a moved download base). Confidence 0.9.
+Review: Kev + claude-opus-5-5, 2026-10-08 — two refusals from the Qwen3.5 re-pin: an unreadable
+snapshot (macOS app-data privacy) is named as such, not as missing metadata; a snapshot lacking a
+published LFS file the app downloads is refused (a partial `hf download` pinned 9 of 10 files).
 """
 import json
 
@@ -129,3 +132,35 @@ def test_merge_refuses_a_carried_pin_whose_download_base_changed():
 def test_committed_pins_reads_the_manifest_shape():
     doc = json.dumps({"repos": {"org/a": {"revision": "r", "downloadBase": "llm", "files": {"f": {"size": 1, "sha256": "s"}}}}})
     assert m.committed_pins(doc) == {"org/a": ("r", {"f": {"size": 1, "sha256": "s"}}, "llm")}
+
+
+def test_an_unreadable_snapshot_is_refused_as_unreadable_not_as_missing_metadata(tmp_path):
+    # macOS app-data privacy lets an outside process stat the container but not list it,
+    # and pathlib's rglob swallows the PermissionError: an unreadable snapshot used to read
+    # as "no HubApi download metadata" and sent Kev to re-download (2026-10-08).
+    import pytest
+    snapshot = tmp_path / "org" / "model"
+    (snapshot / ".cache/huggingface/download").mkdir(parents=True)
+    snapshot.chmod(0)
+    try:
+        with pytest.raises(PermissionError, match="org/model"):
+            m.require_listable("org/model", snapshot)
+    finally:
+        snapshot.chmod(0o755)
+
+
+def test_a_readable_snapshot_passes_the_listing_check(tmp_path):
+    m.require_listable("org/model", tmp_path)
+
+
+def test_a_snapshot_missing_a_published_weight_file_is_refused():
+    # 2026-10-08: a partial `hf download` (the shard never fetched) pinned 9 of 10 files and
+    # reported success, so the app would have "verified" Lil without ever hashing its weights.
+    published = {"model.safetensors": "aa", "tokenizer.json": "bb", "assets/banner.png": "cc"}
+    local = {"tokenizer.json", "config.json"}
+    assert m.missing_published_files(published, local) == ["model.safetensors"]
+
+
+def test_a_complete_snapshot_misses_nothing():
+    published = {"model-00001-of-00002.safetensors": "aa", "model-00002-of-00002.safetensors": "bb"}
+    assert m.missing_published_files(published, set(published)) == []

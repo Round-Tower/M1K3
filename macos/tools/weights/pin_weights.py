@@ -27,13 +27,24 @@ Usage:
     python3 macos/tools/weights/pin_weights.py --check        # verify only, exit 1 on drift
     python3 macos/tools/weights/pin_weights.py --only org/repo   # re-pin one repo; the rest
                                                               # keep their committed pins
+    python3 macos/tools/weights/pin_weights.py --only org/repo --snapshot-root DIR
+
+`--snapshot-root` reads the named repo from DIR/<org>/<repo> instead of the app's
+container, for when macOS app-data privacy keeps this process out of it. DIR is a
+fresh `hf download --local-dir` at the pinned commit (its metadata records the
+commit), so HF supplies those bytes and its LFS oid is no longer independent. The
+second opinion moves to the app: on every load it checks the copy that was run and
+evaluated against the new pin and refuses a mismatch, so launch a build carrying
+the pin before the release.
 """
 
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import json
+import os
 import pathlib
 import sys
 import urllib.request
@@ -128,6 +139,43 @@ def hf_json(url: str):
         return json.load(resp)
 
 
+# What the app downloads for a brain — BrainWeightsFetcher.weightPatterns.
+APP_DOWNLOAD_PATTERNS = ("*.safetensors", "*.json", "*.jinja")
+
+
+def missing_published_files(published: dict[str, str], local: set[str]) -> list[str]:
+    """LFS files HF publishes that the app would download but the snapshot lacks.
+
+    A pin covers only what is on disk, so a partial snapshot pins a partial
+    manifest, and the app then "verifies" a load without hashing the missing
+    files (2026-10-08: the 3 GB shard, after a partial `hf download`)."""
+    return sorted(
+        path
+        for path in published
+        if path not in local and any(fnmatch.fnmatch(path, p) for p in APP_DOWNLOAD_PATTERNS)
+    )
+
+
+def require_listable(repo: str, directory: pathlib.Path) -> None:
+    """Raise PermissionError when `directory` can be stat'ed but not listed.
+
+    macOS app-data privacy lets an outside process see that the container's
+    folders exist but not read inside them, and pathlib's rglob swallows the
+    PermissionError, so an unreadable snapshot would read as one with no
+    download metadata — the wrong diagnosis, and a pointless re-download."""
+    try:
+        next(os.scandir(directory), None)
+        next(os.scandir(directory / ".cache/huggingface/download"), None)
+    except FileNotFoundError:
+        pass
+    except PermissionError as error:
+        raise PermissionError(
+            f"{repo}: cannot read {error.filename} — macOS app-data privacy blocks this "
+            "process from the app's container. Run from a terminal that has access to "
+            "other apps' data (System Settings › Privacy & Security), e.g. Terminal.app."
+        ) from error
+
+
 def collect(repo: str, cache: pathlib.Path) -> tuple[str, dict[str, dict]]:
     """Local digests for `repo`, cross-checked against HF. Exits on disagreement."""
     directory = cache / repo
@@ -137,6 +185,10 @@ def collect(repo: str, cache: pathlib.Path) -> tuple[str, dict[str, dict]]:
             "Pin from bytes that have been run and evaluated — download and "
             "exercise the model first, then re-run this."
         )
+    try:
+        require_listable(repo, directory)
+    except PermissionError as error:
+        sys.exit(f"FATAL {error}")
 
     revision = hf_json(f"https://huggingface.co/api/models/{repo}/revision/main")["sha"]
 
@@ -197,6 +249,13 @@ def collect(repo: str, cache: pathlib.Path) -> tuple[str, dict[str, dict]]:
             confirmed += 1
 
         files[rel] = {"size": path.stat().st_size, "sha256": digest}
+
+    if missing := missing_published_files(published, set(files)):
+        sys.exit(
+            f"FATAL {repo}: the snapshot at {directory} lacks {missing}, which HF publishes and "
+            "the app downloads. A pin covers only what is on disk, so the app would load those "
+            "files unverified. Complete the snapshot, then re-run."
+        )
 
     print(
         f"  {repo}\n"
@@ -389,13 +448,22 @@ def main() -> None:
         metavar="REPO",
         help="re-pin only this repo (repeatable); every other shipped repo keeps its committed pin",
     )
+    parser.add_argument(
+        "--snapshot-root",
+        type=pathlib.Path,
+        metavar="DIR",
+        help="with --only: read the named repos from DIR/<org>/<repo>, not the app container "
+        "(see the module docstring for what that does to the trust model)",
+    )
     args = parser.parse_args()
+    if args.snapshot_root and not args.only:
+        parser.error("--snapshot-root re-pins named repos only: pass --only REPO")
 
     print("Pinning shipped model weights (local bytes, cross-checked against HF):")
     if args.only:
         only = set(args.only)
         fresh = {
-            repo: (*collect(repo, cache), BASE_NAMES[cache])
+            repo: (*collect(repo, args.snapshot_root or cache), BASE_NAMES[cache])
             for repo, cache in SHIPPED_REPOS.items()
             if repo in only
         }

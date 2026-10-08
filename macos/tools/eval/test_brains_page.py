@@ -403,6 +403,18 @@ def test_cli_skips_a_foreign_document_but_still_refuses_a_wrong_schema(tmp_path,
         raise AssertionError("a scorecard with an unread schemaVersion must still fail loudly")
 
 
+def test_cli_skips_a_foreign_document_that_has_its_own_runs_key(tmp_path, capsys):
+    # The 2026-09-26 Mini records carry a `runs` dict of their own and no schemaVersion; they
+    # crashed the page. ChatEvalDocument always encodes schemaVersion, so its absence decides.
+    (tmp_path / "m.json").write_text(json.dumps(MANIFEST))
+    (tmp_path / "r.json").write_text(json.dumps(RUN))
+    (tmp_path / "mini.json").write_text(json.dumps({"brain": "mini", "runs": {"arm_tools": 30}, "summary": {}}))
+    rc = bp.main(["--run", str(tmp_path / "mini.json"), "--run", str(tmp_path / "r.json"),
+                  "--manifest", str(tmp_path / "m.json"), "--json", str(tmp_path / "b.json"),
+                  "--html", str(tmp_path / "b.html"), "--generated", "2026-10-08"])
+    assert rc == 0 and "skipped mini.json" in capsys.readouterr().out
+
+
 
 def test_a_not_applicable_score_leaves_every_count():
     # A vision turn on a text-only brain: one skip named "applicable" (ChatEvalScore.notApplicable).
