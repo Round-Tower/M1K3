@@ -60,7 +60,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — `.mini`'s window is MiniContextWindow.current (the
 //  device's, recorded at launch; 4,096 floor), no longer a literal 4,096.
 //  Review: Kev + claude-opus-5-5, 2026-10-08, Confidence 0.85 — Lil is Qwen3.5-4B again (Kev's call on the
-//  post-#509/#511 evals): ~3,060 MB, and it SEES (supportsImageInput, vision 42/48 on MLXVLM).
+//  post-#509/#511 evals): ~3,060 MB, and it SEES (supportsImageInput, vision 42/48 on MLXVLM). The window
+//  and rotating-cache notes now say hybrid: KVCacheSimple + MambaCache (MLXVLM Qwen35.newCache).
 
 import Foundation
 
@@ -260,8 +261,9 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     ///   `SystemLanguageModel.contextSize` (4,096 on an M1 Max; the WWDC26
     ///   sample shows 8,192), the 4,096 floor until then. AFM throws on
     ///   overflow, so a smaller report is believed, never rounded up.
-    /// - `lil` (dense Qwen3, `maxKVSize == nil` → `KVCacheSimple`): the
-    ///   native ~32K window; growth is MEMORY-bounded, never silently truncated.
+    /// - `lil` (Qwen3.5 hybrid, `maxKVSize == nil`: `KVCacheSimple` on the attention
+    ///   layers, `MambaCache` on the GatedDeltaNet ones): the native ~32K window;
+    ///   growth is MEMORY-bounded, never silently truncated.
     /// - `big` (gemma-4-12B, `RotatingKVCache(maxSize: 8192)`): a HARD 8192-token
     ///   sliding window — past it the head (persona + grounding) rotates OUT
     ///   during prefill with no error. Same cache geometry as the e4b it
@@ -299,7 +301,7 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// (`RotatingKVCache`): exceeding `approximateContextTokens` silently drops the
     /// prompt HEAD rather than erroring, so the budget layer must clamp BELOW it
     /// (with margin for the char≈token estimate). Only `big` (gemma-4-12B) today;
-    /// the dense-Qwen lil uses an unbounded `KVCacheSimple`. Verified against
+    /// lil's Qwen3.5 uses unbounded `KVCacheSimple` + `MambaCache`. Verified against
     /// `MLXBrainProvider`'s per-family cache config (see docs/MODEL_CHOICES.md).
     public var usesRotatingKVCache: Bool {
         self == .big
