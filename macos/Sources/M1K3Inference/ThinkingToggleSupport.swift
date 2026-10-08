@@ -8,13 +8,15 @@
 //  here so the app can ask it without importing MLX, and MLX delegates to it.
 //
 //  The picker follows Lil (Kev, 2026-09-26: "hide the Reasoning Picker until we
-//  do have a Lil model that supports it"). Today's Lil, Qwen3-4B-Instruct-2507,
-//  never thinks; Big's gemma-4 toggle is pinned off; Mini and Pocket have no
-//  think phase. So the picker was a dead control on every shipping brain.
+//  do have a Lil model that supports it"). Lil was then Qwen3-4B-Instruct-2507,
+//  which never thinks; Big's gemma-4 toggle is pinned off; Mini and Pocket have
+//  no think phase. So the picker was a dead control on every shipping brain.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85 (the name rule is
 //  MLXBrainProvider's, moved verbatim and still pinned by its tests).
 //  Prior: MLXBrainProvider.templateSupportsThinkingToggle.
+//  Review: Kev + claude-opus-5-5, 2026-10-08 — no code change: Lil is Qwen3.5-4B again, whose template reads
+//  `enable_thinking`, so the picker reappears by this file's own rule. The header now says the 2507 was Lil.
 //
 
 import Foundation

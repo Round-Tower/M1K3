@@ -9,6 +9,11 @@ FILE_NOTES key that no longer names a pinned file fails loudly.
 
 Signed: Kev + claude-opus-5, 2026-09-12, Confidence 0.9 (pure functions only;
 the committed-manifest round trip needs no model cache). Prior: Unknown
+Review: Kev + claude-opus-5-5, 2026-10-08 — `--only`'s merge (carry committed pins, refuse a
+shipped repo with none, refuse a stray name or a moved download base). Confidence 0.9.
+Review: Kev + claude-opus-5-5, 2026-10-08 — two refusals from the Qwen3.5 re-pin: an unreadable
+snapshot (macOS app-data privacy) is named as such, not as missing metadata; a snapshot lacking a
+published LFS file the app downloads is refused (a partial `hf download` pinned 9 of 10 files).
 """
 import json
 
@@ -63,11 +68,7 @@ def test_orphan_file_notes_are_reported():
 
 
 def _committed_pins():
-    doc = json.loads(m.JSON_OUT.read_text())
-    return {
-        repo: (entry["revision"], entry["files"], entry["downloadBase"])
-        for repo, entry in doc["repos"].items()
-    }
+    return m.committed_pins(m.JSON_OUT.read_text())
 
 
 def test_committed_swift_manifest_is_the_generator_output_of_the_committed_json():
@@ -83,3 +84,89 @@ def test_every_file_note_names_a_committed_pin():
 
 def test_every_shipped_repo_is_in_the_committed_manifest():
     assert set(m.SHIPPED_REPOS) == set(_committed_pins())
+
+
+# --only (2026-10-08): promoting Lil to Qwen3.5 needed ONE repo re-pinned, but the
+# generator re-collected every shipped repo and hard-stopped on Big's snapshot (no
+# HubApi metadata on this Mac — the provenance check working as designed). A
+# re-pin of one repo must not require re-downloading 6.7 GB of another.
+
+def _committed():
+    return {
+        "org/kept": ("rev-k", {"k.safetensors": {"size": 10, "sha256": "kk"}}, "llm"),
+        "org/retired": ("rev-r", {"r.safetensors": {"size": 20, "sha256": "rr"}}, "llm"),
+    }
+
+
+def test_merge_takes_fresh_pins_for_named_repos_and_carries_the_rest():
+    fresh = {"org/new": ("rev-n", {"n.safetensors": {"size": 30, "sha256": "nn"}}, "llm")}
+    shipped = {"org/kept": "llm", "org/new": "llm"}
+    merged = m.merge_pins(shipped, fresh, _committed(), only={"org/new"})
+    assert merged == {"org/kept": _committed()["org/kept"], "org/new": fresh["org/new"]}
+
+
+def test_merge_drops_a_committed_repo_that_no_longer_ships():
+    fresh = {"org/new": ("rev-n", {}, "llm")}
+    merged = m.merge_pins({"org/kept": "llm", "org/new": "llm"}, fresh, _committed(), only={"org/new"})
+    assert "org/retired" not in merged
+
+
+def test_merge_refuses_a_shipped_repo_with_no_committed_pin_that_was_not_named():
+    import pytest
+    with pytest.raises(ValueError, match="org/new"):
+        m.merge_pins({"org/kept": "llm", "org/new": "llm"}, {}, _committed(), only=set())
+
+
+def test_merge_refuses_naming_a_repo_that_does_not_ship():
+    import pytest
+    with pytest.raises(ValueError, match="org/stray"):
+        m.merge_pins({"org/kept": "llm"}, {}, _committed(), only={"org/stray"})
+
+
+def test_merge_refuses_a_carried_pin_whose_download_base_changed():
+    import pytest
+    with pytest.raises(ValueError, match="org/kept"):
+        m.merge_pins({"org/kept": "embedder"}, {}, _committed(), only=set())
+
+
+def test_committed_pins_reads_the_manifest_shape():
+    doc = json.dumps({"repos": {"org/a": {"revision": "r", "downloadBase": "llm", "files": {"f": {"size": 1, "sha256": "s"}}}}})
+    assert m.committed_pins(doc) == {"org/a": ("r", {"f": {"size": 1, "sha256": "s"}}, "llm")}
+
+
+def test_an_unreadable_snapshot_is_refused_as_unreadable_not_as_missing_metadata(tmp_path):
+    # macOS app-data privacy lets an outside process stat the container but not list it,
+    # and pathlib's rglob swallows the PermissionError: an unreadable snapshot used to read
+    # as "no HubApi download metadata" and sent Kev to re-download (2026-10-08).
+    import pytest
+    snapshot = tmp_path / "org" / "model"
+    (snapshot / ".cache/huggingface/download").mkdir(parents=True)
+    snapshot.chmod(0)
+    try:
+        with pytest.raises(PermissionError, match="org/model"):
+            m.require_listable("org/model", snapshot)
+    finally:
+        snapshot.chmod(0o755)
+
+
+def test_a_readable_snapshot_passes_the_listing_check(tmp_path):
+    m.require_listable("org/model", tmp_path)
+
+
+def test_a_snapshot_missing_a_published_weight_file_is_refused():
+    # 2026-10-08: a partial `hf download` (the shard never fetched) pinned 9 of 10 files and
+    # reported success, so the app would have "verified" Lil without ever hashing its weights.
+    published = {"model.safetensors": "aa", "tokenizer.json": "bb", "assets/banner.png": "cc"}
+    local = {"tokenizer.json", "config.json"}
+    assert m.missing_published_files(published, local) == ["model.safetensors"]
+
+
+def test_a_complete_snapshot_misses_nothing():
+    published = {"model-00001-of-00002.safetensors": "aa", "model-00002-of-00002.safetensors": "bb"}
+    assert m.missing_published_files(published, set(published)) == []
+
+
+def test_a_snapshot_missing_a_small_published_file_is_refused_too():
+    # Small files are not LFS-backed, but chat_template.jinja IS the tool-calling contract.
+    listed = {"model.safetensors", "chat_template.jinja", "README.md", ".gitattributes"}
+    assert m.missing_published_files(listed, {"model.safetensors"}) == ["chat_template.jinja"]

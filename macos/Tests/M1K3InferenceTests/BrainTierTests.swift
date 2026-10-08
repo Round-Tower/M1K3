@@ -23,6 +23,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06 — four tiers again — pocket (LFM2.5-1.2B as the non-AFM Mini): facts,
 //  the measured 3.5 GB mobile floor, ordering, `offered(afm:)`, `recommended(…afm:)`, `easedToOfferedMini`.
 //  Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-08 — Lil is Qwen3.5-4B (MLXVLM, sees) again, Kev's call on the
+//  post-#509/#511 evals; ~3,060 MB download. Confidence 0.85.
 //
 
 @testable import M1K3Inference
@@ -72,20 +74,16 @@ struct BrainTierTests {
         #expect(!BrainTier.mini.requiresDownload)
     }
 
-    @Test("the MLX tiers point at the dense Qwen3 / Gemma 4 models")
+    @Test("the MLX tiers point at Qwen3.5-4B (Lil, sees) and gemma-4-12B (Big)")
     func mlxTierModels() {
-        // lil uses DENSE Qwen3 (not the Qwen3.5 GatedDeltaNet hybrid, which
-        // CPU-spikes on mlx-swift-lm 3.31.3 — see MODEL_CHOICES.md). Dense routes
-        // through the existing qwen3 path: .json tools, no pre-open-think,
-        // quantized KV — verified against the real Qwen3 chat template.
-        // lil is the NON-THINKING Instruct-2507 refresh since 2026-07-16: same
-        // dense-qwen3 family/size, but no <think> phase — tools 4.4s vs 21.0s
-        // median, reasoning answers 1.8s vs 11.9s, security parity with the
-        // model it replaces (Run E, macos/scratch/eval-2026-07-15-model-runs/).
-        // DWQ-2510 since 2026-09-05: the same weights under the DWQ quantization
-        // recipe — 18/21 vs 15/21 on mains (security 6/7 vs 3/7; ×3 repeats
-        // 16/21 vs 12/21), median turn 1774 ms vs 2011 ms (docs/evals/2026-09-05-lil-*).
-        #expect(BrainTier.lil.mlxModelID == "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510")
+        // lil is Qwen3.5-4B again since 2026-10-08 (Kev's call), loaded through MLXVLM so it SEES.
+        // It left in July for dense Qwen3-4B-2507 on speed: every tool step re-prefilled the persona
+        // (its MambaCache layers are never trimmable). #509's exact-seed checkpoints and #511's
+        // orphan-</parameter> repair closed that: tier tool-use 19/20 at 5.9 s vs the 2507's 20/20 at
+        // 5.5 s; x3 all kinds 292/324 incl. vision 42/48, same ~4.8 GB peak
+        // (docs/evals/2026-10-07-lil-*, GEMMA_1_1_PLAN.md).
+        #expect(BrainTier.lil.mlxModelID == "mlx-community/Qwen3.5-4B-MLX-4bit")
+        #expect(BrainTier.lil.approxDownloadMB == 3060)
         // big is gemma-4-12B since 2026-07-15: both June blockers cleared on the
         // pinned mlx-swift-lm 3.31.4 (vision_embedder sanitize IS in the tag;
         // the RotatingKVCache.temporalOrder tool-use crash did not reproduce),
@@ -331,28 +329,29 @@ struct BrainTierTests {
         #expect(BrainTier.allCases.filter(\.hasClampedContext) == [.pocket, .big])
     }
 
-    @Test("image input is a Big-only capability — gemma-4-12B through the VLM load path")
+    @Test("image input: Lil and Big through the VLM load path, Mini on macOS 27+")
     func imageInputCapability() {
         // big = gemma-4-12B loaded via VLMModelFactory (vision tower resident,
-        // proven on-device 2026-07-14/19) — the ONLY tier that can consume an
-        // image today. The UI reads this to show/hide the attach affordance;
-        // the mapping layer reads it to drop images before a non-vision model.
+        // proven on-device 2026-07-14/19). The UI reads this to show/hide the
+        // attach affordance; the mapping layer reads it to drop images before a
+        // non-vision model.
         #expect(BrainTier.big.supportsImageInput)
-        // lil (dense Qwen3 text checkpoint) has no vision tower.
-        #expect(!BrainTier.lil.supportsImageInput)
+        // lil = Qwen3.5-4B since 2026-10-08, its exact id routed through MLXVLM
+        // (vision tower shipped in the conversion): vision 42/48 on the x3 run.
+        #expect(BrainTier.lil.supportsImageInput)
         // mini (AFM): gains vision on macOS 27+ via FoundationModels'
         // Attachment API. The test runs on the build host — Xcode 27 → true.
         #if compiler(>=6.4)
             if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) {
                 #expect(BrainTier.mini.supportsImageInput)
-                #expect(Set(BrainTier.allCases.filter(\.supportsImageInput)) == [.mini, .big])
+                #expect(Set(BrainTier.allCases.filter(\.supportsImageInput)) == [.mini, .lil, .big])
             } else {
                 #expect(!BrainTier.mini.supportsImageInput)
-                #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.big])
+                #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.lil, .big])
             }
         #else
             #expect(!BrainTier.mini.supportsImageInput)
-            #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.big])
+            #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.lil, .big])
         #endif
     }
 

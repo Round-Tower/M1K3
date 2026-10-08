@@ -39,7 +39,7 @@ our minds open."
 
 - **Tiers** — `Sources/M1K3Inference/BrainTier.swift`
   - mini = Apple FM (L200) · pocket = `LFM2.5-1.2B-Instruct-4bit` (L204)
-  - lil = `Qwen3-4B-Instruct-2507-4bit-DWQ-2510` (L216, ~2.15 GB, **text-only, default on ≥16 GB**)
+  - lil = `Qwen3.5-4B-MLX-4bit` (L217, ~3.06 GB, **sees, default on ≥16 GB**; the 2507 until 2026-10-08)
   - big = `gemma-4-12B-it-4bit` (L224, ~7.4 GB peak, Mac ≥16 GB, never on mobile L362)
   - defaults: `recommendedByMemory` L450-485; gates: `minimumPhysicalMemoryGB` L344-364
 - **Vision** — Big via MLXVLM (`usesVLMLoadPath`, exact allow-list `"gemma-4-12b"`, `MLXBrainProvider.swift:1082`); Mini via AFM attachments. E4B is excluded: upstream `Gemma4Unified` sanitize lacks the KV-shared-layer fix → `keyNotFound layers.24.self_attn.v_proj`.
