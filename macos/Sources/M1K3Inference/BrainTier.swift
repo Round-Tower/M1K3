@@ -59,6 +59,8 @@
 //
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — `.mini`'s window is MiniContextWindow.current (the
 //  device's, recorded at launch; 4,096 floor), no longer a literal 4,096.
+//  Review: Kev + claude-opus-5-5, 2026-10-08, Confidence 0.85 — Lil is Qwen3.5-4B again (Kev's call on the
+//  post-#509/#511 evals): ~3,060 MB, and it SEES (supportsImageInput, vision 42/48 on MLXVLM).
 
 import Foundation
 
@@ -202,18 +204,17 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         // 1.77 GB peak on the Mac, lfm2 tool dialect. Pinned in
         // PinnedWeights.swift from the evaluated local bytes.
         case .pocket: .mlx(modelID: "mlx-community/LFM2.5-1.2B-Instruct-4bit")
-        // DENSE Qwen3, the NON-THINKING Instruct-2507 refresh since 2026-07-16
-        // (was bare Qwen3-4B-4bit): same family/size/arch — .json tools,
-        // quantized KV, no pre-open-think — but no <think> phase at all, which
-        // is where the speed lives: tools 4.4s vs 21.0s median, reasoning
-        // answers 1.8s vs 11.9s, security parity with the model it replaces
-        // (Run E, 44 fixtures, macos/docs/MODEL_CHOICES.md 2026-07-16 entry).
-        // The thinking TOGGLE is pinned off for the 2507 line in MLXBrainProvider
-        // (its template has no enable_thinking — the reasoning picker hides).
-        // DWQ-2510 since 2026-09-05: identical weights, the distilled-weight-
-        // quantization recipe; A/B on mains 18/21 vs 15/21, security 6/7 vs 3/7
-        // (docs/evals/2026-09-05-lil-*.json, published at m1k3.app/brains).
-        case .lil: .mlx(modelID: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510")
+        // Qwen3.5-4B since 2026-10-08 (Kev's call), loaded through MLXVLM so Lil SEES
+        // (vision 42/48). Lil was Qwen3.5 until 2026-07-16 and left for dense
+        // Qwen3-4B-Instruct-2507 on speed: its MambaCache layers are never
+        // trimmable, so every tool step re-prefilled the persona + palette (~2,585
+        // tokens, 6.8 s). #509's exact-seed checkpoints and #511's orphan-
+        // </parameter> repair closed it: tier tool-use 19/20 at 5.9 s vs the
+        // 2507's 20/20 at 5.5 s; x3 all kinds 292/324 at the same ~4.8 GB peak.
+        // Weaker on code-gen (24/30 vs 30/30) and grounded-Q (18/24 vs 21/24);
+        // far stronger on interview (15/15 vs 4/15). Thinks only on strong
+        // analytic asks (ThinkingPolicy's speed tier). docs/evals/2026-10-07-lil-*.
+        case .lil: .mlx(modelID: "mlx-community/Qwen3.5-4B-MLX-4bit")
         // gemma-4-12B since 2026-07-15 (was e4b): both June blockers cleared on
         // the pinned mlx-swift-lm 3.31.4 — the vision_embedder sanitize fix IS
         // in the tag, and the RotatingKVCache.temporalOrder tool-use crash did
@@ -233,15 +234,16 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
 
     /// Approx one-time download in MB, or `nil` for the no-download Apple tier.
     /// Rough estimates surfaced as "~NN MB"; the real size shows on the progress
-    /// bar at download time. lil is Qwen3-4B-Instruct-2507 (on-disk 2026-07-16 —
-    /// existing Lil users pay one ~2.1GB re-download after the swap); big is
+    /// bar at download time. lil is Qwen3.5-4B incl. its vision tower (HF index,
+    /// 2026-10-08: 3,061 MB — existing Lil users pay one re-download after the
+    /// swap, as they did for the 2507 in July); big is
     /// gemma-4-12B (HF index, 2026-07-15 — same one-time ~6.7GB re-download
     /// story; the model gate's progress bar is the honest surface for both).
     public var approxDownloadMB: Int? {
         switch self {
         case .mini: nil
         case .pocket: 630
-        case .lil: 2150
+        case .lil: 3060
         case .big: 6740
         }
     }
@@ -282,9 +284,9 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     /// (AFM) gains vision on macOS 27 via FoundationModels' Attachment API.
     /// The UI reads this to show/hide the attach affordance; the provider-side
     /// mapping drops images (loudly) for any tier where this is false.
-    /// Lil is a text-only checkpoint.
     public var supportsImageInput: Bool {
-        if self == .big { return true }
+        // Lil (Qwen3.5-4B) and Big (gemma-4-12B) load through MLXVLM with their vision towers.
+        if self == .lil || self == .big { return true }
         #if compiler(>=6.4)
             if self == .mini {
                 if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) { return true }
@@ -358,6 +360,9 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
         // floor at the measured failure, widened only by a soak.
         case (.pocket, .mobile): 3.5
         case (.lil, .mac): nil
+        // 8 GB was measured on the dense Qwen3-4B. Qwen3.5-4B (2026-10-08) loads through MLXVLM and
+        // peaked ~4.8 GB on the Mac, over the 4 GB mobile memoryLimit: UNMEASURED on an iPhone. If the
+        // device soak fails, `.infinity` here (the Big precedent) eases a persisted Lil to Mini.
         case (.lil, .mobile): 8
         case (.big, .mac): 16
         case (.big, .mobile): .infinity

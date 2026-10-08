@@ -62,11 +62,12 @@ protocols in their own targets. `M1K3App/` is a thin shell; `AppEnvironment` (+ 
 `docs/MODULE_MAP.md`.
 
 - **Brains** (`BrainTier.swift`): Mini (Apple Foundation Models — or `LFM2.5-1.2B` shown as
-  Mini where Apple Intelligence is blocked), Lil (`Qwen3-4B-Instruct-2507-4bit-DWQ-2510`),
+  Mini where Apple Intelligence is blocked), Lil (`Qwen3.5-4B-MLX-4bit` via MLXVLM — sees; exact-seed
+  checkpoints because its MambaCache never trims),
   Big (`gemma-4-12B-it-4bit`, 16 GB floor, excluded on mobile). First run is Mini-first
   (`HelloView`); Lil/Big are opt-in upgrades. The why: `docs/MODEL_CHOICES.md`.
 - **Tool calling** (`LocalAgent.run`): native when the brain has a resolvable tool-call
-  format — Qwen3 → `.json`, gemma-4 → `.gemma4` — else the ReAct floor.
+  format — Qwen3.5 → `.qwen35` (+ `Qwen35CallRepair`), gemma-4 → `.gemma4` — else the ReAct floor.
 - **MCP, two surfaces:** the in-app HTTP server on `127.0.0.1:4242/mcp` while the app
   runs (`M1K3App/MCPHostController.swift`), and the `M1K3MCP` stdio binary
   (`docs/MCP_SETUP.md`). `ask_m1k3` is submit-and-poll: ~8 s inline, then a job id for
@@ -110,3 +111,4 @@ on turn one goes back — measure at the next /retro. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — the dep-bump bullet points at
 tools/ci/dep_freshness.py (what's behind, who caps it); the WhisperKit/swift-transformers clash it
 named is gone with WhisperKit 1.x. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-08, Confidence 0.85 — Lil is Qwen3.5-4B (VLM) again. -->

@@ -52,10 +52,12 @@ EMBEDDER_CACHE = CONTAINER / "Documents/huggingface/models"
 
 SHIPPED_REPOS = {
     "mlx-community/gemma-4-12B-it-4bit": LLM_CACHE,
-    # Lil: the DWQ-2510 recipe of the same Qwen3-4B-Instruct-2507 weights beat
-    # the plain 4-bit 18/21 vs 15/21 (security 6/7 vs 3/7; x3 repeats 16/21 vs
-    # 12/21) on 2026-09-05 — docs/evals/2026-09-05-lil-*.json.
-    "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": LLM_CACHE,
+    # Lil: Qwen3.5-4B since 2026-10-08, loaded through MLXVLM (sees). Its snapshot
+    # carries the vision tower's processor/preprocessor JSONs; every file is pinned.
+    # Replaced Qwen3-4B-Instruct-2507-4bit-DWQ-2510, which becomes retired (offered
+    # in Settings ▸ Free up space, never deleted automatically). Evals:
+    # docs/evals/2026-10-07-lil-*.json.
+    "mlx-community/Qwen3.5-4B-MLX-4bit": LLM_CACHE,
     # Mini on devices without Apple Intelligence (the 3 GB A12 iPad has no
     # other local brain): LFM2.5-1.2B, ~630 MB. Tool-use 5/6 through the live
     # path once PR #232 rendered its tool block in trained key order

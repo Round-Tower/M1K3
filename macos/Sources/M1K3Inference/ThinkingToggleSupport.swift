@@ -15,6 +15,8 @@
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85 (the name rule is
 //  MLXBrainProvider's, moved verbatim and still pinned by its tests).
 //  Prior: MLXBrainProvider.templateSupportsThinkingToggle.
+//  Review: Kev + claude-opus-5-5, 2026-10-08 — no code change: Lil is Qwen3.5-4B again, whose template reads
+//  `enable_thinking`, so the picker reappears by this file's own rule (the header's "today's Lil" is the 2507).
 //
 
 import Foundation
