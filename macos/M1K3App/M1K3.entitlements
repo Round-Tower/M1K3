@@ -64,5 +64,29 @@
 	<true/>
 	<key>com.apple.security.personal-information.location</key>
 	<true/>
+	<!-- The Developer ID lane's keychain identity. macOS 27 routes every keychain
+	     call to the data-protection keychain, which secd opens only to a client
+	     with a profile-backed identity; this lane had none, so every save failed
+	     -34018 and the MCP server never started (2026-10-08). An app group alone
+	     is ignored without a profile ("invalid application signature or incorrect
+	     provisioning profile", 2026-10-09), so this asks for the keychain group a
+	     Developer ID profile grants: release-macos.sh exports with
+	     -allowProvisioningUpdates and embeds it. It is the store lanes' default
+	     group (their application identifier), so both lanes share one keychain.
+	     Signed: Kev + claude-opus-5-5, 2026-10-09, Confidence 0.7 (verify-by-
+	     launch decides it), Prior: Unknown -->
+	<!-- Content Controls (Declared Age Range): an App ID capability, so only a
+	     profile can grant it. This lane's Developer ID profile does (#518), so DMG
+	     and cask builds show Apple's age sheet like the store builds; without it
+	     "Set up" fails with "isn't available here". check_store_targets.py
+	     requires it on every lane. (PCC is still store-only: the profile lacks it.)
+	     Signed: Kev + claude-opus-5-5, 2026-10-09, Confidence 0.8 (verify-by-
+	     launch: the sheet shows), Prior: Unknown -->
+	<key>com.apple.developer.declared-age-range</key>
+	<true/>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)app.m1k3</string>
+	</array>
 </dict>
 </plist>

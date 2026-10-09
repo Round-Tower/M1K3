@@ -11,6 +11,9 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85,
 //  Prior: internal knowledge-server project SemanticStore (GRDB idiom) + internal call-pipeline SQLiteCallPersistence (Kev).
+//  Review: Kev + claude-opus-5-5, 2026-10-07 — `loadReadable` decodes row by row: a row the coder
+//  rejects (`CallPersistenceError.decodingFailed`) is counted and skipped, any other error (the
+//  key) throws. `loadAll` stays strict. Confidence 0.85.
 
 import Foundation
 import GRDB
@@ -69,6 +72,22 @@ public final class GRDBCallPersistence: CallPersistence, @unchecked Sendable {
                 return try coder.decode(payload)
             }
         }
+    }
+
+    public func loadReadable() throws -> CallLoadResult {
+        let payloads = try dbQueue.read { db in
+            try Data.fetchAll(db, sql: "SELECT payload FROM call_sessions ORDER BY started_at DESC")
+        }
+        var calls: [CallSession] = []
+        var unreadable = 0
+        for payload in payloads {
+            do {
+                try calls.append(coder.decode(payload))
+            } catch CallPersistenceError.decodingFailed {
+                unreadable += 1
+            }
+        }
+        return CallLoadResult(calls: calls, unreadable: unreadable)
     }
 
     @discardableResult

@@ -12,6 +12,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.7, Prior: Unknown
 //
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.7 — the reloaded seed carries the in-memory
+//  `LMOutput.State`; the disk file does not hold it (named at the call).
+//
 
 import Foundation
 import M1K3Inference
@@ -72,8 +75,11 @@ public extension MLXBrainProvider {
             let genStart = clock.now
             let answer = try await seededAnswer(
                 container: container,
-                // A disk round-trip of the in-memory seed carries its exactness.
-                seed: PersonaPrefixSnapshot(cache: loaded, tokenIDs: reloadedIDs, exact: seed.exact)
+                // A disk round-trip of the in-memory seed carries its exactness. The
+                // model state is NOT on disk (LMOutput.State's serialization is internal
+                // upstream) — it rides from memory, so a real disk path for a state-
+                // carrying family (Qwen3.5 on MLXVLM) would need it persisted first.
+                seed: PersonaPrefixSnapshot(cache: loaded, tokenIDs: reloadedIDs, exact: seed.exact, state: seed.state)
             )
             let genMS = (clock.now - genStart).milliseconds
 

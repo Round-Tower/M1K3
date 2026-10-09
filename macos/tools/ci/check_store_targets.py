@@ -23,6 +23,11 @@ in test_check_store_targets.py; the file I/O + exit wiring is verify-by-run.
 Signed: Kev + claude-fable-5.1, 2026-09-02, Confidence 0.85 (the invariants are
 read off the live ASC record + developer portal via the API the same day;
 project.yml's target/template shape is the one xcodegen documents). Prior: none.
+Review: Kev + claude-opus-5-5, 2026-10-09 — the Developer ID lane must carry the keychain group
+its Developer ID profile grants (its macOS 27 keychain identity). Confidence 0.85 (verified by
+launch: profile embedded, no -34018, MCP listening on 4242).
+Review: Kev + claude-opus-5-5, 2026-10-09 — Declared Age Range is required on every lane, the
+Developer ID one included (its profile grants it); PCC alone stays forbidden there.
 """
 from __future__ import annotations
 
@@ -191,36 +196,57 @@ def audit(project: dict) -> list[str]:
 # --------------------------------------------------------------------------- #
 
 
-# Entitlements that only a provisioning profile can grant. The Developer ID
-# lane (M1K3App/M1K3.entitlements) ships without a profile, so AMFI refuses to
-# launch an app that claims one of these there: every DMG and cask install dies.
-PROFILE_ONLY_ENTITLEMENTS = (
-    "com.apple.developer.private-cloud-compute",
-    # Declared Age Range (2026-10-01): an App ID capability, so a profile carries it.
-    "com.apple.developer.declared-age-range",
-)
+# Entitlements the Developer ID lane's profile can't grant. Until 2026-10-09 that lane
+# (M1K3App/M1K3.entitlements) had no profile at all, and AMFI refused to launch an app claiming
+# one of these: every DMG and cask install died. Its Developer ID profile ("M1K3", read
+# 2026-10-09) grants the App ID's identity, its keychain group and Declared Age Range (so Content
+# Controls works there, Kev 2026-10-09), but not PCC, which would still be killed.
+PROFILE_ONLY_ENTITLEMENTS = ("com.apple.developer.private-cloud-compute",)
 
 
 def profile_only_leaks(developer_id_entitlements: dict) -> list[str]:
     return [
-        f"M1K3.entitlements (Developer ID, no profile) claims {key} — store lane only (M1K3-MAS.entitlements)"
+        f"M1K3.entitlements (Developer ID) claims {key} — store lane only (M1K3-MAS.entitlements)"
         for key in PROFILE_ONLY_ENTITLEMENTS
         if key in developer_id_entitlements
     ]
 
 
-# Entitlements every store lane must carry: a feature App Review is pointed at
-# that silently does nothing without one. Build 375 shipped Content Controls with
-# no declared-age-range entitlement, so the Mac's "Set up" never showed a sheet.
-STORE_LANE_REQUIRED_ENTITLEMENTS = ("com.apple.developer.declared-age-range",)
-STORE_LANE_ENTITLEMENTS = ("M1K3App/M1K3-MAS.entitlements", "M1K3iOSApp/M1K3iOS.entitlements")
+# The Developer ID lane's keychain identity. macOS 27 routes every keychain call to the
+# data-protection keychain ("System Keychain Always"), which secd opens only to a client with a
+# profile-backed identity. The Developer ID lane had none, so secd refused the MCP token's save
+# (-34018) and the DMG/cask build never started its MCP server (2026-10-08); a team-prefixed app
+# group alone was ignored ("incorrect provisioning profile", 2026-10-09). So the lane asks for
+# the keychain group its Developer ID profile grants (release-macos.sh embeds the profile). It is
+# the store lanes' default group too (their application identifier), so both share one keychain.
+DEVELOPER_ID_KEYCHAIN_GROUP = "$(AppIdentifierPrefix)app.m1k3"
 
 
-def store_lane_gaps(name: str, store_entitlements: dict) -> list[str]:
+def developer_id_keychain_gaps(developer_id_entitlements: dict) -> list[str]:
+    if DEVELOPER_ID_KEYCHAIN_GROUP in (developer_id_entitlements.get("keychain-access-groups") or []):
+        return []
     return [
-        f"{name} (store lane) is missing {key} — the feature it gates does nothing without it"
-        for key in STORE_LANE_REQUIRED_ENTITLEMENTS
-        if store_entitlements.get(key) is not True
+        f"M1K3.entitlements (Developer ID) lacks keychain-access-groups {DEVELOPER_ID_KEYCHAIN_GROUP} — on "
+        "macOS 27 its keychain is the data-protection one, and without that identity every save fails -34018"
+    ]
+
+
+# Entitlements every lane must carry: a feature that silently does nothing without one. Build
+# 375 shipped Content Controls with no declared-age-range entitlement, so the Mac's "Set up"
+# never showed a sheet. The Developer ID lane joined on 2026-10-09, once its profile could grant it.
+REQUIRED_ENTITLEMENTS = ("com.apple.developer.declared-age-range",)
+LANE_ENTITLEMENTS = (
+    "M1K3App/M1K3-MAS.entitlements",
+    "M1K3iOSApp/M1K3iOS.entitlements",
+    "M1K3App/M1K3.entitlements",
+)
+
+
+def lane_gaps(name: str, entitlements: dict) -> list[str]:
+    return [
+        f"{name} is missing {key} — the feature it gates does nothing without it"
+        for key in REQUIRED_ENTITLEMENTS
+        if entitlements.get(key) is not True
     ]
 
 
@@ -237,10 +263,12 @@ def main(argv: list[str]) -> int:
         project = yaml.safe_load(f)
     problems = audit(project)
     with open(os.path.join(macos, "M1K3App", "M1K3.entitlements"), "rb") as f:
-        problems += profile_only_leaks(plistlib.load(f))
-    for lane in STORE_LANE_ENTITLEMENTS:
+        developer_id = plistlib.load(f)
+    problems += profile_only_leaks(developer_id)
+    problems += developer_id_keychain_gaps(developer_id)
+    for lane in LANE_ENTITLEMENTS:
         with open(os.path.join(macos, lane), "rb") as f:
-            problems += store_lane_gaps(os.path.basename(lane), plistlib.load(f))
+            problems += lane_gaps(os.path.basename(lane), plistlib.load(f))
     names = sorted(store_targets(project))
     if not problems:
         print(f"✓ {len(names)} store targets ({', '.join(names)}) all upload into {EXPECTED_BUNDLE_ID!r} "

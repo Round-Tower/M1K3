@@ -111,6 +111,11 @@
 //  its conversion ships the vision tower and `qwen3_5` is MLXVLM.Qwen35 in our pin. LAUNCH-PROVEN
 //  (docs/evals/2026-10-07-qwen35-vlm-proof-x1-ac.json): vision 14/16 (Big's baseline 14/16), tool-use 9/10
 //  on the VLM path, own peak 4.56 GB (+0.5 GB over text-only). The ×3 all-kinds column is still owed.
+//  Review: Kev + claude-opus-5-5, 2026-10-07 (exact seed), Confidence 0.85 — a hybrid with kvBits
+//  (Qwen3.5) now seeds by `prefillExactly`, which takes and returns the `LMOutput.State` that belongs
+//  with the cache; the persona slot stores it.
+//  Review: Kev + claude-opus-5-5, 2026-10-09 — note only: the 2026-07-16 entry's "the Instruct variant
+//  is the wired lil" is superseded. Lil is Qwen3.5-4B since 2026-10-08 (#517), which reads the toggle.
 import Foundation
 import Hub
 import M1K3Inference
@@ -784,6 +789,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             let cache: [KVCache]
             let tokenIDs: [Int]
             var exact = false
+            var state: LMOutput.State?
         }
         // Resolved OUTSIDE the closure: touching `self.configuration` inside it
         // makes the closure async and `perform`'s overload no longer matches.
@@ -803,17 +809,18 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                 return PrefixBox(cache: [], tokenIDs: [])
             }
             let cache = try context.model.newCache(parameters: parameters)
-            let build = SeededPlainTurn.seedBuild(
-                freshLayersTrimmable: cache.map(\.isTrimmable), quantizesKV: parameters.kvBits != nil
-            )
+            let build = SeededPlainTurn.seedBuild(freshLayersTrimmable: cache.map(\.isTrimmable))
             if build == .exactPrefill {
-                // A recurrent layer (LFM2's MambaCache) can never be trimmed, so
-                // the sampled position of the generate-and-trim build below would
-                // stay in the seed for good and no turn could append to it
-                // (pocket re-prefilled every plain turn, #240). Prefill forward
-                // only: the cache ends holding exactly `ids`.
-                try Self.prefillExactly(ids, into: cache, parameters: parameters, model: context.model)
-                return PrefixBox(cache: cache, tokenIDs: ids, exact: true)
+                // A recurrent layer (LFM2's, Qwen3.5's MambaCache) can never be
+                // trimmed, so the sampled position of the generate-and-trim build
+                // below would stay in the seed for good and no turn could append
+                // to it (pocket re-prefilled every plain turn, #240). Prefill
+                // forward only: the cache ends holding exactly `ids`, and the
+                // state it hands back (Qwen3.5-VL's rope delta) rides with it.
+                let state = try Self.prefillExactly(
+                    ids, into: cache, state: nil, parameters: parameters, model: context.model
+                )
+                return PrefixBox(cache: cache, tokenIDs: ids, exact: true, state: state)
             }
             // Prefill: run a 1-token generation over the prefix, then trim
             // the cache back to exactly the prompt (the sampled token must
@@ -848,7 +855,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             )
             return
         }
-        personaPrefix.store(built.cache, tokenIDs: built.tokenIDs, exact: built.exact, for: key)
+        personaPrefix.store(built.cache, tokenIDs: built.tokenIDs, exact: built.exact, state: built.state, for: key)
         let tokens = built.tokenIDs.count
         // Key fingerprint stays in the line: this log is the ONLY way to tell a
         // legitimate second prefix (a different tool palette) from the same one
@@ -864,24 +871,35 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     /// all but the remainder it hands back; one forward over that remainder
     /// finishes the prompt, and its logits are discarded instead of sampled.
     /// Mirrors TokenIterator's prepare + first step, minus the token — and minus
-    /// its KVCachePlan: nothing is quantized here, which is why `seedBuild`
-    /// never routes a `kvBits` family to this path. The processed-token
-    /// timeline is not lost: the turn's `generate` rebuilds its KVCacheStorage
-    /// and infers the count from the attention leaves' offsets.
+    /// its KVCachePlan: nothing is quantized here, so a kvBits family's seed is
+    /// stored full-precision and the turn's iterator quantizes it after its own
+    /// prepare. The processed-token timeline is not lost: the turn's `generate`
+    /// rebuilds its KVCacheStorage and infers the count from the attention
+    /// leaves' offsets.
+    ///
+    /// `state`: the state that belongs with `cache` as handed in — nil on a fresh
+    /// cache, the checkpoint's own when extending one (MLXVLM's Qwen3.5 throws
+    /// `missingState` on a warm cache without it, and its forward PRECONDITIONS
+    /// on it, so both calls below must carry it). Returns the state that belongs
+    /// with the cache now.
+    @discardableResult
     static func prefillExactly(
-        _ ids: [Int], into cache: [KVCache], parameters: GenerateParameters, model: any LanguageModel
-    ) throws {
+        _ ids: [Int], into cache: [KVCache], state: LMOutput.State?,
+        parameters: GenerateParameters, model: any LanguageModel
+    ) throws -> LMOutput.State? {
         let input = LMInput(tokens: MLXArray(ids))
-        switch try model.prepare(input, cache: cache, state: nil, prefill: parameters.prefill) {
+        let output: LMOutput
+        switch try model.prepare(input, cache: cache, state: state, prefill: parameters.prefill) {
         case let .tokens(remaining):
-            let output = withPreparedCache(cache, lengths: remaining.sequenceLengths) {
-                model(remaining[text: .newAxis], cache: cache.isEmpty ? nil : cache, state: nil)
+            output = withPreparedCache(cache, lengths: remaining.sequenceLengths) {
+                model(remaining[text: .newAxis], cache: cache.isEmpty ? nil : cache, state: state)
             }
-            eval(output.logits)
-        case let .logits(output):
-            eval(output.logits)
+        case let .logits(result):
+            output = result
         }
+        eval(output.logits)
         eval(cache.flatMap { $0.innerState() })
+        return output.state
     }
 
     /// System-block token ids for the persona prefill (no assistant opener).

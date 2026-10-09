@@ -24,6 +24,8 @@
 //  Prior: Kev + claude-opus-4-8 (CrossTurnCacheReuseTests, the sibling seam).
 //  Review: claude-fable-5.1, 2026-09-06 — PR #240 review 1: pins that an
 //  untrimmed (wrapped) seed is never reused, even as an exact prefix.
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — a quantizing hybrid (Qwen3.5:
+//  kvBits 8 + MambaCache) now takes the exact prefill; the plan quantizes after prepare.
 //
 
 import Foundation
@@ -92,14 +94,15 @@ struct SeededPlainTurnTests {
         #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [false]) == .exactPrefill)
     }
 
-    /// The exact prefill runs no KVCachePlan, so it never quantizes. A family that
-    /// both quantizes its KV and carries a recurrent layer (none today: LFM2 is off
-    /// the quantized allow-list) keeps the sample build — not reusable, but never an
-    /// unquantized seed stored where the turn expects a quantized one.
-    @Test("a quantizing family never takes the plan-free exact prefill")
-    func quantizedKVKeepsTheIteratorBuild() {
-        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, false], quantizesKV: true) == .sampleAndTrim)
-        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, false], quantizesKV: false) == .exactPrefill)
+    /// The exact prefill runs no KVCachePlan, so its seed is stored full-precision.
+    /// That is safe for a quantizing family: the turn's TokenIterator applies its
+    /// plan after `prepare` (legacy kvBits is `.allowPartial`, so validation accepts
+    /// a mixed cache), and full-precision is the shape the 2026-10-07 seeded-prefill
+    /// probe measured consistent. Qwen3.5 (kvBits 8 + MambaCache) is the family
+    /// that needs it: the sample build left its seed one position long, never reused.
+    @Test("a quantizing hybrid gets the exact prefill too")
+    func quantizedHybridGetsExactPrefill() {
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, false]) == .exactPrefill)
     }
 
     @Test("no layers at all is not evidence of trimmability — exact prefill")

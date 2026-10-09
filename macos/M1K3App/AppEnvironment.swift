@@ -88,6 +88,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-01 — a failed chat turn now sets the avatar's `.error` activity
 //  (companion distress: Fear / fox Run) and settles to idle after `avatarDistressDuration` (3 s); it was
 //  earcon-only, so Fear was unreachable. Confidence now 0.8 (the settle is verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-07 — `calls()` loads through `loadReadable`: one undecodable
+//  call no longer blanks the list (Kev's Calls header read 13 over "No calls yet"). What the list can't
+//  show travels WITH the list (`CallsLoad.note`), so a cancelled older load can't leave a stale note;
+//  the cause is a `.notice` breadcrumb with the error's type only, never a payload. Confidence 0.8 (the store half is TDD'd; the screen is verify-by-launch).
 
 import AppKit
 import Foundation
@@ -1801,10 +1805,24 @@ final class AppEnvironment {
         }
     }
 
-    /// All stored calls, newest first. Off the main actor: it may be the store's first
+    /// The calls the list can show, newest first, and what it can't (`note`: undecodable rows, or
+    /// a key that wouldn't unlock; nil when it shows everything). One value, so the view assigns
+    /// both under one cancellation check. Off the main actor: it may be the store's first
     /// decrypt, which waits on Touch ID (`offMainCallStore`).
-    func calls() async -> [CallSession] {
-        (try? await Self.offMainCallStore(callPersistence) { try $0.loadAll() }) ?? []
+    func calls() async -> CallsLoad {
+        do {
+            let result = try await Self.offMainCallStore(callPersistence) { try $0.loadReadable() }
+            if result.unreadable > 0 {
+                Self.callLog.notice(
+                    "calls load: \(result.unreadable, privacy: .public) of \(result.calls.count + result.unreadable, privacy: .public) rows undecodable (skipped, kept)"
+                )
+            }
+            return CallsLoad(calls: result.calls, note: result.statusLine)
+        } catch {
+            // The key, not a row: type only — an error's description can carry more than we log.
+            Self.callLog.notice("calls load failed: \(String(describing: type(of: error)), privacy: .public)")
+            return CallsLoad(calls: [], note: "Couldn’t unlock your calls. Open Calls again to retry.")
+        }
     }
 
     /// Delete a call from both the encrypted store and the knowledge graph.

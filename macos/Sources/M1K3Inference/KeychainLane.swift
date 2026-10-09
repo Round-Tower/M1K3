@@ -5,10 +5,11 @@
 //  Which keychain this process can use — a platform fact, like HostPlatform.
 //  The data-protection keychain (access by team + bundle id, no per-binary
 //  login-password prompt) needs an application-identifier entitlement that only
-//  a provisioned build carries: App Store, TestFlight, a debug ⌘R. The Developer
-//  ID lane (nightly DMG, Homebrew cask) has no profile, and every data-protection
-//  query there fails with errSecMissingEntitlement (-34018, #319). Those builds
-//  use the login keychain, as every build did before 2026-09-12, prompt and all.
+//  a provisioned build carries: App Store, TestFlight, a debug ⌘R and, since
+//  2026-10-09, the Developer ID lane too (nightly DMG, Homebrew cask), which embeds
+//  a Developer ID profile because macOS 27 sends every keychain call there anyway.
+//  A build with no profile still fails every data-protection query with
+//  errSecMissingEntitlement (-34018, #319) and falls back to the login keychain.
 //
 //  One probe per process: a read of an account that never exists. It returns
 //  errSecItemNotFound where the entitlement is present and never prompts.
@@ -16,6 +17,8 @@
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 (the mapping is
 //  pinned; that the probe reads -34018 on the Developer ID build is from the
 //  #319 log, re-checked by launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-09 — header only: the Developer ID lane now carries a
+//  profile (#518), so the login lane is the profile-less fallback, not the DMG's normal path.
 //
 
 import Foundation

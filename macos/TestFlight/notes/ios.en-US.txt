@@ -2,7 +2,7 @@ Thanks for testing M1K3 on iPhone and iPad.
 
 Please try:
 • Chat on Mini — instant on Apple Intelligence devices, a small download elsewhere
-• Lil, the bigger offline brain, if your device has 8 GB of memory
+• Lil, the bigger offline brain, on devices with 8 GB of memory: now Qwen3.5, and it can see (about a 3 GB download). If it quits or stalls on your device, tell us — that's exactly what this build is testing
 • Voice mode — talk, interrupt, and hear the neural voice answer
 • Add a PDF or text file under Documents and ask about it
 • Airplane mode: switch it on and keep chatting

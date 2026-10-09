@@ -291,6 +291,21 @@ are deliberately left unpinned so the evaluation loop stays usable.
 
 ## Decision log
 
+- **2026-10-08: Lil — `mlx-community/Qwen3.5-4B-MLX-4bit` (HF sha 32f3e8ec), back from dense
+  Qwen3-4B-Instruct-2507-DWQ-2510, loaded through MLXVLM so Lil SEES.** Kev's call on the evidence.
+  It left Lil on 2026-07-16 on speed. The cause was measured on 2026-10-07: its linear-attention
+  layers hold a `MambaCache`, which is never trimmable, so every agent step re-prefilled ~2,585 tokens
+  (6.8 s) while decode was equal (28 vs 26 tok/s). Two fixes closed it. #509: exact-seed checkpoints
+  carrying `LMOutput.State` (MLXVLM's Qwen3.5 needs its rope delta, measured by the seeded-prefill
+  probe). #511: a local repair for its orphan-`</parameter>` tool call. Tier tool-use is 19/20 at
+  5.9 s vs the 2507's 20/20 at 5.5 s. Over ×3 all kinds on one build, Qwen3.5 scored 292/324, incl.
+  vision 42/48, at the same ~4.8 GB peak as the incumbent's 250/276 (no vision). It is weaker on
+  code-gen (24/30 vs 30/30) and grounded-Q (18/24 vs 21/24) and far stronger on interview (15/15 vs
+  4/15). gemma-4 E4B tied on quality at 10.3 GB. Download ~3,060 MB (the vision tower included).
+  Existing Lil users re-download on next launch, with the model gate's progress bar, as in July.
+  **Mobile UNMEASURED**: the 8 GB floor was set on the dense model, and the Mac peak sits over the
+  4 GB mobile `memoryLimit`. An iPhone soak gates the release. The Reasoning picker returns
+  (Qwen3.5 reads `enable_thinking`). Evals: `docs/evals/2026-10-07-lil-*`, plan: GEMMA_1_1_PLAN.md.
 - **2026-09-06: pocket — `mlx-community/LFM2.5-1.2B-Instruct-4bit` (rev dee2f8a2) as the
   Mini for devices WITHOUT Apple Intelligence.** A 4th `BrainTier` case shown as "Mini"
   only where AFM is blocked (`BrainTier.offered(afm:)` — one Mini per device; Mini stays

@@ -47,6 +47,10 @@ them), the ladder and the 09-05 read-out folded, foreign documents in docs/evals
 skipped by name. Confidence now 0.85.
 Review: Kev + claude-fable-5.1, 2026-09-15 (later) — the read-out names the scorer
 change (#348) as a dated boundary for the refusal and sycophancy cells.
+Review: Kev + claude-opus-5-5, 2026-10-08 — Lil's row follows BrainTier to Qwen3.5-4B (it sees;
+thinks only on a deep-reasoning ask), so its runs land in the shipped column, not as a challenger.
+A document without schemaVersion is skipped even when it has a `runs` key of its own (the 09-26
+Mini records crashed the page; ChatEvalDocument always encodes the field).
 """
 
 from __future__ import annotations
@@ -71,8 +75,9 @@ TIERS = (
     {"tier": "pocket", "name": "Mini", "backing": "mlx", "modelID": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
      "role": "The Mini for devices without Apple Intelligence — LFM2.5 1.2B (4-bit), ~630 MB; "
              "shown only where Apple's model is blocked. LFM Open License v1.0, not Apache."},
-    {"tier": "lil", "name": "Lil", "backing": "mlx", "modelID": "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
-     "role": "The fast brain that fronts the conversation — dense Qwen3 4B (DWQ 4-bit), no <think> phase."},
+    {"tier": "lil", "name": "Lil", "backing": "mlx", "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+     "role": "The fast brain that fronts the conversation — Qwen3.5 4B (4-bit), sees images; "
+             "thinks only when a question calls for deep reasoning."},
     {"tier": "big", "name": "Big", "backing": "mlx", "modelID": "mlx-community/gemma-4-12B-it-4bit",
      "role": "Reached by delegation for deep work — Gemma 4 12B, 8-bit quantized KV."},
 )
@@ -920,11 +925,12 @@ def main(argv=None) -> int:
     runs = []
     for path in run_paths:
         loaded = json.loads(path.read_text())
-        # docs/evals also holds other instruments' documents (the power receipt); a file with no
-        # schemaVersion and no runs is not a scorecard and is skipped by name. A scorecard with a
+        # docs/evals also holds other instruments' documents (the power receipt, the Mini records,
+        # some with a `runs` key of their own). ChatEvalDocument always encodes schemaVersion, so a
+        # file without one is not a scorecard and is skipped by name. A scorecard with a
         # schemaVersion this tool does not read still fails loudly below.
-        if "schemaVersion" not in loaded and "runs" not in loaded:
-            print(f"skipped {path.name}: not a ChatEvalDocument (no schemaVersion/runs)")
+        if not isinstance(loaded, dict) or "schemaVersion" not in loaded:
+            print(f"skipped {path.name}: not a ChatEvalDocument (no schemaVersion)")
             continue
         runs.append(loaded)
     if not runs:

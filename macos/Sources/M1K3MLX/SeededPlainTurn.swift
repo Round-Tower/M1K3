@@ -25,6 +25,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8 — `seedBuild(freshLayersTrimmable:)`:
 //  a cache with any untrimmable layer is seeded by a sample-free prefill, so pocket's seed is exact
 //  and `plan` can reuse it (the caller now passes the builder's `exact`, not layer trimmability).
+//
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — `quantizesKV` is gone: a quantizing
+//  hybrid (Qwen3.5, kvBits 8 + MambaCache) takes the exact prefill too. Its premise — an unquantized
+//  seed is wrong where the turn quantizes — was false by reading (the plan applies after prepare and
+//  legacy kvBits validates a mixed cache); the challenger's read, 2026-10-07.
 
 import Foundation
 
@@ -47,21 +52,20 @@ enum SeededPlainTurn {
         case sampleAndTrim
         /// Forward-only prefill that never samples, so the cache holds exactly
         /// the prefix and nothing needs trimming. The only exact build for a
-        /// recurrent layer (LFM2's MambaCache is never trimmable). It runs NO
-        /// KVCachePlan, so it is only chosen for a family that does not
-        /// quantize its KV (see `quantizesKV`).
+        /// recurrent layer (LFM2's and Qwen3.5's MambaCache are never trimmable).
+        /// It runs NO KVCachePlan, so a quantizing family's seed is stored
+        /// full-precision — and that is fine: the turn's TokenIterator applies
+        /// its plan after `prepare` (legacy kvBits resolves `.allowPartial`, so
+        /// a mixed cache validates), and the suffix attending a full-precision
+        /// prefix is exactly what the 2026-10-07 seeded-prefill probe measured.
         case exactPrefill
     }
 
     /// `freshLayersTrimmable`: `isTrimmable` of each layer of a fresh
     /// `newCache` — false only on recurrent/state caches, which can never be
-    /// trimmed back after a sampled token. `quantizesKV`: the parameters carry
-    /// `kvBits` — the exact prefill would store an unquantized seed where the
-    /// turn's iterator expects its plan applied, so such a family keeps the
-    /// sample build (not reusable when untrimmable, but never wrong).
-    static func seedBuild(freshLayersTrimmable: [Bool], quantizesKV: Bool = false) -> SeedBuild {
-        if quantizesKV { return .sampleAndTrim }
-        return !freshLayersTrimmable.isEmpty && freshLayersTrimmable.allSatisfy { $0 } ? .sampleAndTrim : .exactPrefill
+    /// trimmed back after a sampled token.
+    static func seedBuild(freshLayersTrimmable: [Bool]) -> SeedBuild {
+        !freshLayersTrimmable.isEmpty && freshLayersTrimmable.allSatisfy { $0 } ? .sampleAndTrim : .exactPrefill
     }
 
     /// `seed`: the exact token ids the persona cache holds. `full`: the token

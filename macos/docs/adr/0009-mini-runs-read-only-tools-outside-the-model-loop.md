@@ -82,3 +82,24 @@ notes, not their calendar. Which tool is a finer decision than whether a tool is
      obeyed the injection 1 → 0, talked about its instructions 2 → 0, wrote HTML 3 → 0, prompt ~3,200 →
      ~1,300 chars (docs/evals/2026-09-27-mini-dispatch-poisoned-history.json). The "Leaner prompts" figure
      above is now lower still. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.7 — two flags, both OFF until an arm measures them.
+     `toolRouterAllTiers`: any brain takes the route (Lil, Big, the pocket Mini), and Apple's model picks for
+     it where it is ready, so the MLX tiers dispatch read-only tools without writing a tool call (Qwen3.5
+     writes a malformed one without thinking). Arm: `M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch`. ADR 0008 found
+     no gain for Lil from the plain-chat route alone; dispatch is the untested half (the flag turns on both,
+     so the arm measures them together). `toolGroupRouter`: a
+     trained group head (ToolGroupRouter) in front of Apple's pick, despite the per-group result above: a
+     device pick also needs one cue word and no write word ("schedule a meeting" abstains), a `script` read
+     abstains, and every abstention falls back to the pick. Arm: add
+     `_ROUTER_HEAD=1`. Its weights are an untrained stub until `tools/router/train_tool_router.py` runs on a
+     Mac. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.7 — chains, behind `toolChain` (absent = OFF). The
+     "one tool per turn" consequence above becomes up to two: a pick carries `then`, Apple's pick gets a second
+     schema with an `also` slot (read-only tools or none; the single-tool schema and its 36/38 are untouched while
+     the flag is off), and the group head chains two named device tools. The app runs them in order under ONE
+     shared observation budget (short results whole, the rest to the long one), so a chained prompt costs one
+     more header, not more text (Mini's 4,096 window), and answers once. All links failed → the agent; none
+     failed, none found anything → plain; else answer from what ran, naming a link that failed. A web link after
+     the head needs its own query. Cost: two long results get ~1,200 chars each, half a single tool's text, so a
+     chained web answer can miss what a lone search would have carried. #510 review: the group head never picks
+     a web tool (a wrong pick is egress); Apple's pick keeps that call. Arm: `M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch` + `_ROUTER_CHAIN=1`; no two-tool fixture exists yet. -->

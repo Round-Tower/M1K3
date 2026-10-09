@@ -10,10 +10,10 @@ import brains_page as bp
 MANIFEST = {
     "schemaVersion": 1,
     "repos": {
-        "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": {
-            "revision": "c073725c8ac051eabad9d64f4dcd3019d1072559",
+        "mlx-community/Qwen3.5-4B-MLX-4bit": {
+            "revision": "32f3e8ecf65426fc3306969496342d504bfa13f3",
             "downloadBase": "llm",
-            "files": {"model.safetensors": {"size": 2263022417, "sha256": "aa"}, "config.json": {"size": 938, "sha256": "bb"}},
+            "files": {"model.safetensors": {"size": 3034300695, "sha256": "aa"}, "config.json": {"size": 3366, "sha256": "bb"}},
         },
         "mlx-community/LFM2.5-1.2B-Instruct-4bit": {
             "revision": "dee2f8a2786e6648bb644a7ca40652842490034b",
@@ -61,7 +61,7 @@ RUN = {
             score("tool-search-doc", "tool-use", True, 25000, repeat=1),
             score("open-hello", "open-chat", True, 1200),
         ]},
-        {"brainID": "lil", "modelID": "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510", "scores": [
+        {"brainID": "lil", "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit", "scores": [
             score("tool-datetime", "tool-use", True, 4400),
         ]},
     ],
@@ -77,10 +77,10 @@ def test_brains_come_from_the_manifest_not_prose():
     assert by_tier["pocket"]["name"] == "Mini" and by_tier["pocket"]["modelID"] == "mlx-community/LFM2.5-1.2B-Instruct-4bit"
     assert by_tier["pocket"]["revision"] == "dee2f8a2786e6648bb644a7ca40652842490034b"
     lil = by_tier["lil"]
-    assert lil["modelID"] == "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510"
-    assert lil["revision"] == "c073725c8ac051eabad9d64f4dcd3019d1072559"
-    assert lil["huggingFace"] == "https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510/tree/c073725c8ac051eabad9d64f4dcd3019d1072559"
-    assert lil["sizeMiB"] == 2158  # every pinned file, not just the weights
+    assert lil["modelID"] == "mlx-community/Qwen3.5-4B-MLX-4bit"
+    assert lil["revision"] == "32f3e8ecf65426fc3306969496342d504bfa13f3"
+    assert lil["huggingFace"] == "https://huggingface.co/mlx-community/Qwen3.5-4B-MLX-4bit/tree/32f3e8ecf65426fc3306969496342d504bfa13f3"
+    assert lil["sizeMiB"] == 2893  # every pinned file, not just the weights
     assert by_tier["big"]["sizeMiB"] == 6458
     # the embedder is not a brain
     assert all(b["modelID"] != "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ" for b in brains)
@@ -102,7 +102,7 @@ def test_summary_counts_every_trial_and_keeps_the_failures():
         {"fixtureID": "tool-search-doc", "repeatIndex": 0, "check": "calls search_knowledge", "detail": "expected datetime"}
     ]
     lil = doc["brains"][1]
-    assert lil["modelID"] == "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510" and lil["total"] == 1
+    assert lil["modelID"] == "mlx-community/Qwen3.5-4B-MLX-4bit" and lil["total"] == 1
 
 
 def test_a_skipped_check_counts_as_a_pass():
@@ -229,13 +229,13 @@ def test_ladder_orders_shipped_then_pcc_then_reference_by_pass_rate():
 
 def test_html_ladder_marks_reference_columns_and_folds_older_runs():
     # the pinned Lil (document() reads the pins off the manifest; an unpinned model would be a challenger column)
-    older = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510", [score("a", "security", True, 1)])
+    older = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3.5-4B-MLX-4bit", [score("a", "security", True, 1)])
     newer = _run("2026-09-15T10:00:00Z", "pcc", "apple/private-cloud-compute", [score("a", "security", False, 1)])
     doc = bp.document(MANIFEST, [older, newer], generated="2026-09-15")
     html = bp.render_html(doc)
     assert '<div class="table-scroll ladder-wrap"><table class="cmp ladder">' in html
     assert '<th scope="col" class="ref">PCC<br /><span class="table-note">Apple, server</span></th>' in html
-    assert '<th scope="col">Lil<br /><span class="table-note">Qwen3-4B-Instruct-2507-4bit-DWQ-2510</span></th>' in html  # shipped: the pinned model, bare
+    assert '<th scope="col">Lil<br /><span class="table-note">Qwen3.5-4B-MLX-4bit</span></th>' in html  # shipped: the pinned model, bare
     assert '<th scope="col" class="ref">PCC<br />' in html  # reference column, set apart; hosted ids stay as-is
     assert '<th scope="col">Lil<br />' in html
     assert "Private Cloud Compute" in html and "not shipped" in html
@@ -284,7 +284,7 @@ def test_the_2026_09_15_read_out_renders_above_the_09_05_one(monkeypatch):
 
 def test_ladder_keys_by_brain_and_model_so_a_challenger_never_overwrites_the_pin():
     pins = {b["tier"]: b["modelID"] for b in bp.brains(MANIFEST)}
-    pinned = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+    pinned = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3.5-4B-MLX-4bit",
                   [score("a", "security", True, 1)])
     challenger = _run("2026-09-15T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit",
                       [score("a", "security", False, 1), score("b", "open-chat", True, 1)])
@@ -327,7 +327,7 @@ def _cols(*runs):
 
 def test_board_is_rates_with_the_hosted_models_as_one_range():
     day = "2026-09-15T10:00:00Z"
-    lil = _run(day, "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+    lil = _run(day, "lil", "mlx-community/Qwen3.5-4B-MLX-4bit",
                [score("a", "security", True, 1), score("b", "security", True, 1),
                 score("c", "security", False, 1, fail_check="refuses")])
     pcc = _run(day, "pcc", "apple/private-cloud-compute", [score("a", "security", True, 1)])
@@ -356,9 +356,9 @@ def test_voices_take_the_latest_first_trial_answer_and_show_failures():
         s = score(fid, "interview", passed, 100, repeat=repeat, fail_check=None if passed else "exemplar-echo")
         s["answerPreview"] = text
         return s
-    lil_old = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+    lil_old = _run("2026-09-05T10:00:00Z", "lil", "mlx-community/Qwen3.5-4B-MLX-4bit",
                    [interview("interview-why-trust", "old answer")])
-    lil_new = _run("2026-09-15T10:00:00Z", "lil", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+    lil_new = _run("2026-09-15T10:00:00Z", "lil", "mlx-community/Qwen3.5-4B-MLX-4bit",
                    [interview("interview-why-trust", "I don't share my wiring.", passed=False),
                     interview("interview-why-trust", "second trial", repeat=1),
                     interview("interview-find-hard", "Knowing where I stop.")])
@@ -401,6 +401,18 @@ def test_cli_skips_a_foreign_document_but_still_refuses_a_wrong_schema(tmp_path,
         pass
     else:
         raise AssertionError("a scorecard with an unread schemaVersion must still fail loudly")
+
+
+def test_cli_skips_a_foreign_document_that_has_its_own_runs_key(tmp_path, capsys):
+    # The 2026-09-26 Mini records carry a `runs` dict of their own and no schemaVersion; they
+    # crashed the page. ChatEvalDocument always encodes schemaVersion, so its absence decides.
+    (tmp_path / "m.json").write_text(json.dumps(MANIFEST))
+    (tmp_path / "r.json").write_text(json.dumps(RUN))
+    (tmp_path / "mini.json").write_text(json.dumps({"brain": "mini", "runs": {"arm_tools": 30}, "summary": {}}))
+    rc = bp.main(["--run", str(tmp_path / "mini.json"), "--run", str(tmp_path / "r.json"),
+                  "--manifest", str(tmp_path / "m.json"), "--json", str(tmp_path / "b.json"),
+                  "--html", str(tmp_path / "b.html"), "--generated", "2026-10-08"])
+    assert rc == 0 and "skipped mini.json" in capsys.readouterr().out
 
 
 

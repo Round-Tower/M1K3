@@ -105,6 +105,11 @@ Anything a cold session needs on turn one belongs below, not there.
   `macos/tools/asc/precheck.py` after every deliver push (a stale
   `review_information/notes.txt` clobbered the live notes on 2026-10-01).
   `submit.py --confirm` is Kev's, via `!`.
+- Store creative (iOS 27 header + search, iPhone/iPad only): render with
+  `macos/tools/site/store_creative.py` (`--check` is the gate), then
+  `macos/tools/asc/creative.py upload|place` (dry-run until `--confirm`, Kev's
+  via `!`). A placement needs an editable version, CPP or PPO; never cancel a
+  review to place art.
 - Never pre-seed the model cache with `hf download` (cache poison).
 - In-app A/B overrides go as argv (`M1K3 -prefillStepSize 512`): on macOS 27
   `defaults write app.m1k3` never reaches the sandboxed app. `log` is a zsh
@@ -121,11 +126,15 @@ Anything a cold session needs on turn one belongs below, not there.
   isolated store; the window is pinned at 1440×900). Never exec the binary from
   a shell: it isn't foreground, so system sheets (Declared Age Range) dismiss
   and the API says `notAvailable`. No coordinate clicks while Kev is active.
-- App-ID capability entitlements are store-lane only: Declared Age Range in
-  `M1K3-MAS.entitlements` + `M1K3iOS.entitlements` (required there by
-  `check_store_targets.py`), PCC in `M1K3-MAS.entitlements`. The check forbids
-  both in the Developer ID `M1K3.entitlements` (AMFI kills a profile-less
-  launch). PCC consent is
+- Entitlements by lane: Declared Age Range in all three (`M1K3-MAS`, `M1K3iOS`
+  and the Developer ID `M1K3.entitlements`; `check_store_targets.py` requires
+  it), PCC in `M1K3-MAS.entitlements` only (the check forbids it in the
+  Developer ID lane, whose profile lacks it: AMFI would kill the launch). The
+  Developer ID lane embeds a profile since #518: macOS 27 sends every keychain
+  call to the data-protection keychain, so a profile-less build can store
+  nothing (-34018, no MCP server). CI's manual signing needs the portal profile
+  "M1K3" (secret `MACOS_DEVELOPER_ID_PROFILE`); Xcode's managed one is refused
+  there. PCC consent is
   `PrivateCloudArming` (ADR 0010: asked once, by message id): any new path that
   sends history to PCC goes through it.
 
@@ -181,4 +190,10 @@ in the Mac store lane only; the check requires only Declared Age Range there.
 Review: Kev + claude-opus-5-5, 2026-10-05 (/debrief) — the release carry-forward:
 the asc runbook from #490, verify before cancel, and relaunch until #491. 1.0.0 went to
 review on build 453. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-07 (/debrief) — store-creative carry-forward
+from #506: where the header/search generator and the Asset Library uploader live,
+and that a placement waits for an editable surface. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-09 — entitlements by lane after #518: the Developer ID
+lane embeds a profile (macOS 27's keychain), so Declared Age Range is in all three lanes and
+PCC stays MAS-only. Confidence 0.85 (keychain verified by launch; the age sheet owed by Kev).
 -->

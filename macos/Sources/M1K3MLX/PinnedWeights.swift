@@ -37,21 +37,6 @@ public enum PinnedWeights {
                 "tokenizer_config.json": .init(size: 92225, sha256: "2a52ec012d3df831ba434b081bef3726a6ee22501f062ad8353c557a0cfa0d01"),
             ]
         ),
-        "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": .init(
-            revision: "c073725c8ac051eabad9d64f4dcd3019d1072559",
-            files: [
-                "added_tokens.json": .init(size: 707, sha256: "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680"),
-                "chat_template.jinja": .init(size: 2630, sha256: "64f85b198065d0fba2a81f37e10ed68161ce2c19a754c7100e67e0ca2ee9c326"),
-                "config.json": .init(size: 990, sha256: "387b98441ee36d609cb2657646fb8ab7cedaecbff1c83422e4d4a61b4f49e8a3"),
-                "generation_config.json": .init(size: 238, sha256: "835fffe355c9438e7a25be099b3fccaa98350b83451f9fd2d99512e74f1ade48"),
-                "model.safetensors": .init(size: 2_263_022_417, sha256: "bf7129c6518c5743080e687855a6ae4a4fb307de5d6239a18527d270dd960f69"),
-                "model.safetensors.index.json": .init(size: 63964, sha256: "388d811b8b7c2608dd04cce1bcb04a8bf715d19b42790894e6d3427ff429a777"),
-                "special_tokens_map.json": .init(size: 613, sha256: "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd"),
-                "tokenizer.json": .init(size: 11_422_654, sha256: "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"),
-                "tokenizer_config.json": .init(size: 5405, sha256: "4b5f2f80f84faefe8420e1616671adb1dd3d7e632038d34b1f0e3a1363a51059"),
-                "vocab.json": .init(size: 2_776_833, sha256: "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"),
-            ]
-        ),
         "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ": .init(
             revision: "6c3ae70858513f1a78e9cdca3cae330d9075cd2a",
             files: [
@@ -65,6 +50,21 @@ public enum PinnedWeights {
                 "tokenizer.json": .init(size: 11_423_705, sha256: "def76fb086971c7867b829c23a26261e38d9d74e02139253b38aeb9df8b4b50a"),
                 "tokenizer_config.json": .init(size: 5404, sha256: "443bfa629eb16387a12edbf92a76f6a6f10b2af3b53d87ba1550adfcf45f7fa0"),
                 "vocab.json": .init(size: 2_776_833, sha256: "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"),
+            ]
+        ),
+        "mlx-community/Qwen3.5-4B-MLX-4bit": .init(
+            revision: "32f3e8ecf65426fc3306969496342d504bfa13f3",
+            files: [
+                "chat_template.jinja": .init(size: 7756, sha256: "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715"),
+                "config.json": .init(size: 3366, sha256: "f3efc81b2ea8d96a45301037d3ccccbcccdef44a961845c87f286aaddbc6eaaa"),
+                "model.safetensors": .init(size: 3_034_300_695, sha256: "5fb9acd0246866381cf8c5c354c6db1019f6498eec4ccb4f5edcc71ffeacb2db"),
+                "model.safetensors.index.json": .init(size: 101_944, sha256: "52e534c41f7b97708329c85f762e5882bf48bd5955a422c6ae74eba321e6048a"),
+                "preprocessor_config.json": .init(size: 390, sha256: "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516"),
+                "processor_config.json": .init(size: 1300, sha256: "14932921ca485d458a04dafd8069fbb0a4505622a48208d19ed247115801385b"),
+                "tokenizer.json": .init(size: 19_989_343, sha256: "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"),
+                "tokenizer_config.json": .init(size: 1139, sha256: "e98f1901ac6f0adff67b1d540bfa0c36ac1a0cf59eb72ed78146ef89aafa1182"),
+                "video_preprocessor_config.json": .init(size: 385, sha256: "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13"),
+                "vocab.json": .init(size: 6_722_759, sha256: "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003"),
             ]
         ),
         "mlx-community/gemma-4-12B-it-4bit": .init(
@@ -94,8 +94,8 @@ public enum PinnedWeights {
     /// embedder where its loader never looks.
     public static let bases: [String: WeightIntegrity.DownloadBase] = [
         "mlx-community/LFM2.5-1.2B-Instruct-4bit": .llm,
-        "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": .llm,
         "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ": .embedder,
+        "mlx-community/Qwen3.5-4B-MLX-4bit": .llm,
         "mlx-community/gemma-4-12B-it-4bit": .llm,
     ]
 

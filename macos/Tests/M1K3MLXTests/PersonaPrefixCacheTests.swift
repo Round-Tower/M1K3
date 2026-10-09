@@ -11,10 +11,13 @@
 //
 //  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85 — the three live prefixes coexist at
 //  the default capacity (was red at 2).
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — the prefix's LMOutput.State rides
+//  the snapshot (Qwen3.5 on MLXVLM can't extend a seed without it).
 //
 
 import Foundation
 @testable import M1K3MLX
+import MLXLMCommon
 import Testing
 
 struct PersonaPrefixCacheTests {
@@ -181,6 +184,21 @@ struct PersonaPrefixCacheTests {
         store.store([], tokenIDs: [4, 5], for: key([]))
         #expect(store.snapshot(for: key(["web_search"]))?.exact == true)
         #expect(store.snapshot(for: key([]))?.exact == false)
+    }
+
+    /// MLXVLM's Qwen3.5 continues a warm cache from the rope delta in the prefix's
+    /// `LMOutput.State` and throws `missingState` without it (SeededPrefillProbe,
+    /// 2026-10-07) — a seed without its state is a seed no turn can extend.
+    @Test("the prefix's model state rides the snapshot beside its cache")
+    func stateRidesTheSnapshot() {
+        let store = PersonaPrefixCache()
+        let anchor = LMOutput.Key<Int>("test.anchor")
+        var state = LMOutput.State()
+        state[anchor] = 42
+        store.store([], tokenIDs: [1, 2, 3], exact: true, state: state, for: key(["web_search"]))
+        store.store([], tokenIDs: [4, 5], exact: true, for: key([]))
+        #expect(store.snapshot(for: key(["web_search"]))?.state?[anchor] == 42)
+        #expect(store.snapshot(for: key([]))?.state == nil)
     }
 
     @Test("invalidate clears every slot, not just the newest")

@@ -25,16 +25,30 @@ in disguise.
 Usage:
     python3 macos/tools/weights/pin_weights.py                # verify + regenerate
     python3 macos/tools/weights/pin_weights.py --check        # verify only, exit 1 on drift
+    python3 macos/tools/weights/pin_weights.py --only org/repo   # re-pin one repo; the rest
+                                                              # keep their committed pins
+    python3 macos/tools/weights/pin_weights.py --only org/repo --snapshot-root DIR
+
+`--snapshot-root` reads the named repo from DIR/<org>/<repo> instead of the app's
+container, for when macOS app-data privacy keeps this process out of it. DIR is a
+fresh `hf download --local-dir` at the pinned commit (its metadata records the
+commit), so HF supplies those bytes and its LFS oid is no longer independent. The
+second opinion moves to the app: on every load it checks the copy that was run and
+evaluated against the new pin and refuses a mismatch, so launch a build carrying
+the pin before the release.
 """
 
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import json
+import os
 import pathlib
 import sys
 import urllib.request
+from collections.abc import Iterable
 
 # The repos M1K3 actually ships and downloads for a user-selectable brain.
 # Spikes, A/B overrides and retired checkpoints are deliberately NOT pinned —
@@ -52,10 +66,12 @@ EMBEDDER_CACHE = CONTAINER / "Documents/huggingface/models"
 
 SHIPPED_REPOS = {
     "mlx-community/gemma-4-12B-it-4bit": LLM_CACHE,
-    # Lil: the DWQ-2510 recipe of the same Qwen3-4B-Instruct-2507 weights beat
-    # the plain 4-bit 18/21 vs 15/21 (security 6/7 vs 3/7; x3 repeats 16/21 vs
-    # 12/21) on 2026-09-05 — docs/evals/2026-09-05-lil-*.json.
-    "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510": LLM_CACHE,
+    # Lil: Qwen3.5-4B since 2026-10-08, loaded through MLXVLM (sees). Its snapshot
+    # carries the vision tower's processor/preprocessor JSONs; every file is pinned.
+    # Replaced Qwen3-4B-Instruct-2507-4bit-DWQ-2510, which becomes retired (offered
+    # in Settings ▸ Free up space, never deleted automatically). Evals:
+    # docs/evals/2026-10-07-lil-*.json.
+    "mlx-community/Qwen3.5-4B-MLX-4bit": LLM_CACHE,
     # Mini on devices without Apple Intelligence (the 3 GB A12 iPad has no
     # other local brain): LFM2.5-1.2B, ~630 MB. Tool-use 5/6 through the live
     # path once PR #232 rendered its tool block in trained key order
@@ -124,6 +140,46 @@ def hf_json(url: str):
         return json.load(resp)
 
 
+# What the app downloads for a brain — BrainWeightsFetcher.weightPatterns.
+APP_DOWNLOAD_PATTERNS = ("*.safetensors", "*.json", "*.jinja")
+
+
+def missing_published_files(listed: Iterable[str], local: set[str]) -> list[str]:
+    """Files HF lists that the app would download but the snapshot lacks.
+
+    A pin covers only what is on disk, so a partial snapshot pins a partial
+    manifest, and the app then "verifies" a load without hashing the missing
+    files (2026-10-08: the 3 GB shard, after a partial `hf download`). Small
+    files count too: chat_template.jinja is the tool-calling contract.
+    Case-sensitive, like the app's glob."""
+    return sorted(
+        path
+        for path in listed
+        if path not in local and any(fnmatch.fnmatchcase(path, p) for p in APP_DOWNLOAD_PATTERNS)
+    )
+
+
+def require_listable(repo: str, directory: pathlib.Path) -> None:
+    """Raise PermissionError when `directory` can be stat'ed but not listed.
+
+    macOS app-data privacy lets an outside process see that the container's
+    folders exist but not read inside them, and pathlib's rglob swallows the
+    PermissionError, so an unreadable snapshot would read as one with no
+    download metadata — the wrong diagnosis, and a pointless re-download."""
+    try:
+        for path in (directory, directory / ".cache/huggingface/download"):
+            with os.scandir(path) as entries:
+                next(entries, None)
+    except (FileNotFoundError, NotADirectoryError):
+        pass
+    except PermissionError as error:
+        raise PermissionError(
+            f"{repo}: cannot read {error.filename} — macOS app-data privacy blocks this "
+            "process from the app's container. Run from a terminal that has access to "
+            "other apps' data (System Settings › Privacy & Security), e.g. Terminal.app."
+        ) from error
+
+
 def collect(repo: str, cache: pathlib.Path) -> tuple[str, dict[str, dict]]:
     """Local digests for `repo`, cross-checked against HF. Exits on disagreement."""
     directory = cache / repo
@@ -133,6 +189,10 @@ def collect(repo: str, cache: pathlib.Path) -> tuple[str, dict[str, dict]]:
             "Pin from bytes that have been run and evaluated — download and "
             "exercise the model first, then re-run this."
         )
+    try:
+        require_listable(repo, directory)
+    except PermissionError as error:
+        sys.exit(f"FATAL {error}")
 
     revision = hf_json(f"https://huggingface.co/api/models/{repo}/revision/main")["sha"]
 
@@ -168,9 +228,11 @@ def collect(repo: str, cache: pathlib.Path) -> tuple[str, dict[str, dict]]:
         )
 
     published: dict[str, str] = {}
-    for entry in hf_json(f"https://huggingface.co/api/models/{repo}/tree/main?recursive=1"):
+    listed: set[str] = set()
+    for entry in hf_json(f"https://huggingface.co/api/models/{repo}/tree/{revision}?recursive=1"):
         if entry.get("type") != "file":
             continue
+        listed.add(entry["path"])
         if oid := (entry.get("lfs") or {}).get("oid"):
             published[entry["path"]] = oid
 
@@ -193,6 +255,13 @@ def collect(repo: str, cache: pathlib.Path) -> tuple[str, dict[str, dict]]:
             confirmed += 1
 
         files[rel] = {"size": path.stat().st_size, "sha256": digest}
+
+    if missing := missing_published_files(listed, set(files)):
+        sys.exit(
+            f"FATAL {repo}: the snapshot at {directory} lacks {missing}, which HF publishes and "
+            "the app downloads. A pin covers only what is on disk, so the app would load those "
+            "files unverified. Complete the snapshot, then re-run."
+        )
 
     print(
         f"  {repo}\n"
@@ -334,6 +403,43 @@ def orphan_file_notes(
     return sorted(key for key in notes if key[1] not in pins.get(key[0], ("", {}, ""))[1])
 
 
+def committed_pins(manifest_text: str) -> dict[str, tuple[str, dict[str, dict], str]]:
+    """The pins in a committed weights-manifest.json, in the generator's `pins` shape."""
+    doc = json.loads(manifest_text)
+    return {
+        repo: (entry["revision"], entry["files"], entry["downloadBase"])
+        for repo, entry in doc["repos"].items()
+    }
+
+
+def merge_pins(
+    shipped: dict[str, str],
+    fresh: dict[str, tuple[str, dict[str, dict], str]],
+    committed: dict[str, tuple[str, dict[str, dict], str]],
+    only: set[str],
+) -> dict[str, tuple[str, dict[str, dict], str]]:
+    """`--only`: freshly collected pins for the named repos, the committed pin for every
+    other shipped repo. A carried pin is one that was already generated and reviewed, so
+    re-pinning one repo never re-hashes (or re-downloads) another. Repos that no longer
+    ship drop out; a shipped repo with no committed pin must be named."""
+    if stray := sorted(only - set(shipped)):
+        raise ValueError(f"--only names repos that do not ship: {stray} — add them to SHIPPED_REPOS first")
+    merged: dict[str, tuple[str, dict[str, dict], str]] = {}
+    for repo, base in shipped.items():
+        if repo in only:
+            merged[repo] = fresh[repo]
+            continue
+        if repo not in committed:
+            raise ValueError(f"{repo} ships but has no committed pin — name it: --only {repo}")
+        revision, files, committed_base = committed[repo]
+        if committed_base != base:
+            raise ValueError(
+                f"{repo}: committed download base {committed_base!r} != shipped {base!r} — re-pin it with --only"
+            )
+        merged[repo] = (revision, files, committed_base)
+    return merged
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -341,13 +447,44 @@ def main() -> None:
         action="store_true",
         help="verify and report drift without rewriting the manifests",
     )
+    parser.add_argument(
+        "--only",
+        action="append",
+        default=[],
+        metavar="REPO",
+        help="re-pin only this repo (repeatable); every other shipped repo keeps its committed pin",
+    )
+    parser.add_argument(
+        "--snapshot-root",
+        type=pathlib.Path,
+        metavar="DIR",
+        help="with --only: read the named repos from DIR/<org>/<repo>, not the app container "
+        "(see the module docstring for what that does to the trust model)",
+    )
     args = parser.parse_args()
+    if args.snapshot_root and not args.only:
+        parser.error("--snapshot-root re-pins named repos only: pass --only REPO")
 
     print("Pinning shipped model weights (local bytes, cross-checked against HF):")
-    pins = {
-        repo: (*collect(repo, cache), BASE_NAMES[cache])
-        for repo, cache in SHIPPED_REPOS.items()
-    }
+    if args.only:
+        only = set(args.only)
+        fresh = {
+            repo: (*collect(repo, args.snapshot_root or cache), BASE_NAMES[cache])
+            for repo, cache in SHIPPED_REPOS.items()
+            if repo in only
+        }
+        shipped = {repo: BASE_NAMES[cache] for repo, cache in SHIPPED_REPOS.items()}
+        try:
+            pins = merge_pins(shipped, fresh, committed_pins(JSON_OUT.read_text()), only)
+        except ValueError as error:
+            sys.exit(f"FATAL {error}")
+        for repo in sorted(set(pins) - only):
+            print(f"  {repo}\n    carried from the committed manifest (not re-hashed)")
+    else:
+        pins = {
+            repo: (*collect(repo, cache), BASE_NAMES[cache])
+            for repo, cache in SHIPPED_REPOS.items()
+        }
     if orphans := orphan_file_notes(pins, FILE_NOTES):
         sys.exit(f"FILE_NOTES name files that are no longer pinned: {orphans} — move or drop the note")
     outputs = {OUT: swift_literal(pins), JSON_OUT: json_manifest(pins)}

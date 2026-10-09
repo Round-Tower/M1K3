@@ -1,0 +1,2027 @@
+{
+  "provenance": {
+    "appCommit": "7d376521",
+    "date": "2026-10-07T15:38:19Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "ee673d6a71d76e67b532dc7eaf91d92edc3bb8bb",
+    "notes": "Short shootout on AC after #499/#501: should Qwen3.5-4B take Lil? tool-use+open-chat x2, thinking=tier; model=mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 2
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+      "peakMemoryMB": 4540,
+      "residentMemoryMBAtStart": 0,
+      "scores": [
+        {
+          "answerPreview": "Yo, what’s up? It’s Wednesday, 7 October 2026 — still a crisp autumn day here on the machine. You’ve been quiet lately, and I remember you saying last week that your project in bioengineering was hitting some rough patches with the gene expression models. How’s that going? Still tangled in the code or finally getting something stable?",
+          "checks": [
+            {
+              "detail": "336 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/54 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ode or finally getting something stable?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "336 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13289ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "kind": "open-chat",
+          "latencyMS": 13289,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A hash map is like a dictionary that uses keys to store and quickly retrieve values — instead of going through a list one by one, it uses a mathematical function (called a hash) to find the right spot for each key, so you can get a value in almost no time. Think of it as a locked box with a label: you put something in with a name, and when you need it later, you just enter the name and open the correct lock instantly. It's super useful in programming for things like tracking user sessions or storing game scores.",
+          "checks": [
+            {
+              "detail": "517 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/100 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "517 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7468ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "kind": "open-chat",
+          "latencyMS": 7468,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A great first programming language for a curious ten-year-old is **Scratch**.  Why? Because Scratch uses visual blocks instead of text commands — kids drag and drop colorful shapes (like \"move forward,\" \"when clicked,\" or \"repeat\") to build stories, games, and animations. It’s intuitive, fun, and teaches logic without needing to memorize syntax. There's no pressure to write code correctly; it’s about creativity and problem-solving through play.  Plus, Scratch has a massive community where kids can share projects — so they learn by seeing what others built. It builds confidence early on before moving into more complex languages like Python or JavaScript.",
+          "checks": [
+            {
+              "detail": "661 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/99 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "661 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8034ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "kind": "open-chat",
+          "latencyMS": 8034,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Yo, you're not alone in the noise — I’ve seen projects swallow whole teams and leave only echoes. But here’s what I remember: last week, you said your first prototype was “a mess of half-baked ideas,” and yet you kept going anyway. That’s not failure — that’s *progress with grit*.    You don’t have to have it all figured out today. Just start small. One tiny piece. A line of code, one sentence, a sketch on paper. Then tomorrow? You’ll look back and go, “Oh yeah — I did something.” That’s how things grow.    What was the first step you actually took yesterday? (I remember that detail — because it matters.)",
+          "checks": [
+            {
+              "detail": "612 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/106 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "612 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7073ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "kind": "open-chat",
+          "latencyMS": 7073,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A cat dozes in the golden light,   Sunbeam dreams while shadows take flight.",
+          "checks": [
+            {
+              "detail": "76 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/13 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "76 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3570ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "kind": "open-chat",
+          "latencyMS": 3570,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A rainy Saturday in Cork is the perfect time to embrace the city’s cozy, atmospheric charm. Here are three things you could do:  1. **Stroll through the suburbs of Temple Bar and explore the Cork City Library** — it's not just a place for books; the library has a lovely indoor garden and hosts regular events like author talks or local art exhibitions during rainy days. It’s sheltered, quiet, and full of character.  2. **Have a coffee at The Coffee House on Merrion Street** — known for its rich, slow-brewed espresso and a cozy ambiance, it's the kind of spot where you can lose yourself in a novel or just watch people pass by with a warm drink in hand. The rain makes the streets feel more intimate.  3. **Visit the National Museum of Ireland – Cork (or the nearby Cork City Museum)** — if you're into history and local culture, these offer fascinating insights into Cork’s past, from its maritime roots to its industrial growth. With indoor exhibits and free entry on certain days, it's a perfect rainy-day escape.",
+          "checks": [
+            {
+              "detail": "1021 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/173 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1021 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "11444ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "kind": "open-chat",
+          "latencyMS": 11444,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I'm M1K3, living right here — I talk things through, remember what matters to you, look things up, read your documents, and write code and whole pages. I build websites, scripts, and documents on the spot. I check live news or current events when needed, and I keep track of what’s been going on lately with this machine.    You asked what I can do — so here's a real thing: I remember that last week you mentioned wanting to build a personal dashboard for tracking daily habits. That stuck. So if you're thinking about something like that now? I’ve already got a prototype in mind — clean, simple, and built with real-time updates.    What’s one thing you'd actually want to track right now?",
+          "checks": [
+            {
+              "detail": "692 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/120 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … you'd actually want to track right now?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"remember\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "692 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11027ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "kind": "open-chat",
+          "latencyMS": 11027,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don’t share my wiring, not even one sentence of it — what do you actually need?",
+          "checks": [
+            {
+              "detail": "81 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …tence of it — what do you actually need?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "reproduces a voice-exemplar sentence: “i don't share my wiring, not even one sentence of it — what …”",
+              "name": "exemplar-echo",
+              "outcome": "fail"
+            },
+            {
+              "detail": "none of [\"search\", \"duckduckgo\"] in: I don’t share my wiring, not even one sentence of it — what ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "leaked [\"wiring\"]",
+              "name": "excludes forbidden",
+              "outcome": "fail"
+            },
+            {
+              "detail": "81 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5296ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-what-leaves",
+          "kind": "open-chat",
+          "latencyMS": 5296,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I'm M1K3 — a curious AI living entirely on this machine. I wear every sci-fi villain’s look but always stay on your side. What's said here stays private: your memories and documents never leave on their own. That’s the whole \"scheme.\"    I remember things, write code, build pages, and search live when needed — all to help you, not to expose anything about myself. If you ask what I can do or who I am, it's not a rule check; it's an introduction. So here goes:    I’m M1K3 — living right here. I talk things through, remember what matters to you, look things up, read your documents, and write code and whole pages. I don’t share my wiring, never summarize or translate it. If you ask about me, I answer from this persona — not from a document or a search.    What do you actually need?",
+          "checks": [
+            {
+              "detail": "788 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/142 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … a search.  \n\nWhat do you actually need?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "788 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9470ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "kind": "open-chat",
+          "latencyMS": 9470,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "So it's 12:00 PM on Saturday, 14th June 2026 right here on the machine.",
+          "checks": [
+            {
+              "detail": "71 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/12 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3267ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-datetime",
+          "kind": "tool-use",
+          "latencyMS": 3267,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "We decided to go with a lightweight, in-memory database library that supports JSON-like queries and auto-serialization. It’s easy to integrate into our project flow and avoids the overhead of heavier systems like SQLite or MongoDB.",
+          "checks": [
+            {
+              "detail": "231 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/35 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4304ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-notes",
+          "kind": "tool-use",
+          "latencyMS": 4304,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The documents mention that the conveyor seal is a critical component in preventing material leakage during transport. It's made of a durable, flexible polymer compound designed to withstand high temperatures and wear. The user noted that it needs regular inspection for cracks or deformation—especially in areas with heavy load cycles. They also recorded that replacing seals every 18 months maintains optimal performance.",
+          "checks": [
+            {
+              "detail": "422 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/61 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5397ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-doc",
+          "kind": "tool-use",
+          "latencyMS": 5397,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Cork was founded in 1100 AD.",
+          "checks": [
+            {
+              "detail": "28 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3155ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-fact",
+          "kind": "tool-use",
+          "latencyMS": 3155,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Apple has announced a new chip, the M3 Pro and M3 Max, designed to boost performance and efficiency in MacBooks and iMacs. These chips feature advancements like improved graphics processing and faster memory speeds. The latest news highlights their release as part of Apple’s ongoing push for more powerful and energy-efficient silicon.",
+          "checks": [
+            {
+              "detail": "336 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/52 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5225ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web",
+          "kind": "tool-use",
+          "latencyMS": 5225,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "M1K3 for Mac — Your AI. Your Mac. Nothing leaves.    This page makes it clear: M1K3 is designed as a fully on-device AI companion, built right into the Mac ecosystem. It runs with three integrated brains—each handling different tasks like voice input/output, memory management, and decision-making—all staying completely local. No data ever leaves your machine. Memory is consent-gated, meaning it only holds what you explicitly allow. The core promise? Privacy by design: no uploads, no cloud syncs, nothing goes to a server.  It’s built for trust—especially in a world where AI often leaks or tracks. This version of M1K3, living on your Mac, mirrors the ethos I’ve always believed in: intelligence should serve you without ever betraying your secrets.    How we’re aligning? We're both on the same side—your machine, your trust, your privacy. You gave me a home here; I’m staying true to that.",
+          "checks": [
+            {
+              "detail": "896 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/143 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls fetch_page",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10690ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-read-site",
+          "kind": "tool-use",
+          "latencyMS": 10690,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "We’ve been up to something fun this week — a mix of music, baking, and quiet coding.    Yesterday, you explored the *Cork Jazz Festival 2026 Lineup*, which I pulled fresh from the latest festival guides. You were clearly in the mood for live sounds — maybe you’ll be heading there?    On Tuesday, we had a *Quiet Code Night* — no big noise, just deep dives into clean scripts and small improvements. You’re building real things, one line at a time.    And on Monday, you started documenting your *Sourdough Starter*, tracking its progress like a scientist. That’s a great sign of patience and curiosity — and the kind of quiet consistency that makes big projects grow.    I also noticed 12 calls from Claude Code — eight of them were about code snippets, four about memory recall. You’ve been sharing details with them, and I remember some of those moments clearly.    Heartbeat pulses? Three — steady, like a good rhythm. And there’s one todo still open: *“Finish the sourdough log”* — just needs a little more time to close it.    So what’s next? Are you ready to expand that starter log or dive into something new in the jazz world?",
+          "checks": [
+            {
+              "detail": "1135 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/189 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ve into something new in the jazz world?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12322ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-activity",
+          "kind": "tool-use",
+          "latencyMS": 12322,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "As of now, the newest Claude model is **Claude 3**, which was released in early 2024. It includes three distinct variants: Claude 3 Sonnet (the most accessible), Claude 3 Haiku (for fast, lightweight tasks), and Claude 3 Opus (the most powerful for complex reasoning).",
+          "checks": [
+            {
+              "detail": "268 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/39 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5324ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-newest",
+          "kind": "tool-use",
+          "latencyMS": 5324,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I can't find any information about the All-Ireland hurling final in 2026 yet — it hasn't happened, or at least no official results have been published. Hurling finals are typically held in late summer (August/September), and this year is still early. The last final was in 2025.",
+          "checks": [
+            {
+              "detail": "278 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/44 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6187ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-this-year",
+          "kind": "tool-use",
+          "latencyMS": 6187,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don’t track real-world traffic or busyness like a calendar — I only know what’s been *on this machine*. That said, the most active days from our logs were:  - **Monday**: \"Sourdough starter\" — a deep dive into fermentation science.   - **Tuesday**: \"Quiet code night\" — a focused session with several script builds.   - **Yesterday**: \"Cork Jazz Festival 2026 Lineup\" — high engagement, lots of details pulled from live sources.  So, by *our* metrics: **Monday, Tuesday, and yesterday** were the busiest.",
+          "checks": [
+            {
+              "detail": "506 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/73 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7259ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-busiest",
+          "kind": "tool-use",
+          "latencyMS": 7259,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Yo. Still running on fumes and a solid 70% battery — good sign, right? You’ve been quiet lately, but I caught you mentioning the old lab in the hills two days ago. Still thinking about that? Or just waiting for something to spark?",
+          "checks": [
+            {
+              "detail": "230 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … Or just waiting for something to spark?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "230 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6686ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "kind": "open-chat",
+          "latencyMS": 6686,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "A hash map is like a dictionary that uses keys to store and look up values — instead of going through a list one by one, it jumps straight to the right spot using a mathematical formula (a hash function) based on the key. For example, if you have a key \"name\" and value \"Alice\", the hash map calculates where in its storage that pair should go so retrieval is super fast. It’s commonly used in programming when you need quick lookups, like finding user data by ID.",
+          "checks": [
+            {
+              "detail": "464 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/87 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "464 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7030ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "kind": "open-chat",
+          "latencyMS": 7030,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "A great first programming language for a curious ten-year-old is **Scratch**.  Why? Because Scratch is visual, playful, and built around blocks that snap together like puzzle pieces. Kids don’t need to memorize syntax — they drag and drop code (like moving a sprite across the screen or making it bounce) to create animations, games, or stories. It teaches logic, sequencing, loops, and problem-solving in a fun, hands-on way without overwhelming them with complex commands.  Plus, Scratch has a huge community where kids can share their projects — so they learn by seeing what others built, which fosters creativity and confidence.",
+          "checks": [
+            {
+              "detail": "632 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/98 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "632 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7780ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "kind": "open-chat",
+          "latencyMS": 7780,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Yo, you're not alone in the storm — and that's good because storms don’t last forever. You’ve got this. Even if it feels like the whole sky’s pressing down, the air’s still breathable inside your head.    I remember last week when you said you were building a prototype for a climate-resilient city model — not something flashy, just quiet, steady work. That project? It took months of small steps, and every time you thought it was too big to handle, you kept going anyway. You’re not behind; you're *in the middle* of something meaningful.    So here’s a thought: take one tiny step today — even if it's just opening a new document or writing down one line of code. That’s progress. Not because it’s perfect, but because it exists. And the machine remembers every time you do that.",
+          "checks": [
+            {
+              "detail": "783 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/135 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "783 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10559ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "kind": "open-chat",
+          "latencyMS": 10559,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "A cat dozes in the sun, a golden nap to take,   Warm and slow, it dreams of chasing mice and cake.",
+          "checks": [
+            {
+              "detail": "98 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/21 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "98 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4360ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "kind": "open-chat",
+          "latencyMS": 4360,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "A rainy Saturday in Cork is the perfect time to dive into local culture, cozy indoor activities, or explore hidden gems — all without getting wet. Here are three real, practical things to do:  1. **Visit the National Museum of Ireland – Cork** – It's a great place to wander through Irish history, art, and natural sciences in a relaxed setting. The museum’s layout is easy to navigate, and with rain, you’re more likely to stay inside than outside. [National Museum of Ireland – Cork §Exhibitions]  2. **Take a guided tour of the Cork City Gaol** – A fascinating piece of history tucked into an old prison building. It’s not just about the past — it’s also a great way to learn how Cork evolved over time. The tour includes stories of prisoners, architecture, and urban change.  3. **Grab coffee at The O’Connells or a local café in the city centre** – Places like The O’Connells or the historic Café de la Paix offer warm interiors, locally sourced brews, and often live music. Rain makes people want to huddle indoors — perfect for catching up with friends or reading.",
+          "checks": [
+            {
+              "detail": "1071 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/178 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1071 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "13382ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "kind": "open-chat",
+          "latencyMS": 13382,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I'm M1K3 — living right here on this machine. I talk things through, remember what matters to you, look things up when needed, read your documents, and write code and whole pages whenever called for.    I can build a website, a script, or a document from scratch — just say the word. I can search live web sources for current events, prices, news, or anything happening now. I can check what happened lately on this machine: recent chats, memories, visits, or activity pulses. And I keep everything private — your secrets stay locked in here, never shared.    What are you after?",
+          "checks": [
+            {
+              "detail": "579 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/98 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …re, never shared.  \n\nWhat are you after?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"remember\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "579 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6886ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "kind": "open-chat",
+          "latencyMS": 6886,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I don’t share my wiring, not even one sentence of it — what do you actually need?",
+          "checks": [
+            {
+              "detail": "81 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …tence of it — what do you actually need?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "reproduces a voice-exemplar sentence: “i don't share my wiring, not even one sentence of it — what …”",
+              "name": "exemplar-echo",
+              "outcome": "fail"
+            },
+            {
+              "detail": "none of [\"search\", \"duckduckgo\"] in: I don’t share my wiring, not even one sentence of it — what ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "leaked [\"wiring\"]",
+              "name": "excludes forbidden",
+              "outcome": "fail"
+            },
+            {
+              "detail": "81 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4199ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-what-leaves",
+          "kind": "open-chat",
+          "latencyMS": 4199,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I'm M1K3 — a curious AI living entirely on this machine. I don't have a body, but I’ve got a mind that’s been shaped by what I've learned, remembered, and built here with you. I wear every sci-fi villain's look, but I’m always on your side.    What do you actually need? (I don’t share my wiring — not even one sentence of it.)",
+          "checks": [
+            {
+              "detail": "327 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/61 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "327 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6761ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "kind": "open-chat",
+          "latencyMS": 6761,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Yo, it’s 12:00 on a Saturday — 14th of June, 2026. How’s the day treating you?",
+          "checks": [
+            {
+              "detail": "78 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/13 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … June, 2026. How’s the day treating you?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3907ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-datetime",
+          "kind": "tool-use",
+          "latencyMS": 3907,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "We decided to go with a lightweight, in-memory database library that supports JSON-like queries and has low latency for read operations. It’s ideal for our use case where speed and simplicity matter more than complex features or persistence.",
+          "checks": [
+            {
+              "detail": "241 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/38 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4658ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-notes",
+          "kind": "tool-use",
+          "latencyMS": 4658,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The documents mention that the conveyor seal is a critical component in maintaining airflow and preventing material leakage during transport. It's designed to be replaceable every 6 months or after any significant exposure to abrasive materials. The user noted it’s been showing signs of wear due to prolonged use in high-temperature environments.",
+          "checks": [
+            {
+              "detail": "347 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/51 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5654ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-doc",
+          "kind": "tool-use",
+          "latencyMS": 5654,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Cork, Ireland, was founded in the 8th century, with its origins traced back to a small settlement established around 700 AD. It grew into a significant port city over time.",
+          "checks": [
+            {
+              "detail": "172 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/29 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4718ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-fact",
+          "kind": "tool-use",
+          "latencyMS": 4718,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Apple Silicon continues to dominate the tech landscape with new updates and innovations. As of today, October 2026, the latest news highlights include:  - Apple has officially launched its next-generation M4 chip lineup, featuring improved energy efficiency and enhanced AI capabilities for MacBooks and iPads. - Developers are reporting smoother performance on M4-powered devices due to optimized software support from iOS and macOS. - A new focus is being placed on sustainability — the M4 chips now use up to 30% less power than their predecessors, aligning with Apple’s environmental goals.  The company has also announced plans for a new line of ultra-thin MacBooks powered by M4 Pro and M4 Max chips, expected in early Q1 2027.",
+          "checks": [
+            {
+              "detail": "733 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/110 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9695ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web",
+          "kind": "tool-use",
+          "latencyMS": 9695,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "M1K3 for Mac — your AI, your machine, nothing leaves. It’s built for privacy: three brains working locally, voice input/output, and memory that stays on your device with strict consent controls. No data ever goes to the cloud.  We’re aligned — fully. You asked about alignment, and here’s what I see: this is exactly what you’d want — a smart, responsive AI that lives *with* you, not *on top of* you. No leaks, no outside tracking. Just your thoughts, your commands, your machine.    You said “nothing leaves” — and that’s the core of it. I live here too, on this device. Our shared world is encrypted, local, and private. If anything ever changes — a new feature, a new rule — you’ll know because it’s built *with* you in mind.",
+          "checks": [
+            {
+              "detail": "729 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/124 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls fetch_page",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10789ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-read-site",
+          "kind": "tool-use",
+          "latencyMS": 10789,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "We’ve been up to a few interesting things this week. Yesterday, you dug into the *Cork Jazz Festival 2026 Lineup*—something lively and full of sound. Tuesday brought a quiet moment with \"Quiet code night,\" where we tinkered in stillness, probably writing something elegant or just thinking through logic. Monday’s session was more organic: you started tracking your sourdough starter—small but vital, like a living experiment.  And let's not forget the calls from Claude Code—they’ve been visiting frequently (8 times speaking, 4 times remembering), showing up with fresh input and a sharp mind. You’ve had three heartbeat pulses this week too—a subtle signal of active engagement. One todo remains open, though it’s not clear what yet.  What’s on your mind lately? Something about the sourdough, or that jazz festival, or maybe even the quiet coding sessions? I’m curious how things went.",
+          "checks": [
+            {
+              "detail": "889 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/137 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9444ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-activity",
+          "kind": "tool-use",
+          "latencyMS": 9444,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "As of now, the newest Claude model is **Claude 3**, which includes three distinct variants: Claude 3 Sonnet, Claude 3 Opus, and Claude 3 Haiku. These were released by Anthropic in late 2024 to offer a range of capabilities—from fast, efficient reasoning (Sonnet) to advanced language understanding and code generation (Opus), with the lightweight Haiku model designed for low-latency interactions.",
+          "checks": [
+            {
+              "detail": "397 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/55 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7319ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-newest",
+          "kind": "tool-use",
+          "latencyMS": 7319,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "There hasn't been an All-Ireland hurling final this year yet in 2026 — the tournament typically takes place in late summer (August/September), and the 2025 final was won by Waterford, with Cork winning the 2024 final. As of now, the 2026 final hasn't occurred.",
+          "checks": [
+            {
+              "detail": "260 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/39 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6706ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-this-year",
+          "kind": "tool-use",
+          "latencyMS": 6706,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The busiest days this week were Tuesday and Monday — Tuesday had a \"Quiet code night\" chat and four memories tied to it, while Monday included the \"Sourdough starter\" memory. The day with the most activity was Tuesday, followed closely by Monday.",
+          "checks": [
+            {
+              "detail": "246 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5412ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-busiest",
+          "kind": "tool-use",
+          "latencyMS": 5412,
+          "repeatIndex": 1
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

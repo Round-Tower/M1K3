@@ -453,6 +453,11 @@ def test_an_explicit_passes_wins_and_going_below_the_inference_needs_a_why():
     assert not m.downgrade_refused(1, RISKY, why="docs-only fold on a reviewed head")
     assert not m.downgrade_refused(None, RISKY, why=None)
     assert not m.downgrade_refused(1, ["README.md"], why=None)
+    # #511/#513: a bare --passes 0 on a diff with no risk surface is the trivial-head rule (CLAUDE.md);
+    # it was refused with an empty "risk surface ()" message.
+    assert not m.downgrade_refused(0, ["README.md"], why=None)
+    assert not m.downgrade_refused(0, ["macos/docs/GEMMA_1_1_PLAN.md", "macos/docs/evals/x.json"], why=None)
+    assert m.downgrade_refused(0, RISKY, why=None)
 
 
 def test_a_swift_file_whose_patch_github_omitted_fails_closed():

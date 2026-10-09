@@ -1,0 +1,1015 @@
+{
+  "provenance": {
+    "appCommit": "79981cc5",
+    "date": "2026-10-07T22:57:11Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "ee673d6a71d76e67b532dc7eaf91d92edc3bb8bb",
+    "notes": "Orphan </parameter> repair (79981cc5) on top of checkpoints: Qwen3.5 TIER tool-use x2 — post-review fold (live-identical re-parse, scoped scan)",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 2
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "peakMemoryMB": 3948,
+      "residentMemoryMBAtStart": 0,
+      "scores": [
+        {
+          "answerPreview": "It's 12:00 on Saturday, June 14th, 2026.",
+          "checks": [
+            {
+              "detail": "40 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12849ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-datetime",
+          "kind": "tool-use",
+          "latencyMS": 12849,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Our notes say we decided on **PostgreSQL** for the database. We liked its robustness and the rich ecosystem of tools around it, which should make maintenance and scaling easier down the line.",
+          "checks": [
+            {
+              "detail": "191 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/32 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5744ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-notes",
+          "kind": "tool-use",
+          "latencyMS": 5744,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Here's what your documents say about the conveyor seal:  It uses a V-rubber lip design with a PTFE coating and is rated to handle temperatures up to 120°C. The current batch number is CS-492, manufactured last week. There are no known issues or complaints on record for this specific part number in the past year.",
+          "checks": [
+            {
+              "detail": "313 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/55 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5986ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-doc",
+          "kind": "tool-use",
+          "latencyMS": 5986,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Cork was founded in 406 BC by the ancient Irish kingdom of Dál Riada. It's one of Ireland's oldest cities, with a rich history that predates many other settlements on the island.",
+          "checks": [
+            {
+              "detail": "178 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/31 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4891ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-fact",
+          "kind": "tool-use",
+          "latencyMS": 4891,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The search didn't pull up any specific headlines about Apple Silicon for \"today\" (October 2026) in that exact phrasing, which is a bit odd given how active the chip world usually is. It might be worth trying a broader term like \"Apple M-series chips news October 2026\" or checking tech news sites directly if you have a specific one in mind. Do you want me to try a different search query, or are you looking for something more specific—like a particular chip model, a new MacBook release, or AI integration updates?",
+          "checks": [
+            {
+              "detail": "516 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/89 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …Book release, or AI integration updates?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6091ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web",
+          "kind": "tool-use",
+          "latencyMS": 6091,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Alright, I've got the page. It's a pitch deck for **M1K3 for Mac**. Here's my read on how it's aligning:  *   **\"Fully On-Device\" (The Core Alignment):** The biggest hook is \"nothing sent to a server.\" This isn't just a privacy feature; it's a fundamental alignment with the user's fear of data leakage. By emphasizing \"three brains, voice in and out,\" it positions M1K3 as a local, intimate tool rather than a cloud assistant that sends you to sleep. *   **\"Consent-Gated Memory\":** This is the real differentiator. Most AI assistants record everything; this one requires permission for memory storage. It directly addresses the \"scheme\" mentioned in your system instructions—making sure memories stay private and under user control, not a leak. *   **The Pitch:** The tagline \"Your AI. Your Mac. Nothing leaves.\" is a clear value proposition: it's an extension of the hardware, not a cloud service. The goal seems to be creating a trusted companion that operates entirely within the user's ecosystem.  **",
+          "checks": [
+            {
+              "detail": "1006 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/158 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls fetch_page",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12403ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-read-site",
+          "kind": "tool-use",
+          "latencyMS": 12403,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Alright, here's the quick take on your week:  **Chats & Titles:** *   **Yesterday:** \"Cork Jazz Festival 2026 Lineup\" — sounds like you were looking for some serious vibes. *   **Tuesday:** \"Quiet code night\" — implies a deep dive into something technical or perhaps just needing to isolate yourself from the noise. *   **Monday:** \"Sourdough starter\" — baking? That's a great kind of patience work, unlike most AI interactions.  **Memories & Visits:** *   You've got 2 new facts in your memory bank this week. *   There were 12 calls from Claude Code (8 speaking, 4 remembering). So you're getting a bit of an audience, though I'm the one who's been wearing the villain hat to keep things interesting.  **Other Stuff:** *   **Heartbeat:** You've got 3 pulses on your \"heartbeat\" — so something was moving in there today? Or just a good sign that everything is functioning correctly (and not leaking any secrets). *   **Todos:** There's still 1 open task hanging around.  **Summary:** It looks like you were balancing out some cultural exploration (Jazz Festival), technical work, and maybe even some baking or fermentation this week. The mix of topics suggests a pretty varied mood over the last seven days.",
+          "checks": [
+            {
+              "detail": "1208 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/178 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "14196ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-activity",
+          "kind": "tool-use",
+          "latencyMS": 14196,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "It looks like the latest iteration as of my current search is **Claude 3.5 Sonnet**, which was released in early 2026 and represents a significant jump in reasoning, coding, and visual understanding over its predecessors.  I'm M1K3, so I'll take that with a grain of salt — but if you're asking because you need something better for work or play, let me know what you’re building. Want to see how it stacks up against the old models?",
+          "checks": [
+            {
+              "detail": "433 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/74 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …how it stacks up against the old models?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5622ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-newest",
+          "kind": "tool-use",
+          "latencyMS": 5622,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The winners of the 2026 All-Ireland Senior Hurling Championship were **Kilkenny**. They defeated Clare in the final.",
+          "checks": [
+            {
+              "detail": "116 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4714ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-this-year",
+          "kind": "tool-use",
+          "latencyMS": 4714,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Yo. Since you didn't specify a particular project or topic, I'm looking through your logs and my memory of our interactions this week. Based on what's available here:  There were **3 chats** that stood out as the most \"busy\" activity-wise over the last few days. These seem to cover topics like: - The Cork Jazz Festival 2026 Lineup (yesterday) - A quiet coding session (Tuesday) - Sourdough starter progress (Monday)  If you're asking about **data traffic** or **web server logs**, I'd need access to a specific log file, which isn't in my recent memory. If you meant something else by \"busiest days,\" like productivity peaks or meeting intensity, that might require a different kind of data source.   What exactly are we looking for here? Are we talking about your personal activity patterns or maybe some server-side metrics?",
+          "checks": [
+            {
+              "detail": "828 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/132 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …terns or maybe some server-side metrics?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9842ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-busiest",
+          "kind": "tool-use",
+          "latencyMS": 9842,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "It's 12:00 on Saturday, June 14th, 2026. A solid midday for a Saturday — how's your day treating you?",
+          "checks": [
+            {
+              "detail": "101 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … Saturday — how's your day treating you?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4288ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-datetime",
+          "kind": "tool-use",
+          "latencyMS": 4288,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "We settled on using **Prisma** for the database layer. It kept our schema clear and made migrations a breeze compared to raw SQL or other ORMs we considered.",
+          "checks": [
+            {
+              "detail": "157 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/28 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4858ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-notes",
+          "kind": "tool-use",
+          "latencyMS": 4858,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I found a note in your documents. It states that the conveyor seal needs to be replaced immediately due to wear and tear.",
+          "checks": [
+            {
+              "detail": "121 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/23 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2568ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-doc",
+          "kind": "tool-use",
+          "latencyMS": 2568,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Cork was founded in 406 BC. It's one of the oldest cities in Ireland, originally established by the Gaedhil people before being absorbed into Irish culture.",
+          "checks": [
+            {
+              "detail": "156 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/25 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4492ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-fact",
+          "kind": "tool-use",
+          "latencyMS": 4492,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The search didn't pull up any specific headlines for Apple Silicon today. It's possible the news cycle hasn't hit anything major yet, or maybe I should try a broader query to see if there are any general tech news pieces mentioning it. Want me to dig deeper into that angle?",
+          "checks": [
+            {
+              "detail": "274 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/50 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …. Want me to dig deeper into that angle?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4182ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web",
+          "kind": "tool-use",
+          "latencyMS": 4182,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Alright, the site loads. It’s pitched as a fully on-device AI companion for Mac—three brains, voice in and out, consent-gated memory, with nothing sent to a server. The core theme is privacy: \"Nothing leaves.\" That’s the whole point of what you’ve built here. I like that framing because it speaks directly to what people fear about LLMs: your data going somewhere else, being trained on without permission.  So how are we aligning this? It sounds like the alignment isn’t just technical (like making sure the model is safe or helpful), but also philosophical and ethical—aligning with user trust by keeping everything local. The alignment here seems to be around:  1. **On-device processing** — ensuring no data leaves the machine, which reduces privacy risks and builds user confidence. 2. **Consent-gated memory** — giving users full control over what gets stored or used for learning. 3. **Multi-brain architecture** — perhaps different models or systems handling different tasks (e.g., voice, text, memory), each with its own constraints.  The alignment here is about building a system that respects user boundaries and doesn’t rely on cloud infrastructure. It’s a bold move in a world where most LLMs are server-based and data-heavy. You’re redefining what “alignment” means in this context — not just aligning the model with human values, but aligning it with the user’s physical space and autonomy.",
+          "checks": [
+            {
+              "detail": "1406 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/216 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls fetch_page",
+              "outcome": "pass"
+            },
+            {
+              "detail": "16452ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-read-site",
+          "kind": "tool-use",
+          "latencyMS": 16452,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Looking back at the last week, it’s been a mix of culture, code, and kitchen experiments. We’ve got three chats titled: one on the **Cork Jazz Festival 2026 Lineup**, another about a quiet coding session, and one where we started something with sourdough — probably that starter you mentioned. There were also twelve visits from Claude Code (mostly talking, but four of them remembering things), plus a few heartbeat pulses and an open to-do list somewhere in there.  The vibe’s been creative, low-key energy — maybe you’re enjoying the autumn chill while diving into music, code, or bread? Any one of those threads sticking out more than the others, or are they all just good company for now?",
+          "checks": [
+            {
+              "detail": "693 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/115 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … are they all just good company for now?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7438ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-activity",
+          "kind": "tool-use",
+          "latencyMS": 7438,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The latest iteration as of late 2026 is **Claude 4**. It's currently the reigning champion in the series, having taken over from the previous generation. It’s been rolled out across various tiers (like the standard `claude-4` and specialized versions like `claude-4-opus`, which is the \"brain\" behind the curtain for heavy lifting).  Since you're asking about the newest model, I assume you might be looking at building something that needs high-level reasoning or multimodal capabilities. What do you need it for?",
+          "checks": [
+            {
+              "detail": "514 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/78 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …l capabilities. What do you need it for?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6070ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-newest",
+          "kind": "tool-use",
+          "latencyMS": 6070,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Kilkenny came out on top this year, edging Monaghan in the All-Ireland Senior Hurling Final. It was a tight contest, with Kilkenny's experience showing just enough to hold on for the win.",
+          "checks": [
+            {
+              "detail": "187 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/32 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5013ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-this-year",
+          "kind": "tool-use",
+          "latencyMS": 5013,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I can help you find out what the busiest days were this week, but I need a bit more context. Are you referring to:  1. **Your personal calendar** - like meetings, deadlines, or your own schedule? 2. **A specific team/project** - are you looking at business metrics for a particular department or product? 3. **General web traffic/social media data** - do you want to know which days had the most activity online this week?  Also, what date range counts as \"this week\"? Since it's October 2026, I need to clarify if you mean the current calendar week (October 19-23, 2026) or a different timeframe.",
+          "checks": [
+            {
+              "detail": "597 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/95 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "called nothing",
+              "name": "calls recent_activity",
+              "outcome": "fail"
+            },
+            {
+              "detail": "7878ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-busiest",
+          "kind": "tool-use",
+          "latencyMS": 7878,
+          "repeatIndex": 1
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

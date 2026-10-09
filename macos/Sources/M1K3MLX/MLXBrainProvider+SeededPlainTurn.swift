@@ -34,6 +34,10 @@
 //  reuse gate reads the seed's `exact` (vouched by the builder), and LFM2 seeds are now built by a
 //  sample-free prefill, so pocket appends to its seed instead of re-prefilling (~1 s/turn on M1 Max).
 //  Verify-by-launch owed: SelfTest security on pocket (the double-BOS regression lives here).
+//  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — reuse hands `generate` the seed's
+//  `LMOutput.State`. Qwen3.5 (kvBits + MambaCache) now gets an exact seed, and on MLXVLM a warm
+//  cache without its rope delta throws `missingState` at iterator init — so this ships with the seed
+//  change or Lil's plain chat breaks (the challenger's catch). Verify-by-launch: a Lil plain turn.
 
 import Foundation
 import MLX
@@ -70,8 +74,9 @@ extension MLXBrainProvider {
         // seed before this function is entered, so no other task holds it.
         struct SeedBox: @unchecked Sendable {
             let cache: [KVCache]
+            let state: LMOutput.State?
         }
-        let box = SeedBox(cache: seed.cache)
+        let box = SeedBox(cache: seed.cache, state: seed.state)
 
         try await container.perform { context in
             let prepared = try await context.processor.prepare(
@@ -85,8 +90,12 @@ extension MLXBrainProvider {
                 )
             )
             let fullIDs = prepared.text.tokens.asArray(Int.self)
-            let cache: [KVCache]
-            let input: LMInput
+            var cache: [KVCache]
+            var input: LMInput
+            // The state that belongs with `cache`: the seed's own on reuse (MLXVLM's
+            // Qwen3.5 throws `missingState` continuing a warm cache without its rope
+            // delta), nil on a fresh cache.
+            var state: LMOutput.State?
             // The builder vouches for exactness (trimmed back, or prefilled
             // without a sampled token) — layer trimmability alone would veto an
             // exact recurrent seed that never needed trimming.
@@ -94,6 +103,7 @@ extension MLXBrainProvider {
             switch SeededPlainTurn.plan(seed: seedIDs, full: fullIDs, seedTrimmed: seedTrimmed) {
             case let .reuse(prefixTokens):
                 cache = box.cache
+                state = box.state
                 input = LMInput(tokens: MLXArray(Array(fullIDs[prefixTokens...])))
             case .fresh:
                 // Correct, just unoptimised — and worth a line, because a seed
@@ -132,9 +142,23 @@ extension MLXBrainProvider {
                 cache = try context.model.newCache(parameters: parameters)
                 input = prepared
             }
-            let stream = try MLXLMCommon.generate(
-                input: input, cache: cache, parameters: parameters, context: context
-            )
+            let stream: AsyncStream<Generation>
+            do {
+                stream = try MLXLMCommon.generate(
+                    input: input, cache: cache, state: state, parameters: parameters, context: context
+                )
+            } catch let error as ContinuationStateError {
+                // The model wanted state the seed lacked (its prefill handed none
+                // back). Thrown at iterator init, before anything streamed: answer
+                // from a full prefill instead of failing the turn.
+                let reason = String(describing: error)
+                mlxTTFTLog.notice(
+                    "\(label, privacy: .public): seed reuse refused (\(reason, privacy: .public)) — full prefill"
+                )
+                cache = try context.model.newCache(parameters: parameters)
+                input = prepared
+                stream = try MLXLMCommon.generate(input: input, cache: cache, parameters: parameters, context: context)
+            }
             for await event in stream {
                 switch event {
                 case let .chunk(piece):
