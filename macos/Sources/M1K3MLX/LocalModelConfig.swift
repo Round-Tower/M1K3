@@ -18,6 +18,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — `chatTemplate(forRepoID:)` (#264): the template text,
 //  from chat_template.jinja or tokenizer_config.json's chat_template, for the post-load think-trait read.
 //  Confidence now 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `slidingWindow` readers (Stream G): the rotating window from config.json, gemma-4 only.
 
 import Foundation
 import Hub
@@ -32,6 +33,31 @@ public enum LocalModelConfig {
               let type = object["model_type"] as? String, !type.isEmpty
         else { return nil }
         return type
+    }
+
+    /// The rotating-KV window the loader will use for a gemma-4 config, read from
+    /// `sliding_window` (top level or under `text_config`), else the loader's own
+    /// per-arch default (Gemma4.swift: unified 1024, otherwise 512). nil for any
+    /// other architecture: other families' configs carry `sliding_window` with
+    /// the feature switched off (Qwen2), so only gemma-4 is trusted to mean it.
+    static func slidingWindow(configJSON data: Data) -> Int? {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        let text = object["text_config"] as? [String: Any]
+        let modelType = (object["model_type"] as? String) ?? (text?["model_type"] as? String) ?? ""
+        guard modelType.hasPrefix("gemma4") else { return nil }
+        if let window = (text?["sliding_window"] ?? object["sliding_window"]) as? Int, window > 0 {
+            return window
+        }
+        return modelType.hasPrefix("gemma4_unified") ? 1024 : 512
+    }
+
+    static func slidingWindow(inDirectory directory: URL) -> Int? {
+        guard let data = try? Data(contentsOf: directory.appendingPathComponent("config.json")) else { return nil }
+        return slidingWindow(configJSON: data)
+    }
+
+    static func slidingWindow(forRepoID repoID: String) -> Int? {
+        slidingWindow(inDirectory: directory(forRepoID: repoID))
     }
 
     /// Same, resolved through the LLM store's own path rule for a hub id (the
