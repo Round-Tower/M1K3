@@ -1,0 +1,119 @@
+"""Pins router_arm_summary.py: eight ChatEval JSONs (lil/big x off/routing/head/chain: three
+flags against `off`) become one table and one verdict per flag. The verdict rule is the part
+that decides a default flip, so it is pinned hard: 'flip' iff accuracy is within one fixture of
+`off` AND the median turn is faster.
+
+Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.7 (the rule is the brief's; "within one
+fixture" is read as a fixture-level majority count with a one-fixture tolerance). Prior: none (new file).
+"""
+
+import json
+from pathlib import Path
+
+import pytest
+
+import router_arm_summary as ras
+
+
+def trial(fixture, kind, ms, ok=True, repeat=0):
+    return {"fixtureID": fixture, "kind": kind, "latencyMS": ms, "repeatIndex": repeat,
+            "checks": [{"name": "tool-called", "outcome": "pass" if ok else "fail"}]}
+
+
+def write_cell(tmp_path, brain, config, trials, date="2026-10-10"):
+    path = tmp_path / f"{date}-router-arm-{brain}-{config}-x3-ac.json"
+    path.write_text(json.dumps({"runs": [{"brainID": brain, "scores": trials}], "provenance": {}}))
+    return path
+
+
+def fixtures(passing, ms, kind="tool-use", names=("a", "b", "c", "d")):
+    """Each fixture x3 repeats; `passing` = fixtures that pass all repeats."""
+    return [trial(n, kind, ms, ok=(n in passing), repeat=r) for n in names for r in range(3)]
+
+
+def test_cell_name_parses_brain_and_config():
+    assert ras.parse_cell_name(Path("2026-10-10-router-arm-lil-chain-x3-ac.json")) == ("lil", "chain")
+    with pytest.raises(ValueError):
+        ras.parse_cell_name(Path("2026-10-10-lil-remeasure-x3-ac.json"))
+
+
+def test_only_tool_use_and_open_chat_count_and_na_is_out(tmp_path):
+    na = {"fixtureID": "v", "kind": "tool-use", "latencyMS": 1, "checks": [{"name": "applicable", "outcome": "skip"}]}
+    other = trial("x", "security", 1)
+    path = write_cell(tmp_path, "lil", "off", [trial("a", "tool-use", 5), na, other])
+    cell = ras.load_cell(path)
+    assert [t.fixture for t in cell.trials] == ["a"]
+
+
+def test_cell_stats_pass_rate_and_median_by_kind(tmp_path):
+    trials = fixtures({"a", "b"}, 1000) + fixtures({"a", "b", "c", "d"}, 3000, kind="open-chat")
+    cell = ras.load_cell(write_cell(tmp_path, "lil", "off", trials))
+    assert cell.passed("tool-use") == (6, 12)
+    assert cell.passed("open-chat") == (12, 12)
+    assert cell.median_ms("tool-use") == 1000
+    assert cell.median_ms() == 2000.0  # 12 x 1000 and 12 x 3000
+
+
+def test_fixture_accuracy_is_a_majority_of_repeats(tmp_path):
+    trials = [trial("a", "tool-use", 1, ok=True, repeat=0), trial("a", "tool-use", 1, ok=True, repeat=1),
+              trial("a", "tool-use", 1, ok=False, repeat=2),
+              trial("b", "tool-use", 1, ok=False, repeat=0), trial("b", "tool-use", 1, ok=True, repeat=1),
+              trial("b", "tool-use", 1, ok=False, repeat=2)]
+    cell = ras.load_cell(write_cell(tmp_path, "lil", "off", trials))
+    assert cell.fixtures_passed("tool-use") == (1, 2)
+
+
+def cells(tmp_path, off, other):
+    return (ras.load_cell(write_cell(tmp_path, "lil", "off", off)),
+            ras.load_cell(write_cell(tmp_path, "lil", "routing", other)))
+
+
+def test_flip_when_as_accurate_and_faster(tmp_path):
+    off, routing = cells(tmp_path, fixtures({"a", "b", "c"}, 5900), fixtures({"a", "b", "c"}, 3000))
+    assert ras.verdict(off, routing) == "flip"
+
+
+def test_flip_tolerates_one_fixture_of_accuracy(tmp_path):
+    off, routing = cells(tmp_path, fixtures({"a", "b", "c", "d"}, 5900), fixtures({"a", "b", "c"}, 3000))
+    assert ras.verdict(off, routing) == "flip"
+
+
+def test_keep_off_when_two_fixtures_worse(tmp_path):
+    off, routing = cells(tmp_path, fixtures({"a", "b", "c", "d"}, 5900), fixtures({"a", "b"}, 3000))
+    assert ras.verdict(off, routing).startswith("keep off")
+    assert "accuracy" in ras.verdict(off, routing)
+
+
+def test_keep_off_when_not_faster_even_at_equal_accuracy(tmp_path):
+    off, routing = cells(tmp_path, fixtures({"a", "b"}, 5900), fixtures({"a", "b"}, 5900))
+    assert ras.verdict(off, routing).startswith("keep off")
+    assert "latency" in ras.verdict(off, routing)
+
+
+def test_open_chat_regression_blocks_the_flip_too(tmp_path):
+    off = fixtures({"a"}, 5900) + fixtures({"a", "b", "c", "d"}, 3000, kind="open-chat")
+    routing = fixtures({"a"}, 1000) + fixtures({"a"}, 3000, kind="open-chat")
+    o, r = cells(tmp_path, off, routing)
+    assert ras.verdict(o, r).startswith("keep off")
+
+
+def test_missing_cell_is_not_a_verdict():
+    assert ras.verdict(None, None) == "no data"
+
+
+def test_table_has_a_row_per_brain_and_config_and_verdicts_for_flags(tmp_path):
+    for brain in ("lil", "big"):
+        write_cell(tmp_path, brain, "off", fixtures({"a", "b"}, 6000))
+        write_cell(tmp_path, brain, "routing", fixtures({"a", "b"}, 2000))
+        write_cell(tmp_path, brain, "head", fixtures({"a", "b"}, 2500))
+        write_cell(tmp_path, brain, "chain", fixtures(set(), 2500))
+    out = ras.render(ras.load_dir(tmp_path, "2026-10-10"))
+    assert out.count("| lil |") == 4 and out.count("| big |") == 4
+    assert "flip" in out and "keep off" in out
+
+
+def test_main_prints_and_reports_a_missing_directory(tmp_path, capsys):
+    assert ras.main(["--dir", str(tmp_path), "--date", "2026-10-10"]) == 1
+    write_cell(tmp_path, "lil", "off", fixtures({"a"}, 1))
+    assert ras.main(["--dir", str(tmp_path), "--date", "2026-10-10"]) == 0
+    assert "lil" in capsys.readouterr().out

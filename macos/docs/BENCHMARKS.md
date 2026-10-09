@@ -221,6 +221,40 @@ Read these before quoting any number here.
 
 ---
 
+## The tool-router arm (flip a default only on the numbers)
+
+`toolRouterAllTiers`, `toolGroupRouter` and `toolChain` shipped dark (#510). Mini's tool turns got
+5x faster behind the cascade (50 s -> 10 s); nobody has measured Lil or Big. The arm measures each
+flag on both brains and flips only the ones that win. Lil already scores 19/20 tool-use at 5.9 s
+natively (#511), so "Apple's model picks first" has to beat that, not just exist.
+
+```bash
+# Prereqs: a build of THIS branch (--app), AC power, the live M1K3 QUIT, :4242 free.
+macos/tools/eval/router_arm.sh --dry-run --app /path/to/M1K3.app      # the plan; touches nothing
+macos/tools/eval/router_arm.sh --app /path/to/M1K3.app                # 8 cells, one brain per launch
+python3 macos/tools/eval/router_arm_summary.py --date <YYYY-MM-DD>    # the table + verdicts
+```
+
+Eight cells (Lil and Big x four configurations), each tool-use + open-chat at x3 with full answers,
+saved as `docs/evals/<date>-router-arm-<brain>-<config>-x3-ac.json` (an existing cell is skipped, so
+an interrupted evening resumes). The configurations are the SelfTest keys `run_chateval.py` now
+plumbs through `--direct`:
+
+| config | flags | SelfTest keys |
+|---|---|---|
+| `off` | none (the shipping defaults) | none |
+| `routing` | `toolRouterAllTiers` | `CHATEVAL_ROUTER=dispatch` |
+| `head` | routing + `toolGroupRouter` | + `CHATEVAL_ROUTER_HEAD=1` |
+| `chain` | routing + `toolChain` | + `CHATEVAL_ROUTER_CHAIN=1` |
+
+The summariser tabulates pass rate by kind (trials and fixtures), the median turn, and a verdict per
+flag against `off`: **flip iff** accuracy is at least `off`'s within one fixture (in both kinds) **and**
+the median turn is faster; otherwise `keep off (<which test>)`. A fixture passes on a majority of its
+repeats. Notes: the verdict is against `off`, not against `routing`, so a `head` or `chain` "flip"
+means "better than today", and Kev should read the `routing` row beside it before flipping a flag
+that only works on top of routing; and the chain verdict is only meaningful on the two-tool fixtures
+(`alsoCallTools`, #512), which sit inside the tool-use kind.
+
 ## Results
 
 Published scorecards live alongside this file as `BENCHMARK-RESULTS.md`, each
