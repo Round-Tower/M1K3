@@ -41,6 +41,8 @@
 //  `SpeechProviderWithPlaybackHealth.stalled(since:)` (logic + tests live in M1K3Voice). Confidence now 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (code-quality fold) — `AskSurface` on intelligenceAsk: `.mcp` answers on
 //  `mcpResponder` (withholds Photo captions, caption memory); `.local` (the App Intent) is unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — `surface` has no default (fail-closed:
+//  a new caller must say who is asking); AskSurfaceCallSiteTests scans every call site.
 
 import Foundation
 import M1K3Avatar // AvatarEmotion
@@ -129,11 +131,14 @@ extension AppEnvironment {
         case mcp
     }
 
+    /// `surface` has NO default on purpose: a new caller must say who is asking,
+    /// so it can never keep Photos by omission (AskSurfaceCallSiteTests pins
+    /// every call site by text as well).
     func intelligenceAsk(
         _ question: String,
         deadline: TimeInterval = MCPHostController.askDeadlineSeconds,
         preemptsRemoteStreams: Bool = true,
-        surface: AskSurface = .local
+        surface: AskSurface
     ) async throws -> String {
         // The same gate the chat surface uses (not a bare isReady): while the
         // selected MLX brain downloads, the interim bridge fronts turns on Mini
