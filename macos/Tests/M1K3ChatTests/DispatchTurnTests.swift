@@ -17,6 +17,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07 — `DispatchChainTests`: a pick carrying a second read-only
 //  tool runs both, shares one observation budget, and answers once; a link the app can't run is skipped.
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — cancelled-chain pin (#512).
 
 import Foundation
 import M1K3Agent
@@ -80,6 +81,24 @@ private struct Recording: AgentTool {
     func execute(input: [String: String]) async throws -> ToolResult {
         calls.log.withLock { $0.append("\(name)(\(input["query"] ?? ""))") }
         return ToolResult(output: output)
+    }
+}
+
+/// A tool whose run is cancelled under it: it cancels the turn's task and throws, as a
+/// cancelled network call does.
+private struct Cancelling: AgentTool {
+    let name: String
+    var description: String {
+        name
+    }
+
+    var parameters: [ToolParameter] {
+        []
+    }
+
+    func execute(input _: [String: String]) async throws -> ToolResult {
+        withUnsafeCurrentTask { $0?.cancel() }
+        throw CancellationError()
     }
 }
 
@@ -442,6 +461,18 @@ struct DispatchChainTests {
             pick: ToolPick(tool: "datetime", query: "", then: [ToolPick(tool: "battery_status", query: "")])
         )
         #expect(agent.prompts.first?.contains("RETURNED JUST NOW") == false)
+    }
+
+    @Test("a cancel mid-chain is no tool failure: no agent turn, no generation (#512)")
+    func cancelledChainIsNotAFailure() async throws {
+        let provider = Scripted(["CONCLUSION: should never be asked"])
+        let text = try await run(
+            provider,
+            tools: [Cancelling(name: "datetime"), Recording(name: "battery_status", output: "80%", calls: Calls())],
+            pick: ToolPick(tool: "datetime", query: "", then: [ToolPick(tool: "battery_status", query: "")])
+        )
+        #expect(text.isEmpty)
+        #expect(provider.prompts.isEmpty)
     }
 
     @Test("ToolDispatch.chain keeps the head, then read-only tools on offer, up to maxChain")

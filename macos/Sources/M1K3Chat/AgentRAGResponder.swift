@@ -149,6 +149,7 @@
 //  pick and up to one more read-only tool, results under one shared budget, one answer. All failed → the
 //  agent; none failed and none found anything → plain; else answer from what ran. A single pick behaves
 //  as before (DispatchTurnTests unchanged). Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — a cancel in the dispatch chain is no tool failure (#512).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `recentActivityRouting` settles "busy": busiest / most
 //  active days means activity on this device → call recent_activity, never ask which kind of busy. Lil
 //  (Qwen3.5) asked ~6/16 on `tool-recent-busiest`. Wording pinned (RecentActivityRoutingTests); the
@@ -786,6 +787,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             if Task.isCancelled { return .answered }
             onActivity(.usingTool(name: step.tool.name, argument: step.input.values.first ?? ""))
             guard let output = try? await step.tool.execute(input: step.input).output, !output.hasPrefix("Error") else {
+                // A cancel surfaces here as a nil output: it is no tool failure.
+                if Task.isCancelled { return .answered }
                 Self.log.notice("tool dispatch: \(step.tool.name, privacy: .public) failed")
                 failures += 1
                 failedNames.append(step.tool.name)

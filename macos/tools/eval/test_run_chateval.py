@@ -7,6 +7,7 @@ outside the sandbox, another session's debug build killed mid-run.
 Signed: Kev + claude-opus-5, 2026-09-12, Confidence 0.8 (pure parts pinned
 here; the launch/quit glue is driven by hand on the real app).
 Prior: none (new file).
+Review: Kev + claude-fable-5.1, 2026-10-09 — the router arm's keys (`--router dispatch`, head, chain) pinned.
 Review: Kev + claude-fable-5.1, 2026-10-09 — pins the Lil RAM-cap flag (5 GB own peak, lil only, inclusive).
 """
 
@@ -333,6 +334,39 @@ def test_summary_omits_own_peak_when_peak_is_below_resident(tmp_path):
                                          "residentMemoryMBAtStart": 900}], "provenance": {}}))
     summary = rc.summarise(doc)
     assert "own" not in summary and "peak 0 MB" in summary
+
+
+# ── the router arm (2026-10-09): the app's own route, with the head and chains as flags ──
+
+def _trig(**over):
+    return rc.build_trigger(base_opts(**over), container=CONTAINER, power_source="ac",
+                            powermode=None, commit=None, mlx_rev=None)
+
+
+def test_router_keys_are_absent_unless_asked():
+    trig = _trig()
+    assert not [k for k in trig if "ROUTER" in k]
+
+
+def test_router_dispatch_rides_the_trigger_with_head_and_chain_only_when_set():
+    assert _trig(router="dispatch")["M1K3_SELFTEST_CHATEVAL_ROUTER"] == "dispatch"
+    plain = _trig(router="dispatch")
+    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD" not in plain and "M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN" not in plain
+    both = _trig(router="dispatch", router_head=True, router_chain=True)
+    assert both["M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"] == "1"
+    assert both["M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"] == "1"
+
+
+def test_router_head_or_chain_without_dispatch_is_refused():
+    # The app reads them only under _ROUTER=dispatch; a silent no-op arm would read as "no gain".
+    for over in ({"router_head": True}, {"router_chain": True}):
+        with pytest.raises(ValueError):
+            _trig(**over)
+
+
+def test_unknown_router_mode_is_refused():
+    with pytest.raises(ValueError):
+        _trig(router="turbo")
 
 
 def test_summary_flags_a_lil_run_over_the_own_peak_cap(tmp_path):

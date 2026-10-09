@@ -21,6 +21,11 @@
 //  now concurrently reads the top-2 results (tight no-retry timeout via an
 //  injected deepReader) and appends the first readable page's text, degrading
 //  to snippets when nothing reads. The link list was never the answer.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#486) — `providerName` is the one name the agent-facing
+//  description and the rate-limit observation read; EgressDisclosureTests pins it equal to
+//  `EgressFacts.searchProvider`, so swapping the backend fails CI instead of going stale in the clause.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — the rate-limit log line reads `providerName`
+//  too; "DDG" was the last literal.
 
 import Foundation
 import M1K3Agent
@@ -30,11 +35,14 @@ import os
 public struct WebSearchTool: AgentTool {
     private static let log = Logger(subsystem: M1K3Log.subsystem, category: "web-search")
     public let name = "web_search"
+    /// The search backend's name, as the user hears it. The egress clause (M1K3Chat) says the
+    /// same word; the cross-module pin lives in EgressDisclosureTests (#486).
+    public static let providerName = "DuckDuckGo"
     /// P1 same-turn exclusion (context-tools charter): this tool reaches the
     /// network, so it never runs in the same turn as a local-sensitive tool.
     public let exclusionClass: ToolExclusionClass? = .network
     public let description =
-        "Search the web via DuckDuckGo for current or external information "
+        "Search the web via \(Self.providerName) for current or external information "
             + "(news, facts, anything not in stored knowledge). Argument: the search query."
     public let parameters = [
         ToolParameter(name: "query", description: "the web search query"),
@@ -66,9 +74,13 @@ public struct WebSearchTool: AgentTool {
         do {
             switch try await search(query: query) {
             case .rateLimited:
-                Self.log.notice("rate-limited: DDG served the challenge page for \"\(query, privacy: .public)\"")
+                let provider = Self.providerName
+                Self.log.notice(
+                    "rate-limited: \(provider, privacy: .public) challenge page for \"\(query, privacy: .public)\""
+                )
                 return ToolResult(output: "Error: web search is temporarily unavailable "
-                    + "(DuckDuckGo rate-limited \(HostPlatform.thisDevice)). Answer from what you already have.")
+                    + "(\(Self.providerName) rate-limited \(HostPlatform.thisDevice)). "
+                    + "Answer from what you already have.")
             case let .results(results) where results.isEmpty:
                 // .notice: "the search found nothing" is a load-bearing breadcrumb
                 // (distinguishes empty-result from never-ran) that must persist.

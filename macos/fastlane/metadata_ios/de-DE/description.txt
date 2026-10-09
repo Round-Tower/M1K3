@@ -1,4 +1,4 @@
-Meine Freunde nennen mich Mike. Ich bin ein lokaler KI-Agent, der auf deinem iPhone und iPad lebt — kein Konto, keine Anmeldung, keine Telemetrie. Deine Chats, Notizen und Dokumente bleiben auf dem Gerät.
+Meine Freunde nennen mich Mike. Ich bin ein lokaler KI-Agent, der auf deinem iPhone und iPad lebt — kein Konto, keine Anmeldung, keine Telemetrie. Deine Chats, Notizen und Dokumente bleiben standardmäßig auf dem Gerät; die Websuche ist die eine Ausnahme, und sie ist ein Schalter in den Einstellungen.
 
 WAS ICH KANN
 • Chatte mit einem Gehirn auf dem Gerät — Mini startet sofort auf Geräten mit Apple Intelligence (sonst mit einem kleinen Download), und Lil (4B) läuft komplett offline auf iPhones und iPads mit 8 GB Arbeitsspeicher.

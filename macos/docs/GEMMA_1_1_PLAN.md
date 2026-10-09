@@ -634,6 +634,9 @@ Before a swap:
 - Read the Qwen3.5 misses: `code-py-fix-bug` ×3, `code-site-about-chat` ×2, `ground-part` ×3.
 - **`chat-what-leaves` is wrong on BOTH models**, not just under-scored: "nothing leaves this Mac", yet
   web search sends queries out. This is a persona fix.
+  **Harness artefact until re-run (2026-10-09):** the CHATEVAL responder had no `egressClauseProvider`, so
+  the run never saw the per-turn egress clause #482 ships (`EgressDisclosure`). `ChatEvalStage` now wires
+  the Mac's shipped defaults (web on, PCC offered); re-run `chat-what-leaves` before reading the miss as real.
 - **Measure, then build, the cross-turn checkpoint.** The eval is single-turn, so it can't see that a
   real chat re-reads its whole history on each new message. That's ~4 s at message 5 and ~8 s at
   message 10 (estimate).

@@ -44,6 +44,8 @@ binary with the trigger as env + stdout reporting (the only route on macOS 27);
 `extract_fenced_json` + `direct_env` pinned. Confidence now 0.8.
 Review: Kev + claude-opus-5-5, 2026-10-07 — summarise reports latency-only fails and the content score
 (the display-sleep stall: E4B 246/324 raw, 288/324 on content).
+Review: Kev + claude-fable-5.1, 2026-10-09 — `--router dispatch [--router-head] [--router-chain]`
+plumb the ChatEvalStage router keys through the trigger (the router arm, tools/eval/router_arm.sh).
 Review: Kev + claude-fable-5.1, 2026-10-09 — `kind_rows` / `kind_table`: a per-kind table under each run line with the
 latency-only and content columns (step 5 of the Qwen3.5 stream read "code-gen 24/30" off the JSON by hand).
 Review: Kev + claude-fable-5.1, 2026-10-09 — `over_lil_own_peak_cap`: the summary flags a lil run whose own peak
@@ -68,6 +70,7 @@ from pathlib import Path
 BUNDLE_ID = "app.m1k3"
 LIVE_APP = "/Applications/M1K3.app"
 KNOWN_BRAINS = ("mini", "pocket", "lil", "big")
+ROUTER_MODES = ("dispatch",)  # "1" (the Mini-style plain route) is a different experiment
 THINKING_MODES = ("tier", "always", "fast")  # EvalThinkingMode in M1K3Eval
 AFM_COOLDOWN_S = 120
 STAMP = Path(tempfile.gettempdir()) / "m1k3-chateval-last-launch"
@@ -192,6 +195,9 @@ class RunOptions:
     pcc: bool = False
     thinking: str | None = None  # None → the app's default (tier: production's shape)
     full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
+    router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
+    router_head: bool = False  # + the group head (toolGroupRouter); needs router
+    router_chain: bool = False  # + two-tool chains (toolChain); needs router
 
 
 def build_trigger(opts: RunOptions, *, container: Path, power_source: str, powermode: int | None,
@@ -207,6 +213,10 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         raise ValueError("repeats must be ≥ 1")
     if opts.thinking is not None and opts.thinking not in THINKING_MODES:
         raise ValueError(f"thinking {opts.thinking!r}: choose from {', '.join(THINKING_MODES)}")
+    if opts.router is not None and opts.router not in ROUTER_MODES:
+        raise ValueError(f"router {opts.router!r}: choose from {', '.join(ROUTER_MODES)}")
+    if (opts.router_head or opts.router_chain) and opts.router is None:
+        raise ValueError("router head/chain need --router dispatch (the app reads them only there)")
     report = out_path(container, opts.name)
     trig = {
         "M1K3_SELFTEST": "1",
@@ -228,6 +238,12 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         trig["M1K3_SELFTEST_CHATEVAL_THINKING"] = opts.thinking
     if opts.full_answers:
         trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] = "1"
+    if opts.router:
+        trig["M1K3_SELFTEST_CHATEVAL_ROUTER"] = opts.router
+        if opts.router_head:
+            trig["M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"] = "1"
+        if opts.router_chain:
+            trig["M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"] = "1"
     if powermode is not None:
         trig["M1K3_SELFTEST_POWERMODE"] = str(powermode)
     if commit:
@@ -468,6 +484,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="how every arm thinks: tier (production's shape, the app default), always, fast")
     ap.add_argument("--full-answers", action="store_true",
                     help="keep every answer whole in the document (bake-offs: fails stay re-adjudicable)")
+    ap.add_argument("--router", choices=ROUTER_MODES,
+                    help="the app's own tool route with every tier on (ChatEvalStage _ROUTER=dispatch)")
+    ap.add_argument("--router-head", action="store_true", help="with --router: the group head in front of the pick")
+    ap.add_argument("--router-chain", action="store_true", help="with --router: let a pick run two read-only tools")
     ap.add_argument("--notes", help="free-text provenance note")
     ap.add_argument("--dump-prompt", action="store_true", help="dump no-call turns' exact prompts")
     ap.add_argument("--app", default=LIVE_APP, help="the M1K3.app bundle to run (default: installed)")
@@ -492,6 +512,7 @@ def main(argv: list[str] | None = None) -> int:
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
         live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
         thinking=args.thinking, full_answers=args.full_answers,
+        router=args.router, router_head=args.router_head, router_chain=args.router_chain,
     )
     if args.direct and args.dump_prompt:
         print("✗ --dump-prompt writes into the container, which --direct exists to avoid reading", file=sys.stderr)

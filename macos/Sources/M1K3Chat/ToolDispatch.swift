@@ -24,6 +24,7 @@
 //  share ONE observation budget (one more header, no more text). ADR 0009 named
 //  the gap ("a question needing two gets the better single pick"). Confidence 0.7.
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the shares tie note (#512).
 
 import Foundation
 import M1K3Agent
@@ -93,7 +94,8 @@ public enum ToolDispatch {
 
     /// Each result's share of the budget: the shortest are carried whole, and what they
     /// leave goes to the rest ("the time" and "the news" give the news nearly all of it).
-    /// `lengths` are TRIMMED counts, as `observationBlock` trims before it cuts.
+    /// `lengths` are TRIMMED counts, as `observationBlock` trims before it cuts. The sort
+    /// isn't stable, but tied lengths get equal shares, so the order between them is moot.
     public static func shares(_ lengths: [Int], total: Int = observationBudget) -> [Int] {
         var out = Array(repeating: 0, count: lengths.count)
         var left = total
