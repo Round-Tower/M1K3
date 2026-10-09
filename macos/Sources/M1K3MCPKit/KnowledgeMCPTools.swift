@@ -26,6 +26,8 @@
 //  withheld from list, search and get-by-id (KnowledgeKind.withheldFromMCP). Search over-reads
 //  nothing: a Photo hit just drops from the ranked list. Fold: list excludes in the query
 //  (`allItems(excluding:)`), so a page is never eaten by newer Photos.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — search withholds in the query too
+//  (`GroundedSearch.run(excludedKinds:)`), replacing the post-`limit` filter that could empty a page.
 //
 
 import Foundation
@@ -45,10 +47,12 @@ struct KnowledgeMCPTools {
     func searchKnowledge(query: String, limit: Int = 5) async throws -> String {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw MCPInputError("search_knowledge requires a non-empty query") }
-        // Photo captions describe private images: withheld from MCP clients.
+        // Photo captions describe private images: withheld from MCP clients,
+        // in the query (never a post-filter that could empty the page).
         let hits = try await GroundedSearch.run(
-            store: store, embedder: embedder, query: trimmed, limit: limit
-        ).filter { !KnowledgeKind.withheldFromMCP.contains($0.kind) }
+            store: store, embedder: embedder, query: trimmed, limit: limit,
+            excludedKinds: KnowledgeKind.withheldFromMCP
+        )
         guard !hits.isEmpty else {
             if embedder != nil {
                 // Gated-empty: nothing cleared the relevance floor — abstain

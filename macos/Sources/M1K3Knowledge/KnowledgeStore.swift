@@ -24,6 +24,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: `.image` joins groundingDocumentKinds so grounded
 //  answers can cite a remembered photo. Fold: `searchGrounding(excludedKinds:)` and `allItems(excluding:)` are the
 //  per-call withhold the MCP surface uses (query-side, never a post-filter).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — `searchFTS(excluding:)`: the FTS
+//  withhold is query-side too (Photos crowding bm25 top-K starved the MCP page).
 
 import Foundation
 import GRDB
@@ -426,22 +428,29 @@ public extension KnowledgeStore {
         min(max(limit, 0), 10000)
     }
 
+    /// `excluding`: kinds withheld IN THE QUERY (the MCP surface passes
+    /// `KnowledgeKind.withheldFromMCP`), so a page is never starved by rows a
+    /// post-filter would have dropped after `limit`. Composes with `kinds`:
+    /// a named kind that is also excluded is simply not searched.
     func searchFTS(
-        query: String, limit: Int = 10, kinds: Set<KnowledgeKind>? = nil
+        query: String, limit: Int = 10, kinds: Set<KnowledgeKind>? = nil,
+        excluding: Set<KnowledgeKind> = []
     ) throws -> [ChunkHit] {
         let limit = Self.clampedSearchLimit(limit)
         guard let sanitized = FTSQuery.sanitized(query) else { return [] }
-        let strict = try ftsMatch(sanitized, limit: limit, kinds: kinds)
+        let strict = try ftsMatch(sanitized, limit: limit, kinds: kinds, excluding: excluding)
         if !strict.isEmpty { return strict }
         guard let relaxed = FTSQuery.relaxed(query) else { return [] }
-        return try ftsMatch(relaxed, limit: limit, kinds: kinds)
+        return try ftsMatch(relaxed, limit: limit, kinds: kinds, excluding: excluding)
     }
 
     /// One FTS5 MATCH execution — shared by the strict pass and the relaxed retry.
     private func ftsMatch(
-        _ match: String, limit: Int, kinds: Set<KnowledgeKind>?
+        _ match: String, limit: Int, kinds: Set<KnowledgeKind>?, excluding: Set<KnowledgeKind>
     ) throws -> [ChunkHit] {
-        try dbQueue.read { db in
+        let kinds = kinds.map { $0.subtracting(excluding) }
+        if let kinds, kinds.isEmpty { return [] }
+        return try dbQueue.read { db in
             var sql = """
             SELECT c.id AS chunk_id, c.item_id, c.heading, c.content,
                    i.title, i.kind, i.created_at AS item_created_at
@@ -458,8 +467,8 @@ public extension KnowledgeStore {
             } else {
                 // nil kinds = every RETRIEVABLE kind. Hidden kinds (quarantined,
                 // superseded memory twins) are reachable only by naming the
-                // kind (index segregation).
-                let hidden = KnowledgeKind.hiddenFromRetrieval.map(\.rawValue).sorted()
+                // kind (index segregation); `excluding` joins them for this call.
+                let hidden = KnowledgeKind.hiddenFromRetrieval.union(excluding).map(\.rawValue).sorted()
                 sql += "\nAND i.kind NOT IN (" + hidden.map { _ in "?" }.joined(separator: ", ") + ")"
                 args += hidden
             }
