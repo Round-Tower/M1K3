@@ -63,7 +63,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — egressClauseProvider (#482): web search + the Home brain
 //  (a live `homeBrainLive` mirror of `homeBrainActive` — the persisted flag missed a phone with no local
 //  brain). No PCC on iOS. Confidence 0.8.
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring. Compile-checked; verify-by-launch owed.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
+//  Compile-checked; verify-by-launch owed.
 
 import Foundation
 import M1K3Agent

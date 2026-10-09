@@ -18,7 +18,8 @@
 //  "Used web search · date & time" provenance line), visible live during and after
 //  the turn. iOS had no tool trace at all. Confidence 0.85.
 //
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — "Remember this photo" under a sent image (RememberPhotoButton). TDD_SKIP: view body.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — "Remember this photo" under a sent image (RememberPhotoButton).
+//  TDD_SKIP: view body.
 
 import M1K3Chat
 import M1K3Knowledge

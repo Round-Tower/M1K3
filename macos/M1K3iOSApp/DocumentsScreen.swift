@@ -11,7 +11,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: the empty-state description says what goes here,
 //  not how to do it — the button does that.
 //
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — Photo rows (caption memory): `photo` icon + accessibility label, privacy line in the empty state. TDD_SKIP: view body.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — Photo rows (caption memory): `photo` icon + accessibility label,
+//  privacy line in the empty state. TDD_SKIP: view body.
 
 import M1K3Knowledge
 import SwiftUI

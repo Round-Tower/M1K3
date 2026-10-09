@@ -16,7 +16,8 @@
 //  iOS + visionOS; on-device run is the Phase-B verify-owed — MLX needs Metal,
 //  absent on the simulator). Prior: Kev + claude-fable-5 (the harness form).
 //
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — injects `photoMemory` (caption memory) into the root. TDD_SKIP: scene wiring.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — injects `photoMemory` (caption memory) into the root. TDD_SKIP:
+//  scene wiring.
 
 import M1K3Avatar
 import SwiftUI

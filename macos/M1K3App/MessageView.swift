@@ -18,7 +18,8 @@
 //  a stopped PCC partial, and no label on the local answer after a fallback).
 //  Review: Kev + claude-opus-4-6, 2026-09-22 — toolTraceFooter now visible DURING streaming (was gated
 //  on status != .streaming); tools show live as each dispatches, with a content transition. Confidence 0.85.
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — "Remember this photo" under a sent image (RememberPhotoButton). TDD_SKIP: view body.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — "Remember this photo" under a sent image (RememberPhotoButton).
+//  TDD_SKIP: view body.
 
 import AppKit
 import M1K3Chat

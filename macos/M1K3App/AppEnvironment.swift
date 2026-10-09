@@ -92,7 +92,8 @@
 //  call no longer blanks the list (Kev's Calls header read 13 over "No calls yet"). What the list can't
 //  show travels WITH the list (`CallsLoad.note`), so a cancelled older load can't leave a stale note;
 //  the cause is a `.notice` breadcrumb with the error's type only, never a payload. Confidence 0.8 (the store half is TDD'd; the screen is verify-by-launch).
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring. Compile-checked; verify-by-launch owed.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
+//  Compile-checked; verify-by-launch owed.
 
 import AppKit
 import Foundation

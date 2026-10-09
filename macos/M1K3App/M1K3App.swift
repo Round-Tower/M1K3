@@ -16,7 +16,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-07 — the screengrab harness pins the window to 1440×900 pt (content 848 +
 //  the 52 pt toolbar strip) so the Mac plates land at the frame system's native 2880×1800. Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — Help ▸ Rate M1K3 on the App Store… (the manual door beside the earned rating prompt).
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — injects `photoMemory` (caption memory) into the main window. TDD_SKIP: scene wiring.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — injects `photoMemory` (caption memory) into the main window.
+//  TDD_SKIP: scene wiring.
 
 import AppKit
 import M1K3Avatar

@@ -19,7 +19,9 @@
 //
 //  Signed: Kev + claude-sonnet-4-6, 2026-07-14, Confidence 0.85 (store layer
 //  unit-pinned; UI is verify-by-launch). Prior: Kev + claude-opus-4-8, 2026-06-06.
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — Photo rows (caption memory): `photo` icon, "Photo" label, no quarantine button (restore would make it Spotlight-donatable), privacy line in the empty state. TDD_SKIP: view body.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — Photo rows (caption memory): `photo` icon, "Photo" label, no
+//  quarantine button (restore would make it Spotlight-donatable), privacy line in the empty state. TDD_SKIP: view
+//  body.
 
 import M1K3Knowledge
 import SwiftUI
