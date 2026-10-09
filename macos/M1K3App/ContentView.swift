@@ -63,6 +63,8 @@
 //  attachment is staged (one staged with the sheet open used to go through, text only). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — ModelGateView re-reads availability every 2 s while
 //  it is up (`availabilityRecheck`), so "Preparing Mini…" lifts itself when AFM recovers. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#479) — the staged-switch pitch said "everything stays on
+//  this Mac": it meant the weights are on disk, but read as the retired privacy absolute. Copy only.
 
 import M1K3Avatar
 import M1K3Chat
@@ -1798,7 +1800,7 @@ private struct BrainUpgradeNudgeCard: View {
 
     private var pitch: String {
         if isStagedSwitch {
-            "Want me to switch over? Takes a few seconds, everything stays on this Mac."
+            "Want me to switch over? Takes a few seconds — it's already on this Mac."
         } else {
             // ONE download pitch (reduction pass, 2026-07-03): the headlines
             // carry the flavour; two near-identical pitches were saying the

@@ -47,6 +47,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the hello card sits on a material panel: the
 //  full-window fox ran through the "Private" door and the disclosure line (seen in the new
 //  onboarding plate). Confidence 0.85 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#479) — "Everything stays on this Mac — no cloud" retired:
+//  web search is on by default and PCC is a brain pick in the App Store lane. `privacyLine` names the
+//  exits per lane (the DMG has no PCC backend). Pure copy, no seam; verify-by-launch. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Inference
@@ -119,6 +122,17 @@ struct HelloView: View {
 
     // MARK: - The one screen
 
+    /// The privacy line App Review reads first (#479). Honest per lane: the Developer ID DMG has
+    /// no Private Cloud Compute backend, so it names web search alone; the App Store build names
+    /// both exits. Web search is on by default, so "a switch", never "unless you turn it on".
+    private var privacyLine: String {
+        AppEnvironment.privateCloudBackend == nil
+            ? "Your local AI companion. Runs on this Mac — no account. Web search is the one thing "
+            + "that goes out, and it's a switch in Settings."
+            : "Your local AI companion. Runs on this Mac — no account. Web search and the optional "
+            + "Private Cloud Compute brain are the two things that go out, and each is a switch in Settings."
+    }
+
     private var helloCard: some View {
         VStack(spacing: 18) {
             Text("M1K3")
@@ -126,7 +140,7 @@ struct HelloView: View {
                 .kerning(2)
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Your local AI companion. Everything stays on this Mac — no cloud, no account.")
+            Text(privacyLine)
                 .font(.title3)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
