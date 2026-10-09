@@ -1,4 +1,4 @@
-My friends call me Mike. I'm a local AI agent that lives on your iPhone and iPad — no account, no sign-up, no telemetry. Your chats, notes and documents stay on the device by default; web search is the one exception, and it's a switch in Settings.
+My friends call me Mike. I'm a local AI agent that lives on your iPhone and iPad — no account, no sign-up, no telemetry. Your chats, notes and documents stay on the device by default; web search (and the lookups it makes) is the one thing that sends anything out, and it's a switch in Settings.
 
 WHAT I DO
 • Chat with an on-device brain — Mini starts instantly on Apple Intelligence devices (a small download everywhere else), and Lil (4B) runs fully offline on iPhones and iPads with 8 GB of memory.

@@ -188,7 +188,7 @@ state: [`CLAUDE.md`](./CLAUDE.md). Security reports: [`SECURITY.md`](./SECURITY.
 
 Inference, retrieval, and voice run on-device; M1K3 itself has no servers and
 never sees or stores your conversations. Two things can leave the machine, each
-a switch: web search (on by default) and, in the Mac App Store build only, the
+a switch: web search and the lookups it makes (on by default) and, in the Mac App Store build only, the
 opt-in Private Cloud Compute brain (off by default) — when you pick it, your
 message goes to Apple's Private Cloud Compute, and the conversation so far only
 if you tick it. See [SECURITY.md](./SECURITY.md) for what is and is not sent
@@ -232,4 +232,6 @@ human-and-AI collaboration on the record.
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85, Prior: Unknown (the README predates
      this signature). The network and privacy paragraphs say what ships: web search on by default, PCC
      opt-in in the App Store build, no cloud path on the DMG — "the 1.0 build has no cloud path" was
-     written before the rung shipped (first live generation 2026-09-15). -->
+     written before the rung shipped (first live generation 2026-09-15).
+     Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — web search names the lookups it makes
+     (Wikipedia, page fetches), so the clause matches the chat's egress answer. -->

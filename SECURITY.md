@@ -66,7 +66,7 @@ stores your conversations, on-device or via PCC.
 **M1K3 for Teams:** organisations can force the Private Cloud Compute switch
 off by policy, so on those installs no conversation goes to anyone's cloud; the
 documented crossings that remain are the model downloads you ask for and web
-search, which an administrator can switch off too.
+search (and the lookups it makes), which the user can switch off in Settings.
 
 ## Supported versions
 
@@ -78,4 +78,7 @@ search, which an administrator can switch off too.
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85, Prior: Unknown (SECURITY.md predates
      this signature). The PCC section said "Not in 1.0 … no cloud path at all"; the rung shipped in the
      App Store build (entitlement in M1K3-MAS.entitlements, ADR 0010 consent, first live generation
-     2026-09-15). Rewritten to what ships: opt-in, off by default, MAS lane only, none on the DMG. -->
+     2026-09-15). Rewritten to what ships: opt-in, off by default, MAS lane only, none on the DMG.
+     Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — Teams no longer claims an administrator
+     can switch web search off: the only managed-off key is PCC's (PrivateCloudRung.managedOffDefaultsKey);
+     webSearchAllowed() reads a plain UserDefaults key. Web search names the lookups it makes. -->

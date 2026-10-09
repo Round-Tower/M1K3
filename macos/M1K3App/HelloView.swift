@@ -50,6 +50,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#479) — "Everything stays on this Mac — no cloud" retired:
 //  web search is on by default and PCC is a brain pick in the App Store lane. `privacyLine` names the
 //  exits per lane (the DMG has no PCC backend). Pure copy, no seam; verify-by-launch. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — the DMG line names the lookups web search
+//  makes (Wikipedia, page fetches carry a query out), matching the chat's egress clause.
 
 import M1K3Avatar
 import M1K3Inference
@@ -127,8 +129,8 @@ struct HelloView: View {
     /// both exits. Web search is on by default, so "a switch", never "unless you turn it on".
     private var privacyLine: String {
         AppEnvironment.privateCloudBackend == nil
-            ? "Your local AI companion. Runs on this Mac — no account. Web search is the one thing "
-            + "that goes out, and it's a switch in Settings."
+            ? "Your local AI companion. Runs on this Mac — no account. Web search (and the lookups it "
+            + "makes) is the one thing that sends anything out, and it's a switch in Settings."
             : "Your local AI companion. Runs on this Mac — no account. Web search and the optional "
             + "Private Cloud Compute brain are the two things that go out, and each is a switch in Settings."
     }

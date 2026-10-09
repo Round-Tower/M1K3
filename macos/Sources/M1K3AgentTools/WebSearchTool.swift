@@ -24,6 +24,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#486) — `providerName` is the one name the agent-facing
 //  description and the rate-limit observation read; EgressDisclosureTests pins it equal to
 //  `EgressFacts.searchProvider`, so swapping the backend fails CI instead of going stale in the clause.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — the rate-limit log line reads `providerName`
+//  too; "DDG" was the last literal.
 
 import Foundation
 import M1K3Agent
@@ -72,7 +74,10 @@ public struct WebSearchTool: AgentTool {
         do {
             switch try await search(query: query) {
             case .rateLimited:
-                Self.log.notice("rate-limited: DDG served the challenge page for \"\(query, privacy: .public)\"")
+                let provider = Self.providerName
+                Self.log.notice(
+                    "rate-limited: \(provider, privacy: .public) challenge page for \"\(query, privacy: .public)\""
+                )
                 return ToolResult(output: "Error: web search is temporarily unavailable "
                     + "(\(Self.providerName) rate-limited \(HostPlatform.thisDevice)). "
                     + "Answer from what you already have.")
