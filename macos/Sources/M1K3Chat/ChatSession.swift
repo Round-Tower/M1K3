@@ -64,6 +64,10 @@
 //  once now (ADR 0010), and a stored "also send this conversation" must still show the sheet before
 //  text that never left this Mac goes. By message id (PR #462 round two: a per-conversation flag went
 //  stale when a local turn landed after the sheet), questions included. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — comment only: the lone-</think> note said "zero live
+//  exposure" because Lil had left Qwen3.5; Lil is Qwen3.5-4B again (#517). The local paths prepend
+//  the opener (MLXToolCalling.swift sendHeld, MLXBrainProvider.generateStreaming); Brain at Home's
+//  raw route does not, and is now named as the remaining exposure. No logic changed.
 
 import Foundation
 import M1K3Inference
@@ -609,13 +613,19 @@ public final class ChatSession {
             // bubble for a frame is the exact leak class this project has
             // repeatedly hardened against. Fed the CUMULATIVE splitter.answer
             // each iteration; StreamFold.delta normalises it like any other
-            // cumulative-or-delta source. Known theoretical gap (named, not
-            // fixed): StreamingReasoningSplitter's lone-</think> retro-move
-            // can shrink splitter.answer back to "" (Qwen3.5's pre-opened-
-            // think quirk) — this splitter has no "un-feed" and would go
-            // stale until real growth resumes. Zero live exposure today: Lil
-            // and Big both moved off Qwen3.5 to dense Qwen3 / gemma-4
-            // (2026-06-22), neither of which hits this path.
+            // cumulative-or-delta source. Known gap (named, not fixed):
+            // StreamingReasoningSplitter's lone-</think> retro-move can shrink
+            // splitter.answer back to "" (Qwen3.5's pre-opened-think quirk) —
+            // this splitter has no "un-feed" and would go stale until real
+            // growth resumes. Lil is Qwen3.5 again (#517), but the LOCAL paths
+            // never reach the retro-move: both the plain stream
+            // (MLXBrainProvider.generateStreaming) and the tool session
+            // (MLXToolTurnSession.sendHeld) yield a synthetic `<think>` as
+            // token zero, so the splitter opens in reasoning mode and the
+            // close is never lone. The one route that still ships a bare
+            // close is Brain at Home: HomeBrainProvider streams the server's
+            // raw route (generateRawStreaming), which adds no opener — a
+            // remote Qwen3.5 brain's turn is the live exposure (2026-10-09).
             var followUpSplitter = StreamingFollowUpSplitter()
             // Coalesce token updates to ~display rate: a fast model emits chunks
             // faster than the eye (or the transcript ForEach) can keep up, and
