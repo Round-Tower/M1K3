@@ -114,6 +114,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07 (exact seed), Confidence 0.85 — a hybrid with kvBits
 //  (Qwen3.5) now seeds by `prefillExactly`, which takes and returns the `LMOutput.State` that belongs
 //  with the cache; the persona slot stores it.
+//  Review: Kev + claude-opus-5-5, 2026-10-09 — note only: the 2026-07-16 entry's "the Instruct variant
+//  is the wired lil" is superseded. Lil is Qwen3.5-4B since 2026-10-08 (#517), which reads the toggle.
 import Foundation
 import Hub
 import M1K3Inference

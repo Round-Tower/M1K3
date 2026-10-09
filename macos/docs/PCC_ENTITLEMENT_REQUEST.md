@@ -68,8 +68,9 @@ found in the macOS 27 dyld shared cache on 2026-09-13. Without it, a
 
 Now that it's granted (#333): the key goes in **`M1K3-MAS.entitlements` only**, the
 store lane (App Store, TestFlight, ⌘R), whose profile carries it. **Never**
-`M1K3.entitlements`: the Developer ID lane has no profile, and AMFI refuses to launch
-an app claiming a profile-only entitlement, so every DMG and cask install would die.
+`M1K3.entitlements`: the Developer ID lane's profile (embedded since #518) doesn't grant
+PCC, and AMFI refuses to launch an app claiming an entitlement its profile lacks, so every
+DMG and cask install would die.
 `tools/ci/check_store_targets.py` fails CI if the key leaks there. iOS/visionOS wait
 until the entitlement read is probed on a device. The first probe is one content-free
 generation on the signed build; it should succeed where the unentitled probe got 1046.
@@ -83,4 +84,6 @@ generation on the signed build; it should succeed where the unentitled probe got
      Review: Kev + claude-opus-5, 2026-09-14 (night): granted the same evening; the
      capability is on app.m1k3 and the profile carries the key (#333). Confidence 0.9.
      Review: Kev + claude-opus-5, 2026-09-14 (night, later): next steps name the store lane only, matching
-     #333's guard (review of #330). Confidence 0.9. -->
+     #333's guard (review of #330). Confidence 0.9.
+     Review: Kev + claude-opus-5-5, 2026-10-09: the Developer ID lane now embeds a profile (#518);
+     PCC still stays out of it, because that profile doesn't grant it. Confidence 0.9. -->

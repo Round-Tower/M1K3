@@ -75,6 +75,15 @@
 	     group (their application identifier), so both lanes share one keychain.
 	     Signed: Kev + claude-opus-5-5, 2026-10-09, Confidence 0.7 (verify-by-
 	     launch decides it), Prior: Unknown -->
+	<!-- Content Controls (Declared Age Range): an App ID capability, so only a
+	     profile can grant it. This lane's Developer ID profile does (#518), so DMG
+	     and cask builds show Apple's age sheet like the store builds; without it
+	     "Set up" fails with "isn't available here". check_store_targets.py
+	     requires it on every lane. (PCC is still store-only: the profile lacks it.)
+	     Signed: Kev + claude-opus-5-5, 2026-10-09, Confidence 0.8 (verify-by-
+	     launch: the sheet shows), Prior: Unknown -->
+	<key>com.apple.developer.declared-age-range</key>
+	<true/>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)app.m1k3</string>

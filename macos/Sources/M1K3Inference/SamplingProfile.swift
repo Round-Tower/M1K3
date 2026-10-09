@@ -22,6 +22,7 @@
 //  Signed: Kev + claude-opus-5-5, 2026-09-23, Confidence 0.85 (the house
 //  profile is pinned to today's values; which arm wins is the eval's call).
 //  Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-09 — comment only: Qwen3.5 Lil has no card arm on purpose.
 //
 
 public struct SamplingProfile: Sendable, Equatable {
@@ -60,7 +61,9 @@ public struct SamplingProfile: Sendable, Equatable {
     /// Model-card sampling, by model family. Only families whose card we've read.
     private static func card(for modelID: String) -> SamplingProfile? {
         let id = modelID.lowercased()
-        // Qwen3-*-Instruct-2507 (Lil): temperature 0.7, top-p 0.8, top-k 20, min-p 0.
+        // Qwen3-*-Instruct-2507 (Lil until 2026-10-08): temperature 0.7, top-p 0.8, top-k 20, min-p 0.
+        // Qwen3.5 (Lil since) has no arm on purpose: its card is unread, so it samples `house`
+        // under every M1K3_SAMPLING value until an eval reads the card and earns one.
         if id.contains("qwen3"), id.contains("instruct-2507") {
             return SamplingProfile(temperature: 0.7, topP: 0.8, topK: 20)
         }

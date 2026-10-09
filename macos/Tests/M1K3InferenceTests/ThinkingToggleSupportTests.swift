@@ -2,8 +2,8 @@ import M1K3Inference
 import Testing
 
 /// Kev, 2026-09-26: hide the Reasoning picker until Lil runs a model that can
-/// actually switch its thinking on and off. Today's Lil (Qwen3-4B-Instruct-2507)
-/// never thinks, so the picker was a dead control.
+/// actually switch its thinking on and off. Lil was then Qwen3-4B-Instruct-2507,
+/// which never thinks; since 2026-10-08 it is Qwen3.5-4B, which does.
 struct ThinkingToggleSupportTests {
     @Test("the families whose templates read enable_thinking")
     func families() {
