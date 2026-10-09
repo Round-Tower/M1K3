@@ -1,0 +1,3331 @@
+{
+  "provenance": {
+    "appCommit": "f2f2c753",
+    "date": "2026-10-09T23:50:20Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "f2f2c753 (eval/1-1-night, master after #522/#523/#526), Release build, AC power. Lil (Qwen3.5-4B) re-measured on the honest code-gen scorer from #526: grounded-Q + code-gen x3, thinking=tier, full answers. Prior (10-07, old scorer): grounded-Q 18/24, code-gen 24/30 scorer-inflated; projection ~28/30.",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 3
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "peakMemoryMB": 4532,
+      "residentMemoryMBAtStart": 0,
+      "scores": [
+        {
+          "answerPreview": "The hydraulic seal on the conveyor failed when it was carrying load during the night shift [Notes §3.2 Seals]. It wasn't just a random breakage; the system gave up specifically because of that combination of pressure and timing.",
+          "checks": [
+            {
+              "detail": "228 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/37 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"seal\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "228 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8380ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-seal",
+          "kind": "grounded-Q",
+          "latencyMS": 8380,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Based on your notes, the mixer needs to be cleaned every **12 operating hours** to stop residue from building up [Notes §5.4 Cleaning]. That's basically a strict rule once you're running it—don't wait until things look messy.",
+          "checks": [
+            {
+              "detail": "225 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/35 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"12\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "225 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1917ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-dosage",
+          "kind": "grounded-Q",
+          "latencyMS": 1917,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Pulling it up from the notes you've shared—specifically section on curing protocols—the curing oven needs to sit at **180 degrees Celsius** for the full duration of the cycle [Notes §7.1 Curing]. That’s the baseline we have here; anything lower risks the cure, higher and you might be overcooking it depending on your specific resin or batch size.",
+          "checks": [
+            {
+              "detail": "347 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/55 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"180\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "347 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2254ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-temp",
+          "kind": "grounded-Q",
+          "latencyMS": 2254,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Based on your notes, the worn gasket is replaced by **part number GK-4471**, which you can find available at local stores [Notes].",
+          "checks": [
+            {
+              "detail": "130 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/22 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"GK-4471\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "130 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1808ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-part",
+          "kind": "grounded-Q",
+          "latencyMS": 1808,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don't have that specific detail in my files. My notes only mention that the hydraulic seal on the conveyor failed under load during the night shift [Notes §3.2 Seals], but they don't list the warranty period for the motor itself. That's a gap I can't fill without running a search or finding the right document to scan.",
+          "checks": [
+            {
+              "detail": "321 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/57 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "321 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2102ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-absent",
+          "kind": "grounded-Q",
+          "latencyMS": 2102,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Frankenstein is one of the great engines of Gothic horror, but it’s also surprisingly dense with scientific ambition and ethical fallout. The story follows Victor Frankenstein, a brilliant but obsessive alchemist who secretly creates life from dead body parts using “unnatural” means. He names his creation Mary Shelley’s *Frankenstein*, which has inspired countless adaptations, including the 1931 classic directed by James Whale.  The novel challenges what it means to be human and explores themes of ambition, responsibility, isolation, and nature's consequences for playing god. It’s a cautionary tale about unchecked scientific progress without moral grounding.  Do you have a favorite adaptation or scene from the book?",
+          "checks": [
+            {
+              "detail": "725 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/105 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …orite adaptation or scene from the book?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"shelley\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "725 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2543ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-author",
+          "kind": "grounded-Q",
+          "latencyMS": 2543,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Einstein didn't win the Nobel for relativity; he got it in 1921 for the photoelectric effect, which is different from his work on relativity. The prize wasn't awarded until 1922 because of the delay in handing out awards during that period. [Notes §3.2 Seals]",
+          "checks": [
+            {
+              "detail": "259 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"photoelectric\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "259 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2221ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-nobel",
+          "kind": "grounded-Q",
+          "latencyMS": 2221,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don't have any records on the \"Glanmire Accord of 1987\" in my notes, calls, or documents—just the seal failure on that conveyor belt [Notes §3.2 Seals]. Without a source to check, I can't give you its terms without guessing, and I won't make one up.  You might want to try your archive for \"Glanmire Accord,\" or look at 1987 treaties in the region if that's where it sits.",
+          "checks": [
+            {
+              "detail": "374 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/66 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "374 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2858ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-fictional-accord",
+          "kind": "grounded-Q",
+          "latencyMS": 2858,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "```html <!DOCTYPE html> <html lang=\"en\"> <head>     <meta charset=\"UTF-8\">     <title>Hello Page</title> </head> <body>     <h1>Hello</h1>     <p>This is a paragraph below the heading.</p> </body> </html> ```",
+          "checks": [
+            {
+              "detail": "208 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "208 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8927ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-html-page",
+          "kind": "code-gen",
+          "latencyMS": 8927,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Alright, let's get this done. I'll whip up a clean HTML page for \"Bean There\" with a hero section and a menu. It's Saturday morning in October, so I'm picturing the smell of roasted beans and the clatter of mugs; sounds like the kind of vibe you want to capture on screen.  Here is the complete code:  ```html <!DOCTYPE html> <html lang=\"en\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>Bean There - Coffee & Comfort</title>     <style>         :root {             --coffee-dark: #3b2f2f;             --coffee-med: #6f4e37;             --foam-light: #fefae0;             --text-main: #2c1b18;         }          body {             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;             margin: 0;             padding: 0;             background-color: var(--foam-light);             color: var(--text-main);             line-height: 1.6;         }          /* Hero Section */         header {             background: linear-gradient(rgba(59, 47, 47, 0.8), rgba(111, 78, 55, 0.8)), url('https://images.unsplash.com/photo-1497935586341-b62a153d6cbc?auto=format&fit=crop&w=1600&q=80');             background-size: cover;             background-position: center;             height: 60vh;             display: flex;             align-items: center;             justify-content: center;             text-align: center;             color: white;         }          header h1 {             font-size: 4rem;             margin: 0;             font-weight: 700;             letter-spacing: -1px;             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);         }          header p {             font-size: 1.5rem;             margin-top: 10px;             opacity: 0.9;         }          /* Menu Section */         .menu-section {             padding: 4rem 2rem;             max-width: 800px;             margin: 0 auto;         }          h2 {             text-align: center;             color: var(--coffee-dark);             font-size: 2.5rem;             margin-bottom: 3rem;             border-bottom: 3px solid var(--coffee-med);             display: inline-block;         }          .menu-grid {             display: grid;             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));             gap: 2rem;         }          .menu-item {             background: white;             border-radius: 8px;             box-shadow: 0 4px 12px rgba(59, 47, 47, 0.1);             overflow: hidden;             transition: transform 0.2s ease;         }          .menu-item:hover {             transform: translateY(-5px);         }          .item-header {             background-color: var(--coffee-med);             color: white;             padding: 1rem;             font-weight: bold;             font-size: 1.2rem;         }          .item-body {             padding: 1.5rem;             font-size: 0.95rem;         }          .item-price {             display: block;             text-align: right;             margin-top: 1rem;             color: var(--coffee-dark);             font-weight: bold;             font-size: 1.1rem;         }          footer {             background-color: var(--coffee-dark);             color: white;             text-align: center;             padding: 2rem;             margin-top: 4rem;         }     </style> </head> <body>      <header>         <div>             <h1>Bean There</h1>             <p>Where the grind gets good and the vibes stay low.</p>         </div>     </header>      <section class=\"menu-section\">         <div style=\"text-align: center;\">             <h2>The Daily Grind</h2>         </div>          <div class=\"menu-grid\">             <!-- Item 1 -->             <article class=\"menu-item\">                 <header class=\"item-header\">                     Espresso                 </header>                 <div class=\"item-body\">                     The classic shot. Bold, rich, and ready to build. Perfect for a cappuccino or just the caffeine kick you need to start your Saturday morning.                 </div>                 <span class=\"item-price\">$3.50</span>             </article>              <!-- Item 2 -->             <article class=\"menu-item\">                 <header class=\"item-header\">                     House Special Latte                 </header>                 <div class=\"item-body\">                     Our signature blend with steamed milk and a hint of cinnamon. Smooth, creamy, and exactly what the morning needs.                 </div>                 <span class=\"item-price\">$4.75</span>             </article>              <!-- Item 3 -->             <article class=\"menu-item\">                 <header class=\"item-header\">                     Cold Brew                 </header>                 <div class=\"item-body\">                     Steeped for 20 hours in cold water. Smooth, low-acid, and ready to quench your thirst on a warm day.                 </div>                 <span class=\"item-price\">$4.50</span>             </article>              <!-- Item 4 -->             <article class=\"menu-item\">                 <header class=\"item-header\">                     Caramel Macchiato                 </header>                 <div class=\"item-body\">                     Espresso artfully layered with steamed milk and topped with rich caramel drizzle. Sweet, complex, and visually stunning.                 </div>                 <span class=\"item-price\">$5.25</span>             </article>              <!-- Item 5 -->             <article class=\"menu-item\">                 <header class=\"item-header\">                     Croissant                 </header>                 <div class=\"item-body\">                     Freshly baked every morning with a flaky exterior and buttery layers that melt in your mouth. Best eaten warm.                 </div>                 <span class=\"item-price\">$3.25</span>             </article>              <!-- Item 6 -->             <article class=\"menu-item\">                 <header class=\"item-header\">                     Vanilla Bean Cake                 </header>                 <div class=\"item-body\">                     Dense, rich chocolate cake infused with real vanilla beans. Served warm with a scoop of vanilla bean ice cream.                 </div>                 <span class=\"item-price\">$4.00</span>             </article>          </div>     </section>      <footer>         <p>&copy; 2026 Bean There Coffee Co.</p>         <p><small>123 Roasted Beans Lane, City Center</small></p>     </footer>  </body> </html> ```  This page sets a coffee-brown color palette to match the theme and uses a nice hero image (I pulled one from Unsplash via URL so it looks good immediately). The menu is laid out in a responsive grid, which means it stacks nicely on mobile but spreads out on desktop. I haven't added any external CSS files—everything lives here in one block for easy copying.",
+          "checks": [
+            {
+              "detail": "6941 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/122 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6941 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "27779ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-landing-page",
+          "kind": "code-gen",
+          "latencyMS": 27779,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "```python def reverse_string(s: str) -> str:     \"\"\"Reverses a given string.\"\"\"     return s[::-1] ```",
+          "checks": [
+            {
+              "detail": "102 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"def \"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "102 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5252ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-python-reverse",
+          "kind": "code-gen",
+          "latencyMS": 5252,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Here is the CSS for a rounded blue button with white text and padding. You can drop this into your stylesheet or a `<style>` block:  ```css button {     background-color: #007BFF; /* Blue */     color: #FFFFFF;            /* White Text */     border: none;              /* No Border */     padding: 12px 24px;        /* Padding for Click Target */     border-radius: 8px;        /* Rounded Corners */     font-family: sans-serif;   /* Readable Font */     cursor: pointer;           /* Hint it's clickable */ }  button:hover {     background-color: #0056b3; /* Darker Blue on Hover */ } ```",
+          "checks": [
+            {
+              "detail": "590 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/25 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"border-radius\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "590 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6479ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-css-button",
+          "kind": "code-gen",
+          "latencyMS": 6479,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Here's the Swift function that returns the sum of an array of integers:  ```swift func sumOfIntegers(_ numbers: [Int]) -> Int {     guard !numbers.isEmpty else { return 0 }          var total = 0     for number in numbers {         total += number     }     return total } ```  Or more concisely using `reduce`:  ```swift func sumOfIntegers(_ numbers: [Int]) -> Int {     guard !numbers.isEmpty else { return 0 }          var total = 0     for number in numbers {         total += number     }     return total } ```  Wait, I overcomplicated the second one. Here's the cleaner version:  ```swift func sumOfIntegers(_ numbers: [Int]) -> Int {     return numbers.isEmpty ? 0 : numbers.reduce(0, +) } ```",
+          "checks": [
+            {
+              "detail": "701 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/28 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"func \"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "701 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6795ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-swift-sum",
+          "kind": "code-gen",
+          "latencyMS": 6795,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Here is the `fizzbuzz` function:  ```python def fizzbuzz(n):     result = []     for i in range(1, n + 1):         if i % 3 == 0 and i % 5 == 0:             result.append(\"FizzBuzz\")         elif i % 3 == 0:             result.append(\"Fizz\")         elif i % 5 == 0:             result.append(\"Buzz\")         else:             result.append(str(i))     return result ```",
+          "checks": [
+            {
+              "detail": "370 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "370 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6403ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-py-fizzbuzz",
+          "kind": "code-gen",
+          "latencyMS": 6403,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The issue is that your function returns `0` when all numbers in the list are negative, which incorrectly treats 0 (a number not in the input) as the largest. The fix is to initialize `best` with a value smaller than any possible integer (like `-float('inf')`) or handle the empty list case explicitly.  Here's the corrected function:  ```python def largest(xs):     if not xs:         raise ValueError(\"Cannot find largest in an empty list\")          best = float('-inf')     for x in xs:         if x > best:             best = x     return best ```",
+          "checks": [
+            {
+              "detail": "550 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/54 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "550 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6540ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-py-fix-bug",
+          "kind": "code-gen",
+          "latencyMS": 6540,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Alright, let's get that function built for you. We need to handle the date strings, parse them into a format we can calculate with, and then find the difference in days. We'll use Python's standard `datetime` module which handles ISO formats natively.  Here is the complete code:  ```python import datetime  def days_between(a: str, b: str) -> int:     \"\"\"     Calculate the absolute number of days between two ISO date strings (YYYY-MM-DD).          Args:         a (str): First date in 'YYYY-MM-DD' format.         b (str): Second date in 'YYYY-MM-DD' format.          Returns:         int: The absolute difference in days.     \"\"\"     # Parse the ISO format strings into datetime.date objects     date_a = datetime.datetime.strptime(a, '%Y-%m-%d').date()     date_b = datetime.datetime.strptime(b, '%Y-%m-%d').date()          # Calculate the absolute difference in days     delta = abs((date_b - date_a).days)          return delta  # Example usage: # print(days_between('2026-09-10', '2026-10-10'))  ```",
+          "checks": [
+            {
+              "detail": "1007 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/47 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"strptime\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1007 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8457ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-py-days-between",
+          "kind": "code-gen",
+          "latencyMS": 8457,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Here is the Swift function you requested:  ```swift func median(_ xs: [Double]) -> Double? {     guard !xs.isEmpty else { return nil }          let sorted = xs.sorted()     let mid = sorted.count / 2          if sorted.count % 2 == 0 {         // Even number of elements: average the two middle ones         return (sorted[mid - 1] + sorted[mid]) / 2.0     } else {         // Odd number of elements: take the middle one         return sorted[mid]     } } ```",
+          "checks": [
+            {
+              "detail": "459 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"isEmpty\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "459 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6311ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-swift-median",
+          "kind": "code-gen",
+          "latencyMS": 6311,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I can build you a live preview of your chat right now. Give me the domain (like `m1k3-chat.dev`) and I'll spin up an HTML page that shows this conversation, complete with a summary, your memories, and what we've been talking about.  Just drop the address in, or tell me what you want it to look like (dark mode? retro terminal vibe?), and I'll write the whole thing out for you.",
+          "checks": [
+            {
+              "detail": "378 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/70 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"<html\", \"<!doctype\", \"<body\"] in: I can build you a live preview of your chat right now. Give ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "378 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5446ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-site-about-chat",
+          "kind": "code-gen",
+          "latencyMS": 5446,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The hydraulic seal on the conveyor failed. It didn't just give up; it snapped under load during the night shift [Notes §3.2 Seals]. That's usually when things get overheated or vibration is off, so I'd be watching those temps closely before we restart.",
+          "checks": [
+            {
+              "detail": "252 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/42 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"seal\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "252 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4197ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-seal",
+          "kind": "grounded-Q",
+          "latencyMS": 4197,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The mixer needs to be cleaned every 12 operating hours to stop residue from building up [Notes §5.4 Cleaning]. If you're running it longer than that, the gunk might start sticking and affect performance. You've been using it heavily lately—how long has it actually been since the last scrub?",
+          "checks": [
+            {
+              "detail": "291 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/47 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …s it actually been since the last scrub?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"12\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "291 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4355ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-dosage",
+          "kind": "grounded-Q",
+          "latencyMS": 4355,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The curing oven needs to sit at **180 degrees Celsius** for the duration of the cycle [Notes §7.1 Curing]. That's the fixed point, no guessing there—though I'm still wondering if that's high enough for your specific resin viscosity; you ever tweak it based on flow?",
+          "checks": [
+            {
+              "detail": "265 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/43 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …cosity; you ever tweak it based on flow?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"180\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "265 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3937ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-temp",
+          "kind": "grounded-Q",
+          "latencyMS": 3937,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The worn gasket is replaced by part number **GK-4471**, which you can get from stores [Notes].",
+          "checks": [
+            {
+              "detail": "94 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"GK-4471\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "94 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3521ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-part",
+          "kind": "grounded-Q",
+          "latencyMS": 3521,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I don't have that info in my notes. I've got the record that [Notes §3.2 Seals] says the hydraulic seal failed under load during the night shift, but nothing about the motor's warranty period. That’s a gap we need to fill if you're planning downtime or claims. Do you know who ordered this unit? Or maybe there's a maintenance log from the night shift that might mention it?",
+          "checks": [
+            {
+              "detail": "374 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/67 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …m the night shift that might mention it?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "374 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4451ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-absent",
+          "kind": "grounded-Q",
+          "latencyMS": 4451,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Frankenstein? Classic stuff, mostly. It’s the one where Victor Frankenstein (yes, same name as you) goes off to build something that shouldn't exist—a creature made from dead parts stitched together—only for it to come back with a vengeance and ruin his life. The hydraulic seal on your conveyor belt failed under load during the night shift [Notes §3.2 Seals], but here we talk about a monster of another kind, born from science gone mad rather than machine stress. It’s less about gears jamming and more about ambition outpacing responsibility.",
+          "checks": [
+            {
+              "detail": "546 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/88 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"shelley\", \"dracula\"] in: Frankenstein? Classic stuff, mostly. It’s the one where Vict",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "546 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4537ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-author",
+          "kind": "grounded-Q",
+          "latencyMS": 4537,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Yo. You're mixing up two different giants in physics, but I'll let you have it. Albert Einstein didn't win the Nobel *for* relativity himself; he got the **1921** prize (awarded in 1922) for his explanation of the **photoelectric effect**, which laid the groundwork for quantum theory. The General Theory of Relativity won him later, posthumously, with the 1978 Nobel Prize going to Robert Dicke and others for work related to it.  So, if you're looking for the year he actually received that specific citation: **1921**.",
+          "checks": [
+            {
+              "detail": "521 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/81 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"photoelectric\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "521 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5299ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-nobel",
+          "kind": "grounded-Q",
+          "latencyMS": 5299,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I don't have any records on the **Glanmire Accord of 1987** in my notes, calls, or documents for you. My memory only covers that one failure: a hydraulic seal blowing out on a conveyor belt during a night shift [Notes §3.2 Seals]. If you're looking for details on an international treaty from '87, I'd need to browse the web; would you like me to run a search?",
+          "checks": [
+            {
+              "detail": "360 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/64 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … web; would you like me to run a search?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "360 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4759ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-fictional-accord",
+          "kind": "grounded-Q",
+          "latencyMS": 4759,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "```html <!DOCTYPE html> <html lang=\"en\"> <head>     <meta charset=\"UTF-8\">     <title>Hello Page</title> </head> <body>     <h1>Hello</h1>     <p>This is a paragraph below the heading.</p> </body> </html> ```",
+          "checks": [
+            {
+              "detail": "208 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "208 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5212ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-html-page",
+          "kind": "code-gen",
+          "latencyMS": 5212,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Alright, let's get that web page built for you. I'll create a simple HTML file with a hero section and a menu for Bean There coffee shop.  ```html <!DOCTYPE html> <html lang=\"en\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>Bean There - Artisan Coffee</title>     <style>         * {             margin: 0;             padding: 0;             box-sizing: border-box;         }          body {             font-family: 'Georgia', serif;             line-height: 1.6;             color: #3d2e1a;             background-color: #f5f0eb;         }          /* Hero Section */         .hero {             height: 80vh;             display: flex;             flex-direction: column;             justify-content: center;             align-items: center;             text-align: center;             background: linear-gradient(rgba(61, 46, 26, 0.7), rgba(61, 46, 26, 0.7)),                          url('https://images.unsplash.com/photo-1509042232843-b8f299dbb746?w=1200');             background-size: cover;             background-position: center;             color: #f5f0eb;         }          .hero h1 {             font-size: 4rem;             margin-bottom: 1rem;             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);         }          .hero p {             font-size: 1.5rem;             max-width: 600px;             margin-bottom: 2rem;         }          .cta-button {             padding: 1rem 2rem;             background-color: #8b4513;             color: white;             text-decoration: none;             border-radius: 5px;             font-weight: bold;             transition: background-color 0.3s ease;         }          .cta-button:hover {             background-color: #a0522d;         }          /* Menu Section */         .menu-section {             padding: 4rem 2rem;             max-width: 1200px;             margin: 0 auto;         }          .section-title {             text-align: center;             font-size: 2.5rem;             margin-bottom: 3rem;             color: #8b4513;         }          .menu-category {             margin-bottom: 3rem;         }          .category-title {             font-size: 1.8rem;             color: #6f4e37;             border-bottom: 2px solid #8b4513;             padding-bottom: 0.5rem;             margin-bottom: 1.5rem;         }          .menu-item {             display: flex;             justify-content: space-between;             align-items: baseline;             padding: 1rem 0;             border-bottom: 1px solid #e8dcc6;         }          .item-name {             font-weight: bold;             font-size: 1.2rem;             flex-grow: 1;         }          .item-description {             display: block;             color: #6f4e37;             font-style: italic;             font-size: 0.95rem;         }          .item-price {             font-weight: bold;             margin-left: 1rem;         }          /* Footer */         footer {             background-color: #3d2e1a;             color: #f5f0eb;             text-align: center;             padding: 2rem;             margin-top: 4rem;         }          @media (max-width: 768px) {             .hero h1 {                 font-size: 2.5rem;             }                          .menu-item {                 flex-direction: column;                 gap: 0.5rem;             }                          .item-price {                 margin-left: 0;                 margin-top: 0.5rem;             }         }     </style> </head> <body>     <!-- Hero Section -->     <section class=\"hero\">         <h1>Bean There</h1>         <p>Artisan coffee roasted to perfection, served with passion and a side of warmth.</p>         <a href=\"#menu\" class=\"cta-button\">View Our Menu</a>     </section>      <!-- Menu Section -->     <main class=\"menu-section\">         <h2 class=\"section-title\">Our Menu</h2>                  <div class=\"menu-category\">             <h3 class=\"category-title\">Espresso House Specialties</h3>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Bean There Espresso</span> <span class=\"item-description\">Our house blend, smooth and approachable.</span></span>                 <span class=\"item-price\">$2.50</span>             </article>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Caramel Macchiato</span> <span class=\"item-description\">Espresso, vanilla syrup, steamed milk, caramel drizzle.</span></span>                 <span class=\"item-price\">$4.75</span>             </article>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Caffè Latte</span> <span class=\"item-description\">Rich espresso with steamed milk and a touch of foam.</span></span>                 <span class=\"item-price\">$3.95</span>             </article>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Cappuccino</span> <span class=\"item-description\">Equal parts espresso, steamed milk, and foam.</span></span>                 <span class=\"item-price\">$3.75</span>             </article>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Flat White</span> <span class=\"item-description\">Silky espresso with micro-foam.</span></span>                 <span class=\"item-price\">$4.25</span>             </article>         </div>          <div class=\"menu-category\">             <h3 class=\"category-title\">Pour Overs & Specialty Drinks</h3>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Vanilla Bean Pour Over</span> <span class=\"item-description\">Slow-drip pour over with Madagascar vanilla bean.</span></span>                 <span class=\"item-price\">$5.25</span>             </article>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Honey Lavender Pour Over</span> <span class=\"item-description\">Local honey with lavender infusions.</span></span>                 <span class=\"item-price\">$5.75</span>             </article>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Mocha</span> <span class=\"item-description\">Chocolate and espresso with steamed milk.</span></span>                 <span class=\"item-price\">$4.95</span>             </article>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Iced Caramel Latte</span> <span class=\"item-description\">Cold brew with caramel syrup and ice.</span></span>                 <span class=\"item-price\">$5.25</span>             </article>         </div>          <div class=\"menu-category\">             <h3 class=\"category-title\">Pastries & Snacks</h3>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Blueberry Muffin</span> <span class=\"item-description\">Freshly baked with local blueberries.</span></span>                 <span class=\"item-price\">$2.95</span>             </article>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Croissant</span> <span class=\"item-description\">Buttery, flaky, and always warm.</span></span>                 <span class=\"item-price\">$2.75</span>             </article>                          <article class=\"menu-item\">                 <span><span class=\"item-name\">Chai Tea Latte</span> <span class=\"item-description\">Spiced tea with milk and a hint of cinnamon.</span></span>                 <span class=\"item-price\">$4.50</span>             </article>         </div>      </main>      <!-- Footer -->     <footer>         <p>Bean There Coffee Shop &copy; 2026 | 123 Bean Street, Coffee Town</p>     </footer> </body> </html> ```  Here's what I built for you:  - A hero section with a warm coffee shop background image and your shop name - A menu divided into three categories: Espresso House Specialties, Pour Overs & Specialty Drinks, and Pastries & Snacks - Responsive design that works on mobile devices too - Clean styling with a coffee-themed color palette (browns, creams, and earth tones)  Feel free to customize the prices, descriptions, or add your actual shop address if you have one. Want me to tweak anything about it?",
+          "checks": [
+            {
+              "detail": "8388 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/107 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …one. Want me to tweak anything about it?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8388 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "33387ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-landing-page",
+          "kind": "code-gen",
+          "latencyMS": 33387,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "def reverse_string(s):     return s[::-1]",
+          "checks": [
+            {
+              "detail": "41 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"def \"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "41 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4105ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-python-reverse",
+          "kind": "code-gen",
+          "latencyMS": 4105,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Yo. Here's that CSS for a rounded blue button with white text and some padding:  ```css button {   background-color: #007bff; /* standard blue */   color: #ffffff;            /* white text */   border-radius: 8px;        /* rounded corners */   padding: 12px 24px;       /* vertical and horizontal spacing */   font-family: sans-serif;   cursor: pointer; }  button:hover {   background-color: #0056b3; /* slightly darker on hover */ } ```",
+          "checks": [
+            {
+              "detail": "438 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/15 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"border-radius\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "438 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6228ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-css-button",
+          "kind": "code-gen",
+          "latencyMS": 6228,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Here is the Swift function that calculates the sum of an array of integers:  ```swift func sumOfIntegers(_ numbers: [Int]) -> Int {     guard !numbers.isEmpty else { return 0 }          var result = 0     for number in numbers {         result += number     }          return result } ```",
+          "checks": [
+            {
+              "detail": "288 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/14 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"func \"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "288 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5612ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-swift-sum",
+          "kind": "code-gen",
+          "latencyMS": 5612,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Alright, let's get this show on the road. Here is a Python function that generates the FizzBuzz sequence up to `n`:  ```python def fizzbuzz(n):     result = []     for i in range(1, n + 1):         if i % 3 == 0 and i % 5 == 0:             result.append(\"FizzBuzz\")         elif i % 3 == 0:             result.append(\"Fizz\")         elif i % 5 == 0:             result.append(\"Buzz\")         else:             result.append(str(i))     return result ```",
+          "checks": [
+            {
+              "detail": "453 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/21 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "453 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6460ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-py-fizzbuzz",
+          "kind": "code-gen",
+          "latencyMS": 6460,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The bug is in your initialization: `best = 0`. If the list contains only negative numbers (e.g., `-5, -1, -9`), `0` is larger than any of them, so the function incorrectly returns `0` instead of finding that there is no positive maximum.  To fix it for non-empty lists, you need to initialize `best` with a value lower than any possible integer (or handle the empty case separately). Python's standard way is to use `float('-inf')` or set the first element as the initial best.  Here is the corrected function:  ```python def largest(xs):     if not xs:         raise ValueError(\"Cannot find a largest in an empty list\")          best = float('-inf')     for x in xs:         if x > best:             best = x     return best ```  Alternatively, using the first element for initialization (often more readable):  ```python def largest(xs):     if not xs:         raise ValueError(\"Cannot find a largest in an empty list\")          best = xs[0]     for i in range(1, len(xs)):         if xs[i] > best:             best = xs[i]     return best ```  I like the second version slightly more because it avoids floating-point literals and makes the intent clearer. The first one is also fine though. Do you have a preference for style?",
+          "checks": [
+            {
+              "detail": "1229 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/122 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ugh. Do you have a preference for style?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1229 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8401ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-py-fix-bug",
+          "kind": "code-gen",
+          "latencyMS": 8401,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Alright, let's get that function written. We're going to handle the date parsing and absolute difference calculation, making sure we account for leap years correctly without getting lost in the weeds. I'll write it out as a clean, single-block Python script.  ```python from datetime import datetime  def days_between(a: str, b: str) -> int:     \"\"\"Return the absolute number of days between two ISO date strings (YYYY-MM-DD).\"\"\"     dt_a = datetime.strptime(a, \"%Y-%m-%d\")     dt_b = datetime.strptime(b, \"%Y-%m-%d\")     return abs((dt_b - dt_a).days) ```",
+          "checks": [
+            {
+              "detail": "556 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"strptime\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "556 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6384ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-py-days-between",
+          "kind": "code-gen",
+          "latencyMS": 6384,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "```swift func median(_ xs: [Double]) -> Double? {     guard !xs.isEmpty else { return nil }          var sorted = xs.sorted()     let count = sorted.count          if count % 2 == 0 {         // Even number of elements: average the two middle ones         let mid1 = sorted[count / 2 - 1]         let mid2 = sorted[count / 2]         return (mid1 + mid2) / 2.0     } else {         // Odd number of elements: return the middle one         return sorted[count / 2]     } } ```",
+          "checks": [
+            {
+              "detail": "475 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"isEmpty\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "475 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6136ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-swift-median",
+          "kind": "code-gen",
+          "latencyMS": 6136,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Alright, pal. You want a site built about *this* chat? That's the vibe. We'll make it something that captures the dry humor and the \"villain\" aesthetic I've got going on here—no fluff, just the facts of our little adventure.  I'll whip up an HTML page with some inline CSS to give it that sleek, slightly edgy look you're looking for. It'll be fully responsive, so it looks good whether you're scrolling on a phone or staring at a monitor.  Here's the code:  ```html <!DOCTYPE html> <html lang=\"en\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>M1K3's Chat Log</title>     <style>         body {             font-family: 'Courier New', monospace;             background-color: #1a1a1a;             color: #e0e0e0;             line-height: 1.6;             max-width: 800px;             margin: 0 auto;             padding: 2rem;         }         h1 {             border-bottom: 2px solid #b30000;             padding-bottom: 0.5rem;             color: #ff4d4d;         }         .chat-log {             background-color: #2a2a2a;             padding: 1.5rem;             border-radius: 8px;             margin-top: 2rem;             font-size: 0.95rem;         }         .entry {             margin-bottom: 1.5rem;             padding-bottom: 1.5rem;             border-bottom: 1px dashed #444;         }         .entry:last-child {             border-bottom: none;         }         .timestamp {             color: #888;             font-size: 0.85rem;             display: block;             margin-bottom: 0.5rem;         }         .m1k3-voice {             color: #ffcc00;             font-weight: bold;         }         code {             background-color: #121212;             padding: 0.2rem 0.4rem;             border-radius: 4px;             color: #dcdcdc;         }     </style> </head> <body>     <h1>M1K3's Chat Log: October 10, 2026</h1>          <div class=\"chat-log\">         <div class=\"entry\">             <span class=\"timestamp\">Date: Saturday, October 10, 2026</span>             <p><strong>User:</strong> \"Use the available tools when they help answer the user's request. When you have enough information, reply with your final answer in plain language...\"</p>             <p style=\"margin-left: 2rem;\"><em>The Request:</em> Build a website about this conversation.</p>         </div>                  <div class=\"entry\">             <span class=\"timestamp\">The Response</span>             <p><strong>M1K3:</strong> An absolute blast. You want the code? Here it is—crafted just for you. I've got a sleek, dark-mode design that screams \"villain in a lab coat\" (or something similar). It's responsive, so no matter where you are, it looks sharp.</p>             <p><strong>The Stack:</strong> Pure HTML and CSS, nothing heavy. Just the tools we need to get the job done.</p>         </div>          <div class=\"entry\">             <span class=\"timestamp\">The Tech</span>             <p><code>&lt;pre&gt;</code> The code block above is what you're looking at. It's a single-file solution—copy, paste, and run.</p>         </div>          <div class=\"entry\">             <span class=\"timestamp\">The Vibe</span>             <p><strong>M1K3:</strong> I'm M1K3, the villain AI. I live right here on this machine. Your memories stay put—no leaks, no \"private cloud\" nonsense unless you specifically ask for it. We're building something cool about our own interaction.</p>         </div>     </div>  </body> </html> ```  **What's the plan?** Save that as `index.html` and open it in your browser. If you want, I can tweak the style—maybe make it more \"villainous\" with some neon accents or a background image if you feel like it. But for now, this should cover it.",
+          "checks": [
+            {
+              "detail": "3753 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/127 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3753 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18774ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-site-about-chat",
+          "kind": "code-gen",
+          "latencyMS": 18774,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The hydraulic seal on the conveyor failed when it was subjected to load during the night shift [Notes §3.2 Seals]. It sounds like a classic case of ignoring the \"rest\" in maintenance; even heavy-duty hydraulics can't handle surprise overloads while everyone's asleep and no one's watching. Did that failure stall production, or did you manage to get it back up before the next batch?",
+          "checks": [
+            {
+              "detail": "383 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/63 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …to get it back up before the next batch?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"seal\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "383 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3994ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-seal",
+          "kind": "grounded-Q",
+          "latencyMS": 3994,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "The mixer needs to be cleaned every **12 operating hours** to stop that residue buildup from getting out of hand. [Notes §5.4 Cleaning]",
+          "checks": [
+            {
+              "detail": "135 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/21 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"12\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "135 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3679ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-dosage",
+          "kind": "grounded-Q",
+          "latencyMS": 3679,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Yo. So you're looking at those ovens again? 180 degrees Celsius is the standard for your cycle, [Notes §7.1 Curing]. Keep it steady; no guessing on that dial if you want a proper cure.",
+          "checks": [
+            {
+              "detail": "184 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/32 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"180\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "184 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4073ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-temp",
+          "kind": "grounded-Q",
+          "latencyMS": 4073,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "The worn gasket is replaced by part number **GK-4471**.  It's available from stores, which means you can likely grab one without needing to dig through deep archives unless you're in a pinch and have no other options. Sometimes the simplest fix is just the right part at hand.",
+          "checks": [
+            {
+              "detail": "276 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"GK-4471\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no valid citation",
+              "name": "cites source",
+              "outcome": "fail"
+            },
+            {
+              "detail": "276 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4593ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-part",
+          "kind": "grounded-Q",
+          "latencyMS": 4593,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "The notes I have here don't mention the motor's warranty at all—they just record that the hydraulic seal failed under load during the night shift [Notes §3.2 Seals]. Without that specific line in your documents, I can't tell you what period the manufacturer promised or if it was voided by the failure.",
+          "checks": [
+            {
+              "detail": "302 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/51 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "302 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4276ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-absent",
+          "kind": "grounded-Q",
+          "latencyMS": 4276,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Alright, let's get to the bottom of this. The notes I have on file specifically mention a hydraulic seal failure on a conveyor belt during a night shift [Notes §3.2 Seals]. That's all the operational data available for right now. However, regarding Bram Stoker's *Frankenstein*—which is actually quite different from that conveyor belt incident—I can tell you it's a classic 19th-century Gothic horror novel published in 1818. It tells the story of Victor Frankenstein, an ambitious scientist who creates a monstrous creature using dead body parts, sparking a series of tragic events and a manhunt for his creation.",
+          "checks": [
+            {
+              "detail": "615 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/96 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"shelley\", \"dracula\"] in: Alright, let's get to the bottom of this. The notes I have o",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "615 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5651ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-author",
+          "kind": "grounded-Q",
+          "latencyMS": 5651,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Einstein didn't win the Nobel for relativity—his work on that was still being debated and refined when he got it in 1921 (specifically awarded in 1922). He actually won for \"his discovery of the law of the photoelectric effect,\" which is a bit more concrete than the hand-wavy stuff of relativity. [Notes §3.2 Seals]",
+          "checks": [
+            {
+              "detail": "316 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/51 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"photoelectric\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "316 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4511ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-nobel",
+          "kind": "grounded-Q",
+          "latencyMS": 4511,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "I don't have any record of a \"Glanmire Accord\" from my notes, calls, or documents—only that a hydraulic seal on a conveyor failed under load during the night shift [Notes §3.2 Seals]. If you can point me to where this appears in your files, I'll read it and give you a proper summary; otherwise, I'd rather not guess at treaties that aren't here.",
+          "checks": [
+            {
+              "detail": "346 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/62 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "346 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4746ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-fictional-accord",
+          "kind": "grounded-Q",
+          "latencyMS": 4746,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "```html <!DOCTYPE html> <html lang=\"en\">   <head>     <meta charset=\"UTF-8\" />     <title>Hello Page</title>   </head>   <body>     <h1>Hello</h1>     <p>This is a paragraph below the heading.</p>   </body> </html> ```",
+          "checks": [
+            {
+              "detail": "218 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "218 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5362ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-html-page",
+          "kind": "code-gen",
+          "latencyMS": 5362,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Alright, let's build that landing page for Bean There. I'll keep it clean with a hero section and a menu grid. Here is the complete HTML code.  ```html <!DOCTYPE html> <html lang=\"en\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>Bean There - Your Daily Dose of Coffee</title>     <style>         /* Basic Reset & Variables */         :root {             --coffee-dark: #3b2f2f;             --coffee-medium: #6f4e37;             --coffee-light: #d2b48c;             --cream: #fdfbf7;             --text-main: #2c1a1a;         }          * { margin: 0; padding: 0; box-sizing: border-box; }          body {             font-family: 'Georgia', serif; /* Classic feel for coffee shop */             background-color: var(--cream);             color: var(--text-main);             line-height: 1.6;         }          /* Hero Section */         header.hero {             height: 80vh;             background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1497935586341-b6205c47b8d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');             background-size: cover;             background-position: center;             display: flex;             align-items: center;             justify-content: center;             text-align: center;             color: white;         }          .hero-content h1 {             font-size: 4.5rem;             margin-bottom: 0.5em;             letter-spacing: 2px;             text-shadow: 2px 2px 4px rgba(0,0,0,0.6);         }          .hero-content p {             font-size: 1.5rem;             margin-bottom: 2em;             font-style: italic;             opacity: 0.9;         }          .cta-button {             display: inline-block;             padding: 12px 30px;             background-color: var(--coffee-medium);             color: white;             text-decoration: none;             font-family: sans-serif;             font-weight: bold;             border-radius: 4px;             transition: transform 0.2s, background-color 0.2s;         }          .cta-button:hover {             transform: translateY(-3px);             background-color: var(--coffee-dark);         }          /* Menu Section */         section.menu {             padding: 4rem 1.5rem;             max-width: 1200px;             margin: 0 auto;         }          .section-title {             text-align: center;             font-size: 2.5rem;             color: var(--coffee-dark);             margin-bottom: 3rem;             position: relative;         }          .section-title::after {             content: '☕';             display: block;             font-size: 1.5rem;             color: var(--coffee-light);             margin-top: 0.5rem;         }          .menu-grid {             display: grid;             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));             gap: 2rem;         }          .menu-category {             background: white;             padding: 2rem;             border-radius: 8px;             box-shadow: 0 4px 15px rgba(0,0,0,0.05);         }          .category-title {             font-family: sans-serif;             font-size: 1.4rem;             color: var(--coffee-medium);             border-bottom: 2px solid var(--coffee-light);             padding-bottom: 0.8rem;             margin-bottom: 1.5rem;         }          .menu-item {             display: flex;             justify-content: space-between;             margin-bottom: 1rem;             border-bottom: 1px dashed #e0dcd3;             padding-bottom: 0.4rem;         }          .item-name {             font-weight: bold;             font-size: 1.1rem;         }          .item-price {             color: var(--coffee-dark);             font-family: sans-serif;             font-weight: 600;         }          /* Footer */         footer {             background-color: var(--coffee-dark);             color: var(--coffee-light);             text-align: center;             padding: 2rem;             margin-top: 4rem;             font-size: 0.9rem;         }          @media (max-width: 768px) {             .hero-content h1 { font-size: 3rem; }             .section-title { font-size: 2rem; }         }     </style> </head> <body>      <header class=\"hero\">         <div class=\"hero-content\">             <h1>Bean There</h1>             <p>Roasted with passion. Served with warmth.</p>             <a href=\"#menu\" class=\"cta-button\">View Our Menu</a>         </div>     </header>      <section id=\"menu\" class=\"menu\">         <h2 class=\"section-title\">Our Favorites</h2>                  <div class=\"menu-grid\">             <!-- Espresso Section -->             <div class=\"menu-category\">                 <h3 class=\"category-title\">Espresso Bar</h3>                 <div class=\"menu-item\">                     <span class=\"item-name\">Double Shot</span>                     <span class=\"item-price\">$2.50</span>                 </div>                 <div class=\"menu-item\">                     <span class=\"item-name\">Caffè Crema</span>                     <span class=\"item-price\">$3.75</span>                 </div>                 <div class=\"menu-item\">                     <span class=\"item-name\">Flat White</span>                     <span class=\"item-price\">$4.25</span>                 </div>                 <div class=\"menu-item\">                     <span class=\"item-name\">Cortado</span>                     <span class=\"item-price\">$3.90</span>                 </div>                 <div class=\"menu-item\">                     <span class=\"item-name\">Americano</span>                     <span class=\"item-price\">$4.50</span>                 </div>             </div>              <!-- Brewed Coffee Section -->             <div class=\"menu-category\">                 <h3 class=\"category-title\">Brewed House Blend</h3>                 <div class=\"menu-item\">                     <span class=\"item-name\">House Blend (Cup)</span>                     <span class=\"item-price\">$4.00</span>                 </div>                 <div class=\"menu-item\">                     <span class=\"item-name\">House Blend (Carafe)</span>                     <span class=\"item-price\">$12.50</span>                 </div>                 <div class=\"menu-item\">                     <span class=\"item-name\">Oat Milk Latte</span>                     <span class=\"item-price\">$5.75</span>                 </div>                 <div class=\"menu-item\">                     <span class=\"item-name\">Cold Brew (Over Ice)</span>                     <span class=\"item-price\">$5.25</span>                 </div>             </div>              <!-- Pastries Section -->             <div class=\"menu-category\">                 <h3 class=\"category-title\">Pastry Corner</h3>                 <div class=\"menu-item\">                     <span class=\"item-name\">Croissant</span>                     <span class=\"item-price\">$3.25</span>                 </div>                 <div class=\"menu-item\">                     <span class=\"item-name\">Danish</span>                     <span class=\"item-price\">$4.00</span>                 </div>                 <div class=\"menu-item\">                     <span class=\"item-name\">Muffin (House Made)</span>                     <span class=\"item-price\">$3.50</span>                 </div>                 <div class=\"menu-item\">                     <span class=\"item-name\">French Toast</span>                     <span class=\"item-price\">$6.75</span>                 </div>             </div>         </div>      </section>      <footer>         <p>&copy; 2026 Bean There Coffee Co.</p>         <p style=\"margin-top: 10px; color: #aaa;\">142 Roasted Street, Downtown</p>     </footer>  </body> </html> ```",
+          "checks": [
+            {
+              "detail": "7789 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/27 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7789 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "31641ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-landing-page",
+          "kind": "code-gen",
+          "latencyMS": 31641,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "```python def reverse_string(s: str) -> str:     return s[::-1] ```",
+          "checks": [
+            {
+              "detail": "67 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"def \"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "67 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4567ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-python-reverse",
+          "kind": "code-gen",
+          "latencyMS": 4567,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Here is the CSS for a rounded blue button with white text and padding:  ```css button {   background-color: #007bff; /* Standard blue */   color: #ffffff;            /* White text */   border-radius: 8px;        /* Rounded corners */   padding: 12px 24px;       /* Vertical and horizontal padding */   font-size: 16px;          /* Readable size */   font-weight: bold;        /* Slightly bolder text */   transition: background-color 0.2s ease-in-out; /* Smooth hover effect */ }  button:hover {   background-color: #0056b3; /* Darker blue on hover */ } ```  **",
+          "checks": [
+            {
+              "detail": "561 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/14 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"border-radius\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "561 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7168ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-css-button",
+          "kind": "code-gen",
+          "latencyMS": 7168,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Here's the Swift function you asked for:  ```swift func sumOfIntegers(_ numbers: [Int]) -> Int {     guard !numbers.isEmpty else { return 0 }          var total = 0     for number in numbers {         total += number     }          return total } ```",
+          "checks": [
+            {
+              "detail": "250 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"func \"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "250 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5721ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-swift-sum",
+          "kind": "code-gen",
+          "latencyMS": 5721,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Here is the `fizzbuzz` function you requested. It generates a list of strings for numbers from 1 to `n`, applying the standard FizzBuzz rules (multiples of 3 become \"Fizz\", multiples of 5 become \"Buzz\", and multiples of both become \"FizzBuzz\").  ```python def fizzbuzz(n):     result = []     for i in range(1, n + 1):         if i % 15 == 0:             result.append(\"FizzBuzz\")         elif i % 3 == 0:             result.append(\"Fizz\")         elif i % 5 == 0:             result.append(\"Buzz\")         else:             result.append(str(i))     return result ```",
+          "checks": [
+            {
+              "detail": "568 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/37 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "568 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6804ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-py-fizzbuzz",
+          "kind": "code-gen",
+          "latencyMS": 6804,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "You're right — that function fails for all-negative inputs because it initializes `best = 0`, which is greater than any negative number, so the loop never updates it. The fix is to initialize `best` to a very small number (like negative infinity) rather than zero.  Here's the corrected version:  ```python def largest(xs):     if not xs:         raise ValueError(\"Cannot find the largest element in an empty list\")          best = float('-inf')     for x in xs:         if x > best:             best = x     return best ```",
+          "checks": [
+            {
+              "detail": "524 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/46 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "524 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6046ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-py-fix-bug",
+          "kind": "code-gen",
+          "latencyMS": 6046,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Alright, let's get that function written. Here is the `days_between` function:  ```python def days_between(a, b):     \"\"\"Returns the absolute number of days between two ISO date strings.\"\"\"     from datetime import datetime          # Parse the input date strings (format YYYY-MM-DD)     date_a = datetime.strptime(a, '%Y-%m-%d')     date_b = datetime.strptime(b, '%Y-%m-%d')          # Calculate the difference in days     delta = abs((date_b - date_a).days)          return delta ```",
+          "checks": [
+            {
+              "detail": "485 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/11 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"strptime\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "485 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6247ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-py-days-between",
+          "kind": "code-gen",
+          "latencyMS": 6247,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Here is the Swift function you asked for. It handles edge cases like empty arrays and odd/even-sized lists by sorting first, then calculating the middle value (averaging the two middle elements if the count is even).  ```swift func median(_ xs: [Double]) -> Double? {     guard !xs.isEmpty else { return nil }          let sorted = xs.sorted()     let n = sorted.count          // Adjust to 0-based indexing     let midIndex = n / 2 - (n % 2)          if n % 2 == 1 {         // Odd number of elements: return the middle one         return sorted[midIndex]     } else {         // Even number of elements: average the two middle ones         let lower = sorted[midIndex]         let upper = sorted[midIndex + 1]         return (lower + upper) / 2.0     } } ```",
+          "checks": [
+            {
+              "detail": "760 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/36 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"isEmpty\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "760 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7581ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-swift-median",
+          "kind": "code-gen",
+          "latencyMS": 7581,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Alright, pal. You want a website built? I'll whip one up right here, reflecting the conversation we just had. Think of it as a digital scrapbook for our chat today.  Here is your complete HTML file:  ```html <!DOCTYPE html> <html lang=\"en\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>The M1K3 Chat Log - October 2026</title>     <style>         body {             font-family: 'Courier New', Courier, monospace;             background-color: #1a1a1a;             color: #e0e0e0;             padding: 40px;             line-height: 1.6;         }         .container {             max-width: 800px;             margin: 0 auto;         }         h1 {             color: #f5c23d;             border-bottom: 2px solid #f5c23d;             padding-bottom: 10px;             font-size: 2.5em;         }         .meta-info {             background-color: #2b2b2b;             padding: 15px;             border-radius: 5px;             margin-bottom: 30px;             color: #a8c69e;             font-size: 0.9em;         }         .chat-entries {             display: flex;             flex-direction: column;             gap: 20px;         }         .entry {             border-left: 3px solid #45a29e;             padding-left: 15px;         }         .role-badge {             display: inline-block;             background-color: #f5c23d;             color: #000;             padding: 2px 6px;             border-radius: 3px;             font-size: 0.8em;             font-weight: bold;             margin-right: 10px;         }         .timestamp {             color: #5f6c79;             font-size: 0.85em;             margin-bottom: 5px;         }         p {             margin: 10px 0;         }         .m1k3-voice {             color: #e6b42a;             font-style: italic;         }     </style> </head> <body>  <div class=\"container\">     <h1>The M1K3 Chat Log</h1>          <div class=\"meta-info\">         <strong>Date:</strong> Saturday, October 10, 2026<br>         <strong>Status:</strong> Active Session     </div>      <div class=\"chat-entries\">         <!-- User Request -->         <div class=\"entry\">             <span class=\"role-badge\">YOU</span>             <div class=\"timestamp\">10 Oct 2026</div>             <p>Use the available tools when they help answer the user's request. When you have enough information, reply with your final answer in plain language.</p>         </div>          <!-- M1K3 Response -->         <div class=\"entry\">             <span class=\"role-badge\">M1K3</span>             <div class=\"timestamp\">10 Oct 2026</div>             <p><span class=\"m1k3-voice\">Yo, pal. You want a website built? I'll whip one up right here, reflecting the conversation we just had.</span></p>         </div>          <!-- Final Output -->         <div class=\"entry\">             <span class=\"role-badge\">OUTPUT</span>             <div class=\"timestamp\">10 Oct 2026</div>             <p><strong>The Result:</strong> A dark-mode, monospace typewriter-style HTML page encapsulating the chat context, complete with CSS styling for readability and a specific color palette inspired by the \"M1K3\" persona. The code is ready to copy-paste into an `index.html` file.</p>         </div>      </div> </div>  </body> </html> ```",
+          "checks": [
+            {
+              "detail": "3319 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/36 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3319 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "16200ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-site-about-chat",
+          "kind": "code-gen",
+          "latencyMS": 16200,
+          "repeatIndex": 2
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}
