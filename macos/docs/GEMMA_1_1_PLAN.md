@@ -681,10 +681,12 @@ not AFM's ceiling.
         attachment.
       - **Stream E audio** — the cheap Gemma ASR + diarization to benchmark against WhisperKit behind
         `TranscriptionProvider`.
-      Setup when we get to it: exact id in `usesVLMLoadPath`; a per-repo `Gemma4TemplateFix.Heal`
-      (hash google/gemma-4-E2B-it's template; expect the same stale `2f1b4d75…` class); read its
-      `sliding_window`; ~3.6 GB download (Kev's call); ×1 shootout on vision + text kinds, scored as a
-      mobile / Mini-vision candidate, never against Lil.
+      **Auditionable as of 2026-10-09** (no weights downloaded): exact id in `usesVLMLoadPath`; a
+      `Gemma4TemplateFix.Heal` for the repo (it serves the same stale `2f1b4d75…`; google/gemma-4-E2B-it's
+      template hashes to E4B's `0a2c8073…` byte for byte, so the Heal shares E4B's vendored resource);
+      `config.json` says `sliding_window` 512, 35 layers, with vision + audio configs (pinned in
+      `MLXBrainProviderTests`). Still Kev's call: the ~3.6 GB download and the ×1 shootout on vision +
+      text kinds, scored as a mobile / Mini-vision candidate, never against Lil.
 
 ### Stream C, slice 1 — done (reference vectors)
 

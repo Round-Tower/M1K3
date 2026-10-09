@@ -1115,13 +1115,15 @@ extension MLXBrainProvider {
     /// drafter. e4b (uniform 4-bit, exact id) routes here too: it is model_type
     /// `gemma4` → MLXVLM.Gemma4, and upstream #384 (2026-07-15, in our pin) made
     /// its 18 KV-shared layers stop demanding v_proj — the 2026-07-14 keyNotFound
-    /// predates that. Other e4b conversions stay off (OptiQ has no embed_vision
-    /// projector or processor config). Qwen3.5-4B (exact id) is natively
+    /// predates that. e2b (exact id, 2026-10-09) is the same `gemma4`
+    /// architecture with vision + audio configs, routed for the mobile audition. Other e4b conversions
+    /// stay off (OptiQ has no embed_vision projector or processor config). Qwen3.5-4B (exact id) is natively
     /// multimodal: the conversion ships its vision tower and `qwen3_5` is
     /// MLXVLM.Qwen35 in our pin (2026-10-07). Unknown ids default to the LLM factory.
     static func usesVLMLoadPath(for configuration: ModelConfiguration) -> Bool {
         let name = configuration.name.lowercased()
         return name.contains("gemma-4-12b") || name == "mlx-community/gemma-4-e4b-it-4bit"
+            || name == "mlx-community/gemma-4-e2b-it-4bit"
             || name == "mlx-community/qwen3.5-4b-mlx-4bit"
     }
 

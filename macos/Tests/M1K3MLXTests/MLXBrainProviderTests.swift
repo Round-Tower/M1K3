@@ -437,6 +437,14 @@ struct MLXBrainProviderTests {
         #expect(!MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-OptiQ-4bit")
         ))
+        // e2b (uniform 4-bit, exact id): same model_type `gemma4` with vision + audio configs
+        // (config.json read 2026-10-09); auditionable as the mobile / Mini-vision candidate.
+        #expect(MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-e2b-it-4bit")
+        ))
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-e2b-it-8bit")
+        ))
         // Qwen3.5-4B (exact id): the conversion ships the vision tower (297 `vision_tower.*`
         // tensors, processor configs) and model_type `qwen3_5` is MLXVLM.Qwen35 in our pin.
         // Other Qwen3.5 sizes stay on the LLM path until a launch proves them.
@@ -478,6 +486,8 @@ struct MLXBrainProviderTests {
         #expect(!MLXBrainProvider(modelID: "mlx-community/Qwen3-4B-Instruct-2507-4bit").supportsImageInput)
         #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-e4b-it-4bit").supportsImageInput)
         #expect(!MLXBrainProvider(modelID: "mlx-community/gemma-4-e4b-it-OptiQ-4bit").supportsImageInput)
+        #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-e2b-it-4bit").supportsImageInput)
+        #expect(!MLXBrainProvider(modelID: "mlx-community/gemma-4-e2b-it-8bit").supportsImageInput)
         #expect(MLXBrainProvider(modelID: "mlx-community/Qwen3.5-4B-MLX-4bit").supportsImageInput)
         #expect(!MLXBrainProvider(modelID: "mlx-community/Qwen3.5-2B-4bit").supportsImageInput)
     }
@@ -583,6 +593,11 @@ struct MLXBrainProviderTests {
         #expect(MLXBrainProvider.slidingWindow(forModelID: e4b, configDirectory: dir) == 512)
         #expect(!MLXBrainProvider.prefixIsReusable(tokens: 600, modelID: e4b, configDirectory: dir))
         #expect(MLXBrainProvider.prefixIsReusable(tokens: 512, modelID: e4b, configDirectory: dir))
+
+        // E2B's published config.json (google + mlx-community, read 2026-10-09): 512, 35 layers.
+        let e2b = "mlx-community/gemma-4-e2b-it-4bit"
+        #expect(MLXBrainProvider.slidingWindow(forModelID: e2b, configDirectory: dir) == 512)
+        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 600, modelID: e2b, configDirectory: dir))
 
         try #"{"model_type":"gemma4_unified","text_config":{"model_type":"gemma4_unified_text","sliding_window":1024}}"#
             .write(to: dir.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
