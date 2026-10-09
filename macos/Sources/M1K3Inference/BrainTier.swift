@@ -64,6 +64,9 @@
 //  and rotating-cache notes now say hybrid: KVCacheSimple + MambaCache (MLXVLM Qwen35.newCache).
 //  Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 — `lilOwnPeakCapGB` (5 GB own peak on a
 //  16 GB Mac, MiB) signs the RAM cap the 1.1 bake-off applied by hand: 4.8 GB passes, E4B's 10.3 is out.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2), Confidence 0.85 — `imageReaders(platform:)` +
+//  `DevicePlatform.current`: the tiers Mini's image decline may name, derived from `supportsImageInput`
+//  and the platform floor (PR #526 review: "Switch to Big" went stale the day Lil learned to see).
 
 import Foundation
 
@@ -519,6 +522,26 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     public enum DevicePlatform: Sendable, Equatable {
         case mac
         case mobile
+
+        /// The platform this process runs on: the Mac, or the iOS/visionOS shell.
+        public static var current: DevicePlatform {
+            #if os(macOS)
+                .mac
+            #else
+                .mobile
+            #endif
+        }
+    }
+
+    /// The brains an image decline may send the user to: the MLX tiers that see AND can be
+    /// picked on `platform` (a finite floor — Big's infinite mobile floor keeps it off a phone).
+    /// Mini (AFM) is never listed: it is the brain that just failed to read the image. Derived
+    /// rather than written, so the decline can't say "Switch to Big" after Lil learned to see.
+    public static func imageReaders(platform: DevicePlatform) -> [BrainTier] {
+        allCases.filter { tier in
+            tier.mlxModelID != nil && tier.supportsImageInput
+                && tier.minimumPhysicalMemoryGB(platform: platform) != .infinity
+        }
     }
 
     /// Convenience: the recommendation for the machine we're running on.

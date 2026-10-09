@@ -26,6 +26,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-08 — Lil is Qwen3.5-4B (MLXVLM, sees) again, Kev's call on the
 //  post-#509/#511 evals; ~3,060 MB download. Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — pins the signed Lil RAM cap (5 GB own peak, MiB, inclusive).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — `imageReaders(platform:)`: the tiers an image decline
+//  may name, derived from `supportsImageInput` and the platform floor (PR #526 review). Confidence 0.85.
 //
 
 @testable import M1K3Inference
@@ -369,6 +371,22 @@ struct BrainTierTests {
             #expect(!BrainTier.mini.supportsImageInput)
             #expect(BrainTier.allCases.filter(\.supportsImageInput) == [.lil, .big])
         #endif
+    }
+
+    /// The brains an AFM image decline may send the user to: the MLX tiers that see AND can be
+    /// picked on this platform. Mini is the brain that just failed, so it is never named; Big's
+    /// infinite mobile floor keeps it off a phone's list. Derived, so the decline can't go stale
+    /// the way "Switch to Big" did once Lil (Qwen3.5-4B) learned to see (PR #526 review).
+    @Test("image readers: Lil and Big on the Mac, Lil alone on mobile, never Mini or pocket")
+    func imageReadersPerPlatform() {
+        #expect(BrainTier.imageReaders(platform: .mac) == [.lil, .big])
+        #expect(BrainTier.imageReaders(platform: .mobile) == [.lil])
+        for platform in [BrainTier.DevicePlatform.mac, .mobile] {
+            let readers = BrainTier.imageReaders(platform: platform)
+            #expect(!readers.contains(.mini))
+            #expect(!readers.contains(.pocket))
+            #expect(readers.filter(\.supportsImageInput) == readers)
+        }
     }
 
     // MARK: - Pocket: the Mini for devices without Apple Intelligence (2026-09-06)

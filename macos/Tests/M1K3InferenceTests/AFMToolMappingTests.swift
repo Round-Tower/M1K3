@@ -18,6 +18,9 @@
 //  `respond(generating:)` is the non-melt backstop, not this map.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-15, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `visionFailureReply(for:imageCount:…)`: the image-turn
+//  fallback per AFMFailure class (decline / resend / fresh chat), the brain names derived per platform
+//  (PR #526 second-pass review). Confidence 0.85.
 
 import Foundation
 @testable import M1K3Inference
@@ -146,5 +149,76 @@ struct AFMVisionTurnTests {
         #expect(text?.contains("couldn't read") == true)
         #expect(text?.contains("2 images") == true)
         #expect(AFMToolPrompt.visionDecline(from: [.user("hi", images: [])]) == nil)
+    }
+
+    // MARK: - The failure reply, per class (PR #526 second-pass review, finding 1)
+
+    /// One decline for every failure fit only the guardrail. A rate-limit, a daemon blip or a
+    /// timeout is answered by a resend, and a context overflow by a fresh chat — not by a brain
+    /// switch. Keyed on `AFMFailure.classify(error:)`, which both image paths already compute.
+    @Test("guardrail and unknown: the honest decline, naming the brains that can read images here")
+    func guardrailAndUnknownDecline() {
+        for failure in [AFMFailure.guardrailViolation, .unknown] {
+            let text = AFMToolPrompt.visionFailureReply(for: failure, imageCount: 1, platform: .mac)
+            #expect(text.contains("couldn't read the image"))
+            #expect(text.contains("won't guess"))
+            #expect(text.contains("Switch to Lil or Big, which can read images"))
+            #expect(!text.contains("try again"))
+        }
+    }
+
+    @Test("the named brains are derived per platform: a phone is sent to Lil alone")
+    func declineNamesThePlatformsReaders() {
+        let text = AFMToolPrompt.visionFailureReply(for: .guardrailViolation, imageCount: 2, platform: .mobile)
+        #expect(text.contains("2 images"))
+        #expect(text.contains("Switch to Lil, which can read images"))
+        #expect(!text.contains("Big"))
+    }
+
+    @Test("with no MLX reader on the platform the decline says so and names no brain")
+    func declineWithoutAReader() {
+        let text = AFMToolPrompt.visionFailureReply(for: .guardrailViolation, imageCount: 1, readers: [])
+        #expect(text.contains("won't guess"))
+        #expect(text.contains("No brain on this device can read images yet"))
+        #expect(!text.contains("Switch to"))
+        #expect(!text.contains("Lil"), "an empty reader list names nobody")
+    }
+
+    @Test("transient classes ask for a resend — no brain-switch advice")
+    func transientAsksForARetry() {
+        for failure in [AFMFailure.rateLimited, .daemonUnavailable, .timeout] {
+            let text = AFMToolPrompt.visionFailureReply(for: failure, imageCount: 1, platform: .mac)
+            #expect(text.contains("try again in a moment"), "\(failure)")
+            #expect(!text.contains("Switch to"), "\(failure)")
+            #expect(!text.contains("won't guess"), "\(failure)")
+        }
+    }
+
+    @Test("a context overflow sends the user to a fresh chat, not another brain")
+    func overflowAsksForAFreshChat() {
+        let text = AFMToolPrompt.visionFailureReply(for: .contextOverflow, imageCount: 1, platform: .mac)
+        #expect(text.contains("too long to read an image alongside"))
+        #expect(text.contains("start a fresh chat"))
+        #expect(!text.contains("Switch to"))
+        #expect(!text.contains("try again in a moment"))
+    }
+
+    @Test("every failure class has a reply, each ends a sentence, and the count rides the noun")
+    func everyClassReplies() {
+        for failure in AFMFailure.allCases {
+            let one = AFMToolPrompt.visionFailureReply(for: failure, imageCount: 1, platform: .mac)
+            let three = AFMToolPrompt.visionFailureReply(for: failure, imageCount: 3, platform: .mac)
+            #expect(!one.isEmpty && one.hasSuffix("."), "\(failure)")
+            #expect(!one.contains("3 images") && !three.contains(" image you"), "\(failure)")
+        }
+    }
+
+    @Test("the transcript decline (visionDecline) is the guardrail reply on this platform")
+    func visionDeclineIsTheGuardrailReply() {
+        let messages: [ToolMessage] = [.user("total?", images: [image])]
+        let expected = AFMToolPrompt.visionFailureReply(
+            for: .guardrailViolation, imageCount: 1, platform: BrainTier.DevicePlatform.current
+        )
+        #expect(AFMToolPrompt.visionDecline(from: messages) == expected)
     }
 }

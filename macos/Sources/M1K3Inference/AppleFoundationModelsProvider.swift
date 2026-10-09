@@ -69,6 +69,8 @@
 //  (AFMToolPrompt.visionDecline) instead of confabulating. Confidence 0.7.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — continueToolTurn takes the neutral, tool-free image shape
 //  (AFMToolPrompt.visionTurn) like the native session; the decline is its failure fallback. Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (3) — continueToolTurn's image fallback is keyed on the failure
+//  class (AFMToolPrompt.visionFailureReply): decline, resend or fresh chat, same as the native session. Confidence 0.8.
 import Foundation
 import M1K3LogCore
 import os
@@ -658,8 +660,16 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
             // model that chose to say nothing, and this backstop deliberately
             // manufactures exactly that shape.
             logFailure(error, streaming: false)
-            // An image turn that still fails gets the honest decline, never a guess.
-            if vision != nil, let decline = AFMToolPrompt.visionDecline(from: messages) { return .text(decline) }
+            // An image turn that still fails gets an honest reply keyed on the failure
+            // class (AFMToolPrompt.visionFailureReply), never a guess. The agent records
+            // it as the model's words, as the native session does — see that file's note.
+            if vision != nil {
+                return .text(AFMToolPrompt.visionFailureReply(
+                    for: AFMFailure.classify(error: error),
+                    imageCount: AFMToolPrompt.latestTurnImageCount(in: messages),
+                    platform: .current
+                ))
+            }
             return .text("")
         }
     }

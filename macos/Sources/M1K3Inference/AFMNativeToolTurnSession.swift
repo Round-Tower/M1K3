@@ -37,6 +37,12 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — Mini SEES: an image turn runs the neutral, tool-free
 //  shape (AFMToolPrompt.visionTurn — persona and tools both defeat AFM vision, seven probe arms); the
 //  decline is the fallback when that turn still fails. Live-probed, not unit-tested here. Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (3) — the fallback is keyed on the failure class
+//  (AFMToolPrompt.visionFailureReply, pure and pinned): the decline only for the guardrail and the
+//  unknown, a resend for a rate limit / daemon blip / timeout, a fresh chat for an overflow. The reply is
+//  RECORDED in the transcript as the model's words (`recordGenerated`) on purpose: later turns then see
+//  M1K3 saying it couldn't read the image, which is the truth of the turn — a transcript that hid it
+//  would let the next answer guess at a picture nobody read. Don't "fix" that. Confidence 0.8.
 
 #if compiler(>=6.2)
     import Foundation
@@ -179,13 +185,17 @@
                     \(preview, privacy: .public)
                     """
                 )
-                // An image turn that still fails (the guardrail firing on the picture
-                // itself, or anything else) gets the honest decline — never a guess,
-                // never an empty bubble. Text turns keep the empty conclusion.
-                if vision != nil, let decline = AFMToolPrompt.visionDecline(from: snapshot) {
-                    transcript.withLock { $0.recordGenerated(.text(decline)) }
-                    onToken(decline)
-                    return .text(decline)
+                // An image turn that still fails gets an honest reply keyed on the
+                // failure class (the guardrail's decline, a resend for a transient, a
+                // fresh chat for an overflow) — never a guess, never an empty bubble.
+                // Text turns keep the empty conclusion.
+                if vision != nil {
+                    let reply = AFMToolPrompt.visionFailureReply(
+                        for: failure, imageCount: AFMToolPrompt.latestTurnImageCount(in: snapshot), platform: .current
+                    )
+                    transcript.withLock { $0.recordGenerated(.text(reply)) }
+                    onToken(reply)
+                    return .text(reply)
                 }
                 return .text("")
             }

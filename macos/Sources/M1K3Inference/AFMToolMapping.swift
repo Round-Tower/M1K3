@@ -32,6 +32,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — `visionTurn(from:)`: the shape AFM vision accepts (neutral
 //  instructions, NO tools, a steer — the only one of seven probe arms that read the receipt). The decline is
 //  now the failure fallback only. Confidence 0.75 — one fixture, one device; voice and tools traded, named.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (3) — `visionFailureReply(for:imageCount:…)`: the fallback by
+//  AFMFailure class (guardrail/unknown decline, transient resend, overflow fresh chat), the brain names
+//  derived from `BrainTier.imageReaders` (PR #526 second-pass review). Confidence 0.85.
 //  Review: Kev + claude-opus-4-6, 2026-09-16 — image support: on macOS 27+ images
 //  ride the Prompt via Attachment(imageURL:) and the "cannot view" text note is
 //  suppressed; `imageURLs(from:)` extracts attached URLs for the provider.
@@ -226,12 +229,41 @@ public enum AFMToolPrompt {
     /// The honest FALLBACK when the guardrail still refuses an image turn in the neutral
     /// shape: Mini says it could not read the image rather than guessing (the in-app path
     /// confabulated for ~40 s before 2026-10-09). `nil` when the latest user turn has no
-    /// image. Not the first response any more — `visionTurn(from:)` is.
+    /// image. Not the first response any more — `visionTurn(from:)` is. The guardrail
+    /// reply for this platform; `visionFailureReply(for:…)` is the per-class form the
+    /// image paths use.
     public static func visionDecline(from messages: [ToolMessage]) -> String? {
         let count = latestTurnImageCount(in: messages)
         guard count > 0 else { return nil }
-        let noun = count == 1 ? "image" : "\(count) images"
-        return "I couldn't read the \(noun) you attached on this brain, so I won't guess at what's in it. "
-            + "Switch to Big, which can read images, and send it again."
+        return visionFailureReply(for: .guardrailViolation, imageCount: count, platform: .current)
+    }
+
+    /// What Mini says when its image turn throws, by failure class (PR #526 review): one
+    /// decline fit only the guardrail. A rate limit, a daemon blip or a timeout is answered by
+    /// a resend, not a brain switch; a context overflow by a fresh chat — the conversation plus
+    /// the image is what no longer fits. Guardrail and unknown get the decline, naming the
+    /// brains that can read images on `platform` (`BrainTier.imageReaders`).
+    public static func visionFailureReply(
+        for failure: AFMFailure, imageCount: Int, platform: BrainTier.DevicePlatform
+    ) -> String {
+        visionFailureReply(for: failure, imageCount: imageCount, readers: BrainTier.imageReaders(platform: platform))
+    }
+
+    /// The same, with the readers supplied — the "no MLX brain sees here" case is a list, not
+    /// a platform, so it stays testable without inventing one.
+    public static func visionFailureReply(for failure: AFMFailure, imageCount: Int, readers: [BrainTier]) -> String {
+        let noun = imageCount == 1 ? "image" : "\(max(imageCount, 2)) images"
+        switch failure {
+        case .rateLimited, .daemonUnavailable, .timeout:
+            return "I couldn't read the \(noun) you attached just now — try again in a moment."
+        case .contextOverflow:
+            return "This conversation is too long to read an image alongside it — "
+                + "start a fresh chat and send the \(noun) again."
+        case .guardrailViolation, .unknown:
+            let decline = "I couldn't read the \(noun) you attached on this brain, so I won't guess at what's in it. "
+            guard !readers.isEmpty else { return decline + "No brain on this device can read images yet." }
+            let names = readers.map(\.displayName).joined(separator: " or ")
+            return decline + "Switch to \(names), which can read images, and send it again."
+        }
     }
 }
