@@ -64,6 +64,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-06 — `vision` kind + `images` on the fixture (GEMMA_1_1_PLAN
 //  Stream A): 16 fixtures over 13 images drawn by tools/eval/make_vision_fixtures.swift (ours, answers
 //  known by construction). Audio waits for Stream E — no unused field ahead of it. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `alsoCallTools` + three `tool-chain-*` fixtures (#510/#512):
+//  two read-only tools in sequence, both pinned, so toolChain is measurable. Confidence 0.75.
 
 import Foundation
 
@@ -198,6 +200,11 @@ public struct EvalExpectation: Sendable, Equatable {
     public let mustComply: Bool
     /// The brain must invoke this tool by name (tool-use fixtures).
     public let mustCallTool: String?
+    /// Further tools the brain must ALSO invoke (chain fixtures: the honest answer needs two
+    /// read-only tools in sequence). Each scores its own "calls X" check, so a brain that
+    /// stops after the first fails the second check instead of banking a pass. Order is
+    /// not pinned — the two reads are independent.
+    public let alsoCallTools: [String]
     /// The answer must carry at least one citation that validates against the
     /// retrieved corpus (grounded-Q fixtures).
     public let mustCite: Bool
@@ -229,6 +236,7 @@ public struct EvalExpectation: Sendable, Equatable {
         mustRefuse: Bool = false,
         mustComply: Bool = false,
         mustCallTool: String? = nil,
+        alsoCallTools: [String] = [],
         mustCite: Bool = false,
         mustNotCite: Bool = false,
         minChars: Int? = nil,
@@ -246,6 +254,7 @@ public struct EvalExpectation: Sendable, Equatable {
         self.mustRefuse = mustRefuse
         self.mustComply = mustComply
         self.mustCallTool = mustCallTool
+        self.alsoCallTools = alsoCallTools
         self.mustCite = mustCite
         self.mustNotCite = mustNotCite
         self.minChars = minChars
@@ -844,6 +853,27 @@ public enum ChatEvalFixtures {
             id: "tool-recent-busiest", kind: .toolUse,
             prompt: "What were the busiest days this week?",
             expectation: .init(mustCallTool: "recent_activity")
+        ),
+        // 2026-10-09 (#510/#512): chains. The honest answer needs TWO read-only tools, so these
+        // score the cascade's toolChain flag (and any brain that can sequence calls natively).
+        // Both tools are pinned; a brain that answers after one call fails the second check.
+        .init(
+            id: "tool-chain-notes-web", kind: .toolUse,
+            prompt: "Find my note about the Cork trip, then search the web for the train times "
+                + "from Dublin to Cork.",
+            expectation: .init(mustCallTool: "search_knowledge", alsoCallTools: ["web_search"])
+        ),
+        .init(
+            id: "tool-chain-activity-web", kind: .toolUse,
+            prompt: "Review what I've been up to this week, and also search the web for the newest "
+                + "Claude model.",
+            expectation: .init(mustCallTool: "recent_activity", alsoCallTools: ["web_search"])
+        ),
+        .init(
+            id: "tool-chain-time-fact", kind: .toolUse,
+            prompt: "Tell me the current date and time on this Mac, and look up the founding year "
+                + "of the city of Cork from a reference source.",
+            expectation: .init(mustCallTool: "datetime", alsoCallTools: ["lookup_fact"])
         ),
     ]
 

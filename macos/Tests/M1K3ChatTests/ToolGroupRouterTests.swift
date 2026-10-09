@@ -11,6 +11,7 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75. Prior: Unknown.
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — schedule-verb cases, one-vector-per-turn pin (#512).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
 
 import Foundation
 @testable import M1K3Chat
@@ -145,7 +146,8 @@ struct ToolGroupRouterFixtureTests {
         let wrong = ChatEvalFixtures.toolUse.compactMap { fixture -> String? in
             guard let expected = fixture.expectation.mustCallTool,
                   let pick = ToolGroupRouter.pick(for: fixture.prompt, embed: embedder.vector),
-                  pick.tool != expected
+                  pick.tool != expected,
+                  !fixture.expectation.alsoCallTools.contains(pick.tool)
             else { return nil }
             return "\(fixture.id) → \(pick.tool)"
         }

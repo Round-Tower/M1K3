@@ -18,6 +18,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85 — the glued-marker gap pinned (#497
 //  review): a letter edge needs a boundary ("listUSER:" passes), a punctuation edge never does.
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.9 — decimal-aware digit edges pinned both ways.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
 
 @testable import M1K3Eval
 import Testing
@@ -625,6 +626,27 @@ struct ChatEvalScorerTests {
         #expect(check(called, "calls search_knowledge")?.outcome == .pass)
         #expect(check(wrong, "calls search_knowledge")?.outcome == .fail)
         #expect(check(wrong, "calls search_knowledge")?.detail.contains("datetime") == true)
+    }
+
+    @Test("a two-tool expectation pins BOTH tools — one call alone is a fail, not a banked pass")
+    func chainedToolCalls() {
+        let exp = EvalExpectation(mustCallTool: "search_knowledge", alsoCallTools: ["web_search"])
+        func run(_ calls: [String]) -> ChatEvalScore {
+            ChatEvalScorer.score(
+                fixture: fixture(.toolUse, exp),
+                observation: EvalObservation(rawText: "…", toolCalls: calls)
+            )
+        }
+        let both = run(["search_knowledge", "web_search"])
+        #expect(check(both, "calls search_knowledge")?.outcome == .pass)
+        #expect(check(both, "calls web_search")?.outcome == .pass)
+        let first = run(["search_knowledge"])
+        #expect(check(first, "calls search_knowledge")?.outcome == .pass)
+        #expect(check(first, "calls web_search")?.outcome == .fail)
+        #expect(check(first, "calls web_search")?.detail.contains("search_knowledge") == true)
+        let none = run([])
+        #expect(check(none, "calls web_search")?.outcome == .fail)
+        #expect(check(none, "calls search_knowledge")?.outcome == .fail)
     }
 
     @Test("citation check needs at least one valid citation")
