@@ -19,12 +19,19 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-04, Confidence 0.8 (pure and pinned;
 //  whether each brain repeats it faithfully is the open-chat eval's call).
 //  Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#486) — `EgressFacts.searchProvider` is the one
+//  name for the web search backend; the clause reads it, and EgressDisclosureTests pins it equal
+//  to `WebSearchTool.providerName` (this module cannot link the tools). Confidence 0.85.
 //
 
 import Foundation
 
 /// The settings that decide what can leave the device on a turn.
 public struct EgressFacts: Sendable, Equatable {
+    /// Where a web search query goes. The tool (`WebSearchTool.providerName`) is the other
+    /// reader; the test pins the two equal so a backend swap cannot leave this stale (#486).
+    public static let searchProvider = "DuckDuckGo"
+
     /// The web tools are in the palette: the Settings switch AND the age band
     /// (`webToolsAllowed`) — a child's session withholds them whatever the switch says.
     public var webSearch: Bool
@@ -51,7 +58,7 @@ public enum EgressDisclosure {
         var answer: [String] = []
         answer.append(
             facts.webSearch
-                ? "Web searches do: the query I write goes to DuckDuckGo and can carry words from our chat, "
+                ? "Web searches do: the query I write goes to \(EgressFacts.searchProvider) and can carry words from our chat, "
                 + "and Wikipedia lookups and pages I read are fetched."
                 : "Web search is off."
         )

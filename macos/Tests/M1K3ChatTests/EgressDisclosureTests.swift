@@ -7,8 +7,13 @@
 //  repeated it — with web search on by default and Private Cloud Compute a pick.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-04, Confidence 0.85. Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#486) — the search provider's name is ONE constant
+//  (`EgressFacts.searchProvider`), pinned equal to `WebSearchTool.providerName` across the module
+//  seam (M1K3Chat cannot link the tools; same pattern as SelfQueryGateTests), so a backend swap
+//  fails here instead of the clause going stale.
 //
 
+import M1K3AgentTools
 @testable import M1K3Chat
 import Testing
 
@@ -26,6 +31,16 @@ struct EgressDisclosureTests {
         #expect(text.contains("words from our chat"))
         #expect(text.contains("Wikipedia"))
         #expect(!text.contains("Web search is off"))
+    }
+
+    /// #486: the clause used to hard-code "DuckDuckGo". The tool owns the name; the clause reads
+    /// the one constant; this pin is the only place both modules meet.
+    @Test("the clause names the web search tool's provider, through one constant")
+    func searchProviderIsOneName() {
+        #expect(EgressFacts.searchProvider == WebSearchTool.providerName)
+        #expect(EgressFacts.searchProvider == "DuckDuckGo")
+        #expect(line(web: true).contains("goes to \(EgressFacts.searchProvider)"))
+        #expect(WebSearchTool().description.contains(WebSearchTool.providerName))
     }
 
     @Test("web search off says so")
