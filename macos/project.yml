@@ -23,6 +23,10 @@
 # Review: Kev + claude-opus-5.5, 2026-09-23 — NSAudioCaptureUsageDescription for the call recorder's Core Audio process tap
 # (it replaced ScreenCaptureKit, so the app no longer asks for Screen Recording); the context-senses comment now says the
 # TCC dialog fires as the toggle goes on. Confidence 0.85.
+# Review: Kev + claude-fable-5.1, 2026-10-09 (#479) — the usage strings drop "Nothing leaves" where it was false:
+# calendar and location ground answers, and a web search M1K3 writes (on by default) can carry them; the iOS
+# local-network string now describes the connection, not the app. Mic and call-audio strings stay — transcription
+# is on-device and the audio really does not leave. Confidence 0.85.
 
 name: M1K3
 
@@ -322,7 +326,7 @@ targets:
         # Call recording (consent-gated, user-started): the far end is a Core
         # Audio process tap — System Audio Recording, never Screen Recording
         # (App Review 2026-09-23; SystemAudioTap.swift).
-        NSAudioCaptureUsageDescription: "When you record a call, M1K3 captures the other side's audio so it can transcribe the call on your Mac. Nothing leaves your Mac."
+        NSAudioCaptureUsageDescription: "When you record a call, M1K3 captures the other side's audio so it can transcribe the call on your Mac. The audio never leaves your Mac."
         # Brain at Home (default OFF): advertising the paired-devices brain
         # service on the local network (Bonjour) — macOS surfaces a local-network
         # consent dialog on first use.
@@ -331,11 +335,11 @@ targets:
           - "_m1k3._tcp"
         # The context senses (default OFF, docs/CONTEXT_TOOLS_PLAN.md): TCC
         # prompts fire as the in-app toggle is switched on (never before it).
-        NSCalendarsFullAccessUsageDescription: "M1K3 reads your next few events (titles and times) to ground answers — only while the Calendar context toggle is on. Nothing leaves your Mac."
+        NSCalendarsFullAccessUsageDescription: "M1K3 reads your next few events (titles and times) to ground answers — only while the Calendar context toggle is on. They stay on this Mac, except that a web search M1K3 runs can carry words from them — web search is a switch in Settings."
         # Both location keys: requestWhenInUseAuthorization documents the
         # WhenInUse key on macOS; the general key is belt-and-braces (audit S3).
-        NSLocationUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. Nothing leaves your Mac."
-        NSLocationWhenInUseUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. Nothing leaves your Mac."
+        NSLocationUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. It stays on this Mac, except that a web search M1K3 runs can carry it — web search is a switch in Settings."
+        NSLocationWhenInUseUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. It stays on this Mac, except that a web search M1K3 runs can carry it — web search is a switch in Settings."
         # Export compliance: M1K3 uses only standard, exempt encryption (HTTPS/TLS
         # for on-device model-weight downloads). Declaring this up front skips the
         # per-submission encryption prompt in App Store Connect and prevents an
@@ -423,7 +427,7 @@ targets:
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
-        NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. Nothing leaves your network."
+        NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. That connection stays on your own network, encrypted."
 
   # visionOS sibling — same shell, same portable graph, rendered spatially as a
   # window. The Kokoro visionOS gap (no xrOS ONNX slice) is RESOLVED as of
@@ -468,7 +472,7 @@ targets:
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
-        NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. Nothing leaves your network."
+        NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. That connection stays on your own network, encrypted."
 
   # App Store screengrab suites (marketing/app-store/CAPTURE-PLAN.md): one XCUITest
   # per plate, launching the app under M1K3_SCREENGRAB=1 with the plate's launch

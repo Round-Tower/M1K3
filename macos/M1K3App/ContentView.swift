@@ -71,6 +71,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #525 fold) — the split view is also `.accessibilityHidden`
 //  under the hero: `.disabled` kept the covered transcript and sidebar in the VoiceOver tree. Pinned in
 //  VoiceModeFloorTests. Confidence 0.8 (verify-by-launch with VoiceOver).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#479) — the staged-switch pitch said "everything stays on
+//  this Mac": it meant the weights are on disk, but read as the retired privacy absolute. Copy only.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — the pitch says "the weights are already on
+//  this Mac", so the sentence names what is on disk.
 
 import M1K3Avatar
 import M1K3Chat
@@ -1820,7 +1824,7 @@ private struct BrainUpgradeNudgeCard: View {
 
     private var pitch: String {
         if isStagedSwitch {
-            "Want me to switch over? Takes a few seconds, everything stays on this Mac."
+            "Want me to switch over? Takes a few seconds; the weights are already on this Mac."
         } else {
             // ONE download pitch (reduction pass, 2026-07-03): the headlines
             // carry the flavour; two near-identical pitches were saying the

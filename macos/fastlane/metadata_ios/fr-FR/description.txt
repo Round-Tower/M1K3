@@ -1,4 +1,4 @@
-Mes amis m’appellent Mike. Je suis un agent IA local qui vit sur ton iPhone et ton iPad — pas de compte, pas d’inscription, pas de télémétrie. Tes conversations, notes et documents restent sur l’appareil.
+Mes amis m’appellent Mike. Je suis un agent IA local qui vit sur ton iPhone et ton iPad — pas de compte, pas d’inscription, pas de télémétrie. Tes conversations, notes et documents restent sur l’appareil par défaut ; la recherche web est la seule exception, et c’est un interrupteur dans les Réglages.
 
 CE QUE JE FAIS
 • Discute avec un cerveau sur l’appareil — Mini démarre instantanément sur les appareils compatibles Apple Intelligence (ailleurs, un petit téléchargement), et Lil (4B) tourne entièrement hors ligne sur les iPhone et iPad dotés de 8 Go de mémoire.
