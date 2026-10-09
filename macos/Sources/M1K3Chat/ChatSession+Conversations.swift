@@ -12,9 +12,12 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.9 (every transition
 //  and guard test-pinned incl. the title/switch race). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — a delete reports the discarded attachments
+//  (`onAttachmentsDiscarded`), gated exactly like the file discard, so Photo memories cascade.
 //
 
 import Foundation
+import M1K3Inference
 
 public extension ChatSession {
     /// Summaries for the drawer, most recent first. Reads through the session
@@ -71,19 +74,29 @@ public extension ChatSession {
             // Both directions are test-pinned (activeDeleteSweepsFilesEvenIf
             // RowDeleteFails / failedDeleteKeepsAttachmentFiles).
             AttachmentStore.discard(attachments)
+            reportDiscarded(attachments)
             beginConversation(id: UUID(), messages: [], title: nil)
         } else {
             // Non-active: discard ONLY if the row actually went. A failed DB
             // delete leaves the conversation listed — its thumbnails must not
             // be broken by an eager file sweep (the inverse privacy failure:
             // row survives, photo gone).
-            if rowDeleted { AttachmentStore.discard(attachments) }
+            if rowDeleted {
+                AttachmentStore.discard(attachments)
+                reportDiscarded(attachments)
+            }
             noteHistoryChanged()
         }
     }
 }
 
 extension ChatSession {
+    /// The delete cascade for caption memory -- only when something went.
+    func reportDiscarded(_ attachments: [ImageAttachment]) {
+        guard !attachments.isEmpty else { return }
+        onAttachmentsDiscarded?(attachments)
+    }
+
     /// One mutation point for "the transcript now shows conversation X".
     /// Internal — the main file's stored properties stay private(set) to
     /// everything except these two files.

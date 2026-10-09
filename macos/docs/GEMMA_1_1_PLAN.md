@@ -136,6 +136,21 @@ Goal: images, screenshots and audio live in the knowledge graph beside text.
 - [ ] UI: image results render as thumbnails in grounded answers; citations still work.
 - [ ] Privacy copy: everything on-device; nothing new leaves the machine. PCC paths unchanged (ADR 0010).
 
+#### Stream D, 1.1 slice: caption memory (built 2026-10-09, branch `feat/caption-memory`, not yet merged or launched)
+
+The part of Stream D that needs **no new embedder and no migration**. Challenger-shaped: opt-in, reference-only, neutral.
+
+- **Trigger:** "Remember this photo" under a sent image, on Mac and iOS. The tap is the consent. Never automatic, never "when idle" (a caption queues on the model's actor ahead of the next turn, and no idle scheduler exists).
+- **Brains:** MLX Lil and Big only, on the brain already selected (never load one to caption). Mini and Pocket are refused by name: "Switch to Lil to remember photos."
+- **Generation:** `ImageCaptioning` capability on `MLXBrainProvider` (neutral instructions only, thinking forced off, 220 tokens), run under the same `withInstructions` + `backgroundUtility` wrapper the call summaries use. Forwarded by `SwappableInferenceProvider` and the app's `RuntimeInferenceProvider`.
+- **Storage:** string-backed `KnowledgeKind.image` ("Photo"), `source: .captioned`, `sourceRef = "attachment:<filename>"` (filename only; re-send dedupes; the delete cascade keys on it). In `groundingDocumentKinds`, in both launch sweeps (one `KnowledgeKind.launchSweepKinds`, pinned against `allStaticKinds`), never donated to Spotlight, withheld from MCP list/search/get.
+- **Delete:** deleting a chat forgets its Photo memories (`ChatSession.onAttachmentsDiscarded` -> `PhotoMemory.forget`), gated like the file discard.
+- **UI:** the row shows the caption head (first 60 characters), a `photo` icon, no quarantine button (restore re-tags to `.document`, which is donatable). Privacy line in the Documents empty state: descriptions stay on this device.
+
+Still waits for Stream C (an image embedder) and the rest of Stream D: `modality` column and thumbnail/blob reference (the migration), text-to-image retrieval beyond caption words, per-modality floors, thumbnails inside grounded answers, lazy vision-encoder loading, automatic or idle captioning (needs a scheduler and cancellation checks), Mini/AFM captioning (needs its own summary-style AFM instance), "also forgets N photos" in the delete confirmation, a Mac Photo row that shows the full caption, and a vision eval for caption accuracy (42/48 means roughly 1 caption in 8 can be wrong; the row shows the caption so the user can delete it).
+
+Verify-by-launch owed: attach `whiteboard-pricing.png` on Lil, tap Remember, ask "the whiteboard photo about pricing", delete the chat and confirm the Photo row is gone, and feel the next turn while a caption runs.
+
 ### Stream E — Big hears: Gemma 12B audio (batch)
 
 - [ ] Spike: feed a WAV through MLXVLM `UserInput` audio to gemma-4-12B. Upstream state 2026-10-06: #400 (Gemma4Unified audio + video in the processor) and #392 (native audio encoder) both **open** — expect to carry or wait. Does mlx-swift-lm's `Gemma4Unified` wire the audio embedder end to end? Measure length cap, RAM, latency.
@@ -774,3 +789,5 @@ dependency; it does NOT reuse Gemma4Text — the PLE differs):
 - EmbeddingGemma 2: [Google blog](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/) · [developer guide](https://developers.googleblog.com/en/embeddinggemma-2-the-developer-guide/) · [MarkTechPost](https://www.marktechpost.com/2026/10/06/google-deepmind-releases-embeddinggemma-2-a-740m-open-multimodal-embedding-model-built-on-gemma-4/) · [AI Weekly](https://aiweekly.co/alerts/google-ships-embeddinggemma-2-740m-multimodal-embedder-apache-20) · [Sentence Transformers guide](https://ai.google.dev/gemma/docs/embeddinggemma/inference-embeddinggemma-with-sentence-transformers)
 - Gemma 4: [July 2026 refresh](https://runaihome.com/blog/gemma-4-july-2026-flash-attention-4-prefill-ollama-update/) · [releases](https://ai.google.dev/gemma/docs/releases) · [model card](https://ai.google.dev/gemma/docs/core/model_card_4) · [12B intro](https://blog.google/innovation-and-ai/technology/developers-tools/introducing-gemma-4-12b/) · [12B on DataNorth](https://datanorth.ai/news/google-releases-gemma-4-12b)
 - Qwen3.5 small: [MarkTechPost](https://www.marktechpost.com/2026/03/02/alibaba-just-released-qwen-3-5-small-models-a-family-of-0-8b-to-9b-parameters-built-for-on-device-applications/) · [mlx-swift-lm releases](https://github.com/ml-explore/mlx-swift-lm/releases)
+
+Review: Kev + claude-fable-5.1, 2026-10-09 — Stream D's 1.1 slice (caption memory) written up above; the migration, the image embedder and the thumbnails wait for Stream C.

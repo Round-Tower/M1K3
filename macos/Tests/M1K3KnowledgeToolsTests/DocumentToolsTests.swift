@@ -5,6 +5,8 @@
 //  ListDocumentsTool + GetDocumentTool over a real store.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — `excludedKinds` pins: the MCP
+//  palette's list/get never list or fetch a Photo (title match included); the local default still does.
 
 import Foundation
 import M1K3Knowledge
@@ -29,6 +31,53 @@ private func seededStore() throws -> KnowledgeStore {
         embeddings: nil
     )
     return store
+}
+
+/// The seeded store plus one Photo whose title (the caption's head) matches "whiteboard".
+private func storeWithPhoto() async throws -> KnowledgeStore {
+    let store = try seededStore()
+    try await ImageCaptionIngester(store: store)
+        .ingest(caption: "A whiteboard listing the hydraulic pricing tiers.", attachmentFilename: "W.jpg")
+    return store
+}
+
+struct DocumentToolsExclusionTests {
+    @Test("list_documents with excludedKinds never lists a Photo; the local default still does")
+    func listWithholdsPhotos() async throws {
+        let store = try await storeWithPhoto()
+        let withheld = try await ListDocumentsTool(store: store, excludedKinds: KnowledgeKind.withheldFromMCP)
+            .execute(input: [:]).output
+        #expect(!withheld.contains("whiteboard"))
+        #expect(!withheld.contains("[image]"))
+        #expect(withheld.contains("Plant Notes [document]"))
+        let local = try await ListDocumentsTool(store: store).execute(input: [:]).output
+        #expect(local.contains("A whiteboard listing the hydraulic pricing tiers. [image]"))
+    }
+
+    @Test("list_documents on a store holding only Photos reads as empty to the MCP palette")
+    func listPhotoOnlyStoreIsEmpty() async throws {
+        let store = try KnowledgeStore()
+        try await ImageCaptionIngester(store: store)
+            .ingest(caption: "A photo of a whiteboard.", attachmentFilename: "W.jpg")
+        let out = try await ListDocumentsTool(store: store, excludedKinds: KnowledgeKind.withheldFromMCP)
+            .execute(input: [:]).output
+        #expect(out.contains("No stored knowledge"))
+    }
+
+    @Test("get_document with excludedKinds never fetches a Photo by title match; the local default still does")
+    func getWithholdsPhotos() async throws {
+        let store = try await storeWithPhoto()
+        let withheld = try await GetDocumentTool(store: store, excludedKinds: KnowledgeKind.withheldFromMCP)
+            .execute(input: ["title": "whiteboard"]).output
+        #expect(withheld.contains("No document matching"))
+        #expect(!withheld.contains("pricing tiers"))
+        // The excluded Photo must not shadow a real document either.
+        let doc = try await GetDocumentTool(store: store, excludedKinds: KnowledgeKind.withheldFromMCP)
+            .execute(input: ["title": "plant"]).output
+        #expect(doc.contains("hydraulic seal failed"))
+        let local = try await GetDocumentTool(store: store).execute(input: ["title": "whiteboard"]).output
+        #expect(local.contains("pricing tiers"))
+    }
 }
 
 struct ListDocumentsToolTests {

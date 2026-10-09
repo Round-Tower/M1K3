@@ -24,6 +24,8 @@
 //  code gated on WHICH brain serves (the Mini tool router) sees through this façade. Without it
 //  the router never ran on the Mac (build 373). Compile-checked; verify-by-launch owed via the
 //  `tool router:` notice on a Mini turn.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — forwards `ImageCaptioning` (caption memory), the app mirror of
+//  SwappableInferenceProvider's forward.
 
 import Foundation
 import M1K3Inference
@@ -195,5 +197,17 @@ extension RuntimeInferenceProvider: TurnWarmable {
 extension RuntimeInferenceProvider: RawCompletionProviding {
     func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
         (active as? RawCompletionProviding)?.generateRawStreaming(prompt: prompt, maxTokens: maxTokens)
+    }
+}
+
+/// Forwards neutral image captioning (caption memory) to the routed backend --
+/// same every-façade-forwards rule as its siblings above. Miss it and the
+/// `as? ImageCaptioning` cast fails silently on the Mac.
+extension RuntimeInferenceProvider: ImageCaptioning {
+    func caption(image: ImageAttachment, prompt: String) async throws -> String {
+        guard let captioner = active as? ImageCaptioning else {
+            throw InferenceError.generationFailed("active backend cannot caption images")
+        }
+        return try await captioner.caption(image: image, prompt: prompt)
     }
 }

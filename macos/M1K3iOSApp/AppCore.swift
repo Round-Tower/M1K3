@@ -65,6 +65,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — egressClauseProvider (#482): web search + the Home brain
 //  (a live `homeBrainLive` mirror of `homeBrainActive` — the persisted flag missed a phone with no local
 //  brain). No PCC on iOS. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
+//  Compile-checked; verify-by-launch owed.
 
 import Foundation
 import M1K3Agent
@@ -105,6 +107,13 @@ final class AppCore {
     let embedder: any EmbeddingService
     let ingester: DocumentIngester
     let chat: ChatSession
+    /// "Remember this photo" (caption memory): the same shared model as the Mac. Lazy because its
+    /// closures read `self`; the provider is the swappable slot (it forwards ImageCaptioning).
+    @ObservationIgnored lazy var photoMemory = PhotoMemory(
+        provider: { [unowned self] in activeProvider },
+        tier: { [unowned self] in selectedBrain },
+        ingester: ImageCaptionIngester(store: store, embedder: embedder)
+    )
     /// The pixel-cube companion, shared verbatim with the Mac app (AvatarView).
     let avatar = AvatarController()
     /// The App Store rating ledger (ReviewPromptPolicy's facts). The phone has
@@ -417,6 +426,10 @@ final class AppCore {
             ),
             autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() }
         )
+
+        // Caption memory: a deleted chat forgets its Photo memories.
+        photoMemory.onChange = { [weak self] in self?.refreshCounts() }
+        chat.onAttachmentsDiscarded = { [weak self] in self?.photoMemory.forget($0) }
 
         refreshCounts()
         // Brain at Home: restore a paired Mac, and re-point the slot at it if

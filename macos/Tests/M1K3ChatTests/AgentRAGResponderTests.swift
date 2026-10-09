@@ -19,12 +19,18 @@
 //  a genuine user memory alongside it still does, using the live note's own title/text.
 //  Review: Kev + claude-opus-5.5, 2026-10-05, Confidence 0.85 — #482: the inverse pin — Kev's
 //  launch-film episode ("Kev and Claude made M1K3's launch film", backticked render line) renders.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — excludedKinds pins: the MCP-shaped responder never surfaces a
+//  Photo (source, prompt, citation); the default responder still grounds on it.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — the end-to-end leak the review found:
+//  a scripted model calling get_document + list_documents on a Photo-bearing store through the MCP-shaped
+//  palette never sees the caption in an observation; the same script on the local palette does.
 
 import Foundation
 import M1K3Agent
 @testable import M1K3Chat
 import M1K3Inference
 import M1K3Knowledge
+import M1K3KnowledgeTools
 import Synchronization
 import Testing
 
@@ -394,6 +400,122 @@ struct AgentRAGResponderTests {
         #expect(!sources.isEmpty)
         let firstPrompt = try #require(provider.allPrompts.first)
         #expect(firstPrompt.contains("fixed tool search_knowledge"))
+    }
+
+    // MARK: - Excluded kinds (the MCP withhold; caption memory 2026-10-09)
+
+    /// The seeded store plus one Photo caption that shares the question's words.
+    private func storeWithPhoto() async throws -> (KnowledgeStore, HashingEmbeddingService) {
+        let (store, hashing) = try await ingestedStore()
+        try await ImageCaptionIngester(store: store, embedder: hashing).ingest(
+            caption: "A photo of the hydraulic seal on the conveyor that failed under load.",
+            attachmentFilename: "SEAL.jpg"
+        )
+        return (store, hashing)
+    }
+
+    @Test("the default responder grounds on a remembered Photo (local surfaces keep photos)")
+    func defaultResponderGroundsOnPhotos() async throws {
+        let (store, hashing) = try await storeWithPhoto()
+        let provider = AgentScriptedProvider(["CONCLUSION: The seal failed."])
+        let responder = AgentRAGResponder(store: store, embedder: hashing, provider: provider, tools: [])
+        let (sources, stream) = try await responder.answerStreaming(
+            "What hydraulic seal failed on the conveyor under load?"
+        )
+        _ = await collect(stream)
+        #expect(sources.contains { $0.kind == .image })
+    }
+
+    @Test("an MCP-shaped responder never surfaces a Photo: not as a source, not in the prompt, not as a citation")
+    func excludedKindsNeverSurface() async throws {
+        let (store, hashing) = try await storeWithPhoto()
+        let provider = AgentScriptedProvider(["CONCLUSION: The seal failed."])
+        let collector = ToolSourceCollector()
+        let responder = AgentRAGResponder(
+            store: store, embedder: hashing, provider: provider,
+            toolsProvider: { [] }, sourceCollector: collector,
+            excludedKinds: KnowledgeKind.withheldFromMCP
+        )
+        let (sources, stream) = try await responder.answerStreaming(
+            "What hydraulic seal failed on the conveyor under load?"
+        )
+        _ = await collect(stream)
+        #expect(!sources.isEmpty)
+        #expect(!sources.contains { $0.kind == .image })
+        for prompt in provider.allPrompts {
+            #expect(!prompt.contains("A photo of the hydraulic seal"))
+        }
+        // A tool that slipped a Photo hit into the collector is dropped at the citation gate too.
+        collector.record([
+            ChunkHit(
+                chunkID: UUID(), itemID: UUID(), itemTitle: "A photo", kind: .image, heading: nil, content: "x"
+            ),
+            ChunkHit(
+                chunkID: UUID(), itemID: UUID(), itemTitle: "Plant Notes", kind: .document, heading: nil, content: "y"
+            ),
+        ])
+        #expect(responder.collectedSources().map(\.kind) == [.document])
+    }
+
+    /// The knowledge trio the `.mcp` palette builds over the store (the agent's own copies of the MCP
+    /// list/search/get), with `excludedKinds` threaded exactly as `interactiveAgentTools` threads it.
+    private func knowledgeTools(
+        store: KnowledgeStore, embedder: HashingEmbeddingService, excludedKinds: Set<KnowledgeKind>
+    ) -> [any AgentTool] {
+        [
+            SearchKnowledgeTool(store: store, embedder: embedder, excludedKinds: excludedKinds, onHits: { _ in }),
+            ListDocumentsTool(store: store, excludedKinds: excludedKinds),
+            GetDocumentTool(store: store, excludedKinds: excludedKinds),
+        ]
+    }
+
+    private static let photoScript = [
+        "ACTION: get_document(photo of the hydraulic seal)",
+        "ACTION: list_documents()",
+        "CONCLUSION: Nothing on that.",
+    ]
+
+    @Test("an MCP-shaped responder's get_document + list_documents never put a Photo caption in an observation")
+    func mcpPaletteNeverObservesAPhoto() async throws {
+        let (store, hashing) = try await storeWithPhoto()
+        let provider = AgentScriptedProvider(Self.photoScript)
+        let responder = AgentRAGResponder(
+            store: store, embedder: hashing, provider: provider,
+            toolsProvider: {
+                self.knowledgeTools(store: store, embedder: hashing, excludedKinds: KnowledgeKind.withheldFromMCP)
+            },
+            sourceCollector: ToolSourceCollector(),
+            excludedKinds: KnowledgeKind.withheldFromMCP
+        )
+        let (_, stream) = try await responder.answerStreaming("Is there a photo of the hydraulic seal?")
+        _ = await collect(stream)
+        // Both tools ran (their observations reached the context) ...
+        let prompts = provider.allPrompts
+        #expect(prompts.count == 3)
+        let last = try #require(prompts.last)
+        #expect(last.contains("No document matching"))
+        #expect(last.contains("Plant Notes [document]"))
+        // ... and no prompt ever carried the caption, its title, or the kind.
+        for prompt in prompts {
+            #expect(!prompt.contains("A photo of the hydraulic seal"))
+            #expect(!prompt.contains("[image]"))
+        }
+    }
+
+    @Test("the same script on the local palette does see the Photo (the leak the test guards is real)")
+    func localPaletteObservesAPhoto() async throws {
+        let (store, hashing) = try await storeWithPhoto()
+        let provider = AgentScriptedProvider(Self.photoScript)
+        let responder = AgentRAGResponder(
+            store: store, embedder: hashing, provider: provider,
+            toolsProvider: { self.knowledgeTools(store: store, embedder: hashing, excludedKinds: []) },
+            sourceCollector: ToolSourceCollector()
+        )
+        let (_, stream) = try await responder.answerStreaming("Is there a photo of the hydraulic seal?")
+        _ = await collect(stream)
+        let last = try #require(provider.allPrompts.last)
+        #expect(last.contains("A photo of the hydraulic seal on the conveyor that failed under load."))
+        #expect(last.contains("[image]"))
     }
 
     // MARK: - Grounding-size safety cap (wiring)

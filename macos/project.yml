@@ -30,6 +30,7 @@
 # Review: Kev + claude-fable-5.1, 2026-10-09 — M1K3 + M1K3iOS stamp GitCommitSHA (tools/ci/git_commit_stamp.py) in a post-BUILD
 # phase (post-compile was overwritten by ProcessInfoPlistFile; pre-push review), with script sandboxing off for those two
 # targets so the phase can read .git.
+# Review: Kev + claude-fable-5.1, 2026-10-09 — RememberPhotoButton.swift joins the MobileShell template (caption memory).
 
 name: M1K3
 
@@ -109,6 +110,9 @@ targetTemplates:
       # and CompanionAvatarView #if's out its shading calls on visionOS.
       - path: M1K3App/CompanionAvatarView.swift
       - path: M1K3App/CodeBlockView.swift
+      # "Remember this photo" under a sent image (caption memory): pure SwiftUI over
+      # M1K3Chat's PhotoMemory, one file for both shells.
+      - path: M1K3App/RememberPhotoButton.swift
       # App Store privacy manifest — Apple REQUIRES one at the bundle root of every
       # iOS/visionOS submission (the Mac target sweeps it in with `M1K3App/`; this
       # template cherry-picks, so it's explicit here). The SAME file: zero tracking,

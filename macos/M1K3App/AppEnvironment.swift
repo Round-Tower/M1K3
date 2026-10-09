@@ -92,6 +92,8 @@
 //  call no longer blanks the list (Kev's Calls header read 13 over "No calls yet"). What the list can't
 //  show travels WITH the list (`CallsLoad.note`), so a cancelled older load can't leave a stale note;
 //  the cause is a `.notice` breadcrumb with the error's type only, never a payload. Confidence 0.8 (the store half is TDD'd; the screen is verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
+//  Compile-checked; verify-by-launch owed. Fold: `mcpResponder`, the ask responder that withholds Photos.
 
 import AppKit
 import Foundation
@@ -179,6 +181,13 @@ final class AppEnvironment {
 
     let embedder: SwappableEmbeddingService // internal: MCPHostController builds a dedicated responder
     let ingester: DocumentIngester // internal: the MCP remember tool ingests through it
+    /// "Remember this photo" (caption memory): caption on the SELECTED brain, file as a Photo
+    /// item, forget when the chat is deleted. Lazy because its closures read `self`.
+    @ObservationIgnored lazy var photoMemory = PhotoMemory(
+        provider: { [unowned self] in provider },
+        tier: { [unowned self] in selectedBrain },
+        ingester: ImageCaptionIngester(store: store, embedder: embedder)
+    )
     /// The intelligence surfaces (MCP `ask_m1k3` AND the Ask App Intent) share ONE
     /// dedicated responder and ONE single-flight lock: `collectedSources()` is a
     /// draining read, so two asks on the same provider must never overlap. Built
@@ -190,6 +199,15 @@ final class AppEnvironment {
         Self.makeAgentResponder(
             store: store, embedder: embedder, provider: provider, forcedThinkingMode: .fast,
             ageBandProvider: Self.ageBandProvider
+        )
+    /// The MCP surface's twin of `intelligenceResponder` (caption memory): same
+    /// brain, same lock, but it never grounds on, cites, or lets search_knowledge
+    /// return a Photo caption (`KnowledgeKind.withheldFromMCP`) — every MCP path
+    /// withholds Photos, local asks keep them. Chosen per call by `AskSurface`.
+    @ObservationIgnored private(set) lazy var mcpResponder: any RAGResponding =
+        Self.makeAgentResponder(
+            store: store, embedder: embedder, provider: provider, forcedThinkingMode: .fast,
+            ageBandProvider: Self.ageBandProvider, excludedKinds: KnowledgeKind.withheldFromMCP
         )
     /// True while an `ask_m1k3` / Ask-intent generation is running (shared lock).
     /// Observation is intentionally suppressed: the VISIBLE "answering" signal is
@@ -1124,6 +1142,9 @@ final class AppEnvironment {
         // traceability (set here, post-init, so the weak-self capture is sound;
         // invoked only at answer-finalization). Reads the @Observable selection.
         chat.residentBrainName = { [weak self] in self?.selectedBrain.displayName }
+        // Caption memory: a deleted chat forgets its Photo memories; a remember refreshes the counts.
+        photoMemory.onChange = { [weak self] in self?.refreshCounts() }
+        chat.onAttachmentsDiscarded = { [weak self] in self?.photoMemory.forget($0) }
 
         // Warm a restored MLX brain (Lil/Big) on launch so it's ready to answer;
         // Mini (Apple) needs nothing. Setting selectedRuntime drives the existing

@@ -68,6 +68,8 @@
 //  exposure" because Lil had left Qwen3.5; Lil is Qwen3.5-4B again (#517). The local paths prepend
 //  the opener (MLXToolCalling.swift sendHeld, MLXBrainProvider.generateStreaming); Brain at Home's
 //  raw route does not, and is now named as the remaining exposure. No logic changed.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `onAttachmentsDiscarded`: the conversation-delete cascade hook for
+//  caption memory (Photo knowledge items key on the attachment filename).
 
 import Foundation
 import M1K3Inference
@@ -347,6 +349,11 @@ public final class ChatSession {
     /// can read AppEnvironment's @Observable selectedBrain directly. Set by
     /// AppEnvironment after construction; nil for test/legacy sessions.
     public var residentBrainName: (@MainActor () -> String?)?
+    /// Called with the attachments whose files a conversation delete just
+    /// discarded, so the shell can forget the Photo memories keyed on them
+    /// (caption memory: a deleted sensitive photo must not stay retrievable
+    /// as text). Same gating as the file discard.
+    public var onAttachmentsDiscarded: (@MainActor ([ImageAttachment]) -> Void)?
     /// Test hook — `await titlingTask?.value` makes fire-and-forget titling
     /// deterministic in tests.
     private(set) var titlingTask: Task<Void, Never>?

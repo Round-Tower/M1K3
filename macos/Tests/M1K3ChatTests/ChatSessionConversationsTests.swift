@@ -7,6 +7,9 @@
 //  isResponding guards, and the fire-and-forget auto-titling hook with its
 //  switch race. All against an in-memory store + fake responders/titlers.
 //
+//  Signed: Kev + claude-fable-5.1, 2026-10-09 (the photo-cascade tests only; the rest predates this
+//  signature). Prior: Unknown
+//
 
 import Foundation
 @testable import M1K3Chat
@@ -465,6 +468,67 @@ struct ChatSessionConversationsTests {
 
         #expect(FileManager.default.fileExists(atPath: file.path))
         #expect(session.conversationSummaries().contains { $0.id == other })
+    }
+
+    @Test("deleting a conversation tells the photo memory which attachments went — the cascade key")
+    func deleteReportsDiscardedAttachments() async throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("cascade-\(UUID().uuidString).png")
+        try Data([0x89]).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let store = InMemoryHistoryStore()
+        let session = ChatSession(responder: EchoResponder(), history: store)
+        await session.send("hello")
+        let other = UUID()
+        var seeded = completedMessages([("look", "photo")])
+        seeded[0].attachments = [ImageAttachment(url: file)]
+        store.seed(id: other, title: nil, updatedAt: Date(timeIntervalSince1970: 50), messages: seeded)
+        var reported: [ImageAttachment] = []
+        session.onAttachmentsDiscarded = { reported += $0 }
+
+        session.deleteConversation(other)
+
+        #expect(reported == [ImageAttachment(url: file)])
+    }
+
+    @Test("a FAILED row delete does not forget the photos either — the row and its memory stay together")
+    func failedDeleteDoesNotReportAttachments() async throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("cascade-\(UUID().uuidString).png")
+        try Data([0x89]).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let store = InMemoryHistoryStore()
+        let session = ChatSession(responder: EchoResponder(), history: store)
+        await session.send("hello")
+        let other = UUID()
+        var seeded = completedMessages([("look", "photo")])
+        seeded[0].attachments = [ImageAttachment(url: file)]
+        store.seed(id: other, title: nil, updatedAt: Date(timeIntervalSince1970: 50), messages: seeded)
+        store.failsDeletes = true
+        var reported: [ImageAttachment] = []
+        session.onAttachmentsDiscarded = { reported += $0 }
+
+        session.deleteConversation(other)
+
+        #expect(reported.isEmpty)
+    }
+
+    @Test("deleting the ACTIVE conversation reports its attachments even if the row delete fails (same asymmetry)")
+    func activeDeleteReportsAttachments() throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("cascade-\(UUID().uuidString).png")
+        try Data([0x89]).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let store = InMemoryHistoryStore()
+        let active = UUID()
+        var seeded = completedMessages([("look", "photo")])
+        seeded[0].attachments = [ImageAttachment(url: file)]
+        store.seed(id: active, title: nil, updatedAt: Date(timeIntervalSince1970: 100), messages: seeded)
+        let session = ChatSession(responder: EchoResponder(), history: store)
+        store.failsDeletes = true
+        var reported: [ImageAttachment] = []
+        session.onAttachmentsDiscarded = { reported += $0 }
+
+        session.deleteConversation(active)
+
+        #expect(reported == [ImageAttachment(url: file)])
     }
 
     @Test("ACTIVE-conversation delete sweeps the files even when the row delete fails — the deliberate asymmetry")

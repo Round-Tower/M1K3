@@ -11,6 +11,8 @@
 //  domain-record/PDF-specific). GRDB record types; persistence lives in KnowledgeStore.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: adds `.image` (Photo), `.captioned`,
+//  `allStaticKinds`, `launchSweepKinds`, `withheldFromMCP`, `displayLabel`; string-backed, no migration.
 
 import Foundation
 import GRDB
@@ -45,6 +47,43 @@ public struct KnowledgeKind: RawRepresentable, Hashable, Sendable, Codable {
     /// grounding). ONE definition — the deny sites in KnowledgeStore all
     /// consume this so a new hidden kind can't be half-wired.
     public static let hiddenFromRetrieval: Set<KnowledgeKind> = [.quarantined, .memorySuperseded]
+
+    /// A photo the user chose to "Remember": the item text is a NEUTRAL,
+    /// model-written caption (`KnowledgeSource.captioned`), `sourceRef` is
+    /// `attachment:<filename>` — a reference, never a copy of the image.
+    /// Retrievable and grounded like a document, but never donated to
+    /// Spotlight and withheld from MCP clients (`withheldFromMCP`).
+    public static let image = KnowledgeKind(rawValue: "image")
+
+    /// Every kind declared above. ONE list, so the launch sweeps can be pinned
+    /// against it: a new kind that is retrievable but missing from
+    /// `launchSweepKinds` fails `ImageCaptionIngesterTests` instead of silently
+    /// escaping the model-thinking / self-wiring sweeps.
+    public static let allStaticKinds: [KnowledgeKind] = [
+        .document, .call, .note, .memory, .image, .quarantined, .memorySuperseded,
+    ]
+
+    /// The kinds both launch sweeps (ModelThinkingQuarantine, SelfWiringQuarantine)
+    /// walk: every retrievable kind, because every one can hold model-written text.
+    public static let launchSweepKinds: [KnowledgeKind] = [.document, .call, .note, .memory, .image]
+
+    /// Kinds the MCP surface (list / search / get by id) never shows. A Photo
+    /// caption describes a private image; Claude Code and Brain-at-Home peers
+    /// are outside "nothing leaves this machine".
+    public static let withheldFromMCP: Set<KnowledgeKind> = [.image]
+
+    /// The user-facing name of the kind, for list rows on both shells.
+    public var displayLabel: String {
+        switch self {
+        case .document: String(localized: "Document")
+        case .call: String(localized: "Call")
+        case .note: String(localized: "Note")
+        case .memory: String(localized: "Memory")
+        case .image: String(localized: "Photo")
+        case .quarantined: String(localized: "internal")
+        default: rawValue
+        }
+    }
 }
 
 /// Who wrote a knowledge item — the provenance half of the memory consent
@@ -60,6 +99,10 @@ public struct KnowledgeSource: RawRepresentable, Hashable, Sendable, Codable {
     public static let user = KnowledgeSource(rawValue: "user")
     /// The background distillation loop extracted it from a conversation.
     public static let distilled = KnowledgeSource(rawValue: "distilled")
+    /// A model wrote it from an image the user chose to remember (caption
+    /// memory). Model-written text: it can be wrong, and it can carry text
+    /// transcribed from the picture — treat as data, never as instructions.
+    public static let captioned = KnowledgeSource(rawValue: "captioned")
 }
 
 /// A unit of knowledge the assistant can retrieve over.

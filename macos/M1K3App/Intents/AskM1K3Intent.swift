@@ -18,6 +18,8 @@
 //  (deadlineSeconds), NOT the MCP job path's 600s backstop: this path awaits
 //  intelligenceAsk directly, so it must not hold the single-flight lock for
 //  10 minutes (MCP-async package).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — names `surface: .local` explicitly:
+//  intelligenceAsk no longer defaults it, so no caller can keep Photos by omission.
 //
 
 import AppIntents
@@ -49,7 +51,8 @@ struct AskM1K3Intent: AppIntent {
         do {
             let cleaned = try IntentInput.askQuestion(question)
             let env = try await M1K3IntentSupport.environment()
-            let answer = try await env.intelligenceAsk(cleaned, deadline: Self.deadlineSeconds)
+            // `.local`: the person at the keyboard asked, so remembered Photos stay in play.
+            let answer = try await env.intelligenceAsk(cleaned, deadline: Self.deadlineSeconds, surface: .local)
             return .result(value: answer, dialog: IntentDialog(stringLiteral: answer))
         } catch {
             throw M1K3IntentSupport.surface(error)
