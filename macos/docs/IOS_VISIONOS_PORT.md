@@ -619,3 +619,14 @@ _Signed: Kev + claude-fable-5.1, 2026-09-02, Confidence 0.85 (the three facts ar
 read off the ASC API + developer portal the same day, not inferred; the guard is
 red-then-green against the real file; the cloud upload is the still-unverified
 step — nothing here is claimed to have reached TestFlight yet)._
+
+## Addendum — 2026-10-09: the window's own field
+
+Chat and voice no longer paint a private navy gradient: both sit on
+`Rectangle().fill(.background)` (the iOS counterpart of the Mac's behind-window
+glass), and on visionOS on `Color.clear`, which paints nothing so the system glass
+pane shows. The app is still forced dark for 1.1, so on iOS this is near-invisible
+until light mode is allowed; `ChatBackdrop`'s reading scrim now takes its tone and
+stops from the shared `BackdropInk`, so it is correct that day. A source-scan test
+(`VoiceModeFloorTests`) pins the field. Verify-owed: the Simulator look, and the
+visionOS glass pane (Simulator can't be trusted for RealityView).

@@ -24,6 +24,11 @@
 //  takes a long quiet spell (EndpointCadence.emptyListensBeforeParking), not
 //  a few seconds. And the bubble timeline no longer wipes itself at every
 //  sentence boundary (the per-chunk nil hop); it resets on a new answer.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the floor is the window's own field
+//  (`Rectangle().fill(.background)`; visionOS `Color.clear` so the glass pane
+//  shows), matching ChatScreen; the private navy gradient is gone. Still forced dark
+//  for 1.1, so the change is near-invisible until light mode is allowed. Pinned by
+//  VoiceModeFloorTests (source scan). Confidence 0.7 (verify-by-launch).
 //
 
 import M1K3Avatar
@@ -39,13 +44,24 @@ struct VoiceScreen: View {
         core.voiceLoop?.state ?? .ended
     }
 
+    /// The window's own field: `.background` on iOS; visionOS paints nothing so the
+    /// system glass pane shows.
+    @ViewBuilder
+    private var windowField: some View {
+        #if os(visionOS)
+            Color.clear
+        #else
+            Rectangle().fill(.background)
+        #endif
+    }
+
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.05, green: 0.05, blue: 0.11), .black],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            // The window's own field (Kev, 2026-10-09), not a private navy: the same
+            // floor as the chat, so the hero sits on one surface. visionOS paints
+            // nothing, so the system glass pane shows through.
+            windowField
+                .ignoresSafeArea()
 
             VStack(spacing: 28) {
                 Spacer(minLength: 12)

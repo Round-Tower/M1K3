@@ -24,6 +24,31 @@ struct VoiceModeFloorTests {
         return try String(contentsOf: root.appendingPathComponent(relative), encoding: .utf8)
     }
 
+    /// Source with comment lines stripped, so headers may explain what was removed.
+    private static func code(_ relative: String) throws -> String {
+        let src = try source(relative)
+        #expect(!src.isEmpty, "scan read an empty file — \(relative) moved")
+        return src.split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+    }
+
+    @Test("the phone's voice and chat screens share the window field, not a navy gradient",
+          arguments: ["M1K3iOSApp/VoiceScreen.swift", "M1K3iOSApp/ChatScreen.swift"])
+    func iosScreensUseTheWindowField(_ path: String) throws {
+        let code = try Self.code(path)
+        #expect(!code.contains("Color(red: 0.05"), "\(path) paints the private navy floor again")
+        #expect(code.contains("Rectangle().fill(.background)"), "\(path) must sit on the window field")
+        #expect(code.contains("Color.clear"), "\(path) must leave visionOS's glass pane showing")
+    }
+
+    @Test("the phone's reading scrim follows the appearance (BackdropInk), not a fixed black")
+    func iosScrimFollowsInk() throws {
+        let code = try Self.code("M1K3iOSApp/ChatBackdrop.swift")
+        #expect(code.contains("BackdropInk(isDark:"))
+        #expect(!code.contains(".init(color: .black.opacity"), "the scrim is hard-coded black again")
+    }
+
     @Test("the Mac voice hero draws no private floor of its own")
     func macVoiceHeroHasNoPrivateFloor() throws {
         let src = try Self.source("M1K3App/VoiceModeView.swift")

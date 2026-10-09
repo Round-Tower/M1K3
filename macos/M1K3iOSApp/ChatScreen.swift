@@ -51,6 +51,8 @@
 //  change, shared `AttachmentRouting`); an image a blind brain can't take is named. Confidence 0.8 (device-owed).
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — the screengrab beat also pushes the plate's screen (`phoneRoute`:
 //  Settings ▸ Documents / Memories) so App Preview footage needs no taps. Confidence 0.85 (verify-by-launch on the sim).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the navy gradient floor is the window's own field (see `backdrop`), shared
+//  with VoiceScreen; forced dark keeps it near-black until light mode is allowed. Verify-by-launch.
 
 import M1K3Avatar
 import M1K3Chat
@@ -245,15 +247,24 @@ struct ChatScreen: View {
 
     // MARK: - Backdrop
 
-    /// The gradient base is the iOS stand-in for the Mac's behind-window glass;
-    /// once a conversation is underway the reactive avatar backdrop layers over
-    /// it (ONE RealityView at a time — the hero hands off to the backdrop).
+    /// The window's own field: `.background` on iOS; visionOS paints nothing so the
+    /// system glass pane shows.
+    @ViewBuilder
+    private var windowField: some View {
+        #if os(visionOS)
+            Color.clear
+        #else
+            Rectangle().fill(.background)
+        #endif
+    }
+
+    /// The base is the window's own field (`.background`; visionOS paints nothing so
+    /// its glass pane shows) — the iOS counterpart of the Mac's behind-window glass,
+    /// and the same floor VoiceScreen sits on. Once a conversation is underway the reactive avatar
+    /// backdrop layers over it (ONE RealityView at a time — the hero hands off to the backdrop).
     private var backdrop: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.05, green: 0.05, blue: 0.11), .black],
-                startPoint: .top, endPoint: .bottom
-            )
+            windowField
             if backdropActive {
                 ChatBackdrop(core: core, isComposing: isComposing)
                     .transition(.opacity)
