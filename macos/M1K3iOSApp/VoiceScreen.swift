@@ -24,14 +24,19 @@
 //  takes a long quiet spell (EndpointCadence.emptyListensBeforeParking), not
 //  a few seconds. And the bubble timeline no longer wipes itself at every
 //  sentence boundary (the per-chunk nil hop); it resets on a new answer.
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — the floor is the window's own field
-//  (`Rectangle().fill(.background)`; visionOS `Color.clear` so the glass pane
-//  shows), matching ChatScreen; the private navy gradient is gone. Still forced dark
-//  for 1.1, so the change is near-invisible until light mode is allowed. Pinned by
-//  VoiceModeFloorTests (source scan). Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the floor is the shared `WindowField`
+//  (the window's own `.background` on iOS; visionOS keeps its deep gradient — the
+//  challenger's NO-GO on `Color.clear` there), matching ChatScreen; the screen's own
+//  navy gradient is gone. Still forced dark for 1.1, so the change is near-invisible
+//  until light mode is allowed. Pinned by VoiceModeFloorTests + WindowFieldTests
+//  (source scans). Confidence 0.7 (verify-by-launch).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — the face is full-bleed like the Mac hero (no 340-pt box or 44-pt
 //  inset); tap still wakes/barges in; caption and hint float on glass; the face pauses under Low Power. The waveform
 //  (None) branch is unchanged, centred. ChatScreen unmounts its backdrop while this cover is up (one RealityView).
+//  Review fold, same day: the hero pauses on the chat backdrop's policy (`chatBackdropTreatment`: thinking /
+//  generating, Reduce Motion, Low Power), not Low Power alone — a full-bleed RealityView at 60 fps beside MLX
+//  decode on a phone is the drawable cost the challenger named. The creature surface ignores `paused` today
+//  (AvatarSurface's logged follow-up), so this bites the pixel face first.
 //
 
 import M1K3Avatar
@@ -41,29 +46,19 @@ import SwiftUI
 
 struct VoiceScreen: View {
     @Environment(AppCore.self) private var core
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
 
     private var state: VoiceLoopState {
         core.voiceLoop?.state ?? .ended
     }
 
-    /// The window's own field: `.background` on iOS; visionOS paints nothing so the
-    /// system glass pane shows.
-    @ViewBuilder
-    private var windowField: some View {
-        #if os(visionOS)
-            Color.clear
-        #else
-            Rectangle().fill(.background)
-        #endif
-    }
-
     var body: some View {
         ZStack {
             // The window's own field (Kev, 2026-10-09), not a private navy: the same
-            // floor as the chat, so the hero sits on one surface. visionOS paints
-            // nothing, so the system glass pane shows through.
-            windowField
+            // floor as the chat, so the hero sits on one surface (visionOS keeps
+            // its gradient — see WindowField).
+            WindowField()
                 .ignoresSafeArea()
 
             // The hero fills the screen like the Mac's; caption and controls float over it.
@@ -126,12 +121,11 @@ struct VoiceScreen: View {
                     .symbolEffect(.variableColor.iterative, isActive: isLive)
                     .frame(maxHeight: 320)
             } else {
-                // Full-bleed, like the Mac hero. Paused under Low Power (one crisp frame):
-                // the voice hero shares the GPU with MLX, ASR and TTS.
-                AvatarSurface(
-                    controller: core.avatar,
-                    paused: ProcessInfo.processInfo.isLowPowerModeEnabled
-                )
+                // Full-bleed, like the Mac hero. Paused on the chat backdrop's policy
+                // (thinking / generating, Reduce Motion, Low Power — one crisp frame):
+                // the voice hero shares the GPU with MLX, ASR and TTS, and a full-bleed
+                // scene at 60 fps beside decode is the cost that shows on a phone.
+                AvatarSurface(controller: core.avatar, paused: heroPaused)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -140,6 +134,16 @@ struct VoiceScreen: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityStateLabel)
         .accessibilityHint("Double-tap to start talking, or to interrupt while M1K3 is speaking.")
+    }
+
+    /// The hero's clock stop: the same verdict ChatBackdrop renders from
+    /// (ChatBackdropTreatment, package-tested). Low Power is read at render like
+    /// there — activity and loop-state changes re-render and re-read it.
+    private var heroPaused: Bool {
+        !core.avatar.state.activity.chatBackdropTreatment(
+            reduceMotion: reduceMotion,
+            lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled
+        ).animatesMotion
     }
 
     /// Mic or speech actively moving — drives the waveform's variable-color pulse.

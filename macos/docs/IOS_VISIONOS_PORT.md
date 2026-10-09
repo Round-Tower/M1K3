@@ -622,11 +622,16 @@ step — nothing here is claimed to have reached TestFlight yet)._
 
 ## Addendum — 2026-10-09: the window's own field
 
-Chat and voice no longer paint a private navy gradient: both sit on
-`Rectangle().fill(.background)` (the iOS counterpart of the Mac's behind-window
-glass), and on visionOS on `Color.clear`, which paints nothing so the system glass
-pane shows. The app is still forced dark for 1.1, so on iOS this is near-invisible
-until light mode is allowed; `ChatBackdrop`'s reading scrim now takes its tone and
-stops from the shared `BackdropInk`, so it is correct that day. A source-scan test
-(`VoiceModeFloorTests`) pins the field. Verify-owed: the Simulator look, and the
-visionOS glass pane (Simulator can't be trusted for RealityView).
+Chat and voice no longer paint a private navy gradient of their own: both sit on
+the shared `WindowField` — `Rectangle().fill(.background)` on iOS (the counterpart
+of the Mac's behind-window glass); on visionOS the deep gradient they always had,
+kept there on purpose (`Color.clear` would hand the floor to the system glass pane,
+and a RealityView hero over it is unseen on a device — challenger NO-GO). The app
+is still forced dark for 1.1, so on iOS this is near-invisible until light mode is
+allowed; `ChatBackdrop`'s reading scrim now takes its tone and stops from the shared
+`BackdropInk`, so it is correct that day. The voice hero is full-bleed and pauses on
+the chat backdrop's policy (`chatBackdropTreatment`), and `ChatScreen` unmounts its
+backdrop while the voice cover is up (one RealityView). Source-scan tests
+(`VoiceModeFloorTests`, `WindowFieldTests`) pin the field. Verify-owed: the Simulator
+look, and the visionOS gradient under the full-bleed hero (Simulator can't be
+trusted for RealityView). Not touched: `OnboardingScreen` keeps its own floor (1.1).

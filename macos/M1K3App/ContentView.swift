@@ -64,7 +64,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — ModelGateView re-reads availability every 2 s while
 //  it is up (`availabilityRecheck`), so "Preparing Mini…" lifts itself when AFM recovers. Confidence 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — voice mode sits on the window glass (VoiceModeView drops its private
-//  gradient); the overlay comment records the opacity fallback if the transcript ghosts through. Comment-only here.
+//  gradient); the overlay comment records the opacity fallback if the transcript ghosts through. Review fold the
+//  same day: the orbs route through `AmbientBackdropPolicy` (voice mode no longer a cue — they were hidden behind
+//  the hero's gradient since 06-26 and would now show), and the split view is `.disabled` under the hero so Tab
+//  cannot reach the covered text field. Confidence 0.8 (the disabled Tab order is verify-by-launch).
 
 import M1K3Avatar
 import M1K3Chat
@@ -326,6 +329,11 @@ struct ContentView: View {
         // covers the chat with the window glass itself (`.glassBackdrop()`); if a
         // launch shows the transcript or sidebar ghosting through, fade the split
         // view here instead (`.opacity(0)` while voice is active, under this overlay).
+        // Disabled underneath the hero: the covered transcript, input and sidebar
+        // leave the key-view loop, so Tab from the hero cannot land typing in a
+        // text field nobody can see (and Space stays the barge-in). The overlay
+        // and the toolbar sit outside this modifier, so they stay live.
+        .disabled(env.isVoiceModeActive)
         .overlay {
             if env.isVoiceModeActive {
                 VoiceModeView()
@@ -1080,11 +1088,13 @@ struct ContentView: View {
     }
 
     /// Cue for the ambient animated backdrop: audio capture (dictation / call
-    /// recording) or the WHOLE of voice-first mode. The mode is one continuous
-    /// audio conversation — gating per phase would fade the orbs out every time
-    /// M1K3 starts speaking, which reads as the app going dead mid-sentence.
+    /// recording). Voice mode is NOT a cue any more (AmbientBackdropPolicy): its
+    /// hero covered the orbs with an opaque gradient from 2026-06-26, so they only
+    /// ticked a 30 fps clock during decode; on the window glass they would show
+    /// again, over the thinking rain and the face. A call recorded from inside
+    /// voice mode still raises them — that is capture, not the mode.
     private var showsAmbientBackdrop: Bool {
-        env.isListening || env.isRecording || env.isVoiceModeActive
+        AmbientBackdropPolicy.shows(isListening: env.isListening, isRecording: env.isRecording)
     }
 
     /// One spoken label for the toolbar status pill — the colour-coded dots carry

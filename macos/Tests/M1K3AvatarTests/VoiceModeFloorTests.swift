@@ -11,6 +11,9 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.6 (a coarse tripwire;
 //  the look itself is verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (review fold) — the phone screens share one
+//  `WindowField` (its arms are pinned in WindowFieldTests); ContentView's orbs come from
+//  `AmbientBackdropPolicy`, voice mode no longer a cue; one `code(_:)` helper.
 //
 
 import Foundation
@@ -38,8 +41,8 @@ struct VoiceModeFloorTests {
     func iosScreensUseTheWindowField(_ path: String) throws {
         let code = try Self.code(path)
         #expect(!code.contains("Color(red: 0.05"), "\(path) paints the private navy floor again")
-        #expect(code.contains("Rectangle().fill(.background)"), "\(path) must sit on the window field")
-        #expect(code.contains("Color.clear"), "\(path) must leave visionOS's glass pane showing")
+        #expect(!code.contains("LinearGradient("), "\(path) paints a gradient floor of its own")
+        #expect(code.contains("WindowField()"), "\(path) must sit on the shared window field")
     }
 
     @Test("the phone's reading scrim follows the appearance (BackdropInk), not a fixed black")
@@ -56,6 +59,12 @@ struct VoiceModeFloorTests {
         #expect(!code.contains(".padding(.horizontal, 44)"), "the face is inset again")
     }
 
+    @Test("the phone voice hero pauses like the chat backdrop (one policy, not Low Power alone)")
+    func iosVoiceHeroPausesLikeTheBackdrop() throws {
+        let code = try Self.code("M1K3iOSApp/VoiceScreen.swift")
+        #expect(code.contains("chatBackdropTreatment("), "the hero must take the shared pause policy")
+    }
+
     @Test("ChatScreen hands the one RealityView to the voice cover")
     func iosChatUnmountsBackdropUnderVoice() throws {
         let code = try Self.code("M1K3iOSApp/ChatScreen.swift")
@@ -64,16 +73,25 @@ struct VoiceModeFloorTests {
 
     @Test("the Mac voice hero draws no private floor of its own")
     func macVoiceHeroHasNoPrivateFloor() throws {
-        let src = try Self.source("M1K3App/VoiceModeView.swift")
-        #expect(!src.isEmpty, "scan read an empty file — the path moved")
-        #expect(src.contains("struct VoiceModeView"), "scan is not reading the voice hero")
-        // Strip comment lines so the header may still explain what was removed.
-        let code = src.split(separator: "\n", omittingEmptySubsequences: false)
-            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
-            .joined(separator: "\n")
+        let code = try Self.code("M1K3App/VoiceModeView.swift")
+        #expect(code.contains("struct VoiceModeView"), "scan is not reading the voice hero")
         #expect(!code.contains("LinearGradient("), "voice mode paints a gradient floor again")
         #expect(!code.contains("Color(red:"), "voice mode paints a literal-colour floor again")
         #expect(!code.contains("VoiceBackdrop"), "the private VoiceBackdrop is back")
         #expect(code.contains(".glassBackdrop()"), "voice mode must sit on the window glass")
+    }
+
+    @Test("the Mac's orbs come from AmbientBackdropPolicy — voice mode alone is not a cue")
+    func macOrbsFollowThePolicy() throws {
+        let code = try Self.code("M1K3App/ContentView.swift")
+        #expect(
+            code.contains("AmbientBackdropPolicy.shows(isListening: env.isListening, isRecording: env.isRecording)"),
+            "showsAmbientBackdrop must route through the policy"
+        )
+        #expect(!code.contains("env.isRecording || env.isVoiceModeActive"), "voice mode raises the orbs again")
+        #expect(
+            code.contains(".disabled(env.isVoiceModeActive)"),
+            "the split view must leave the Tab order while voice is up"
+        )
     }
 }

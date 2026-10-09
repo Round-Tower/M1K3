@@ -51,8 +51,9 @@
 //  change, shared `AttachmentRouting`); an image a blind brain can't take is named. Confidence 0.8 (device-owed).
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — the screengrab beat also pushes the plate's screen (`phoneRoute`:
 //  Settings ▸ Documents / Memories) so App Preview footage needs no taps. Confidence 0.85 (verify-by-launch on the sim).
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — the navy gradient floor is the window's own field (see `backdrop`),
-//  shared with VoiceScreen; forced dark keeps it near-black until light mode is allowed. Verify-by-launch.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the navy gradient floor is the window's own field (`WindowField`,
+//  shared with VoiceScreen; visionOS keeps the gradient there — challenger NO-GO on `Color.clear`); forced dark keeps
+//  it near-black until light mode is allowed. Verify-by-launch.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — the backdrop unmounts while the voice cover is presented (the cover
 //  keeps this view mounted beneath it, so two RealityViews ran); VoiceScreen's full-bleed hero is the one.
 
@@ -256,24 +257,13 @@ struct ChatScreen: View {
 
     // MARK: - Backdrop
 
-    /// The window's own field: `.background` on iOS; visionOS paints nothing so the
-    /// system glass pane shows.
-    @ViewBuilder
-    private var windowField: some View {
-        #if os(visionOS)
-            Color.clear
-        #else
-            Rectangle().fill(.background)
-        #endif
-    }
-
-    /// The base is the window's own field (`.background`; visionOS paints nothing so
-    /// its glass pane shows) — the iOS counterpart of the Mac's behind-window glass,
-    /// and the same floor VoiceScreen sits on. Once a conversation is underway the reactive avatar
+    /// The base is the shared `WindowField` (the window's own `.background` on iOS,
+    /// the deep gradient on visionOS) — the iOS counterpart of the Mac's behind-window
+    /// glass, and the same floor VoiceScreen sits on. Once a conversation is underway the reactive avatar
     /// backdrop layers over it (ONE RealityView at a time — the hero hands off to the backdrop).
     private var backdrop: some View {
         ZStack {
-            windowField
+            WindowField()
             if backdropMounted {
                 ChatBackdrop(core: core, isComposing: isComposing)
                     .transition(.opacity)
