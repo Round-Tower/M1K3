@@ -172,6 +172,10 @@ jobs:
             | base64 --decode | shasum -a 1 | cut -c1-40 | tr 'a-f' 'A-F')"
           security find-identity -p codesigning -v "$KEYCHAIN" | grep -q "$PROFILE_CERT" || {
             echo "❌ the profile's certificate ($PROFILE_CERT) is not the imported Developer ID identity"; exit 1; }
+          # …and grants everything the app's entitlements ask for (a regenerated profile that
+          # dropped Declared Age Range or the keychain group would otherwise die at launch).
+          python3 macos/tools/ci/check_profile_grants.py --profile "$PROFILE" \
+            --entitlements macos/M1K3App/M1K3.entitlements --team "$APPLE_TEAM_ID"
           for DIR in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" "$HOME/Library/MobileDevice/Provisioning Profiles"; do
             mkdir -p "$DIR"
             cp "$PROFILE" "$DIR/$UUID.provisionprofile"
