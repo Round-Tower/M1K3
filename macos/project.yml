@@ -23,6 +23,8 @@
 # Review: Kev + claude-opus-5.5, 2026-09-23 — NSAudioCaptureUsageDescription for the call recorder's Core Audio process tap
 # (it replaced ScreenCaptureKit, so the app no longer asks for Screen Recording); the context-senses comment now says the
 # TCC dialog fires as the toggle goes on. Confidence 0.85.
+# Review: Kev + claude-fable-5.1, 2026-10-09 — M1K3 + M1K3iOS stamp GitCommitSHA (tools/ci/git_commit_stamp.py) in a post-compile
+# phase, with script sandboxing off for those two targets so the phase can read .git.
 
 name: M1K3
 
@@ -170,6 +172,21 @@ targetTemplates:
 targets:
   M1K3:
     type: application
+    postCompileScripts:
+      # Stamps GitCommitSHA into the built Info.plist BEFORE signing (post-compile
+      # runs ahead of CodeSign), so run_chateval.py / ChatEvalStage know which
+      # commit the app is. Xcode Cloud inherits CI_COMMIT into this env; locally
+      # it is `git rev-parse --short HEAD` (+ -dirty). Never fails the build.
+      - name: Stamp GitCommitSHA
+        basedOnDependencyAnalysis: false
+        script: |
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          [ -f "$PLIST" ] || { echo "warning: no Info.plist at $PLIST; GitCommitSHA not stamped"; exit 0; }
+          SHA="$(/usr/bin/python3 -I "$SRCROOT/tools/ci/git_commit_stamp.py" "$SRCROOT" 2>/dev/null)"
+          [ -n "$SHA" ] || SHA=unknown
+          /usr/libexec/PlistBuddy -c "Set :GitCommitSHA $SHA" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST"
+          echo "GitCommitSHA=$SHA"
     platform: macOS
     deploymentTarget: "26.0"
     sources:
@@ -280,6 +297,8 @@ targets:
         PRODUCT_NAME: M1K3
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
+        # The stamp phase reads .git; a sandboxed script phase cannot.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Round Tower Software Studios Ltd"
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
         # DEFAULT to the App-Store-SAFE entitlements (no audioanalyticsd
@@ -357,6 +376,21 @@ targets:
   # a clean, unambiguous Xcode Cloud archive lane.
   M1K3iOS:
     type: application
+    postCompileScripts:
+      # Stamps GitCommitSHA into the built Info.plist BEFORE signing (post-compile
+      # runs ahead of CodeSign), so run_chateval.py / ChatEvalStage know which
+      # commit the app is. Xcode Cloud inherits CI_COMMIT into this env; locally
+      # it is `git rev-parse --short HEAD` (+ -dirty). Never fails the build.
+      - name: Stamp GitCommitSHA
+        basedOnDependencyAnalysis: false
+        script: |
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          [ -f "$PLIST" ] || { echo "warning: no Info.plist at $PLIST; GitCommitSHA not stamped"; exit 0; }
+          SHA="$(/usr/bin/python3 -I "$SRCROOT/tools/ci/git_commit_stamp.py" "$SRCROOT" 2>/dev/null)"
+          [ -n "$SHA" ] || SHA=unknown
+          /usr/libexec/PlistBuddy -c "Set :GitCommitSHA $SHA" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST"
+          echo "GitCommitSHA=$SHA"
     platform: iOS
     deploymentTarget: "26.0"
     templates: [MobileShell]
@@ -407,6 +441,8 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
+        # The stamp phase reads .git; a sandboxed script phase cannot.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "6.2"
