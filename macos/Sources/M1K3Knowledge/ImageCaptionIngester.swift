@@ -16,6 +16,8 @@
 //  ride both launch sweeps (`KnowledgeKind.launchSweepKinds`).
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 third-pass fold) — doc comment only: why `forget` may delete by
+//  `sourceRef` alone (UUID attachment filenames, never shared across conversations).
 
 import Foundation
 
@@ -74,6 +76,8 @@ public struct ImageCaptionIngester: Sendable {
     /// The delete cascade: remove the Photo item of each attachment. Only
     /// `.image` items are touched (a document that happens to share a ref is
     /// not ours to delete). Returns how many were removed.
+    /// Deleting by `sourceRef` alone is safe because attachment filenames are
+    /// UUID-based (`AttachmentStore`): two conversations never share a key.
     @discardableResult
     public func forget(attachments: [String]) throws -> Int {
         var removed = 0

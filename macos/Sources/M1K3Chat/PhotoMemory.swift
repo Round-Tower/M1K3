@@ -17,6 +17,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — `forget` no longer swallows a store
 //  error on the privacy-forget path: it logs at `.error` (chat-session), returns 0, and leaves the row
 //  reading the store (still remembered — honest). `forgetter:` is the test seam for a refusing store.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 third-pass fold) — `forget` during an in-flight caption
+//  used to let the ingest land afterwards: an orphan Photo nothing could cascade-delete. `forgotten` marks the
+//  in-flight keys; `remember` skips the ingest (or forgets a landed one), resets the row, logs once. A cancelled
+//  remember resets the row to nil instead of `.failed("cancelled")`.
 
 import Foundation
 import M1K3Inference
@@ -38,6 +42,9 @@ public final class PhotoMemory {
     private static let log = M1K3Log.logger(.chatSession)
 
     private var transient: [String: State] = [:]
+    /// Keys `forget` saw while their caption was in flight. `remember` consumes
+    /// its own key after the awaits so the ingest never outlives the delete.
+    private var forgotten: Set<String> = []
     private let providerSource: @MainActor () -> any InferenceProvider
     private let tierSource: @MainActor () -> BrainTier
     private let ingester: ImageCaptionIngester
@@ -88,16 +95,42 @@ public final class PhotoMemory {
         case .failed, nil: break
         }
         transient[key] = .looking
+        forgotten.remove(key)
         do {
             let caption = try await ImageCaptioner(provider: providerSource())
                 .caption(image: image, tier: tierSource())
+            // The conversation went while we were looking: the files are gone,
+            // so an ingest now would write a Photo nothing can cascade-delete.
+            guard !forgotten.contains(key) else {
+                try discardForgotten(key, landed: false)
+                return
+            }
             try await ingester.ingest(caption: caption, attachmentFilename: key)
+            guard !forgotten.contains(key) else {
+                try discardForgotten(key, landed: true)
+                return
+            }
             // Cleared, not cached: `state(for:)` reads "remembered" from the store,
             // so a Photo deleted from the Documents list shows the action again.
             transient[key] = nil
             onChange?()
+        } catch is CancellationError {
+            // Not a failure to show: the row goes back to the plain action.
+            transient[key] = nil
         } catch {
             transient[key] = .failed(error.localizedDescription)
+        }
+    }
+
+    /// `forget` raced this remember. A landed ingest is deleted through the
+    /// same forgetter as the cascade; either way the row resets and we log once.
+    private func discardForgotten(_ key: String, landed: Bool) throws {
+        forgotten.remove(key)
+        transient[key] = nil
+        Self.log.notice("photo forgotten while captioning, ingest \(landed ? "deleted" : "skipped", privacy: .public)")
+        if landed {
+            _ = try forgetter([key])
+            onChange?()
         }
     }
 
@@ -109,6 +142,9 @@ public final class PhotoMemory {
     @discardableResult
     public func forget(_ images: [ImageAttachment]) -> Int {
         let names = images.map(Self.key)
+        for name in names where transient[name] == .looking {
+            forgotten.insert(name)
+        }
         var removed = 0
         do {
             removed = try forgetter(names)

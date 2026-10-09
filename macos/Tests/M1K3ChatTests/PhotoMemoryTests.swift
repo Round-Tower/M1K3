@@ -10,6 +10,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8, Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — a forget the store refuses is no longer
 //  swallowed: it logs, returns 0, and the row keeps reading the store (still remembered — the truth).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 third-pass fold) — a forget that lands while the caption is
+//  in flight leaves NO Photo behind (the orphan nothing could cascade-delete), and a cancelled remember resets
+//  the row instead of reading as a failure.
 
 import Foundation
 @testable import M1K3Chat
@@ -36,6 +39,7 @@ private final class FakeCaptioner: InferenceProvider, ImageCaptioning, @unchecke
     func caption(image _: ImageAttachment, prompt _: String) async throws -> String {
         lock.withLock { calls += 1 }
         await gate?()
+        try Task.checkCancellation()
         return reply
     }
 }
@@ -154,6 +158,47 @@ struct PhotoMemoryTests {
         #expect(memory.state(for: image) == .remembered)
         #expect(try store.allItems(kind: .image).count == 1)
         #expect(changes == 1)
+    }
+
+    @Test("a forget while the caption is in flight stores nothing: no orphan Photo, row reset to nil")
+    func forgetDuringRememberStoresNothing() async throws {
+        let provider = FakeCaptioner()
+        let release = AsyncStream<Void>.makeStream()
+        provider.gate = { for await _ in release.stream {
+            return
+        } }
+        let store = try KnowledgeStore()
+        let memory = makeMemory(provider: provider, store: store)
+        let inFlight = Task { await memory.remember(image) }
+        while memory.state(for: image) != .looking {
+            await Task.yield()
+        }
+        // The conversation is deleted mid-caption: the store has nothing yet.
+        #expect(memory.forget([image]) == 0)
+        release.continuation.yield()
+        await inFlight.value
+        #expect(try store.allItems(kind: .image).isEmpty)
+        #expect(memory.state(for: image) == nil)
+    }
+
+    @Test("a cancelled remember resets the row to the plain action, not a failure")
+    func cancellationResetsRow() async throws {
+        let provider = FakeCaptioner()
+        let release = AsyncStream<Void>.makeStream()
+        provider.gate = { for await _ in release.stream {
+            return
+        } }
+        let store = try KnowledgeStore()
+        let memory = makeMemory(provider: provider, store: store)
+        let inFlight = Task { await memory.remember(image) }
+        while memory.state(for: image) != .looking {
+            await Task.yield()
+        }
+        inFlight.cancel()
+        release.continuation.yield()
+        await inFlight.value
+        #expect(memory.state(for: image) == nil)
+        #expect(try store.allItems(kind: .image).isEmpty)
     }
 
     @Test("a Photo deleted from the Documents list resets the row to the plain action -- the store is the truth")
