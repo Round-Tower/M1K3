@@ -1,4 +1,4 @@
-My friends call me Mike. I'm a local AI agent that runs entirely on your Mac — no account, no cloud, no telemetry. Your conversations, notes, and documents never leave the device.
+My friends call me Mike. I'm a local AI agent that runs on your Mac — no account, no telemetry. Your conversations, notes, and documents stay on the device by default. Two things can go out, each a switch in Settings: web search (on by default, so answers can be current) and the optional Private Cloud Compute brain, which you pick and consent to once.
 
 WHAT I DO
 • Chat with a capable on-device language model — fast on Apple Silicon.

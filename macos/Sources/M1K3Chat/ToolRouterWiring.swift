@@ -35,12 +35,15 @@
 //  routes a chat verdict to the plain turn on Lil/Big (ADR 0008 measured no gain on Lil there), so the
 //  arm measures the two together.
 //  Confidence 0.7.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the gate and the head share one sentence vector per
+//  turn (`OneTurnEmbedder`, #512).
 //
 
 import Foundation
 import M1K3Inference
 import M1K3LogCore
 import os
+import Synchronization
 
 public enum ToolRouterWiring {
     /// UserDefaults Bool; absent = ON (Kev, 2026-09-26). Only an explicit false turns it off.
@@ -86,6 +89,9 @@ public enum ToolRouterWiring {
     /// Loaded once: the embedding asset is read-only and shared across turns.
     private static let embedder = NLSentenceEmbedder()
 
+    /// The gate (ToolNeedRouter) and the group head embed the same turn text: one vector for both.
+    private static let turnEmbedder = OneTurnEmbedder(embedder.vector)
+
     private static let log = M1K3Log.logger(.route)
 
     /// Apple's model as a picker for a brain that isn't Mini (all tiers). A fresh
@@ -113,7 +119,7 @@ public enum ToolRouterWiring {
             // type checker once (ChatEvalStage's header).
             var classify: (@Sendable (String) -> ToolPick?)?
             if groupRouter {
-                classify = { ToolGroupRouter.pick(for: $0, embed: embedder.vector, chain: chain) }
+                classify = { ToolGroupRouter.pick(for: $0, embed: turnEmbedder.vector, chain: chain) }
             }
             // `[classify]`: a captured var can't be read from a @Sendable closure (Swift 6).
             picker = { [classify] question, menu in
@@ -121,7 +127,7 @@ public enum ToolRouterWiring {
             }
         }
         return PlainTurnRoute(
-            decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) },
+            decide: { ToolNeedRouter.decide(for: $0, embed: turnEmbedder.vector) },
             instructions: nil,
             pick: picker
         )
@@ -176,5 +182,23 @@ public enum ToolRouterWiring {
             serving = facade.routedBackend
         }
         return serving as? AppleFoundationModelsProvider
+    }
+}
+
+/// Remembers the last text's vector, so the gate and the group head, which ask for the same
+/// turn one after the other, embed it once. One entry: a new turn replaces it.
+final class OneTurnEmbedder: Sendable {
+    private let embed: @Sendable (String) -> [Double]?
+    private let last = Mutex<(text: String, vector: [Double]?)?>(nil)
+
+    init(_ embed: @escaping @Sendable (String) -> [Double]?) {
+        self.embed = embed
+    }
+
+    func vector(_ text: String) -> [Double]? {
+        if let hit = last.withLock({ $0 }), hit.text == text { return hit.vector }
+        let vector = embed(text)
+        last.withLock { $0 = (text, vector) }
+        return vector
     }
 }

@@ -29,6 +29,8 @@ spike's, reproduced; the data is synthetic until a shadow log exists). Prior: Un
 Review: Kev + claude-opus-5-5, 2026-10-07 — the group head, so every tier can dispatch
 read-only tools without thinking or a tool-call format. Confidence 0.7 (the floor's
 precision is cross-validated on synthetic data; the live gain is the eval arm's to show).
+Review: Kev + claude-fable-5.1, 2026-10-09 — the generated floor comment says a floor above 1
+is unreachable by design (#512).
 """
 from __future__ import annotations
 
@@ -138,7 +140,8 @@ def render_group_swift(
 enum ToolGroupRouterWeights {{
     /// Row order of `weights` and `biases`.
     static let groups: [String] = [{", ".join(f'"{g}"' for g in groups)}]
-    /// At or above (top probability): dispatch. Picked for {PRECISION:.0%} group-level precision in
+    /// At or above (top probability): dispatch. A floor above 1 is unreachable by design: the head
+    /// never speaks (no floor reached the precision, or untrained). Picked for {PRECISION:.0%} group-level precision in
     /// cross-validation: an upper bound live (the shipped fit is sharper, the data synthetic, and the
     /// tool-level word rules add their own error).
     static let floor: Double = {floor:.9g}

@@ -4,6 +4,7 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85. Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
 
 @testable import M1K3Eval
 import Testing
@@ -16,8 +17,9 @@ struct ChatEvalStubPaletteTests {
         // for EVERY brain — silently counted in every published tool-use cell.
         let names = Set(ChatEvalStubPalette.names)
         for fixture in ChatEvalFixtures.toolUse {
-            let tool = fixture.expectation.mustCallTool ?? ""
-            #expect(names.contains(tool), "\(fixture.id) requires \(tool), which no stub offers")
+            for tool in [fixture.expectation.mustCallTool ?? ""] + fixture.expectation.alsoCallTools {
+                #expect(names.contains(tool), "\(fixture.id) requires \(tool), which no stub offers")
+            }
         }
     }
 
