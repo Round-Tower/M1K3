@@ -252,8 +252,11 @@ flag against `off`: **flip iff** accuracy is at least `off`'s within one fixture
 the median turn is faster; otherwise `keep off (<which test>)`. A fixture passes on a majority of its
 repeats. Notes: the verdict is against `off`, not against `routing`, so a `head` or `chain` "flip"
 means "better than today", and Kev should read the `routing` row beside it before flipping a flag
-that only works on top of routing; and the chain verdict is only meaningful on the two-tool fixtures
-(`alsoCallTools`, #512), which sit inside the tool-use kind.
+that only works on top of routing. The two-tool `tool-chain-*` fixtures (`alsoCallTools`, #512) are
+shown in their own `chain fx` column and stay OUT of every verdict: each stub's canned output tells a
+native loop it is done ("no further search needed"), so `off` can only fail them while a dispatch
+chain runs both tools up front — a win by construction, not a measurement, until the stubs are
+chain-aware (follow-up). Read that column by eye for `toolChain`.
 
 ## Results
 
@@ -272,3 +275,6 @@ that matters and is deliberately unflattering). Prior: Unknown.*
 stdout route, the PCC column and the two reference runners, each driven on the
 day it was written (Bench-Max day); the container route above is kept for
 macOS 26 readers.*
+*Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.7 — the tool-router arm
+section (#510/#512): eight cells, the flip rule, and the chain fixtures kept out of the
+verdict until the stubs are chain-aware.*

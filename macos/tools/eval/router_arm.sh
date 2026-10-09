@@ -19,11 +19,13 @@
 # two MLX processes crawl, and :4242 must be free. This script refuses to start otherwise and
 # never quits the app for you.
 #
-# zsh traps respected (GEMMA_1_1_PLAN.md §5, plus one more: never name a variable `path`, it is tied to PATH): --kinds=<list> as ONE word (never ${x:+--kinds $x}),
-# and pkill -f, not kill $(pgrep ...) (two pids = one bad argument).
+# zsh traps respected (GEMMA_1_1_PLAN.md §5): --kinds=<list> as ONE word (never ${x:+--kinds $x}),
+# pkill -f, not kill $(pgrep ...) (two pids = one bad argument), and no variable named `path`
+# (it is tied to PATH).
 #
 # Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.6 (dry-run and the refusals checked;
 # the launches themselves are tonight's first real run). Prior: none (new file).
+# Review: same day, code-quality fold — a flag without its value is refused (NO_UNSET aborted on $2).
 
 setopt PIPE_FAIL NO_UNSET
 
@@ -37,12 +39,15 @@ dry=0
 
 while (( $# )); do
   case $1 in
+    --app|--date|--brains|--repeats) (( $# >= 2 )) || { print -u2 -- "$1 needs a value"; exit 2 } ;;
+  esac
+  case $1 in
     --app) app=$2; shift 2 ;;
     --date) date_stamp=$2; shift 2 ;;
     --brains) brains=(${(s:,:)2}); shift 2 ;;
     --repeats) repeats=$2; shift 2 ;;
     --dry-run) dry=1; shift ;;
-    -h|--help) sed -n '2,25p' $0; exit 0 ;;
+    -h|--help) sed -n '2,28p' $0; exit 0 ;;
     *) print -u2 "unknown argument: $1"; exit 2 ;;
   esac
 done

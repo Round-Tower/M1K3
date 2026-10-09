@@ -7,6 +7,7 @@ outside the sandbox, another session's debug build killed mid-run.
 Signed: Kev + claude-opus-5, 2026-09-12, Confidence 0.8 (pure parts pinned
 here; the launch/quit glue is driven by hand on the real app).
 Prior: none (new file).
+Review: Kev + claude-fable-5.1, 2026-10-09 — the router arm's keys (`--router dispatch`, head, chain) pinned.
 """
 
 import json

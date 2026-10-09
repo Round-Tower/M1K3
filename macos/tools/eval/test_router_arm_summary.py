@@ -5,6 +5,7 @@ that decides a default flip, so it is pinned hard: 'flip' iff accuracy is within
 
 Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.7 (the rule is the brief's; "within one
 fixture" is read as a fixture-level majority count with a one-fixture tolerance). Prior: none (new file).
+Review: same day, code-quality fold — the tool-chain-* fixtures are out of the verdict and in their own column.
 """
 
 import json
@@ -95,6 +96,22 @@ def test_open_chat_regression_blocks_the_flip_too(tmp_path):
     routing = fixtures({"a"}, 1000) + fixtures({"a"}, 3000, kind="open-chat")
     o, r = cells(tmp_path, off, routing)
     assert ras.verdict(o, r).startswith("keep off")
+
+
+def test_chain_fixtures_are_out_of_the_verdict_and_in_their_own_column(tmp_path):
+    # The stubs tell a native loop to stop after one call, so `off` fails every chain fixture by
+    # construction; a chain cell that regresses two plain fixtures must still read "keep off".
+    plain = ("a", "b", "c", "d")
+    off = fixtures(set(plain), 5000, names=plain) + fixtures(set(), 5000, names=("tool-chain-x", "tool-chain-y", "tool-chain-z"))
+    chain = fixtures({"a", "b"}, 3000, names=plain) + fixtures({"tool-chain-x", "tool-chain-y", "tool-chain-z"}, 3000,
+                                                                names=("tool-chain-x", "tool-chain-y", "tool-chain-z"))
+    o = ras.load_cell(write_cell(tmp_path, "lil", "off", off))
+    c = ras.load_cell(write_cell(tmp_path, "lil", "chain", chain))
+    assert o.fixtures_passed("tool-use") == (4, 4) and c.fixtures_passed("tool-use") == (2, 4)
+    assert o.fixtures_passed("tool-use", chain=True) == (0, 3) and c.fixtures_passed("tool-use", chain=True) == (3, 3)
+    assert ras.verdict(o, c).startswith("keep off (accuracy")
+    out = ras.render({("lil", "off"): o, ("lil", "chain"): c})
+    assert "| chain fx |" in out and "| 0/3 fx |" in out and "| 3/3 fx |" in out
 
 
 def test_missing_cell_is_not_a_verdict():
