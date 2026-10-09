@@ -9,6 +9,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-21, Confidence 0.85. Prior: this file.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — `identity(brainName:)`, the date-free line Mini's
 //  plain turn takes (#428/#349). Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — #488: the line carries the ISO date and the
+//  "earlier dates are in the past" cue, placed before the brain clause. Confidence 0.8.
 
 import Foundation
 @testable import M1K3Chat
@@ -108,5 +110,34 @@ struct PromptContextTests {
     func stableEnglishMonth() {
         let line = PromptContext.line(now: noon(2026, 1, 1), brainName: "Mini M1K3")
         #expect(line.contains("January"))
+    }
+
+    /// #488 (2026-10-05): Big (gemma-4-12B) read "it's Monday, 5 October 2026" beside a
+    /// memory's "On 2026-10-02 …" and called 2 October the future ("that date hasn't
+    /// happened yet — today is only October 5th"). Two different shapes of the same
+    /// kind of thing, ordered by eye. The line now carries the ISO date as well (the
+    /// shape memories and tool outputs use) and says the ordering rule outright.
+    @Test("carries the ISO date and the past-dates cue (#488)")
+    func isoDateAndPastCue() {
+        let line = PromptContext.line(now: noon(2026, 10, 5), brainName: "Big")
+        #expect(line.contains("5 October 2026 (2026-10-05)"))
+        #expect(line.contains("earlier dates are in the past"))
+    }
+
+    @Test("the ISO date is zero-padded")
+    func isoDateZeroPadded() {
+        let line = PromptContext.line(now: noon(2026, 1, 1), brainName: "")
+        #expect(line.contains("(2026-01-01)"))
+    }
+
+    /// The cue is part of the DATE clause: it precedes the brain clause (which stays the
+    /// line's suffix, `identityHasNoDate`) and closes the line when there is no brain.
+    @Test("the cue sits between the date and the brain clause")
+    func cuePrecedesIdentity() throws {
+        let line = PromptContext.line(now: noon(2026, 10, 5), brainName: "Big")
+        let cue = try #require(line.range(of: "earlier dates are in the past."))
+        let identity = try #require(line.range(of: "You're M1K3"))
+        #expect(cue.upperBound <= identity.lowerBound)
+        #expect(PromptContext.line(now: noon(2026, 10, 5), brainName: "").hasSuffix("earlier dates are in the past."))
     }
 }
