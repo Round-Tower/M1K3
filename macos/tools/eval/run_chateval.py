@@ -46,6 +46,8 @@ Review: Kev + claude-opus-5-5, 2026-10-07 — summarise reports latency-only fai
 (the display-sleep stall: E4B 246/324 raw, 288/324 on content).
 Review: Kev + claude-fable-5.1, 2026-10-09 — `kind_rows` / `kind_table`: a per-kind table under each run line with the
 latency-only and content columns (step 5 of the Qwen3.5 stream read "code-gen 24/30" off the JSON by hand).
+Review: Kev + claude-fable-5.1, 2026-10-09 — `over_lil_own_peak_cap`: the summary flags a lil run whose own peak
+exceeds the signed 5 GB cap (BrainTier.lilOwnPeakCapGB); the bake-off had applied it by eye.
 """
 
 from __future__ import annotations
@@ -352,6 +354,17 @@ def kind_table(rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
+# Lil's RAM cap, signed 2026-10-09 (BrainTier.lilOwnPeakCapGB): 5 GB of the brain's OWN peak on a
+# 16 GB Mac, in the mebibytes the report records. The incumbent and Qwen3.5-4B measured 4.8 GB;
+# gemma-4 E4B's 10.3 GB is what it rejects. Inclusive at the cap.
+LIL_OWN_PEAK_CAP_GB = 5
+
+
+def over_lil_own_peak_cap(brain_id: str, own_mb: int | None) -> bool:
+    """True when a lil run's own peak exceeds the signed cap. Other brains have their own floors."""
+    return brain_id == "lil" and own_mb is not None and own_mb > LIL_OWN_PEAK_CAP_GB * 1024
+
+
 def summarise(doc_path: Path) -> str:
     doc = json.loads(doc_path.read_text())
     lines = []
@@ -365,7 +378,10 @@ def summarise(doc_path: Path) -> str:
         na = len(everything) - len(scores)
         peak, resident = run.get("peakMemoryMB"), run.get("residentMemoryMBAtStart")
         # Same rule as BrainRun.ownPeakMemoryMB: peak below resident means no number.
-        own = f" (own {peak - resident} MB)" if peak is not None and resident is not None and peak >= resident else ""
+        own_mb = peak - resident if peak is not None and resident is not None and peak >= resident else None
+        own = f" (own {own_mb} MB)" if own_mb is not None else ""
+        if over_lil_own_peak_cap(label, own_mb):
+            own += f" ⚠ OVER the Lil RAM cap ({LIL_OWN_PEAK_CAP_GB} GB own peak)"
         lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed" + (f" ({na} n/a)" if na else "")
                      + (f", {latency_only} latency-only (content {passed + latency_only}/{len(scores)})"
                         if latency_only else "")

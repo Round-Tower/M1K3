@@ -7,6 +7,7 @@ outside the sandbox, another session's debug build killed mid-run.
 Signed: Kev + claude-opus-5, 2026-09-12, Confidence 0.8 (pure parts pinned
 here; the launch/quit glue is driven by hand on the real app).
 Prior: none (new file).
+Review: Kev + claude-fable-5.1, 2026-10-09 — pins the Lil RAM-cap flag (5 GB own peak, lil only, inclusive).
 """
 
 import json
@@ -332,3 +333,25 @@ def test_summary_omits_own_peak_when_peak_is_below_resident(tmp_path):
                                          "residentMemoryMBAtStart": 900}], "provenance": {}}))
     summary = rc.summarise(doc)
     assert "own" not in summary and "peak 0 MB" in summary
+
+
+def test_summary_flags_a_lil_run_over_the_own_peak_cap(tmp_path):
+    # Signed 2026-10-09: Lil's cap is 5 GB OWN peak (BrainTier.lilOwnPeakCapGB) on a 16 GB Mac —
+    # the incumbent and Qwen3.5 both measured 4.8 GB; gemma-4 E4B's 10.3 GB is what it rejects.
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    over = tmp_path / "over.json"
+    over.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok], "peakMemoryMB": 11000,
+                                          "residentMemoryMBAtStart": 453}], "provenance": {}}))
+    summary = rc.summarise(over)
+    assert "own 10547 MB" in summary
+    assert "OVER the Lil RAM cap (5 GB own peak)" in summary
+    under = tmp_path / "under.json"
+    under.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok], "peakMemoryMB": 5368,
+                                           "residentMemoryMBAtStart": 453}], "provenance": {}}))
+    assert "RAM cap" not in rc.summarise(under), "4.8 GB own peak is inside the cap"
+    # The rule itself: mebibytes, inclusive at the cap, Lil only (Big's 7.4 GB has its own floor).
+    assert rc.LIL_OWN_PEAK_CAP_GB == 5
+    assert rc.over_lil_own_peak_cap("lil", 5120) is False
+    assert rc.over_lil_own_peak_cap("lil", 5121) is True
+    assert rc.over_lil_own_peak_cap("big", 7402) is False
+    assert rc.over_lil_own_peak_cap("lil", None) is False
