@@ -2,6 +2,7 @@ Thanks for testing M1K3 on the Mac.
 
 Please try:
 • Chat on Mini (instant, no download), then let it offer Lil or Big and pick one
+• Lil is now Qwen3.5 and it can see: attach an image and ask about it (Lil downloads again, about 3 GB)
 • Voice mode — talk, interrupt, and hear the neural voice answer
 • Drop a note or PDF onto the chat and ask about it
 • Memories — tell it something worth keeping, then find it and forget it

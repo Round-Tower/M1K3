@@ -36,6 +36,13 @@ same source, but the iPhone app itself is checked by hand on a device.
 The stamp proves only that build N runs and serves MCP. Feature checks (a fix's repro, the
 voice on a headset) are still yours to run, and the PR that made the change names them.
 
+**A brain re-pinned with `pin_weights.py --snapshot-root` owes one more check.** Those bytes came
+from a fresh HF download, so HF's oid check only proves the download matches HF, not that it is
+the copy that was run and evaluated; the second opinion is build N verifying that evaluated copy. Before submitting, load that brain once
+in build N and read `/usr/bin/log show --predicate 'subsystem == "app.m1k3" AND category == "weight-integrity"'`
+for `verified <repo> against pinned revision …` (a refusal there means the pin and the evaluated
+bytes disagree: stop). Lil's 2026-10-08 pin (#517) took this route and passed on a local build.
+
 | Script | What it does | Writes? |
 |---|---|---|
 | `precheck.py` | The pre-submit checklist: build attached + VALID, screenshots per display type, availability (V2), price schedule, keyword trademarks, promo cap, support URL. | no |
