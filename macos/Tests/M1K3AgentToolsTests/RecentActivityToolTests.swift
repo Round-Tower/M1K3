@@ -9,6 +9,8 @@
 //  pinned; the tool is tested against a fake reader.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85, Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the description pins "busiest" / "most active"
+//  (tool-recent-busiest).
 //
 
 import Foundation
@@ -391,6 +393,10 @@ struct RecentActivityToolTests {
         #expect(tool.requiresExclusiveCompute == false)
         #expect(tool.description.contains("recent chats"))
         #expect(tool.description.contains("today"))
+        // 2026-10-09: the description names the words the routing line disambiguates,
+        // so a "busiest days" ask matches the tool even when the rules are far above it.
+        #expect(tool.description.contains("busiest"))
+        #expect(tool.description.contains("most active"))
     }
 
     @Test("the positional argument is the window; the reader is asked for exactly those bounds")

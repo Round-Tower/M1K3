@@ -646,7 +646,9 @@ not AFM's ceiling.
       since it is full-precision. Measure a scripted 6–8-message chat's prefill curve FIRST.
 - [ ] **Persona: the honest privacy answer** — web search sends queries to DuckDuckGo; say so.
 - [ ] Read Qwen3.5's code-gen and grounded misses before the swap call.
-- [ ] `tool-recent-busiest`: a prompt nudge for recency asks, before anything heavier.
+- [x] `tool-recent-busiest`: a prompt nudge for recency asks, before anything heavier — 2026-10-09: the
+      routing line settles "busiest / most active" as activity on this device, and the tool description
+      (app + eval stub) names the words. 5× Lil replay owed.
 - [ ] `run_chateval`: stamp the app's build commit, not HEAD (three files hand-corrected 2026-10-07).
 - [ ] File the orphan-`</parameter>` issue upstream (draft above; Kev). Retires `Qwen35CallRepair`.
 - [ ] #509 follow-ups: peak RSS per step, re-seed after a fresh/image send, a pure seam for the

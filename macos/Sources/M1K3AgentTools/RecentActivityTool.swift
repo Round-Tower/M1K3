@@ -31,6 +31,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85 (pure digest +
 //  parsers pinned red-first; the live reader is verify-by-launch on the Mac).
 //  Prior: none (new file, patterned on CalendarPeekTool + SystemStatusTool).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the description names "busiest or most active days" so
+//  a busiest-days ask matches the tool as well as the routing line (tool-recent-busiest); the eval stub
+//  in ChatEvalStubPalette carries the same words, pinned in both test targets.
 //
 
 import Foundation
@@ -43,8 +46,8 @@ public struct RecentActivityTool: AgentTool {
     public let name = "recent_activity"
     public let description =
         "Review what happened lately on \(HostPlatform.thisDevice): recent chats, new memories, visiting "
-            + "agents, heartbeat pulses and todos. Argument: the window — today, yesterday, or N days "
-            + "(default: the last 7 days)."
+            + "agents, heartbeat pulses and todos — including the busiest or most active days. Argument: the "
+            + "window — today, yesterday, or N days (default: the last 7 days)."
     public let parameters = [
         ToolParameter(name: "window", description: "today, yesterday, N days, or week (default)", isRequired: false),
         ToolParameter(

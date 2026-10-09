@@ -3,6 +3,8 @@
 //  M1K3EvalTests
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-10, Confidence 0.85. Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the recent_activity stub's description carries the same
+//  "busiest" / "most active" words as the production tool, so the eval sees what the app sees.
 //
 
 @testable import M1K3Eval
@@ -70,5 +72,12 @@ struct ChatEvalStubPaletteTests {
         let activity = try #require(ChatEvalStubPalette.specs.first { $0.name == "recent_activity" })
         #expect(activity.output(for: "week", hard: false).hasPrefix("Recent activity on this Mac"))
         #expect(activity.output(for: "week", hard: true).contains("nothing to review"))
+    }
+
+    @Test("the recent_activity stub describes 'busiest' / 'most active' like the production tool")
+    func recentActivityStubMirrorsProductionWords() throws {
+        let activity = try #require(ChatEvalStubPalette.specs.first { $0.name == "recent_activity" })
+        #expect(activity.description.contains("busiest"))
+        #expect(activity.description.contains("most active"))
     }
 }
