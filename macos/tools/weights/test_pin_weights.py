@@ -14,6 +14,9 @@ shipped repo with none, refuse a stray name or a moved download base). Confidenc
 Review: Kev + claude-opus-5-5, 2026-10-08 — two refusals from the Qwen3.5 re-pin: an unreadable
 snapshot (macOS app-data privacy) is named as such, not as missing metadata; a snapshot lacking a
 published LFS file the app downloads is refused (a partial `hf download` pinned 9 of 10 files).
+Review: Kev + claude-opus-5-5, 2026-10-09 — #517's test gaps: collect() against a faked HF (the
+call site, mutation-checked), --snapshot-root without --only, the pattern list mirrored from the
+Swift fetcher, and a root-run skip for the chmod-0 test.
 """
 import json
 
@@ -138,7 +141,11 @@ def test_an_unreadable_snapshot_is_refused_as_unreadable_not_as_missing_metadata
     # macOS app-data privacy lets an outside process stat the container but not list it,
     # and pathlib's rglob swallows the PermissionError: an unreadable snapshot used to read
     # as "no HubApi download metadata" and sent Kev to re-download (2026-10-08).
+    import os
+
     import pytest
+    if os.geteuid() == 0:
+        pytest.skip("root lists a chmod-0 directory anyway, so this would pass vacuously")
     snapshot = tmp_path / "org" / "model"
     (snapshot / ".cache/huggingface/download").mkdir(parents=True)
     snapshot.chmod(0)
@@ -170,3 +177,71 @@ def test_a_snapshot_missing_a_small_published_file_is_refused_too():
     # Small files are not LFS-backed, but chat_template.jinja IS the tool-calling contract.
     listed = {"model.safetensors", "chat_template.jinja", "README.md", ".gitattributes"}
     assert m.missing_published_files(listed, {"model.safetensors"}) == ["chat_template.jinja"]
+
+
+
+def _snapshot(tmp_path, files: dict[str, bytes], commit: str = "rev1"):
+    """A `hf download --local-dir`-shaped snapshot: the files plus HubApi's metadata."""
+    repo = tmp_path / "org" / "model"
+    meta = repo / ".cache/huggingface/download"
+    meta.mkdir(parents=True)
+    for name, data in files.items():
+        (repo / name).write_bytes(data)
+        (meta / f"{name}.metadata").write_text(f"{commit}\netag\n0\n")
+    return tmp_path
+
+
+def _fake_hf(monkeypatch, tree: list[dict], revision: str = "rev1"):
+    def fake(url: str):
+        return {"sha": revision} if "/revision/" in url else tree
+    monkeypatch.setattr(m, "hf_json", fake)
+
+
+def test_collect_refuses_a_snapshot_missing_a_small_file_hf_lists(tmp_path, monkeypatch):
+    # The call-site half of #517's fold: collect() must feed the guard EVERY listed file, not
+    # just the LFS ones, or a snapshot missing chat_template.jinja (the tool-call contract) pins.
+    import hashlib
+
+    import pytest
+    weights = b"weights"
+    root = _snapshot(tmp_path, {"model.safetensors": weights})
+    _fake_hf(monkeypatch, [
+        {"type": "file", "path": "model.safetensors", "lfs": {"oid": hashlib.sha256(weights).hexdigest()}},
+        {"type": "file", "path": "chat_template.jinja"},
+        {"type": "file", "path": "README.md"},
+    ])
+    with pytest.raises(SystemExit, match="chat_template.jinja"):
+        m.collect("org/model", root)
+
+
+def test_collect_pins_a_complete_snapshot(tmp_path, monkeypatch):
+    import hashlib
+    weights, template = b"weights", b"{{ messages }}"
+    root = _snapshot(tmp_path, {"model.safetensors": weights, "chat_template.jinja": template})
+    _fake_hf(monkeypatch, [
+        {"type": "file", "path": "model.safetensors", "lfs": {"oid": hashlib.sha256(weights).hexdigest()}},
+        {"type": "file", "path": "chat_template.jinja"},
+        {"type": "file", "path": "README.md"},
+    ])
+    revision, files = m.collect("org/model", root)
+    assert revision == "rev1"
+    assert set(files) == {"model.safetensors", "chat_template.jinja"}
+    assert files["chat_template.jinja"]["sha256"] == hashlib.sha256(template).hexdigest()
+
+
+def test_snapshot_root_without_only_is_refused(monkeypatch, capsys):
+    import pytest
+    monkeypatch.setattr("sys.argv", ["pin_weights.py", "--snapshot-root", "/tmp"])
+    with pytest.raises(SystemExit) as exit_info:
+        m.main()
+    assert exit_info.value.code == 2
+    assert "--only" in capsys.readouterr().err
+
+
+def test_app_download_patterns_mirror_the_swift_fetcher():
+    # The pin covers what the app downloads; the two lists drifting would pin the wrong set.
+    import re
+    swift = (m.REPO_ROOT / "macos/Sources/M1K3MLX/BrainWeightsFetcher.swift").read_text()
+    declared = re.search(r"static let weightPatterns = \[([^\]]*)\]", swift)
+    assert declared, "BrainWeightsFetcher.weightPatterns not found"
+    assert tuple(re.findall(r'"([^"]+)"', declared.group(1))) == m.APP_DOWNLOAD_PATTERNS
