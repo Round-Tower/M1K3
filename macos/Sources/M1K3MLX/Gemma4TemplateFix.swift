@@ -36,6 +36,9 @@
 //  stale-hash parameter: a custom stale hash would have been judged against 12B's canonical.
 //  E4B is unpinned, so the hash gate is its only template check — pin it before it becomes a tier.
 //  Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — E2B joins (mobile audition). Its stale hash is
+//  E4B's `2f1b4d75…` and google/gemma-4-E2B-it's template hashes to E4B's `0a2c8073…`, so the
+//  Heal reuses E4B's vendored resource. Confidence 0.85 (hashes fetched read-only over https).
 //
 
 import CryptoKit
@@ -53,7 +56,7 @@ public enum Gemma4TemplateFix {
         let resourceName: String
     }
 
-    /// 12B (the shipped Big) and E4B (the 1.1 Lil candidate). The drafter repos
+    /// 12B (the shipped Big), E4B (the 1.1 Lil candidate) and E2B (the mobile candidate). The drafter repos
     /// keep theirs — drafting consumes token ids, never the chat template.
     public static let heals: [Heal] = [
         Heal(
@@ -62,6 +65,15 @@ public enum Gemma4TemplateFix {
         ),
         Heal(
             repoID: "mlx-community/gemma-4-e4b-it-4bit",
+            staleSHA256: "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082",
+            canonicalSHA256: "0a2c8073c878ab1da004bee933a998606537bbb62016310352c7285c3f01c5b5",
+            resourceName: "gemma4-e4b-chat-template-canonical"
+        ),
+        // E2B (mobile / Mini-vision / audio audition): same stale hash, and Google's E2B template
+        // is byte-identical to E4B's (both sha256 0a2c8073…, fetched 2026-10-09), so it shares
+        // E4B's vendored resource rather than carrying a second copy.
+        Heal(
+            repoID: "mlx-community/gemma-4-e2b-it-4bit",
             staleSHA256: "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082",
             canonicalSHA256: "0a2c8073c878ab1da004bee933a998606537bbb62016310352c7285c3f01c5b5",
             resourceName: "gemma4-e4b-chat-template-canonical"

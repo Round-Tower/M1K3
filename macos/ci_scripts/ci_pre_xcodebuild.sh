@@ -7,6 +7,8 @@ echo "CI_XCODEBUILD_ACTION: ${CI_XCODEBUILD_ACTION:-unknown}"
 echo "CI_WORKFLOW:          ${CI_WORKFLOW:-unknown}"
 echo "CI_BRANCH:            ${CI_BRANCH:-unknown}"
 echo "CI_COMMIT:            ${CI_COMMIT:-unknown}"
+# GitCommitSHA: the "Stamp GitCommitSHA" post-build phase in project.yml reads CI_COMMIT from the build env and
+# writes it into Info.plist BEFORE signing. (ci_post_xcodebuild runs after the archive is signed, so it cannot.)
 
 # M1K3 is privacy-first — NO Firebase/analytics plist to verify (unlike the prior knowledge-server app).
 # Just confirm xcodegen actually produced the project in post-clone.

@@ -13,6 +13,8 @@
 //  persists or routes on it. No test logic changed.
 //  Review: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.9 — prefill step pins: gemma-4 gets 1024
 //  whatever its cache geometry; the override wins for every family (red before the fix).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — window pins per family from config.json (12B 1024, E4B 512,
+//  Qwen3.5 nil); the lil id in the reuse pin re-pointed from Qwen3-2507 to the shipped Qwen3.5.
 //  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.9 — E4B routing pins: the uniform 4-bit id
 //  takes the VLM path; OptiQ, 8-bit and a local audition folder stay on the LLM path.
 //  Review: same day (overnight) — Qwen3.5-4B's exact id joins the VLM allow-list; 2B stays text-only.
@@ -435,6 +437,14 @@ struct MLXBrainProviderTests {
         #expect(!MLXBrainProvider.usesVLMLoadPath(
             for: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-OptiQ-4bit")
         ))
+        // e2b (uniform 4-bit, exact id): same model_type `gemma4` with vision + audio configs
+        // (config.json read 2026-10-09); auditionable as the mobile / Mini-vision candidate.
+        #expect(MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-e2b-it-4bit")
+        ))
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "mlx-community/gemma-4-e2b-it-8bit")
+        ))
         // Qwen3.5-4B (exact id): the conversion ships the vision tower (297 `vision_tower.*`
         // tensors, processor configs) and model_type `qwen3_5` is MLXVLM.Qwen35 in our pin.
         // Other Qwen3.5 sizes stay on the LLM path until a launch proves them.
@@ -476,6 +486,8 @@ struct MLXBrainProviderTests {
         #expect(!MLXBrainProvider(modelID: "mlx-community/Qwen3-4B-Instruct-2507-4bit").supportsImageInput)
         #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-e4b-it-4bit").supportsImageInput)
         #expect(!MLXBrainProvider(modelID: "mlx-community/gemma-4-e4b-it-OptiQ-4bit").supportsImageInput)
+        #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-e2b-it-4bit").supportsImageInput)
+        #expect(!MLXBrainProvider(modelID: "mlx-community/gemma-4-e2b-it-8bit").supportsImageInput)
         #expect(MLXBrainProvider(modelID: "mlx-community/Qwen3.5-4B-MLX-4bit").supportsImageInput)
         #expect(!MLXBrainProvider(modelID: "mlx-community/Qwen3.5-2B-4bit").supportsImageInput)
     }
@@ -532,14 +544,100 @@ struct MLXBrainProviderTests {
     func prefixReusabilityFollowsTheWindow() {
         let big = "mlx-community/gemma-4-12B-it-4bit"
         #expect(MLXBrainProvider.slidingWindow(forModelID: big) == 1024)
-        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 1878, modelID: big))
-        #expect(MLXBrainProvider.prefixIsReusable(tokens: 1024, modelID: big), "exactly the window fits")
-        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 1025, modelID: big))
+        let bigWindow = MLXBrainProvider.slidingWindow(forModelID: big)
+        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 1878, window: bigWindow))
+        #expect(MLXBrainProvider.prefixIsReusable(tokens: 1024, window: bigWindow), "exactly the window fits")
+        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 1025, window: bigWindow))
 
         // Dense attention: no window, so a prefix of any size stays trimmable
         // and reuse genuinely works — which is why Lil is 10x faster per turn.
-        let lil = "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510"
+        let lil = "mlx-community/Qwen3.5-4B-MLX-4bit"
         #expect(MLXBrainProvider.slidingWindow(forModelID: lil) == nil)
-        #expect(MLXBrainProvider.prefixIsReusable(tokens: 1878, modelID: lil))
+        let lilWindow = MLXBrainProvider.slidingWindow(forModelID: lil)
+        #expect(MLXBrainProvider.prefixIsReusable(tokens: 1878, window: lilWindow))
+    }
+
+    /// Stream G hygiene: the window comes from config.json, not the repo name.
+    /// E4B's config says 512; the name-keyed 1024 was wrong for it.
+    @Test("the sliding window is read from config.json per family; the name is only the pre-load fallback",
+          arguments: [
+              (#"{"model_type":"gemma4_unified","#
+                  + #""text_config":{"model_type":"gemma4_unified_text","sliding_window":1024}}"#, 1024),
+              (#"{"model_type":"gemma4","text_config":{"model_type":"gemma4_text","sliding_window":512}}"#, 512),
+              (#"{"model_type":"gemma4_text","sliding_window":512}"#, 512),
+              // Key absent: the loader's own per-arch default (unified 1024, else 512).
+              (#"{"model_type":"gemma4_unified","text_config":{"model_type":"gemma4_unified_text"}}"#, 1024),
+              (#"{"model_type":"gemma4","text_config":{"model_type":"gemma4_text"}}"#, 512),
+          ])
+    func windowFromConfig(json: String, expected: Int) {
+        #expect(LocalModelConfig.slidingWindow(configJSON: Data(json.utf8)) == expected)
+    }
+
+    @Test("a non-gemma-4 config has no rotating window, even if it carries a sliding_window key")
+    func nonGemmaConfigHasNoWindow() {
+        let qwen35 = #"{"model_type":"qwen3_5","text_config":{"model_type":"qwen3_5_text"}}"#
+        #expect(LocalModelConfig.slidingWindow(configJSON: Data(qwen35.utf8)) == nil)
+        let qwen2 = #"{"model_type":"qwen2","sliding_window":4096,"use_sliding_window":false}"#
+        #expect(LocalModelConfig.slidingWindow(configJSON: Data(qwen2.utf8)) == nil)
+        #expect(LocalModelConfig.slidingWindow(configJSON: Data("not json".utf8)) == nil)
+    }
+
+    @Test("the config-aware overload prefers the config, falls back to the name, and keeps 12B at 1024")
+    func overloadPrefersConfig() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SlidingWindowTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let e4b = "mlx-community/gemma-4-E4B-it-4bit"
+        // No config on disk yet (pre-load): the name-keyed 1024.
+        #expect(MLXBrainProvider.slidingWindow(forModelID: e4b, configDirectory: dir) == 1024)
+        try #"{"model_type":"gemma4","text_config":{"model_type":"gemma4_text","sliding_window":512}}"#
+            .write(to: dir.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
+        let e4bWindow = MLXBrainProvider.slidingWindow(forModelID: e4b, configDirectory: dir)
+        #expect(e4bWindow == 512)
+        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 600, window: e4bWindow))
+        #expect(MLXBrainProvider.prefixIsReusable(tokens: 512, window: e4bWindow))
+
+        // E2B's published config.json (google + mlx-community, read 2026-10-09): 512, 35 layers.
+        let e2b = "mlx-community/gemma-4-e2b-it-4bit"
+        let e2bWindow = MLXBrainProvider.slidingWindow(forModelID: e2b, configDirectory: dir)
+        #expect(e2bWindow == 512)
+        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 600, window: e2bWindow))
+
+        try #"{"model_type":"gemma4_unified","text_config":{"model_type":"gemma4_unified_text","sliding_window":1024}}"#
+            .write(to: dir.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
+        let big = "mlx-community/gemma-4-12B-it-4bit"
+        #expect(MLXBrainProvider.slidingWindow(forModelID: big, configDirectory: dir) == 1024)
+    }
+
+    /// Review fold (#522): `configDirectory.map(…)` was `Int??`, so a folder with no
+    /// config.json read as `.some(nil)` and the name-keyed fallback could be skipped.
+    @Test("a config-less folder falls back to the name: gemma-4 1024, anything else nil")
+    func configlessFolderFallsBackToTheName() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SlidingWindowTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let big = "mlx-community/gemma-4-12B-it-4bit"
+        let lil = "mlx-community/Qwen3.5-4B-MLX-4bit"
+        #expect(MLXBrainProvider.slidingWindow(forModelID: big, configDirectory: dir) == 1024)
+        #expect(MLXBrainProvider.slidingWindow(forModelID: lil, configDirectory: dir) == nil)
+        // Unreadable config (a directory where the file should be) is the same as absent.
+        try FileManager.default.createDirectory(
+            at: dir.appendingPathComponent("config.json"), withIntermediateDirectories: false
+        )
+        #expect(MLXBrainProvider.slidingWindow(forModelID: big, configDirectory: dir) == 1024)
+    }
+
+    @Test("a 12B-shaped config with a non-Int sliding_window takes the unified default, 1024")
+    func nonIntegerWindowTakesTheDefault() {
+        func twelveB(window: String) -> Data {
+            Data((#"{"model_type":"gemma4_unified","text_config":{"model_type":"gemma4_unified_text","#
+                    + #""sliding_window":"# + window + "}}").utf8)
+        }
+        #expect(LocalModelConfig.slidingWindow(configJSON: twelveB(window: #""1024""#)) == 1024)
+        #expect(LocalModelConfig.slidingWindow(configJSON: twelveB(window: "null")) == 1024)
+        #expect(LocalModelConfig.slidingWindow(configJSON: twelveB(window: "0")) == 1024)
+        #expect(LocalModelConfig.slidingWindow(configJSON: twelveB(window: "768")) == 768, "an Int is honoured")
     }
 }

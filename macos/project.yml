@@ -27,6 +27,9 @@
 # calendar and location ground answers, and a web search M1K3 writes (on by default) can carry them; the iOS
 # local-network string now describes the connection, not the app. Mic and call-audio strings stay — transcription
 # is on-device and the audio really does not leave. Confidence 0.85.
+# Review: Kev + claude-fable-5.1, 2026-10-09 — M1K3 + M1K3iOS stamp GitCommitSHA (tools/ci/git_commit_stamp.py) in a post-BUILD
+# phase (post-compile was overwritten by ProcessInfoPlistFile; pre-push review), with script sandboxing off for those two
+# targets so the phase can read .git.
 # Review: Kev + claude-fable-5.1, 2026-10-09 — RememberPhotoButton.swift joins the MobileShell template (caption memory).
 
 name: M1K3
@@ -178,6 +181,32 @@ targetTemplates:
 targets:
   M1K3:
     type: application
+    postBuildScripts:
+      # Stamps GitCommitSHA into the built Info.plist BEFORE signing: a post-build
+      # phase with the processed plist as its input runs after ProcessInfoPlistFile
+      # and ahead of CodeSign (as a post-compile phase, or without the input, the
+      # plist step ran later and overwrote the stamp — build logs, 2026-10-09), so
+      # run_chateval.py / ChatEvalStage know which commit the app is. Xcode Cloud inherits CI_COMMIT into this env; locally
+      # it is `git rev-parse --short HEAD` (+ -dirty). Never fails the build.
+      - name: Stamp GitCommitSHA
+        basedOnDependencyAnalysis: false
+        # The processed plist as a declared INPUT orders this phase after
+        # ProcessInfoPlistFile; without it the build system scheduled the plist
+        # step after the script even as the last phase (build logs, 2026-10-09).
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
+        script: |
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          [ -f "$PLIST" ] || { echo "warning: no Info.plist at $PLIST; GitCommitSHA not stamped"; exit 0; }
+          SHA="$(/usr/bin/python3 -I "$SRCROOT/tools/ci/git_commit_stamp.py" "$SRCROOT" 2>/dev/null)"
+          [ -n "$SHA" ] || SHA=unknown
+          # The script's stderr is dropped above (tracebacks), so say the loss here: an
+          # `unknown` on an archive is a build that cannot be matched to a commit.
+          [ "$SHA" != unknown ] || echo "warning: GitCommitSHA is unknown (git, python3 or CI_COMMIT unavailable)" >&2
+          /usr/libexec/PlistBuddy -c "Set :GitCommitSHA $SHA" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST" \
+            || { echo "warning: GitCommitSHA not stamped into $PLIST"; exit 0; }
+          echo "GitCommitSHA=$SHA"
     platform: macOS
     deploymentTarget: "26.0"
     sources:
@@ -288,6 +317,11 @@ targets:
         PRODUCT_NAME: M1K3
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
+        # The Stamp GitCommitSHA phase reads .git AND rewrites the built Info.plist
+        # (PlistBuddy on $TARGET_BUILD_DIR/$INFOPLIST_PATH, declared only as an
+        # input): a sandboxed script phase can do neither. Only these two app
+        # shells carry a script phase, so the blast radius is just them.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Round Tower Software Studios Ltd"
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
         # DEFAULT to the App-Store-SAFE entitlements (no audioanalyticsd
@@ -365,6 +399,32 @@ targets:
   # a clean, unambiguous Xcode Cloud archive lane.
   M1K3iOS:
     type: application
+    postBuildScripts:
+      # Stamps GitCommitSHA into the built Info.plist BEFORE signing: a post-build
+      # phase with the processed plist as its input runs after ProcessInfoPlistFile
+      # and ahead of CodeSign (as a post-compile phase, or without the input, the
+      # plist step ran later and overwrote the stamp — build logs, 2026-10-09), so
+      # run_chateval.py / ChatEvalStage know which commit the app is. Xcode Cloud inherits CI_COMMIT into this env; locally
+      # it is `git rev-parse --short HEAD` (+ -dirty). Never fails the build.
+      - name: Stamp GitCommitSHA
+        basedOnDependencyAnalysis: false
+        # The processed plist as a declared INPUT orders this phase after
+        # ProcessInfoPlistFile; without it the build system scheduled the plist
+        # step after the script even as the last phase (build logs, 2026-10-09).
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
+        script: |
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          [ -f "$PLIST" ] || { echo "warning: no Info.plist at $PLIST; GitCommitSHA not stamped"; exit 0; }
+          SHA="$(/usr/bin/python3 -I "$SRCROOT/tools/ci/git_commit_stamp.py" "$SRCROOT" 2>/dev/null)"
+          [ -n "$SHA" ] || SHA=unknown
+          # The script's stderr is dropped above (tracebacks), so say the loss here: an
+          # `unknown` on an archive is a build that cannot be matched to a commit.
+          [ "$SHA" != unknown ] || echo "warning: GitCommitSHA is unknown (git, python3 or CI_COMMIT unavailable)" >&2
+          /usr/libexec/PlistBuddy -c "Set :GitCommitSHA $SHA" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST" \
+            || { echo "warning: GitCommitSHA not stamped into $PLIST"; exit 0; }
+          echo "GitCommitSHA=$SHA"
     platform: iOS
     deploymentTarget: "26.0"
     templates: [MobileShell]
@@ -415,6 +475,11 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
+        # The Stamp GitCommitSHA phase reads .git AND rewrites the built Info.plist
+        # (PlistBuddy on $TARGET_BUILD_DIR/$INFOPLIST_PATH, declared only as an
+        # input): a sandboxed script phase can do neither. Only these two app
+        # shells carry a script phase, so the blast radius is just them.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "6.2"

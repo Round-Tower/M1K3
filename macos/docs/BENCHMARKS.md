@@ -89,6 +89,22 @@ python3 tools/eval/scorecard.py \
   ~/Library/Containers/app.m1k3/Data/scorecard.txt --markdown scorecard.md
 ```
 
+### The chat curve (prefill over a scripted chat)
+
+`M1K3_SELFTEST_CHATCURVE=1` (Lil; or `lil`, `big`, a model id) drives a fixed eight-message
+chat through `AgentRAGResponder` with the history accumulating, and reports per message the
+rendered prompt tokens, the tool session's cache reuse (`reuse: X/Y`), the tokens and
+milliseconds actually prefilled, and peak RSS, plus the slope per message. A flat prefill
+slope means the cache carries across turns; a rising one is the cost a cross-turn checkpoint
+would buy back (`docs/GEMMA_1_1_PLAN.md`). Quit the live app first (two MLX processes crawl).
+Run the built app's binary directly, report on stdout:
+
+```bash
+M1K3_SELFTEST=1 M1K3_SELFTEST_CHATCURVE=1 M1K3_SELFTEST_OUT=- \
+  /path/to/M1K3.app/Contents/MacOS/M1K3 > chatcurve.txt
+# the JSON is the block between -----BEGIN/END CHATCURVE JSON----- ; with a file OUT it is <OUT>.json
+```
+
 ### macOS 27: the report comes out over stdout
 
 App-data privacy on macOS 27 closes `~/Library/Containers/app.m1k3` to shells:
@@ -266,6 +282,15 @@ revision it ran against. Generate your own with the steps above — the numbers
 here are one machine's, and the point of publishing the method is that you do
 not have to take them on trust.
 
+The app commit comes from `GitCommitSHA` in the built Info.plist, stamped by the
+`Stamp GitCommitSHA` post-build phase in `project.yml` (`tools/ci/git_commit_stamp.py`:
+`$CI_COMMIT` on Xcode Cloud, else the short HEAD, `-dirty` if the tree has changes,
+`unknown` without git). `run_chateval.py` reads it, so `--commit` is only needed for
+a build that predates the phase. A `-dirty` stamp means the scorecard is not
+reproducible from that commit alone (untracked files count, so build artifacts
+must be gitignored — `macos/.dd/` is). The CI stamp is 8 characters and the
+local one is git's short hash (7+): prefix-match, never compare for equality.
+
 ---
 
 *Signed: Kev + claude-opus-5, 2026-08-08, Confidence 0.9 (methodology and
@@ -278,3 +303,5 @@ macOS 26 readers.*
 *Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.7 — the tool-router arm
 section (#510/#512): eight cells, the flip rule, and the chain fixtures kept out of the
 verdict until the stubs are chain-aware.*
+*Review: Kev + claude-fable-5.1, 2026-10-09 (#522) — the GitCommitSHA stamp
+paragraph: where the app commit comes from and what `-dirty` means.*
