@@ -18,6 +18,9 @@
 //  needs (the "refuses to code" bug). Fix: generation verbs are no longer
 //  "analytic" on any tier, and the speed tier now thinks ONLY on an explicit
 //  deep-reasoning marker (no weak openers, no length). Verify-by-feel at ⌘R.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `ThinkingModeResolver`: the Mac's
+//  inline provider closure became a shared pure function so the iOS shell reads
+//  the same default, keys and voice-fast rule (#198).
 //
 
 import Foundation
@@ -42,6 +45,36 @@ public enum VoiceThinkingPolicy {
     ) -> ThinkingMode {
         guard voiceModeActive else { return stored }
         return voiceThinkingEnabled ? .auto : .fast
+    }
+}
+
+/// The per-turn mode resolution BOTH shells read (#198): the Mac's
+/// `AppEnvironment` and the iOS `AppCore` each pass `resolve` as their
+/// `thinkingModeProvider`, so the default (auto), the defaults keys and the
+/// voice "fast" rule cannot drift apart. iOS has no Reasoning picker, so its
+/// stored value is always unset and the default governs; a Qwen3.5 brain
+/// (Lil) reads `enable_thinking` from the resolved mode.
+public enum ThinkingModeResolver {
+    /// What an unset (or unreadable) stored value means.
+    public static let defaultMode: ThinkingMode = .auto
+    /// UserDefaults key of the Settings Reasoning picker (a `ThinkingMode` rawValue).
+    public static let storedModeKey = "thinkingMode"
+    /// UserDefaults key of voice mode's in-mode thinking toggle (default off → fast).
+    public static let voiceThinkingKey = "voiceMode.thinking"
+
+    public static func resolve(
+        storedRaw: String?,
+        forced: ThinkingMode?,
+        voiceModeActive: Bool,
+        voiceThinkingEnabled: Bool
+    ) -> ThinkingMode {
+        if let forced { return forced }
+        let stored = storedRaw.flatMap(ThinkingMode.init(rawValue:)) ?? defaultMode
+        return VoiceThinkingPolicy.effectiveMode(
+            stored: stored,
+            voiceModeActive: voiceModeActive,
+            voiceThinkingEnabled: voiceThinkingEnabled
+        )
     }
 }
 

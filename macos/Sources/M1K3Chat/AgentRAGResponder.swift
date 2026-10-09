@@ -150,6 +150,10 @@
 //  agent; none failed and none found anything → plain; else answer from what ran. A single pick behaves
 //  as before (DispatchTurnTests unchanged). Confidence 0.75.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — a cancel in the dispatch chain is no tool failure (#512).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `recentActivityRouting` settles "busy": busiest / most
+//  active days means activity on this device → call recent_activity, never ask which kind of busy. Lil
+//  (Qwen3.5) asked ~6/16 on `tool-recent-busiest`. Wording pinned (RecentActivityRoutingTests); the
+//  5× Lil replay is owed. Confidence 0.7.
 
 import Foundation
 import M1K3Agent
@@ -1417,10 +1421,18 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// reconstruction from the history window, which holds one conversation's
     /// tail and nothing of the visitors or the heartbeat (2026-09-10).
     /// Offered-only, like every routing line (RecentActivityRoutingTests).
+    ///
+    /// 2026-10-09: "What were the busiest days this week?" drew a clarifying
+    /// question from Lil (Qwen3.5) — "your calendar, a team, web traffic?" —
+    /// in ~6/16 trials instead of the call (`tool-recent-busiest`). The second
+    /// sentence settles the ambiguity in the rule itself: busy here means
+    /// activity on this device, and the tool is the answer, not a question.
     static let recentActivityRouting =
         "- For what happened lately on \(HostPlatform.thisDevice) — recent chats, new memories, "
             + "visiting agents, heartbeat pulses, todos, how busy it's been — call recent_activity (window: today, "
-            + "yesterday, or N days); do not reconstruct it from this conversation."
+            + "yesterday, or N days); do not reconstruct it from this conversation. "
+            + "\"Busy\", \"busiest\" or \"most active\" days means activity on \(HostPlatform.thisDevice): "
+            + "call recent_activity straight away; do not ask which kind of busy they mean."
 
     /// The web route (2026-09-12). Byte-replayed on Lil, n=4 per probe, master →
     /// this line plus the persona's matching bullet: "What's the newest Claude

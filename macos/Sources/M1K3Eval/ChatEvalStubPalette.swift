@@ -16,6 +16,8 @@
 //  Prior: Unknown (the four original specs were ChatEvalStage's, 2026-06).
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — recent_activity stub (parameter `window`) so the new tool is scored
 //  from day one; the AFM arm gained a matching @Generable shape (ChatEvalStage).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the recent_activity stub mirrors the production description's
+//  "busiest or most active days" so the eval sees what the app sees (tool-recent-busiest).
 //
 
 import Foundation
@@ -117,8 +119,8 @@ public enum ChatEvalStubPalette {
         ChatEvalStubSpec(
             name: "recent_activity",
             description: "Review what happened lately on this Mac: recent chats, new memories, visiting "
-                + "agents, heartbeat pulses and todos. Argument: the window — today, yesterday, or N days "
-                + "(default: the last 7 days).",
+                + "agents, heartbeat pulses and todos — including the busiest or most active days. Argument: the "
+                + "window — today, yesterday, or N days (default: the last 7 days).",
             parameter: ChatEvalStubParameter(name: "window", description: "today, yesterday, N days, or week (default)"),
             canned: "Recent activity on this Mac — {input}. Chats: 3 touched, 3 titled. \"Cork Jazz Festival "
                 + "2026 Lineup\" (yesterday), \"Quiet code night\" (Tuesday), \"Sourdough starter\" (Monday). "

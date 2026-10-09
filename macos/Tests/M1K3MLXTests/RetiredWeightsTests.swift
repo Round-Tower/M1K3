@@ -8,6 +8,8 @@
 //  against a temp download base — no network, no MLX. Issue #222.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.85, Prior: none.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the keep set names the shipped Lil (Qwen3.5-4B, #517);
+//  the 2507 DWQ it replaced is now one of the stranded folders the policy exists to find. Fixture only.
 
 import Foundation
 @testable import M1K3MLX
@@ -34,19 +36,23 @@ struct RetiredWeightsTests {
         let installed = [
             InstalledWeights(repoID: "mlx-community/Qwen3-4B-Instruct-2507-4bit", bytes: 2_263_022_417),
             InstalledWeights(repoID: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510", bytes: 2_263_000_000),
+            InstalledWeights(repoID: "mlx-community/Qwen3.5-4B-MLX-4bit", bytes: 3_060_000_000),
             InstalledWeights(repoID: "mlx-community/gemma-4-12B-it-4bit", bytes: 6_772_000_000),
             InstalledWeights(repoID: "mlx-community/Qwen3.8-27B-4bit", bytes: 16_070_000_000),
             InstalledWeights(repoID: "mlx-community/Llama-3.2-1B-Instruct-4bit", bytes: 700_000_000),
         ]
+        // What ships (Lil = Qwen3.5-4B since #517, Big = gemma-4-12B) plus what is loaded.
         let keep: Set = [
-            "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510", "mlx-community/gemma-4-12B-it-4bit",
+            "mlx-community/Qwen3.5-4B-MLX-4bit", "mlx-community/gemma-4-12B-it-4bit",
             "mlx-community/Qwen3.8-27B-4bit", // loaded right now (an eval override) — never offered
         ]
         let retired = RetiredWeightsPolicy.retired(installed: installed, keep: keep)
+        // Both 2507 folders — the Lil of July–October — are stranded now; biggest first.
         #expect(retired.map(\.repoID) == [
-            "mlx-community/Qwen3-4B-Instruct-2507-4bit", "mlx-community/Llama-3.2-1B-Instruct-4bit",
+            "mlx-community/Qwen3-4B-Instruct-2507-4bit", "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510",
+            "mlx-community/Llama-3.2-1B-Instruct-4bit",
         ])
-        #expect(RetiredWeightsPolicy.totalBytes(retired) == 2_263_022_417 + 700_000_000)
+        #expect(RetiredWeightsPolicy.totalBytes(retired) == 2_263_022_417 + 2_263_000_000 + 700_000_000)
         #expect(RetiredWeightsPolicy.retired(installed: [], keep: keep).isEmpty)
     }
 

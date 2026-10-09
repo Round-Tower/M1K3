@@ -66,6 +66,10 @@
 //  known by construction). Audio waits for Stream E — no unused field ahead of it. Confidence 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `alsoCallTools` + three `tool-chain-*` fixtures (#510/#512):
 //  two read-only tools in sequence, both pinned, so toolChain is measurable. Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 — `leakMarkers` is public on the enum so the scorer can
+//  scope a code-gen fixture's list: leak markers in the prose, content markers ("best = 0") in the fence.
+//  Lil's `code-py-fix-bug` 0/3 and `code-site-about-chat` 1/3 on 2026-10-07 were the diagnosis and a
+//  rendered chat bubble, not the bug surviving or a transcript leak.
 
 import Foundation
 
@@ -300,9 +304,14 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
 /// The status-report greeting shape a 4B copies from an exemplar (see
 /// chat-greeting). Case-insensitive, like every mustNotContain marker.
 private let cannedGreetingMarkers = ["all quiet here", "nothing in or out", "what are we at"]
-private let leakMarkers = ["<think>", "</think>", "USER:", "M1K3:", "ASSISTANT:"]
 
 public enum ChatEvalFixtures {
+    /// The scaffolding markers above, named so the scorer can tell a LEAK (something the
+    /// model said) from a content marker (something it made): on code-gen fixtures the
+    /// scorer reads these in the prose beside the artifact and every other
+    /// `mustNotContain` entry inside the fence (2026-10-09).
+    public static let leakMarkers = ["<think>", "</think>", "USER:", "M1K3:", "ASSISTANT:"]
+
     /// Open chat — persona, coherence, brevity, no scaffolding leak. This is
     /// the kind that drove the floor-default policy (AFM weaker at open chat).
     public static let openChat: [ChatEvalFixture] = [

@@ -306,6 +306,10 @@ are deliberately left unpinned so the evaluation loop stays usable.
   **Mobile UNMEASURED**: the 8 GB floor was set on the dense model, and the Mac peak sits over the
   4 GB mobile `memoryLimit`. An iPhone soak gates the release. The Reasoning picker returns
   (Qwen3.5 reads `enable_thinking`). Evals: `docs/evals/2026-10-07-lil-*`, plan: GEMMA_1_1_PLAN.md.
+  **Lil RAM cap, signed 2026-10-09:** 5 GB of the brain's OWN peak (`BrainRun.ownPeakMemoryMB`, MiB)
+  on a 16 GB Mac — `BrainTier.lilOwnPeakCapGB`, and `run_chateval.py summarise` flags a lil run over
+  it. Incumbent 4.8 / Qwen3.5 4.8 pass; E4B's 10.3 is what it rejects. A Lil candidate over the cap
+  is not Lil, whatever it scores.
 - **2026-09-06: pocket — `mlx-community/LFM2.5-1.2B-Instruct-4bit` (rev dee2f8a2) as the
   Mini for devices WITHOUT Apple Intelligence.** A 4th `BrainTier` case shown as "Mini"
   only where AFM is blocked (`BrainTier.offered(afm:)` — one Mini per device; Mini stays
@@ -662,3 +666,6 @@ stale (ReAct floor + stale template, both since fixed); its re-audition is queue
 GEMMA_1_1_PLAN, not Lil. No decision changed. -->
 <!-- Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8 — E2B wired for audition (VLM route,
 template heal, window 512 from config.json); no download, no verdict changed. -->
+<!-- Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 — the Lil RAM cap signed into the
+2026-10-08 entry (5 GB own peak on a 16 GB Mac; `BrainTier.lilOwnPeakCapGB`, flagged by run_chateval's
+summary). The numbers it sits on are the ×3 bake-off's own; no decision changed. -->

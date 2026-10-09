@@ -65,6 +65,15 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 (2), Confidence 0.85 — `takeSession(consultSlot:)`: a call
 //  on foreign instructions (the neutral titler) gets a fresh session and never touches the prewarm slot,
 //  which drops on a key mismatch (PR #424 review: it evicted the next chat turn's prewarm).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — continueToolTurn declines images honestly
+//  (now the guardrail arm of AFMToolPrompt.visionFailureReply) instead of confabulating. Confidence 0.7.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — continueToolTurn takes the neutral, tool-free image shape
+//  (AFMToolPrompt.visionTurn) like the native session; the decline is its failure fallback. Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (3) — continueToolTurn's image fallback is keyed on the failure
+//  class (AFMToolPrompt.visionFailureReply): decline, resend or fresh chat, same as the native session. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (4) — continueToolTurn gates the neutral image shape on the same
+//  runtime read that attaches the image (AFMToolPrompt.visionRoute / imagesAttachable): where none can ride the
+//  Prompt the turn is the honest `.cannotShow` reply, no session built (PR #526 third-pass review). Confidence 0.85.
 import Foundation
 import M1K3LogCore
 import os
@@ -608,9 +617,18 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
     /// override above, this path only fires on older runtimes or when
     /// `makeToolTurnSession` is bypassed.
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
-        let body = AFMToolPrompt.render(messages: messages, tools: tools)
+        // An image turn takes the neutral shape (see AFMNativeToolTurnSession): no
+        // persona, no tool catalogue or tool paragraph in the body, the steer last —
+        // only where the image can ride the Prompt (`imagesAttachable`, the same check
+        // as the attach branch below); elsewhere the honest reply IS the turn.
+        let route = AFMToolPrompt.visionRoute(
+            from: messages, imagesAttachable: AFMToolPrompt.imagesAttachable, platform: .current
+        )
+        if case let .cannotShow(reply) = route { return .text(reply) }
+        let vision: AFMToolPrompt.VisionTurn? = if case let .see(turn) = route { turn } else { nil }
+        let body = vision?.body ?? AFMToolPrompt.render(messages: messages, tools: tools)
         let imageURLs = AFMToolPrompt.imageURLs(from: messages)
-        let standing = AFMToolPrompt.systemInstructions(from: messages) ?? instructions()
+        let standing = vision?.instructions ?? AFMToolPrompt.systemInstructions(from: messages) ?? instructions()
         let session = LanguageModelSession(instructions: standing)
         do {
             let decision: AFMToolDecision
@@ -651,6 +669,16 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
             // model that chose to say nothing, and this backstop deliberately
             // manufactures exactly that shape.
             logFailure(error, streaming: false)
+            // An image turn that still fails gets an honest reply keyed on the failure
+            // class (AFMToolPrompt.visionFailureReply), never a guess. The agent records
+            // it as the model's words, as the native session does — see that file's note.
+            if vision != nil {
+                return .text(AFMToolPrompt.visionFailureReply(
+                    for: AFMFailure.classify(error: error),
+                    imageCount: AFMToolPrompt.latestTurnImageCount(in: messages),
+                    platform: .current
+                ))
+            }
             return .text("")
         }
     }

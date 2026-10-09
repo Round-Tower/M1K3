@@ -9,6 +9,16 @@
 //  flush as the answer; .toolCalls → discard, the transcript keeps it).
 //
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 — pins the PRE-OPENED
+//  template contract (Qwen3.5, Lil again since #517): the gate has no notion of
+//  "pre-opened"; the SESSION yields the synthetic `<think>` as token zero
+//  (MLXToolTurnSession.sendHeld, MLXBrainProvider.generateStreaming) so the gate
+//  is live from the model's first token and closes on its lone `</think>`. A
+//  reasoning-only turn fires no answer token (the responder's empty-answer
+//  fallback relies on that), and a redundant model-emitted opener can reach the
+//  disclosure but never the bubble. Green from the start: these pin wiring that
+//  already held, written while chasing a reported bubble leak that the source
+//  does not reproduce. Test names kept under the lint limit; Confidence now 0.85.
 //
 
 import Foundation
@@ -120,5 +130,50 @@ struct ThinkStreamGateTests {
         #expect(live == "<think>checking the weather</think>")
         #expect(answer == "It's sunny.")
         #expect(gate.flushRemainder() == "It's sunny.")
+    }
+
+    // MARK: - Pre-opened template (Qwen3.5)
+
+    @Test("pre-opened template: the synthetic opener is token zero; reasoning streams live to the lone </think>")
+    func preOpenedStreamsLiveFromTokenZero() {
+        // The model never emits `<think>` (its template already did); the
+        // session prepends it. Everything up to the lone close is reasoning.
+        var (live, answer, gate) = feedAllWithAnswer([
+            "<think>", "Let me", " check", " the time", "</think>", "It's", " 3pm.",
+        ])
+        #expect(live == "<think>Let me check the time</think>")
+        #expect(answer == "It's 3pm.")
+        #expect(gate.flushRemainder() == "It's 3pm.")
+    }
+
+    @Test("pre-opened template, reasoning-only turn: no answer token fires, the remainder is empty")
+    func preOpenedReasoningOnlyFiresNoAnswer() {
+        var (live, answer, gate) = feedAllWithAnswer(["<think>", "only", " thinking", "</think>"])
+        #expect(live == "<think>only thinking</think>")
+        #expect(answer.isEmpty)
+        #expect(gate.flushRemainder().isEmpty)
+    }
+
+    @Test("pre-opened template, thinking off: no opener is yielded; a plain turn streams to the answer")
+    func preOpenedThinkingOffIsPlain() {
+        // `toolTurnThinkingDecision(turnThinking: false, …).prefixNeeded` is
+        // false, so the session yields no opener; the template closed the
+        // block itself and the model emits no tags at all.
+        var (live, answer, gate) = feedAllWithAnswer(["It's", " 3pm."])
+        #expect(live.isEmpty)
+        #expect(answer == "It's 3pm.")
+        #expect(gate.flushRemainder() == "It's 3pm.")
+    }
+
+    @Test("a model re-emitting <think> after the synthetic opener doubles the LIVE tag only, never the answer")
+    func redundantModelOpenerNeverReachesAnswer() {
+        // Unreachable for a pre-opening template (the opener is in its prompt),
+        // pinned so the safety property is explicit: the double lands in the
+        // reasoning disclosure, never the bubble, and the final text is
+        // deduped by normaliseThinkPrefix's hasPrefix guard.
+        var (live, answer, gate) = feedAllWithAnswer(["<think>", "<think>", "plan", "</think>", "done"])
+        #expect(live == "<think><think>plan</think>")
+        #expect(answer == "done")
+        #expect(gate.flushRemainder() == "done")
     }
 }

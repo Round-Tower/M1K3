@@ -34,6 +34,8 @@
 //  AFM is the brain #97 was caught on. Purely numeric tokens are excluded as
 //  footnote markers. Trade pinned in tests: a fabricated headingless citation
 //  still survives unchecked; the § form keeps full fabrication checking.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — doc only: ChatPromptBuilder now names the `[Title]` shape
+//  when a chunk is headingless; the allowlist here is what makes that steer safe to give.
 
 import Foundation
 
@@ -143,7 +145,8 @@ public enum CitationValidator {
     /// overwhelmingly ordinary text — `[String]` in a code block, `[1]`
     /// footnotes, `[sic]`. The trade is that a FABRICATED headingless citation
     /// survives unchecked; the § form keeps full fabrication checking, and the
-    /// prompt only ever demonstrates the § form (see ChatPromptBuilder).
+    /// prompt leads with the § form, naming `[Title]` only when a chunk has no
+    /// heading (see ChatPromptBuilder, 2026-10-09).
     static func headinglessCitations(in text: String, chunks: [ChunkHit]) -> [Citation] {
         guard !chunks.isEmpty else { return [] }
         // BOTH delimiters, for the same reason `citationHits` parses both:
