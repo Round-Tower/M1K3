@@ -31,6 +31,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-01 — the clock parks when there is nothing to draw or feed
 //  (`InferencePhosphor.needsClock`): an EMPTY rain behind an idle, visible chat held the window at
 //  52–58% CPU (Debug A/B; 0.1–1.5% with the rain off). Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the ink follows the appearance (`BackdropInk.rain`): voice
+//  mode sits on the window glass now, and the pale phosphor tints at half strength vanished on light.
+//  Dark is byte-identical. Confidence 0.7 (light numbers are first-judged by eye).
 //
 
 import M1K3Avatar
@@ -58,6 +61,7 @@ struct InferencePhosphorView: View {
     var paused = false
 
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Read here rather than trusted to the host (#405): voice mode's host passed no
     /// `paused:`, so a hidden or minimised window kept the rain ticking.
@@ -144,6 +148,9 @@ struct InferencePhosphorView: View {
         // top — the avatar floats in front of them (this layer is behind it).
         let baseline = size.height * 0.62
         let font = Font.system(size: fontSize, weight: .light, design: .monospaced)
+        // The appearance's ink: dark keeps the tuned half-strength pale tints; light
+        // lays down more, darker ink so the rain reads on the window glass.
+        let ink = BackdropInk(isDark: colorScheme == .dark).rain
 
         for (index, line) in lines.enumerated() {
             let opacity = rain.opacity(for: line, at: now)
@@ -156,7 +163,10 @@ struct InferencePhosphorView: View {
             var text = canvas.resolve(Text(line.text).font(font))
             // Ambient: capped well below full so it reads as a backdrop the
             // avatar sits in front of, never foreground text.
-            text.shading = .color(line.source.tint.opacity(opacity * 0.5))
+            let tint = ink.tintDarkening > 0
+                ? line.source.tint.mix(with: .black, by: ink.tintDarkening)
+                : line.source.tint
+            text.shading = .color(tint.opacity(opacity * ink.opacityScale))
             canvas.draw(text, at: CGPoint(x: size.width / 2, y: y), anchor: .center)
         }
     }
