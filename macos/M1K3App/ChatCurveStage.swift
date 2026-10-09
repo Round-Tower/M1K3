@@ -100,21 +100,26 @@ enum ChatCurveStage {
                 samples.append(sample)
                 emit("chatcurve #\(index + 1) done (\(cleaned.count) chars)")
             }
-            let report = ChatCurveReport(modelID: modelID, samples: samples)
-            emit(report.rendered)
-            let json = try ChatCurveReport.json(report)
-            if SelfTest.writesToStandardOutput {
-                emit(ChatCurveReport.fenced(json))
-            } else {
-                let url = URL(fileURLWithPath: SelfTest.outputPath + ".json")
-                try json.write(to: url)
-                emit("• chatcurve json → \(url.lastPathComponent)")
-            }
-            if samples.allSatisfy({ $0.renderedTokens == nil }) {
-                emit("  – chatcurve: no reuse/prefill lines were readable (OSLogStore empty?) — figures are nil, not zero")
-            }
+            try report(ChatCurveReport(modelID: modelID, samples: samples), emit: emit)
         } catch {
             emit("✗ chatcurve: \(error)")
+        }
+    }
+
+    /// The transcript table, then the JSON: fenced on stdout (`M1K3_SELFTEST_OUT=-`), else `<OUT>.json`.
+    private static func report(_ report: ChatCurveReport, emit: (String) -> Void) throws {
+        emit(report.rendered)
+        let json = try ChatCurveReport.json(report)
+        if SelfTest.writesToStandardOutput {
+            emit(ChatCurveReport.fenced(json))
+        } else {
+            let url = URL(fileURLWithPath: SelfTest.outputPath + ".json")
+            try json.write(to: url)
+            emit("• chatcurve json → \(url.lastPathComponent)")
+        }
+        if report.samples.allSatisfy({ $0.renderedTokens == nil }) {
+            emit("  – chatcurve: no reuse/prefill lines were readable (OSLogStore empty?)"
+                + " — figures are nil, not zero")
         }
     }
 }

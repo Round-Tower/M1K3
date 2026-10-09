@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Print the build-commit stamp for Info.plist's GitCommitSHA.
 
-Called by the `Stamp GitCommitSHA` post-compile phase in project.yml (before
-signing) and by the Xcode Cloud hooks. Resolution order:
+Called by the `Stamp GitCommitSHA` post-build phase in project.yml (after
+ProcessInfoPlistFile, before signing) and by the Xcode Cloud hooks. Resolution order:
 
   1. $CI_COMMIT (Xcode Cloud has no .git-state guarantee; it names the commit)
   2. `git rev-parse --short HEAD`, plus `-dirty` if `git status --porcelain`

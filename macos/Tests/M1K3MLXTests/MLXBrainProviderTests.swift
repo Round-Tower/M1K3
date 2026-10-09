@@ -559,7 +559,8 @@ struct MLXBrainProviderTests {
     /// E4B's config says 512; the name-keyed 1024 was wrong for it.
     @Test("the sliding window is read from config.json per family; the name is only the pre-load fallback",
           arguments: [
-              (#"{"model_type":"gemma4_unified","text_config":{"model_type":"gemma4_unified_text","sliding_window":1024}}"#, 1024),
+              (#"{"model_type":"gemma4_unified","#
+                  + #""text_config":{"model_type":"gemma4_unified_text","sliding_window":1024}}"#, 1024),
               (#"{"model_type":"gemma4","text_config":{"model_type":"gemma4_text","sliding_window":512}}"#, 512),
               (#"{"model_type":"gemma4_text","sliding_window":512}"#, 512),
               // Key absent: the loader's own per-arch default (unified 1024, else 512).

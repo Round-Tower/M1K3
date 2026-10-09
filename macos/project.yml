@@ -23,8 +23,9 @@
 # Review: Kev + claude-opus-5.5, 2026-09-23 — NSAudioCaptureUsageDescription for the call recorder's Core Audio process tap
 # (it replaced ScreenCaptureKit, so the app no longer asks for Screen Recording); the context-senses comment now says the
 # TCC dialog fires as the toggle goes on. Confidence 0.85.
-# Review: Kev + claude-fable-5.1, 2026-10-09 — M1K3 + M1K3iOS stamp GitCommitSHA (tools/ci/git_commit_stamp.py) in a post-compile
-# phase, with script sandboxing off for those two targets so the phase can read .git.
+# Review: Kev + claude-fable-5.1, 2026-10-09 — M1K3 + M1K3iOS stamp GitCommitSHA (tools/ci/git_commit_stamp.py) in a post-BUILD
+# phase (post-compile was overwritten by ProcessInfoPlistFile; pre-push review), with script sandboxing off for those two
+# targets so the phase can read .git.
 
 name: M1K3
 
@@ -172,20 +173,28 @@ targetTemplates:
 targets:
   M1K3:
     type: application
-    postCompileScripts:
-      # Stamps GitCommitSHA into the built Info.plist BEFORE signing (post-compile
-      # runs ahead of CodeSign), so run_chateval.py / ChatEvalStage know which
-      # commit the app is. Xcode Cloud inherits CI_COMMIT into this env; locally
+    postBuildScripts:
+      # Stamps GitCommitSHA into the built Info.plist BEFORE signing: a post-build
+      # phase with the processed plist as its input runs after ProcessInfoPlistFile
+      # and ahead of CodeSign (as a post-compile phase, or without the input, the
+      # plist step ran later and overwrote the stamp — build logs, 2026-10-09), so
+      # run_chateval.py / ChatEvalStage know which commit the app is. Xcode Cloud inherits CI_COMMIT into this env; locally
       # it is `git rev-parse --short HEAD` (+ -dirty). Never fails the build.
       - name: Stamp GitCommitSHA
         basedOnDependencyAnalysis: false
+        # The processed plist as a declared INPUT orders this phase after
+        # ProcessInfoPlistFile; without it the build system scheduled the plist
+        # step after the script even as the last phase (build logs, 2026-10-09).
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
         script: |
           PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
           [ -f "$PLIST" ] || { echo "warning: no Info.plist at $PLIST; GitCommitSHA not stamped"; exit 0; }
           SHA="$(/usr/bin/python3 -I "$SRCROOT/tools/ci/git_commit_stamp.py" "$SRCROOT" 2>/dev/null)"
           [ -n "$SHA" ] || SHA=unknown
           /usr/libexec/PlistBuddy -c "Set :GitCommitSHA $SHA" "$PLIST" 2>/dev/null \
-            || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST"
+            || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST" \
+            || { echo "warning: GitCommitSHA not stamped into $PLIST"; exit 0; }
           echo "GitCommitSHA=$SHA"
     platform: macOS
     deploymentTarget: "26.0"
@@ -376,20 +385,28 @@ targets:
   # a clean, unambiguous Xcode Cloud archive lane.
   M1K3iOS:
     type: application
-    postCompileScripts:
-      # Stamps GitCommitSHA into the built Info.plist BEFORE signing (post-compile
-      # runs ahead of CodeSign), so run_chateval.py / ChatEvalStage know which
-      # commit the app is. Xcode Cloud inherits CI_COMMIT into this env; locally
+    postBuildScripts:
+      # Stamps GitCommitSHA into the built Info.plist BEFORE signing: a post-build
+      # phase with the processed plist as its input runs after ProcessInfoPlistFile
+      # and ahead of CodeSign (as a post-compile phase, or without the input, the
+      # plist step ran later and overwrote the stamp — build logs, 2026-10-09), so
+      # run_chateval.py / ChatEvalStage know which commit the app is. Xcode Cloud inherits CI_COMMIT into this env; locally
       # it is `git rev-parse --short HEAD` (+ -dirty). Never fails the build.
       - name: Stamp GitCommitSHA
         basedOnDependencyAnalysis: false
+        # The processed plist as a declared INPUT orders this phase after
+        # ProcessInfoPlistFile; without it the build system scheduled the plist
+        # step after the script even as the last phase (build logs, 2026-10-09).
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
         script: |
           PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
           [ -f "$PLIST" ] || { echo "warning: no Info.plist at $PLIST; GitCommitSHA not stamped"; exit 0; }
           SHA="$(/usr/bin/python3 -I "$SRCROOT/tools/ci/git_commit_stamp.py" "$SRCROOT" 2>/dev/null)"
           [ -n "$SHA" ] || SHA=unknown
           /usr/libexec/PlistBuddy -c "Set :GitCommitSHA $SHA" "$PLIST" 2>/dev/null \
-            || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST"
+            || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST" \
+            || { echo "warning: GitCommitSHA not stamped into $PLIST"; exit 0; }
           echo "GitCommitSHA=$SHA"
     platform: iOS
     deploymentTarget: "26.0"

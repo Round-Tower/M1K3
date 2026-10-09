@@ -246,7 +246,7 @@ here are one machine's, and the point of publishing the method is that you do
 not have to take them on trust.
 
 The app commit comes from `GitCommitSHA` in the built Info.plist, stamped by the
-`Stamp GitCommitSHA` post-compile phase in `project.yml` (`tools/ci/git_commit_stamp.py`:
+`Stamp GitCommitSHA` post-build phase in `project.yml` (`tools/ci/git_commit_stamp.py`:
 `$CI_COMMIT` on Xcode Cloud, else the short HEAD, `-dirty` if the tree has changes,
 `unknown` without git). `run_chateval.py` reads it, so `--commit` is only needed for
 a build that predates the phase. A `-dirty` stamp means the scorecard is not

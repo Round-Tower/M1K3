@@ -31,7 +31,8 @@ struct ChatCurveTests {
 
     @Test("a vetoed reuse line still parses")
     func parsesVetoedReuse() {
-        let line = "toolTurnSession reuse: 0/3232 tok from cache, prefilling 3232, seed=none (VETOED — cache not trimmable)"
+        let line = "toolTurnSession reuse: 0/3232 tok from cache, prefilling 3232, seed=none"
+            + " (VETOED — cache not trimmable: wrapped window or recurrent layer)"
         #expect(ChatCurveLogParser.reuse(in: line) == ChatCurveReuse(reused: 0, total: 3232))
     }
 
@@ -91,7 +92,9 @@ struct ChatCurveTests {
         let one = ChatCurveSummary(samples: [sample(0, total: 10, prefill: 5)])
         #expect(one.renderedTokensPerMessage == nil)
         let gap = ChatCurveSummary(samples: [
-            sample(0, total: 100, prefill: nil), sample(1, total: nil, prefill: nil), sample(2, total: 300, prefill: nil),
+            sample(0, total: 100, prefill: nil),
+            sample(1, total: nil, prefill: nil),
+            sample(2, total: 300, prefill: nil),
         ])
         #expect(gap.renderedTokensPerMessage == 100)
         #expect(gap.prefillMSPerMessage == nil)
@@ -113,7 +116,7 @@ struct ChatCurveTests {
             modelID: "m", samples: [sample(0, total: 1, prefill: 2), sample(1, total: 3, prefill: 4)]
         )
         let data = try ChatCurveReport.json(report)
-        let text = String(decoding: data, as: UTF8.self)
+        let text = try #require(String(bytes: data, encoding: .utf8))
         #expect(text.firstRange(of: "\"modelID\"") != nil)
         let back = try JSONDecoder().decode(ChatCurveReport.self, from: data)
         #expect(back.samples.count == 2)
@@ -122,7 +125,9 @@ struct ChatCurveTests {
 
     @Test("the rendered table has one row per message plus the slope line")
     func rendered() {
-        let report = ChatCurveReport(modelID: "m", samples: (0 ..< 3).map { sample($0, total: 100 * $0, prefill: 10 * $0) })
+        let report = ChatCurveReport(
+            modelID: "m", samples: (0 ..< 3).map { sample($0, total: 100 * $0, prefill: 10 * $0) }
+        )
         let lines = report.rendered.split(separator: "\n")
         #expect(lines.contains { $0.contains("slope") })
         #expect(lines.filter { $0.hasPrefix("chatcurve #") }.count == 3)

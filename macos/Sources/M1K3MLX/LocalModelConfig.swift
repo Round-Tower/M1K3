@@ -18,7 +18,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — `chatTemplate(forRepoID:)` (#264): the template text,
 //  from chat_template.jinja or tokenizer_config.json's chat_template, for the post-load think-trait read.
 //  Confidence now 0.85.
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — `slidingWindow` readers (Stream G): the rotating window from config.json, gemma-4 only.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `slidingWindow` readers (Stream G): the rotating window from
+//  config.json, gemma-4 only.
 
 import Foundation
 import Hub

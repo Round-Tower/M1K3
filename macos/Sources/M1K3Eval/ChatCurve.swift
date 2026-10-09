@@ -143,8 +143,12 @@ public struct ChatCurveSummary: Sendable, Equatable, Codable {
     public let prefillMSPerMessage: Double?
 
     public init(samples: [ChatCurveSample]) {
-        renderedTokensPerMessage = Self.slope(samples.compactMap { s in s.renderedTokens.map { (s.index, Double($0)) } })
-        prefillMSPerMessage = Self.slope(samples.compactMap { s in s.prefillMS.map { (s.index, Double($0)) } })
+        renderedTokensPerMessage = Self.slope(
+            samples.compactMap { s in s.renderedTokens.map { (s.index, Double($0)) } }
+        )
+        prefillMSPerMessage = Self.slope(
+            samples.compactMap { s in s.prefillMS.map { (s.index, Double($0)) } }
+        )
     }
 
     static func slope(_ points: [(Int, Double)]) -> Double? {
