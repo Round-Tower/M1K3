@@ -45,3 +45,49 @@ struct VoiceThinkingPolicyTests {
         }
     }
 }
+
+/// The one resolution both shells read (#198): the Mac and the phone must agree on
+/// the default, on the key, and on the voice "fast" rule.
+struct ThinkingModeResolverTests {
+    @Test("an unset or garbled stored value resolves to the shared default, auto")
+    func defaultIsAuto() {
+        #expect(ThinkingModeResolver.defaultMode == .auto)
+        for raw in [nil, "", "nonsense"] as [String?] {
+            #expect(ThinkingModeResolver.resolve(
+                storedRaw: raw, forced: nil, voiceModeActive: false, voiceThinkingEnabled: false
+            ) == .auto)
+        }
+    }
+
+    @Test("a stored raw value round-trips outside voice mode")
+    func storedPassesThrough() {
+        for mode in ThinkingMode.allCases {
+            #expect(ThinkingModeResolver.resolve(
+                storedRaw: mode.rawValue, forced: nil, voiceModeActive: false, voiceThinkingEnabled: false
+            ) == mode)
+        }
+    }
+
+    @Test("voice mode with the toggle off is fast on a fresh install (no stored value)")
+    func voiceIsFastByDefault() {
+        #expect(ThinkingModeResolver.resolve(
+            storedRaw: nil, forced: nil, voiceModeActive: true, voiceThinkingEnabled: false
+        ) == .fast)
+    }
+
+    @Test("a forced mode bypasses Settings and voice mode alike")
+    func forcedWins() {
+        #expect(ThinkingModeResolver.resolve(
+            storedRaw: "always", forced: .fast, voiceModeActive: false, voiceThinkingEnabled: true
+        ) == .fast)
+        #expect(ThinkingModeResolver.resolve(
+            storedRaw: "fast", forced: .always, voiceModeActive: true, voiceThinkingEnabled: false
+        ) == .always)
+    }
+
+    @Test("the defaults keys are pinned — a rename would silently orphan stored settings")
+    func keysPinned() {
+        #expect(ThinkingModeResolver.storedModeKey == "thinkingMode")
+        #expect(ThinkingModeResolver.voiceThinkingKey == "voice" + "Mode.thinking")
+    }
+}

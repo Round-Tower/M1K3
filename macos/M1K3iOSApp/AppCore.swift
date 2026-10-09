@@ -55,6 +55,7 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — the App Store rating ledger (ReviewPromptLedger); a completed answer counts toward the ask.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — a stopped answer is not a win; voice turns count too (AppCore+Voice) — local review fold.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `thinkingModeProvider` via the shared ThinkingModeResolver (#198): voice turns fast, chat auto.
 //  Review: Kev + claude-opus-5-5, 2026-09-25 — `mlxAvailable` also refuses Apple GPU family 5 (MLXRuntimeSupport): an iPad 8th gen
 //  trapped warming M1K3 Voice; A12X/A12Z iPad Pros pass the brain memory floor but share that GPU. A stage left behind is
 //  discarded at launch. Verify-by-launch on the A12 iPad. Confidence 0.85.
@@ -905,6 +906,19 @@ final class AppCore {
                 ))
             },
             sourceCollector: sourceCollector,
+            thinkingModeProvider: {
+                // The Mac's resolution, shared (#198). No Reasoning picker on the
+                // phone, so the stored value is unset → the shared default (auto);
+                // a spoken turn is fast unless voice mode's thinking toggle is on.
+                // Read per turn. Lil (Qwen3.5) reads enable_thinking from this.
+                let defaults = UserDefaults.standard
+                return ThinkingModeResolver.resolve(
+                    storedRaw: defaults.string(forKey: ThinkingModeResolver.storedModeKey),
+                    forced: nil,
+                    voiceModeActive: defaults.bool(forKey: VoiceModeDefaults.activeKey),
+                    voiceThinkingEnabled: defaults.bool(forKey: ThinkingModeResolver.voiceThinkingKey)
+                )
+            },
             brainNameProvider: {
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.displayName ?? ""
