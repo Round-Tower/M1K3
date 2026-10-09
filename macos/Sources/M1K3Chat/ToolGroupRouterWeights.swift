@@ -12,7 +12,8 @@
 enum ToolGroupRouterWeights {
     /// Row order of `weights` and `biases`.
     static let groups: [String] = ["none", "device", "knowledge", "web", "activity", "script"]
-    /// At or above (top probability): dispatch. Picked for 95% group-level precision in
+    /// At or above (top probability): dispatch. A floor above 1 is unreachable by design: the head
+    /// never speaks (no floor reached the precision, or untrained). Picked for 95% group-level precision in
     /// cross-validation: an upper bound live (the shipped fit is sharper, the data synthetic, and the
     /// tool-level word rules add their own error).
     static let floor: Double = 0.76337048

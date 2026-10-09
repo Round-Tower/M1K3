@@ -10,12 +10,14 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75. Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — schedule-verb cases, one-vector-per-turn pin (#512).
 
 import Foundation
 @testable import M1K3Chat
 @testable import M1K3Eval
 import M1K3Inference
 import NaturalLanguage
+import Synchronization
 import Testing
 
 struct ToolGroupRouterTests {
@@ -96,6 +98,11 @@ struct ToolGroupRouterTests {
         #expect(ToolGroupRouter.deviceTools("Add an event for lunch tomorrow").isEmpty)
         #expect(ToolGroupRouter.deviceTools("Set a reminder for 5pm").isEmpty)
         #expect(ToolGroupRouter.deviceTools("My schedule for today.") == ["calendar_peek"])
+        // #510 review 3: "schedule" as a verb is a write, however it's phrased.
+        #expect(ToolGroupRouter.deviceTools("Schedule lunch with Sean tomorrow").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("schedule time with Anna").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("Could you schedule it for 3?").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("What's on the schedule today?") == ["calendar_peek"])
     }
 
     @Test("each local family names its tool; web and script are left to Apple's pick")
@@ -196,6 +203,20 @@ struct ToolPickCascadeTests {
         let failing = RecordingPicker(answer: nil)
         #expect(await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: failing) == nil)
         #expect(await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: nil) == nil)
+    }
+
+    @Test("the gate and the head share one sentence vector per turn; a new turn embeds again (#512)")
+    func vectorCachedPerTurn() {
+        let calls = Mutex<[String]>([])
+        let cache = OneTurnEmbedder { text in
+            calls.withLock { $0.append(text) }
+            return [1, 2, 3]
+        }
+        #expect(cache.vector("what time is it?") == [1, 2, 3])
+        #expect(cache.vector("what time is it?") == [1, 2, 3])
+        #expect(calls.withLock { $0 } == ["what time is it?"])
+        _ = cache.vector("and my battery?")
+        #expect(calls.withLock { $0 } == ["what time is it?", "and my battery?"])
     }
 
     private actor ChainPicker: ToolPicking {

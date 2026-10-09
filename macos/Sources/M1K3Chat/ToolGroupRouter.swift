@@ -32,6 +32,7 @@
 //  weights come from synthetic data and the live gain is the eval arm's to show).
 //  Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — "schedule" is a cue only as a noun; a turn opening on it is a write (#512).
 
 import Foundation
 
@@ -123,7 +124,9 @@ public enum ToolGroupRouter {
     static let deviceCues: [(tool: String, cues: [String])] = [
         // Not a bare "event(s)": "current events" is news (#510 review 2).
         ("calendar_peek", [
-            "calendar", "schedule", "agenda", "meeting", "meetings", "appointment", "appointments",
+            // "schedule" only as a noun: "schedule lunch with Sean" is a write (#510 review 3).
+            "calendar", "my schedule", "the schedule", "schedule for", "schedule today", "agenda",
+            "meeting", "meetings", "appointment", "appointments",
             "my events", "any events", "my day",
         ]),
         ("battery_status", ["battery", "charging", "juice"]),
@@ -150,7 +153,9 @@ public enum ToolGroupRouter {
 
     /// Every device tool the words name, in `deviceCues` order; none for a write.
     static func deviceTools(_ question: String) -> [String] {
-        guard !mentions(question, any: writeCues) else { return [] }
+        // A turn that opens on "schedule" is asking for one ("Schedule it for 3").
+        let opensOnSchedule = question.lowercased().drop(while: { !$0.isLetter }).hasPrefix("schedule")
+        guard !opensOnSchedule, !mentions(question, any: writeCues) else { return [] }
         return deviceCues.filter { mentions(question, any: $0.cues) }.map { $0.tool }
     }
 
