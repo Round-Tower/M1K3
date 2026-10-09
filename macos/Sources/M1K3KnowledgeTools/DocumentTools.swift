@@ -14,6 +14,10 @@
 //  Review: Kev + claude-fable-5, 2026-07-02 — GetDocumentTool renders via
 //  DocumentRenderer (shared with the MCP get_document): windowed paging with
 //  a resume-offset footer replaces the silent 4,000-char ellipsis truncation.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — `excludedKinds` on both tools:
+//  the MCP ask's palette builds them with KnowledgeKind.withheldFromMCP, so a Photo caption is never
+//  listed, never title-matched, and its chunks never read (the leak the second pass found). Query-side
+//  via `allItems(excluding:)`; the local default (empty) is byte-identical to before.
 
 import Foundation
 import M1K3Agent
@@ -28,14 +32,17 @@ public struct ListDocumentsTool: AgentTool {
 
     private let store: KnowledgeStore
     private let limit: Int
+    /// Kinds this palette never lists (the MCP ask passes `KnowledgeKind.withheldFromMCP`).
+    private let excludedKinds: Set<KnowledgeKind>
 
-    public init(store: KnowledgeStore, limit: Int = 50) {
+    public init(store: KnowledgeStore, limit: Int = 50, excludedKinds: Set<KnowledgeKind> = []) {
         self.store = store
         self.limit = limit
+        self.excludedKinds = excludedKinds
     }
 
     public func execute(input _: [String: String]) async throws -> ToolResult {
-        let items = try store.allItems(limit: limit)
+        let items = try store.allItems(excluding: excludedKinds, limit: limit)
         // Wording is load-bearing: ToolDispatch.emptyResultPrefixes reads it (ADR 0009).
         guard !items.isEmpty else { return ToolResult(output: "No stored knowledge yet.") }
         let body = items.enumerated().map { index, item in
@@ -60,17 +67,22 @@ public struct GetDocumentTool: AgentTool {
 
     private let store: KnowledgeStore
     private let maxChars: Int
+    /// Kinds this palette never fetches: an excluded item is not a title-match
+    /// candidate, so its chunks are never read (the MCP ask passes
+    /// `KnowledgeKind.withheldFromMCP`).
+    private let excludedKinds: Set<KnowledgeKind>
 
-    public init(store: KnowledgeStore, maxChars: Int = 4000) {
+    public init(store: KnowledgeStore, maxChars: Int = 4000, excludedKinds: Set<KnowledgeKind> = []) {
         self.store = store
         self.maxChars = maxChars
+        self.excludedKinds = excludedKinds
     }
 
     public func execute(input: [String: String]) async throws -> ToolResult {
         let query = (input["title"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return ToolResult(output: "Error: empty title.") }
 
-        let items = try store.allItems(limit: 500)
+        let items = try store.allItems(excluding: excludedKinds, limit: 500)
         guard let match = items.first(where: { $0.title.range(of: query, options: .caseInsensitive) != nil }) else {
             return ToolResult(output: "No document matching \"\(query)\".")
         }

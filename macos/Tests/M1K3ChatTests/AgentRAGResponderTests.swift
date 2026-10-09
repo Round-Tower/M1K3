@@ -21,12 +21,16 @@
 //  launch-film episode ("Kev and Claude made M1K3's launch film", backticked render line) renders.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — excludedKinds pins: the MCP-shaped responder never surfaces a
 //  Photo (source, prompt, citation); the default responder still grounds on it.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — the end-to-end leak the review found:
+//  a scripted model calling get_document + list_documents on a Photo-bearing store through the MCP-shaped
+//  palette never sees the caption in an observation; the same script on the local palette does.
 
 import Foundation
 import M1K3Agent
 @testable import M1K3Chat
 import M1K3Inference
 import M1K3Knowledge
+import M1K3KnowledgeTools
 import Synchronization
 import Testing
 
@@ -451,6 +455,67 @@ struct AgentRAGResponderTests {
             ),
         ])
         #expect(responder.collectedSources().map(\.kind) == [.document])
+    }
+
+    /// The knowledge trio the `.mcp` palette builds over the store (the agent's own copies of the MCP
+    /// list/search/get), with `excludedKinds` threaded exactly as `interactiveAgentTools` threads it.
+    private func knowledgeTools(
+        store: KnowledgeStore, embedder: HashingEmbeddingService, excludedKinds: Set<KnowledgeKind>
+    ) -> [any AgentTool] {
+        [
+            SearchKnowledgeTool(store: store, embedder: embedder, excludedKinds: excludedKinds, onHits: { _ in }),
+            ListDocumentsTool(store: store, excludedKinds: excludedKinds),
+            GetDocumentTool(store: store, excludedKinds: excludedKinds),
+        ]
+    }
+
+    private static let photoScript = [
+        "ACTION: get_document(photo of the hydraulic seal)",
+        "ACTION: list_documents()",
+        "CONCLUSION: Nothing on that.",
+    ]
+
+    @Test("an MCP-shaped responder's get_document + list_documents never put a Photo caption in an observation")
+    func mcpPaletteNeverObservesAPhoto() async throws {
+        let (store, hashing) = try await storeWithPhoto()
+        let provider = AgentScriptedProvider(Self.photoScript)
+        let responder = AgentRAGResponder(
+            store: store, embedder: hashing, provider: provider,
+            toolsProvider: {
+                self.knowledgeTools(store: store, embedder: hashing, excludedKinds: KnowledgeKind.withheldFromMCP)
+            },
+            sourceCollector: ToolSourceCollector(),
+            excludedKinds: KnowledgeKind.withheldFromMCP
+        )
+        let (_, stream) = try await responder.answerStreaming("Is there a photo of the hydraulic seal?")
+        _ = await collect(stream)
+        // Both tools ran (their observations reached the context) ...
+        let prompts = provider.allPrompts
+        #expect(prompts.count == 3)
+        let last = try #require(prompts.last)
+        #expect(last.contains("No document matching"))
+        #expect(last.contains("Plant Notes [document]"))
+        // ... and no prompt ever carried the caption, its title, or the kind.
+        for prompt in prompts {
+            #expect(!prompt.contains("A photo of the hydraulic seal"))
+            #expect(!prompt.contains("[image]"))
+        }
+    }
+
+    @Test("the same script on the local palette does see the Photo (the leak the test guards is real)")
+    func localPaletteObservesAPhoto() async throws {
+        let (store, hashing) = try await storeWithPhoto()
+        let provider = AgentScriptedProvider(Self.photoScript)
+        let responder = AgentRAGResponder(
+            store: store, embedder: hashing, provider: provider,
+            toolsProvider: { self.knowledgeTools(store: store, embedder: hashing, excludedKinds: []) },
+            sourceCollector: ToolSourceCollector()
+        )
+        let (_, stream) = try await responder.answerStreaming("Is there a photo of the hydraulic seal?")
+        _ = await collect(stream)
+        let last = try #require(provider.allPrompts.last)
+        #expect(last.contains("A photo of the hydraulic seal on the conveyor that failed under load."))
+        #expect(last.contains("[image]"))
     }
 
     // MARK: - Grounding-size safety cap (wiring)

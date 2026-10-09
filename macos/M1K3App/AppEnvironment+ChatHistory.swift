@@ -28,6 +28,8 @@
 //  "picked" (a PCC turn never reaches the responder). Confidence 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — `excludedKinds` threads through makeAgentResponder and
 //  interactiveAgentTools (the search tool) so the MCP responder withholds Photo captions.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — list_documents and get_document take
+//  `excludedKinds` too (the agent's copies leaked a caption as an observation); pinned by text scan.
 
 import Foundation
 import M1K3Agent
@@ -212,9 +214,11 @@ extension AppEnvironment {
         var tools: [any AgentTool] = [
             DateTimeTool(),
             SystemStatusTool(),
+            // Every store-reading tool takes `excludedKinds` — the `.mcp` palette withholds Photos
+            // on all three, not just search (AskSurfaceCallSiteTests pins the wiring by text).
             SearchKnowledgeTool(store: store, embedder: embedder, excludedKinds: excludedKinds, onHits: onHits),
-            ListDocumentsTool(store: store),
-            GetDocumentTool(store: store),
+            ListDocumentsTool(store: store, excludedKinds: excludedKinds),
+            GetDocumentTool(store: store, excludedKinds: excludedKinds),
         ]
         // delegate_deep joins ONLY the interactive-chat palette (non-nil hook is
         // passed solely by the main responder): MCP's ask_m1k3 has its own job
