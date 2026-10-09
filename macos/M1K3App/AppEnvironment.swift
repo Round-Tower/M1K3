@@ -538,7 +538,8 @@ final class AppEnvironment {
     /// tok/s — under each assistant answer. Default OFF; MLX tiers only.
     nonisolated static let showGenerationStatsKey = "showGenerationStats"
     /// Settings: reasoning budget — ThinkingMode rawValue (auto/always/fast).
-    nonisolated static let thinkingModeKey = "thinkingMode"
+    /// The resolver's key (#198): the iOS shell reads the same one.
+    nonisolated static let thinkingModeKey = ThinkingModeResolver.storedModeKey
     /// Agent Interaction Log: OPT-IN, OFF BY DEFAULT. When true, `conversationLog`
     /// captures every MCP tool call's full request + response text (on-device
     /// only, capped at the newest 500, one-tap Clear). `nonisolated` so the

@@ -72,6 +72,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07 (repair), Confidence 0.8 — both tool loops hand a rejected
 //  call to `Qwen35CallRepair` first: Qwen3.5's orphan `</parameter>` is dropped and the call re-parsed by
 //  upstream's own processor; anything else stays rejected. Logged as REPAIRED (names + counts only).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — comment only: `chatMessage`'s images note named gemma-4-12B
+//  as the one seeing model; Lil (Qwen3.5-4B, #517) loads through MLXVLM too. No logic changed.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — #509 follow-up (the cheap half): checkpoint mode logs an
+//  MLXMemoryBudget snapshot per send, labelled by step and reuse (`ExactPrefixReuse.stepSnapshotLabel`),
+//  so a long agent turn's RAM reads as a curve. Verify-by-launch: the curve on a 5+ step Lil turn.
 
 import Foundation
 import M1K3Inference
@@ -220,10 +225,11 @@ enum MLXToolMapping {
         case let .system(text):
             return .system(text)
         case let .user(text, images):
-            // Images flow ONLY when the backing model is vision-capable
-            // (VLM-loaded gemma-4-12B) — a text-only checkpoint's processor
-            // would choke on (or silently mangle) image parts. Default false
-            // keeps every pre-vision call site byte-identical.
+            // Images flow ONLY when the backing model is vision-capable (the
+            // VLM-loaded tiers: Lil's Qwen3.5-4B since #517, Big's gemma-4-12B)
+            // — a text-only checkpoint's processor would choke on (or silently
+            // mangle) image parts. Default false keeps every pre-vision call
+            // site byte-identical.
             guard imagesAllowed, !images.isEmpty else { return .user(text) }
             return .user(text, images: images.map { .url($0.url) })
         case let .toolResult(_, output):
@@ -1028,6 +1034,12 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                     fullIDs: fullIDs, prepared: prepared, turnCarriesImages: turnCarriesImages, context: context
                 )
                 (cache, input, state) = (turn.cache, turn.input, turn.state)
+                // Per-step RAM (#509 follow-up): the checkpoints are full-precision
+                // copies of the transcript's cache, so this is the number that says
+                // whether "flat per step" holds across a long agent turn.
+                MLXMemoryBudget.logSnapshot(label: ExactPrefixReuse.stepSnapshotLabel(
+                    step: self.sendCount, reused: turn.reused, total: fullIDs.count
+                ))
             } else if reuse > 0, reusable, let existing = self.kvCache {
                 // Keep the reusable prefix; trim past it (the prior turn's
                 // generated tail + any divergence) and prefill only the rest.
@@ -1163,6 +1175,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         let cache: [KVCache]
         let input: LMInput
         let state: LMOutput.State?
+        /// Tokens the checkpoint supplied (0 on a fresh prefill) — for the
+        /// per-step snapshot label.
+        let reused: Int
     }
 
     private func fromCheckpoint(
@@ -1175,7 +1190,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             checkpoints = Array(checkpoints.prefix(1))
             logPrefillReuse(reused: 0, total: fullIDs.count, vetoed: false, source: seedSource.rawValue)
             return try CheckpointTurn(
-                cache: context.model.newCache(parameters: parameters), input: prepared, state: nil
+                cache: context.model.newCache(parameters: parameters), input: prepared, state: nil, reused: 0
             )
         }
         let base = checkpoints[index]
@@ -1199,12 +1214,14 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             let source = index == 1 ? "checkpoint"
                 : rollingDiverged ? "\(seedSource.rawValue) (checkpoint diverged)" : seedSource.rawValue
             logPrefillReuse(reused: from, total: fullIDs.count, vetoed: false, source: source)
-            return CheckpointTurn(cache: work, input: LMInput(tokens: MLXArray(Array(fullIDs[to...]))), state: state)
+            return CheckpointTurn(
+                cache: work, input: LMInput(tokens: MLXArray(Array(fullIDs[to...]))), state: state, reused: from
+            )
         } catch let error as ContinuationStateError {
             checkpoints = []
             logCheckpointDropped(String(describing: error))
             return try CheckpointTurn(
-                cache: context.model.newCache(parameters: parameters), input: prepared, state: nil
+                cache: context.model.newCache(parameters: parameters), input: prepared, state: nil, reused: 0
             )
         }
     }

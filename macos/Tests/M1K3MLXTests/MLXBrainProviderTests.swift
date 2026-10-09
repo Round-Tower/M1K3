@@ -18,6 +18,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.9 — E4B routing pins: the uniform 4-bit id
 //  takes the VLM path; OptiQ, 8-bit and a local audition folder stay on the LLM path.
 //  Review: same day (overnight) — Qwen3.5-4B's exact id joins the VLM allow-list; 2B stays text-only.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — every `lil` in here is the shipped Qwen3.5-4B id (#517); the
+//  2507 stays only where the test is ABOUT the 2507 (the thinking-toggle exclusion, text-only routing).
 
 import Foundation
 import M1K3Chat
@@ -197,8 +199,10 @@ struct MLXBrainProviderTests {
         // template carries enable_thinking (verified against the HF template
         // 2026-07-16). The bare "qwen3" name-match would claim the toggle and
         // leave the Settings reasoning picker as a control that does nothing —
-        // the dead-control rule says pin it off instead. THE WIRED LIL (since
-        // 2026-07-16) is the Instruct variant, so this pin is load-bearing.
+        // the dead-control rule says pin it off instead. The 2507 was the wired
+        // Lil from 2026-07-16 to 2026-10-08; Lil is Qwen3.5-4B again (#517) and
+        // keeps the toggle (thinkTraitsByNameGate). This pin still guards the
+        // exclusion for the retired weights and any A/B override of them.
         #expect(!MLXBrainProvider.templateSupportsThinkingToggle(
             for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit")
         ))
@@ -375,9 +379,9 @@ struct MLXBrainProviderTests {
         #expect(big.generateParameters.prefill.stepSize == 1024)
         let e4b = MLXBrainProvider(configuration: ModelConfiguration(id: "mlx-community/gemma-4-e4b-it-4bit"))
         #expect(e4b.generateParameters.prefill.stepSize == 1024)
-        // Unmeasured families keep upstream's choice.
+        // Unmeasured families keep upstream's choice — Lil (Qwen3.5-4B) included.
         let lil = MLXBrainProvider(
-            configuration: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510")
+            configuration: ModelConfiguration(id: "mlx-community/Qwen3.5-4B-MLX-4bit")
         )
         #expect(lil.generateParameters.prefill.stepSize == nil)
     }
@@ -524,10 +528,11 @@ struct MLXBrainProviderTests {
         #expect(MLXBrainProvider.prefersWindowSizedPrefill(
             for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")
         ))
-        // Lil has no sliding window and cross-turn reuse works there, so its
-        // prefill profile is a different question — upstream's default stands.
+        // Lil (Qwen3.5-4B) has no sliding window and its prefix reuse rides the
+        // exact-seed checkpoints (#509), so its prefill profile is a different
+        // question — upstream's default stands.
         #expect(!MLXBrainProvider.prefersWindowSizedPrefill(
-            for: ModelConfiguration(id: "mlx-community/Qwen3-4B-Instruct-2507-4bit")
+            for: ModelConfiguration(id: "mlx-community/Qwen3.5-4B-MLX-4bit")
         ))
         #expect(!MLXBrainProvider.prefersWindowSizedPrefill(
             for: ModelConfiguration(id: "mlx-community/Llama-3.2-3B-Instruct-4bit")
@@ -549,8 +554,10 @@ struct MLXBrainProviderTests {
         #expect(MLXBrainProvider.prefixIsReusable(tokens: 1024, window: bigWindow), "exactly the window fits")
         #expect(!MLXBrainProvider.prefixIsReusable(tokens: 1025, window: bigWindow))
 
-        // Dense attention: no window, so a prefix of any size stays trimmable
-        // and reuse genuinely works — which is why Lil is 10x faster per turn.
+        // No sliding window on Lil (Qwen3.5-4B, the shipped id since #517): a
+        // prefix of any size is worth building. Its MambaCache layers are never
+        // trimmable, so the reuse itself rides the exact-seed checkpoints (#509)
+        // rather than a trim — the window question is still the one asked here.
         let lil = "mlx-community/Qwen3.5-4B-MLX-4bit"
         #expect(MLXBrainProvider.slidingWindow(forModelID: lil) == nil)
         let lilWindow = MLXBrainProvider.slidingWindow(forModelID: lil)

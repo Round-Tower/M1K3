@@ -20,6 +20,8 @@
 //  (both dialects in one frame); a parse test pins the dropped-JSON-call bug on the strict parser.
 //  Review: Kev + claude-opus-5-5, 2026-10-07 — mlx-swift-lm 3.32.3: `UserInput.Image` is a struct with a `source`
 //  enum, so the image test matches `.url` on `.source`.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `qwen35PreOpensThink` pins the shipped Lil id
+//  (Qwen3.5-4B-MLX-4bit, #517) against the pre-open rule.
 
 import Foundation
 import M1K3Inference
@@ -377,6 +379,10 @@ struct MLXThinkTemplateTests {
         #expect(MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3.5-2B-4bit")))
         #expect(MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3.5-9B-4bit")))
         #expect(MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/qwen3_5-instruct")))
+        // The SHIPPED Lil id (#517): the synthetic opener on both the plain
+        // stream and the tool session hangs off this match — lose it and a
+        // thinking tool turn's chain-of-thought streams into the bubble.
+        #expect(MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3.5-4B-MLX-4bit")))
         // Bonsai-27B is qwen3_5 under a brand id with NO qwen spelling — its
         // template ends the generation prompt with an opened <think> (verified
         // against the HF chat_template.jinja 2026-07-17). Without this arm the

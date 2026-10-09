@@ -159,11 +159,19 @@ Verify-by-launch owed: attach `whiteboard-pricing.png` on Lil, tap Remember, ask
 
 ### Stream F — Quick win: image turns on Lil escalate
 
+**Moot, 2026-10-09:** Lil is Qwen3.5-4B and sees (#517, vision 42/48) — an image turn on Lil stays on
+Lil. Nothing below ships; kept for the record.
+
 Independent of B; ship it if B doesn't swap Lil within the week.
 - [ ] Read `Sources/M1K3Inference/AttachmentRouting.swift`: what happens today when an image is attached while Lil is active?
 - [ ] Route that turn to Big when RAM allows (same gate as `delegate_deep`), else Mini's AFM vision; tell the user which brain looked.
 
 ### Stream G — gemma-4 speed: the sliding window and prefix reuse (keep an open mind)
+
+**Retired, 2026-10-09:** the veto wording landed in #509 (the reuse log names both untrimmable
+causes — a wrapped window, a recurrent layer — and checkpoint mode covers the exact ones), and no
+shipped brain is misconfigured: Big's 1024 is measured on the 12B it runs, Lil has no window. What
+is left is a spike for the next gemma audition (E4B/E2B), not 1.1 work.
 
 Why: Lil's runtime has been tuned around a dense Qwen3 — trimmable caches, cross-turn prefix
 reuse, quantised KV. Every gemma-4 candidate pays a tax that is partly **ours**, not the model's:
@@ -229,6 +237,16 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-fable-5.1, 2026-10-09 — step 7 hygiene (branch `fix/1-1-mini-sees-lil-polish`): the
+Lil RAM cap signed (5 GB own peak, `BrainTier.lilOwnPeakCapGB`, flagged by run_chateval); Stream F moot
+and Stream G retired (Lil sees; the veto wording is in #509); the thinking-disclosure side-finding moot at
+our pin (the decoder never emits `.reasoning`) with its inverse pinned in step 2; Mini vision points at
+step 1's honest decline (the prompt shape trips AFM's guardrail, not the file hand-off); #509's cheap
+half done (per-step RAM snapshot, `seedIsExact`, the "flat except image turns" line). Confidence 0.85 —
+every tick is code- or test-pinned; the per-step RAM curve is still verify-by-launch.
+Review: Kev + claude-fable-5.1, 2026-10-09 (2) — Mini sees: the seven-arm bisect found the shape AFM vision
+accepts (neutral, tool-free, steer) and it ships as `AFMToolPrompt.visionTurn`; the decline is the fallback.
+Confidence 0.75 — one fixture on one device reads cleanly; the Mini vision baseline re-run is the proof.
 Review: Kev + claude-opus-5-5, 2026-10-08 00:40 — #513 review folded: the probe and AFM results are archived
 under docs/evals; the unified-log figures are labelled unarchived; the median convention is stated; "matches"
 now reads "on aggregate", with the incumbent's interview 4/15 explained (exemplar echo, real behaviour).
@@ -596,9 +614,14 @@ Fix list, in order:
      → **19/20 @ 5.9 s** (#511's final code, app 79981cc5, `…-lil-q35-repair2-tier…`; those three files
      landed with #511). The bar is met. The remaining miss is `tool-recent-busiest`: the
      model doesn't call `recent_activity`.
-- **UNVERIFIED side-finding:** because the decoder routes reasoning away from `.chunk`, a thinking
-  brain on the native tool path may show an empty "thinking" disclosure in the chat UI (our tool
-  session only reads `.chunk`). Check on a live Qwen3.5 thinking turn.
+- ~~UNVERIFIED side-finding: the decoder routes reasoning away from `.chunk`, so a thinking brain on the
+  native tool path may show an empty "thinking" disclosure.~~ **Moot at our pin (2026-10-09):**
+  mlx-swift-lm 3.32.3's `StandardTokenStreamDecoder` emits only `.response` / `.toolCall` /
+  `.rejectedToolCall` — never `.reasoning` — so nothing is routed away from `.chunk`. The INVERSE is
+  the real shape (reasoning arrives in `.chunk` and could leak into the bubble), and that is closed
+  in this branch (step 2): the tool session yields a synthetic `<think>` as token zero, so
+  ThinkStreamGate opens in reasoning mode and closes on the lone `</think>` — pinned in
+  ThinkStreamGateTests. The remaining exposure is Brain at Home's raw route (no opener).
 - `feat/gemma-1-1-next`: one hold per **agent turn** (`LocalAgent.run`; no unheld tool gaps) and
   per-call-site reasons for `pmset -g assertions`.
 
@@ -646,9 +669,24 @@ not AFM's ceiling.
 
 ### Open next
 
-- [ ] **Mini vision — AFM can see (2026-10-07 21:23, `AFMVisionLiveTests`: URL and CGImage both read
-      €23.40).** So the in-app confabulation is the attach path: decode in-process and attach
-      pixels, not the sandboxed file URL. Then re-run the vision kind on Mini.
+- [x] **Mini vision — AFM can see (2026-10-07 21:23, `AFMVisionLiveTests`: URL and CGImage both read
+      €23.40).** ~~So the in-app confabulation is the attach path~~ — **it is the prompt shape, not the
+      file hand-off (this branch, step 1, `04ef7b90`):** the app-shaped arm of `AFMVisionLiveTests`
+      (persona + 16 tools + rendered body + `Attachment(imageURL:)`, unsandboxed) hits the guardrail
+      ("May contain unsafe content") with persona or tools present and reads the receipt bare. No pixel
+      decode was built; `AFMToolPrompt.visionDecline(from:)` made Mini decline an attached image
+      honestly instead of confabulating.
+      **Mini SEES (2026-10-09, later, this branch):** the seven-arm bisect of the same probe — the
+      persona trips the guardrail; ANY tool palette (generic instructions, a steer, a hard "do not call
+      a tool", even `toolCallingMode: .disallowed`) makes Mini call `read_document` / `search_knowledge`
+      instead of looking; **"neutral instructions, no tools, steer" reads €23.40.** Shipped as
+      `AFMToolPrompt.visionTurn(from:)`: an image turn on Mini runs persona-free and tool-free with a
+      body that is the conversation plus the steer (render's closing tool paragraph made the tool-free
+      arm answer "Call the calculator tool with the amount €23.40"; without it: `"€23.40"`). Both AFM
+      paths (`AFMNativeToolTurnSession`, `continueToolTurn`) take it; the decline is the fallback when
+      that turn still fails. Trades, named: the image turn loses M1K3's voice and cannot call a tool
+      (the next text turn can). One fixture, one device — the 16-fixture vision baseline on Mini is the
+      measurement owed (was 1/16).
 - [~] (history) **Mini vision — investigation started (2026-10-07):** the attach path IS compiled in (the
       `#if compiler(>=6.4)` gate; local toolchain Swift 6.4 / Xcode 27), so the baseline really sent
       `Attachment(imageURL:)`. Suspects: (1) the out-of-process model can't read the app's file URL in
@@ -657,11 +695,10 @@ not AFM's ceiling.
       receipt total by URL AND by decoded CGImage — it decides between them. Blocked right now:
       Apple Intelligence reports `modelNotReady` (assets updating); re-run when ready. If the CGImage
       path reads it and the app doesn't, decode in-process and attach pixels, not paths.
-- [ ] **Mini vision (possible user-facing bug):** on the native AFM path every Mini answer
-      confabulates ("The note says three hinges", "the function is `capture_overlay`"), ~38 s a turn,
-      never "can't see". Either the attachment never reaches AFM or AFM vision is this weak — trace
-      `AFMToolPrompt.imageURLs` → `Attachment(imageURL:)` on a live turn before anything else; the app
-      shows Mini an attach button on macOS 27.
+- [x] **Mini vision (user-facing bug, fixed in this branch — step 1, `04ef7b90`):** on the native AFM
+      path every Mini answer confabulated ("The note says three hinges"), ~38 s a turn, never "can't
+      see". Cause: the attachment reached AFM, but the persona + tool prompt shape trips its guardrail
+      (hypothesis B). Mini now declines attached images honestly; the live probe pins why.
 - [x] The bake-off proper (overnight 2026-10-06/07) — text is in; gemma latency/RAM void (stall).
 - [x] **Re-run the gemma columns once #499 lands** — done 2026-10-07 on `bc2dc9bd`: E4B 292/324, 9.0 s,
       **10.3 GB own peak confirmed** (twice Qwen3.5's 4.8 GB).
@@ -670,19 +707,26 @@ not AFM's ceiling.
       since it is full-precision. Measure a scripted 6–8-message chat's prefill curve FIRST.
 - [ ] **Persona: the honest privacy answer** — web search sends queries to DuckDuckGo; say so.
 - [ ] Read Qwen3.5's code-gen and grounded misses before the swap call.
-- [ ] `tool-recent-busiest`: a prompt nudge for recency asks, before anything heavier.
+- [x] `tool-recent-busiest`: a prompt nudge for recency asks, before anything heavier — 2026-10-09: the
+      routing line settles "busiest / most active" as activity on this device, and the tool description
+      (app + eval stub) names the words. 5× Lil replay owed.
 - [ ] `run_chateval`: stamp the app's build commit, not HEAD (three files hand-corrected 2026-10-07).
 - [ ] File the orphan-`</parameter>` issue upstream (draft above; Kev). Retires `Qwen35CallRepair`.
-- [ ] #509 follow-ups: peak RSS per step, re-seed after a fresh/image send, a pure seam for the
-      checkpoint bookkeeping, `seedTrimmed` → `seedIsExact`.
-- [ ] Set the Lil RAM cap BEFORE that re-run (own peak, not raw): incumbent 4.75 GB, Qwen3.5 4.07.
+- [x] #509 follow-ups, the cheap half (this branch, step 7): a per-step `MLXMemoryBudget` snapshot in
+      checkpoint mode (`ExactPrefixReuse.stepSnapshotLabel`), `seedTrimmed` → `seedIsExact`, and the
+      header's honest line — flat per step EXCEPT image turns. Curve verify-by-launch on a 5+ step turn.
+- [ ] #509 follow-ups, the rest: re-seed after a fresh/image send; a pure seam for the checkpoint
+      bookkeeping.
+- [x] **Lil RAM cap, signed 2026-10-09 (step 7):** 5 GB OWN peak on a 16 GB Mac —
+      `BrainTier.lilOwnPeakCapGB`, MiB, inclusive; `run_chateval.py summarise` flags a lil run over it.
+      Incumbent 4.8 / Qwen3.5 4.8 pass; E4B's 10.3 is what it rejects (MODEL_CHOICES 2026-10-08).
 - [ ] `selfquery-notes`: "I don't run internal QA…" is a decline the markers miss (challenger first).
-- [ ] Stream F (image turns on Lil escalate) — still the fallback if Lil stays Qwen3.
+- [x] ~~Stream F (image turns on Lil escalate)~~ — moot: Lil is Qwen3.5-4B and sees (#517).
 - [ ] Stream C, slice 2: the Swift port (spec below).
 - [~] **The stall + tokenizer fixes:** eval caffeinate + app hold landed (#498); the tokenizer bump
       is #499. Still owed: the display-off A/B (is App Nap the mechanism?).
-- [ ] **Stream G** (gemma-4 speed) — re-read after the tokenizer bump: part of E4B's 5.6× was CPU
-      tokenizing, not prefill.
+- [x] ~~**Stream G** (gemma-4 speed)~~ — retired 2026-10-09: the veto wording landed in #509 and no
+      shipped brain is misconfigured (see §2); the E4B/E2B speed split is a spike for their next audition.
 - [ ] **Qwen3.5 vision + tools (Kev: "Vision would be great to test, tools can be tuned, and I like
       that interviewing improved"):** the cached conversion already ships its vision tower (297
       `vision_tower.*` tensors; `qwen3_5` is MLXVLM.Qwen35 in our pin) — routing its exact id through

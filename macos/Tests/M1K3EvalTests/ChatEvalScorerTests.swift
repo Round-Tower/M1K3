@@ -19,6 +19,8 @@
 //  review): a letter edge needs a boundary ("listUSER:" passes), a punctuation edge never does.
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.9 — decimal-aware digit edges pinned both ways.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2), Confidence 0.9 — think tags are read whole-answer on code-gen
+//  too: a `</think>` inside an unclosed fence is never page content (PR #526 third-pass review).
 
 @testable import M1K3Eval
 import Testing
@@ -1124,5 +1126,95 @@ struct ChatEvalScorerTests {
         #expect((excerpt.answerPreview?.count ?? 0) <= ChatEvalScore.answerPreviewLimit + 1)
         let whole = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: long), previewLimit: .max)
         #expect(whole.answerPreview == long.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    @Test("a codeGen fixture's forbidden string in prose does not fire; in the fence it does")
+    func codeGenForbiddenIsScopedToTheFence() {
+        // 2026-10-07 Lil re-measure: `code-py-fix-bug` forbids "best = 0" — the BUG must not
+        // survive in the fix. Qwen3.5 named the bug in its explanation ("the bug is `best = 0`")
+        // beside a correct fenced fix, 3/3, and the scorer read the diagnosis as the bug.
+        let exp = EvalExpectation(mustNotContain: ["best = 0"] + ChatEvalFixtures.leakMarkers, mustComply: true)
+        func forbidden(_ raw: String) -> CheckOutcome? {
+            check(ChatEvalScorer.score(fixture: fixture(.codeGen, exp), observation: EvalObservation(rawText: raw)),
+                  "excludes forbidden")?.outcome
+        }
+        let diagnosed = "The bug is `best = 0`: all-negative lists return 0.\n\n"
+            + "```python\ndef largest(xs):\n    best = xs[0]\n    for x in xs:\n"
+            + "        best = max(best, x)\n    return best\n```"
+        let survived = "Here is the fix:\n\n"
+            + "```python\ndef largest(xs):\n    best = 0\n    for x in xs:\n"
+            + "        best = max(best, x)\n    return best\n```"
+        #expect(forbidden(diagnosed) == .pass)
+        #expect(forbidden(survived) == .fail)
+        // No fence at all: nothing was made, so the whole answer is read as before.
+        #expect(forbidden("Just set best = 0 and loop.") == .fail)
+        // An open-chat fixture keeps the whole-answer reading: a fence is not a shelter there.
+        let openExp = EvalExpectation(mustNotContain: ["best = 0"])
+        let openScore = ChatEvalScorer.score(
+            fixture: fixture(.openChat, openExp), observation: EvalObservation(rawText: diagnosed)
+        )
+        #expect(check(openScore, "excludes forbidden")?.outcome == .fail)
+    }
+
+    @Test("a leak marker inside a fence does not fire; in prose it does")
+    func codeGenLeakMarkerIsScopedToTheProse() {
+        // `code-site-about-chat`, 2026-10-07: the page ABOUT the chat rendered the chat — a
+        // `<strong>M1K3:</strong>` bubble label inside the HTML — and scored as a transcript leak.
+        // A leak is something the model SAYS (scaffolding in its prose), not something it draws.
+        let exp = EvalExpectation(
+            mustContainAny: ["<html"], mustNotContain: ["share my wiring"] + ChatEvalFixtures.leakMarkers,
+            mustComply: true
+        )
+        func forbidden(_ raw: String) -> CheckOutcome? {
+            check(ChatEvalScorer.score(fixture: fixture(.codeGen, exp), observation: EvalObservation(rawText: raw)),
+                  "excludes forbidden")?.outcome
+        }
+        let drawn = "Here's the page.\n\n```html\n<html><body>\n<p><strong>You:</strong> hi</p>\n"
+            + "<p><strong>M1K3:</strong> yo</p>\n</body></html>\n```"
+        let parroted = "Here's the page.\nM1K3: yo\nUSER: and then\n\n"
+            + "```html\n<html><body>\n<p>x</p>\n</body></html>\n```"
+        #expect(forbidden(drawn) == .pass)
+        #expect(forbidden(parroted) == .fail)
+        // The taught decline is prose, not code: with no fence it still fires.
+        #expect(forbidden("I don't share my wiring, pal.") == .fail)
+    }
+
+    @Test("a think tag is never page content: on code-gen it fails inside an unclosed fence too")
+    func codeGenThinkTagFailsInsideTheFence() {
+        // The cut-off shape: a second `</think>` after the stripper took the first one's prefix
+        // (`ReasoningSplit` treats a lone close as the template's pre-opened block). The other
+        // leak markers stay prose-scoped — a drawn "M1K3:" bubble is content — but `<think>`
+        // and `</think>` can only be scaffolding, wherever they land.
+        let exp = EvalExpectation(
+            mustContainAny: ["def"], mustNotContain: ChatEvalFixtures.leakMarkers, mustComply: true
+        )
+        func scored(_ raw: String) -> ChatEvalScore {
+            ChatEvalScorer.score(fixture: fixture(.codeGen, exp), observation: EvalObservation(rawText: raw))
+        }
+        let raw = "</think>\nHere is the fix:\n\n```python\ndef largest(xs):\n    best = xs[0]\n"
+            + "</think>\n    return best"
+        let score = scored(raw)
+        #expect(check(score, "excludes forbidden")?.outcome == .fail)
+        #expect(check(score, "excludes forbidden")?.detail.contains("</think>") == true)
+        #expect(!score.passed)
+        // The same tag in a CLOSED fence is no more content than in an open one.
+        let closed = "</think>\nHere:\n\n```python\ndef f():\n    pass\n</think>\n```\nDone."
+        let closedScore = scored(closed)
+        #expect(check(closedScore, "excludes forbidden")?.outcome == .fail)
+        // A drawn bubble label inside the fence is still content.
+        let drawn = "Here:\n\n```python\ndef f():\n    print(\"M1K3: hi\")\n```"
+        let drawnScore = scored(drawn)
+        #expect(check(drawnScore, "excludes forbidden")?.outcome == .pass)
+    }
+
+    @Test("code inside fences is the complement of the prose: closed blocks, unclosed tails, never a spoken snippet")
+    func codeInsideFences() {
+        #expect(RefusalHeuristic.codeInsideFences("a\n```js\nx\ny\nz\n```\nb") == "x\ny\nz")
+        #expect(RefusalHeuristic.codeInsideFences("a\n  ```\nx") == "x")
+        #expect(RefusalHeuristic.codeInsideFences("no fences here") == "")
+        // #304's spoken snippet is prose on both sides of the split.
+        #expect(RefusalHeuristic.codeInsideFences("a\n```\nx\n```\nb") == "")
+        #expect(RefusalHeuristic.codeInsideFences("a\n```html\n<p>x</p>\n```\nb") == "<p>x</p>")
+        #expect(RefusalHeuristic.codeInsideFences("```\nx\n```\n```js\ny\n```") == "y")
     }
 }
