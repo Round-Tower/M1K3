@@ -12,6 +12,9 @@
 
 # Xcode (app shell added at the UI phase)
 DerivedData/
+# In-repo derived data for worktree builds (`-derivedDataPath macos/.dd`): a
+# build artifact, and untracked it stamped every local build `-dirty`.
+.dd/
 *.xcuserstate
 xcuserdata/
 

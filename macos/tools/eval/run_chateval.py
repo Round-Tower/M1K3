@@ -471,7 +471,7 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(trig, indent=1, sort_keys=True))
     print(f"power: {power} · quit: {plan.to_quit} · live running: {plan.live_was_running}")
     if "M1K3_SELFTEST_APP_COMMIT" not in trig:
-        print("! app commit unknown (local builds carry no GitCommitSHA) — pass --commit")
+        print("! app commit unknown (this build predates the GitCommitSHA stamp phase, or was built outside Xcode) — rebuild, or pass --commit")
     if plan.blockers:
         for pid, exe in plan.blockers:
             print(f"✗ pid {pid} is someone else's M1K3 ({exe}) — not quitting it; stop it yourself", file=sys.stderr)

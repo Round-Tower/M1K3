@@ -10,6 +10,8 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85, Prior: none (new file).
 //  Review: same day (pre-push review) — the options are `.userInitiatedAllowingIdleSystemSleep`;
 //  cancellation and strict begin/end alternation pinned.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the `-generationActivity` kill-switch pinned
+//  (reader parity; a disabled hold never begins).
 
 import Foundation
 @testable import M1K3Inference
@@ -115,5 +117,36 @@ struct GenerationActivityTests {
         #expect(ProcessActivityAsserter.options == .userInitiatedAllowingIdleSystemSleep)
         #expect(!ProcessActivityAsserter.options.contains(.idleSystemSleepDisabled))
         #expect(!ProcessActivityAsserter.options.contains(.idleDisplaySleepDisabled))
+    }
+
+    // MARK: - the -generationActivity kill-switch (the display-off A/B's arm B)
+
+    @Test("the switch reads the way its words say: absent is on; NO / false / 0 are off")
+    func switchParity() throws {
+        let suite = "GenerationActivityTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(GenerationActivity.isEnabled(in: defaults))
+        for off in ["NO", "false", "0"] {
+            defaults.set(off, forKey: GenerationActivity.defaultsKey)
+            #expect(!GenerationActivity.isEnabled(in: defaults), "\(off)")
+        }
+        for on in ["YES", "true", "1"] {
+            defaults.set(on, forKey: GenerationActivity.defaultsKey)
+            #expect(GenerationActivity.isEnabled(in: defaults), "\(on)")
+        }
+    }
+
+    @Test("a disabled hold never begins an activity, but still counts holders and runs the work")
+    func disabledNeverBegins() async {
+        let asserter = RecordingAsserter()
+        let activity = GenerationActivity(asserter: asserter, enabled: false)
+        let value = await activity.during("chat turn") {
+            #expect(activity.holders == 1)
+            return 7
+        }
+        #expect(value == 7)
+        #expect(asserter.calls.isEmpty)
+        #expect(activity.holders == 0)
     }
 }
