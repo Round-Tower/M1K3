@@ -130,6 +130,19 @@ struct PromptContextTests {
         #expect(line.contains("(2026-01-01)"))
     }
 
+    /// Mini's DISPATCHED turn (a tool result in hand, `brainName: ""`) carries the line too —
+    /// decided 2026-10-09, not gated to the MLX tiers: the observation is where the ISO dates
+    /// live (recent_activity, calendar, memories), so that turn is where the cue earns its
+    /// keep. The cost is bounded here so it stays a rounding error of Mini's 4,096 window.
+    @Test("the dispatched-turn line (no brain) carries both date shapes and the cue, under budget")
+    func dispatchedTurnLineCarriesTheCueUnderBudget() {
+        let line = PromptContext.line(now: noon(2026, 10, 5), brainName: "")
+        #expect(line.contains("Monday, 5 October 2026 (2026-10-05)"))
+        #expect(line.hasSuffix("earlier dates are in the past."))
+        let words = line.split(whereSeparator: \.isWhitespace).count
+        #expect(words <= 20, "the date clause is ~14 tokens on every dated turn; got \(words) words")
+    }
+
     /// The cue is part of the DATE clause: it precedes the brain clause (which stays the
     /// line's suffix, `identityHasNoDate`) and closes the line when there is no brain.
     @Test("the cue sits between the date and the brain clause")
