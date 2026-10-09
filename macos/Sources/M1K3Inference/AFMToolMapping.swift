@@ -27,6 +27,7 @@
 //  here and the live harness is left to test only the genuine unknown.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-15, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `visionDecline(from:)`: an honest decline for images on the latest user turn (Mini can't read them in the app's prompt shape; AFMVisionLiveTests). Confidence 0.7.
 //  Review: Kev + claude-opus-4-6, 2026-09-16 — image support: on macOS 27+ images
 //  ride the Prompt via Attachment(imageURL:) and the "cannot view" text note is
 //  suppressed; `imageURLs(from:)` extracts attached URLs for the provider.
@@ -166,5 +167,20 @@ public enum AFMToolPrompt {
             guard case let .user(_, images) = message else { return nil }
             return images.map(\.url)
         }.flatMap { $0 }
+    }
+
+    /// The honest answer when the latest user turn carries images: Mini (AFM) does not read them
+    /// in the app's prompt shape — the 2026-10-09 live probe (AFMVisionLiveTests) got a guardrail
+    /// error or a tool call, never the content, while the in-app path confabulated for ~40 s.
+    /// `nil` when there is nothing to decline. Only the latest user turn counts.
+    public static func visionDecline(from messages: [ToolMessage]) -> String? {
+        let latest = messages.reversed().compactMap { message -> [ImageAttachment]? in
+            guard case let .user(_, images) = message else { return nil }
+            return images
+        }.first
+        guard let count = latest?.count, count > 0 else { return nil }
+        let noun = count == 1 ? "image" : "\(count) images"
+        return "I can't see the \(noun) you attached on this brain, so I won't guess at what's in it. "
+            + "Switch to Big, which can read images, and send it again."
     }
 }

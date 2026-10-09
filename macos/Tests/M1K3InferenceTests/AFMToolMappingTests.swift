@@ -89,3 +89,30 @@ struct AFMToolMappingTests {
         ]))
     }
 }
+
+/// Mini cannot read images in the app's prompt shape (live probe 2026-10-09: persona + tools +
+/// rendered body → a guardrail error or a tool call, never the receipt total; bare session reads
+/// it). Until a shape that works is proven, an attached image gets an honest decline, not a guess.
+struct AFMVisionDeclineTests {
+    private let image = ImageAttachment(url: URL(fileURLWithPath: "/tmp/receipt.png"))
+
+    @Test("a latest user turn with images declines, naming the count")
+    func declinesWithImages() {
+        let text = AFMToolPrompt.visionDecline(from: [.system("persona"), .user("total?", images: [image, image])])
+        #expect(text?.contains("can't see") == true)
+        #expect(text?.contains("2") == true)
+    }
+
+    @Test("no images means no decline")
+    func noDeclineWithoutImages() {
+        #expect(AFMToolPrompt.visionDecline(from: [.user("hi", images: [])]) == nil)
+    }
+
+    @Test("only the LATEST user turn counts, an old image does not poison later text turns")
+    func onlyLatestTurn() {
+        let messages: [ToolMessage] = [
+            .user("look", images: [image]), .assistant(text: "ok", toolCalls: []), .user("thanks", images: []),
+        ]
+        #expect(AFMToolPrompt.visionDecline(from: messages) == nil)
+    }
+}

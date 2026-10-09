@@ -65,6 +65,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 (2), Confidence 0.85 — `takeSession(consultSlot:)`: a call
 //  on foreign instructions (the neutral titler) gets a fresh session and never touches the prewarm slot,
 //  which drops on a key mismatch (PR #424 review: it evicted the next chat turn's prewarm).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — continueToolTurn declines images honestly (AFMToolPrompt.visionDecline) instead of confabulating. Confidence 0.7.
 import Foundation
 import M1K3LogCore
 import os
@@ -608,6 +609,7 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
     /// override above, this path only fires on older runtimes or when
     /// `makeToolTurnSession` is bypassed.
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
+        if let decline = AFMToolPrompt.visionDecline(from: messages) { return .text(decline) }
         let body = AFMToolPrompt.render(messages: messages, tools: tools)
         let imageURLs = AFMToolPrompt.imageURLs(from: messages)
         let standing = AFMToolPrompt.systemInstructions(from: messages) ?? instructions()
