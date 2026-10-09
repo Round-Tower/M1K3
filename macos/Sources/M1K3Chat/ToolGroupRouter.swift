@@ -33,6 +33,8 @@
 //  Prior: Unknown.
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — "schedule" is a cue only as a noun; a turn opening on it is a write (#512).
+//  Review: same day, code-quality fold — the verb reading covers every position ("Can you schedule time with
+//  Anna for the meeting?" matched "meeting"): "schedule" is the noun only after a lead word (`scheduleNounLeads`).
 
 import Foundation
 
@@ -148,21 +150,38 @@ public enum ToolGroupRouter {
     /// say it booked it). Any of these words abstains.
     static let writeCues = [
         "add", "create", "book", "set", "cancel", "move", "remind", "delete", "remove", "reschedule", "invite", "put",
-        "schedule a", "schedule an", "schedule the", "schedule my",
     ]
+
+    /// The words after which "schedule" is the noun ("my schedule", "today's schedule"). After
+    /// anything else — the turn's first word, "you", "please", "to" — it is the verb, a write
+    /// ("Can you schedule time with Anna for the meeting?" names a meeting and books one).
+    static let scheduleNounLeads: Set<Substring> = [
+        "my", "the", "your", "our", "his", "her", "their", "this", "that", "s",
+        "today", "tomorrow", "work", "whole", "full", "daily", "weekly",
+    ]
+
+    /// "schedule" used as a verb anywhere in the turn (#510 review 3).
+    static func schedulesSomething(_ question: String) -> Bool {
+        let words = words(question)
+        return words.indices.contains { i in
+            words[i] == "schedule" && (i == words.startIndex || !scheduleNounLeads.contains(words[i - 1]))
+        }
+    }
 
     /// Every device tool the words name, in `deviceCues` order; none for a write.
     static func deviceTools(_ question: String) -> [String] {
-        // A turn that opens on "schedule" is asking for one ("Schedule it for 3").
-        let opensOnSchedule = question.lowercased().drop(while: { !$0.isLetter }).hasPrefix("schedule")
-        guard !opensOnSchedule, !mentions(question, any: writeCues) else { return [] }
+        guard !schedulesSomething(question), !mentions(question, any: writeCues) else { return [] }
         return deviceCues.filter { mentions(question, any: $0.cues) }.map { $0.tool }
     }
 
     /// Whole-word (or whole-phrase) match, case-insensitive: "daytime" is not "day".
     static func mentions(_ text: String, any cues: [String]) -> Bool {
-        let cleaned = String(text.lowercased().map { $0.isLetter || $0.isNumber ? $0 : " " })
-        let words = " " + cleaned.split(separator: " ").joined(separator: " ") + " "
-        return cues.contains { words.contains(" \($0) ") }
+        let joined = " " + words(text).joined(separator: " ") + " "
+        return cues.contains { joined.contains(" \($0) ") }
+    }
+
+    /// The turn's lower-cased words: letters and digits only ("today's" is "today", "s").
+    static func words(_ text: String) -> [Substring] {
+        String(text.lowercased().map { $0.isLetter || $0.isNumber ? $0 : " " }).split(separator: " ")
     }
 }

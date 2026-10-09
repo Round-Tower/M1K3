@@ -10,7 +10,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75. Prior: Unknown.
 //
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — schedule-verb cases, one-vector-per-turn pin (#512).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — schedule-verb cases (any position, after the fold),
+//  one-vector-per-turn pin (#512).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
 
 import Foundation
@@ -104,6 +105,14 @@ struct ToolGroupRouterTests {
         #expect(ToolGroupRouter.deviceTools("schedule time with Anna").isEmpty)
         #expect(ToolGroupRouter.deviceTools("Could you schedule it for 3?").isEmpty)
         #expect(ToolGroupRouter.deviceTools("What's on the schedule today?") == ["calendar_peek"])
+        // Code-quality fold: the verb mid-sentence, beside a calendar cue, is still a write.
+        #expect(ToolGroupRouter.deviceTools("Can you schedule time with Anna for the meeting?").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("Please schedule a meeting with Sean").isEmpty)
+        #expect(ToolGroupRouter.deviceTools("What's on today's schedule for my meeting?") == ["calendar_peek"])
+        #expect(ToolGroupRouter.schedulesSomething("What's on today's schedule?") == false)
+        #expect(ToolGroupRouter.deviceTools("Show me the schedule for the meeting") == ["calendar_peek"])
+        #expect(ToolGroupRouter.schedulesSomething("my schedule") == false)
+        #expect(ToolGroupRouter.schedulesSomething("schedule") == true)
     }
 
     @Test("each local family names its tool; web and script are left to Apple's pick")
