@@ -63,6 +63,8 @@
 //  attachment is staged (one staged with the sheet open used to go through, text only). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — ModelGateView re-reads availability every 2 s while
 //  it is up (`availabilityRecheck`), so "Preparing Mini…" lifts itself when AFM recovers. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — voice mode sits on the window glass (VoiceModeView drops its private
+//  gradient); the overlay comment records the opacity fallback if the transcript ghosts through. Comment-only here.
 
 import M1K3Avatar
 import M1K3Chat
@@ -320,7 +322,10 @@ struct ContentView: View {
         // active (the chat answer still lands in the transcript underneath). This
         // replaced the 06-21 bottom dock — Kev wanted the face full screen, not a
         // 92pt corner card. Mounted as an overlay (not a body-swap) so the toolbar
-        // chrome stays reachable and the transition is a clean fade.
+        // chrome stays reachable and the transition is a clean fade. VoiceModeView
+        // covers the chat with the window glass itself (`.glassBackdrop()`); if a
+        // launch shows the transcript or sidebar ghosting through, fade the split
+        // view here instead (`.opacity(0)` while voice is active, under this overlay).
         .overlay {
             if env.isVoiceModeActive {
                 VoiceModeView()
