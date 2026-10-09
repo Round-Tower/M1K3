@@ -43,8 +43,8 @@ our minds open."
   - big = `gemma-4-12B-it-4bit` (L224, ~7.4 GB peak, Mac ≥16 GB, never on mobile L362)
   - defaults: `recommendedByMemory` L450-485; gates: `minimumPhysicalMemoryGB` L344-364
 - **Vision** — Big via MLXVLM (`usesVLMLoadPath`, exact allow-list `"gemma-4-12b"`, `MLXBrainProvider.swift:1082`); Mini via AFM attachments. E4B is excluded: upstream `Gemma4Unified` sanitize lacks the KV-shared-layer fix → `keyNotFound layers.24.self_attn.v_proj`.
-- **Embeddings** — `Sources/M1K3MLX/MLXEmbeddingService.swift` (Qwen3-Embedding-0.6B, 1024 → MRL 512, L91-92). EmbeddingGemma v1 was rejected: its `sanitize` fatals on load with our pin (L18-23). Fingerprint `mlx/<name>/d<dim>/mlx-swift-0.31` (L66-73) drives an automatic, atomic re-index (`KnowledgeStore.reindexEmbeddings` L186-240; `AppEnvironment.swift` L1673-1708, L2110, L2233, L2332-2360). Per-embedder similarity floors: `Sources/M1K3Knowledge/EmbedderFloors.swift` (qwen3Instructed L46).
-- **Pins** — `Sources/M1K3MLX/PinnedWeights.swift` (regen: `tools/weights/pin_weights.py`, ADR 0002). mlx-swift-lm at main `ee673d6a`; mlx-swift 0.31.6. `M1K3MLX` links MLXEmbedders + MLXLLM + MLXVLM.
+- **Embeddings** — `Sources/M1K3MLX/MLXEmbeddingService.swift` (Qwen3-Embedding-0.6B, 1024 → MRL 512, L91-92). EmbeddingGemma v1 was rejected: its `sanitize` fatals on load with our pin (L18-23). Fingerprint `mlx/<name>/d<dim>/mlx-swift-0.32` (L66-73) drives an automatic, atomic re-index (`KnowledgeStore.reindexEmbeddings` L186-240; `AppEnvironment.swift` L1673-1708, L2110, L2233, L2332-2360). Per-embedder similarity floors: `Sources/M1K3Knowledge/EmbedderFloors.swift` (qwen3Instructed L46).
+- **Pins** — `Sources/M1K3MLX/PinnedWeights.swift` (regen: `tools/weights/pin_weights.py`, ADR 0002). mlx-swift-lm 3.32.3; mlx-swift 0.32.3 (the tag pair since 2026-10-07; was main `ee673d6a` / 0.31.6). `M1K3MLX` links MLXEmbedders + MLXLLM + MLXVLM.
 - **Eval** — `ChatEvalFixture` (`Sources/M1K3Eval/ChatEvalFixture.swift:241`) has `prompt` + `seedDoc` only: **no image/audio field**. Runner: `tools/eval/run_chateval.py --direct --model lil=<id> --save-to docs/evals/<name>.json` (see `docs/BENCHMARKS.md` "Reproducing it", the macOS 27 stdout route). Retrieval fixtures: `Sources/M1K3Knowledge/*EvalFixtures.swift`.
 - **Audio-to-model** — not shipped (`scratch/gemma4-audio-spike/SPIKE.md`: E4B batch-only, 30 s cap).
 
@@ -238,6 +238,7 @@ is off and every turn re-prefills persona + palette + history. Next: an exact-se
 tool session (pocket's LFM2 trick), then router-gated thinking. Confidence 0.75 on the cause (the
 mechanism is certain; its share of the 3× is not yet measured). Same hour: measured from the unified
 log: prefill is the whole gap (6.8 s vs 0.2 s a turn; decode equal). Confidence 0.9.
+Review: Kev + claude-opus-5-5, 2026-10-07 17:15 — the Pins line notes the 3.32.3 / 0.32.3 tag-pair move.
 Review: Kev + claude-opus-5-5, 2026-10-07 16:30 — Mini vision investigation opened: the attach path is
 compiled in; a live URL-vs-CGImage test is written; AFM is `modelNotReady` right now. Confidence 0.5 —
 two live hypotheses, one test to decide.
