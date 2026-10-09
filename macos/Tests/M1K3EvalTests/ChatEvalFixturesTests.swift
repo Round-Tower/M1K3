@@ -10,6 +10,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.9 — every forbidden marker must fire on a
 //  sentence quoting it (#497 review: whole-word must not leave a dead marker). Reasoning tags exempt —
 //  the stripper removes them before any content check, on master too.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
 
 @testable import M1K3Eval
 import M1K3Inference
@@ -210,6 +211,19 @@ struct ChatEvalFixturesTests {
     func toolShape() {
         for fixture in ChatEvalFixtures.toolUse {
             #expect(fixture.expectation.mustCallTool != nil, "\(fixture.id) names no tool")
+        }
+    }
+
+    @Test("chain fixtures exist, each pins two distinct tools the stub palette offers")
+    func chainShape() {
+        let chains = ChatEvalFixtures.toolUse.filter { !$0.expectation.alsoCallTools.isEmpty }
+        #expect(chains.count >= 2, "only \(chains.count) two-tool fixtures")
+        let names = Set(ChatEvalStubPalette.names)
+        for fixture in chains {
+            let tools = [fixture.expectation.mustCallTool ?? ""] + fixture.expectation.alsoCallTools
+            #expect(Set(tools).count == tools.count, "\(fixture.id) repeats a tool")
+            #expect(tools.allSatisfy(names.contains), "\(fixture.id) names a tool no stub offers: \(tools)")
+            #expect(fixture.id.hasPrefix("tool-chain-"), "\(fixture.id) should be named tool-chain-*")
         }
     }
 

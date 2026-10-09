@@ -25,6 +25,7 @@
 //  name two tools ("the weather and my calendar"). The single-tool schema is untouched: the 36/38
 //  pick only changes when the flag is on, and the arm measures that first. Confidence 0.7.
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — chainPicks promotes `also` when the head is none (#512).
 
 import Foundation
 @_weakLinked import FoundationModels
@@ -53,6 +54,15 @@ public enum AFMToolPicker {
 
     /// A chain's second tool: read-only tools or none, never `action` (an action is the agent's).
     public static let alsoChoices: [String] = choices.filter { $0 != "action" }
+
+    /// The picks a chain schema's answer stands for. `also` repeating the head, or none,
+    /// adds nothing; a `none` head with a real `also` IS that tool (#510 review 3: the
+    /// turn went plain and the tool it named never ran).
+    public static func chainPicks(tool: String, query: String, also: String, alsoQuery: String) -> [(tool: String, query: String)] {
+        let second: (tool: String, query: String)? = also == "none" || also == tool ? nil : (tool: also, query: alsoQuery)
+        if tool == "none", let second { return [second] }
+        return [(tool: tool, query: query)] + (second.map { [$0] } ?? [])
+    }
 }
 
 @Generable
@@ -93,10 +103,6 @@ extension AppleFoundationModelsProvider: ToolPicking {
         let pick = try await session.respond(
             to: message, generating: AFMToolChainPick.self, options: GenerationOptions(temperature: 0)
         ).content
-        var picks: [(tool: String, query: String)] = [(tool: pick.tool, query: pick.query)]
-        if pick.also != "none", pick.also != pick.tool {
-            picks.append((tool: pick.also, query: pick.alsoQuery))
-        }
-        return picks
+        return AFMToolPicker.chainPicks(tool: pick.tool, query: pick.query, also: pick.also, alsoQuery: pick.alsoQuery)
     }
 }
