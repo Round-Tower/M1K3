@@ -23,6 +23,8 @@
 //  the inherited stdout (the sandboxed route on macOS 27; verified by a direct exec of the signed Debug build).
 //  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — mechanical rename only: `MLXGemmaProvider` → `MLXBrainProvider`; no behaviour change.
 //  Review: Kev + claude-opus-5-5, 2026-10-07 — dispatches SeedProbeStage (M1K3_SELFTEST_SEEDPROBE); no other change.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — dispatches ChatCurveStage (M1K3_SELFTEST_CHATCURVE=1|lil|big|<model id>,
+//  the scripted 8-message prefill curve; report at <M1K3_SELFTEST_OUT>.json, fenced on stdout with OUT=-); no other change.
 
 import Foundation
 import M1K3Chat
@@ -502,6 +504,13 @@ enum SelfTest {
         //     MLXLLM load paths? See SeedProbeStage.swift.
         if SeedProbeStage.isRequested {
             await SeedProbeStage.run(emit: emit)
+        }
+
+        // 8g. Optional chat-curve measurement (M1K3_SELFTEST_CHATCURVE=1|lil|big|<model id>): a
+        //     scripted 8-message chat through AgentRAGResponder; per-message rendered tokens, cache
+        //     reuse, prefill and peak RSS. See ChatCurveStage.swift.
+        if ChatCurveStage.isRequested {
+            await ChatCurveStage.run(emit: emit)
         }
 
         emit("=== END SELF-TEST ===")

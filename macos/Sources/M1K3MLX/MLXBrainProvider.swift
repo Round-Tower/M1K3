@@ -116,6 +116,10 @@
 //  with the cache; the persona slot stores it.
 //  Review: Kev + claude-opus-5-5, 2026-10-09 — note only: the 2026-07-16 entry's "the Instruct variant
 //  is the wired lil" is superseded. Lil is Qwen3.5-4B since 2026-10-08 (#517), which reads the toggle.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — Stream G hygiene: the sliding window is read from config.json
+//  (`slidingWindow(forModelID:configDirectory:)`); the name-keyed 1024 is the pre-load fallback. E4B is 512.
+//  Review: same day (#522 review fold) — `prefixIsReusable(tokens:window:)` IS the gate renderPersonaPrefix
+//  ships (the id-keyed overloads had no production caller); the config read is a flatMap. 12B stays 1024.
 import Foundation
 import Hub
 import M1K3Inference
@@ -793,7 +797,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         }
         // Resolved OUTSIDE the closure: touching `self.configuration` inside it
         // makes the closure async and `perform`'s overload no longer matches.
-        let reusableWindow = Self.slidingWindow(forModelID: modelIdentifier)
+        let reusableWindow = Self.slidingWindow(forModelID: modelIdentifier, configDirectory: configDirectory)
         let built: PrefixBox = try await container.perform { context in
             // System-block token ids, no assistant opener. Lenient templates
             // render a system-only array; strict ones (Qwen3.5) reject it and
@@ -805,7 +809,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             // on every single turn.
             // An EMPTY box is the "declined" signal — keeping the closure's
             // return type unchanged keeps `perform`'s overload resolution happy.
-            guard reusableWindow.map({ ids.count <= $0 }) ?? true else {
+            guard Self.prefixIsReusable(tokens: ids.count, window: reusableWindow) else {
                 return PrefixBox(cache: [], tokenIDs: [])
             }
             let cache = try context.model.newCache(parameters: parameters)
@@ -1113,13 +1117,15 @@ extension MLXBrainProvider {
     /// drafter. e4b (uniform 4-bit, exact id) routes here too: it is model_type
     /// `gemma4` → MLXVLM.Gemma4, and upstream #384 (2026-07-15, in our pin) made
     /// its 18 KV-shared layers stop demanding v_proj — the 2026-07-14 keyNotFound
-    /// predates that. Other e4b conversions stay off (OptiQ has no embed_vision
-    /// projector or processor config). Qwen3.5-4B (exact id) is natively
+    /// predates that. e2b (exact id, 2026-10-09) is the same `gemma4`
+    /// architecture with vision + audio configs, routed for the mobile audition. Other e4b conversions
+    /// stay off (OptiQ has no embed_vision projector or processor config). Qwen3.5-4B (exact id) is natively
     /// multimodal: the conversion ships its vision tower and `qwen3_5` is
     /// MLXVLM.Qwen35 in our pin (2026-10-07). Unknown ids default to the LLM factory.
     static func usesVLMLoadPath(for configuration: ModelConfiguration) -> Bool {
         let name = configuration.name.lowercased()
         return name.contains("gemma-4-12b") || name == "mlx-community/gemma-4-e4b-it-4bit"
+            || name == "mlx-community/gemma-4-e2b-it-4bit"
             || name == "mlx-community/qwen3.5-4b-mlx-4bit"
     }
 
@@ -1191,11 +1197,24 @@ extension MLXBrainProvider {
     /// A model's attention window, when it is SMALLER than its context length —
     /// i.e. a sliding window that the KV cache rotates through.
     ///
-    /// gemma-4 slides at 1024. Nil means "no sliding window" (dense attention,
-    /// e.g. Qwen3), where a cached prefix stays linearly trimmable and reuse
-    /// works for real.
+    /// Name-keyed, so it is the PRE-LOAD fallback only: gemma-4 12B slides at 1024
+    /// but E4B's config says 512 — `slidingWindow(forModelID:configDirectory:)`
+    /// reads config.json first. Nil means "no sliding window" (dense or hybrid
+    /// attention, e.g. Qwen3.5), where a cached prefix stays linearly trimmable
+    /// (or, for recurrent layers, is built by exact prefill) and reuse works.
     static func slidingWindow(forModelID modelID: String) -> Int? {
         modelID.lowercased().contains("gemma-4") ? 1024 : nil
+    }
+
+    /// The window from the model's own config.json (the folder, else the LLM
+    /// store's path for the hub id), falling back to the name before the first
+    /// download when there is no config on disk.
+    static func slidingWindow(forModelID modelID: String, configDirectory: URL?) -> Int? {
+        // flatMap, not map: `map` would be `Int??`, and a folder with no readable
+        // config.json must read as "no config" (fall through), not `.some(nil)`.
+        let fromConfig = configDirectory.flatMap(LocalModelConfig.slidingWindow(inDirectory:))
+            ?? LocalModelConfig.slidingWindow(forRepoID: modelID)
+        return fromConfig ?? slidingWindow(forModelID: modelID)
     }
 
     /// Whether a persona prefix of `tokens` can ever be REUSED on this model.
@@ -1210,8 +1229,12 @@ extension MLXBrainProvider {
     /// The old code documented this ("a wrapped prefix can't be linearly reused
     /// anyway") and built it regardless. Knowing it is wasted is not the same as
     /// not doing it.
-    static func prefixIsReusable(tokens: Int, modelID: String) -> Bool {
-        guard let window = slidingWindow(forModelID: modelID) else { return true }
+    ///
+    /// `window` is the resolved sliding window (`slidingWindow(forModelID:configDirectory:)`);
+    /// nil means dense attention, where any prefix stays trimmable. This is the
+    /// predicate `renderPersonaPrefix` ships, so it is the one the tests pin.
+    static func prefixIsReusable(tokens: Int, window: Int?) -> Bool {
+        guard let window else { return true }
         return tokens <= window
     }
 
