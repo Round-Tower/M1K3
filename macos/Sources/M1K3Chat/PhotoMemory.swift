@@ -12,6 +12,8 @@
 //  and "remembered" is read from the store, never cached across launches.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (code-quality fold) — a success clears the transient
+//  instead of caching `.remembered`, so a Photo deleted from the Documents list resets the row.
 
 import Foundation
 import M1K3Inference
@@ -70,7 +72,9 @@ public final class PhotoMemory {
             let caption = try await ImageCaptioner(provider: providerSource())
                 .caption(image: image, tier: tierSource())
             try await ingester.ingest(caption: caption, attachmentFilename: key)
-            transient[key] = .remembered
+            // Cleared, not cached: `state(for:)` reads "remembered" from the store,
+            // so a Photo deleted from the Documents list shows the action again.
+            transient[key] = nil
             onChange?()
         } catch {
             transient[key] = .failed(error.localizedDescription)

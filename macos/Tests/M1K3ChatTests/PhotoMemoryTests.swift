@@ -134,6 +134,17 @@ struct PhotoMemoryTests {
         #expect(try store.allItems(kind: .image).isEmpty)
     }
 
+    @Test("a Photo deleted from the Documents list resets the row to the plain action -- the store is the truth")
+    func storeDeleteResetsRow() async throws {
+        let store = try KnowledgeStore()
+        let memory = makeMemory(provider: FakeCaptioner(), store: store)
+        await memory.remember(image)
+        #expect(memory.state(for: image) == .remembered)
+        let id = try #require(try store.itemID(forSourceRef: "attachment:W1.png"))
+        #expect(try store.deleteItem(id: id))
+        #expect(memory.state(for: image) == nil)
+    }
+
     @Test("onChange fires after a remember and after a forget")
     func notifiesShell() async throws {
         let store = try KnowledgeStore()

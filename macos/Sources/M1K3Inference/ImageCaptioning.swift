@@ -11,8 +11,8 @@
 //
 //  This is an `as?` capability seam, so EVERY façade must forward it
 //  (SwappableInferenceProvider here, RuntimeInferenceProvider in the app) or
-//  the cast fails silently in production. Pinned by
-//  SwappableCapabilityForwardingTests.
+//  the cast fails silently in production. Pinned by ImageCaptioningTests
+//  (the package façade) and ImageCaptionerTests.throughFacade.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8, Prior: Unknown
 

@@ -11,6 +11,8 @@
 //  abstention pins. FTS-only surface unchanged via the nil default.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #378: empty query and bad/unknown ids now pin a
 //  throw, the quarantine case included. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: a Photo (.image) item is withheld from
+//  list, search and get-by-id (photoCaptionsAreWithheld).
 
 import Foundation
 import M1K3Knowledge
