@@ -303,6 +303,12 @@ targets:
         # the MAS set is still the default, the exception can still only ship when a script asks for it).
         M1K3_APP_ENTITLEMENTS: M1K3App/M1K3-MAS.entitlements
         CODE_SIGN_ENTITLEMENTS: $(M1K3_APP_ENTITLEMENTS)
+        # The app's profile, indirected for the same reason (2026-10-09): a global
+        # PROVISIONING_PROFILE_SPECIFIER would land on the `m1k3` helper too. Empty =
+        # automatic signing picks one (local runs, Xcode Cloud); release-macos.sh's
+        # manual (CI) mode names the Developer ID profile its keychain group needs.
+        M1K3_APP_PROFILE: ""
+        PROVISIONING_PROFILE_SPECIFIER: $(M1K3_APP_PROFILE)
         ENABLE_HARDENED_RUNTIME: YES
         SWIFT_EMIT_LOC_STRINGS: YES
     info:

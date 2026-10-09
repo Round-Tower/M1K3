@@ -133,9 +133,38 @@ CLI_ENTITLEMENTS="$MACOS_DIR/M1K3CLI/m1k3-direct.entitlements"
 # (macOS Developer ID needs no provisioning profile; export re-signs as before).
 # Local runs keep Automatic — set nothing.
 SIGN_ARGS=()
+# CI's manual mode needs a MANUALLY managed Developer ID profile: Xcode's own ("Mac Team Direct
+# Provisioning Profile: app.m1k3", made by -allowProvisioningUpdates) is refused under manual
+# signing (2026-10-09). This one ("M1K3") is made in the developer portal for app.m1k3 + the Developer ID
+# Application cert the nightly imports, and installed from MACOS_DEVELOPER_ID_PROFILE.
+DEVELOPER_ID_PROFILE="M1K3"
+# Automatic (local) signing may create/fetch profiles through the Xcode account,
+# as release-mas.sh does: the app's keychain-access-groups needs a Developer ID
+# profile since 2026-10-09 (macOS 27's keychain refuses a profile-less identity).
+PROVISIONING_ARGS=(-allowProvisioningUpdates)
 if [ "${M1K3_SIGN_STYLE:-automatic}" = "manual" ]; then
   echo "▸ Manual signing (Developer ID Application) — single-identity keychain mode"
-  SIGN_ARGS=(CODE_SIGN_STYLE=Manual "CODE_SIGN_IDENTITY=Developer ID Application")
+  # The app's keychain-access-groups needs its Developer ID profile, installed by the
+  # workflow from MACOS_DEVELOPER_ID_PROFILE; the helper target stays profile-less.
+  SIGN_ARGS=(CODE_SIGN_STYLE=Manual "CODE_SIGN_IDENTITY=Developer ID Application"
+    "M1K3_APP_PROFILE=$DEVELOPER_ID_PROFILE")
+  PROVISIONING_ARGS=()
+  EXPORT_OPTS="$BUILD/ExportOptions-manual.plist"
+  mkdir -p "$BUILD"
+  cat > "$EXPORT_OPTS" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>method</key><string>developer-id</string>
+  <key>signingStyle</key><string>manual</string>
+  <key>signingCertificate</key><string>Developer ID Application</string>
+  <key>teamID</key><string>$TEAM</string>
+  <key>provisioningProfiles</key>
+  <dict><key>app.m1k3</key><string>$DEVELOPER_ID_PROFILE</string></dict>
+</dict>
+</plist>
+PLIST
 fi
 
 echo "▸ [1/6] Archiving…"
@@ -146,6 +175,7 @@ xcodebuild archive \
   -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
   -archivePath "$ARCHIVE" -destination 'generic/platform=macOS' \
   -skipPackagePluginValidation \
+  ${PROVISIONING_ARGS[@]+"${PROVISIONING_ARGS[@]}"} \
   M1K3_APP_ENTITLEMENTS="$DIRECT_ENTITLEMENTS" \
   M1K3_CLI_ENTITLEMENTS="$CLI_ENTITLEMENTS" \
   DEVELOPMENT_TEAM="$TEAM" \
@@ -156,7 +186,8 @@ echo "▸ [2/6] Exporting (Developer ID)…"
 rm -rf "$EXPORT_DIR"
 xcodebuild -exportArchive \
   -archivePath "$ARCHIVE" -exportPath "$EXPORT_DIR" \
-  -exportOptionsPlist "$EXPORT_OPTS" | beautify
+  -exportOptionsPlist "$EXPORT_OPTS" \
+  ${PROVISIONING_ARGS[@]+"${PROVISIONING_ARGS[@]}"} | beautify
 [ -d "$APP" ] || { echo "✗ Export produced no $APP_NAME.app"; exit 1; }
 
 # ── 2b. The embedded CLI must NOT be sandboxed on this channel ───────────────
@@ -214,6 +245,24 @@ if [ "$CLI_HELP_RC" -ne 0 ] || [ -z "$CLI_HELP" ]; then
   exit 1
 fi
 echo "✓ m1k3 helper launches (--help answered)"
+
+# ── The app must carry its keychain identity (2026-10-09) ────────────────────
+# macOS 27's keychain refuses a profile-less identity (-34018): no MCP server, no
+# Brain at Home key, no call key. Nothing here launches the DMG to notice, so the
+# export is checked for the profile and the keychain group, failing closed.
+[ -f "$APP/Contents/embedded.provisionprofile" ] || {
+  echo "✗ $APP_NAME.app embeds no provisioning profile — its keychain saves would fail -34018"; exit 1; }
+# `|| true`: a failed read must reach the message below, not end the script silently.
+APP_IDENTIFIER="$(codesign -d --entitlements - --xml "$APP" 2>/dev/null \
+  | plutil -extract 'com\.apple\.application-identifier' raw - 2>/dev/null || true)"
+KEYCHAIN_GROUP="$(codesign -d --entitlements - --xml "$APP" 2>/dev/null \
+  | plutil -extract keychain-access-groups.0 raw - 2>/dev/null || true)"
+if [ "$APP_IDENTIFIER" != "$TEAM.app.m1k3" ] || [ "$KEYCHAIN_GROUP" != "$TEAM.app.m1k3" ]; then
+  echo "✗ $APP_NAME.app is signed as '${APP_IDENTIFIER:-no identifier}' with keychain group"
+  echo "  '${KEYCHAIN_GROUP:-none}', expected $TEAM.app.m1k3 for both (check M1K3_APP_ENTITLEMENTS)"
+  exit 1
+fi
+echo "✓ app embeds its Developer ID profile and keychain group"
 
 # ── 3. Notarize + staple the .app (offline first-launch) ─────────────────────
 if [ "$SKIP_NOTARIZE" -eq 0 ]; then

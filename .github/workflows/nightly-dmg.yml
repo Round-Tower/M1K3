@@ -14,6 +14,11 @@ name: Nightly DMG
 #   MACOS_DEVELOPER_ID_CERT_PASSWORD  the password you set when exporting that .p12
 #   APPLE_NOTARY_APPLE_ID             Apple ID email for notarization (e.g. kevin@round-tower.ie)
 #   APPLE_NOTARY_PASSWORD             an app-specific password from appleid.apple.com
+#   MACOS_DEVELOPER_ID_PROFILE        base64 of the app's Developer ID provisioning profile, named
+#                                     "M1K3" (developer portal: Developer ID, app.m1k3,
+#                                     the Developer ID Application cert above; NOT Xcode's managed
+#                                     one, which manual signing refuses). Its keychain group is
+#                                     what lets the DMG build store anything on macOS 27.
 #
 # Until those secrets exist the job SKIPS cleanly (it never reddens the Actions
 # tab — same philosophy as ci.yml's Slack notify). Once set, it just works.
@@ -65,7 +70,7 @@ jobs:
         run: |
           if [ -z "$CERT" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Signing secrets not set yet — skipping the nightly DMG. See the header of this workflow for the 4 secrets to add."
+            echo "::notice::Signing secrets not set yet — skipping the nightly DMG. See the header of this workflow for the 5 secrets to add."
             exit 0
           fi
           # Scheduled runs skip when master hasn't moved since the last release —
@@ -144,6 +149,35 @@ jobs:
           rm -f "$RUNNER_TEMP/cert.p12"
           security find-identity -p codesigning -v "$KEYCHAIN" | grep "Developer ID Application" || {
             echo "❌ No Developer ID Application identity imported"; exit 1; }
+
+      - name: Install the Developer ID provisioning profile
+        if: steps.gate.outputs.configured == 'true'
+        # The app's keychain-access-groups needs it: macOS 27's keychain refuses a
+        # profile-less identity (-34018), so without it the DMG build has no MCP
+        # server, no Brain at Home key and no call key (2026-10-09). Fail closed.
+        env:
+          PROFILE_B64: ${{ secrets.MACOS_DEVELOPER_ID_PROFILE }}
+        run: |
+          set -euo pipefail
+          [ -n "$PROFILE_B64" ] || { echo "❌ MACOS_DEVELOPER_ID_PROFILE is not set — see this workflow's header"; exit 1; }
+          PROFILE="$RUNNER_TEMP/m1k3-direct.provisionprofile"
+          umask 077
+          echo "$PROFILE_B64" | base64 --decode > "$PROFILE"
+          UUID="$(security cms -D -i "$PROFILE" | plutil -extract UUID raw -)"
+          NAME="$(security cms -D -i "$PROFILE" | plutil -extract Name raw -)"
+          # A wrong or rotated secret fails here in seconds, not at export: the name
+          # release-macos.sh asks for, and a certificate the keychain above holds.
+          [ "$NAME" = "M1K3" ] || { echo "❌ profile is named '$NAME'; release-macos.sh asks for 'M1K3'"; exit 1; }
+          PROFILE_CERT="$(security cms -D -i "$PROFILE" | plutil -extract DeveloperCertificates.0 raw - \
+            | base64 --decode | shasum -a 1 | cut -c1-40 | tr 'a-f' 'A-F')"
+          security find-identity -p codesigning -v "$KEYCHAIN" | grep -q "$PROFILE_CERT" || {
+            echo "❌ the profile's certificate ($PROFILE_CERT) is not the imported Developer ID identity"; exit 1; }
+          for DIR in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" "$HOME/Library/MobileDevice/Provisioning Profiles"; do
+            mkdir -p "$DIR"
+            cp "$PROFILE" "$DIR/$UUID.provisionprofile"
+          done
+          rm -f "$PROFILE"
+          echo "Installed: $NAME ($UUID)"
 
       - name: Store notary credentials (matches release-macos.sh profile)
         if: steps.gate.outputs.configured == 'true'

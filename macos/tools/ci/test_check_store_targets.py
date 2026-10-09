@@ -192,6 +192,27 @@ def test_declared_age_range_in_developer_id_entitlements_is_flagged():
     assert "declared-age-range" in leaks[0]
 
 
+
+# 2026-10-08/09: macOS 27 routes every keychain call to the data-protection keychain, which
+# secd opens only to a profile-backed identity. With none, the MCP token's save failed -34018
+# and the DMG/cask build never started its MCP server; an app group alone was ignored without a
+# profile. The Developer ID lane asks for the keychain group its Developer ID profile grants.
+def test_developer_id_entitlements_with_the_app_keychain_group_pass():
+    ents = {"keychain-access-groups": ["$(AppIdentifierPrefix)app.m1k3"]}
+    assert m.developer_id_keychain_gaps(ents) == []
+
+
+def test_developer_id_entitlements_without_a_keychain_group_are_flagged():
+    gaps = m.developer_id_keychain_gaps({"com.apple.security.app-sandbox": True})
+    assert len(gaps) == 1
+    assert "$(AppIdentifierPrefix)app.m1k3" in gaps[0]
+
+
+def test_an_app_group_is_not_a_keychain_identity_without_its_profile():
+    # 2026-10-09: secd ignored a team-prefixed app group ("incorrect provisioning profile").
+    gaps = m.developer_id_keychain_gaps({"com.apple.security.application-groups": ["76DJH43A4P.app.m1k3"]})
+    assert len(gaps) == 1
+
 # 2026-10-01: build 375 shipped Content Controls with no declared-age-range
 # entitlement, so "Set up" did nothing on the Mac — the path App Review is sent down.
 def test_store_lane_without_declared_age_range_is_flagged():
