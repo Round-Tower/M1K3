@@ -26,6 +26,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — egressClauseProvider + `egressFacts()` (#482): what can leave
 //  this Mac per turn — web search (switch AND age band), PCC offered by `PrivateCloudRung.setting`, never
 //  "picked" (a PCC turn never reaches the responder). Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — `excludedKinds` threads through makeAgentResponder and
+//  interactiveAgentTools (the search tool) so the MCP responder withholds Photo captions.
 
 import Foundation
 import M1K3Agent
@@ -204,12 +206,13 @@ extension AppEnvironment {
         contextSenses: ContextSenseHook? = nil,
         recentActivity: (any ActivityReading)? = nil,
         ageBandProvider: (any AgeBandProviding)? = nil, // swiftformat:disable:next unusedArguments
-        availability: ToolPalettePolicy.Availability? = nil
+        availability: ToolPalettePolicy.Availability? = nil,
+        excludedKinds: Set<KnowledgeKind> = []
     ) -> [any AgentTool] {
         var tools: [any AgentTool] = [
             DateTimeTool(),
             SystemStatusTool(),
-            SearchKnowledgeTool(store: store, embedder: embedder, onHits: onHits),
+            SearchKnowledgeTool(store: store, embedder: embedder, excludedKinds: excludedKinds, onHits: onHits),
             ListDocumentsTool(store: store),
             GetDocumentTool(store: store),
         ]
@@ -412,7 +415,8 @@ extension AppEnvironment {
         scriptExecution: ScriptExecutionHook? = nil,
         contextSenses: ContextSenseHook? = nil,
         recentActivity: (any ActivityReading)? = nil,
-        ageBandProvider: (any AgeBandProviding)? = nil // swiftformat:disable:next unusedArguments
+        ageBandProvider: (any AgeBandProviding)? = nil, // swiftformat:disable:next unusedArguments
+        excludedKinds: Set<KnowledgeKind> = []
     ) -> any RAGResponding {
         // Hits the model retrieves itself (search_knowledge) flow through the
         // collector into the turn's sources + the citation allow-list.
@@ -431,7 +435,8 @@ extension AppEnvironment {
                     scriptExecution: scriptExecution,
                     contextSenses: contextSenses,
                     recentActivity: recentActivity,
-                    ageBandProvider: ageBandProvider
+                    ageBandProvider: ageBandProvider,
+                    excludedKinds: excludedKinds
                 )
             },
             sourceCollector: sourceCollector,
@@ -547,7 +552,8 @@ extension AppEnvironment {
                     allTiers: ToolRouterWiring.allTiersEnabled(),
                     chain: ToolRouterWiring.chainEnabled()
                 )
-            }
+            },
+            excludedKinds: excludedKinds
         )
     }
 

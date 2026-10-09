@@ -26,6 +26,8 @@
 //  Review: Kev + claude-fable-5, 2026-07-02 — retrieval branches lifted into
 //  M1K3Knowledge.GroundedSearch so the MCP surface runs the same policy;
 //  behaviour and phrasing here unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — `excludedKinds` (caption memory): the MCP ask's palette
+//  builds this tool with KnowledgeKind.withheldFromMCP so a Photo caption never lands in an observation.
 
 import Foundation
 import M1K3Agent
@@ -46,17 +48,21 @@ public struct SearchKnowledgeTool: AgentTool {
     private let store: KnowledgeStore
     private let embedder: (any EmbeddingService)?
     private let limit: Int
+    /// Kinds this tool never returns (the MCP surface's withhold); default none.
+    private let excludedKinds: Set<KnowledgeKind>
     private let onHits: (@Sendable ([ChunkHit]) -> Void)?
 
     public init(
         store: KnowledgeStore,
         embedder: (any EmbeddingService)? = nil,
         limit: Int = 5,
+        excludedKinds: Set<KnowledgeKind> = [],
         onHits: (@Sendable ([ChunkHit]) -> Void)? = nil
     ) {
         self.store = store
         self.embedder = embedder
         self.limit = limit
+        self.excludedKinds = excludedKinds
         self.onHits = onHits
     }
 
@@ -73,7 +79,7 @@ public struct SearchKnowledgeTool: AgentTool {
         // GroundedSearch owns the retrieval policy (two-lane gated hybrid with
         // an embedder, FTS without); this tool owns the agent-facing phrasing.
         let hits = try await GroundedSearch.run(
-            store: store, embedder: embedder, query: query, limit: limit
+            store: store, embedder: embedder, query: query, limit: limit, excludedKinds: excludedKinds
         )
         guard !hits.isEmpty else {
             if embedder != nil {

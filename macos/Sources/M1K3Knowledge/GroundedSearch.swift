@@ -16,6 +16,9 @@
 //  verbatim from the agent tool's TDD'd branches; MCP-side hybrid is
 //  test-pinned in KnowledgeMCPToolsTests, the in-app embedder wire is
 //  verify-by-launch). Prior: Kev + claude-opus-4-8 (SearchKnowledgeTool).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — `excludedKinds`, the per-call withhold (MCP keeps
+//  Photo captions out).
+//  The FTS fallback filters post hoc; the hybrid lanes exclude in the query.
 //
 
 import Foundation
@@ -28,10 +31,12 @@ public enum GroundedSearch {
         store: KnowledgeStore,
         embedder: (any EmbeddingService)?,
         query: String,
-        limit: Int
+        limit: Int,
+        excludedKinds: Set<KnowledgeKind> = []
     ) async throws -> [ChunkHit] {
         guard let embedder else {
             return try store.searchFTS(query: query, limit: limit)
+                .filter { !excludedKinds.contains($0.kind) }
         }
         let queryVector = try await embedder.embedQuery(query)
         // Two-lane retrieval (documents + memories get SEPARATE top-K budgets),
@@ -42,7 +47,7 @@ public enum GroundedSearch {
         let (knowledge, memories) = try GroundingGate.partition(
             store.searchGrounding(
                 query: query, queryVector: queryVector,
-                documentLimit: limit, memoryLimit: limit
+                documentLimit: limit, memoryLimit: limit, excludedKinds: excludedKinds
             ),
             floors: .forFingerprint(embedder.fingerprint)
         )

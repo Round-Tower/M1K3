@@ -12,7 +12,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #378: empty query and bad/unknown ids now pin a
 //  throw, the quarantine case included. Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: a Photo (.image) item is withheld from
-//  list, search and get-by-id (photoCaptionsAreWithheld).
+//  list, search and get-by-id (photoCaptionsAreWithheld); list excludes in the query (fold).
 
 import Foundation
 import M1K3Knowledge
@@ -49,6 +49,18 @@ struct KnowledgeMCPToolsTests {
             try tools.getDocument(idString: result.itemID.uuidString)
         }
         #expect(refusal?.description.contains("No document found") == true)
+    }
+
+    @Test("list_documents excludes Photos in the query, so a page is never eaten by newer Photos")
+    func listDocumentsPageSurvivesNewerPhotos() async throws {
+        let store = try await seededStore()
+        for name in ["P1.jpg", "P2.jpg", "P3.jpg"] {
+            try await ImageCaptionIngester(store: store).ingest(caption: "Photo \(name)", attachmentFilename: name)
+        }
+        let page = try KnowledgeMCPTools(store: store).listDocuments(limit: 2)
+        #expect(page.contains("Plant Notes"))
+        #expect(page.contains("Safety"))
+        #expect(!page.contains("Photo"))
     }
 
     @Test("get_document by id treats a quarantined item as not found")

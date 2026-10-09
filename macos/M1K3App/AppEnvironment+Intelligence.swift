@@ -39,6 +39,8 @@
 //  Confidence now 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-02 (PR #471 round 2) — throwIfSpeechStalled is now a thin call to
 //  `SpeechProviderWithPlaybackHealth.stalled(since:)` (logic + tests live in M1K3Voice). Confidence now 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (code-quality fold) — `AskSurface` on intelligenceAsk: `.mcp` answers on
+//  `mcpResponder` (withholds Photo captions, caption memory); `.local` (the App Intent) is unchanged.
 
 import Foundation
 import M1K3Avatar // AvatarEmotion
@@ -118,10 +120,20 @@ extension AppEnvironment {
     /// must not preempt another's stream (2026-08-19 review fold). Single-flight
     /// holds either way — `admitRemoteTurn` folds `intelligenceAskInFlight` into
     /// busy, so no NEW remote stream starts while an ask runs.
+    /// Who is asking, for what the answer may draw on. `.mcp` (every MCP path,
+    /// loopback or LAN-scoped) answers on `mcpResponder`, which withholds Photo
+    /// captions exactly as list/search/get do; `.local` (the Ask App Intent)
+    /// keeps them — the person at the keyboard owns the photos.
+    enum AskSurface {
+        case local
+        case mcp
+    }
+
     func intelligenceAsk(
         _ question: String,
         deadline: TimeInterval = MCPHostController.askDeadlineSeconds,
-        preemptsRemoteStreams: Bool = true
+        preemptsRemoteStreams: Bool = true,
+        surface: AskSurface = .local
     ) async throws -> String {
         // The same gate the chat surface uses (not a bare isReady): while the
         // selected MLX brain downloads, the interim bridge fronts turns on Mini
@@ -161,7 +173,10 @@ extension AppEnvironment {
         defer { avatar.resetToIdle() }
 
         // Capture Sendable values so the @Sendable timeout closure needn't touch self.
-        let responder = intelligenceResponder
+        let responder: any RAGResponding = switch surface {
+        case .local: intelligenceResponder
+        case .mcp: mcpResponder
+        }
         let tripwire = CanaryGuard.fromLocalConfig()
         do {
             let answer = try await withTimeout(seconds: deadline) {

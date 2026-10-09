@@ -19,6 +19,8 @@
 //  a genuine user memory alongside it still does, using the live note's own title/text.
 //  Review: Kev + claude-opus-5.5, 2026-10-05, Confidence 0.85 — #482: the inverse pin — Kev's
 //  launch-film episode ("Kev and Claude made M1K3's launch film", backticked render line) renders.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — excludedKinds pins: the MCP-shaped responder never surfaces a
+//  Photo (source, prompt, citation); the default responder still grounds on it.
 
 import Foundation
 import M1K3Agent
@@ -394,6 +396,61 @@ struct AgentRAGResponderTests {
         #expect(!sources.isEmpty)
         let firstPrompt = try #require(provider.allPrompts.first)
         #expect(firstPrompt.contains("fixed tool search_knowledge"))
+    }
+
+    // MARK: - Excluded kinds (the MCP withhold; caption memory 2026-10-09)
+
+    /// The seeded store plus one Photo caption that shares the question's words.
+    private func storeWithPhoto() async throws -> (KnowledgeStore, HashingEmbeddingService) {
+        let (store, hashing) = try await ingestedStore()
+        try await ImageCaptionIngester(store: store, embedder: hashing).ingest(
+            caption: "A photo of the hydraulic seal on the conveyor that failed under load.",
+            attachmentFilename: "SEAL.jpg"
+        )
+        return (store, hashing)
+    }
+
+    @Test("the default responder grounds on a remembered Photo (local surfaces keep photos)")
+    func defaultResponderGroundsOnPhotos() async throws {
+        let (store, hashing) = try await storeWithPhoto()
+        let provider = AgentScriptedProvider(["CONCLUSION: The seal failed."])
+        let responder = AgentRAGResponder(store: store, embedder: hashing, provider: provider, tools: [])
+        let (sources, stream) = try await responder.answerStreaming(
+            "What hydraulic seal failed on the conveyor under load?"
+        )
+        _ = await collect(stream)
+        #expect(sources.contains { $0.kind == .image })
+    }
+
+    @Test("an MCP-shaped responder never surfaces a Photo: not as a source, not in the prompt, not as a citation")
+    func excludedKindsNeverSurface() async throws {
+        let (store, hashing) = try await storeWithPhoto()
+        let provider = AgentScriptedProvider(["CONCLUSION: The seal failed."])
+        let collector = ToolSourceCollector()
+        let responder = AgentRAGResponder(
+            store: store, embedder: hashing, provider: provider,
+            toolsProvider: { [] }, sourceCollector: collector,
+            excludedKinds: KnowledgeKind.withheldFromMCP
+        )
+        let (sources, stream) = try await responder.answerStreaming(
+            "What hydraulic seal failed on the conveyor under load?"
+        )
+        _ = await collect(stream)
+        #expect(!sources.isEmpty)
+        #expect(!sources.contains { $0.kind == .image })
+        for prompt in provider.allPrompts {
+            #expect(!prompt.contains("A photo of the hydraulic seal"))
+        }
+        // A tool that slipped a Photo hit into the collector is dropped at the citation gate too.
+        collector.record([
+            ChunkHit(
+                chunkID: UUID(), itemID: UUID(), itemTitle: "A photo", kind: .image, heading: nil, content: "x"
+            ),
+            ChunkHit(
+                chunkID: UUID(), itemID: UUID(), itemTitle: "Plant Notes", kind: .document, heading: nil, content: "y"
+            ),
+        ])
+        #expect(responder.collectedSources().map(\.kind) == [.document])
     }
 
     // MARK: - Grounding-size safety cap (wiring)

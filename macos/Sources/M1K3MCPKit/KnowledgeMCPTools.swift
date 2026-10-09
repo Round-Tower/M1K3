@@ -24,7 +24,8 @@
 //  refuses exactly as an absent one does. Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: `.image` (Photo) items are
 //  withheld from list, search and get-by-id (KnowledgeKind.withheldFromMCP). Search over-reads
-//  nothing: a Photo hit just drops from the ranked list.
+//  nothing: a Photo hit just drops from the ranked list. Fold: list excludes in the query
+//  (`allItems(excluding:)`), so a page is never eaten by newer Photos.
 //
 
 import Foundation
@@ -65,9 +66,7 @@ struct KnowledgeMCPTools {
 
     /// List indexed items (documents, calls, notes) with their ids.
     func listDocuments(limit: Int = 100) throws -> String {
-        let items = try store.allItems(limit: limit + 50)
-            .filter { !KnowledgeKind.withheldFromMCP.contains($0.kind) }
-            .prefix(limit)
+        let items = try store.allItems(excluding: KnowledgeKind.withheldFromMCP, limit: limit)
         guard !items.isEmpty else { return "No documents indexed yet." }
         return items.map { item in
             "\(item.id.uuidString)  [\(item.kind.rawValue)]  \(item.title)"

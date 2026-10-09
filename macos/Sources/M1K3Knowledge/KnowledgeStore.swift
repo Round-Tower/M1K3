@@ -22,7 +22,8 @@
 //  memory facts out of a single top-K (the open-chat recall miss). Pinned by
 //  KnowledgeStoreGroundingTests; existing callers unaffected (filter defaults nil).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: `.image` joins groundingDocumentKinds so grounded
-//  answers can cite a remembered photo.
+//  answers can cite a remembered photo. Fold: `searchGrounding(excludedKinds:)` and `allItems(excluding:)` are the
+//  per-call withhold the MCP surface uses (query-side, never a post-filter).
 
 import Foundation
 import GRDB
@@ -332,17 +333,22 @@ public final class KnowledgeStore: @unchecked Sendable {
     /// listing covers every RETRIEVABLE kind — quarantined items appear only
     /// when asked for by name, same rule as the search surfaces, so the
     /// agent-facing list/get tools never enumerate them.
-    public func allItems(kind: KnowledgeKind? = nil, limit: Int = 200) throws -> [KnowledgeItem] {
+    /// `excluding`: kinds withheld IN THE QUERY (not post-filtered), so a page
+    /// of `limit` is never eaten by newer rows of a withheld kind.
+    public func allItems(
+        kind: KnowledgeKind? = nil, excluding: Set<KnowledgeKind> = [], limit: Int = 200
+    ) throws -> [KnowledgeItem] {
         try dbQueue.read { db in
             let rows: [Row]
             if let kind {
+                guard !excluding.contains(kind) else { return [] }
                 rows = try Row.fetchAll(
                     db,
                     sql: "SELECT * FROM knowledge_items WHERE kind = ? ORDER BY created_at DESC LIMIT ?",
                     arguments: [kind.rawValue, limit]
                 )
             } else {
-                let hidden = KnowledgeKind.hiddenFromRetrieval.map(\.rawValue).sorted()
+                let hidden = KnowledgeKind.hiddenFromRetrieval.union(excluding).map(\.rawValue).sorted()
                 let holes = hidden.map { _ in "?" }.joined(separator: ", ")
                 rows = try Row.fetchAll(
                     db,
@@ -593,16 +599,18 @@ public extension KnowledgeStore {
         query: String,
         queryVector: [Float],
         documentLimit: Int = 5,
-        memoryLimit: Int = 5
+        memoryLimit: Int = 5,
+        excludedKinds: Set<KnowledgeKind> = []
     ) throws -> [ChunkHit] {
-        let documents = try searchHybrid(
-            query: query, queryVector: queryVector,
-            limit: documentLimit, kinds: Self.groundingDocumentKinds
-        )
-        let memories = try searchHybrid(
-            query: query, queryVector: queryVector,
-            limit: memoryLimit, kinds: [.memory]
-        )
+        /// `excludedKinds` is a per-call withhold (the MCP surface keeps Photo
+        /// captions out: KnowledgeKind.withheldFromMCP); default = nothing.
+        func lane(_ kinds: Set<KnowledgeKind>, limit: Int) throws -> [ChunkHit] {
+            let kept = kinds.subtracting(excludedKinds)
+            guard !kept.isEmpty else { return [] }
+            return try searchHybrid(query: query, queryVector: queryVector, limit: limit, kinds: kept)
+        }
+        let documents = try lane(Self.groundingDocumentKinds, limit: documentLimit)
+        let memories = try lane([.memory], limit: memoryLimit)
         return documents + memories
     }
 

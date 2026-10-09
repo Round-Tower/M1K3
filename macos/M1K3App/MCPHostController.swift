@@ -49,6 +49,8 @@
 //  Loaded (or minted) from the Keychain before the listener starts — an unreadable Keychain means
 //  no start, never a token-less one — read per request through `LoopbackAccessTokenBox`, and
 //  rotated from Settings. Confidence 0.85 (vault + gate pinned; the Keychain read is verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — ask_m1k3 answers on the `.mcp` surface (Photo captions
+//  withheld).
 
 import Foundation
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
@@ -398,7 +400,7 @@ final class MCPHostController {
             ask: { [weak self] question in
                 guard let self else { throw MCPVoiceError("M1K3 is shutting down") }
                 return try await self.env.intelligenceAsk(
-                    question, preemptsRemoteStreams: preemptsRemoteStreams
+                    question, preemptsRemoteStreams: preemptsRemoteStreams, surface: .mcp
                 )
             },
             remember: { [weak self] title, text, kind in

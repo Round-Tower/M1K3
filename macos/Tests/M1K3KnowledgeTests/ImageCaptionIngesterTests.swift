@@ -9,6 +9,8 @@
 //  (not an absolute container path), and the cascade keys on that ref.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (code-quality fold) — store-side pins for the MCP withhold
+//  (`searchGrounding(excludedKinds:)`, `allItems(excluding:)`).
 
 import Foundation
 @testable import M1K3Knowledge
@@ -53,6 +55,34 @@ struct ImageCaptionIngesterTests {
         let vector = try await embedder.embedQuery("the whiteboard photo about pricing")
         let grounded = try store.searchGrounding(query: "whiteboard pricing", queryVector: vector)
         #expect(grounded.contains { $0.kind == .image })
+    }
+
+    @Test func groundingCanExcludePhotosPerCall() async throws {
+        let store = try KnowledgeStore()
+        let embedder = HashingEmbeddingService()
+        try await ImageCaptionIngester(store: store, embedder: embedder)
+            .ingest(caption: caption, attachmentFilename: "A1B2.jpg")
+        let vector = try await embedder.embedQuery("the whiteboard photo about pricing")
+        let withheld = try store.searchGrounding(
+            query: "whiteboard pricing", queryVector: vector, excludedKinds: KnowledgeKind.withheldFromMCP
+        )
+        #expect(!withheld.contains { $0.kind == .image })
+        let local = try store.searchGrounding(query: "whiteboard pricing", queryVector: vector)
+        #expect(local.contains { $0.kind == .image })
+    }
+
+    @Test func allItemsCanExcludePhotosStoreSide() async throws {
+        let store = try KnowledgeStore()
+        try await DocumentIngester(store: store).ingest(title: "Doc A", text: "a")
+        try await DocumentIngester(store: store).ingest(title: "Doc B", text: "b")
+        for name in ["P1.jpg", "P2.jpg", "P3.jpg"] {
+            try await ImageCaptionIngester(store: store).ingest(caption: "Photo \(name)", attachmentFilename: name)
+        }
+        // Three newer Photos sit above the two documents: a post-filtered page
+        // of two would come back empty; the exclusion belongs in the query.
+        let page = try store.allItems(excluding: [.image], limit: 2)
+        #expect(page.map(\.title).sorted() == ["Doc A", "Doc B"])
+        #expect(try store.allItems(limit: 2).allSatisfy { $0.kind == .image })
     }
 
     @Test func titleIsTheFirst60CharactersOfTheCaption() {
