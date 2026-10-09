@@ -10,7 +10,8 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85, Prior: none (new file).
 //  Review: same day (pre-push review) — the options are `.userInitiatedAllowingIdleSystemSleep`;
 //  cancellation and strict begin/end alternation pinned.
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — the `-generationActivity` kill-switch pinned (reader parity, disabled never begins).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the `-generationActivity` kill-switch pinned
+//  (reader parity; a disabled hold never begins).
 
 import Foundation
 @testable import M1K3Inference
