@@ -38,7 +38,8 @@ struct AskSurfaceCallSiteTests {
         var files: [(String, String)] = []
         for shell in ["M1K3App", "M1K3iOSApp"] {
             let dir = root.appending(path: shell)
-            guard let walker = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil) else { continue }
+            guard let walker = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil)
+            else { continue }
             while let url = walker.nextObject() as? URL {
                 guard url.pathExtension == "swift" else { continue }
                 let relative = String(url.path.dropFirst(root.path.count + 1))
@@ -105,7 +106,9 @@ struct AskSurfaceCallSiteTests {
                 ?? palette.startIndex
             let lineEnd = palette[range.lowerBound...].firstIndex(of: "\n") ?? palette.endIndex
             let line = String(palette[lineStart ..< lineEnd])
-            if !line.contains("excludedKinds: excludedKinds") { offenders.append(line.trimmingCharacters(in: .whitespaces)) }
+            if !line.contains("excludedKinds: excludedKinds") {
+                offenders.append(line.trimmingCharacters(in: .whitespaces))
+            }
             search = range.upperBound
         }
         #expect(storeTools == 3, "expected search + list + get over the store; found \(storeTools)")

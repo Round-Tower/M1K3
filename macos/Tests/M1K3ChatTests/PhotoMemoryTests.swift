@@ -8,6 +8,8 @@
 //  and the forget cascade.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — a forget the store refuses is no longer
+//  swallowed: it logs, returns 0, and the row keeps reading the store (still remembered — the truth).
 
 import Foundation
 @testable import M1K3Chat
@@ -132,6 +134,26 @@ struct PhotoMemoryTests {
         #expect(count == 1)
         #expect(memory.state(for: image) == nil)
         #expect(try store.allItems(kind: .image).isEmpty)
+    }
+
+    @Test("a forget the store refuses is reported, not swallowed: 0 removed, still remembered, shell notified")
+    func forgetFailureIsHonest() async throws {
+        struct StoreRefused: Error {}
+        let store = try KnowledgeStore()
+        let memory = PhotoMemory(
+            provider: { FakeCaptioner() }, tier: { .lil },
+            ingester: ImageCaptionIngester(store: store, embedder: HashingEmbeddingService()),
+            forgetter: { _ in throw StoreRefused() }
+        )
+        await memory.remember(image)
+        var changes = 0
+        memory.onChange = { changes += 1 }
+        let removed = memory.forget([image])
+        #expect(removed == 0)
+        // The store still holds the Photo, and the row says so -- never a quiet "gone".
+        #expect(memory.state(for: image) == .remembered)
+        #expect(try store.allItems(kind: .image).count == 1)
+        #expect(changes == 1)
     }
 
     @Test("a Photo deleted from the Documents list resets the row to the plain action -- the store is the truth")
