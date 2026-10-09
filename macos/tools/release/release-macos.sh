@@ -262,6 +262,10 @@ if [ "$APP_IDENTIFIER" != "$TEAM.app.m1k3" ] || [ "$KEYCHAIN_GROUP" != "$TEAM.ap
   echo "  '${KEYCHAIN_GROUP:-none}', expected $TEAM.app.m1k3 for both (check M1K3_APP_ENTITLEMENTS)"
   exit 1
 fi
+# And the profile must grant everything signed in beside it: an ungranted capability is an
+# AMFI launch kill on a user's Mac, after release (the profile's grants are read off the portal).
+python3 "$MACOS_DIR/tools/ci/check_profile_grants.py" \
+  --profile "$APP/Contents/embedded.provisionprofile" --app "$APP" --team "$TEAM" || exit 1
 echo "✓ app embeds its Developer ID profile and keychain group"
 
 # ── 3. Notarize + staple the .app (offline first-launch) ─────────────────────
