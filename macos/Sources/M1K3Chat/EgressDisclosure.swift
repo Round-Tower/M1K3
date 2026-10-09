@@ -58,8 +58,8 @@ public enum EgressDisclosure {
         var answer: [String] = []
         answer.append(
             facts.webSearch
-                ? "Web searches do: the query I write goes to \(EgressFacts.searchProvider) and can carry words from our chat, "
-                + "and Wikipedia lookups and pages I read are fetched."
+                ? "Web searches do: the query I write goes to \(EgressFacts.searchProvider) and can carry words "
+                + "from our chat, and Wikipedia lookups and pages I read are fetched."
                 : "Web search is off."
         )
         if facts.privateCloudOffered {

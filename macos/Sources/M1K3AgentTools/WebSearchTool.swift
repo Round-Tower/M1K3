@@ -74,7 +74,8 @@ public struct WebSearchTool: AgentTool {
             case .rateLimited:
                 Self.log.notice("rate-limited: DDG served the challenge page for \"\(query, privacy: .public)\"")
                 return ToolResult(output: "Error: web search is temporarily unavailable "
-                    + "(\(Self.providerName) rate-limited \(HostPlatform.thisDevice)). Answer from what you already have.")
+                    + "(\(Self.providerName) rate-limited \(HostPlatform.thisDevice)). "
+                    + "Answer from what you already have.")
             case let .results(results) where results.isEmpty:
                 // .notice: "the search found nothing" is a load-bearing breadcrumb
                 // (distinguishes empty-result from never-ran) that must persist.
