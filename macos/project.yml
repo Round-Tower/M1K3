@@ -192,6 +192,9 @@ targets:
           [ -f "$PLIST" ] || { echo "warning: no Info.plist at $PLIST; GitCommitSHA not stamped"; exit 0; }
           SHA="$(/usr/bin/python3 -I "$SRCROOT/tools/ci/git_commit_stamp.py" "$SRCROOT" 2>/dev/null)"
           [ -n "$SHA" ] || SHA=unknown
+          # The script's stderr is dropped above (tracebacks), so say the loss here: an
+          # `unknown` on an archive is a build that cannot be matched to a commit.
+          [ "$SHA" != unknown ] || echo "warning: GitCommitSHA is unknown (git, python3 or CI_COMMIT unavailable)" >&2
           /usr/libexec/PlistBuddy -c "Set :GitCommitSHA $SHA" "$PLIST" 2>/dev/null \
             || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST" \
             || { echo "warning: GitCommitSHA not stamped into $PLIST"; exit 0; }
@@ -306,7 +309,10 @@ targets:
         PRODUCT_NAME: M1K3
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
-        # The stamp phase reads .git; a sandboxed script phase cannot.
+        # The Stamp GitCommitSHA phase reads .git AND rewrites the built Info.plist
+        # (PlistBuddy on $TARGET_BUILD_DIR/$INFOPLIST_PATH, declared only as an
+        # input): a sandboxed script phase can do neither. Only these two app
+        # shells carry a script phase, so the blast radius is just them.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Round Tower Software Studios Ltd"
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
@@ -404,6 +410,9 @@ targets:
           [ -f "$PLIST" ] || { echo "warning: no Info.plist at $PLIST; GitCommitSHA not stamped"; exit 0; }
           SHA="$(/usr/bin/python3 -I "$SRCROOT/tools/ci/git_commit_stamp.py" "$SRCROOT" 2>/dev/null)"
           [ -n "$SHA" ] || SHA=unknown
+          # The script's stderr is dropped above (tracebacks), so say the loss here: an
+          # `unknown` on an archive is a build that cannot be matched to a commit.
+          [ "$SHA" != unknown ] || echo "warning: GitCommitSHA is unknown (git, python3 or CI_COMMIT unavailable)" >&2
           /usr/libexec/PlistBuddy -c "Set :GitCommitSHA $SHA" "$PLIST" 2>/dev/null \
             || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST" \
             || { echo "warning: GitCommitSHA not stamped into $PLIST"; exit 0; }
@@ -458,7 +467,10 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
-        # The stamp phase reads .git; a sandboxed script phase cannot.
+        # The Stamp GitCommitSHA phase reads .git AND rewrites the built Info.plist
+        # (PlistBuddy on $TARGET_BUILD_DIR/$INFOPLIST_PATH, declared only as an
+        # input): a sandboxed script phase can do neither. Only these two app
+        # shells carry a script phase, so the blast radius is just them.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         TARGETED_DEVICE_FAMILY: "1,2"

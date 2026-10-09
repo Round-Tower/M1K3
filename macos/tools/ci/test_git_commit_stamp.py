@@ -50,3 +50,28 @@ def test_ci_commit_wins_and_is_shortened(tmp_path):
 
 def test_blank_ci_commit_falls_through(tmp_path):
     assert m.stamp(tmp_path, env={"CI_COMMIT": "  "}) == "unknown"
+
+
+def test_ci_commit_that_is_not_a_hex_prefix_is_unknown(tmp_path):
+    # A space or ';' would reach `PlistBuddy -c "Set :GitCommitSHA $SHA"` unquoted.
+    for bad in ("abc 123", "0123456;rm -rf /", "HEAD", "g1234567"):
+        assert m.stamp(tmp_path, env={"CI_COMMIT": bad}) == "unknown", bad
+
+
+def test_unknown_stamp_warns_on_stderr(tmp_path, capsys):
+    assert m.stamp(tmp_path, env={}) == "unknown"
+    assert "warning:" in capsys.readouterr().err
+
+
+def test_known_stamp_is_quiet(tmp_path, capsys):
+    repo = _repo(tmp_path)
+    m.stamp(repo, env={})
+    assert capsys.readouterr().err == ""
+
+
+def test_stamp_pattern_accepts_the_three_shapes():
+    assert m.STAMP_RE.fullmatch("0123456")
+    assert m.STAMP_RE.fullmatch("0123456789abcdef0123456789abcdef01234567-dirty")
+    assert m.STAMP_RE.fullmatch("unknown")
+    assert not m.STAMP_RE.fullmatch("012345")
+    assert not m.STAMP_RE.fullmatch("0123456-dirty ")

@@ -25,7 +25,7 @@
 # Keyboard/mouse activity wakes the display and voids an arm: walk away. Arm order is A then B,
 # so a B collapse cannot be blamed on a cold weights cache.
 #
-# Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.6. Prior: none (new file).
+# Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.6. Prior: Unknown (new file).
 # Open: NEVER RUN. Only --dry-run and `bash -n` are checked; the log-line parse and the
 # `open --env/--stdout` plumbing are verify-by-launch. Whether CHATEVAL on one brain outlives
 # MIN_OFF with these defaults depends on the brain's speed (the script says "RUN TOO SHORT"

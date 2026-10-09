@@ -118,6 +118,8 @@
 //  is the wired lil" is superseded. Lil is Qwen3.5-4B since 2026-10-08 (#517), which reads the toggle.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — Stream G hygiene: the sliding window is read from config.json
 //  (`slidingWindow(forModelID:configDirectory:)`); the name-keyed 1024 is the pre-load fallback. E4B is 512.
+//  Review: same day (#522 review fold) — `prefixIsReusable(tokens:window:)` IS the gate renderPersonaPrefix
+//  ships (the id-keyed overloads had no production caller); the config read is a flatMap. 12B stays 1024.
 import Foundation
 import Hub
 import M1K3Inference
@@ -807,7 +809,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             // on every single turn.
             // An EMPTY box is the "declined" signal — keeping the closure's
             // return type unchanged keeps `perform`'s overload resolution happy.
-            guard reusableWindow.map({ ids.count <= $0 }) ?? true else {
+            guard Self.prefixIsReusable(tokens: ids.count, window: reusableWindow) else {
                 return PrefixBox(cache: [], tokenIDs: [])
             }
             let cache = try context.model.newCache(parameters: parameters)
@@ -1208,7 +1210,9 @@ extension MLXBrainProvider {
     /// store's path for the hub id), falling back to the name before the first
     /// download when there is no config on disk.
     static func slidingWindow(forModelID modelID: String, configDirectory: URL?) -> Int? {
-        let fromConfig = configDirectory.map(LocalModelConfig.slidingWindow(inDirectory:))
+        // flatMap, not map: `map` would be `Int??`, and a folder with no readable
+        // config.json must read as "no config" (fall through), not `.some(nil)`.
+        let fromConfig = configDirectory.flatMap(LocalModelConfig.slidingWindow(inDirectory:))
             ?? LocalModelConfig.slidingWindow(forRepoID: modelID)
         return fromConfig ?? slidingWindow(forModelID: modelID)
     }
@@ -1225,13 +1229,12 @@ extension MLXBrainProvider {
     /// The old code documented this ("a wrapped prefix can't be linearly reused
     /// anyway") and built it regardless. Knowing it is wasted is not the same as
     /// not doing it.
-    static func prefixIsReusable(tokens: Int, modelID: String) -> Bool {
-        guard let window = slidingWindow(forModelID: modelID) else { return true }
-        return tokens <= window
-    }
-
-    static func prefixIsReusable(tokens: Int, modelID: String, configDirectory: URL?) -> Bool {
-        guard let window = slidingWindow(forModelID: modelID, configDirectory: configDirectory) else { return true }
+    ///
+    /// `window` is the resolved sliding window (`slidingWindow(forModelID:configDirectory:)`);
+    /// nil means dense attention, where any prefix stays trimmable. This is the
+    /// predicate `renderPersonaPrefix` ships, so it is the one the tests pin.
+    static func prefixIsReusable(tokens: Int, window: Int?) -> Bool {
+        guard let window else { return true }
         return tokens <= window
     }
 

@@ -17,7 +17,10 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.7 (app glue over TDD'd parts;
 //  verify-by-launch owed: the OSLogStore read in a sandboxed build is untested until run).
-//  Prior: none (new file); shaped after MemBlockProbeStage.
+//  Prior: Unknown (new file; shaped after MemBlockProbeStage).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#522 review fold) — a throw mid-script still reports the
+//  samples collected so far. Follow-up: the 1 s log-flush sleep is a fixed wait; poll for the generation
+//  line with a cap if a slow turn ever reads nil.
 //
 
 import Darwin
@@ -68,6 +71,9 @@ enum ChatCurveStage {
             return
         }
         emit("• chatcurve: \(modelID), \(ChatCurveScript.messages.count) scripted messages…")
+        // Outside the `do` so a throw mid-script keeps the samples already measured:
+        // a partial curve is still a curve, and the run cost minutes of GPU.
+        var samples: [ChatCurveSample] = []
         do {
             let provider = MLXBrainProvider(modelID: modelID, name: "chatcurve")
             let responder = try AgentRAGResponder(
@@ -75,7 +81,6 @@ enum ChatCurveStage {
                 toolsProvider: { ChatEvalStage.toolPalette }, maxIterations: 3
             )
             var history: [ChatTurn] = []
-            var samples: [ChatCurveSample] = []
             for (index, question) in ChatCurveScript.messages.enumerated() {
                 let started = Date()
                 let (_, stream) = try await responder.answerStreaming(
@@ -103,6 +108,13 @@ enum ChatCurveStage {
             try report(ChatCurveReport(modelID: modelID, samples: samples), emit: emit)
         } catch {
             emit("✗ chatcurve: \(error)")
+            guard !samples.isEmpty else { return }
+            emit("• chatcurve: partial report, \(samples.count)/\(ChatCurveScript.messages.count) messages")
+            do {
+                try report(ChatCurveReport(modelID: modelID, samples: samples), emit: emit)
+            } catch {
+                emit("✗ chatcurve: partial report failed: \(error)")
+            }
         }
     }
 

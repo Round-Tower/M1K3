@@ -250,7 +250,9 @@ The app commit comes from `GitCommitSHA` in the built Info.plist, stamped by the
 `$CI_COMMIT` on Xcode Cloud, else the short HEAD, `-dirty` if the tree has changes,
 `unknown` without git). `run_chateval.py` reads it, so `--commit` is only needed for
 a build that predates the phase. A `-dirty` stamp means the scorecard is not
-reproducible from that commit alone.
+reproducible from that commit alone (untracked files count, so build artifacts
+must be gitignored — `macos/.dd/` is). The CI stamp is 8 characters and the
+local one is git's short hash (7+): prefix-match, never compare for equality.
 
 ---
 
@@ -261,3 +263,5 @@ that matters and is deliberately unflattering). Prior: Unknown.*
 stdout route, the PCC column and the two reference runners, each driven on the
 day it was written (Bench-Max day); the container route above is kept for
 macOS 26 readers.*
+*Review: Kev + claude-fable-5.1, 2026-10-09 (#522) — the GitCommitSHA stamp
+paragraph: where the app commit comes from and what `-dirty` means.*

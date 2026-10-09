@@ -18,6 +18,8 @@ def test_app_shells_run_the_stamp_phase_unsandboxed():
         script = stamps[0]["script"]
         assert "git_commit_stamp.py" in script and "GitCommitSHA" in script, name
         assert "TARGET_BUILD_DIR" in script and "INFOPLIST_PATH" in script, name
+        # an `unknown` stamp is a quiet loss on an archive unless the phase says so
+        assert 'warning: GitCommitSHA is unknown' in script, name
         # a sandboxed phase cannot read .git
         assert target["settings"]["base"]["ENABLE_USER_SCRIPT_SANDBOXING"] in (False, "NO"), name  # YAML 1.1: bare NO parses as False
         assert stamps[0].get("basedOnDependencyAnalysis") is False, name

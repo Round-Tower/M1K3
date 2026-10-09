@@ -19,7 +19,7 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8 (TDD'd in ChatCurveTests;
 //  the log-line formats are pinned there against MLXToolCalling.logPrefillReuse and
-//  logGenerationInfo, so a reworded log line fails a test, not a run). Prior: none.
+//  logGenerationInfo, so a reworded log line fails a test, not a run). Prior: Unknown.
 //
 
 import Foundation

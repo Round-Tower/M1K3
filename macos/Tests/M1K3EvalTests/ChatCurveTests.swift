@@ -7,7 +7,7 @@
 //  verify-by-launch (SelfTest ChatCurveStage); these pin what it reads and how.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8 (pure arithmetic and
-//  parsing; the on-device curve is the named verify-owed). Prior: none (new file).
+//  parsing; the on-device curve is the named verify-owed). Prior: Unknown (new file).
 //
 
 import Foundation
