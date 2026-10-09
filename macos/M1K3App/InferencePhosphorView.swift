@@ -58,6 +58,7 @@ struct InferencePhosphorView: View {
     var paused = false
 
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Read here rather than trusted to the host (#405): voice mode's host passed no
     /// `paused:`, so a hidden or minimised window kept the rain ticking.
@@ -156,7 +157,11 @@ struct InferencePhosphorView: View {
             var text = canvas.resolve(Text(line.text).font(font))
             // Ambient: capped well below full so it reads as a backdrop the
             // avatar sits in front of, never foreground text.
-            text.shading = .color(line.source.tint.opacity(opacity * 0.5))
+            let ink = BackdropInk(isDark: colorScheme == .dark).rain
+            let tint = ink.tintDarkening > 0
+                ? line.source.tint.mix(with: .black, by: ink.tintDarkening)
+                : line.source.tint
+            text.shading = .color(tint.opacity(opacity * ink.opacityScale))
             canvas.draw(text, at: CGPoint(x: size.width / 2, y: y), anchor: .center)
         }
     }
