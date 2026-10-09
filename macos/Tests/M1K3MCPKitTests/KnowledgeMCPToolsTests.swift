@@ -32,6 +32,23 @@ private func seededStore() async throws -> KnowledgeStore {
 }
 
 struct KnowledgeMCPToolsTests {
+    @Test("a Photo caption never reaches an MCP client: not listed, not searched, not fetched")
+    func photoCaptionsAreWithheld() async throws {
+        let store = try await seededStore()
+        let result = try await ImageCaptionIngester(store: store, embedder: HashingEmbeddingService())
+            .ingest(caption: "A whiteboard listing the hydraulic pricing tiers.", attachmentFilename: "P.jpg")
+        let tools = KnowledgeMCPTools(store: store)
+        #expect(try !tools.listDocuments().contains("whiteboard"))
+        #expect(try !tools.listDocuments().contains(result.itemID.uuidString))
+        let found = try await tools.searchKnowledge(query: "hydraulic", limit: 10)
+        #expect(!found.contains("pricing tiers"))
+        #expect(found.contains("Plant Notes"))
+        let refusal = #expect(throws: MCPInputError.self) {
+            try tools.getDocument(idString: result.itemID.uuidString)
+        }
+        #expect(refusal?.description.contains("No document found") == true)
+    }
+
     @Test("get_document by id treats a quarantined item as not found")
     func getDocumentQuarantinedHidden() async throws {
         let store = try await seededStore()

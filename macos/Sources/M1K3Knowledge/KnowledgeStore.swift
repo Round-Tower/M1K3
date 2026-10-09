@@ -21,6 +21,7 @@
 //  (separate doc/memory budgets) so the document corpus can't crowd short
 //  memory facts out of a single top-K (the open-chat recall miss). Pinned by
 //  KnowledgeStoreGroundingTests; existing callers unaffected (filter defaults nil).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: `.image` joins groundingDocumentKinds so grounded answers can cite a remembered photo.
 
 import Foundation
 import GRDB
@@ -574,7 +575,7 @@ public extension KnowledgeStore {
     /// The non-memory kinds that share the document grounding budget. Memory is
     /// retrieved on its own lane (see `searchGrounding`) so short atomic facts
     /// are never crowded out of a single top-K by the larger document corpus.
-    static let groundingDocumentKinds: Set<KnowledgeKind> = [.document, .call, .note]
+    static let groundingDocumentKinds: Set<KnowledgeKind> = [.document, .call, .note, .image]
 
     /// Two-lane grounding retrieval: documents and memories ranked + budgeted
     /// SEPARATELY, then concatenated for the caller to gate by kind.
