@@ -81,6 +81,16 @@ struct ImageCaptionIngesterTests {
         #expect(try store.itemID(forSourceRef: "attachment:C3D4.jpg") != nil)
     }
 
+    @Test func isRememberedReadsTheStore() async throws {
+        let store = try KnowledgeStore()
+        let ingester = ImageCaptionIngester(store: store)
+        #expect(!ingester.isRemembered(attachment: "A1B2.jpg"))
+        try await ingester.ingest(caption: caption, attachmentFilename: "A1B2.jpg")
+        #expect(ingester.isRemembered(attachment: "/c/A1B2.jpg"))
+        try ingester.forget(attachments: ["A1B2.jpg"])
+        #expect(!ingester.isRemembered(attachment: "A1B2.jpg"))
+    }
+
     @Test func forgetOnlyTouchesPhotoItems() async throws {
         let store = try KnowledgeStore()
         try await DocumentIngester(store: store).ingest(

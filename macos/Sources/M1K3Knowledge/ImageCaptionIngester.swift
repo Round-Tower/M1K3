@@ -63,6 +63,14 @@ public struct ImageCaptionIngester: Sendable {
         )
     }
 
+    /// Whether this attachment already has a Photo memory (the row state on a
+    /// relaunch -- the store is the truth, not a view's @State).
+    public func isRemembered(attachment: String) -> Bool {
+        guard let id = try? store.itemID(forSourceRef: Self.sourceRef(forAttachment: attachment)),
+              let item = try? store.item(id: id) else { return false }
+        return item.kind == .image
+    }
+
     /// The delete cascade: remove the Photo item of each attachment. Only
     /// `.image` items are touched (a document that happens to share a ref is
     /// not ours to delete). Returns how many were removed.
