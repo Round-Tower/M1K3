@@ -103,3 +103,8 @@ notes, not their calendar. Which tool is a finer decision than whether a tool is
      the head needs its own query. Cost: two long results get ~1,200 chars each, half a single tool's text, so a
      chained web answer can miss what a lone search would have carried. #510 review: the group head never picks
      a web tool (a wrong pick is egress); Apple's pick keeps that call. Arm: `M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch` + `_ROUTER_CHAIN=1`; no two-tool fixture exists yet. -->
+<!-- Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.7 — the group head is trained (it was an untrained stub).
+     `train_tool_router.py` on 393 prompts: gate unchanged (threshold 0.330, CV 209/216 tool asks kept, 128/177 chat
+     turns freed; the weights file did not move). Group head: dispatch floor 0.763 at 95% precision; CV at the floor:
+     55 dispatched, 53 right, 53/216 tool asks covered (~25%). Synthetic data, group level: an upper bound live.
+     The flags stay OFF; the eval arm (Lil and Big, flags off / routing / +head / +chains) decides each flip. -->
