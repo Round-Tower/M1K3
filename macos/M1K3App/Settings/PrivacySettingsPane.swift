@@ -43,6 +43,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — Apple's error maps by case NAME (the iOS twin's launch crash:
 //  a switch over the cases strong-links each one, and the invalidAccount case is missing from the iOS 26.5 runtime).
 //  Confidence 0.85 — macOS 26 itself not launched here.
+//  Review: Kev + claude-opus-5-5, 2026-10-09 — Content Controls reads AgeBand.contentControlsStatus: an adult
+//  who shared no longer reads "No age range declared" (Kev saw it on the DMG build). Confidence 0.9.
 
 import AppKit // NSPasteboard — the Copy buttons
 #if canImport(DeclaredAgeRange)
@@ -181,23 +183,21 @@ struct PrivacySettingsPane: View {
     // The system sheet handles the actual declaration; we persist the coarse band.
     #if !os(visionOS)
         private var contentControlsSection: some View {
-            let band = AgeBand(persisted: ageBandRaw)
-            let active = band != .undeclared && band != .adult
+            // One answer for both shells (ContentControlsStatus): an adult who shared
+            // used to read "No age range declared" here.
+            let status = AgeBand(persisted: ageBandRaw).contentControlsStatus
             return Section {
                 HStack {
-                    Label(
-                        active ? "Age-appropriate adjustments active" : "No age range declared",
-                        systemImage: active ? "person.crop.circle.badge.checkmark" : "person.crop.circle"
-                    )
+                    Label(status.title, systemImage: status.systemImage)
                     Spacer()
-                    if band != .undeclared {
+                    if status.canClear {
                         Button("Clear") {
                             ageBandRaw = nil
                         }
                         .buttonStyle(.borderless)
                     }
                 }
-                Button(band == .undeclared ? "Set up" : "Update") {
+                Button(status.actionTitle) {
                     requestAgeRange()
                 }
                 .disabled(ageBandRequesting)

@@ -40,6 +40,8 @@
 //  (the web-search switch) on appear; inert otherwise. Confidence 0.8 (verify-by-launch on the sim).
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — About footer: "Private by design. No account, no analytics." (the iOS
 //  listing's claims), not "Everything runs on your device." Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-09 — Content Controls reads AgeBand.contentControlsStatus: an adult
+//  who shared no longer reads "No age range declared". Confidence 0.9 (copy pinned in M1K3Chat).
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -209,23 +211,21 @@ struct SettingsScreen: View {
         @Environment(\.requestAgeRange) private var requestAgeRange
 
         private var contentControlsSection: some View {
-            let band = AgeBand(persisted: ageBandRaw)
-            let active = band != .undeclared && band != .adult
+            // One answer for both shells (ContentControlsStatus): an adult who shared
+            // used to read "No age range declared" here.
+            let status = AgeBand(persisted: ageBandRaw).contentControlsStatus
             return Section {
                 HStack {
-                    Label(
-                        active ? "Age-appropriate adjustments active" : "No age range declared",
-                        systemImage: active ? "person.crop.circle.badge.checkmark" : "person.crop.circle"
-                    )
+                    Label(status.title, systemImage: status.systemImage)
                     Spacer()
-                    if band != .undeclared {
+                    if status.canClear {
                         Button("Clear") {
                             ageBandRaw = nil
                         }
                         .buttonStyle(.borderless)
                     }
                 }
-                Button(band == .undeclared ? "Set up" : "Update") {
+                Button(status.actionTitle) {
                     requestAgeBand()
                 }
                 if let ageRangeFailure {
