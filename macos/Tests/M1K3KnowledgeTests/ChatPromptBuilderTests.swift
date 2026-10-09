@@ -118,6 +118,25 @@ struct ChatPromptBuilderTests {
         #expect(prompt.contains("§"))
     }
 
+    @Test("a headingless chunk adds the bare [Title] shape beside the § example; all-headed chunks do not")
+    func headinglessChunkShowsBothCitationShapes() {
+        // 2026-10-07 Lil re-measure: `ground-part` seeds "Spares" with no heading, the prompt
+        // showed only `[Title §heading]`, and Qwen3.5 cited nothing 3/3 — it had no shape to
+        // copy. CitationValidator has credited a bare `[Title]` against the chunk titles since
+        // 2026-08-03; the prompt just never said so.
+        let bothShapes = "like [Title §heading], or [Title] when the source has no heading"
+        let mixed = ChatPromptBuilder.build(
+            chunks: [hit("Plant Notes", "3.2 Seals", "seal"), hit("Spares", nil, "GK-4471")], userMessage: "q"
+        )
+        #expect(mixed.contains(bothShapes))
+        let headed = ChatPromptBuilder.build(chunks: [hit("Plant Notes", "3.2 Seals", "seal")], userMessage: "q")
+        #expect(!headed.contains("when the source has no heading"))
+        #expect(headed.contains("like [Title §heading]."))
+        // Mini's window: the extra clause stays short.
+        let extra = mixed.count - headed.replacingOccurrences(of: "seal", with: "").count
+        #expect(extra < 120, "the headingless clause must stay within ~15 tokens, got \(extra) chars")
+    }
+
     @Test("numbers multiple chunks in order")
     func numbered() {
         let prompt = ChatPromptBuilder.build(

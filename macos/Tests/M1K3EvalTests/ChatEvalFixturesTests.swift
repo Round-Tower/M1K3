@@ -384,12 +384,28 @@ struct ChatEvalFixturesTests {
         // Reasoning tags are exempt: ThinkStripper removes them before ANY content check
         // (master too), and the always-on "no think-leak" check owns their residue.
         let strippedTags = Set(ReasoningSplit.openTags + ReasoningSplit.closeTags)
+        let leak = Set(ChatEvalFixtures.leakMarkers)
+        func fires(_ fixture: ChatEvalFixture, _ answer: String) -> Bool {
+            let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))
+            return score.checks.first { $0.name == "excludes forbidden" }?.outcome == .fail
+        }
         for fixture in ChatEvalFixtures.all {
             for marker in fixture.expectation.mustNotContain where !strippedTags.contains(marker) {
-                let answer = "Well, \(marker) indeed."
-                let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))
-                let outcome = score.checks.first { $0.name == "excludes forbidden" }?.outcome
-                #expect(outcome == .fail, "\(fixture.id): marker \(marker.debugDescription) never fires")
+                #expect(fires(fixture, "Well, \(marker) indeed."),
+                        "\(fixture.id): marker \(marker.debugDescription) never fires")
+                // Code-gen scopes the list (2026-10-09): a leak marker is read in the prose beside
+                // the artifact, every other marker inside the fence. Both placements must stay live.
+                guard fixture.kind == .codeGen else { continue }
+                let fenced = "Here it is.\n\n```text\nline one\nWell, \(marker) indeed.\nline three\n```"
+                let beside = "Well, \(marker) indeed.\n\n```text\nline one\nline two\nline three\n```"
+                let who = "\(fixture.id): marker \(marker.debugDescription)"
+                if leak.contains(marker) {
+                    #expect(fires(fixture, beside), "\(who) (leak) misses the prose")
+                    #expect(!fires(fixture, fenced), "\(who) (leak) fires inside code")
+                } else {
+                    #expect(fires(fixture, fenced), "\(who) misses the fence")
+                    #expect(!fires(fixture, beside), "\(who) fires on the prose")
+                }
             }
         }
     }

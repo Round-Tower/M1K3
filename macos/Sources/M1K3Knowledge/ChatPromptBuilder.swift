@@ -33,6 +33,10 @@
 //  example is now the generic `[Title §heading]` — the same shape the agent
 //  path's rules already use, and the only shape CitationValidator and
 //  SpeechTextPolish can see (both discriminate on §).
+//  Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 — when any chunk is headingless the example shows both
+//  shapes ("[Title §heading], or [Title] when the source has no heading"): the headingless `[Title]`
+//  has validated since 2026-08-03 but the prompt only ever demonstrated the § form, and Lil cited
+//  nothing on `ground-part` 3/3. All-headed knowledge keeps the single example.
 
 import Foundation
 
@@ -58,6 +62,16 @@ public enum ChatPromptBuilder {
             "\(index + 1). \(citationLabel(for: hit))\n\(hit.content)"
         }.joined(separator: "\n\n")
 
+        // Show the shape the model can actually copy. A headingless chunk is labelled
+        // `[Title]` in KNOWLEDGE, and a 4B shown only `[Title §heading]` cited nothing
+        // (Lil, `ground-part`, 0/3 on 2026-10-07). CitationValidator credits a bare
+        // `[Title]` against the chunk titles; the § form stays first. ~12 tokens, so
+        // Mini's window carries it; omitted when every chunk has a heading.
+        let anyHeadingless = chunks.contains { ($0.heading ?? "").isEmpty }
+        let shapes = anyHeadingless
+            ? "[Title §heading], or [Title] when the source has no heading"
+            : "[Title §heading]"
+
         return """
         Answer the user's question using the KNOWLEDGE below — the user's own
         documents, calls, and notes.
@@ -68,7 +82,7 @@ public enum ChatPromptBuilder {
         HOW TO ANSWER:
         - Ground your answer in the KNOWLEDGE above. If it doesn't cover the
           question, say so — do not invent facts.
-        - Cite sources inline using citation tokens like [Title §heading].
+        - Cite sources inline using citation tokens like \(shapes).
           These are citation tokens, NOT markdown links — never follow them with
           parentheses or a URL.
 

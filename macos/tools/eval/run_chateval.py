@@ -44,6 +44,8 @@ binary with the trigger as env + stdout reporting (the only route on macOS 27);
 `extract_fenced_json` + `direct_env` pinned. Confidence now 0.8.
 Review: Kev + claude-opus-5-5, 2026-10-07 — summarise reports latency-only fails and the content score
 (the display-sleep stall: E4B 246/324 raw, 288/324 on content).
+Review: Kev + claude-fable-5.1, 2026-10-09 — `kind_rows` / `kind_table`: a per-kind table under each run line with the
+latency-only and content columns (step 5 of the Qwen3.5 stream read "code-gen 24/30" off the JSON by hand).
 """
 
 from __future__ import annotations
@@ -308,19 +310,56 @@ def app_bundle_id(app: Path) -> str | None:
         return None
 
 
+def _applicable(scores: list[dict]) -> list[dict]:
+    """n/a (a vision turn on a brain that can't see) is one skip named "applicable" — out of every count."""
+    return [s for s in scores
+            if [(c.get("name"), c.get("outcome")) for c in s.get("checks", [])] != [("applicable", "skip")]]
+
+
+def _passed(score: dict) -> bool:
+    return not any(c.get("outcome") == "fail" for c in score.get("checks", []))
+
+
+def _latency_only(score: dict) -> bool:
+    """A fail whose ONLY failing check is the latency ceiling: the answer was right, the clock wasn't
+    (2026-10-07: a display-sleep stall made 42 of E4B's fails exactly this). Reported, never folded in."""
+    return [c.get("name") for c in score.get("checks", []) if c.get("outcome") == "fail"] == ["responsive"]
+
+
+def kind_rows(scores: list[dict]) -> list[dict]:
+    """Per task-kind: passed, total, latency-only fails and the content score (passed + latency-only).
+    Sorted by kind; n/a trials left out. "code-gen 24/30, grounded-Q 18/24" were hand counts off the
+    JSON before this (2026-10-09); content is a column, not a hand count on top of one."""
+    rows: dict[str, dict] = {}
+    for s in _applicable(scores):
+        row = rows.setdefault(s.get("kind") or "?", {"passed": 0, "total": 0, "latency_only": 0})
+        row["total"] += 1
+        if _passed(s):
+            row["passed"] += 1
+        elif _latency_only(s):
+            row["latency_only"] += 1
+    return [{"kind": kind, **row, "content": row["passed"] + row["latency_only"]}
+            for kind, row in sorted(rows.items())]
+
+
+def kind_table(rows: list[dict]) -> str:
+    """The rows as an aligned text table: kind | passed | latency-only | content."""
+    width = max([len("kind")] + [len(r["kind"]) for r in rows])
+    lines = [f"    {'kind'.ljust(width)}  passed  latency-only  content"]
+    for r in rows:
+        passed, content = f"{r['passed']}/{r['total']}", f"{r['content']}/{r['total']}"
+        lines.append(f"    {r['kind'].ljust(width)}  {passed.rjust(6)}  {str(r['latency_only']).rjust(12)}  {content.rjust(7)}")
+    return "\n".join(lines)
+
+
 def summarise(doc_path: Path) -> str:
     doc = json.loads(doc_path.read_text())
     lines = []
     for run in doc.get("runs", []):
         everything = run.get("scores", [])
-        # n/a (a vision turn on a brain that can't see) is one skip named "applicable" — out of every count.
-        scores = [s for s in everything
-                  if [(c.get("name"), c.get("outcome")) for c in s.get("checks", [])] != [("applicable", "skip")]]
-        passed = sum(1 for s in scores if not any(c.get("outcome") == "fail" for c in s.get("checks", [])))
-        # Fails whose ONLY failing check is the latency ceiling: the answer was right, the clock wasn't
-        # (2026-10-07: a display-sleep stall made 42 of E4B's fails exactly this). Reported, never folded in.
-        latency_only = sum(1 for s in scores
-                           if [c.get("name") for c in s.get("checks", []) if c.get("outcome") == "fail"] == ["responsive"])
+        scores = _applicable(everything)
+        passed = sum(1 for s in scores if _passed(s))
+        latency_only = sum(1 for s in scores if _latency_only(s))
         label = run.get("brainID") or "?"
         model = run.get("modelID") or "stock"
         na = len(everything) - len(scores)
@@ -331,6 +370,8 @@ def summarise(doc_path: Path) -> str:
                      + (f", {latency_only} latency-only (content {passed + latency_only}/{len(scores)})"
                         if latency_only else "")
                      + (f", peak {peak} MB{own}" if peak is not None else ""))
+        if scores:
+            lines.append(kind_table(kind_rows(everything)))
     prov = doc.get("provenance", {})
     lines.append(f"  power={prov.get('powerSource')} powermode={prov.get('powerMode')} commit={prov.get('appCommit')}")
     return "\n".join(lines)
