@@ -65,7 +65,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 (2), Confidence 0.85 — `takeSession(consultSlot:)`: a call
 //  on foreign instructions (the neutral titler) gets a fresh session and never touches the prewarm slot,
 //  which drops on a key mismatch (PR #424 review: it evicted the next chat turn's prewarm).
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — continueToolTurn declines images honestly (AFMToolPrompt.visionDecline) instead of confabulating. Confidence 0.7.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — continueToolTurn declines images honestly
+//  (AFMToolPrompt.visionDecline) instead of confabulating. Confidence 0.7.
 import Foundation
 import M1K3LogCore
 import os

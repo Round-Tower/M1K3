@@ -27,7 +27,8 @@
 //  here and the live harness is left to test only the genuine unknown.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-15, Confidence 0.9, Prior: Unknown
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — `visionDecline(from:)`: an honest decline for images on the latest user turn (Mini can't read them in the app's prompt shape; AFMVisionLiveTests). Confidence 0.7.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `visionDecline(from:)`: an honest decline for images on the
+//  latest user turn (Mini can't read them in the app's prompt shape; AFMVisionLiveTests). Confidence 0.7.
 //  Review: Kev + claude-opus-4-6, 2026-09-16 — image support: on macOS 27+ images
 //  ride the Prompt via Attachment(imageURL:) and the "cannot view" text note is
 //  suppressed; `imageURLs(from:)` extracts attached URLs for the provider.
