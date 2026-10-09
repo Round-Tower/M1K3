@@ -11,6 +11,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: the empty-state description says what goes here,
 //  not how to do it — the button does that.
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — Photo rows (caption memory): `photo` icon + accessibility label, privacy line in the empty state. TDD_SKIP: view body.
 
 import M1K3Knowledge
 import SwiftUI
@@ -27,7 +28,7 @@ struct DocumentsScreen: View {
                 ContentUnavailableView {
                     Label("No documents yet", systemImage: "doc.text.magnifyingglass")
                 } description: {
-                    Text("PDFs and text files M1K3 can answer from.")
+                    Text("PDFs and text files M1K3 can answer from. Photos you ask it to remember show up here too; their descriptions stay on this device.")
                 } actions: {
                     Button("Import a file") { importing = true }
                         .buttonStyle(.borderedProminent)
@@ -36,7 +37,14 @@ struct DocumentsScreen: View {
                 List {
                     ForEach(items) { item in
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(item.title).font(.body)
+                            HStack(spacing: 6) {
+                                if item.kind == .image {
+                                    Image(systemName: "photo")
+                                        .foregroundStyle(.secondary)
+                                        .accessibilityLabel(item.kind.displayLabel)
+                                }
+                                Text(item.title).font(.body)
+                            }
                             Text(item.createdAt, format: .dateTime.day().month().year())
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)

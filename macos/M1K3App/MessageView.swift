@@ -18,6 +18,7 @@
 //  a stopped PCC partial, and no label on the local answer after a fallback).
 //  Review: Kev + claude-opus-4-6, 2026-09-22 — toolTraceFooter now visible DURING streaming (was gated
 //  on status != .streaming); tools show live as each dispatches, with a content transition. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — "Remember this photo" under a sent image (RememberPhotoButton). TDD_SKIP: view body.
 
 import AppKit
 import M1K3Chat
@@ -89,17 +90,20 @@ struct MessageView: View {
         case .user:
             VStack(alignment: .trailing, spacing: 6) {
                 if let attachments = message.attachments, !attachments.isEmpty {
-                    HStack(spacing: 8) {
+                    HStack(alignment: .bottom, spacing: 8) {
                         Spacer(minLength: 60)
                         ForEach(attachments, id: \.url) { attachment in
-                            AsyncImage(url: attachment.url) { image in
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Color.secondary.opacity(0.2)
+                            VStack(alignment: .trailing, spacing: 4) {
+                                AsyncImage(url: attachment.url) { image in
+                                    image.resizable().aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Color.secondary.opacity(0.2)
+                                }
+                                .frame(width: 120, height: 120)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .accessibilityLabel("Attached image")
+                                RememberPhotoButton(attachment: attachment)
                             }
-                            .frame(width: 120, height: 120)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .accessibilityLabel("Attached image")
                         }
                     }
                 }

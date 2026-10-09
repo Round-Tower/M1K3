@@ -18,6 +18,7 @@
 //  "Used web search · date & time" provenance line), visible live during and after
 //  the turn. iOS had no tool trace at all. Confidence 0.85.
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — "Remember this photo" under a sent image (RememberPhotoButton). TDD_SKIP: view body.
 
 import M1K3Chat
 import M1K3Knowledge
@@ -35,17 +36,20 @@ struct MessageBubble: View {
         case .user:
             VStack(alignment: .trailing, spacing: 6) {
                 if let attachments = message.attachments, !attachments.isEmpty {
-                    HStack(spacing: 8) {
+                    HStack(alignment: .bottom, spacing: 8) {
                         Spacer(minLength: 48)
                         ForEach(attachments, id: \.url) { attachment in
-                            AsyncImage(url: attachment.url) { image in
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Color.secondary.opacity(0.2)
+                            VStack(alignment: .trailing, spacing: 4) {
+                                AsyncImage(url: attachment.url) { image in
+                                    image.resizable().aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Color.secondary.opacity(0.2)
+                                }
+                                .frame(width: 80, height: 80)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .accessibilityLabel("Attached image")
+                                RememberPhotoButton(attachment: attachment)
                             }
-                            .frame(width: 80, height: 80)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .accessibilityLabel("Attached image")
                         }
                     }
                 }
