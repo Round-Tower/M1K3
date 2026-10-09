@@ -26,7 +26,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — egressClauseProvider + `egressFacts()` (#482): what can leave
 //  this Mac per turn — web search (switch AND age band), PCC offered by `PrivateCloudRung.setting`, never
 //  "picked" (a PCC turn never reaches the responder). Confidence 0.8.
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — thinkingModeProvider resolves via the shared ThinkingModeResolver (#198); behaviour unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — thinkingModeProvider resolves via the shared
+//  ThinkingModeResolver (#198); behaviour unchanged.
 
 import Foundation
 import M1K3Agent
